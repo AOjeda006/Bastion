@@ -79,33 +79,111 @@ discutirlas.
   `frontend/package.json`, con `package-lock.json` commiteado. El *lockfile* es lo que hace la
   construcción reproducible; el rango permite parches de seguridad sin un commit por chincheta.
 
+### Tomadas por el agente de desarrollo — ítem 0.1 (2026-08-25)
+
+Respuestas del usuario a la puerta de clarificación, y decisiones triviales o reversibles que se
+anotan para no volver a discutirlas.
+
+**Respondidas por el usuario:**
+
+- **Modo git: `commit+push`.** Commits firmados (SSH, `commit.gpgsign=true`) y **solo** con las
+  credenciales del usuario: ningún `Co-Authored-By` ni trailer de sesión. El aviso de arranque sobre
+  `SIGNING_KEY_B64` se refiere al entorno de nube y **no aplica en local**: la firma estaba activa y
+  el primer commit verificó `G` (*Good signature*).
+- **Alcance de la solución: solo los proyectos de la fase 0 — 19 de los 74 posibles.** `Bastion.Api`,
+  los tres bloques comunes, y las cinco capas de Identidad, Organización y Auditoría. Los otros once
+  módulos (fases 1-11) conservan su carpeta con `.gitkeep` y **cada fase crea los suyos al empezar**.
+  Motivo: «no adelantes fases», y no pagar `restore`/`build`/`format`/CI sobre cincuenta y cinco
+  ensamblados vacíos durante meses. Consecuencia: cada fase futura añade sus proyectos al `.sln`.
+- **`ERP-PLAN-MAESTRO.md` vive en la raíz del repositorio pero NO se versiona.** Se renombró desde
+  `ERPPLANMAESTRO.md` al nombre canónico que usan `CLAUDE.md` y `README.md`, y se añadió a
+  `.gitignore`. Los dos ficheros dicen que la especificación la aporta el usuario **fuera del
+  repositorio**; ignorarlo cumple eso y a la vez lo deja a mano en local. Si se prefiere versionarlo,
+  basta con quitar la línea del `.gitignore`.
+
+**Decididas por el agente (triviales o reversibles):**
+
+- **Rama por unidad de trabajo, y `main` avanza por *fast-forward*.** `principios/git-workflow.md`
+  prohíbe trabajar sobre `main`, pero el usuario no quiere PR. El apaño: se trabaja en
+  `feature/<item>`, se verifica en verde y solo entonces `main` avanza sin *merge commit*. Así `main`
+  nunca ve trabajo a medias y el historial sigue siendo lineal y legible para retomar.
+- **La solución se crea con `--format sln` explícito.** El SDK de .NET 10 crea `.slnx` por omisión y
+  eso dejaría el *job* `backend` de la CI saltándose todos sus pasos para siempre. Está en
+  **`docs/adr/adr-0001-formato-de-fichero-de-solucion.md`** porque el aprendizaje es transversal.
+- **Los bloques comunes se llaman `Bastion.BuildingBlocks.<Capa>`.** Las carpetas del §12 son
+  `src/BuildingBlocks/{Domain,Application,Infrastructure}` (sin prefijo, al contrario que las de
+  módulo); el nombre del proyecto se deriva de la ruta y respeta la raíz `Bastion` del Anexo A.1.
+- **`Contracts` no referencia nada, ni siquiera los bloques comunes.** Es lo único que un módulo
+  puede ver de otro (§4, regla 1): si arrastrase `Domain`, cualquier módulo vería el dominio ajeno
+  por transitividad y la frontera sería decorativa.
+- **`Endpoints` es una biblioteca de clases con `FrameworkReference Microsoft.AspNetCore.App`**, no
+  un proyecto de SDK Web. El host es uno solo (`src/Api`); los módulos solo aportan controladores. Al
+  ser referencia al framework compartido y no un paquete, no lleva versión ni entra en
+  `Directory.Packages.props`.
+- **`Bastion.Api` referencia dos capas de cada módulo de fase 0**, y por motivos distintos:
+  `Endpoints` para que el host descubra los controladores, e `Infrastructure` para registrar su
+  `DbContext` y sus adaptadores. Es el *composition root*: el único sitio donde eso está permitido.
+- **`RestorePackagesWithLockFile` activado** en `Directory.Build.props`. No es adorno: la CI usa
+  `cache-dependency-path: '**/packages.lock.json'` y `actions/setup-dotnet` **falla** si ese patrón
+  no casa con ningún fichero. De paso fija también las versiones transitivas, que la gestión
+  centralizada por sí sola no cubre. Los 19 `packages.lock.json` se commitean.
+- **`Directory.Packages.props` sigue vacío: el 0.1 no adopta ni un solo paquete de NuGet.** Un host
+  mínimo y diecinueve bibliotecas sin código no necesitan ninguno, y ASP.NET Core entra por
+  referencia al framework. El primer `PackageVersion` llegará cuando el 0.2 o el 0.3 adopte algo — y
+  entonces se comprueba su licencia primero.
+- **Todavía no hay proyectos de test.** El 0.1 no crea comportamiento: no hay nada que probar, y TDD
+  exige el test *antes* del código, no un proyecto vacío antes del test. `tests/Arquitectura.Tests/` y
+  `tests/Api.FunctionalTests/` siguen como carpeta con `.gitkeep`; los `<Modulo>.UnitTests` y
+  `<Modulo>.IntegrationTests` del §12 nacen con su primera prueba (0.3 en adelante; el de
+  arquitectura, en el 0.12). `dotnet test` sobre una solución sin proyectos de test devuelve 0:
+  comprobado en los dos filtros, no hay rojo ni verde falso.
+- **Discrepancia del plan maestro, resuelta a favor del §5:** el árbol del §12 no lista **Auditoría**
+  bajo `src/Modules/`, pero el §5 la asigna a la fase 0 y el Anexo A.3 le dedica el ítem 0.7. La
+  carpeta ya existía; se le han creado sus cinco proyectos. Es una omisión del árbol del §12, no una
+  decisión.
+- **Los `.gitkeep` de las diecinueve carpetas que ya tienen `.csproj` se han borrado.** Existían para
+  que git conservara la carpeta vacía; con un proyecto dentro sobran. Quedan 60, los de las carpetas
+  que siguen vacías.
+
 ## Estado actual
 
-**Terminado el andamiaje de configuración; la fase 0 no ha empezado.** Lo que hay en el repositorio
-es el arnés del agente (`CLAUDE.md`, `AGENTS.md`, este `PLAN.md`, `.claude/settings.json`), la
-configuración del repositorio (`.gitignore`, `.gitattributes`, `.editorconfig`,
-`Directory.Build.props`, `Directory.Packages.props`), el `docker-compose.yml` con sus Dockerfiles, el
-*workflow* de CI, el `README.md`, la estructura de carpetas del §12 con `.gitkeep`, y el **andamiaje
-del frontal ya verificado** (`npm run build`, `npm run lint` y `npm run typecheck` en verde).
+**Ítem 0.1 terminado. Siguiente: ítem 0.2 (`docker compose up`), sin empezar.**
 
-**Siguiente: ítem 0.1**, aún sin empezar. Es el primero y el que desbloquea al resto.
+`Bastion.sln` existe y compila: **19 proyectos** (`Bastion.Api`, los tres bloques comunes y las
+cinco capas de Identidad, Organización y Auditoría), con las referencias de proyecto ya cableadas
+según el §4. Verificado con la batería completa de `AGENTS.md` en verde — `dotnet build` en Debug y
+en Release (0 advertencias / 0 errores), `dotnet format --verify-no-changes`, `dotnet test` en sus
+dos filtros, y `npm run typecheck | lint | format:check | test | build`.
+
+A partir de ahora **el *job* `backend` de la CI se ejecuta de verdad**: su condición
+`if [ -f Bastion.sln ]` ya se cumple, sin tocar el *workflow*. Un fallo suyo es un fallo real.
+
+**Dónde retomar exactamente:** ítem 0.2. La API es hoy un host mínimo — `src/Api/Program.cs` hace
+`CreateBuilder` → `Build` → `Run` y no expone nada. El 0.2 tiene que darle las sondas
+`/health/live` y `/health/ready` que **ya esperan** el `HEALTHCHECK` de `deploy/Dockerfile.api`, el
+`deploy/docker-compose.yml` y el `README.md`, y levantar el compose entero. Dos cosas ya escritas
+condicionan el diseño: la sonda de **vida** no debe mirar la base de datos (si lo hace, un corte de
+PostgreSQL reinicia la API en bucle en vez de devolver 503), y la de **disponibilidad** tiene que
+dejar sitio a la comprobación de deriva del reloj que exige R15.
 
 ### Lo que el agente de configuración NO pudo dejar hecho, y por qué
 
-Leer esto antes de empezar el 0.1: explica por qué faltan cosas que parecerían obvias.
+Explica por qué faltaban cosas que parecerían obvias. Los puntos **1 y 2 ya están
+resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vigentes**.
 
-1. **No existe `Bastion.sln` ni ningún `.csproj`.** El entorno donde se montó esto **no tenía el SDK
+1. ~~**No existe `Bastion.sln` ni ningún `.csproj`.**~~ **RESUELTO en el 0.1** — existen la
+   solución y 19 proyectos (los de la fase 0). El entorno donde se montó esto **no tenía el SDK
    de .NET**, así que no había forma de comprobar que la solución compilaba. La regla era explícita:
    un esqueleto que no compila es peor que ninguno. Están las **carpetas** del §12 (una por módulo y
    capa, con el nombre del proyecto ya puesto: `src/Modules/Ventas/Bastion.Ventas.Domain/`), los
-   `.gitkeep` y toda la configuración de MSBuild que los proyectos heredarán. **Crear la solución y
-   los proyectos es la primera mitad del ítem 0.1.**
-2. **La CI está escrita pero su mitad de backend no se ejecuta todavía.** El *job* `backend` de
-   `.github/workflows/ci.yml` comprueba primero si existe `Bastion.sln`: mientras no exista, se salta
-   los pasos y lo deja dicho en el resumen del *run*. **No es una CI en rojo ni un verde falso: es
-   una CI que declara lo que no ha podido comprobar.** En cuanto el 0.1 cree la solución, el mismo
-   *workflow* pasa a compilar, formatear y ejecutar tests **sin tocar una línea** — y a partir de ahí
-   un fallo suyo es un fallo de verdad. El *job* `frontend` sí corre de verdad desde el primer commit.
+   `.gitkeep` y toda la configuración de MSBuild que los proyectos heredarán, que es exactamente
+   de lo que partió el 0.1.
+2. ~~**La CI está escrita pero su mitad de backend no se ejecuta todavía.**~~ **RESUELTO en el
+   0.1** — al existir `Bastion.sln`, el *job* compila, formatea y ejecuta tests de verdad, sin que
+   se tocara el *workflow*. Mientras `Bastion.sln` no existía, el *job* se saltaba los pasos y lo
+   declaraba en el resumen del *run*: ni rojo ni verde falso, sino una CI diciendo lo que no había
+   podido comprobar. **A partir de ahora un fallo suyo es un fallo de verdad.** El *job* `frontend`
+   corría de verdad desde el primer commit.
 3. **El frontal es solo la cadena de herramientas.** React 19, TypeScript estricto, Vite, ESLint
    (con `react-hooks` y `jsx-a11y`), Prettier, Vitest y Tailwind v4, con la estructura de carpetas del
    §10 y un `App.tsx` de relleno que no hace nada. **No hay enrutador, ni caché de servidor, ni
@@ -123,7 +201,7 @@ Leer esto antes de empezar el 0.1: explica por qué faltan cosas que parecerían
 >
 > Literal del **Anexo A.3** del plan maestro. No se reordena ni se amplía: si algo falta, se propone.
 
-- [ ] **0.1 · Andamiaje del repositorio y solución modular** — criterio de aceptación: `Bastion.sln`
+- [x] **0.1 · Andamiaje del repositorio y solución modular** — criterio de aceptación: `Bastion.sln`
   compila; la estructura coincide con el §12; `dotnet build` y `npm run build` en verde.
 - [ ] **0.2 · `docker compose up`** — criterio de aceptación: levanta PostgreSQL, API, frontal y
   observabilidad; la API responde a su sonda de vida y el frontal carga.
@@ -182,6 +260,15 @@ cuando hace falta el porqué.
   y bajarla solo quita sitio. Se deja el valor de la plantilla; si el agente local es de 200K,
   **quita la línea**. Para afinarlo: mide con `/context` lo que cuesta una tarea típica (`U`) y deja
   la ventana en ≈ `2·U`.
+- **El presupuesto de tamaño del frontal en la CI está mal medido y la va a poner en rojo.** El paso
+  «Presupuesto de tamaño» de `.github/workflows/ci.yml` hace `du -sk dist` con un tope de 1024 kB, y
+  `dist/` mide hoy **1097 kB** — con un `App.tsx` de relleno. El culpable no es el *bundle*: son los
+  **911 kB del *sourcemap*** (`vite.config.ts` fija `build.sourcemap: true`, deliberadamente). Lo que
+  el navegador descarga al arrancar son **205 kB**. La comprobación contradice su propio comentario,
+  que habla del «arranque del usuario»: un *sourcemap* no se descarga nunca al arrancar. **Está fuera
+  del alcance del 0.1 y no se ha tocado.** Arreglo propuesto, de una línea: medir con
+  `du -sk --exclude='*.map' dist`. Alternativas: bajar a `sourcemap: 'hidden'`, o subir el tope — la
+  peor, porque desactiva la señal que el presupuesto existe para dar.
 - **La firma de commits depende del secreto `SIGNING_KEY_B64`.** El hook `SessionStart` de
   `.claude/settings.json` la activa si existe y avisa si no. Sin él, **no se commitea** (política de
   `CLAUDE.md` §3). El montaje de la clave está en `plantillas/README.md` de la biblioteca.
