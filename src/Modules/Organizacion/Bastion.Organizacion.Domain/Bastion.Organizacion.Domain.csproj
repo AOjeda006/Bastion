@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dominio del módulo Organizacion (§4): entidades, objetos de valor, eventos de dominio,
+    invariantes y máquinas de estado.
+
+    Su única referencia permitida es el dominio base. Ni EF Core, ni ASP.NET Core, ni
+    nada de infraestructura: el dominio no sabe que existe una base de datos
+    (§4, regla de frontera 2). El test de arquitectura del ítem 0.12 lo comprueba.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

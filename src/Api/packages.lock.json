@@ -1,0 +1,112 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "bastion.auditoria.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.Auditoria.Contracts": "[1.0.0, )",
+          "Bastion.Auditoria.Domain": "[1.0.0, )",
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.auditoria.contracts": {
+        "type": "Project"
+      },
+      "bastion.auditoria.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.auditoria.endpoints": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.Auditoria.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.auditoria.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.Auditoria.Application": "[1.0.0, )",
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )"
+        }
+      },
+      "bastion.buildingblocks.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.buildingblocks.domain": {
+        "type": "Project"
+      },
+      "bastion.buildingblocks.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.identidad.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Identidad.Contracts": "[1.0.0, )",
+          "Bastion.Identidad.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.identidad.contracts": {
+        "type": "Project"
+      },
+      "bastion.identidad.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.identidad.endpoints": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.Identidad.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.identidad.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Identidad.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.organizacion.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Organizacion.Contracts": "[1.0.0, )",
+          "Bastion.Organizacion.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.organizacion.contracts": {
+        "type": "Project"
+      },
+      "bastion.organizacion.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.organizacion.endpoints": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.Organizacion.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.organizacion.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Organizacion.Application": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}

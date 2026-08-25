@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Infraestructura del módulo Identidad: su DbContext propio con su esquema y su historial de
+    migraciones (§14), las configuraciones de EF Core, los repositorios y los adaptadores
+    externos. Implementa los puertos que declara Application; la dependencia sigue
+    apuntando hacia dentro.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Identidad.Application/Bastion.Identidad.Application.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

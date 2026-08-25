@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dominio base compartido por todos los módulos (§12 del plan maestro): Entidad,
+    RaizAgregado, ObjetoValor, EventoDominio, Importe, Resultado.
+
+    NO referencia NADA, y es deliberado: es la regla de frontera 2 del §4 llevada a su
+    extremo. Si el dominio base pudiera ver infraestructura, todos los dominios de módulo
+    la verían por herencia de referencia, y la regla dejaría de significar nada.
+
+    El TFM, `Nullable`, los analizadores y la identidad se heredan de `Directory.Build.props`
+    de la raíz. Aquí solo va lo propio de este proyecto.
+  -->
+
+</Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Infraestructura del módulo Organizacion: su DbContext propio con su esquema y su historial de
+    migraciones (§14), las configuraciones de EF Core, los repositorios y los adaptadores
+    externos. Implementa los puertos que declara Application; la dependencia sigue
+    apuntando hacia dentro.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Organizacion.Application/Bastion.Organizacion.Application.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Infraestructura común (§12): base de EF Core, outbox, auditoría, filtro multiempresa,
+    ProblemDetails e idempotencia. Es el único de los tres bloques comunes que conoce la
+    base de datos; los otros dos no saben que existe.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Application/Bastion.BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+
+</Project>

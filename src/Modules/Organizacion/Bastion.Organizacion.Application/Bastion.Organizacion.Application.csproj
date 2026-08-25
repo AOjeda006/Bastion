@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Casos de uso del módulo Organizacion: un tipo por operación, sus puertos y sus DTOs internos.
+    Nada de bus en memoria: un caso de uso es una interfaz con su implementación
+    registrada en el contenedor (§3 del plan maestro).
+
+    Referencia su propio Contracts porque es quien publica los eventos de integración
+    del módulo (§4, «escrituras entre módulos, solo por eventos»).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Organizacion.Domain/Bastion.Organizacion.Domain.csproj" />
+    <ProjectReference Include="../Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Application/Bastion.BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+
+</Project>

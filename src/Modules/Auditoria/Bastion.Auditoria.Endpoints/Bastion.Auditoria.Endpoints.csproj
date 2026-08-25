@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Controladores REST del módulo Auditoria, bajo /api/v1/auditoria/{recurso} (Anexo A.1).
+
+    Biblioteca de clases con FrameworkReference, no SDK Web: el host es uno solo
+    (src/Api) y este proyecto solo aporta controladores. Microsoft.AspNetCore.App es una
+    referencia al framework compartido, no un paquete de NuGet, así que no lleva versión
+    ni entra en Directory.Packages.props.
+  -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Auditoria.Application/Bastion.Auditoria.Application.csproj" />
+  </ItemGroup>
+
+</Project>

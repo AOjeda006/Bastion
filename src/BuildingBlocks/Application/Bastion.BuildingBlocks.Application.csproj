@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Puertos comunes de la capa de aplicación (§12): IUnidadTrabajo, IUsuarioActual,
+    IReloj, IDespachadorEventos. Son interfaces; quien las implementa es Infrastructure.
+    Ese es el sentido de la regla: la capa que consume define el puerto
+    (`principios/clean-architecture.md`, «rompe ciclos de capa colocando el puerto en la
+    capa consumidora»).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Domain/Bastion.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

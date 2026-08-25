@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lo ÚNICO público del módulo Organizacion (§4, regla de frontera 1): DTOs y eventos de
+    integración. Es lo que otro módulo puede referenciar.
+
+    Por eso NO referencia nada, ni siquiera los bloques comunes: si Contracts arrastrase
+    Domain, cualquier módulo que lo usara vería el dominio ajeno por la puerta de atrás y
+    la frontera sería decorativa.
+  -->
+
+</Project>

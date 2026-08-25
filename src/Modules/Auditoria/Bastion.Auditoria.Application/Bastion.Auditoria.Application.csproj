@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Casos de uso del módulo Auditoria: un tipo por operación, sus puertos y sus DTOs internos.
+    Nada de bus en memoria: un caso de uso es una interfaz con su implementación
+    registrada en el contenedor (§3 del plan maestro).
+
+    Referencia su propio Contracts porque es quien publica los eventos de integración
+    del módulo (§4, «escrituras entre módulos, solo por eventos»).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Auditoria.Domain/Bastion.Auditoria.Domain.csproj" />
+    <ProjectReference Include="../Bastion.Auditoria.Contracts/Bastion.Auditoria.Contracts.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Application/Bastion.BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+
+</Project>

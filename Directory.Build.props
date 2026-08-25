@@ -61,6 +61,15 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!--
+      Fichero de bloqueo por proyecto (`packages.lock.json`, commiteado). Cierra la
+      última rendija de la reproducibilidad: la gestión centralizada fija la versión
+      DIRECTA, pero las transitivas seguirían resolviéndose el día del restore.
+      Además es de lo que depende la caché de la CI: `.github/workflows/ci.yml` usa
+      `cache-dependency-path: '**/packages.lock.json'`, y `actions/setup-dotnet` falla
+      si ese patrón no casa con ningún fichero.
+    -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <PropertyGroup Label="Identidad del proyecto">

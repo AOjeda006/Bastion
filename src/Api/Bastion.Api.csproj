@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Host único de ASP.NET Core y composition root de la solución (§4 del plan maestro).
+
+    Es el ÚNICO proyecto autorizado a ver la Infrastructure de los módulos: el cableado
+    de dependencias ocurre aquí y solo aquí, separado del uso
+    (`principios/clean-architecture.md`). Un módulo nunca se registra a sí mismo por su
+    cuenta ni alcanza la infraestructura de otro.
+
+    Referencia dos capas de cada módulo, y por motivos distintos:
+      - Endpoints       -> para que el host descubra sus controladores.
+      - Infrastructure  -> para registrar su DbContext y sus adaptadores en el contenedor.
+    Application y Domain llegan por transitividad; Contracts es lo único que un módulo
+    puede ver de OTRO módulo.
+
+    Solo están los módulos de la fase 0. Los de las fases 1-11 tienen su carpeta creada y
+    vacía: cada fase añade los suyos al empezar (ver docs/PLAN.md).
+  -->
+
+  <ItemGroup Label="Bloques comunes">
+    <ProjectReference Include="../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Módulos de la fase 0">
+    <ProjectReference Include="../Modules/Identidad/Bastion.Identidad.Endpoints/Bastion.Identidad.Endpoints.csproj" />
+    <ProjectReference Include="../Modules/Identidad/Bastion.Identidad.Infrastructure/Bastion.Identidad.Infrastructure.csproj" />
+    <ProjectReference Include="../Modules/Organizacion/Bastion.Organizacion.Endpoints/Bastion.Organizacion.Endpoints.csproj" />
+    <ProjectReference Include="../Modules/Organizacion/Bastion.Organizacion.Infrastructure/Bastion.Organizacion.Infrastructure.csproj" />
+    <ProjectReference Include="../Modules/Auditoria/Bastion.Auditoria.Endpoints/Bastion.Auditoria.Endpoints.csproj" />
+    <ProjectReference Include="../Modules/Auditoria/Bastion.Auditoria.Infrastructure/Bastion.Auditoria.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
