@@ -545,6 +545,23 @@ cuando hace falta el porqué.
   §13, y esperar un *run* completo de CI para cada iteración de un repositorio no es un ciclo de
   trabajo viable. **Recomendación:** instalar Docker Desktop (o un demonio equivalente) antes de
   empezar el 0.4.
+
+  **Intento del 2026-08-25, fallido, y lo que se aprendió:** el prerrequisito ya está —WSL 2 con
+  Ubuntu como distribución predeterminada—, y `winget` ofrece `Docker.DockerDesktop` 4.88.0. El
+  intento se quedó **parado en la descarga**: doce minutos con 0,58 s de CPU y **cero bytes**
+  escritos. No es la red —la misma máquina descarga el instalador de 631 MB por HTTPS sin problema,
+  `200 OK` con `curl -I`—, sino que la sesión **no es administradora** y winget se queda esperando
+  la elevación. Se detuvo el proceso; **no quedó nada a medias** (`C:\Program Files\Docker` no
+  existe). Lo tiene que lanzar el usuario desde una terminal **elevada**:
+
+  ```powershell
+  winget install --id Docker.DockerDesktop --exact --accept-package-agreements --accept-source-agreements
+  ```
+
+  Después hacen falta dos cosas más que tampoco puede hacer el agente: estar en el grupo
+  `docker-users` (cerrar sesión y volver a entrar) y arrancar Docker Desktop una vez. Y la
+  comprobación no es `docker --version`: es **una ejecución real de Testcontainers**, que es lo que
+  demuestra que el demonio acepta contenedores y que el ciclo del 0.4 es viable.
 - **La firma de commits depende del secreto `SIGNING_KEY_B64`.** El hook `SessionStart` de
   `.claude/settings.json` la activa si existe y avisa si no. Sin él, **no se commitea** (política de
   `CLAUDE.md` §3). El montaje de la clave está en `plantillas/README.md` de la biblioteca.
