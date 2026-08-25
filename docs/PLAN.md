@@ -197,9 +197,90 @@ anotan para no volver a discutirlas.
 - **Paquetes del framework fijados en `10.0.9`**, que es el runtime de ASP.NET instalado aquí. Un
   paquete más nuevo que el runtime es el sentido que rompe; al revés rueda hacia delante.
 
+### Tomadas por el agente de desarrollo — ítem 0.3 (2026-08-25)
+
+- **`tests/BuildingBlocks.UnitTests` creado** siguiendo el §12 (decisión del usuario: trivial y
+  reversible, se decide y se anota). Referencia **solo** a `BuildingBlocks.Domain`: si algún día
+  estos tests necesitan un doble de algo, será señal de que al dominio base se le ha colado una
+  dependencia. Con él, **21 proyectos**.
+- **Dos escalas son dos TIPOS: `Importe` (4 decimales) y `PrecioUnitario` (6).** Y la reducción de
+  escala ocurre en **un solo sitio con nombre**, `PrecioUnitario.Por(cantidad)`, con un único
+  redondeo sobre el producto exacto. Detalle y caso dorado en el **ADR-0005**.
+- **El modo de redondeo va escrito (`AwayFromZero`) en cada llamada**, porque el de .NET es
+  `ToEven` y omitirlo cambia el resultado. Hay un test que lo demuestra con 0,125.
+- **La unidad mínima por divisa no tiene valor por omisión: una divisa desconocida lanza.** Suponer
+  dos decimales acertaría con el dólar y fallaría en silencio con el yen y con el dinar.
+- **NO se ha construido el servicio de cálculo de impuestos.** El §12 lo sitúa en su propio módulo
+  de dominio y el plan maestro en la fase de facturación. El bloque común aporta la primitiva
+  `Importe.Cuota` (un redondeo, por par base/tipo) y el caso dorado como referencia que ese servicio
+  tendrá que reproducir; la agrupación vive **en el test**, como una de tres estrategias comparadas.
+- **La frontera entre `Resultado` y excepción está escrita en el ADR-0004**, con la regla, la tabla
+  de qué capa hace qué y cuatro ejemplos. Resumen: `Resultado` cruza **una sola costura** —de
+  Aplicación al borde— y el dominio **siempre lanza**.
+- **`ErrorDeOperacion` lleva código estable + mensaje**, y el código se valida al construirlo
+  (minúsculas y guiones): se publica dentro de un URI, así que es contrato.
+- **Las fábricas de `Resultado<T>` viven en `Resultado`, que no es genérico.** CA1000 está activo en
+  `latest-recommended` y tiene razón: `Resultado<int>.Correcto(...)` obliga a escribir el tipo,
+  `Resultado.Correcto(42)` lo infiere. Se corrigió el diseño en vez de suprimir la regla.
+- **`BuildingBlocks.Infrastructure` pasa a conocer ASP.NET Core** (`FrameworkReference`). Es
+  inevitable: la política de `ProblemDetails` que el §12 pone ahí *es* HTTP. Efecto colateral, con
+  `NU1510`: `Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions` se vuelve redundante
+  —viene en el marco compartido— y se ha quitado del `.csproj` y de `Directory.Packages.props`.
+- **Las rutas que fallan a propósito viven en el proyecto de tests**, inyectadas con un
+  `IStartupFilter`, no en la API. La política es middleware central e independiente de la ruta;
+  publicar rutas de diagnóstico en producción para poder probarla sería pagar en superficie real lo
+  que en el host de pruebas no cuesta nada.
+- **Paquetes nuevos declarados: `Serilog` 4.3.0 y `Serilog.Formatting.Compact` 3.0.0** en
+  `tests/Api.FunctionalTests` (ya llegaban por transitividad de la API; un paquete que se usa se
+  declara). **Ambos Apache-2.0**, comprobado en su `.nuspec`. Ninguno de los comerciales de 2025.
+- **Pruebas basadas en propiedades: descartadas por ahora.** Eran opcionales. Meter una biblioteca
+  nueva y un idioma de test nuevo en el mismo ítem que estrena el dominio compra menos de lo que
+  cuesta; los casos dorados de la fase 5 son mejor sitio, y allí sí. Anotado en *Notas / riesgos*.
+
 ## Estado actual
 
-**Ítem 0.2 TERMINADO. Siguiente: ítem 0.3 (bloque común / *shared kernel*), sin empezar.**
+**Ítem 0.3 TERMINADO. Siguiente: ítem 0.4 (módulo Organización), sin empezar.**
+
+`src/BuildingBlocks/Domain` deja de estar vacío: estrena `Dinero/` (`Importe`, `PrecioUnitario`,
+`Divisas`) y `Resultados/` (`Resultado`, `Resultado<T>`, `ErrorDeOperacion`, `TipoDeError`), y sigue
+**sin una sola referencia**, que es justo lo que debe ser. `BuildingBlocks.Infrastructure` estrena
+`Errores/` con la política central de `ProblemDetails`, y `Program.cs` la cablea lo primero de la
+tubería. Con `tests/BuildingBlocks.UnitTests`, la solución va por **21 proyectos** y `dotnet test`
+pasa de 3 casos a **55**.
+
+Verificado en local, con la salida real de cada comando y enseñando el rojo de cada bloque:
+
+- **`Importe`/R6** — rojo 1: no compilaba. Rojo 2, ya con recuento: **22 con error, 0 superados**.
+  Verde: **22/22**.
+- **`Resultado`** — rojo: no compilaba (`Resultados` no existía). Verde: **41/41** acumulado.
+- **`ProblemDetails`** — rojo: no compilaba (`Infrastructure.Errores` no existía). Verde: **14/14**
+  en `Api.FunctionalTests`, once de ellos de la política de errores.
+- `dotnet build` en Release sobre la solución entera → **0 advertencias / 0 errores**.
+  `dotnet format --verify-no-changes` → `rc=0`. `dotnet restore` con los 21 `packages.lock.json`.
+- `dotnet test` en Release → **55 superadas, 0 con error** (41 + 14).
+- `dotnet test --filter "Category=Integracion"` → `rc=0` diciendo «Ninguna prueba coincide con el
+  filtro» en los **dos** ensamblados: un no-op **declarado**, no un verde mudo. Sigue sin haber
+  pruebas de integración porque **sigue sin haber Docker** en esta máquina.
+- Y fuera del host de pruebas, con la API arrancada de verdad (`dotnet run` + `curl`): un `404` de
+  enrutado devuelve `application/problem+json` con `"traceId":"4bf92f3577b34da6a3ce929d0e0e4736"` —el
+  mismo `traceparent` que se mandó— y esa misma traza aparece como `@tr` en la línea del registro.
+
+Lo que el criterio pedía y dónde está probado:
+
+| Comprobante | Dónde |
+|---|---|
+| Redondeo de R6 por par (base, tipo) | `ReglaDeRedondeoR6Tests`, con las **tres** estrategias dando 10,00 / 10,02 / 9,99 |
+| `AwayFromZero` y no el `ToEven` de .NET | `ImporteTests.Cuota_EnElPuntoMedioDeLaUnidadMinima_…` |
+| Las dos escalas y dónde baja la escala | `PrecioUnitarioTests.Por_…` |
+| Operar entre divisas lanza | `ImporteTests.Suma_ConDivisasDistintas_Lanza` |
+| `type` estable por clase de error | `PoliticaDeErroresTests.CadaClaseDeError_…` (los cinco) |
+| `traceId` de la respuesta = `@tr` del registro | `PoliticaDeErroresTests.ElTraceIdDeLaRespuesta_…` |
+| Nada del interior sale en la respuesta | `…_RespondeQuinientosSinNadaDelInterior` (entrada hostil) |
+| Los dos destinatarios no comparten texto | `ElDetalleInterno_ViveEnElRegistroYNoEnLaRespuesta` |
+
+---
+
+**Del ítem 0.2:**
 
 `src/Api/Program.cs` deja de ser un host vacío: publica las dos sondas del §14, registra con Serilog
 en JSON compacto y exporta trazas y métricas por OTLP al recolector. `BuildingBlocks.Infrastructure`
@@ -244,13 +325,18 @@ saltaba porque `hashFiles('Bastion.sln')` estaba vacío) y construyó `Dockerfil
 `Dockerfile.web` sin tocarlos. En aquel *run* `dotnet test` salía 0 **sin ejecutar nada**, porque no
 había proyectos de test: no era evidencia. Desde el 0.2 sí ejecuta casos.
 
-**Dónde retomar exactamente:** ítem **0.3**, el bloque común. Criterio: objeto de valor
-`Importe(cantidad, divisa)` con la regla de redondeo de R6 probada, resultado de operación y
-`ProblemDetails` según RFC 9457. Es el primer ítem con **dominio de verdad**, así que es el primero
-donde el TDD del contrato manda: el test antes que el código, sin excepción. El sitio es
-`src/BuildingBlocks/Domain` (hoy vacío y sin una sola referencia, que es justo lo que debe ser) y su
-proyecto de tests hay que crearlo — `tests/` solo tiene `Api.FunctionalTests` y la carpeta vacía
-`Arquitectura.Tests`.
+**Dónde retomar exactamente:** ítem **0.4**, el módulo Organización. Criterio: CRUD de `Empresa`,
+`Ejercicio`, `Serie` y `Almacen`, con migraciones propias del módulo.
+
+**Antes de empezar el 0.4 hay que instalar Docker en esta máquina.** El 0.4 estrena migraciones y
+persistencia, y la regla es que el comportamiento relacional se prueba con **Testcontainers**, nunca
+con EF Core InMemory. Sin Docker no hay Testcontainers, y el filtro `Category=Integracion` seguiría
+siendo un no-op — que hoy está declarado y es honesto, pero a partir del 0.4 sería un agujero.
+Instalarlo y **comprobarlo con una ejecución real de Testcontainers**, no con `docker --version`.
+
+El sitio del 0.4 son las cinco capas de `src/Modules/Organizacion/`, que existen desde el 0.1 y
+están vacías. `tests/` tiene ya `Api.FunctionalTests` y `BuildingBlocks.UnitTests`; la carpeta
+`Arquitectura.Tests` sigue vacía y es del 0.11.
 
 ### Lo que el agente de configuración NO pudo dejar hecho, y por qué
 
@@ -292,9 +378,11 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 - [x] **0.2 · `docker compose up`** — criterio de aceptación: levanta PostgreSQL, API, frontal y
   observabilidad; la API responde a su sonda de vida y el frontal carga.
   Verificado en el *job* `Humo` de la CI — [run 32873076287](https://github.com/AOjeda006/Bastion/actions/runs/32873076287).
-- [ ] **0.3 · Bloque común (*shared kernel*)** — criterio de aceptación: objeto de valor
+- [x] **0.3 · Bloque común (*shared kernel*)** — criterio de aceptación: objeto de valor
   `Importe(cantidad, divisa)` con la regla de redondeo de R6 probada; resultado de operación;
   `ProblemDetails` según **RFC 9457**.
+  Decisiones en `docs/adr/adr-0004-frontera-entre-resultado-y-excepcion.md` y
+  `docs/adr/adr-0005-dinero-dos-escalas-y-la-regla-de-redondeo.md`.
 - [ ] **0.4 · Módulo Organización** — criterio de aceptación: CRUD de `Empresa`, `Ejercicio`, `Serie`
   y `Almacen`, con migraciones propias del módulo.
 - [ ] **0.5 · Módulo Identidad** — criterio de aceptación: registro y login; roles y permisos por
@@ -342,6 +430,22 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **Un test que solo se ejecuta aislado no está probado.** Dos tests de la política de errores
+  **pasaban en aislado y fallaban con la suite entera**: `AddSerilog(configurar)` deja por omisión el
+  registro en el `Log.Logger` **estático** y ata el contenedor a ese estático, así que con dos hosts
+  de prueba levantándose en paralelo el último le pisaba el registro al otro. Arreglado con
+  `preserveStaticLogger: true` en el host de pruebas. Regla que se queda: **cualquier host de prueba
+  que capture registro lo usa**, y una verificación en aislado no cuenta como verificación.
+- **Pruebas basadas en propiedades: pendientes, y con una condición.** Descartadas en el 0.3 a
+  propósito (ver *Decisiones*). El sitio natural son los **casos dorados de impuestos y valoración**
+  de la fase 5. La regla que más cuesta cumplir, anotada aquí para que no se pierda: **no se escribe
+  la función para que encaje con la propiedad**, y si la propiedad se pone en rojo, la primera
+  pregunta es **qué afirma la propiedad**, no qué falla en el código. Comprobar la licencia de la
+  biblioteca antes de adoptarla.
+- **El servicio de cálculo de impuestos es de la fase de facturación, no del bloque común.** El 0.3
+  deja la primitiva (`Importe.Cuota`, un redondeo por par base/tipo) y el **caso dorado** del
+  ADR-0005. Criterio de aceptación de aquel servicio: reproducir esa tabla. Si da 10,02 está
+  redondeando línea a línea; si da 9,99, al final.
 - **`autoCompactWindow: 300000` en `.claude/settings.json` solo sirve si el agente corre un modelo de
   ventana de 1M.** En un modelo de 200K no hace nada útil: la frontera por omisión ya está donde toca
   y bajarla solo quita sitio. Se deja el valor de la plantilla; si el agente local es de 200K,

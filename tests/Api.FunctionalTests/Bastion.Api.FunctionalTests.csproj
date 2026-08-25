@@ -22,6 +22,16 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
+  <ItemGroup Label="Captura del registro">
+    <!--
+      Serilog explicito y no por transitividad de la API: estos tests usan ILogEventSink y
+      CompactJsonFormatter directamente, y un paquete que se usa se declara. Los dos son
+      Apache-2.0.
+    -->
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

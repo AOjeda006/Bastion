@@ -11,12 +11,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--
-      Solo las ABSTRACCIONES de las sondas: aquí se implementa `IHealthCheck`, pero quién
-      las publica como endpoints HTTP es el host. Este proyecto no conoce ASP.NET Core.
-    -->
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
     <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      La política de `ProblemDetails` que el §12 sitúa en este proyecto ES HTTP: traduce clases
+      de error de negocio a códigos de estado y escribe `application/problem+json`. No se puede
+      expresar contra abstracciones, así que este proyecto SÍ conoce ASP.NET Core.
+
+      Los otros dos bloques comunes no: `Domain` no referencia nada y `Application` solo
+      referencia a `Domain`. La frontera que importa —que el dominio no sepa de transporte—
+      sigue en pie, y el compilador la sigue vigilando.
+    -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

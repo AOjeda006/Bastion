@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests unitarios del bloque común (§13 del plan maestro: unitarios de dominio, sin
+    infraestructura y sin E/S). Referencia SOLO a `BuildingBlocks.Domain`, que a su vez no
+    referencia nada: si algún día estos tests necesitan un doble de algo, es que al dominio
+    base se le ha colado una dependencia.
+  -->
+
+  <ItemGroup Label="Sujeto de prueba">
+    <ProjectReference Include="../../src/BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Marco de pruebas">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

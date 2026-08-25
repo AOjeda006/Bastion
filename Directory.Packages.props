@@ -49,21 +49,13 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+    <PackageVersion Include="Serilog" Version="4.3.0" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
   </ItemGroup>
 
-  <!--
-    Sondas de salud. Solo las ABSTRACCIONES: un componente de infraestructura implementa
-    `IHealthCheck` sin arrastrar ASP.NET Core; quien las publica como endpoints es el host.
-    MIT.
-  -->
-  <ItemGroup Label="Salud">
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.9" />
-  </ItemGroup>
-
-  <!--
+    <!--
     Tests. Las versiones NO son las últimas de nuget.org a propósito: son las que
     `dotnet new xunit` genera con el SDK que fija global.json. Ese conjunto es el camino
     VSTest, que es el único que entiende los filtros por categoría y el registrador `trx`

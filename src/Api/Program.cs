@@ -2,6 +2,7 @@
 // maestro). La construcción del sistema vive aquí, separada de su uso
 // (`principios/clean-architecture.md`); ningún módulo se registra a sí mismo por su cuenta.
 
+using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -81,6 +82,11 @@ builder.Services.AddOpenTelemetry()
 // mirar dependencia alguna; DISPONIBILIDAD responde "puedo atender tráfico" y sí mira la
 // base. Si la de vida mirase la base, un corte de PostgreSQL haría que el orquestador
 // reiniciara la API en bucle — y reiniciar la API no arregla la base.
+// -------------------------------------------------------------- política de errores
+// UNA política central para todo lo que sale como error (§9). No hay try/catch por
+// controlador: un manejador por endpoint no cubre lo que pasa donde no hay endpoint.
+builder.Services.AgregarPoliticaDeErrores();
+
 string cadenaDeConexion = (builder.Configuration.GetConnectionString("Bastion") ?? string.Empty).Trim();
 IHealthChecksBuilder salud = builder.Services.AddHealthChecks();
 
@@ -100,6 +106,11 @@ else
 }
 
 WebApplication app = builder.Build();
+
+// Lo PRIMERO de la tubería: un manejador de excepciones solo cubre lo que tiene por dentro.
+// Y va por fuera del registro de peticiones a propósito: si fuera al revés, cada 500 se
+// registraría dos veces con su traza entera, una por cada uno.
+app.UsarPoliticaDeErrores();
 
 // Una línea por petición con su método, ruta, código y duración, en lugar de las tres que
 // emite el host por su cuenta.
