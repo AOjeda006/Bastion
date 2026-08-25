@@ -236,3 +236,77 @@ jobs:
           load: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ======================================================================== HUMO
+  # Levanta el entorno COMPLETO con docker compose y comprueba el criterio de aceptación
+  # del ítem 0.2 por el efecto, no por el fichero: que la API responde a su sonda de vida,
+  # que la de disponibilidad ve PostgreSQL de verdad, que el frontal carga y que las trazas
+  # llegan al visor.
+  #
+  # Está en la CI y no solo en la máquina de quien desarrolla porque así se comprueba
+  # SIEMPRE, en un equipo limpio, y no "la vez que lo probé".
+  humo:
+    name: Humo (docker compose)
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v5
+
+      # Las credenciales se generan aquí y mueren con el runner. En el repositorio no hay
+      # —ni puede haber— un `deploy/.env`: está en .gitignore y en .dockerignore.
+      - name: Preparar deploy/.env
+        run: |
+          {
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
+            echo "JWT_SIGNING_KEY=$(openssl rand -base64 48)"
+          } > deploy/.env
+
+      # `--wait` espera a que cada servicio con sonda esté SANO, no solo arrancado.
+      - name: Levantar el entorno
+        run: docker compose -f deploy/docker-compose.yml up --build --detach --wait --wait-timeout 600
+
+      - name: Estado de los servicios
+        run: docker compose -f deploy/docker-compose.yml ps
+
+      - name: La API responde a su sonda de VIDA
+        run: |
+          RESPUESTA=$(curl --fail --silent --show-error http://localhost:8080/health/live)
+          echo "/health/live -> $RESPUESTA"
+          test "$RESPUESTA" = "Healthy"
+
+      # Esto es lo que NO puede comprobar un test funcional en memoria: que hay un
+      # PostgreSQL de verdad al otro lado y que la API sabe llegar a él.
+      - name: La sonda de DISPONIBILIDAD ve PostgreSQL
+        run: |
+          RESPUESTA=$(curl --fail --silent --show-error http://localhost:8080/health/ready)
+          echo "/health/ready -> $RESPUESTA"
+          echo "$RESPUESTA" | grep -q '"nombre":"base-de-datos","estado":"Healthy"'
+
+      - name: El frontal carga
+        run: |
+          curl --fail --silent --show-error http://localhost:5173/ -o pagina.html
+          grep -q '<div id="root"></div>' pagina.html
+          grep -q '<title>Bastion</title>' pagina.html
+
+      # La instrumentación no se comprueba mirando si el paquete está en el csproj, sino
+      # preguntándole al visor si le ha llegado algo.
+      - name: Las trazas llegan al visor
+        run: |
+          curl --silent --output /dev/null http://localhost:8080/no-existe
+          for INTENTO in $(seq 1 12); do
+            if curl --fail --silent http://localhost:16686/api/services | grep -q 'bastion-api'; then
+              echo "Jaeger conoce el servicio bastion-api (intento $INTENTO)."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Jaeger no ha recibido ninguna traza de bastion-api en 60 s."
+          exit 1
+
+      - name: Registros de los contenedores
+        if: failure()
+        run: docker compose -f deploy/docker-compose.yml logs --no-color --tail 200
+
+      - name: Tirar el entorno
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down --volumes --remove-orphans

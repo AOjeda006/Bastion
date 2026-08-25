@@ -24,7 +24,63 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
-  <ItemGroup Label="Backend — se rellena en la fase 0">
+  <!--
+    Acceso a datos. Npgsql lleva licencia PostgreSQL (permisiva, estilo BSD).
+    La versión se fija por debajo o a la altura del runtime instalado: un paquete más
+    nuevo que el runtime es el sentido que rompe; al revés, rueda hacia delante.
+  -->
+  <ItemGroup Label="Datos">
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+
+  <!--
+    Observabilidad (`herramientas/observabilidad.md`). Las tres señales, y la frontera con
+    el proveedor puesta en OpenTelemetry: la aplicación habla OTLP y no sabe quién hay
+    detrás. Serilog da el registro ESTRUCTURADO; a partir de Serilog 4 cada evento arrastra
+    el `TraceId` y el `SpanId` de la actividad en curso, y `CompactJsonFormatter` los
+    escribe como `@tr` y `@sp`. Eso es la correlación entre traza y registro, y sale gratis:
+    no hace falta inventarse una cabecera de correlación propia.
+
+    Todo Apache-2.0.
+  -->
+  <ItemGroup Label="Observabilidad">
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+    <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
+  </ItemGroup>
+
+  <!--
+    Sondas de salud. Solo las ABSTRACCIONES: un componente de infraestructura implementa
+    `IHealthCheck` sin arrastrar ASP.NET Core; quien las publica como endpoints es el host.
+    MIT.
+  -->
+  <ItemGroup Label="Salud">
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+
+  <!--
+    Tests. Las versiones NO son las últimas de nuget.org a propósito: son las que
+    `dotnet new xunit` genera con el SDK que fija global.json. Ese conjunto es el camino
+    VSTest, que es el único que entiende los filtros por categoría y el registrador `trx`
+    tal y como los invoca `.github/workflows/ci.yml`. Las versiones mayores (xunit v3 y
+    Test.Sdk 18) son el camino Microsoft.Testing.Platform, con otra gramática de filtros:
+    subir a ellas es un trabajo con su propio commit, no un efecto colateral.
+
+    Licencias comprobadas antes de adoptarlas: Apache-2.0 (xunit y su runner),
+    MIT (Microsoft) y BSD-3-Clause (Shouldly). Shouldly, y no FluentAssertions 8:
+    esa pasó a licencia comercial en 2025.
+  -->
+  <ItemGroup Label="Tests">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
 
 </Project>

@@ -31,4 +31,31 @@
     <ProjectReference Include="../Modules/Auditoria/Bastion.Auditoria.Infrastructure/Bastion.Auditoria.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup Label="Observabilidad y datos">
+    <!--
+      Cablear la telemetría y el origen de datos es CONSTRUCCIÓN del sistema, y por eso
+      vive en el composition root. Los componentes que se cablean (la comprobación de
+      PostgreSQL, por ejemplo) viven en BuildingBlocks.Infrastructure.
+    -->
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+  </ItemGroup>
+
+  <ItemGroup Label="Pruebas">
+    <!--
+      Program.cs son sentencias de nivel superior, así que el compilador genera una clase
+      `Program` INTERNA. WebApplicationFactory necesita verla para localizar el punto de
+      entrada; abrirla al ensamblado de tests es preferible a hacerla pública, que
+      convertiría un detalle del arranque en API del host.
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.FunctionalTests" />
+  </ItemGroup>
+
 </Project>

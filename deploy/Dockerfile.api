@@ -4,9 +4,6 @@
 # Contexto de construcción: la RAÍZ del repositorio.
 #   docker build -f deploy/Dockerfile.api -t bastion-api .
 #
-# NOTA: este Dockerfile no construye todavía, porque `Bastion.sln` aún no existe
-# (ítem 0.1 de docs/PLAN.md). Está escrito para que el 0.1 solo tenga que crear la
-# solución; no hay que tocarlo.
 
 # ---------------------------------------------------------------- compilación
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
@@ -18,7 +15,11 @@ WORKDIR /origen
 COPY Directory.Build.props Directory.Packages.props nuget.config* ./
 COPY Bastion.sln ./
 COPY src/ ./src/
-COPY tests/Directory.Build.props ./tests/
+# `tests/` entero, no solo su Directory.Build.props: la solución referencia proyectos de
+# test, y `dotnet restore Bastion.sln` falla si no encuentra sus .csproj. Restaurar la
+# solución COMPLETA, y no solo el proyecto de la API, es deliberado: así la imagen resuelve
+# exactamente el mismo grafo de paquetes que la CI, y no pueden divergir en silencio.
+COPY tests/ ./tests/
 
 RUN dotnet restore Bastion.sln
 
@@ -32,6 +33,15 @@ RUN dotnet publish src/Api/Bastion.Api.csproj \
 # ---------------------------------------------------------------- ejecución
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 WORKDIR /app
+
+# Las imágenes de .NET son MÍNIMAS: no traen wget, ni curl, ni ningún otro cliente HTTP.
+# Sin uno, ni el HEALTHCHECK de abajo ni el de docker-compose pueden ejecutarse, y el
+# contenedor se queda en `starting` para siempre — que es un fallo mudo, no un error.
+# `curl` es lo más pequeño que lo resuelve. Se instala como root y se vuelve a `app`.
+USER root
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Usuario sin privilegios. La imagen de .NET ya trae el uid 1654 como `app`.
 USER app
@@ -49,6 +59,6 @@ EXPOSE 8080
 # Sonda en la propia imagen, no solo en compose: comprueba que el proceso RESPONDE,
 # no que el contenedor siga vivo.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD ["/bin/sh", "-c", "wget -qO- http://localhost:8080/health/live || exit 1"]
+    CMD ["/bin/sh", "-c", "curl --fail --silent http://localhost:8080/health/live || exit 1"]
 
 ENTRYPOINT ["dotnet", "Bastion.Api.dll"]

@@ -145,12 +145,87 @@ anotan para no volver a discutirlas.
   que git conservara la carpeta vacía; con un proyecto dentro sobran. Quedan 60, los de las carpetas
   que siguen vacías.
 
+### Tomadas por el agente de desarrollo — ítem 0.2 (2026-08-25)
+
+- **El criterio del 0.2 se verifica con un *job* de humo en la CI, no en local** (decisión del
+  usuario). **Docker no está instalado en la máquina de desarrollo** —ni en el `PATH` de PowerShell
+  ni en el de Git Bash, sin `C:\Program Files\Docker`, sin el servicio `com.docker.service`—, así
+  que aquí `docker compose up` no se puede ejecutar. El *job* `Humo` levanta el compose entero en un
+  *runner* limpio y comprueba las cuatro cosas del criterio por su efecto: `/health/live` responde
+  `Healthy`, `/health/ready` ve PostgreSQL, el frontal sirve su `index.html` y Jaeger conoce el
+  servicio `bastion-api`. Ventaja sobre comprobarlo en local: se comprueba **siempre**, y no «la vez
+  que lo probé».
+- **La API se instrumenta ya, en el 0.2** (decisión del usuario), en lugar de dejarlo para más
+  adelante: Serilog para el registro estructurado y OpenTelemetry para trazas y métricas. El
+  `docker-compose.yml` ya trae recolector y visor, y una observabilidad que se añade después obliga a
+  reescribir el arranque cuando ya hay módulos colgando de él.
+- **Dos sondas con semántica distinta, y la de vida no mira NADA.** `/health/live` se publica con
+  `Predicate = _ => false`: cero comprobaciones, 200 si y solo si el proceso atiende peticiones.
+  `/health/ready` agrega las comprobaciones etiquetadas `disponibilidad`. Como agrega por etiqueta,
+  añadir la deriva del reloj de R15 en su fase será una línea, no un rediseño.
+- **La correlación entre traza y registro sale del estándar, no de una cabecera propia.** Serilog 4
+  arrastra el `TraceId` y el `SpanId` de la actividad en curso y `CompactJsonFormatter` los escribe
+  como `@tr` y `@sp`; ASP.NET Core ya honra `traceparent` de entrada. No se inventa ningún
+  `X-Correlation-Id`: sería un segundo identificador que mantener, y peor, uno que los visores de
+  trazas no entienden.
+- **El exportador OTLP solo se registra si hay recolector configurado.** Sin esa guarda, un
+  `dotnet run` a pelo o un test funcional convierten cada intento de exportar en un error de red
+  repetido que ensucia el registro. La instrumentación se registra siempre; lo condicional es a
+  dónde se manda.
+- **La comprobación de PostgreSQL vive en `BuildingBlocks.Infrastructure`, no en `src/Api`.** El
+  *composition root* **cablea** componentes; no los aloja. `ComprobacionDeBaseDeDatos` solo depende
+  de las *abstracciones* de sondas y de Npgsql, así que ese proyecto sigue sin conocer ASP.NET Core.
+  Ejecuta `SELECT 1` con margen propio de 3 s: mirar solo si el puerto acepta conexiones daría
+  «sano» con una base recuperándose.
+- **`/health/ready` responde JSON con el detalle por dependencia**, no el `Unhealthy` a secas que
+  escribe el formateador por omisión. Un cuerpo que dice qué comprobación ha fallado y por qué es la
+  diferencia entre diagnosticar y bucear en los registros.
+- **Primer proyecto de test: `tests/Api.FunctionalTests`, por el camino VSTest.** xUnit 2.9.3 +
+  `xunit.runner.visualstudio` 3.1.4 + `Microsoft.NET.Test.Sdk` 17.14.1 — que es exactamente lo que
+  genera `dotnet new xunit` con el SDK de `global.json`, **no** lo último de nuget.org. Las versiones
+  mayores (xunit v3, Test.Sdk 18) son el camino Microsoft.Testing.Platform, con otra gramática de
+  filtros que rompería el `--filter "Category!=Integracion"` y el `--logger trx` de la CI. Aserciones
+  con **Shouldly** (BSD-3-Clause), no FluentAssertions 8 (comercial desde 2025).
+- **`CA1707` (nada de guiones bajos) silenciado SOLO bajo `tests/`.** La convención de nombres de
+  test es `Metodo_Escenario_ResultadoEsperado`, y el `.editorconfig` ya lo declaraba para la regla de
+  *estilo*; faltaba hacerlo para el analizador, que sí rompe el build. En `src/` sigue vigente.
+- **Registro en JSON compacto también en desarrollo.** Un registro que se lee distinto en local que
+  en producción deja de ser el que se depura de verdad. Las sondas se registran a nivel `Verbose`
+  para que consultarlas cada pocos segundos no ahogue la salida.
+- **Sin `appsettings.json`.** La configuración llega por entorno, que es lo que hace el compose. Un
+  fichero de ajustes con valores por omisión duplicados es una fuente de verdad de más.
+- **Paquetes del framework fijados en `10.0.9`**, que es el runtime de ASP.NET instalado aquí. Un
+  paquete más nuevo que el runtime es el sentido que rompe; al revés rueda hacia delante.
+
 ## Estado actual
 
-**Ítem 0.1 terminado. Siguiente: ítem 0.2 (`docker compose up`), sin empezar.**
+**Ítem 0.2 implementado y verde en local. Falta su primera verificación en la CI: hasta que el
+*job* `Humo` salga en verde, el ítem NO está cerrado.**
 
-`Bastion.sln` existe y compila: **19 proyectos** (`Bastion.Api`, los tres bloques comunes y las
-cinco capas de Identidad, Organización y Auditoría), con las referencias de proyecto ya cableadas
+`src/Api/Program.cs` deja de ser un host vacío: publica las dos sondas del §14, registra con Serilog
+en JSON compacto y exporta trazas y métricas por OTLP al recolector. `BuildingBlocks.Infrastructure`
+estrena su primer componente (`Salud/ComprobacionDeBaseDeDatos`) y la solución su **primer proyecto
+de test**, `tests/Api.FunctionalTests` — **20 proyectos**. Con eso, `dotnet test` deja de ser el
+verde vacío que era en el 0.1: ejecuta **3 casos** y los pasa.
+
+Verificado en local, con la salida real de cada comando:
+
+- `dotnet build` en Debug y en Release, `dotnet format --verify-no-changes` y
+  `dotnet restore --locked-mode` → **0 advertencias / 0 errores**, `rc=0` los tres.
+- `dotnet test --filter "Category!=Integracion"` → **3 superadas, 0 con error**. Antes de escribir el
+  código esos mismos 3 casos fallaban (404 donde se esperaba 200 y 503): el rojo fue real.
+- `dotnet test --filter "Category=Integracion"` → `rc=0` diciendo «Ninguna prueba coincide con el
+  filtro»: un no-op **declarado**, no un verde mudo.
+- API arrancada de verdad (`dotnet run` + `curl`): `/health/live` → `200 Healthy`; `/health/ready` →
+  `503` con el detalle por dependencia. En el registro, cada evento con su `@tr` y su `@sp`, la sonda
+  de vida sin generar línea y el 503 subido a nivel `Error`.
+
+Lo que **no** se puede comprobar aquí, y comprueba el *job* `Humo`: que el compose levanta, que la
+sonda de disponibilidad ve un PostgreSQL de verdad, que el frontal carga y que las trazas llegan al
+visor. Docker no está instalado en esta máquina (ver *Decisiones*, ítem 0.2).
+
+Del ítem 0.1: `Bastion.sln` compila con los 19 proyectos de entonces (`Bastion.Api`, los tres
+bloques comunes y las cinco capas de Identidad, Organización y Auditoría), con las referencias de proyecto ya cableadas
 según el §4. Verificado con la batería completa de `AGENTS.md` en verde — `dotnet build` en Debug y
 en Release (0 advertencias / 0 errores), `dotnet format --verify-no-changes`, `dotnet test` en sus
 dos filtros, y `npm run typecheck | lint | format:check | test | build`.
@@ -161,16 +236,12 @@ A partir de ahora **el *job* `backend` de la CI se ejecuta de verdad**: su condi
 **CI en verde de punta a punta desde `801837d`** — [run 32866580496](https://github.com/AOjeda006/Bastion/actions/runs/32866580496):
 `Frontal` ✅, `Backend` ✅ e `Imágenes` ✅. El *job* `Imágenes` corrió por primera vez (antes se
 saltaba porque `hashFiles('Bastion.sln')` estaba vacío) y construyó `Dockerfile.api` y
-`Dockerfile.web` sin tocarlos. Ojo: `dotnet test` sale 0 **sin ejecutar nada**, porque todavía no
-hay proyectos de test — no es evidencia de nada hasta el 0.3.
+`Dockerfile.web` sin tocarlos. En aquel *run* `dotnet test` salía 0 **sin ejecutar nada**, porque no
+había proyectos de test: no era evidencia. Desde el 0.2 sí ejecuta casos.
 
-**Dónde retomar exactamente:** ítem 0.2. La API es hoy un host mínimo — `src/Api/Program.cs` hace
-`CreateBuilder` → `Build` → `Run` y no expone nada. El 0.2 tiene que darle las sondas
-`/health/live` y `/health/ready` que **ya esperan** el `HEALTHCHECK` de `deploy/Dockerfile.api`, el
-`deploy/docker-compose.yml` y el `README.md`, y levantar el compose entero. Dos cosas ya escritas
-condicionan el diseño: la sonda de **vida** no debe mirar la base de datos (si lo hace, un corte de
-PostgreSQL reinicia la API en bucle en vez de devolver 503), y la de **disponibilidad** tiene que
-dejar sitio a la comprobación de deriva del reloj que exige R15.
+**Dónde retomar exactamente:** abrir el último *run* de la CI. Si el *job* `Humo` está en verde,
+marcar el 0.2 en el checklist con el enlace del *run* y seguir por el **0.3**. Si está en rojo,
+diagnosticarlo y arreglarlo **antes** de tocar el 0.3: no se anota como riesgo y se sigue.
 
 ### Lo que el agente de configuración NO pudo dejar hecho, y por qué
 
@@ -308,6 +379,30 @@ cuando hace falta el porqué.
   no lo pide y un rastreador de errores sí puede consumirlo si algún día se sube. **No se toca ahora**
   (fuera del alcance); es decisión del 0.11 o del despliegue, y conviene tomarla antes de que la imagen
   se publique en algún sitio.
+- **ARREGLADO (2026-08-25) · las sondas del andamiaje no podían ejecutarse: las imágenes de .NET no
+  traen ningún cliente HTTP.** Tanto el `HEALTHCHECK` de `deploy/Dockerfile.api` como el del servicio
+  `api` en `docker-compose.yml` invocaban `wget`, y `mcr.microsoft.com/dotnet/aspnet:10.0-noble` es
+  una imagen mínima: sin `wget`, sin `curl`, sin nada. El síntoma habría sido **mudo** —el contenedor
+  quedándose en `starting` para siempre, y `web` sin arrancar por su `depends_on: service_healthy`—,
+  no un error legible. Arreglado instalando `curl` en la etapa final (como `root`, volviendo a `app`)
+  y usando `curl --fail --silent` en ambas sondas. Detalle, junto con el diseño de las dos sondas, en
+  **`docs/adr/adr-0003-sondas-de-vida-y-de-disponibilidad.md`**.
+- **`Dockerfile.api` tenía que copiar `tests/` entero, no solo su `Directory.Build.props`.** Desde
+  que la solución referencia un proyecto de test, `dotnet restore Bastion.sln` dentro de la imagen
+  falla si no encuentra su `.csproj`. Se restaura la solución **completa** a propósito: así la imagen
+  resuelve el mismo grafo de paquetes que la CI y no pueden divergir en silencio.
+- **`Imágenes` y `Humo` construyen las mismas dos imágenes, cada uno por su lado.** `Imágenes` usa
+  `docker/build-push-action` con caché de *runner*; `Humo` las reconstruye vía compose porque
+  `load: false` no las deja en el demonio. Son unos minutos de más por *run*. **Recomendación:**
+  consolidarlo en el **0.13**, que es el ítem de integración continua — o bien `Humo` absorbe a
+  `Imágenes`, o `Imágenes` publica con `load: true` y `Humo` reutiliza. No se toca ahora: el 0.13
+  tiene que rehacer el *workflow* de todas formas y hacerlo dos veces sería trabajo tirado.
+- **Docker no está instalado en la máquina de desarrollo.** Ni `docker compose` ni Testcontainers
+  pueden ejecutarse en local. Hoy lo cubre el *job* `Humo` de la CI, pero **a partir del 0.4 esto
+  duele de verdad**: los tests de integración con PostgreSQL real son la mitad de la pirámide del
+  §13, y esperar un *run* completo de CI para cada iteración de un repositorio no es un ciclo de
+  trabajo viable. **Recomendación:** instalar Docker Desktop (o un demonio equivalente) antes de
+  empezar el 0.4.
 - **La firma de commits depende del secreto `SIGNING_KEY_B64`.** El hook `SessionStart` de
   `.claude/settings.json` la activa si existe y avisa si no. Sin él, **no se commitea** (política de
   `CLAUDE.md` §3). El montaje de la clave está en `plantillas/README.md` de la biblioteca.

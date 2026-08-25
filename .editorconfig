@@ -282,3 +282,7 @@ generated_code = true
 [tests/**/*.cs]
 dotnet_diagnostic.CS1591.severity = none
 dotnet_naming_rule.non_field_members_are_pascal_case.severity = none
+# CA1707 (nada de guiones bajos en nombres de miembro) dice lo mismo que la regla de
+# estilo de arriba, pero por la vía del analizador, y ahí sí rompe el build. Fuera aquí
+# y SOLO aquí: en `src/` sigue vigente.
+dotnet_diagnostic.CA1707.severity = none

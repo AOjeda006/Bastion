@@ -10,4 +10,13 @@
     <ProjectReference Include="../Application/Bastion.BuildingBlocks.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      Solo las ABSTRACCIONES de las sondas: aquí se implementa `IHealthCheck`, pero quién
+      las publica como endpoints HTTP es el host. Este proyecto no conoce ASP.NET Core.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
 </Project>

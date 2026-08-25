@@ -65,7 +65,7 @@ services:
       # Sonda de VIDA (`/health/live`): "el proceso responde". La de DISPONIBILIDAD
       # (`/health/ready`) mira además la base y la deriva del reloj — y esa NO se usa
       # aquí, o un corte de base reiniciaría la API en bucle en vez de devolver 503.
-      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/health/live || exit 1']
+      test: ['CMD-SHELL', 'curl --fail --silent http://localhost:8080/health/live || exit 1']
       interval: 10s
       timeout: 5s
       retries: 6
