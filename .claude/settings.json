@@ -1,0 +1,18 @@
+{
+  "//": "Copia este archivo a .claude/settings.json en el proyecto. Fija tu identidad git en cada arranque y, si existe el secreto SIGNING_KEY_B64, activa la firma SSH de commits (Verified). Si no existe, avisa de cómo añadirlo. Cambia nombre/email si no eres el propietario de esta biblioteca.",
+  "//autoCompactWindow": "Cuán lleno llega a estar el contexto antes de que compacte solo, EN TOKENS (100000..1000000; se capa al contexto real del modelo). Sin esto, un modelo de 1M compacta casi en el límite y pagas esa ventana en CADA turno. 300000 es el punto de partida para modelos de 1M; ajústalo midiendo con /context lo que cuesta una tarea típica (U) y poniendo el doble. En modelos de 200K déjalo sin poner. NUNCA uses DISABLE_COMPACT: desactiva también el /compact manual.",
+  "autoCompactWindow": 300000,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Configurando identidad y firma de commits del usuario",
+            "command": "git config --global user.name \"Andrés Ojeda Rodríguez\" && git config --global user.email \"andresojedarodriguez@gmail.com\" && if [ -n \"$SIGNING_KEY_B64\" ]; then mkdir -p ~/.ssh && printf '%s' \"$SIGNING_KEY_B64\" | base64 -d > ~/.ssh/claude_signing && chmod 600 ~/.ssh/claude_signing && ssh-keygen -y -f ~/.ssh/claude_signing > ~/.ssh/claude_signing.pub && git config --global gpg.format ssh && git config --global user.signingkey ~/.ssh/claude_signing.pub && git config --global commit.gpgsign true && echo '[firma] OK: commits firmados (Verified).'; else echo '[firma] FALTA el secreto SIGNING_KEY_B64: los commits NO iran firmados. Para activarlo: en la config del entorno de Claude Code (Environments -> variables/secretos) crea SIGNING_KEY_B64 con la salida de: base64 -w0 ~/.ssh/claude_signing ; luego reinicia la sesion. Detalle en plantillas/README.md.'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

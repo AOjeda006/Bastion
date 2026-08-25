@@ -1,0 +1,30 @@
+<Project>
+
+  <!--
+    Gestión CENTRALIZADA de versiones de paquetes (Central Package Management).
+    Es lo que hace cumplir el "una sola versión por solución" de `stacks/dotnet/convenciones.md`
+    en una solución que va a tener del orden de setenta proyectos: sin esto, dos módulos acaban
+    con dos versiones de Npgsql y el fallo aparece en tiempo de ejecución.
+
+    Cómo se usa:
+      - AQUÍ:      <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+      - En el csproj: <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />   (SIN Version)
+
+    Está vacío A PROPÓSITO: la fase 0 va añadiendo cada paquete cuando lo adopta.
+
+    Antes de añadir NADA, comprueba su licencia. MediatR, AutoMapper y FluentAssertions 8
+    pasaron a licencia comercial en 2025 y siguen apareciendo como libres en tutoriales y en
+    respuestas de modelos. Alternativas libres: Shouldly o AwesomeAssertions (aserciones),
+    Mapperly (mapeo por generación de código, sin reflexión en caliente) y —en un monolito
+    modular— una interfaz de caso de uso en lugar de un bus en memoria.
+  -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup Label="Backend — se rellena en la fase 0">
+  </ItemGroup>
+
+</Project>

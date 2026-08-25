@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens del sistema. Los importes de un ERP se alinean a la derecha con tipografía
+ * monoespaciada (§10 del plan maestro): la familia se declara aquí, en un único sitio,
+ * y el formateo del número vive en `shared/lib`.
+ */
+@theme {
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    monospace;
+}

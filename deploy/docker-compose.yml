@@ -1,0 +1,116 @@
+# Entorno local completo de Bastion (§3 y §14 del plan maestro).
+#
+#   docker compose -f deploy/docker-compose.yml up --build
+#   docker compose -f deploy/docker-compose.yml down -v
+#
+# Vive en `deploy/` por la estructura del §12, así que TODOS los comandos llevan `-f`.
+# Las credenciales salen de `deploy/.env` (copia de `.env.example`), nunca del repositorio.
+
+name: bastion
+
+services:
+  # --------------------------------------------------------------- base de datos
+  postgres:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bastion_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-bastion}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en deploy/.env}
+      # Ordenación y formato en español desde la creación del clúster: cambiarlo
+      # después obliga a recrear la base (R6 y los listados alfabéticos con 'ñ').
+      LANG: es_ES.utf8
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale-provider=icu --icu-locale=es-ES --locale=C'
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-datos:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` responde antes de que la base admita conexiones de verdad;
+      # una consulta real es lo que evita que la API arranque contra una base a medias.
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-bastion} -d ${POSTGRES_DB:-bastion_dev} && psql -U ${POSTGRES_USER:-bastion} -d ${POSTGRES_DB:-bastion_dev} -c "SELECT 1" > /dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # --------------------------------------------------------------- API (host único)
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_HTTP_PORTS: '8080'
+      ConnectionStrings__Bastion: 'Host=postgres;Port=5432;Database=${POSTGRES_DB:-bastion_dev};Username=${POSTGRES_USER:-bastion};Password=${POSTGRES_PASSWORD};Include Error Detail=true'
+      # Telemetría por OTLP al recolector; la aplicación no sabe quién hay detrás
+      # (`herramientas/observabilidad.md`: OpenTelemetry es la frontera con el proveedor).
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector:4317'
+      OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc'
+      OTEL_SERVICE_NAME: 'bastion-api'
+      OTEL_RESOURCE_ATTRIBUTES: 'service.namespace=bastion,deployment.environment=local'
+      # El emisor de JWT y la clave se leen del entorno; NUNCA del repositorio.
+      Jwt__Issuer: ${JWT_ISSUER:-https://localhost}
+      Jwt__Audience: ${JWT_AUDIENCE:-bastion-web}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?define JWT_SIGNING_KEY en deploy/.env}
+    ports:
+      - '${API_PORT:-8080}:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      # Sonda de VIDA (`/health/live`): "el proceso responde". La de DISPONIBILIDAD
+      # (`/health/ready`) mira además la base y la deriva del reloj — y esa NO se usa
+      # aquí, o un corte de base reiniciaría la API en bucle en vez de devolver 503.
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/health/live || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+  # --------------------------------------------------------------- frontal
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-5173}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/ > /dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  # --------------------------------------------------------------- observabilidad
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.139.0
+    restart: unless-stopped
+    command: ['--config=/etc/otel/config.yaml']
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - '${OTLP_GRPC_PORT:-4317}:4317' # OTLP gRPC
+      - '${OTLP_HTTP_PORT:-4318}:4318' # OTLP HTTP
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  jaeger:
+    # Visor de trazas. Todo en memoria: es un entorno local, no se conserva nada.
+    image: jaegertracing/all-in-one:1.65.0
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      - '${JAEGER_UI_PORT:-16686}:16686' # interfaz web
+
+volumes:
+  postgres-datos:

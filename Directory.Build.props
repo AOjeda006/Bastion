@@ -1,0 +1,89 @@
+<Project>
+
+  <!--
+    Propiedades comunes a TODOS los proyectos de la solución.
+    MSBuild sube por el árbol de directorios hasta el primer Directory.Build.props que
+    encuentra, así que cualquier .csproj bajo esta carpeta las hereda sin hacer nada.
+    `tests/Directory.Build.props` importa este y relaja lo que no aplica a los tests.
+
+    Convenciones: `stacks/dotnet/convenciones.md` y `stacks/csharp/convenciones.md`
+    de la BibliotecaDocumentacion.
+  -->
+
+  <PropertyGroup Label="Plataforma">
+    <!--
+      LTS vigente. La convención es explícita: "LTS vigente se COMPRUEBA, no se recuerda"
+      (sale una mayor cada noviembre; las LTS son las pares). Se cambia AQUÍ, en un único
+      sitio, y con su propio commit — nunca de rebote dentro de otro trabajo.
+      Un solo TFM en toda la solución: nada de mezclar.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!--
+      Deliberadamente FALSE, y al revés de lo que traen varias plantillas de contenedor.
+      Bastion formatea importes y fechas en es-ES y ordena texto con acentos y 'ñ'. Con
+      globalización invariante eso se rompe EN SILENCIO: no hay excepción, hay un informe
+      con el orden mal y un importe con el separador cambiado.
+    -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Calidad">
+    <!--
+      Warnings como errores. Un aviso que nadie arregla deja de leerse en dos semanas;
+      a partir de ahí la salida del build es ruido y los avisos de verdad se pierden.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>9999</WarningLevel>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <!--
+      El estilo NO rompe el build: lo comprueba `dotnet format` en modo verificación, que es
+      un paso propio de la CI. Así un build roto significa siempre "el código está mal",
+      nunca "falta un espacio". Las severidades viven en .editorconfig.
+    -->
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <!--
+      Documentación XML de la API pública (`principios/comentarios-y-documentacion.md`).
+      CS1591 (miembro público sin <summary>) queda como AVISO, no como error, para que la
+      falta de un comentario no bloquee un build; la CI lo enseña igual.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Compilación reproducible">
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- Que el mismo commit produzca el mismo binario: los artefactos son comparables. -->
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Identidad del proyecto">
+    <!--
+      Raíz de espacios de nombres `Bastion` (Anexo A.1). El nombre del producto y la palabra
+      "ERP" NO se repiten dentro: `Bastion.Facturacion.Domain`, nunca `BastionERP.Facturacion.Erp`.
+      Cada .csproj hereda esto y define su propio RootNamespace/AssemblyName completo.
+    -->
+    <Product>Bastion</Product>
+    <Company>Andrés Ojeda Rodríguez</Company>
+    <Authors>Andrés Ojeda Rodríguez</Authors>
+    <NeutralLanguage>es-ES</NeutralLanguage>
+    <Copyright>Copyright © Andrés Ojeda Rodríguez</Copyright>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Higiene">
+    <!-- Nada de paquetes con vulnerabilidad conocida entrando de tapadillo. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <!-- Un fichero suelto sin proyecto no se compila por accidente. -->
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+  </PropertyGroup>
+
+</Project>

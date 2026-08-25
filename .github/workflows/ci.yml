@@ -1,0 +1,227 @@
+name: CI
+
+# Integración continua de Bastion (§14 del plan maestro).
+#
+# Vive en `.github/workflows/` y no en `deploy/.github/workflows/` como dibuja el §12:
+# GitHub Actions SOLO ejecuta lo que encuentra en la raíz del repositorio. La decisión
+# está anotada en `docs/PLAN.md`.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Un push nuevo cancela el run anterior de la misma rama: el runner no gasta minutos
+# en un commit que ya nadie va a mirar.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  # ==================================================================== FRONTAL
+  # Corre de verdad desde el primer commit.
+  frontend:
+    name: Frontal (bastion-web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci` y no `npm install`: instala EXACTAMENTE el lockfile y falla si el
+      # package.json y el lock han divergido. Es la diferencia entre una construcción
+      # reproducible y una que depende del día.
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Linter
+        run: npm run lint
+
+      - name: Formato
+        run: npm run format:check
+
+      - name: Tests
+        run: npm run test
+
+      - name: Construir
+        run: npm run build
+
+      # Presupuesto de tamaño (§14): que el frontal engorde tiene que doler en la CI,
+      # no en el arranque del usuario seis meses después.
+      - name: Presupuesto de tamaño
+        run: |
+          TOPE_KB=1024
+          TAMANO_KB=$(du -sk dist | cut -f1)
+          echo "Tamaño de dist/: ${TAMANO_KB} kB (tope ${TOPE_KB} kB)"
+          echo "### Frontal: ${TAMANO_KB} kB / ${TOPE_KB} kB" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$TAMANO_KB" -gt "$TOPE_KB" ]; then
+            echo "::error::El frontal supera el presupuesto de tamaño (${TAMANO_KB} kB > ${TOPE_KB} kB)."
+            exit 1
+          fi
+
+      - name: Publicar el frontal construido
+        uses: actions/upload-artifact@v4
+        with:
+          name: bastion-web-dist
+          path: frontend/dist
+          retention-days: 7
+
+  # ==================================================================== BACKEND
+  # Mientras `Bastion.sln` no exista (ítem 0.1 de docs/PLAN.md), este job DECLARA que
+  # no ha comprobado nada en lugar de fingir un verde o dejar la CI en rojo sin
+  # explicación. En cuanto el 0.1 cree la solución, los pasos se activan solos: no hay
+  # que tocar este fichero, y a partir de ahí un fallo suyo es un fallo de verdad.
+  backend:
+    name: Backend (Bastion.sln)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: ¿Existe ya la solución?
+        id: solucion
+        run: |
+          if [ -f Bastion.sln ]; then
+            echo "existe=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "existe=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Backend: pendiente del ítem 0.1"
+              echo
+              echo "No existe \`Bastion.sln\`, así que **no se ha compilado ni probado nada del backend**."
+              echo "Esto es lo esperado hasta que se complete el ítem 0.1 del checklist de \`docs/PLAN.md\`;"
+              echo "el agente de configuración no pudo crear la solución porque su entorno no tenía el SDK de .NET."
+              echo
+              echo "Este job se activa solo en cuanto exista la solución. **No hay que tocar el workflow.**"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Backend sin comprobar: falta Bastion.sln (ítem 0.1 de docs/PLAN.md)."
+          fi
+
+      - name: .NET
+        if: steps.solucion.outputs.existe == 'true'
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restaurar
+        if: steps.solucion.outputs.existe == 'true'
+        run: dotnet restore Bastion.sln
+
+      - name: Compilar
+        if: steps.solucion.outputs.existe == 'true'
+        run: dotnet build Bastion.sln --configuration Release --no-restore
+
+      # Estilo y formato. Va aparte del build a propósito (ver Directory.Build.props):
+      # un build roto significa siempre "el código está mal", nunca "falta un espacio".
+      - name: Formato
+        if: steps.solucion.outputs.existe == 'true'
+        run: dotnet format Bastion.sln --verify-no-changes --no-restore
+
+      # Rápidos y sin Docker: dominio puro + fitness functions de las fronteras del §4.
+      # Van PRIMERO porque son los que fallan en segundos, no en minutos.
+      - name: Tests de dominio y de arquitectura
+        if: steps.solucion.outputs.existe == 'true'
+        run: |
+          dotnet test Bastion.sln \
+            --configuration Release \
+            --no-build \
+            --filter "Category!=Integracion" \
+            --logger "trx;LogFileName=dominio-arquitectura.trx" \
+            --results-directory artifacts/test-results
+
+      # Testcontainers levanta PostgreSQL de verdad. Nada de EF Core InMemory: no traduce
+      # SQL real, ignora restricciones, columnas computadas y filtros globales, y da
+      # falsos verdes (`stacks/dotnet/convenciones.md`).
+      - name: Tests de integración (Testcontainers)
+        if: steps.solucion.outputs.existe == 'true'
+        run: |
+          dotnet test Bastion.sln \
+            --configuration Release \
+            --no-build \
+            --filter "Category=Integracion" \
+            --logger "trx;LogFileName=integracion.trx" \
+            --results-directory artifacts/test-results
+
+      # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
+      - name: Migraciones — el modelo no tiene cambios pendientes
+        if: steps.solucion.outputs.existe == 'true'
+        run: |
+          if [ -f scripts/comprobar-migraciones.sh ]; then
+            bash scripts/comprobar-migraciones.sh
+          else
+            echo "::notice::Sin comprobación de migraciones todavía (se añade con el primer DbContext, ítem 0.4)."
+          fi
+
+      # El OpenAPI es el contrato del que se genera el cliente de TypeScript: se publica
+      # como artefacto para que el frontal lo consuma en vez de escribir DTOs a mano.
+      - name: Publicar el OpenAPI
+        if: steps.solucion.outputs.existe == 'true' && hashFiles('docs/api/openapi.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi
+          path: docs/api/openapi.json
+          retention-days: 30
+
+      - name: Publicar resultados de test
+        if: always() && steps.solucion.outputs.existe == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: artifacts/test-results
+          retention-days: 7
+
+  # ==================================================================== IMÁGENES
+  # Solo comprueba que los Dockerfile construyen; no publica nada. La publicación es
+  # cosa de `cd.yml`, que se escribirá cuando haya a dónde desplegar.
+  imagenes:
+    name: Imágenes de contenedor
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construir la imagen del frontal
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.web
+          push: false
+          load: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Construir la imagen de la API
+        # Igual que el job `backend`: sin solución no hay nada que construir.
+        if: hashFiles('Bastion.sln') != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.api
+          push: false
+          load: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

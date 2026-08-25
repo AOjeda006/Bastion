@@ -1,0 +1,20 @@
+<Project>
+
+  <!--
+    Hereda todo lo de la raíz y relaja lo que no tiene sentido en un proyecto de tests.
+    El Import explícito es obligatorio: sin él, MSBuild deja de subir al encontrar este fichero.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!--
+      Documentar cada método de test con /// es ruido: la convención habla de la API PÚBLICA.
+      El nombre del test (`Metodo_Escenario_ResultadoEsperado`) ya es la documentación.
+    -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

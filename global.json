@@ -1,0 +1,8 @@
+{
+  "//": "Fija el SDK de .NET con el que se construye Bastion. Sin esto, cada máquina y cada runner usa el que tenga instalado y el build deja de ser reproducible. Lo lee `actions/setup-dotnet` en la CI (ver .github/workflows/ci.yml). Se sube de versión con su propio commit, nunca de rebote.",
+  "sdk": {
+    "version": "10.0.100",
+    "rollForward": "latestFeature",
+    "allowPrerelease": false
+  }
+}

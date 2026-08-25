@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+#
+# Frontal de Bastion (`bastion-web`) — build multi-stage, servido por nginx no-root.
+# Contexto de construcción: la RAÍZ del repositorio.
+#   docker build -f deploy/Dockerfile.web -t bastion-web .
+
+# ---------------------------------------------------------------- compilación
+FROM node:22.22-alpine AS build
+WORKDIR /origen
+
+# El lockfile primero: `npm ci` solo se rehace si cambian las dependencias.
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
+# ---------------------------------------------------------------- ejecución
+# La variante `-unprivileged` corre como uid 101 y escucha en 8080: no hace falta
+# ni root ni capacidades para puertos bajos.
+FROM nginxinc/nginx-unprivileged:1.29-alpine AS final
+
+COPY --from=build /origen/dist /usr/share/nginx/html
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["/bin/sh", "-c", "wget -qO- http://localhost:8080/ > /dev/null || exit 1"]

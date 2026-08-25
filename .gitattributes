@@ -1,0 +1,55 @@
+# Normalización de fin de línea: LF en el repositorio, lo que toque en el disco.
+# Sin esto, un equipo Windows y uno Linux se pelean por cada fichero.
+* text=auto eol=lf
+
+# ---------- Ficheros que DEBEN llevar CRLF en disco ----------
+*.bat            text eol=crlf
+*.cmd            text eol=crlf
+*.ps1            text eol=crlf
+*.sln            text eol=crlf
+
+# ---------- Texto explícito ----------
+*.cs             text diff=csharp
+*.csproj         text
+*.props          text
+*.targets        text
+*.json           text
+*.jsonc          text
+*.md             text diff=markdown
+*.yml            text
+*.yaml           text
+*.xml            text
+*.xsd            text
+*.sql            text
+*.ts             text
+*.tsx            text
+*.js             text
+*.jsx            text
+*.css            text
+*.html           text diff=html
+*.editorconfig   text
+Dockerfile*      text
+*.sh             text eol=lf
+
+# ---------- Binarios: ni diff ni normalización ----------
+*.png            binary
+*.jpg            binary
+*.jpeg           binary
+*.gif            binary
+*.ico            binary
+*.webp           binary
+*.pdf            binary
+*.zip            binary
+*.tgz            binary
+*.gz             binary
+*.woff           binary
+*.woff2          binary
+*.ttf            binary
+*.otf            binary
+*.snk            binary
+*.pfx            binary
+
+# ---------- Generado: fuera de los diffs y de las estadísticas del repo ----------
+frontend/package-lock.json   linguist-generated=true -diff
+db/migraciones/**/*.cs       linguist-generated=true
+docs/api/openapi.json        linguist-generated=true -diff

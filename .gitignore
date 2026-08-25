@@ -1,0 +1,86 @@
+# ---------- .NET ----------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+.vs/
+_ReSharper*/
+*.DotSettings.user
+project.lock.json
+project.fragment.lock.json
+*.nupkg
+*.snupkg
+# NuGet: se ignora el cache local, no el config del repo
+**/packages/*
+!**/packages/build/
+.nuget/
+# Cobertura y resultados de test
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.coveragexml
+BenchmarkDotNet.Artifacts/
+
+# ---------- Node / frontal ----------
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+.eslintcache
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+# Playwright
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/blob-report/
+/frontend/.playwright/
+
+# ---------- Secretos y entorno ----------
+# NUNCA se commitea un .env real. El ejemplo sí: deploy/.env.example
+.env
+.env.*
+!.env.example
+!deploy/.env.example
+*.pfx
+*.p12
+*.key
+*.pem
+secrets.json
+appsettings.*.Local.json
+
+# ---------- Herramientas y sistema ----------
+.idea/
+.fleet/
+*.swp
+*.swo
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+__MACOSX/
+
+# ---------- Salidas locales ----------
+/docs/api/openapi.json
+
+# ---------- Especificación del producto ----------
+# `ERP-PLAN-MAESTRO.md` es la fuente de verdad del producto y la aporta el usuario
+# FUERA del repositorio (CLAUDE.md y README.md lo dicen así). Se deja en la raíz para
+# tenerlo a mano en local, pero no se versiona: no es del repositorio, es del encargo.
+/ERP-PLAN-MAESTRO.md

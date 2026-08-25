@@ -1,0 +1,7 @@
+dist
+coverage
+node_modules
+package-lock.json
+*.tsbuildinfo
+# El cliente de la API se GENERA desde el OpenAPI: no se formatea ni se edita a mano.
+src/shared/api/generated

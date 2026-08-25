@@ -1,0 +1,54 @@
+# syntax=docker/dockerfile:1
+#
+# API de Bastion — build multi-stage, usuario no-root, base mínima.
+# Contexto de construcción: la RAÍZ del repositorio.
+#   docker build -f deploy/Dockerfile.api -t bastion-api .
+#
+# NOTA: este Dockerfile no construye todavía, porque `Bastion.sln` aún no existe
+# (ítem 0.1 de docs/PLAN.md). Está escrito para que el 0.1 solo tenga que crear la
+# solución; no hay que tocarlo.
+
+# ---------------------------------------------------------------- compilación
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /origen
+
+# Primero SOLO lo que define las dependencias: así un cambio de código no invalida
+# la capa de `restore`, que es la cara (`herramientas/docker.md`, orden de capas).
+COPY Directory.Build.props Directory.Packages.props nuget.config* ./
+COPY Bastion.sln ./
+COPY src/ ./src/
+COPY tests/Directory.Build.props ./tests/
+
+RUN dotnet restore Bastion.sln
+
+COPY . .
+RUN dotnet publish src/Api/Bastion.Api.csproj \
+        --configuration "$BUILD_CONFIGURATION" \
+        --no-restore \
+        --output /publicado \
+        /p:UseAppHost=false
+
+# ---------------------------------------------------------------- ejecución
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
+WORKDIR /app
+
+# Usuario sin privilegios. La imagen de .NET ya trae el uid 1654 como `app`.
+USER app
+
+# Globalización COMPLETA: Bastion formatea en es-ES y ordena con acentos y 'ñ'.
+# Ponerlo en invariante rompe eso en silencio (ver Directory.Build.props).
+ENV ASPNETCORE_HTTP_PORTS=8080 \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
+COPY --from=build --chown=app:app /publicado .
+
+EXPOSE 8080
+
+# Sonda en la propia imagen, no solo en compose: comprueba que el proceso RESPONDE,
+# no que el contenedor siga vivo.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD ["/bin/sh", "-c", "wget -qO- http://localhost:8080/health/live || exit 1"]
+
+ENTRYPOINT ["dotnet", "Bastion.Api.dll"]

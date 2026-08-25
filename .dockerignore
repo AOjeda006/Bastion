@@ -1,0 +1,25 @@
+# Contexto de construcción mínimo: lo que no se copia, no invalida capas ni se filtra.
+.git
+.github
+.claude
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.eslintcache
+docs
+db/migraciones
+deploy/.env
+.env
+.env.*
+!deploy/.env.example
+**/*.user
+**/.vs
+**/.idea
+**/.DS_Store
+**/Thumbs.db
+**/__MACOSX
+*.md
+!README.md

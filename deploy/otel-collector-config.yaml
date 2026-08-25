@@ -1,0 +1,53 @@
+# Recolector de OpenTelemetry para el entorno local.
+#
+# La aplicación habla OTLP y nada más: el recolector decide a dónde va cada señal
+# (`herramientas/observabilidad.md` — OpenTelemetry es la frontera con el proveedor).
+# Cambiar de destino en producción es cambiar este fichero, no el código.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Agrupa antes de exportar: sin esto, cada tramo es una llamada de red.
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  # Tope de memoria: un recolector que se come el equipo de desarrollo por una
+  # tormenta de trazas es peor que no tener trazas.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  # En local, las métricas y el registro se leen por consola del propio recolector.
+  # En producción esto se sustituye por el exportador del proveedor que toque.
+  debug:
+    verbosity: normal
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]
