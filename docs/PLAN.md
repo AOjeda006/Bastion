@@ -260,6 +260,19 @@ cuando hace falta el porqué.
   y bajarla solo quita sitio. Se deja el valor de la plantilla; si el agente local es de 200K,
   **quita la línea**. Para afinarlo: mide con `/context` lo que cuesta una tarea típica (`U`) y deja
   la ventana en ≈ `2·U`.
+- **`nuget.config` manda la caché de paquetes a una carpeta literal dentro del repositorio.** El
+  bloque `<config>` fija `globalPackagesFolder` a `%NUGET_PACKAGES%`, y con esa variable **sin
+  definir** —que es el caso en un portátil recién montado y en el *runner* de la CI— NuGet no la
+  expande: la toma al pie de la letra. Comprobado:
+  `dotnet nuget locals global-packages --list` responde `…/Bastion/%NUGET_PACKAGES%`. **Todavía no
+  ha mordido porque el 0.1 no adopta ni un paquete**, así que esa ruta no se ha usado nunca. Morderá
+  en cuanto el 0.2 o el 0.3 añada el primer `PackageVersion`: aparecerá una carpeta
+  `%NUGET_PACKAGES%/` sin rastrear y sin ignorar en la raíz, la caché global dejará de compartirse
+  entre proyectos, y la caché de la CI perderá su sentido. **Está fuera del alcance del 0.1 y no se
+  ha tocado.** Arreglo propuesto: **borrar el bloque `<config>` entero** de `nuget.config`. El valor
+  por omisión de NuGet (`~/.nuget/packages`) es justo lo que se quiere, y lo que `actions/setup-dotnet`
+  espera encontrar para cachear. La reproducibilidad la dan las fuentes explícitas con `<clear/>`, el
+  `packageSourceMapping` y los `packages.lock.json` — no la ubicación de la caché.
 - **El presupuesto de tamaño del frontal en la CI está mal medido y la va a poner en rojo.** El paso
   «Presupuesto de tamaño» de `.github/workflows/ci.yml` hace `du -sk dist` con un tope de 1024 kB, y
   `dist/` mide hoy **1097 kB** — con un `App.tsx` de relleno. El culpable no es el *bundle*: son los
