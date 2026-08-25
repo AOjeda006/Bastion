@@ -62,7 +62,21 @@ Se instala `curl` en la etapa final (como `root`, volviendo después a `app`) y 
 `curl --fail --silent`. Es la opción aburrida; las alternativas —añadir un modo sonda al propio
 ejecutable, o renunciar al `HEALTHCHECK` en la imagen— cuestan más y compran menos.
 
-`deploy/Dockerfile.web` **no** cambia: es Alpine, y su BusyBox sí trae `wget`.
+### 2 bis. Y la sonda apunta a `127.0.0.1`, no a `localhost`
+
+Arreglado lo anterior, el *job* de humo seguía en rojo, ahora con `container bastion-web-1 is
+unhealthy` ([run 32872440626](https://github.com/AOjeda006/Bastion/actions/runs/32872440626)), con
+todo lo demás sano.
+
+Dentro de un contenedor, `localhost` resuelve a **dos** direcciones: `127.0.0.1` y `::1`. El `wget`
+de BusyBox se queda con la primera que le devuelve el sistema; `curl`, en cambio, prueba todas. Y
+`nginx.conf` declara `listen 8080;` a secas, que es **solo IPv4**. Cuando la resolución devolvía
+`::1` primero, la sonda daba «connection refused» contra un servidor que estaba sirviendo
+perfectamente.
+
+Las tres sondas —la de la imagen del frontal, la del frontal en compose y la de la API— pasan a
+`127.0.0.1` explícito. `deploy/Dockerfile.web` no necesita instalar nada: es Alpine y su BusyBox sí
+trae `wget`; lo que necesitaba era una dirección en vez de un nombre.
 
 ### 3. La instrumentación se registra siempre; el exportador, solo si hay a dónde exportar
 
@@ -91,9 +105,29 @@ Las sondas se **excluyen de las trazas** (se consultan cada pocos segundos y no 
 - Añadir una dependencia a la sonda de disponibilidad es registrar una comprobación con la etiqueta
   `disponibilidad`. Añadirla a la de vida es, casi siempre, un error.
 
+### 4. La CI tiene que poder explicar su propio fallo
+
+Con el repositorio público, la API de Actions deja leer *runs*, *jobs* y pasos sin autenticación,
+pero **`GET /actions/jobs/{id}/logs` devuelve 403**. La primera versión del *job* de humo era un
+único `docker compose up --build`, así que su fallo llegó como `Process completed with exit code 1`
+y nada más.
+
+De ahí dos medidas que se quedan: los pasos van **partidos por fase** —validar, construir, levantar
+PostgreSQL, levantar el resto—, de modo que la conclusión de cada paso ya localiza el fallo sin leer
+una sola línea de log; y un paso `Diagnóstico` emite como **anotación** (`::error::`, que sí es
+pública) el final de cada salida y, para cada servicio que no esté sano, su
+`docker inspect --format '{{json .State.Health}}'`. Eso último es lo decisivo: la salida de una sonda
+fallida **no** aparece en los registros del contenedor, la guarda el demonio.
+
 ## Aprendizaje transversal
 
 Se repite el del ADR-0002, ahora en otra herramienta: **una configuración escrita antes que el código
 al que apunta no está verificada, por muy razonable que se lea.** El `wget` de las dos sondas llevaba
 escrito desde el andamiaje y nadie podía haberlo ejecutado nunca, porque no había API que sondear. Lo
 que lo detecta no es releerlo: es ejecutarlo.
+
+Y un corolario sobre el propio diagnóstico: entre el primer rojo y el verde hubo dos hipótesis
+razonables y **falsas** —que fallaba la creación del clúster de PostgreSQL por la configuración ICU
+en Alpine, y que fallaba la construcción de una imagen—, ambas descartadas en cuanto los pasos se
+partieron por fase y PostgreSQL apareció sano en 9 s. Instrumentar para que el fallo se localice
+solo cuesta menos que razonar sobre qué pudo pasar.

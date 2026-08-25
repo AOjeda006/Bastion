@@ -199,8 +199,7 @@ anotan para no volver a discutirlas.
 
 ## Estado actual
 
-**Ítem 0.2 implementado y verde en local. Falta su primera verificación en la CI: hasta que el
-*job* `Humo` salga en verde, el ítem NO está cerrado.**
+**Ítem 0.2 TERMINADO. Siguiente: ítem 0.3 (bloque común / *shared kernel*), sin empezar.**
 
 `src/Api/Program.cs` deja de ser un host vacío: publica las dos sondas del §14, registra con Serilog
 en JSON compacto y exporta trazas y métricas por OTLP al recolector. `BuildingBlocks.Infrastructure`
@@ -220,9 +219,15 @@ Verificado en local, con la salida real de cada comando:
   `503` con el detalle por dependencia. En el registro, cada evento con su `@tr` y su `@sp`, la sonda
   de vida sin generar línea y el 503 subido a nivel `Error`.
 
-Lo que **no** se puede comprobar aquí, y comprueba el *job* `Humo`: que el compose levanta, que la
-sonda de disponibilidad ve un PostgreSQL de verdad, que el frontal carga y que las trazas llegan al
-visor. Docker no está instalado en esta máquina (ver *Decisiones*, ítem 0.2).
+Y verificado donde importa, en la CI — **[run 32873076287](https://github.com/AOjeda006/Bastion/actions/runs/32873076287), los cuatro *jobs* en verde**:
+`Frontal` ✅, `Backend` ✅, `Imágenes` ✅ y `Humo` ✅. Los cuatro comprobantes del criterio, cada uno
+su propio paso: `/health/live` devuelve `Healthy`; `/health/ready` responde `Healthy` contra un
+PostgreSQL de verdad; el frontal sirve su `index.html`; y Jaeger conoce el servicio `bastion-api`,
+que es la prueba de que la instrumentación exporta y no solo está declarada en un `.csproj`.
+
+Costó **tres *runs***, y los dos primeros están contados en *Notas / riesgos*: el andamiaje traía dos
+sondas escritas con `wget` que no podían funcionar, por dos motivos distintos y en dos imágenes
+distintas.
 
 Del ítem 0.1: `Bastion.sln` compila con los 19 proyectos de entonces (`Bastion.Api`, los tres
 bloques comunes y las cinco capas de Identidad, Organización y Auditoría), con las referencias de proyecto ya cableadas
@@ -239,9 +244,13 @@ saltaba porque `hashFiles('Bastion.sln')` estaba vacío) y construyó `Dockerfil
 `Dockerfile.web` sin tocarlos. En aquel *run* `dotnet test` salía 0 **sin ejecutar nada**, porque no
 había proyectos de test: no era evidencia. Desde el 0.2 sí ejecuta casos.
 
-**Dónde retomar exactamente:** abrir el último *run* de la CI. Si el *job* `Humo` está en verde,
-marcar el 0.2 en el checklist con el enlace del *run* y seguir por el **0.3**. Si está en rojo,
-diagnosticarlo y arreglarlo **antes** de tocar el 0.3: no se anota como riesgo y se sigue.
+**Dónde retomar exactamente:** ítem **0.3**, el bloque común. Criterio: objeto de valor
+`Importe(cantidad, divisa)` con la regla de redondeo de R6 probada, resultado de operación y
+`ProblemDetails` según RFC 9457. Es el primer ítem con **dominio de verdad**, así que es el primero
+donde el TDD del contrato manda: el test antes que el código, sin excepción. El sitio es
+`src/BuildingBlocks/Domain` (hoy vacío y sin una sola referencia, que es justo lo que debe ser) y su
+proyecto de tests hay que crearlo — `tests/` solo tiene `Api.FunctionalTests` y la carpeta vacía
+`Arquitectura.Tests`.
 
 ### Lo que el agente de configuración NO pudo dejar hecho, y por qué
 
@@ -280,8 +289,9 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 
 - [x] **0.1 · Andamiaje del repositorio y solución modular** — criterio de aceptación: `Bastion.sln`
   compila; la estructura coincide con el §12; `dotnet build` y `npm run build` en verde.
-- [ ] **0.2 · `docker compose up`** — criterio de aceptación: levanta PostgreSQL, API, frontal y
+- [x] **0.2 · `docker compose up`** — criterio de aceptación: levanta PostgreSQL, API, frontal y
   observabilidad; la API responde a su sonda de vida y el frontal carga.
+  Verificado en el *job* `Humo` de la CI — [run 32873076287](https://github.com/AOjeda006/Bastion/actions/runs/32873076287).
 - [ ] **0.3 · Bloque común (*shared kernel*)** — criterio de aceptación: objeto de valor
   `Importe(cantidad, divisa)` con la regla de redondeo de R6 probada; resultado de operación;
   `ProblemDetails` según **RFC 9457**.
@@ -387,6 +397,24 @@ cuando hace falta el porqué.
   no un error legible. Arreglado instalando `curl` en la etapa final (como `root`, volviendo a `app`)
   y usando `curl --fail --silent` en ambas sondas. Detalle, junto con el diseño de las dos sondas, en
   **`docs/adr/adr-0003-sondas-de-vida-y-de-disponibilidad.md`**.
+- **ARREGLADO (2026-08-25) · la sonda del frontal apuntaba a `localhost`, y eso no es una dirección.**
+  Segundo defecto de la misma familia, en la otra imagen. Con el `curl` de la API ya puesto, el *job*
+  `Humo` seguía en rojo — [run 32872440626](https://github.com/AOjeda006/Bastion/actions/runs/32872440626):
+  `postgres`, `api`, `otel-collector` y `jaeger` sanos, y `container bastion-web-1 is unhealthy`.
+  Dentro de un contenedor, `localhost` resuelve a **127.0.0.1 y a ::1**; el `wget` de BusyBox se queda
+  con la primera dirección que le devuelve el sistema, y `nginx` hace `listen 8080` a secas, que es
+  **solo IPv4**. Cuando salía `::1`, la sonda daba «connection refused» contra un servidor
+  perfectamente vivo. El `curl` de la API no lo sufría porque prueba todas las direcciones. Las tres
+  sondas pasan a `127.0.0.1` explícito.
+- **Los logs de un *run* de Actions NO son públicos; las anotaciones sí.** Con el repositorio público,
+  `GET /actions/runs/{id}` y `/jobs` se leen sin autenticación, pero `/jobs/{id}/logs` devuelve **403**.
+  La primera versión del *job* `Humo` era un solo `up --build`, así que su fallo llegó como un
+  `Process completed with exit code 1` y nada más — imposible de diagnosticar sin bajarse el log.
+  Arreglado en el propio *workflow*, y conviene mantenerlo así: los pasos están **partidos por fase**
+  (validar / construir / levantar PostgreSQL / levantar el resto), de modo que la conclusión de cada
+  paso ya localiza el fallo, y el paso `Diagnóstico` emite como **anotación** (`::error::`) el final de
+  cada salida y, para cada servicio que no esté sano, su `docker inspect .State.Health` — que es lo
+  único que dice por qué falla una sonda, porque no aparece en los registros del contenedor.
 - **`Dockerfile.api` tenía que copiar `tests/` entero, no solo su `Directory.Build.props`.** Desde
   que la solución referencia un proyecto de test, `dotnet restore Bastion.sln` dentro de la imagen
   falla si no encuentra su `.csproj`. Se restaura la solución **completa** a propósito: así la imagen
