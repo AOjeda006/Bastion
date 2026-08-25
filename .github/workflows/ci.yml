@@ -261,12 +261,33 @@ jobs:
             echo "JWT_SIGNING_KEY=$(openssl rand -base64 48)"
           } > deploy/.env
 
+      # Valida e interpola el fichero sin levantar nada. `--quiet` es obligatorio: la salida
+      # de `config` incluye las credenciales ya sustituidas.
+      - name: Validar el compose
+        run: docker compose -f deploy/docker-compose.yml config --quiet
+
+      # Construir y levantar van en pasos SEPARADOS, y PostgreSQL antes que el resto, a
+      # propósito: los logs de un *run* solo se leen con autenticación, así que la
+      # conclusión de cada paso es la única señal pública que localiza el fallo. Un único
+      # paso «up --build» solo sabe decir «algo ha fallado».
+      - name: Construir las imágenes
+        run: |
+          set -o pipefail
+          docker compose -f deploy/docker-compose.yml build --progress plain 2>&1 | tee construir.log
+
+      - name: Levantar PostgreSQL
+        run: |
+          set -o pipefail
+          docker compose -f deploy/docker-compose.yml up --detach --wait --wait-timeout 180 postgres 2>&1 | tee postgres.log
+
       # `--wait` espera a que cada servicio con sonda esté SANO, no solo arrancado.
-      - name: Levantar el entorno
-        run: docker compose -f deploy/docker-compose.yml up --build --detach --wait --wait-timeout 600
+      - name: Levantar el resto del entorno
+        run: |
+          set -o pipefail
+          docker compose -f deploy/docker-compose.yml up --detach --wait --wait-timeout 300 2>&1 | tee levantar.log
 
       - name: Estado de los servicios
-        run: docker compose -f deploy/docker-compose.yml ps
+        run: docker compose -f deploy/docker-compose.yml ps --all
 
       - name: La API responde a su sonda de VIDA
         run: |
@@ -303,9 +324,22 @@ jobs:
           echo "::error::Jaeger no ha recibido ninguna traza de bastion-api en 60 s."
           exit 1
 
-      - name: Registros de los contenedores
+      # El log de un *job* solo se descarga con autenticación; las ANOTACIONES, en cambio,
+      # son públicas y se leen por API. Sin esto, un fallo aquí es un `exit 1` sin
+      # explicación para quien no pueda bajarse el log — que es exactamente lo que pasó la
+      # primera vez que corrió este *job*. Se emite el final de cada salida como anotación
+      # (con los saltos de línea codificados como %0A, que es lo que exige el formato).
+      - name: Diagnóstico
         if: failure()
-        run: docker compose -f deploy/docker-compose.yml logs --no-color --tail 200
+        run: |
+          docker compose -f deploy/docker-compose.yml ps --all || true
+          docker compose -f deploy/docker-compose.yml logs --no-color --tail 200 || true
+          docker compose -f deploy/docker-compose.yml logs --no-color --tail 60 > servicios.log 2>&1 || true
+          for FICHERO in construir.log postgres.log levantar.log servicios.log; do
+            [ -s "$FICHERO" ] || continue
+            RESUMEN=$(tail -c 1200 "$FICHERO" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=${FICHERO}::${RESUMEN}"
+          done
 
       - name: Tirar el entorno
         if: always()
