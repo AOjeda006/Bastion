@@ -177,14 +177,10 @@ línea del registro.
 - **Errores por campo en validación** (§9) todavía no existen: ningún caso de uso los pide en la fase
   0. Cuando lleguen, entran como extensión `errors` del mismo `ProblemDetails`.
 
-## Aprendizaje transversal
+## Lo que salió de aquí y vive en otro sitio
 
-Dos de los tests de esta política **pasaban en aislado y fallaban al ejecutar la suite entera**. La
-causa: `AddSerilog(configurar)` deja por omisión el registro creado en el `Log.Logger` **estático** y
-ata el contenedor a ese estático. Con dos hosts de prueba levantándose en paralelo, el último en
-construirse le pisaba el registro al otro, y el sumidero de captura no recibía nada.
-
-De ahí dos cosas que se quedan. Una concreta: cualquier host de prueba que capture registro usa
-`preserveStaticLogger: true`. Y otra general, que es la que vale para el resto del proyecto: **un
-test que solo se ejecuta aislado no está probado**. El estado global no se ve leyendo el código de
-un test; se ve cuando algo más comparte proceso con él.
+Escribir los tests de esta política destapó una trampa que **no es de errores**: dos de ellos pasaban
+en aislado y fallaban con la suite entera, porque `AddSerilog(configurar)` deja el registro en el
+`Log.Logger` estático. Es un problema de *toolchain*, transversal a todo el proyecto, y por eso no se
+archiva dentro de un ADR sobre la frontera `Resultado`/excepción: está en
+[`adr-0006-un-test-que-solo-se-ejecuta-aislado-no-esta-probado.md`](adr-0006-un-test-que-solo-se-ejecuta-aislado-no-esta-probado.md).

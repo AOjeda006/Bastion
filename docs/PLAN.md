@@ -331,11 +331,13 @@ había proyectos de test: no era evidencia. Desde el 0.2 sí ejecuta casos.
 **Dónde retomar exactamente:** ítem **0.4**, el módulo Organización. Criterio: CRUD de `Empresa`,
 `Ejercicio`, `Serie` y `Almacen`, con migraciones propias del módulo.
 
-**Antes de empezar el 0.4 hay que instalar Docker en esta máquina.** El 0.4 estrena migraciones y
-persistencia, y la regla es que el comportamiento relacional se prueba con **Testcontainers**, nunca
-con EF Core InMemory. Sin Docker no hay Testcontainers, y el filtro `Category=Integracion` seguiría
-siendo un no-op — que hoy está declarado y es honesto, pero a partir del 0.4 sería un agujero.
-Instalarlo y **comprobarlo con una ejecución real de Testcontainers**, no con `docker --version`.
+**Docker en local NO bloquea el 0.4.** El *runner* `ubuntu-latest` trae demonio de Docker —el *job*
+`Humo` lo demuestra levantando el compose entero— y el paso `Category=Integracion` del *job* `Backend`
+ya está cableado: deja de ser un no-op en cuanto exista el primer test, sin tocar el *workflow*. Lo
+que falta en local es solo el **bucle rápido**: sin Docker aquí, cada iteración de un repositorio
+cuesta un *run* completo de CI en vez de segundos. Sigue mereciendo la pena instalarlo (ver
+*Notas / riesgos*), pero se instala **mientras** el 0.4 avanza, no antes. Y la comprobación no es
+`docker --version`: es **una ejecución real de Testcontainers**.
 
 El sitio del 0.4 son las cinco capas de `src/Modules/Organizacion/`, que existen desde el 0.1 y
 están vacías. `tests/` tiene ya `Api.FunctionalTests` y `BuildingBlocks.UnitTests`; la carpeta
@@ -445,7 +447,10 @@ cuando hace falta el porqué.
   registro en el `Log.Logger` **estático** y ata el contenedor a ese estático, así que con dos hosts
   de prueba levantándose en paralelo el último le pisaba el registro al otro. Arreglado con
   `preserveStaticLogger: true` en el host de pruebas. Regla que se queda: **cualquier host de prueba
-  que capture registro lo usa**, y una verificación en aislado no cuenta como verificación.
+  que capture registro lo usa**, y una verificación en aislado no cuenta como verificación. Es una
+  trampa de *toolchain*, transversal y reutilizable, así que vive en su propio
+  **`docs/adr/adr-0006-un-test-que-solo-se-ejecuta-aislado-no-esta-probado.md`** y no dentro del
+  ADR-0004, que va de otra cosa.
 - **Pruebas basadas en propiedades: pendientes, y con una condición.** Descartadas en el 0.3 a
   propósito (ver *Decisiones*). El sitio natural son los **casos dorados de impuestos y valoración**
   de la fase 5. La regla que más cuesta cumplir, anotada aquí para que no se pierda: **no se escribe
@@ -540,11 +545,13 @@ cuando hace falta el porqué.
   `Imágenes`, o `Imágenes` publica con `load: true` y `Humo` reutiliza. No se toca ahora: el 0.13
   tiene que rehacer el *workflow* de todas formas y hacerlo dos veces sería trabajo tirado.
 - **Docker no está instalado en la máquina de desarrollo.** Ni `docker compose` ni Testcontainers
-  pueden ejecutarse en local. Hoy lo cubre el *job* `Humo` de la CI, pero **a partir del 0.4 esto
-  duele de verdad**: los tests de integración con PostgreSQL real son la mitad de la pirámide del
-  §13, y esperar un *run* completo de CI para cada iteración de un repositorio no es un ciclo de
-  trabajo viable. **Recomendación:** instalar Docker Desktop (o un demonio equivalente) antes de
-  empezar el 0.4.
+  pueden ejecutarse en local. Lo que esto cuesta es el **bucle rápido**, no el trabajo: el *runner*
+  `ubuntu-latest` sí tiene demonio de Docker, así que los tests con Testcontainers se ejecutan en la
+  CI desde el 0.4 y el criterio del ítem se puede cumplir y verificar sin Docker aquí. Lo que no se
+  puede es iterar en segundos: cada vuelta de un repositorio cuesta un *run* completo. Los tests de
+  integración con PostgreSQL real son la mitad de la pirámide del §13, así que esa diferencia se nota.
+  **Recomendación:** instalar Docker Desktop (o un demonio equivalente) cuanto antes, **en paralelo**
+  al 0.4, no como paso previo que lo bloquee.
 
   **Intento del 2026-08-25, fallido, y lo que se aprendió:** el prerrequisito ya está —WSL 2 con
   Ubuntu como distribución predeterminada—, y `winget` ofrece `Docker.DockerDesktop` 4.88.0. El
