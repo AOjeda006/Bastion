@@ -152,6 +152,16 @@ jobs:
 
       # Rápidos y sin Docker: dominio puro + fitness functions de las fronteras del §4.
       # Van PRIMERO porque son los que fallan en segundos, no en minutos.
+      #
+      # Cada paso escribe en SU directorio y sin `LogFileName` fijo: `dotnet test` sobre la
+      # solución genera un .trx POR ENSAMBLADO, y con un nombre fijo el segundo pisaba al
+      # primero ("ADVERTENCIA: Se sobrescribirá el archivo de resultados"). El artefacto
+      # publicado solo traía la mitad de los resultados.
+      #
+      # El recuento no es decoración: un `--filter` que no casa con nada y un ensamblado que
+      # ya no se encuentra salen con código 0, igual que un verde de verdad. El paso solo
+      # pasa si ejecuta al menos el mínimo declarado, y lo publica como `::notice::` —los
+      # registros del job devuelven 403 sin autenticar, las anotaciones no.
       - name: Tests de dominio y de arquitectura
         if: steps.solucion.outputs.existe == 'true'
         run: |
@@ -159,12 +169,19 @@ jobs:
             --configuration Release \
             --no-build \
             --filter "Category!=Integracion" \
-            --logger "trx;LogFileName=dominio-arquitectura.trx" \
-            --results-directory artifacts/test-results
+            --logger "trx" \
+            --results-directory artifacts/test-results/dominio
+          bash scripts/ci/recuento-de-tests.sh \
+            artifacts/test-results/dominio "Dominio y arquitectura" 1
 
       # Testcontainers levanta PostgreSQL de verdad. Nada de EF Core InMemory: no traduce
       # SQL real, ignora restricciones, columnas computadas y filtros globales, y da
       # falsos verdes (`stacks/dotnet/convenciones.md`).
+      #
+      # El mínimo es 0 mientras no exista el primer test de integración: hoy este paso es un
+      # no-op DECLARADO, y el recuento lo dice en la anotación en vez de fingir. Pasa a 1 en
+      # el ítem 0.4, con el primer test contra PostgreSQL real — a partir de ahí un cero ya
+      # no significa "todavía no los hay" sino "han dejado de ejecutarse".
       - name: Tests de integración (Testcontainers)
         if: steps.solucion.outputs.existe == 'true'
         run: |
@@ -172,8 +189,10 @@ jobs:
             --configuration Release \
             --no-build \
             --filter "Category=Integracion" \
-            --logger "trx;LogFileName=integracion.trx" \
-            --results-directory artifacts/test-results
+            --logger "trx" \
+            --results-directory artifacts/test-results/integracion
+          bash scripts/ci/recuento-de-tests.sh \
+            artifacts/test-results/integracion "Integración (Testcontainers)" 0
 
       # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
       - name: Migraciones — el modelo no tiene cambios pendientes

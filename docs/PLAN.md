@@ -436,12 +436,16 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
-- **El verde del *job* `Backend` no dice cuántos casos ejecuta.** El recuento (55 en el 0.3) solo
-  consta de la ejecución local: los registros de un *job* devuelven **403** sin autenticar, y en un
-  *run* correcto no hay anotaciones que leer. Mientras siga así, un `dotnet test` que dejara de
-  encontrar ensamblados pasaría por verde igual que pasó en el 0.1. Arreglo previsto: que el paso de
-  tests emita el resumen como `::notice::`, que sí es público. **No se hace ahora** —no es del
-  criterio del 0.3— pero conviene antes de que la suite crezca.
+- **ARREGLADO (2026-08-26) · el verde del *job* `Backend` no decía cuántos casos ejecutaba.** Los
+  registros de un *job* devuelven **403** sin autenticar, así que desde fuera un `dotnet test` que
+  dejara de encontrar ensamblados —o un `--filter` que no casara con nada— se veía igual de verde que
+  un verde de verdad. Los dos pasos de test escriben ahora en **su propio** directorio y sin
+  `LogFileName` fijo, y `scripts/ci/recuento-de-tests.sh` publica el recuento como `::notice::`, que
+  sí es público, y **falla** si baja del mínimo declarado (dominio 1; integración 0 hasta el 0.4, y 1
+  desde el 0.4). De paso salió un defecto que no se veía: con un `LogFileName` fijo, `dotnet test`
+  sobre la solución escribe un `.trx` **por ensamblado** y el segundo pisaba al primero, así que el
+  artefacto `test-results` solo traía la mitad de los resultados. El recuento se saca del `.trx`, que
+  es XML, y no del resumen de consola, que va **traducido** al idioma del CLI.
 - **Un test que solo se ejecuta aislado no está probado.** Dos tests de la política de errores
   **pasaban en aislado y fallaban con la suite entera**: `AddSerilog(configurar)` deja por omisión el
   registro en el `Log.Logger` **estático** y ata el contenedor a ese estático, así que con dos hosts
