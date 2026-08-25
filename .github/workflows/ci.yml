@@ -334,11 +334,23 @@ jobs:
         run: |
           docker compose -f deploy/docker-compose.yml ps --all || true
           docker compose -f deploy/docker-compose.yml logs --no-color --tail 200 || true
-          docker compose -f deploy/docker-compose.yml logs --no-color --tail 60 > servicios.log 2>&1 || true
-          for FICHERO in construir.log postgres.log levantar.log servicios.log; do
+          for FICHERO in construir.log postgres.log levantar.log; do
             [ -s "$FICHERO" ] || continue
             RESUMEN=$(tail -c 1200 "$FICHERO" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
             echo "::error title=${FICHERO}::${RESUMEN}"
+          done
+          # Lo decisivo cuando un servicio queda `unhealthy` es la SALIDA de la sonda, que
+          # no aparece en los registros del contenedor: la guarda el demonio.
+          for SERVICIO in postgres api web otel-collector jaeger; do
+            CONTENEDOR=$(docker compose -f deploy/docker-compose.yml ps --all --quiet "$SERVICIO" | head -1)
+            [ -n "$CONTENEDOR" ] || continue
+            SALUD=$(docker inspect --format '{{json .State.Health}}' "$CONTENEDOR" 2>/dev/null || echo 'sin sonda')
+            case "$SALUD" in
+              *'"Status":"healthy"'*) continue ;;
+            esac
+            REGISTRO=$(docker compose -f deploy/docker-compose.yml logs --no-color --tail 20 "$SERVICIO" 2>&1 || true)
+            RESUMEN=$(printf '%s\n---\n%s' "$SALUD" "$REGISTRO" | tail -c 1200 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=servicio ${SERVICIO}::${RESUMEN}"
           done
 
       - name: Tirar el entorno

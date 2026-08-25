@@ -65,7 +65,7 @@ services:
       # Sonda de VIDA (`/health/live`): "el proceso responde". La de DISPONIBILIDAD
       # (`/health/ready`) mira además la base y la deriva del reloj — y esa NO se usa
       # aquí, o un corte de base reiniciaría la API en bucle en vez de devolver 503.
-      test: ['CMD-SHELL', 'curl --fail --silent http://localhost:8080/health/live || exit 1']
+      test: ['CMD-SHELL', 'curl --fail --silent http://127.0.0.1:8080/health/live || exit 1']
       interval: 10s
       timeout: 5s
       retries: 6
@@ -83,7 +83,12 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/ > /dev/null || exit 1']
+      # `127.0.0.1` y no `localhost`, y no es cosmético: dentro de un contenedor
+      # `localhost` resuelve a 127.0.0.1 Y a ::1, el `wget` de BusyBox se queda con la
+      # primera dirección que le devuelve el sistema, y nginx hace `listen 8080` a secas,
+      # que es solo IPv4. Si sale ::1, la sonda falla con "connection refused" contra un
+      # servidor que esta perfectamente vivo.
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/ > /dev/null || exit 1']
       interval: 10s
       timeout: 5s
       retries: 6

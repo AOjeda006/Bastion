@@ -59,6 +59,6 @@ EXPOSE 8080
 # Sonda en la propia imagen, no solo en compose: comprueba que el proceso RESPONDE,
 # no que el contenedor siga vivo.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD ["/bin/sh", "-c", "curl --fail --silent http://localhost:8080/health/live || exit 1"]
+    CMD ["/bin/sh", "-c", "curl --fail --silent http://127.0.0.1:8080/health/live || exit 1"]
 
 ENTRYPOINT ["dotnet", "Bastion.Api.dll"]

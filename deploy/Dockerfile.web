@@ -25,5 +25,7 @@ COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 8080
 
+# La sonda apunta al bucle IPv4 EXPLÍCITO: `localhost` resuelve también a ::1, el wget de
+# BusyBox toma la primera dirección que le den, y `listen 8080` de nginx es solo IPv4.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD ["/bin/sh", "-c", "wget -qO- http://localhost:8080/ > /dev/null || exit 1"]
+    CMD ["/bin/sh", "-c", "wget -qO- http://127.0.0.1:8080/ > /dev/null || exit 1"]
