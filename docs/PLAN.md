@@ -278,6 +278,9 @@ Lo que el criterio pedía y dónde está probado:
 | Nada del interior sale en la respuesta | `…_RespondeQuinientosSinNadaDelInterior` (entrada hostil) |
 | Los dos destinatarios no comparten texto | `ElDetalleInterno_ViveEnElRegistroYNoEnLaRespuesta` |
 
+Y en la CI — **[run 32882753628](https://github.com/AOjeda006/Bastion/actions/runs/32882753628), los cuatro *jobs* en verde**: `Frontal` ✅,
+`Backend` ✅, `Imágenes` ✅ y `Humo` ✅, a la primera y sin ningún paso en rojo.
+
 ---
 
 **Del ítem 0.2:**
@@ -383,6 +386,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   `ProblemDetails` según **RFC 9457**.
   Decisiones en `docs/adr/adr-0004-frontera-entre-resultado-y-excepcion.md` y
   `docs/adr/adr-0005-dinero-dos-escalas-y-la-regla-de-redondeo.md`.
+  Los cuatro *jobs* de la CI en verde — [run 32882753628](https://github.com/AOjeda006/Bastion/actions/runs/32882753628).
 - [ ] **0.4 · Módulo Organización** — criterio de aceptación: CRUD de `Empresa`, `Ejercicio`, `Serie`
   y `Almacen`, con migraciones propias del módulo.
 - [ ] **0.5 · Módulo Identidad** — criterio de aceptación: registro y login; roles y permisos por
@@ -430,6 +434,12 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **El verde del *job* `Backend` no dice cuántos casos ejecuta.** El recuento (55 en el 0.3) solo
+  consta de la ejecución local: los registros de un *job* devuelven **403** sin autenticar, y en un
+  *run* correcto no hay anotaciones que leer. Mientras siga así, un `dotnet test` que dejara de
+  encontrar ensamblados pasaría por verde igual que pasó en el 0.1. Arreglo previsto: que el paso de
+  tests emita el resumen como `::notice::`, que sí es público. **No se hace ahora** —no es del
+  criterio del 0.3— pero conviene antes de que la suite crezca.
 - **Un test que solo se ejecuta aislado no está probado.** Dos tests de la política de errores
   **pasaban en aislado y fallaban con la suite entera**: `AddSerilog(configurar)` deja por omisión el
   registro en el `Log.Logger` **estático** y ata el contenedor a ese estático, así que con dos hosts
