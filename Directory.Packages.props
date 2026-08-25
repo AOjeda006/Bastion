@@ -31,7 +31,25 @@
   -->
   <ItemGroup Label="Datos">
     <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
+    <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
   </ItemGroup>
+
+  <!--
+    Licencias comprobadas en el nuspec de cada paquete antes de adoptarlos (item 0.4):
+      Npgsql y Npgsql.EntityFrameworkCore.PostgreSQL ...... PostgreSQL (permisiva, estilo BSD)
+      Microsoft.EntityFrameworkCore.* ..................... MIT
+      EFCore.NamingConventions ............................ Apache-2.0
+      Testcontainers.PostgreSql ........................... MIT
+    Ninguna es de las que cambiaron a comercial en 2025.
+
+    EF Core va en 10.0.9 y no en la ultima (10.0.11) por la regla del comentario de arriba:
+    a la altura del runtime instalado, no por encima. `Npgsql.EntityFrameworkCore.PostgreSQL`
+    10.0.3 exige EF Core >= 10.0.4, asi que el conjunto cuadra.
+  -->
 
   <!--
     Observabilidad (`herramientas/observabilidad.md`). Las tres señales, y la frontera con
@@ -73,6 +91,17 @@
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <!--
+    Testcontainers levanta un PostgreSQL de verdad por test de integracion. Nada de EF Core
+    InMemory: no traduce SQL real, ignora restricciones y filtros globales, y da falsos verdes.
+    La IMAGEN que se usa es la misma que sirve `deploy/docker-compose.yml` (postgres:17.6), no
+    la que trae la biblioteca por omision: probar contra otra version es probar contra otra
+    base de datos. MIT.
+  -->
+  <ItemGroup Label="Tests de integracion">
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
   </ItemGroup>
 
 </Project>

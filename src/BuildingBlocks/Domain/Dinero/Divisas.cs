@@ -2,7 +2,15 @@ namespace Bastion.BuildingBlocks.Domain.Dinero;
 
 // La divisa se guarda como texto ISO 4217 y no como enumerado: el catálogo lo mantiene la ISO,
 // no nosotros, y un enumerado obligaría a recompilar para admitir una divisa más.
-internal static class Divisas
+/// <summary>
+/// Catálogo de divisas: qué es un código válido y con cuántos decimales se redondea cada una.
+/// </summary>
+/// <remarks>
+/// Pasó de <c>internal</c> a <c>public</c> en el ítem 0.4: la divisa base de una empresa se
+/// valida contra este mismo catálogo. Duplicar la comprobación en el módulo habría sido tener
+/// dos listas de divisas que se separan en cuanto entre la segunda.
+/// </remarks>
+public static class Divisas
 {
     // Unidad mínima (decimales de redondeo fiscal) POR divisa. Hoy solo el euro, que es lo
     // único que Bastion factura. Deliberadamente NO hay valor por omisión: suponer dos
@@ -11,7 +19,8 @@ internal static class Divisas
     private static readonly Dictionary<string, int> s_unidadMinima =
         new(StringComparer.Ordinal) { ["EUR"] = 2 };
 
-    internal static string Normalizar(string divisa)
+    /// <summary>Normaliza el código y comprueba que tiene forma ISO 4217.</summary>
+    public static string Normalizar(string divisa)
     {
         ArgumentNullException.ThrowIfNull(divisa);
 
@@ -23,7 +32,8 @@ internal static class Divisas
                 $"La divisa {divisa} no es un código ISO 4217 (tres letras, como EUR).", nameof(divisa));
     }
 
-    internal static int UnidadMinima(string divisa) =>
+    /// <summary>Decimales de redondeo fiscal de la divisa; lanza si no se conoce.</summary>
+    public static int UnidadMinima(string divisa) =>
         s_unidadMinima.TryGetValue(divisa, out int decimales)
             ? decimales
             : throw new NotSupportedException(

@@ -4,6 +4,7 @@
 
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
+using Bastion.Organizacion.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Npgsql;
@@ -104,6 +105,12 @@ else
     builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(cadenaDeConexion));
     salud.AddCheck<ComprobacionDeBaseDeDatos>(nombreDeLaBase, tags: [etiquetaDeDisponibilidad]);
 }
+
+// ------------------------------------------------------------------------- modulos
+// Cada modulo se registra AQUI y solo aqui: la construccion del sistema esta separada de
+// su uso. Se registra aunque la cadena venga vacia, porque `dotnet ef migrations add` monta
+// este host para descubrir el DbContext y generar la migracion no abre ninguna conexion.
+builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion);
 
 WebApplication app = builder.Build();
 

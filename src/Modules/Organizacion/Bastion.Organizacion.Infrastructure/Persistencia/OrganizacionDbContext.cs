@@ -1,0 +1,81 @@
+using Bastion.Organizacion.Domain.Almacenes;
+using Bastion.Organizacion.Domain.Ejercicios;
+using Bastion.Organizacion.Domain.Empresas;
+using Bastion.Organizacion.Domain.Series;
+using Microsoft.EntityFrameworkCore;
+
+namespace Bastion.Organizacion.Infrastructure.Persistencia;
+
+/// <summary>
+/// Contexto de EF Core del módulo Organización: su esquema, sus tablas y —esto es lo que hay
+/// que mirar dos veces— <b>su propio historial de migraciones</b>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>La trampa del historial.</b> Cada módulo tiene su <c>DbContext</c> y su propia cadena de
+/// migraciones. EF Core, por omisión, guarda el historial en <c>public.__EFMigrationsHistory</c>,
+/// que es un sitio COMPARTIDO: el segundo módulo que migrase encontraría allí las migraciones
+/// del primero, se creería al día y no aplicaría las suyas. El fallo no sale por pantalla: sale
+/// como un esquema incompleto en producción. Por eso el historial se escribe explícitamente en
+/// el esquema del módulo, y hay un test de integración que lo comprueba <b>mirando la tabla</b>,
+/// no la configuración.
+/// </para>
+/// <para>
+/// <see cref="Configurar"/> es el único sitio donde se dicen esas tres cosas —proveedor,
+/// historial y convención de nombres—, y lo usan por igual el <i>composition root</i> y el
+/// arranque de los tests. Dos cableados que se pueden separar acaban separándose, y el que se
+/// prueba deja de ser el que se despliega.
+/// </para>
+/// </remarks>
+/// <param name="opciones">Opciones del contexto.</param>
+public sealed class OrganizacionDbContext(DbContextOptions<OrganizacionDbContext> opciones)
+    : DbContext(opciones)
+{
+    /// <summary>Esquema de PostgreSQL del módulo (Anexo A.1 del plan maestro).</summary>
+    public const string Esquema = "org";
+
+    /// <summary>
+    /// Tabla de historial de migraciones, DENTRO del esquema del módulo. El nombre va en
+    /// <c>snake_case</c> como el resto; lo que no es negociable es el esquema.
+    /// </summary>
+    public const string TablaDelHistorial = "__historial_de_migraciones";
+
+    /// <summary>Empresas.</summary>
+    public DbSet<Empresa> Empresas => Set<Empresa>();
+
+    /// <summary>Ejercicios contables.</summary>
+    public DbSet<Ejercicio> Ejercicios => Set<Ejercicio>();
+
+    /// <summary>Series documentales.</summary>
+    public DbSet<Serie> Series => Set<Serie>();
+
+    /// <summary>Almacenes.</summary>
+    public DbSet<Almacen> Almacenes => Set<Almacen>();
+
+    /// <summary>
+    /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive
+    /// el historial de migraciones y qué convención de nombres se aplica.
+    /// </summary>
+    public static void Configurar(DbContextOptionsBuilder opciones, string cadenaDeConexion)
+    {
+        ArgumentNullException.ThrowIfNull(opciones);
+
+        opciones
+            .UseNpgsql(cadenaDeConexion, npgsql => npgsql
+                .MigrationsHistoryTable(TablaDelHistorial, Esquema)
+                .MigrationsAssembly(typeof(OrganizacionDbContext).Assembly.FullName))
+
+            // `snake_case` en toda la base de datos (§3): identificadores sin comillas, que es
+            // lo que espera cualquiera que abra una consola de psql.
+            .UseSnakeCaseNamingConvention();
+    }
+
+    /// <inheritdoc/>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        modelBuilder.HasDefaultSchema(Esquema);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(OrganizacionDbContext).Assembly);
+    }
+}

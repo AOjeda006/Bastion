@@ -12,4 +12,17 @@
     <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!--
+    EF Core y su proveedor de PostgreSQL. `Design` va aquí, y no en el host, porque es el
+    proyecto donde `dotnet ef migrations add` genera y compila: sin él, la herramienta no
+    encuentra el ensamblado de migraciones del módulo.
+  -->
+  <ItemGroup Label="Persistencia">
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
 </Project>

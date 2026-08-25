@@ -178,10 +178,8 @@ jobs:
       # SQL real, ignora restricciones, columnas computadas y filtros globales, y da
       # falsos verdes (`stacks/dotnet/convenciones.md`).
       #
-      # El mínimo es 0 mientras no exista el primer test de integración: hoy este paso es un
-      # no-op DECLARADO, y el recuento lo dice en la anotación en vez de fingir. Pasa a 1 en
-      # el ítem 0.4, con el primer test contra PostgreSQL real — a partir de ahí un cero ya
-      # no significa "todavía no los hay" sino "han dejado de ejecutarse".
+      # Mínimo 1 desde el ítem 0.4: ya hay tests de integración contra PostgreSQL real, así que
+      # un cero aquí ya no significa "todavía no los hay" sino "han dejado de ejecutarse".
       - name: Tests de integración (Testcontainers)
         if: steps.solucion.outputs.existe == 'true'
         run: |
@@ -192,7 +190,7 @@ jobs:
             --logger "trx" \
             --results-directory artifacts/test-results/integracion
           bash scripts/ci/recuento-de-tests.sh \
-            artifacts/test-results/integracion "Integración (Testcontainers)" 0
+            artifacts/test-results/integracion "Integración (Testcontainers)" 1
 
       # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
       - name: Migraciones — el modelo no tiene cambios pendientes
