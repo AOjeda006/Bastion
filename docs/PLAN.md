@@ -260,28 +260,48 @@ cuando hace falta el porqué.
   y bajarla solo quita sitio. Se deja el valor de la plantilla; si el agente local es de 200K,
   **quita la línea**. Para afinarlo: mide con `/context` lo que cuesta una tarea típica (`U`) y deja
   la ventana en ≈ `2·U`.
-- **`nuget.config` manda la caché de paquetes a una carpeta literal dentro del repositorio.** El
-  bloque `<config>` fija `globalPackagesFolder` a `%NUGET_PACKAGES%`, y con esa variable **sin
-  definir** —que es el caso en un portátil recién montado y en el *runner* de la CI— NuGet no la
-  expande: la toma al pie de la letra. Comprobado:
-  `dotnet nuget locals global-packages --list` responde `…/Bastion/%NUGET_PACKAGES%`. **Todavía no
-  ha mordido porque el 0.1 no adopta ni un paquete**, así que esa ruta no se ha usado nunca. Morderá
-  en cuanto el 0.2 o el 0.3 añada el primer `PackageVersion`: aparecerá una carpeta
-  `%NUGET_PACKAGES%/` sin rastrear y sin ignorar en la raíz, la caché global dejará de compartirse
-  entre proyectos, y la caché de la CI perderá su sentido. **Está fuera del alcance del 0.1 y no se
-  ha tocado.** Arreglo propuesto: **borrar el bloque `<config>` entero** de `nuget.config`. El valor
-  por omisión de NuGet (`~/.nuget/packages`) es justo lo que se quiere, y lo que `actions/setup-dotnet`
-  espera encontrar para cachear. La reproducibilidad la dan las fuentes explícitas con `<clear/>`, el
-  `packageSourceMapping` y los `packages.lock.json` — no la ubicación de la caché.
-- **El presupuesto de tamaño del frontal en la CI está mal medido y la va a poner en rojo.** El paso
-  «Presupuesto de tamaño» de `.github/workflows/ci.yml` hace `du -sk dist` con un tope de 1024 kB, y
-  `dist/` mide hoy **1097 kB** — con un `App.tsx` de relleno. El culpable no es el *bundle*: son los
-  **911 kB del *sourcemap*** (`vite.config.ts` fija `build.sourcemap: true`, deliberadamente). Lo que
-  el navegador descarga al arrancar son **205 kB**. La comprobación contradice su propio comentario,
-  que habla del «arranque del usuario»: un *sourcemap* no se descarga nunca al arrancar. **Está fuera
-  del alcance del 0.1 y no se ha tocado.** Arreglo propuesto, de una línea: medir con
-  `du -sk --exclude='*.map' dist`. Alternativas: bajar a `sourcemap: 'hidden'`, o subir el tope — la
-  peor, porque desactiva la señal que el presupuesto existe para dar.
+- **ARREGLADO (2026-08-25) · `nuget.config` mandaba la caché de paquetes dentro del repositorio, y
+  tumbó la CI el mismo día.** El bloque `<config>` fijaba `globalPackagesFolder` a
+  `%NUGET_PACKAGES%`; con la variable sin definir, NuGet no falla: toma el literal y lo resuelve
+  relativo al propio fichero. **La predicción anterior de esta nota era falsa**: decía que no había
+  mordido y que mordería «con el primer `PackageVersion`, en el 0.2 o el 0.3». Mordió en el primer
+  *run* con solución, sin ningún paquete adoptado — [run 32845328258](https://github.com/AOjeda006/Bastion/actions/runs/32845328258):
+
+  ```
+  Post .NET: Cache folder path is retrieved for .NET CLI but doesn't exist on disk:
+             /home/runner/work/Bastion/Bastion/%NUGET_PACKAGES%
+  ```
+
+  Quien toca esa carpeta no es `restore`, es el **post-step** de `actions/setup-dotnet`, que la pide
+  para guardar la caché. Por eso el *job* `Backend` tuvo **sus doce pasos reales en verde y acabó en
+  rojo**. Arreglado en dos mitades, porque borrar el `<config>` **no bastaba**: los 19
+  `packages.lock.json` solo tienen entradas `"type": "Project"`, así que la carpeta no se crea ni en
+  la ruta correcta. Se borró el bloque **y** se añadió `mkdir -p ~/.nuget/packages` a la CI. Detalle
+  en **`docs/adr/adr-0002-cache-de-paquetes-y-post-step-de-la-ci.md`**. El `mkdir` se retira en el
+  0.13, no antes.
+- **ARREGLADO (2026-08-25) · el presupuesto de tamaño del frontal medía el sourcemap.** El paso
+  «Presupuesto de tamaño» hacía `du -sk dist` con tope 1024 kB. En el *runner* dio **1104 kB** y puso
+  el *job* `Frontal` en rojo con todo lo demás en verde — [run 32845328258](https://github.com/AOjeda006/Bastion/actions/runs/32845328258):
+  `El frontal supera el presupuesto de tamaño (1104 kB > 1024 kB)`. (En disco local daban 1097 kB: el
+  `du` del *runner* redondea distinto, así que **la cifra local no es la que decide**.) El culpable no
+  era el *bundle* sino los ~911 kB del *sourcemap*, que el navegador no descarga. La comprobación
+  contradecía su propio comentario, que habla del «arranque del usuario». Arreglado midiendo
+  `du -sk --exclude='*.map' dist`.
+- **El presupuesto del frontal ha quedado flojo, y hay que apretarlo en el 0.11.** Con el
+  `--exclude='*.map'`, lo que el navegador descarga son ~205 kB contra un tope de 1024 kB: un margen
+  de cinco veces no señala nada. **Recomendación:** al terminar el shell de React (0.11), cuando el
+  frontal tenga enrutador, caché de servidor, formularios, i18n y cliente de API, medir lo que pesa
+  de verdad y dejar el tope en ese valor más un margen corto (~20 %). Un presupuesto que nunca puede
+  saltar es peor que no tenerlo: ocupa el sitio del que sí avisaría.
+- **`sourcemap: true` publica el código fuente del frontal a cualquiera que abra las herramientas de
+  desarrollo.** `frontend/vite.config.ts` fija `build.sourcemap: true` y `deploy/Dockerfile.web` copia
+  el `dist` entero, *sourcemaps* incluidos, a la imagen que sirve nginx. No es un problema hoy —no hay
+  nada que proteger en un `App.tsx` de relleno— pero sí lo será el día que el frontal lleve lógica de
+  negocio, nombres de endpoints internos y reglas de permisos. **Recomendación:** `sourcemap: 'hidden'`,
+  que genera el mapa pero **no** deja el comentario `//# sourceMappingURL=` que lo enlaza: el navegador
+  no lo pide y un rastreador de errores sí puede consumirlo si algún día se sube. **No se toca ahora**
+  (fuera del alcance); es decisión del 0.11 o del despliegue, y conviene tomarla antes de que la imagen
+  se publique en algún sitio.
 - **La firma de commits depende del secreto `SIGNING_KEY_B64`.** El hook `SessionStart` de
   `.claude/settings.json` la activa si existe y avisa si no. Sin él, **no se commitea** (política de
   `CLAUDE.md` §3). El montaje de la clave está en `plantillas/README.md` de la biblioteca.

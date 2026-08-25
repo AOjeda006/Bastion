@@ -68,11 +68,13 @@ jobs:
         run: npm run build
 
       # Presupuesto de tamaño (§14): que el frontal engorde tiene que doler en la CI,
-      # no en el arranque del usuario seis meses después.
+      # no en el arranque del usuario seis meses después. Por eso se mide lo que el navegador
+      # DESCARGA y se excluyen los `.map`: un sourcemap pesa más que el bundle y no se descarga
+      # al arrancar, así que contarlo medía otra cosa distinta de la que dice esta frase.
       - name: Presupuesto de tamaño
         run: |
           TOPE_KB=1024
-          TAMANO_KB=$(du -sk dist | cut -f1)
+          TAMANO_KB=$(du -sk --exclude='*.map' dist | cut -f1)
           echo "Tamaño de dist/: ${TAMANO_KB} kB (tope ${TOPE_KB} kB)"
           echo "### Frontal: ${TAMANO_KB} kB / ${TOPE_KB} kB" >> "$GITHUB_STEP_SUMMARY"
           if [ "$TAMANO_KB" -gt "$TOPE_KB" ]; then
@@ -124,6 +126,15 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
+
+      # `actions/setup-dotnet` falla en su POST-step si la carpeta de paquetes no existe, y
+      # hoy no existe: los `packages.lock.json` solo tienen entradas "type": "Project", cero
+      # paquetes de NuGet, así que ningún `restore` la crea. Un job con build, formato y tests
+      # en verde se quedaba en rojo por eso (ADR-0002). Deja de hacer falta cuando lleguen
+      # paquetes de verdad; mientras tanto, no estorba.
+      - name: Asegurar la carpeta de paquetes
+        if: steps.solucion.outputs.existe == 'true'
+        run: mkdir -p ~/.nuget/packages
 
       - name: Restaurar
         if: steps.solucion.outputs.existe == 'true'
