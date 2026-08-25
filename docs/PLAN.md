@@ -158,6 +158,12 @@ dos filtros, y `npm run typecheck | lint | format:check | test | build`.
 A partir de ahora **el *job* `backend` de la CI se ejecuta de verdad**: su condición
 `if [ -f Bastion.sln ]` ya se cumple, sin tocar el *workflow*. Un fallo suyo es un fallo real.
 
+**CI en verde de punta a punta desde `801837d`** — [run 32866580496](https://github.com/AOjeda006/Bastion/actions/runs/32866580496):
+`Frontal` ✅, `Backend` ✅ e `Imágenes` ✅. El *job* `Imágenes` corrió por primera vez (antes se
+saltaba porque `hashFiles('Bastion.sln')` estaba vacío) y construyó `Dockerfile.api` y
+`Dockerfile.web` sin tocarlos. Ojo: `dotnet test` sale 0 **sin ejecutar nada**, porque todavía no
+hay proyectos de test — no es evidencia de nada hasta el 0.3.
+
 **Dónde retomar exactamente:** ítem 0.2. La API es hoy un host mínimo — `src/Api/Program.cs` hace
 `CreateBuilder` → `Build` → `Run` y no expone nada. El 0.2 tiene que darle las sondas
 `/health/live` y `/health/ready` que **ya esperan** el `HEALTHCHECK` de `deploy/Dockerfile.api`, el
