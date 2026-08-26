@@ -185,8 +185,12 @@ jobs:
             --results-directory artifacts/test-results/dominio
           resultado=$?
           set -e
+          # El suelo no es el número de hoy (315): es el número por debajo del cual se ha
+          # perdido algo gordo. El ensamblado más pequeño de este paso aporta 41 casos, así
+          # que perder cualquiera de los cuatro deja el recuento por debajo de 300 y el paso
+          # falla. Un suelo exacto se rompería al borrar un test de más; uno de 1 no protege.
           bash scripts/ci/recuento-de-tests.sh \
-            artifacts/test-results/dominio "Dominio y arquitectura" 1
+            artifacts/test-results/dominio "Dominio y arquitectura" 300
           exit $resultado
 
       # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
@@ -224,8 +228,11 @@ jobs:
             --results-directory artifacts/test-results/integracion
           resultado=$?
           set -e
+          # Mismo criterio: hoy son 113 (85 de la API + 28 de Organización). Perder el bloque
+          # de Organización deja 85, por debajo del suelo, y el paso falla en vez de dar verde
+          # sobre la mitad de la suite.
           bash scripts/ci/recuento-de-tests.sh \
-            artifacts/test-results/integracion "Integración (Testcontainers)" 1
+            artifacts/test-results/integracion "Integración (Testcontainers)" 100
           exit $resultado
 
       # El OpenAPI es el contrato del que se genera el cliente de TypeScript: se publica
