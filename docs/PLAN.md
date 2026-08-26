@@ -397,9 +397,149 @@ preguntarlas):
   —registro, login, permisos por acción, pertenencia y *claim*— y el §11 lo declara «opcional para
   roles con poder». Anotado aquí para que no parezca un olvido.
 
+**Decididas al montarlo** (durante la implementación, 2026-08-26):
+
+- **`Desbloquear`, `Cerrar` y `Reabrir` estrenan puerta HTTP.** En el 0.4 se dejaron sin ella con un
+  motivo escrito: no había a quién exigirle un permiso, y una operación de recuperación abierta a
+  cualquiera es peor que no tenerla. Ese motivo desaparece hoy. Se abren detrás de
+  `organizacion.empresa.desbloquear`, `organizacion.almacen.desbloquear`,
+  `organizacion.ejercicio.cerrar` y `organizacion.ejercicio.reabrir`, cada una con su `401` y su
+  `403` ejercitados. **No es ampliación de alcance encubierta:** son las mismas operaciones de
+  dominio que ya existían y ya estaban probadas; lo que faltaba era la puerta.
+- **Crear y modificar NO comparten permiso, aunque los escriba el mismo código.** Hay perfiles que
+  dan de alta y no corrigen, y al revés; un permiso compartido hace imposible expresarlo. Lo vigila
+  `Escribir_y_modificar_no_comparten_permiso_aunque_los_escriba_el_mismo_codigo`, que barre la tabla
+  de rutas y agrupa por permiso todas las acciones de escritura. Las **lecturas sí** comparten:
+  `ver` es una sola facultad, la liste quien la liste.
+- **Los tests de HTTP se mudan a `tests/Api.IntegrationTests`, nuevo.** Desde hoy **toda** petición
+  necesita un token que emite Identidad, así que un test de contrato de Organización ya no puede
+  vivir en un proyecto que solo ve Organización. `Organizacion.IntegrationTests` se queda **solo con
+  persistencia** (y pierde la referencia a `src/Api` y a `Mvc.Testing`), porque su
+  `EsquemaDelModuloTests` afirma que hay **un** historial de migraciones, y eso solo es cierto en un
+  contenedor con un módulo migrado. El nuevo proyecto migra los **dos**, que es lo que convierte esa
+  afirmación del 0.4 en una prueba de verdad.
+- **Ningún test fabrica un principal ni sustituye un servicio del contenedor.** Todos los clientes
+  autenticados entran por `POST /api/v1/identidad/sesiones` con la contraseña de la semilla.
+  `TokenForjado` existe solo para fabricar los que el borde **tiene que rechazar** (caducado, otro
+  emisor, otra audiencia, firma tocada, ninguno): no hay manera de comprobar que la caducidad se
+  valida sin presentar uno caducado.
+- **Los casos de uso no llevan tests unitarios con dobles.** Se ejercitan por su camino real —HTTP
+  contra PostgreSQL de verdad— igual que en el 0.4. Un doble del repositorio habría dado verde al
+  defecto del 0.4 (`ExisteConNifAsync` con un conversor de valor por medio), que es exactamente el
+  motivo. El **dominio** sí va con TDD y tests unitarios: `Identidad.UnitTests` pasa de 0 a 58.
+- **`OpcionesDeJwt.DelEntorno()` se retira.** La configuración entra por `IConfiguration`, que ya lee
+  las variables de entorno; un segundo camino que lee `Environment.GetEnvironmentVariable` a mano
+  era código muerto y, peor, un camino que los tests no podían configurar.
+
 ## Estado actual
 
-**Ítem 0.4 TERMINADO. Siguiente: ítem 0.5 (módulo Identidad), sin empezar.**
+**Ítem 0.5 escrito y en verde en local; falta la confirmación de la CI.** GitHub Actions está en
+**caída mayor** (incidencia abierta a las 15:11 UTC del 2026-08-26) y **no ha creado el *run*** del
+commit `7d5f3c3`, ya empujado a `main`. En cuanto Actions vuelva, se apunta aquí el *run* con sus
+cuatro conclusiones y los dos recuentos, y el ítem se marca en el checklist. **Hasta entonces el 0.5
+no está cerrado**, por mucho que el árbol esté verde en esta máquina.
+
+Las cinco capas de `src/Modules/Identidad/` dejan de estar vacías: `Usuario`, `Rol`, `Permiso`,
+`Membresia` y `TokenDeRefresco`, con el esquema `identidad` y su migración propia. Y lo que cambia
+para **todo lo demás**: la API deja de ser pública.
+
+- **Se deniega por omisión** (`SetFallbackPolicy(RequireAuthenticatedUser)`) y cada acción se abre
+  con `[ExigePermiso]`. **46 acciones**: 41 detrás de su permiso, 3 anónimas (`Iniciar`, `Renovar`,
+  `Cerrar` sesión) y 2 autenticadas sin permiso (cambiar de empresa y cambiarse la contraseña de
+  uno mismo, que no pueden depender de una facultad que se pueda retirar).
+- **34 permisos** en dos catálogos (`identidad.*` 14, `organizacion.*` 20), con el formato
+  `modulo.recurso.accion` del §11. Los roles los agrupan; no hay ni un `[Authorize(Roles = …)]`.
+- **La empresa activa viaja en el *claim*** y se cambia reemitiendo el par de tokens. No hay ni un
+  camino que la lea del cuerpo o de la consulta.
+- **Refresco rotatorio** en cookie `__Host-bastion-refresco` (`HttpOnly` + `Secure` +
+  `SameSite=Lax`), 14 días; el acceso, 15 minutos, en memoria. Reutilizar un refresco ya canjeado
+  **tumba la familia entera**.
+- **Semilla de arranque** en el *composition root* —cruza dos módulos, así que no puede vivir en
+  ninguno—, solo si no hay ningún usuario y solo con sus siete variables de entorno puestas.
+
+Recuento: `dotnet test` pasa de **226** casos a **298 rápidos** + los de integración (que aquí no se
+pueden ejecutar: sigue sin haber Docker en esta máquina).
+
+Verificado en local, con la salida real y **enseñando el rojo de cada bloque**:
+
+- **Dominio de Identidad (TDD)** — rojo: no compilaba, las entidades no existían. Verde:
+  `Identidad.UnitTests` **58/58** (de 0).
+- **La denegación por omisión** — el rojo más útil del ítem, y no lo buscaba nadie: al poner la
+  política de respaldo, **11 de los 19** tests funcionales que ya estaban en verde se pusieron en
+  rojo con `401`. Ninguno hablaba de autorización: eran los de la política de errores, que piden
+  rutas inventadas a propósito. Causa: el middleware aplica la política de respaldo **también
+  cuando la petición no casa con ningún endpoint**. Está en el **ADR-0009**, con las tres
+  consecuencias que arrastra (sondas con `AllowAnonymous` explícito, rutas de prueba publicadas
+  como `Endpoint`, y `UseAuthentication` antes de `UseAuthorization`).
+- **Los seis tests de forma de la autorización** (`CadaAccionDeclaraSuPermisoTests`) — probados con
+  **cinco mutaciones** de `EmpresasController`, restaurando el fichero tras cada una: quitar el
+  atributo → 2 rojos; exigir el permiso de otro módulo → 3 rojos; que `Crear` y `Modificar`
+  compartan permiso → 2 rojos; `[Authorize(Policy = "inventada")]` → 3 rojos; exigir un permiso que
+  no está en el catálogo → 2 rojos.
+- **El resumen de contraseñas** (`ElResumenDeContrasenasTests`, 5 casos) — probado con **tres
+  mutaciones** del hasher: bajar a 10 000 iteraciones → rojo *«iteraciones should be 100000 but was
+  10000»*; que el resumen de relleno salga de una contraseña adivinable → rojo *«should be
+  Incorrecta but was Correcta»*; memorizar el resumen → rojo *«primero should not be "AQAAAAIAAYag…"»*.
+  Los parámetros del ADR-0008 viven **en el test**, no en el documento: si el paquete cambia sus
+  valores por omisión, sale en rojo y el ADR se corrige con él.
+- `dotnet restore --locked-mode` → `rc=0`. `dotnet build` Release → **0 advertencias / 0 errores**.
+  `dotnet format --verify-no-changes` → `rc=0` (14 `IDE1006` corregidos a mano por el camino: el
+  `NamingStyleCodeFixProvider` no admite «corregir todo en la solución», así que `dotnet format` los
+  señala y no los arregla).
+- `bash scripts/comprobar-migraciones.sh` → `rc=0`, y ahora dice **dos** líneas: *«Organizacion: 1
+  migración(es)…»* y *«Identidad: 1 migración(es)…»*.
+- `dotnet test --filter "Category!=Integracion"` en Release → **298 correctos, 0 con error**
+  (94 bloques comunes + 116 Organización + 58 Identidad + 30 funcionales).
+
+### Cada regla de autorización, la petición que la ejerce y lo que devuelve
+
+Si una fila no tiene petición, esa regla no está probada. Las tres primeras **no son una fila por
+acción: son un barrido sobre las 46** que el host publica, sacadas de
+`IActionDescriptorCollectionProvider` —la misma tabla que usa el enrutado para servir— y no de una
+lista escrita a mano.
+
+| Regla | Petición que la ejerce | Respuesta |
+|---|---|---|
+| Sin credenciales no se atiende **ninguna** acción protegida | las 41, sin cabecera `Authorization` | `401` |
+| Con un permiso que no es el suyo no se abre **ninguna** | las 41, con un token que solo trae `identidad.rol.ver` | `403` |
+| Con su permiso se abre **cada una**, y solo con el suyo | las 41, cada una con un token que trae exactamente su permiso | ni `401` ni `403` |
+| Las tres anónimas se alcanzan sin credenciales | `POST /sesiones` con cuerpo vacío | `400` (ha entrado) |
+| | `DELETE /sesiones/actual` sin cookie | `204` |
+| Cambiar la contraseña propia no exige permiso | `PUT /usuarios/actual/contrasena` con una cuenta **sin ni un permiso** | ni `401` ni `403` |
+| Elegir empresa no exige permiso | `PUT /sesiones/actual/empresa` con esa misma cuenta | ni `401` ni `403` |
+| Una ruta que no existe, para quien se ha identificado | `GET /api/v1/esto-no-existe` con token | `404` + `problem+json` |
+| Una ruta que no existe, para el anónimo | la misma, sin token | `401` (ADR-0009) |
+| No se pasa a una empresa a la que uno no pertenece | `PUT /sesiones/actual/empresa` con otra empresa | `403` `/errors/empresa-no-pertenece` |
+| El correo que no existe y la contraseña mala son indistinguibles | dos `POST /sesiones`, uno con cada cosa | misma respuesta, mismo cuerpo |
+| Cinco fallos rechazan la cuenta | 5 × `POST /sesiones` mal + 1 con la contraseña **buena** | `401` también el sexto |
+| El acceso caducado, de otro emisor, de otra audiencia, con la firma tocada o sin token | `[Theory]` de 5 casos con `TokenForjado` | `401` |
+| Reutilizar un refresco ya canjeado | renovar dos veces con la misma cookie | `401` y la familia entera muerta |
+| El refresco no viaja en el cuerpo | leer la respuesta de `POST /sesiones` | solo en `Set-Cookie`, `HttpOnly` |
+| Nada del interior sale en un error | NIF hostil, paginación imposible, cuerpo roto, tipo de contenido malo, cadena de 100 000 caracteres, correo hostil | `400`/`404`/`415`, y **ni uno** de los 23 rastros prohibidos |
+
+Los 23 rastros —`Npgsql`, `SELECT `, `relation "`, `C:\`, `/home/runner`, `.cs:line`…— están
+**escritos en el test** (`EntradaHostilTests`), no en la cabeza de nadie, más los dos secretos que
+cambian en cada ejecución (la cadena de conexión y la clave de firma).
+
+### Lo que el criterio del ítem pedía, y dónde está probado
+
+| Comprobante | Dónde |
+|---|---|
+| Registro (por invitación) | `Crear` de `UsuariosController`, tras `identidad.usuario.crear` |
+| Login | `SesionesYTokensTests`, entrando de verdad por `POST /sesiones` |
+| Roles y permisos **por acción** | `LaPuertaDeCadaAccionTests` (barrido) + `CadaAccionDeclaraSuPermisoTests` (forma) |
+| Pertenencia a empresas | `Escenario.EntrarEnAsync`, que concede pertenencia y rol por sus endpoints |
+| El identificador de empresa viaja en el *claim* | `El_token_de_acceso_lleva_dentro_la_empresa_activa_el_usuario_y_los_permisos` |
+| El historial por esquema del 0.4, probado de verdad | `Cada_modulo_tiene_SU_historial_de_migraciones_en_SU_esquema`: **exactamente 2** |
+| Sin claves ajenas entre esquemas (§4, regla 4) | `La_membresia_guarda_el_identificador_de_empresa_y_NO_una_clave_ajena` |
+| `Bloqueado` como tercer estado (R16 / LOPDGDD art. 32) | `El_usuario_se_bloquea_y_no_se_borra_asi_que_tiene_donde_apuntarlo` |
+| `timestamptz` para los instantes | teoría de 6 columnas sobre `information_schema` |
+
+---
+
+**Del ítem 0.4:**
+
+**Ítem 0.4 TERMINADO.**
 
 > **Entre medias (2026-08-26), un commit propio que no es de ningún ítem:** el esquema de
 > Organización pasó de `org` a `organizacion` y el Anexo A.1 quedó corregido y completo (dieciséis
@@ -638,6 +778,11 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Los cuatro *jobs* de la CI en verde — [run 32929808259](https://github.com/AOjeda006/Bastion/actions/runs/32929808259).
 - [ ] **0.5 · Módulo Identidad** — criterio de aceptación: registro y login; roles y permisos por
   acción; pertenencia a empresas; el identificador de empresa viaja en el *claim*.
+  Escrito y **en verde en local** (commit `7d5f3c3`, ya en `main`); decisiones en
+  `docs/adr/adr-0008-contrasenas-bloqueo-y-la-respuesta-unica-del-acceso.md` y
+  `docs/adr/adr-0009-la-denegacion-por-omision-tambien-cubre-lo-que-no-es-una-ruta.md`.
+  **Sin marcar a propósito:** falta el *run* de la CI, que GitHub no ha creado por la caída mayor de
+  Actions del 2026-08-26. Se marca cuando haya cuatro conclusiones que leer.
 - [ ] **0.6 · Filtro global multiempresa (R8)** — criterio de aceptación: un test demuestra que una
   consulta sin filtro explícito **no** devuelve datos de otra empresa, y que el identificador del
   cuerpo de la petición se ignora.
@@ -681,6 +826,34 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTO (2026-08-26) · el *compose* no aplica las migraciones, así que la semilla no llega a
+  aplicarse ahí.** Nadie ejecuta `dotnet ef database update` ni al arrancar la API ni en el
+  `docker-compose.yml`: la base del entorno local no tiene tablas. Consecuencia práctica de hoy:
+  las siete variables `BASTION_SEMILLA_*` están **declaradas en el compose y vacías por omisión**,
+  así que la semilla se salta con un aviso en el registro y el entorno levanta igual que antes. Si
+  se rellenan sin haber migrado, el arranque **revienta a propósito** (la semilla no se calla). Lo
+  que falta es decidir **quién** aplica las migraciones en un despliegue —un paso del compose, un
+  `initContainer`, o el propio arranque de la API— y eso es materia del **0.13**, no del 0.5. Los
+  tests de integración sí migran: lo hace su fixture antes de levantar el host.
+- **ABIERTO (2026-08-26) · la CI solo se dispara en `main` en este repositorio.** El *workflow*
+  declara `push: branches: ['**']`, pero de los **19** *runs* que existen, los 19 son de `main`.
+  Empujar `feature/0.5-identidad` (commit `7d5f3c3`) **no creó ningún *run***, ni siquiera un
+  `check-run`. Consecuencia: la regla de trabajo *«rama por ítem, verificar en verde y solo entonces
+  `main` avanza por fast-forward»* no se puede cumplir tal cual — la única manera de que la CI mire
+  el trabajo es empujar `main`, que es lo que han hecho de hecho todos los ítems anteriores
+  (incluidos dos rojos, `ab9009b` y `2e991ac`, arreglados hacia delante). Pendiente de decidir con
+  el usuario: o se acepta el «arreglar hacia delante en `main`» y se escribe así en el plan, o se
+  averigua por qué Actions no atiende a las ramas (permisos del repositorio, no del *workflow*).
+- **INCIDENCIA EXTERNA (2026-08-26) · GitHub Actions en caída mayor.** Incidencia abierta a las
+  15:11 UTC. El *push* de `7d5f3c3` a `main` llegó (el `HEAD` remoto es ese) y **no se creó el
+  *run***. No es un fallo del repositorio ni del *workflow*: `githubstatus.com` da `Actions ->
+  major_outage` con `Git Operations`, `API Requests` y `Webhooks` operativos. El 0.5 queda **sin
+  cerrar** hasta que haya *run* que leer.
+- **ABIERTO · los mínimos del recuento de tests siguen en 1 y 1.** `scripts/ci/recuento-de-tests.sh`
+  falla si un paso ejecuta menos casos de los exigidos, y hoy exige **uno** en cada paso mientras se
+  ejecutan 298 y unos cuantos de integración. Con ese suelo, perder un ensamblado entero del barrido
+  seguiría saliendo verde. Se suben a un suelo realista **en cuanto la CI publique las dos cuentas
+  de verdad** — no antes, para no poner un número inventado.
 - **ARREGLADO (2026-08-26) · el verde del *job* `Backend` no decía cuántos casos ejecutaba.** Los
   registros de un *job* devuelven **403** sin autenticar, así que desde fuera un `dotnet test` que
   dejara de encontrar ensamblados —o un `--filter` que no casara con nada— se veía igual de verde que
