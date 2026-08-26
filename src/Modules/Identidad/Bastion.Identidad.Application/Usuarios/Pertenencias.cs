@@ -97,7 +97,16 @@ internal sealed class ConcederPertenencia(
             return Resultado.Fallo(ErroresDeUsuario.EmpresaNoOperativa());
         }
 
-        usuario.Conceder(peticion.EmpresaId);
+        // Conceder dos veces la misma pertenencia no es un error: es la misma petición repetida.
+        // Se sale ANTES de tocar nada, y no confiando en que `Conceder` devuelva la que ya había,
+        // porque lo que viene después —`Registrar`— sí distingue: apuntar como nueva una que ya
+        // existe acabaría en un INSERT contra su propio índice único.
+        if (usuario.PerteneceA(peticion.EmpresaId))
+        {
+            return Resultado.Correcto();
+        }
+
+        usuarios.Registrar(usuario.Conceder(peticion.EmpresaId));
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto();

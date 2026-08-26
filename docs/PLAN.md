@@ -778,11 +778,14 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Los cuatro *jobs* de la CI en verde — [run 32929808259](https://github.com/AOjeda006/Bastion/actions/runs/32929808259).
 - [ ] **0.5 · Módulo Identidad** — criterio de aceptación: registro y login; roles y permisos por
   acción; pertenencia a empresas; el identificador de empresa viaja en el *claim*.
-  Escrito y **en verde en local** (commit `7d5f3c3`, ya en `main`); decisiones en
-  `docs/adr/adr-0008-contrasenas-bloqueo-y-la-respuesta-unica-del-acceso.md` y
-  `docs/adr/adr-0009-la-denegacion-por-omision-tambien-cubre-lo-que-no-es-una-ruta.md`.
-  **Sin marcar a propósito:** falta el *run* de la CI, que GitHub no ha creado por la caída mayor de
-  Actions del 2026-08-26. Se marca cuando haya cuatro conclusiones que leer.
+  Escrito y en verde en local; decisiones en
+  `docs/adr/adr-0008-contrasenas-bloqueo-y-la-respuesta-unica-del-acceso.md`,
+  `docs/adr/adr-0009-la-denegacion-por-omision-tambien-cubre-lo-que-no-es-una-ruta.md` y
+  `docs/adr/adr-0010-una-entidad-hija-con-clave-propia-no-se-da-de-alta-sola.md`.
+  **Sin marcar a propósito:** la CI lo ha tumbado tres veces —`7d5f3c3` no llegó a ejecutarse por
+  la caída mayor de Actions del 2026-08-26; `5314ffc` y `772ddec` salieron rojos por defectos
+  reales que solo PostgreSQL veía— y se arregla hacia delante. Se marca cuando haya cuatro
+  conclusiones en verde que leer, no antes.
 - [ ] **0.6 · Filtro global multiempresa (R8)** — criterio de aceptación: un test demuestra que una
   consulta sin filtro explícito **no** devuelve datos de otra empresa, y que el identificador del
   cuerpo de la petición se ignora.

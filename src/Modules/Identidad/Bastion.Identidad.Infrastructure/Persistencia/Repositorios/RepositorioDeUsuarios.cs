@@ -67,4 +67,6 @@ internal sealed class RepositorioDeUsuarios(IdentidadDbContext contexto) : IRepo
             .PaginarAsync(paginacion, cancelacion);
 
     public void Agregar(Usuario usuario) => contexto.Usuarios.Add(usuario);
+
+    public void Registrar(Membresia membresia) => contexto.Membresias.Add(membresia);
 }

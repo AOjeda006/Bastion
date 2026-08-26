@@ -63,4 +63,26 @@ public interface IRepositorioDeUsuarios
     /// <summary>Apunta un usuario nuevo. No lo graba: eso lo hace la unidad de trabajo.</summary>
     /// <param name="usuario">Usuario que se da de alta.</param>
     void Agregar(Usuario usuario);
+
+    /// <summary>Apunta una pertenencia recién concedida.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Hace falta, aunque la pertenencia ya esté colgada de su usuario, y esto costó un rojo
+    /// entero de la CI.</b> Cuando el usuario se ha leído de la base —o sea, siempre menos en la
+    /// semilla— EF Core lo tiene en estado <c>Unchanged</c>. Al detectar cambios encuentra en su
+    /// colección una <see cref="Membresia"/> que no seguía, y decide qué es MIRANDO SI TIENE
+    /// CLAVE: la tiene, porque el constructor le pone un <c>Guid</c> v7 el primer día, así que
+    /// concluye que ya existía y la marca <c>Modified</c>. Lo que sale no es un <c>INSERT</c>,
+    /// es un <c>UPDATE … WHERE id = …</c> que no toca ni una fila, y eso es un
+    /// <c>DbUpdateConcurrencyException</c>: un <c>500</c> en cada alta.
+    /// </para>
+    /// <para>
+    /// No pasa con el usuario recién creado —el hijo hereda el <c>Added</c> del padre— ni con
+    /// <c>RolDeMembresia</c>, cuya clave es compuesta y sí sale <c>Added</c>. Solo con esta, y
+    /// solo por el camino que ningún test de dominio recorre. Está fijado en
+    /// <c>LasPertenenciasNuevasSeInsertanTests</c>, que no necesita base de datos.
+    /// </para>
+    /// </remarks>
+    /// <param name="membresia">Pertenencia que devolvió <c>Usuario.Conceder</c>.</param>
+    void Registrar(Membresia membresia);
 }

@@ -114,7 +114,10 @@ if [ "$con_error" -gt 0 ]; then
         emitidos++
         if (emitidos > tope) { return }
         m = limpiar(mensaje)
-        if (length(m) > 400) { m = substr(m, 1, 400) " […]" }
+        # 400 cortaba el mensaje justo antes de lo que hacía falta: el cuerpo de la respuesta
+        # ya se come casi todo, y lo que el test adjunta detrás —el registro del servidor, que
+        # es lo ÚNICO que explica un 500 en la CI— se perdía entero. Ver `RegistroDeFallos`.
+        if (length(m) > 1600) { m = substr(m, 1, 1600) " […]" }
         printf "::error title=%s::%s — %s\n", etiqueta, limpiar(nombre), m
       }
       /<UnitTestResult / {
