@@ -172,14 +172,22 @@ jobs:
       - name: Tests de dominio y de arquitectura
         if: steps.solucion.outputs.existe == 'true'
         run: |
+          # El `dotnet test` NO decide el desenlace del paso: lo decide el recuento, que se
+          # ejecuta SIEMPRE. Si se dejara abortar aquí, un rojo de test se vería desde fuera
+          # como «Process completed with exit code 1» y nada más —los registros son 403 sin
+          # autenticar—, sin el nombre del caso ni la aserción.
+          set +e
           dotnet test Bastion.sln \
             --configuration Release \
             --no-build \
             --filter "Category!=Integracion" \
             --logger "trx" \
             --results-directory artifacts/test-results/dominio
+          resultado=$?
+          set -e
           bash scripts/ci/recuento-de-tests.sh \
             artifacts/test-results/dominio "Dominio y arquitectura" 1
+          exit $resultado
 
       # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
       #
@@ -206,14 +214,19 @@ jobs:
       - name: Tests de integración (Testcontainers)
         if: steps.solucion.outputs.existe == 'true'
         run: |
+          # Igual que el paso anterior: el recuento se ejecuta siempre y es quien decide.
+          set +e
           dotnet test Bastion.sln \
             --configuration Release \
             --no-build \
             --filter "Category=Integracion" \
             --logger "trx" \
             --results-directory artifacts/test-results/integracion
+          resultado=$?
+          set -e
           bash scripts/ci/recuento-de-tests.sh \
             artifacts/test-results/integracion "Integración (Testcontainers)" 1
+          exit $resultado
 
       # El OpenAPI es el contrato del que se genera el cliente de TypeScript: se publica
       # como artefacto para que el frontal lo consuma en vez de escribir DTOs a mano.
