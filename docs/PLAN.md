@@ -434,9 +434,9 @@ preguntarlas):
 ## Estado actual
 
 **Ítem 0.5 cerrado, con la CI en verde de verdad:**
-[run 32998349456](https://github.com/AOjeda006/Bastion/actions/runs/32998349456) sobre `cae3c54`,
+[run 32999845303](https://github.com/AOjeda006/Bastion/actions/runs/32999845303) sobre `369c24d`,
 los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
-los dos recuentos publicados: **315** casos rápidos y **113** de integración contra PostgreSQL 17.6.
+los dos recuentos publicados: **315** casos rápidos y **114** de integración contra PostgreSQL 17.6.
 
 Y llegar ahí costó **tres rojos de la CI**, que es la parte que importa: el árbol llevaba días verde
 en esta máquina y escondía tres defectos que solo se veían con una base de datos delante. Están
@@ -460,7 +460,7 @@ para **todo lo demás**: la API deja de ser pública.
 - **Semilla de arranque** en el *composition root* —cruza dos módulos, así que no puede vivir en
   ninguno—, solo si no hay ningún usuario y solo con sus siete variables de entorno puestas.
 
-Recuento: `dotnet test` pasa de **226** casos a **315 rápidos** + **113 de integración**. Los de
+Recuento: `dotnet test` pasa de **226** casos a **315 rápidos** + **114 de integración**. Los de
 integración no se pueden ejecutar aquí —sigue sin haber Docker en esta máquina—, así que quien los
 ejecuta es la CI y por eso su conclusión es la única que cierra el ítem.
 
@@ -837,8 +837,8 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   `docs/adr/adr-0010-una-entidad-hija-con-clave-propia-no-se-da-de-alta-sola.md`.
   Segundo módulo con persistencia, o sea la primera prueba **de verdad** del historial de
   migraciones por esquema del 0.4: se comprueba mirando las tablas y salen exactamente dos.
-  Los cuatro *jobs* de la CI en verde — [run 32998349456](https://github.com/AOjeda006/Bastion/actions/runs/32998349456),
-  con **315** casos rápidos y **113** de integración.
+  Los cuatro *jobs* de la CI en verde — [run 32999845303](https://github.com/AOjeda006/Bastion/actions/runs/32999845303),
+  con **315** casos rápidos y **114** de integración.
 - [ ] **0.6 · Filtro global multiempresa (R8)** — criterio de aceptación: un test demuestra que una
   consulta sin filtro explícito **no** devuelve datos de otra empresa, y que el identificador del
   cuerpo de la petición se ignora.
@@ -911,7 +911,7 @@ cuando hace falta el porqué.
   `scripts/ci/recuento-de-tests.sh` falla si un paso ejecuta menos casos de los exigidos, y exigía
   **uno** en cada paso mientras se ejecutaban cientos: con ese suelo, perder un ensamblado entero
   del barrido seguía saliendo verde. Con las dos cuentas ya publicadas por la CI —**315** y
-  **113**— el suelo pasa a **300** y **100**. El criterio no es el número de hoy sino aquel por
+  **114**— el suelo pasa a **300** y **100**. El criterio no es el número de hoy sino aquel por
   debajo del cual se ha perdido algo gordo: el ensamblado más pequeño de cada paso aporta 41 y 28
   casos, así que perder cualquiera de ellos rompe el suelo y borrar un test de más no.
 - **ARREGLADO (2026-08-26) · el verde del *job* `Backend` no decía cuántos casos ejecutaba.** Los
