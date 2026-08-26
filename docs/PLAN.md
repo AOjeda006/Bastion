@@ -431,7 +431,189 @@ preguntarlas):
   las variables de entorno; un segundo camino que lee `Environment.GetEnvironmentVariable` a mano
   era código muerto y, peor, un camino que los tests no podían configurar.
 
+### Tomadas por el agente de desarrollo — ítem 0.6 (2026-08-27)
+
+**Respondidas por el usuario** en la puerta de clarificación, antes de escribir una línea:
+
+- **`Empresa` se filtra, y solo se ve la activa.** La alternativa era «se ven las empresas a las que
+  uno pertenece», que exigía cruzar de Organización a Identidad en una consulta y eso lo prohíbe el
+  §4. Consecuencia asumida: `GET /empresas` trae una sola fila y el `Location` de un `POST` no se
+  puede seguir hasta entrar en la empresa nueva.
+- **Un usuario con el que no se comparte empresa da `404`, no `403`.** Un `403` confirmaría que la
+  cuenta existe, que es exactamente lo que sirve para enumerar correos.
+
+**El inquilinato, entidad por entidad.** Esta tabla se decidió **antes** que el código, porque
+decidirla mal no se nota: una entidad global de más es una fuga permanente y una de menos es una
+funcionalidad que no se puede construir. Va aquí y en el **ADR-0011**, y no la vigila la buena
+voluntad: la vigila `CadaEntidadDeclaraSuInquilinatoTests`, que recorre el modelo ya construido y la
+compara **en los dos sentidos**.
+
+| Entidad | ¿De inquilino? | Por qué |
+|---|---|---|
+| `Empresa` | Sí, **por su propia clave** | Es la raíz: no lleva `empresa_id` porque ella *es* el inquilino. Filtra por `Id`. |
+| `Ejercicio` | Sí | Un ejercicio contable es de una empresa; dos empresas tienen su 2026 cada una. |
+| `Serie` | Sí | La numeración de facturas es de una empresa y un ejercicio. Compartirla es un problema fiscal, no de privacidad. |
+| `Almacen` | Sí | El dato de negocio más obvio. |
+| `Membresia` | Sí — **es el puente** | Lleva `empresa_id` y dice quién está en qué empresa. Sobre ella se apoya el filtro de `Usuario`. |
+| `Usuario` | Global, con **consulta acotada** | Una cuenta es una y puede pertenecer a varias empresas: no puede llevar `empresa_id`. Filtra por la pertenencia. |
+| `Rol` | Global | Un rol es un catálogo de permisos de la instalación. **Consecuencia asumida y escrita:** un rol creado desde una empresa se ve y se asigna desde las demás. |
+| `PermisoDeRol` | Global | Es parte del rol; no tiene `DbSet` ni consulta propia. |
+| `RolDeMembresia` | Global **de hecho** | Depende de la pertenencia, que sí filtra, y no tiene navegación de vuelta con la que escribir un filtro. Seguro **mientras no se consulte por su cuenta**, y eso no se confía: se comprueba. |
+| `TokenDeRefresco` | Global | Se busca por su resumen **antes** de que haya empresa activa. La empresa con la que se operaba va dentro de la fila (`EmpresaActivaId`) y la comprueba `RenovarSesion`. |
+
+**Decididas por el agente** al montarlo:
+
+- **El filtro falla cerrado.** `IInquilinoActual.EmpresaDelFiltro` **lanza** cuando no hay empresa
+  activa; no devuelve nulo ni `Guid.Empty`. Cualquiera de esas dos sería un valor por omisión que
+  rellena el hueco y lo esconde, y el síntoma —«no tienes almacenes», o peor, «aquí están los de
+  todos»— no se distingue de un dato correcto.
+- **Los caminos legítimos sin principal van por un ámbito explícito, con nombre y anotado en el
+  registro**, no por `IgnoreQueryFilters`. Los motivos son un **enumerado cerrado**
+  (`MotivoSinInquilino`), no una cadena libre: añadir uno obliga a tocar el tipo, que es un cambio
+  que se ve en la revisión. Son cuatro: `SemillaDeArranque`, `AutenticacionYSesion`,
+  `UnicidadGlobal` (el NIF y el correo son únicos en toda la instalación: filtrada, la comprobación
+  diría «libre» sobre un valor ocupado y el alta se estrellaría contra el índice único — un `500`
+  donde toca un `409`) y `AdministracionDePertenencias`. Diez aperturas en siete ficheros, y la
+  lista se compara entera. **El 0.8 tiene aquí su sitio**: el trabajo de fondo de la bandeja de
+  salida corre sin petición, y lo que necesita es un motivo nuevo en el enumerado, no un contexto
+  sin filtro.
+- **El ámbito vive en un `AsyncLocal`, no en un `static` a secas.** El host atiende varias
+  peticiones a la vez en el mismo proceso, y un estático convertiría «la semilla está sembrando» en
+  «nadie filtra, para todos». Anidar está permitido y al cerrarse recupera el de fuera.
+- **Los filtros se escriben a mano, uno por entidad, en el `OnModelCreating` de cada contexto.** Un
+  barrido por reflexión sería más corto y peor: para armar la expresión habría que meter la
+  instancia dentro (`Expression.Constant(this)`) y el modelo, que EF Core cachea, se quedaría con el
+  inquilino del **primer** contexto. Lo que la reflexión iba a garantizar —que no falte ninguna— lo
+  garantiza el test que recorre el modelo.
+- **Los contextos siguen con `AddDbContext`, no con `AddDbContextPool`.** Y el filtro lee una
+  **propiedad de instancia** evaluada en cada consulta, no un campo copiado en el constructor. Hoy
+  las dos cosas se comportan igual; la propiedad es lo que hace que sigan igual el día que alguien
+  active la agrupación buscando rendimiento.
+- **La forma fuerte de «el identificador del cuerpo se ignora» es que no exista.** Ningún DTO tiene
+  por dónde recibir la empresa. Lo comprueba `NingunaPeticionNombraLaEmpresaTests` sobre la tabla de
+  rutas que el host construye de verdad, con seis excepciones —las acciones cuyo **sujeto** es la
+  empresa— y el guardián nombrado en cada una.
+- **Una fila ajena y una inexistente devuelven exactamente lo mismo: `404`, con el mismo
+  `ProblemDetails` y el mismo `type`.** No contradice el `403 /errors/empresa-ajena` del 0.5: allí
+  la petición nombra una **empresa** y se niega la operación —quien la recibe ya sabía qué empresa
+  había escrito—; aquí la petición nombra una **fila** y no se dice si existe. La distinción está
+  escrita en el ADR-0011, §6.
+- **`Microsoft.EntityFrameworkCore` entra como referencia de
+  `Bastion.BuildingBlocks.Infrastructure`** (EF Core, no el proveedor: quién elige PostgreSQL sigue
+  siendo la `Infrastructure` de cada módulo). No es un paquete nuevo en la solución —la versión
+  10.0.9 ya estaba en `Directory.Packages.props` desde el 0.4—, es una referencia nueva. Licencia
+  **MIT**.
+
 ## Estado actual
+
+**Ítem 0.6 cerrado.** El filtro de empresa deja de ser algo que cada repositorio tiene que recordar:
+es **global**, va en el modelo de EF Core y **falla cerrado**. Seis filtros, dos contextos, y la
+empresa sale del *claim* en cada consulta.
+
+Lo que llega con él: `IInquilinoActual` y `MotivoSinInquilino` en el bloque común, la base de los
+`DbContext` de módulo con la propiedad por la que filtran, y **diecisiete casos nuevos** repartidos
+entre los que prueban el efecto (integración, contra PostgreSQL de verdad) y los que cierran los
+caminos que rodean al filtro (funcionales, sin base de datos).
+
+### Cada camino que podría saltarse el filtro, y qué lo impide
+
+Un filtro de consulta protege lo que pasa por el traductor de consultas y nada más. La lista es
+corta y es conocida. **Un camino sin test que lo ejerza ni prohibición comprobada es un camino
+abierto**, así que aquí no hay ninguna fila sin la una o la otra.
+
+| Camino | Qué lo impide |
+|---|---|
+| Listado sin filtro explícito | **Test** `Un_listado_sin_filtro_explicito_no_devuelve_datos_de_otra_empresa` |
+| El total de la paginación (es **otra** consulta, no la de los elementos) | **Test** `El_total_de_la_pagina_tampoco_cuenta_las_filas_de_otra_empresa` |
+| Lectura por identificador de una fila ajena | **Test** `Una_fila_de_otra_empresa_no_se_distingue_de_una_que_no_existe` (mismo `404` y mismo `type` que un `Guid` inventado) |
+| **Escritura** por identificador contra una fila ajena (`PUT`) | **Test** `Una_escritura_por_identificador_contra_una_fila_de_otra_empresa_es_404`, que además comprueba que la fila **no cambió** |
+| **Borrado** por identificador contra una fila ajena (`DELETE`) | **Test** `Un_borrado_por_identificador_contra_una_fila_de_otra_empresa_es_404`, que además comprueba que sigue `Activo` |
+| El identificador de empresa colado en la petición | **Test** `El_identificador_de_empresa_que_venga_en_la_peticion_se_ignora` (cuerpo + `?empresaId=` + cabecera `X-Empresa-Id`, los tres a la vez) y **prohibición** `NingunaPeticionNombraLaEmpresaTests`: ningún DTO tiene el campo |
+| La raíz: leer el padrón de empresas desde otra empresa | **Test** `El_padron_de_empresas_no_se_lee_desde_otra_empresa` |
+| Un usuario con el que no se comparte empresa | **Test** `Un_usuario_que_no_comparte_empresa_no_se_ve` |
+| Navegaciones y claves que apuntan fuera (`Include`, `ejercicioId` ajeno) | **Test** `Una_serie_colgada_del_ejercicio_de_otra_empresa_es_400_del_campo_ejercicioId` (del 0.4; desde hoy el ejercicio ajeno además **ya no se ve**, así que esa comprobación pasa a ser la segunda línea, no la única) |
+| Una entidad **nueva** a la que se le olvide el filtro | **Test** `CadaEntidadDeclaraSuInquilinatoTests`, en los dos sentidos. Es lo único de esta tabla que **escala a los dieciséis módulos** |
+| El filtro congelado en el primer contexto | **Test** `ElFiltroSeLeeEnCadaConsultaTests`, 3 casos, incluido el del **mismo contexto reutilizado** |
+| No tener empresa y que pase desapercibido | **Test** `SinEmpresaNoSeConsultaTests`, 4 casos sobre el `IInquilinoActual` que resuelve el contenedor de verdad |
+| `IgnoreQueryFilters()` | **Prohibición comprobada.** Se puede prohibir del todo porque el ámbito auditado cubre lo que hacía falta |
+| SQL crudo: `FromSql*`, `ExecuteSql*`, `SqlQuery` | **Prohibición comprobada**: no pasan por el traductor, así que el filtro no se les aplica |
+| `ExecuteUpdate` / `ExecuteDelete` | **Prohibición comprobada**: respetan el filtro, pero saltan el rastreador y la unidad de trabajo, así que ni la auditoría (0.7) ni la concurrencia (0.9) los verían pasar |
+| `Find` / `FindAsync` y el rastreador | **Prohibición comprobada**: pueden contestar desde el rastreador **sin consultar**, y entonces no hay consulta que filtrar |
+| Consultar una dependiente global por su cuenta (`Set<RolDeMembresia>`, `Set<PermisoDeRol>`) | **Prohibición comprobada, con una excepción anotada**: `RepositorioDeRoles.PermisosDeAsync`. Los identificadores de rol no vienen de la petición, los pone `ConstructorDeSesion` desde la membresía, que sí filtra |
+| Abrir un ámbito sin inquilino donde no toca | **Prohibición comprobada**: los siete ficheros y el número de aperturas de cada uno se comparan **enteros**, en los dos sentidos |
+| Definir un filtro global fuera de los contextos de módulo | **Prohibición comprobada**: repartirlos no rompería nada, solo haría imposible contestar «¿qué filtra y qué no?» leyendo un sitio |
+
+El barrido de prohibiciones lee `src/**/*.cs` **con los comentarios quitados** y solo los ficheros
+que ven EF Core: lo que se prohíbe es **llamar**, no nombrar, y un `.Find(` en el dominio es el de
+`List<T>` —lo fue: `Usuario.EnEmpresa` dio el primer falso positivo—.
+
+### La prueba fuerte: ocho mutaciones, y lo que cada una puso en rojo
+
+Un test que no distingue el código bueno del malo no prueba nada. Cada mutación se aplicó, se
+ejecutó y se revirtió; `grep -rn "MUTACION" src tests` no devuelve nada.
+
+| # | Mutación | Rojo |
+|---|---|---|
+| 1 | Los seis `HasQueryFilter` comentados | 4 rápidos + **los 8 casos de integración de R8** |
+| 2 | El inquilino copiado una vez, no leído en cada consulta | **verde** con los dos casos que había → se escribió el tercero (mismo contexto reutilizado) y entonces rojo |
+| 3 | `EmpresaDelFiltro` deja de lanzar y de mirar el ámbito | **27** casos de integración |
+| 3b | Solo se quita el `throw` | 3 casos de `SinEmpresaNoSeConsultaTests` |
+| 4 | Sin filtro en `Empresa` | `CadaEntidadDeclaraSuInquilinato` + `El_padron_de_empresas_no_se_lee_desde_otra_empresa` |
+| 5 | Sin filtro en `Usuario` | `CadaEntidadDeclaraSuInquilinato` + `Un_usuario_que_no_comparte_empresa_no_se_ve` |
+| 6 | Sin filtro en `Ejercicio` | `CadaEntidadDeclaraSuInquilinato` ×2 — **integración se queda verde** |
+| 7 | `.IgnoreQueryFilters()` inyectado en `RepositorioDeAlmacenes` | `ElFiltroNoSeSaltaPorAhi.Ninguna_llamada…` |
+| 8 | Quitado el ámbito de `IniciarSesion` | `ElFiltroNoSeSaltaPorAhi.El_ambito_sin_inquilino_solo_se_abre_donde_esta_declarado` |
+
+**Las dos mutaciones que hay que contar sin adornarlas:**
+
+- **La 2 salió verde**, y no era un fallo del código sino de los tests: con `AddDbContext` cada
+  consulta abre su propio ámbito de servicios, así que un identificador copiado en el constructor se
+  comporta **igual** que leerlo cada vez y ningún test lo distinguía. El caso nuevo reutiliza la
+  misma instancia de contexto con dos empresas —lo que haría `AddDbContextPool`— y ese sí lo
+  distingue: rojo bajo la mutación, verde al restaurar.
+- **La 6 dejó la integración verde**: `Ejercicio` y `Serie` **no tienen test de efecto propio**. Lo
+  que los cubre es la red de completitud, que es justamente la parte que escala. Queda dicho para
+  que no se lea como cobertura que no está.
+
+### Verificado en local, con la salida real
+
+Con Docker ya instalado, **por primera vez los dos carriles se ejecutan aquí**. El ítem se hizo
+test-first caso a caso, enseñando el rojo antes de cada verde.
+
+- `dotnet build -c Release` → **0 advertencias / 0 errores**.
+- `dotnet format --verify-no-changes` → `rc=0`.
+- `dotnet test --filter "Category!=Integracion"` → **332** correctos, 0 con error
+  (100 comunes + 116 Organización + 58 Identidad + **58** funcionales, de 41).
+- `dotnet test --filter "Category=Integracion"` → **122** correctos, 0 con error
+  (28 Organización + **94** de API, de 86), contra PostgreSQL 17.6 con Testcontainers.
+- El rojo de partida más grande: al cablear el filtro que falla cerrado, **70 casos de integración
+  en rojo a la vez**. Setenta no eran setenta defectos: eran los caminos legítimos sin principal
+  saliendo a la luz de golpe, que es exactamente para lo que sirve fallar cerrado. Diez ámbitos
+  después, cuatro. Y esos cuatro eran la consecuencia de «`Empresa`: solo la activa».
+
+### Lo que cambia para lo que ya estaba
+
+- **Cuatro tests de contrato del 0.5 pasaron a entrar en la empresa antes de operar sobre ella.** No
+  se relajó ni una aserción: cambió el contrato, no la prueba. Quien crea una empresa recibe un
+  `201` con un `Location` que **todavía no puede seguir** hasta cambiarse a ella.
+- **Diez aperturas de ámbito sin inquilino en siete ficheros de producción**, cada una con su motivo
+  escrito al lado y todas anotadas en el registro al abrirse.
+- **`tests/Arquitectura.Tests/` sigue vacía**: es del 0.12. Las prohibiciones de este ítem se
+  comprueban hoy leyendo los fuentes desde `Api.FunctionalTests`; cuando exista ese proyecto será el
+  momento de decidir si alguna se expresa mejor allí. **No se ha adelantado el 0.12.**
+- El comentario de `.github/workflows/ci.yml` que decía «el ensamblado más pequeño de este paso
+  aporta 41 casos» quedó desfasado (son 58) y se corrige con este ítem. Los suelos de recuento
+  (300 / 100) siguen haciendo su trabajo: 332 y 122.
+
+**Dónde retomar exactamente:** ítem **0.7**, módulo Auditoría. Criterio: tabla *append-only* de
+quién cambió qué; un cambio en un maestro deja su rastro. Estrena el tercer esquema
+(`auditoria`), y hereda de este ítem dos cosas: que `ExecuteUpdate`/`ExecuteDelete` están prohibidos
+—si pasaran, la auditoría no los vería— y que el ámbito sin inquilino se anota en el registro, que
+es el precedente de «una operación deliberada deja rastro».
+
+---
+
+**Del ítem 0.5:**
 
 **Ítem 0.5 cerrado, con la CI en verde de verdad:**
 [run 32999845303](https://github.com/AOjeda006/Bastion/actions/runs/32999845303) sobre `369c24d`,
