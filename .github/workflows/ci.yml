@@ -140,6 +140,13 @@ jobs:
         if: steps.solucion.outputs.existe == 'true'
         run: dotnet restore Bastion.sln
 
+      # Herramientas LOCALES (.config/dotnet-tools.json): `dotnet ef` entre ellas. Sin este
+      # paso, el guardián de migraciones fallaría con «no se reconoce el comando ef», que es
+      # un diagnóstico que no dice nada de las migraciones.
+      - name: Restaurar herramientas
+        if: steps.solucion.outputs.existe == 'true'
+        run: dotnet tool restore
+
       - name: Compilar
         if: steps.solucion.outputs.existe == 'true'
         run: dotnet build Bastion.sln --configuration Release --no-restore
@@ -174,6 +181,22 @@ jobs:
           bash scripts/ci/recuento-de-tests.sh \
             artifacts/test-results/dominio "Dominio y arquitectura" 1
 
+      # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
+      #
+      # Va ANTES de los tests de integración a propósito: tarda segundos, no necesita Docker y
+      # diagnostica en UNA línea lo que, si no, aparece como veinte tests de integración en rojo
+      # por «la relación no existe» — media hora mirando el sitio equivocado.
+      - name: Migraciones — el modelo no tiene cambios pendientes
+        if: steps.solucion.outputs.existe == 'true'
+        env:
+          CONFIGURACION: Release
+        run: |
+          if [ -f scripts/comprobar-migraciones.sh ]; then
+            bash scripts/comprobar-migraciones.sh
+          else
+            echo "::notice::Sin comprobación de migraciones todavía (se añade con el primer DbContext, ítem 0.4)."
+          fi
+
       # Testcontainers levanta PostgreSQL de verdad. Nada de EF Core InMemory: no traduce
       # SQL real, ignora restricciones, columnas computadas y filtros globales, y da
       # falsos verdes (`stacks/dotnet/convenciones.md`).
@@ -191,16 +214,6 @@ jobs:
             --results-directory artifacts/test-results/integracion
           bash scripts/ci/recuento-de-tests.sh \
             artifacts/test-results/integracion "Integración (Testcontainers)" 1
-
-      # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
-      - name: Migraciones — el modelo no tiene cambios pendientes
-        if: steps.solucion.outputs.existe == 'true'
-        run: |
-          if [ -f scripts/comprobar-migraciones.sh ]; then
-            bash scripts/comprobar-migraciones.sh
-          else
-            echo "::notice::Sin comprobación de migraciones todavía (se añade con el primer DbContext, ítem 0.4)."
-          fi
 
       # El OpenAPI es el contrato del que se genera el cliente de TypeScript: se publica
       # como artefacto para que el frontal lo consuma en vez de escribir DTOs a mano.

@@ -13,6 +13,19 @@
   </ItemGroup>
 
   <!--
+    Las migraciones de este módulo viven en `db/migraciones/Organizacion` (§14): fuera del
+    proyecto, para que todas las del sistema se lean juntas y en orden. Fuera del proyecto
+    quiere decir que el glob por defecto del SDK NO las compila, y una migración que no está
+    en el ensamblado no existe para EF: `Migrate()` aplicaría cero migraciones y crearía cero
+    tablas, sin error y sin aviso. De ahí esta inclusión explícita.
+
+    `LinkBase` solo afecta a cómo las agrupa el IDE; lo que importa es el `Include`.
+  -->
+  <ItemGroup Label="Migraciones">
+    <Compile Include="../../../../db/migraciones/Organizacion/**/*.cs" LinkBase="Migrations" />
+  </ItemGroup>
+
+  <!--
     EF Core y su proveedor de PostgreSQL. `Design` va aquí, y no en el host, porque es el
     proyecto donde `dotnet ef migrations add` genera y compila: sin él, la herramienta no
     encuentra el ensamblado de migraciones del módulo.
