@@ -19,10 +19,18 @@ namespace Bastion.Organizacion.Endpoints.Comun;
 /// Deriva de <see cref="ControllerBase"/> y no de <c>Controller</c>: esto es una API, no un sitio
 /// con vistas, y <c>Controller</c> arrastra todo el aparato de Razor.
 /// </para>
+/// <para>
+/// <b>Sin <c>[Produces("application/json")]</c>, y no por olvido.</b> Ese atributo no documenta:
+/// SUSTITUYE los tipos de contenido de cualquier <c>ObjectResult</c>, y el <c>400</c> automático
+/// de <c>[ApiController]</c> es uno. Con él puesto, un error de enlace de modelo salía como
+/// <c>application/json</c> en vez de <c>application/problem+json</c>, así que un cliente que
+/// ramificara por el tipo de contenido —lo que manda la RFC 9457— no reconocía como problema justo
+/// el error más frecuente. Lo que sí documenta, y no cambia nada en ejecución, es
+/// <c>[ProducesResponseType]</c> en cada acción.
+/// </para>
 /// </remarks>
 [ApiController]
 [Route(RutaBase)]
-[Produces("application/json")]
 public abstract class ControladorDeOrganizacion : ControllerBase
 {
     /// <summary>Ruta base del módulo, con la versión desde el primer día (§9).</summary>

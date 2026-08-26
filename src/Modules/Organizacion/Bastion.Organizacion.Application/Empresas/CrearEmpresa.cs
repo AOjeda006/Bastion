@@ -64,18 +64,23 @@ internal sealed class CrearEmpresa(IRepositorioDeEmpresas empresas, IUnidadTraba
             return Resultado.Fallo<EmpresaDto>(errores.AError());
         }
 
+        // Pasado el bloque de validación, el NIF está construido. Se nombra una sola vez, aquí,
+        // en lugar de repetir el `!` en cada uso: un `!` esparcido es una afirmación que hay que
+        // volver a comprobar en cada sitio donde aparece.
+        Nif identificador = nif!;
+
         // El NIF identifica a la empresa ante la AEAT: dos empresas con el mismo NIF no son dos
         // empresas. La base lo impide con un índice único; comprobarlo aquí es lo que convierte
         // el choque en un 409 con explicación en lugar de en una excepción de PostgreSQL.
-        if (await empresas.ExisteConNifAsync(nif!.Valor, cancelacion).ConfigureAwait(false))
+        if (await empresas.ExisteConNifAsync(identificador, cancelacion).ConfigureAwait(false))
         {
             return Resultado.Fallo<EmpresaDto>(ErrorDeOperacion.Conflicto(
                 "empresa-ya-registrada",
-                $"Ya hay una empresa dada de alta con el NIF {nif.Valor}."));
+                $"Ya hay una empresa dada de alta con el NIF {identificador.Valor}."));
         }
 
         var empresa = Empresa.Crear(
-            nif,
+            identificador,
             peticion.RazonSocial,
             peticion.DomicilioFiscal.ADireccion(),
             peticion.DivisaBase,

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Empresas;
 
@@ -15,7 +16,16 @@ public interface IRepositorioDeEmpresas
     Task<Empresa?> ObtenerAsync(Guid id, CancellationToken cancelacion);
 
     /// <summary>Indica si ya hay una empresa con ese NIF.</summary>
-    Task<bool> ExisteConNifAsync(string nif, CancellationToken cancelacion);
+    /// <remarks>
+    /// Pide el <see cref="Nif"/> entero y no su cadena a propósito. En la base, el NIF es un
+    /// valor convertido: EF Core sabe traducir una comparación contra el objeto completo, pero
+    /// <b>no</b> sabe entrar en él —<c>empresa.Nif.Valor == cadena</c> revienta en ejecución con
+    /// «no se pudo traducir la expresión»—. Con la cadena en la firma, ese error estaba a un
+    /// descuido de distancia; con el tipo, no se puede escribir.
+    /// </remarks>
+    /// <param name="nif">NIF ya validado.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<bool> ExisteConNifAsync(Nif nif, CancellationToken cancelacion);
 
     /// <summary>Indica si existe la empresa, sin traérsela entera.</summary>
     Task<bool> ExisteAsync(Guid id, CancellationToken cancelacion);
