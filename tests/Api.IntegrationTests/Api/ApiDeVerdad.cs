@@ -4,6 +4,7 @@ using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.Identidad.Infrastructure.Seguridad;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Logging;
 
 namespace Bastion.Api.IntegrationTests.Api;
 
@@ -105,5 +106,9 @@ public sealed class ApiDeVerdad(PostgresConTodosLosModulos postgres) : WebApplic
         builder.UseSetting(SemillaDeArranque.VariableDeCalle, "Calle de la Semilla");
         builder.UseSetting(SemillaDeArranque.VariableDeCodigoPostal, "28001");
         builder.UseSetting(SemillaDeArranque.VariableDePoblacion, "Madrid");
+
+        // Lo unico que se anade al host, y no sustituye nada: un proveedor de registro mas, para
+        // que un 500 en la CI diga que ha reventado. Ver RegistroDeFallos.
+        builder.ConfigureLogging(registro => registro.AddProvider(new RegistroDeFallos()));
     }
 }

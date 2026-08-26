@@ -50,8 +50,10 @@ public sealed class PertenenciasEntreEmpresasTests(PostgresConTodosLosModulos po
         sesion.EmpresaActivaId.ShouldNotBe(nueva.Id);
 
         Guid primero = await CrearUsuarioAsync(administrador);
-        (await ConcederAsync(administrador, primero, nueva.Id)).StatusCode
-            .ShouldBe(HttpStatusCode.NoContent);
+        HttpResponseMessage concedida = await ConcederAsync(administrador, primero, nueva.Id);
+
+        concedida.StatusCode.ShouldBe(
+            HttpStatusCode.NoContent, await Escenario.Detalle(concedida));
 
         // Y ya hay alguien dentro. A partir de aquí, administrar esa empresa exige entrar en ella:
         // si no, tener el permiso en una empresa cualquiera valdría para todas y R8 se caería por
@@ -102,8 +104,7 @@ public sealed class PertenenciasEntreEmpresasTests(PostgresConTodosLosModulos po
                 Contrasena = Guid.CreateVersion7().ToString("N") + "aA1!",
             });
 
-        alta.StatusCode.ShouldBe(
-            HttpStatusCode.Created, await alta.Content.ReadAsStringAsync());
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
 
         return (await alta.Content.ReadFromJsonAsync<UsuarioDto>())!.Id;
     }

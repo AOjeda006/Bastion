@@ -140,6 +140,18 @@ public static class Escenario
         return roles.Elementos.Single(rol => rol.Codigo == "administracion").Id;
     }
 
-    private static async Task<string> Detalle(HttpResponseMessage respuesta) =>
-        await respuesta.Content.ReadAsStringAsync().ConfigureAwait(false);
+    /// <summary>El cuerpo de la respuesta y, si la API dejo un error escrito, ese error.</summary>
+    /// <remarks>
+    /// El cuerpo de un <c>500</c> no dice nada a proposito, asi que sin la segunda mitad un rojo de
+    /// la CI se lee como «esperaba 204 y llego 500» y ahi se acaba. Ver <see cref="RegistroDeFallos"/>.
+    /// </remarks>
+    /// <param name="respuesta">La respuesta que ha llegado.</param>
+    internal static async Task<string> Detalle(HttpResponseMessage respuesta)
+    {
+        ArgumentNullException.ThrowIfNull(respuesta);
+
+        string cuerpo = await respuesta.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        return cuerpo + RegistroDeFallos.Ultimos;
+    }
 }
