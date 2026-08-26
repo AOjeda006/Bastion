@@ -246,20 +246,35 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         string.Empty,
         RegexOptions.Multiline);
 
-    // El repositorio se encuentra subiendo desde ESTE fichero hasta la solución. Partir del
-    // directorio de salida apuntaría a bin/Release/net10.0, que es igual de válido hoy y deja de
-    // serlo en cuanto cambie la profundidad de la salida.
+    // El repositorio se encuentra subiendo hasta la solución, y se parte del directorio del
+    // ensamblado, NO de este fichero. La primera versión hacía lo contrario y se cayó en la CI
+    // estando verde aquí: `Directory.Build.props` pone `ContinuousIntegrationBuild` cuando corre
+    // en GitHub Actions, eso activa `DeterministicSourcePaths`, y con él las rutas de los fuentes
+    // se reescriben a `/_/tests/…` para que dos máquinas produzcan el mismo binario. Un
+    // `[CallerFilePath]` así no apunta a ningún sitio que exista.
+    //
+    // El fichero del test queda de segundo intento, por si algún día la salida se mueve fuera del
+    // árbol. Y si no aparece por ninguno de los dos, esto REVIENTA: un barrido que no encuentra
+    // qué barrer no puede dar verde, que es justo lo que hizo bien la versión anterior.
     private static string Raiz([CallerFilePath] string desde = "")
     {
-        DirectoryInfo? carpeta = new FileInfo(desde).Directory;
+        string? raiz = Subiendo(AppContext.BaseDirectory) ?? Subiendo(Path.GetDirectoryName(desde));
+
+        raiz.ShouldNotBeNull(
+            "no se ha encontrado Bastion.sln, ni subiendo desde el ensamblado ni desde el fichero del test");
+
+        return raiz;
+    }
+
+    private static string? Subiendo(string? partida)
+    {
+        DirectoryInfo? carpeta = string.IsNullOrEmpty(partida) ? null : new DirectoryInfo(partida);
 
         while (carpeta is not null && !File.Exists(Path.Combine(carpeta.FullName, "Bastion.sln")))
         {
             carpeta = carpeta.Parent;
         }
 
-        carpeta.ShouldNotBeNull("no se ha encontrado Bastion.sln subiendo desde el fichero del test");
-
-        return carpeta.FullName;
+        return carpeta?.FullName;
     }
 }

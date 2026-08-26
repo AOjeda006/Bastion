@@ -586,10 +586,39 @@ test-first caso a caso, enseñando el rojo antes de cada verde.
   (100 comunes + 116 Organización + 58 Identidad + **58** funcionales, de 41).
 - `dotnet test --filter "Category=Integracion"` → **122** correctos, 0 con error
   (28 Organización + **94** de API, de 86), contra PostgreSQL 17.6 con Testcontainers.
+- Y los **dos carriles otra vez con `GITHUB_ACTIONS=true`**, que es lo que hace que el build sea
+  el mismo que el de la CI: 332 y 122, en verde. No es una repetición decorativa — ver abajo.
 - El rojo de partida más grande: al cablear el filtro que falla cerrado, **70 casos de integración
   en rojo a la vez**. Setenta no eran setenta defectos: eran los caminos legítimos sin principal
   saliendo a la luz de golpe, que es exactamente para lo que sirve fallar cerrado. Diez ámbitos
   después, cuatro. Y esos cuatro eran la consecuencia de «`Empresa`: solo la activa».
+
+### Lo que la CI encontró y en local no se veía
+
+**Un rojo, y de los que enseñan algo**
+([run 33022273428](https://github.com/AOjeda006/Bastion/actions/runs/33022273428), 4 en rojo de 332).
+Los cuatro casos de `ElFiltroNoSeSaltaPorAhiTests` fallaron con *«no se ha encontrado Bastion.sln
+subiendo desde el fichero del test»*. Localizaban la raíz del repositorio desde `[CallerFilePath]`,
+y eso **no sobrevive a la CI**: `Directory.Build.props` activa `ContinuousIntegrationBuild` cuando
+corre en GitHub Actions, con él llega `DeterministicSourcePaths`, y las rutas de los fuentes se
+reescriben a `/_/tests/…` para que dos máquinas produzcan el mismo binario. La ruta deja de apuntar
+a un sitio que existe.
+
+Se busca ahora desde el directorio del ensamblado, con el fichero del test de segundo intento. Y
+**lo que el test hizo bien se conserva**: si no encuentra la raíz por ninguno de los dos caminos,
+revienta. Un barrido de prohibiciones que no encuentra qué barrer y da verde es peor que no tenerlo
+—sería un `IgnoreQueryFilters` colado con la CI aplaudiendo—.
+
+Dos cosas que se quedan de aquí:
+
+- **El rojo se reprodujo en local antes de tocar nada**, con `GITHUB_ACTIONS=true dotnet build`:
+  misma aserción, mismos cuatro casos. Desde ahora ese es el modo de reproducir un rojo de la CI en
+  esta máquina, y los dos carriles se ejecutan también así.
+- **Las anotaciones del recuento pagaron su precio.** Los registros del *job* devuelven `403` sin
+  autenticar —se comprobó, no se supuso—, así que el nombre de los cuatro casos y su aserción
+  salieron de `GET /check-runs/{id}/annotations`, que sí responde `200`. Sin el `::notice::` que
+  publica `recuento-de-tests.sh`, el rojo se habría visto desde fuera como *«Process completed with
+  exit code 1»* y nada más.
 
 ### Lo que cambia para lo que ya estaba
 
