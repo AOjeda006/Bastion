@@ -891,15 +891,24 @@ cuando hace falta el porqué.
   que falta es decidir **quién** aplica las migraciones en un despliegue —un paso del compose, un
   `initContainer`, o el propio arranque de la API— y eso es materia del **0.13**, no del 0.5. Los
   tests de integración sí migran: lo hace su fixture antes de levantar el host.
-- **ABIERTO (2026-08-26) · la CI solo se dispara en `main` en este repositorio.** El *workflow*
-  declara `push: branches: ['**']`, pero de los **19** *runs* que existen, los 19 son de `main`.
-  Empujar `feature/0.5-identidad` (commit `7d5f3c3`) **no creó ningún *run***, ni siquiera un
-  `check-run`. Consecuencia: la regla de trabajo *«rama por ítem, verificar en verde y solo entonces
-  `main` avanza por fast-forward»* no se puede cumplir tal cual — la única manera de que la CI mire
-  el trabajo es empujar `main`, que es lo que han hecho de hecho todos los ítems anteriores
-  (incluidos dos rojos, `ab9009b` y `2e991ac`, arreglados hacia delante). Pendiente de decidir con
-  el usuario: o se acepta el «arreglar hacia delante en `main`» y se escribe así en el plan, o se
-  averigua por qué Actions no atiende a las ramas (permisos del repositorio, no del *workflow*).
+- **CORREGIDO (2026-08-27) · la CI SÍ se dispara en las ramas; lo que falló fue la observación.**
+  Esta nota decía que empujar `feature/0.5-identidad` (commit `7d5f3c3`) no había creado ningún
+  *run* y dejaba a decisión del usuario si investigar los permisos de Actions. **La premisa era
+  falsa.** El *run* existe: `32993726736`, `event: push`, `head_branch: feature/0.5-identidad`,
+  `head_sha: 7d5f3c3`, conclusión **failure**. El `on: push: branches: ['**']` funciona —`**` casa
+  con las barras— y la consulta que lo resuelve, `GET /actions/runs?branch=feature/0.5-identidad`,
+  responde **sin autenticar** y devuelve `total_count: 1`.
+  Lo que hubo fue una conclusión sacada de una ausencia que produjo la propia herramienta: las
+  consultas a la API de Actions sin credenciales devuelven **403** en varios caminos —los registros
+  de un *job*, sin ir más lejos, como ya dice la nota de más abajo— y un 403 se leyó como «no hay
+  *run*». **Ausencia de evidencia con una herramienta que devuelve 403 no es evidencia de
+  ausencia**; cuando una consulta no devuelva nada, lo primero es comprobar si tenía permiso para
+  devolver algo. Es el mismo error contra el que llevan cuatro ítems peleando los tests, solo que
+  apuntando al andamiaje en vez de al producto.
+  **Corolario, vigente desde el 0.6:** «rama por ítem, verde ahí, y solo entonces `main` avanza por
+  avance rápido» **sí se puede cumplir**, y se cumple. El 0.5 se arregló hacia delante sobre `main`
+  por esta nota equivocada; no vuelve a pasar. `feature/0.5-identidad` se borró del remoto el
+  2026-08-27, ya superada por `main`.
 - **CERRADA (2026-08-26) · GitHub Actions estuvo en caída mayor.** Incidencia abierta a las 15:11
   UTC: el *push* de `7d5f3c3` a `main` llegó (el `HEAD` remoto era ese) y **no se creó el *run***.
   No fue un fallo del repositorio ni del *workflow* —`githubstatus.com` daba `Actions ->
@@ -1038,31 +1047,18 @@ cuando hace falta el porqué.
   consolidarlo en el **0.13**, que es el ítem de integración continua — o bien `Humo` absorbe a
   `Imágenes`, o `Imágenes` publica con `load: true` y `Humo` reutiliza. No se toca ahora: el 0.13
   tiene que rehacer el *workflow* de todas formas y hacerlo dos veces sería trabajo tirado.
-- **Docker no está instalado en la máquina de desarrollo.** Ni `docker compose` ni Testcontainers
-  pueden ejecutarse en local. Lo que esto cuesta es el **bucle rápido**, no el trabajo: el *runner*
-  `ubuntu-latest` sí tiene demonio de Docker, así que los tests con Testcontainers se ejecutan en la
-  CI desde el 0.4 y el criterio del ítem se puede cumplir y verificar sin Docker aquí. Lo que no se
-  puede es iterar en segundos: cada vuelta de un repositorio cuesta un *run* completo. Los tests de
-  integración con PostgreSQL real son la mitad de la pirámide del §13, así que esa diferencia se nota.
-  **Recomendación:** instalar Docker Desktop (o un demonio equivalente) cuanto antes, **en paralelo**
-  al 0.4, no como paso previo que lo bloquee.
-
-  **Intento del 2026-08-25, fallido, y lo que se aprendió:** el prerrequisito ya está —WSL 2 con
-  Ubuntu como distribución predeterminada—, y `winget` ofrece `Docker.DockerDesktop` 4.88.0. El
-  intento se quedó **parado en la descarga**: doce minutos con 0,58 s de CPU y **cero bytes**
-  escritos. No es la red —la misma máquina descarga el instalador de 631 MB por HTTPS sin problema,
-  `200 OK` con `curl -I`—, sino que la sesión **no es administradora** y winget se queda esperando
-  la elevación. Se detuvo el proceso; **no quedó nada a medias** (`C:\Program Files\Docker` no
-  existe). Lo tiene que lanzar el usuario desde una terminal **elevada**:
-
-  ```powershell
-  winget install --id Docker.DockerDesktop --exact --accept-package-agreements --accept-source-agreements
-  ```
-
-  Después hacen falta dos cosas más que tampoco puede hacer el agente: estar en el grupo
-  `docker-users` (cerrar sesión y volver a entrar) y arrancar Docker Desktop una vez. Y la
-  comprobación no es `docker --version`: es **una ejecución real de Testcontainers**, que es lo que
-  demuestra que el demonio acepta contenedores y que el ciclo del 0.4 es viable.
+- **RESUELTO (2026-08-27) · Docker ya está instalado, y el bucle rápido existe.** Esta nota llevaba
+  desde el 0.2 diciendo que no había demonio en la máquina de desarrollo y que cada vuelta de un
+  repositorio costaba un *run* de CI. Ya no. `docker info` responde `29.7.2 · linux/x86_64`, y la
+  comprobación que este plan exigía —**no** `docker --version`, sino **una ejecución real de
+  Testcontainers**— sale en verde: `dotnet test --filter "Category=Integracion"` ejecuta en local
+  los **114** casos contra PostgreSQL 17.6 en **35 s**, con el mismo reparto que publica la CI
+  (28 de `Organizacion.IntegrationTests` + 86 de `Api.IntegrationTests`).
+  Consecuencia práctica, y es grande: **el rojo de un test de integración ya se puede enseñar
+  aquí**. Los tres defectos del 0.5 costaron tres *runs* de CI porque no había otra forma de
+  verlos; desde el 0.6, un ítem se desarrolla test-first contra PostgreSQL de verdad en segundos y
+  la CI vuelve a ser lo que debe ser: la segunda opinión, en un entorno limpio, no el único sitio
+  donde se ejecuta la mitad de la pirámide del §13.
 - **La firma de commits depende del secreto `SIGNING_KEY_B64`.** El hook `SessionStart` de
   `.claude/settings.json` la activa si existe y avisa si no. Sin él, **no se commitea** (política de
   `CLAUDE.md` §3). El montaje de la clave está en `plantillas/README.md` de la biblioteca.
