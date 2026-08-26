@@ -506,9 +506,14 @@ compara **en los dos sentidos**.
 
 ## Estado actual
 
-**Ítem 0.6 cerrado.** El filtro de empresa deja de ser algo que cada repositorio tiene que recordar:
-es **global**, va en el modelo de EF Core y **falla cerrado**. Seis filtros, dos contextos, y la
-empresa sale del *claim* en cada consulta.
+**Ítem 0.6 cerrado, con la CI en verde:**
+[run 33022811597](https://github.com/AOjeda006/Bastion/actions/runs/33022811597) sobre `9391f0b`,
+los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
+los dos recuentos publicados: **332** casos rápidos y **122** de integración contra PostgreSQL 17.6.
+
+El filtro de empresa deja de ser algo que cada repositorio tiene que recordar: es **global**, va en
+el modelo de EF Core y **falla cerrado**. Seis filtros, dos contextos, y la empresa sale del *claim*
+en cada consulta.
 
 Lo que llega con él: `IInquilinoActual` y `MotivoSinInquilino` en el bloque común, la base de los
 `DbContext` de módulo con la propiedad por la que filtran, y **diecisiete casos nuevos** repartidos
@@ -1050,9 +1055,19 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   migraciones por esquema del 0.4: se comprueba mirando las tablas y salen exactamente dos.
   Los cuatro *jobs* de la CI en verde — [run 32999845303](https://github.com/AOjeda006/Bastion/actions/runs/32999845303),
   con **315** casos rápidos y **114** de integración.
-- [ ] **0.6 · Filtro global multiempresa (R8)** — criterio de aceptación: un test demuestra que una
+- [x] **0.6 · Filtro global multiempresa (R8)** — criterio de aceptación: un test demuestra que una
   consulta sin filtro explícito **no** devuelve datos de otra empresa, y que el identificador del
   cuerpo de la petición se ignora.
+  Las dos mitades del criterio, por el efecto y sobre HTTP con dos empresas sembradas:
+  `Un_listado_sin_filtro_explicito_no_devuelve_datos_de_otra_empresa` y
+  `El_identificador_de_empresa_que_venga_en_la_peticion_se_ignora`, que lo manda por el cuerpo, por
+  la cadena de consulta y por una cabecera a la vez. Y su forma fuerte: ningún DTO tiene por dónde
+  recibir una empresa. Decisiones en
+  `docs/adr/adr-0011-el-filtro-global-de-empresa-y-los-caminos-que-lo-rodean.md`, con la tabla de
+  inquilinato, los cuatro motivos del ámbito auditado y el `404` que no distingue una fila ajena de
+  una que no existe. Probado con **ocho mutaciones**, dos de ellas contadas sin adornarlas.
+  Los cuatro *jobs* de la CI en verde — [run 33022811597](https://github.com/AOjeda006/Bastion/actions/runs/33022811597),
+  con **332** casos rápidos y **122** de integración.
 - [ ] **0.7 · Módulo Auditoría** — criterio de aceptación: tabla *append-only* de quién cambió qué;
   un cambio en un maestro deja su rastro.
 - [ ] **0.8 · Outbox transaccional (R12)** — criterio de aceptación: un evento y su escritura de
