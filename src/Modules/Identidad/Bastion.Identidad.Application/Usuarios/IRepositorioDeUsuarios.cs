@@ -36,6 +36,16 @@ public interface IRepositorioDeUsuarios
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<bool> NoHayNingunoAsync(CancellationToken cancelacion);
 
+    /// <summary>Si en esa empresa no hay nadie dado de alta, salvo quizá ese usuario.</summary>
+    /// <remarks>
+    /// Es lo que decide si una empresa recién creada se puede poblar desde fuera. Ver el
+    /// arranque en frío que documenta <c>ErroresDePertenencia.PuedeAdministrarAsync</c>.
+    /// </remarks>
+    /// <param name="empresaId">Empresa que se mira.</param>
+    /// <param name="salvoUsuarioId">El usuario que no cuenta como «alguien».</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<bool> SinMiembrosAjenosAsync(Guid empresaId, Guid salvoUsuarioId, CancellationToken cancelacion);
+
     /// <summary>Una página de usuarios, con el total.</summary>
     /// <param name="paginacion">Qué página se pide.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>

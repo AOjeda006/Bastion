@@ -97,7 +97,7 @@ public sealed class LaPuertaDeCadaAccionTests(PostgresConTodosLosModulos postgre
             using HttpRequestMessage peticion = PeticionDeSondeo.De(accion, token);
             using HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
 
-            if (respuesta.StatusCode != HttpStatusCode.Forbidden)
+            if (!await EsPuertaCerradaAsync(respuesta))
             {
                 coladas.Add($"{PeticionDeSondeo.Nombre(accion)} ({permiso}) → {(int)respuesta.StatusCode}");
             }
@@ -130,7 +130,7 @@ public sealed class LaPuertaDeCadaAccionTests(PostgresConTodosLosModulos postgre
                 // Lo que salga después —400 por el cuerpo vacío, 404 por el identificador
                 // inventado— da igual: lo que se comprueba es que la puerta se abre con ESTE
                 // permiso y con uno solo. Sin este test, denegarlo todo pasaría los otros dos.
-                if (respuesta.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                if (await EsPuertaCerradaAsync(respuesta))
                 {
                     cerradas.Add($"{PeticionDeSondeo.Nombre(accion)} ({permiso}) → {(int)respuesta.StatusCode}");
                 }
@@ -162,7 +162,7 @@ public sealed class LaPuertaDeCadaAccionTests(PostgresConTodosLosModulos postgre
             using HttpRequestMessage peticion = PeticionDeSondeo.De(accion, token);
             using HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
 
-            if (respuesta.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            if (await EsPuertaCerradaAsync(respuesta))
             {
                 negadas.Add($"{PeticionDeSondeo.Nombre(accion)} → {(int)respuesta.StatusCode}");
             }
@@ -206,6 +206,39 @@ public sealed class LaPuertaDeCadaAccionTests(PostgresConTodosLosModulos postgre
         // cierra el sondeo de rutas, no el uso normal de la API.
         respuesta.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+    }
+
+    /// <summary>Si esa respuesta es <b>la puerta</b> cerrada, y no una regla de negocio.</summary>
+    /// <remarks>
+    /// <para>
+    /// Un <c>403</c> significa dos cosas distintas y solo una es la puerta. La de la política de
+    /// autorización llega <b>sin cuerpo</b>: la petición no ha entrado en la acción, así que no
+    /// hay nada de negocio que contar. La de una regla —«esa empresa no es la tuya»— trae su
+    /// <c>problem+json</c> con un <c>type</c> propio, y para llegar a escribirlo la petición
+    /// <b>ha tenido que entrar</b>.
+    /// </para>
+    /// <para>
+    /// Distinguirlas no es un detalle: dar por buena la puerta porque «ha salido 403» es
+    /// exactamente la manera de que un endpoint sin atributo pase el barrido, escondido detrás de
+    /// una regla de negocio que casualmente deniega. Y al revés, en el barrido de «con su permiso
+    /// se abre», un 403 de negocio se leería como una puerta que no se abre con su propio permiso.
+    /// </para>
+    /// </remarks>
+    private static async Task<bool> EsPuertaCerradaAsync(HttpResponseMessage respuesta)
+    {
+        if (respuesta.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return true;
+        }
+
+        if (respuesta.StatusCode != HttpStatusCode.Forbidden)
+        {
+            return false;
+        }
+
+        string cuerpo = await respuesta.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        return !cuerpo.Contains("/errors/", StringComparison.Ordinal);
     }
 
     private static string TokenDe(HttpClient cliente) =>

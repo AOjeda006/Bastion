@@ -36,6 +36,19 @@ public sealed class CorreoTests
     public void De_ConCualquierOtraCosa_Lanza(string texto) =>
         Should.Throw<ArgumentException>(() => Correo.De(texto));
 
+    [Theory]
+    [InlineData("\u0000@ejemplo.es")]        // NUL: PostgreSQL no lo admite ni en `text`
+    [InlineData("ana\u0000@ejemplo.es")]
+    [InlineData("ana@ejem\u0000plo.es")]
+    [InlineData("ana\r\n@ejemplo.es")]      // salto de línea: media inyección de cabeceras
+    [InlineData("ana@ejemplo.es\u007f")]      // DEL
+    [InlineData("ana\u00a0lopez@ejemplo.es")] // espacio duro, que «IsWhiteSpace» sí ve
+    public void De_ConUnCaracterDeControl_Lanza(string texto) =>
+        // No es quisquillosidad de formato: un NUL atraviesa el borde, llega a Npgsql y sale como
+        // 500 —un fallo del servidor por un dato que se sabía malo antes de consultar nada—. Lo
+        // descubrió el test de entrada hostil del inicio de sesión, no una revisión.
+        Should.Throw<ArgumentException>(() => Correo.De(texto));
+
     [Fact]
     public void De_ConMasDeDoscientosCincuentaYCuatro_Lanza()
     {

@@ -63,7 +63,7 @@ public sealed record Correo
 
         string normalizado = valor.Trim().ToLowerInvariant();
 
-        if (normalizado.Length > Longitud || normalizado.AsSpan().ContainsAny(' ', '\t'))
+        if (normalizado.Length > Longitud || TieneAlgunCaracterImposible(normalizado))
         {
             return false;
         }
@@ -85,6 +85,24 @@ public sealed record Correo
 
         correo = new Correo(normalizado);
         return true;
+    }
+
+    // Ni espacios ni caracteres de control. Los espacios son forma; los de control son otra
+    // cosa: un NUL no lo admite una columna `text` de PostgreSQL, así que atraviesa el borde,
+    // llega al motor y sale como 500 —un fallo del servidor por un dato que se sabía malo
+    // antes de consultar nada—. Y un salto de línea dentro de una dirección es la mitad de una
+    // inyección de cabeceras el día que Notificaciones la escriba en un «To:».
+    private static bool TieneAlgunCaracterImposible(string valor)
+    {
+        foreach (char caracter in valor)
+        {
+            if (char.IsWhiteSpace(caracter) || char.IsControl(caracter))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>La dirección, para cuando hace falta como texto.</summary>

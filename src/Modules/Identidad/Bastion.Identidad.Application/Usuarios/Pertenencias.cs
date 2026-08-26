@@ -60,9 +60,9 @@ public interface IRetirarRol
 /// resuelta en proceso. Es una llamada a método, no una petición HTTP.
 /// </para>
 /// <para>
-/// Y la empresa que se puede nombrar es solo la del <i>claim</i>: si se pudiera nombrar otra,
-/// tener <c>identidad.pertenencia.conceder</c> en una empresa cualquiera equivaldría a tenerlo en
-/// todas, y R8 se caería por la puerta de atrás.
+/// Y la empresa que se puede nombrar es la del <i>claim</i> —con la única excepción de la empresa
+/// todavía vacía, que es el arranque en frío que documenta
+/// <see cref="ErroresDePertenencia.PuedeAdministrarAsync"/>—.
 /// </para>
 /// </remarks>
 internal sealed class ConcederPertenencia(
@@ -78,7 +78,9 @@ internal sealed class ConcederPertenencia(
     {
         ArgumentNullException.ThrowIfNull(peticion);
 
-        if (peticion.EmpresaId != usuarioActual.EmpresaId)
+        if (!await ErroresDePertenencia
+            .PuedeAdministrarAsync(usuarioActual, usuarios, peticion.EmpresaId, cancelacion)
+            .ConfigureAwait(false))
         {
             return Resultado.Fallo(ErroresDePertenencia.EmpresaAjena());
         }
@@ -113,7 +115,9 @@ internal sealed class RetirarPertenencia(
         Guid empresaId,
         CancellationToken cancelacion)
     {
-        if (empresaId != usuarioActual.EmpresaId)
+        if (!await ErroresDePertenencia
+            .PuedeAdministrarAsync(usuarioActual, usuarios, empresaId, cancelacion)
+            .ConfigureAwait(false))
         {
             return Resultado.Fallo(ErroresDePertenencia.EmpresaAjena());
         }
@@ -210,6 +214,46 @@ internal static class ErroresDePertenencia
         "empresa-ajena",
         "Solo se pueden administrar pertenencias de la empresa con la que se está operando.");
 
+    /// <summary>
+    /// Si se pueden administrar las pertenencias de esa empresa desde la sesión de ahora.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// La regla es la del <i>claim</i>: se administra la empresa con la que se está operando y
+    /// ninguna otra. Si se pudiera nombrar otra, tener <c>identidad.pertenencia.conceder</c> en
+    /// una empresa cualquiera equivaldría a tenerlo en todas, y R8 se caería por la puerta de
+    /// atrás.
+    /// </para>
+    /// <para>
+    /// <b>Con una excepción, y por necesidad: el arranque en frío.</b> Una empresa recién creada
+    /// no tiene a nadie dentro; para entrar en ella hay que pertenecer a ella, y para que alguien
+    /// pertenezca hay que estar dentro. Escrita solo con la regla de arriba, la segunda empresa
+    /// del sistema es <b>inalcanzable para siempre</b> —lo descubrió el primer test que intentó
+    /// crear una—. Así que se admite nombrar otra empresa <b>mientras no haya nadie más dentro</b>:
+    /// la que uno acaba de crear y todavía está vacía. En cuanto entra un segundo, se acabó.
+    /// </para>
+    /// <para>
+    /// Lo que NO abre esa excepción: una empresa vacía no tiene datos que ver, así que colarse en
+    /// ella no enseña nada de nadie; y quien lo haga necesita ya el permiso de conceder, con el
+    /// que podría crearse una empresa propia igualmente. La alternativa —que crear la empresa dé
+    /// de alta a quien la crea— es una escritura de Organización sobre Identidad, y eso solo se
+    /// hace por eventos (§4, regla 5), que son el ítem 0.8.
+    /// </para>
+    /// </remarks>
+    /// <param name="usuarioActual">De dónde sale la empresa con la que se opera.</param>
+    /// <param name="usuarios">Repositorio de usuarios.</param>
+    /// <param name="empresaId">Empresa que nombra la petición.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    internal static async Task<bool> PuedeAdministrarAsync(
+        IUsuarioActual usuarioActual,
+        IRepositorioDeUsuarios usuarios,
+        Guid empresaId,
+        CancellationToken cancelacion) =>
+        empresaId == usuarioActual.EmpresaId
+        || await usuarios
+            .SinMiembrosAjenosAsync(empresaId, usuarioActual.UsuarioId, cancelacion)
+            .ConfigureAwait(false);
+
     /// <summary>El usuario no pertenece a esa empresa.</summary>
     internal static ErrorDeOperacion NoPertenece() => ErrorDeOperacion.NoEncontrado(
         "pertenencia-no-encontrada",
@@ -239,7 +283,8 @@ internal static class ErroresDePertenencia
         ArgumentNullException.ThrowIfNull(usuarioActual);
         ArgumentNullException.ThrowIfNull(usuarios);
 
-        if (empresaId != usuarioActual.EmpresaId)
+        if (!await PuedeAdministrarAsync(usuarioActual, usuarios, empresaId, cancelacion)
+            .ConfigureAwait(false))
         {
             return Resultado.Fallo<Membresia>(EmpresaAjena());
         }

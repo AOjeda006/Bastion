@@ -85,7 +85,12 @@ public static class Sesiones
         // Correo y código irrepetibles: los tests comparten base y se ejecutan en el mismo
         // proceso, así que reutilizar un correo haría que el segundo chocara con un 409 y el
         // fallo se leería como un problema de permisos.
-        string sufijo = Guid.CreateVersion7().ToString("N");
+        // Los doce ULTIMOS caracteres, no los doce primeros: en un GUID de versión 7 los
+        // primeros son la marca de tiempo, y dos roles creados en el mismo segundo tendrían
+        // el mismo código. Y doce, no treinta y dos, porque el código de un rol admite
+        // cuarenta posiciones y «recortado-» ya gasta diez: con el GUID entero salía un 400
+        // que se leía como un problema de permisos.
+        string sufijo = Guid.CreateVersion7().ToString("N")[^12..];
         string correo = $"recortado-{sufijo}@bastion.pruebas";
         string contrasena = Guid.CreateVersion7().ToString("N") + "aA1!";
 

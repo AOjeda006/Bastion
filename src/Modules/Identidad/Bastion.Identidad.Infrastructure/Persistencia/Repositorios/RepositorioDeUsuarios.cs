@@ -33,6 +33,20 @@ internal sealed class RepositorioDeUsuarios(IdentidadDbContext contexto) : IRepo
     public async Task<bool> NoHayNingunoAsync(CancellationToken cancelacion) =>
         !await contexto.Usuarios.AnyAsync(cancelacion).ConfigureAwait(false);
 
+    // La consulta va contra la base y no sobre las pertenencias ya cargadas: quien pregunta
+    // esto es el usuario que acaba de crear la empresa, y sus propias pertenencias no dicen
+    // nada de las de los demás.
+    public async Task<bool> SinMiembrosAjenosAsync(
+        Guid empresaId,
+        Guid salvoUsuarioId,
+        CancellationToken cancelacion) =>
+        !await contexto.Usuarios
+            .Where(usuario => usuario.Id != salvoUsuarioId)
+            .AnyAsync(
+                usuario => usuario.Membresias.Any(membresia => membresia.EmpresaId == empresaId),
+                cancelacion)
+            .ConfigureAwait(false);
+
     public Task<PaginaDe<Usuario>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
         contexto.Usuarios
             .OrderBy(usuario => usuario.Correo)
