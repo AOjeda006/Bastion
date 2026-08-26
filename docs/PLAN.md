@@ -433,11 +433,14 @@ preguntarlas):
 
 ## Estado actual
 
-**Ítem 0.5 escrito y en verde en local; falta la confirmación de la CI.** GitHub Actions está en
-**caída mayor** (incidencia abierta a las 15:11 UTC del 2026-08-26) y **no ha creado el *run*** del
-commit `7d5f3c3`, ya empujado a `main`. En cuanto Actions vuelva, se apunta aquí el *run* con sus
-cuatro conclusiones y los dos recuentos, y el ítem se marca en el checklist. **Hasta entonces el 0.5
-no está cerrado**, por mucho que el árbol esté verde en esta máquina.
+**Ítem 0.5 cerrado, con la CI en verde de verdad:**
+[run 32998349456](https://github.com/AOjeda006/Bastion/actions/runs/32998349456) sobre `cae3c54`,
+los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
+los dos recuentos publicados: **315** casos rápidos y **113** de integración contra PostgreSQL 17.6.
+
+Y llegar ahí costó **tres rojos de la CI**, que es la parte que importa: el árbol llevaba días verde
+en esta máquina y escondía tres defectos que solo se veían con una base de datos delante. Están
+contados abajo.
 
 Las cinco capas de `src/Modules/Identidad/` dejan de estar vacías: `Usuario`, `Rol`, `Permiso`,
 `Membresia` y `TokenDeRefresco`, con el esquema `identidad` y su migración propia. Y lo que cambia
@@ -457,8 +460,9 @@ para **todo lo demás**: la API deja de ser pública.
 - **Semilla de arranque** en el *composition root* —cruza dos módulos, así que no puede vivir en
   ninguno—, solo si no hay ningún usuario y solo con sus siete variables de entorno puestas.
 
-Recuento: `dotnet test` pasa de **226** casos a **298 rápidos** + los de integración (que aquí no se
-pueden ejecutar: sigue sin haber Docker en esta máquina).
+Recuento: `dotnet test` pasa de **226** casos a **315 rápidos** + **113 de integración**. Los de
+integración no se pueden ejecutar aquí —sigue sin haber Docker en esta máquina—, así que quien los
+ejecuta es la CI y por eso su conclusión es la única que cierra el ítem.
 
 Verificado en local, con la salida real y **enseñando el rojo de cada bloque**:
 
@@ -488,8 +492,54 @@ Verificado en local, con la salida real y **enseñando el rojo de cada bloque**:
   señala y no los arregla).
 - `bash scripts/comprobar-migraciones.sh` → `rc=0`, y ahora dice **dos** líneas: *«Organizacion: 1
   migración(es)…»* y *«Identidad: 1 migración(es)…»*.
-- `dotnet test --filter "Category!=Integracion"` en Release → **298 correctos, 0 con error**
-  (94 bloques comunes + 116 Organización + 58 Identidad + 30 funcionales).
+- `dotnet test --filter "Category!=Integracion"` en Release → **315 correctos, 0 con error**
+  (100 bloques comunes + 116 Organización + 58 Identidad + 41 funcionales).
+
+### Lo que la CI encontró y en local no se veía
+
+Tres rojos, tres defectos reales, ninguno visible sin PostgreSQL delante. Se arreglaron hacia
+delante sobre `main`, que es como han ido todos los ítems de esta fase.
+
+1. **La empresa recién creada era inalcanzable para siempre**
+   ([run 32993448112](https://github.com/AOjeda006/Bastion/actions/runs/32993448112), 11 rojos).
+   Con la regla «solo se administra la empresa del *claim*», la **segunda** empresa del sistema no
+   la puede usar nadie: para entrar hay que pertenecer, y para pertenecer hay que estar dentro. No
+   es un fallo del test, es un fallo del producto, y no lo enseña ningún test de dominio. La
+   excepción es la mínima que lo desatasca —se admite nombrar otra empresa **mientras no haya nadie
+   más dentro**— y está escrita en `ErroresDePertenencia.PuedeAdministrarAsync`. Se descartó la
+   alternativa obvia (que crear la empresa dé de alta a quien la crea) porque sería una escritura
+   de Organización sobre Identidad, y eso solo va por eventos (§4, regla 5), que son el **0.8**.
+   Del mismo *run* salieron un código de rol de 42 caracteres contra un tope de 40, un `\0` en un
+   correo que llegaba vivo hasta el 500, y un barrido que daba por cerrada una puerta que en
+   realidad había abierto (el `403` de negocio confundido con el de la política).
+2. **El 400 del enlace de modelo publicaba el tipo de C#**
+   ([run 32994795968](https://github.com/AOjeda006/Bastion/actions/runs/32994795968)). Mandar `[]`
+   a una acción que espera un objeto contestaba *«The JSON value could not be converted to
+   Bastion.Organizacion.Contracts.Empresas.CrearEmpresaDto»*. No es una traza, así que no lo paraba
+   ningún manejador de excepciones: es el camino **previsto** para un cuerpo mal formado, y MVC lo
+   componía por su cuenta, también sin identificador de traza (§9). Lo arregla `EntradaNoValida`, y
+   el rojo se enseñó **sin Docker** por la única puerta anónima que recibe un cuerpo: 6 de 7 casos
+   en rojo, 7 de 7 en verde.
+3. **Dar de alta en una empresa era un `UPDATE` que no tocaba ninguna fila**
+   ([run 32997004433](https://github.com/AOjeda006/Bastion/actions/runs/32997004433), 10 rojos, y
+   los diez el mismo `500`). EF Core decide si una entidad hija es nueva **mirando si tiene clave**;
+   `Membresia` la tiene desde el constructor —un `Guid` v7, a propósito—, así que la daba por
+   existente. Lo tapaba que el otro camino que crea pertenencias es la semilla, donde el hijo hereda
+   el alta del padre. Está en el **ADR-0010**, con las tres alternativas descartadas, y fijado en
+   `LasPertenenciasNuevasSeInsertanTests`: cuatro casos, **sin base de datos**, porque el estado en
+   que EF Core deja la entidad se decide antes de abrir ninguna conexión.
+
+De ahí salieron además dos cosas que se quedan: `RegistroDeFallos`, que engancha el registro de la
+API al mensaje de la aserción para que un `500` de la CI diga **qué** ha reventado —los registros de
+un *job* devuelven 403 sin autenticar, así que no hay otra forma de leerlos—, y un cuarto barrido,
+`Ninguna_accion_contesta_con_un_fallo_del_servidor_al_sondeo`: el barrido de «se abre con su
+permiso» da por buena cualquier respuesta que no sea 401 ni 403, **y eso incluye un 500**.
+
+**Honestidad sobre el método:** los tres agregados de Identidad (`Usuario`, `Rol`, `TokenDeRefresco`)
+se escribieron **a la vez** que sus tests, no estrictamente test-first. El rojo de partida fue real
+—no compilaba, las entidades no existían— pero no fue caso a caso. Donde sí se hizo por el efecto,
+caso a caso y enseñando el rojo, es en todo lo que vino después: la denegación por omisión, la forma
+de la autorización, el resumen de contraseñas y los tres defectos de arriba.
 
 ### Cada regla de autorización, la petición que la ejerce y lo que devuelve
 
@@ -503,6 +553,7 @@ lista escrita a mano.
 | Sin credenciales no se atiende **ninguna** acción protegida | las 41, sin cabecera `Authorization` | `401` |
 | Con un permiso que no es el suyo no se abre **ninguna** | las 41, con un token que solo trae `identidad.rol.ver` | `403` |
 | Con su permiso se abre **cada una**, y solo con el suyo | las 41, cada una con un token que trae exactamente su permiso | ni `401` ni `403` |
+| Y ninguna **estalla** al abrirse | las mismas 41 respuestas, miradas otra vez | nunca `5xx` |
 | Las tres anónimas se alcanzan sin credenciales | `POST /sesiones` con cuerpo vacío | `400` (ha entrado) |
 | | `DELETE /sesiones/actual` sin cookie | `204` |
 | Cambiar la contraseña propia no exige permiso | `PUT /usuarios/actual/contrasena` con una cuenta **sin ni un permiso** | ni `401` ni `403` |
@@ -776,16 +827,18 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Primer ítem con tests de integración de verdad: **50 casos** contra PostgreSQL 17.6 con
   Testcontainers, y `Category=Integracion` deja de ser un no-op declarado.
   Los cuatro *jobs* de la CI en verde — [run 32929808259](https://github.com/AOjeda006/Bastion/actions/runs/32929808259).
-- [ ] **0.5 · Módulo Identidad** — criterio de aceptación: registro y login; roles y permisos por
+- [x] **0.5 · Módulo Identidad** — criterio de aceptación: registro y login; roles y permisos por
   acción; pertenencia a empresas; el identificador de empresa viaja en el *claim*.
-  Escrito y en verde en local; decisiones en
+  La API deja de ser pública: se deniega por omisión y cada una de las **46 acciones** se abre con
+  su `[ExigePermiso]` —41 tras su permiso, 3 anónimas, 2 autenticadas sin permiso— sobre un catálogo
+  de **34 permisos**. Decisiones en
   `docs/adr/adr-0008-contrasenas-bloqueo-y-la-respuesta-unica-del-acceso.md`,
   `docs/adr/adr-0009-la-denegacion-por-omision-tambien-cubre-lo-que-no-es-una-ruta.md` y
   `docs/adr/adr-0010-una-entidad-hija-con-clave-propia-no-se-da-de-alta-sola.md`.
-  **Sin marcar a propósito:** la CI lo ha tumbado tres veces —`7d5f3c3` no llegó a ejecutarse por
-  la caída mayor de Actions del 2026-08-26; `5314ffc` y `772ddec` salieron rojos por defectos
-  reales que solo PostgreSQL veía— y se arregla hacia delante. Se marca cuando haya cuatro
-  conclusiones en verde que leer, no antes.
+  Segundo módulo con persistencia, o sea la primera prueba **de verdad** del historial de
+  migraciones por esquema del 0.4: se comprueba mirando las tablas y salen exactamente dos.
+  Los cuatro *jobs* de la CI en verde — [run 32998349456](https://github.com/AOjeda006/Bastion/actions/runs/32998349456),
+  con **315** casos rápidos y **113** de integración.
 - [ ] **0.6 · Filtro global multiempresa (R8)** — criterio de aceptación: un test demuestra que una
   consulta sin filtro explícito **no** devuelve datos de otra empresa, y que el identificador del
   cuerpo de la petición se ignora.
@@ -847,16 +900,20 @@ cuando hace falta el porqué.
   (incluidos dos rojos, `ab9009b` y `2e991ac`, arreglados hacia delante). Pendiente de decidir con
   el usuario: o se acepta el «arreglar hacia delante en `main`» y se escribe así en el plan, o se
   averigua por qué Actions no atiende a las ramas (permisos del repositorio, no del *workflow*).
-- **INCIDENCIA EXTERNA (2026-08-26) · GitHub Actions en caída mayor.** Incidencia abierta a las
-  15:11 UTC. El *push* de `7d5f3c3` a `main` llegó (el `HEAD` remoto es ese) y **no se creó el
-  *run***. No es un fallo del repositorio ni del *workflow*: `githubstatus.com` da `Actions ->
-  major_outage` con `Git Operations`, `API Requests` y `Webhooks` operativos. El 0.5 queda **sin
-  cerrar** hasta que haya *run* que leer.
-- **ABIERTO · los mínimos del recuento de tests siguen en 1 y 1.** `scripts/ci/recuento-de-tests.sh`
-  falla si un paso ejecuta menos casos de los exigidos, y hoy exige **uno** en cada paso mientras se
-  ejecutan 298 y unos cuantos de integración. Con ese suelo, perder un ensamblado entero del barrido
-  seguiría saliendo verde. Se suben a un suelo realista **en cuanto la CI publique las dos cuentas
-  de verdad** — no antes, para no poner un número inventado.
+- **CERRADA (2026-08-26) · GitHub Actions estuvo en caída mayor.** Incidencia abierta a las 15:11
+  UTC: el *push* de `7d5f3c3` a `main` llegó (el `HEAD` remoto era ese) y **no se creó el *run***.
+  No fue un fallo del repositorio ni del *workflow* —`githubstatus.com` daba `Actions ->
+  major_outage` con `Git Operations`, `API Requests` y `Webhooks` operativos— y el servicio
+  volvió esa misma tarde. Queda apuntada porque explica el hueco entre `7d5f3c3` y el primer *run*
+  del 0.5, y porque la lección es que **no haber *run* no es lo mismo que *run* en verde**: lo que
+  tocaba era esperar, no dar el ítem por cerrado.
+- **ARREGLADO (2026-08-26) · los mínimos del recuento de tests estaban en 1 y 1.**
+  `scripts/ci/recuento-de-tests.sh` falla si un paso ejecuta menos casos de los exigidos, y exigía
+  **uno** en cada paso mientras se ejecutaban cientos: con ese suelo, perder un ensamblado entero
+  del barrido seguía saliendo verde. Con las dos cuentas ya publicadas por la CI —**315** y
+  **113**— el suelo pasa a **300** y **100**. El criterio no es el número de hoy sino aquel por
+  debajo del cual se ha perdido algo gordo: el ensamblado más pequeño de cada paso aporta 41 y 28
+  casos, así que perder cualquiera de ellos rompe el suelo y borrar un test de más no.
 - **ARREGLADO (2026-08-26) · el verde del *job* `Backend` no decía cuántos casos ejecutaba.** Los
   registros de un *job* devuelven **403** sin autenticar, así que desde fuera un `dotnet test` que
   dejara de encontrar ensamblados —o un `--filter` que no casara con nada— se veía igual de verde que
