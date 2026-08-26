@@ -12,6 +12,12 @@
 
   <ItemGroup>
     <PackageReference Include="Npgsql" />
+    <!--
+      EF Core, no el proveedor. Aqui vive la base de los DbContext de modulo (§12) y con ella el
+      unico sitio del que sale la empresa por la que filtra el inquilinato. Quien elige PostgreSQL
+      sigue siendo la Infrastructure de cada modulo: este proyecto no sabe contra que base corre.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
 
   <ItemGroup>

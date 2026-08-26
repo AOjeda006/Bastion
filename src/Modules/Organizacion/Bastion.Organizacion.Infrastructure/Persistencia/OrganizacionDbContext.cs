@@ -1,3 +1,5 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Domain.Ejercicios;
 using Bastion.Organizacion.Domain.Empresas;
@@ -28,8 +30,11 @@ namespace Bastion.Organizacion.Infrastructure.Persistencia;
 /// </para>
 /// </remarks>
 /// <param name="opciones">Opciones del contexto.</param>
-public sealed class OrganizacionDbContext(DbContextOptions<OrganizacionDbContext> opciones)
-    : DbContext(opciones)
+/// <param name="inquilino">De dónde sale la empresa por la que filtra el inquilinato (R8).</param>
+public sealed class OrganizacionDbContext(
+    DbContextOptions<OrganizacionDbContext> opciones,
+    IInquilinoActual inquilino)
+    : ContextoDeModulo(opciones, inquilino)
 {
     /// <summary>
     /// Esquema de PostgreSQL del módulo: el nombre del módulo en minúsculas y sin acentos.
@@ -85,5 +90,25 @@ public sealed class OrganizacionDbContext(DbContextOptions<OrganizacionDbContext
 
         modelBuilder.HasDefaultSchema(Esquema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(OrganizacionDbContext).Assembly);
+
+        // R8, una línea por entidad y a la vista. `EmpresaDelFiltro` es una propiedad de la
+        // instancia: EF Core la lee en CADA consulta, no al construir el modelo. Y `== null` no es
+        // una válvula de escape silenciosa: la propiedad solo devuelve nulo dentro de un ámbito sin
+        // inquilino abierto a propósito y con su motivo; fuera de él, lanza.
+        modelBuilder.Entity<Ejercicio>().HasQueryFilter(
+            ejercicio => EmpresaDelFiltro == null || ejercicio.EmpresaId == EmpresaDelFiltro);
+        modelBuilder.Entity<Serie>().HasQueryFilter(
+            serie => EmpresaDelFiltro == null || serie.EmpresaId == EmpresaDelFiltro);
+        modelBuilder.Entity<Almacen>().HasQueryFilter(
+            almacen => EmpresaDelFiltro == null || almacen.EmpresaId == EmpresaDelFiltro);
+
+        // La empresa es la RAÍZ del inquilinato: no lleva `empresa_id` porque ella ES el
+        // inquilino, así que se filtra por su propia clave. La consecuencia buscada es que el
+        // padrón de empresas de la instalación deje de ser legible desde dentro de cualquiera de
+        // ellas: sin esto, `GET /organizacion/empresas` devuelve la razón social y el NIF de todos
+        // los clientes de quien explote el sistema. Dar de alta una empresa y administrarla desde
+        // fuera —que es real, y es el arranque en frío del 0.5— pasa por un ámbito con su motivo.
+        modelBuilder.Entity<Empresa>().HasQueryFilter(
+            empresa => EmpresaDelFiltro == null || empresa.Id == EmpresaDelFiltro);
     }
 }

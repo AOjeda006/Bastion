@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
@@ -40,7 +41,7 @@ public sealed class PostgresDeVerdad : IAsyncLifetime
     {
         DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
         OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
-        return new OrganizacionDbContext(opciones.Options);
+        return new OrganizacionDbContext(opciones.Options, new InquilinoQueNadieDebeConsultar());
     }
 
     /// <inheritdoc/>
@@ -65,4 +66,25 @@ public sealed class ColeccionDePostgres : ICollectionFixture<PostgresDeVerdad>
 {
     /// <summary>Nombre de la colección.</summary>
     public const string Nombre = "PostgreSQL de verdad";
+}
+
+/// <summary>
+/// Un inquilino que <b>lanza en cuanto se le pregunta</b>, y ese es todo su trabajo.
+/// </summary>
+/// <remarks>
+/// Los tests de este proyecto miran el esquema por <c>information_schema</c>: no consultan ni una
+/// entidad, así que el filtro de R8 no llega a evaluarse nunca. Con un doble que devolviera una
+/// empresa cualquiera eso sería una suposición; con este, es una afirmación comprobada, porque el
+/// día que alguien añada aquí una consulta a una tabla del módulo, el test se cae y se entera.
+/// </remarks>
+internal sealed class InquilinoQueNadieDebeConsultar : IInquilinoActual
+{
+    public bool HayEmpresaActiva => false;
+
+    public Guid? EmpresaDelFiltro => throw new FaltaLaEmpresaActivaException(
+        "Este proyecto solo mira el esquema. Si has llegado aquí es que has escrito una consulta " +
+        "a una entidad del módulo, y esa se prueba en Api.IntegrationTests, con sesión de verdad.");
+
+    public IDisposable SinInquilino(MotivoSinInquilino motivo) => throw new NotSupportedException(
+        "Abrir un ámbito sin inquilino aquí no significa nada: no hay ninguno que suspender.");
 }

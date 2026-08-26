@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -39,21 +40,48 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
     /// solo sabe producir el dominio, y montarlos con SQL a mano probaría una fila que el sistema
     /// no produce nunca.
     /// </remarks>
-    public OrganizacionDbContext AbrirOrganizacion()
+    /// <param name="empresaId">
+    /// Como qué empresa se abre. Es <b>obligatorio</b>: un contexto de prueba sin empresa vería
+    /// las filas de todas, y entonces la puerta de atrás del test tendría más alcance que la API
+    /// que está ayudando a probar. Para el único caso que de verdad no tiene empresa —migrar—
+    /// está <see cref="AbrirOrganizacionParaMigrar"/>, que lo dice en el nombre.
+    /// </param>
+    public OrganizacionDbContext AbrirOrganizacion(Guid empresaId)
     {
         DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
         OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
 
-        return new OrganizacionDbContext(opciones.Options);
+        return new OrganizacionDbContext(opciones.Options, new InquilinoFijo(empresaId));
     }
 
-    /// <summary>Abre un contexto de Identidad contra el contenedor.</summary>
-    public IdentidadDbContext AbrirIdentidad()
+    /// <summary>Abre un contexto de Identidad contra el contenedor, como una empresa concreta.</summary>
+    /// <param name="empresaId">Como qué empresa se abre.</param>
+    public IdentidadDbContext AbrirIdentidad(Guid empresaId)
     {
         DbContextOptionsBuilder<IdentidadDbContext> opciones = new();
         IdentidadDbContext.Configurar(opciones, CadenaDeConexion);
 
-        return new IdentidadDbContext(opciones.Options);
+        return new IdentidadDbContext(opciones.Options, new InquilinoFijo(empresaId));
+    }
+
+    /// <summary>Un contexto de Organización solo para aplicar migraciones.</summary>
+    /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
+    public OrganizacionDbContext AbrirOrganizacionParaMigrar()
+    {
+        DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
+        OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new OrganizacionDbContext(opciones.Options, new InquilinoFijo(null));
+    }
+
+    /// <summary>Un contexto de Identidad solo para aplicar migraciones.</summary>
+    /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
+    public IdentidadDbContext AbrirIdentidadParaMigrar()
+    {
+        DbContextOptionsBuilder<IdentidadDbContext> opciones = new();
+        IdentidadDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new IdentidadDbContext(opciones.Options, new InquilinoFijo(null));
     }
 
     /// <inheritdoc/>
@@ -61,12 +89,12 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
     {
         await _contenedor.StartAsync();
 
-        await using (OrganizacionDbContext organizacion = AbrirOrganizacion())
+        await using (OrganizacionDbContext organizacion = AbrirOrganizacionParaMigrar())
         {
             await organizacion.Database.MigrateAsync();
         }
 
-        await using (IdentidadDbContext identidad = AbrirIdentidad())
+        await using (IdentidadDbContext identidad = AbrirIdentidadParaMigrar())
         {
             await identidad.Database.MigrateAsync();
         }
@@ -92,4 +120,30 @@ public sealed class ColeccionDeLaApi : ICollectionFixture<PostgresConTodosLosMod
 {
     /// <summary>Nombre de la colección.</summary>
     public const string Nombre = "API contra PostgreSQL de verdad";
+}
+
+/// <summary>
+/// El inquilino de la puerta de atrás de los tests: fijo, sin <i>claim</i> y sin ningún ingenio.
+/// </summary>
+/// <remarks>
+/// <para>
+/// No sustituye nada del contenedor de la API —ahí el inquilino sale del <i>claim</i>, como en
+/// producción—: esto es para los contextos que un test abre <b>a mano</b> para montar un estado
+/// que solo sabe producir el dominio.
+/// </para>
+/// <para>
+/// El nulo significa «migrar» y nada más. Se pide siempre por el constructor, para que abrir un
+/// contexto de prueba sin decir con qué empresa sea imposible por descuido.
+/// </para>
+/// </remarks>
+/// <param name="empresaId">La empresa fija, o nulo para migrar.</param>
+internal sealed class InquilinoFijo(Guid? empresaId) : IInquilinoActual
+{
+    public bool HayEmpresaActiva => empresaId is not null;
+
+    public Guid? EmpresaDelFiltro => empresaId;
+
+    public IDisposable SinInquilino(MotivoSinInquilino motivo) => throw new NotSupportedException(
+        "La puerta de atrás de los tests no abre ámbitos: si un test necesita ver más de una " +
+        "empresa, abre un contexto por empresa y lo dice.");
 }

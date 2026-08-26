@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Multiempresa;
 namespace Bastion.Identidad.Domain.Usuarios;
 
 /// <summary>
@@ -22,7 +23,7 @@ namespace Bastion.Identidad.Domain.Usuarios;
 /// donde están todas las pertenencias, que es el único sitio donde se puede comprobar.
 /// </para>
 /// </remarks>
-public sealed class Membresia
+public sealed class Membresia : IDeInquilino
 {
     private readonly List<RolDeMembresia> _roles = [];
 

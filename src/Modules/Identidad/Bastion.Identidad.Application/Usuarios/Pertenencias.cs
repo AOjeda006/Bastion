@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Roles;
 using Bastion.Identidad.Contracts.Usuarios;
@@ -69,6 +70,7 @@ internal sealed class ConcederPertenencia(
     IUsuarioActual usuarioActual,
     IRepositorioDeUsuarios usuarios,
     IConsultaDeEmpresas empresas,
+    IInquilinoActual inquilino,
     IUnidadTrabajoDeIdentidad unidadTrabajo) : IConcederPertenencia
 {
     public async Task<Resultado> EjecutarAsync(
@@ -77,6 +79,13 @@ internal sealed class ConcederPertenencia(
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(peticion);
+
+        // Administrar pertenencias habla POR DEFINICIÓN de una empresa que no tiene por qué ser la
+        // activa —el arranque en frío de la que uno acaba de crear—, y necesita ver al usuario con
+        // TODAS sus pertenencias: con el filtro puesto, `PerteneceA` diría «no» sobre una que sí
+        // existe y el alta acabaría contra su propio índice único. Quién puede nombrar qué empresa
+        // no lo decide el filtro, lo decide `PuedeAdministrarAsync` — que está justo aquí abajo.
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AdministracionDePertenencias);
 
         if (!await ErroresDePertenencia
             .PuedeAdministrarAsync(usuarioActual, usuarios, peticion.EmpresaId, cancelacion)
@@ -117,6 +126,7 @@ internal sealed class ConcederPertenencia(
 internal sealed class RetirarPertenencia(
     IUsuarioActual usuarioActual,
     IRepositorioDeUsuarios usuarios,
+    IInquilinoActual inquilino,
     IUnidadTrabajoDeIdentidad unidadTrabajo) : IRetirarPertenencia
 {
     public async Task<Resultado> EjecutarAsync(
@@ -124,6 +134,10 @@ internal sealed class RetirarPertenencia(
         Guid empresaId,
         CancellationToken cancelacion)
     {
+        // Igual que al conceder: la pertenencia que se retira puede ser la de otra empresa, y
+        // retirar la última de un usuario ajeno tiene que poder verse para poder negarse.
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AdministracionDePertenencias);
+
         if (!await ErroresDePertenencia
             .PuedeAdministrarAsync(usuarioActual, usuarios, empresaId, cancelacion)
             .ConfigureAwait(false))
@@ -154,6 +168,7 @@ internal sealed class AsignarRol(
     IUsuarioActual usuarioActual,
     IRepositorioDeUsuarios usuarios,
     IRepositorioDeRoles roles,
+    IInquilinoActual inquilino,
     IUnidadTrabajoDeIdentidad unidadTrabajo) : IAsignarRol
 {
     public async Task<Resultado> EjecutarAsync(
@@ -162,6 +177,10 @@ internal sealed class AsignarRol(
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(peticion);
+
+        // La pertenencia sobre la que se asigna el rol es la de la empresa que nombra la petición,
+        // que en el arranque en frío no es la activa. Sin ámbito, `ResolverAsync` no la encuentra.
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AdministracionDePertenencias);
 
         Resultado<Membresia> membresia = await ErroresDePertenencia
             .ResolverAsync(usuarioActual, usuarios, usuarioId, peticion.EmpresaId, cancelacion)
@@ -188,6 +207,7 @@ internal sealed class AsignarRol(
 internal sealed class RetirarRol(
     IUsuarioActual usuarioActual,
     IRepositorioDeUsuarios usuarios,
+    IInquilinoActual inquilino,
     IUnidadTrabajoDeIdentidad unidadTrabajo) : IRetirarRol
 {
     public async Task<Resultado> EjecutarAsync(
@@ -196,6 +216,9 @@ internal sealed class RetirarRol(
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(peticion);
+
+        // Lo mismo que al asignarlo, y por lo mismo.
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AdministracionDePertenencias);
 
         Resultado<Membresia> membresia = await ErroresDePertenencia
             .ResolverAsync(usuarioActual, usuarios, usuarioId, peticion.EmpresaId, cancelacion)

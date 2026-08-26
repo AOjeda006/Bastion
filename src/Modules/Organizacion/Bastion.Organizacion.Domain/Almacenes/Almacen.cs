@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Direcciones;
+using Bastion.BuildingBlocks.Domain.Multiempresa;
 
 namespace Bastion.Organizacion.Domain.Almacenes;
 
@@ -9,7 +10,7 @@ namespace Bastion.Organizacion.Domain.Almacenes;
 /// Su dirección va en campos estructurados (R17) y es opcional, porque un almacén virtual o de
 /// tránsito no está en ningún sitio y exigirle una dirección obligaría a inventarla.
 /// </remarks>
-public sealed class Almacen
+public sealed class Almacen : IDeInquilino
 {
     /// <summary>Tope del código del almacén: cabe en una etiqueta y en un albarán.</summary>
     public const int LongitudMaximaDeCodigo = 20;

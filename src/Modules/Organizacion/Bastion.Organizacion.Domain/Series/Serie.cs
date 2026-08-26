@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Multiempresa;
 namespace Bastion.Organizacion.Domain.Series;
 
 /// <summary>
@@ -16,7 +17,7 @@ namespace Bastion.Organizacion.Domain.Series;
 /// procedimiento; lo único que el dominio impide desde hoy es que el contador salte.
 /// </para>
 /// </remarks>
-public sealed class Serie
+public sealed class Serie : IDeInquilino
 {
     /// <summary>
     /// Tope del código. El <c>NumSerieFactura</c> de Veri*factu admite 60 caracteres para

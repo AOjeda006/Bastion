@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Usuarios;
 using Bastion.Identidad.Contracts.Sesiones;
@@ -40,6 +41,7 @@ internal sealed class CambiarEmpresaActiva(
     IRepositorioDeUsuarios usuarios,
     IRepositorioDeTokensDeRefresco tokens,
     IEmisorDeTokens emisor,
+    IInquilinoActual inquilino,
     ConstructorDeSesion constructor,
     IUnidadTrabajoDeIdentidad unidadTrabajo,
     TimeProvider reloj) : ICambiarEmpresaActiva
@@ -50,6 +52,12 @@ internal sealed class CambiarEmpresaActiva(
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(peticion);
+
+        // Esta operación es, literalmente, «deja de operar con la empresa del `claim`». La
+        // pertenencia que hay que encontrar es la de la empresa DESTINO, que por definición no es
+        // la del filtro: con él puesto, cambiar de empresa devolvería siempre «no pertenece».
+        // Que se pueda o no cambiar lo sigue decidiendo `usuario.EnEmpresa`, unas líneas más abajo.
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AutenticacionYSesion);
 
         DateTimeOffset ahora = reloj.GetUtcNow();
 

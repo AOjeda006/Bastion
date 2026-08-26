@@ -7,6 +7,7 @@ using Bastion.Api.Arranque;
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
+using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
 using Bastion.Identidad.Contracts;
 using Bastion.Identidad.Infrastructure;
@@ -130,6 +131,11 @@ else
 // Cada modulo se registra AQUI y solo aqui: la construccion del sistema esta separada de
 // su uso. Se registra aunque la cadena venga vacia, porque `dotnet ef migrations add` monta
 // este host para descubrir el DbContext y generar la migracion no abre ninguna conexion.
+// R8. Va delante de los modulos porque los DbContext de los dos dependen de el: sin esto, el host
+// no resuelve ni un contexto y no atiende la primera peticion. La empresa por la que filtra cada
+// consulta sale de aqui, del claim, y de ningun otro sitio.
+builder.Services.AgregarInquilinato();
+
 builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion);
 builder.Services.AgregarModuloDeIdentidad(cadenaDeConexion, opcionesDeJwt);
 

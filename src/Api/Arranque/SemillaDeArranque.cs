@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Arranque;
 using Bastion.Organizacion.Application.Empresas;
@@ -81,6 +82,14 @@ public static partial class SemillaDeArranque
         }
 
         await using AsyncServiceScope alcance = app.Services.CreateAsyncScope();
+
+        // La semilla corre ANTES de que exista nadie: no hay petición, no hay token y por tanto no
+        // hay empresa activa. El ámbito lo dice a la cara y queda anotado en el registro, en vez de
+        // que el filtro se encuentre con un hueco y lo rellene solo. Cubre las dos llamadas porque
+        // las dos consultan: la empresa que quizá ya esté, y los usuarios que quizá ya haya.
+        using IDisposable ambito = alcance.ServiceProvider
+            .GetRequiredService<IInquilinoActual>()
+            .SinInquilino(MotivoSinInquilino.SemillaDeArranque);
 
         Guid empresaId = await AsegurarEmpresaAsync(alcance.ServiceProvider, app.Configuration).ConfigureAwait(false);
 

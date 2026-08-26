@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Usuarios;
 using Bastion.Identidad.Domain.Sesiones;
@@ -38,6 +39,7 @@ internal sealed class RenovarSesion(
     IRepositorioDeTokensDeRefresco tokens,
     IRepositorioDeUsuarios usuarios,
     IEmisorDeTokens emisor,
+    IInquilinoActual inquilino,
     ConstructorDeSesion constructor,
     IUnidadTrabajoDeIdentidad unidadTrabajo,
     TimeProvider reloj) : IRenovarSesion
@@ -50,6 +52,11 @@ internal sealed class RenovarSesion(
         {
             return Resultado.Fallo<SesionAbierta>(ErroresDeSesion.Refresco());
         }
+
+        // Renovar entra por una ruta anónima: lo único que se presenta es la cookie, y de ella
+        // sale la empresa activa que se va a reconstruir. No hay `claim` que filtrar, y armar la
+        // sesión vuelve a leer la pertenencia de esa empresa.
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AutenticacionYSesion);
 
         DateTimeOffset ahora = reloj.GetUtcNow();
 

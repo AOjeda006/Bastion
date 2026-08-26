@@ -1,3 +1,5 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Identidad.Domain.Roles;
 using Bastion.Identidad.Domain.Sesiones;
 using Bastion.Identidad.Domain.Usuarios;
@@ -24,8 +26,11 @@ namespace Bastion.Identidad.Infrastructure.Persistencia;
 /// </para>
 /// </remarks>
 /// <param name="opciones">Opciones del contexto.</param>
-public sealed class IdentidadDbContext(DbContextOptions<IdentidadDbContext> opciones)
-    : DbContext(opciones)
+/// <param name="inquilino">De dónde sale la empresa por la que filtra el inquilinato (R8).</param>
+public sealed class IdentidadDbContext(
+    DbContextOptions<IdentidadDbContext> opciones,
+    IInquilinoActual inquilino)
+    : ContextoDeModulo(opciones, inquilino)
 {
     /// <summary>
     /// Esquema de PostgreSQL del módulo: el nombre del módulo en minúsculas y sin acentos.
@@ -73,5 +78,24 @@ public sealed class IdentidadDbContext(DbContextOptions<IdentidadDbContext> opci
 
         modelBuilder.HasDefaultSchema(Esquema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentidadDbContext).Assembly);
+
+        // La pertenencia es el PUENTE del inquilinato: lleva `empresa_id` y se filtra por él.
+        // Filtrarla tiene una consecuencia que hay que mirar de frente: el acceso carga al usuario
+        // con TODAS sus pertenencias para saber a qué empresas puede entrar, y esa carga ocurre
+        // antes de que haya empresa activa. Corre dentro de un ámbito con su motivo
+        // (`AutenticacionYSesion`), que es lo que la deja ver la lista entera; el resto del sistema
+        // solo ve las de la empresa en la que está.
+        modelBuilder.Entity<Membresia>().HasQueryFilter(
+            membresia => EmpresaDelFiltro == null || membresia.EmpresaId == EmpresaDelFiltro);
+
+        // El usuario NO lleva `empresa_id`: una cuenta es una, con un correo, y puede pertenecer a
+        // varias empresas. Pero «global» no puede significar «consultable desde cualquier
+        // empresa»: sin este filtro, quien tenga `identidad.usuario.ver` en una empresa lee el
+        // correo y el nombre de los usuarios de todas las demás enumerando identificadores. Así
+        // que la entidad es global y la CONSULTA se acota por la pertenencia, que es la relación
+        // que dice quién comparte empresa con quién.
+        modelBuilder.Entity<Usuario>().HasQueryFilter(
+            usuario => EmpresaDelFiltro == null
+                || usuario.Membresias.Any(membresia => membresia.EmpresaId == EmpresaDelFiltro));
     }
 }

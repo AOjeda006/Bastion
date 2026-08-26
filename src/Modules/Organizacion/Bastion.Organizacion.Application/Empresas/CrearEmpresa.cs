@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -22,7 +23,10 @@ public interface ICrearEmpresa
 /// memoria: quién atiende cada caso de uso lo dice el compilador, no una tabla de despacho que
 /// solo falla en ejecución.
 /// </remarks>
-internal sealed class CrearEmpresa(IRepositorioDeEmpresas empresas, IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearEmpresa
+internal sealed class CrearEmpresa(
+    IRepositorioDeEmpresas empresas,
+    IInquilinoActual inquilino,
+    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearEmpresa
 {
     public async Task<Resultado<EmpresaDto>> EjecutarAsync(
         CrearEmpresaDto peticion,
@@ -71,7 +75,17 @@ internal sealed class CrearEmpresa(IRepositorioDeEmpresas empresas, IUnidadTraba
         // El NIF identifica a la empresa ante la AEAT: dos empresas con el mismo NIF no son dos
         // empresas. La base lo impide con un índice único; comprobarlo aquí es lo que convierte
         // el choque en un 409 con explicación en lugar de en una excepción de PostgreSQL.
-        if (await empresas.ExisteConNifAsync(identificador, cancelacion).ConfigureAwait(false))
+        // Y se comprueba SIN filtro de empresa a propósito: el índice único es de la instalación
+        // entera, no de un inquilino. Filtrada, la consulta diría «libre» sobre un NIF ocupado por
+        // otra empresa y el alta se estrellaría contra el índice — un 500 donde toca este 409.
+        bool ocupado;
+
+        using (inquilino.SinInquilino(MotivoSinInquilino.UnicidadGlobal))
+        {
+            ocupado = await empresas.ExisteConNifAsync(identificador, cancelacion).ConfigureAwait(false);
+        }
+
+        if (ocupado)
         {
             return Resultado.Fallo<EmpresaDto>(ErrorDeOperacion.Conflicto(
                 "empresa-ya-registrada",

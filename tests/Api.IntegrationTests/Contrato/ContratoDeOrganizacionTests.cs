@@ -50,7 +50,8 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
     [Fact]
     public async Task Crear_una_empresa_devuelve_201_con_Location_que_lleva_al_recurso()
     {
-        using HttpClient cliente = await _api.ComoAdministradorAsync();
+        (HttpClient cliente, SesionDto sesion) = await _api.AbrirComoAdministradorAsync();
+        using HttpClient suyo = cliente;
 
         HttpResponseMessage creacion = await cliente.PostAsJsonAsync(
             Empresas, Escenario.NuevaEmpresa("00000001R"));
@@ -66,6 +67,14 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         // `[controller]` copia el nombre de la clase y publica `…/Empresas/…`: el nombre de un
         // tipo de C# asomando por el contrato, y una ruta distinta de la documentada.
         creacion.Headers.Location.AbsolutePath.ShouldStartWith(Empresas + "/");
+
+        // Desde 0.6, «lleva al recurso» quiere decir «lleva al recurso para quien opera DENTRO de
+        // esa empresa». El filtro de inquilinato (R8) no hace una excepción con la que uno acaba
+        // de crear, así que se entra por donde se entra —pertenencia, rol y empresa activa— y solo
+        // entonces se sigue el enlace. Que desde fuera dé 404 es lo que comprueba
+        // `ElFiltroDeEmpresaTests`, que es su sitio.
+        EmpresaDto creada = (await creacion.Content.ReadFromJsonAsync<EmpresaDto>())!;
+        await Escenario.EntrarEnAsync(cliente, sesion.UsuarioId, creada.Id);
 
         HttpResponseMessage seguimiento = await cliente.GetAsync(creacion.Headers.Location);
         seguimiento.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -178,8 +187,10 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
     [Fact]
     public async Task Borrar_una_empresa_la_bloquea_pero_no_la_borra()
     {
-        using HttpClient cliente = await _api.ComoAdministradorAsync();
-        EmpresaDto empresa = await Escenario.CrearEmpresaAsync(cliente, "33333333P");
+        // Dentro de la empresa que se va a bloquear: desde fuera, R8 la esconde y el 404 taparía
+        // lo que este caso quiere ver, que es el estado en el que queda.
+        (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("33333333P");
+        using HttpClient suyo = cliente;
 
         HttpResponseMessage borrado = await cliente.DeleteAsync($"{Empresas}/{empresa.Id}");
         borrado.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -194,8 +205,9 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
     [Fact]
     public async Task Una_empresa_bloqueada_se_desbloquea_por_su_puerta_y_vuelve_a_estar_activa()
     {
-        using HttpClient cliente = await _api.ComoAdministradorAsync();
-        EmpresaDto empresa = await Escenario.CrearEmpresaAsync(cliente, "00000011B");
+        (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("00000011B");
+        using HttpClient suyo = cliente;
+
         await cliente.DeleteAsync($"{Empresas}/{empresa.Id}");
 
         // En 0.4 desbloquear existía en el dominio y no tenía puerta HTTP: se podía bloquear y no
@@ -213,8 +225,9 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
     [Fact]
     public async Task Una_empresa_bloqueada_no_se_puede_modificar_y_da_409()
     {
-        using HttpClient cliente = await _api.ComoAdministradorAsync();
-        EmpresaDto empresa = await Escenario.CrearEmpresaAsync(cliente, "44444444A");
+        (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("44444444A");
+        using HttpClient suyo = cliente;
+
         await cliente.DeleteAsync($"{Empresas}/{empresa.Id}");
 
         HttpResponseMessage respuesta = await cliente.PutAsJsonAsync(
@@ -363,14 +376,14 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
     [Fact]
     public async Task Suprimir_una_serie_que_ya_ha_numerado_es_409()
     {
-        (HttpClient cliente, _) = await _api.EnUnaEmpresaNuevaAsync("88888888Y");
+        (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("88888888Y");
         using HttpClient suyo = cliente;
         SerieDto serie = await CrearSerie(cliente, "FAC");
 
         // Numerar todavía no tiene puerta HTTP —es de la fase de facturación—, así que se hace
         // por el dominio, que es quien manda: subir el contador a mano en la base saltándose
         // `RegistrarNumeroAsignado` probaría un estado que el sistema no sabe producir.
-        await using (OrganizacionDbContext contexto = postgres.AbrirOrganizacion())
+        await using (OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresa.Id))
         {
             Serie guardada = await contexto.Series.SingleAsync(fila => fila.Id == serie.Id);
             guardada.RegistrarNumeroAsignado(1);

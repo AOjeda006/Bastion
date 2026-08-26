@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Comun;
@@ -28,6 +29,7 @@ internal sealed class CrearUsuario(
     IUsuarioActual usuarioActual,
     IRepositorioDeUsuarios usuarios,
     IConsultaDeEmpresas empresas,
+    IInquilinoActual inquilino,
     IHasherDeContrasenas hasher,
     IUnidadTrabajoDeIdentidad unidadTrabajo,
     TimeProvider reloj) : ICrearUsuario
@@ -52,7 +54,17 @@ internal sealed class CrearUsuario(
 
         Correo identificador = correo!;
 
-        if (await usuarios.ExisteConCorreoAsync(identificador, cancelacion).ConfigureAwait(false))
+        // Sin filtro, por lo mismo que el NIF: el correo identifica al usuario en TODA la
+        // instalación —con él inicia sesión, antes de que exista empresa activa—, así que la
+        // comprobación tiene que ver más allá de la empresa de quien invita.
+        bool ocupado;
+
+        using (inquilino.SinInquilino(MotivoSinInquilino.UnicidadGlobal))
+        {
+            ocupado = await usuarios.ExisteConCorreoAsync(identificador, cancelacion).ConfigureAwait(false);
+        }
+
+        if (ocupado)
         {
             return Resultado.Fallo<UsuarioDto>(ErroresDeUsuario.CorreoYaRegistrado(identificador.Valor));
         }

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Usuarios;
@@ -38,6 +39,7 @@ public interface IIniciarSesion
 internal sealed class IniciarSesion(
     IRepositorioDeUsuarios usuarios,
     IHasherDeContrasenas hasher,
+    IInquilinoActual inquilino,
     ConstructorDeSesion constructor,
     IUnidadTrabajoDeIdentidad unidadTrabajo,
     TimeProvider reloj) : IIniciarSesion
@@ -47,6 +49,12 @@ internal sealed class IniciarSesion(
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(peticion);
+
+        // Aquí todavía no hay empresa activa: entrar es precisamente la operación que la elige.
+        // Filtrar por ella sería pedirle a la petición el dato que la petición viene a obtener, y
+        // el efecto no sería un error sino un 401 —«credenciales incorrectas»— para quien las tiene
+        // bien. El ámbito cubre el método entero porque las pertenencias se leen hasta el final.
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AutenticacionYSesion);
 
         DateTimeOffset ahora = reloj.GetUtcNow();
 

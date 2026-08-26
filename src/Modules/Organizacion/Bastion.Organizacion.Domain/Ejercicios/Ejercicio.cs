@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Multiempresa;
 namespace Bastion.Organizacion.Domain.Ejercicios;
 
 /// <summary>
@@ -16,7 +17,7 @@ namespace Bastion.Organizacion.Domain.Ejercicios;
 /// tablas y todas las consultas.
 /// </para>
 /// </remarks>
-public sealed class Ejercicio
+public sealed class Ejercicio : IDeInquilino
 {
     /// <summary>Duración máxima de un ejercicio: doce meses (art. 26 de la LIS).</summary>
     public const int MesesMaximos = 12;
