@@ -11,9 +11,21 @@
 
   <ItemGroup Label="Sujeto de prueba">
     <ProjectReference Include="../../src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Bastion.Organizacion.Infrastructure.csproj" />
+    <!--
+      Y el host, para probar los endpoints del módulo COMO LOS VE UN CLIENTE: por HTTP, con el
+      contenedor de dependencias real y contra la misma base de datos de verdad. Un test que
+      llamara al caso de uso directamente no comprobaría ni el enlace de modelo, ni el 400 por
+      campo que genera [ApiController], ni el 201 con su Location, que es donde vive la mitad
+      del contrato.
+
+      No van en Api.FunctionalTests porque aquel proyecto es, a propósito, el de lo que se puede
+      comprobar SIN dependencias externas (ver su csproj). Esto necesita PostgreSQL.
+    -->
+    <ProjectReference Include="../../src/Api/Bastion.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Marco de pruebas">
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Testcontainers.PostgreSql" />

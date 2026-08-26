@@ -153,11 +153,27 @@ public sealed class Serie
         }
     }
 
+    /// <summary>Deja el código en la forma exacta en la que se guarda.</summary>
+    /// <remarks>
+    /// Pública a propósito: sobre esta forma hay un índice único, y quien comprueba si el código ya
+    /// existe ANTES de insertar tiene que preguntar por ella. Preguntando por lo que escribió el
+    /// usuario, «fac» pasaría el filtro, chocaría contra el índice y saldría como un 500 en vez de
+    /// como un 409 con explicación. No valida nada —de la longitud se encarga la creación—: una
+    /// pregunta no tiene por qué reventar.
+    /// </remarks>
+    /// <param name="codigo">Código tal como lo escribieron.</param>
+    public static string NormalizarCodigo(string codigo)
+    {
+        ArgumentNullException.ThrowIfNull(codigo);
+
+        return codigo.Trim().ToUpperInvariant();
+    }
+
     private static string CodigoValido(string codigo)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(codigo);
 
-        string normalizado = codigo.Trim().ToUpperInvariant();
+        string normalizado = NormalizarCodigo(codigo);
 
         return normalizado.Length <= LongitudMaximaDeCodigo
             ? normalizado

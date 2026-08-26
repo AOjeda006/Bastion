@@ -24,12 +24,33 @@ public static class Divisas
     {
         ArgumentNullException.ThrowIfNull(divisa);
 
+        return ConForma(divisa) ?? throw new ArgumentException(
+            $"La divisa {divisa} no es un código ISO 4217 (tres letras, como EUR).", nameof(divisa));
+    }
+
+    /// <summary>Indica si se conoce el redondeo fiscal de la divisa, sin lanzar por nada.</summary>
+    /// <remarks>
+    /// La puerta que PREGUNTA, frente a <see cref="UnidadMinima"/>, que EXIGE. El borde necesita
+    /// preguntar para poder responder «divisaBase: no se conoce el redondeo» en el campo que toca;
+    /// dentro, en cambio, una divisa que no se sabe redondear es un fallo de programación y por eso
+    /// <see cref="UnidadMinima"/> lanza. Las dos leen el mismo catálogo (ver ADR-0004).
+    /// </remarks>
+    public static bool EsConocida(string divisa)
+    {
+        ArgumentNullException.ThrowIfNull(divisa);
+
+        string? normalizada = ConForma(divisa);
+
+        return normalizada is not null && s_unidadMinima.ContainsKey(normalizada);
+    }
+
+    // Un solo sitio decide qué es «forma de divisa». Si normalizar y preguntar tuvieran cada uno
+    // su copia, una acabaría admitiendo lo que la otra rechaza.
+    private static string? ConForma(string divisa)
+    {
         string normalizada = divisa.Trim().ToUpperInvariant();
 
-        return normalizada.Length == 3 && normalizada.All(char.IsAsciiLetterUpper)
-            ? normalizada
-            : throw new ArgumentException(
-                $"La divisa {divisa} no es un código ISO 4217 (tres letras, como EUR).", nameof(divisa));
+        return normalizada.Length == 3 && normalizada.All(char.IsAsciiLetterUpper) ? normalizada : null;
     }
 
     /// <summary>Decimales de redondeo fiscal de la divisa; lanza si no se conoce.</summary>

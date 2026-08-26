@@ -9,6 +9,12 @@
 
   <ItemGroup Label="Sujeto de prueba">
     <ProjectReference Include="../../src/Modules/Organizacion/Bastion.Organizacion.Domain/Bastion.Organizacion.Domain.csproj" />
+    <!--
+      Contracts ADEMÁS del dominio, y solo para un test: los DTO repiten como números unos
+      límites que manda el dominio, porque Contracts no puede referenciarlo. Este proyecto ve
+      los dos y comprueba que siguen diciendo lo mismo.
+    -->
+    <ProjectReference Include="../../src/Modules/Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Marco de pruebas">

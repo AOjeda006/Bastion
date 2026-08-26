@@ -15,6 +15,14 @@
 
   <ItemGroup>
     <ProjectReference Include="../Bastion.Organizacion.Application/Bastion.Organizacion.Application.csproj" />
+    <!--
+      El bloque común de Infrastructure, y solo por la política de errores: es donde el §12 sitúa
+      la traducción de un error de negocio a ProblemDetails, y esa traducción ES HTTP, igual que
+      este proyecto. Reescribirla aquí daría dos formatos de error que se separarían al primer
+      cambio. NO se referencia la Infrastructure DEL MÓDULO: los controladores hablan con casos
+      de uso, nunca con repositorios (§4).
+    -->
+    <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

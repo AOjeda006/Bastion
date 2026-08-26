@@ -189,11 +189,6 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.9"
         }
       },
-      "Microsoft.Extensions.DependencyInjection.Abstractions": {
-        "type": "Transitive",
-        "resolved": "10.0.9",
-        "contentHash": "g41l/30G3K4B/d/L8kjux0+30e27c8D0FVQ/PFCpbekgfDpj9mnDhieP67EqXWvl1EWNeZh2rpR4F5B/jcDOHA=="
-      },
       "Microsoft.Extensions.DependencyModel": {
         "type": "Transitive",
         "resolved": "10.0.9",
@@ -323,7 +318,8 @@
         "dependencies": {
           "Bastion.BuildingBlocks.Application": "[1.0.0, )",
           "Bastion.Organizacion.Contracts": "[1.0.0, )",
-          "Bastion.Organizacion.Domain": "[1.0.0, )"
+          "Bastion.Organizacion.Domain": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.9, )"
         }
       },
       "bastion.organizacion.contracts": {
@@ -334,6 +330,12 @@
         "dependencies": {
           "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
         }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.9, )",
+        "resolved": "10.0.9",
+        "contentHash": "g41l/30G3K4B/d/L8kjux0+30e27c8D0FVQ/PFCpbekgfDpj9mnDhieP67EqXWvl1EWNeZh2rpR4F5B/jcDOHA=="
       },
       "Npgsql": {
         "type": "CentralTransitive",

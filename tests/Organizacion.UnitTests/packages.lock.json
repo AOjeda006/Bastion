@@ -133,6 +133,9 @@
       "bastion.buildingblocks.domain": {
         "type": "Project"
       },
+      "bastion.organizacion.contracts": {
+        "type": "Project"
+      },
       "bastion.organizacion.domain": {
         "type": "Project",
         "dependencies": {

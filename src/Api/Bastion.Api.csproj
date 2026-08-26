@@ -56,6 +56,7 @@
       convertiría un detalle del arranque en API del host.
     -->
     <InternalsVisibleTo Include="Bastion.Api.FunctionalTests" />
+    <InternalsVisibleTo Include="Bastion.Organizacion.IntegrationTests" />
   </ItemGroup>
 
 </Project>

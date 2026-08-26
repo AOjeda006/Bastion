@@ -2,6 +2,7 @@
 // maestro). La construcción del sistema vive aquí, separada de su uso
 // (`principios/clean-architecture.md`); ningún módulo se registra a sí mismo por su cuenta.
 
+using System.Text.Json.Serialization;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
 using Bastion.Organizacion.Infrastructure;
@@ -112,6 +113,23 @@ else
 // este host para descubrir el DbContext y generar la migracion no abre ninguna conexion.
 builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion);
 
+// ---------------------------------------------------------------------- controladores
+// Los controladores viven en los proyectos Endpoints de cada módulo, no aquí. `AddControllers`
+// descubre los del ensamblado de entrada y los de los que referencia, así que basta con que el
+// host los referencie (ver Bastion.Api.csproj).
+//
+// Los enumerados se serializan como TEXTO: un ordinal es un contrato que se rompe solo con
+// reordenar el enumerado, y el que lo reordena no ve que está rompiendo un cliente.
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(json => json.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+// Las URL que genera el enrutador van en minúsculas. Sin esto, el token `[controller]` toma el
+// nombre de la clase tal cual y el `Location` de una creación sale como
+// `/api/v1/organizacion/Empresas/…`: el nombre de un tipo de C# asomando en el contrato público,
+// y una ruta que no coincide con la que está escrita en el OpenAPI ni en la documentación.
+builder.Services.AddRouting(rutas => rutas.LowercaseUrls = true);
+
 WebApplication app = builder.Build();
 
 // Lo PRIMERO de la tubería: un manejador de excepciones solo cubre lo que tiene por dentro.
@@ -135,6 +153,8 @@ app.MapHealthChecks(rutaDeDisponibilidad, new HealthCheckOptions
     Predicate = comprobacion => comprobacion.Tags.Contains(etiquetaDeDisponibilidad),
     ResponseWriter = EscribirEstadoDeLasDependencias,
 });
+
+app.MapControllers();
 
 app.Run();
 

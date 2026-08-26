@@ -1,0 +1,61 @@
+using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Organizacion.Application.Comun;
+using Bastion.Organizacion.Contracts.Comun;
+using Bastion.Organizacion.Contracts.Empresas;
+using Bastion.Organizacion.Domain.Empresas;
+
+namespace Bastion.Organizacion.Application.Empresas;
+
+/// <summary>Devuelve una empresa por su identificador.</summary>
+public interface IObtenerEmpresa
+{
+    /// <summary>Ejecuta el caso de uso.</summary>
+    /// <param name="id">Identificador de la empresa.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<Resultado<EmpresaDto>> EjecutarAsync(Guid id, CancellationToken cancelacion);
+}
+
+/// <summary>Devuelve una página de empresas.</summary>
+/// <remarks>
+/// Devuelve la página a secas y no un <c>Resultado</c>, a propósito: un listado no tiene desenlace
+/// fallido de negocio. Que la paginación pedida sea absurda lo rechaza el borde con sus
+/// anotaciones antes de llegar, y una colección vacía es una respuesta correcta, no un error
+/// (ADR-0004: el <c>Resultado</c> es para lo que PUEDE fallar de verdad).
+/// </remarks>
+public interface IListarEmpresas
+{
+    /// <summary>Ejecuta el caso de uso.</summary>
+    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<PaginaDe<EmpresaDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
+}
+
+/// <inheritdoc cref="IObtenerEmpresa"/>
+internal sealed class ObtenerEmpresa(IRepositorioDeEmpresas empresas) : IObtenerEmpresa
+{
+    public async Task<Resultado<EmpresaDto>> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    {
+        Empresa? empresa = await empresas.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
+
+        return empresa is null
+            ? Resultado.Fallo<EmpresaDto>(ErroresDeEmpresa.NoEncontrada(id))
+            : Resultado.Correcto(empresa.ADto());
+    }
+}
+
+/// <inheritdoc cref="IListarEmpresas"/>
+internal sealed class ListarEmpresas(IRepositorioDeEmpresas empresas) : IListarEmpresas
+{
+    public async Task<PaginaDe<EmpresaDto>> EjecutarAsync(
+        Paginacion paginacion,
+        CancellationToken cancelacion)
+    {
+        PaginaDe<Empresa> pagina = await empresas.ListarAsync(paginacion, cancelacion).ConfigureAwait(false);
+
+        return new PaginaDe<EmpresaDto>(
+            [.. pagina.Elementos.Select(empresa => empresa.ADto())],
+            pagina.Pagina,
+            pagina.Tamanio,
+            pagina.Total);
+    }
+}

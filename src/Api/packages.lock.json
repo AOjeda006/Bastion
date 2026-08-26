@@ -401,6 +401,7 @@
       "bastion.organizacion.endpoints": {
         "type": "Project",
         "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
           "Bastion.Organizacion.Application": "[1.0.0, )"
         }
       },

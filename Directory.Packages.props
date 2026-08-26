@@ -29,6 +29,18 @@
     La versión se fija por debajo o a la altura del runtime instalado: un paquete más
     nuevo que el runtime es el sentido que rompe; al revés, rueda hacia delante.
   -->
+  <!--
+    Contrato del contenedor de inyección de dependencias. Lo necesita la capa de Aplicación de
+    cada módulo para publicar su «AgregarCasosDeUsoDe…»: las implementaciones de los casos de uso
+    son `internal`, así que quien las registra tiene que estar en el mismo ensamblado.
+
+    Son las ABSTRACCIONES, no el contenedor: `IServiceCollection` y poco más. La capa sigue sin
+    saber quién resuelve nada en ejecución (`patrones/inyeccion-dependencias.md`).
+  -->
+  <ItemGroup Label="Inyección de dependencias">
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+
   <ItemGroup Label="Datos">
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
@@ -43,6 +55,7 @@
       Npgsql y Npgsql.EntityFrameworkCore.PostgreSQL ...... PostgreSQL (permisiva, estilo BSD)
       Microsoft.EntityFrameworkCore.* ..................... MIT
       EFCore.NamingConventions ............................ Apache-2.0
+      Microsoft.Extensions.DependencyInjection.Abstractions  MIT
       Testcontainers.PostgreSql ........................... MIT
     Ninguna es de las que cambiaron a comercial en 2025.
 
