@@ -38,6 +38,19 @@ public static class PoliticaDeErrores
             contexto => Completar(contexto.ProblemDetails, contexto.HttpContext));
         servicios.AddExceptionHandler<ManejadorDeExcepcionesNoControladas>();
 
+        // Y el 400 automático de `[ApiController]`, que MVC compone por su cuenta y por fuera de
+        // esta política: sin identificador de traza y con el texto del deserializador. Ver
+        // `EntradaNoValida`.
+        //
+        // `PostConfigure` y no `Configure`, y esto costó un rojo: quien pone la fábrica por
+        // omisión es `ApiBehaviorOptionsSetup`, que la asigna SIN mirar si ya había una y lo
+        // registra `AddControllers`. Con `Configure`, que se ejecuta en orden de registro, esta
+        // línea gana o pierde según se llame antes o después de `AddControllers` — o sea, según
+        // el orden en que estén escritas dos líneas de `Program.cs`. `PostConfigure` va después
+        // de todos los `Configure`, así que el orden deja de importar.
+        servicios.PostConfigure<ApiBehaviorOptions>(
+            opciones => opciones.InvalidModelStateResponseFactory = EntradaNoValida.Respuesta);
+
         return servicios;
     }
 
