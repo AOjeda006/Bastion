@@ -110,42 +110,50 @@ public sealed class LaPuertaDeCadaAccionTests(PostgresConTodosLosModulos postgre
     [Fact]
     public async Task Con_su_permiso_y_solo_con_el_suyo_ninguna_accion_responde_401_ni_403()
     {
-        Dictionary<string, HttpClient> porPermiso = [];
         List<string> cerradas = [];
 
-        try
+        // Lo que salga después —400 por el cuerpo vacío, 404 por el identificador inventado— da
+        // igual: lo que se comprueba es que la puerta se abre con ESTE permiso y con uno solo. Sin
+        // este test, denegarlo todo pasaría los otros dos.
+        await ConSuPermisoAsync(async (accion, respuesta) =>
         {
-            foreach (ActionDescriptor accion in Protegidas())
+            if (await EsPuertaCerradaAsync(respuesta))
             {
-                Permiso permiso = PeticionDeSondeo.PermisoDe(accion)!;
-
-                if (!porPermiso.TryGetValue(permiso.Valor, out HttpClient? cliente))
-                {
-                    porPermiso[permiso.Valor] = cliente = await _api.ConPermisosAsync(permiso.Valor);
-                }
-
-                using HttpRequestMessage peticion = PeticionDeSondeo.De(accion, TokenDe(cliente));
-                using HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
-
-                // Lo que salga después —400 por el cuerpo vacío, 404 por el identificador
-                // inventado— da igual: lo que se comprueba es que la puerta se abre con ESTE
-                // permiso y con uno solo. Sin este test, denegarlo todo pasaría los otros dos.
-                if (await EsPuertaCerradaAsync(respuesta))
-                {
-                    cerradas.Add($"{PeticionDeSondeo.Nombre(accion)} ({permiso}) → {(int)respuesta.StatusCode}");
-                }
+                cerradas.Add(
+                    $"{PeticionDeSondeo.Nombre(accion)} ({PeticionDeSondeo.PermisoDe(accion)}) → {(int)respuesta.StatusCode}");
             }
-        }
-        finally
-        {
-            foreach (HttpClient cliente in porPermiso.Values)
-            {
-                cliente.Dispose();
-            }
-        }
+        });
 
         cerradas.ShouldBeEmpty(
             "estas acciones no se abren ni con el permiso que declaran exigir: " + string.Join(", ", cerradas));
+    }
+
+    [Fact]
+    public async Task Ninguna_accion_contesta_con_un_fallo_del_servidor_al_sondeo()
+    {
+        List<string> reventadas = [];
+
+        // El barrido de arriba da por buena CUALQUIER respuesta que no sea 401 ni 403, y eso
+        // incluye un 500. Es correcto para lo que aquel comprueba —la puerta— y es un agujero
+        // como evidencia: una acción que estalla nada más entrar lo pasa igual de bien que una
+        // que funciona. Pasó de verdad, y con las diez acciones de pertenencias a la vez
+        // (ADR-0010); lo que lo delató fue un test de contrato, no este barrido.
+        //
+        // Aquí un 500 no puede ser correcto: el sondeo manda cuerpos vacíos e identificadores
+        // inventados, o sea, entrada mala, y a la entrada mala se contesta 4xx.
+        await ConSuPermisoAsync((accion, respuesta) =>
+        {
+            if ((int)respuesta.StatusCode >= 500)
+            {
+                reventadas.Add($"{PeticionDeSondeo.Nombre(accion)} → {(int)respuesta.StatusCode}");
+            }
+
+            return Task.CompletedTask;
+        });
+
+        reventadas.ShouldBeEmpty(
+            "estas acciones contestan con un fallo del servidor a una petición de sondeo: "
+            + string.Join(", ", reventadas));
     }
 
     [Fact]
@@ -206,6 +214,46 @@ public sealed class LaPuertaDeCadaAccionTests(PostgresConTodosLosModulos postgre
         // cierra el sondeo de rutas, no el uso normal de la API.
         respuesta.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+    }
+
+    /// <summary>
+    /// Sondea <b>cada</b> acción protegida con un token que trae exactamente su permiso, y le pasa
+    /// la respuesta a quien mira.
+    /// </summary>
+    /// <remarks>
+    /// Un cliente por permiso y no uno por acción: abrir sesión cuesta un resumen de contraseña
+    /// completo —cien mil iteraciones, a propósito— y hay cuarenta y una acciones para treinta y
+    /// cuatro permisos.
+    /// </remarks>
+    /// <param name="mirar">Qué se comprueba de cada respuesta.</param>
+    private async Task ConSuPermisoAsync(Func<ActionDescriptor, HttpResponseMessage, Task> mirar)
+    {
+        Dictionary<string, HttpClient> porPermiso = [];
+
+        try
+        {
+            foreach (ActionDescriptor accion in Protegidas())
+            {
+                Permiso permiso = PeticionDeSondeo.PermisoDe(accion)!;
+
+                if (!porPermiso.TryGetValue(permiso.Valor, out HttpClient? cliente))
+                {
+                    porPermiso[permiso.Valor] = cliente = await _api.ConPermisosAsync(permiso.Valor);
+                }
+
+                using HttpRequestMessage peticion = PeticionDeSondeo.De(accion, TokenDe(cliente));
+                using HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
+
+                await mirar(accion, respuesta);
+            }
+        }
+        finally
+        {
+            foreach (HttpClient cliente in porPermiso.Values)
+            {
+                cliente.Dispose();
+            }
+        }
     }
 
     /// <summary>Si esa respuesta es <b>la puerta</b> cerrada, y no una regla de negocio.</summary>
