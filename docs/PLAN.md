@@ -237,9 +237,155 @@ anotan para no volver a discutirlas.
   nueva y un idioma de test nuevo en el mismo ítem que estrena el dominio compra menos de lo que
   cuesta; los casos dorados de la fase 5 son mejor sitio, y allí sí. Anotado en *Notas / riesgos*.
 
+### Tomadas por el agente de desarrollo — ítem 0.4 (2026-08-26)
+
+- **El esquema del módulo se llama `org`, no `organizacion`.** El encargo hablaba de un esquema
+  `organizacion`; el **Anexo A.1** del plan maestro fija `org`, y `CLAUDE.md` prohíbe contradecirlo.
+  Se ha ido con `org`. **Queda anotado como conflicto**: si la intención era `organizacion`, se
+  cambia ahora —una migración de renombrado sobre tablas vacías— y no después.
+- **Lo irreversible de esquema entra en el 0.4 para las entidades que el 0.4 crea**, según acordado
+  con el usuario antes de empezar. Las ocho decisiones —direcciones en seis columnas con longitudes
+  de ISO 20022, `empresa_id` desde la primera tabla, `Bloqueado` con su fecha, `date` frente a
+  `timestamptz`, contador en columna y nunca secuencia, historial de migraciones en el esquema del
+  módulo, enumerados como texto y cero cascadas— están en el
+  **`docs/adr/adr-0007-lo-irreversible-del-esquema-de-organizacion.md`**, con el porqué de cada una.
+  El 0.6 y el 0.10 llegan a tablas que ya tienen lo que necesitan; ninguno migra datos.
+- **Un caso de uso por operación, sin bus en memoria** (§4): interfaz pública + implementación
+  `internal`, y `AgregarCasosDeUsoDeOrganizacion()` registra los veinte. Como quien registra tipos
+  `internal` tiene que vivir en el mismo ensamblado, la capa de Aplicación adopta
+  **`Microsoft.Extensions.DependencyInjection.Abstractions` 10.0.9 — MIT**, comprobado en su
+  `.nuspec`. Son las abstracciones, no el contenedor. MediatR está descartado por el plan maestro
+  y además es comercial desde 2025.
+- **`IUnidadTrabajo` vive en `src/BuildingBlocks/Application`** (carpeta nueva). Un repositorio no
+  confirma por su cuenta: quien decide dónde acaba la transacción es el caso de uso. Es del bloque
+  común porque lo van a necesitar los cinco módulos.
+- **El reloj es `TimeProvider`, no un `IReloj` propio.** Es el tipo de la BCL para esto desde .NET 8
+  y un puerto con la misma forma solo añadiría una capa que traducir. Se registra con `TryAdd` para
+  que un test que ya haya puesto un reloj falso conserve el suyo.
+- **Los listados devuelven `PaginaDe<T>` directamente, no `Resultado<PaginaDe<T>>`.** Un listado no
+  tiene modo de fallo de negocio: o hay elementos o la página viene vacía. Envolverlo obligaría a
+  desenvolver algo que nunca trae error.
+- **El tope de paginación lo aplica el enlace de modelo, no el controlador.** `page`/`size` (§9, en
+  inglés) se enlazan a `ConsultaPaginada` con sus `[Range]`; un objeto de paginación construido a
+  mano dentro de la acción se salta la validación entera y el tope no existe. Es un defecto que se
+  encontró y se corrigió dentro del ítem.
+- **`Endpoints` referencia `BuildingBlocks.Infrastructure` para reutilizar la política de errores del
+  0.3, no para duplicarla.** `ErrorDeOperacion.AResultadoDeAccion()` es el único puente nuevo: un
+  `IActionResult` que delega en el `IResult` que ya existía.
+- **El error por campo del §9 es una extensión `errors` del `ProblemDetails`**, alimentada por
+  `ErrorDeOperacion.Campos`. La forma es la MISMA la produzca el enlace de modelo o el caso de uso,
+  para que un cliente no tenga que distinguir quién detectó el fallo. Los campos malos salen
+  **todos de una vez**: corregir, reenviar y descubrir el siguiente es como se pierde la paciencia
+  con un formulario.
+- **`Desbloquear`, `Reabrir` y `Cerrar` existen en el dominio y NO tienen puerta HTTP.** Abrirlas sin
+  permisos (fase 1) sería publicar la operación con la que se deshace un bloqueo legal. Anotado aquí
+  para que no parezca un olvido.
+- **Las URL generadas van en minúsculas (`LowercaseUrls`) y los `Obtener` no declaran nombre de
+  ruta.** Los nombres de ruta son **globales**, no por controlador: los cuatro `Obtener` colisionaban
+  y la aplicación **no arrancaba**. `CreatedAtAction` resuelve por nombre de acción y no los
+  necesitaba. Sin `LowercaseUrls`, el token `[controller]` publicaba el nombre de la clase de C# en
+  el `Location`.
+- **Los tests de contrato de la API son de integración, por HTTP y contra PostgreSQL de verdad.**
+  `WebApplicationFactory<Program>` sustituye **solo** la cadena de conexión, por el sitio por el que
+  la configuración entra de verdad: en cuanto se reemplaza un registro del contenedor, lo que se
+  prueba deja de ser el sistema que se despliega. Paquete
+  **`Microsoft.AspNetCore.Mvc.Testing` 10.0.9 — MIT**, ya en uso desde el 0.2, más un
+  `InternalsVisibleTo` en `Bastion.Api` porque con instrucciones de nivel superior `Program` es
+  `internal`.
+- **`Serie` y `Almacen` normalizan su código antes de preguntar por duplicados** (recorte +
+  mayúsculas). Sin eso `«  central  »` pasaba el filtro y chocaba contra el índice único: un `500`
+  donde tocaba un `409`.
+- **`ARREGLADO` · las migraciones del módulo no se compilaban.** Viven en `db/migraciones/` (§14),
+  fuera del proyecto, y el glob por omisión del SDK no las recoge: `Migrate()` aplicaba **cero**
+  migraciones y creaba **cero** tablas, sin error y sin aviso. Se arregló con un `<Compile Include>`
+  explícito. Y el guardián `scripts/comprobar-migraciones.sh` tenía la lógica de códigos de salida
+  **invertida** —`has-pending-model-changes` sale **0 cuando está limpio** y **1 cuando hay
+  deriva**—; solo parecía funcionar porque los dos defectos se cancelaban. Ahora comprueba también
+  que haya al menos una migración **en el ensamblado**, y se ha demostrado su rojo con una propiedad
+  de sombra.
+- **`ARREGLADO` · el puerto de empresas pide el `Nif`, no su cadena.** `empresa.Nif.Valor == cadena`
+  no se traduce a SQL —el NIF va con conversor de valor, y para EF la columna es un escalar—, así
+  que **toda alta de empresa devolvía 500** mientras las lecturas funcionaban. Con el tipo en la
+  firma, el error no se puede volver a escribir. Lo encontró el primer paso de los tests de
+  integración; un doble en memoria lo habría dado por bueno.
+- **`ARREGLADO` · fuera `[Produces("application/json")]` del controlador base.** No documenta:
+  **sustituye** los tipos de contenido de todo `ObjectResult`, y con él puesto el `400` del enlace
+  de modelo salía como `application/json` en vez de `application/problem+json`. Lo que documenta,
+  sin efecto en ejecución, es `[ProducesResponseType]`.
+
 ## Estado actual
 
-**Ítem 0.3 TERMINADO. Siguiente: ítem 0.4 (módulo Organización), sin empezar.**
+**Ítem 0.4 TERMINADO. Siguiente: ítem 0.5 (módulo Identidad), sin empezar.**
+
+Las cinco capas de `src/Modules/Organizacion/` dejan de estar vacías. `Empresa`, `Ejercicio`,
+`Serie` y `Almacen` se crean, consultan, modifican y suprimen por `/api/v1/organizacion/*`, sobre
+las migraciones propias del módulo y su esquema `org`. Con ellas llegan los **veinte casos de uso**
+(un tipo por operación), los cuatro repositorios, la unidad de trabajo y los cuatro controladores.
+
+**El hito del ítem:** `--filter "Category=Integracion"` **deja de ser un no-op declarado**. Desde el
+0.2 ese paso salía con `rc=0` diciendo «Ninguna prueba coincide con el filtro»; ahora ejecuta **50
+casos contra PostgreSQL 17.6 de verdad** —la misma imagen del compose— levantado por Testcontainers
+en la CI. Nada de EF Core InMemory.
+
+Recuento: `dotnet test` pasa de **55** casos a **226** (176 rápidos + 50 de integración).
+
+Verificado en local, con la salida real y enseñando el rojo de cada bloque:
+
+- **Dominio (TDD, el test antes que el código)** — rojo por bloque: no compilaba, porque las
+  entidades no existían. Verde: `Organizacion.UnitTests` **105/105**.
+- **Bloque común (`ErrorDeOperacion.Campos`, `Divisas.EsConocida`)** — rojo: no compilaba. Verde:
+  `BuildingBlocks.UnitTests` **57/57** (venía de 41).
+- **Colisión de nombres de ruta** — rojo real y bien feo: los catorce tests de
+  `Api.FunctionalTests` en rojo a la vez con `Attribute routes with the same name 'Obtener' must
+  have the same template`. La aplicación no arrancaba. Verde tras quitar los nombres: **14/14**.
+- `dotnet build` Debug y Release → **0 advertencias / 0 errores**. `dotnet format --verify-no-changes`
+  → `rc=0` (once `IDE0007` corregidos por el camino). `dotnet restore --locked-mode` → `rc=0`.
+- `bash scripts/comprobar-migraciones.sh` → `rc=0`: *«Organizacion: 1 migración(es) en el ensamblado,
+  y el modelo coincide con ellas.»*
+- `dotnet test --filter "Category!=Integracion"` en Release → **176 correctos, 0 con error**
+  (57 + 105 + 14), con el recuento sacado del `.trx`.
+- Los **50 de integración no se pueden ejecutar aquí**: esta máquina sigue **sin Docker**. Se
+  ejecutan en la CI, que es el bucle que el usuario avaló.
+
+Y **el rojo que solo podía ver PostgreSQL**, que es la razón entera de que estos tests existan: en
+su primera ejecución, **16 de los 50 fallaron**, y los dos defectos eran invisibles para cualquier
+test de dominio.
+
+- **Toda escritura respondía `500`.** `ExisteConNifAsync` comparaba `empresa.Nif.Valor` contra una
+  cadena, y el NIF está mapeado con un **conversor de valor**: para EF Core la columna es un escalar
+  y no hay ningún `.Valor` en el que entrar, así que la consulta no se traducía. Las **lecturas**
+  funcionaban —ninguna toca el NIF—, de ahí que solo cayera lo que escribe. Un doble en memoria
+  habría evaluado ese `.Valor` en LINQ-to-Objects y habría dado **verde**. El puerto pide ahora el
+  `Nif` entero, para que el error no se pueda volver a escribir.
+- **El `400` del enlace de modelo salía como `application/json`.** `[Produces("application/json")]`
+  en el controlador base no documenta: **sustituye** los tipos de contenido de todo `ObjectResult`,
+  y el `400` automático de `[ApiController]` es uno. Un cliente que ramifique por el tipo de
+  contenido —lo que manda la RFC 9457— no reconocía como problema el error más frecuente de todos.
+  Quien documenta es `[ProducesResponseType]`, que ya estaba en cada acción.
+
+Los cuatro *jobs* en verde — **[run 32929808259](https://github.com/AOjeda006/Bastion/actions/runs/32929808259)**: `Frontal` ✅, `Backend` ✅,
+`Imágenes` ✅ y `Humo` ✅, con los dos recuentos publicados como anotación: *«Dominio y arquitectura:
+176 casos (176 correctos, 0 con error, 0 omitidos)»* e *«Integración (Testcontainers): 50 casos (50
+correctos, 0 con error, 0 omitidos)»*.
+
+Lo que el criterio pedía y dónde está probado:
+
+| Comprobante | Dónde |
+|---|---|
+| CRUD de las cuatro entidades por HTTP | `ContratoDeLaApiTests`, `201`+`Location` seguido hasta el recurso |
+| Migraciones propias del módulo | `EsquemaDelModuloTests`, mirando `information_schema`, no la configuración |
+| El historial vive en `org`, no en `public` | `El_historial_de_migraciones_vive_en_el_esquema_del_modulo…` |
+| Suprimir es bloquear (R16) | `Borrar_una_empresa_la_bloquea_pero_no_la_borra` |
+| Direcciones estructuradas (R17) | `La_direccion_va_y_vuelve_en_los_seis_campos_de_R17` |
+| Fechas de negocio sin zona | `Las_fechas_de_un_ejercicio_van_y_vuelven_como_fechas_de_calendario` |
+| Error por campo del §9 | `Varios_campos_malos_se_devuelven_todos_de_una_vez` |
+| `409` y no excepción de PostgreSQL | `Dos_empresas_con_el_mismo_NIF_es_409…` |
+| Serie colgada de otra contabilidad | `Una_serie_colgada_del_ejercicio_de_otra_empresa_es_400…` |
+| El tope de paginación se aplica de verdad | `Pedir_una_pagina_gigante_no_se_lleva_la_tabla` |
+
+---
+
+**Del ítem 0.3:**
 
 `src/BuildingBlocks/Domain` deja de estar vacío: estrena `Dinero/` (`Importe`, `PrecioUnitario`,
 `Divisas`) y `Resultados/` (`Resultado`, `Resultado<T>`, `ErrorDeOperacion`, `TipoDeError`), y sigue
@@ -328,20 +474,26 @@ saltaba porque `hashFiles('Bastion.sln')` estaba vacío) y construyó `Dockerfil
 `Dockerfile.web` sin tocarlos. En aquel *run* `dotnet test` salía 0 **sin ejecutar nada**, porque no
 había proyectos de test: no era evidencia. Desde el 0.2 sí ejecuta casos.
 
-**Dónde retomar exactamente:** ítem **0.4**, el módulo Organización. Criterio: CRUD de `Empresa`,
-`Ejercicio`, `Serie` y `Almacen`, con migraciones propias del módulo.
+**Dónde retomar exactamente:** ítem **0.5**, el módulo Identidad. Criterio: registro y login; roles
+y permisos por acción; pertenencia a empresas; el identificador de empresa viaja en el *claim*.
 
-**Docker en local NO bloquea el 0.4.** El *runner* `ubuntu-latest` trae demonio de Docker —el *job*
-`Humo` lo demuestra levantando el compose entero— y el paso `Category=Integracion` del *job* `Backend`
-ya está cableado: deja de ser un no-op en cuanto exista el primer test, sin tocar el *workflow*. Lo
-que falta en local es solo el **bucle rápido**: sin Docker aquí, cada iteración de un repositorio
-cuesta un *run* completo de CI en vez de segundos. Sigue mereciendo la pena instalarlo (ver
-*Notas / riesgos*), pero se instala **mientras** el 0.4 avanza, no antes. Y la comprobación no es
-`docker --version`: es **una ejecución real de Testcontainers**.
+El sitio del 0.5 son las cinco capas de `src/Modules/Identidad/`, que existen desde el 0.1 y siguen
+vacías. Organización ya está montado y sirve de plantilla: mismo reparto por capas, mismo
+`Modulo…` en el *composition root*, mismo `DbContext` con su esquema y su historial propios, y los
+mismos dos ficheros de test (`…UnitTests` para el dominio, `…IntegrationTests` para el esquema y el
+contrato de la API). La carpeta `Arquitectura.Tests` sigue vacía y es del **0.12**.
 
-El sitio del 0.4 son las cinco capas de `src/Modules/Organizacion/`, que existen desde el 0.1 y
-están vacías. `tests/` tiene ya `Api.FunctionalTests` y `BuildingBlocks.UnitTests`; la carpeta
-`Arquitectura.Tests` sigue vacía y es del 0.11.
+**Lo que el 0.5 va a necesitar de lo que dejó el 0.4:** el *claim* de empresa que exige R8 se apoya
+en la columna `empresa_id` que ya existe en las tres entidades transaccionales; el filtro global que
+la usa es el **0.6**, no el 0.5.
+
+**Docker en local sigue sin estar, y sigue sin bloquear.** El *runner* `ubuntu-latest` trae demonio
+de Docker —el *job* `Humo` levanta el compose entero y el paso `Category=Integracion` ejecuta ya 50
+casos con Testcontainers—, así que la cobertura existe. Lo que falta en local es solo el **bucle
+rápido**: cada iteración de un repositorio cuesta un *run* de CI (unos cuatro minutos) en vez de
+segundos. Los dos defectos del 0.4 costaron dos *runs* completos por eso. Sigue mereciendo la pena
+instalarlo (ver *Notas / riesgos*), y la comprobación no es `docker --version`: es **una ejecución
+real de Testcontainers**.
 
 ### Lo que el agente de configuración NO pudo dejar hecho, y por qué
 
@@ -389,8 +541,12 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Decisiones en `docs/adr/adr-0004-frontera-entre-resultado-y-excepcion.md` y
   `docs/adr/adr-0005-dinero-dos-escalas-y-la-regla-de-redondeo.md`.
   Los cuatro *jobs* de la CI en verde — [run 32882753628](https://github.com/AOjeda006/Bastion/actions/runs/32882753628).
-- [ ] **0.4 · Módulo Organización** — criterio de aceptación: CRUD de `Empresa`, `Ejercicio`, `Serie`
+- [x] **0.4 · Módulo Organización** — criterio de aceptación: CRUD de `Empresa`, `Ejercicio`, `Serie`
   y `Almacen`, con migraciones propias del módulo.
+  Decisiones de esquema en `docs/adr/adr-0007-lo-irreversible-del-esquema-de-organizacion.md`.
+  Primer ítem con tests de integración de verdad: **50 casos** contra PostgreSQL 17.6 con
+  Testcontainers, y `Category=Integracion` deja de ser un no-op declarado.
+  Los cuatro *jobs* de la CI en verde — [run 32929808259](https://github.com/AOjeda006/Bastion/actions/runs/32929808259).
 - [ ] **0.5 · Módulo Identidad** — criterio de aceptación: registro y login; roles y permisos por
   acción; pertenencia a empresas; el identificador de empresa viaja en el *claim*.
 - [ ] **0.6 · Filtro global multiempresa (R8)** — criterio de aceptación: un test demuestra que una
@@ -446,6 +602,18 @@ cuando hace falta el porqué.
   sobre la solución escribe un `.trx` **por ensamblado** y el segundo pisaba al primero, así que el
   artefacto `test-results` solo traía la mitad de los resultados. El recuento se saca del `.trx`, que
   es XML, y no del resumen de consola, que va **traducido** al idioma del CLI.
+- **ARREGLADO (2026-08-26) · un rojo de test no decía QUÉ había fallado.** Continuación de la nota
+  anterior, y descubierto en el 0.4: con los registros del *job* devolviendo **403** sin autenticar
+  y la descarga del artefacto `test-results` pidiendo credenciales (**401**), un rojo se veía desde
+  fuera como *«Process completed with exit code 1»* y nada más — ni el nombre del caso ni la
+  aserción. `recuento-de-tests.sh` saca ahora de cada `.trx` los casos en rojo con su nombre y su
+  mensaje y los emite como `::error::`, que sí es público; y los dos pasos de test dejan de decidir
+  el desenlace (`dotnet test` con `set +e`, el recuento habla el último, el paso sale con el código
+  original). Sin esto, los dos defectos del 0.4 no se habrían podido diagnosticar sin credenciales.
+  **Dos límites que conviene saber:** GitHub conserva **10 anotaciones por nivel y paso**, así que
+  el script emite como mucho quince y dice cuántas quedan fuera; y las anotaciones llegan en
+  Latin-1 por la API, de modo que los acentos se ven rotos al leerlas con `curl` —en la web salen
+  bien—.
 - **Un test que solo se ejecuta aislado no está probado.** Dos tests de la política de errores
   **pasaban en aislado y fallaban con la suite entera**: `AddSerilog(configurar)` deja por omisión el
   registro en el `Log.Logger` **estático** y ata el contenedor a ese estático, así que con dos hosts
