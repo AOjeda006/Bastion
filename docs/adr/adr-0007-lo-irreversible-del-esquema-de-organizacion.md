@@ -125,8 +125,16 @@ sea comprobable: `SePuedeSuprimir` es `Contador == 0`.
 
 ### 6. Cada módulo escribe su historial de migraciones en su propio esquema
 
-El esquema es **`org`** (Anexo A.1), y el historial de migraciones va a
-`org.__historial_de_migraciones`, dicho explícitamente en `OrganizacionDbContext.Configurar`.
+El esquema es **`organizacion`**, y el historial de migraciones va a
+`organizacion.__historial_de_migraciones`, dicho explícitamente en `OrganizacionDbContext.Configurar`.
+
+> **Corregido el 2026-08-26.** Este ADR decía `org`, que era lo que fijaba el Anexo A.1. En la
+> propia lista del anexo, trece de los catorce esquemas eran el nombre del módulo en minúsculas y
+> sin acentos, y **`org` era la única abreviatura**; los once encabezados del §7 tampoco la usaban.
+> Antes de estrenar el segundo esquema se corrigió el anexo y se pasó a `organizacion`, para que la
+> convención se pueda escribir en una línea y sin «salvo». Cómo se hizo, en el punto 9.
+
+
 
 Por omisión EF Core lo pondría en `public.__EFMigrationsHistory`, que es un sitio **compartido**. Con
 un módulo funciona; con el segundo, el que migre después encuentra allí las migraciones del primero,
@@ -151,6 +159,43 @@ Las cuatro claves ajenas son `ON DELETE RESTRICT`. En un ERP, un borrado en casc
 rápida de perder un histórico: borrar una empresa se llevaría por delante sus ejercicios, sus series
 y con ellas la numeración fiscal. Que la base se niegue es la respuesta correcta.
 
+### 9. El esquema pasó de `org` a `organizacion` regenerando la migración, no renombrando
+
+**Añadido el 2026-08-26, antes de empezar el ítem 0.5.** El cambio de nombre del punto 6 se podía
+hacer de dos maneras, y la que parece obvia **no funciona**.
+
+La obvia sería una segunda migración de renombrado: la 1 crea las tablas en `org`, la 2 hace
+`RenameTable(..., newSchema: "organizacion")` sobre cada una. El problema es el **historial**. EF
+Core resuelve dónde está la tabla de historial *antes* de decidir qué migraciones aplicar, y lo hace
+con la configuración vigente — que a partir del cambio dice `organizacion.__historial_de_migraciones`.
+Las dos consecuencias:
+
+- **Contra una base existente con `org`**, EF busca el historial en `organizacion`, no lo encuentra,
+  concluye que la base está vacía e intenta aplicar la migración 1: `CREATE TABLE organizacion.empresas`
+  después de un `EnsureSchema`… mientras las tablas viejas siguen en `org`. Sale un esquema duplicado,
+  o un error, según el caso. O sea, la migración de renombrado **falla justo en el único escenario
+  para el que existiría**.
+- **Contra una base nueva**, funciona, pero crea el esquema `org` y lo vacía a continuación, en cada
+  base de datos que se levante, para siempre.
+
+Como no hay ni una fila en ninguna parte —las bases de la CI las crea y las destruye Testcontainers
+en cada *run*, y en esta máquina no hay Docker, así que `bastion_dev` no ha existido nunca—, lo
+correcto es que la **primera** migración nazca ya con el nombre bueno. Se borró y se regeneró con
+`dotnet ef migrations add`.
+
+Que la regeneración no cambió **nada más** que el nombre está comprobado, no supuesto: la migración
+nueva y la instantánea del modelo son idénticas a las anteriores tras sustituir `org` por
+`organizacion`, byte a byte (`diff --strip-trailing-cr`, sin diferencias). Y el DDL que se ejecutará
+de verdad (`dotnet ef migrations script --idempotent`) crea `organizacion` y no contiene ni una
+aparición de `org`.
+
+Si alguien tuviera un volumen de desarrollo con el esquema viejo, la reparación es una línea de SQL
+y no una migración:
+
+```sql
+ALTER SCHEMA org RENAME TO organizacion;
+```
+
 ## Consecuencias
 
 - **El 0.6 y el 0.10 llegan a tablas que ya tienen lo que necesitan.** El 0.6 escribe el filtro
@@ -173,7 +218,7 @@ y con ellas la numeración fiscal. Que la base se niegue es la respuesta correct
 ## Procedencia
 
 Ítem 0.4 del checklist de `docs/PLAN.md`. El esquema está en
-`db/migraciones/Organizacion/20260825233619_EsquemaInicialDeOrganizacion.cs` y las reglas que lo
+`db/migraciones/Organizacion/20260826045842_EsquemaInicialDeOrganizacion.cs` y las reglas que lo
 justifican, en el §6 del plan maestro (R8, R9, R11, R16, R17) y en el §7.2 del modelo de dominio.
 
 La decisión sobre **dónde vive el historial de migraciones** tiene además una segunda mitad —que las

@@ -12,11 +12,11 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.EnsureSchema(
-                name: "org");
+                name: "organizacion");
 
             migrationBuilder.CreateTable(
                 name: "empresas",
-                schema: "org",
+                schema: "organizacion",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -40,7 +40,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "almacenes",
-                schema: "org",
+                schema: "organizacion",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -63,7 +63,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_almacenes_empresas_empresa_id",
                         column: x => x.empresa_id,
-                        principalSchema: "org",
+                        principalSchema: "organizacion",
                         principalTable: "empresas",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
@@ -71,7 +71,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ejercicios",
-                schema: "org",
+                schema: "organizacion",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -87,7 +87,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_ejercicios_empresas_empresa_id",
                         column: x => x.empresa_id,
-                        principalSchema: "org",
+                        principalSchema: "organizacion",
                         principalTable: "empresas",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
@@ -95,7 +95,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "series",
-                schema: "org",
+                schema: "organizacion",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -113,14 +113,14 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_series_ejercicios_ejercicio_id",
                         column: x => x.ejercicio_id,
-                        principalSchema: "org",
+                        principalSchema: "organizacion",
                         principalTable: "ejercicios",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "fk_series_empresas_empresa_id",
                         column: x => x.empresa_id,
-                        principalSchema: "org",
+                        principalSchema: "organizacion",
                         principalTable: "empresas",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
@@ -128,34 +128,34 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "ix_almacenes_empresa_id_codigo",
-                schema: "org",
+                schema: "organizacion",
                 table: "almacenes",
                 columns: new[] { "empresa_id", "codigo" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_ejercicios_empresa_id_anio",
-                schema: "org",
+                schema: "organizacion",
                 table: "ejercicios",
                 columns: new[] { "empresa_id", "anio" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_empresas_nif",
-                schema: "org",
+                schema: "organizacion",
                 table: "empresas",
                 column: "nif",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_series_ejercicio_id",
-                schema: "org",
+                schema: "organizacion",
                 table: "series",
                 column: "ejercicio_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_series_empresa_id_ejercicio_id_codigo",
-                schema: "org",
+                schema: "organizacion",
                 table: "series",
                 columns: new[] { "empresa_id", "ejercicio_id", "codigo" },
                 unique: true);
@@ -166,19 +166,19 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "almacenes",
-                schema: "org");
+                schema: "organizacion");
 
             migrationBuilder.DropTable(
                 name: "series",
-                schema: "org");
+                schema: "organizacion");
 
             migrationBuilder.DropTable(
                 name: "ejercicios",
-                schema: "org");
+                schema: "organizacion");
 
             migrationBuilder.DropTable(
                 name: "empresas",
-                schema: "org");
+                schema: "organizacion");
         }
     }
 }

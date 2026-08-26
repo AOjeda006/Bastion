@@ -239,10 +239,10 @@ anotan para no volver a discutirlas.
 
 ### Tomadas por el agente de desarrollo — ítem 0.4 (2026-08-26)
 
-- **El esquema del módulo se llama `org`, no `organizacion`.** El encargo hablaba de un esquema
+- **El esquema del módulo se llama `org`, no `organizacion`.** ~~El encargo hablaba de un esquema
   `organizacion`; el **Anexo A.1** del plan maestro fija `org`, y `CLAUDE.md` prohíbe contradecirlo.
-  Se ha ido con `org`. **Queda anotado como conflicto**: si la intención era `organizacion`, se
-  cambia ahora —una migración de renombrado sobre tablas vacías— y no después.
+  Se ha ido con `org`.~~ **RESUELTO el 2026-08-26, antes del 0.5:** el usuario eligió `organizacion`
+  y se corrigió el Anexo A.1. Ver *Convención de esquemas* más abajo.
 - **Lo irreversible de esquema entra en el 0.4 para las entidades que el 0.4 crea**, según acordado
   con el usuario antes de empezar. Las ocho decisiones —direcciones en seis columnas con longitudes
   de ISO 20022, `empresa_id` desde la primera tabla, `Bloqueado` con su fecha, `date` frente a
@@ -313,13 +313,102 @@ anotan para no volver a discutirlas.
   de modelo salía como `application/json` en vez de `application/problem+json`. Lo que documenta,
   sin efecto en ejecución, es `[ProducesResponseType]`.
 
+### Convención de esquemas de PostgreSQL — los dieciséis módulos
+
+> Enumerada aquí **entera y de una vez** para que ningún ítem la redescubra por su cuenta. El 0.4
+> estrenó el primer esquema, el 0.5 estrena el segundo y el 0.7 el tercero; tres redescubrimientos
+> son tres criterios distintos en la misma base de datos.
+
+**La regla, sin excepciones: el esquema es el nombre del módulo (§5) en minúsculas y sin acentos.**
+
+| Módulo (§5) | Esquema | Fase | Estado |
+|---|---|---|---|
+| Identidad | `identidad` | 0 | **0.5**, en curso |
+| Organización | `organizacion` | 0 | creado en el 0.4 |
+| Auditoría | `auditoria` | 0 | 0.7 |
+| Terceros | `terceros` | 1 | — |
+| Catálogo | `catalogo` | 1 | — |
+| Inventario | `inventario` | 2 | — |
+| Compras | `compras` | 3 | — |
+| Ventas | `ventas` | 4 | — |
+| Facturación | `facturacion` | 5 | — |
+| Tesorería | `tesoreria` | 6 | — |
+| Contabilidad | `contabilidad` | 7 | — |
+| Producción | `produccion` | 8 | — |
+| CRM | `crm` | 9 | — |
+| RRHH | `rrhh` | 10 | — |
+| Informes | `informes` | transversal | — |
+| Notificaciones | `notificaciones` | transversal | sin carpeta en `src/Modules/` todavía |
+
+Dos correcciones al **Anexo A.1**, decididas por el usuario el 2026-08-26 y ya aplicadas al plan
+maestro para que no vuelva a divergir:
+
+1. **`org` → `organizacion`.** En la lista del propio anexo, trece de los catorce esquemas ya eran
+   el nombre del módulo en minúsculas y sin acentos; `org` era la única abreviatura, y los once
+   encabezados del §7 tampoco la usaban. Escrita como estaba, la convención necesitaba un «salvo».
+2. **Faltaban dos.** El anexo nombraba catorce esquemas y el §5 lista **dieciséis** módulos: no
+   había esquema para **Informes** ni para **Notificaciones**, los dos `genérico / transversal`.
+   Ahora son `informes` y `notificaciones`. Los dos acabarán teniendo tablas propias —Informes
+   materializa proyecciones de lectura, Notificaciones guarda la cola de avisos en aplicación—, así
+   que no tener nombre era un hueco, no una ausencia deliberada.
+
+**El historial de migraciones de cada módulo vive dentro de su propio esquema**, nunca en `public`
+(ADR-0007, punto 6). Se comprueba mirando `information_schema`, no la configuración.
+
+### Tomadas por el agente de desarrollo — ítem 0.5 (2026-08-26)
+
+**Respondidas por el usuario** en la puerta de clarificación, antes de escribir una línea:
+
+- **Esquema de Organización: `organizacion`.** Ver el bloque de arriba. Hecho en su propio commit
+  antes de empezar el 0.5.
+- **Esquemas de Informes y Notificaciones: `informes` y `notificaciones`.** Ver el bloque de arriba.
+- **De ASP.NET Core Identity se adopta el *hasher* y su bloqueo, no los almacenes.** `Usuario`,
+  `Rol`, `Permiso` y la pertenencia a empresas son agregados propios del módulo, con sus invariantes
+  y sus tablas en el esquema `identidad`. Motivo: `IdentityUser`/`IdentityRole` son entidades
+  anémicas con setters públicos dentro de un módulo cuyas fronteras vigila el compilador (§4), y su
+  `LockoutEnd` es bloqueo **temporal por intentos**, que no es el `Bloqueado` de R16 (baja lógica):
+  con Identity entero harían falta los dos conceptos igual. La contraseña se sigue hasheando con «el
+  algoritmo por defecto del framework» que exige el §11, así que esto **no** contradice el stack del
+  §3; el algoritmo y sus parámetros quedan escritos en su ADR.
+- **El registro es solo por invitación, con semilla de arranque.** Crear un usuario exige el permiso
+  `identidad.usuario.crear` **en la empresa del *claim***: sin credenciales `401`, con credenciales
+  sin ese permiso `403`. El primer usuario y su pertenencia nacen de una semilla que solo se aplica
+  si la tabla de usuarios está vacía, parametrizada por variables de entorno. Motivo: esto no es un
+  SaaS público; con auto-registro abierto, cualquiera con acceso de red se crea cuenta en la
+  instalación de la empresa.
+
+**Decididas por el agente** (o ya fijadas por el plan maestro, y anotadas para no volver a
+preguntarlas):
+
+- **Cómo se cambia de empresa: reemitiendo el token.** No es decisión abierta — el §9 del plan
+  maestro (línea 850) ya lo fija: «la activa se selecciona al iniciar sesión y se refleja en el
+  token, nunca en un parámetro manipulable». El *claim* lleva la empresa **activa**, no la lista;
+  cambiar de empresa valida la pertenencia y **reemite el par de tokens**. Si la empresa fuese un
+  parámetro de la petición, el *claim* sería decorativo.
+- **El renombrado del esquema se hizo regenerando la migración inicial, no con una migración de
+  renombrado.** El encargo pedía lo segundo y no funciona: EF Core resuelve dónde está la tabla de
+  historial con la configuración vigente, así que contra una base con el esquema viejo buscaría el
+  historial en `organizacion`, no lo encontraría y volvería a aplicar la migración 1 — falla justo
+  en el único escenario para el que existiría. Y contra una base nueva crearía `org` para vaciarlo
+  acto seguido, en cada base, para siempre. Como no hay ni una fila en ninguna parte, la primera
+  migración nace ya con el nombre bueno. El razonamiento entero, y el `ALTER SCHEMA` de una línea
+  para quien tenga un volumen de desarrollo viejo, en el **punto 9 del ADR-0007**.
+- **El segundo factor (TOTP) del §11 no entra en el 0.5.** El criterio del ítem no lo menciona
+  —registro, login, permisos por acción, pertenencia y *claim*— y el §11 lo declara «opcional para
+  roles con poder». Anotado aquí para que no parezca un olvido.
+
 ## Estado actual
 
 **Ítem 0.4 TERMINADO. Siguiente: ítem 0.5 (módulo Identidad), sin empezar.**
 
+> **Entre medias (2026-08-26), un commit propio que no es de ningún ítem:** el esquema de
+> Organización pasó de `org` a `organizacion` y el Anexo A.1 quedó corregido y completo (dieciséis
+> esquemas). Se hizo **antes** del 0.5 a propósito: es el ítem que estrena el segundo esquema, y
+> renombrar con tablas vacías cuesta una migración regenerada; con datos, cuesta otra cosa.
+
 Las cinco capas de `src/Modules/Organizacion/` dejan de estar vacías. `Empresa`, `Ejercicio`,
 `Serie` y `Almacen` se crean, consultan, modifican y suprimen por `/api/v1/organizacion/*`, sobre
-las migraciones propias del módulo y su esquema `org`. Con ellas llegan los **veinte casos de uso**
+las migraciones propias del módulo y su esquema `organizacion`. Con ellas llegan los **veinte casos de uso**
 (un tipo por operación), los cuatro repositorios, la unidad de trabajo y los cuatro controladores.
 
 **El hito del ítem:** `--filter "Category=Integracion"` **deja de ser un no-op declarado**. Desde el
@@ -374,7 +463,7 @@ Lo que el criterio pedía y dónde está probado:
 |---|---|
 | CRUD de las cuatro entidades por HTTP | `ContratoDeLaApiTests`, `201`+`Location` seguido hasta el recurso |
 | Migraciones propias del módulo | `EsquemaDelModuloTests`, mirando `information_schema`, no la configuración |
-| El historial vive en `org`, no en `public` | `El_historial_de_migraciones_vive_en_el_esquema_del_modulo…` |
+| El historial vive en el esquema del módulo, no en `public` | `El_historial_de_migraciones_vive_en_el_esquema_del_modulo…` |
 | Suprimir es bloquear (R16) | `Borrar_una_empresa_la_bloquea_pero_no_la_borra` |
 | Direcciones estructuradas (R17) | `La_direccion_va_y_vuelve_en_los_seis_campos_de_R17` |
 | Fechas de negocio sin zona | `Las_fechas_de_un_ejercicio_van_y_vuelven_como_fechas_de_calendario` |

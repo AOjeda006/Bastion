@@ -17,7 +17,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("org")
+                .HasDefaultSchema("organizacion")
                 .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -66,7 +66,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_almacenes_empresa_id_codigo");
 
-                    b.ToTable("almacenes", "org");
+                    b.ToTable("almacenes", "organizacion");
                 });
 
             modelBuilder.Entity("Bastion.Organizacion.Domain.Ejercicios.Ejercicio", b =>
@@ -104,7 +104,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_ejercicios_empresa_id_anio");
 
-                    b.ToTable("ejercicios", "org");
+                    b.ToTable("ejercicios", "organizacion");
                 });
 
             modelBuilder.Entity("Bastion.Organizacion.Domain.Empresas.Empresa", b =>
@@ -152,7 +152,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_empresas_nif");
 
-                    b.ToTable("empresas", "org");
+                    b.ToTable("empresas", "organizacion");
                 });
 
             modelBuilder.Entity("Bastion.Organizacion.Domain.Series.Serie", b =>
@@ -205,7 +205,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_series_empresa_id_ejercicio_id_codigo");
 
-                    b.ToTable("series", "org");
+                    b.ToTable("series", "organizacion");
                 });
 
             modelBuilder.Entity("Bastion.Organizacion.Domain.Almacenes.Almacen", b =>
@@ -259,7 +259,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
 
                             b1.HasKey("AlmacenId");
 
-                            b1.ToTable("almacenes", "org");
+                            b1.ToTable("almacenes", "organizacion");
 
                             b1.WithOwner()
                                 .HasForeignKey("AlmacenId")
@@ -323,7 +323,7 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
 
                             b1.HasKey("EmpresaId");
 
-                            b1.ToTable("empresas", "org");
+                            b1.ToTable("empresas", "organizacion");
 
                             b1.WithOwner()
                                 .HasForeignKey("EmpresaId")

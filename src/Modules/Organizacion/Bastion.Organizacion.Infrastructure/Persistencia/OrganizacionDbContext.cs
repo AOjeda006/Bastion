@@ -31,8 +31,16 @@ namespace Bastion.Organizacion.Infrastructure.Persistencia;
 public sealed class OrganizacionDbContext(DbContextOptions<OrganizacionDbContext> opciones)
     : DbContext(opciones)
 {
-    /// <summary>Esquema de PostgreSQL del módulo (Anexo A.1 del plan maestro).</summary>
-    public const string Esquema = "org";
+    /// <summary>
+    /// Esquema de PostgreSQL del módulo: el nombre del módulo en minúsculas y sin acentos.
+    /// </summary>
+    /// <remarks>
+    /// La convención vale para los dieciséis módulos del §5 y está enumerada en <c>docs/PLAN.md</c>.
+    /// El Anexo A.1 abreviaba este —y solo este— a <c>org</c>; se corrigió el anexo en vez de
+    /// quedarse con una excepción, porque una regla con una excepción es una regla que el próximo
+    /// módulo redescubre a medias.
+    /// </remarks>
+    public const string Esquema = "organizacion";
 
     /// <summary>
     /// Tabla de historial de migraciones, DENTRO del esquema del módulo. El nombre va en
