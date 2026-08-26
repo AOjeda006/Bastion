@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Ejercicios;
 
@@ -24,7 +23,7 @@ public interface IEliminarEjercicio
 /// <inheritdoc cref="IEliminarEjercicio"/>
 internal sealed class EliminarEjercicio(
     IRepositorioDeEjercicios ejercicios,
-    IUnidadTrabajo unidadTrabajo) : IEliminarEjercicio
+    IUnidadTrabajoDeOrganizacion unidadTrabajo) : IEliminarEjercicio
 {
     public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
     {

@@ -14,6 +14,18 @@ public enum TipoDeError
     /// <summary>Los datos recibidos no cumplen el contrato de entrada.</summary>
     Validacion,
 
+    /// <summary>
+    /// Quien pide la operación no ha demostrado quién es, o ya no puede demostrarlo.
+    /// </summary>
+    /// <remarks>
+    /// Es distinto de <see cref="PermisoDenegado"/> y la diferencia importa para el cliente:
+    /// <b>no autenticado</b> significa «identifícate y vuelve a intentarlo», y el frontal responde
+    /// mandando al login; <b>permiso denegado</b> significa «ya sé quién eres y esto no es para
+    /// ti», y volver a identificarse no cambia nada. Mandar al login a quien solo le falta un
+    /// permiso es un bucle: entra, vuelve, y otra vez.
+    /// </remarks>
+    NoAutenticado,
+
     /// <summary>Quien pide la operación está identificado pero no tiene permiso para hacerla.</summary>
     PermisoDenegado,
 

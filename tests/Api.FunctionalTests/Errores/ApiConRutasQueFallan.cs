@@ -20,8 +20,7 @@ public sealed class ApiConRutasQueFallan : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSetting("ConnectionStrings:Bastion", string.Empty);
-        builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
+        AjustesMinimos.Aplicar(builder);
 
         builder.ConfigureTestServices(servicios =>
         {

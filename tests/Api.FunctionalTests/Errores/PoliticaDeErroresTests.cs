@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
+using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Shouldly;
 
 namespace Bastion.Api.FunctionalTests.Errores;
@@ -26,6 +29,7 @@ public sealed class PoliticaDeErroresTests(ApiConRutasQueFallan api) : IClassFix
     [InlineData(RutasQueFallan.NoEncontrado, HttpStatusCode.NotFound, "/errors/articulo-no-encontrado")]
     [InlineData(RutasQueFallan.Conflicto, HttpStatusCode.Conflict, "/errors/pedido-ya-confirmado")]
     [InlineData(RutasQueFallan.ReglaDeNegocio, HttpStatusCode.UnprocessableContent, "/errors/stock-insuficiente")]
+    [InlineData(RutasQueFallan.NoAutenticado, HttpStatusCode.Unauthorized, "/errors/sesion-caducada")]
     public async Task CadaClaseDeError_SeTraduceASuCodigoDeEstadoYASuTypeEstable(
         string ruta, HttpStatusCode estadoEsperado, string tipoEsperado)
     {
@@ -37,6 +41,34 @@ public sealed class PoliticaDeErroresTests(ApiConRutasQueFallan api) : IClassFix
         using var cuerpo = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
         cuerpo.RootElement.GetProperty("type").GetString().ShouldBe(tipoEsperado);
         cuerpo.RootElement.GetProperty("status").GetInt32().ShouldBe((int)estadoEsperado);
+    }
+
+    // La teoría de arriba enumera las clases A MANO, y una lista a mano se queda corta: añadir una
+    // clase de error nueva y no añadir su fila la dejaría sin comprobar, y el síntoma sería un
+    // `NotSupportedException` desde dentro del manejador de errores —o sea, un 500 justo cuando ya
+    // había un error que contar—. Estos dos tests son el guardián de esa lista.
+    [Fact]
+    public void TodaClaseDeError_TieneCodigoDeEstadoYTitulo()
+    {
+        foreach (TipoDeError tipo in Enum.GetValues<TipoDeError>())
+        {
+            Should.NotThrow(() => PoliticaDeErrores.CodigoDeEstadoDe(tipo), $"falta el estado de {tipo}");
+            Should.NotThrow(() => PoliticaDeErrores.TituloDe(tipo), $"falta el título de {tipo}");
+        }
+    }
+
+    [Fact]
+    public void LaTeoriaDeArriba_TieneUnaFilaPorClaseDeError()
+    {
+        int filas = typeof(PoliticaDeErroresTests)
+            .GetMethod(nameof(CadaClaseDeError_SeTraduceASuCodigoDeEstadoYASuTypeEstable))!
+            .GetCustomAttributes(typeof(InlineDataAttribute), inherit: false)
+            .Length;
+
+        filas.ShouldBe(
+            Enum.GetValues<TipoDeError>().Length,
+            "hay una clase de error sin ruta que la ejerza: mientras no la tenga, nadie ha visto " +
+            "nunca la respuesta que produce");
     }
 
     [Fact]
@@ -138,17 +170,23 @@ public sealed class PoliticaDeErroresTests(ApiConRutasQueFallan api) : IClassFix
 
     // La política es central: también responde ProblemDetails donde no hay endpoint que la
     // invoque, que es justo donde un try/catch por controlador nunca llegaría.
+    //
+    // Y a un anónimo le responde 401, no 404: desde 0.5 la política de respaldo alcanza también a
+    // las peticiones que no casan con ningún endpoint. No es un efecto colateral que se tolere,
+    // es lo que se quiere —quien no se ha identificado no puede ir probando rutas para averiguar
+    // cuáles existen—. El 404 lo ve quien SÍ se ha identificado, y eso se comprueba en
+    // Api.IntegrationTests, que es donde hay con qué identificarse.
     [Fact]
-    public async Task UnaRutaQueNoExiste_TambienRespondeProblemDetails()
+    public async Task UnaRutaQueNoExiste_LeResponde401AlAnonimoYTambienEnProblemDetails()
     {
         using HttpResponseMessage respuesta = await api.CreateClient()
             .GetAsync(new Uri("/api/v1/esto-no-existe", UriKind.Relative));
 
-        respuesta.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
 
         using var problema = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
-        problema.RootElement.GetProperty("status").GetInt32().ShouldBe(404);
+        problema.RootElement.GetProperty("status").GetInt32().ShouldBe(401);
         problema.RootElement.GetProperty("traceId").GetString().ShouldNotBeNullOrWhiteSpace();
     }
 }

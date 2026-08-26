@@ -25,10 +25,11 @@ public sealed record EjercicioDto(
 /// </remarks>
 public sealed record CrearEjercicioDto
 {
-    /// <summary>Empresa a la que pertenece el ejercicio.</summary>
-    [Required(ErrorMessage = "La empresa es obligatoria.")]
-    public Guid EmpresaId { get; init; }
-
+    // No hay campo `EmpresaId`, y su AUSENCIA es la regla (R8). La empresa sale del <i>claim</i>
+    // del token y no hay ningún camino que la lea de la petición, así que no puede existir un caso
+    // de uso que se olvide de comprobarla: el dato no llega por ahí. Con el campo puesto, el
+    // permiso «crear en mi empresa» sería en realidad «crear en cualquiera», y la comprobación que
+    // lo evitara habría que acordarse de escribirla en cada caso de uso, para siempre.
     /// <summary>Año con el que se le conoce. No tiene por qué ser el del año natural.</summary>
     [Range(1900, 2999, ErrorMessage = "El año va de {1} a {2}.")]
     public int Anio { get; init; }

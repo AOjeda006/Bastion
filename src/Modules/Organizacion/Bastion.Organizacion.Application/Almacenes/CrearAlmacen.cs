@@ -1,4 +1,4 @@
-using Bastion.BuildingBlocks.Application;
+using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Application.Empresas;
@@ -18,9 +18,10 @@ public interface ICrearAlmacen
 
 /// <inheritdoc cref="ICrearAlmacen"/>
 internal sealed class CrearAlmacen(
+    IUsuarioActual usuarioActual,
     IRepositorioDeAlmacenes almacenes,
     IRepositorioDeEmpresas empresas,
-    IUnidadTrabajo unidadTrabajo) : ICrearAlmacen
+    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearAlmacen
 {
     public async Task<Resultado<AlmacenDto>> EjecutarAsync(
         CrearAlmacenDto peticion,
@@ -28,12 +29,16 @@ internal sealed class CrearAlmacen(
     {
         ArgumentNullException.ThrowIfNull(peticion);
 
-        var errores = new ErroresPorCampo();
+        // La empresa sale del CLAIM y no de la petición (R8). El caso de uso no puede recibirla
+        // por ningún otro camino: `CrearAlmacenDto` no tiene el campo.
+        Guid empresaId = usuarioActual.EmpresaId;
 
-        if (!await empresas.ExisteAsync(peticion.EmpresaId, cancelacion).ConfigureAwait(false))
+        if (!await empresas.EstaActivaAsync(empresaId, cancelacion).ConfigureAwait(false))
         {
-            errores.Agregar("empresaId", "No hay ninguna empresa con ese identificador.");
+            return Resultado.Fallo<AlmacenDto>(ErroresDeEmpresa.NoOperativa());
         }
+
+        var errores = new ErroresPorCampo();
 
         if (!Enumerados.Intentar(peticion.Tipo, out TipoDeAlmacen tipo))
         {
@@ -56,7 +61,7 @@ internal sealed class CrearAlmacen(
 
         string codigo = Almacen.NormalizarCodigo(peticion.Codigo);
 
-        if (await almacenes.ExisteElCodigoAsync(peticion.EmpresaId, codigo, cancelacion)
+        if (await almacenes.ExisteElCodigoAsync(empresaId, codigo, cancelacion)
                 .ConfigureAwait(false))
         {
             return Resultado.Fallo<AlmacenDto>(ErrorDeOperacion.Conflicto(
@@ -65,7 +70,7 @@ internal sealed class CrearAlmacen(
         }
 
         var almacen = Almacen.Crear(
-            peticion.EmpresaId,
+            empresaId,
             peticion.Codigo,
             peticion.Nombre,
             peticion.Direccion?.ADireccion(),

@@ -35,12 +35,15 @@ public static class CasosDeUsoDeOrganizacion
         servicios.AddScoped<IListarEmpresas, ListarEmpresas>();
         servicios.AddScoped<IModificarEmpresa, ModificarEmpresa>();
         servicios.AddScoped<IBloquearEmpresa, BloquearEmpresa>();
+        servicios.AddScoped<IDesbloquearEmpresa, DesbloquearEmpresa>();
 
         servicios.AddScoped<ICrearEjercicio, CrearEjercicio>();
         servicios.AddScoped<IObtenerEjercicio, ObtenerEjercicio>();
         servicios.AddScoped<IListarEjercicios, ListarEjercicios>();
         servicios.AddScoped<IModificarEjercicio, ModificarEjercicio>();
         servicios.AddScoped<IEliminarEjercicio, EliminarEjercicio>();
+        servicios.AddScoped<ICerrarEjercicio, CerrarEjercicio>();
+        servicios.AddScoped<IReabrirEjercicio, ReabrirEjercicio>();
 
         servicios.AddScoped<ICrearSerie, CrearSerie>();
         servicios.AddScoped<IObtenerSerie, ObtenerSerie>();
@@ -53,6 +56,7 @@ public static class CasosDeUsoDeOrganizacion
         servicios.AddScoped<IListarAlmacenes, ListarAlmacenes>();
         servicios.AddScoped<IModificarAlmacen, ModificarAlmacen>();
         servicios.AddScoped<IBloquearAlmacen, BloquearAlmacen>();
+        servicios.AddScoped<IDesbloquearAlmacen, DesbloquearAlmacen>();
 
         // El reloj como servicio, y no `DateTimeOffset.UtcNow` esparcido por los casos de uso:
         // así un test puede fijar el instante y comprobar la fecha de bloqueo sin esperar a que

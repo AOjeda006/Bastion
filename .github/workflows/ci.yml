@@ -346,6 +346,17 @@ jobs:
           echo "/health/ready -> $RESPUESTA"
           echo "$RESPUESTA" | grep -q '"nombre":"base-de-datos","estado":"Healthy"'
 
+      # La denegacion por omision, comprobada sobre el entorno que se DESPLIEGA y no sobre el
+      # host en memoria de los tests. Es middleware puro: no toca la base, asi que dice lo mismo
+      # con el esquema migrado o sin migrar. Un 404 aqui seria la mala noticia —la peticion habria
+      # entrado y buscado el recurso—, y un 200, la peor de todas.
+      - name: La API desplegada no atiende a quien no se identifica
+        run: |
+          RUTA=http://localhost:8080/api/v1/organizacion/empresas
+          CODIGO=$(curl --silent --output /dev/null --write-out '%{http_code}' "$RUTA")
+          echo "GET /api/v1/organizacion/empresas sin credenciales -> $CODIGO"
+          test "$CODIGO" = "401"
+
       - name: El frontal carga
         run: |
           curl --fail --silent --show-error http://localhost:5173/ -o pagina.html

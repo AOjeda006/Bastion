@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -16,9 +17,13 @@ namespace Bastion.Api.FunctionalTests.Errores;
 /// poder probarla sería pagar en superficie real lo que aquí no cuesta nada.
 /// </para>
 /// <para>
-/// El filtro registra su middleware DESPUÉS de <c>next</c>, es decir, en el punto más interno
-/// de la tubería: por dentro del manejador de excepciones, que es lo que se quiere ejercitar.
-/// Las peticiones que sí casan con un endpoint real (las sondas) ni lo rozan.
+/// Cada ruta se publica como un <see cref="Endpoint"/> de verdad, con
+/// <see cref="AllowAnonymousAttribute"/> entre sus metadatos, y lo ejecuta el middleware de
+/// endpoints del propio host. Eso importa: desde el ítem 0.5 la política de respaldo exige
+/// autenticación a TODO lo que no diga lo contrario —incluidas las peticiones que no casan con
+/// ningún endpoint—, así que un middleware suelto al final de la tubería ya no se alcanza: la
+/// autorización responde 401 mucho antes. Publicándolas como endpoints, lo que se ejercita
+/// vuelve a ser el manejador de excepciones y no la puerta.
 /// </para>
 /// </remarks>
 internal sealed class RutasQueFallan : IStartupFilter
@@ -35,23 +40,28 @@ internal sealed class RutasQueFallan : IStartupFilter
     internal const string Conflicto = "/pruebas/errores/conflicto";
     internal const string Permiso = "/pruebas/errores/permiso";
     internal const string Validacion = "/pruebas/errores/validacion";
+    internal const string NoAutenticado = "/pruebas/errores/no-autenticado";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => aplicacion =>
     {
-        next(aplicacion);
-
-        // `Use` y no `Run`: lo que no sea una ruta de prueba tiene que seguir cayendo al final
-        // de la tubería, que es quien pone el 404 que también hay que comprobar.
+        // ANTES de `next`, porque el endpoint hay que dejarlo puesto antes de que el enrutado y la
+        // autorización miren si hay uno. Este middleware no responde ni falla: solo etiqueta la
+        // petición y sigue. Lo que estalla es el delegado del endpoint, ya por dentro del
+        // manejador de excepciones, que es lo que se quiere ejercitar.
         aplicacion.Use(async (contexto, siguiente) =>
         {
-            if (!EsRutaDePrueba(contexto.Request.Path.Value ?? string.Empty))
+            if (EsRutaDePrueba(contexto.Request.Path.Value ?? string.Empty))
             {
-                await siguiente(contexto);
-                return;
+                contexto.SetEndpoint(new Endpoint(
+                    Atender,
+                    new EndpointMetadataCollection(new AllowAnonymousAttribute()),
+                    "rutas que fallan a propósito"));
             }
 
-            await Atender(contexto);
+            await siguiente(contexto);
         });
+
+        next(aplicacion);
     };
 
     private static bool EsRutaDePrueba(string ruta) => ruta.StartsWith("/pruebas/", StringComparison.Ordinal);
@@ -80,6 +90,8 @@ internal sealed class RutasQueFallan : IStartupFilter
                 "sin-permiso-de-facturacion", "Su perfil no permite emitir facturas.")),
             Validacion => Responder(contexto, ErrorDeOperacion.Validacion(
                 "fecha-fuera-de-ejercicio", "La fecha no cae dentro de un ejercicio abierto.")),
+            NoAutenticado => Responder(contexto, ErrorDeOperacion.NoAutenticado(
+                "sesion-caducada", "Su sesión ha caducado. Vuelva a iniciarla.")),
 
             _ => Task.CompletedTask,
         };

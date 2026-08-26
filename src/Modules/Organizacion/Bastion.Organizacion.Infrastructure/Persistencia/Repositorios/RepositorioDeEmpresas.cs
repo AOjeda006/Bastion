@@ -26,6 +26,11 @@ internal sealed class RepositorioDeEmpresas(OrganizacionDbContext contexto) : IR
     public Task<bool> ExisteAsync(Guid id, CancellationToken cancelacion) =>
         contexto.Empresas.AnyAsync(empresa => empresa.Id == id, cancelacion);
 
+    public Task<bool> EstaActivaAsync(Guid id, CancellationToken cancelacion) =>
+        contexto.Empresas.AnyAsync(
+            empresa => empresa.Id == id && empresa.Estado == EstadoDeEmpresa.Activa,
+            cancelacion);
+
     // Orden estable y explícito. Sin `ORDER BY`, PostgreSQL no promete ningún orden entre
     // consultas, así que la página 2 podría repetir o saltarse filas de la 1 sin que nadie
     // hubiera tocado nada.

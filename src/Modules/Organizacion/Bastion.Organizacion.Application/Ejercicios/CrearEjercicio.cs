@@ -1,4 +1,4 @@
-using Bastion.BuildingBlocks.Application;
+using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Application.Empresas;
@@ -18,9 +18,10 @@ public interface ICrearEjercicio
 
 /// <inheritdoc cref="ICrearEjercicio"/>
 internal sealed class CrearEjercicio(
+    IUsuarioActual usuarioActual,
     IRepositorioDeEjercicios ejercicios,
     IRepositorioDeEmpresas empresas,
-    IUnidadTrabajo unidadTrabajo) : ICrearEjercicio
+    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearEjercicio
 {
     public async Task<Resultado<EjercicioDto>> EjecutarAsync(
         CrearEjercicioDto peticion,
@@ -28,16 +29,19 @@ internal sealed class CrearEjercicio(
     {
         ArgumentNullException.ThrowIfNull(peticion);
 
-        var errores = new ErroresPorCampo();
+        // La empresa sale del CLAIM y no de la petición (R8). `CrearEjercicioDto` no tiene el
+        // campo, así que no hay ningún camino por el que pueda entrar otra.
+        Guid empresaId = usuarioActual.EmpresaId;
 
-        // La empresa se comprueba aquí y no se deja a la clave ajena. La base impediría el
-        // insert igualmente, pero con una excepción de PostgreSQL que sale como 500; y el
-        // usuario no ha hecho nada mal salvo escribir mal un identificador, que es un 400 de
-        // ese campo.
-        if (!await empresas.ExisteAsync(peticion.EmpresaId, cancelacion).ConfigureAwait(false))
+        // Se comprueba aquí y no se deja a la clave ajena: la base impediría el insert igualmente,
+        // pero con una excepción de PostgreSQL que sale como 500. Y ya no es «un identificador mal
+        // escrito» —viene del token—, sino una sesión que apunta a una empresa que ya no opera.
+        if (!await empresas.EstaActivaAsync(empresaId, cancelacion).ConfigureAwait(false))
         {
-            errores.Agregar("empresaId", "No hay ninguna empresa con ese identificador.");
+            return Resultado.Fallo<EjercicioDto>(ErroresDeEmpresa.NoOperativa());
         }
+
+        var errores = new ErroresPorCampo();
 
         ReglasDeFechas.Comprobar(peticion.FechaDeInicio, peticion.FechaDeFin, errores);
 
@@ -46,7 +50,7 @@ internal sealed class CrearEjercicio(
             return Resultado.Fallo<EjercicioDto>(errores.AError());
         }
 
-        if (await ejercicios.ExisteElAnioAsync(peticion.EmpresaId, peticion.Anio, cancelacion)
+        if (await ejercicios.ExisteElAnioAsync(empresaId, peticion.Anio, cancelacion)
                 .ConfigureAwait(false))
         {
             return Resultado.Fallo<EjercicioDto>(ErrorDeOperacion.Conflicto(
@@ -55,7 +59,7 @@ internal sealed class CrearEjercicio(
         }
 
         var ejercicio = Ejercicio.Crear(
-            peticion.EmpresaId, peticion.Anio, peticion.FechaDeInicio, peticion.FechaDeFin);
+            empresaId, peticion.Anio, peticion.FechaDeInicio, peticion.FechaDeFin);
 
         ejercicios.Agregar(ejercicio);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

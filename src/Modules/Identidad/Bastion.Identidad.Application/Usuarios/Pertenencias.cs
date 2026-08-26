@@ -1,0 +1,260 @@
+using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Identidad.Application.Roles;
+using Bastion.Identidad.Contracts.Usuarios;
+using Bastion.Identidad.Domain.Usuarios;
+using Bastion.Organizacion.Contracts.Empresas;
+
+namespace Bastion.Identidad.Application.Usuarios;
+
+/// <summary>Da de alta a un usuario en una empresa.</summary>
+public interface IConcederPertenencia
+{
+    /// <summary>Ejecuta el caso de uso.</summary>
+    /// <param name="usuarioId">Identificador del usuario.</param>
+    /// <param name="peticion">Empresa a la que se le da de alta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<Resultado> EjecutarAsync(
+        Guid usuarioId,
+        ConcederPertenenciaDto peticion,
+        CancellationToken cancelacion);
+}
+
+/// <summary>Da de baja a un usuario de una empresa.</summary>
+public interface IRetirarPertenencia
+{
+    /// <summary>Ejecuta el caso de uso.</summary>
+    /// <param name="usuarioId">Identificador del usuario.</param>
+    /// <param name="empresaId">Empresa de la que se le da de baja.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<Resultado> EjecutarAsync(Guid usuarioId, Guid empresaId, CancellationToken cancelacion);
+}
+
+/// <summary>Asigna un rol a un usuario en una empresa.</summary>
+public interface IAsignarRol
+{
+    /// <summary>Ejecuta el caso de uso.</summary>
+    /// <param name="usuarioId">Identificador del usuario.</param>
+    /// <param name="peticion">Empresa y rol.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<Resultado> EjecutarAsync(Guid usuarioId, AsignarRolDto peticion, CancellationToken cancelacion);
+}
+
+/// <summary>Le retira un rol a un usuario en una empresa.</summary>
+public interface IRetirarRol
+{
+    /// <summary>Ejecuta el caso de uso.</summary>
+    /// <param name="usuarioId">Identificador del usuario.</param>
+    /// <param name="peticion">Empresa y rol.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<Resultado> EjecutarAsync(Guid usuarioId, AsignarRolDto peticion, CancellationToken cancelacion);
+}
+
+/// <inheritdoc cref="IConcederPertenencia"/>
+/// <remarks>
+/// <para>
+/// Este es el sitio donde se guarda un identificador de <b>otro esquema</b>, y por tanto donde se
+/// paga el precio de no tener claves foráneas entre módulos (§4, regla de frontera 4). El motor no
+/// va a comprobar que esa empresa existe: lo comprueba
+/// <see cref="IConsultaDeEmpresas"/>, que es la interfaz del <c>Contracts</c> del módulo dueño,
+/// resuelta en proceso. Es una llamada a método, no una petición HTTP.
+/// </para>
+/// <para>
+/// Y la empresa que se puede nombrar es solo la del <i>claim</i>: si se pudiera nombrar otra,
+/// tener <c>identidad.pertenencia.conceder</c> en una empresa cualquiera equivaldría a tenerlo en
+/// todas, y R8 se caería por la puerta de atrás.
+/// </para>
+/// </remarks>
+internal sealed class ConcederPertenencia(
+    IUsuarioActual usuarioActual,
+    IRepositorioDeUsuarios usuarios,
+    IConsultaDeEmpresas empresas,
+    IUnidadTrabajoDeIdentidad unidadTrabajo) : IConcederPertenencia
+{
+    public async Task<Resultado> EjecutarAsync(
+        Guid usuarioId,
+        ConcederPertenenciaDto peticion,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+
+        if (peticion.EmpresaId != usuarioActual.EmpresaId)
+        {
+            return Resultado.Fallo(ErroresDePertenencia.EmpresaAjena());
+        }
+
+        Usuario? usuario = await usuarios.ObtenerAsync(usuarioId, cancelacion).ConfigureAwait(false);
+
+        if (usuario is null)
+        {
+            return Resultado.Fallo(ErroresDeUsuario.NoEncontrado(usuarioId));
+        }
+
+        if (!await empresas.EstaActivaAsync(peticion.EmpresaId, cancelacion).ConfigureAwait(false))
+        {
+            return Resultado.Fallo(ErroresDeUsuario.EmpresaNoOperativa());
+        }
+
+        usuario.Conceder(peticion.EmpresaId);
+        await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
+
+        return Resultado.Correcto();
+    }
+}
+
+/// <inheritdoc cref="IRetirarPertenencia"/>
+internal sealed class RetirarPertenencia(
+    IUsuarioActual usuarioActual,
+    IRepositorioDeUsuarios usuarios,
+    IUnidadTrabajoDeIdentidad unidadTrabajo) : IRetirarPertenencia
+{
+    public async Task<Resultado> EjecutarAsync(
+        Guid usuarioId,
+        Guid empresaId,
+        CancellationToken cancelacion)
+    {
+        if (empresaId != usuarioActual.EmpresaId)
+        {
+            return Resultado.Fallo(ErroresDePertenencia.EmpresaAjena());
+        }
+
+        Usuario? usuario = await usuarios.ObtenerAsync(usuarioId, cancelacion).ConfigureAwait(false);
+
+        if (usuario is null)
+        {
+            return Resultado.Fallo(ErroresDeUsuario.NoEncontrado(usuarioId));
+        }
+
+        if (!usuario.Retirar(empresaId))
+        {
+            return Resultado.Fallo(ErroresDePertenencia.NoPertenece());
+        }
+
+        await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
+
+        return Resultado.Correcto();
+    }
+}
+
+/// <inheritdoc cref="IAsignarRol"/>
+internal sealed class AsignarRol(
+    IUsuarioActual usuarioActual,
+    IRepositorioDeUsuarios usuarios,
+    IRepositorioDeRoles roles,
+    IUnidadTrabajoDeIdentidad unidadTrabajo) : IAsignarRol
+{
+    public async Task<Resultado> EjecutarAsync(
+        Guid usuarioId,
+        AsignarRolDto peticion,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+
+        Resultado<Membresia> membresia = await ErroresDePertenencia
+            .ResolverAsync(usuarioActual, usuarios, usuarioId, peticion.EmpresaId, cancelacion)
+            .ConfigureAwait(false);
+
+        if (!membresia.EsCorrecto)
+        {
+            return Resultado.Fallo(membresia.Error!);
+        }
+
+        if (!await roles.ExisteAsync(peticion.RolId, cancelacion).ConfigureAwait(false))
+        {
+            return Resultado.Fallo(ErroresDeRol.NoEncontrado(peticion.RolId));
+        }
+
+        membresia.Valor.AsignarRol(peticion.RolId);
+        await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
+
+        return Resultado.Correcto();
+    }
+}
+
+/// <inheritdoc cref="IRetirarRol"/>
+internal sealed class RetirarRol(
+    IUsuarioActual usuarioActual,
+    IRepositorioDeUsuarios usuarios,
+    IUnidadTrabajoDeIdentidad unidadTrabajo) : IRetirarRol
+{
+    public async Task<Resultado> EjecutarAsync(
+        Guid usuarioId,
+        AsignarRolDto peticion,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(peticion);
+
+        Resultado<Membresia> membresia = await ErroresDePertenencia
+            .ResolverAsync(usuarioActual, usuarios, usuarioId, peticion.EmpresaId, cancelacion)
+            .ConfigureAwait(false);
+
+        if (!membresia.EsCorrecto)
+        {
+            return Resultado.Fallo(membresia.Error!);
+        }
+
+        // No comprueba que el rol exista: retirar uno que ya no existe es exactamente lo que hay
+        // que poder hacer para limpiar una asignación huérfana.
+        membresia.Valor.RetirarRol(peticion.RolId);
+        await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
+
+        return Resultado.Correcto();
+    }
+}
+
+/// <summary>Los errores de negocio de las pertenencias, y la resolución que comparten.</summary>
+internal static class ErroresDePertenencia
+{
+    /// <summary>Se ha nombrado una empresa que no es la del <i>claim</i>.</summary>
+    internal static ErrorDeOperacion EmpresaAjena() => ErrorDeOperacion.PermisoDenegado(
+        "empresa-ajena",
+        "Solo se pueden administrar pertenencias de la empresa con la que se está operando.");
+
+    /// <summary>El usuario no pertenece a esa empresa.</summary>
+    internal static ErrorDeOperacion NoPertenece() => ErrorDeOperacion.NoEncontrado(
+        "pertenencia-no-encontrada",
+        "Ese usuario no pertenece a esa empresa.");
+
+    /// <summary>
+    /// Comprueba la empresa contra el <i>claim</i> y devuelve la pertenencia sobre la que operar.
+    /// </summary>
+    /// <remarks>
+    /// Está compartida porque asignar y retirar un rol hacen la misma comprobación, y una
+    /// comprobación repetida es una comprobación que un día se copia mal. Que sean dos permisos
+    /// distintos no obliga a que sean dos validaciones distintas: lo que se separa es quién puede
+    /// hacer cada cosa, no cómo se averigua sobre qué se hace.
+    /// </remarks>
+    /// <param name="usuarioActual">De dónde sale la empresa con la que se opera.</param>
+    /// <param name="usuarios">Repositorio de usuarios.</param>
+    /// <param name="usuarioId">Usuario sobre el que se opera.</param>
+    /// <param name="empresaId">Empresa que nombra la petición.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    internal static async Task<Resultado<Membresia>> ResolverAsync(
+        IUsuarioActual usuarioActual,
+        IRepositorioDeUsuarios usuarios,
+        Guid usuarioId,
+        Guid empresaId,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(usuarioActual);
+        ArgumentNullException.ThrowIfNull(usuarios);
+
+        if (empresaId != usuarioActual.EmpresaId)
+        {
+            return Resultado.Fallo<Membresia>(EmpresaAjena());
+        }
+
+        Usuario? usuario = await usuarios.ObtenerAsync(usuarioId, cancelacion).ConfigureAwait(false);
+
+        if (usuario is null)
+        {
+            return Resultado.Fallo<Membresia>(ErroresDeUsuario.NoEncontrado(usuarioId));
+        }
+
+        Membresia? membresia = usuario.EnEmpresa(empresaId);
+
+        return membresia is null
+            ? Resultado.Fallo<Membresia>(NoPertenece())
+            : Resultado.Correcto(membresia);
+    }
+}

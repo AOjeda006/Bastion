@@ -1,4 +1,4 @@
-using Bastion.BuildingBlocks.Application;
+using Bastion.Organizacion.Application;
 
 namespace Bastion.Organizacion.Infrastructure.Persistencia;
 
@@ -10,7 +10,7 @@ namespace Bastion.Organizacion.Infrastructure.Persistencia;
 /// de trabajo común acabaría confirmando en la misma llamada cambios de dos módulos, que es
 /// exactamente la frontera que el §4 no quiere que se cruce sin darse cuenta.
 /// </remarks>
-internal sealed class UnidadDeTrabajoDeOrganizacion(OrganizacionDbContext contexto) : IUnidadTrabajo
+internal sealed class UnidadDeTrabajoDeOrganizacion(OrganizacionDbContext contexto) : IUnidadTrabajoDeOrganizacion
 {
     public Task<int> ConfirmarAsync(CancellationToken cancelacion) =>
         contexto.SaveChangesAsync(cancelacion);

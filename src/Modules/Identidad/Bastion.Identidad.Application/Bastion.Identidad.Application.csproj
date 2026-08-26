@@ -13,6 +13,24 @@
     <ProjectReference Include="../Bastion.Identidad.Domain/Bastion.Identidad.Domain.csproj" />
     <ProjectReference Include="../Bastion.Identidad.Contracts/Bastion.Identidad.Contracts.csproj" />
     <ProjectReference Include="../../../BuildingBlocks/Application/Bastion.BuildingBlocks.Application.csproj" />
+
+    <!--
+      Contracts de Organización, y SOLO Contracts (§4, regla de frontera 1). Es la otra mitad de
+      «sin claves foráneas entre esquemas» (regla 4): la pertenencia guarda un Guid de empresa que
+      el motor no puede comprobar porque vive en otro esquema, así que lo comprueba el módulo
+      dueño a través de su interfaz, resuelta en proceso. Es una llamada a método, no una petición
+      HTTP.
+    -->
+    <ProjectReference Include="../../Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
+    Solo las ABSTRACCIONES del contenedor, para publicar `AgregarCasosDeUsoDeIdentidad`. Las
+    implementaciones de los casos de uso son `internal` a propósito —fuera del módulo solo se ve
+    la interfaz—, y eso obliga a que quien las registre viva en este mismo ensamblado.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
 </Project>

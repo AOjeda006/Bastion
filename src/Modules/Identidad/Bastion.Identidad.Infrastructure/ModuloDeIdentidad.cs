@@ -1,0 +1,55 @@
+using Bastion.Identidad.Application;
+using Bastion.Identidad.Application.Roles;
+using Bastion.Identidad.Application.Sesiones;
+using Bastion.Identidad.Application.Usuarios;
+using Bastion.Identidad.Infrastructure.Persistencia;
+using Bastion.Identidad.Infrastructure.Persistencia.Repositorios;
+using Bastion.Identidad.Infrastructure.Seguridad;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace Bastion.Identidad.Infrastructure;
+
+/// <summary>
+/// Registro del módulo Identidad en el contenedor. Lo llama el <i>composition root</i>
+/// (<c>src/Api</c>), que es el único proyecto autorizado a ver esta capa.
+/// </summary>
+public static class ModuloDeIdentidad
+{
+    /// <summary>Registra el contexto, los repositorios, la seguridad y los casos de uso.</summary>
+    /// <param name="servicios">Colección de servicios del <i>composition root</i>.</param>
+    /// <param name="cadenaDeConexion">Cadena de conexión a PostgreSQL.</param>
+    /// <param name="jwt">Cómo se firma el token de acceso.</param>
+    public static IServiceCollection AgregarModuloDeIdentidad(
+        this IServiceCollection servicios,
+        string cadenaDeConexion,
+        OpcionesDeJwt jwt)
+    {
+        ArgumentNullException.ThrowIfNull(servicios);
+        ArgumentNullException.ThrowIfNull(jwt);
+
+        servicios.AddDbContext<IdentidadDbContext>(
+            opciones => IdentidadDbContext.Configurar(opciones, cadenaDeConexion));
+
+        servicios.AddScoped<IUnidadTrabajoDeIdentidad, UnidadDeTrabajoDeIdentidad>();
+
+        servicios.AddScoped<IRepositorioDeUsuarios, RepositorioDeUsuarios>();
+        servicios.AddScoped<IRepositorioDeRoles, RepositorioDeRoles>();
+        servicios.AddScoped<IRepositorioDeTokensDeRefresco, RepositorioDeTokensDeRefresco>();
+
+        // El hasher es SINGLETON, y no por ahorro: su resumen de relleno —el que iguala el tiempo
+        // de un correo que no existe con el de uno que sí— se calcula en el constructor y cuesta
+        // lo que cuesta comprobar una contraseña. Registrado por petición, ese coste se pagaría en
+        // cada intento de acceso, dos veces.
+        servicios.AddSingleton<IHasherDeContrasenas, HasherDeContrasenas>();
+
+        servicios.AddSingleton(jwt);
+        servicios.AddSingleton<IEmisorDeTokens, EmisorDeTokens>();
+        servicios.TryAddSingleton(TimeProvider.System);
+
+        servicios.AgregarCasosDeUsoDeIdentidad();
+
+        return servicios;
+    }
+}

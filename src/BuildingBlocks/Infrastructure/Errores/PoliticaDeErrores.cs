@@ -65,6 +65,7 @@ public static class PoliticaDeErrores
     public static int CodigoDeEstadoDe(TipoDeError tipo) => tipo switch
     {
         TipoDeError.Validacion => StatusCodes.Status400BadRequest,
+        TipoDeError.NoAutenticado => StatusCodes.Status401Unauthorized,
         TipoDeError.PermisoDenegado => StatusCodes.Status403Forbidden,
         TipoDeError.NoEncontrado => StatusCodes.Status404NotFound,
         TipoDeError.Conflicto => StatusCodes.Status409Conflict,
@@ -76,6 +77,7 @@ public static class PoliticaDeErrores
     public static string TituloDe(TipoDeError tipo) => tipo switch
     {
         TipoDeError.Validacion => "Datos de entrada no válidos",
+        TipoDeError.NoAutenticado => "No autenticado",
         TipoDeError.PermisoDenegado => "Permiso denegado",
         TipoDeError.NoEncontrado => "Recurso no encontrado",
         TipoDeError.Conflicto => "Conflicto con el estado actual",

@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Almacenes;
@@ -20,7 +19,7 @@ public interface IModificarAlmacen
 }
 
 /// <inheritdoc cref="IModificarAlmacen"/>
-internal sealed class ModificarAlmacen(IRepositorioDeAlmacenes almacenes, IUnidadTrabajo unidadTrabajo)
+internal sealed class ModificarAlmacen(IRepositorioDeAlmacenes almacenes, IUnidadTrabajoDeOrganizacion unidadTrabajo)
     : IModificarAlmacen
 {
     public async Task<Resultado<AlmacenDto>> EjecutarAsync(

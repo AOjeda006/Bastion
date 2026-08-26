@@ -1,4 +1,6 @@
+using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.Organizacion.Application.Ejercicios;
+using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Endpoints.Comun;
@@ -13,12 +15,15 @@ public sealed class EjerciciosController(
     IObtenerEjercicio obtener,
     IListarEjercicios listar,
     IModificarEjercicio modificar,
-    IEliminarEjercicio eliminar) : ControladorDeOrganizacion
+    IEliminarEjercicio eliminar,
+    ICerrarEjercicio cerrar,
+    IReabrirEjercicio reabrir) : ControladorDeOrganizacion
 {
     /// <summary>Devuelve una página de ejercicios.</summary>
     /// <param name="consulta">Paginación pedida (<c>page</c> y <c>size</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
+    [ExigePermiso(PermisosDeOrganizacion.EjercicioVer)]
     [ProducesResponseType(typeof(PaginaDe<EjercicioDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
         [FromQuery] ConsultaPaginada consulta,
@@ -33,6 +38,7 @@ public sealed class EjerciciosController(
     /// <param name="id">Identificador del ejercicio.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.EjercicioVer)]
     [ProducesResponseType(typeof(EjercicioDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Obtener(Guid id, CancellationToken cancelacion) =>
@@ -42,6 +48,7 @@ public sealed class EjerciciosController(
     /// <param name="peticion">Datos del ejercicio.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost]
+    [ExigePermiso(PermisosDeOrganizacion.EjercicioCrear)]
     [ProducesResponseType(typeof(EjercicioDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -58,6 +65,7 @@ public sealed class EjerciciosController(
     /// <param name="peticion">Las fechas nuevas.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPut("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.EjercicioModificar)]
     [ProducesResponseType(typeof(EjercicioDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -72,9 +80,39 @@ public sealed class EjerciciosController(
     /// <param name="id">Identificador del ejercicio.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpDelete("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.EjercicioEliminar)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Eliminar(Guid id, CancellationToken cancelacion) =>
         ResponderSinContenido(await eliminar.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+
+    /// <summary>Cierra el ejercicio (R9).</summary>
+    /// <remarks>
+    /// Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que
+    /// cualquiera congele el año. Con su permiso detrás, se abre.
+    /// </remarks>
+    /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("{id:guid}/cierre")]
+    [ExigePermiso(PermisosDeOrganizacion.EjercicioCerrar)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Cerrar(Guid id, CancellationToken cancelacion) =>
+        ResponderSinContenido(await cerrar.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+
+    /// <summary>Reabre un ejercicio cerrado (R9).</summary>
+    /// <remarks>
+    /// El cierre es el sub-recurso, así que reabrir es borrarlo. Lleva permiso propio y distinto
+    /// del de cerrar: reabrir vuelve a admitir apuntes en un periodo del que probablemente ya se
+    /// presentaron modelos.
+    /// </remarks>
+    /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpDelete("{id:guid}/cierre")]
+    [ExigePermiso(PermisosDeOrganizacion.EjercicioReabrir)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Reabrir(Guid id, CancellationToken cancelacion) =>
+        ResponderSinContenido(await reabrir.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
 }

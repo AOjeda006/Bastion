@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
@@ -21,7 +20,7 @@ public interface IModificarEmpresa
 }
 
 /// <inheritdoc cref="IModificarEmpresa"/>
-internal sealed class ModificarEmpresa(IRepositorioDeEmpresas empresas, IUnidadTrabajo unidadTrabajo)
+internal sealed class ModificarEmpresa(IRepositorioDeEmpresas empresas, IUnidadTrabajoDeOrganizacion unidadTrabajo)
     : IModificarEmpresa
 {
     public async Task<Resultado<EmpresaDto>> EjecutarAsync(

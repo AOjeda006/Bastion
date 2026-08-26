@@ -1,4 +1,6 @@
+using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.Organizacion.Application.Series;
+using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Endpoints.Comun;
@@ -19,6 +21,7 @@ public sealed class SeriesController(
     /// <param name="consulta">Paginación pedida (<c>page</c> y <c>size</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
+    [ExigePermiso(PermisosDeOrganizacion.SerieVer)]
     [ProducesResponseType(typeof(PaginaDe<SerieDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
         [FromQuery] ConsultaPaginada consulta,
@@ -33,6 +36,7 @@ public sealed class SeriesController(
     /// <param name="id">Identificador de la serie.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.SerieVer)]
     [ProducesResponseType(typeof(SerieDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Obtener(Guid id, CancellationToken cancelacion) =>
@@ -42,6 +46,7 @@ public sealed class SeriesController(
     /// <param name="peticion">Datos de la serie.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost]
+    [ExigePermiso(PermisosDeOrganizacion.SerieCrear)]
     [ProducesResponseType(typeof(SerieDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -58,6 +63,7 @@ public sealed class SeriesController(
     /// <param name="peticion">El formato nuevo.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPut("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.SerieModificar)]
     [ProducesResponseType(typeof(SerieDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -78,6 +84,7 @@ public sealed class SeriesController(
     /// <param name="id">Identificador de la serie.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpDelete("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.SerieEliminar)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]

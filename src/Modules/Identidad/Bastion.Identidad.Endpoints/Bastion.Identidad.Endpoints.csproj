@@ -15,6 +15,14 @@
 
   <ItemGroup>
     <ProjectReference Include="../Bastion.Identidad.Application/Bastion.Identidad.Application.csproj" />
+    <!--
+      El bloque común de Infrastructure, por dos cosas que SON HTTP: la traducción de un error de
+      negocio a ProblemDetails (§12) y el atributo que declara el permiso de cada acción. Ninguna
+      de las dos pertenece a la capa de aplicación, que no sabe que existen los códigos de estado.
+      NO se referencia la Infrastructure DEL MÓDULO: los controladores hablan con casos de uso,
+      nunca con repositorios (§4).
+    -->
+    <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

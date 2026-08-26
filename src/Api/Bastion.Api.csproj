@@ -37,6 +37,13 @@
       vive en el composition root. Los componentes que se cablean (la comprobación de
       PostgreSQL, por ejemplo) viven en BuildingBlocks.Infrastructure.
     -->
+    <!--
+      La validación del token de acceso es cosa del BORDE, y el borde es este proyecto: es
+      quien reconstruye quién llama antes de que ninguna acción se ejecute. Quien EMITE el
+      token es Identidad.Infrastructure; los dos comparten la familia Microsoft.IdentityModel
+      en la misma versión, fijada en Directory.Packages.props.
+    -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
@@ -56,7 +63,7 @@
       convertiría un detalle del arranque en API del host.
     -->
     <InternalsVisibleTo Include="Bastion.Api.FunctionalTests" />
-    <InternalsVisibleTo Include="Bastion.Organizacion.IntegrationTests" />
+    <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
   </ItemGroup>
 
 </Project>

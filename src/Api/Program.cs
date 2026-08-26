@@ -3,11 +3,21 @@
 // (`principios/clean-architecture.md`); ningún módulo se registra a sí mismo por su cuenta.
 
 using System.Text.Json.Serialization;
+using Bastion.Api.Arranque;
+using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
+using Bastion.Identidad.Contracts;
+using Bastion.Identidad.Infrastructure;
+using Bastion.Identidad.Infrastructure.Seguridad;
+using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -90,6 +100,15 @@ builder.Services.AddOpenTelemetry()
 builder.Services.AgregarPoliticaDeErrores();
 
 string cadenaDeConexion = (builder.Configuration.GetConnectionString("Bastion") ?? string.Empty).Trim();
+
+// La clave de firma y el par emisor/audiencia se leen ANTES de registrar nada, y sin valor por
+// omisión: si falta cualquiera de las tres, esto lanza y la aplicación no llega a escuchar. Un
+// secreto con valor por omisión es un secreto conocido, y el despliegue que se olvidó de ponerlo
+// es exactamente el que lo conservaría.
+var opcionesDeJwt = OpcionesDeJwt.De(
+    builder.Configuration[OpcionesDeJwt.VariableDeEmisor],
+    builder.Configuration[OpcionesDeJwt.VariableDeAudiencia],
+    builder.Configuration[OpcionesDeJwt.VariableDeClave]);
 IHealthChecksBuilder salud = builder.Services.AddHealthChecks();
 
 if (cadenaDeConexion.Length == 0)
@@ -112,6 +131,54 @@ else
 // su uso. Se registra aunque la cadena venga vacia, porque `dotnet ef migrations add` monta
 // este host para descubrir el DbContext y generar la migracion no abre ninguna conexion.
 builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion);
+builder.Services.AgregarModuloDeIdentidad(cadenaDeConexion, opcionesDeJwt);
+
+// --------------------------------------------------------------------- autenticación
+// Quién es quien llama, leído del token de acceso y de ningún otro sitio. Las cuatro
+// comprobaciones van juntas y todas encendidas: la FIRMA dice que lo emitimos nosotros, el
+// EMISOR y la AUDIENCIA que lo emitimos para esta aplicación, y la CADUCIDAD que sigue
+// vigente. Apagar cualquiera de las tres últimas deja la firma validando tokens que no son
+// para aquí — y un sistema que valida firmas parece seguro.
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opciones =>
+    {
+        // Sin esto, la pila de Microsoft TRADUCE los nombres entrantes: `sub` se convierte en la
+        // URI larga de ClaimTypes.NameIdentifier y buscar `sub` no encuentra nada. El emisor
+        // escribe `sub`; aquí se lee `sub`.
+        opciones.MapInboundClaims = false;
+
+        opciones.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = opcionesDeJwt.Clave,
+            ValidateIssuer = true,
+            ValidIssuer = opcionesDeJwt.Emisor,
+            ValidateAudience = true,
+            ValidAudience = opcionesDeJwt.Audiencia,
+            ValidateLifetime = true,
+
+            // Por omisión la biblioteca regala CINCO MINUTOS de gracia sobre la caducidad. Con un
+            // token de quince minutos, eso es un tercio de su vida: un token revocado por
+            // caducidad seguiría entrando un tercio de tiempo más.
+            ClockSkew = TimeSpan.Zero,
+
+            NameClaimType = ClaimsDeBastion.Nombre,
+        };
+    });
+
+// ---------------------------------------------------------------------- autorización
+// El catálogo se compone AQUÍ con lo que declara cada módulo. Identidad valida contra él los
+// permisos de un rol sin ver a los otros quince módulos (§4).
+builder.Services.AgregarAutorizacionPorPermisos(
+    [.. PermisosDeOrganizacion.Todos, .. PermisosDeIdentidad.Todos]);
+
+// DENEGAR POR DEFECTO. La política de respaldo se aplica a todo endpoint que no traiga metadatos
+// de autorización propios, así que olvidarse de poner el atributo CIERRA la puerta en vez de
+// abrirla. Lo contrario —abierto salvo que se marque— es la clase de descuido que no se ve en
+// ninguna revisión: el endpoint nuevo funciona, y funciona para cualquiera.
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
 // ---------------------------------------------------------------------- controladores
 // Los controladores viven en los proyectos Endpoints de cada módulo, no aquí. `AddControllers`
@@ -146,17 +213,34 @@ app.UseSerilogRequestLogging(opciones =>
 
 // `Predicate = _ => false` no es un descuido: es la sonda de vida ejecutando CERO
 // comprobaciones. Responde 200 si y solo si el proceso está en pie y atiende peticiones.
-app.MapHealthChecks(rutaDeVida, new HealthCheckOptions { Predicate = _ => false });
+// Autenticar va SIEMPRE antes de autorizar: la segunda decide sobre el usuario que ha
+// reconstruido la primera. Al revés, la autorización miraría un principal anónimo y respondería
+// 401 a todo el mundo, token o no.
+app.UseAuthentication();
+app.UseAuthorization();
+
+// `AllowAnonymous` explícito en las dos sondas, y NO por comodidad: con la política de respaldo
+// puesta, un orquestador que consulta /health/live sin token recibiría 401 y reiniciaría el
+// contenedor en bucle. No exponen nada: la de vida no ejecuta ninguna comprobación y la de
+// disponibilidad solo dice si la base responde.
+app.MapHealthChecks(rutaDeVida, new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
 
 app.MapHealthChecks(rutaDeDisponibilidad, new HealthCheckOptions
 {
     Predicate = comprobacion => comprobacion.Tags.Contains(etiquetaDeDisponibilidad),
     ResponseWriter = EscribirEstadoDeLasDependencias,
-});
+}).AllowAnonymous();
 
 app.MapControllers();
 
-app.Run();
+// Sin cadena de conexión no hay base a la que sembrar: es el caso de los tests funcionales, que
+// levantan el host entero sin dependencia externa ninguna.
+if (cadenaDeConexion.Length > 0)
+{
+    await app.SembrarAsync();
+}
+
+await app.RunAsync();
 
 static bool EsSonda(PathString ruta) => ruta.StartsWithSegments("/health");
 

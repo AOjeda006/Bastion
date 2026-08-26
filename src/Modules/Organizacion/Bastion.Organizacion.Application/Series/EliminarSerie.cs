@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Series;
 
@@ -21,7 +20,7 @@ public interface IEliminarSerie
 }
 
 /// <inheritdoc cref="IEliminarSerie"/>
-internal sealed class EliminarSerie(IRepositorioDeSeries series, IUnidadTrabajo unidadTrabajo)
+internal sealed class EliminarSerie(IRepositorioDeSeries series, IUnidadTrabajoDeOrganizacion unidadTrabajo)
     : IEliminarSerie
 {
     public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)

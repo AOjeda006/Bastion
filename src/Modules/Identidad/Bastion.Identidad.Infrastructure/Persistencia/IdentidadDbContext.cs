@@ -1,0 +1,77 @@
+using Bastion.Identidad.Domain.Roles;
+using Bastion.Identidad.Domain.Sesiones;
+using Bastion.Identidad.Domain.Usuarios;
+using Microsoft.EntityFrameworkCore;
+
+namespace Bastion.Identidad.Infrastructure.Persistencia;
+
+/// <summary>
+/// Contexto de EF Core del módulo Identidad: su esquema, sus tablas y su propio historial de
+/// migraciones.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Este es el módulo que comprueba de verdad lo que el 0.4 solo pudo afirmar.</b> Con un único
+/// módulo, el historial de migraciones podía estar en <c>public.__EFMigrationsHistory</c> y no
+/// pasaba nada: no había nadie con quien chocar. Con dos, el sitio compartido es una avería
+/// esperando —el segundo módulo lee allí las migraciones del primero, se cree al día y no aplica
+/// las suyas—, y el fallo no sale por pantalla: sale como un esquema incompleto en producción.
+/// </para>
+/// <para>
+/// Por eso el historial va dentro del esquema del módulo, y por eso el test de integración lo
+/// comprueba <b>mirando las tablas</b>, no la configuración: leer la configuración solo demuestra
+/// que la configuración dice lo que dice.
+/// </para>
+/// </remarks>
+/// <param name="opciones">Opciones del contexto.</param>
+public sealed class IdentidadDbContext(DbContextOptions<IdentidadDbContext> opciones)
+    : DbContext(opciones)
+{
+    /// <summary>
+    /// Esquema de PostgreSQL del módulo: el nombre del módulo en minúsculas y sin acentos.
+    /// </summary>
+    public const string Esquema = "identidad";
+
+    /// <summary>
+    /// Tabla de historial de migraciones, DENTRO del esquema del módulo.
+    /// </summary>
+    public const string TablaDelHistorial = "__historial_de_migraciones";
+
+    /// <summary>Cuentas de usuario.</summary>
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+
+    /// <summary>Pertenencias de un usuario a una empresa.</summary>
+    public DbSet<Membresia> Membresias => Set<Membresia>();
+
+    /// <summary>Roles, que son agrupaciones de permisos.</summary>
+    public DbSet<Rol> Roles => Set<Rol>();
+
+    /// <summary>Emisiones de token de refresco.</summary>
+    public DbSet<TokenDeRefresco> TokensDeRefresco => Set<TokenDeRefresco>();
+
+    /// <summary>
+    /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive
+    /// el historial de migraciones y qué convención de nombres se aplica.
+    /// </summary>
+    /// <param name="opciones">Constructor de opciones que se va a rellenar.</param>
+    /// <param name="cadenaDeConexion">Cadena de conexión a PostgreSQL.</param>
+    public static void Configurar(DbContextOptionsBuilder opciones, string cadenaDeConexion)
+    {
+        ArgumentNullException.ThrowIfNull(opciones);
+
+        opciones
+            .UseNpgsql(cadenaDeConexion, npgsql => npgsql
+                .MigrationsHistoryTable(TablaDelHistorial, Esquema)
+                .MigrationsAssembly(typeof(IdentidadDbContext).Assembly.FullName))
+            .UseSnakeCaseNamingConvention();
+    }
+
+    /// <inheritdoc/>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        modelBuilder.HasDefaultSchema(Esquema);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentidadDbContext).Assembly);
+    }
+}

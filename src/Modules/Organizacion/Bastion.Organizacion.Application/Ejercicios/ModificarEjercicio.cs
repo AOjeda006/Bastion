@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Ejercicios;
@@ -22,7 +21,7 @@ public interface IModificarEjercicio
 /// <inheritdoc cref="IModificarEjercicio"/>
 internal sealed class ModificarEjercicio(
     IRepositorioDeEjercicios ejercicios,
-    IUnidadTrabajo unidadTrabajo) : IModificarEjercicio
+    IUnidadTrabajoDeOrganizacion unidadTrabajo) : IModificarEjercicio
 {
     public async Task<Resultado<EjercicioDto>> EjecutarAsync(
         Guid id,

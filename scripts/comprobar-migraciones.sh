@@ -36,9 +36,25 @@ FALLOS=0
 # por un motivo que no tiene nada que ver con las migraciones. Se pasa por entorno.
 CONFIGURACION="${CONFIGURACION:-Debug}"
 
+# `dotnet ef` construye el host de src/Api para descubrir los DbContext, y ese host EXIGE las tres
+# variables del JWT: sin ellas no arranca, y con razón (un secreto con valor por omisión es un
+# secreto conocido). Aquí se generan al vuelo y no se escriben en ninguna parte: esta clave no
+# firma nada, solo hace que el host llegue a construirse. Ninguna de las dos comprobaciones se
+# conecta a base de datos ni emite un token.
+export JWT_ISSUER="bastion-comprobacion-de-migraciones"
+export JWT_AUDIENCE="bastion-comprobacion-de-migraciones"
+JWT_SIGNING_KEY="$(head -c 48 /dev/urandom | base64 | tr -d '
+')"
+export JWT_SIGNING_KEY
+
 comprobar() {
   modulo="$1"
   proyecto="src/Modules/${modulo}/Bastion.${modulo}.Infrastructure"
+
+  # Desde que hay más de un DbContext en la solución, `dotnet ef` no adivina cuál: sin --context
+  # falla con «More than one DbContext was found» y el paso se caería por un motivo que no tiene
+  # nada que ver con las migraciones.
+  contexto="${modulo}DbContext"
 
   if [ ! -d "$proyecto" ]; then
     echo "::error title=Migraciones::No existe $proyecto: revisa la lista de módulos de este script."
@@ -49,7 +65,7 @@ comprobar() {
   # Los nombres de migración empiezan por la marca de tiempo de catorce dígitos que genera EF.
   # Contar esas líneas descarta los avisos que el comando escribe por lo demás.
   migraciones=$(dotnet ef migrations list --project "$proyecto" --startup-project "$STARTUP" \
-      --configuration "$CONFIGURACION" --no-build --no-connect 2>/dev/null \
+      --context "$contexto" --configuration "$CONFIGURACION" --no-build --no-connect 2>/dev/null \
       | grep -c '^[0-9]\{14\}_' || true)
 
   if [ "${migraciones:-0}" -eq 0 ]; then
@@ -62,15 +78,15 @@ comprobar() {
   # los hay. Comprobado por el efecto —añadiendo una propiedad de sombra al modelo y viendo el
   # código de salida pasar de 0 a 1—, no por lo que pareciera razonable.
   if dotnet ef migrations has-pending-model-changes --project "$proyecto" --startup-project "$STARTUP" \
-      --configuration "$CONFIGURACION" --no-build >/dev/null 2>&1; then
+      --context "$contexto" --configuration "$CONFIGURACION" --no-build >/dev/null 2>&1; then
     echo "${modulo}: ${migraciones} migración(es) en el ensamblado, y el modelo coincide con ellas."
   else
-    echo "::error title=Migraciones::El modelo de ${modulo} tiene cambios sin migrar. Genera la migración: dotnet ef migrations add <Nombre> --project ${proyecto} --startup-project ${STARTUP} --output-dir ../../../../db/migraciones/${modulo}"
+    echo "::error title=Migraciones::El modelo de ${modulo} tiene cambios sin migrar. Genera la migración: dotnet ef migrations add <Nombre> --project ${proyecto} --startup-project ${STARTUP} --context ${contexto} --output-dir ../../../../db/migraciones/${modulo}"
     FALLOS=$((FALLOS + 1))
   fi
 }
 
-for modulo in Organizacion; do
+for modulo in Organizacion Identidad; do
   comprobar "$modulo"
 done
 

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests unitarios del módulo Identidad (§13: dominio puro, sin infraestructura y sin E/S).
+    Referencia solo al dominio del módulo y a Contracts, igual que los de Organización: si algún
+    día hiciera falta un doble de algo aquí, sería la señal de que al dominio se le ha colado una
+    dependencia.
+
+    Lo que NO se puede probar aquí, y por eso hay `Identidad.IntegrationTests`: que la cadena de
+    autorización cierre de verdad. Un permiso mal escrito, una acción sin permiso declarado o una
+    política que no case se ven igual de verdes en un test de dominio.
+  -->
+
+  <ItemGroup Label="Sujeto de prueba">
+    <ProjectReference Include="../../src/Modules/Identidad/Bastion.Identidad.Domain/Bastion.Identidad.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Identidad/Bastion.Identidad.Contracts/Bastion.Identidad.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Marco de pruebas">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

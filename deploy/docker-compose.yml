@@ -50,10 +50,25 @@ services:
       OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc'
       OTEL_SERVICE_NAME: 'bastion-api'
       OTEL_RESOURCE_ATTRIBUTES: 'service.namespace=bastion,deployment.environment=local'
-      # El emisor de JWT y la clave se leen del entorno; NUNCA del repositorio.
-      Jwt__Issuer: ${JWT_ISSUER:-https://localhost}
-      Jwt__Audience: ${JWT_AUDIENCE:-bastion-web}
-      Jwt__SigningKey: ${JWT_SIGNING_KEY:?define JWT_SIGNING_KEY en deploy/.env}
+      # El emisor, la audiencia y la clave de firma se leen del entorno; NUNCA del repositorio.
+      # Los nombres son los de `OpcionesDeJwt` y se leen tal cual, sin seccion: una variable
+      # `Jwt__SigningKey` acabaria en la clave de configuracion `Jwt:SigningKey`, que no lee
+      # nadie, y la API se negaria a arrancar diciendo que falta JWT_SIGNING_KEY.
+      JWT_ISSUER: ${JWT_ISSUER:-https://localhost}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-bastion-web}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?define JWT_SIGNING_KEY en deploy/.env}
+      # Semilla de arranque: la primera empresa y la primera cuenta, y solo si no hay ninguna.
+      # Van SIN valor por omision a proposito: si falta una, la semilla no se aplica y lo dice en
+      # el registro. Unas credenciales por omision son unas credenciales conocidas, y la
+      # instalacion que nadie configuro es exactamente la que las conservaria.
+      BASTION_SEMILLA_ADMIN_CORREO: ${BASTION_SEMILLA_ADMIN_CORREO:-}
+      BASTION_SEMILLA_ADMIN_CONTRASENA: ${BASTION_SEMILLA_ADMIN_CONTRASENA:-}
+      BASTION_SEMILLA_EMPRESA_NIF: ${BASTION_SEMILLA_EMPRESA_NIF:-}
+      BASTION_SEMILLA_EMPRESA_RAZON_SOCIAL: ${BASTION_SEMILLA_EMPRESA_RAZON_SOCIAL:-}
+      BASTION_SEMILLA_EMPRESA_CALLE: ${BASTION_SEMILLA_EMPRESA_CALLE:-}
+      BASTION_SEMILLA_EMPRESA_CODIGO_POSTAL: ${BASTION_SEMILLA_EMPRESA_CODIGO_POSTAL:-}
+      BASTION_SEMILLA_EMPRESA_POBLACION: ${BASTION_SEMILLA_EMPRESA_POBLACION:-}
+      BASTION_SEMILLA_EMPRESA_PAIS: ${BASTION_SEMILLA_EMPRESA_PAIS:-ES}
     ports:
       - '${API_PORT:-8080}:8080'
     depends_on:

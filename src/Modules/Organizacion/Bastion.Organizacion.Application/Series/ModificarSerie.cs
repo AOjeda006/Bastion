@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Series;
@@ -20,7 +19,7 @@ public interface IModificarSerie
 }
 
 /// <inheritdoc cref="IModificarSerie"/>
-internal sealed class ModificarSerie(IRepositorioDeSeries series, IUnidadTrabajo unidadTrabajo)
+internal sealed class ModificarSerie(IRepositorioDeSeries series, IUnidadTrabajoDeOrganizacion unidadTrabajo)
     : IModificarSerie
 {
     public async Task<Resultado<SerieDto>> EjecutarAsync(

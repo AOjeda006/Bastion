@@ -75,6 +75,10 @@ public sealed record ErrorDeOperacion
         return Crear(codigo, mensaje, TipoDeError.Validacion, new Dictionary<string, IReadOnlyList<string>>(campos));
     }
 
+    /// <summary>Quien pide la operación no ha demostrado quién es.</summary>
+    public static ErrorDeOperacion NoAutenticado(string codigo, string mensaje) =>
+        Crear(codigo, mensaje, TipoDeError.NoAutenticado, s_sinCampos);
+
     /// <summary>Quien pide la operación no tiene permiso para hacerla.</summary>
     public static ErrorDeOperacion PermisoDenegado(string codigo, string mensaje) =>
         Crear(codigo, mensaje, TipoDeError.PermisoDenegado, s_sinCampos);

@@ -87,6 +87,30 @@
   </ItemGroup>
 
     <!--
+    Seguridad (item 0.5). Nada de criptografia propia: el resumen de contrasenas lo calcula el
+    `PasswordHasher` de ASP.NET Core Identity con sus parametros por defecto, y el JWT lo firma y
+    lo valida la pila de Microsoft.IdentityModel. Que algoritmo, con cuantas iteraciones y por que,
+    esta en el ADR-0008.
+
+    `Microsoft.Extensions.Identity.Core` y no `Microsoft.AspNetCore.Identity.EntityFrameworkCore`:
+    de Identity solo se adopta el hasher. Su modelo de datos —IdentityUser, IdentityRole y sus
+    siete tablas— no cabe en un dominio que tiene pertenencias por empresa y permisos por accion;
+    arrastrarlo obligaria a mantener dos modelos de usuario en paralelo.
+
+    La familia Microsoft.IdentityModel va ENTERA en la misma version. JwtBearer 10.0.9 pide 8.0.1
+    por transitividad; subirla suelta dejaria `Tokens` y `JsonWebTokens` en versiones distintas,
+    que es la clase de descuadre que se manifiesta como una firma que no valida.
+
+    Licencias comprobadas en el nuspec: las cuatro MIT.
+  -->
+  <ItemGroup Label="Seguridad">
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.22.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.22.0" />
+  </ItemGroup>
+
+  <!--
     Tests. Las versiones NO son las últimas de nuget.org a propósito: son las que
     `dotnet new xunit` genera con el SDK que fija global.json. Ese conjunto es el camino
     VSTest, que es el único que entiende los filtros por categoría y el registrador `trx`

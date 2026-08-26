@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Almacenes;
 
@@ -24,7 +23,7 @@ public interface IBloquearAlmacen
 /// <inheritdoc cref="IBloquearAlmacen"/>
 internal sealed class BloquearAlmacen(
     IRepositorioDeAlmacenes almacenes,
-    IUnidadTrabajo unidadTrabajo,
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
     TimeProvider reloj) : IBloquearAlmacen
 {
     public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)

@@ -17,6 +17,17 @@ internal static class ErroresDeEmpresa
         "empresa-no-encontrada",
         $"No hay ninguna empresa con el identificador {id}.");
 
+    /// <summary>La empresa del <i>claim</i> no existe o está bloqueada.</summary>
+    /// <remarks>
+    /// Sin identificador en el mensaje, y no por descuido: quien recibe esto no ha escrito ninguna
+    /// empresa —le vino en el token—, así que repetírsela no le ayuda a corregir nada. Lo que
+    /// necesita saber es que su sesión apunta a una empresa que ya no opera y que tiene que volver
+    /// a entrar.
+    /// </remarks>
+    internal static ErrorDeOperacion NoOperativa() => ErrorDeOperacion.Conflicto(
+        "empresa-no-operativa",
+        "La empresa con la que está operando no existe o está bloqueada. Vuelva a iniciar sesión.");
+
     internal static ErrorDeOperacion Bloqueada(Guid id) => ErrorDeOperacion.Conflicto(
         "empresa-bloqueada",
         $"La empresa {id} está bloqueada y sus datos no se pueden tratar (art. 32 LOPDGDD). " +

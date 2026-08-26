@@ -12,4 +12,34 @@
     <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!--
+    Las migraciones de este modulo viven en `db/migraciones/Identidad` (§14), fuera del proyecto,
+    por lo mismo que las de Organizacion: para que todas las del sistema se lean juntas. Fuera del
+    proyecto quiere decir que el glob por defecto del SDK NO las compila, y una migracion que no
+    esta en el ensamblado no existe para EF.
+  -->
+  <ItemGroup Label="Migraciones">
+    <Compile Include="../../../../db/migraciones/Identidad/**/*.cs" LinkBase="Migrations" />
+  </ItemGroup>
+
+  <ItemGroup Label="Persistencia">
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <!--
+    El hasher de contrasenas y el emisor de JWT viven aqui, no en Application: son decisiones de
+    infraestructura detras de sus puertos (`IHasherDeContrasenas`, `IEmisorDeTokens`). Lo que ve
+    un caso de uso es la interfaz; el dia que haya que subir el coste del algoritmo o rotar la
+    clave de firma, no se toca ni una linea de dominio.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" />
+  </ItemGroup>
+
 </Project>

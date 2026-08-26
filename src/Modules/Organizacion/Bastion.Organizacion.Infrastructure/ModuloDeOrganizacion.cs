@@ -1,9 +1,9 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.Organizacion.Application;
 using Bastion.Organizacion.Application.Almacenes;
 using Bastion.Organizacion.Application.Ejercicios;
 using Bastion.Organizacion.Application.Empresas;
 using Bastion.Organizacion.Application.Series;
+using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
@@ -33,15 +33,21 @@ public static class ModuloDeOrganizacion
         servicios.AddDbContext<OrganizacionDbContext>(
             opciones => OrganizacionDbContext.Configurar(opciones, cadenaDeConexion));
 
-        // La unidad de trabajo es la del MÓDULO: envuelve el contexto de este módulo y confirma
-        // lo que se ha hecho en él. Se registra aquí, junto a su contexto, y no en el bloque
-        // común, porque el bloque común no sabe cuántos contextos hay ni cuál toca.
-        servicios.AddScoped<IUnidadTrabajo, UnidadDeTrabajoDeOrganizacion>();
+        // La unidad de trabajo es la del MÓDULO, y se registra bajo el tipo del MÓDULO. Bajo
+        // `IUnidadTrabajo` a secas, el segundo módulo que se registrara desplazaría al primero y
+        // los casos de uso de Organización confirmarían sobre el contexto ajeno: cero filas, sin
+        // excepción y sin rastro.
+        servicios.AddScoped<IUnidadTrabajoDeOrganizacion, UnidadDeTrabajoDeOrganizacion>();
 
         servicios.AddScoped<IRepositorioDeEmpresas, RepositorioDeEmpresas>();
         servicios.AddScoped<IRepositorioDeEjercicios, RepositorioDeEjercicios>();
         servicios.AddScoped<IRepositorioDeSeries, RepositorioDeSeries>();
         servicios.AddScoped<IRepositorioDeAlmacenes, RepositorioDeAlmacenes>();
+
+        // Lo ÚNICO que este módulo expone a los demás, y va bajo el tipo de su `Contracts`. Se
+        // registra aquí porque quien lo implementa es esta capa; quien lo consume —Identidad, al
+        // guardar una pertenencia— no sabe que existe este ensamblado.
+        servicios.AddScoped<IConsultaDeEmpresas, ConsultaDeEmpresas>();
 
         servicios.AgregarCasosDeUsoDeOrganizacion();
 

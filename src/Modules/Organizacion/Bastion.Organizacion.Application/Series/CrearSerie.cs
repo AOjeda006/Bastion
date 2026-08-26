@@ -1,4 +1,4 @@
-using Bastion.BuildingBlocks.Application;
+using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Application.Ejercicios;
@@ -20,10 +20,11 @@ public interface ICrearSerie
 
 /// <inheritdoc cref="ICrearSerie"/>
 internal sealed class CrearSerie(
+    IUsuarioActual usuarioActual,
     IRepositorioDeSeries series,
     IRepositorioDeEjercicios ejercicios,
     IRepositorioDeEmpresas empresas,
-    IUnidadTrabajo unidadTrabajo) : ICrearSerie
+    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearSerie
 {
     public async Task<Resultado<SerieDto>> EjecutarAsync(
         CrearSerieDto peticion,
@@ -31,12 +32,15 @@ internal sealed class CrearSerie(
     {
         ArgumentNullException.ThrowIfNull(peticion);
 
-        var errores = new ErroresPorCampo();
+        // La empresa sale del CLAIM y no de la petición (R8). `CrearSerieDto` no tiene el campo.
+        Guid empresaId = usuarioActual.EmpresaId;
 
-        if (!await empresas.ExisteAsync(peticion.EmpresaId, cancelacion).ConfigureAwait(false))
+        if (!await empresas.EstaActivaAsync(empresaId, cancelacion).ConfigureAwait(false))
         {
-            errores.Agregar("empresaId", "No hay ninguna empresa con ese identificador.");
+            return Resultado.Fallo<SerieDto>(ErroresDeEmpresa.NoOperativa());
         }
+
+        var errores = new ErroresPorCampo();
 
         Ejercicio? ejercicio = await ejercicios.ObtenerAsync(peticion.EjercicioId, cancelacion)
             .ConfigureAwait(false);
@@ -45,12 +49,14 @@ internal sealed class CrearSerie(
         {
             errores.Agregar("ejercicioId", "No hay ningún ejercicio con ese identificador.");
         }
-        else if (ejercicio.EmpresaId != peticion.EmpresaId)
+        else if (ejercicio.EmpresaId != empresaId)
         {
-            // Sin esta comprobación se podría colgar una serie de la empresa A del ejercicio de
-            // la empresa B: las dos claves ajenas serían válidas por separado y la fila quedaría
-            // apuntando a dos contabilidades distintas a la vez.
-            errores.Agregar("ejercicioId", "Ese ejercicio es de otra empresa.");
+            // Sigue haciendo falta con la empresa saliendo del claim, y aquí se ve por qué: el
+            // ejercicio SÍ viene en la petición, así que un cliente puede nombrar el de otra
+            // empresa. Sin esta comprobación, la serie quedaría colgando de dos contabilidades a
+            // la vez. Y el mensaje no dice de cuál es: eso confirmaría que ese identificador
+            // existe en otra empresa, que es justo lo que no se le cuenta a quien no pertenece.
+            errores.Agregar("ejercicioId", "No hay ningún ejercicio con ese identificador.");
         }
 
         if (!Enumerados.Intentar(peticion.TipoDeDocumento, out TipoDeDocumento tipo))
@@ -70,7 +76,7 @@ internal sealed class CrearSerie(
         // luego contra el índice único, que es un 500 en lugar de un 409.
         string codigo = Serie.NormalizarCodigo(peticion.Codigo);
 
-        if (await series.ExisteElCodigoAsync(peticion.EmpresaId, peticion.EjercicioId, codigo, cancelacion)
+        if (await series.ExisteElCodigoAsync(empresaId, peticion.EjercicioId, codigo, cancelacion)
                 .ConfigureAwait(false))
         {
             return Resultado.Fallo<SerieDto>(ErrorDeOperacion.Conflicto(
@@ -79,7 +85,7 @@ internal sealed class CrearSerie(
         }
 
         var serie = Serie.Crear(
-            peticion.EmpresaId, peticion.EjercicioId, tipo, peticion.Codigo, peticion.Formato);
+            empresaId, peticion.EjercicioId, tipo, peticion.Codigo, peticion.Formato);
 
         series.Agregar(serie);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

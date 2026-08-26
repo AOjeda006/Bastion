@@ -11,12 +11,20 @@
       "bastion.buildingblocks.domain": {
         "type": "Project"
       },
+      "bastion.buildingblocks.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Npgsql": "[10.0.3, )"
+        }
+      },
       "bastion.identidad.application": {
         "type": "Project",
         "dependencies": {
           "Bastion.BuildingBlocks.Application": "[1.0.0, )",
           "Bastion.Identidad.Contracts": "[1.0.0, )",
-          "Bastion.Identidad.Domain": "[1.0.0, )"
+          "Bastion.Identidad.Domain": "[1.0.0, )",
+          "Bastion.Organizacion.Contracts": "[1.0.0, )"
         }
       },
       "bastion.identidad.contracts": {
@@ -27,6 +35,15 @@
         "dependencies": {
           "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
         }
+      },
+      "bastion.organizacion.contracts": {
+        "type": "Project"
+      },
+      "Npgsql": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "7nb5YzXuvWWJxB0J8DiyL3we+X4FOctZrt0fIBnucOIaIevFEEwGQVZKtiu9olXdlNAK1eNgqSral6r/jlhI4w=="
       }
     }
   }

@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -23,7 +22,7 @@ public interface ICrearEmpresa
 /// memoria: quién atiende cada caso de uso lo dice el compilador, no una tabla de despacho que
 /// solo falla en ejecución.
 /// </remarks>
-internal sealed class CrearEmpresa(IRepositorioDeEmpresas empresas, IUnidadTrabajo unidadTrabajo) : ICrearEmpresa
+internal sealed class CrearEmpresa(IRepositorioDeEmpresas empresas, IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearEmpresa
 {
     public async Task<Resultado<EmpresaDto>> EjecutarAsync(
         CrearEmpresaDto peticion,

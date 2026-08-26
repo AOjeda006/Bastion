@@ -25,10 +25,11 @@ public sealed record AlmacenDto(
 /// <summary>Lo que hace falta para dar de alta un almacén.</summary>
 public sealed record CrearAlmacenDto
 {
-    /// <summary>Empresa a la que pertenece el almacén.</summary>
-    [Required(ErrorMessage = "La empresa es obligatoria.")]
-    public Guid EmpresaId { get; init; }
-
+    // No hay campo `EmpresaId`, y su AUSENCIA es la regla (R8). La empresa sale del <i>claim</i>
+    // del token y no hay ningún camino que la lea de la petición, así que no puede existir un caso
+    // de uso que se olvide de comprobarla: el dato no llega por ahí. Con el campo puesto, el
+    // permiso «crear en mi empresa» sería en realidad «crear en cualquiera», y la comprobación que
+    // lo evitara habría que acordarse de escribirla en cada caso de uso, para siempre.
     /// <summary>Código del almacén. Se normaliza a mayúsculas.</summary>
     [Required(ErrorMessage = "El código es obligatorio.")]
     [StringLength(20, ErrorMessage = "El código no puede pasar de {1} caracteres.")]

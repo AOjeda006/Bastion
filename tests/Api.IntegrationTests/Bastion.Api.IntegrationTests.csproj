@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests de integración DEL SISTEMA ENTERO (§13): el host real, con su Program.cs, su
+    contenedor de dependencias y su autorización, contra un PostgreSQL de verdad levantado con
+    Testcontainers y con las migraciones de TODOS los módulos aplicadas.
+
+    Por qué existe este proyecto y no van estos tests en el de cada módulo: desde el ítem 0.5
+    ninguna petición HTTP es de un solo módulo. Para llamar a /api/v1/organizacion/empresas hace
+    falta un token que emite Identidad, así que un test de contrato de Organización necesita las
+    dos bases y las dos capas. Aquí es donde eso es legítimo; en el proyecto de un módulo no.
+
+    Y la base con LOS DOS esquemas es justo lo que hace falta para probar que el historial de
+    migraciones por módulo funciona: con un solo esquema, la comprobación pasaría igual estando
+    mal (ADR-0007, punto 6).
+
+    Todo lo de aquí lleva `[Trait("Category", "Integracion")]`: es lo que separa la batería
+    rápida (sin Docker) de la completa en `AGENTS.md` y en los dos pasos de la CI.
+  -->
+
+  <ItemGroup Label="Sujeto de prueba">
+    <ProjectReference Include="../../src/Api/Bastion.Api.csproj" />
+    <!--
+      Las dos Infrastructure, y solo para MIGRAR: el fixture abre cada DbContext y aplica sus
+      migraciones antes de que el host arranque. Es lo mismo que hará el paso de despliegue.
+    -->
+    <ProjectReference Include="../../src/Modules/Identidad/Bastion.Identidad.Infrastructure/Bastion.Identidad.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Bastion.Organizacion.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Consulta directa al catálogo">
+    <!--
+      Npgsql explícito y no por transitividad de la API: los tests de esquema abren su propia
+      conexión y preguntan a information_schema, y un paquete que se usa se declara. PostgreSQL
+      License (estilo BSD).
+    -->
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
+  <ItemGroup Label="Marco de pruebas">
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

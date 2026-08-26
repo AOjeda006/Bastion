@@ -1,4 +1,6 @@
+using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.Organizacion.Application.Empresas;
+using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Endpoints.Comun;
@@ -20,12 +22,14 @@ public sealed class EmpresasController(
     IObtenerEmpresa obtener,
     IListarEmpresas listar,
     IModificarEmpresa modificar,
-    IBloquearEmpresa bloquear) : ControladorDeOrganizacion
+    IBloquearEmpresa bloquear,
+    IDesbloquearEmpresa desbloquear) : ControladorDeOrganizacion
 {
     /// <summary>Devuelve una página de empresas.</summary>
     /// <param name="consulta">Paginación pedida (<c>page</c> y <c>size</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
+    [ExigePermiso(PermisosDeOrganizacion.EmpresaVer)]
     [ProducesResponseType(typeof(PaginaDe<EmpresaDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
         [FromQuery] ConsultaPaginada consulta,
@@ -40,6 +44,7 @@ public sealed class EmpresasController(
     /// <param name="id">Identificador de la empresa.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.EmpresaVer)]
     [ProducesResponseType(typeof(EmpresaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Obtener(Guid id, CancellationToken cancelacion) =>
@@ -49,6 +54,7 @@ public sealed class EmpresasController(
     /// <param name="peticion">Datos de la empresa.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost]
+    [ExigePermiso(PermisosDeOrganizacion.EmpresaCrear)]
     [ProducesResponseType(typeof(EmpresaDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -65,6 +71,7 @@ public sealed class EmpresasController(
     /// <param name="peticion">Los datos nuevos.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPut("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.EmpresaModificar)]
     [ProducesResponseType(typeof(EmpresaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -86,8 +93,31 @@ public sealed class EmpresasController(
     /// <param name="id">Identificador de la empresa.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpDelete("{id:guid}")]
+    [ExigePermiso(PermisosDeOrganizacion.EmpresaBloquear)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Bloquear(Guid id, CancellationToken cancelacion) =>
         ResponderSinContenido(await bloquear.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+
+    /// <summary>Devuelve una empresa bloqueada a la actividad.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>No existe el <c>DELETE</c> inverso, así que es un <c>POST</c> a un sub-recurso.</b> El
+    /// estado de la ficha no es un recurso que se sustituya con <c>PUT</c>: es el desenlace de una
+    /// operación con nombre propio, y por eso tiene permiso propio.
+    /// </para>
+    /// <para>
+    /// En el 0.4 esta operación existía en el dominio y no tenía puerta HTTP, porque abrirla sin
+    /// autorización habría dejado a cualquiera revirtiendo bloqueos del art. 32. Con el permiso
+    /// detrás, ese motivo desaparece.
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Identificador de la empresa.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("{id:guid}/desbloqueo")]
+    [ExigePermiso(PermisosDeOrganizacion.EmpresaDesbloquear)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Desbloquear(Guid id, CancellationToken cancelacion) =>
+        ResponderSinContenido(await desbloquear.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
 }

@@ -30,6 +30,16 @@ public interface IRepositorioDeEmpresas
     /// <summary>Indica si existe la empresa, sin traérsela entera.</summary>
     Task<bool> ExisteAsync(Guid id, CancellationToken cancelacion);
 
+    /// <summary>Si la empresa existe Y está activa.</summary>
+    /// <remarks>
+    /// Es lo que se pregunta de la empresa del <i>claim</i>, y no basta con que exista: una empresa
+    /// bloqueada por el art. 32 no puede recibir altas. Con <c>ExisteAsync</c> a secas se le
+    /// seguirían colgando almacenes y ejercicios a una ficha que se dio de baja.
+    /// </remarks>
+    /// <param name="id">Identificador de la empresa.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<bool> EstaActivaAsync(Guid id, CancellationToken cancelacion);
+
     /// <summary>Una página de empresas, con el total.</summary>
     Task<PaginaDe<Empresa>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion);
 
