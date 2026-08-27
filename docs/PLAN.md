@@ -323,7 +323,7 @@ anotan para no volver a discutirlas.
 
 | Módulo (§5) | Esquema | Fase | Estado |
 |---|---|---|---|
-| Identidad | `identidad` | 0 | **0.5**, en curso |
+| Identidad | `identidad` | 0 | creado en el 0.5 |
 | Organización | `organizacion` | 0 | creado en el 0.4 |
 | Auditoría | `auditoria` | 0 | 0.7 |
 | Terceros | `terceros` | 1 | — |
