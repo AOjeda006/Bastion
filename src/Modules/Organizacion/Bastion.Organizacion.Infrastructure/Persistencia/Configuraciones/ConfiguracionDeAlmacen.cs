@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Domain.Empresas;
 using Microsoft.EntityFrameworkCore;
@@ -12,25 +13,31 @@ internal sealed class ConfiguracionDeAlmacen : IEntityTypeConfiguration<Almacen>
         ArgumentNullException.ThrowIfNull(almacen);
 
         almacen.ToTable("almacenes");
+
+        // Maestro: donde esta el stock. Su alta, su codigo y su bloqueo dejan traza.
+        almacen.SeAudita();
         almacen.HasKey(fila => fila.Id);
 
-        almacen.Property(fila => fila.EmpresaId).IsRequired();
+        almacen.Property(fila => fila.EmpresaId).IsRequired().SeAudita();
 
         almacen.Property(fila => fila.Codigo)
             .HasMaxLength(Almacen.LongitudMaximaDeCodigo)
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
-        almacen.Property(fila => fila.Nombre).IsRequired();
+        almacen.Property(fila => fila.Nombre).IsRequired().SeAudita();
 
         almacen.Property(fila => fila.Tipo)
             .HasConversion<string>()
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
         almacen.Property(fila => fila.Estado)
             .HasConversion<string>()
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
-        almacen.Property(fila => fila.BloqueadoEn);
+        almacen.Property(fila => fila.BloqueadoEn).SeAudita();
 
         // Dirección OPCIONAL: un almacén virtual o de tránsito no está en ningún sitio, y
         // exigirle una dirección obligaría a inventarla. Las seis columnas quedan anulables.

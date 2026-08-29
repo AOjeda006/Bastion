@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Identidad.Domain.Roles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -11,18 +12,22 @@ internal sealed class ConfiguracionDeRol : IEntityTypeConfiguration<Rol>
         ArgumentNullException.ThrowIfNull(rol);
 
         rol.ToTable("roles");
+
+        // Un rol es un juego de poderes. Cambiarlo cambia lo que puede hacer todo el que lo tenga.
+        rol.SeAudita();
         rol.HasKey(fila => fila.Id);
 
         rol.Property(fila => fila.Codigo)
             .HasMaxLength(Rol.LongitudDelCodigo)
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
         // El código es contrato con la semilla: `administrador` tiene que ser uno y solo uno,
         // porque es por donde la semilla vuelve a encontrarlo.
         rol.HasIndex(fila => fila.Codigo).IsUnique();
 
-        rol.Property(fila => fila.Nombre).IsRequired();
-        rol.Property(fila => fila.EsDelSistema).IsRequired();
+        rol.Property(fila => fila.Nombre).IsRequired().SeAudita();
+        rol.Property(fila => fila.EsDelSistema).IsRequired().SeAudita();
 
         rol.Metadata
             .FindNavigation(nameof(Rol.Permisos))!
@@ -42,6 +47,11 @@ internal sealed class ConfiguracionDePermisoDeRol : IEntityTypeConfiguration<Per
         ArgumentNullException.ThrowIfNull(permiso);
 
         permiso.ToTable("permisos_de_rol");
+
+        // Conceder o retirar un permiso a un rol es EL cambio que hay que poder reconstruir. No
+        // tiene ninguna propiedad que clasificar: sus dos columnas son la clave, o sea, la fila de
+        // la que se habla. El alta y la baja de la fila SON el cambio.
+        permiso.SeAudita();
 
         // Clave compuesta: un rol no puede conceder dos veces el mismo permiso.
         permiso.HasKey(fila => new { fila.RolId, fila.Permiso });

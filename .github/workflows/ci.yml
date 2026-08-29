@@ -185,7 +185,7 @@ jobs:
             --results-directory artifacts/test-results/dominio
           resultado=$?
           set -e
-          # El suelo no es el número de hoy (332): es el número por debajo del cual se ha
+          # El suelo no es el número de hoy (340): es el número por debajo del cual se ha
           # perdido algo gordo. El ensamblado más pequeño de este paso aporta 58 casos, así
           # que perder cualquiera de los cuatro deja el recuento por debajo de 300 y el paso
           # falla. Un suelo exacto se rompería al borrar un test de más; uno de 1 no protege.
@@ -228,7 +228,7 @@ jobs:
             --results-directory artifacts/test-results/integracion
           resultado=$?
           set -e
-          # Mismo criterio: hoy son 122 (94 de la API + 28 de Organización). Perder el bloque
+          # Mismo criterio: hoy son 142 (114 de la API + 28 de Organización). Perder el bloque
           # de la API deja 28, muy por debajo del suelo, y el paso falla en vez de dar verde
           # sobre la mitad de la suite.
           bash scripts/ci/recuento-de-tests.sh \

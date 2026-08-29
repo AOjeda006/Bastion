@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Identidad.Domain.Sesiones;
 using Bastion.Identidad.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,15 @@ internal sealed class ConfiguracionDeTokenDeRefresco : IEntityTypeConfiguration<
         ArgumentNullException.ThrowIfNull(token);
 
         token.ToTable("tokens_de_refresco");
+
+        // El «no» de la lista, y por dos motivos que se suman. Uno: rota constantemente —una fila
+        // por acceso y otra por cada renovacion, cada quince minutos—, asi que auditarla llenaria
+        // de ruido una tabla que por diseño no se puede limpiar. Dos: lleva `Hash`, que es un
+        // resumen de credencial. Lo que de esta tabla interesa a una auditoria es «quien entro y
+        // cuando», y eso ya deja traza en `Usuario.UltimoAccesoEn`.
+        token.NoSeAudita(
+            "emision de refresco: rota cada quince minutos y lleva un resumen de credencial. " +
+            "El acceso deja traza en Usuario.UltimoAccesoEn, que es el dato que interesa.");
         token.HasKey(fila => fila.Id);
 
         token.Property(fila => fila.UsuarioId).IsRequired();

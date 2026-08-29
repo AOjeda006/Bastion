@@ -92,6 +92,7 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
     {
         ["src/Api/Arranque/SemillaDeArranque.cs"] = 1,
         ["src/Modules/Identidad/Bastion.Identidad.Application/Sesiones/CambiarEmpresaActiva.cs"] = 1,
+        ["src/Modules/Identidad/Bastion.Identidad.Application/Sesiones/CerrarSesion.cs"] = 1,
         ["src/Modules/Identidad/Bastion.Identidad.Application/Sesiones/IniciarSesion.cs"] = 1,
         ["src/Modules/Identidad/Bastion.Identidad.Application/Sesiones/RenovarSesion.cs"] = 1,
         ["src/Modules/Identidad/Bastion.Identidad.Application/Usuarios/CrearUsuario.cs"] = 1,
@@ -99,10 +100,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         ["src/Modules/Organizacion/Bastion.Organizacion.Application/Empresas/CrearEmpresa.cs"] = 1,
     };
 
-    // Los dos únicos sitios donde se define un filtro global. Repartirlos por otros ficheros no
-    // rompería nada; solo haría imposible contestar «qué filtra y qué no» leyendo un sitio.
+    // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de
+    // módulo, uno por módulo con persistencia. Repartirlos por otros ficheros no rompería nada;
+    // solo haría imposible contestar «qué filtra y qué no» leyendo un sitio.
     private static readonly string[] s_dondeSeDefinenLosFiltros =
     [
+        "src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Persistencia/AuditoriaDbContext.cs",
         "src/Modules/Identidad/Bastion.Identidad.Infrastructure/Persistencia/IdentidadDbContext.cs",
         "src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/OrganizacionDbContext.cs",
     ];

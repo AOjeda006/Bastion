@@ -4,7 +4,9 @@
 
 using System.Text.Json.Serialization;
 using Bastion.Api.Arranque;
+using Bastion.Auditoria.Infrastructure;
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
@@ -136,6 +138,12 @@ else
 // consulta sale de aqui, del claim, y de ningun otro sitio.
 builder.Services.AgregarInquilinato();
 
+// R11. Tambien delante: registra el interceptor que cada modulo con persistencia engancha a su
+// DbContext en la linea siguiente. Enchufarlo es cosa de cada modulo, a la vista en su
+// `AddDbContext`; lo que se registra aqui es el servicio, una sola vez.
+builder.Services.AgregarAuditoria();
+
+builder.Services.AgregarModuloDeAuditoria(cadenaDeConexion);
 builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion);
 builder.Services.AgregarModuloDeIdentidad(cadenaDeConexion, opcionesDeJwt);
 

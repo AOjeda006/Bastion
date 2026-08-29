@@ -1,4 +1,5 @@
 using Bastion.Api.FunctionalTests.Salud;
+using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
@@ -60,6 +61,10 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
     {
         ["Empresa"] = "es la raíz del inquilinato: se filtra por su propia clave",
         ["Usuario"] = "es global, y la consulta se acota por la pertenencia, que es lo que dice quién comparte empresa",
+        ["RegistroDeAuditoria"] =
+            "su empresa es ANULABLE —hay escrituras legítimas sin inquilino, y llevan el motivo en " +
+            "su columna—, así que no puede declarar IDeInquilino, que la exige. Filtra igual que " +
+            "todas: una traza dice qué NIF tenía antes una empresa y quién lo cambió (ADR-0012)",
     };
 
     private readonly ApiSinDependencias _api = new();
@@ -135,6 +140,7 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
         [
             .. Entidades(alcance.ServiceProvider.GetRequiredService<OrganizacionDbContext>()),
             .. Entidades(alcance.ServiceProvider.GetRequiredService<IdentidadDbContext>()),
+            .. Entidades(alcance.ServiceProvider.GetRequiredService<AuditoriaDbContext>()),
         ];
     }
 

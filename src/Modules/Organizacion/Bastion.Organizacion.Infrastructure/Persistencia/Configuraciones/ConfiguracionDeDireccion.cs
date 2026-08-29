@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Direcciones;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Bastion.Organizacion.Infrastructure.Persistencia.Configuraciones;
@@ -21,24 +22,30 @@ internal static class ConfiguracionDeDireccion
 
         direccion.Property(campo => campo.Calle)
             .HasMaxLength(Direccion.LongitudMaximaDeCalle)
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
         direccion.Property(campo => campo.Numero)
-            .HasMaxLength(Direccion.LongitudMaximaDeNumero);
+            .HasMaxLength(Direccion.LongitudMaximaDeNumero)
+            .SeAudita();
 
         direccion.Property(campo => campo.CodigoPostal)
             .HasMaxLength(Direccion.LongitudMaximaDeCodigoPostal)
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
         direccion.Property(campo => campo.Poblacion)
             .HasMaxLength(Direccion.LongitudMaximaDePoblacion)
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
         direccion.Property(campo => campo.Subdivision)
-            .HasMaxLength(Direccion.LongitudMaximaDeSubdivision);
+            .HasMaxLength(Direccion.LongitudMaximaDeSubdivision)
+            .SeAudita();
 
         direccion.Property(campo => campo.Pais)
             .HasMaxLength(Direccion.LongitudDelPais)
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
     }
 }

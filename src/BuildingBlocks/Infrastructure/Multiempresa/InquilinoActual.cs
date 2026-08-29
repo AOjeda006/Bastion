@@ -37,13 +37,16 @@ public sealed partial class InquilinoActual(
         : Leer() ?? throw new FaltaLaEmpresaActivaException();
 
     /// <inheritdoc/>
+    public MotivoSinInquilino? MotivoDelAmbito => s_ambito.Value?.Motivo;
+
+    /// <inheritdoc/>
     public IDisposable SinInquilino(MotivoSinInquilino motivo)
     {
         // Se anota al abrirlo, no al cerrarlo: si lo de dentro revienta, el registro ya dice bajo
         // qué ámbito estaba corriendo, que es justo lo que hará falta para entenderlo.
         Anotar(registro, motivo);
 
-        Ambito ambito = new(s_ambito.Value);
+        Ambito ambito = new(motivo, s_ambito.Value);
         s_ambito.Value = ambito;
 
         return ambito;
@@ -65,9 +68,14 @@ public sealed partial class InquilinoActual(
     // Al cerrarse recupera el de fuera en vez de dejar el campo en nulo: anidar dos ámbitos es
     // normal —la semilla abre el suyo y por dentro llama a una comprobación de unicidad que abre
     // el suyo— y con un nulo a pelo el de fuera se cerraría también, en silencio y a mitad.
-    private sealed class Ambito(Ambito? anterior) : IDisposable
+    private sealed class Ambito(MotivoSinInquilino motivo, Ambito? anterior) : IDisposable
     {
         private bool _cerrado;
+
+        // El motivo se guarda, no solo se anota: la fila de auditoría escrita bajo este ámbito lo
+        // lleva en su propia columna, que es lo que distingue «no tiene empresa porque la sembró
+        // el arranque» de «no tiene empresa y nadie sabe por qué».
+        public MotivoSinInquilino Motivo => motivo;
 
         public void Dispose()
         {

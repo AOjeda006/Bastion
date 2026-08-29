@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Identificacion;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Identidad.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -12,6 +13,10 @@ internal sealed class ConfiguracionDeUsuario : IEntityTypeConfiguration<Usuario>
         ArgumentNullException.ThrowIfNull(usuario);
 
         usuario.ToTable("usuarios");
+
+        // Maestro de personas, y ademas el sujeto del §11: quien entro, quien fue bloqueado y
+        // quien cambio el correo de quien.
+        usuario.SeAudita();
         usuario.HasKey(fila => fila.Id);
 
         // 254 es el tope real de una dirección de correo (RFC 5321). Aquí el máximo no es una
@@ -20,32 +25,47 @@ internal sealed class ConfiguracionDeUsuario : IEntityTypeConfiguration<Usuario>
         usuario.Property(fila => fila.Correo)
             .HasConversion(correo => correo.Valor, valor => Correo.De(valor))
             .HasMaxLength(Correo.Longitud)
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
         // Una cuenta por correo. Es con lo que se inicia sesión: dos filas con el mismo correo
         // harían que el login dependiera de cuál devuelva primero la consulta.
         usuario.HasIndex(fila => fila.Correo).IsUnique();
 
-        usuario.Property(fila => fila.Nombre).IsRequired();
+        usuario.Property(fila => fila.Nombre).IsRequired().SeAudita();
 
         // El resumen, nunca la contraseña. Longitud sin tope: el formato del `PasswordHasher`
         // crece cuando sube la versión del algoritmo, y un `varchar` corto convertiría esa subida
         // en filas truncadas, o sea, en cuentas que dejan de poder entrar.
-        usuario.Property(fila => fila.HashDeContrasena).IsRequired();
+        //
+        // Y SECRETA. Una tabla que registra el valor viejo y el nuevo de cada propiedad, y que por
+        // diseño no se puede limpiar, seria —sin que nadie lo decidiera— el historial completo de
+        // resumenes de contraseña de todo el mundo. No es que «no interese auditarla»: es que no
+        // puede acabar ahi por ningun camino, y hay un test que lo comprueba por el VALOR.
+        usuario.Property(fila => fila.HashDeContrasena)
+            .IsRequired()
+            .EsSecreta("resumen de credencial: el historial de resumenes es un boton de ataque");
 
         usuario.Property(fila => fila.Estado)
             .HasConversion<string>()
-            .IsRequired();
+            .IsRequired()
+            .SeAudita();
 
         // Los cuatro son INSTANTES, no fechas de negocio: `timestamptz`. De `BloqueadoEn` arranca
         // el plazo del art. 32 de la LOPDGDD, y `RechazadoHasta` se compara contra el reloj para
         // decidir si se admite un intento — una fecha sin zona haría que esa comparación
         // dependiera de dónde esté el servidor.
-        usuario.Property(fila => fila.BloqueadoEn);
-        usuario.Property(fila => fila.CreadoEn).IsRequired();
-        usuario.Property(fila => fila.UltimoAccesoEn);
-        usuario.Property(fila => fila.RechazadoHasta);
-        usuario.Property(fila => fila.IntentosFallidos).IsRequired();
+        usuario.Property(fila => fila.BloqueadoEn).SeAudita();
+        usuario.Property(fila => fila.CreadoEn).IsRequired().SeAudita();
+
+        // Los tres de abajo son ACCESOS, no cambios de maestro, y el §11 los pide igual. La
+        // consecuencia se dice entera: cada entrada correcta y cada intento fallido escriben una
+        // fila de traza, asi que esta tabla crece con el uso y no solo con la administracion. Es
+        // lo que se quiere —«quien entro» es la mitad de una auditoria— y es lo que hay que tener
+        // presente cuando en el 0.9, o mas tarde, se hable de retencion.
+        usuario.Property(fila => fila.UltimoAccesoEn).SeAudita();
+        usuario.Property(fila => fila.RechazadoHasta).SeAudita();
+        usuario.Property(fila => fila.IntentosFallidos).IsRequired().SeAudita();
 
         // La colección se mapea por su CAMPO, no por la propiedad: la propiedad es de solo
         // lectura a propósito, para que nadie añada pertenencias esquivando `Conceder`.

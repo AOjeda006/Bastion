@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Domain.Ejercicios;
@@ -91,6 +92,12 @@ public sealed class OrganizacionDbContext(
         modelBuilder.HasDefaultSchema(Esquema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(OrganizacionDbContext).Assembly);
 
+        // La tabla de traza, apuntando al esquema `auditoria` y marcada para NO migrarse desde
+        // aquí: la crea el módulo Auditoría, que es su dueño. Se mapea en este contexto porque es
+        // lo que permite que la traza se añada en el MISMO `SaveChanges` que el cambio, sin
+        // transacción explícita en ningún caso de uso (ADR-0012).
+        ConfiguracionDeAuditoria.Mapear(modelBuilder, migra: false);
+
         // R8, una línea por entidad y a la vista. `EmpresaDelFiltro` es una propiedad de la
         // instancia: EF Core la lee en CADA consulta, no al construir el modelo. Y `== null` no es
         // una válvula de escape silenciosa: la propiedad solo devuelve nulo dentro de un ámbito sin
@@ -110,5 +117,11 @@ public sealed class OrganizacionDbContext(
         // fuera —que es real, y es el arranque en frío del 0.5— pasa por un ámbito con su motivo.
         modelBuilder.Entity<Empresa>().HasQueryFilter(
             empresa => EmpresaDelFiltro == null || empresa.Id == EmpresaDelFiltro);
+
+        // Una traza es un dato: dice qué NIF tenía antes una empresa y quién lo cambió. Filtra
+        // igual que todo lo demás, y por su propia columna, que es anulable — las filas sin empresa
+        // (la semilla, el acceso) no son de nadie y desde dentro de una empresa no se ven.
+        modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
+            registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
     }
 }

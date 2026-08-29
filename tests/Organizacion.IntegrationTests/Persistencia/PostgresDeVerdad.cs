@@ -85,6 +85,8 @@ internal sealed class InquilinoQueNadieDebeConsultar : IInquilinoActual
         "Este proyecto solo mira el esquema. Si has llegado aquí es que has escrito una consulta " +
         "a una entidad del módulo, y esa se prueba en Api.IntegrationTests, con sesión de verdad.");
 
+    public MotivoSinInquilino? MotivoDelAmbito => null;
+
     public IDisposable SinInquilino(MotivoSinInquilino motivo) => throw new NotSupportedException(
         "Abrir un ámbito sin inquilino aquí no significa nada: no hay ninguno que suspender.");
 }

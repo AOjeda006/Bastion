@@ -5,11 +5,42 @@
     migraciones (§14), las configuraciones de EF Core, los repositorios y los adaptadores
     externos. Implementa los puertos que declara Application; la dependencia sigue
     apuntando hacia dentro.
+
+    La ENTIDAD de traza no vive aquí, sino en BuildingBlocks.Infrastructure (§12), y no por
+    comodidad: la escriben los contextos de todos los módulos desde su propio SaveChanges, y un
+    módulo no puede ver la Infrastructure de otro (§4, regla 1). Este proyecto es el dueño de la
+    TABLA —la crea, la migra y la consultará cuando haya qué consultar—, no del tipo.
   -->
 
   <ItemGroup>
     <ProjectReference Include="../Bastion.Auditoria.Application/Bastion.Auditoria.Application.csproj" />
     <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!--
+    Las migraciones de este módulo viven en `db/migraciones/Auditoria` (§14): fuera del
+    proyecto, para que todas las del sistema se lean juntas y en orden. Fuera del proyecto
+    quiere decir que el glob por defecto del SDK NO las compila, y una migración que no está
+    en el ensamblado no existe para EF: `Migrate()` aplicaría cero migraciones y crearía cero
+    tablas, sin error y sin aviso. De ahí esta inclusión explícita.
+
+    `LinkBase` solo afecta a cómo las agrupa el IDE; lo que importa es el `Include`.
+  -->
+  <ItemGroup Label="Migraciones">
+    <Compile Include="../../../../db/migraciones/Auditoria/**/*.cs" LinkBase="Migrations" />
+  </ItemGroup>
+
+  <!--
+    EF Core y su proveedor de PostgreSQL. `Design` va aquí, y no en el host, porque es el
+    proyecto donde `dotnet ef migrations add` genera y compila: sin él, la herramienta no
+    encuentra el ensamblado de migraciones del módulo.
+  -->
+  <ItemGroup Label="Persistencia">
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
 </Project>

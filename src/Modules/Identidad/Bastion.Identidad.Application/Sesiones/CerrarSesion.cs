@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Domain.Sesiones;
 
@@ -29,6 +30,7 @@ public interface ICerrarSesion
 internal sealed class CerrarSesion(
     IRepositorioDeTokensDeRefresco tokens,
     IEmisorDeTokens emisor,
+    IInquilinoActual inquilino,
     IUnidadTrabajoDeIdentidad unidadTrabajo,
     TimeProvider reloj) : ICerrarSesion
 {
@@ -38,6 +40,13 @@ internal sealed class CerrarSesion(
         {
             return Resultado.Correcto();
         }
+
+        // El mismo ámbito que abren `IniciarSesion` y `RenovarSesion`, y por el mismo motivo:
+        // cerrar sesión es una operación de autenticación, y quien la pide puede no tener empresa
+        // activa ninguna —la cookie basta, no hace falta token de acceso—. Faltaba aquí desde el
+        // 0.5 y no se notaba porque nada preguntaba; desde el 0.7 sí pregunta alguien: la traza de
+        // cada cambio necesita saber en nombre de qué empresa se escribe, o de por qué no hay.
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AutenticacionYSesion);
 
         TokenDeRefresco? presentada = await tokens
             .ObtenerPorHashAsync(emisor.HashearRefresco(refrescoPresentado), cancelacion)

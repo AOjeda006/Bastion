@@ -18,6 +18,19 @@
       sigue siendo la Infrastructure de cada modulo: este proyecto no sabe contra que base corre.
     -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <!--
+      Y el paquete relacional, desde el 0.7. Aqui se mapea la tabla de traza (§12 pone la
+      auditoria en este proyecto), y mapear una TABLA es relacional por definicion: `ToTable`,
+      `HasCheckConstraint` y el tipo de columna viven ahi.
+
+      El tipo de esa columna es `jsonb`, que es la unica palabra de PostgreSQL escrita en este
+      proyecto. Esta escrita a proposito y no se esconde: la alternativa era `text`, y con `text`
+      la pregunta que justifica la forma de la tabla —que cambios tocaron esta columna— deja de
+      poder resolverse con un indice. Este proyecto ya referenciaba `Npgsql` para la comprobacion
+      de salud, asi que la frontera que de verdad se cuida no es esta: es que Domain y Application
+      no sepan de persistencia.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
   <ItemGroup>

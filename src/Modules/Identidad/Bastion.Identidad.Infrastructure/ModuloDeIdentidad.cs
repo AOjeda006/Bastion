@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Identidad.Application;
 using Bastion.Identidad.Application.Roles;
 using Bastion.Identidad.Application.Sesiones;
@@ -29,8 +30,16 @@ public static class ModuloDeIdentidad
         ArgumentNullException.ThrowIfNull(servicios);
         ArgumentNullException.ThrowIfNull(jwt);
 
-        servicios.AddDbContext<IdentidadDbContext>(
-            opciones => IdentidadDbContext.Configurar(opciones, cadenaDeConexion));
+        servicios.AddDbContext<IdentidadDbContext>((alcance, opciones) =>
+        {
+            IdentidadDbContext.Configurar(opciones, cadenaDeConexion);
+
+            // La traza de cada cambio, DENTRO del mismo SaveChanges que lo produce (ADR-0012). Sin
+            // esta línea el módulo sigue funcionando y sigue pasando sus tests de negocio: lo único
+            // que cambia es que deja de haber rastro, y eso no se nota mirando la pantalla. Lo nota
+            // `UnCambioEnUnMaestroDejaSuRastroTests`.
+            opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeAuditoria>());
+        });
 
         servicios.AddScoped<IUnidadTrabajoDeIdentidad, UnidadDeTrabajoDeIdentidad>();
 

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Identidad.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -11,9 +12,13 @@ internal sealed class ConfiguracionDeMembresia : IEntityTypeConfiguration<Membre
         ArgumentNullException.ThrowIfNull(membresia);
 
         membresia.ToTable("membresias");
+
+        // Quien pertenece a que empresa. Es la frontera del inquilinato del 0.6 escrita en filas:
+        // un alta aqui da acceso a los datos de una empresa entera.
+        membresia.SeAudita();
         membresia.HasKey(fila => fila.Id);
 
-        membresia.Property(fila => fila.UsuarioId).IsRequired();
+        membresia.Property(fila => fila.UsuarioId).IsRequired().SeAudita();
 
         // `empresa_id` es un Guid A SECAS, sin `HasOne(...).HasForeignKey(...)`, y eso NO es un
         // descuido. La empresa vive en el esquema `organizacion`: PostgreSQL dejaría poner la
@@ -24,7 +29,7 @@ internal sealed class ConfiguracionDeMembresia : IEntityTypeConfiguration<Membre
         // Lo que sustituye a la integridad referencial es una comprobación explícita contra
         // `IConsultaDeEmpresas` en el caso de uso que escribe esta fila. No es gratis; es el
         // precio de la frontera, y está pagado a la vista.
-        membresia.Property(fila => fila.EmpresaId).IsRequired();
+        membresia.Property(fila => fila.EmpresaId).IsRequired().SeAudita();
 
         // Una sola pertenencia por usuario y empresa. Dos filas darían dos juegos de roles para
         // el mismo par, y la sesión se llevaría el de la que saliera primero.
@@ -48,6 +53,10 @@ internal sealed class ConfiguracionDeRolDeMembresia : IEntityTypeConfiguration<R
         ArgumentNullException.ThrowIfNull(concedido);
 
         concedido.ToTable("roles_de_membresia");
+
+        // Que rol tiene alguien en una empresa: la otra mitad de «quien puede que». Como
+        // `PermisoDeRol`, sus dos columnas son la clave y el alta o la baja SON el cambio.
+        concedido.SeAudita();
 
         // Clave primaria COMPUESTA, que es lo que impide conceder dos veces el mismo rol. La
         // comprobación en memoria de `AsignarRol` cubre el caso normal; esta cubre el de dos

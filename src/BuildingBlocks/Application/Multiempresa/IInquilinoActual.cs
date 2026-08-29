@@ -52,6 +52,17 @@ public interface IInquilinoActual
     /// <param name="motivo">Por qué esta operación no tiene empresa. Va al registro.</param>
     /// <returns>El ámbito. Desecharlo lo cierra.</returns>
     IDisposable SinInquilino(MotivoSinInquilino motivo);
+
+    /// <summary>
+    /// El motivo del ámbito sin inquilino abierto ahora mismo, o <c>null</c> si no hay ninguno.
+    /// </summary>
+    /// <remarks>
+    /// Existe para la auditoría (0.7), y es lo que hace que una fila de traza escrita sin empresa
+    /// sea <b>representable</b> en vez de un hueco: la fila no lleva <see cref="Guid.Empty"/> ni
+    /// una empresa inventada, lleva <c>null</c> y, al lado, por qué. «La sembró el arranque» y
+    /// «alguien perdió la empresa por el camino» dejan así de parecerse.
+    /// </remarks>
+    MotivoSinInquilino? MotivoDelAmbito { get; }
 }
 
 /// <summary>

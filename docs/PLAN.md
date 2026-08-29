@@ -325,7 +325,7 @@ anotan para no volver a discutirlas.
 |---|---|---|---|
 | Identidad | `identidad` | 0 | creado en el 0.5 |
 | Organización | `organizacion` | 0 | creado en el 0.4 |
-| Auditoría | `auditoria` | 0 | 0.7 |
+| Auditoría | `auditoria` | 0 | creado en el 0.7 |
 | Terceros | `terceros` | 1 | — |
 | Catálogo | `catalogo` | 1 | — |
 | Inventario | `inventario` | 2 | — |
@@ -503,6 +503,146 @@ compara **en los dos sentidos**.
   siendo la `Infrastructure` de cada módulo). No es un paquete nuevo en la solución —la versión
   10.0.9 ya estaba en `Directory.Packages.props` desde el 0.4—, es una referencia nueva. Licencia
   **MIT**.
+
+### Tomadas por el agente de desarrollo — ítem 0.7 (2026-08-27)
+
+**Apuntada por el usuario** al abrir el ítem: la ruta 1 —la entidad de traza **mapeada en el
+contexto de cada módulo**, apuntando al esquema `auditoria` con `ToTable(nombre, "auditoria")`
+explícito— era su apuesta. Se ha montado, y sale. Lo que se temía de ella —que Organización e
+Identidad necesitaran una migración vacía cada una para un modelo que no cambia— **no ocurre**:
+`ExcludeFromMigrations` saca la tabla del comparador de modelos, y `scripts/comprobar-migraciones.sh`
+dice «el modelo coincide con ellas» para los tres módulos. La tabla la migra un solo dueño:
+`AuditoriaDbContext`.
+
+Todo lo de abajo está razonado en
+`docs/adr/adr-0012-la-traza-va-en-la-misma-transaccion-que-el-cambio.md`.
+
+- **La traza entra en el mismo `SaveChanges` que el cambio.** Un `SaveChangesInterceptor` añade las
+  filas en `SavingChanges`, al mismo `DbContext`, antes de que EF Core mande nada. **Las dos rutas
+  descartadas se escriben descartadas:** ni escribir la traza *después* de que `SaveChanges` haya
+  ido bien —cambio confirmado, traza que puede no llegar—, ni desde un contexto aparte con su propia
+  transacción —traza confirmada de un cambio que se revirtió—. «Mejor esfuerzo» no es una propiedad
+  que esta tabla pueda tener.
+- **La prueba de la atomicidad es el `xmin`.** Los dos tests obvios —un guardado que revienta no
+  deja ni fila ni traza; uno que va bien deja las dos— los pasa **también** la ruta descartada de
+  escribir después. Así que hay un tercero: PostgreSQL guarda en cada fila el número de la
+  transacción que la insertó, y el de la fila y el de su traza tienen que ser **el mismo**. Es el
+  único de los tres que la mutación «escribir después del guardado» pone en rojo.
+- **Una sola fase, y comprobado en vez de copiado.** La receta canónica es de dos porque en el caso
+  general la clave de un `INSERT` la pone la base. Aquí no la pone: lo verifica
+  `LasClavesSeConocenAntesDeGuardarTests` sobre los modelos ya construidos, en las **cinco** formas
+  que tiene un valor de venir del servidor (`DEFAULT`, columna calculada, `IDENTITY`/`serial` de
+  Npgsql, regeneración en `UPDATE`, testigo de concurrencia — el `xmin` que llega con el 0.9). Si se
+  pone rojo no se añade a una lista de excepciones: se reabre el ADR-0012.
+- **Solo añadido lo impide el motor.** Una función `plpgsql` y **dos** disparadores sobre
+  `auditoria.registros`: uno de fila `BEFORE UPDATE OR DELETE` y otro de sentencia `BEFORE TRUNCATE`
+  —los de fila no ven un `TRUNCATE`, que es justo la orden con la que se vaciaría la tabla de un
+  golpe—, los dos con `ERRCODE = 'restrict_violation'`. Un `REVOKE` no vale: los permisos los da y
+  los quita el dueño de la tabla, que es el usuario con el que se conecta la aplicación, y un
+  permiso que el interesado puede devolverse a sí mismo es una frase, no una guarda. **Y queda
+  escrito en el ADR con estas palabras:** esto no es lógica de negocio, es una restricción de
+  integridad, de la misma familia que un `CHECK`. Leer la migración no es la prueba — la prueba es
+  el `UPDATE`, el `DELETE` y el `TRUNCATE` lanzados contra PostgreSQL exigiendo el SQLSTATE.
+- **Lo que se audita es una lista de permitidos, y falla cerrado.** Cada entidad y cada propiedad
+  declara su clasificación (`Auditada`, `NoAuditada`, `Secreta`) en su configuración; lo que no está
+  clasificado no se audita, y `CadaEntidadDeclaraSuAuditoriaTests` pone en rojo cualquier
+  `SinClasificar`. Las dos propiedades que no pueden acabar ahí por ningún camino son
+  `Usuario.HashDeContrasena` y `TokenDeRefresco.Hash`. Eso es la forma; el efecto lo prueban dos
+  tests de integración, uno de ellos en su **forma fuerte**: no nombra ninguna columna, le pregunta
+  al modelo qué ha declarado secreto, lee esos valores de la base y exige que ninguno esté en
+  ninguna traza.
+- **La traza tiene su propio inquilinato, y no admite huecos.** `RegistroDeAuditoria` **no**
+  implementa `IDeInquilino` porque su empresa es **anulable**: hay escrituras legítimas sin
+  inquilino. Esas filas llevan el motivo en su propia columna, y un `CHECK` de la tabla
+  —`(empresa_id IS NULL) <> (sin_inquilino IS NULL)`— hace imposible tener una cosa sin la otra. No
+  es `Guid.Empty`: un valor por omisión rellena el hueco y lo esconde. Y filtra por empresa como
+  todo lo demás, porque una traza dice qué NIF tenía antes una empresa y quién lo cambió.
+- **La traza de una entidad global lleva la empresa DESDE LA QUE se actuó.** Un `Rol` no es de
+  ninguna empresa (ADR-0011); su traza sí, y es la que estaba activa al hacer el cambio.
+  **Consecuencia asumida y escrita:** un mismo rol acumula trazas de varias empresas y cada una solo
+  ve las suyas — nadie ve su historia completa desde dentro de una empresa. Lo contrario convertiría
+  la auditoría en el camino por el que se descubre qué otras empresas existen.
+- **Se cierra el cabo que dejó suelto el 0.6: `HasQueryFilter` no interviene en un `INSERT`.** El
+  interceptor, que ya recorre las entradas pendientes, comprueba que toda fila `IDeInquilino`
+  añadida o modificada lleve la empresa del ámbito actual, y lanza antes de confirmar nada. **Su
+  límite está escrito:** dentro de un ámbito sin inquilino no hay contra qué comparar, así que no se
+  comprueba — la semilla y la administración de pertenencias escriben filas de otra empresa a
+  propósito, y quién puede hacerlo lo decide `PuedeAdministrarAsync`.
+- **`CerrarSesion` abre ahora el ámbito `AutenticacionYSesion`**, el mismo que `IniciarSesion` y
+  `RenovarSesion`. Le faltaba desde el 0.5 y no se notaba porque nada preguntaba; desde el 0.7
+  pregunta el interceptor. Es el único cambio de comportamiento que el ítem hace sobre lo que ya
+  estaba, y la lista de aperturas del 0.6 pasa de diez a **once**.
+- **`Microsoft.EntityFrameworkCore.Relational` entra como referencia de
+  `Bastion.BuildingBlocks.Infrastructure`.** No es un paquete nuevo en la solución —la versión
+  10.0.9 ya estaba en `Directory.Packages.props`—, es una referencia nueva. Licencia **MIT**.
+- **`jsonb` es la única palabra de PostgreSQL en el bloque común, y se acepta a sabiendas.** La
+  alternativa era `text`, que no obliga a nada y pierde lo único que justifica guardar una fila por
+  entidad cambiada: poder preguntar por dentro de los valores sin leer la tabla entera. Va en un
+  `HasColumnType` de la configuración compartida, no en una consulta.
+
+**Qué es «un maestro», entidad por entidad.** El criterio del ítem dice «un maestro» sin definirlo,
+así que se define aquí sobre las diez entidades que existen hoy. Va también en el **ADR-0012**, y no
+la vigila la buena voluntad: la vigila `CadaEntidadDeclaraSuAuditoriaTests`, que recorre el modelo ya
+construido y exige que no quede nada sin clasificar.
+
+| Entidad | ¿Se audita? | Por qué |
+|---|---|---|
+| `Empresa` | **Sí** | El maestro raíz. Su NIF y su razón social salen impresos en cada factura: cambiarlos cambia un documento con validez fiscal. |
+| `Ejercicio` | **Sí** | Su apertura y su cierre son la frontera de la R14: qué se puede seguir tocando y qué no. |
+| `Serie` | **Sí** | La numeración fiscal. Tocar una serie es tocar la correlatividad de las facturas. |
+| `Almacen` | **Sí** | Dónde está el stock. Su alta, su código y su bloqueo. |
+| `Usuario` | **Sí**, sin el resumen | Alta, correo, nombre, bloqueo, último acceso. `HashDeContrasena` va marcado `Secreta` y no entra. |
+| `Rol` | **Sí** | Un rol es un juego de poderes: cambiarlo cambia lo que puede hacer todo el que lo tenga. |
+| `PermisoDeRol` | **Sí** | Conceder o retirar un permiso es *el* cambio que hay que poder reconstruir. No tiene ninguna propiedad que clasificar: sus dos columnas **son** la clave, así que el alta y la baja de la fila son el cambio entero. |
+| `Membresia` | **Sí** | Quién pertenece a qué empresa: la frontera del inquilinato del 0.6 escrita en filas. Un alta aquí da acceso a los datos de una empresa entera. |
+| `RolDeMembresia` | **Sí** | Qué rol tiene alguien en una empresa: la otra mitad de «quién puede qué». Como `PermisoDeRol`, sus dos columnas son la clave. |
+| `TokenDeRefresco` | **No** | El «no» de la lista, por dos motivos que se suman: rota cada quince minutos —una fila por acceso y otra por renovación—, así que llenaría de ruido una tabla que no se puede limpiar; y lleva `Hash`, un resumen de credencial. Lo que de ella interesa a una auditoría es «quién entró y cuándo», y eso ya deja traza en `Usuario.UltimoAccesoEn`. |
+| `RegistroDeAuditoria` | **No** | Es la traza. **El interceptor no se audita a sí mismo:** sería recursión, no información. |
+
+`Direccion` no está en la lista porque **no es una entidad**, es un objeto de valor poseído. EF Core
+la sigue como una entrada aparte del rastreador, y el interceptor la **pliega** en la fila de su
+dueño con el nombre de la navegación por delante (`Direccion.Calle`). Sustituirla entera —que es lo
+que hace un `Modificar` de dominio— aparece como dos entradas con la misma clave, una baja y un
+alta; plegadas, vuelven a ser el antes y el después de las mismas propiedades.
+
+**Y solo lo que cambió.** Una modificación lista únicamente las propiedades cuyo valor es distinto,
+comparando el valor **tal como va a la columna** y no la bandera `IsModified` del rastreador, que se
+enciende para todas las columnas de un objeto de valor sustituido aunque vuelvan a llevar lo mismo.
+Una modificación que no cambia nada auditado **no deja fila**; un alta y una baja sí la dejan aunque
+no tengan valores que enseñar.
+
+### La prueba fuerte del 0.7: seis mutaciones, y las dos que hay que contar enteras
+
+Cada una se aplicó sobre el árbol verde, se compiló, se corrió la tanda de auditoría (20 casos) y se
+revirtió comprobando que el fichero volvía byte a byte al original.
+
+| Mutación | Qué se rompió | Resultado |
+|---|---|---|
+| Quitar `AddInterceptors` del cableado de Organización | El módulo deja de escribir traza | **5 rojos**, todos de `UnCambioEnUnMaestroDejaSuRastroTests` |
+| Escribir la traza **después** de que el guardado fuera bien (capturar en `SavingChanges`, volcar en `SavedChanges` con un segundo `SaveChanges`) | La ruta no atómica que el usuario nombró | **1 rojo**, y solo uno: `La_fila_y_su_traza_las_escribe_LA_MISMA_transaccion` |
+| Escribir la traza en **otra conexión**, con su propia transacción | La otra ruta no atómica | **2 rojos**: el del `xmin` y `Un_guardado_que_revienta_no_deja_ni_la_fila_ni_su_traza` |
+| Quitar la función y los dos disparadores de la migración | La tabla deja de ser de solo añadido | **3 rojos**: `UPDATE`, `DELETE` y `TRUNCATE` |
+| Cambiar `.EsSecreta(…)` por `.SeAudita()` en `Usuario.HashDeContrasena` | El resumen de credencial entra en la traza | **2 rojos** en integración, y la tanda rápida **en verde** |
+| Quitar la guarda de escritura del interceptor | Se puede escribir en la empresa de otro | **2 rojos**, y el control positivo sigue verde |
+
+**Las dos que hay que contar enteras:**
+
+1. **Una mutación salió verde y no cuenta como superviviente: no llegó a mutar nada.** Poner
+   `AutoTransactionBehavior.Never` en el contexto —para que `SaveChanges` no abriera transacción— no
+   cambió ni un test. El motivo es que EF Core manda los dos `INSERT` en **un solo comando**, y
+   PostgreSQL envuelve un comando con varias sentencias en una transacción implícita: quitar la
+   explícita no quita la atomicidad. Es un intento de mutación fallido, no una prueba de nada, y por
+   eso se repitió por el camino de la conexión aparte, que sí muta lo que se quería mutar.
+2. **La mutación del secreto deja la tanda rápida en verde, y eso es información.**
+   `CadaEntidadDeclaraSuAuditoriaTests` comprueba que **todo** esté clasificado, no que lo esté
+   *bien*: `SeAudita()` sobre un resumen de contraseña es una clasificación perfectamente válida
+   para él. Lo que la caza es el test de **efecto**, que lee el resumen de la base y lo busca dentro
+   de las filas de traza. Por eso el punto de los secretos pedía las dos cosas, y por eso no bastaba
+   con el barrido del modelo.
+3. **Y la primera fila de la tabla y la segunda dicen lo mismo desde dos lados:** la ruta «escribir
+   después» pasa los dos tests de atomicidad que uno escribiría de primeras. Sin el test del `xmin`,
+   esa ruta habría sobrevivido a esta batería entera.
+
 
 ## Estado actual
 

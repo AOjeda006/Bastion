@@ -1,4 +1,8 @@
+using Bastion.Auditoria.Infrastructure.Persistencia;
+using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Domain.Autorizacion;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +78,61 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         return new OrganizacionDbContext(opciones.Options, new InquilinoFijo(null));
     }
 
+    /// <summary>
+    /// Un contexto de Organizacion CON el interceptor de auditoria puesto, como lo tiene el host.
+    /// </summary>
+    /// <remarks>
+    /// Los demas `Abrir...` de esta clase no lo llevan: son la puerta de atras para montar estados
+    /// que solo sabe producir el dominio, y ahi la traza estorbaria. Este existe para lo contrario
+    /// —probar el interceptor— y para los dos casos que la API no puede provocar por diseno: una
+    /// escritura que revienta a mitad y una fila con la empresa de otro. Ninguna peticion puede
+    /// nombrar una empresa (lo comprueba `NingunaPeticionNombraLaEmpresaTests`), asi que la unica
+    /// forma de comprobar que la guarda salta es ponerse aqui.
+    /// </remarks>
+    /// <param name="empresaId">Empresa activa.</param>
+    /// <param name="usuarioId">Quien firma los cambios.</param>
+    public OrganizacionDbContext AbrirOrganizacionAuditada(Guid empresaId, Guid usuarioId)
+    {
+        DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
+        OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
+
+        InquilinoFijo inquilino = new(empresaId);
+        opciones.AddInterceptors(
+            new InterceptorDeAuditoria(inquilino, new UsuarioFijo(empresaId, usuarioId), TimeProvider.System));
+
+        return new OrganizacionDbContext(opciones.Options, inquilino);
+    }
+
+    /// <summary>Abre un contexto de Auditoria contra el contenedor, como una empresa concreta.</summary>
+    /// <remarks>
+    /// Es la unica manera de LEER la traza en el 0.7: no hay endpoint de consulta, y no lo hay a
+    /// proposito (eso es de la fase 10). La evidencia de que un cambio deja rastro es esta tabla
+    /// leida de la base, no una pantalla.
+    /// </remarks>
+    /// <param name="empresaId">Como que empresa se abre.</param>
+    public AuditoriaDbContext AbrirAuditoria(Guid empresaId)
+    {
+        DbContextOptionsBuilder<AuditoriaDbContext> opciones = new();
+        AuditoriaDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new AuditoriaDbContext(opciones.Options, new InquilinoFijo(empresaId));
+    }
+
+    /// <summary>Un contexto de Auditoria sin empresa, para ver TODA la traza.</summary>
+    /// <remarks>
+    /// Se llama asi y no `AbrirAuditoria(null)` por lo mismo que <see cref="AbrirOrganizacionParaMigrar"/>:
+    /// mirar la tabla entera es lo que hace falta para comprobar que una fila NO esta —que ningun
+    /// resumen de contrasena aparece en ninguna traza, por ejemplo—, y una comprobacion asi hecha
+    /// con el filtro puesto daria verde por no estar mirando.
+    /// </remarks>
+    public AuditoriaDbContext AbrirAuditoriaEntera()
+    {
+        DbContextOptionsBuilder<AuditoriaDbContext> opciones = new();
+        AuditoriaDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new AuditoriaDbContext(opciones.Options, new InquilinoFijo(null));
+    }
+
     /// <summary>Un contexto de Identidad solo para aplicar migraciones.</summary>
     /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
     public IdentidadDbContext AbrirIdentidadParaMigrar()
@@ -88,6 +147,14 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _contenedor.StartAsync();
+
+        // Auditoria PRIMERO: es la duenna de `auditoria.registros`, y los otros dos modulos
+        // escriben ahi en cuanto guardan algo. Con este orden invertido, la semilla de arranque
+        // reventaria contra una tabla que no existe.
+        await using (AuditoriaDbContext auditoria = AbrirAuditoriaEntera())
+        {
+            await auditoria.Database.MigrateAsync();
+        }
 
         await using (OrganizacionDbContext organizacion = AbrirOrganizacionParaMigrar())
         {
@@ -143,7 +210,33 @@ internal sealed class InquilinoFijo(Guid? empresaId) : IInquilinoActual
 
     public Guid? EmpresaDelFiltro => empresaId;
 
+    // Nunca hay ambito abierto, porque `SinInquilino` no abre ninguno. Un contexto de la puerta de
+    // atras que escribiera dejaria traza sin empresa y sin motivo, y eso lo rechaza el interceptor;
+    // aqui no pasa porque estos contextos no llevan interceptor.
+    public MotivoSinInquilino? MotivoDelAmbito => null;
+
     public IDisposable SinInquilino(MotivoSinInquilino motivo) => throw new NotSupportedException(
         "La puerta de atrás de los tests no abre ámbitos: si un test necesita ver más de una " +
         "empresa, abre un contexto por empresa y lo dice.");
+}
+
+/// <summary>
+/// El usuario de la puerta de atras: uno fijo, sin token y sin permisos.
+/// </summary>
+/// <remarks>
+/// No concede nada —<see cref="Tiene"/> dice que no a todo—, porque quien decide si una operacion
+/// se permite es la autorizacion de la API, y esta clase no la sustituye: solo le dice al
+/// interceptor quien firma la fila de traza.
+/// </remarks>
+/// <param name="empresaId">Empresa activa.</param>
+/// <param name="usuarioId">Quien firma.</param>
+internal sealed class UsuarioFijo(Guid empresaId, Guid usuarioId) : IUsuarioActual
+{
+    public bool EstaAutenticado => true;
+
+    public Guid UsuarioId => usuarioId;
+
+    public Guid EmpresaId => empresaId;
+
+    public bool Tiene(Permiso permiso) => false;
 }

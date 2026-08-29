@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Identidad.Domain.Roles;
 using Bastion.Identidad.Domain.Sesiones;
@@ -78,6 +79,15 @@ public sealed class IdentidadDbContext(
 
         modelBuilder.HasDefaultSchema(Esquema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentidadDbContext).Assembly);
+
+        // La tabla de traza, apuntando al esquema `auditoria` y marcada para NO migrarse desde
+        // aquí: la crea el módulo Auditoría, que es su dueño. Se mapea en este contexto porque es
+        // lo que permite que la traza se añada en el MISMO `SaveChanges` que el cambio, sin
+        // transacción explícita en ningún caso de uso (ADR-0012).
+        ConfiguracionDeAuditoria.Mapear(modelBuilder, migra: false);
+
+        modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
+            registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
 
         // La pertenencia es el PUENTE del inquilinato: lleva `empresa_id` y se filtra por él.
         // Filtrarla tiene una consecuencia que hay que mirar de frente: el acceso carga al usuario
