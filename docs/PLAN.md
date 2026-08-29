@@ -788,6 +788,77 @@ entera.
 
 ## Estado actual
 
+**Ítem 0.8 cerrado, con la CI en verde:**
+[run 33263044577](https://github.com/AOjeda006/Bastion/actions/runs/33263044577) sobre `ac7b9a4`,
+los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
+los dos recuentos publicados: **352** casos rápidos y **160** de integración contra
+PostgreSQL 17.6.
+
+Estrena **el único camino por el que un módulo escribe en otro** (§4, regla 5). A partir de aquí,
+«Contabilidad se entera de que se emitió una factura» es una fila de `auditoria.bandeja_de_salida`,
+escrita en la misma transacción que la factura.
+
+Lo que llega con él: `EventoDeIntegracion` y `RaizAgregado` en el dominio común;
+`IDespachadorDeEventos` e `IManejadorDeEvento` en la aplicación común; la bandeja entera
+—entidades, contexto, interceptor, despachador, cerrojo, publicador y métricas— en
+`BuildingBlocks/Infrastructure/BandejaDeSalida`; el primer evento de verdad,
+`Organizacion.Contracts.Empresas.EmpresaCreada`; **dos tablas nuevas** en el esquema `auditoria`, que
+las migra; y **treinta casos nuevos** —18 de integración y 12 rápidos—.
+
+### Lo que el criterio del 0.8 pedía, y dónde está probado
+
+Tres cláusulas, y ninguna cubre a las otras.
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| *Un evento y su escritura de negocio caen en la misma transacción* | `ElEventoVaEnLaMismaTransaccionTests`, 4 casos. El que no se puede fingir es el del `xmin`: el de `organizacion.empresas` y el de `auditoria.bandeja_de_salida` tienen que ser el mismo número. Los otros dos —el guardado que revienta y el que va bien— los pasa también la ruta de escribir después. |
+| …y que guardar dos veces el mismo agregado no lo encole dos veces | El cuarto caso del mismo fichero: el agregado olvida sus eventos cuando el guardado ya ha ido bien. |
+| *El trabajo de fondo lo publica* | `ElTrabajoDeFondoVaciaLaColaTests`, 4 casos con el cableado de producción: publica; reintenta al que falló una vez —el que distingue «al menos una vez» de «como mucho una vez»—; aísla el envenenado y **sigue vivo después**; y aparca al que su manejador nunca podrá atender. |
+| …y con un evento **real**, de punta a punta | `ElAltaDeUnaEmpresaSePublicaTests`, 2 casos por la API de verdad: un `POST /empresas` deja su fila y el publicador **del propio host** la publica; y el alta de la semilla, que no tiene empresa, sale igual con su motivo. |
+| *Reprocesar no duplica* | `ReprocesarNoDuplicaTests`, 4 casos, asertados sobre **el efecto** —el contador del manejador— y no sobre la fila de la huella: dos entregas del mismo evento dejan un solo efecto, cada consumidor tiene su turno, y los dos controles que tienen que seguir verdes. |
+| Que la cola no se cuele por los barridos del 0.6 y del 0.7 | `CadaEntidadDeclaraSuInquilinatoTests` y `ElFiltroNoSeSaltaPorAhiTests`, con las dos entidades nuevas clasificadas y la excepción del cerrojo nombrada por su ruta. La lista de aperturas pasa de once a **doce** y se compara entera. |
+| Que todo evento esté declarado | `CadaEventoEstaDeclaradoTests`, 3 casos sobre el catálogo que construye el host de verdad. |
+| Que se vigile con una métrica y **no** con una sonda | `LaBandejaSeMideYNoSeSondeaTests` (la lista de sondas registradas, entera) y `LaEdadDelMasViejoSeMideTests`, que comprueba que el instrumento **mide lo que dice medir**: ~600 s con un evento de hace diez minutos, y 0 con la cola vacía. |
+| Qué hace contra una base sin migrar | `SinLaTablaElPublicadorSeParaTests`, 2 casos: avisa **una** vez y se para, por los dos caminos —sin esquema y con esquema pero sin tabla—. |
+
+### Verificado en local, con la salida real
+
+- `dotnet build Bastion.sln` → **0 advertencias / 0 errores**.
+- `dotnet format Bastion.sln --verify-no-changes` → `rc=0`, sin una línea de salida.
+- `dotnet test --filter "Category!=Integracion"` → **352** correctos, 0 con error
+  (100 comunes + 116 Organización + 58 Identidad + **78** funcionales, de 66).
+- `dotnet test --filter "Category=Integracion"` → **160** correctos, 0 con error
+  (28 Organización + **132** de API, de 114), contra PostgreSQL 17.6 con Testcontainers.
+- Los **dos carriles otra vez con `GITHUB_ACTIONS=true`**: 352 y 160, en verde.
+- `scripts/comprobar-migraciones.sh` → *«el modelo coincide con ellas»* en los tres módulos:
+  **Auditoría 2** migraciones —la nueva es la de la bandeja—, Organización 1, Identidad 1. Ninguna
+  migración vacía, que es lo que hace viable la ruta 1.
+- **Seis mutaciones**, cada una aplicada, compilada, ejecutada y revertida. La tabla completa está
+  arriba; las dos que hay que leer son la que salió **verde** —y desmintió un comentario que estaba
+  escrito en el código— y la que hubo que repetir porque no mutaba lo que decía mutar.
+
+### Lo que la CI encontró y en local no se veía
+
+**Nada, otra vez, y por el mismo motivo que en el 0.7**: los dos carriles se ejecutan también en
+local con `GITHUB_ACTIONS=true`, así que el *build* es el mismo, y los dos recuentos publicados
+coinciden **exactamente** con los de esta máquina — 352 y 160. Los suelos de recuento (300 / 100)
+siguen haciendo su trabajo.
+
+Lo único que la CI dice y aquí no se ve sigue siendo el aviso ajeno a este ítem, ya anotado en el
+0.7 y todavía sin tocar: `actions/upload-artifact@v4`, `docker/build-push-action@v6` y
+`docker/setup-buildx-action@v3` apuntan a Node.js 20, que está en desuso, y el ejecutor los fuerza a
+Node.js 24. No es un fallo; es del 0.13.
+
+**Dónde retomar exactamente:** ítem **0.9**, idempotencia (R10) y concurrencia optimista (R11).
+Criterio: la misma `Idempotency-Key` devuelve el mismo recurso; `If-Match` obsoleto → **412**;
+estado incorrecto → **409**; sin cabecera → **428**. Hereda de este ítem dos cosas que conviene no
+confundir: lo de aquí es idempotencia **del consumidor** —nadie repite una petición, se repite una
+entrega—, y el testigo de concurrencia de PostgreSQL es `xmin`, el mismo que aquí se usa para probar
+la atomicidad; en cuanto el 0.9 lo declare como testigo, `LasClavesSeConocenAntesDeGuardarTests`
+—del 0.7— se pondrá rojo a propósito y habrá que reabrir el ADR-0012, punto 2.
+
+---
+
 **Ítem 0.7 cerrado, con la CI en verde:**
 [run 33249546052](https://github.com/AOjeda006/Bastion/actions/runs/33249546052) sobre `7556951`,
 los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
@@ -1424,8 +1495,23 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   contadas enteras.
   Los cuatro *jobs* de la CI en verde — [run 33249546052](https://github.com/AOjeda006/Bastion/actions/runs/33249546052),
   con **340** casos rápidos y **142** de integración.
-- [ ] **0.8 · Outbox transaccional (R12)** — criterio de aceptación: un evento y su escritura de
+- [x] **0.8 · Outbox transaccional (R12)** — criterio de aceptación: un evento y su escritura de
   negocio caen en la misma transacción; el trabajo de fondo lo publica; reprocesar no duplica.
+  Las tres cláusulas, probadas por separado y ninguna cubriendo a las otras: la atomicidad por el
+  `xmin` —el de la empresa y el de su evento son el mismo número—, la publicación con el cableado de
+  producción y también con un evento **real** de punta a punta (`EmpresaCreada` por la API), y la no
+  duplicación asertada sobre **el efecto** y no sobre la fila de la huella. Se marca DESPUÉS de
+  despachar, así que la entrega es «al menos una vez» y quien la convierte en una sola es la huella
+  del par (evento, consumidor); la ventana que queda abierta está escrita. Dos tablas nuevas en el
+  esquema `auditoria`, que las migra, por la ruta 1 del 0.7. El publicador es lo primero que corre
+  sin petición detrás: abre su ámbito sin inquilino con el motivo `PublicacionDeEventos` y la lista
+  de aperturas pasa de once a doce. Se vigila con una métrica —la edad del pendiente más viejo— y no
+  con una sonda. Decisiones en
+  `docs/adr/adr-0013-el-evento-va-en-la-misma-transaccion-y-el-efecto-ocurre-una-vez.md`, con el
+  aplazamiento razonado de Hangfire y la ventana de la huella. Probado con **seis mutaciones**, una
+  de ellas verde y contada entera: desmintió un comentario que estaba escrito en el código.
+  Los cuatro *jobs* de la CI en verde — [run 33263044577](https://github.com/AOjeda006/Bastion/actions/runs/33263044577),
+  con **352** casos rápidos y **160** de integración.
 - [ ] **0.9 · Idempotencia (R10) y concurrencia optimista (R11)** — criterio de aceptación: la misma
   `Idempotency-Key` devuelve el mismo recurso; `If-Match` obsoleto → **412**; estado incorrecto →
   **409**; sin cabecera → **428**.
