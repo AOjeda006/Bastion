@@ -325,7 +325,7 @@ anotan para no volver a discutirlas.
 |---|---|---|---|
 | Identidad | `identidad` | 0 | creado en el 0.5 |
 | Organización | `organizacion` | 0 | creado en el 0.4 |
-| Auditoría | `auditoria` | 0 | creado en el 0.7 |
+| Auditoría | `auditoria` | 0 | creado en el 0.7; desde el 0.8 acoge además las dos tablas de la bandeja de salida (ADR-0013) |
 | Terceros | `terceros` | 1 | — |
 | Catálogo | `catalogo` | 1 | — |
 | Inventario | `inventario` | 2 | — |
@@ -644,6 +644,146 @@ revirtió comprobando que el fichero volvía byte a byte al original.
 3. **Y la primera fila de la tabla y la segunda dicen lo mismo desde dos lados:** la ruta «escribir
    después» pasa los dos tests de atomicidad que uno escribiría de primeras. Sin el test del `xmin`,
    esa ruta habría sobrevivido a esta batería entera.
+
+
+### Tomadas por el agente de desarrollo — ítem 0.8 (2026-08-29)
+
+Todo lo de abajo está razonado en
+`docs/adr/adr-0013-el-evento-va-en-la-misma-transaccion-y-el-efecto-ocurre-una-vez.md`.
+
+- **El evento entra en el mismo `SaveChanges` que el cambio, por la ruta 1 del 0.7.** Las dos tablas
+  se mapean en el contexto de **cada** módulo apuntando al esquema `auditoria`, y un
+  `SaveChangesInterceptor` vuelca en `SavingChanges` los eventos que los agregados llevan en la
+  mano. **Las dos alternativas se escriben descartadas:** un contexto aparte alistado en la
+  transacción del módulo —obliga a que cada caso de uso de cada módulo abra y comparta una
+  transacción explícita, y el que se olvide no falla: pierde el evento— y un `INSERT` a mano sobre
+  la conexión —SQL crudo esquivando el barrido del 0.6—.
+- **La prueba de la atomicidad vuelve a ser el `xmin`,** y con una condición escrita en el fichero:
+  **ahí no corre el publicador**, porque marcar una fila es un `UPDATE` y un `UPDATE` le cambia el
+  `xmin` a la fila. Los otros dos tests —un guardado que revienta no deja ni la empresa ni su
+  evento; uno que va bien deja las dos— los pasa **también** la ruta de volcar después del guardado.
+- **Los eventos viajan en el agregado (`RaizAgregado`), no en un recolector de ámbito.** La
+  atomicidad la darían los dos; lo que solo da esta es que **un evento no pueda existir sin su
+  escritura**: a la bandeja solo llega el evento de un agregado que se está guardando. Con una lista
+  suelta por petición, un evento registrado sin guardar nada se colaría en el `SaveChanges`
+  siguiente, que puede ser el de otra cosa. Y el agregado olvida sus eventos **cuando el guardado ya
+  ha ido bien**, no al volcarlos.
+- **`Bastion.Organizacion.Contracts` pasa a referenciar `Bastion.BuildingBlocks.Domain`.** Es la
+  única frontera que este ítem mueve, y es de fondo y no de grado: ese bloque es el **núcleo
+  compartido** (`Nif`, `Direccion`, `Resultado`, `EventoDeIntegracion`), no el dominio de ningún
+  módulo, y todos los módulos lo ven ya por sus propias capas. Sin ella un evento sería un `object`.
+  El motivo de fondo es que el `Domain` de un módulo no ve su `Contracts` —las dependencias apuntan
+  hacia dentro—, así que el evento lo construye la capa de aplicación y se lo entrega a la raíz.
+- **El nombre con el que viaja un evento lo declara el propio contrato** (`EmpresaCreada.Nombre`), y
+  lo usan igual el cableado de producción y los tests. Escrito dos veces, se separa el día que
+  alguien renombra uno de los dos, y lo que se rompe no es un test: es la cola, con filas cuyo
+  nombre ya no declara nadie.
+- **Las dos tablas viven en el esquema `auditoria` y las migra el módulo Auditoría.** No es que la
+  bandeja sea auditoría: el §5 lista dieciséis módulos y **ninguno es la bandeja**, así que no hay
+  esquema del que pudiera ser —la convención dice que el esquema es el nombre del módulo—, inventar
+  un decimoséptimo módulo reabriría el §5, y un esquema sin módulo que lo migre no lo puede crear
+  nadie. Queda el dueño que ya tiene la otra tabla que escriben todos los contextos dentro de su
+  transacción. Los demás contextos la declaran con `ExcludeFromMigrations`: sin migraciones vacías,
+  y `scripts/comprobar-migraciones.sh` en verde para los tres módulos.
+- **Un despachador propio de unas decenas de líneas, no un bus en memoria.** En un monolito modular
+  un bus no aporta nada sobre una interfaz y sí quita algo: quién atiende deja de decirlo el
+  compilador. Y la interfaz del manejador **no es genérica** a propósito: cerrarla por reflexión
+  (`MakeGenericType`) y resolver del contenedor un tipo construido es la clase de código que falla
+  en el arranque de producción y en ningún test. **Ningún paquete NuGet nuevo** entra con este ítem.
+- **La cola la vacía un `BackgroundService`: cada dos segundos, cien filas por vuelta, ordenadas por
+  `id`** —versión 7, o sea, orden de escritura—. **Un solo lector**, garantizado con un cerrojo
+  consultivo de PostgreSQL. Las otras dos formas se miraron: suponer una sola instancia desplegada
+  es gratis y falla publicando dos veces —dos correos, dos asientos, dos remesas— en silencio el día
+  que alguien escale a dos réplicas; y `FOR UPDATE SKIP LOCKED` con varios lectores es **más** SQL
+  crudo, este sí sobre filas, y **pierde el orden** — que pesa, porque la R15 va a necesitar
+  exactamente un consumidor serializado.
+- **La excepción a la prohibición de SQL crudo del 0.6 es una, está nombrada por su ruta y no se
+  extiende.** `CerrojoDeLaBandeja.cs`, listado en `ElFiltroNoSeSaltaPorAhiTests`. El argumento: la
+  prohibición existe porque el SQL a mano no pasa por el traductor y devuelve filas de otros
+  inquilinos sin fallar; **estas dos órdenes no leen ninguna tabla** —toman y sueltan un cerrojo del
+  motor con una clave constante—, así que no hay fila que filtrar. Se justifica por lo que la hace
+  inútil para cualquier otro caso: quien quiera SQL crudo para leer *filas* tendrá que traer su
+  propio argumento.
+- **Se marca DESPUÉS de despachar: la entrega es «al menos una vez» por decisión.** Marcar antes
+  haría que el fallo de un manejador se **tragara** el evento: cola limpia, nadie lo reintenta, el
+  efecto no ocurre jamás y **no hay ningún error que mirar**. Lo que convierte «al menos una» en
+  «exactamente una» es la huella del par **(evento, consumidor)** — con solo el evento, el segundo
+  consumidor de un mismo hecho no llegaría a ejecutarse nunca.
+- **La ventana que queda abierta está escrita:** la huella se graba en su propia transacción, no en
+  la del efecto del manejador, así que una caída entre «el manejador terminó» y «la huella está
+  grabada» repite ese manejador. Cerrarla exige que el manejador escriba efecto y huella en el mismo
+  `SaveChanges`, y por eso `EventoProcesado` está mapeado también en los contextos de módulo: la
+  puerta queda abierta y sin usar. La fase 0 no tiene ningún manejador con efecto de negocio; se
+  decide el día que haya uno delante.
+- **La unidad de aislamiento del fallo es la fila, y a los cinco intentos se aparca.** Uno
+  confundiría un corte de red con un evento imposible; cien serían ocho minutos de vueltas y cien
+  excepciones iguales en el registro. Aparcar cuesta el orden **de ese evento** y salva el de todos
+  los demás. Y no se aparca en silencio: queda dicho una sola vez, con el motivo dentro de la fila.
+- **El publicador no tiene petición detrás, y por eso abre su ámbito sin inquilino con un motivo
+  nuevo: `PublicacionDeEventos`** — el que el 0.6 dejó reservado por escrito. **La lista de
+  aperturas pasa de once a doce**, y se compara entera. La alternativa —un contexto sin filtro para
+  el trabajo de fondo— sería un segundo mecanismo para saltarse el inquilinato, sin lista cerrada y
+  sin quedar anotado.
+- **`EventoDeLaBandeja` no implementa `IDeInquilino`** —su empresa es anulable, y la cola es de
+  todas las empresas a la vez: un publicador por empresa sería un publicador por cada una de las que
+  existan—, así que lleva **o** la empresa desde la que se actuó **o** el motivo, nunca las dos y
+  nunca ninguna: constructor y `CHECK` de la tabla. **`EventoProcesado` es global a propósito.** Las
+  dos están clasificadas en los **dos** barridos del modelo, el de inquilinato y el de auditoría.
+- **Se vigila con una métrica y NO con una sonda**, que es la lección del 0.2 otra vez: una cola
+  atrasada no significa que el proceso esté colgado —la sonda de vida reiniciaría la API en bucle, y
+  reiniciar no vacía la cola— ni que no pueda atender tráfico. Y la métrica es **la edad del
+  pendiente más viejo**, no cuántos hay: el tamaño sube y baja con el tráfico y no distingue mil
+  eventos que salen en dos segundos de uno atascado desde ayer. Más dos contadores separados,
+  publicados y aparcados, porque sobre uno se pone alerta y sobre el otro no. La lista de sondas
+  registradas se compara entera.
+- **Contra una base sin migrar el publicador se para y lo dice una vez.** Es el riesgo abierto del
+  compose hasta el 0.13; hasta entonces, un error por vuelta desde el arranque no es información, es
+  donde se esconden los errores de verdad. Que la API siga sirviendo es correcto: lo que falta es la
+  cola, no la API.
+- **Hangfire se aplaza, y se dice por qué.** El §3 lo nombra para trabajos de fondo. Aquí no hace
+  falta nada de lo que aporta —horarios, reintentos con almacén propio, panel, trabajos encolados
+  por el usuario—: esto es un bucle que mira una tabla cada dos segundos y su almacén **es** la
+  tabla que mira. Envolver un `while` en un programador de tareas con su propio esquema añadiría un
+  mecanismo de reintentos encima del que la bandeja ya tiene, y dos sitios donde mirar cuando algo
+  falla. Entra cuando aparezca su caso: trabajos con horario —cierres, remesas, envíos periódicos—.
+
+### La prueba fuerte del 0.8: seis mutaciones, y la que salió verde contada entera
+
+Cada una se aplicó sobre el árbol verde, se compiló, se corrió la tanda que le tocaba y se revirtió
+comprobando que el fichero volvía al original.
+
+| Mutación | Qué se rompió | Resultado |
+|---|---|---|
+| Volcar los eventos en `SavedChangesAsync`, después de que el guardado fuera bien | La ruta no atómica | **1 rojo, y solo uno:** `La_empresa_y_su_evento_los_escribe_LA_MISMA_transaccion`. Los otros tres de la clase, verdes |
+| Quitar el `AddHostedService` del publicador | Nadie vacía la cola | **2 rojos**, los dos de `ElAltaDeUnaEmpresaSePublicaTests` |
+| Marcar la fila `Publicado` **antes** de despachar | «Al menos una vez» se convierte en «como mucho una vez» | **4 rojos** en `ElTrabajoDeFondoVaciaLaColaTests` |
+| Que la comprobación del duplicado mire, avise y **no** se salte al manejador | Reprocesar duplica el efecto | **2 rojos de 4** en `ReprocesarNoDuplicaTests`; los otros dos son los controles que tienen que seguir verdes |
+| Quitar el ámbito `SinInquilino` del publicador | El trabajo de fondo se queda sin empresa y sin motivo | **4 rojos**: sin ámbito, `EmpresaDelFiltro` lanza y no se publica nada |
+| Que una tabla ausente caiga por la rama genérica en vez de reconocerse | El publicador deja de pararse | **2 rojos**, los dos de `SinLaTablaElPublicadorSeParaTests` |
+
+**La que salió verde, entera, porque desmiente algo que yo mismo había escrito en el código.** La
+sexta mutación iba a ser otra: quitar de la clasificación de errores la rama de
+`invalid_schema_name` (3F000), dejando solo `undefined_table` (42P01). El comentario del publicador
+decía —lo escribí yo— que *«son dos códigos, y el segundo es el que de verdad pasa»*, y que ese
+detalle **lo había encontrado el test**. Con la mutación puesta, los dos casos de
+`SinLaTablaElPublicadorSeParaTests` siguieron **verdes**.
+
+Lo que hay detrás, comprobado lanzando las dos consultas contra `postgres:17.6-alpine`, la misma
+imagen de los tests: **un `SELECT` sobre una tabla cuyo esquema no existe responde 42P01**
+—«relation ... does not exist»—, no 3F000. El 3F000 lo dan las órdenes que **crean** algo dentro de
+un esquema ausente, y el publicador no crea nada. O sea: la rama del 3F000 era **código muerto** y
+el comentario que la justificaba era falso. Se ha quitado la rama, se han reescrito el comentario
+del publicador y el de la cabecera del test con lo que sí se ha verificado, y la sexta mutación se
+ha rehecho por el camino que sí muta algo —hacer que la tabla ausente no se distinga—, que pone los
+dos casos en rojo.
+
+**Y una que hubo que repetir porque el primer intento no mutaba lo que decía mutar.** Mover el
+volcado a `SavedChangesAsync` a secas no escribía **nada**, porque el volcado filtra las entradas
+por «se está guardando» y después del guardado las entidades están `Unchanged`: tres tests en rojo,
+pero por el motivo equivocado —un interceptor que no vuelca no es la ruta no atómica, es ningún
+interceptor—. Con el filtro quitado también, la mutación es la que quería ser y deja **un solo**
+rojo: el del `xmin`. Sin ese test, la ruta de escribir después habría sobrevivido a la batería
+entera.
 
 
 ## Estado actual

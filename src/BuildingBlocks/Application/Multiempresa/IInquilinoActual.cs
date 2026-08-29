@@ -101,4 +101,19 @@ public enum MotivoSinInquilino
     /// frío del 0.5) y mirar si esa empresa ya tiene a alguien dentro.
     /// </summary>
     AdministracionDePertenencias,
+
+    /// <summary>
+    /// El trabajo de fondo que vacía la bandeja de salida (R12). <b>No hay petición</b>: nadie ha
+    /// iniciado sesión, no hay <i>claim</i> del que sacar la empresa, y la cola es de todas las
+    /// empresas a la vez porque un publicador por empresa sería un publicador por cada una de las
+    /// que existan.
+    /// </summary>
+    /// <remarks>
+    /// Es el motivo que el 0.6 dejó reservado por escrito, y se usa por primera vez en el 0.8. La
+    /// alternativa —darle al trabajo de fondo un contexto sin filtro— no se descartó por gusto:
+    /// sería un segundo mecanismo para saltarse el inquilinato, sin lista cerrada, sin quedar
+    /// anotado en el registro y sin aparecer en la columna de la traza que distingue «no tenía
+    /// empresa porque publica eventos» de «alguien perdió la empresa por el camino».
+    /// </remarks>
+    PublicacionDeEventos,
 }

@@ -49,7 +49,10 @@
         }
       },
       "bastion.organizacion.contracts": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
       },
       "Microsoft.EntityFrameworkCore": {
         "type": "CentralTransitive",

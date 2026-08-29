@@ -1,4 +1,5 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,8 +10,18 @@ namespace Bastion.Auditoria.Infrastructure;
 /// (<c>src/Api</c>), que es el único proyecto autorizado a ver esta capa.
 /// </summary>
 /// <remarks>
-/// Este módulo no tiene todavía casos de uso ni repositorios: en el 0.7 solo aporta el esquema, la
-/// tabla y su migración. Consultar la traza es de la fase 10, y no se adelanta.
+/// <para>
+/// Este módulo no tiene todavía casos de uso ni repositorios: aporta el esquema, las tablas y sus
+/// migraciones. Consultar la traza es de la fase 10, y no se adelanta.
+/// </para>
+/// <para>
+/// Desde el 0.8 aporta además <b>las dos tablas de la bandeja de salida</b> y el contexto con el
+/// que el publicador las lee. No es que la bandeja sea auditoría: es que el §5 lista dieciséis
+/// módulos y ninguno es la bandeja, así que no hay esquema del que pudiera ser, y quien crea una
+/// tabla tiene que ser el dueño de un esquema. Este módulo ya es el dueño de la otra tabla que
+/// escriben todos los contextos dentro de su transacción. El razonamiento entero, y las
+/// alternativas descartadas, en el ADR-0013.
+/// </para>
 /// </remarks>
 public static class ModuloDeAuditoria
 {
@@ -29,6 +40,15 @@ public static class ModuloDeAuditoria
         // `OnModelCreating`.
         servicios.AddDbContext<AuditoriaDbContext>(
             opciones => AuditoriaDbContext.Configurar(opciones, cadenaDeConexion));
+
+        // El contexto con el que el trabajo de fondo lee la bandeja. Se registra AQUÍ y no en los
+        // bloques comunes porque los bloques comunes traen EF Core pero no el proveedor: allí no
+        // se sabe contra qué base corre el sistema, y elegirlo es cosa de la Infrastructure de un
+        // módulo. Sin interceptores, por lo mismo que el de arriba: lo que escribe está
+        // clasificado como no auditable, así que engancharlos no produciría ni una fila.
+        servicios.AddDbContext<ContextoDeLaBandeja>(opciones => opciones
+            .UseNpgsql(cadenaDeConexion)
+            .UseSnakeCaseNamingConvention());
 
         return servicios;
     }

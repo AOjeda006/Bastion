@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.Organizacion.Application;
 using Bastion.Organizacion.Application.Almacenes;
 using Bastion.Organizacion.Application.Ejercicios;
@@ -40,6 +41,11 @@ public static class ModuloDeOrganizacion
             // que cambia es que deja de haber rastro, y eso no se nota mirando la pantalla. Lo nota
             // `UnCambioEnUnMaestroDejaSuRastroTests`.
             opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeAuditoria>());
+
+            // Y los eventos que registre un agregado, en ese mismo SaveChanges (R12, ADR-0013).
+            // Quitar esta línea deja los eventos muriéndose en memoria sin que nada falle: lo nota
+            // `ElEventoVaEnLaMismaTransaccionTests`.
+            opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeLaBandeja>());
         });
 
         // La unidad de trabajo es la del MÓDULO, y se registra bajo el tipo del MÓDULO. Bajo
@@ -57,6 +63,11 @@ public static class ModuloDeOrganizacion
         // registra aquí porque quien lo implementa es esta capa; quien lo consume —Identidad, al
         // guardar una pertenencia— no sabe que existe este ensamblado.
         servicios.AddScoped<IConsultaDeEmpresas, ConsultaDeEmpresas>();
+
+        // Los eventos que emite este módulo, con el nombre que llevan en la cola. Se declaran
+        // AQUÍ y no en los bloques comunes: un catálogo central obligaría a tocar código común
+        // para publicar un evento nuevo, que es justo la frontera del §4.
+        servicios.DeclararEvento<EmpresaCreada>(EmpresaCreada.Nombre);
 
         servicios.AgregarCasosDeUsoDeOrganizacion();
 

@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.Identidad.Application;
 using Bastion.Identidad.Application.Roles;
 using Bastion.Identidad.Application.Sesiones;
@@ -39,6 +40,11 @@ public static class ModuloDeIdentidad
             // que cambia es que deja de haber rastro, y eso no se nota mirando la pantalla. Lo nota
             // `UnCambioEnUnMaestroDejaSuRastroTests`.
             opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeAuditoria>());
+
+            // Y el de la bandeja de salida. Identidad todavía no emite eventos: el interceptor
+            // va igual porque su ausencia no falla, se limita a no publicar nada, y esa es la
+            // clase de olvido que no se ve hasta que alguien pregunta por qué no llegó el aviso.
+            opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeLaBandeja>());
         });
 
         servicios.AddScoped<IUnidadTrabajoDeIdentidad, UnidadDeTrabajoDeIdentidad>();

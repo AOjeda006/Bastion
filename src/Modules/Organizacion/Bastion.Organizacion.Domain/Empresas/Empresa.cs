@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Direcciones;
+using Bastion.BuildingBlocks.Domain.Eventos;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 
 namespace Bastion.Organizacion.Domain.Empresas;
@@ -13,13 +14,18 @@ namespace Bastion.Organizacion.Domain.Empresas;
 /// La empresa NO lleva <c>empresa_id</c>: es el tenant, no un inquilino de otro.
 /// </para>
 /// <para>
+/// Es la primera <see cref="RaizAgregado"/> del sistema: de ella salen eventos de integración
+/// (R12). Heredarlo no le añade estado persistido ninguno —la colección de eventos vive en
+/// memoria y el modelo la ignora—; lo que declara es que lo que le pasa se cuenta.
+/// </para>
+/// <para>
 /// Sí lleva estado <see cref="EstadoDeEmpresa.Bloqueada"/>, y la razón está escrita en el
 /// ADR-0007: un <b>empresario individual</b> es persona física, así que la razón social puede
 /// ser un nombre propio y el domicilio fiscal, un domicilio particular. El artículo 32 de la
 /// LOPDGDD alcanza entonces a esta ficha igual que a la de un tercero.
 /// </para>
 /// </remarks>
-public sealed class Empresa
+public sealed class Empresa : RaizAgregado
 {
     private Empresa(
         Guid id,

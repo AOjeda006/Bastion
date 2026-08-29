@@ -3,9 +3,12 @@ using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.Identidad.Infrastructure.Persistencia;
+using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace Bastion.Api.IntegrationTests.Persistencia;
@@ -133,6 +136,58 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         return new AuditoriaDbContext(opciones.Options, new InquilinoFijo(null));
     }
 
+    /// <summary>
+    /// El catálogo de eventos de la puerta de atrás: una línea por evento declarado.
+    /// </summary>
+    /// <remarks>
+    /// Repite las declaraciones que hacen los <c>Modulo…</c> porque construirlo desde el
+    /// contenedor obligaría a levantar el host, y el host trae el publicador puesto — que es
+    /// justo lo que no puede estar corriendo mientras se comprueba en qué transacción entró una
+    /// fila. Que la lista se quede corta no da un verde silencioso: el interceptor lanza al
+    /// volcar un evento sin declarar, con el nombre del tipo en el mensaje. Y que la de verdad
+    /// esté completa lo comprueba <c>CadaEventoEstaDeclaradoTests</c>, en el paso rápido.
+    /// </remarks>
+    public static CatalogoDeEventos Catalogo { get; } =
+        new([new DeclaracionDeEvento(EmpresaCreada.Nombre, typeof(EmpresaCreada))]);
+
+    /// <summary>
+    /// Un contexto de Organización CON el interceptor de la bandeja puesto, como lo tiene el host.
+    /// </summary>
+    /// <remarks>
+    /// Existe por lo mismo que <see cref="AbrirOrganizacionAuditada"/>: para probar el interceptor
+    /// —y, sobre todo, para mirar en qué transacción entró cada fila— hace falta un guardado que
+    /// no esté compartiendo la base con un publicador que va por detrás actualizando las filas de
+    /// la cola. Un <c>UPDATE</c> le cambia el <c>xmin</c> a la fila, así que la comparación que
+    /// prueba la atomicidad tiene que hacerse sobre una cola que nadie está vaciando.
+    /// </remarks>
+    /// <param name="empresaId">Empresa activa, la que quedará escrita en el evento.</param>
+    public OrganizacionDbContext AbrirOrganizacionConBandeja(Guid empresaId)
+    {
+        DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
+        OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
+
+        InquilinoFijo inquilino = new(empresaId);
+        opciones.AddInterceptors(new InterceptorDeLaBandeja(inquilino, Catalogo, TimeProvider.System));
+
+        return new OrganizacionDbContext(opciones.Options, inquilino);
+    }
+
+    /// <summary>Abre el contexto de la bandeja como una empresa concreta.</summary>
+    /// <remarks>
+    /// Es la única manera de LEER la cola: no hay endpoint que la consulte, y no lo hay a
+    /// propósito. Con empresa, para comprobar que el filtro de la tabla es de verdad.
+    /// </remarks>
+    /// <param name="empresaId">Como qué empresa se abre.</param>
+    public ContextoDeLaBandeja AbrirBandeja(Guid empresaId) => AbrirBandeja((Guid?)empresaId);
+
+    /// <summary>Abre el contexto de la bandeja sin empresa, para ver la cola entera.</summary>
+    /// <remarks>
+    /// Se llama así y no <c>AbrirBandeja(null)</c> por lo mismo que
+    /// <see cref="AbrirAuditoriaEntera"/>: comprobar que una fila NO está exige mirar la tabla
+    /// entera, y hacerlo con el filtro puesto daría verde por no estar mirando.
+    /// </remarks>
+    public ContextoDeLaBandeja AbrirBandejaEntera() => AbrirBandeja((Guid?)null);
+
     /// <summary>Un contexto de Identidad solo para aplicar migraciones.</summary>
     /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
     public IdentidadDbContext AbrirIdentidadParaMigrar()
@@ -141,6 +196,62 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         IdentidadDbContext.Configurar(opciones, CadenaDeConexion);
 
         return new IdentidadDbContext(opciones.Options, new InquilinoFijo(null));
+    }
+
+    // El contexto de la bandeja no tiene `Configurar` a propósito: vive en los bloques comunes,
+    // que traen EF Core pero NO el proveedor de PostgreSQL, así que quien elige proveedor es el
+    // módulo Auditoría en su cableado. Aquí se repite esa elección, que es la misma y es de una
+    // línea; lo que no se puede es llamar a un método que allí no existe.
+    private ContextoDeLaBandeja AbrirBandeja(Guid? empresaId)
+    {
+        DbContextOptionsBuilder<ContextoDeLaBandeja> opciones = new();
+        opciones.UseNpgsql(CadenaDeConexion).UseSnakeCaseNamingConvention();
+
+        return new ContextoDeLaBandeja(opciones.Options, new InquilinoFijo(empresaId));
+    }
+
+    /// <summary>
+    /// Crea una base de datos NUEVA en el mismo servidor, para los tests que necesitan una cola
+    /// que nadie más esté tocando —o una base a la que nadie ha aplicado nada—.
+    /// </summary>
+    /// <remarks>
+    /// La base compartida tiene las migraciones puestas y a los demás tests escribiendo en ella;
+    /// hay dos cosas que ahí no se pueden comprobar: qué hace el publicador cuando la tabla no
+    /// está, y cuánto vale una métrica que habla del elemento más viejo de la cola.
+    /// </remarks>
+    /// <param name="migrada">Si se le aplican las migraciones de Auditoría, que son las de la bandeja.</param>
+    /// <returns>La cadena de conexión a la base nueva.</returns>
+    public async Task<string> CrearBaseNuevaAsync(bool migrada)
+    {
+        string nombre = "bastion_" + Guid.CreateVersion7().ToString("N")[..12];
+
+        await using (NpgsqlConnection servidor = new(CadenaDeConexion))
+        {
+            await servidor.OpenAsync();
+
+            // El nombre lo compone este método a partir de un identificador recién creado: no hay
+            // entrada de nadie por medio, y `CREATE DATABASE` no admite parámetros.
+            await using NpgsqlCommand crear = new($"CREATE DATABASE \"{nombre}\"", servidor);
+            await crear.ExecuteNonQueryAsync();
+        }
+
+        string cadena = new NpgsqlConnectionStringBuilder(CadenaDeConexion)
+        {
+            Database = nombre,
+        }.ConnectionString;
+
+        if (migrada)
+        {
+            DbContextOptionsBuilder<AuditoriaDbContext> opciones = new();
+            AuditoriaDbContext.Configurar(opciones, cadena);
+
+            await using AuditoriaDbContext auditoria =
+                new(opciones.Options, new InquilinoFijo(null));
+
+            await auditoria.Database.MigrateAsync();
+        }
+
+        return cadena;
     }
 
     /// <inheritdoc/>

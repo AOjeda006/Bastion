@@ -99,6 +99,18 @@ internal sealed class CrearEmpresa(
             peticion.DivisaBase,
             regimen);
 
+        // R12: el hecho se APUNTA en el agregado y lo vuelca a la bandeja el interceptor, dentro
+        // de este mismo `ConfirmarAsync`. Ni antes —se contaría un alta que puede no llegar a
+        // ocurrir— ni después —se perdería si el proceso se cae en medio—.
+        //
+        // El evento lo construye esta capa y no el dominio: vive en `Contracts`, que es lo único
+        // público del módulo, y el dominio no lo ve porque las dependencias apuntan hacia dentro.
+        empresa.Registrar(new EmpresaCreada(
+            empresa.Id,
+            empresa.Nif.Valor,
+            empresa.RazonSocial,
+            empresa.DivisaBase));
+
         empresas.Agregar(empresa);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 

@@ -1,6 +1,7 @@
 using Bastion.Api.FunctionalTests.Salud;
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +55,12 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
             "una emisión de refresco es de una sesión, no de una empresa: se busca por su resumen " +
             "antes de que haya empresa activa. La empresa con la que se estaba operando va DENTRO " +
             "de la fila (EmpresaActivaId) y la comprueba RenovarSesion",
+
+        ["EventoProcesado"] =
+            "es la huella de que un consumidor ya pasó por un evento, y la consulta el despachador " +
+            "por su clave entera (evento, consumidor) desde un ámbito sin inquilino. Filtrarla por " +
+            "empresa sería peor que inútil: la huella tiene que impedir el reproceso PASE LO QUE " +
+            "PASE con la empresa activa, y un filtro la escondería justo cuando hace falta verla",
     };
 
     // Las dos que filtran SIN llevar `empresa_id`, y por qué el filtro no es el de siempre.
@@ -65,6 +72,12 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
             "su empresa es ANULABLE —hay escrituras legítimas sin inquilino, y llevan el motivo en " +
             "su columna—, así que no puede declarar IDeInquilino, que la exige. Filtra igual que " +
             "todas: una traza dice qué NIF tenía antes una empresa y quién lo cambió (ADR-0012)",
+
+        ["EventoDeLaBandeja"] =
+            "su empresa es ANULABLE, igual que la de la traza y por el mismo motivo: hay escrituras " +
+            "legítimas sin inquilino -la semilla de arranque- y llevan el porqué en su columna. " +
+            "Filtra como todo lo demás; el publicador la ve entera porque abre un ámbito con su " +
+            "motivo, no porque le falte el filtro (ADR-0013)",
     };
 
     private readonly ApiSinDependencias _api = new();
@@ -141,6 +154,12 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
             .. Entidades(alcance.ServiceProvider.GetRequiredService<OrganizacionDbContext>()),
             .. Entidades(alcance.ServiceProvider.GetRequiredService<IdentidadDbContext>()),
             .. Entidades(alcance.ServiceProvider.GetRequiredService<AuditoriaDbContext>()),
+
+            // No es de ningún módulo, y entra igual: es el contexto con el que el trabajo de fondo
+            // lee la bandeja, y sus entidades son las mismas dos. Que estén aquí es lo que impide
+            // que alguien le quite el filtro a ESTE contexto -que es el que corre sin petición y
+            // sin empresa- dejando puestos los de los módulos.
+            .. Entidades(alcance.ServiceProvider.GetRequiredService<ContextoDeLaBandeja>()),
         ];
     }
 

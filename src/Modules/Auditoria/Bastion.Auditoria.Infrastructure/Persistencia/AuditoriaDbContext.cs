@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,7 +71,19 @@ public sealed class AuditoriaDbContext(
 
         ConfiguracionDeAuditoria.Mapear(modelBuilder, migra: true);
 
+        // Y la bandeja de salida y su registro de procesados: este módulo es también su dueño,
+        // por lo que dice el ADR-0013 —el §5 lista dieciséis módulos y ninguno es la bandeja, así
+        // que no hay esquema propio que crear sin reabrir el mapa de módulos—.
+        ConfiguracionDeLaBandeja.Mapear(modelBuilder, migra: true);
+
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
             registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
+
+        // La cola de eventos es un dato de la empresa que los emitió: sin filtro, la primera
+        // consulta que se escriba sobre esta tabla enseñaría los hechos de todos los clientes de
+        // la instalación desde dentro de cualquiera de ellos. El publicador la ve entera porque
+        // abre un ámbito con su motivo, no porque aquí falte una línea.
+        modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
+            evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
     }
 }

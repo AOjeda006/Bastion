@@ -84,6 +84,15 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             "Los identificadores de rol NO vienen de la petición: los pone ConstructorDeSesion a " +
             "partir de la membresía, que sí filtra. Y el rol es global por decisión (ADR-0011), " +
             "así que sus permisos no son de ninguna empresa en particular",
+
+        ["src/BuildingBlocks/Infrastructure/BandejaDeSalida/CerrojoDeLaBandeja.cs usa .SqlQuery"] =
+            "toma y suelta el cerrojo con el que un solo publicador vacía la cola, y `pg_try_advisory_lock` " +
+            "no tiene traducción en EF Core: no hay forma de pedirlo sin SQL crudo. La excepción es " +
+            "estrecha por lo que la hace inútil para cualquier otro caso: esas dos sentencias NO LEEN " +
+            "NINGUNA TABLA -devuelven un booleano del gestor de bloqueos-, así que no hay ninguna fila " +
+            "que un filtro de empresa hubiera protegido. Quien quiera SQL crudo sobre filas no puede " +
+            "acogerse a esto, porque el argumento entero es que aquí no hay filas. Está en un fichero " +
+            "propio y en dos métodos, para que la excepción se lea de una vez",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del
@@ -98,6 +107,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         ["src/Modules/Identidad/Bastion.Identidad.Application/Usuarios/CrearUsuario.cs"] = 1,
         ["src/Modules/Identidad/Bastion.Identidad.Application/Usuarios/Pertenencias.cs"] = 4,
         ["src/Modules/Organizacion/Bastion.Organizacion.Application/Empresas/CrearEmpresa.cs"] = 1,
+
+        // El primero que no tiene petición detrás. El publicador corre solo, sin usuario y sin
+        // empresa: la cola es de la instalación entera y sus filas son de empresas distintas. Sin
+        // este ámbito no es que viera menos eventos — es que reventaría en cada vuelta, porque
+        // fuera de un ámbito y sin claim la empresa del filtro no existe.
+        ["src/BuildingBlocks/Infrastructure/BandejaDeSalida/PublicadorDeLaBandeja.cs"] = 1,
     };
 
     // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de
@@ -108,6 +123,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         "src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Persistencia/AuditoriaDbContext.cs",
         "src/Modules/Identidad/Bastion.Identidad.Infrastructure/Persistencia/IdentidadDbContext.cs",
         "src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/OrganizacionDbContext.cs",
+
+        // No es un módulo, y por eso está aquí abajo y con su línea: es el contexto con el que el
+        // trabajo de fondo lee la bandeja. Define el filtro por lo mismo que los otros tres -la
+        // cola es un dato de la empresa que lo emitió- y no puede definirlo el mapeo compartido,
+        // porque la expresión del filtro lee una propiedad DE LA INSTANCIA del contexto.
+        "src/BuildingBlocks/Infrastructure/BandejaDeSalida/ContextoDeLaBandeja.cs",
     ];
 
     private const string Bloque = @"/\*.*?\*/";

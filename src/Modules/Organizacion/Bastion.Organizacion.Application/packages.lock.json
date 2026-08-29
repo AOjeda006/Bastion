@@ -18,7 +18,10 @@
         "type": "Project"
       },
       "bastion.organizacion.contracts": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
       },
       "bastion.organizacion.domain": {
         "type": "Project",

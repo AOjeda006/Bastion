@@ -4,9 +4,21 @@
     Lo ÚNICO público del módulo Organizacion (§4, regla de frontera 1): DTOs y eventos de
     integración. Es lo que otro módulo puede referenciar.
 
-    Por eso NO referencia nada, ni siquiera los bloques comunes: si Contracts arrastrase
-    Domain, cualquier módulo que lo usara vería el dominio ajeno por la puerta de atrás y
-    la frontera sería decorativa.
+    NO referencia `Bastion.Organizacion.Domain`, y eso sigue igual: si lo hiciera, cualquier
+    módulo que usara este proyecto vería el dominio ajeno por la puerta de atrás y la frontera
+    sería decorativa.
+
+    SÍ referencia los bloques comunes de Dominio desde el 0.8, y la diferencia es de fondo, no
+    de grado. `Bastion.BuildingBlocks.Domain` es el NÚCLEO COMPARTIDO —`Nif`, `Direccion`,
+    `Resultado`, `EventoDeIntegracion`—: no es el dominio de ningún módulo, y todos los módulos
+    lo ven ya por sus propias capas, así que esta línea no expone nada que no estuviera
+    expuesto. Lo que aporta es la forma común de un evento de integración, que es la mitad de
+    lo que el §12 coloca en este proyecto; sin ella, un evento sería un `object` y el mecanismo
+    entero perdería el tipo. El detalle, en el ADR-0013.
   -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
 
 </Project>

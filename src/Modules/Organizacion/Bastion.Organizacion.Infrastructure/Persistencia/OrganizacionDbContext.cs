@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Domain.Ejercicios;
@@ -98,6 +99,10 @@ public sealed class OrganizacionDbContext(
         // transacción explícita en ningún caso de uso (ADR-0012).
         ConfiguracionDeAuditoria.Mapear(modelBuilder, migra: false);
 
+        // Y la bandeja de salida, igual: se mapea aquí para que el evento entre en la misma
+        // transacción que el cambio, y la migra el módulo Auditoría (ADR-0013).
+        ConfiguracionDeLaBandeja.Mapear(modelBuilder, migra: false);
+
         // R8, una línea por entidad y a la vista. `EmpresaDelFiltro` es una propiedad de la
         // instancia: EF Core la lee en CADA consulta, no al construir el modelo. Y `== null` no es
         // una válvula de escape silenciosa: la propiedad solo devuelve nulo dentro de un ámbito sin
@@ -123,5 +128,12 @@ public sealed class OrganizacionDbContext(
         // (la semilla, el acceso) no son de nadie y desde dentro de una empresa no se ven.
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
             registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
+
+        // La cola de eventos es un dato de la empresa que los emitió: sin filtro, la primera
+        // consulta que se escriba sobre esta tabla enseñaría los hechos de todos los clientes de
+        // la instalación desde dentro de cualquiera de ellos. El publicador la ve entera porque
+        // abre un ámbito con su motivo, no porque aquí falte una línea.
+        modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
+            evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
     }
 }

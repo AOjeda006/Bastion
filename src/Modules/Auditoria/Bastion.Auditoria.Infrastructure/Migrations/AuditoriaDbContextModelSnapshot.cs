@@ -93,6 +93,101 @@ namespace Bastion.Auditoria.Infrastructure.Migrations
 
                     b.HasAnnotation("Bastion:Auditoria", "NoAuditada|es la traza; auditarla sería recursión, no información");
                 });
+
+            modelBuilder.Entity("Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida.EventoDeLaBandeja", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Cuerpo")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("cuerpo");
+
+                    b.Property<Guid?>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("estado");
+
+                    b.Property<Guid>("EventoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evento_id");
+
+                    b.Property<int>("Intentos")
+                        .HasColumnType("integer")
+                        .HasColumnName("intentos");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("nombre");
+
+                    b.Property<DateTimeOffset>("OcurridoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ocurrido_en");
+
+                    b.Property<DateTimeOffset?>("PublicadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("publicado_en");
+
+                    b.Property<string>("SinInquilino")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("sin_inquilino");
+
+                    b.Property<string>("UltimoError")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("ultimo_error");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bandeja_de_salida");
+
+                    b.HasIndex("EventoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bandeja_evento_id");
+
+                    b.HasIndex("Estado", "Id")
+                        .HasDatabaseName("ix_bandeja_de_salida_estado_id");
+
+                    b.ToTable("bandeja_de_salida", "auditoria", t =>
+                        {
+                            t.HasCheckConstraint("ck_bandeja_empresa_o_motivo", "(empresa_id IS NULL) <> (sin_inquilino IS NULL)");
+                        });
+
+                    b.HasAnnotation("Bastion:Auditoria", "NoAuditada|es la cola de eventos; publicarlos es fontanería, no un cambio de datos");
+                });
+
+            modelBuilder.Entity("Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida.EventoProcesado", b =>
+                {
+                    b.Property<Guid>("EventoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evento_id");
+
+                    b.Property<string>("Consumidor")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("consumidor");
+
+                    b.Property<DateTimeOffset>("ProcesadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("procesado_en");
+
+                    b.HasKey("EventoId", "Consumidor")
+                        .HasName("pk_eventos_procesados");
+
+                    b.ToTable("eventos_procesados", "auditoria");
+
+                    b.HasAnnotation("Bastion:Auditoria", "NoAuditada|es la huella de que un consumidor ya pasó; no es un cambio de datos");
+                });
 #pragma warning restore 612, 618
         }
     }

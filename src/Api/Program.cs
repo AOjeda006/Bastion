@@ -8,6 +8,7 @@ using Bastion.Auditoria.Infrastructure;
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
@@ -86,6 +87,12 @@ builder.Services.AddOpenTelemetry()
         metricas.AddHttpClientInstrumentation();
         metricas.AddRuntimeInstrumentation();
 
+        // La bandeja de salida publica la EDAD del evento pendiente más antiguo (0.8). Es lo que
+        // distingue «mil eventos que salen en dos segundos» de «uno atascado desde ayer», que el
+        // tamaño de la cola no distingue. No está en ninguna sonda a propósito: el porqué, en
+        // `MetricasDeLaBandeja`.
+        metricas.AddMeter(MetricasDeLaBandeja.Medidor);
+
         if (hayRecolector)
         {
             metricas.AddOtlpExporter();
@@ -142,6 +149,15 @@ builder.Services.AgregarInquilinato();
 // DbContext en la linea siguiente. Enchufarlo es cosa de cada modulo, a la vista en su
 // `AddDbContext`; lo que se registra aqui es el servicio, una sola vez.
 builder.Services.AgregarAuditoria();
+
+// R12. También delante, y por lo mismo: registra el interceptor que llena la bandeja de salida y
+// que cada módulo con persistencia engancha a su DbContext en la línea siguiente.
+//
+// El trabajo de fondo que la VACÍA solo se registra si hay base de datos a la que conectarse. Sin
+// cadena de conexión —los tests funcionales levantan el host entero sin dependencia ninguna— un
+// publicador sondeando sería un error por vuelta desde el arranque, y ese ruido esconde los
+// errores de verdad.
+builder.Services.AgregarBandejaDeSalida(publica: cadenaDeConexion.Length > 0);
 
 builder.Services.AgregarModuloDeAuditoria(cadenaDeConexion);
 builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion);

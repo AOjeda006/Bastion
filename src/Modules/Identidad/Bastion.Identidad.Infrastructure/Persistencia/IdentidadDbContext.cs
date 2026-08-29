@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Identidad.Domain.Roles;
 using Bastion.Identidad.Domain.Sesiones;
@@ -86,8 +87,20 @@ public sealed class IdentidadDbContext(
         // transacción explícita en ningún caso de uso (ADR-0012).
         ConfiguracionDeAuditoria.Mapear(modelBuilder, migra: false);
 
+        // Y la bandeja de salida, por lo mismo. Este módulo todavía no emite ningún evento; la
+        // mapea igual para que el día que lo emita no haya que acordarse de venir aquí, y para
+        // que el barrido del inquilinato la vea también desde este contexto.
+        ConfiguracionDeLaBandeja.Mapear(modelBuilder, migra: false);
+
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
             registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
+
+        // La cola de eventos es un dato de la empresa que los emitió: sin filtro, la primera
+        // consulta que se escriba sobre esta tabla enseñaría los hechos de todos los clientes de
+        // la instalación desde dentro de cualquiera de ellos. El publicador la ve entera porque
+        // abre un ámbito con su motivo, no porque aquí falte una línea.
+        modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
+            evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
 
         // La pertenencia es el PUENTE del inquilinato: lleva `empresa_id` y se filtra por él.
         // Filtrarla tiene una consecuencia que hay que mirar de frente: el acceso carga al usuario
