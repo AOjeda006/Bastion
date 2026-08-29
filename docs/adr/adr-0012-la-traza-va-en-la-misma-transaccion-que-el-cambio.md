@@ -162,8 +162,9 @@ qué otras empresas existen y quién trabaja en ellas.
 
 ## 6. Qué es «un maestro»: las diez entidades de hoy, una por una
 
-El criterio dice «un maestro» sin definirlo. Se define aquí, entidad por entidad, sobre las que
-existen hoy. La tabla está también en `docs/PLAN.md`, y no la vigila la buena voluntad: la vigila
+El criterio dice «un maestro» sin definirlo. Se define aquí, entidad por entidad, sobre las diez que
+existen hoy. La tabla lleva una fila más, la undécima: la propia traza, porque «el interceptor no se
+audita a sí mismo» también hay que escribirlo en algún sitio. La tabla está también en `docs/PLAN.md`, y no la vigila la buena voluntad: la vigila
 `CadaEntidadDeclaraSuAuditoriaTests`.
 
 | Entidad | ¿Se audita? | Por qué |

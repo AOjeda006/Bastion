@@ -581,7 +581,9 @@ Todo lo de abajo está razonado en
   `HasColumnType` de la configuración compartida, no en una consulta.
 
 **Qué es «un maestro», entidad por entidad.** El criterio del ítem dice «un maestro» sin definirlo,
-así que se define aquí sobre las diez entidades que existen hoy. Va también en el **ADR-0012**, y no
+así que se define aquí sobre las diez entidades que existen hoy — y sobre la undécima fila de la
+tabla, que es la propia traza, porque «el interceptor no se audita a sí mismo» también hay que
+escribirlo en algún sitio. Va también en el **ADR-0012**, y no
 la vigila la buena voluntad: la vigila `CadaEntidadDeclaraSuAuditoriaTests`, que recorre el modelo ya
 construido y exige que no quede nada sin clasificar.
 
@@ -645,6 +647,63 @@ revirtió comprobando que el fichero volvía byte a byte al original.
 
 
 ## Estado actual
+
+**Ítem 0.7 cerrado, con la CI en verde:**
+[run 33249546052](https://github.com/AOjeda006/Bastion/actions/runs/33249546052) sobre `7556951`,
+los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
+los dos recuentos publicados: **340** casos rápidos y **142** de integración contra
+PostgreSQL 17.6.
+
+Estrena el tercer esquema, `auditoria`, y con él **la primera tabla de solo añadido del sistema**.
+La forma que se fija aquí no se vuelve a discutir: los libros de la R3 —asientos, movimientos, la
+cadena de la R15— la copian.
+
+Lo que llega con él: `RegistroDeAuditoria`, su configuración compartida y el interceptor en
+`BuildingBlocks/Infrastructure/Auditoria` (que es donde el §12 coloca la infraestructura de
+auditoría, y lo que hace posible que los tres contextos mapeen la misma tabla sin cruzar ninguna
+frontera del §4); el módulo `Auditoria`, único dueño de la migración; y **veinticinco casos nuevos**
+—19 de integración y 6 rápidos— repartidos entre los que prueban el efecto contra PostgreSQL de
+verdad y los que barren el modelo ya construido.
+
+### Lo que el criterio del 0.7 pedía, y dónde está probado
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| *Tabla append-only* | `LaTrazaEsDeSoloAnadidoTests`: `UPDATE`, `DELETE` y `TRUNCATE` lanzados contra PostgreSQL exigiendo el SQLSTATE `23001` del motor. Leer la migración no cuenta. |
+| …y que no admita una fila incoherente | Dos casos más del mismo: un `INSERT` sin empresa y sin motivo, y otro con las dos cosas, contra el `CHECK` `ck_registros_empresa_o_motivo` (`23514`). |
+| *De quién cambió qué* | `UnCambioEnUnMaestroDejaSuRastroTests`: quién (`usuario_id` de la sesión), dónde (`empresa_id`), qué (entidad + clave) y el antes y el después de cada propiedad. |
+| *Un cambio en un maestro deja su rastro* | El mismo, **por la API de verdad y con sesión de verdad**: se hace un `POST` y un `PUT` de almacén y un `POST` de rol, y se mira la tabla. Que el interceptor esté registrado no se lee en ningún sitio: se nota aquí o no se nota en ninguna parte. |
+| Y que la traza **no** sobreviva a un cambio revertido | `LaTrazaVaEnLaMismaTransaccionTests`, tres casos, incluido el del `xmin` — el único que distingue la ruta buena de la de «escribir después de que el guardado fuera bien». |
+| Y que no guarde secretos | `LaTrazaNoGuardaSecretosTests`, dos casos, uno de ellos en forma fuerte: no nombra ninguna columna, se las pregunta al modelo. |
+| Y el cabo del 0.6 | `NadieEscribeEnLaEmpresaDeOtroTests`, tres casos con su control positivo. |
+
+### Verificado en local, con la salida real
+
+- `dotnet build Bastion.sln` → **0 advertencias / 0 errores**.
+- `dotnet format --verify-no-changes` → `rc=0` (pasó por un `dotnet format` antes: orden de
+  importaciones e `IDE0007` en cuatro sitios de los tests nuevos).
+- `dotnet test --filter "Category!=Integracion"` → **340** correctos, 0 con error
+  (100 comunes + 116 Organización + 58 Identidad + **66** funcionales, de 58).
+- `dotnet test --filter "Category=Integracion"` → **142** correctos, 0 con error
+  (28 Organización + **114** de API, de 94), contra PostgreSQL 17.6 con Testcontainers.
+- Los **dos carriles otra vez con `GITHUB_ACTIONS=true`**: 340 y 142, en verde.
+- `scripts/comprobar-migraciones.sh` → *«el modelo coincide con ellas»* en los **tres** módulos, y
+  ninguna migración vacía en Organización ni en Identidad.
+- El rojo de partida más interesante no fue el del interceptor sino el de `CerrarSesion`: un `500`
+  en un test del 0.5 que llevaba meses en verde. La traza le preguntó a una escritura en nombre de
+  qué empresa se hacía, y resultó que aquel caso de uso nunca había contestado.
+### Lo que la CI encontró y en local no se veía
+
+**Nada, y esta vez es un dato y no una frase hecha.** Los cuatro *jobs* en `success` a la primera, y
+los dos recuentos publicados coinciden **exactamente** con los de esta máquina: 340 y 142. Es la
+primera vez que pasa, y la explicación no es la suerte — es que el ítem 0.6 dejó dos costumbres: los
+dos carriles se ejecutan también con `GITHUB_ACTIONS=true`, que es lo que hace que el *build* sea el
+mismo, y el recuento se publica como anotación porque los registros del *job* devuelven `403` sin
+autenticar.
+
+Lo único que la CI dice y aquí no se ve es un aviso ajeno a este ítem:
+`actions/upload-artifact@v4` apunta a Node.js 20, que está en desuso, y el ejecutor lo fuerza a
+Node.js 24. No es un fallo y no rompe nada; queda anotado para cuando toque el 0.13.
 
 **Ítem 0.6 cerrado, con la CI en verde:**
 [run 33022811597](https://github.com/AOjeda006/Bastion/actions/runs/33022811597) sobre `9391f0b`,
@@ -1208,8 +1267,23 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   una que no existe. Probado con **ocho mutaciones**, dos de ellas contadas sin adornarlas.
   Los cuatro *jobs* de la CI en verde — [run 33022811597](https://github.com/AOjeda006/Bastion/actions/runs/33022811597),
   con **332** casos rápidos y **122** de integración.
-- [ ] **0.7 · Módulo Auditoría** — criterio de aceptación: tabla *append-only* de quién cambió qué;
+- [x] **0.7 · Módulo Auditoría** — criterio de aceptación: tabla *append-only* de quién cambió qué;
   un cambio en un maestro deja su rastro.
+  Las dos mitades del criterio, por el efecto: lo *append-only* lo rechaza **el motor** —una función
+  `plpgsql` y dos disparadores, uno de fila para `UPDATE` y `DELETE` y otro de sentencia para
+  `TRUNCATE`—, y se prueba lanzando las tres órdenes contra PostgreSQL, no leyendo la migración; y
+  el rastro se comprueba por la API de verdad, con sesión de verdad, mirando la tabla. La traza va
+  **dentro del mismo `SaveChanges`** que el cambio, y eso lo prueba el `xmin`: el de la fila y el de
+  su traza son el mismo número. Estrena el tercer esquema, `auditoria`, y con él la primera tabla de
+  solo añadido del sistema. Decisiones en
+  `docs/adr/adr-0012-la-traza-va-en-la-misma-transaccion-que-el-cambio.md`, con las dos rutas no
+  atómicas escritas descartadas, la tabla de las diez entidades —más la propia traza, que no se audita a sí
+  misma— y la línea sobre datos personales y
+  conservación, que es una decisión que aquí no se toma. De paso cierra el cabo del 0.6:
+  `HasQueryFilter` no interviene en un `INSERT`. Probado con **seis mutaciones**, dos de ellas
+  contadas enteras.
+  Los cuatro *jobs* de la CI en verde — [run 33249546052](https://github.com/AOjeda006/Bastion/actions/runs/33249546052),
+  con **340** casos rápidos y **142** de integración.
 - [ ] **0.8 · Outbox transaccional (R12)** — criterio de aceptación: un evento y su escritura de
   negocio caen en la misma transacción; el trabajo de fondo lo publica; reprocesar no duplica.
 - [ ] **0.9 · Idempotencia (R10) y concurrencia optimista (R11)** — criterio de aceptación: la misma
