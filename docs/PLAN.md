@@ -942,6 +942,118 @@ son SHA-256 en hexadecimal— mata el test que tenía que matar.
 
 ## Estado actual
 
+**Ítem 0.9 cerrado, con la CI en verde:**
+[run 33347235943](https://github.com/AOjeda006/Bastion/actions/runs/33347235943) sobre `c6327b2`,
+los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
+los dos recuentos publicados: **370** casos rápidos y **180** de integración contra
+PostgreSQL 17.6.
+
+Cierra la fase 0 por el lado del **protocolo de escritura**: a partir de aquí, toda modificación de
+un maestro dice sobre qué versión escribe, y toda alta se puede reintentar sin duplicar. Las dos
+cosas son requisitos duros —R10 y R11— y ninguna tiene síntoma en desarrollo: un sistema sin ellas
+funciona perfectamente hasta el día que dos personas trabajan a la vez o a alguien se le cae la
+cobertura.
+
+Lo que llega con él: `VersionDeRecurso`, `IVersiones` y `ErroresDeConcurrencia` en la aplicación
+común; `TestigoDeConcurrencia`, `Versiones`, `RespuestasConVersion` y `ManejadorDeVersionObsoleta`
+en la infraestructura común; el mecanismo de idempotencia entero —clave, huella, registro, almacén,
+filtro y respuesta repetida— en `BuildingBlocks/{Application,Infrastructure}/Idempotencia`; **una
+tabla nueva** en el esquema `auditoria`, `claves_de_idempotencia`; el testigo `xmin` en las **seis**
+entidades con lectura por identificador; y **treinta y ocho casos más** que al cerrar el 0.8
+—20 de integración y 18 rápidos—.
+
+### Lo que el criterio del 0.9 pedía, y dónde está probado
+
+Cuatro cláusulas de dos mecanismos distintos.
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| *La misma `Idempotency-Key` devuelve el mismo recurso* | `El_reintento_con_la_misma_clave_devuelve_los_mismos_bytes_y_no_crea_otro`: los **mismos bytes**, el mismo `Location`, la cabecera `Idempotent-Replayed` solo en la segunda — y, por el efecto, **un** almacén y no dos. |
+| …y la misma clave con otro cuerpo **no** | `La_misma_clave_con_otro_cuerpo_es_409`, más la comprobación de que el segundo no se creó. |
+| …y la misma clave de otra empresa es otra clave | `La_misma_clave_desde_otra_empresa_hace_su_propio_trabajo`, con dos empresas mandando literalmente la misma cadena. |
+| …y dos peticiones **simultáneas** con la misma clave | `De_dos_peticiones_simultaneas_con_la_misma_clave_solo_una_hace_el_trabajo`, asertado sobre el efecto: exactamente una lleva la cabecera de repetición y hay una sola fila. Es el test que justifica el `ON CONFLICT`. |
+| …y que la clave no se queme con un intento fallido | `Un_alta_rechazada_deja_la_clave_libre_para_el_reintento`: el cliente corrige y reintenta **con la misma clave**, como manda la cabecera. |
+| …y que el recibo caiga en la transacción del trabajo | `El_recibo_y_el_almacen_llevan_el_mismo_xmin`. Tercera vez que se prueba así en este proyecto, y la única que no se puede fingir desde el código. |
+| *`If-Match` obsoleto → **412*** | `Una_version_obsoleta_es_412_y_trae_la_actual` y `De_dos_que_leyeron_lo_mismo_solo_guarda_el_primero`: el segundo se lleva el `412` **y lo del primero sigue ahí**, que es la mitad que de verdad importa. |
+| …y que el `412` traiga el estado actual | El mismo test: `versionActual` en el cuerpo coincide con el `ETag` que emite una relectura. Y comprueba que la cabecera `ETag` **no** viene, que es lo contrario de lo que se diseñó primero. |
+| *Sin cabecera → **428*** | `Sin_la_cabecera_es_428_y_no_toca_nada`, con la segunda mitad: la fila sigue como estaba. |
+| Y la cabecera ilegible → **400**, que no es lo mismo | `Una_cabecera_que_no_es_una_version_concreta_es_400`, cinco filas: el comodín `*`, una etiqueta débil, una lista, una sin comillas y una que no es un número. |
+| *Estado incorrecto → **409*** | Ya estaba desde el 0.4 y sigue verde: `Una_empresa_bloqueada_no_se_puede_modificar_y_da_409`, `Suprimir_una_serie_que_ya_ha_numerado_es_409`. Lo que el 0.9 añade es que ahora llegan **después** del `If-Match`, no en vez de él. |
+| Que el `ETag` que emite la lectura sea el que acepta la escritura | `La_etiqueta_que_emite_la_lectura_es_la_que_acepta_la_escritura` y `La_version_cambia_cuando_el_recurso_cambia`. El segundo no sobra: con una versión constante, todos los demás saldrían verdes sin comprobar nada. |
+| Tras un `412`, ni traza ni evento | `Tras_un_412_ni_traza_ni_evento`, que ata este ítem con el 0.7 y el 0.8: los tres viajan en el mismo `SaveChanges`, así que o se deshacen los tres o queda una traza de un cambio que no ocurrió. |
+| Que ninguna escritura se quede sin decir cómo se protege | `TodaEscrituraDiceComoSeProtegeTests`, 6 casos, con el inventario fijado en números. |
+| Que la sentencia cruda siga mereciendo su excepción | `LaClaveDeIdempotenciaEsLaTuplaEnteraTests`, 8 casos contra el modelo ya construido. |
+
+### Verificado en local, con la salida real
+
+- `dotnet build Bastion.sln` → **0 advertencias / 0 errores**.
+- `dotnet format Bastion.sln --verify-no-changes` → limpio. **No lo estaba**: encontró cuatro
+  incumplimientos en código de este ítem (orden de `using` en `Program.cs`, dos `IDE0270` y un
+  `IDE0078`). Se aplicó el formateador y se volvieron a pasar los dos carriles enteros después.
+- `dotnet test --filter "Category!=Integracion"` → **370** correctos, 0 con error
+  (100 comunes + 116 Organización + 58 Identidad + **96** funcionales, de 78).
+- `dotnet test --filter "Category=Integracion"` → **180** correctos, 0 con error
+  (28 Organización + **152** de API, de 132), contra PostgreSQL 17.6 con Testcontainers.
+- Los **dos carriles otra vez con `GITHUB_ACTIONS=true`**: 370 y 180, en verde.
+- `scripts/comprobar-migraciones.sh` → *«el modelo coincide con ellas»* en los tres módulos:
+  **Auditoría 3** migraciones —la nueva es la de `claves_de_idempotencia`—, **Organización 2** e
+  **Identidad 2** —las nuevas son las del testigo, que **no emiten SQL** y se conservan para que
+  modelo y migraciones cuadren—.
+- **Siete mutaciones**, cada una aplicada, compilada, ejecutada y revertida. La tabla está arriba.
+  Ninguna sobrevivió, y la que hay que leer es la que **no llegó a compilar** y por tanto no llegó a
+  mutar: apuntada sin mirar, habría pasado por superviviente.
+
+### Lo que se ha decidido dejar pendiente, a propósito
+
+- **La retención de `auditoria.claves_de_idempotencia`.** La tabla crece sin límite. Está fuera de
+  este ítem por decisión, no por olvido: borrar recibos es exactamente lo que reabre la ventana que
+  la tabla cierra, y decidir cuánto se conserva uno necesita saber cuánto reintenta un cliente. Se
+  decidirá con datos, no ahora.
+
+### Lo que se encontró por el camino y no estaba previsto
+
+1. **La cabecera `ETag` en un `412` no llega nunca.** El middleware de excepciones de ASP.NET Core
+   registra un `OnStarting` que la borra de toda respuesta de error. Se vio poniendo a la vez el
+   `ETag` y una cabecera cualquiera: la segunda llegó y el `ETag` no. Y **el borrado tiene razón**
+   —el `ETag` etiqueta la representación que va en esa respuesta, y ahí va un documento de problema,
+   no el recurso—, así que no se le buscó la vuelta: se quitó la cabecera, la versión actual viaja
+   en el cuerpo, y hay un test que comprueba que la cabecera **no** está para que nadie la reponga
+   «porque parece que falta».
+2. **Los puntos de guardado automáticos de EF Core rompían la prueba de atomicidad, y algo más.**
+   Con una transacción abierta, EF pone un `SAVEPOINT` delante de cada `SaveChanges`; cada uno abre
+   una subtransacción con su propio identificador, así que las filas de un mismo trabajo salían con
+   `xmin` distintos —medido: **759** la de negocio, **760** el recibo—. Apagarlos no era solo para
+   que el test pasara: con ellos, un guardado que falla deja la transacción **viva** con la clave ya
+   reclamada dentro.
+3. **Una `Idempotency-Key` en blanco se atendía sin protección.** El filtro preguntaba si el texto
+   estaba en blanco, y una cabecera presente y vacía cuenta como ausente en esa pregunta. El cliente
+   se creía protegido y duplicaría al reintentar. Ahora se pregunta por el número de valores.
+
+### Lo que la CI encontró y en local no se veía
+
+**Nada, por tercera vez, y por el mismo motivo que en el 0.7 y el 0.8**: los dos carriles se
+ejecutan también en local con `GITHUB_ACTIONS=true`, así que el *build* es el mismo, y los dos
+recuentos publicados coinciden **exactamente** con los de esta máquina — **370** y **180**, con el
+mismo reparto por ensamblado (`BuildingBlocks` 100, Organización 116, Identidad 58, funcionales 96;
+Organización de integración 28 y API 152). Los suelos de recuento (300 / 100) siguen haciendo su
+trabajo, y `Modelo y migraciones coinciden en todos los módulos con persistencia` sale también allí,
+que es lo que da valor a las dos migraciones vacías: si algún día dejaran de estar, este aviso se
+volvería rojo en la CI y no solo aquí.
+
+Lo único que la CI dice y aquí no se ve sigue siendo el mismo aviso ajeno a este ítem, arrastrado
+desde el 0.7 y todavía sin tocar: `actions/upload-artifact@v4` (en `Backend` y en `Frontal`) y
+`docker/build-push-action@v6` con `docker/setup-buildx-action@v3` (en `Imágenes de contenedor`)
+apuntan a Node.js 20, en desuso, y el ejecutor los fuerza a Node.js 24. No es un fallo; es del 0.13.
+
+**Dónde retomar exactamente:** ítem **0.10**, estados `Bloqueado` y fechas de R14–R17 en el modelo
+base. Criterio: el tipo base de entidad y las direcciones ya nacen con lo que exigen R14, R16 y R17
+—no se añade después—. Lo que hereda de aquí: las seis entidades con lectura por identificador ya
+llevan testigo de concurrencia, así que el tipo base del 0.10 tiene que nacer sabiéndolo, y la lista
+de seis testigos del **ADR-0015** se compara entera — una entidad nueva con `xmin` obliga a
+escribirla ahí, que es lo que mantiene «cuáles son» como una decisión.
+
+---
+
 **Ítem 0.8 cerrado, con la CI en verde:**
 [run 33263044577](https://github.com/AOjeda006/Bastion/actions/runs/33263044577) sobre `ac7b9a4`,
 los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
@@ -1666,9 +1778,25 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   de ellas verde y contada entera: desmintió un comentario que estaba escrito en el código.
   Los cuatro *jobs* de la CI en verde — [run 33263044577](https://github.com/AOjeda006/Bastion/actions/runs/33263044577),
   con **352** casos rápidos y **160** de integración.
-- [ ] **0.9 · Idempotencia (R10) y concurrencia optimista (R11)** — criterio de aceptación: la misma
+- [x] **0.9 · Idempotencia (R10) y concurrencia optimista (R11)** — criterio de aceptación: la misma
   `Idempotency-Key` devuelve el mismo recurso; `If-Match` obsoleto → **412**; estado incorrecto →
   **409**; sin cabecera → **428**.
+  **Son dos mecanismos y se han diseñado por separado**, aunque el criterio los junte: la clave del
+  cliente protege de que UNA persona repita su petición; el `If-Match`, de que DOS pisen el mismo
+  recurso. Ninguna acción pide las dos, y un barrido lo mantiene así. El testigo es `xmin` —no un
+  contador nuestro—, con la trampa del `AsNoTracking` cerrada con un fallo ruidoso. La clave de
+  idempotencia es **la tupla entera** (empresa, usuario, método, ruta, clave) y se reclama con un
+  `INSERT … ON CONFLICT DO NOTHING`, la única sentencia cruda del mecanismo, con su excepción al
+  barrido del 0.6 ganada por el mismo argumento que el cerrojo del 0.8: **no lee ninguna tabla**.
+  El recibo cae en la transacción del trabajo, y para que eso sea *comprobable* hubo que apagar los
+  puntos de guardado automáticos de EF Core —abren subtransacciones con `xmin` propio—. Una tabla
+  nueva en el esquema `auditoria`; **la retención de esa tabla queda fuera a propósito** y anotada.
+  Decisiones en `docs/adr/adr-0014-la-clave-del-cliente-y-la-version-del-recurso-son-dos-mecanismos.md`
+  y, para la premisa reenunciada del 0.7, en
+  `docs/adr/adr-0015-lo-unico-que-genera-el-servidor-son-los-testigos-de-concurrencia.md`.
+  Probado con **siete mutaciones**, ninguna superviviente y una que hubo que rehacer porque no
+  llegó a compilar. Los cuatro *jobs* de la CI en verde — [run 33347235943](https://github.com/AOjeda006/Bastion/actions/runs/33347235943),
+  con **370** casos rápidos y **180** de integración publicados como `::notice::`.
 - [ ] **0.10 · Estados `Bloqueado` y fechas de R14–R17 en el modelo base** — criterio de aceptación:
   el tipo base de entidad y las direcciones ya nacen con lo que exigen R14, R16 y R17 — no se añade
   después.
@@ -1702,6 +1830,17 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTO (2026-08-31) · `auditoria.claves_de_idempotencia` crece sin límite, y es a propósito.**
+  El 0.9 no trae política de retención, y no por olvido. Un recibo de idempotencia es lo que impide
+  que un reintento duplique un alta: **borrarlo reabre exactamente la ventana que la tabla cierra**,
+  así que una limpieza mal calibrada no deja la tabla más pequeña, deja el sistema sin la garantía.
+  Lo que hace falta para decidirlo no está en el código sino en el uso: **cuánto tarda un cliente
+  real en reintentar**. Hasta que haya ese dato, borrar sería adivinar. Dos cosas que ya se saben y
+  ahorran trabajo el día que toque: la fila es pequeña y anónima —identidad, huella, código y bytes
+  de la respuesta, nada del contenido de negocio (ADR-0014 §5)—, y la clave primaria empieza por
+  `empresa_id`, así que un borrado por antigüedad dentro de una empresa recorre un rango contiguo
+  del índice. El momento natural de decidirlo es el **0.13**, junto con quién aplica las migraciones
+  en un despliegue; no antes.
 - **ABIERTO (2026-08-26) · el *compose* no aplica las migraciones, así que la semilla no llega a
   aplicarse ahí.** Nadie ejecuta `dotnet ef database update` ni al arrancar la API ni en el
   `docker-compose.yml`: la base del entorno local no tiene tablas. Consecuencia práctica de hoy:
