@@ -76,9 +76,6 @@ ehthumbs.db
 desktop.ini
 __MACOSX/
 
-# ---------- Salidas locales ----------
-/docs/api/openapi.json
-
 # ---------- Especificación del producto ----------
 # `ERP-PLAN-MAESTRO.md` es la fuente de verdad del producto y la aporta el usuario
 # FUERA del repositorio (CLAUDE.md y README.md lo dicen así). Se deja en la raíz para

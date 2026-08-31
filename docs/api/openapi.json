@@ -1,0 +1,5262 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Bastion",
+    "description": "ERP para pyme española. Contrato de la versión 1 de la API, bajo /api/v1/{modulo}/{recurso}. Se genera al compilar desde los controladores y los DTO: no se escribe a mano, y el cliente del frontal se genera de él.",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/v1/identidad/roles": {
+      "get": {
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Devuelve una página de roles.",
+        "operationId": "Roles_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeRolDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeRolDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeRolDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Crea un rol con su lista de permisos.",
+        "operationId": "Roles_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRolDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRolDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRolDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/roles/permisos": {
+      "get": {
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Devuelve el catálogo de permisos que se pueden conceder.",
+        "description": "Exige `rol.ver` y no es una consulta pública de conveniencia: enumerar los permisos que\r\nexiste es enumerar lo que el sistema sabe hacer, y eso es un mapa que a un anónimo no se le\r\nda. La ruta va antes que `{id:guid}` por claridad; no compiten, porque\r\n`permisos` no casa con la restricción `:guid`.",
+        "operationId": "Roles_Permisos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/roles/{id}": {
+      "get": {
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Devuelve un rol.",
+        "operationId": "Roles_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del rol.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Cambia el nombre y los permisos de un rol.",
+        "description": "Permiso propio, distinto del de crear: crear un rol vacío no le da a nadie nada, mientras\r\nque modificar uno le cambia los permisos a todos los que ya lo tienen asignado.",
+        "operationId": "Roles_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del rol.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarRolDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarRolDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarRolDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/sesiones": {
+      "post": {
+        "tags": [
+          "Sesiones"
+        ],
+        "summary": "Abre una sesión.",
+        "operationId": "Sesiones_Iniciar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarSesionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarSesionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarSesionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [ ]
+      }
+    },
+    "/api/v1/identidad/sesiones/renovacion": {
+      "post": {
+        "tags": [
+          "Sesiones"
+        ],
+        "summary": "Cambia el token de refresco por una sesión nueva.",
+        "description": "No lleva cuerpo: lo que autoriza es la cookie. Un token de refresco en el cuerpo tendría\r\nque haberlo leído el JavaScript de algún sitio, y ese sitio sería el que no puede existir.",
+        "operationId": "Sesiones_Renovar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [ ]
+      }
+    },
+    "/api/v1/identidad/sesiones/actual": {
+      "delete": {
+        "tags": [
+          "Sesiones"
+        ],
+        "summary": "Cierra la sesión.",
+        "operationId": "Sesiones_Cerrar",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [ ]
+      }
+    },
+    "/api/v1/identidad/sesiones/actual/empresa": {
+      "put": {
+        "tags": [
+          "Sesiones"
+        ],
+        "summary": "Cambia con qué empresa se está operando (R8).",
+        "description": "Autenticada pero SIN permiso: elegir entre las empresas a las que uno ya pertenece no es una\r\nfacultad que se conceda, es lo que significa pertenecer a varias. Lo que sí se comprueba\r\n—dentro— es que pertenezca a la que pide.",
+        "operationId": "Sesiones_CambiarEmpresa",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarEmpresaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarEmpresaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarEmpresaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Devuelve una página de usuarios de la empresa activa.",
+        "operationId": "Usuarios_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUsuarioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUsuarioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUsuarioDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Da de alta un usuario en la empresa activa.",
+        "operationId": "Usuarios_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUsuarioDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUsuarioDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUsuarioDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios/{id}": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Devuelve un usuario.",
+        "operationId": "Usuarios_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Cambia el nombre de un usuario.",
+        "operationId": "Usuarios_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUsuarioDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUsuarioDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUsuarioDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Bloquea un usuario (R16). No lo borra.",
+        "operationId": "Usuarios_Bloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios/{id}/desbloqueo": {
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Devuelve a un usuario bloqueado a la actividad.",
+        "description": "<b>Es la única escritura del sistema sin `If-Match`.</b> No es un descuido ni una\r\n        excepción de comodidad: desde el 0.10 un recurso bloqueado no se lee por ningún camino\r\n        ordinario, y el `ETag` se obtiene leyendo. Exigir aquí una versión sería exigir una\r\n        llave que no se puede conseguir, y dejaría la puerta cerrada para siempre. Lo que el\r\n        `If-Match` evita —pisar el cambio de otro— aquí no puede pasar: mientras el recurso\r\n        está bloqueado ninguna otra escritura llega hasta él, y desbloquear dos veces deja el mismo\r\n        resultado que desbloquear una (ADR-0017).",
+        "operationId": "Usuarios_Desbloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios/actual/contrasena": {
+      "put": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Cambia la contraseña PROPIA, presentando la actual.",
+        "description": "La única acción autenticada del sistema que no exige permiso, y no es una excepción\r\ncaprichosa: la autorización es saber la contraseña de ahora, que se presenta en el cuerpo.\r\nSobre quién se opera no se pregunta —sale del <i>claim</i>—, así que aquí no se puede tocar\r\nla cuenta de otro ni escribiéndolo aposta.",
+        "operationId": "Usuarios_CambiarContrasenaPropia",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarContrasenaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarContrasenaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarContrasenaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios/{id}/contrasena": {
+      "put": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Le cambia la contraseña a otro usuario.",
+        "operationId": "Usuarios_Restablecer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestablecerContrasenaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestablecerContrasenaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestablecerContrasenaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios/{id}/pertenencias": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Devuelve las pertenencias de un usuario.",
+        "operationId": "Usuarios_Pertenencias",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MembresiaDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MembresiaDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MembresiaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Da de alta a un usuario en una empresa.",
+        "operationId": "Usuarios_Conceder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConcederPertenenciaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConcederPertenenciaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConcederPertenenciaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios/{id}/pertenencias/{empresaId}": {
+      "delete": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Da de baja a un usuario de una empresa.",
+        "operationId": "Usuarios_Retirar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "empresaId",
+            "in": "path",
+            "description": "Empresa de la que se le da de baja.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios/{id}/roles": {
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Asigna un rol a un usuario en una empresa.",
+        "operationId": "Usuarios_AsignarRol",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarRolDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarRolDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarRolDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/identidad/usuarios/{id}/roles/{empresaId}/{rolId}": {
+      "delete": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Le retira un rol a un usuario en una empresa.",
+        "description": "Permiso propio, distinto del de asignar: hacer y deshacer no son la misma facultad. Quien\r\nreparte roles no tiene por qué poder quitarle el suyo al administrador.",
+        "operationId": "Usuarios_RetirarRol",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del usuario.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "empresaId",
+            "in": "path",
+            "description": "Empresa en la que se le retira.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "rolId",
+            "in": "path",
+            "description": "Rol que se le retira.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/almacenes": {
+      "get": {
+        "tags": [
+          "Almacenes"
+        ],
+        "summary": "Devuelve una página de almacenes.",
+        "operationId": "Almacenes_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeAlmacenDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeAlmacenDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeAlmacenDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Almacenes"
+        ],
+        "summary": "Da de alta un almacén.",
+        "operationId": "Almacenes_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearAlmacenDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearAlmacenDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearAlmacenDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/almacenes/{id}": {
+      "get": {
+        "tags": [
+          "Almacenes"
+        ],
+        "summary": "Devuelve un almacén.",
+        "operationId": "Almacenes_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del almacén.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Almacenes"
+        ],
+        "summary": "Cambia los datos de un almacén.",
+        "operationId": "Almacenes_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del almacén.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarAlmacenDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarAlmacenDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarAlmacenDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmacenDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Almacenes"
+        ],
+        "summary": "Bloquea un almacén. No lo borra.",
+        "description": "Cada movimiento de existencias apunta a su almacén para siempre: borrar la fila rompería el\r\nhistórico de valoración, que no se puede reconstruir después.",
+        "operationId": "Almacenes_Bloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del almacén.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/almacenes/{id}/desbloqueo": {
+      "post": {
+        "tags": [
+          "Almacenes"
+        ],
+        "summary": "Devuelve un almacén bloqueado a la operativa.",
+        "description": "Sin puerta HTTP en el 0.4 por lo mismo que el desbloqueo de empresa, y abierta hoy por lo\r\nmismo: detrás de su permiso, que no es el de bloquear.",
+        "operationId": "Almacenes_Desbloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del almacén.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/ejercicios": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Devuelve una página de ejercicios.",
+        "operationId": "Ejercicios_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeEjercicioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeEjercicioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeEjercicioDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Abre un ejercicio.",
+        "operationId": "Ejercicios_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEjercicioDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEjercicioDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEjercicioDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/ejercicios/{id}": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Devuelve un ejercicio.",
+        "operationId": "Ejercicios_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del ejercicio.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Cambia las fechas de un ejercicio abierto.",
+        "operationId": "Ejercicios_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del ejercicio.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarEjercicioDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarEjercicioDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarEjercicioDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EjercicioDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Borra un ejercicio que todavía no tiene series.",
+        "operationId": "Ejercicios_Eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del ejercicio.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/ejercicios/{id}/cierre": {
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Cierra el ejercicio (R9).",
+        "description": "Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que\r\ncualquiera congele el año. Con su permiso detrás, se abre.",
+        "operationId": "Ejercicios_Cerrar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del ejercicio.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Reabre un ejercicio cerrado (R9).",
+        "description": "El cierre es el sub-recurso, así que reabrir es borrarlo. Lleva permiso propio y distinto\r\ndel de cerrar: reabrir vuelve a admitir apuntes en un periodo del que probablemente ya se\r\npresentaron modelos.",
+        "operationId": "Ejercicios_Reabrir",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del ejercicio.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/empresas": {
+      "get": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Devuelve una página de empresas.",
+        "operationId": "Empresas_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeEmpresaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeEmpresaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeEmpresaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Da de alta una empresa.",
+        "operationId": "Empresas_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEmpresaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEmpresaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEmpresaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/empresas/{id}": {
+      "get": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Devuelve una empresa.",
+        "operationId": "Empresas_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la empresa.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Cambia los datos de una empresa.",
+        "operationId": "Empresas_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la empresa.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarEmpresaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarEmpresaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarEmpresaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Bloquea una empresa (R16). No la borra.",
+        "description": "El verbo es `DELETE` porque es lo que el cliente quiere decir —«quítame esto de en\r\nmedio»— y lo que se hace por debajo es bloquear: una empresa puede ser un empresario\r\nindividual, y el art. 32 de la LOPDGDD manda bloquear, no destruir.",
+        "operationId": "Empresas_Bloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la empresa.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/empresas/{id}/desbloqueo": {
+      "post": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Devuelve una empresa bloqueada a la actividad.",
+        "description": "    No existe el DELETE inverso, así que es un POST a un sub-recurso. El\r\n      estado de la ficha no es un recurso que se sustituya con PUT: es el desenlace de una\r\n      operación con nombre propio, y por eso tiene permiso propio.\r\n    En el 0.4 esta operación existía en el dominio y no tenía puerta HTTP, porque abrirla sin\r\nautorización habría dejado a cualquiera revirtiendo bloqueos del art. 32. Con el permiso\r\ndetrás, ese motivo desaparece.",
+        "operationId": "Empresas_Desbloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la empresa.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/series": {
+      "get": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Devuelve una página de series.",
+        "operationId": "Series_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeSerieDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeSerieDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeSerieDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Crea una serie.",
+        "operationId": "Series_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSerieDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSerieDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSerieDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/series/{id}": {
+      "get": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Devuelve una serie.",
+        "operationId": "Series_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la serie.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Cambia el formato de una serie activa.",
+        "operationId": "Series_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la serie.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarSerieDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarSerieDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarSerieDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Suprime una serie que todavía no ha numerado.",
+        "description": "`204` mientras es un borrador; `409` en cuanto ha numerado una sola vez, porque\r\n        entonces ya forma parte del libro registro (§9 y R11).",
+        "operationId": "Series_Eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la serie.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlmacenDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "codigo",
+          "nombre",
+          "direccion",
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del almacén.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del almacén, en mayúsculas."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre con el que se le conoce."
+          },
+          "direccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Dónde está, o nulo si es virtual o de tránsito.",
+                "$ref": "#/components/schemas/DireccionDto"
+              }
+            ]
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de almacén, como texto."
+          }
+        },
+        "description": "Un almacén, tal como sale de la API."
+      },
+      "AsignarRolDto": {
+        "required": [
+          "empresaId",
+          "rolId"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa en la que se asigna.",
+            "format": "uuid"
+          },
+          "rolId": {
+            "type": "string",
+            "description": "Rol que se asigna.",
+            "format": "uuid"
+          }
+        },
+        "description": "Qué rol se asigna o se retira, y en qué empresa."
+      },
+      "CambiarContrasenaDto": {
+        "required": [
+          "actual",
+          "nueva"
+        ],
+        "type": "object",
+        "properties": {
+          "actual": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "La contraseña de ahora."
+          },
+          "nueva": {
+            "maxLength": 128,
+            "minLength": 12,
+            "type": "string",
+            "description": "La contraseña nueva."
+          }
+        },
+        "description": "Cambio de la propia contraseña."
+      },
+      "CambiarEmpresaDto": {
+        "required": [
+          "empresaId"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa que pasa a ser la activa.",
+            "format": "uuid"
+          }
+        },
+        "description": "Con qué empresa se sigue operando."
+      },
+      "ConcederPertenenciaDto": {
+        "required": [
+          "empresaId"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que se da de alta.",
+            "format": "uuid"
+          }
+        },
+        "description": "A qué empresa se da de alta al usuario."
+      },
+      "CrearAlmacenDto": {
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código del almacén. Se normaliza a mayúsculas."
+          },
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se le conoce."
+          },
+          "direccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Dónde está. Opcional en el contrato porque un almacén virtual o de tránsito no está en\r\nningún sitio; para uno físico la exige el dominio, que es quien sabe la regla.",
+                "$ref": "#/components/schemas/DireccionDto"
+              }
+            ]
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de almacén, como texto."
+          }
+        },
+        "description": "Lo que hace falta para dar de alta un almacén."
+      },
+      "CrearEjercicioDto": {
+        "required": [
+          "fechaDeInicio",
+          "fechaDeFin"
+        ],
+        "type": "object",
+        "properties": {
+          "anio": {
+            "maximum": 2999,
+            "minimum": 1900,
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Año con el que se le conoce. No tiene por qué ser el del año natural.",
+            "format": "int32"
+          },
+          "fechaDeInicio": {
+            "type": "string",
+            "description": "Primer día del ejercicio.",
+            "format": "date"
+          },
+          "fechaDeFin": {
+            "type": "string",
+            "description": "Último día del ejercicio.",
+            "format": "date"
+          }
+        },
+        "description": "Lo que hace falta para abrir un ejercicio."
+      },
+      "CrearEmpresaDto": {
+        "required": [
+          "nif",
+          "razonSocial",
+          "domicilioFiscal",
+          "divisaBase",
+          "regimenDeIva"
+        ],
+        "type": "object",
+        "properties": {
+          "nif": {
+            "type": "string",
+            "description": "NIF de la empresa. Se normaliza y se valida su carácter de control."
+          },
+          "razonSocial": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "Razón social, o nombre del empresario individual."
+          },
+          "domicilioFiscal": {
+            "description": "Domicilio fiscal, en los seis campos de R17.",
+            "$ref": "#/components/schemas/DireccionDto"
+          },
+          "divisaBase": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string",
+            "description": "Divisa base en ISO 4217, tres letras."
+          },
+          "regimenDeIva": {
+            "type": "string",
+            "description": "Régimen de IVA, como texto."
+          }
+        },
+        "description": "Lo que hace falta para dar de alta una empresa."
+      },
+      "CrearRolDto": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "maxLength": 40,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código estable. Se normaliza a minúsculas."
+          },
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre para la interfaz."
+          },
+          "permisos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Permisos que concede. Se validan contra el catálogo."
+          }
+        },
+        "description": "Lo que hace falta para crear un rol."
+      },
+      "CrearSerieDto": {
+        "required": [
+          "ejercicioId",
+          "tipoDeDocumento",
+          "codigo",
+          "formato"
+        ],
+        "type": "object",
+        "properties": {
+          "ejercicioId": {
+            "type": "string",
+            "description": "Ejercicio en el que numera.",
+            "format": "uuid"
+          },
+          "tipoDeDocumento": {
+            "type": "string",
+            "description": "Qué documentos numera, como texto."
+          },
+          "codigo": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código de la serie. Se normaliza a mayúsculas."
+          },
+          "formato": {
+            "maxLength": 60,
+            "minLength": 0,
+            "type": "string",
+            "description": "Plantilla con la que se compone el número del documento."
+          }
+        },
+        "description": "Lo que hace falta para crear una serie."
+      },
+      "CrearUsuarioDto": {
+        "required": [
+          "correo",
+          "nombre",
+          "contrasena"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "maxLength": 254,
+            "minLength": 0,
+            "type": "string",
+            "description": "Correo con el que iniciará sesión."
+          },
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre para la interfaz."
+          },
+          "contrasena": {
+            "maxLength": 128,
+            "minLength": 12,
+            "type": "string",
+            "description": "Contraseña inicial."
+          }
+        },
+        "description": "Lo que hace falta para dar de alta un usuario."
+      },
+      "DireccionDto": {
+        "required": [
+          "calle",
+          "codigoPostal",
+          "poblacion",
+          "pais"
+        ],
+        "type": "object",
+        "properties": {
+          "calle": {
+            "maxLength": 70,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre de la vía."
+          },
+          "numero": {
+            "maxLength": 16,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Número, portal, piso. Opcional: hay direcciones que no lo tienen."
+          },
+          "codigoPostal": {
+            "maxLength": 16,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código postal, tal como lo escribe el país de la dirección."
+          },
+          "poblacion": {
+            "maxLength": 35,
+            "minLength": 0,
+            "type": "string",
+            "description": "Población."
+          },
+          "subdivision": {
+            "maxLength": 35,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Provincia, región o estado. Opcional: no todos los países la usan."
+          },
+          "pais": {
+            "maxLength": 2,
+            "minLength": 2,
+            "type": "string",
+            "description": "País en ISO 3166-1 alfa-2, dos letras."
+          }
+        },
+        "description": "Una dirección estructurada, en los seis campos que exige R17."
+      },
+      "EjercicioDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "anio",
+          "fechaDeInicio",
+          "fechaDeFin",
+          "estado"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del ejercicio.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "anio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Año con el que se le conoce.",
+            "format": "int32"
+          },
+          "fechaDeInicio": {
+            "type": "string",
+            "description": "Primer día del ejercicio.",
+            "format": "date"
+          },
+          "fechaDeFin": {
+            "type": "string",
+            "description": "Último día del ejercicio.",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del ejercicio, como texto."
+          }
+        },
+        "description": "Un ejercicio contable, tal como sale de la API."
+      },
+      "EmpresaDeSesionDto": {
+        "required": [
+          "id",
+          "razonSocial"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la empresa.",
+            "format": "uuid"
+          },
+          "razonSocial": {
+            "type": "string",
+            "description": "Razón social, o nombre del empresario individual."
+          }
+        },
+        "description": "Una de las empresas entre las que se puede cambiar, tal como la pinta el selector."
+      },
+      "EmpresaDto": {
+        "required": [
+          "id",
+          "nif",
+          "razonSocial",
+          "domicilioFiscal",
+          "divisaBase",
+          "regimenDeIva"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la empresa.",
+            "format": "uuid"
+          },
+          "nif": {
+            "type": "string",
+            "description": "NIF, ya normalizado."
+          },
+          "razonSocial": {
+            "type": "string",
+            "description": "Razón social o nombre del empresario individual."
+          },
+          "domicilioFiscal": {
+            "description": "Domicilio fiscal, estructurado (R17).",
+            "$ref": "#/components/schemas/DireccionDto"
+          },
+          "divisaBase": {
+            "type": "string",
+            "description": "Divisa base en ISO 4217."
+          },
+          "regimenDeIva": {
+            "type": "string",
+            "description": "Régimen de IVA, como texto."
+          }
+        },
+        "description": "Una empresa, tal como sale de la API."
+      },
+      "IniciarSesionDto": {
+        "required": [
+          "correo",
+          "contrasena"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "maxLength": 254,
+            "minLength": 0,
+            "type": "string",
+            "description": "Correo con el que se identifica."
+          },
+          "contrasena": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "description": "Su contraseña."
+          },
+          "empresaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Con qué empresa quiere empezar, si tiene varias.",
+            "format": "uuid"
+          }
+        },
+        "description": "Lo que hace falta para iniciar sesión."
+      },
+      "MembresiaDto": {
+        "required": [
+          "empresaId",
+          "roles"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece.",
+            "format": "uuid"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RolConcedidoDto"
+            },
+            "description": "Roles que tiene en esa empresa."
+          }
+        },
+        "description": "La pertenencia de un usuario a una empresa, con sus roles ahí."
+      },
+      "ModificarAlmacenDto": {
+        "required": [
+          "nombre",
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se le conoce."
+          },
+          "direccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Dónde está, o nulo si es virtual o de tránsito.",
+                "$ref": "#/components/schemas/DireccionDto"
+              }
+            ]
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de almacén, como texto."
+          }
+        },
+        "description": "Lo que se puede cambiar de un almacén."
+      },
+      "ModificarEjercicioDto": {
+        "required": [
+          "fechaDeInicio",
+          "fechaDeFin"
+        ],
+        "type": "object",
+        "properties": {
+          "fechaDeInicio": {
+            "type": "string",
+            "description": "Primer día del ejercicio.",
+            "format": "date"
+          },
+          "fechaDeFin": {
+            "type": "string",
+            "description": "Último día del ejercicio.",
+            "format": "date"
+          }
+        },
+        "description": "Lo que se puede cambiar de un ejercicio abierto: sus fechas."
+      },
+      "ModificarEmpresaDto": {
+        "required": [
+          "razonSocial",
+          "domicilioFiscal",
+          "divisaBase",
+          "regimenDeIva"
+        ],
+        "type": "object",
+        "properties": {
+          "razonSocial": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "Razón social, o nombre del empresario individual."
+          },
+          "domicilioFiscal": {
+            "description": "Domicilio fiscal, en los seis campos de R17.",
+            "$ref": "#/components/schemas/DireccionDto"
+          },
+          "divisaBase": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string",
+            "description": "Divisa base en ISO 4217, tres letras."
+          },
+          "regimenDeIva": {
+            "type": "string",
+            "description": "Régimen de IVA, como texto."
+          }
+        },
+        "description": "Lo que se puede cambiar de una empresa ya dada de alta."
+      },
+      "ModificarRolDto": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre para la interfaz."
+          },
+          "permisos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Los permisos que el rol debe conceder, exactamente estos."
+          }
+        },
+        "description": "Lo que se puede cambiar de un rol: el nombre y la lista ENTERA de permisos."
+      },
+      "ModificarSerieDto": {
+        "required": [
+          "formato"
+        ],
+        "type": "object",
+        "properties": {
+          "formato": {
+            "maxLength": 60,
+            "minLength": 0,
+            "type": "string",
+            "description": "Plantilla con la que se compone el número del documento."
+          }
+        },
+        "description": "Lo que se puede cambiar de una serie: su formato."
+      },
+      "ModificarUsuarioDto": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre para la interfaz."
+          }
+        },
+        "description": "Lo que se puede cambiar de un usuario."
+      },
+      "PaginaDeAlmacenDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlmacenDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeEjercicioDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EjercicioDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeEmpresaDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmpresaDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeRolDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RolDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeSerieDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SerieDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeUsuarioDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsuarioDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RestablecerContrasenaDto": {
+        "required": [
+          "nueva"
+        ],
+        "type": "object",
+        "properties": {
+          "nueva": {
+            "maxLength": 128,
+            "minLength": 12,
+            "type": "string",
+            "description": "La contraseña nueva."
+          }
+        },
+        "description": "Cambio de la contraseña de OTRO usuario, por quien tiene el permiso."
+      },
+      "RolConcedidoDto": {
+        "required": [
+          "rolId",
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "rolId": {
+            "type": "string",
+            "description": "Identificador del rol.",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código estable del rol."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del rol."
+          }
+        },
+        "description": "Un rol concedido, con su nombre para no obligar a una segunda consulta."
+      },
+      "RolDto": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "esDelSistema",
+          "permisos"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del rol.",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código estable, en minúsculas y con guiones."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre para la interfaz."
+          },
+          "esDelSistema": {
+            "type": "boolean",
+            "description": "Si lo creó la semilla y no se puede suprimir."
+          },
+          "permisos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Permisos que concede, ordenados."
+          }
+        },
+        "description": "Un rol, tal como sale de la API."
+      },
+      "SerieDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "ejercicioId",
+          "tipoDeDocumento",
+          "codigo",
+          "formato",
+          "contador",
+          "estado"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la serie.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "ejercicioId": {
+            "type": "string",
+            "description": "Ejercicio en el que numera.",
+            "format": "uuid"
+          },
+          "tipoDeDocumento": {
+            "type": "string",
+            "description": "Qué documentos numera, como texto."
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código de la serie, en mayúsculas."
+          },
+          "formato": {
+            "type": "string",
+            "description": "Plantilla con la que se compone el número del documento."
+          },
+          "contador": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Último número asignado. Cero mientras no haya numerado nada.",
+            "format": "int64"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la serie, como texto."
+          }
+        },
+        "description": "Una serie de numeración, tal como sale de la API."
+      },
+      "SesionDto": {
+        "required": [
+          "tokenDeAcceso",
+          "expiraEn",
+          "usuarioId",
+          "nombre",
+          "empresaActivaId",
+          "empresas",
+          "permisos"
+        ],
+        "type": "object",
+        "properties": {
+          "tokenDeAcceso": {
+            "type": "string",
+            "description": "JWT corto, que el frontal guarda en memoria."
+          },
+          "expiraEn": {
+            "type": "string",
+            "description": "Cuándo caduca el token de acceso.",
+            "format": "date-time"
+          },
+          "usuarioId": {
+            "type": "string",
+            "description": "Quién ha iniciado sesión.",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Su nombre, para la interfaz."
+          },
+          "empresaActivaId": {
+            "type": "string",
+            "description": "Empresa con la que se está operando (R8).",
+            "format": "uuid"
+          },
+          "empresas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmpresaDeSesionDto"
+            },
+            "description": "Empresas a las que pertenece, con nombre, para el selector."
+          },
+          "permisos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Permisos que tiene en la empresa activa, para la interfaz."
+          }
+        },
+        "description": "Una sesión abierta: el token de acceso y con qué se está operando."
+      },
+      "UsuarioDto": {
+        "required": [
+          "id",
+          "correo",
+          "nombre",
+          "creadoEn",
+          "ultimoAccesoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del usuario.",
+            "format": "uuid"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo con el que inicia sesión, normalizado."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre para la interfaz."
+          },
+          "creadoEn": {
+            "type": "string",
+            "description": "Cuándo se creó.",
+            "format": "date-time"
+          },
+          "ultimoAccesoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Último inicio de sesión correcto, o nulo si no ha habido.",
+            "format": "date-time"
+          }
+        },
+        "description": "Un usuario, tal como sale de la API."
+      }
+    },
+    "securitySchemes": {
+      "testigoDeAcceso": {
+        "type": "http",
+        "description": "Testigo de acceso de quince minutos, en la cabecera Authorization. Lo emite POST /api/v1/identidad/sesiones y lo renueva POST .../sesiones/renovacion, que no lo lee de aquí sino de una cookie HttpOnly. El testigo de refresco no aparece en este contrato a propósito: el navegador no tiene que poder leerlo.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Roles"
+    },
+    {
+      "name": "Sesiones"
+    },
+    {
+      "name": "Usuarios"
+    },
+    {
+      "name": "Almacenes"
+    },
+    {
+      "name": "Ejercicios"
+    },
+    {
+      "name": "Empresas"
+    },
+    {
+      "name": "Series"
+    }
+  ]
+}

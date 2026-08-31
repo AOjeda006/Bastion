@@ -49,7 +49,12 @@ Dockerfile*      text
 *.snk            binary
 *.pfx            binary
 
-# ---------- Generado: fuera de los diffs y de las estadísticas del repo ----------
+# ---------- Generado: fuera de las estadísticas del repo ----------
+# `-diff` solo donde el contenido no se lee nunca. Las migraciones SÍ se revisan, y desde el
+# ítem 0.11 el documento OpenAPI también: es el contrato del que se genera el cliente del
+# frontal, y un campo que cambia de nombre tiene que notarse en la revisión. `linguist-generated`
+# lo deja plegado por omisión, que es lo que se quiere de un fichero de cinco mil líneas; `-diff`
+# lo dejaría además ilegible.
 frontend/package-lock.json   linguist-generated=true -diff
 db/migraciones/**/*.cs       linguist-generated=true
-docs/api/openapi.json        linguist-generated=true -diff
+docs/api/openapi.json        linguist-generated=true
