@@ -90,7 +90,20 @@ if diff -u "$VERSIONADO" "$RECIEN" > /dev/null 2>&1; then
   exit 0
 fi
 
-echo "::error title=OpenAPI::El contrato ha cambiado y ${VERSIONADO} se ha quedado atrás. Regenéralo y commitéalo: bash scripts/generar-openapi.sh"
-echo "--- diferencias (versionado vs. recién generado) ---"
-diff -u "$VERSIONADO" "$RECIEN" | head -60
+# El `diff` va DENTRO de la anotación, no a la salida estándar. Los registros de un job devuelven
+# 403 sin autenticar y las anotaciones no, así que un `echo` aquí es un diagnóstico que no se puede
+# leer desde fuera: el paso se vería como «exit code 1» y nada más. Es la misma razón por la que los
+# recuentos de tests se publican como `::notice::`.
+#
+# `%0A` es como se escribe un salto de línea en una orden de flujo de trabajo, y el `%` literal hay
+# que escaparlo ANTES o se comería los propios escapes.
+escapar() {
+  printf '%s' "$1" | awk '{ gsub(/%/, "%25"); printf "%s%%0A", $0 }'
+}
+
+DIFERENCIAS="$(diff -u "$VERSIONADO" "$RECIEN" | head -80 || true)"
+
+TAMANOS="versionado $(wc -c < "$VERSIONADO") bytes, recién generado $(wc -c < "$RECIEN") bytes"
+
+echo "::error title=OpenAPI::El contrato ha cambiado y ${VERSIONADO} se ha quedado atrás ($TAMANOS). Regenéralo y commitéalo: bash scripts/generar-openapi.sh%0A%0A$(escapar "$DIFERENCIAS")"
 exit 1
