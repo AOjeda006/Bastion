@@ -1101,6 +1101,42 @@ puntos—; **(2)** comprobar que la ampliación se pone **roja** con el mapeo to
 be "Almacen.Direccion: 6, Empresa.DomicilioFiscal: 6" but was ""`), porque un barrido nuevo que nace
 verde no ha demostrado que mire; **(3)** después, cambiar el mapeo.
 
+### Tomadas por el agente de desarrollo — ítem 0.11 (2026-08-31)
+
+**Respuestas de la puerta de clarificación**, preguntadas antes de escribir una línea porque las
+tres cambiaban lo que había que construir:
+
+- **El selector de empresa saca los nombres de la propia sesión.** `SesionDto.Empresas` deja de ser
+  `IReadOnlyList<Guid>` y pasa a llevar identificador **y razón social**, poblados con un método
+  nuevo de `IConsultaDeEmpresas` —el puerto de lectura entre módulos que ya existía y que Identidad
+  ya referenciaba—. La alternativa descartada era que el frontal cruzara contra
+  `GET /api/v1/organizacion/empresas`: ese endpoint exige `organizacion.empresa.ver`, y **pertenecer
+  a varias empresas no implica poder ver la ficha de ninguna** — quien no tuviera el permiso vería
+  identificadores pelados en el desplegable con el que se cambia de empresa.
+
+- **Lo bloqueado sigue sin camino de lectura, y el 0.11 no abre ninguno.** El shell no lleva
+  pantalla de bloqueados: la lista de sitios que abren `ViendoLoBloqueado` sigue siendo los tres
+  desbloqueos y se sigue comparando entera. Queda **ABIERTA** en *Notas / riesgos* con lo que hace
+  falta para decidirlo. Abrir un listado de administración habría sido trabajo de dominio y de
+  derecho —motivo nuevo, permiso nuevo y un ADR que argumentara por qué el art. 32 admite esa
+  visualización— dentro de un ítem cuya disciplina es otra.
+
+- **El shell lleva dos listados de solo lectura: almacenes y empresas.** No es adorno: la mutación
+  que quita el vaciado de caché al cambiar de empresa **solo se puede probar por el efecto si hay
+  una lista de datos de empresa que mirar**, y un test que compruebe que se llamó a `clear()` prueba
+  que se llamó a `clear()`. Ni altas, ni ediciones, ni bloqueos: eso no es shell.
+
+- **Y un hallazgo que salió al hacerlo: el selector es también la lista de empresas operables.**
+  Al esconder lo bloqueado del desplegable quedó a la vista una incoherencia que ya existía desde el
+  0.10: se podía **abrir sesión, renovarla y cambiarse** a una empresa suprimida al amparo del art.
+  32. El bloqueo la tapaba en las pantallas sin echar a nadie de ella, y el token de refresco la
+  habría mantenido activa durante días. Los tres casos de uso de sesión calculan ahora el selector
+  **antes** de elegir la empresa activa, y `ConstructorDeSesion` comprueba la invariante. La empresa
+  bloqueada sale por el error de siempre —`401` de credenciales al entrar, `empresa-no-pertenece` al
+  cambiar—: un código propio confirmaría el bloqueo, que es justo lo que el `404` del 0.10 se niega
+  a confirmar. Motivo de revocación nuevo, `EmpresaSuprimida`, sin migración porque se guarda con
+  `HasConversion<string>()`.
+
 ## Estado actual
 
 **Ítem 0.10 cerrado, con la CI en verde:**
