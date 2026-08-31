@@ -137,6 +137,33 @@
     la que trae la biblioteca por omision: probar contra otra version es probar contra otra
     base de datos. MIT.
   -->
+  <!--
+    OpenAPI (item 0.11). El documento es el contrato del que se genera el cliente del frontal,
+    asi que no puede escribirse a mano ni quedarse atras: se GENERA AL COMPILAR desde las
+    descripciones de ASP.NET Core y se versiona en `docs/api/openapi.json`, y la CI vuelve a
+    generarlo y falla si difiere. Misma forma que el paso de migraciones.
+
+      Microsoft.AspNetCore.OpenApi ............ construye el documento desde el ApiExplorer.
+      Microsoft.Extensions.ApiDescription.Server  engancha esa generacion al build (herramienta:
+                                                 va con PrivateAssets="all").
+
+    Las dos son del repositorio dotnet/aspnetcore. Licencias comprobadas en el nuspec: MIT.
+    Version 10.0.9, a la altura del runtime instalado, como el resto de la familia.
+
+    `Microsoft.OpenApi` esta FIJADO y no llega por transitividad. `Microsoft.AspNetCore.OpenApi`
+    10.0.9 pide la 2.0.0, y esa version tiene el aviso GHSA-v5pm-xwqc-g5wc (gravedad alta: un
+    esquema con referencias circulares aborta el analisis del documento). Con `NuGetAudit` como
+    error, la restauracion falla — que es exactamente lo que se quiere que pase. La 2.7.5 es la
+    PRIMERA parcheada, y el fijado transitivo central es lo que permite subirla sin tocar el
+    paquete que la arrastra. Es de microsoft/OpenAPI.NET, con su propio versionado, asi que no
+    la ata la regla del runtime. MIT tambien.
+  -->
+  <ItemGroup Label="OpenAPI">
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
+  </ItemGroup>
+
   <ItemGroup Label="Tests de integracion">
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
   </ItemGroup>

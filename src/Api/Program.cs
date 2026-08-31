@@ -234,6 +234,16 @@ builder.Services
 // y una ruta que no coincide con la que está escrita en el OpenAPI ni en la documentación.
 builder.Services.AddRouting(rutas => rutas.LowercaseUrls = true);
 
+// ---------------------------------------------------------------------------- OpenAPI
+// El contrato de la API, generado de las descripciones que ya publica ASP.NET Core. De aquí
+// sale `docs/api/openapi.json` y de ese fichero sale el cliente de TypeScript del frontal: el
+// contrato se escribe UNA vez, en los controladores y los DTO, y todo lo demás se deriva.
+//
+// Se registra el servicio pero NO se mapea el endpoint: el documento se genera al compilar
+// (ver Bastion.Api.csproj) y no se sirve por HTTP. Un `/openapi/v1.json` anónimo sería el único
+// hueco de una API que deniega por defecto, y uno autenticado no serviría para generar nada.
+builder.Services.AgregarContratoDeLaApi();
+
 WebApplication app = builder.Build();
 
 // Lo PRIMERO de la tubería: un manejador de excepciones solo cubre lo que tiene por dentro.

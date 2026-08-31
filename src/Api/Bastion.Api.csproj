@@ -55,6 +55,34 @@
     <PackageReference Include="Serilog.Sinks.Console" />
   </ItemGroup>
 
+  <!--
+    OpenAPI. El documento NO se sirve en caliente: se genera al compilar y se versiona en
+    `docs/api/openapi.json`. Servirlo por HTTP obligaría a decidir quién puede leerlo —con la
+    política de respaldo puesta, un `/openapi/v1.json` anónimo sería el único hueco abierto de
+    la API—, y sobre todo dejaría el contrato del que vive el frontal detrás de un despliegue
+    en marcha. Como fichero, se revisa en el `diff` y la CI puede exigir que esté al día.
+
+    `OpenApiGenerateDocumentsOnBuild` en `false` a propósito: la generación construye el host
+    entero, y hacerlo en cada `dotnet build` cargaría el bucle interno de todos los días para
+    un fichero que solo cambia cuando cambia el contrato. Lo dispara `scripts/generar-openapi.sh`,
+    que es lo que ejecuta la CI para comprobar que no ha divergido.
+  -->
+  <PropertyGroup Label="OpenAPI">
+    <OpenApiGenerateDocuments>true</OpenApiGenerateDocuments>
+    <OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/obj/openapi</OpenApiDocumentsDirectory>
+  </PropertyGroup>
+
+  <ItemGroup Label="OpenAPI">
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+
+    <!--
+      Herramienta de compilación, no dependencia: `PrivateAssets="all"` impide que se propague
+      a quien referencie este proyecto y que acabe en la imagen publicada.
+    -->
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
+  </ItemGroup>
+
   <ItemGroup Label="Pruebas">
     <!--
       Program.cs son sentencias de nivel superior, así que el compilador genera una clase

@@ -209,6 +209,25 @@ jobs:
             echo "::notice::Sin comprobación de migraciones todavía (se añade con el primer DbContext, ítem 0.4)."
           fi
 
+      # El documento OpenAPI es el contrato del que se genera el cliente de TypeScript del
+      # frontal, y está VERSIONADO. Generarlo sin comprobar que sigue al día sería volver a tener
+      # dos fuentes de verdad con un paso extra en medio: el cliente parecería derivado del
+      # contrato sin estarlo.
+      #
+      # Misma forma que el paso de migraciones, y por lo mismo: tarda segundos, no necesita
+      # Docker, y no encadena este trabajo con el del frontal ni le pasa artefactos. El frontal
+      # lee el fichero del repositorio, que es lo que un desarrollador tiene delante.
+      - name: OpenAPI — el contrato versionado no se ha quedado atrás
+        if: steps.solucion.outputs.existe == 'true'
+        env:
+          CONFIGURACION: Release
+        run: |
+          if [ -f scripts/generar-openapi.sh ]; then
+            bash scripts/generar-openapi.sh --comprobar
+          else
+            echo "::notice::Sin documento OpenAPI todavía (se añade en el ítem 0.11)."
+          fi
+
       # Testcontainers levanta PostgreSQL de verdad. Nada de EF Core InMemory: no traduce
       # SQL real, ignora restricciones, columnas computadas y filtros globales, y da
       # falsos verdes (`stacks/dotnet/convenciones.md`).
