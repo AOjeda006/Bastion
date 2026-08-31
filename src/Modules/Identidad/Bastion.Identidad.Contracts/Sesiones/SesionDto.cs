@@ -55,7 +55,7 @@ public sealed record CambiarEmpresaDto
 /// <param name="UsuarioId">Quién ha iniciado sesión.</param>
 /// <param name="Nombre">Su nombre, para la interfaz.</param>
 /// <param name="EmpresaActivaId">Empresa con la que se está operando (R8).</param>
-/// <param name="Empresas">Empresas a las que pertenece, para el selector.</param>
+/// <param name="Empresas">Empresas a las que pertenece, con nombre, para el selector.</param>
 /// <param name="Permisos">Permisos que tiene en la empresa activa, para la interfaz.</param>
 public sealed record SesionDto(
     string TokenDeAcceso,
@@ -63,5 +63,30 @@ public sealed record SesionDto(
     Guid UsuarioId,
     string Nombre,
     Guid EmpresaActivaId,
-    IReadOnlyList<Guid> Empresas,
+    IReadOnlyList<EmpresaDeSesionDto> Empresas,
     IReadOnlyList<string> Permisos);
+
+/// <summary>Una de las empresas entre las que se puede cambiar, tal como la pinta el selector.</summary>
+/// <remarks>
+/// <para>
+/// <b>Lleva el nombre, y esa es toda la razón de que exista.</b> Hasta el 0.11 la sesión devolvía
+/// una lista de identificadores, y con eso no se puede pintar un desplegable: nadie elige entre
+/// <c>a3f1…</c> y <c>7c02…</c>. El nombre no puede salir de
+/// <c>GET /api/v1/organizacion/empresas</c> porque ese endpoint exige el permiso
+/// <c>organizacion.empresa.ver</c>, y pertenecer a varias empresas no implica poder ver la ficha de
+/// ninguna: el usuario de almacén que trabaja para dos sociedades tiene que poder cambiar entre
+/// ellas sin tener acceso al padrón.
+/// </para>
+/// <para>
+/// Lleva el nombre y <b>nada más</b>. Ni NIF, ni domicilio, ni régimen: es una etiqueta de una
+/// lista, no una ficha, y lo que no viaja no se filtra por descuido.
+/// </para>
+/// <para>
+/// <b>Una empresa bloqueada no aparece aquí</b> aunque el usuario siga perteneciendo a ella. No es
+/// un caso especial de este contrato: es el filtro de R16 en la consulta que lo puebla. Suprimir
+/// al amparo del art. 32 y seguir ofreciéndola en un desplegable serían dos cosas incompatibles.
+/// </para>
+/// </remarks>
+/// <param name="Id">Identificador de la empresa.</param>
+/// <param name="RazonSocial">Razón social, o nombre del empresario individual.</param>
+public sealed record EmpresaDeSesionDto(Guid Id, string RazonSocial);

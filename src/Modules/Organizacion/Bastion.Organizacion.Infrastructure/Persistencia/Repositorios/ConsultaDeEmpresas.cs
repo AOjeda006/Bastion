@@ -24,4 +24,28 @@ internal sealed class ConsultaDeEmpresas(OrganizacionDbContext contexto) : ICons
             .Select(empresa => (Guid?)empresa.Id)
             .FirstOrDefaultAsync(cancelacion)
             .ConfigureAwait(false);
+
+    // Una sola consulta con `IN`, no una por identificador: el selector se arma en cada login y en
+    // cada renovación, y un usuario de seis empresas no puede costar seis idas y vueltas.
+    //
+    // Quien llama abre ya un ámbito sin inquilino (`AutenticacionYSesion`), y hace falta: sin él,
+    // el filtro de R8 sobre `Empresa` la restringe a su propia clave y esto devolvería una sola
+    // fila —la activa—, dejando el resto del desplegable sin nombre. El de R16 sí sigue puesto, y
+    // eso es lo que se quiere: lo bloqueado no sale.
+    public async Task<IReadOnlyDictionary<Guid, string>> RazonesSocialesDeAsync(
+        IReadOnlyCollection<Guid> empresaIds,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(empresaIds);
+
+        if (empresaIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        return await contexto.Empresas
+            .Where(empresa => empresaIds.Contains(empresa.Id))
+            .ToDictionaryAsync(empresa => empresa.Id, empresa => empresa.RazonSocial, cancelacion)
+            .ConfigureAwait(false);
+    }
 }

@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Usuarios;
+using Bastion.Identidad.Contracts.Sesiones;
 using Bastion.Identidad.Domain.Sesiones;
 using Bastion.Identidad.Domain.Usuarios;
 
@@ -100,10 +101,28 @@ internal sealed class RenovarSesion(
             return Resultado.Fallo<SesionAbierta>(ErroresDeSesion.Refresco());
         }
 
+        IReadOnlyList<EmpresaDeSesionDto> selector = await constructor
+            .ParaElSelectorAsync(usuario, cancelacion)
+            .ConfigureAwait(false);
+
+        // Y la empresa con la que se opera tampoco puede haberse suprimido entre dos renovaciones.
+        // Es la regla de arriba sobre el otro sujeto: sin esta comprobación, bloquear una empresa
+        // no echaría a nadie de ella —cada quince minutos se reemitiría un token con su
+        // identificador dentro— y el art. 32 quedaría incumplido durante los días que dure el
+        // refresco. Se revoca la familia por lo mismo que allí: para que no lo reintente.
+        if (!selector.Any(empresa => empresa.Id == presentada.EmpresaActivaId))
+        {
+            await RevocarFamiliaAsync(
+                presentada.FamiliaId, MotivoDeRevocacion.EmpresaSuprimida, ahora, cancelacion)
+                .ConfigureAwait(false);
+
+            return Resultado.Fallo<SesionAbierta>(ErroresDeSesion.Refresco());
+        }
+
         // Misma familia y misma empresa activa: renovar continúa la sesión, no abre otra ni
         // cambia con qué se está operando.
         SesionArmada armada = await constructor
-            .ArmarAsync(usuario, presentada.EmpresaActivaId, presentada.FamiliaId, cancelacion)
+            .ArmarAsync(usuario, presentada.EmpresaActivaId, selector, presentada.FamiliaId, cancelacion)
             .ConfigureAwait(false);
 
         presentada.Canjear(armada.Emision.Id, ahora);

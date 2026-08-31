@@ -20,4 +20,14 @@ public enum MotivoDeRevocacion
 
     /// <summary>La sesión cambió de empresa activa y se reemitió (§9).</summary>
     CambioDeEmpresa,
+
+    /// <summary>
+    /// La empresa con la que se estaba operando se suprimió al amparo del art. 32 (R16).
+    /// </summary>
+    /// <remarks>
+    /// Es hermano de <see cref="CuentaAlterada"/> sobre el otro sujeto: allí se da de baja a quien
+    /// opera, aquí aquello con lo que opera. Se distingue porque el motivo se lee en la traza, y
+    /// «cuenta alterada» mandaría a mirar la cuenta —que está intacta— en vez de la empresa.
+    /// </remarks>
+    EmpresaSuprimida,
 }

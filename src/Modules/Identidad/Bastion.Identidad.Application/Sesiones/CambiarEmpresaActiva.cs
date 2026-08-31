@@ -71,9 +71,22 @@ internal sealed class CambiarEmpresaActiva(
             return Resultado.Fallo<SesionAbierta>(ErroresDeSesion.Credenciales());
         }
 
+        // Las mismas empresas que el frontal está pintando en el desplegable, y por la misma
+        // consulta. Cambiar a una que no esté en esa lista es cambiar a algo que no se ofreció.
+        IReadOnlyList<EmpresaDeSesionDto> selector = await constructor
+            .ParaElSelectorAsync(usuario, cancelacion)
+            .ConfigureAwait(false);
+
         // Aquí sí se puede decir qué ha pasado: el usuario ya conoce la lista de empresas a las
         // que pertenece, porque se la devuelve su propia sesión. No se revela nada que no tuviera.
-        if (usuario.EnEmpresa(peticion.EmpresaId) is null)
+        //
+        // Las dos condiciones salen por el MISMO error a propósito. «No pertenece» y «pertenece
+        // pero está suprimida» son distinguibles desde dentro y no pueden serlo desde fuera: el
+        // segundo mensaje confirmaría la existencia de una empresa bloqueada, que es exactamente
+        // lo que el 404 del 0.10 se niega a confirmar. Un código nuevo aquí sería el mismo agujero
+        // por otra puerta.
+        if (usuario.EnEmpresa(peticion.EmpresaId) is null ||
+            !selector.Any(empresa => empresa.Id == peticion.EmpresaId))
         {
             return Resultado.Fallo<SesionAbierta>(ErrorDeOperacion.PermisoDenegado(
                 "empresa-no-pertenece",
@@ -100,7 +113,7 @@ internal sealed class CambiarEmpresaActiva(
         }
 
         SesionArmada armada = await constructor
-            .ArmarAsync(usuario, peticion.EmpresaId, Guid.CreateVersion7(), cancelacion)
+            .ArmarAsync(usuario, peticion.EmpresaId, selector, Guid.CreateVersion7(), cancelacion)
             .ConfigureAwait(false);
 
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

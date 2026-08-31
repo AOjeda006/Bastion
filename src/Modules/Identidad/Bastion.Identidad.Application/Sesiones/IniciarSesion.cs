@@ -91,14 +91,29 @@ internal sealed class IniciarSesion(
             return Resultado.Fallo<SesionAbierta>(ErroresDeSesion.Credenciales());
         }
 
+        // Las empresas del usuario que siguen en pie. Se calcula ANTES de elegir la activa porque
+        // es la lista de entre las que se elige: una empresa suprimida al amparo del art. 32 no
+        // sale de aquí —lo quita el filtro de R16—, y por tanto tampoco se puede entrar en ella.
+        IReadOnlyList<EmpresaDeSesionDto> selector = await constructor
+            .ParaElSelectorAsync(usuario, cancelacion)
+            .ConfigureAwait(false);
+
         // La empresa activa: la pedida si pertenece a ella, y si no se ha pedido ninguna, la
         // primera. Que la petición pueda SUGERIR con cuál empezar no contradice R8: lo que manda
         // es que la elegida quede en el token y que a partir de ahí nadie la lea de la petición.
+        //
+        // «La primera» sigue siendo la primera PERTENENCIA y no la primera del selector —que va
+        // ordenado por nombre—: con cuál se entra no puede cambiar porque alguien renombre una
+        // empresa. Lo único que cambia es que las bloqueadas se saltan.
         Membresia? membresia = peticion.EmpresaId is Guid pedida
             ? usuario.EnEmpresa(pedida)
-            : usuario.Membresias.FirstOrDefault();
+            : usuario.Membresias.FirstOrDefault(
+                pertenencia => selector.Any(empresa => empresa.Id == pertenencia.EmpresaId));
 
-        if (membresia is null)
+        // Y si la pedida está bloqueada, sale por donde salen las demás: mismo error, mismo texto.
+        // Contestar «esa empresa está suprimida» convertiría el formulario de acceso en la
+        // consulta que el art. 32 impide, y encima a quien todavía no ha entrado.
+        if (membresia is null || !selector.Any(empresa => empresa.Id == membresia.EmpresaId))
         {
             return Resultado.Fallo<SesionAbierta>(ErroresDeSesion.Credenciales());
         }
@@ -116,7 +131,7 @@ internal sealed class IniciarSesion(
         // cerrar una no cierre las demás y para que detectar una reutilización solo tire abajo
         // la cadena afectada.
         SesionArmada armada = await constructor
-            .ArmarAsync(usuario, membresia.EmpresaId, Guid.CreateVersion7(), cancelacion)
+            .ArmarAsync(usuario, membresia.EmpresaId, selector, Guid.CreateVersion7(), cancelacion)
             .ConfigureAwait(false);
 
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

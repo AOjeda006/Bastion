@@ -36,4 +36,32 @@ public interface IConsultaDeEmpresas
     /// </remarks>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<Guid?> PrimeraActivaAsync(CancellationToken cancelacion);
+
+    /// <summary>La razón social de cada una de esas empresas, para las que sigan activas.</summary>
+    /// <remarks>
+    /// <para>
+    /// Existe para el <b>selector de empresa</b> del 0.11: la sesión devuelve a qué empresas
+    /// pertenece quien acaba de entrar, y un desplegable de identificadores no es un selector. El
+    /// nombre tiene que salir de aquí y no de <c>GET /organizacion/empresas</c>, porque ese
+    /// endpoint exige el permiso <c>organizacion.empresa.ver</c> y <b>pertenecer a varias empresas
+    /// no implica poder ver la ficha de ninguna</b>.
+    /// </para>
+    /// <para>
+    /// Devuelve la razón social y nada más. No es la ficha: ni NIF, ni domicilio fiscal, ni
+    /// ejercicios — quien pregunta solo necesita poder escribir el nombre en una lista.
+    /// </para>
+    /// <para>
+    /// <b>Las que estén bloqueadas no salen</b>, y no por omisión: es el filtro de R16 haciendo su
+    /// trabajo una vez más. Una empresa suprimida al amparo del art. 32 desaparece del selector
+    /// igual que desapareció del listado, y quien la tuviera en sus pertenencias simplemente ve una
+    /// opción menos. Por eso el resultado se indexa por identificador en vez de devolver una lista
+    /// paralela a la de entrada: <b>puede traer menos elementos de los que se pidieron</b>, y quien
+    /// llama tiene que poder notarlo.
+    /// </para>
+    /// </remarks>
+    /// <param name="empresaIds">Identificadores por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<IReadOnlyDictionary<Guid, string>> RazonesSocialesDeAsync(
+        IReadOnlyCollection<Guid> empresaIds,
+        CancellationToken cancelacion);
 }
