@@ -1103,6 +1103,150 @@ verde no ha demostrado que mire; **(3)** después, cambiar el mapeo.
 
 ## Estado actual
 
+**Ítem 0.10 cerrado, con la CI en verde:**
+[run 33436800074](https://github.com/AOjeda006/Bastion/actions/runs/33436800074) sobre `1ba9669`,
+los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
+los dos recuentos publicados: **388** casos rápidos y **202** de integración contra
+PostgreSQL 17.6.
+
+Cierra la fase 0 por el lado del **modelo base**: a partir de aquí toda entidad que es un recurso
+nace sabiendo cuándo se creó y cuándo se tocó, el bloqueo de R16 es uno solo y tapa de verdad, y la
+dirección de R17 se mapea como lo que es. Nada de esto se añade después: ese era el criterio.
+
+Lo que llega con él: `EntidadBase` y `InterceptorDeMarcasDeTiempo` en el bloque común; `Bloqueo`,
+`MotivoDeBloqueo` e `IBloqueable` en `BuildingBlocks/Domain/Bloqueos`; `IAccesoALoBloqueado`,
+`MotivoParaVerLoBloqueado` y el filtro global `"Bloqueo"` en las tres entidades bloqueables;
+`ConfiguracionDeEntidadBase` y `ConfiguracionDeBloqueo`; `Direccion` mapeada como **tipo complejo**;
+**dos migraciones nuevas** —Organización e Identidad— escritas a mano; y **dieciocho casos más** que
+al cerrar el 0.9 —22 de integración y 18 rápidos, menos los que desaparecieron con los tres
+enumerados—.
+
+Y **tres ficheros menos**: `EstadoDeEmpresa`, `EstadoDeAlmacen` y `EstadoDeUsuario`.
+
+### Lo que el criterio del 0.10 pedía, y dónde está probado
+
+El criterio es una sola frase —*el tipo base de entidad y las direcciones ya nacen con lo que exigen
+R14, R16 y R17; no se añade después*— y son tres reglas.
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| **R14** · un instante lleva zona horaria, una fecha de calendario no | `LasFechasDicenDeQueTipoSonTests`, 4 casos sobre los tres modelos: todo `DateTimeOffset` es `timestamptz`, todo `DateOnly` es `date`, **no hay ni un `DateTime`** —el tipo que no contesta la pregunta— y el barrido encuentra fechas de las dos clases, que es lo que impide que los otros tres salgan verdes recorriendo una lista vacía. |
+| …y en el esquema de verdad, columna a columna | `EsquemaDelModuloTests.Los_instantes_llevan_zona_horaria_porque_son_momentos` (10 filas) y `EsquemaDeIdentidadTests`, contra `information_schema`. |
+| …y sin `DEFAULT` ninguno | `Lo_que_toda_fila_tiene_que_llevar_es_NOT_NULL_y_sin_DEFAULT`: `(is_nullable, column_default)` tiene que ser `("NO", null)`. Un `DEFAULT` puesto por una migración se queda en la tabla aunque el modelo no lo declare, y este es el único sitio desde donde se ve. |
+| …y que la hora la ponga el reloj inyectado | `LasMarcasDeTiempoLasPoneElRelojInyectadoTests`, 3 casos. Uno pasa **por la API entera** —un `PUT` mueve `modificado_en` y deja `creado_en`—, que es lo único que nota si se borra la línea que engancha el interceptor. Los otros dos usan un reloj **parado en marzo de 2019**: un instante que `now()` no puede devolver, así que el valor de la columna solo lo pudo escribir el reloj que se inyectó. El tercero comprueba que el alta **no** pasa por el interceptor: sus dos marcas son la del dominio, en otro año. |
+| **R16** · suprimir es bloquear, y lo bloqueado deja de verse | `LaFilaBloqueadaSigueEnLaBaseTests`, 2 casos con **SQL en crudo**, que es la única lectura que no le pregunta al acusado. Tras el `DELETE`: el `GET` da 404 **y** la fila sigue entera, con su bandera, su motivo, su fecha y su razón social. |
+| …y desbloquear devuelve la misma fila, no una copia | El segundo caso: `id` y `creado_en` idénticos antes y después, y las tres columnas del bloqueo de vuelta a `["false", "", ""]` — sin cuarto estado. |
+| …y que el ámbito que ve lo bloqueado esté enumerado | `El_ambito_que_ve_lo_bloqueado_solo_se_abre_donde_esta_declarado`: la lista de ficheros que llaman a `ViendoLoBloqueado(` se compara **entera** contra los tres desbloqueos. |
+| …y las dos respuestas de la transición | `BloqueoTests`, 11 casos: bloquear dos veces devuelve el bloqueo de antes **entero**, desbloquear lo no bloqueado no es un error, desbloquear borra las tres cosas, los motivos son dos y están enumerados. |
+| …y que los dos bloqueos del usuario sigan siendo dos | `EsquemaDeIdentidadTests`: `rechazado_hasta` sigue existiendo, en su columna, al lado de las tres del bloqueo. |
+| **R17** · la dirección son seis campos y no tiene identidad | `Las_propiedades_de_un_tipo_complejo_entran_en_este_barrido`, con el inventario fijado: `Almacen.Direccion: 6`, `Empresa.DomicilioFiscal: 6`, más los tres `Bloqueo: 3`. |
+| Que el tipo base nazca sabiendo del testigo de concurrencia | `Las_entidades_del_tipo_base_y_las_que_llevan_testigo_son_las_MISMAS`: tres listas enteras —las que heredan de `EntidadBase`, las que llevan `xmin` y la del ADR-0015— comparadas entre sí. No prohíbe la divergencia: la hace visible, y obliga a explicarla en el ADR. |
+| Que toda escritura siga diciendo cómo se protege | `TodaEscrituraDiceComoSeProtegeTests`, con el inventario movido en el mismo cambio: **13 / 6 / 13** de 32. |
+
+### Verificado en local, con la salida real
+
+- `dotnet build Bastion.sln` → **0 advertencias / 0 errores**.
+- `dotnet format Bastion.sln --verify-no-changes` → limpio. **No lo estaba**: encontró treinta y un
+  incumplimientos en código de este ítem —diecisiete `CHARSET` (BOM sobrante, efecto de editar los
+  ficheros con un script), diez `IMPORTS` de orden de `using` y cuatro `IDE0007`—. Se aplicó el
+  formateador y se volvieron a pasar los dos carriles enteros después.
+- `dotnet test --filter "Category!=Integracion"` → **388** correctos, 0 con error
+  (111 comunes + 116 Organización + 58 Identidad + **103** funcionales, de 96).
+- `dotnet test --filter "Category=Integracion"` → **202** correctos, 0 con error
+  (**42** Organización, de 28, + **160** de API, de 152), contra PostgreSQL 17.6 con Testcontainers.
+- Los **dos carriles otra vez con `GITHUB_ACTIONS=true`** y el recuento de la CI ejecutado en local:
+  `::notice title=Dominio y arquitectura::… 388 casos (388 correctos, 0 con error, 0 omitidos)` y
+  `::notice title=Integración con PostgreSQL::… 202 casos (202 correctos, 0 con error, 0 omitidos)`.
+- `scripts/comprobar-migraciones.sh` → *«el modelo coincide con ellas»* en los tres módulos:
+  **Auditoría 3**, **Organización 3** e **Identidad 3** —las dos nuevas son las del bloqueo y las
+  marcas de tiempo; el cambio de `Direccion` a tipo complejo **no emite SQL**—.
+- **Seis mutaciones**, cada una aplicada, compilada, ejecutada y revertida. La tabla está arriba.
+  Ninguna sobrevivió… salvo la sexta, que sobrevivió **a propósito y antes de tiempo**, y por eso
+  existe `PropiedadesConCamino()`.
+
+### Lo que se ha decidido dejar pendiente, a propósito
+
+- **La retención de `auditoria.claves_de_idempotencia`** sigue abierta, tal como quedó en el 0.9. No
+  se ha tocado.
+- **El ámbito declarado para leer el almacén de un movimiento histórico.** Es de la fase 3: hoy no
+  hay movimientos, así que no hay camino que abrir, y abrirlo antes sería una excepción sin caso.
+
+### Lo que se encontró por el camino y no estaba previsto
+
+1. **R16 rompió el `If-Match` de los tres desbloqueos**, y no se vio al diseñarlo sino al ver dos
+   tests de contrato en rojo **dentro del ayudante que lee la etiqueta**. El `ETag` se obtiene
+   con un `GET`, y un recurso bloqueado ya no se deja leer. Se resolvió como decisión y con ADR (0017), no
+   aflojando el barrido: se descartó devolver el `ETag` en el `DELETE` —solo funcionaría justo
+   después de bloquear— y se descartó abrir un camino de lectura para lo bloqueado, que es el
+   agujero que este mismo ítem acababa de cerrar.
+2. **El barrido de escrituras se puso rojo por ello, y eso es el mecanismo funcionando.** Los tres
+   desbloqueos dejaron de declarar cómo se protegen. Se movieron al cajón de exentas con su motivo
+   escrito, y los tres números del inventario se movieron en el mismo cambio: **16 → 13** y
+   **10 → 13**, con el total de acciones que cambian estado quieto en 32.
+3. **El barrido de clasificación de auditoría se puso rojo al nacer `Bloqueo`**, exactamente como
+   estaba previsto. Las tres propiedades **ya venían clasificadas**; lo que estaba sin actualizar
+   era el inventario escrito a mano, que es justo lo que el barrido existe para obligar a tocar.
+4. **Dos clases de test nuevas se pisaban con `LaVersionViajaDeLaLecturaALaEscritura` por el NIF.**
+   Cinco NIF estaban usados dos veces en el mismo ensamblado, que comparte la base de datos: la
+   segunda alta se llevaba un `409 empresa-ya-registrada`, y **qué caso caía dependía del orden de
+   ejecución**. En aislado, verde; juntos, cinco rojos. Es la trampa del ADR-0006 otra vez y por el
+   camino contrario: allí el test que solo pasaba aislado, aquí el que solo pasa aislado. Corregido
+   con NIF libres (`00000076F`…`00000080B`), calculados con su carácter de control y no inventados.
+5. **`comprobar-migraciones.sh` acusó a Identidad de tener cambios pendientes, y no los tenía.** El
+   script usa `--no-build`, así que estaba leyendo el ensamblado anterior a `migrations add`. Un
+   `dotnet build src/Api` antes y los tres módulos en verde.
+
+### Lo que la CI encontró y en local no se veía
+
+**Nada, por cuarta vez, y por el mismo motivo que en el 0.7, el 0.8 y el 0.9**: los dos carriles se
+ejecutan también en local con `GITHUB_ACTIONS=true`, así que el *build* es el mismo, y los dos
+recuentos publicados coinciden **exactamente** con los de esta máquina, ensamblado por ensamblado:
+
+```
+Dominio y arquitectura: 388 casos (388 correctos, 0 con error, 0 omitidos) en 6 ensamblados ·
+  Organizacion.UnitTests 116, BuildingBlocks.UnitTests 111, Api.FunctionalTests 103, Identidad.UnitTests 58
+Integración (Testcontainers): 202 casos (202 correctos, 0 con error, 0 omitidos) en 6 ensamblados ·
+  Organizacion.IntegrationTests 42, Api.IntegrationTests 160
+```
+
+—el título del aviso lo pone la etiqueta que se le pasa al script, por eso allí el segundo carril se
+llama `Integración (Testcontainers)` y aquí se lanzó como `Integración con PostgreSQL`; los números
+y el reparto son los mismos—. Los suelos de recuento (300 / 100) siguen haciendo su trabajo.
+
+Y un tercer aviso, que en este ítem es el que más pesaba: `Modelo y migraciones coinciden en todos
+los módulos con persistencia`. Las dos migraciones del 0.10 están **escritas a mano**, así que la
+garantía de que siguen describiendo el modelo no la da el andamiaje: la da este paso, y la da
+también allí y no solo aquí.
+
+Los cuatro *jobs* ejercieron lo que dicen ejercer —se comprobó paso a paso, no por el color—:
+`Formato` 40 s, `Tests de dominio y de arquitectura` 11 s, `Migraciones` 15 s y `Tests de
+integración (Testcontainers)` 72 s en `Backend`; y en `Humo`, las cuatro sondas del entorno levantado con
+`docker compose` —vida, disponibilidad contra PostgreSQL, la API rechazando a quien no se identifica
+y el frontal cargando— más las trazas llegando al visor.
+
+Lo único que la CI dice y aquí no se ve sigue siendo el mismo aviso ajeno a este ítem, arrastrado
+desde el 0.7 y todavía sin tocar: `actions/upload-artifact@v4` (en `Backend` y en `Frontal`) y
+`docker/build-push-action@v6` con `docker/setup-buildx-action@v3` (en `Imágenes de contenedor`)
+apuntan a Node.js 20, en desuso, y el ejecutor los fuerza a Node.js 24. No es un fallo; es del 0.13.
+
+**Dónde retomar exactamente:** ítem **0.11**, *shell* de React. Criterio: login, selector de
+empresa, *layout*, rutas protegidas y cliente de API **generado desde el OpenAPI**; cambio de ruta accesible
+(`<title>`, `role="status"`, foco). Tres cosas que hereda de aquí:
+
+1. **El contrato que va a consumir ya no distingue «no existe» de «está bloqueado»**, y no debe
+   hacerlo: los códigos `empresa-bloqueada` y `almacen-bloqueado` están borrados del catálogo, y lo
+   bloqueado contesta **404** por los caminos ordinarios (ADR-0016). Una interfaz que dijera «esta
+   empresa está bloqueada» desharía en la pantalla lo que el filtro protege en la base.
+2. **Los tres `POST .../desbloqueo` son las únicas escrituras sobre un recurso existente que no
+   piden `If-Match`** (ADR-0017). El cliente generado no debe inventarles una cabecera de versión;
+   las otras trece sí la exigen, y el barrido lo mantiene así.
+3. **`docs/api/openapi.json` todavía no está en el repositorio** —solo hay un `.gitkeep`—, así que
+   el paso `Publicar el OpenAPI` del *job* `Backend` lleva saliendo `skipped` desde que existe. No
+   es una regresión de este ítem; es exactamente el hueco que el 0.11 viene a llenar, y el sitio
+   donde se notará si se llena de verdad.
+
+---
+
 **Ítem 0.9 cerrado, con la CI en verde:**
 [run 33347235943](https://github.com/AOjeda006/Bastion/actions/runs/33347235943) sobre `c6327b2`,
 los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor— y
@@ -1958,9 +2102,37 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Probado con **siete mutaciones**, ninguna superviviente y una que hubo que rehacer porque no
   llegó a compilar. Los cuatro *jobs* de la CI en verde — [run 33347235943](https://github.com/AOjeda006/Bastion/actions/runs/33347235943),
   con **370** casos rápidos y **180** de integración publicados como `::notice::`.
-- [ ] **0.10 · Estados `Bloqueado` y fechas de R14–R17 en el modelo base** — criterio de aceptación:
+- [x] **0.10 · Estados `Bloqueado` y fechas de R14–R17 en el modelo base** — criterio de aceptación:
   el tipo base de entidad y las direcciones ya nacen con lo que exigen R14, R16 y R17 — no se añade
   después.
+  **No añade una función: unifica lo que estaba escrito tres veces.** `EstadoDeEmpresa`,
+  `EstadoDeAlmacen` y `EstadoDeUsuario` eran tres enumerados de dos valores, con tres `BloqueadoEn`
+  sueltos al lado y **ningún motivo**; ahora son un solo `Bloqueo` —bandera, fecha y motivo de lista
+  cerrada, juntos, con la transición como comportamiento y sin *setters* públicos—. Y ninguno de los
+  tres tapaba nada: el filtro global `"Bloqueo"`, hermano del `"Inquilinato"` del ADR-0011, **tapa a
+  las tres sin excepciones**, así que `GET` y `PUT` sobre lo bloqueado contestan **404** y no un 409
+  que revelaría a la vez que la fila existe y en qué estado está — que es el tratamiento que el
+  art. 32 de la LOPDGDD manda impedir. Ver lo bloqueado es una **apertura declarada** con motivo, y
+  la lista de sitios donde se abre se compara entera: hoy son los tres desbloqueos y nada más.
+  `EntidadBase` aporta **las dos marcas de tiempo y nada más** —ni identidad ni bloqueo, porque no
+  era eso lo que estaba escrito tres veces—: `CreadoEn` la pone el dominio en la fábrica,
+  `ModificadoEn` un interceptor al guardar, y **ninguna es un `DEFAULT now()`**, comprobado con un
+  reloj parado en 2019 —un instante que `now()` no puede devolver—. `Direccion` deja de fingir que
+  tiene identidad y pasa de tipo poseído a **tipo complejo**, sin cambio de esquema. Las **dos
+  migraciones nuevas están escritas a mano**: derivan el bloqueo de la columna vieja antes de
+  tirarla, y el `Down` lo rehace — deshacer una migración no puede ser una forma de desbloquear en
+  silencio. Consecuencia con ADR propio: los tres `POST .../desbloqueo` **pierden el `If-Match`**,
+  porque la etiqueta se obtiene leyendo y lo bloqueado ya no se deja leer; el testigo `xmin` se
+  sigue comparando dentro de la petición.
+  Decisiones en `docs/adr/adr-0016-el-bloqueo-es-uno-y-tapa-a-las-tres.md` y
+  `docs/adr/adr-0017-el-desbloqueo-no-puede-pedir-una-llave-que-el-bloqueo-esconde.md`.
+  Probado con **seis mutaciones**, ninguna superviviente salvo la sexta, que sobrevivió **a
+  propósito y antes de tiempo**: `Direccion` a tipo complejo con los barridos sin ampliar dejó
+  **catorce barridos en verde y doce propiedades fuera** de la clasificación de auditoría, porque
+  las de un tipo complejo no salen en `GetProperties()`. De ahí `PropiedadesConCamino()`, y de ahí
+  el orden barridos → rojo → mapeo.
+  Los cuatro *jobs* de la CI en verde — [run 33436800074](https://github.com/AOjeda006/Bastion/actions/runs/33436800074),
+  con **388** casos rápidos y **202** de integración publicados como `::notice::`.
 - [ ] **0.11 · Shell de React** — criterio de aceptación: login, selector de empresa, layout, rutas
   protegidas y cliente de API **generado desde el OpenAPI**; cambio de ruta accesible (`<title>`,
   `role="status"`, foco).
