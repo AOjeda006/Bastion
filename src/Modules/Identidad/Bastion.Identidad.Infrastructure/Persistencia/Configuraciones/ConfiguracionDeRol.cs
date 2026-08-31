@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Identidad.Domain.Roles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -19,6 +20,8 @@ internal sealed class ConfiguracionDeRol : IEntityTypeConfiguration<Rol>
         rol.HasKey(fila => fila.Id);
 
         rol.LlevaTestigoDeConcurrencia();
+
+        ConfiguracionDeEntidadBase.Mapear(rol);
 
         rol.Property(fila => fila.Codigo)
             .HasMaxLength(Rol.LongitudDelCodigo)

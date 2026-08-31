@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Direcciones;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.Organizacion.Domain.Empresas;
@@ -7,26 +8,33 @@ namespace Bastion.Organizacion.UnitTests.Empresas;
 
 public sealed class EmpresaTests
 {
+    private static readonly DateTimeOffset s_momento = new(2026, 8, 26, 10, 0, 0, TimeSpan.Zero);
+
     private static Direccion Fiscal() => Direccion.De(
         "Gran Vía", "31", "28013", "Madrid", "Madrid", "ES");
 
     private static Empresa Nueva() => Empresa.Crear(
-        Nif.De("A58818501"), "Ferretería del Norte, S.L.", Fiscal(), "EUR", RegimenDeIva.General);
+        Nif.De("A58818501"), "Ferretería del Norte, S.L.", Fiscal(), "EUR", RegimenDeIva.General, s_momento);
 
     [Fact]
     public void Una_empresa_nace_activa()
     {
         Empresa empresa = Nueva();
 
-        empresa.Estado.ShouldBe(EstadoDeEmpresa.Activa);
-        empresa.BloqueadaEn.ShouldBeNull();
+        empresa.Bloqueo.EstaBloqueado.ShouldBeFalse();
+        empresa.Bloqueo.Desde.ShouldBeNull();
+        empresa.Bloqueo.Motivo.ShouldBeNull();
         empresa.Id.ShouldNotBe(Guid.Empty);
+
+        // R14: las dos marcas, puestas por la fábrica y en el mismo instante.
+        empresa.CreadoEn.ShouldBe(s_momento);
+        empresa.ModificadoEn.ShouldBe(s_momento);
     }
 
     [Fact]
     public void La_divisa_base_se_normaliza_contra_el_catalogo_del_bloque_comun()
     {
-        Empresa.Crear(Nif.De("A58818501"), "Norte", Fiscal(), " eur ", RegimenDeIva.General)
+        Empresa.Crear(Nif.De("A58818501"), "Norte", Fiscal(), " eur ", RegimenDeIva.General, s_momento)
             .DivisaBase.ShouldBe("EUR");
     }
 
@@ -36,7 +44,7 @@ public sealed class EmpresaTests
         // Aceptarla dejaría a la empresa sin poder calcular una cuota: R6 exige saber con
         // cuántos decimales se redondea ANTES de emitir la primera factura, no después.
         Should.Throw<NotSupportedException>(() => Empresa.Crear(
-            Nif.De("A58818501"), "Norte", Fiscal(), "JPY", RegimenDeIva.General));
+            Nif.De("A58818501"), "Norte", Fiscal(), "JPY", RegimenDeIva.General, s_momento));
     }
 
     [Theory]
@@ -45,7 +53,7 @@ public sealed class EmpresaTests
     public void La_razon_social_es_obligatoria(string razonSocial)
     {
         Should.Throw<ArgumentException>(() => Empresa.Crear(
-            Nif.De("A58818501"), razonSocial, Fiscal(), "EUR", RegimenDeIva.General));
+            Nif.De("A58818501"), razonSocial, Fiscal(), "EUR", RegimenDeIva.General, s_momento));
     }
 
     [Fact]
@@ -57,10 +65,14 @@ public sealed class EmpresaTests
         Empresa empresa = Nueva();
         DateTimeOffset momento = new(2026, 8, 26, 10, 30, 0, TimeSpan.FromHours(2));
 
-        empresa.Bloquear(momento);
+        empresa.Bloquear(MotivoDeBloqueo.SupresionSolicitada, momento);
 
-        empresa.Estado.ShouldBe(EstadoDeEmpresa.Bloqueada);
-        empresa.BloqueadaEn.ShouldBe(momento);
+        empresa.Bloqueo.EstaBloqueado.ShouldBeTrue();
+        empresa.Bloqueo.Desde.ShouldBe(momento);
+
+        // El motivo se guarda con el bloqueo, y no es decoración: es lo que permite responder
+        // «por qué está bloqueado esto» sin ir a buscarlo a la traza.
+        empresa.Bloqueo.Motivo.ShouldBe(MotivoDeBloqueo.SupresionSolicitada);
     }
 
     [Fact]
@@ -71,29 +83,30 @@ public sealed class EmpresaTests
         Empresa empresa = Nueva();
         DateTimeOffset primero = new(2026, 8, 26, 10, 0, 0, TimeSpan.Zero);
 
-        empresa.Bloquear(primero);
-        empresa.Bloquear(primero.AddDays(30));
+        empresa.Bloquear(MotivoDeBloqueo.SupresionSolicitada, primero);
+        empresa.Bloquear(MotivoDeBloqueo.SupresionSolicitada, primero.AddDays(30));
 
-        empresa.BloqueadaEn.ShouldBe(primero);
+        empresa.Bloqueo.Desde.ShouldBe(primero);
     }
 
     [Fact]
     public void Desbloquear_devuelve_la_empresa_a_activa_y_borra_la_fecha()
     {
         Empresa empresa = Nueva();
-        empresa.Bloquear(DateTimeOffset.UtcNow);
+        empresa.Bloquear(MotivoDeBloqueo.SupresionSolicitada, s_momento);
 
         empresa.Desbloquear();
 
-        empresa.Estado.ShouldBe(EstadoDeEmpresa.Activa);
-        empresa.BloqueadaEn.ShouldBeNull();
+        empresa.Bloqueo.EstaBloqueado.ShouldBeFalse();
+        empresa.Bloqueo.Desde.ShouldBeNull();
+        empresa.Bloqueo.Motivo.ShouldBeNull();
     }
 
     [Fact]
     public void Una_empresa_bloqueada_no_se_puede_modificar()
     {
         Empresa empresa = Nueva();
-        empresa.Bloquear(DateTimeOffset.UtcNow);
+        empresa.Bloquear(MotivoDeBloqueo.SupresionSolicitada, s_momento);
 
         // El art. 32 impide el TRATAMIENTO de los datos bloqueados, no solo su visualización.
         // Modificarlos es tratarlos.

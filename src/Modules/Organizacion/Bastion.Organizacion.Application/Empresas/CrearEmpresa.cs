@@ -26,7 +26,8 @@ public interface ICrearEmpresa
 internal sealed class CrearEmpresa(
     IRepositorioDeEmpresas empresas,
     IInquilinoActual inquilino,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearEmpresa
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    TimeProvider reloj) : ICrearEmpresa
 {
     public async Task<Resultado<EmpresaDto>> EjecutarAsync(
         CrearEmpresaDto peticion,
@@ -97,7 +98,8 @@ internal sealed class CrearEmpresa(
             peticion.RazonSocial,
             peticion.DomicilioFiscal.ADireccion(),
             peticion.DivisaBase,
-            regimen);
+            regimen,
+            reloj.GetUtcNow());
 
         // R12: el hecho se APUNTA en el agregado y lo vuelca a la bandeja el interceptor, dentro
         // de este mismo `ConfirmarAsync`. Ni antes —se contaría un alta que puede no llegar a

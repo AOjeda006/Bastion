@@ -21,7 +21,8 @@ internal sealed class CrearEjercicio(
     IUsuarioActual usuarioActual,
     IRepositorioDeEjercicios ejercicios,
     IRepositorioDeEmpresas empresas,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearEjercicio
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    TimeProvider reloj) : ICrearEjercicio
 {
     public async Task<Resultado<EjercicioDto>> EjecutarAsync(
         CrearEjercicioDto peticion,
@@ -59,7 +60,8 @@ internal sealed class CrearEjercicio(
         }
 
         var ejercicio = Ejercicio.Crear(
-            empresaId, peticion.Anio, peticion.FechaDeInicio, peticion.FechaDeFin);
+            empresaId, peticion.Anio, peticion.FechaDeInicio, peticion.FechaDeFin,
+            reloj.GetUtcNow());
 
         ejercicios.Agregar(ejercicio);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

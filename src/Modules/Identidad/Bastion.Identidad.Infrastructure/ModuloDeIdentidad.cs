@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Identidad.Application;
 using Bastion.Identidad.Application.Roles;
@@ -41,6 +42,11 @@ public static class ModuloDeIdentidad
             // que cambia es que deja de haber rastro, y eso no se nota mirando la pantalla. Lo nota
             // `UnCambioEnUnMaestroDejaSuRastroTests`.
             opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeAuditoria>());
+
+            // Y la marca de última modificación (R14). Quitar esta línea no rompe nada visible:
+            // `modificado_en` se queda con la fecha del alta para siempre. Lo nota
+            // `LasMarcasDeTiempoLasPoneElRelojInyectadoTests`.
+            opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeMarcasDeTiempo>());
 
             // Y el de la bandeja de salida. Identidad todavía no emite eventos: el interceptor
             // va igual porque su ausencia no falla, se limita a no publicar nada, y esa es la

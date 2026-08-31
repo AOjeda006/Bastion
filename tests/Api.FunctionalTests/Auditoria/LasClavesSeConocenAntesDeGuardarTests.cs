@@ -1,4 +1,5 @@
 using Bastion.Api.FunctionalTests.Salud;
+using Bastion.BuildingBlocks.Domain.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
@@ -102,6 +103,40 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
                 .Select(par => $"{tipo.ShortName()}.{par.Camino}"))];
 
         impostoras.ShouldBeEmpty("esto lo genera el servidor y no es el testigo de concurrencia");
+    }
+
+    [Fact]
+    public void Las_entidades_del_tipo_base_y_las_que_llevan_testigo_son_las_MISMAS()
+    {
+        // El ítem 0.10 extrajo `EntidadBase`, y con él las dos preguntas se juntaron: hoy las seis
+        // entidades que heredan del tipo base son exactamente las seis que llevan testigo. Que
+        // coincidan no es casualidad —son las que se modifican, y lo que se modifica necesita
+        // saber cuándo y contra qué versión— pero tampoco es una ley: podría haber una entidad de
+        // solo-inserción con marcas de tiempo y sin testigo.
+        //
+        // Por eso esto no PROHÍBE la divergencia, la hace visible. Si un día una entidad hereda del
+        // base y no lleva testigo, este caso se pone rojo y hay que decir por qué en el ADR-0015,
+        // que es donde vive la lista. Sin este caso, la entidad nueva entraría sin control de
+        // concurrencia y sin que nada lo dijera.
+        List<string> delTipoBase = [.. Modelos()
+            .SelectMany(modelo => modelo.GetEntityTypes())
+            .Where(tipo => typeof(EntidadBase).IsAssignableFrom(tipo.ClrType))
+            .Select(tipo => tipo.ShortName())];
+
+        List<string> conTestigo = [.. Modelos()
+            .SelectMany(modelo => modelo.GetEntityTypes())
+            .Where(tipo => tipo.GetProperties().Any(propiedad => propiedad.EsElTestigo()))
+            .Select(tipo => tipo.ShortName())];
+
+        delTipoBase.Sort(StringComparer.Ordinal);
+        conTestigo.Sort(StringComparer.Ordinal);
+
+        // Y las dos contra la lista del ADR-0015, que sigue siendo la declaración: sin esto, dos
+        // listas derivadas del mismo modelo podrían quedarse iguales y a la vez vacías.
+        string.Join(", ", delTipoBase).ShouldBe(string.Join(", ", conTestigo));
+        string.Join(", ", conTestigo).ShouldBe(
+            string.Join(", ", s_generadasPorElServidor.Select(nombre => nombre.Split('.')[0])),
+            "las entidades con testigo son las del ADR-0015, ni una más ni una menos");
     }
 
     [Fact]

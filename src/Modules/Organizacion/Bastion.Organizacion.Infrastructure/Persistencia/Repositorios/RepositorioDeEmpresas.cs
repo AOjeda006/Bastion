@@ -23,13 +23,11 @@ internal sealed class RepositorioDeEmpresas(OrganizacionDbContext contexto) : IR
     public Task<bool> ExisteConNifAsync(Nif nif, CancellationToken cancelacion) =>
         contexto.Empresas.AnyAsync(empresa => empresa.Nif == nif, cancelacion);
 
-    public Task<bool> ExisteAsync(Guid id, CancellationToken cancelacion) =>
-        contexto.Empresas.AnyAsync(empresa => empresa.Id == id, cancelacion);
-
+    // Sin cláusula de estado: el filtro de R16 ya deja fuera lo bloqueado, y repetirlo aquí
+    // haría creer que la protección vive en esta consulta — de donde se puede caer olvidándola
+    // en la siguiente.
     public Task<bool> EstaActivaAsync(Guid id, CancellationToken cancelacion) =>
-        contexto.Empresas.AnyAsync(
-            empresa => empresa.Id == id && empresa.Estado == EstadoDeEmpresa.Activa,
-            cancelacion);
+        contexto.Empresas.AnyAsync(empresa => empresa.Id == id, cancelacion);
 
     // Orden estable y explícito. Sin `ORDER BY`, PostgreSQL no promete ningún orden entre
     // consultas, así que la página 2 podría repetir o saltarse filas de la 1 sin que nadie

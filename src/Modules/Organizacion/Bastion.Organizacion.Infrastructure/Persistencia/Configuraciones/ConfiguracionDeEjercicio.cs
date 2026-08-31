@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Organizacion.Domain.Ejercicios;
 using Bastion.Organizacion.Domain.Empresas;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,8 @@ internal sealed class ConfiguracionDeEjercicio : IEntityTypeConfiguration<Ejerci
         // R8: la columna de empresa está desde la primera tabla. El filtro global que la aplica
         // en toda consulta es del ítem 0.6; añadir la columna después obligaría a tocar todas
         // las tablas y todas las consultas, y eso es lo que se está evitando hoy.
+        ConfiguracionDeEntidadBase.Mapear(ejercicio);
+
         ejercicio.Property(fila => fila.EmpresaId).IsRequired().SeAudita();
 
         // `date`, no `timestamptz`. Un ejercicio contable no tiene zona horaria: empieza el 1 de

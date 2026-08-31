@@ -1,4 +1,6 @@
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Direcciones;
+using Bastion.BuildingBlocks.Domain.Entidades;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 
 namespace Bastion.Organizacion.Domain.Almacenes;
@@ -7,10 +9,21 @@ namespace Bastion.Organizacion.Domain.Almacenes;
 /// Almacén de una empresa: el sitio al que apunta cada movimiento de existencias.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Su dirección va en campos estructurados (R17) y es opcional, porque un almacén virtual o de
 /// tránsito no está en ningún sitio y exigirle una dirección obligaría a inventarla.
+/// </para>
+/// <para>
+/// <b>Es <see cref="IBloqueable"/> por un motivo distinto al de la empresa</b>, y desde el 0.10
+/// con el mismo mecanismo. Aquí no es el artículo 32: es que cada movimiento de existencias
+/// apunta a su almacén para siempre, así que borrarlo rompería el histórico de valoración, que es
+/// irreparable. Compartir el mecanismo tiene una consecuencia que se decidió a conciencia y está
+/// en el ADR-0016: un almacén bloqueado deja de verse por los caminos ordinarios, igual que una
+/// empresa bloqueada, y leer el almacén de un movimiento histórico exigirá abrir un ámbito
+/// declarado cuando llegue el módulo de inventario.
+/// </para>
 /// </remarks>
-public sealed class Almacen : IDeInquilino
+public sealed class Almacen : EntidadBase, IDeInquilino, IBloqueable
 {
     /// <summary>Tope del código del almacén: cabe en una etiqueta y en un albarán.</summary>
     public const int LongitudMaximaDeCodigo = 20;
@@ -21,7 +34,9 @@ public sealed class Almacen : IDeInquilino
         string codigo,
         string nombre,
         Direccion? direccion,
-        TipoDeAlmacen tipo)
+        TipoDeAlmacen tipo,
+        DateTimeOffset momento)
+        : base(momento)
     {
         Id = id;
         EmpresaId = empresaId;
@@ -29,13 +44,14 @@ public sealed class Almacen : IDeInquilino
         Nombre = nombre;
         Direccion = direccion;
         Tipo = tipo;
-        Estado = EstadoDeAlmacen.Activo;
+        Bloqueo = Bloqueo.Ninguno();
     }
 
     private Almacen()
     {
         Codigo = null!;
         Nombre = null!;
+        Bloqueo = null!;
     }
 
     /// <summary>Identificador del almacén.</summary>
@@ -56,19 +72,19 @@ public sealed class Almacen : IDeInquilino
     /// <summary>Naturaleza del almacén.</summary>
     public TipoDeAlmacen Tipo { get; private set; }
 
-    /// <summary>Activo o bloqueado.</summary>
-    public EstadoDeAlmacen Estado { get; private set; }
-
-    /// <summary>Instante del bloqueo, con zona horaria: es un momento, no una fecha de negocio.</summary>
-    public DateTimeOffset? BloqueadoEn { get; private set; }
+    /// <inheritdoc/>
+    public Bloqueo Bloqueo { get; private set; }
 
     /// <summary>Crea un almacén activo.</summary>
+    /// <remarks>El <c>momento</c> es la fecha de creación, y la pone quien tiene el
+    /// <c>TimeProvider</c>: no la base de datos.</remarks>
     public static Almacen Crear(
         Guid empresaId,
         string codigo,
         string nombre,
         Direccion? direccion,
-        TipoDeAlmacen tipo)
+        TipoDeAlmacen tipo,
+        DateTimeOffset momento)
     {
         if (empresaId == Guid.Empty)
         {
@@ -84,17 +100,17 @@ public sealed class Almacen : IDeInquilino
             CodigoValido(codigo),
             NombreValido(nombre),
             direccion,
-            tipo);
+            tipo,
+            momento);
     }
 
     /// <summary>Cambia nombre, dirección y tipo. El código no.</summary>
     public void Modificar(string nombre, Direccion? direccion, TipoDeAlmacen tipo)
     {
-        if (Estado == EstadoDeAlmacen.Bloqueado)
-        {
-            throw new InvalidOperationException(
-                $"El almacén {Codigo} está bloqueado y no admite cambios.");
-        }
+        Bloqueo.ExigirQueNoEsteBloqueado(
+            $"El almacén {Codigo}, bloqueado,",
+            "su histórico de valoración lo señala para siempre y la ficha que lo describe se " +
+            "conserva con él");
 
         ExigirDireccionCoherenteConElTipo(direccion, tipo);
 
@@ -103,24 +119,13 @@ public sealed class Almacen : IDeInquilino
         Tipo = tipo;
     }
 
-    /// <summary>Bloquea el almacén: deja de admitir movimientos, y su histórico se conserva.</summary>
-    public void Bloquear(DateTimeOffset momento)
-    {
-        if (Estado == EstadoDeAlmacen.Bloqueado)
-        {
-            return;
-        }
+    /// <inheritdoc/>
+    /// <remarks>Deja de admitir movimientos, y su histórico se conserva.</remarks>
+    public void Bloquear(MotivoDeBloqueo motivo, DateTimeOffset momento) =>
+        Bloqueo = Bloqueo.Bloquear(motivo, momento);
 
-        Estado = EstadoDeAlmacen.Bloqueado;
-        BloqueadoEn = momento;
-    }
-
-    /// <summary>Levanta el bloqueo.</summary>
-    public void Desbloquear()
-    {
-        Estado = EstadoDeAlmacen.Activo;
-        BloqueadoEn = null;
-    }
+    /// <inheritdoc/>
+    public void Desbloquear() => Bloqueo = Bloqueo.Desbloquear();
 
     private static void ExigirDireccionCoherenteConElTipo(Direccion? direccion, TipoDeAlmacen tipo)
     {

@@ -101,7 +101,7 @@ internal sealed class SembrarAdministrador(
 
     private Rol CrearRolDeAdministracion()
     {
-        var rol = Rol.Crear(CodigoDelRol, "Administración", esDelSistema: true);
+        var rol = Rol.Crear(CodigoDelRol, "Administración", reloj.GetUtcNow(), esDelSistema: true);
         roles.Agregar(rol);
 
         return rol;

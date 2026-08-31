@@ -127,17 +127,20 @@ public sealed class ElFiltroDeEmpresaTests(PostgresConTodosLosModulos postgres) 
         AlmacenDto deA = await CrearAlmacenAsync(enA, "BORRADO-A");
 
         (HttpClient enB, EmpresaDto _) = await EnUnaEmpresaNuevaAsync("00000025W");
-        // El borrado es un bloqueo (art. 32 LOPDGDD), así que la fila sigue ahí y se puede mirar
-        // en qué estado ha quedado. Un bloqueo ajeno no cambia la fila pero SÍ la deja inservible
-        // para su dueño: es una escritura destructiva con nombre suave.
+        // El borrado es un bloqueo (art. 32 LOPDGDD). Un bloqueo ajeno no cambiaría la fila,
+        // pero SÍ la dejaría inservible para su dueño: es una escritura destructiva con nombre
+        // suave, y por eso este test la cuenta como escritura.
         using HttpResponseMessage borrado = await enB.EnviarConVersionAsync(
             HttpMethod.Delete, $"{Almacenes}/{deA.Id}", "\"1\"");
 
         borrado.StatusCode.ShouldBe(HttpStatusCode.NotFound, await Escenario.Detalle(borrado));
 
-        AlmacenDto sigueActivo = await ObtenerAlmacenAsync(enA, deA.Id);
+        // La prueba de que no se ejecutó es que su DUEÑO lo sigue viendo. Desde el 0.10 ya no
+        // hay `Estado` que mirar: si el bloqueo hubiera entrado, el filtro de R16 taparía el
+        // almacén también para él y esto sería un 404. Que responda es la comprobación.
+        AlmacenDto sigueVisible = await ObtenerAlmacenAsync(enA, deA.Id);
 
-        sigueActivo.Estado.ShouldBe("Activo");
+        sigueVisible.Id.ShouldBe(deA.Id);
     }
 
     [Fact]

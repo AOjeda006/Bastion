@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Organizacion.Domain.Ejercicios;
 using Bastion.Organizacion.Domain.Empresas;
 using Bastion.Organizacion.Domain.Series;
@@ -21,6 +22,8 @@ internal sealed class ConfiguracionDeSerie : IEntityTypeConfiguration<Serie>
         serie.HasKey(fila => fila.Id);
 
         serie.LlevaTestigoDeConcurrencia();
+
+        ConfiguracionDeEntidadBase.Mapear(serie);
 
         serie.Property(fila => fila.EmpresaId).IsRequired().SeAudita();
         serie.Property(fila => fila.EjercicioId).IsRequired().SeAudita();

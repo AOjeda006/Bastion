@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Organizacion.Application;
 using Bastion.Organizacion.Application.Almacenes;
@@ -42,6 +43,11 @@ public static class ModuloDeOrganizacion
             // que cambia es que deja de haber rastro, y eso no se nota mirando la pantalla. Lo nota
             // `UnCambioEnUnMaestroDejaSuRastroTests`.
             opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeAuditoria>());
+
+            // Y la marca de última modificación (R14). Quitar esta línea no rompe nada visible:
+            // `modificado_en` se queda con la fecha del alta para siempre. Lo nota
+            // `LasMarcasDeTiempoLasPoneElRelojInyectadoTests`.
+            opciones.AddInterceptors(alcance.GetRequiredService<InterceptorDeMarcasDeTiempo>());
 
             // Y los eventos que registre un agregado, en ese mismo SaveChanges (R12, ADR-0013).
             // Quitar esta línea deja los eventos muriéndose en memoria sin que nada falle: lo nota

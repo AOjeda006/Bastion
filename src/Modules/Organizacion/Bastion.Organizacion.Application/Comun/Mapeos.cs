@@ -56,9 +56,7 @@ internal static class Mapeos
         empresa.RazonSocial,
         empresa.DomicilioFiscal.ADto(),
         empresa.DivisaBase,
-        empresa.RegimenDeIva.ToString(),
-        empresa.Estado.ToString(),
-        empresa.BloqueadaEn);
+        empresa.RegimenDeIva.ToString());
 
     internal static EjercicioDto ADto(this Ejercicio ejercicio) => new(
         ejercicio.Id,
@@ -84,7 +82,5 @@ internal static class Mapeos
         almacen.Codigo,
         almacen.Nombre,
         almacen.Direccion?.ADto(),
-        almacen.Tipo.ToString(),
-        almacen.Estado.ToString(),
-        almacen.BloqueadoEn);
+        almacen.Tipo.ToString());
 }

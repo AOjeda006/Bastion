@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
@@ -30,10 +31,12 @@ namespace Bastion.Identidad.Infrastructure.Persistencia;
 /// </remarks>
 /// <param name="opciones">Opciones del contexto.</param>
 /// <param name="inquilino">De dónde sale la empresa por la que filtra el inquilinato (R8).</param>
+/// <param name="bloqueados">De dónde sale el permiso para ver lo bloqueado (R16).</param>
 public sealed class IdentidadDbContext(
     DbContextOptions<IdentidadDbContext> opciones,
-    IInquilinoActual inquilino)
-    : ContextoDeModulo(opciones, inquilino)
+    IInquilinoActual inquilino,
+    IAccesoALoBloqueado bloqueados)
+    : ContextoDeModulo(opciones, inquilino, bloqueados)
 {
     /// <summary>
     /// Esquema de PostgreSQL del módulo: el nombre del módulo en minúsculas y sin acentos.
@@ -99,20 +102,20 @@ public sealed class IdentidadDbContext(
         ConfiguracionDeIdempotencia.Mapear(modelBuilder, migra: false);
 
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
-            registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
 
         // La cola de eventos es un dato de la empresa que los emitió: sin filtro, la primera
         // consulta que se escriba sobre esta tabla enseñaría los hechos de todos los clientes de
         // la instalación desde dentro de cualquiera de ellos. El publicador la ve entera porque
         // abre un ámbito con su motivo, no porque aquí falte una línea.
         modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
-            evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
 
         // Y el recibo de las peticiones repetibles (R10), por lo mismo que la cola: es un dato
         // de la empresa que la pidió. Sin filtro, una consulta sobre esta tabla enseñaría desde
         // dentro de una empresa qué está dando de alta otra, y con qué respuesta.
         modelBuilder.Entity<RegistroDeIdempotencia>().HasQueryFilter(
-            recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
 
         // La pertenencia es el PUENTE del inquilinato: lleva `empresa_id` y se filtra por él.
         // Filtrarla tiene una consecuencia que hay que mirar de frente: el acceso carga al usuario
@@ -121,7 +124,7 @@ public sealed class IdentidadDbContext(
         // (`AutenticacionYSesion`), que es lo que la deja ver la lista entera; el resto del sistema
         // solo ve las de la empresa en la que está.
         modelBuilder.Entity<Membresia>().HasQueryFilter(
-            membresia => EmpresaDelFiltro == null || membresia.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", membresia => EmpresaDelFiltro == null || membresia.EmpresaId == EmpresaDelFiltro);
 
         // El usuario NO lleva `empresa_id`: una cuenta es una, con un correo, y puede pertenecer a
         // varias empresas. Pero «global» no puede significar «consultable desde cualquier
@@ -130,7 +133,13 @@ public sealed class IdentidadDbContext(
         // que la entidad es global y la CONSULTA se acota por la pertenencia, que es la relación
         // que dice quién comparte empresa con quién.
         modelBuilder.Entity<Usuario>().HasQueryFilter(
-            usuario => EmpresaDelFiltro == null
+            "Inquilinato", usuario => EmpresaDelFiltro == null
                 || usuario.Membresias.Any(membresia => membresia.EmpresaId == EmpresaDelFiltro));
+
+        // R16: un usuario bloqueado no se ve por los caminos ordinarios. Es el mismo mecanismo
+        // que en Organización, y alcanza a las tres entidades bloqueables sin excepciones — el
+        // filtro no lleva lista de exentos, que es lo que lo hace comprobable.
+        modelBuilder.Entity<Usuario>().HasQueryFilter(
+            "Bloqueo", usuario => VerLoBloqueado || !usuario.Bloqueo.EstaBloqueado);
     }
 }

@@ -10,17 +10,20 @@ namespace Bastion.Organizacion.Contracts.Empresas;
 /// <param name="DomicilioFiscal">Domicilio fiscal, estructurado (R17).</param>
 /// <param name="DivisaBase">Divisa base en ISO 4217.</param>
 /// <param name="RegimenDeIva">Régimen de IVA, como texto.</param>
-/// <param name="Estado">Estado de la empresa, como texto.</param>
-/// <param name="BloqueadaEn">Cuándo se bloqueó, o nulo si está activa.</param>
+/// <remarks>
+/// <b>No lleva estado ni fecha de bloqueo, y su ausencia es la regla</b> (R16, desde el 0.10). El
+/// filtro de repositorio deja fuera lo bloqueado, así que todo lo que sale por un camino ordinario
+/// está activo por construcción: un campo `Estado` solo podría decir «activo», y un campo que solo
+/// puede decir una cosa no informa, confunde. Lo bloqueado se ve abriendo un ámbito declarado, y
+/// quien lo abra tiene delante la entidad entera.
+/// </remarks>
 public sealed record EmpresaDto(
     Guid Id,
     string Nif,
     string RazonSocial,
     DireccionDto DomicilioFiscal,
     string DivisaBase,
-    string RegimenDeIva,
-    string Estado,
-    DateTimeOffset? BloqueadaEn);
+    string RegimenDeIva);
 
 /// <summary>Lo que hace falta para dar de alta una empresa.</summary>
 /// <remarks>

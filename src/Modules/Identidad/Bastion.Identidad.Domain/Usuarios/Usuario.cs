@@ -1,3 +1,5 @@
+using Bastion.BuildingBlocks.Domain.Bloqueos;
+using Bastion.BuildingBlocks.Domain.Entidades;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 
 namespace Bastion.Identidad.Domain.Usuarios;
@@ -16,14 +18,15 @@ namespace Bastion.Identidad.Domain.Usuarios;
 /// </para>
 /// <para>
 /// <b>Dos bloqueos distintos que no se pueden confundir.</b>
-/// <see cref="Estado"/> es el bloqueo de R16: baja lógica, la decide una persona con permiso y
-/// no caduca sola. <see cref="RechazadoHasta"/> es el bloqueo por intentos fallidos: automático,
-/// temporal y se levanta solo. Mezclarlos en un campo haría que un ataque de fuerza bruta diera
-/// de baja la cuenta —que es exactamente el favor que el atacante quería— o que dar de baja una
-/// cuenta caducara al cabo de un rato.
+/// <see cref="Bloqueo"/> es el bloqueo de R16: baja lógica, la decide una persona con permiso,
+/// lleva fecha y motivo y no caduca sola. <see cref="RechazadoHasta"/> es el rechazo por intentos
+/// fallidos: automático, temporal y se levanta solo. Mezclarlos en un campo haría que un ataque de
+/// fuerza bruta diera de baja la cuenta —que es exactamente el favor que el atacante quería— o que
+/// dar de baja una cuenta caducara al cabo de un rato. Siguen siendo dos cosas separadas después
+/// del 0.10, y hay una prueba que se pone roja si alguien las junta.
 /// </para>
 /// </remarks>
-public sealed class Usuario
+public sealed class Usuario : EntidadBase, IBloqueable
 {
     /// <summary>Intentos fallidos seguidos que se toleran antes de rechazar.</summary>
     /// <remarks>
@@ -43,16 +46,17 @@ public sealed class Usuario
         Correo = null!;
         Nombre = null!;
         HashDeContrasena = null!;
+        Bloqueo = null!;
     }
 
     private Usuario(Guid id, Correo correo, string nombre, string hashDeContrasena, DateTimeOffset momento)
+        : base(momento)
     {
         Id = id;
         Correo = correo;
         Nombre = nombre;
         HashDeContrasena = hashDeContrasena;
-        Estado = EstadoDeUsuario.Activo;
-        CreadoEn = momento;
+        Bloqueo = Bloqueo.Ninguno();
     }
 
     /// <summary>Identificador del usuario. Es lo que viaja en el <i>claim</i> del sujeto.</summary>
@@ -67,14 +71,8 @@ public sealed class Usuario
     /// <summary>Resumen de la contraseña. Nunca la contraseña.</summary>
     public string HashDeContrasena { get; private set; }
 
-    /// <summary>Estado de la cuenta (R16).</summary>
-    public EstadoDeUsuario Estado { get; private set; }
-
-    /// <summary>Cuándo se dio de baja, si se dio.</summary>
-    public DateTimeOffset? BloqueadoEn { get; private set; }
-
-    /// <summary>Cuándo se creó la cuenta.</summary>
-    public DateTimeOffset CreadoEn { get; private set; }
+    /// <inheritdoc/>
+    public Bloqueo Bloqueo { get; private set; }
 
     /// <summary>Último inicio de sesión correcto, si ha habido alguno.</summary>
     public DateTimeOffset? UltimoAccesoEn { get; private set; }
@@ -129,25 +127,13 @@ public sealed class Usuario
         RechazadoHasta = null;
     }
 
-    /// <summary>Da de baja la cuenta (R16). No la borra.</summary>
-    /// <param name="momento">Ahora.</param>
-    public void Bloquear(DateTimeOffset momento)
-    {
-        if (Estado == EstadoDeUsuario.Bloqueado)
-        {
-            return;
-        }
+    /// <inheritdoc/>
+    /// <remarks>Da de baja la cuenta (R16). No la borra: un usuario es una persona física.</remarks>
+    public void Bloquear(MotivoDeBloqueo motivo, DateTimeOffset momento) =>
+        Bloqueo = Bloqueo.Bloquear(motivo, momento);
 
-        Estado = EstadoDeUsuario.Bloqueado;
-        BloqueadoEn = momento;
-    }
-
-    /// <summary>Reactiva una cuenta dada de baja.</summary>
-    public void Desbloquear()
-    {
-        Estado = EstadoDeUsuario.Activo;
-        BloqueadoEn = null;
-    }
+    /// <inheritdoc/>
+    public void Desbloquear() => Bloqueo = Bloqueo.Desbloquear();
 
     /// <summary>Si la cuenta está rechazando intentos ahora mismo.</summary>
     /// <param name="momento">Ahora.</param>
@@ -156,8 +142,12 @@ public sealed class Usuario
 
     /// <summary>Si la cuenta puede iniciar sesión en este momento.</summary>
     /// <param name="momento">Ahora.</param>
+    /// <remarks>
+    /// Las dos condiciones son las dos que hay, y son distintas: la cuenta no está dada de baja
+    /// (R16) y no está rechazando intentos ahora mismo. Fundirlas sería fundir los dos bloqueos.
+    /// </remarks>
     public bool PuedeIniciarSesion(DateTimeOffset momento) =>
-        Estado == EstadoDeUsuario.Activo && !EstaRechazado(momento);
+        !Bloqueo.EstaBloqueado && !EstaRechazado(momento);
 
     /// <summary>Apunta un intento fallido y rechaza la cuenta si se pasa del tope.</summary>
     /// <param name="momento">Ahora.</param>

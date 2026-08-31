@@ -4,23 +4,27 @@ namespace Bastion.Identidad.Contracts.Usuarios;
 
 /// <summary>Un usuario, tal como sale de la API.</summary>
 /// <remarks>
+/// <para>
 /// <b>No lleva el resumen de la contraseña, ni un campo donde pudiera colarse.</b> Un DTO que
 /// arrastrara el hash lo publicaría en cada listado, en cada caché de navegador y en cada registro
 /// de una petición. Lo que sí lleva son los datos con los que se administra la cuenta.
+/// </para>
+/// <para>
+/// <b>Tampoco lleva estado ni fecha de baja, y su ausencia es la regla</b> (R16, desde el 0.10).
+/// El filtro de repositorio deja fuera lo bloqueado, así que todo lo que sale por un camino
+/// ordinario está activo por construcción: un campo `Estado` solo podría decir «activo», y un
+/// campo que solo puede decir una cosa no informa, confunde.
+/// </para>
 /// </remarks>
 /// <param name="Id">Identificador del usuario.</param>
 /// <param name="Correo">Correo con el que inicia sesión, normalizado.</param>
 /// <param name="Nombre">Nombre para la interfaz.</param>
-/// <param name="Estado">Estado de la cuenta, como texto.</param>
-/// <param name="BloqueadoEn">Cuándo se dio de baja, o nulo si está activa.</param>
 /// <param name="CreadoEn">Cuándo se creó.</param>
 /// <param name="UltimoAccesoEn">Último inicio de sesión correcto, o nulo si no ha habido.</param>
 public sealed record UsuarioDto(
     Guid Id,
     string Correo,
     string Nombre,
-    string Estado,
-    DateTimeOffset? BloqueadoEn,
     DateTimeOffset CreadoEn,
     DateTimeOffset? UltimoAccesoEn);
 

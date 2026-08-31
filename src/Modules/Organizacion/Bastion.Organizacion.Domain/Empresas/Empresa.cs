@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Direcciones;
 using Bastion.BuildingBlocks.Domain.Eventos;
@@ -19,13 +20,13 @@ namespace Bastion.Organizacion.Domain.Empresas;
 /// memoria y el modelo la ignora—; lo que declara es que lo que le pasa se cuenta.
 /// </para>
 /// <para>
-/// Sí lleva estado <see cref="EstadoDeEmpresa.Bloqueada"/>, y la razón está escrita en el
-/// ADR-0007: un <b>empresario individual</b> es persona física, así que la razón social puede
-/// ser un nombre propio y el domicilio fiscal, un domicilio particular. El artículo 32 de la
-/// LOPDGDD alcanza entonces a esta ficha igual que a la de un tercero.
+/// Sí es <see cref="IBloqueable"/>, y la razón está escrita en el ADR-0007: un <b>empresario
+/// individual</b> es persona física, así que la razón social puede ser un nombre propio y el
+/// domicilio fiscal, un domicilio particular. El artículo 32 de la LOPDGDD alcanza entonces a
+/// esta ficha igual que a la de un tercero.
 /// </para>
 /// </remarks>
-public sealed class Empresa : RaizAgregado
+public sealed class Empresa : RaizAgregado, IBloqueable
 {
     private Empresa(
         Guid id,
@@ -33,7 +34,9 @@ public sealed class Empresa : RaizAgregado
         string razonSocial,
         Direccion domicilioFiscal,
         string divisaBase,
-        RegimenDeIva regimenDeIva)
+        RegimenDeIva regimenDeIva,
+        DateTimeOffset momento)
+        : base(momento)
     {
         Id = id;
         Nif = nif;
@@ -41,7 +44,7 @@ public sealed class Empresa : RaizAgregado
         DomicilioFiscal = domicilioFiscal;
         DivisaBase = divisaBase;
         RegimenDeIva = regimenDeIva;
-        Estado = EstadoDeEmpresa.Activa;
+        Bloqueo = Bloqueo.Ninguno();
     }
 
     // EF Core necesita poder materializar la entidad desde la base de datos sin pasar por las
@@ -52,6 +55,7 @@ public sealed class Empresa : RaizAgregado
         RazonSocial = null!;
         DomicilioFiscal = null!;
         DivisaBase = null!;
+        Bloqueo = null!;
     }
 
     /// <summary>Identificador de la empresa.</summary>
@@ -72,22 +76,19 @@ public sealed class Empresa : RaizAgregado
     /// <summary>Régimen de IVA en el que tributa.</summary>
     public RegimenDeIva RegimenDeIva { get; private set; }
 
-    /// <summary>Estado de la ficha: activa o bloqueada (R16).</summary>
-    public EstadoDeEmpresa Estado { get; private set; }
-
-    /// <summary>
-    /// Instante del bloqueo. Es un momento del tiempo, no una fecha de negocio: de él arranca
-    /// el plazo de prescripción del art. 32, así que se guarda con zona horaria.
-    /// </summary>
-    public DateTimeOffset? BloqueadaEn { get; private set; }
+    /// <inheritdoc/>
+    public Bloqueo Bloqueo { get; private set; }
 
     /// <summary>Crea una empresa activa.</summary>
+    /// <remarks>El <c>momento</c> es la fecha de creación, y la pone quien tiene el
+    /// <c>TimeProvider</c>: no la base de datos.</remarks>
     public static Empresa Crear(
         Nif nif,
         string razonSocial,
         Direccion domicilioFiscal,
         string divisaBase,
-        RegimenDeIva regimenDeIva)
+        RegimenDeIva regimenDeIva,
+        DateTimeOffset momento)
     {
         ArgumentNullException.ThrowIfNull(nif);
         ArgumentNullException.ThrowIfNull(domicilioFiscal);
@@ -98,7 +99,8 @@ public sealed class Empresa : RaizAgregado
             RazonSocialValida(razonSocial),
             domicilioFiscal,
             DivisaBaseValida(divisaBase),
-            regimenDeIva);
+            regimenDeIva,
+            momento);
     }
 
     /// <summary>Cambia lo que puede cambiar. El NIF no está entre ello.</summary>
@@ -117,38 +119,18 @@ public sealed class Empresa : RaizAgregado
         RegimenDeIva = regimenDeIva;
     }
 
-    /// <summary>Bloquea la ficha (R16). Suprimir no es borrar.</summary>
-    /// <remarks>
-    /// Es idempotente y NO mueve la fecha del primer bloqueo: de esa fecha cuelga el plazo de
-    /// prescripción, y re-bloquear alargaría la conservación sin que nadie lo hubiera decidido.
-    /// </remarks>
-    public void Bloquear(DateTimeOffset momento)
-    {
-        if (Estado == EstadoDeEmpresa.Bloqueada)
-        {
-            return;
-        }
+    /// <inheritdoc/>
+    public void Bloquear(MotivoDeBloqueo motivo, DateTimeOffset momento) =>
+        Bloqueo = Bloqueo.Bloquear(motivo, momento);
 
-        Estado = EstadoDeEmpresa.Bloqueada;
-        BloqueadaEn = momento;
-    }
+    /// <inheritdoc/>
+    public void Desbloquear() => Bloqueo = Bloqueo.Desbloquear();
 
-    /// <summary>Levanta el bloqueo.</summary>
-    public void Desbloquear()
-    {
-        Estado = EstadoDeEmpresa.Activa;
-        BloqueadaEn = null;
-    }
-
-    private void ExigirQueNoEsteBloqueada()
-    {
-        if (Estado == EstadoDeEmpresa.Bloqueada)
-        {
-            throw new InvalidOperationException(
-                "Una empresa bloqueada no admite cambios: el art. 32 de la LOPDGDD impide el " +
-                "tratamiento de los datos bloqueados, y modificarlos es tratarlos.");
-        }
-    }
+    private void ExigirQueNoEsteBloqueada() =>
+        Bloqueo.ExigirQueNoEsteBloqueado(
+            "Una empresa bloqueada",
+            "el art. 32 de la LOPDGDD impide el tratamiento de los datos bloqueados, y " +
+            "modificarlos es tratarlos");
 
     private static string RazonSocialValida(string razonSocial)
     {

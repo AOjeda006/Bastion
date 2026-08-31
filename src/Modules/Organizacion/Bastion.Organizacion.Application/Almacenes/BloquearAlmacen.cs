@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Almacenes;
 
@@ -43,7 +44,10 @@ internal sealed class BloquearAlmacen(
 
         versiones.Exigir(almacen, version);
 
-        almacen.Bloquear(reloj.GetUtcNow());
+        // Un almacén no se bloquea por el art. 32 sino porque deja de usarse: su histórico de
+        // valoración apunta a él para siempre. Mismo mecanismo, motivo distinto, y la columna lo
+        // distingue.
+        almacen.Bloquear(MotivoDeBloqueo.CeseDeUso, reloj.GetUtcNow());
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto();

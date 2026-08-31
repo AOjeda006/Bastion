@@ -109,14 +109,31 @@ public sealed class EsquemaDeIdentidadTests(PostgresConTodosLosModulos postgres)
     [Fact]
     public async Task El_usuario_se_bloquea_y_no_se_borra_asi_que_tiene_donde_apuntarlo()
     {
-        // Tercer estado, y no una fila menos: un usuario es una persona física, así que el art. 32
-        // de la LOPDGDD se aplica entero —bloquear, conservar y poder demostrar quién hizo qué—.
-        (await TipoDeColumnaAsync("usuarios", "estado")).ShouldBe("text");
+        // Un estado aparte, y no una fila menos: un usuario es una persona física, así que el
+        // art. 32 de la LOPDGDD se aplica entero —bloquear, conservar y poder demostrar quién hizo
+        // qué—.
+        //
+        // Desde el 0.10 esto son las TRES columnas del tipo complejo compartido, las mismas que
+        // llevan empresa y almacén. El `estado` de texto que había aquí antes decía lo mismo con
+        // otras palabras y en otro sitio, y era la tercera copia de la misma idea.
+        (await TipoDeColumnaAsync("usuarios", "bloqueado")).ShouldBe("boolean");
         (await TipoDeColumnaAsync("usuarios", "bloqueado_en")).ShouldBe("timestamp with time zone");
+        (await TipoDeColumnaAsync("usuarios", "motivo_del_bloqueo")).ShouldBe("text");
+
+        // Y sigue habiendo DOS bloqueos, no uno: `rechazado_hasta` es el rechazo temporal por
+        // intentos fallidos, que se levanta solo. Si algún día una fuerza bruta pudiera dar de
+        // baja la cuenta de alguien, sería porque estas columnas se fundieron.
+        (await TipoDeColumnaAsync("usuarios", "rechazado_hasta")).ShouldBe("timestamp with time zone");
+        (await TipoDeColumnaAsync("usuarios", "estado")).ShouldBeNull();
     }
 
     [Theory]
     [InlineData("usuarios", "creado_en")]
+    // R14: la marca de modificación llega con `EntidadBase`, y el rol —que nunca tuvo fecha—
+    // estrena las dos.
+    [InlineData("usuarios", "modificado_en")]
+    [InlineData("roles", "creado_en")]
+    [InlineData("roles", "modificado_en")]
     [InlineData("usuarios", "ultimo_acceso_en")]
     [InlineData("usuarios", "rechazado_hasta")]
     [InlineData("tokens_de_refresco", "expira_en")]

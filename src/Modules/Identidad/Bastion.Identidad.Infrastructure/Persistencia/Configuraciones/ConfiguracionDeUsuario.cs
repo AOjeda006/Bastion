@@ -1,6 +1,8 @@
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Identidad.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -49,17 +51,16 @@ internal sealed class ConfiguracionDeUsuario : IEntityTypeConfiguration<Usuario>
             .IsRequired()
             .EsSecreta("resumen de credencial: el historial de resumenes es un boton de ataque");
 
-        usuario.Property(fila => fila.Estado)
-            .HasConversion<string>()
-            .IsRequired()
-            .SeAudita();
+        ConfiguracionDeEntidadBase.Mapear(usuario);
 
-        // Los cuatro son INSTANTES, no fechas de negocio: `timestamptz`. De `BloqueadoEn` arranca
-        // el plazo del art. 32 de la LOPDGDD, y `RechazadoHasta` se compara contra el reloj para
-        // decidir si se admite un intento — una fecha sin zona haría que esa comparación
-        // dependiera de dónde esté el servidor.
-        usuario.Property(fila => fila.BloqueadoEn).SeAudita();
-        usuario.Property(fila => fila.CreadoEn).IsRequired().SeAudita();
+        // El bloqueo de R16, con su fecha y su motivo. Es el de la baja logica, y no tiene nada
+        // que ver con `RechazadoHasta`, que esta cuatro lineas mas abajo: uno lo decide una
+        // persona y no caduca, el otro lo decide un contador de intentos y se levanta solo.
+        usuario.ComplexProperty(fila => fila.Bloqueo, ConfiguracionDeBloqueo.Mapear);
+
+        // Los dos de abajo son INSTANTES, no fechas de negocio: `timestamptz`. `RechazadoHasta`
+        // se compara contra el reloj para decidir si se admite un intento — una fecha sin zona
+        // haria que esa comparacion dependiera de donde este el servidor.
 
         // Los tres de abajo son ACCESOS, no cambios de maestro, y el §11 los pide igual. La
         // consecuencia se dice entera: cada entrada correcta y cada intento fallido escriben una

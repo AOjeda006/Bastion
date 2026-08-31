@@ -54,8 +54,8 @@ public sealed class LaTrazaVaEnLaMismaTransaccionTests(PostgresConTodosLosModulo
         AlmacenDto ocupado = await CrearAlmacenAsync(cliente, "ATOMICO");
 
         var usuarioId = Guid.CreateVersion7();
-        var buena = Almacen.Crear(empresa.Id, "ATOMICO-BUENA", "La que iba a entrar", null, TipoDeAlmacen.Virtual);
-        var chocante = Almacen.Crear(empresa.Id, ocupado.Codigo, "La que choca", null, TipoDeAlmacen.Virtual);
+        var buena = Almacen.Crear(empresa.Id, "ATOMICO-BUENA", "La que iba a entrar", null, TipoDeAlmacen.Virtual, TimeProvider.System.GetUtcNow());
+        var chocante = Almacen.Crear(empresa.Id, ocupado.Codigo, "La que choca", null, TipoDeAlmacen.Virtual, TimeProvider.System.GetUtcNow());
 
         await using (OrganizacionDbContext contexto = postgres.AbrirOrganizacionAuditada(empresa.Id, usuarioId))
         {
@@ -83,7 +83,7 @@ public sealed class LaTrazaVaEnLaMismaTransaccionTests(PostgresConTodosLosModulo
         (HttpClient _, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("00000041H");
 
         var usuarioId = Guid.CreateVersion7();
-        var almacen = Almacen.Crear(empresa.Id, "ATOMICO-OK", "La que sí entra", null, TipoDeAlmacen.Virtual);
+        var almacen = Almacen.Crear(empresa.Id, "ATOMICO-OK", "La que sí entra", null, TipoDeAlmacen.Virtual, TimeProvider.System.GetUtcNow());
 
         await using (OrganizacionDbContext contexto = postgres.AbrirOrganizacionAuditada(empresa.Id, usuarioId))
         {
@@ -111,7 +111,7 @@ public sealed class LaTrazaVaEnLaMismaTransaccionTests(PostgresConTodosLosModulo
         // instrumentar nada: lo cuenta la propia base.
         (HttpClient _, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("00000047R");
 
-        var almacen = Almacen.Crear(empresa.Id, "ATOMICO-XMIN", "La que se compara", null, TipoDeAlmacen.Virtual);
+        var almacen = Almacen.Crear(empresa.Id, "ATOMICO-XMIN", "La que se compara", null, TipoDeAlmacen.Virtual, TimeProvider.System.GetUtcNow());
 
         await using (OrganizacionDbContext contexto =
             postgres.AbrirOrganizacionAuditada(empresa.Id, Guid.CreateVersion7()))

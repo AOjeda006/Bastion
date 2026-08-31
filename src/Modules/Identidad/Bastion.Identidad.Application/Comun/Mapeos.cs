@@ -28,8 +28,6 @@ internal static class Mapeos
         usuario.Id,
         usuario.Correo.Valor,
         usuario.Nombre,
-        usuario.Estado.ToString(),
-        usuario.BloqueadoEn,
         usuario.CreadoEn,
         usuario.UltimoAccesoEn);
 

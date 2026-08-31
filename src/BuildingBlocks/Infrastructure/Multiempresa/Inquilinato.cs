@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 
-/// <summary>Registro del inquilinato (R8) en el <i>composition root</i>.</summary>
+/// <summary>Registro del inquilinato (R8) y del acceso a lo bloqueado (R16).</summary>
 public static class Inquilinato
 {
     /// <summary>
@@ -30,6 +32,12 @@ public static class Inquilinato
 
         servicios.AddHttpContextAccessor();
         servicios.TryAddScoped<IInquilinoActual, InquilinoActual>();
+
+        // Y con él, la puerta declarada de R16. Va aquí y no en un método aparte porque es la
+        // otra mitad de lo mismo: los dos son cosas que un `DbContext` de módulo necesita para
+        // construirse, y separarlos dejaría un host que registra una y se olvida de la otra
+        // reventando al resolver el primer contexto, en vez de no compilar.
+        servicios.TryAddScoped<IAccesoALoBloqueado, AccesoALoBloqueado>();
 
         return servicios;
     }

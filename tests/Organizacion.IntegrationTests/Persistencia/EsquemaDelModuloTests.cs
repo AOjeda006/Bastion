@@ -101,15 +101,54 @@ public sealed class EsquemaDelModuloTests(PostgresDeVerdad postgres)
     }
 
     [Theory]
-    [InlineData("empresas", "bloqueada_en")]
+    // El instante del bloqueo. Desde el 0.10 las dos tablas lo llaman igual, porque las dos lo
+    // sacan del mismo tipo complejo compartido.
+    [InlineData("empresas", "bloqueado_en")]
     [InlineData("almacenes", "bloqueado_en")]
-    public async Task El_instante_de_bloqueo_si_lleva_zona_horaria_porque_es_un_momento(
+    // Las dos marcas de R14, en las CUATRO tablas del módulo: nacen con el tipo base, no se
+    // añaden entidad por entidad. Si alguien crea una entidad nueva sin heredar de `EntidadBase`,
+    // esta teoría no la ve —para eso está el barrido sobre el modelo—, pero si alguien cambia el
+    // tipo de una de estas columnas, aquí se entera.
+    [InlineData("empresas", "creado_en")]
+    [InlineData("empresas", "modificado_en")]
+    [InlineData("ejercicios", "creado_en")]
+    [InlineData("ejercicios", "modificado_en")]
+    [InlineData("series", "creado_en")]
+    [InlineData("series", "modificado_en")]
+    [InlineData("almacenes", "creado_en")]
+    [InlineData("almacenes", "modificado_en")]
+    public async Task Los_instantes_llevan_zona_horaria_porque_son_momentos(
         string tabla, string columna)
     {
-        // De esta fecha arranca el plazo de prescripción del art. 32 de la LOPDGDD: es un punto
-        // en la línea del tiempo, no una fecha de calendario. La distinción con `date` no es
-        // estilística, y por eso las dos están probadas.
+        // De la fecha de bloqueo arranca el plazo de prescripción del art. 32 de la LOPDGDD, y
+        // las marcas de R14 dicen cuándo pasó algo: son puntos en la línea del tiempo, no fechas
+        // de calendario. La distinción con `date` no es estilística, y por eso las dos están
+        // probadas: esta teoría y la de arriba son la misma pregunta con las dos respuestas.
         (await TipoDeColumnaAsync(tabla, columna)).ShouldBe("timestamp with time zone");
+    }
+
+    [Theory]
+    [InlineData("empresas", "creado_en")]
+    [InlineData("empresas", "modificado_en")]
+    [InlineData("almacenes", "creado_en")]
+    [InlineData("almacenes", "modificado_en")]
+    [InlineData("empresas", "bloqueado")]
+    [InlineData("almacenes", "bloqueado")]
+    public async Task Lo_que_toda_fila_tiene_que_llevar_es_NOT_NULL_y_sin_DEFAULT(
+        string tabla, string columna)
+    {
+        // Dos comprobaciones en una, y las dos importan.
+        //
+        // NOT NULL: una marca de tiempo que admita nulo deja de ser una garantía y pasa a ser una
+        // sugerencia, y el día que una fila entre sin ella nadie se entera.
+        //
+        // Sin DEFAULT: `ADD COLUMN ... NOT NULL DEFAULT x` —lo que genera el andamiaje para poder
+        // rellenar las filas que ya existen— deja el DEFAULT puesto en la tabla para siempre.
+        // Eso sería una forma nueva de valor generado por el servidor en un modelo donde lo único
+        // que lo genera son los seis testigos del ADR-0015, y encima una diferencia entre el
+        // esquema y el modelo que ningún barrido sobre el modelo puede ver. Por eso la migración
+        // añade, rellena y cierra en tres pasos: para que esto salga vacío.
+        (await NuloYPorOmisionAsync(tabla, columna)).ShouldBe(("NO", null));
     }
 
     [Fact]
@@ -176,7 +215,9 @@ public sealed class EsquemaDelModuloTests(PostgresDeVerdad postgres)
         // Un enumerado guardado por su valor entero deja de significar nada en cuanto alguien
         // reordena el enumerado. En un ERP los datos duran más que el código.
         (await TipoDeColumnaAsync("empresas", "regimen_de_iva")).ShouldBe("text");
-        (await TipoDeColumnaAsync("empresas", "estado")).ShouldBe("text");
+        (await TipoDeColumnaAsync("empresas", "motivo_del_bloqueo")).ShouldBe("text");
+        (await TipoDeColumnaAsync("almacenes", "motivo_del_bloqueo")).ShouldBe("text");
+        (await TipoDeColumnaAsync("ejercicios", "estado")).ShouldBe("text");
         (await TipoDeColumnaAsync("series", "tipo_de_documento")).ShouldBe("text");
         (await TipoDeColumnaAsync("almacenes", "tipo")).ShouldBe("text");
     }
@@ -212,6 +253,22 @@ public sealed class EsquemaDelModuloTests(PostgresDeVerdad postgres)
             """);
 
         return filas.Count == 0 ? null : filas[0].Uno;
+    }
+
+    private async Task<(string Nulo, string? PorOmision)> NuloYPorOmisionAsync(
+        string tabla, string columna)
+    {
+        IReadOnlyList<(string Uno, string Dos)> filas = await ConsultarAsync(
+            $"""
+            SELECT is_nullable, COALESCE(column_default, '')
+            FROM information_schema.columns
+            WHERE table_schema = '{OrganizacionDbContext.Esquema}'
+              AND table_name = '{tabla}' AND column_name = '{columna}'
+            """);
+
+        filas.Count.ShouldBe(1, $"no existe la columna {tabla}.{columna}");
+
+        return (filas[0].Uno, filas[0].Dos.Length == 0 ? null : filas[0].Dos);
     }
 
     private async Task<int?> LongitudDeColumnaAsync(string tabla, string columna)

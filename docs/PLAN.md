@@ -249,7 +249,13 @@ anotan para no volver a discutirlas.
   `timestamptz`, contador en columna y nunca secuencia, historial de migraciones en el esquema del
   módulo, enumerados como texto y cero cascadas— están en el
   **`docs/adr/adr-0007-lo-irreversible-del-esquema-de-organizacion.md`**, con el porqué de cada una.
-  El 0.6 y el 0.10 llegan a tablas que ya tienen lo que necesitan; ninguno migra datos.
+  El 0.6 llegó a tablas que ya tenían lo que necesitaba y no migró datos. **El 0.10 sí**, y la
+  previsión de 2026-08-26 se quedó corta por un sitio que entonces no se veía: las columnas
+  estaban puestas, pero el bloqueo pasó de un enumerado por tabla a las tres columnas del tipo
+  compartido, y ese cambio de forma **sí** obliga a derivar el dato de las filas existentes
+  antes de tirar la columna vieja (ADR-0016). La previsión acertó en lo irreversible —ninguna
+  de las ocho decisiones del ADR-0007 hubo que rehacerla— y erró en que unificar tres formas
+  de lo mismo también mueve datos.
 - **Un caso de uso por operación, sin bus en memoria** (§4): interfaz pública + implementación
   `internal`, y `AgregarCasosDeUsoDeOrganizacion()` registra los veinte. Como quien registra tipos
   `internal` tiene que vivir en el mismo ensamblado, la capa de Aplicación adopta
@@ -859,9 +865,16 @@ Todo lo de abajo está razonado en
 #### Qué recurso lleva qué, decidido con un barrido y no de memoria
 
 `TodaEscrituraDiceComoSeProtegeTests` recorre por reflexión los dos ensamblados de *endpoints*.
-Hoy: **46 acciones**, de ellas **32** cambian estado — **16** exigen `If-Match`, **6** admiten
-`Idempotency-Key` y **10** están exentas con su motivo escrito. Los números están fijados en el
+Hoy: **46 acciones**, de ellas **32** cambian estado — **13** exigen `If-Match`, **6** admiten
+`Idempotency-Key` y **13** están exentas con su motivo escrito. Los números están fijados en el
 propio test: un barrido cuya enumeración devuelva nada saldría verde por la peor de las razones.
+
+> **Movido en el 0.10** (eran 16 y 10). Los tres `POST /{id}/desbloqueo` pasaron de exigir
+> `If-Match` a estar exentos con su motivo: R16 hace que un recurso bloqueado no emita `ETag`, así
+> que la precondición pedía una llave que el propio mecanismo esconde. El argumento entero está en
+> el [ADR-0017](adr/adr-0017-el-desbloqueo-no-puede-pedir-una-llave-que-el-bloqueo-esconde.md). El
+> total de acciones que cambian estado **no se mueve**, y eso es lo que dice que fue una mudanza y
+> no una acción nueva colada sin protección. Las tablas de abajo están ya con los números de hoy.
 
 **Los seis recursos que emiten `ETag` en su lectura por identificador:**
 
@@ -878,16 +891,16 @@ Los listados **no** lo emiten: un `ETag` sobre una página sería el de la pági
 elemento, y un cliente que lo devolviera en un `If-Match` estaría citando una versión que no es la
 del recurso que escribe.
 
-**Las dieciséis operaciones que exigen `If-Match`:**
+**Las trece operaciones que exigen `If-Match`:**
 
 | Recurso | Operaciones |
 |---|---|
-| Almacén | `PUT /{id}`, `DELETE /{id}` (bloqueo), `POST /{id}/desbloqueo` |
+| Almacén | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
 | Ejercicio | `PUT /{id}`, `DELETE /{id}`, `POST /{id}/cierre`, `DELETE /{id}/cierre` |
-| Empresa | `PUT /{id}`, `DELETE /{id}` (bloqueo), `POST /{id}/desbloqueo` |
+| Empresa | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
 | Serie | `PUT /{id}`, `DELETE /{id}` |
 | Rol | `PUT /{id}` |
-| Usuario | `PUT /{id}`, `DELETE /{id}` (bloqueo), `POST /{id}/desbloqueo` |
+| Usuario | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
 
 Las subrutas —el bloqueo, el cierre— citan la versión **del recurso**, no una suya: no son otro
 recurso, son otra puerta al mismo. Es lo que hace que bloquear un almacén y modificarlo compitan por
@@ -904,7 +917,7 @@ la misma versión, que es lo que se quiere.
 | `POST /api/v1/identidad/roles` | `identidad` | `AlmacenDeIdempotenciaDeIdentidad` |
 | `POST /api/v1/identidad/usuarios` | `identidad` | ídem |
 
-**Y las diez exentas, con el motivo resumido** (el entero está en el test):
+**Y las trece exentas, con el motivo resumido** (el entero está en el test):
 
 | Acción | Por qué |
 |---|---|
@@ -916,6 +929,9 @@ la misma versión, que es lo que se quiere.
 | `Usuarios.Restablecer` | Mismo estado al repetirse; y su cuerpo ES la contraseña nueva, así que no se le invita a reintentar desde donde sea |
 | `Usuarios.Conceder` / `Usuarios.AsignarRol` | Repetirlo choca con su clave: `409`, no un segundo efecto. Y un `If-Match` **sobre el usuario** no protegería la fila que se toca — una cabecera que parece proteger sin proteger es peor que no tenerla |
 | `Usuarios.Retirar` / `Usuarios.RetirarRol` | Retirar lo que ya no está es un `404`, no un segundo efecto; mismo motivo para el `If-Match` |
+| `Empresas.Desbloquear` (0.10) | Una empresa bloqueada contesta `404` a su propio `GET`, así que no hay `ETag` que citar. Y no hace falta: mientras está bloqueada ninguna otra escritura llega a la fila, y desbloquear dos veces deja el mismo estado |
+| `Almacenes.Desbloquear` (0.10) | Lo mismo. El testigo de concurrencia **sigue** comparándose dentro de la petición; lo que desaparece es la precondición que cita el cliente, no la protección |
+| `Usuarios.Desbloquear` (0.10) | Igual que las dos de Organización. Levanta el bloqueo del art. 32, **no** el rechazo temporal por intentos fallidos, que vive en `rechazado_hasta` y se levanta solo |
 
 #### La prueba fuerte del 0.9: siete mutaciones, y la que no llegó a mutar
 
@@ -939,6 +955,151 @@ apuntado como «cero rojos, sobrevive» y habría acusado a los tests de un aguj
 Rehecha como `Huella.Length == huella.Length` —que sí compila, y siempre es verdad porque las dos
 son SHA-256 en hexadecimal— mata el test que tenía que matar.
 
+
+### Tomadas por el agente de desarrollo — ítem 0.10 (2026-08-31)
+
+El ítem **no añade una función: unifica lo que estaba escrito tres veces.** `EstadoDeEmpresa`,
+`EstadoDeAlmacen` y `EstadoDeUsuario` eran tres enumerados de dos valores, con tres `BloqueadoEn`
+sueltos al lado, tres `Bloquear`/`Desbloquear` copiados y **ningún motivo**. Se borra la copia de
+dentro y se llama a la compartida; nunca al revés.
+
+Decisiones en `docs/adr/adr-0016-el-bloqueo-es-uno-y-tapa-a-las-tres.md` y
+`docs/adr/adr-0017-el-desbloqueo-no-puede-pedir-una-llave-que-el-bloqueo-esconde.md`.
+
+- **Un solo `Bloqueo`, objeto de valor, con las tres piezas juntas** (si está bloqueado, desde
+  cuándo y por qué) en `BuildingBlocks/Domain/Bloqueos`. Un enumerado deja la fecha y el motivo
+  sueltos al lado, donde nada obliga a que estén puestos cuando el estado lo dice ni vacíos cuando
+  no; y de esa fecha cuelga el plazo de prescripción del art. 32 de la LOPDGDD. El motivo es
+  **lista cerrada** —`SupresionSolicitada`, `CeseDeUso`— porque es lo que permite contestar años
+  después por qué esos datos siguen guardados, y las dos razones no caducan igual.
+
+- **La transición es comportamiento, y las dos preguntas incómodas tienen respuesta escrita.**
+  *Bloquear lo ya bloqueado devuelve el bloqueo de antes, entero*: no mueve la fecha —moverla
+  alargaría la conservación de datos personales sin que nadie lo decidiera— ni pisa el motivo, y de
+  paso hace idempotente el `DELETE`. *Desbloquear lo que no está bloqueado no es un error*: la
+  postcondición ya se cumple, y lanzar obligaría a preguntar antes, cosa que no es atómica. Las once
+  respuestas están en `BloqueoTests`.
+
+- **El filtro tapa a las tres: empresa, usuario y almacén. Sin lista de excepciones.** Filtro global
+  `"Bloqueo"`, hermano del `"Inquilinato"` del ADR-0011. El motivo de bloquear un almacén no es el
+  art. 32 —un almacén no es una persona— sino no romper el histórico de valoración; pero el
+  mecanismo es el mismo **a propósito**: una excepción «solo para el almacén» sería el primer sitio
+  donde mirar para saber si el filtro tapa de verdad, y la segunda llegaría con menos discusión que
+  la primera. Cuando la fase 3 necesite leer el almacén de un movimiento histórico, abrirá un ámbito
+  declarado.
+
+- **`GET` y `PUT` sobre lo bloqueado contestan 404, no 409.** Un 409 que dijera «esa empresa está
+  bloqueada» revela a la vez que el registro existe y en qué estado está, que es exactamente el
+  tratamiento —la visualización— que el bloqueo impide. Los códigos `empresa-bloqueada` y
+  `almacen-bloqueado` se **borran del catálogo** en vez de quedarse sin quien los emita.
+
+- **Ver lo bloqueado es una apertura declarada, enumerada y con motivo.** `ViendoLoBloqueado(...)`,
+  ámbito `AsyncLocal`, rastro en el registro, y **la lista de sitios donde se abre se compara
+  entera**. Hoy: los tres desbloqueos y nada más. `.IgnoreQueryFilters(` sigue prohibido y ahora con
+  un argumento más fuerte — **apaga los dos filtros**, así que quien lo escribiera para ver una fila
+  bloqueada abriría de paso el de empresa sin enterarse.
+
+- **Los dos bloqueos del usuario siguen separados.** El `Bloqueo` del art. 32 lo decide una persona,
+  lleva fecha y motivo, no caduca solo y saca la fila de todas las consultas; `RechazadoHasta` es el
+  rechazo temporal por intentos fallidos, se levanta solo y no oculta nada. Fundirlos haría que
+  fallar la contraseña cinco veces diera de baja la cuenta para siempre.
+
+- **`EntidadBase` aporta las dos marcas de tiempo y nada más.** No aporta identidad —cada entidad
+  declara su `Id`, que es como estaba y no era lo que se había escrito tres veces— ni bloqueo
+  —bloquearse no le pasa a todo el mundo: un ejercicio se cierra, no se bloquea—.
+
+- **Dos marcas, dos mecanismos, y ninguno es un `DEFAULT now()`.** `CreadoEn` la pone el dominio en
+  la fábrica: ocurre en un solo sitio por entidad, así que se puede sostener, y así la entidad nace
+  completa incluso en una prueba unitaria. `ModificadoEn` la pone un interceptor: cambia en todos
+  los métodos que tocan algo, presentes y futuros, y sostenerla a mano significa que el día que
+  alguien escriba un método nuevo y no se acuerde, la marca deja de moverse **sin que nada falle**.
+  Un `DEFAULT now()` ataría las dos al reloj del servidor de base de datos —el único que una prueba
+  no puede adelantar— y metería una sexta forma de valor generado por el servidor en un modelo donde
+  lo único que lo genera son los testigos del ADR-0015: se comprobó mutándolo, y pone rojo el
+  ADR-0015 en tres casos.
+
+- **Los tres `POST .../desbloqueo` pierden el `If-Match` (ADR-0017).** No es aflojar R11: la
+  etiqueta se obtiene leyendo el recurso, y desde este ítem un recurso bloqueado contesta 404 a su
+  propio `GET`. Una precondición cuya llave no hay manera de conseguir no es una precondición, es un
+  muro. Y no hay nada que perder: mientras está bloqueado ninguna otra escritura llega a la fila
+  —todas la piden al repositorio y el filtro no se la da—, y desbloquear dos veces deja el mismo
+  estado. **El testigo `xmin` sigue comparándose dentro de la petición**; lo que desaparece es la
+  cabecera que cita el cliente, no la protección. Las firmas pierden el parámetro de versión: no es
+  que no se pida, es que no se puede pedir, y la firma lo dice.
+
+- **`Direccion` pasa de tipo poseído a tipo complejo.** Un objeto de valor no tiene identidad y un
+  tipo poseído sí: EF Core le sintetiza una clave y lo saca en `GetEntityTypes()`. El cambio resultó
+  **neutro para el esquema** —las mismas seis columnas, ninguna migración— así que lo único en juego
+  era decir la verdad sobre el modelo… y lo que se descubrió al medirlo, que está abajo.
+
+- **Las migraciones derivan los datos, no los inventan.** Lo generado por el andamiaje tiraba
+  `estado` antes de leerlo y creaba `bloqueado` a `false`: sobre una tabla con filas, eso es
+  desbloquear a todo el mundo en silencio, y el dato que se pierde ahí es justo el que el art. 32
+  obliga a conservar. Escritas a mano, con el patrón **añadir anulable → `UPDATE` que deriva →
+  cerrar a `NOT NULL`**: un `NOT NULL` directo necesita un `DEFAULT` para las filas existentes, y
+  ese `DEFAULT` **se queda en la tabla** aunque el modelo no lo declare — una divergencia que ningún
+  barrido ve. El `Down` rehace `estado` a partir de `bloqueado` antes de tirarlo: deshacer una
+  migración no puede ser una forma de desbloquear en silencio.
+
+- **A las filas viejas se les elige un valor y se escribe el motivo.** `creado_en` de una fila
+  anterior al 0.10 no lo sabe nadie; lo único cierto es que ya existía cuando la migración corrió, y
+  ese instante es la cota superior más ajustada que se puede afirmar. Todas comparten el mismo valor
+  al milisegundo, y esa coincidencia es la señal de que el dato está derivado y no observado. El
+  `0001-01-01` del andamiaje no dice «no se sabe»: dice que la empresa se dio de alta en el año uno.
+  `usuarios.modificado_en` sí se sabe —se pone a `creado_en`, que existe desde el 0.5—.
+
+- **Las propiedades nuevas del tipo base se clasificaron una a una.** `CreadoEn` **se audita**: no
+  cambia nunca después del alta, así que un cambio suyo es exactamente lo que la traza existe para
+  contar. `ModificadoEn` **no se audita**, con motivo escrito: cambia en todas las modificaciones y
+  el instante de cada una ya viaja en el `ocurrido_en` de la propia fila de traza. El barrido de
+  clasificación se puso rojo al nacer `Bloqueo`, como estaba anunciado, y ese rojo es el mecanismo
+  funcionando.
+
+#### Ninguna dependencia nueva
+
+No se ha añadido ni un paquete. En particular **no** se trajo
+`Microsoft.Extensions.TimeProvider.Testing` por su `FakeTimeProvider`: lo único que hacía falta era
+que `GetUtcNow()` devolviera un instante elegido, y eso son tres líneas (`RelojParado`). Una
+dependencia se justifica por lo que ahorra.
+
+#### La prueba fuerte del 0.10: seis mutaciones, y la que hay que leer entera
+
+Cada una aplicada sobre el árbol verde, compilada, ejecutada y revertida.
+
+| Mutación | Qué se rompía si nadie miraba | Resultado |
+|---|---|---|
+| `DEFAULT now()` en `CreadoEn` | El servidor genera un valor auditado y la fase única del interceptor deja de estar justificada | **3 rojos** en `LasClavesSeConocenAntesDeGuardarTests`; las seis entidades a la vez, porque el `DEFAULT` se pone una vez en el tipo base |
+| Quitar `Serie.Version` de la lista **declarada** del ADR-0015 | La lista deja de describir el modelo | **2 rojos** |
+| Quitar el testigo de `Serie` en el **modelo** | Un recurso se queda sin control de concurrencia | **2 rojos**, los mismos: comparar listas enteras caza los dos sentidos |
+| Que `ModificarEmpresa` abra `ViendoLoBloqueado` | Un caso de uso ordinario ve lo bloqueado y nadie se entera | **1 rojo:** `El_ambito_que_ve_lo_bloqueado_solo_se_abre_donde_esta_declarado` |
+| Fundir el rechazo temporal con el bloqueo de R16 | Fallar la contraseña cinco veces da de baja la cuenta para siempre | **2 rojos**, y el que lo nombra: `ElRechazoPorIntentos_SeLevantaSolo_YNoTocaElEstadoDeLaCuenta` |
+| *Setter* público en vez del método de transición | El segundo bloqueo mueve la fecha del primero | **1 rojo:** `Bloquear_dos_veces_no_mueve_la_fecha_del_primer_bloqueo`, con treinta días de conservación de más |
+
+**Y la sexta, la que había que leer entera salga como salga: `Direccion` a tipo complejo con los
+barridos SIN ampliar.** Se midió antes de tocar nada:
+
+| | Poseída | Compleja |
+|---|---:|---:|
+| Propiedades escalares en el modelo | 152 | **138** |
+| Tipos de entidad | 20 | 18 |
+| Tipos poseídos | 2 | 0 |
+| **Barridos de modelo en rojo** | — | **0 de 14** |
+
+**Doce propiedades se fueron de la clasificación de auditoría y los catorce barridos siguieron en
+verde.** La causa es una línea de EF Core: las propiedades de un tipo complejo **no salen** en
+`GetProperties()` ni en `EntityEntry.Properties`. Todo barrido escrito sobre esas dos APIs deja de
+mirar dentro de un tipo complejo y **no avisa**: devuelve menos y da verde.
+
+El único rojo fue de comportamiento y en integración
+(`La_direccion_de_un_almacen_viaja_DENTRO_de_la_traza_de_su_dueno`), porque el interceptor de
+auditoría recorría `entrada.Properties`. Es decir: **el mecanismo que iba a avisar no avisó, y lo
+que salvó el cambio fue un test de efecto escrito para otra cosa.** Ese es el hallazgo del ítem.
+
+De ahí el orden que se siguió, que es la parte reutilizable: **(1)** ampliar barridos e interceptor
+con `PropiedadesConCamino()` —recorrido recursivo de `GetComplexProperties()` con el camino en
+puntos—; **(2)** comprobar que la ampliación se pone **roja** con el mapeo todavía poseído (`should
+be "Almacen.Direccion: 6, Empresa.DomicilioFiscal: 6" but was ""`), porque un barrido nuevo que nace
+verde no ha demostrado que mire; **(3)** después, cambiar el mapeo.
 
 ## Estado actual
 
@@ -978,7 +1139,7 @@ Cuatro cláusulas de dos mecanismos distintos.
 | …y que el `412` traiga el estado actual | El mismo test: `versionActual` en el cuerpo coincide con el `ETag` que emite una relectura. Y comprueba que la cabecera `ETag` **no** viene, que es lo contrario de lo que se diseñó primero. |
 | *Sin cabecera → **428*** | `Sin_la_cabecera_es_428_y_no_toca_nada`, con la segunda mitad: la fila sigue como estaba. |
 | Y la cabecera ilegible → **400**, que no es lo mismo | `Una_cabecera_que_no_es_una_version_concreta_es_400`, cinco filas: el comodín `*`, una etiqueta débil, una lista, una sin comillas y una que no es un número. |
-| *Estado incorrecto → **409*** | Ya estaba desde el 0.4 y sigue verde: `Una_empresa_bloqueada_no_se_puede_modificar_y_da_409`, `Suprimir_una_serie_que_ya_ha_numerado_es_409`. Lo que el 0.9 añade es que ahora llegan **después** del `If-Match`, no en vez de él. |
+| *Estado incorrecto → **409*** | Ya estaba desde el 0.4 y sigue verde: `Suprimir_una_serie_que_ya_ha_numerado_es_409`. Lo que el 0.9 añade es que ahora llegan **después** del `If-Match`, no en vez de él. *(El otro caso que sostenía esta fila, `Una_empresa_bloqueada_no_se_puede_modificar_y_da_409`, es hoy `…_y_da_404`: con R16 puesta, modificar algo bloqueado no da 409 sino 404, y ese código de error se borró del catálogo — ADR-0016.)* |
 | Que el `ETag` que emite la lectura sea el que acepta la escritura | `La_etiqueta_que_emite_la_lectura_es_la_que_acepta_la_escritura` y `La_version_cambia_cuando_el_recurso_cambia`. El segundo no sobra: con una versión constante, todos los demás saldrían verdes sin comprobar nada. |
 | Tras un `412`, ni traza ni evento | `Tras_un_412_ni_traza_ni_evento`, que ata este ítem con el 0.7 y el 0.8: los tres viajan en el mismo `SaveChanges`, así que o se deshacen los tres o queda una traza de un cambio que no ocurrió. |
 | Que ninguna escritura se quede sin decir cómo se protege | `TodaEscrituraDiceComoSeProtegeTests`, 6 casos, con el inventario fijado en números. |

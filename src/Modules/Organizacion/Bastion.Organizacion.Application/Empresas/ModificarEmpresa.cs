@@ -45,14 +45,18 @@ internal sealed class ModificarEmpresa(
 
         versiones.Exigir(empresa, version);
 
-        // El dominio LANZA si se modifica una empresa bloqueada, y hace bien: dentro, eso es una
-        // invariante rota. Pero desde fuera es un desenlace de negocio perfectamente esperable
-        // —el usuario pidió modificar algo que está bloqueado—, y tiene que salir como 409 y no
-        // como 500. Por eso se comprueba aquí antes de llamar (ADR-0004).
-        if (empresa.Estado == EstadoDeEmpresa.Bloqueada)
-        {
-            return Resultado.Fallo<EmpresaDto>(ErroresDeEmpresa.Bloqueada(id));
-        }
+        // Aquí NO se comprueba si está bloqueada, y desde el 0.10 no se puede: la consulta de
+        // arriba ya no trae lo bloqueado, así que la respuesta ordinaria a modificar una empresa
+        // bloqueada es el 404 de ahí arriba.
+        //
+        // No es una simplificación, es lo que pide el art. 32 de la LOPDGDD: un 409 que dijera
+        // «esa empresa está bloqueada» estaría revelando que el registro existe y en qué estado
+        // está, que es exactamente el tratamiento —la visualización— que el bloqueo impide. Para
+        // tratarla hay que desbloquearla primero, por su puerta.
+        //
+        // La invariante sigue dentro de la entidad (`Modificar` lanza si está bloqueada) porque
+        // ahí protege a quien la modifique DESDE un ámbito abierto a propósito, que es el único
+        // sitio desde el que se puede llegar a ella.
 
         var errores = new ErroresPorCampo();
 

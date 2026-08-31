@@ -43,8 +43,11 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
     // que este fichero se quede verde por estar mirando donde ya no hay nada.
     private static readonly string[] s_tiposComplejos =
     [
+        "Almacen.Bloqueo: 3",
         "Almacen.Direccion: 6",
+        "Empresa.Bloqueo: 3",
         "Empresa.DomicilioFiscal: 6",
+        "Usuario.Bloqueo: 3",
     ];
 
     private readonly ApiSinDependencias _api = new();

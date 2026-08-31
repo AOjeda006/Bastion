@@ -1,4 +1,6 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Comun;
 using Bastion.Identidad.Application.Sesiones;
@@ -56,10 +58,14 @@ public interface IBloquearUsuario
 public interface IDesbloquearUsuario
 {
     /// <summary>Ejecuta el caso de uso.</summary>
+    /// <remarks>
+    /// <b>No lleva versión, y desde el 0.10 no puede llevarla.</b> El <c>If-Match</c> se cita
+    /// leyendo antes el recurso, y un recurso bloqueado no se puede leer por ningún camino
+    /// ordinario: la precondición pediría una llave que no existe (ADR-0017).
+    /// </remarks>
     /// <param name="id">Identificador del usuario.</param>
-    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IModificarUsuario"/>
@@ -115,7 +121,7 @@ internal sealed class BloquearUsuario(
         versiones.Exigir(usuario, version);
 
         DateTimeOffset ahora = reloj.GetUtcNow();
-        usuario.Bloquear(ahora);
+        usuario.Bloquear(MotivoDeBloqueo.SupresionSolicitada, ahora);
 
         foreach (TokenDeRefresco emision in
             await tokens.DelUsuarioAsync(usuario.Id, cancelacion).ConfigureAwait(false))
@@ -133,21 +139,22 @@ internal sealed class BloquearUsuario(
 internal sealed class DesbloquearUsuario(
     IRepositorioDeUsuarios usuarios,
     IUnidadTrabajoDeIdentidad unidadTrabajo,
-    IVersionesDeIdentidad versiones) : IDesbloquearUsuario
+    IAccesoALoBloqueado bloqueados) : IDesbloquearUsuario
 {
-    public async Task<Resultado> EjecutarAsync(
-        Guid id,
-        VersionDeRecurso version,
-        CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
     {
+        // El ÚNICO camino ordinario que necesita ver lo bloqueado, y por una razón de lógica:
+        // para levantar un bloqueo hay que poder leer lo que está bloqueado. Es una apertura
+        // declarada, con su motivo de la lista cerrada y anotada en el registro — no un
+        // `IgnoreQueryFilters`, que además apagaría de paso el filtro de empresa.
+        using IDisposable _ = bloqueados.ViendoLoBloqueado(MotivoParaVerLoBloqueado.AdministracionDelBloqueo);
+
         Usuario? usuario = await usuarios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
         if (usuario is null)
         {
             return Resultado.Fallo(ErroresDeUsuario.NoEncontrado(id));
         }
-
-        versiones.Exigir(usuario, version);
 
         usuario.Desbloquear();
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

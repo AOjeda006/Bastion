@@ -7,9 +7,10 @@ public sealed class SerieTests
 {
     private static readonly Guid s_empresa = Guid.Parse("2f6d5f4e-0000-4000-8000-000000000001");
     private static readonly Guid s_ejercicio = Guid.Parse("2f6d5f4e-0000-4000-8000-000000000002");
+    private static readonly DateTimeOffset s_momento = new(2026, 8, 26, 12, 0, 0, TimeSpan.Zero);
 
     private static Serie Nueva(string codigo = "FV") => Serie.Crear(
-        s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, codigo, "{serie}/{anio}/{numero:0000}");
+        s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, codigo, "{serie}/{anio}/{numero:0000}", s_momento);
 
     [Fact]
     public void Una_serie_nace_activa_con_el_contador_a_cero()
@@ -32,7 +33,7 @@ public sealed class SerieTests
     public void Una_serie_sin_empresa_no_existe()
     {
         Should.Throw<ArgumentException>(() => Serie.Crear(
-            Guid.Empty, s_ejercicio, TipoDeDocumento.FacturaEmitida, "FV", "{numero}"));
+            Guid.Empty, s_ejercicio, TipoDeDocumento.FacturaEmitida, "FV", "{numero}", s_momento));
     }
 
     [Fact]
@@ -40,7 +41,7 @@ public sealed class SerieTests
     {
         // R5 numera «por serie y ejercicio»: una serie suelta no puede garantizar correlatividad.
         Should.Throw<ArgumentException>(() => Serie.Crear(
-            s_empresa, Guid.Empty, TipoDeDocumento.FacturaEmitida, "FV", "{numero}"));
+            s_empresa, Guid.Empty, TipoDeDocumento.FacturaEmitida, "FV", "{numero}", s_momento));
     }
 
     [Fact]
@@ -51,14 +52,14 @@ public sealed class SerieTests
         string demasiado = new('A', Serie.LongitudMaximaDeCodigo + 1);
 
         Should.Throw<ArgumentException>(() => Serie.Crear(
-            s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, demasiado, "{numero}"));
+            s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, demasiado, "{numero}", s_momento));
     }
 
     [Fact]
     public void El_formato_es_obligatorio_porque_sin_el_no_se_sabe_componer_el_numero()
     {
         Should.Throw<ArgumentException>(() => Serie.Crear(
-            s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, "FV", "   "));
+            s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, "FV", "   ", s_momento));
     }
 
     [Fact]

@@ -1,6 +1,8 @@
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Organizacion.Domain.Empresas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -50,14 +52,9 @@ internal sealed class ConfiguracionDeEmpresa : IEntityTypeConfiguration<Empresa>
             .IsRequired()
             .SeAudita();
 
-        empresa.Property(fila => fila.Estado)
-            .HasConversion<string>()
-            .IsRequired()
-            .SeAudita();
+        ConfiguracionDeEntidadBase.Mapear(empresa);
 
-        // Instante, no fecha de negocio: de aquí arranca el plazo de prescripción del art. 32
-        // de la LOPDGDD, así que se guarda con zona horaria.
-        empresa.Property(fila => fila.BloqueadaEn).SeAudita();
+        empresa.ComplexProperty(fila => fila.Bloqueo, ConfiguracionDeBloqueo.Mapear);
 
         empresa.ComplexProperty(fila => fila.DomicilioFiscal, direccion =>
         {

@@ -27,14 +27,19 @@ public interface IRepositorioDeEmpresas
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<bool> ExisteConNifAsync(Nif nif, CancellationToken cancelacion);
 
-    /// <summary>Indica si existe la empresa, sin traérsela entera.</summary>
-    Task<bool> ExisteAsync(Guid id, CancellationToken cancelacion);
-
     /// <summary>Si la empresa existe Y está activa.</summary>
     /// <remarks>
+    /// <para>
     /// Es lo que se pregunta de la empresa del <i>claim</i>, y no basta con que exista: una empresa
-    /// bloqueada por el art. 32 no puede recibir altas. Con <c>ExisteAsync</c> a secas se le
-    /// seguirían colgando almacenes y ejercicios a una ficha que se dio de baja.
+    /// bloqueada por el art. 32 no puede recibir altas, o se le seguirían colgando almacenes y
+    /// ejercicios a una ficha que se dio de baja.
+    /// </para>
+    /// <para>
+    /// <b>Desde el 0.10 la mitad «y está activa» la pone el filtro de repositorio</b> y no la
+    /// consulta. Aquí había además un <c>ExisteAsync</c> que preguntaba solo por la existencia;
+    /// con el filtro puesto los dos devolvían exactamente lo mismo, y el que sobraba era el que
+    /// se leía como «existe aunque esté bloqueada», que ya no es verdad. Se ha ido.
+    /// </para>
     /// </remarks>
     /// <param name="id">Identificador de la empresa.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>

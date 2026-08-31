@@ -36,10 +36,13 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
     private static readonly Dictionary<string, string> s_prohibidas = new(StringComparer.Ordinal)
     {
         [".IgnoreQueryFilters("] =
-            "apaga el filtro para esa consulta. No hace falta: lo que se necesitaba de verdad " +
-            "-semilla, acceso, unicidad global, pertenencias- pasa por SinInquilino, que deja " +
-            "rastro en el registro y tiene los motivos en una lista cerrada. Con una alternativa " +
-            "auditada al lado, la prohibición puede ser absoluta",
+            "apaga TODOS los filtros de esa consulta, y desde el 0.10 son dos: el de empresa y el " +
+            "de bloqueo (R16). Quien lo escribiera para ver una fila bloqueada estaría abriendo de " +
+            "paso el de empresa sin enterarse. No hace falta: lo que se necesitaba de verdad " +
+            "-semilla, acceso, unicidad global, pertenencias- pasa por SinInquilino, y levantar un " +
+            "bloqueo pasa por ViendoLoBloqueado. Los dos dejan rastro en el registro y tienen los " +
+            "motivos en una lista cerrada. Con dos alternativas auditadas al lado, la prohibición " +
+            "puede ser absoluta",
 
         [".FromSql"] =
             "el SQL escrito a mano no pasa por el traductor, así que el filtro no se le aplica",
@@ -129,6 +132,20 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         ["src/BuildingBlocks/Infrastructure/BandejaDeSalida/PublicadorDeLaBandeja.cs"] = 1,
     };
 
+    // Lo mismo para el ámbito que ve lo bloqueado. Es una lista aparte y no una más en la de
+    // arriba porque son dos mecanismos distintos que se apagan por separado: abrir uno no abre el
+    // otro, y ese es medio diseño. Un camino que quiera ver lo bloqueado y no esté aquí, rojo.
+    private static readonly Dictionary<string, int> s_aperturasDeBloqueoPermitidas =
+        new(StringComparer.Ordinal)
+        {
+            // Los tres desbloqueos, y nada más. La razón es de lógica y no de permisos: para levantar
+            // un bloqueo hay que poder leer lo que está bloqueado, y eso -por definición- lo tapa el
+            // filtro. Ninguna consulta ordinaria está en esta lista, y ese es el punto.
+            ["src/Modules/Organizacion/Bastion.Organizacion.Application/Almacenes/DesbloquearAlmacen.cs"] = 1,
+            ["src/Modules/Organizacion/Bastion.Organizacion.Application/Empresas/DesbloquearEmpresa.cs"] = 1,
+            ["src/Modules/Identidad/Bastion.Identidad.Application/Usuarios/AdministracionDeUsuarios.cs"] = 1,
+        };
+
     // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de
     // módulo, uno por módulo con persistencia. Repartirlos por otros ficheros no rompería nada;
     // solo haría imposible contestar «qué filtra y qué no» leyendo un sitio.
@@ -213,6 +230,28 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // desaparece de donde hacía falta deja ese camino lanzando en cuanto lo pise una petición
         // sin empresa, y eso es un 500 que aquí se ve antes.
         Enumerar(aperturas).ShouldBe(Enumerar(s_ambitosPermitidos));
+    }
+
+    [Fact]
+    public void El_ambito_que_ve_lo_bloqueado_solo_se_abre_donde_esta_declarado()
+    {
+        Dictionary<string, int> aperturas = [];
+
+        foreach ((string ruta, string codigo) in CodigoDeProduccion())
+        {
+            int cuantas = Veces(codigo, ".ViendoLoBloqueado(");
+
+            if (cuantas > 0)
+            {
+                aperturas[ruta] = cuantas;
+            }
+        }
+
+        // Las dos listas ENTERAS y en los dos sentidos, igual que con el inquilinato. De más: un
+        // camino nuevo mira datos que el art. 32 reserva y nadie lo ha decidido. De menos: el
+        // desbloqueo se quedó sin su apertura y dejó de encontrar lo que iba a desbloquear, que
+        // es un 404 en una operación que existe justamente para eso.
+        Enumerar(aperturas).ShouldBe(Enumerar(s_aperturasDeBloqueoPermitidas));
     }
 
     [Fact]

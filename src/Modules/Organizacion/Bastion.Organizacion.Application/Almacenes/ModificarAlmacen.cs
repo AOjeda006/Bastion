@@ -44,10 +44,19 @@ internal sealed class ModificarAlmacen(
 
         versiones.Exigir(almacen, version);
 
-        if (almacen.Estado == EstadoDeAlmacen.Bloqueado)
-        {
-            return Resultado.Fallo<AlmacenDto>(ErroresDeAlmacen.Bloqueado(id));
-        }
+        // Aquí NO se comprueba si está bloqueado, y desde el 0.10 no se puede: la consulta de
+        // arriba ya no trae lo bloqueado, así que la respuesta ordinaria a modificar un almacén
+        // bloqueado es el 404 de ahí arriba.
+        //
+        // El motivo de bloquear un almacén no es el art. 32 —un almacén no es una persona— sino
+        // no romper la valoración histórica; pero el MECANISMO es el mismo y no lleva lista de
+        // excepciones, a propósito. Una excepción «solo para el almacén, que no es un dato
+        // personal» sería el primer sitio donde mirar para saber si el filtro tapa de verdad, y
+        // la segunda excepción llegaría con menos discusión que la primera.
+        //
+        // La invariante sigue dentro de la entidad (`Modificar` lanza si está bloqueado) porque
+        // ahí protege a quien lo modifique DESDE un ámbito abierto a propósito, que es el único
+        // sitio desde el que se puede llegar a él.
 
         var errores = new ErroresPorCampo();
 

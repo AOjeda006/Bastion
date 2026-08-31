@@ -1,11 +1,12 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 
 /// <summary>
-/// Base de los <c>DbContext</c> de módulo: aporta el único sitio del que sale la empresa por la
-/// que filtra el inquilinato (R8).
+/// Base de los <c>DbContext</c> de módulo: aporta los dos únicos sitios de los que salen la
+/// empresa por la que filtra el inquilinato (R8) y el permiso para ver lo bloqueado (R16).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -32,8 +33,11 @@ namespace Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 /// </remarks>
 /// <param name="opciones">Opciones del contexto.</param>
 /// <param name="inquilino">De dónde sale la empresa activa.</param>
-public abstract class ContextoDeModulo(DbContextOptions opciones, IInquilinoActual inquilino)
-    : DbContext(opciones)
+/// <param name="bloqueados">De dónde sale el permiso para ver lo bloqueado.</param>
+public abstract class ContextoDeModulo(
+    DbContextOptions opciones,
+    IInquilinoActual inquilino,
+    IAccesoALoBloqueado bloqueados) : DbContext(opciones)
 {
     /// <summary>
     /// Empresa por la que filtra <b>esta</b> consulta, o <c>null</c> si hay un ámbito sin
@@ -49,4 +53,16 @@ public abstract class ContextoDeModulo(DbContextOptions opciones, IInquilinoActu
     /// alternativa es servir las filas de todas las empresas con un <c>200</c>.
     /// </exception>
     protected Guid? EmpresaDelFiltro => inquilino.EmpresaDelFiltro;
+
+    /// <summary>
+    /// Si <b>esta</b> consulta puede ver lo bloqueado, porque hay un ámbito abierto a propósito
+    /// (R16).
+    /// </summary>
+    /// <remarks>
+    /// Propiedad de instancia y no valor copiado, exactamente por lo mismo que
+    /// <see cref="EmpresaDelFiltro"/>: el modelo se cachea por tipo de contexto y opciones, así
+    /// que un valor congelado al construirlo dejaría a todas las consultas posteriores con el
+    /// permiso —o la falta de permiso— del primero que pasó por aquí.
+    /// </remarks>
+    protected bool VerLoBloqueado => bloqueados.Abierto;
 }

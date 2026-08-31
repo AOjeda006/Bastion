@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.Identidad.Domain.Usuarios;
 using Shouldly;
@@ -16,9 +17,10 @@ public sealed class UsuarioTests
     {
         Usuario usuario = UnUsuario();
 
-        usuario.Estado.ShouldBe(EstadoDeUsuario.Activo);
-        usuario.BloqueadoEn.ShouldBeNull();
+        usuario.Bloqueo.EstaBloqueado.ShouldBeFalse();
+        usuario.Bloqueo.Desde.ShouldBeNull();
         usuario.CreadoEn.ShouldBe(s_ahora);
+        usuario.ModificadoEn.ShouldBe(s_ahora);
         usuario.UltimoAccesoEn.ShouldBeNull();
         usuario.IntentosFallidos.ShouldBe(0);
         usuario.RechazadoHasta.ShouldBeNull();
@@ -54,10 +56,11 @@ public sealed class UsuarioTests
     {
         Usuario usuario = UnUsuario();
 
-        usuario.Bloquear(s_ahora);
+        usuario.Bloquear(MotivoDeBloqueo.SupresionSolicitada, s_ahora);
 
-        usuario.Estado.ShouldBe(EstadoDeUsuario.Bloqueado);
-        usuario.BloqueadoEn.ShouldBe(s_ahora);
+        usuario.Bloqueo.EstaBloqueado.ShouldBeTrue();
+        usuario.Bloqueo.Desde.ShouldBe(s_ahora);
+        usuario.Bloqueo.Motivo.ShouldBe(MotivoDeBloqueo.SupresionSolicitada);
         usuario.PuedeIniciarSesion(s_ahora).ShouldBeFalse();
     }
 
@@ -67,23 +70,24 @@ public sealed class UsuarioTests
     public void Bloquear_DosVeces_ConservaLaPrimeraFecha()
     {
         Usuario usuario = UnUsuario();
-        usuario.Bloquear(s_ahora);
+        usuario.Bloquear(MotivoDeBloqueo.SupresionSolicitada, s_ahora);
 
-        usuario.Bloquear(s_ahora.AddDays(30));
+        usuario.Bloquear(MotivoDeBloqueo.SupresionSolicitada, s_ahora.AddDays(30));
 
-        usuario.BloqueadoEn.ShouldBe(s_ahora);
+        usuario.Bloqueo.Desde.ShouldBe(s_ahora);
     }
 
     [Fact]
     public void Desbloquear_DevuelveLaCuentaAActivoYBorraLaFecha()
     {
         Usuario usuario = UnUsuario();
-        usuario.Bloquear(s_ahora);
+        usuario.Bloquear(MotivoDeBloqueo.SupresionSolicitada, s_ahora);
 
         usuario.Desbloquear();
 
-        usuario.Estado.ShouldBe(EstadoDeUsuario.Activo);
-        usuario.BloqueadoEn.ShouldBeNull();
+        usuario.Bloqueo.EstaBloqueado.ShouldBeFalse();
+        usuario.Bloqueo.Desde.ShouldBeNull();
+        usuario.Bloqueo.Motivo.ShouldBeNull();
         usuario.PuedeIniciarSesion(s_ahora).ShouldBeTrue();
     }
 
@@ -135,7 +139,7 @@ public sealed class UsuarioTests
 
         usuario.EstaRechazado(despues).ShouldBeFalse();
         usuario.PuedeIniciarSesion(despues).ShouldBeTrue();
-        usuario.Estado.ShouldBe(EstadoDeUsuario.Activo);
+        usuario.Bloqueo.EstaBloqueado.ShouldBeFalse();
     }
 
     [Fact]
@@ -177,7 +181,7 @@ public sealed class UsuarioTests
         Should.NotThrow(() =>
         {
             Usuario usuario = UnUsuario();
-            usuario.Bloquear(s_ahora);
+            usuario.Bloquear(MotivoDeBloqueo.SupresionSolicitada, s_ahora);
             usuario.PuedeIniciarSesion(s_ahora.AddYears(1)).ShouldBeFalse();
         });
 

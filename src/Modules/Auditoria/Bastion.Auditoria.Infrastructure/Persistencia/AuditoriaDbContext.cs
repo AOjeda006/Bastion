@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
@@ -30,10 +31,12 @@ namespace Bastion.Auditoria.Infrastructure.Persistencia;
 /// </remarks>
 /// <param name="opciones">Opciones del contexto.</param>
 /// <param name="inquilino">De dónde sale la empresa por la que filtra el inquilinato (R8).</param>
+/// <param name="bloqueados">De dónde sale el permiso para ver lo bloqueado (R16).</param>
 public sealed class AuditoriaDbContext(
     DbContextOptions<AuditoriaDbContext> opciones,
-    IInquilinoActual inquilino)
-    : ContextoDeModulo(opciones, inquilino)
+    IInquilinoActual inquilino,
+    IAccesoALoBloqueado bloqueados)
+    : ContextoDeModulo(opciones, inquilino, bloqueados)
 {
     /// <summary>
     /// Esquema de PostgreSQL del módulo: el nombre del módulo en minúsculas y sin acentos.
@@ -83,19 +86,19 @@ public sealed class AuditoriaDbContext(
         ConfiguracionDeIdempotencia.Mapear(modelBuilder, migra: true);
 
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
-            registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
 
         // La cola de eventos es un dato de la empresa que los emitió: sin filtro, la primera
         // consulta que se escriba sobre esta tabla enseñaría los hechos de todos los clientes de
         // la instalación desde dentro de cualquiera de ellos. El publicador la ve entera porque
         // abre un ámbito con su motivo, no porque aquí falte una línea.
         modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
-            evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
 
         // Y el recibo de las peticiones repetibles (R10), por lo mismo que la cola: es un dato
         // de la empresa que la pidió. Sin filtro, una consulta sobre esta tabla enseñaría desde
         // dentro de una empresa qué está dando de alta otra, y con qué respuesta.
         modelBuilder.Entity<RegistroDeIdempotencia>().HasQueryFilter(
-            recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
     }
 }

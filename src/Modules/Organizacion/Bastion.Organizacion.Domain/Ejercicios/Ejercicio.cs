@@ -1,4 +1,6 @@
+using Bastion.BuildingBlocks.Domain.Entidades;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
+
 namespace Bastion.Organizacion.Domain.Ejercicios;
 
 /// <summary>
@@ -17,12 +19,14 @@ namespace Bastion.Organizacion.Domain.Ejercicios;
 /// tablas y todas las consultas.
 /// </para>
 /// </remarks>
-public sealed class Ejercicio : IDeInquilino
+public sealed class Ejercicio : EntidadBase, IDeInquilino
 {
     /// <summary>Duración máxima de un ejercicio: doce meses (art. 26 de la LIS).</summary>
     public const int MesesMaximos = 12;
 
-    private Ejercicio(Guid id, Guid empresaId, int anio, DateOnly inicio, DateOnly fin)
+    private Ejercicio(
+        Guid id, Guid empresaId, int anio, DateOnly inicio, DateOnly fin, DateTimeOffset momento)
+        : base(momento)
     {
         Id = id;
         EmpresaId = empresaId;
@@ -55,12 +59,18 @@ public sealed class Ejercicio : IDeInquilino
     public EstadoDeEjercicio Estado { get; private set; }
 
     /// <summary>Crea un ejercicio abierto.</summary>
-    public static Ejercicio Crear(Guid empresaId, int anio, DateOnly inicio, DateOnly fin)
+    /// <remarks>
+    /// El <c>momento</c> es un instante —cuándo se dio de alta la ficha— y no una de las dos
+    /// fechas del ejercicio, que son días de calendario. Las tres van juntas en la firma y son de
+    /// tipos distintos a propósito: es R14 vigilado por el compilador.
+    /// </remarks>
+    public static Ejercicio Crear(
+        Guid empresaId, int anio, DateOnly inicio, DateOnly fin, DateTimeOffset momento)
     {
         ExigirEmpresa(empresaId);
         ExigirIntervaloValido(inicio, fin);
 
-        return new Ejercicio(Guid.CreateVersion7(), empresaId, anio, inicio, fin);
+        return new Ejercicio(Guid.CreateVersion7(), empresaId, anio, inicio, fin, momento);
     }
 
     /// <summary>Cambia el intervalo del ejercicio. Solo si sigue abierto.</summary>

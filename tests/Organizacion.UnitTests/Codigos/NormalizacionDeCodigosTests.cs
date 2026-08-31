@@ -20,6 +20,8 @@ namespace Bastion.Organizacion.UnitTests.Codigos;
 public sealed class NormalizacionDeCodigosTests
 {
     private static readonly Guid s_empresa = Guid.Parse("2f6d5f4e-0000-4000-8000-000000000001");
+    private static readonly DateTimeOffset s_momento = new(2026, 8, 26, 12, 0, 0, TimeSpan.Zero);
+
     private static readonly Guid s_ejercicio = Guid.Parse("2f6d5f4e-0000-4000-8000-000000000002");
 
     [Theory]
@@ -32,7 +34,7 @@ public sealed class NormalizacionDeCodigosTests
         Serie.NormalizarCodigo(escrito).ShouldBe(esperado);
 
         var creada = Serie.Crear(
-            s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, escrito, "{serie}-{numero:0000}");
+            s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, escrito, "{serie}-{numero:0000}", s_momento);
 
         // Las dos puertas dan lo mismo: es lo único que hace que la comprobación previa sirva.
         creada.Codigo.ShouldBe(esperado);
@@ -52,7 +54,8 @@ public sealed class NormalizacionDeCodigosTests
             escrito,
             "Almacén central",
             Direccion.De("Gran Vía", "31", "28013", "Madrid", "Madrid", "ES"),
-            TipoDeAlmacen.Fisico);
+            TipoDeAlmacen.Fisico,
+            s_momento);
 
         creado.Codigo.ShouldBe(esperado);
         creado.Codigo.ShouldBe(Almacen.NormalizarCodigo(escrito));
@@ -69,6 +72,6 @@ public sealed class NormalizacionDeCodigosTests
         Should.NotThrow(() => Serie.NormalizarCodigo(largo)).ShouldBe(largo);
 
         Should.Throw<ArgumentException>(() => Serie.Crear(
-            s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, largo, "{numero}"));
+            s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, largo, "{numero}", s_momento));
     }
 }

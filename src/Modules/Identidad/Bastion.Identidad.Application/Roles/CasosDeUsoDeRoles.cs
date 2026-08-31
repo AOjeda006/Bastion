@@ -68,7 +68,8 @@ public interface IListarPermisosDisponibles
 internal sealed class CrearRol(
     IRepositorioDeRoles roles,
     ICatalogoDePermisos catalogo,
-    IUnidadTrabajoDeIdentidad unidadTrabajo) : ICrearRol
+    IUnidadTrabajoDeIdentidad unidadTrabajo,
+    TimeProvider reloj) : ICrearRol
 {
     public async Task<Resultado<RolDto>> EjecutarAsync(CrearRolDto peticion, CancellationToken cancelacion)
     {
@@ -88,7 +89,7 @@ internal sealed class CrearRol(
             return Resultado.Fallo<RolDto>(ErroresDeRol.CodigoYaUsado(codigo));
         }
 
-        var rol = Rol.Crear(codigo, peticion.Nombre);
+        var rol = Rol.Crear(codigo, peticion.Nombre, reloj.GetUtcNow());
         rol.FijarPermisos(permisos.Valor);
 
         roles.Agregar(rol);

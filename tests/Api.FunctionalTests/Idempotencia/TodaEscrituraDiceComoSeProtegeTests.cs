@@ -91,6 +91,30 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
 
         ["UsuariosController.RetirarRol"] =
             "retirar un rol que ya no está es un 404. Mismo motivo que Retirar",
+
+        // Las tres siguientes entraron en esta lista en el 0.10, y no por comodidad: hasta el 0.9
+        // exigían If-Match y lo perdieron porque R16 dejó su llave fuera del alcance del cliente.
+        // El argumento entero está en el ADR-0017; aquí va el resumen, una vez por acción porque
+        // cada una tiene su matiz.
+        ["EmpresasController.Desbloquear"] =
+            "no puede exigir If-Match desde el 0.10: la etiqueta se obtiene leyendo el recurso, y " +
+            "una empresa bloqueada contesta 404 a su propio GET. Una precondición cuya llave no " +
+            "hay manera de conseguir no es una precondición, es un muro. Y no hace falta: " +
+            "mientras está bloqueada ninguna otra escritura llega a la fila —todas la piden al " +
+            "repositorio y el filtro no se la da—, así que no hay con quién competir; desbloquear " +
+            "dos veces deja el mismo estado (ADR-0017)",
+
+        ["AlmacenesController.Desbloquear"] =
+            "lo mismo, y con la misma consecuencia: el almacén bloqueado no emite ETag porque no " +
+            "se deja leer. El testigo de concurrencia SIGUE comprobándose dentro de la petición " +
+            "—se lee la fila y se guarda en la misma transacción—; lo que desaparece es la " +
+            "precondición que el cliente cita, no la protección (ADR-0017)",
+
+        ["UsuariosController.Desbloquear"] =
+            "igual que las dos de Organización. Y aquí conviene dejar escrito lo que NO es: esto " +
+            "levanta el bloqueo del art. 32, no el rechazo temporal por intentos fallidos, que " +
+            "vive en `rechazado_hasta`, se levanta solo y nunca sacó al usuario de las consultas " +
+            "(ADR-0017)",
     };
 
     private readonly ApiSinDependencias _api = new();
@@ -213,15 +237,19 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         todas.Count.ShouldBe(46, "acciones en total");
         cambian.Count.ShouldBe(32, "acciones que cambian estado");
 
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(16, "operaciones que exigen If-Match");
+        // Trece y no dieciséis desde el 0.10: los tres `Desbloquear` dejaron de exigir If-Match, y
+        // los tres se han mudado al cajón de las exentas, que pasa de diez a trece. El total de
+        // acciones que cambian estado no se mueve, y eso es lo que dice que fue una mudanza y no
+        // una acción nueva que se ha colado sin protección.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(13, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(6, "rutas que admiten Idempotency-Key");
-        s_exentas.Count.ShouldBe(10, "acciones exentas con motivo escrito");
+        s_exentas.Count.ShouldBe(13, "acciones exentas con motivo escrito");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (16 + 6 + s_exentas.Count).ShouldBe(cambian.Count);
+        (13 + 6 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     private static IEnumerable<Accion> QueCambianEstado() =>

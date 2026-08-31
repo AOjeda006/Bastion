@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
@@ -34,10 +35,12 @@ namespace Bastion.Organizacion.Infrastructure.Persistencia;
 /// </remarks>
 /// <param name="opciones">Opciones del contexto.</param>
 /// <param name="inquilino">De dónde sale la empresa por la que filtra el inquilinato (R8).</param>
+/// <param name="bloqueados">De dónde sale el permiso para ver lo bloqueado (R16).</param>
 public sealed class OrganizacionDbContext(
     DbContextOptions<OrganizacionDbContext> opciones,
-    IInquilinoActual inquilino)
-    : ContextoDeModulo(opciones, inquilino)
+    IInquilinoActual inquilino,
+    IAccesoALoBloqueado bloqueados)
+    : ContextoDeModulo(opciones, inquilino, bloqueados)
 {
     /// <summary>
     /// Esquema de PostgreSQL del módulo: el nombre del módulo en minúsculas y sin acentos.
@@ -114,11 +117,19 @@ public sealed class OrganizacionDbContext(
         // una válvula de escape silenciosa: la propiedad solo devuelve nulo dentro de un ámbito sin
         // inquilino abierto a propósito y con su motivo; fuera de él, lanza.
         modelBuilder.Entity<Ejercicio>().HasQueryFilter(
-            ejercicio => EmpresaDelFiltro == null || ejercicio.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", ejercicio => EmpresaDelFiltro == null || ejercicio.EmpresaId == EmpresaDelFiltro);
         modelBuilder.Entity<Serie>().HasQueryFilter(
-            serie => EmpresaDelFiltro == null || serie.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", serie => EmpresaDelFiltro == null || serie.EmpresaId == EmpresaDelFiltro);
         modelBuilder.Entity<Almacen>().HasQueryFilter(
-            almacen => EmpresaDelFiltro == null || almacen.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", almacen => EmpresaDelFiltro == null || almacen.EmpresaId == EmpresaDelFiltro);
+
+        // R16, con la misma forma y en el mismo sitio: una línea por entidad bloqueable, a la
+        // vista. `VerLoBloqueado` es otra propiedad de instancia, y vale `true` solo dentro de un
+        // ámbito abierto a propósito y con su motivo. Es el filtro DE REPOSITORIO que pide el
+        // art. 32: lo bloqueado no se ve porque la consulta no lo trae, no porque la pantalla lo
+        // esconda.
+        modelBuilder.Entity<Almacen>().HasQueryFilter(
+            "Bloqueo", almacen => VerLoBloqueado || !almacen.Bloqueo.EstaBloqueado);
 
         // La empresa es la RAÍZ del inquilinato: no lleva `empresa_id` porque ella ES el
         // inquilino, así que se filtra por su propia clave. La consecuencia buscada es que el
@@ -127,25 +138,28 @@ public sealed class OrganizacionDbContext(
         // los clientes de quien explote el sistema. Dar de alta una empresa y administrarla desde
         // fuera —que es real, y es el arranque en frío del 0.5— pasa por un ámbito con su motivo.
         modelBuilder.Entity<Empresa>().HasQueryFilter(
-            empresa => EmpresaDelFiltro == null || empresa.Id == EmpresaDelFiltro);
+            "Inquilinato", empresa => EmpresaDelFiltro == null || empresa.Id == EmpresaDelFiltro);
+
+        modelBuilder.Entity<Empresa>().HasQueryFilter(
+            "Bloqueo", empresa => VerLoBloqueado || !empresa.Bloqueo.EstaBloqueado);
 
         // Una traza es un dato: dice qué NIF tenía antes una empresa y quién lo cambió. Filtra
         // igual que todo lo demás, y por su propia columna, que es anulable — las filas sin empresa
         // (la semilla, el acceso) no son de nadie y desde dentro de una empresa no se ven.
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
-            registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
 
         // La cola de eventos es un dato de la empresa que los emitió: sin filtro, la primera
         // consulta que se escriba sobre esta tabla enseñaría los hechos de todos los clientes de
         // la instalación desde dentro de cualquiera de ellos. El publicador la ve entera porque
         // abre un ámbito con su motivo, no porque aquí falte una línea.
         modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
-            evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
 
         // Y el recibo de las peticiones repetibles (R10), por lo mismo que la cola: es un dato
         // de la empresa que la pidió. Sin filtro, una consulta sobre esta tabla enseñaría desde
         // dentro de una empresa qué está dando de alta otra, y con qué respuesta.
         modelBuilder.Entity<RegistroDeIdempotencia>().HasQueryFilter(
-            recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
     }
 }

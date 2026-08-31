@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Autorizacion;
+using Bastion.BuildingBlocks.Domain.Entidades;
 
 namespace Bastion.Identidad.Domain.Roles;
 
@@ -26,7 +27,7 @@ namespace Bastion.Identidad.Domain.Roles;
 /// la tabla no rompería nada visible: sería una puerta que nunca se abre.
 /// </para>
 /// </remarks>
-public sealed class Rol
+public sealed class Rol : EntidadBase
 {
     /// <summary>Longitud máxima del código, que es lo que va en la columna.</summary>
     public const int LongitudDelCodigo = 40;
@@ -39,7 +40,8 @@ public sealed class Rol
         Nombre = null!;
     }
 
-    private Rol(Guid id, string codigo, string nombre, bool esDelSistema)
+    private Rol(Guid id, string codigo, string nombre, bool esDelSistema, DateTimeOffset momento)
+        : base(momento)
     {
         Id = id;
         Codigo = codigo;
@@ -73,8 +75,10 @@ public sealed class Rol
     /// <summary>Crea un rol.</summary>
     /// <param name="codigo">Código estable, en minúsculas y con guiones.</param>
     /// <param name="nombre">Nombre para la interfaz.</param>
+    /// <param name="momento">Ahora: la fecha de creación, que no pone la base de datos.</param>
     /// <param name="esDelSistema">Si lo crea la semilla y no se puede suprimir.</param>
-    public static Rol Crear(string codigo, string nombre, bool esDelSistema = false)
+    public static Rol Crear(
+        string codigo, string nombre, DateTimeOffset momento, bool esDelSistema = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(codigo);
         ArgumentException.ThrowIfNullOrWhiteSpace(nombre);
@@ -89,7 +93,7 @@ public sealed class Rol
                 nameof(codigo));
         }
 
-        return new Rol(Guid.CreateVersion7(), normalizado, nombre.Trim(), esDelSistema);
+        return new Rol(Guid.CreateVersion7(), normalizado, nombre.Trim(), esDelSistema, momento);
     }
 
     /// <summary>Cambia el nombre para la interfaz. El código no se toca: es contrato.</summary>

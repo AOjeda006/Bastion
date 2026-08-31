@@ -12,16 +12,14 @@ namespace Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 /// </remarks>
 internal sealed class ConsultaDeEmpresas(OrganizacionDbContext contexto) : IConsultaDeEmpresas
 {
+    // «Activa» lo pone el filtro de R16, no esta consulta: ver `RepositorioDeEmpresas`.
     public Task<bool> EstaActivaAsync(Guid empresaId, CancellationToken cancelacion) =>
-        contexto.Empresas.AnyAsync(
-            empresa => empresa.Id == empresaId && empresa.Estado == EstadoDeEmpresa.Activa,
-            cancelacion);
+        contexto.Empresas.AnyAsync(empresa => empresa.Id == empresaId, cancelacion);
 
     // Orden explícito: «la primera» tiene que ser siempre la misma, o la semilla elegiría una
     // empresa distinta en cada arranque según lo que devolviera PostgreSQL.
     public async Task<Guid?> PrimeraActivaAsync(CancellationToken cancelacion) =>
         await contexto.Empresas
-            .Where(empresa => empresa.Estado == EstadoDeEmpresa.Activa)
             .OrderBy(empresa => empresa.Id)
             .Select(empresa => (Guid?)empresa.Id)
             .FirstOrDefaultAsync(cancelacion)

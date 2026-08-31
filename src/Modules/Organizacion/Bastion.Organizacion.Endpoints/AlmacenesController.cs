@@ -112,20 +112,21 @@ public sealed class AlmacenesController(
     /// Sin puerta HTTP en el 0.4 por lo mismo que el desbloqueo de empresa, y abierta hoy por lo
     /// mismo: detrás de su permiso, que no es el de bloquear.
     /// </remarks>
+    /// <remarks>
+    /// <b>Es la única escritura del sistema sin <c>If-Match</c>.</b> No es un descuido ni una
+    /// excepción de comodidad: desde el 0.10 un recurso bloqueado no se lee por ningún camino
+    /// ordinario, y el <c>ETag</c> se obtiene leyendo. Exigir aquí una versión sería exigir una
+    /// llave que no se puede conseguir, y dejaría la puerta cerrada para siempre. Lo que el
+    /// <c>If-Match</c> evita —pisar el cambio de otro— aquí no puede pasar: mientras el recurso
+    /// está bloqueado ninguna otra escritura llega hasta él, y desbloquear dos veces deja el mismo
+    /// resultado que desbloquear una (ADR-0017).
+    /// </remarks>
     /// <param name="id">Identificador del almacén.</param>
-    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost("{id:guid}/desbloqueo")]
     [ExigePermiso(PermisosDeOrganizacion.AlmacenDesbloquear)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
-    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
-    public Task<IActionResult> Desbloquear(
-        Guid id,
-        [FromHeader(Name = "If-Match")] string? ifMatch,
-        CancellationToken cancelacion) =>
-        ResponderSinContenidoExigiendoVersionAsync(
-            ifMatch,
-            version => desbloquear.EjecutarAsync(id, version, cancelacion));
+    public async Task<IActionResult> Desbloquear(Guid id, CancellationToken cancelacion) =>
+        ResponderSinContenido(await desbloquear.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
 }

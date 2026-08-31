@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -31,6 +32,10 @@ public static class CableadoDeAuditoria
 
         servicios.TryAddSingleton(TimeProvider.System);
         servicios.TryAddScoped<InterceptorDeAuditoria>();
+
+        // Y el que mueve `ModificadoEn` (R14). Va con este porque comparte reloj y porque los dos
+        // son lo mismo: cosas que pasan en cada `SaveChanges` y que nadie tiene que recordar.
+        servicios.TryAddScoped<InterceptorDeMarcasDeTiempo>();
 
         return servicios;
     }

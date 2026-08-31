@@ -1,0 +1,77 @@
+namespace Bastion.BuildingBlocks.Application.Bloqueos;
+
+/// <summary>
+/// La puerta declarada por la que se ve lo bloqueado (R16), y el único sitio del que sale.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Bloquear no es esconder en la pantalla.</b> El artículo 32 de la LOPDGDD obliga a impedir el
+/// tratamiento de los datos bloqueados <b>incluida su visualización</b>, así que el filtro es de
+/// repositorio y no de interfaz: un registro bloqueado no aparece en una consulta ordinaria porque
+/// la consulta no lo trae, no porque la pantalla lo oculte.
+/// </para>
+/// <para>
+/// <b>Y sin embargo hay que poder llegar a él.</b> Ese mismo artículo reserva el acceso a jueces,
+/// Fiscalía y Administraciones competentes durante el plazo de prescripción; y, más cerca, para
+/// <b>levantar</b> un bloqueo hay que poder leer lo que está bloqueado. La forma de resolverlo es
+/// la misma que el 0.6 eligió para el inquilinato y por las mismas razones: un ámbito
+/// <b>explícito</b>, con un motivo de una lista cerrada
+/// (<see cref="MotivoParaVerLoBloqueado"/>) y anotado en el registro.
+/// </para>
+/// <para>
+/// <b>Lo que NO es: un <c>IgnoreQueryFilters</c>.</b> Está prohibido desde el 0.6 y sigue
+/// estándolo. Un <c>IgnoreQueryFilters</c> suelto donde hiciera falta apagaría de paso el filtro
+/// de empresa —son el mismo mecanismo—, no dejaría rastro de quién decidió mirar, y convertiría
+/// «se ve lo bloqueado aquí, por esto» en una decisión que se toma línea a línea. Un camino nuevo
+/// que quiera ver lo bloqueado y no esté en la lista pone <c>ElFiltroNoSeSaltaPorAhiTests</c> en
+/// rojo.
+/// </para>
+/// </remarks>
+public interface IAccesoALoBloqueado
+{
+    /// <summary>
+    /// Si <b>esta</b> consulta puede ver lo bloqueado, porque hay un ámbito abierto a propósito.
+    /// </summary>
+    /// <remarks>
+    /// Es un <b>miembro de instancia que se lee en cada consulta</b>, por lo mismo que
+    /// <c>EmpresaDelFiltro</c>: el modelo de EF Core se cachea, y un valor copiado al construir el
+    /// contexto se quedaría con el del primero que lo construyó.
+    /// </remarks>
+    bool Abierto { get; }
+
+    /// <summary>El motivo del ámbito abierto ahora mismo, o <c>null</c> si no hay ninguno.</summary>
+    MotivoParaVerLoBloqueado? MotivoDelAmbito { get; }
+
+    /// <summary>Abre un ámbito en el que las consultas <b>sí</b> ven lo bloqueado.</summary>
+    /// <remarks>
+    /// El ámbito vale para el flujo asíncrono en curso y se cierra al desechar el resultado.
+    /// Anidar dos está permitido y el de dentro manda; al cerrarse, se recupera el de fuera.
+    /// </remarks>
+    /// <param name="motivo">Por qué esta operación mira lo bloqueado. Va al registro.</param>
+    /// <returns>El ámbito. Desecharlo lo cierra.</returns>
+    IDisposable ViendoLoBloqueado(MotivoParaVerLoBloqueado motivo);
+}
+
+/// <summary>
+/// Los motivos por los que una operación puede ver datos bloqueados.
+/// </summary>
+/// <remarks>
+/// Lista cerrada, igual que <c>MotivoSinInquilino</c>: añadir un motivo obliga a tocar este
+/// enumerado, que es un cambio que se ve en la revisión. Un <c>string</c> dejaría abrir la puerta
+/// con «temporal».
+/// </remarks>
+public enum MotivoParaVerLoBloqueado
+{
+    /// <summary>
+    /// Levantar un bloqueo. Es el único camino ordinario que necesita ver lo bloqueado, y la
+    /// razón es de lógica: para desbloquear algo hay que poder leerlo primero, y lo que se va a
+    /// leer está —por definición— bloqueado.
+    /// </summary>
+    /// <remarks>
+    /// El acceso de jueces, Fiscalía y Administraciones competentes que el artículo 32 reserva
+    /// <b>no</b> tiene aquí su motivo, y no es un olvido: no existe todavía el camino que lo
+    /// serviría. Cuando exista traerá el suyo, y traerlo antes sería una rama que nadie recorre y
+    /// que nadie prueba.
+    /// </remarks>
+    AdministracionDelBloqueo,
+}

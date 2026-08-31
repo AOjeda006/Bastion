@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Direcciones;
 using Bastion.Organizacion.Domain.Almacenes;
 using Shouldly;
@@ -7,28 +8,36 @@ namespace Bastion.Organizacion.UnitTests.Almacenes;
 public sealed class AlmacenTests
 {
     private static readonly Guid s_empresa = Guid.Parse("2f6d5f4e-0000-4000-8000-000000000001");
+    private static readonly DateTimeOffset s_momento = new(2026, 8, 26, 12, 0, 0, TimeSpan.Zero);
 
     private static Direccion Ubicacion() => Direccion.De(
         "Polígono Las Fuentes", "12", "50002", "Zaragoza", "Zaragoza", "ES");
 
     private static Almacen Nuevo(string codigo = "CENTRAL") => Almacen.Crear(
-        s_empresa, codigo, "Almacén central", Ubicacion(), TipoDeAlmacen.Fisico);
+        s_empresa, codigo, "Almacén central", Ubicacion(), TipoDeAlmacen.Fisico, s_momento);
 
     [Fact]
     public void Un_almacen_nace_activo_y_con_su_empresa()
     {
         Almacen almacen = Nuevo();
 
-        almacen.Estado.ShouldBe(EstadoDeAlmacen.Activo);
+        almacen.Bloqueo.EstaBloqueado.ShouldBeFalse();
         almacen.EmpresaId.ShouldBe(s_empresa);
-        almacen.BloqueadoEn.ShouldBeNull();
+        almacen.Bloqueo.Desde.ShouldBeNull();
+        almacen.Bloqueo.Motivo.ShouldBeNull();
+
+        // R14: nace con las dos marcas puestas y en el mismo instante. Una entidad recién creada
+        // que dijera que se modificó DESPUÉS de crearse estaría mintiendo sobre un cambio que no
+        // ha habido.
+        almacen.CreadoEn.ShouldBe(s_momento);
+        almacen.ModificadoEn.ShouldBe(s_momento);
     }
 
     [Fact]
     public void Un_almacen_sin_empresa_no_existe()
     {
         Should.Throw<ArgumentException>(() => Almacen.Crear(
-            Guid.Empty, "CENTRAL", "Central", Ubicacion(), TipoDeAlmacen.Fisico));
+            Guid.Empty, "CENTRAL", "Central", Ubicacion(), TipoDeAlmacen.Fisico, s_momento));
     }
 
     [Fact]
@@ -43,7 +52,7 @@ public sealed class AlmacenTests
     public void El_nombre_es_obligatorio(string nombre)
     {
         Should.Throw<ArgumentException>(() => Almacen.Crear(
-            s_empresa, "CENTRAL", nombre, Ubicacion(), TipoDeAlmacen.Fisico));
+            s_empresa, "CENTRAL", nombre, Ubicacion(), TipoDeAlmacen.Fisico, s_momento));
     }
 
     [Fact]
@@ -52,7 +61,8 @@ public sealed class AlmacenTests
         // Un almacén de regularizaciones o de tránsito no está en ningún sitio. Exigirle una
         // dirección obligaría a inventarse una, que es peor que no tenerla.
         var virtual_ = Almacen.Crear(
-            s_empresa, "REGUL", "Regularizaciones", direccion: null, TipoDeAlmacen.Virtual);
+            s_empresa, "REGUL", "Regularizaciones", direccion: null, TipoDeAlmacen.Virtual,
+            s_momento);
 
         virtual_.Direccion.ShouldBeNull();
     }
@@ -61,7 +71,7 @@ public sealed class AlmacenTests
     public void Un_almacen_fisico_sin_direccion_no_se_acepta()
     {
         Should.Throw<ArgumentException>(() => Almacen.Crear(
-            s_empresa, "CENTRAL", "Central", direccion: null, TipoDeAlmacen.Fisico));
+            s_empresa, "CENTRAL", "Central", direccion: null, TipoDeAlmacen.Fisico, s_momento));
     }
 
     [Fact]
@@ -73,19 +83,20 @@ public sealed class AlmacenTests
         // estado, distinto de activo y de borrado, cubre los dos motivos con una sola columna,
         // y por eso el 0.10 podrá formalizar el tipo base sin migrar nada.
         Almacen almacen = Nuevo();
-        DateTimeOffset momento = new(2026, 8, 26, 12, 0, 0, TimeSpan.Zero);
+        DateTimeOffset momento = s_momento.AddDays(1);
 
-        almacen.Bloquear(momento);
+        almacen.Bloquear(MotivoDeBloqueo.CeseDeUso, momento);
 
-        almacen.Estado.ShouldBe(EstadoDeAlmacen.Bloqueado);
-        almacen.BloqueadoEn.ShouldBe(momento);
+        almacen.Bloqueo.EstaBloqueado.ShouldBeTrue();
+        almacen.Bloqueo.Desde.ShouldBe(momento);
+        almacen.Bloqueo.Motivo.ShouldBe(MotivoDeBloqueo.CeseDeUso);
     }
 
     [Fact]
     public void Un_almacen_bloqueado_no_admite_modificaciones()
     {
         Almacen almacen = Nuevo();
-        almacen.Bloquear(DateTimeOffset.UtcNow);
+        almacen.Bloquear(MotivoDeBloqueo.CeseDeUso, s_momento);
 
         Should.Throw<InvalidOperationException>(() =>
             almacen.Modificar("Otro nombre", Ubicacion(), TipoDeAlmacen.Fisico));
@@ -95,12 +106,13 @@ public sealed class AlmacenTests
     public void Desbloquear_devuelve_el_almacen_a_activo()
     {
         Almacen almacen = Nuevo();
-        almacen.Bloquear(DateTimeOffset.UtcNow);
+        almacen.Bloquear(MotivoDeBloqueo.CeseDeUso, s_momento);
 
         almacen.Desbloquear();
 
-        almacen.Estado.ShouldBe(EstadoDeAlmacen.Activo);
-        almacen.BloqueadoEn.ShouldBeNull();
+        almacen.Bloqueo.EstaBloqueado.ShouldBeFalse();
+        almacen.Bloqueo.Desde.ShouldBeNull();
+        almacen.Bloqueo.Motivo.ShouldBeNull();
     }
 
     [Fact]

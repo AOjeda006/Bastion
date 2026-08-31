@@ -1,9 +1,11 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
@@ -58,7 +60,8 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
         OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
 
-        return new OrganizacionDbContext(opciones.Options, new InquilinoFijo(empresaId));
+        return new OrganizacionDbContext(
+            opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
     }
 
     /// <summary>Abre un contexto de Identidad contra el contenedor, como una empresa concreta.</summary>
@@ -68,7 +71,8 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         DbContextOptionsBuilder<IdentidadDbContext> opciones = new();
         IdentidadDbContext.Configurar(opciones, CadenaDeConexion);
 
-        return new IdentidadDbContext(opciones.Options, new InquilinoFijo(empresaId));
+        return new IdentidadDbContext(
+            opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
     }
 
     /// <summary>Un contexto de Organización solo para aplicar migraciones.</summary>
@@ -78,7 +82,8 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
         OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
 
-        return new OrganizacionDbContext(opciones.Options, new InquilinoFijo(null));
+        return new OrganizacionDbContext(
+            opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
     /// <summary>
@@ -103,7 +108,36 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         opciones.AddInterceptors(
             new InterceptorDeAuditoria(inquilino, new UsuarioFijo(empresaId, usuarioId), TimeProvider.System));
 
-        return new OrganizacionDbContext(opciones.Options, inquilino);
+        return new OrganizacionDbContext(opciones.Options, inquilino, new AccesoCerrado());
+    }
+
+    /// <summary>
+    /// Un contexto de Organización con el interceptor de marcas de tiempo y el reloj que se le diga.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El reloj entra por parámetro y ese es todo el motivo de que este método exista.</b> Es lo
+    /// único que hace comprobable la frase «la hora la pone el reloj inyectado»: con
+    /// <c>TimeProvider.System</c>, el instante que acaba en la columna se parece tanto al que
+    /// pondría un <c>DEFAULT now()</c> que la comprobación no distinguiría entre los dos
+    /// mecanismos. Con un reloj parado en un instante que la base de datos no puede producir, sí.
+    /// </para>
+    /// <para>
+    /// No sustituye ningún registro del contenedor de la API —eso lo prohíbe <c>ApiDeVerdad</c>—:
+    /// construye otro contexto, por la puerta de atrás, como los dos de arriba. Que el host lleve
+    /// el interceptor puesto de verdad se comprueba por el otro lado, pasando por la API.
+    /// </para>
+    /// </remarks>
+    /// <param name="empresaId">Empresa activa.</param>
+    /// <param name="reloj">De dónde sale la hora que se escribirá en <c>modificado_en</c>.</param>
+    public OrganizacionDbContext AbrirOrganizacionConMarcasDeTiempo(Guid empresaId, TimeProvider reloj)
+    {
+        DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
+        OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
+        opciones.AddInterceptors(new InterceptorDeMarcasDeTiempo(reloj));
+
+        return new OrganizacionDbContext(
+            opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
     }
 
     /// <summary>Abre un contexto de Auditoria contra el contenedor, como una empresa concreta.</summary>
@@ -118,7 +152,8 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         DbContextOptionsBuilder<AuditoriaDbContext> opciones = new();
         AuditoriaDbContext.Configurar(opciones, CadenaDeConexion);
 
-        return new AuditoriaDbContext(opciones.Options, new InquilinoFijo(empresaId));
+        return new AuditoriaDbContext(
+            opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
     }
 
     /// <summary>Un contexto de Auditoria sin empresa, para ver TODA la traza.</summary>
@@ -133,7 +168,8 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         DbContextOptionsBuilder<AuditoriaDbContext> opciones = new();
         AuditoriaDbContext.Configurar(opciones, CadenaDeConexion);
 
-        return new AuditoriaDbContext(opciones.Options, new InquilinoFijo(null));
+        return new AuditoriaDbContext(
+            opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
     /// <summary>
@@ -169,7 +205,7 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         InquilinoFijo inquilino = new(empresaId);
         opciones.AddInterceptors(new InterceptorDeLaBandeja(inquilino, Catalogo, TimeProvider.System));
 
-        return new OrganizacionDbContext(opciones.Options, inquilino);
+        return new OrganizacionDbContext(opciones.Options, inquilino, new AccesoCerrado());
     }
 
     /// <summary>Abre el contexto de la bandeja como una empresa concreta.</summary>
@@ -195,7 +231,8 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         DbContextOptionsBuilder<IdentidadDbContext> opciones = new();
         IdentidadDbContext.Configurar(opciones, CadenaDeConexion);
 
-        return new IdentidadDbContext(opciones.Options, new InquilinoFijo(null));
+        return new IdentidadDbContext(
+            opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
     // El contexto de la bandeja no tiene `Configurar` a propósito: vive en los bloques comunes,
@@ -207,7 +244,8 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         DbContextOptionsBuilder<ContextoDeLaBandeja> opciones = new();
         opciones.UseNpgsql(CadenaDeConexion).UseSnakeCaseNamingConvention();
 
-        return new ContextoDeLaBandeja(opciones.Options, new InquilinoFijo(empresaId));
+        return new ContextoDeLaBandeja(
+            opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
     }
 
     /// <summary>
@@ -246,7 +284,7 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
             AuditoriaDbContext.Configurar(opciones, cadena);
 
             await using AuditoriaDbContext auditoria =
-                new(opciones.Options, new InquilinoFijo(null));
+                new(opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
 
             await auditoria.Database.MigrateAsync();
         }
@@ -350,4 +388,26 @@ internal sealed class UsuarioFijo(Guid empresaId, Guid usuarioId) : IUsuarioActu
     public Guid EmpresaId => empresaId;
 
     public bool Tiene(Permiso permiso) => false;
+}
+
+/// <summary>
+/// El acceso a lo bloqueado de la puerta de atrás: cerrado, como en producción.
+/// </summary>
+/// <remarks>
+/// Que la puerta de atrás vea lo mismo que la API es justamente lo que la hace útil: si aquí
+/// estuviera abierta, un test podría montar un estado bloqueado, leerlo sin enterarse de que
+/// está bloqueado, y dar por buena una API que no lo está filtrando. Un test que necesite
+/// comprobar que la fila bloqueada SIGUE en la base la lee con SQL en crudo, que es la evidencia
+/// de verdad y no depende de ningún filtro.
+/// </remarks>
+internal sealed class AccesoCerrado : IAccesoALoBloqueado
+{
+    public bool Abierto => false;
+
+    public MotivoParaVerLoBloqueado? MotivoDelAmbito => null;
+
+    public IDisposable ViendoLoBloqueado(MotivoParaVerLoBloqueado motivo) =>
+        throw new NotSupportedException(
+            "La puerta de atrás de los tests no abre ámbitos de R16: lo que hay que comprobar es " +
+            "que el filtro tapa la fila, no esquivarlo desde el propio test.");
 }

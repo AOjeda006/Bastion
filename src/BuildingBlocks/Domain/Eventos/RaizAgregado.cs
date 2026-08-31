@@ -1,3 +1,5 @@
+using Bastion.BuildingBlocks.Domain.Entidades;
+
 namespace Bastion.BuildingBlocks.Domain.Eventos;
 
 /// <summary>
@@ -16,9 +18,15 @@ namespace Bastion.BuildingBlocks.Domain.Eventos;
 /// </para>
 /// <para>
 /// <b>Solo la heredan los agregados que emiten.</b> No es una clase base universal ni pretende
-/// serlo: no aporta identidad, ni igualdad, ni marca de tiempo — eso lo tiene ya cada entidad y
-/// duplicarlo sería un molde que hay que rellenar. Heredarla significa exactamente una cosa: «de
-/// esta raíz salen eventos».
+/// serlo: no aporta identidad ni igualdad — eso lo declara cada entidad y duplicarlo sería un
+/// molde que hay que rellenar. Heredarla significa exactamente una cosa: «de esta raíz salen
+/// eventos».
+/// </para>
+/// <para>
+/// <b>Desde el 0.10 sí aporta las dos marcas de tiempo</b>, porque hereda de
+/// <see cref="EntidadBase"/>. No es una excepción a lo anterior: una raíz de agregado es, por
+/// definición, un recurso que alguien lee y edita por su cuenta, y de eso trata
+/// <see cref="EntidadBase"/>. Lo que sigue sin aportar es todo lo demás.
 /// </para>
 /// <para>
 /// <b>EF Core no ve nada de esto.</b> <see cref="EventosPendientes"/> apunta a un tipo que el
@@ -27,9 +35,21 @@ namespace Bastion.BuildingBlocks.Domain.Eventos;
 /// <see cref="EventoDeIntegracion"/> como entidad y pediría una clave primaria para él.
 /// </para>
 /// </remarks>
-public abstract class RaizAgregado
+public abstract class RaizAgregado : EntidadBase
 {
     private readonly List<EventoDeIntegracion> _eventos = [];
+
+    /// <summary>Crea la raíz con sus marcas de tiempo puestas.</summary>
+    /// <param name="momento">Ahora.</param>
+    protected RaizAgregado(DateTimeOffset momento)
+        : base(momento)
+    {
+    }
+
+    /// <summary>Constructor de materialización para EF Core.</summary>
+    protected RaizAgregado()
+    {
+    }
 
     /// <summary>Lo ocurrido con este agregado que todavía no está en la bandeja de salida.</summary>
     public IReadOnlyList<EventoDeIntegracion> EventosPendientes => _eventos;

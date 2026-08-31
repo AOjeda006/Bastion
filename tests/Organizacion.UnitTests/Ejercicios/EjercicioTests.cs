@@ -6,9 +6,10 @@ namespace Bastion.Organizacion.UnitTests.Ejercicios;
 public sealed class EjercicioTests
 {
     private static readonly Guid s_empresa = Guid.Parse("2f6d5f4e-0000-4000-8000-000000000001");
+    private static readonly DateTimeOffset s_momento = new(2026, 8, 26, 12, 0, 0, TimeSpan.Zero);
 
     private static Ejercicio Nuevo(int anio = 2026) => Ejercicio.Crear(
-        s_empresa, anio, new DateOnly(anio, 1, 1), new DateOnly(anio, 12, 31));
+        s_empresa, anio, new DateOnly(anio, 1, 1), new DateOnly(anio, 12, 31), s_momento);
 
     [Fact]
     public void Un_ejercicio_nace_abierto_y_con_su_empresa()
@@ -37,14 +38,14 @@ public sealed class EjercicioTests
     {
         // R8: `empresa_id` en toda entidad transaccional, desde la primera tabla.
         Should.Throw<ArgumentException>(() => Ejercicio.Crear(
-            Guid.Empty, 2026, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)));
+            Guid.Empty, 2026, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31), s_momento));
     }
 
     [Fact]
     public void La_fecha_de_fin_no_puede_ser_anterior_a_la_de_inicio()
     {
         Should.Throw<ArgumentException>(() => Ejercicio.Crear(
-            s_empresa, 2026, new DateOnly(2026, 12, 31), new DateOnly(2026, 1, 1)));
+            s_empresa, 2026, new DateOnly(2026, 12, 31), new DateOnly(2026, 1, 1), s_momento));
     }
 
     [Fact]
@@ -53,7 +54,7 @@ public sealed class EjercicioTests
         // El art. 26 de la Ley del Impuesto sobre Sociedades permite un ejercicio partido.
         // Rechazarlo por "no cuadra con el año" dejaría fuera a empresas perfectamente legales.
         var partido = Ejercicio.Crear(
-            s_empresa, 2026, new DateOnly(2026, 7, 1), new DateOnly(2027, 6, 30));
+            s_empresa, 2026, new DateOnly(2026, 7, 1), new DateOnly(2027, 6, 30), s_momento);
 
         partido.FechaDeFin.ShouldBe(new DateOnly(2027, 6, 30));
     }
@@ -62,7 +63,7 @@ public sealed class EjercicioTests
     public void Un_ejercicio_no_puede_durar_mas_de_doce_meses()
     {
         Should.Throw<ArgumentException>(() => Ejercicio.Crear(
-            s_empresa, 2026, new DateOnly(2026, 1, 1), new DateOnly(2027, 6, 30)));
+            s_empresa, 2026, new DateOnly(2026, 1, 1), new DateOnly(2027, 6, 30), s_momento));
     }
 
     [Fact]

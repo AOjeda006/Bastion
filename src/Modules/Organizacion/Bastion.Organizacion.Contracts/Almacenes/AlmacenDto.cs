@@ -10,17 +10,20 @@ namespace Bastion.Organizacion.Contracts.Almacenes;
 /// <param name="Nombre">Nombre con el que se le conoce.</param>
 /// <param name="Direccion">Dónde está, o nulo si es virtual o de tránsito.</param>
 /// <param name="Tipo">Tipo de almacén, como texto.</param>
-/// <param name="Estado">Estado del almacén, como texto.</param>
-/// <param name="BloqueadoEn">Cuándo se bloqueó, o nulo si está activo.</param>
+/// <remarks>
+/// <b>No lleva estado ni fecha de bloqueo, y su ausencia es la regla</b> (R16, desde el 0.10). El
+/// filtro de repositorio deja fuera lo bloqueado, así que todo lo que sale por un camino ordinario
+/// está activo por construcción: un campo `Estado` solo podría decir «activo», y un campo que solo
+/// puede decir una cosa no informa, confunde. Lo bloqueado se ve abriendo un ámbito declarado, y
+/// quien lo abra tiene delante la entidad entera.
+/// </remarks>
 public sealed record AlmacenDto(
     Guid Id,
     Guid EmpresaId,
     string Codigo,
     string Nombre,
     DireccionDto? Direccion,
-    string Tipo,
-    string Estado,
-    DateTimeOffset? BloqueadoEn);
+    string Tipo);
 
 /// <summary>Lo que hace falta para dar de alta un almacén.</summary>
 public sealed record CrearAlmacenDto

@@ -21,7 +21,8 @@ internal sealed class CrearAlmacen(
     IUsuarioActual usuarioActual,
     IRepositorioDeAlmacenes almacenes,
     IRepositorioDeEmpresas empresas,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearAlmacen
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    TimeProvider reloj) : ICrearAlmacen
 {
     public async Task<Resultado<AlmacenDto>> EjecutarAsync(
         CrearAlmacenDto peticion,
@@ -74,7 +75,8 @@ internal sealed class CrearAlmacen(
             peticion.Codigo,
             peticion.Nombre,
             peticion.Direccion?.ADireccion(),
-            tipo);
+            tipo,
+            reloj.GetUtcNow());
 
         almacenes.Agregar(almacen);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

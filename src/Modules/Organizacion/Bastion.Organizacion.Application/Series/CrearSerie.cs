@@ -24,7 +24,8 @@ internal sealed class CrearSerie(
     IRepositorioDeSeries series,
     IRepositorioDeEjercicios ejercicios,
     IRepositorioDeEmpresas empresas,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICrearSerie
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    TimeProvider reloj) : ICrearSerie
 {
     public async Task<Resultado<SerieDto>> EjecutarAsync(
         CrearSerieDto peticion,
@@ -85,7 +86,8 @@ internal sealed class CrearSerie(
         }
 
         var serie = Serie.Crear(
-            empresaId, peticion.EjercicioId, tipo, peticion.Codigo, peticion.Formato);
+            empresaId, peticion.EjercicioId, tipo, peticion.Codigo, peticion.Formato,
+            reloj.GetUtcNow());
 
         series.Agregar(serie);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

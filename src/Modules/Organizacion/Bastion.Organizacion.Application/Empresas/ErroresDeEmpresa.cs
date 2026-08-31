@@ -27,9 +27,4 @@ internal static class ErroresDeEmpresa
     internal static ErrorDeOperacion NoOperativa() => ErrorDeOperacion.Conflicto(
         "empresa-no-operativa",
         "La empresa con la que está operando no existe o está bloqueada. Vuelva a iniciar sesión.");
-
-    internal static ErrorDeOperacion Bloqueada(Guid id) => ErrorDeOperacion.Conflicto(
-        "empresa-bloqueada",
-        $"La empresa {id} está bloqueada y sus datos no se pueden tratar (art. 32 LOPDGDD). " +
-        "Desbloquéela antes de modificarla.");
 }

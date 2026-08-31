@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -41,7 +42,10 @@ public sealed class PostgresDeVerdad : IAsyncLifetime
     {
         DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
         OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
-        return new OrganizacionDbContext(opciones.Options, new InquilinoQueNadieDebeConsultar());
+        return new OrganizacionDbContext(
+            opciones.Options,
+            new InquilinoQueNadieDebeConsultar(),
+            new AccesoQueNadieDebeAbrir());
     }
 
     /// <inheritdoc/>
@@ -89,4 +93,25 @@ internal sealed class InquilinoQueNadieDebeConsultar : IInquilinoActual
 
     public IDisposable SinInquilino(MotivoSinInquilino motivo) => throw new NotSupportedException(
         "Abrir un ámbito sin inquilino aquí no significa nada: no hay ninguno que suspender.");
+}
+
+/// <summary>
+/// El gemelo del anterior por el lado de R16: también lanza en cuanto se le pregunta.
+/// </summary>
+/// <remarks>
+/// Por lo mismo. El filtro de bloqueo solo se evalúa al consultar una entidad, y aquí no se
+/// consulta ninguna; si alguien escribe la primera consulta, se entera por una excepción y no
+/// por un resultado que parece correcto.
+/// </remarks>
+internal sealed class AccesoQueNadieDebeAbrir : IAccesoALoBloqueado
+{
+    public bool Abierto => throw new NotSupportedException(
+        "Este proyecto solo mira el esquema. Si has llegado aquí es que has escrito una consulta " +
+        "a una entidad del módulo, y esa se prueba en Api.IntegrationTests.");
+
+    public MotivoParaVerLoBloqueado? MotivoDelAmbito => null;
+
+    public IDisposable ViendoLoBloqueado(MotivoParaVerLoBloqueado motivo) =>
+        throw new NotSupportedException(
+            "Ver lo bloqueado aquí no significa nada: no hay ninguna consulta que filtrar.");
 }

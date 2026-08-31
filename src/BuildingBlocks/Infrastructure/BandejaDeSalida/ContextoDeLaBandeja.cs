@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Microsoft.EntityFrameworkCore;
@@ -39,10 +40,17 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// </remarks>
 /// <param name="opciones">Opciones del contexto.</param>
 /// <param name="inquilino">De dónde sale la empresa por la que filtra el inquilinato (R8).</param>
+/// <param name="bloqueados">
+/// De dónde sale el permiso para ver lo bloqueado (R16). Este contexto no mapea ninguna entidad
+/// bloqueable —ni la cola ni las huellas de consumidor lo son—, así que no lo usa; lo recibe
+/// porque su base lo pide, y su base lo pide para que ninguna derivada pueda montar un filtro de
+/// R16 con un permiso copiado al construirse.
+/// </param>
 public sealed class ContextoDeLaBandeja(
     DbContextOptions<ContextoDeLaBandeja> opciones,
-    IInquilinoActual inquilino)
-    : ContextoDeModulo(opciones, inquilino)
+    IInquilinoActual inquilino,
+    IAccesoALoBloqueado bloqueados)
+    : ContextoDeModulo(opciones, inquilino, bloqueados)
 {
     /// <summary>La cola de eventos por publicar.</summary>
     public DbSet<EventoDeLaBandeja> Bandeja => Set<EventoDeLaBandeja>();
@@ -60,6 +68,6 @@ public sealed class ContextoDeLaBandeja(
         ConfiguracionDeLaBandeja.Mapear(modelBuilder, migra: false);
 
         modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
-            evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
+            "Inquilinato", evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
     }
 }

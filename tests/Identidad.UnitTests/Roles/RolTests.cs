@@ -6,13 +6,14 @@ namespace Bastion.Identidad.UnitTests.Roles;
 
 public sealed class RolTests
 {
+    private static readonly DateTimeOffset s_momento = new(2026, 8, 26, 12, 0, 0, TimeSpan.Zero);
     private static readonly Permiso s_crear = Permiso.De("organizacion.almacen.crear");
     private static readonly Permiso s_modificar = Permiso.De("organizacion.almacen.modificar");
 
     [Fact]
     public void Crear_NaceSinPermisosYSinSerDelSistema()
     {
-        var rol = Rol.Crear("contable", "Contable");
+        var rol = Rol.Crear("contable", "Contable", s_momento);
 
         rol.Codigo.ShouldBe("contable");
         rol.Nombre.ShouldBe("Contable");
@@ -24,7 +25,7 @@ public sealed class RolTests
     [InlineData("  Contable  ", "contable")]
     [InlineData("JEFE-DE-ALMACEN", "jefe-de-almacen")]
     public void Crear_NormalizaElCodigo(string entrada, string esperado) =>
-        Rol.Crear(entrada, "Un rol").Codigo.ShouldBe(esperado);
+        Rol.Crear(entrada, "Un rol", s_momento).Codigo.ShouldBe(esperado);
 
     [Theory]
     [InlineData("")]
@@ -35,17 +36,17 @@ public sealed class RolTests
     [InlineData("contable-")]
     [InlineData("contable.jefe")]
     public void Crear_ConUnCodigoQueNoEsRanuraEstable_Lanza(string codigo) =>
-        Should.Throw<ArgumentException>(() => Rol.Crear(codigo, "Un rol"));
+        Should.Throw<ArgumentException>(() => Rol.Crear(codigo, "Un rol", s_momento));
 
     [Fact]
     public void Crear_ConUnCodigoDemasiadoLargo_Lanza() =>
         Should.Throw<ArgumentException>(() =>
-            Rol.Crear(new string('a', Rol.LongitudDelCodigo + 1), "Un rol"));
+            Rol.Crear(new string('a', Rol.LongitudDelCodigo + 1), "Un rol", s_momento));
 
     [Fact]
     public void Conceder_AnadeElPermisoUnaSolaVez()
     {
-        var rol = Rol.Crear("contable", "Contable");
+        var rol = Rol.Crear("contable", "Contable", s_momento);
 
         rol.Conceder(s_crear).ShouldBeTrue();
         rol.Conceder(s_crear).ShouldBeFalse();
@@ -60,7 +61,7 @@ public sealed class RolTests
     [Fact]
     public void ConcederCrear_NoConcedeModificar()
     {
-        var rol = Rol.Crear("alta-de-almacenes", "Alta de almacenes");
+        var rol = Rol.Crear("alta-de-almacenes", "Alta de almacenes", s_momento);
 
         rol.Conceder(s_crear);
 
@@ -71,7 +72,7 @@ public sealed class RolTests
     [Fact]
     public void Retirar_QuitaSoloEsePermiso()
     {
-        var rol = Rol.Crear("contable", "Contable");
+        var rol = Rol.Crear("contable", "Contable", s_momento);
         rol.Conceder(s_crear);
         rol.Conceder(s_modificar);
 
@@ -83,7 +84,7 @@ public sealed class RolTests
 
     [Fact]
     public void Retirar_UnPermisoQueNoTenia_NoHaceNada() =>
-        Rol.Crear("contable", "Contable").Retirar(s_crear).ShouldBeFalse();
+        Rol.Crear("contable", "Contable", s_momento).Retirar(s_crear).ShouldBeFalse();
 
     // `FijarPermisos` es lo que necesita un formulario que edita la lista entera: si el borde
     // tuviera que calcular la diferencia, un descuido dejaría concedido un permiso que el
@@ -91,7 +92,7 @@ public sealed class RolTests
     [Fact]
     public void FijarPermisos_DejaExactamenteLosQueSeLePasan()
     {
-        var rol = Rol.Crear("contable", "Contable");
+        var rol = Rol.Crear("contable", "Contable", s_momento);
         rol.Conceder(s_crear);
 
         rol.FijarPermisos([s_modificar]);
@@ -104,7 +105,7 @@ public sealed class RolTests
     [Fact]
     public void FijarPermisos_ConLaListaVacia_LoDejaSinNinguno()
     {
-        var rol = Rol.Crear("contable", "Contable");
+        var rol = Rol.Crear("contable", "Contable", s_momento);
         rol.Conceder(s_crear);
 
         rol.FijarPermisos([]);
@@ -115,7 +116,7 @@ public sealed class RolTests
     [Fact]
     public void FijarPermisos_ConRepetidos_NoLosDuplica()
     {
-        var rol = Rol.Crear("contable", "Contable");
+        var rol = Rol.Crear("contable", "Contable", s_momento);
 
         rol.FijarPermisos([s_crear, s_crear, s_modificar]);
 
@@ -125,7 +126,7 @@ public sealed class RolTests
     [Fact]
     public void Renombrar_CambiaElNombreYNoElCodigo()
     {
-        var rol = Rol.Crear("contable", "Contable");
+        var rol = Rol.Crear("contable", "Contable", s_momento);
 
         rol.Renombrar("  Responsable de contabilidad  ");
 
@@ -135,5 +136,5 @@ public sealed class RolTests
 
     [Fact]
     public void UnRolDeLaSemilla_SeMarcaComoDelSistema() =>
-        Rol.Crear("administracion", "Administración", esDelSistema: true).EsDelSistema.ShouldBeTrue();
+        Rol.Crear("administracion", "Administración", s_momento, esDelSistema: true).EsDelSistema.ShouldBeTrue();
 }

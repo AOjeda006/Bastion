@@ -82,7 +82,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         EmpresaDto? empresa = await seguimiento.Content.ReadFromJsonAsync<EmpresaDto>();
         empresa.ShouldNotBeNull();
         empresa.Nif.ShouldBe("00000001R");
-        empresa.Estado.ShouldBe("Activa");
+        empresa.Id.ShouldBe(creada.Id);
     }
 
     [Fact]
@@ -97,7 +97,11 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         // Un ordinal es un contrato que se rompe solo con reordenar el enumerado, y quien lo
         // reordena no ve que está rompiendo a nadie.
         cuerpo.ShouldContain("\"regimenDeIva\":\"General\"");
-        cuerpo.ShouldContain("\"estado\":\"Activa\"");
+
+        // `estado` ya no viaja: desapareció del DTO en el 0.10. Un campo que solo puede decir
+        // «activa» no informa de nada, porque si la empresa estuviera bloqueada no habría
+        // respuesta que mirar —el filtro de R16 la habría tapado antes—.
+        cuerpo.ShouldNotContain("\"estado\"");
     }
 
     [Fact]
@@ -195,11 +199,16 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         HttpResponseMessage borrado = await cliente.SuprimirAsync($"{Empresas}/{empresa.Id}");
         borrado.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
-        // Sigue ahí, y con su estado: el art. 32 de la LOPDGDD manda bloquear, no destruir.
-        EmpresaDto? despues = await cliente.GetFromJsonAsync<EmpresaDto>($"{Empresas}/{empresa.Id}");
-        despues.ShouldNotBeNull();
-        despues.Estado.ShouldBe("Bloqueada");
-        despues.BloqueadaEn.ShouldNotBeNull();
+        // Hasta el 0.9 este GET devolvía la empresa con su estado «Bloqueada». Desde el 0.10
+        // devuelve 404, y el cambio ES el ítem: el art. 32 de la LOPDGDD manda bloquear —no
+        // destruir—, pero bloquear impide el tratamiento «incluida su visualización». Una
+        // respuesta que dijera «existe, y está bloqueada» sería tratamiento.
+        //
+        // Que la fila SIGUE en PostgreSQL no lo puede demostrar esta puerta, porque el filtro que
+        // estamos probando es justo el que la tapa: lo demuestra
+        // `LaFilaBloqueadaSigueEnLaBaseTests` leyendo la tabla con SQL en crudo.
+        HttpResponseMessage despues = await cliente.GetAsync($"{Empresas}/{empresa.Id}");
+        despues.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -212,42 +221,57 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
 
         // En 0.4 desbloquear existía en el dominio y no tenía puerta HTTP: se podía bloquear y no
         // se podía deshacer. La puerta se abre en 0.5, detrás de su propio permiso.
-        HttpResponseMessage desbloqueo = await cliente.AccionarAsync(
-            $"{Empresas}/{empresa.Id}",
-            $"{Empresas}/{empresa.Id}/desbloqueo",
-            HttpMethod.Post);
+        //
+        // Y va SIN `If-Match`, que es lo que cambió en el 0.10: hasta entonces la versión se leía
+        // del recurso con un GET previo, y ese GET ahora devuelve 404 porque la empresa está
+        // bloqueada. Pedir una versión que no hay forma de conseguir habría dejado esta puerta
+        // cerrada para siempre (ADR-0017).
+        using HttpResponseMessage desbloqueo = await cliente.EnviarConVersionAsync(
+            HttpMethod.Post, $"{Empresas}/{empresa.Id}/desbloqueo", etiqueta: null);
 
         desbloqueo.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
+        // Y aquí está la otra mitad de la prueba de que el bloqueo no borra: lo que el GET no
+        // veía hace tres líneas vuelve a estar, entero. Si la supresión hubiera destruido la
+        // fila, esto no habría nada que desbloquear.
         EmpresaDto? despues = await cliente.GetFromJsonAsync<EmpresaDto>($"{Empresas}/{empresa.Id}");
         despues.ShouldNotBeNull();
-        despues.Estado.ShouldBe("Activa");
-        despues.BloqueadaEn.ShouldBeNull();
+        despues.Id.ShouldBe(empresa.Id);
+        despues.Nif.ShouldBe("00000011B");
     }
 
     [Fact]
-    public async Task Una_empresa_bloqueada_no_se_puede_modificar_y_da_409()
+    public async Task Una_empresa_bloqueada_no_se_puede_modificar_y_da_404()
     {
         (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("44444444A");
         using HttpClient suyo = cliente;
 
         await cliente.SuprimirAsync($"{Empresas}/{empresa.Id}");
 
-        HttpResponseMessage respuesta = await cliente.ModificarAsync(
+        // La versión se cita a mano: `ModificarAsync` la leería con un GET previo, y ese GET ya
+        // no trae nada. Con cualquier `If-Match` vale, porque el 404 llega antes de mirarlo.
+        using HttpResponseMessage respuesta = await cliente.EnviarConVersionAsync(
+            HttpMethod.Put,
             $"{Empresas}/{empresa.Id}",
-            new ModificarEmpresaDto
+            "\"1\"",
+            JsonContent.Create(new ModificarEmpresaDto
             {
                 RazonSocial = "Otro nombre",
                 DomicilioFiscal = Escenario.Domicilio(),
                 DivisaBase = "EUR",
                 RegimenDeIva = "General",
-            });
+            }));
 
-        // 409 y no 500: modificar algo bloqueado es un desenlace de negocio esperable, no un
-        // fallo del programa.
-        respuesta.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        // Hasta el 0.9 esto era un 409 «empresa-bloqueada». Ahora es un 404, y por lo mismo que
+        // el GET: el caso de uso pide la empresa al repositorio, el filtro de R16 no se la da, y
+        // lo que responde es «no hay ninguna empresa con ese identificador». Un 409 explicando
+        // que está bloqueada revelaría a la vez que existe y en qué estado está.
+        //
+        // No queda ninguna rama que produzca aquel 409: por eso el código de error
+        // `empresa-bloqueada` se ha borrado del catálogo en vez de quedarse sin quien lo emita.
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await LeerProblema(respuesta)).GetProperty("type").GetString()
-            .ShouldBe("/errors/empresa-bloqueada");
+            .ShouldBe("/errors/empresa-no-encontrada");
     }
 
     [Fact]

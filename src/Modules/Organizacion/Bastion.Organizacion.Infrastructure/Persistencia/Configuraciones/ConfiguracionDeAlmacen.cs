@@ -1,5 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Domain.Empresas;
 using Microsoft.EntityFrameworkCore;
@@ -35,12 +37,9 @@ internal sealed class ConfiguracionDeAlmacen : IEntityTypeConfiguration<Almacen>
             .IsRequired()
             .SeAudita();
 
-        almacen.Property(fila => fila.Estado)
-            .HasConversion<string>()
-            .IsRequired()
-            .SeAudita();
+        ConfiguracionDeEntidadBase.Mapear(almacen);
 
-        almacen.Property(fila => fila.BloqueadoEn).SeAudita();
+        almacen.ComplexProperty(fila => fila.Bloqueo, ConfiguracionDeBloqueo.Mapear);
 
         // Dirección OPCIONAL: un almacén virtual o de tránsito no está en ningún sitio, y
         // exigirle una dirección obligaría a inventarla. Las seis columnas quedan anulables.

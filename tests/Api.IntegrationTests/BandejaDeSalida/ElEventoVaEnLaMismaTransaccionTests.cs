@@ -183,7 +183,8 @@ public sealed class ElEventoVaEnLaMismaTransaccionTests(PostgresConTodosLosModul
     // reviente a mitad, que es lo que hace falta para el segundo test.
     private static (Empresa Empresa, EmpresaCreada Evento) Nueva(string nif, string razonSocial)
     {
-        var empresa = Empresa.Crear(Nif.De(nif), razonSocial, Fiscal(), "EUR", RegimenDeIva.General);
+        var empresa = Empresa.Crear(Nif.De(nif), razonSocial, Fiscal(), "EUR", RegimenDeIva.General,
+            TimeProvider.System.GetUtcNow());
 
         EmpresaCreada evento = new(empresa.Id, empresa.Nif.Valor, empresa.RazonSocial, empresa.DivisaBase);
 

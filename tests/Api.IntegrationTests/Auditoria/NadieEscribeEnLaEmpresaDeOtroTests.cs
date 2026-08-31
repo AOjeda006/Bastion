@@ -46,7 +46,7 @@ public sealed class NadieEscribeEnLaEmpresaDeOtroTests(PostgresConTodosLosModulo
 
         // La empresa la pone el caso de uso, y aquí la pone MAL. Es exactamente lo que pasa cuando
         // alguien copia un `CrearX` y se deja el `usuarioActual.EmpresaId` del original.
-        var almacen = Almacen.Crear(ajena.Id, "AJENO-ALTA", "En la empresa de otro", null, TipoDeAlmacen.Virtual);
+        var almacen = Almacen.Crear(ajena.Id, "AJENO-ALTA", "En la empresa de otro", null, TipoDeAlmacen.Virtual, TimeProvider.System.GetUtcNow());
 
         await using OrganizacionDbContext contexto =
             postgres.AbrirOrganizacionAuditada(propia.Id, Guid.CreateVersion7());
@@ -70,7 +70,7 @@ public sealed class NadieEscribeEnLaEmpresaDeOtroTests(PostgresConTodosLosModulo
         (HttpClient _, EmpresaDto propia) = await _api.EnUnaEmpresaNuevaAsync("00000044K");
         (HttpClient _, EmpresaDto ajena) = await _api.EnUnaEmpresaNuevaAsync("00000045E");
 
-        var almacen = Almacen.Crear(propia.Id, "AJENO-MOD", "Nace bien", null, TipoDeAlmacen.Virtual);
+        var almacen = Almacen.Crear(propia.Id, "AJENO-MOD", "Nace bien", null, TipoDeAlmacen.Virtual, TimeProvider.System.GetUtcNow());
 
         await using (OrganizacionDbContext alta = postgres.AbrirOrganizacionAuditada(propia.Id, Guid.CreateVersion7()))
         {
@@ -99,7 +99,7 @@ public sealed class NadieEscribeEnLaEmpresaDeOtroTests(PostgresConTodosLosModulo
         // arriba y rompería el sistema entero sin que estos tests se enteraran.
         (HttpClient _, EmpresaDto propia) = await _api.EnUnaEmpresaNuevaAsync("00000046T");
 
-        var almacen = Almacen.Crear(propia.Id, "PROPIO", "En la empresa de uno", null, TipoDeAlmacen.Virtual);
+        var almacen = Almacen.Crear(propia.Id, "PROPIO", "En la empresa de uno", null, TipoDeAlmacen.Virtual, TimeProvider.System.GetUtcNow());
 
         await using OrganizacionDbContext contexto =
             postgres.AbrirOrganizacionAuditada(propia.Id, Guid.CreateVersion7());

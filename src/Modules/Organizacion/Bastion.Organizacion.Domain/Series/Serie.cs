@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Entidades;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 namespace Bastion.Organizacion.Domain.Series;
 
@@ -17,7 +18,7 @@ namespace Bastion.Organizacion.Domain.Series;
 /// procedimiento; lo único que el dominio impide desde hoy es que el contador salte.
 /// </para>
 /// </remarks>
-public sealed class Serie : IDeInquilino
+public sealed class Serie : EntidadBase, IDeInquilino
 {
     /// <summary>
     /// Tope del código. El <c>NumSerieFactura</c> de Veri*factu admite 60 caracteres para
@@ -31,7 +32,9 @@ public sealed class Serie : IDeInquilino
         Guid ejercicioId,
         TipoDeDocumento tipoDeDocumento,
         string codigo,
-        string formato)
+        string formato,
+        DateTimeOffset momento)
+        : base(momento)
     {
         Id = id;
         EmpresaId = empresaId;
@@ -80,12 +83,15 @@ public sealed class Serie : IDeInquilino
     public bool SePuedeSuprimir => Contador == 0;
 
     /// <summary>Crea una serie activa con el contador a cero.</summary>
+    /// <remarks>El <c>momento</c> es la fecha de creación, y la pone quien tiene el
+    /// <c>TimeProvider</c>: no la base de datos.</remarks>
     public static Serie Crear(
         Guid empresaId,
         Guid ejercicioId,
         TipoDeDocumento tipoDeDocumento,
         string codigo,
-        string formato)
+        string formato,
+        DateTimeOffset momento)
     {
         if (empresaId == Guid.Empty)
         {
@@ -106,7 +112,8 @@ public sealed class Serie : IDeInquilino
             ejercicioId,
             tipoDeDocumento,
             CodigoValido(codigo),
-            FormatoValido(formato));
+            FormatoValido(formato),
+            momento);
     }
 
     /// <summary>Cambia el formato de composición del número.</summary>

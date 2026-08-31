@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Empresas;
 
@@ -50,7 +51,11 @@ internal sealed class BloquearEmpresa(
         // mueve la fecha del primer bloqueo, de la que cuelga el plazo de prescripción. Así, un
         // cliente que reintenta un DELETE que ya había llegado obtiene el mismo 204 y no un 409
         // que le haría pensar que algo va mal.
-        empresa.Bloquear(reloj.GetUtcNow());
+        // El motivo lo pone el camino: un DELETE sobre una empresa es una supresión solicitada,
+        // que es lo que el art. 32 obliga a atender reservando en vez de borrando. Cuando exista
+        // otro camino que bloquee —un cese de actividad, la destrucción al vencer el plazo—
+        // traerá su propio motivo de la lista cerrada.
+        empresa.Bloquear(MotivoDeBloqueo.SupresionSolicitada, reloj.GetUtcNow());
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto();
