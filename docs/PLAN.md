@@ -1117,9 +1117,9 @@ Lo que llega con él: `EntidadBase` y `InterceptorDeMarcasDeTiempo` en el bloque
 `MotivoDeBloqueo` e `IBloqueable` en `BuildingBlocks/Domain/Bloqueos`; `IAccesoALoBloqueado`,
 `MotivoParaVerLoBloqueado` y el filtro global `"Bloqueo"` en las tres entidades bloqueables;
 `ConfiguracionDeEntidadBase` y `ConfiguracionDeBloqueo`; `Direccion` mapeada como **tipo complejo**;
-**dos migraciones nuevas** —Organización e Identidad— escritas a mano; y **dieciocho casos más** que
-al cerrar el 0.9 —22 de integración y 18 rápidos, menos los que desaparecieron con los tres
-enumerados—.
+**dos migraciones nuevas** —Organización e Identidad— escritas a mano; y **cuarenta casos más** que
+al cerrar el 0.9 —22 de integración y 18 rápidos—, ya descontados los que se fueron con los tres
+enumerados.
 
 Y **tres ficheros menos**: `EstadoDeEmpresa`, `EstadoDeAlmacen` y `EstadoDeUsuario`.
 
