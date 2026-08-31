@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Microsoft.EntityFrameworkCore;
 
@@ -76,6 +77,11 @@ public sealed class AuditoriaDbContext(
         // que no hay esquema propio que crear sin reabrir el mapa de módulos—.
         ConfiguracionDeLaBandeja.Mapear(modelBuilder, migra: true);
 
+        // Y la tabla de claves de idempotencia (R10), otra vez igual: se mapea aquí para que el
+        // recibo de la petición caiga en la misma transacción que el trabajo, y la migra el
+        // módulo Auditoría.
+        ConfiguracionDeIdempotencia.Mapear(modelBuilder, migra: true);
+
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
             registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
 
@@ -85,5 +91,11 @@ public sealed class AuditoriaDbContext(
         // abre un ámbito con su motivo, no porque aquí falte una línea.
         modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
             evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
+
+        // Y el recibo de las peticiones repetibles (R10), por lo mismo que la cola: es un dato
+        // de la empresa que la pidió. Sin filtro, una consulta sobre esta tabla enseñaría desde
+        // dentro de una empresa qué está dando de alta otra, y con qué respuesta.
+        modelBuilder.Entity<RegistroDeIdempotencia>().HasQueryFilter(
+            recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
     }
 }

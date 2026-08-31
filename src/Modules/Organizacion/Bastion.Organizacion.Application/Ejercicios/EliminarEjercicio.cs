@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Ejercicios;
 
@@ -16,16 +17,18 @@ public interface IEliminarEjercicio
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IEliminarEjercicio"/>
 internal sealed class EliminarEjercicio(
     IRepositorioDeEjercicios ejercicios,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : IEliminarEjercicio
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones) : IEliminarEjercicio
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
     {
         Ejercicio? ejercicio = await ejercicios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -33,6 +36,8 @@ internal sealed class EliminarEjercicio(
         {
             return Resultado.Fallo(ErroresDeEjercicio.NoEncontrado(id));
         }
+
+        versiones.Exigir(ejercicio, version);
 
         // La clave ajena es `Restrict`, así que la base también lo impediría. Pero lo haría con
         // una excepción de integridad referencial que sale como 500, y esto no es un fallo del

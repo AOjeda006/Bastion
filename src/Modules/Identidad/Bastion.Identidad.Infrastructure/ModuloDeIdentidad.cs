@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Identidad.Application;
 using Bastion.Identidad.Application.Roles;
 using Bastion.Identidad.Application.Sesiones;
@@ -48,6 +49,13 @@ public static class ModuloDeIdentidad
         });
 
         servicios.AddScoped<IUnidadTrabajoDeIdentidad, UnidadDeTrabajoDeIdentidad>();
+        servicios.AddScoped<IVersionesDeIdentidad, VersionesDeIdentidad>();
+
+        // Y el almacén de claves de idempotencia (R10), con la clave del módulo: el filtro del
+        // borde resuelve el suyo por el segmento de la ruta, para que la clave y el trabajo caigan
+        // en la transacción del MISMO contexto.
+        servicios.AgregarAlmacenDeIdempotencia<AlmacenDeIdempotenciaDeIdentidad>(
+            IdentidadDbContext.Esquema);
 
         servicios.AddScoped<IRepositorioDeUsuarios, RepositorioDeUsuarios>();
         servicios.AddScoped<IRepositorioDeRoles, RepositorioDeRoles>();

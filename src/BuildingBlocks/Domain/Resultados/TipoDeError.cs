@@ -32,8 +32,37 @@ public enum TipoDeError
     /// <summary>Lo que la operación necesita no existe, o no es visible para quien la pide.</summary>
     NoEncontrado,
 
-    /// <summary>El recurso está en un estado que no admite la operación, o hay concurrencia.</summary>
+    /// <summary>El recurso está en un estado que no admite la operación.</summary>
+    /// <remarks>
+    /// <b>No es el conflicto de versión.</b> Aquí el documento ya no admite lo que se le pide
+    /// —cerrar un ejercicio que ya está cerrado, facturar un albarán ya facturado— y repetir la
+    /// operación con datos frescos tampoco funcionaría. Cuando lo que pasa es que otro escribió
+    /// antes, el desenlace es <see cref="VersionObsoleta"/> y el cliente reacciona distinto:
+    /// vuelve a leer y decide. Los dos salen con códigos distintos porque son cosas distintas.
+    /// </remarks>
     Conflicto,
+
+    /// <summary>
+    /// La versión sobre la que el cliente dice estar escribiendo ya no es la actual: alguien
+    /// guardó en medio.
+    /// </summary>
+    /// <remarks>
+    /// Es la actualización perdida, y el protocolo ya trae su respuesta: <c>412</c>. La versión
+    /// no la comprueba ningún caso de uso a mano —eso sería leer, comparar y guardar, con hueco
+    /// entre los tres pasos—, sino el <c>WHERE</c> del propio <c>UPDATE</c>.
+    /// </remarks>
+    VersionObsoleta,
+
+    /// <summary>
+    /// La operación exige decir sobre qué versión se escribe, y la petición no lo dice.
+    /// </summary>
+    /// <remarks>
+    /// <c>428</c> y no <c>400</c>: la petición está bien formada, lo que falta es una
+    /// precondición. La diferencia importa porque el cliente puede arreglarlo solo —leer el
+    /// recurso, quedarse con su <c>ETag</c> y repetir—, y un <c>400</c> le diría que revise el
+    /// cuerpo, que está impecable.
+    /// </remarks>
+    FaltaLaVersion,
 
     /// <summary>Los datos son válidos y el estado es coherente, pero una regla lo impide.</summary>
     ReglaDeNegocio,

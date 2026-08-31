@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Almacenes;
@@ -12,7 +13,7 @@ public interface IObtenerAlmacen
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del almacén.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado<AlmacenDto>> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado<ConVersion<AlmacenDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve una página de almacenes.</summary>
@@ -25,15 +26,17 @@ public interface IListarAlmacenes
 }
 
 /// <inheritdoc cref="IObtenerAlmacen"/>
-internal sealed class ObtenerAlmacen(IRepositorioDeAlmacenes almacenes) : IObtenerAlmacen
+internal sealed class ObtenerAlmacen(
+    IRepositorioDeAlmacenes almacenes,
+    IVersionesDeOrganizacion versiones) : IObtenerAlmacen
 {
-    public async Task<Resultado<AlmacenDto>> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado<ConVersion<AlmacenDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion)
     {
         Almacen? almacen = await almacenes.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
         return almacen is null
-            ? Resultado.Fallo<AlmacenDto>(ErroresDeAlmacen.NoEncontrado(id))
-            : Resultado.Correcto(almacen.ADto());
+            ? Resultado.Fallo<ConVersion<AlmacenDto>>(ErroresDeAlmacen.NoEncontrado(id))
+            : Resultado.Correcto(new ConVersion<AlmacenDto>(almacen.ADto(), versiones.De(almacen)));
     }
 }
 

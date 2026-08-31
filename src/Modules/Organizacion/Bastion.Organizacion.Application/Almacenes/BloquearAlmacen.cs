@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Almacenes;
 
@@ -16,17 +17,22 @@ public interface IBloquearAlmacen
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del almacén.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IBloquearAlmacen"/>
 internal sealed class BloquearAlmacen(
     IRepositorioDeAlmacenes almacenes,
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones,
     TimeProvider reloj) : IBloquearAlmacen
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(
+        Guid id,
+        VersionDeRecurso version,
+        CancellationToken cancelacion)
     {
         Almacen? almacen = await almacenes.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -34,6 +40,8 @@ internal sealed class BloquearAlmacen(
         {
             return Resultado.Fallo(ErroresDeAlmacen.NoEncontrado(id));
         }
+
+        versiones.Exigir(almacen, version);
 
         almacen.Bloquear(reloj.GetUtcNow());
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

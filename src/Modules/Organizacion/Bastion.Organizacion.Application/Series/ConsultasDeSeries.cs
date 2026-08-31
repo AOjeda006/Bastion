@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -12,7 +13,7 @@ public interface IObtenerSerie
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador de la serie.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado<SerieDto>> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado<ConVersion<SerieDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve una página de series.</summary>
@@ -25,15 +26,17 @@ public interface IListarSeries
 }
 
 /// <inheritdoc cref="IObtenerSerie"/>
-internal sealed class ObtenerSerie(IRepositorioDeSeries series) : IObtenerSerie
+internal sealed class ObtenerSerie(
+    IRepositorioDeSeries series,
+    IVersionesDeOrganizacion versiones) : IObtenerSerie
 {
-    public async Task<Resultado<SerieDto>> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado<ConVersion<SerieDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion)
     {
         Serie? serie = await series.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
         return serie is null
-            ? Resultado.Fallo<SerieDto>(ErroresDeSerie.NoEncontrada(id))
-            : Resultado.Correcto(serie.ADto());
+            ? Resultado.Fallo<ConVersion<SerieDto>>(ErroresDeSerie.NoEncontrada(id))
+            : Resultado.Correcto(new ConVersion<SerieDto>(serie.ADto(), versiones.De(serie)));
     }
 }
 

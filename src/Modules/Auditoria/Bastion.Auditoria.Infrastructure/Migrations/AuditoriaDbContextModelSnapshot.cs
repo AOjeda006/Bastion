@@ -188,6 +188,72 @@ namespace Bastion.Auditoria.Infrastructure.Migrations
 
                     b.HasAnnotation("Bastion:Auditoria", "NoAuditada|es la huella de que un consumidor ya pasó; no es un cambio de datos");
                 });
+
+            modelBuilder.Entity("Bastion.BuildingBlocks.Infrastructure.Idempotencia.RegistroDeIdempotencia", b =>
+                {
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<string>("Metodo")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("metodo");
+
+                    b.Property<string>("Ruta")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("ruta");
+
+                    b.Property<string>("Clave")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("clave");
+
+                    b.Property<int?>("CodigoDeEstado")
+                        .HasColumnType("integer")
+                        .HasColumnName("codigo_de_estado");
+
+                    b.Property<DateTimeOffset>("CreadaEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creada_en");
+
+                    b.Property<string>("Cuerpo")
+                        .HasColumnType("text")
+                        .HasColumnName("cuerpo");
+
+                    b.Property<string>("Etiqueta")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("etiqueta");
+
+                    b.Property<string>("Huella")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("huella");
+
+                    b.Property<string>("TipoDeContenido")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("tipo_de_contenido");
+
+                    b.Property<string>("Ubicacion")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("ubicacion");
+
+                    b.HasKey("EmpresaId", "UsuarioId", "Metodo", "Ruta", "Clave")
+                        .HasName("pk_claves_de_idempotencia");
+
+                    b.ToTable("claves_de_idempotencia", "auditoria");
+
+                    b.HasAnnotation("Bastion:Auditoria", "NoAuditada|es el recibo de una petición ya atendida, no un cambio de datos");
+                });
 #pragma warning restore 612, 618
         }
     }

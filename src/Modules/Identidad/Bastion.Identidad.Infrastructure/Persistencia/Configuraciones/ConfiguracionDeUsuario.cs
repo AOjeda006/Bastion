@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Identidad.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -18,6 +19,8 @@ internal sealed class ConfiguracionDeUsuario : IEntityTypeConfiguration<Usuario>
         // quien cambio el correo de quien.
         usuario.SeAudita();
         usuario.HasKey(fila => fila.Id);
+
+        usuario.LlevaTestigoDeConcurrencia();
 
         // 254 es el tope real de una dirección de correo (RFC 5321). Aquí el máximo no es una
         // comodidad: es lo que hace que el índice único quepa y que nadie meta un texto largo por

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
@@ -11,20 +12,25 @@ public interface IModificarEmpresa
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador de la empresa.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="peticion">Los datos nuevos.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<Resultado<EmpresaDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarEmpresaDto peticion,
         CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IModificarEmpresa"/>
-internal sealed class ModificarEmpresa(IRepositorioDeEmpresas empresas, IUnidadTrabajoDeOrganizacion unidadTrabajo)
-    : IModificarEmpresa
+internal sealed class ModificarEmpresa(
+    IRepositorioDeEmpresas empresas,
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones) : IModificarEmpresa
 {
     public async Task<Resultado<EmpresaDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarEmpresaDto peticion,
         CancellationToken cancelacion)
     {
@@ -36,6 +42,8 @@ internal sealed class ModificarEmpresa(IRepositorioDeEmpresas empresas, IUnidadT
         {
             return Resultado.Fallo<EmpresaDto>(ErroresDeEmpresa.NoEncontrada(id));
         }
+
+        versiones.Exigir(empresa, version);
 
         // El dominio LANZA si se modifica una empresa bloqueada, y hace bien: dentro, eso es una
         // invariante rota. Pero desde fuera es un desenlace de negocio perfectamente esperable

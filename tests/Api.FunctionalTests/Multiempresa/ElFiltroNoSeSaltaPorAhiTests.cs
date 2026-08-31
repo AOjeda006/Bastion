@@ -93,6 +93,20 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             "que un filtro de empresa hubiera protegido. Quien quiera SQL crudo sobre filas no puede " +
             "acogerse a esto, porque el argumento entero es que aquí no hay filas. Está en un fichero " +
             "propio y en dos métodos, para que la excepción se lea de una vez",
+
+        ["src/BuildingBlocks/Infrastructure/Idempotencia/AlmacenDeIdempotencia.cs usa .ExecuteSql"] =
+            "reclama una Idempotency-Key con un INSERT ... ON CONFLICT DO NOTHING, que EF Core no sabe "
+            + "traducir. Las dos alternativas sin SQL crudo son peores: mirar-y-luego-insertar deja la "
+            + "ventana por la que dos peticiones con la misma clave hacen las dos el trabajo -o sea, "
+            + "reintroduce el fallo que el mecanismo viene a impedir-, y atrapar la violacion del indice "
+            + "usa una excepcion como flujo de control DENTRO de una transaccion, que en PostgreSQL queda "
+            + "abortada y no puede seguir. La excepcion es estrecha por lo que la hace inutil para otro "
+            + "caso: esa sentencia NO LEE NINGUNA TABLA -es una escritura de una fila cuya clave primaria "
+            + "completa se le entrega, con empresa_id dentro, tomado del claim y nunca de la peticion-, "
+            + "asi que no hay ninguna fila que un filtro de empresa hubiera protegido y ella alcance. "
+            + "TODO lo que se LEE de esa tabla pasa por EF Core con su filtro puesto, y que la sentencia "
+            + "siga nombrando empresa_id en las columnas y en el objetivo del conflicto lo comprueba "
+            + "LaClaveDeIdempotenciaEsLaTuplaEnteraTests",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

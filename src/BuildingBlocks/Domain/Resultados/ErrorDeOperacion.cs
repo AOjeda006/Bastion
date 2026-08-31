@@ -87,9 +87,17 @@ public sealed record ErrorDeOperacion
     public static ErrorDeOperacion NoEncontrado(string codigo, string mensaje) =>
         Crear(codigo, mensaje, TipoDeError.NoEncontrado, s_sinCampos);
 
-    /// <summary>El estado del recurso no admite la operación, o hay concurrencia.</summary>
+    /// <summary>El estado del recurso no admite la operación.</summary>
     public static ErrorDeOperacion Conflicto(string codigo, string mensaje) =>
         Crear(codigo, mensaje, TipoDeError.Conflicto, s_sinCampos);
+
+    /// <summary>Otro escribió antes: la versión que trae el cliente ya no es la actual.</summary>
+    public static ErrorDeOperacion VersionObsoleta(string codigo, string mensaje) =>
+        Crear(codigo, mensaje, TipoDeError.VersionObsoleta, s_sinCampos);
+
+    /// <summary>La operación exige decir sobre qué versión se escribe y no se ha dicho.</summary>
+    public static ErrorDeOperacion FaltaLaVersion(string codigo, string mensaje) =>
+        Crear(codigo, mensaje, TipoDeError.FaltaLaVersion, s_sinCampos);
 
     /// <summary>Una regla de negocio impide la operación.</summary>
     public static ErrorDeOperacion ReglaDeNegocio(string codigo, string mensaje) =>

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Ejercicios;
@@ -10,10 +11,12 @@ public interface IModificarEjercicio
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="peticion">Las fechas nuevas.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<Resultado<EjercicioDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarEjercicioDto peticion,
         CancellationToken cancelacion);
 }
@@ -21,10 +24,12 @@ public interface IModificarEjercicio
 /// <inheritdoc cref="IModificarEjercicio"/>
 internal sealed class ModificarEjercicio(
     IRepositorioDeEjercicios ejercicios,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : IModificarEjercicio
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones) : IModificarEjercicio
 {
     public async Task<Resultado<EjercicioDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarEjercicioDto peticion,
         CancellationToken cancelacion)
     {
@@ -36,6 +41,8 @@ internal sealed class ModificarEjercicio(
         {
             return Resultado.Fallo<EjercicioDto>(ErroresDeEjercicio.NoEncontrado(id));
         }
+
+        versiones.Exigir(ejercicio, version);
 
         if (ejercicio.Estado == EstadoDeEjercicio.Cerrado)
         {

@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Identidad.Domain.Roles;
 using Bastion.Identidad.Domain.Sesiones;
@@ -92,6 +93,11 @@ public sealed class IdentidadDbContext(
         // que el barrido del inquilinato la vea también desde este contexto.
         ConfiguracionDeLaBandeja.Mapear(modelBuilder, migra: false);
 
+        // Y la tabla de claves de idempotencia (R10), otra vez igual: se mapea aquí para que el
+        // recibo de la petición caiga en la misma transacción que el trabajo, y la migra el
+        // módulo Auditoría.
+        ConfiguracionDeIdempotencia.Mapear(modelBuilder, migra: false);
+
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
             registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
 
@@ -101,6 +107,12 @@ public sealed class IdentidadDbContext(
         // abre un ámbito con su motivo, no porque aquí falte una línea.
         modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
             evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
+
+        // Y el recibo de las peticiones repetibles (R10), por lo mismo que la cola: es un dato
+        // de la empresa que la pidió. Sin filtro, una consulta sobre esta tabla enseñaría desde
+        // dentro de una empresa qué está dando de alta otra, y con qué respuesta.
+        modelBuilder.Entity<RegistroDeIdempotencia>().HasQueryFilter(
+            recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
 
         // La pertenencia es el PUENTE del inquilinato: lleva `empresa_id` y se filtra por él.
         // Filtrarla tiene una consecuencia que hay que mirar de frente: el acceso carga al usuario

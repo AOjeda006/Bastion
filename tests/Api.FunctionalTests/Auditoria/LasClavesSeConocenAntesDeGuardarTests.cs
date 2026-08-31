@@ -1,4 +1,6 @@
 using Bastion.Api.FunctionalTests.Salud;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -10,8 +12,8 @@ using Shouldly;
 namespace Bastion.Api.FunctionalTests.Auditoria;
 
 /// <summary>
-/// La premisa de la que depende que el interceptor de auditoría sea de <b>una sola fase</b>:
-/// ningún valor de los que van a la traza lo pone la base de datos.
+/// La premisa de la que depende que el interceptor de auditoría sea de <b>una sola fase</b>, y el
+/// inventario cerrado de lo que en este modelo genera el servidor.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,31 +23,85 @@ namespace Bastion.Api.FunctionalTests.Auditoria;
 /// hasta después de mandarlo.
 /// </para>
 /// <para>
-/// Aquí no hace falta, porque las claves salen del constructor del dominio (ADR-0010). Pero eso
-/// es una <b>propiedad del modelo de hoy</b>, no una ley: el día que alguien ponga una columna
-/// <c>IDENTITY</c>, un <c>DEFAULT gen_random_uuid()</c>, una columna calculada o el testigo de
-/// concurrencia <c>xmin</c> del 0.9, la segunda fase deja de ser ceremonia y pasa a ser
-/// obligatoria — y con ella una segunda escritura que hay que meter en la misma transacción.
+/// <b>Este fichero se puso rojo en el 0.9, como estaba anunciado</b>, en cuanto el testigo de
+/// concurrencia entró en el modelo: <c>xmin</c> lo genera PostgreSQL en cada escritura. La
+/// premisa se reenunció —ADR-0015, que sustituye al punto 2 del ADR-0012— y la comprobación se
+/// partió en dos, porque una sola habría tenido que aflojarse.
 /// </para>
 /// <para>
-/// Por eso esto es un test y no un párrafo del ADR: el párrafo envejece en silencio, el test se
-/// pone rojo. Si se pone rojo, <b>no se añade a la lista</b>: se reabre la decisión del ADR-0012.
+/// <b>Por qué dos y no una más laxa.</b> Pasar de «ninguna propiedad viene del servidor» a
+/// «ninguna propiedad AUDITADA viene del servidor» habría dejado de mirar todo lo demás: un
+/// <c>DEFAULT gen_random_uuid()</c> en una columna no auditada habría entrado sin que nadie se
+/// enterase. Las dos de aquí, juntas, afirman al menos tanto como la de antes: la primera cubre
+/// exactamente lo que el interceptor necesita, y la segunda enumera <b>por nombre</b> lo único
+/// que puede venir del servidor. Una forma nueva de generar valor —una sexta, o una séptima—
+/// aparece en la lista real, no está en la declarada, y esto se pone rojo igual que antes.
+/// </para>
+/// <para>
+/// Si se pone rojo, <b>no se añade a la lista sin más</b>: se mira si la premisa del interceptor
+/// sigue en pie, y si no, se reabre la decisión con un ADR que sustituya al vigente.
 /// </para>
 /// </remarks>
 public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
 {
+    // El inventario declarado, ENTERO y por nombre. No es «lo que hay»: es lo que se ha decidido
+    // que haya. Por eso se compara la lista completa y no se pregunta si cada una está permitida.
+    private static readonly string[] s_generadasPorElServidor =
+    [
+        "Almacen.Version",
+        "Ejercicio.Version",
+        "Empresa.Version",
+        "Rol.Version",
+        "Serie.Version",
+        "Usuario.Version",
+    ];
+
     private readonly ApiSinDependencias _api = new();
 
     public void Dispose() => _api.Dispose();
 
     [Fact]
-    public void Ningun_valor_del_modelo_lo_pone_la_base_de_datos()
+    public void Ninguna_propiedad_auditada_la_pone_la_base_de_datos()
     {
-        List<string> generadas = [.. Modelos().SelectMany(DondeGeneraLaBase)];
+        List<string> generadas = [.. Modelos().SelectMany(modelo => Donde(modelo, EsAuditadaYDelServidor))];
 
         generadas.ShouldBeEmpty(
-            "si la base genera un valor, no se conoce hasta después del INSERT y el interceptor " +
-            "de auditoría necesita una segunda fase. Reabre el ADR-0012 antes de tocar esta lista.");
+            "si la base genera un valor QUE VA A LA TRAZA, no se conoce hasta después del INSERT " +
+            "y el interceptor de auditoría necesita una segunda fase. Reabre el ADR-0015 antes " +
+            "de tocar esta lista.");
+    }
+
+    [Fact]
+    public void Lo_unico_que_genera_el_servidor_son_los_testigos_de_concurrencia()
+    {
+        List<string> generadas = [.. Modelos().SelectMany(modelo => Donde(modelo, EsDelServidor))];
+
+        generadas.Sort(StringComparer.Ordinal);
+
+        // Las dos listas ENTERAS y en el mismo orden, no «lo que sobra»: un testigo que
+        // DESAPARECE del modelo deja ese recurso sin control de concurrencia, y eso también
+        // tiene que verse aquí.
+        string.Join(", ", generadas).ShouldBe(
+            string.Join(", ", s_generadasPorElServidor),
+            "el servidor solo genera los testigos de concurrencia del R11. Cualquier otra cosa " +
+            "—un DEFAULT, una columna calculada, un IDENTITY— vuelve a poner en duda la fase " +
+            "única del interceptor de auditoría, y eso se decide en un ADR, no aquí.");
+    }
+
+    [Fact]
+    public void Todo_lo_que_genera_el_servidor_es_de_verdad_un_testigo_de_concurrencia()
+    {
+        // Y no algo que se le PAREZCA. La lista de arriba se compara por nombre, así que una
+        // propiedad llamada `Version` con un DEFAULT en la base pasaría por testigo sin serlo:
+        // aquí se comprueba que cada una lo es por lo que la hace serlo —uint, generada en cada
+        // escritura y marcada como testigo—, que es lo que mete el valor en el WHERE del UPDATE.
+        List<string> impostoras = [.. Modelos()
+            .SelectMany(modelo => modelo.GetEntityTypes())
+            .SelectMany(tipo => tipo.GetProperties()
+                .Where(propiedad => EsDelServidor(propiedad) && !propiedad.EsElTestigo())
+                .Select(propiedad => $"{tipo.ShortName()}.{propiedad.Name}"))];
+
+        impostoras.ShouldBeEmpty("esto lo genera el servidor y no es el testigo de concurrencia");
     }
 
     [Fact]
@@ -63,24 +119,27 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         // marca así las claves que se rellenan al insertar, y quien las rellena es el generador
         // del lado del cliente —o, como aquí, el constructor del dominio, que llega con el valor
         // puesto y EF lo respeta—. Lo que sí sería un problema es una clave `OnAdd` que además
-        // dependiera del servidor, y de eso se ocupa el caso de arriba.
+        // dependiera del servidor, y de eso se ocupan los casos de arriba.
         sinClave.ShouldBeEmpty("estas claves no las pone ni el dominio ni el cliente");
     }
 
     private static bool EsClienteQuienLaPone(IProperty clave) =>
         clave.ClrType == typeof(Guid) || clave.ClrType == typeof(Guid?);
 
-    private static IEnumerable<string> DondeGeneraLaBase(IModel modelo) =>
+    private static IEnumerable<string> Donde(IModel modelo, Func<IProperty, bool> condicion) =>
         modelo.GetEntityTypes()
             .SelectMany(tipo => tipo.GetProperties()
-                .Where(EsDelServidor)
+                .Where(condicion)
                 .Select(propiedad => $"{tipo.ShortName()}.{propiedad.Name}"));
+
+    private static bool EsAuditadaYDelServidor(IProperty propiedad) =>
+        propiedad.Auditoria().Que == ClasificacionDeAuditoria.Auditada && EsDelServidor(propiedad);
 
     // Las cinco formas que tiene un valor de venir del servidor, cada una con su nombre: un
     // DEFAULT, una columna calculada, una columna IDENTITY o serial —esta es de Npgsql, y es la
     // que de verdad distingue «la pone la base» de «la pone el cliente al insertar»—, algo que se
     // regenera en cada UPDATE (la forma de un `rowversion`), y el testigo de concurrencia, que
-    // llega con el 0.9 y en PostgreSQL suele ser `xmin`.
+    // en PostgreSQL es `xmin`.
     private static bool EsDelServidor(IProperty propiedad) =>
         propiedad.GetDefaultValueSql() is not null
         || propiedad.GetComputedColumnSql() is not null

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Empresas;
 
@@ -22,16 +23,18 @@ public interface IDesbloquearEmpresa
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador de la empresa.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IDesbloquearEmpresa"/>
 internal sealed class DesbloquearEmpresa(
     IRepositorioDeEmpresas empresas,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : IDesbloquearEmpresa
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones) : IDesbloquearEmpresa
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
     {
         Empresa? empresa = await empresas.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -39,6 +42,8 @@ internal sealed class DesbloquearEmpresa(
         {
             return Resultado.Fallo(ErroresDeEmpresa.NoEncontrada(id));
         }
+
+        versiones.Exigir(empresa, version);
 
         empresa.Desbloquear();
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Almacenes;
 
@@ -14,16 +15,21 @@ public interface IDesbloquearAlmacen
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del almacén.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IDesbloquearAlmacen"/>
 internal sealed class DesbloquearAlmacen(
     IRepositorioDeAlmacenes almacenes,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : IDesbloquearAlmacen
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones) : IDesbloquearAlmacen
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(
+        Guid id,
+        VersionDeRecurso version,
+        CancellationToken cancelacion)
     {
         Almacen? almacen = await almacenes.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -31,6 +37,8 @@ internal sealed class DesbloquearAlmacen(
         {
             return Resultado.Fallo(ErroresDeAlmacen.NoEncontrado(id));
         }
+
+        versiones.Exigir(almacen, version);
 
         almacen.Desbloquear();
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

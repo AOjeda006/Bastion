@@ -192,7 +192,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("33333333P");
         using HttpClient suyo = cliente;
 
-        HttpResponseMessage borrado = await cliente.DeleteAsync($"{Empresas}/{empresa.Id}");
+        HttpResponseMessage borrado = await cliente.SuprimirAsync($"{Empresas}/{empresa.Id}");
         borrado.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         // Sigue ahí, y con su estado: el art. 32 de la LOPDGDD manda bloquear, no destruir.
@@ -208,11 +208,14 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("00000011B");
         using HttpClient suyo = cliente;
 
-        await cliente.DeleteAsync($"{Empresas}/{empresa.Id}");
+        await cliente.SuprimirAsync($"{Empresas}/{empresa.Id}");
 
         // En 0.4 desbloquear existía en el dominio y no tenía puerta HTTP: se podía bloquear y no
         // se podía deshacer. La puerta se abre en 0.5, detrás de su propio permiso.
-        HttpResponseMessage desbloqueo = await cliente.PostAsync($"{Empresas}/{empresa.Id}/desbloqueo", null);
+        HttpResponseMessage desbloqueo = await cliente.AccionarAsync(
+            $"{Empresas}/{empresa.Id}",
+            $"{Empresas}/{empresa.Id}/desbloqueo",
+            HttpMethod.Post);
 
         desbloqueo.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
@@ -228,9 +231,9 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync("44444444A");
         using HttpClient suyo = cliente;
 
-        await cliente.DeleteAsync($"{Empresas}/{empresa.Id}");
+        await cliente.SuprimirAsync($"{Empresas}/{empresa.Id}");
 
-        HttpResponseMessage respuesta = await cliente.PutAsJsonAsync(
+        HttpResponseMessage respuesta = await cliente.ModificarAsync(
             $"{Empresas}/{empresa.Id}",
             new ModificarEmpresaDto
             {
@@ -321,7 +324,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         // El token sigue siendo válido y sigue llevando esta empresa dentro. Lo que ha cambiado es
         // la empresa, y sin esta comprobación el ejercicio se crearía colgando de una empresa que
         // ya no opera —una fila que nadie sabría de dónde ha salido—.
-        (await cliente.DeleteAsync($"{Empresas}/{propia.Id}")).StatusCode
+        (await cliente.SuprimirAsync($"{Empresas}/{propia.Id}")).StatusCode
             .ShouldBe(HttpStatusCode.NoContent);
 
         HttpResponseMessage respuesta = await cliente.PostAsJsonAsync(Ejercicios, new CrearEjercicioDto
@@ -345,14 +348,20 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
 
         // El cierre es POST y la reapertura DELETE sobre el MISMO recurso `…/cierre`: el estado es
         // algo que se crea y se quita, no dos verbos inventados colgando del ejercicio.
-        (await cliente.PostAsync($"{Ejercicios}/{ejercicio.Id}/cierre", null)).StatusCode
+        (await cliente.AccionarAsync(
+            $"{Ejercicios}/{ejercicio.Id}",
+            $"{Ejercicios}/{ejercicio.Id}/cierre",
+            HttpMethod.Post)).StatusCode
             .ShouldBe(HttpStatusCode.NoContent);
 
         EjercicioDto? cerrado = await cliente.GetFromJsonAsync<EjercicioDto>($"{Ejercicios}/{ejercicio.Id}");
         cerrado.ShouldNotBeNull();
         cerrado.Estado.ShouldBe("Cerrado");
 
-        (await cliente.DeleteAsync($"{Ejercicios}/{ejercicio.Id}/cierre")).StatusCode
+        (await cliente.AccionarAsync(
+            $"{Ejercicios}/{ejercicio.Id}",
+            $"{Ejercicios}/{ejercicio.Id}/cierre",
+            HttpMethod.Delete)).StatusCode
             .ShouldBe(HttpStatusCode.NoContent);
 
         EjercicioDto? reabierto = await cliente.GetFromJsonAsync<EjercicioDto>($"{Ejercicios}/{ejercicio.Id}");
@@ -367,7 +376,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         using HttpClient suyo = cliente;
         SerieDto serie = await CrearSerie(cliente, "FAC");
 
-        HttpResponseMessage borrado = await cliente.DeleteAsync($"{Series}/{serie.Id}");
+        HttpResponseMessage borrado = await cliente.SuprimirAsync($"{Series}/{serie.Id}");
 
         borrado.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await cliente.GetAsync($"{Series}/{serie.Id}")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -390,7 +399,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
             await contexto.SaveChangesAsync();
         }
 
-        HttpResponseMessage borrado = await cliente.DeleteAsync($"{Series}/{serie.Id}");
+        HttpResponseMessage borrado = await cliente.SuprimirAsync($"{Series}/{serie.Id}");
 
         borrado.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await LeerProblema(borrado)).GetProperty("type").GetString()

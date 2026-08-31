@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Comun;
@@ -23,7 +24,7 @@ public interface IObtenerRol
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del rol.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado<RolDto>> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado<ConVersion<RolDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve una página de roles.</summary>
@@ -40,9 +41,14 @@ public interface IModificarRol
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del rol.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="peticion">Nombre y la lista ENTERA de permisos.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado<RolDto>> EjecutarAsync(Guid id, ModificarRolDto peticion, CancellationToken cancelacion);
+    Task<Resultado<RolDto>> EjecutarAsync(
+        Guid id,
+        VersionDeRecurso version,
+        ModificarRolDto peticion,
+        CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve el catálogo de permisos que se pueden conceder.</summary>
@@ -93,15 +99,17 @@ internal sealed class CrearRol(
 }
 
 /// <inheritdoc cref="IObtenerRol"/>
-internal sealed class ObtenerRol(IRepositorioDeRoles roles) : IObtenerRol
+internal sealed class ObtenerRol(
+    IRepositorioDeRoles roles,
+    IVersionesDeIdentidad versiones) : IObtenerRol
 {
-    public async Task<Resultado<RolDto>> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado<ConVersion<RolDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion)
     {
         Rol? rol = await roles.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
         return rol is null
-            ? Resultado.Fallo<RolDto>(ErroresDeRol.NoEncontrado(id))
-            : Resultado.Correcto(rol.ADto());
+            ? Resultado.Fallo<ConVersion<RolDto>>(ErroresDeRol.NoEncontrado(id))
+            : Resultado.Correcto(new ConVersion<RolDto>(rol.ADto(), versiones.De(rol)));
     }
 }
 
@@ -124,10 +132,12 @@ internal sealed class ListarRoles(IRepositorioDeRoles roles) : IListarRoles
 internal sealed class ModificarRol(
     IRepositorioDeRoles roles,
     ICatalogoDePermisos catalogo,
-    IUnidadTrabajoDeIdentidad unidadTrabajo) : IModificarRol
+    IUnidadTrabajoDeIdentidad unidadTrabajo,
+    IVersionesDeIdentidad versiones) : IModificarRol
 {
     public async Task<Resultado<RolDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarRolDto peticion,
         CancellationToken cancelacion)
     {
@@ -146,6 +156,8 @@ internal sealed class ModificarRol(
         {
             return Resultado.Fallo<RolDto>(ErroresDeRol.NoEncontrado(id));
         }
+
+        versiones.Exigir(rol, version);
 
         rol.Renombrar(peticion.Nombre);
         rol.FijarPermisos(permisos.Valor);

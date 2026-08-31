@@ -16,7 +16,20 @@ namespace Bastion.BuildingBlocks.Infrastructure.Errores;
 public static class RespuestasDeError
 {
     /// <summary>Respuesta <c>ProblemDetails</c> que corresponde a un error de operación.</summary>
-    public static IResult ARespuesta(this ErrorDeOperacion error)
+    public static IResult ARespuesta(this ErrorDeOperacion error) =>
+        new RespuestaDeProblema(error.AProblema());
+
+    /// <summary>
+    /// El <c>ProblemDetails</c> de un error de operación, sin envolver en respuesta.
+    /// </summary>
+    /// <remarks>
+    /// Lo necesitan los manejadores de excepciones, que escriben por <c>IProblemDetailsService</c>
+    /// y no devuelven un <see cref="IResult"/>. Se expone el CUERPO y no se duplica su
+    /// construcción: dos sitios que compongan un ProblemDetails son dos formatos de error el día
+    /// que uno de los dos cambie.
+    /// </remarks>
+    /// <param name="error">El desenlace fallido.</param>
+    public static ProblemDetails AProblema(this ErrorDeOperacion error)
     {
         ArgumentNullException.ThrowIfNull(error);
 
@@ -41,7 +54,7 @@ public static class RespuestasDeError
             problema.Extensions["errors"] = error.Campos;
         }
 
-        return new RespuestaDeProblema(problema);
+        return problema;
     }
 
     /// <summary>

@@ -325,7 +325,7 @@ anotan para no volver a discutirlas.
 |---|---|---|---|
 | Identidad | `identidad` | 0 | creado en el 0.5 |
 | Organización | `organizacion` | 0 | creado en el 0.4 |
-| Auditoría | `auditoria` | 0 | creado en el 0.7; desde el 0.8 acoge además las dos tablas de la bandeja de salida (ADR-0013) |
+| Auditoría | `auditoria` | 0 | creado en el 0.7; desde el 0.8 acoge además las dos tablas de la bandeja de salida (ADR-0013) y desde el 0.9 la de claves de idempotencia (ADR-0014) |
 | Terceros | `terceros` | 1 | — |
 | Catálogo | `catalogo` | 1 | — |
 | Inventario | `inventario` | 2 | — |
@@ -532,8 +532,11 @@ Todo lo de abajo está razonado en
   general la clave de un `INSERT` la pone la base. Aquí no la pone: lo verifica
   `LasClavesSeConocenAntesDeGuardarTests` sobre los modelos ya construidos, en las **cinco** formas
   que tiene un valor de venir del servidor (`DEFAULT`, columna calculada, `IDENTITY`/`serial` de
-  Npgsql, regeneración en `UPDATE`, testigo de concurrencia — el `xmin` que llega con el 0.9). Si se
-  pone rojo no se añade a una lista de excepciones: se reabre el ADR-0012.
+  Npgsql, regeneración en `UPDATE`, testigo de concurrencia — el `xmin` que llegó con el 0.9). Si se
+  pone rojo no se añade a una lista de excepciones: se reabre el ADR. **Y así ocurrió**: el 0.9
+  declaró `xmin` como testigo, el test se puso rojo como estaba escrito que haría, y la premisa se
+  reenunció en el **ADR-0015**, que sustituye al punto 2 del ADR-0012 — una decisión aceptada no se
+  edita—. La fase única sigue en pie: el testigo no va a la traza.
 - **Solo añadido lo impide el motor.** Una función `plpgsql` y **dos** disparadores sobre
   `auditoria.registros`: uno de fila `BEFORE UPDATE OR DELETE` y otro de sentencia `BEFORE TRUNCATE`
   —los de fila no ven un `TRUNCATE`, que es justo la orden con la que se vaciaría la tabla de un
@@ -784,6 +787,157 @@ pero por el motivo equivocado —un interceptor que no vuelca no es la ruta no a
 interceptor—. Con el filtro quitado también, la mutación es la que quería ser y deja **un solo**
 rojo: el del `xmin`. Sin ese test, la ruta de escribir después habría sobrevivido a la batería
 entera.
+
+
+### Tomadas por el agente de desarrollo — ítem 0.9 (2026-08-31)
+
+Todo lo de abajo está razonado en
+`docs/adr/adr-0014-la-clave-del-cliente-y-la-version-del-recurso-son-dos-mecanismos.md`.
+
+- **Son dos mecanismos, no dos niveles de uno.** La `Idempotency-Key` (R10) protege de que **una**
+  persona repita su propia petición —el móvil que pierde cobertura al enviar y reintenta solo—; el
+  `If-Match` (R11) protege de que **dos** personas pisen el mismo recurso —Ana guarda, Luis guarda
+  encima y lo de Ana desaparece sin un solo error—. Un alta no tiene versión previa que citar, así
+  que solo la protege la primera; una modificación ya la trae de su lectura, así que le basta la
+  segunda. **Ninguna acción pide las dos**, y hay un barrido que lo mantiene así.
+- **La identidad de una petición repetible es la tupla entera**: `(empresa, usuario, método, ruta,
+  clave)`, que es también la clave primaria de la tabla. Con la clave sola, dos clientes que
+  eligieran la misma —`1`, `test`, el UUID de una plantilla copiada— se cruzarían las respuestas, y
+  el segundo leería el recurso de otra empresa **como si fuera suyo**: no hay error que mirar, hay
+  un dato de otro presentado como correcto.
+- **La huella del cuerpo se calcula sobre los BYTES tal como llegaron**, antes de deserializar, y es
+  un SHA-256. Sobre el objeto ya deserializado dependería del serializador, y cambiar una opción
+  cambiaría la identidad de peticiones ya guardadas. **La contrapartida se escribe**: dos cuerpos que
+  solo difieren en espacios en blanco tienen huellas distintas, así que el segundo intento sale
+  `409` en vez de repetirse. El cuerpo **no se guarda**; se guarda su huella.
+- **Reclamar la clave es un `INSERT … ON CONFLICT DO NOTHING`,** la única sentencia cruda del
+  mecanismo. Las dos alternativas son peores: *mirar y luego insertar* reintroduce, dentro de la
+  propia implementación, la carrera que el mecanismo viene a impedir; *insertar y atrapar la
+  violación del índice* usa una excepción como flujo de control dentro de una transacción que
+  PostgreSQL deja **abortada**, así que el `catch` no puede seguir trabajando. **La excepción al
+  barrido del 0.6 se gana por su argumento**, igual que el cerrojo del 0.8: esa sentencia **no lee
+  ninguna tabla**, y la fila que escribe lleva `empresa_id` dentro de su clave primaria completa,
+  tomado del *claim*. `LaClaveDeIdempotenciaEsLaTuplaEnteraTests` comprueba que sigue siendo verdad.
+- **El recibo cae en la misma transacción que el trabajo, y el filtro es el dueño de esa
+  transacción.** La invariante es «la fila existe si y solo si el trabajo ocurrió»: solo se guarda
+  la respuesta de un `2xx`, y un fallo deja la clave libre para que el mismo reintento pueda salir
+  bien. Guardar el recibo de un `409` dejaría al cliente atrapado con la clave quemada.
+- **Y la transacción va SIN puntos de guardado automáticos** (`AutoSavepointsEnabled = false`). No es
+  afinar: con ellos, un `SaveChanges` que falla vuelve al punto de guardado y **deja viva** la
+  transacción con la clave ya reclamada dentro. Sin ellos, aborta entera y no hay nada que confirmar:
+  la invariante deja de depender de que el filtro se acuerde. El precio está dicho en el ADR.
+- **Los almacenes se registran con clave** (`AddKeyedScoped`), y la clave es el segmento de módulo de
+  la ruta —que es también el nombre de su esquema—. Registrados bajo el tipo a secas, el último
+  módulo desplazaría a los demás y las claves de Organización se apuntarían en la transacción de
+  Identidad: dos transacciones para un trabajo que tenía que ser uno, sin error y sin rastro.
+- **El testigo de concurrencia es `xmin`**, declarado como propiedad de sombra `Version`. No es un
+  contador nuestro, así que no hay que mantenerlo. **La trampa se comprobó antes de diseñar**: por un
+  camino con `AsNoTracking()`, leer el testigo devuelve **`0` sin lanzar nada** —EF adjunta la
+  entidad en ese momento y la sombra nace a cero—, y ese cero saldría dentro de un `ETag`
+  convirtiendo todo `If-Match` en un `412` perpetuo. `Versiones.De` comprueba el rastreo antes de
+  preguntar y falla ruidosamente.
+- **Las migraciones del testigo existen y no emiten SQL.** El diferenciador escribe un `AddColumn`
+  porque ve una columna nueva, pero `xmin` ya está en toda tabla de PostgreSQL:
+  `dotnet ef migrations script` sobre ellas produce **solo** el `INSERT` en el historial. Se conservan
+  para que modelo y migraciones sigan cuadrando.
+- **El `412` sale de la política central**, de un `IExceptionHandler` que traduce
+  `DbUpdateConcurrencyException`, y no de un `catch` por acción: el que faltara devolvería un `500`
+  que el cliente reintentaría tal cual, machacando lo que el otro escribió.
+- **El estado actual del conflicto se sirve como versión y en el CUERPO**, en la extensión
+  `versionActual`. La cabecera `ETag` era el primer diseño y **no llega**: el middleware de
+  excepciones de ASP.NET Core la borra de toda respuesta de error. Y hace bien —el `ETag` etiqueta
+  la representación que va en esa respuesta, que en un `412` es un documento de problema—, así que
+  no se le busca la vuelta con otro nombre de cabecera.
+- **El comodín `If-Match: *` no se admite**, aunque el RFC lo defina: significa «me vale cualquier
+  versión con tal de que el recurso exista», que es saltarse el control entero sin dejar de cumplir
+  el protocolo.
+- **Una cabecera presente y vacía es un `400`, no una petición sin proteger.** «Sin cabecera» es que
+  no venga, y se pregunta por el número de valores, no por si el texto está en blanco. Lo encontró
+  un test: el filtro trataba una clave en blanco como ausente y atendía la petición sin protección
+  ninguna, que es el cliente creyéndose protegido y duplicando al reintentar.
+
+#### Qué recurso lleva qué, decidido con un barrido y no de memoria
+
+`TodaEscrituraDiceComoSeProtegeTests` recorre por reflexión los dos ensamblados de *endpoints*.
+Hoy: **46 acciones**, de ellas **32** cambian estado — **16** exigen `If-Match`, **6** admiten
+`Idempotency-Key` y **10** están exentas con su motivo escrito. Los números están fijados en el
+propio test: un barrido cuya enumeración devuelva nada saldría verde por la peor de las razones.
+
+**Los seis recursos que emiten `ETag` en su lectura por identificador:**
+
+| Recurso | Ruta del `GET` que emite el `ETag` |
+|---|---|
+| Almacén | `GET /api/v1/organizacion/almacenes/{id}` |
+| Ejercicio | `GET /api/v1/organizacion/ejercicios/{id}` |
+| Empresa | `GET /api/v1/organizacion/empresas/{id}` |
+| Serie | `GET /api/v1/organizacion/series/{id}` |
+| Rol | `GET /api/v1/identidad/roles/{id}` |
+| Usuario | `GET /api/v1/identidad/usuarios/{id}` |
+
+Los listados **no** lo emiten: un `ETag` sobre una página sería el de la página, no el de cada
+elemento, y un cliente que lo devolviera en un `If-Match` estaría citando una versión que no es la
+del recurso que escribe.
+
+**Las dieciséis operaciones que exigen `If-Match`:**
+
+| Recurso | Operaciones |
+|---|---|
+| Almacén | `PUT /{id}`, `DELETE /{id}` (bloqueo), `POST /{id}/desbloqueo` |
+| Ejercicio | `PUT /{id}`, `DELETE /{id}`, `POST /{id}/cierre`, `DELETE /{id}/cierre` |
+| Empresa | `PUT /{id}`, `DELETE /{id}` (bloqueo), `POST /{id}/desbloqueo` |
+| Serie | `PUT /{id}`, `DELETE /{id}` |
+| Rol | `PUT /{id}` |
+| Usuario | `PUT /{id}`, `DELETE /{id}` (bloqueo), `POST /{id}/desbloqueo` |
+
+Las subrutas —el bloqueo, el cierre— citan la versión **del recurso**, no una suya: no son otro
+recurso, son otra puerta al mismo. Es lo que hace que bloquear un almacén y modificarlo compitan por
+la misma versión, que es lo que se quiere.
+
+**Las seis rutas que admiten `Idempotency-Key`** — las seis altas, y solo ellas:
+
+| Ruta | Módulo | Almacén que la atiende |
+|---|---|---|
+| `POST /api/v1/organizacion/almacenes` | `organizacion` | `AlmacenDeIdempotenciaDeOrganizacion` |
+| `POST /api/v1/organizacion/ejercicios` | `organizacion` | ídem |
+| `POST /api/v1/organizacion/empresas` | `organizacion` | ídem |
+| `POST /api/v1/organizacion/series` | `organizacion` | ídem |
+| `POST /api/v1/identidad/roles` | `identidad` | `AlmacenDeIdempotenciaDeIdentidad` |
+| `POST /api/v1/identidad/usuarios` | `identidad` | ídem |
+
+**Y las diez exentas, con el motivo resumido** (el entero está en el test):
+
+| Acción | Por qué |
+|---|---|
+| `Sesiones.Iniciar` | Anónima por definición: no hay tupla (empresa, usuario) con la que formar clave, y su respuesta lleva credenciales dentro |
+| `Sesiones.Renovar` | Lo mismo, y encima el refresco YA es de un solo uso: la protección está en el dominio |
+| `Sesiones.Cerrar` | Cerrar una sesión cerrada es cerrarla; y es anónima a propósito, para poder cerrar con un token caducado |
+| `Sesiones.CambiarEmpresa` | Emite un token nuevo; repetirlo emite otro igual de válido y no acumula nada |
+| `Usuarios.CambiarContrasenaPropia` | Mismo estado al repetirse, y su precondición ya viaja en el cuerpo: hay que presentar la contraseña de ahora |
+| `Usuarios.Restablecer` | Mismo estado al repetirse; y su cuerpo ES la contraseña nueva, así que no se le invita a reintentar desde donde sea |
+| `Usuarios.Conceder` / `Usuarios.AsignarRol` | Repetirlo choca con su clave: `409`, no un segundo efecto. Y un `If-Match` **sobre el usuario** no protegería la fila que se toca — una cabecera que parece proteger sin proteger es peor que no tenerla |
+| `Usuarios.Retirar` / `Usuarios.RetirarRol` | Retirar lo que ya no está es un `404`, no un segundo efecto; mismo motivo para el `If-Match` |
+
+#### La prueba fuerte del 0.9: siete mutaciones, y la que no llegó a mutar
+
+Cada una se aplicó sobre el árbol verde, se compiló, se corrió la tanda que le tocaba y se revirtió.
+
+| Mutación | Qué se rompió | Resultado |
+|---|---|---|
+| Quitar `empresa_id` del `ON CONFLICT` de la sentencia cruda | La excepción al barrido del 0.6 deja de ser cierta | **3 rojos** en `LaClaveDeIdempotenciaEsLaTuplaEnteraTests`; los otros 5 verdes |
+| Guardar el recibo también cuando el trabajo falla (`exito = true`) | La clave se quema con un intento rechazado | **1 rojo, y solo uno:** `Un_alta_rechazada_deja_la_clave_libre_para_el_reintento` |
+| Devolver los puntos de guardado automáticos de EF Core | El recibo y el trabajo dejan de compartir transacción visible | **1 rojo:** `El_recibo_y_el_almacen_llevan_el_mismo_xmin` |
+| Aceptar el comodín `If-Match: *` | Se puede saltar el control cumpliendo el protocolo | **1 rojo:** la fila `*` de la teoría del `400`; las otras cuatro verdes |
+| Que `Versiones.Exigir` no meta la versión en el `WHERE` | La actualización perdida vuelve entera | **3 rojos:** el `412`, los dos escritores simultáneos y «tras un 412, ni traza ni evento» |
+| Comparar la **longitud** de la huella en vez de la huella | La segunda vez se atiende como si fuera la primera | **1 rojo:** `La_misma_clave_con_otro_cuerpo_es_409` |
+| Quitar `[AdmiteIdempotencia]` de `SeriesController.Crear` | El barrido deja de ver una ruta que sí estaba protegida | **2 rojos** en `TodaEscrituraDiceComoSeProtegeTests`, incluido el que fija el inventario |
+
+**Ninguna sobrevivió. Y una hubo que rehacerla porque no llegó a mutar**, que es la distinción que
+separa una batería de un ritual. La sexta iba a ser `CoincideElCuerpo(huella) => true`, y **no
+compiló**: CA1822 —«el miembro no accede a datos de instancia y puede marcarse como `static`»— está
+tratado como error en este proyecto. Sin mirar la salida de la compilación, esa mutación se habría
+apuntado como «cero rojos, sobrevive» y habría acusado a los tests de un agujero que no tenían.
+Rehecha como `Huella.Length == huella.Length` —que sí compila, y siempre es verdad porque las dos
+son SHA-256 en hexadecimal— mata el test que tenía que matar.
 
 
 ## Estado actual

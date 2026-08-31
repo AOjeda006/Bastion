@@ -1,4 +1,6 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Microsoft.AspNetCore.Mvc;
 
@@ -80,4 +82,34 @@ public abstract class ControladorDeOrganizacion : ControllerBase
             ? CreatedAtAction(accionDeConsulta, new { id = id(resultado.Valor) }, resultado.Valor)
             : resultado.Error!.AResultadoDeAccion();
     }
+
+    /// <summary>
+    /// Publica un recurso leído con su <c>ETag</c>, que es lo que el cliente devolverá en
+    /// <c>If-Match</c> cuando lo escriba.
+    /// </summary>
+    /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>
+    /// <param name="resultado">Desenlace de la lectura.</param>
+    protected IActionResult ResponderConVersion<T>(Resultado<ConVersion<T>> resultado) =>
+        RespuestasConVersion.ConEtiqueta(this, resultado);
+
+    /// <summary>
+    /// Ejecuta una escritura sobre la versión que exige la petición: sin <c>If-Match</c> responde
+    /// <c>428</c>, con una cabecera ilegible <c>400</c>, y si la versión ya no es la actual el
+    /// guardado falla y la política central responde <c>412</c>.
+    /// </summary>
+    /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>
+    /// <param name="ifMatch">Valor de la cabecera <c>If-Match</c>.</param>
+    /// <param name="operacion">La escritura, que recibe la versión ya leída.</param>
+    protected Task<IActionResult> ResponderExigiendoVersionAsync<T>(
+        string? ifMatch,
+        Func<VersionDeRecurso, Task<Resultado<T>>> operacion) =>
+        RespuestasConVersion.ExigiendoVersionAsync(this, ifMatch, operacion);
+
+    /// <summary>Lo mismo, para una escritura que no devuelve nada.</summary>
+    /// <param name="ifMatch">Valor de la cabecera <c>If-Match</c>.</param>
+    /// <param name="operacion">La escritura, que recibe la versión ya leída.</param>
+    protected Task<IActionResult> ResponderSinContenidoExigiendoVersionAsync(
+        string? ifMatch,
+        Func<VersionDeRecurso, Task<Resultado>> operacion) =>
+        RespuestasConVersion.ExigiendoVersionSinContenidoAsync(this, ifMatch, operacion);
 }

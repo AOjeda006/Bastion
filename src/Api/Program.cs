@@ -10,6 +10,7 @@ using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
 using Bastion.Identidad.Contracts;
@@ -158,6 +159,12 @@ builder.Services.AgregarAuditoria();
 // publicador sondeando sería un error por vuelta desde el arranque, y ese ruido esconde los
 // errores de verdad.
 builder.Services.AgregarBandejaDeSalida(publica: cadenaDeConexion.Length > 0);
+
+// R10. Pone el filtro de idempotencia en la tubería de MVC, para TODAS las acciones: solo unas
+// pocas admiten la cabecera, pero el filtro tiene que ver también las que no para poder
+// contestarles 400 en vez de tragarse la cabecera y dejar al cliente creyendo que su reintento
+// está protegido. El almacén de cada módulo se registra en la línea de ese módulo, con su clave.
+builder.Services.AgregarIdempotencia();
 
 builder.Services.AgregarModuloDeAuditoria(cadenaDeConexion);
 builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion);

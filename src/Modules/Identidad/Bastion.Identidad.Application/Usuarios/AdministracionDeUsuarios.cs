@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Comun;
 using Bastion.Identidad.Application.Sesiones;
@@ -12,10 +13,12 @@ public interface IModificarUsuario
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del usuario.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="peticion">Lo que se cambia.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<Resultado<UsuarioDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarUsuarioDto peticion,
         CancellationToken cancelacion);
 }
@@ -39,8 +42,9 @@ public interface IBloquearUsuario
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del usuario.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve a un usuario bloqueado a la actividad.</summary>
@@ -53,17 +57,20 @@ public interface IDesbloquearUsuario
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del usuario.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IModificarUsuario"/>
 internal sealed class ModificarUsuario(
     IRepositorioDeUsuarios usuarios,
-    IUnidadTrabajoDeIdentidad unidadTrabajo) : IModificarUsuario
+    IUnidadTrabajoDeIdentidad unidadTrabajo,
+    IVersionesDeIdentidad versiones) : IModificarUsuario
 {
     public async Task<Resultado<UsuarioDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarUsuarioDto peticion,
         CancellationToken cancelacion)
     {
@@ -75,6 +82,8 @@ internal sealed class ModificarUsuario(
         {
             return Resultado.Fallo<UsuarioDto>(ErroresDeUsuario.NoEncontrado(id));
         }
+
+        versiones.Exigir(usuario, version);
 
         usuario.Renombrar(peticion.Nombre);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
@@ -88,9 +97,13 @@ internal sealed class BloquearUsuario(
     IRepositorioDeUsuarios usuarios,
     IRepositorioDeTokensDeRefresco tokens,
     IUnidadTrabajoDeIdentidad unidadTrabajo,
+    IVersionesDeIdentidad versiones,
     TimeProvider reloj) : IBloquearUsuario
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(
+        Guid id,
+        VersionDeRecurso version,
+        CancellationToken cancelacion)
     {
         Usuario? usuario = await usuarios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -98,6 +111,8 @@ internal sealed class BloquearUsuario(
         {
             return Resultado.Fallo(ErroresDeUsuario.NoEncontrado(id));
         }
+
+        versiones.Exigir(usuario, version);
 
         DateTimeOffset ahora = reloj.GetUtcNow();
         usuario.Bloquear(ahora);
@@ -117,9 +132,13 @@ internal sealed class BloquearUsuario(
 /// <inheritdoc cref="IDesbloquearUsuario"/>
 internal sealed class DesbloquearUsuario(
     IRepositorioDeUsuarios usuarios,
-    IUnidadTrabajoDeIdentidad unidadTrabajo) : IDesbloquearUsuario
+    IUnidadTrabajoDeIdentidad unidadTrabajo,
+    IVersionesDeIdentidad versiones) : IDesbloquearUsuario
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(
+        Guid id,
+        VersionDeRecurso version,
+        CancellationToken cancelacion)
     {
         Usuario? usuario = await usuarios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -127,6 +146,8 @@ internal sealed class DesbloquearUsuario(
         {
             return Resultado.Fallo(ErroresDeUsuario.NoEncontrado(id));
         }
+
+        versiones.Exigir(usuario, version);
 
         usuario.Desbloquear();
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

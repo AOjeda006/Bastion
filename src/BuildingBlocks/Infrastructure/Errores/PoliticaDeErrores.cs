@@ -36,6 +36,10 @@ public static class PoliticaDeErrores
 
         servicios.AddProblemDetails(opciones => opciones.CustomizeProblemDetails =
             contexto => Completar(contexto.ProblemDetails, contexto.HttpContext));
+        // El choque de concurrencia va PRIMERO: los manejadores se prueban en orden de
+        // inscripción y el general atrapa cualquier excepción. Registrado después, no llegaría a
+        // ejecutarse nunca y todo 412 saldría como 500.
+        servicios.AddExceptionHandler<ManejadorDeVersionObsoleta>();
         servicios.AddExceptionHandler<ManejadorDeExcepcionesNoControladas>();
 
         // Y el 400 automático de `[ApiController]`, que MVC compone por su cuenta y por fuera de
@@ -82,6 +86,8 @@ public static class PoliticaDeErrores
         TipoDeError.PermisoDenegado => StatusCodes.Status403Forbidden,
         TipoDeError.NoEncontrado => StatusCodes.Status404NotFound,
         TipoDeError.Conflicto => StatusCodes.Status409Conflict,
+        TipoDeError.VersionObsoleta => StatusCodes.Status412PreconditionFailed,
+        TipoDeError.FaltaLaVersion => StatusCodes.Status428PreconditionRequired,
         TipoDeError.ReglaDeNegocio => StatusCodes.Status422UnprocessableEntity,
         _ => throw new NotSupportedException($"No hay código de estado definido para {tipo}."),
     };
@@ -94,6 +100,8 @@ public static class PoliticaDeErrores
         TipoDeError.PermisoDenegado => "Permiso denegado",
         TipoDeError.NoEncontrado => "Recurso no encontrado",
         TipoDeError.Conflicto => "Conflicto con el estado actual",
+        TipoDeError.VersionObsoleta => "La versión ya no es la actual",
+        TipoDeError.FaltaLaVersion => "Falta la precondición de versión",
         TipoDeError.ReglaDeNegocio => "Regla de negocio incumplida",
         _ => throw new NotSupportedException($"No hay título definido para {tipo}."),
     };

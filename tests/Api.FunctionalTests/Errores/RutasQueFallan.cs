@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Microsoft.AspNetCore.Authorization;
@@ -41,6 +42,8 @@ internal sealed class RutasQueFallan : IStartupFilter
     internal const string Permiso = "/pruebas/errores/permiso";
     internal const string Validacion = "/pruebas/errores/validacion";
     internal const string NoAutenticado = "/pruebas/errores/no-autenticado";
+    internal const string VersionObsoleta = "/pruebas/errores/version-obsoleta";
+    internal const string FaltaLaVersion = "/pruebas/errores/falta-la-version";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => aplicacion =>
     {
@@ -92,6 +95,13 @@ internal sealed class RutasQueFallan : IStartupFilter
                 "fecha-fuera-de-ejercicio", "La fecha no cae dentro de un ejercicio abierto.")),
             NoAutenticado => Responder(contexto, ErrorDeOperacion.NoAutenticado(
                 "sesion-caducada", "Su sesión ha caducado. Vuelva a iniciarla.")),
+
+            // Las dos de concurrencia se sirven por sus fábricas de verdad, y no por un
+            // ErrorDeOperacion escrito aquí a mano: así lo que se ejercita es el código que
+            // publican los 412 y los 428 reales, y cambiarlo rompe aquí.
+            VersionObsoleta => Responder(
+                contexto, ErroresDeConcurrencia.Obsoleta(new VersionDeRecurso(756))),
+            FaltaLaVersion => Responder(contexto, ErroresDeConcurrencia.FaltaLaCabecera()),
 
             _ => Task.CompletedTask,
         };

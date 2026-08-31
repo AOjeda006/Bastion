@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Organizacion.Domain.Empresas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -18,6 +19,8 @@ internal sealed class ConfiguracionDeEmpresa : IEntityTypeConfiguration<Empresa>
         // la bloqueo son las tres preguntas que una inspeccion hace primero.
         empresa.SeAudita();
         empresa.HasKey(fila => fila.Id);
+
+        empresa.LlevaTestigoDeConcurrencia();
 
         // `varchar(9)` y no `text`: nueve no es una estimación de comodidad, es la longitud del
         // identificador fiscal. Es el caso de libro en el que el tope pertenece al esquema.

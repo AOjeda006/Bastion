@@ -80,7 +80,7 @@ public sealed class UnCambioEnUnMaestroDejaSuRastroTests(PostgresConTodosLosModu
 
         AlmacenDto almacen = await CrearAlmacenAsync(cliente, "RASTRO-MOD");
 
-        HttpResponseMessage cambio = await cliente.PutAsJsonAsync(
+        HttpResponseMessage cambio = await cliente.ModificarAsync(
             $"{Almacenes}/{almacen.Id}",
             new ModificarAlmacenDto
             {
@@ -113,7 +113,7 @@ public sealed class UnCambioEnUnMaestroDejaSuRastroTests(PostgresConTodosLosModu
         AlmacenDto almacen = await CrearAlmacenAsync(cliente, "RASTRO-IGUAL");
 
         // El mismo cuerpo con el que se creó: la fila queda como estaba.
-        HttpResponseMessage cambio = await cliente.PutAsJsonAsync(
+        HttpResponseMessage cambio = await cliente.ModificarAsync(
             $"{Almacenes}/{almacen.Id}",
             new ModificarAlmacenDto
             {

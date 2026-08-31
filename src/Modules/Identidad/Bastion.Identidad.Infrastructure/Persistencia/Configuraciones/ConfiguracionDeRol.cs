@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Identidad.Domain.Roles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -16,6 +17,8 @@ internal sealed class ConfiguracionDeRol : IEntityTypeConfiguration<Rol>
         // Un rol es un juego de poderes. Cambiarlo cambia lo que puede hacer todo el que lo tenga.
         rol.SeAudita();
         rol.HasKey(fila => fila.Id);
+
+        rol.LlevaTestigoDeConcurrencia();
 
         rol.Property(fila => fila.Codigo)
             .HasMaxLength(Rol.LongitudDelCodigo)

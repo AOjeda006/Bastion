@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Organizacion.Domain.Ejercicios;
 using Bastion.Organizacion.Domain.Empresas;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,8 @@ internal sealed class ConfiguracionDeEjercicio : IEntityTypeConfiguration<Ejerci
         // cerrar o mover las fechas de un ejercicio es un cambio con consecuencias fiscales.
         ejercicio.SeAudita();
         ejercicio.HasKey(fila => fila.Id);
+
+        ejercicio.LlevaTestigoDeConcurrencia();
 
         // R8: la columna de empresa está desde la primera tabla. El filtro global que la aplica
         // en toda consulta es del ítem 0.6; añadir la columna después obligaría a tocar todas

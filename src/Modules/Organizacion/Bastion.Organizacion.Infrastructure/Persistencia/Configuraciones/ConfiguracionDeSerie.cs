@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Organizacion.Domain.Ejercicios;
 using Bastion.Organizacion.Domain.Empresas;
 using Bastion.Organizacion.Domain.Series;
@@ -18,6 +19,8 @@ internal sealed class ConfiguracionDeSerie : IEntityTypeConfiguration<Serie>
         // Maestro, y el mas delicado de los tres: la numeracion de una serie es legal (R5).
         serie.SeAudita();
         serie.HasKey(fila => fila.Id);
+
+        serie.LlevaTestigoDeConcurrencia();
 
         serie.Property(fila => fila.EmpresaId).IsRequired().SeAudita();
         serie.Property(fila => fila.EjercicioId).IsRequired().SeAudita();

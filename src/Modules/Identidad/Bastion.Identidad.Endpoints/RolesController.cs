@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Identidad.Application.Roles;
 using Bastion.Identidad.Contracts;
 using Bastion.Identidad.Contracts.Comun;
@@ -61,12 +62,13 @@ public sealed class RolesController(
     [ProducesResponseType(typeof(RolDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Obtener(Guid id, CancellationToken cancelacion) =>
-        Responder(await obtener.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+        ResponderConVersion(await obtener.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
 
     /// <summary>Crea un rol con su lista de permisos.</summary>
     /// <param name="peticion">Código, nombre y permisos.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost]
+    [AdmiteIdempotencia]
     [ExigePermiso(PermisosDeIdentidad.RolCrear)]
     [ProducesResponseType(typeof(RolDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -85,6 +87,7 @@ public sealed class RolesController(
     /// que modificar uno le cambia los permisos a todos los que ya lo tienen asignado.
     /// </remarks>
     /// <param name="id">Identificador del rol.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="peticion">Nombre y la lista ENTERA de permisos.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPut("{id:guid}")]
@@ -92,9 +95,14 @@ public sealed class RolesController(
     [ProducesResponseType(typeof(RolDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Modificar(
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Modificar(
         Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
         [FromBody] ModificarRolDto peticion,
         CancellationToken cancelacion) =>
-        Responder(await modificar.EjecutarAsync(id, peticion, cancelacion).ConfigureAwait(false));
+        ResponderExigiendoVersionAsync(
+            ifMatch,
+            version => modificar.EjecutarAsync(id, version, peticion, cancelacion));
 }

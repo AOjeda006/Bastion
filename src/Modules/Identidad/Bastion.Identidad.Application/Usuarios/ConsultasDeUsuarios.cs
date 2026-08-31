@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Comun;
 using Bastion.Identidad.Application.Roles;
@@ -15,7 +16,7 @@ public interface IObtenerUsuario
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del usuario.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado<UsuarioDto>> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado<ConVersion<UsuarioDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve una página de usuarios de la empresa activa.</summary>
@@ -37,15 +38,17 @@ public interface IListarPertenencias
 }
 
 /// <inheritdoc cref="IObtenerUsuario"/>
-internal sealed class ObtenerUsuario(IRepositorioDeUsuarios usuarios) : IObtenerUsuario
+internal sealed class ObtenerUsuario(
+    IRepositorioDeUsuarios usuarios,
+    IVersionesDeIdentidad versiones) : IObtenerUsuario
 {
-    public async Task<Resultado<UsuarioDto>> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado<ConVersion<UsuarioDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion)
     {
         Usuario? usuario = await usuarios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
         return usuario is null
-            ? Resultado.Fallo<UsuarioDto>(ErroresDeUsuario.NoEncontrado(id))
-            : Resultado.Correcto(usuario.ADto());
+            ? Resultado.Fallo<ConVersion<UsuarioDto>>(ErroresDeUsuario.NoEncontrado(id))
+            : Resultado.Correcto(new ConVersion<UsuarioDto>(usuario.ADto(), versiones.De(usuario)));
     }
 }
 

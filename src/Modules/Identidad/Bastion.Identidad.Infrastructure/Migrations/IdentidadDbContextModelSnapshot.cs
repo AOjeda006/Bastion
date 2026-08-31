@@ -23,6 +23,179 @@ namespace Bastion.Identidad.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Bastion.BuildingBlocks.Infrastructure.Auditoria.RegistroDeAuditoria", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Cambio")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("cambio");
+
+                    b.Property<Guid>("CorrelacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlacion_id");
+
+                    b.Property<Guid?>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Entidad")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("entidad");
+
+                    b.Property<string>("EntidadId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("entidad_id");
+
+                    b.Property<DateTimeOffset>("OcurridoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ocurrido_en");
+
+                    b.Property<string>("SinInquilino")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("sin_inquilino");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<string>("Valores")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("valores");
+
+                    b.HasKey("Id")
+                        .HasName("pk_registros");
+
+                    b.HasIndex("CorrelacionId")
+                        .HasDatabaseName("ix_registros_correlacion_id");
+
+                    b.HasIndex("OcurridoEn")
+                        .HasDatabaseName("ix_registros_ocurrido_en");
+
+                    b.HasIndex("Entidad", "EntidadId")
+                        .HasDatabaseName("ix_registros_entidad_entidad_id");
+
+                    b.ToTable("registros", "auditoria", t =>
+                        {
+                            t.ExcludeFromMigrations();
+
+                            t.HasCheckConstraint("ck_registros_empresa_o_motivo", "(empresa_id IS NULL) <> (sin_inquilino IS NULL)");
+                        });
+
+                    b.HasAnnotation("Bastion:Auditoria", "NoAuditada|es la traza; auditarla sería recursión, no información");
+                });
+
+            modelBuilder.Entity("Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida.EventoDeLaBandeja", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Cuerpo")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("cuerpo");
+
+                    b.Property<Guid?>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("estado");
+
+                    b.Property<Guid>("EventoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evento_id");
+
+                    b.Property<int>("Intentos")
+                        .HasColumnType("integer")
+                        .HasColumnName("intentos");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("nombre");
+
+                    b.Property<DateTimeOffset>("OcurridoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ocurrido_en");
+
+                    b.Property<DateTimeOffset?>("PublicadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("publicado_en");
+
+                    b.Property<string>("SinInquilino")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("sin_inquilino");
+
+                    b.Property<string>("UltimoError")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("ultimo_error");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bandeja_de_salida");
+
+                    b.HasIndex("EventoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bandeja_evento_id");
+
+                    b.HasIndex("Estado", "Id")
+                        .HasDatabaseName("ix_bandeja_de_salida_estado_id");
+
+                    b.ToTable("bandeja_de_salida", "auditoria", t =>
+                        {
+                            t.ExcludeFromMigrations();
+
+                            t.HasCheckConstraint("ck_bandeja_empresa_o_motivo", "(empresa_id IS NULL) <> (sin_inquilino IS NULL)");
+                        });
+
+                    b.HasAnnotation("Bastion:Auditoria", "NoAuditada|es la cola de eventos; publicarlos es fontanería, no un cambio de datos");
+                });
+
+            modelBuilder.Entity("Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida.EventoProcesado", b =>
+                {
+                    b.Property<Guid>("EventoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evento_id");
+
+                    b.Property<string>("Consumidor")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("consumidor");
+
+                    b.Property<DateTimeOffset>("ProcesadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("procesado_en");
+
+                    b.HasKey("EventoId", "Consumidor")
+                        .HasName("pk_eventos_procesados");
+
+                    b.ToTable("eventos_procesados", "auditoria", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+
+                    b.HasAnnotation("Bastion:Auditoria", "NoAuditada|es la huella de que un consumidor ya pasó; no es un cambio de datos");
+                });
+
             modelBuilder.Entity("Bastion.Identidad.Domain.Roles.PermisoDeRol", b =>
                 {
                     b.Property<Guid>("RolId")
@@ -38,6 +211,8 @@ namespace Bastion.Identidad.Infrastructure.Migrations
                         .HasName("pk_permisos_de_rol");
 
                     b.ToTable("permisos_de_rol", "identidad");
+
+                    b.HasAnnotation("Bastion:Auditoria", "Auditada|");
                 });
 
             modelBuilder.Entity("Bastion.Identidad.Domain.Roles.Rol", b =>
@@ -51,16 +226,26 @@ namespace Bastion.Identidad.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
-                        .HasColumnName("codigo");
+                        .HasColumnName("codigo")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<bool>("EsDelSistema")
                         .HasColumnType("boolean")
-                        .HasColumnName("es_del_sistema");
+                        .HasColumnName("es_del_sistema")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("nombre");
+                        .HasColumnName("nombre")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin")
+                        .HasAnnotation("Bastion:Auditoria", "NoAuditada|es el testigo de concurrencia (xmin): lo pone PostgreSQL en cada escritura y no es un dato del negocio. Auditar su cambio sería anotar que hubo un cambio en la misma fila que ya anota cuál fue.");
 
                     b.HasKey("Id")
                         .HasName("pk_roles");
@@ -70,6 +255,8 @@ namespace Bastion.Identidad.Infrastructure.Migrations
                         .HasDatabaseName("ix_roles_codigo");
 
                     b.ToTable("roles", "identidad");
+
+                    b.HasAnnotation("Bastion:Auditoria", "Auditada|");
                 });
 
             modelBuilder.Entity("Bastion.Identidad.Domain.Sesiones.TokenDeRefresco", b =>
@@ -135,6 +322,8 @@ namespace Bastion.Identidad.Infrastructure.Migrations
                         .HasDatabaseName("ix_tokens_de_refresco_usuario_id");
 
                     b.ToTable("tokens_de_refresco", "identidad");
+
+                    b.HasAnnotation("Bastion:Auditoria", "NoAuditada|emision de refresco: rota cada quince minutos y lleva un resumen de credencial. El acceso deja traza en Usuario.UltimoAccesoEn, que es el dato que interesa.");
                 });
 
             modelBuilder.Entity("Bastion.Identidad.Domain.Usuarios.Membresia", b =>
@@ -146,11 +335,13 @@ namespace Bastion.Identidad.Infrastructure.Migrations
 
                     b.Property<Guid>("EmpresaId")
                         .HasColumnType("uuid")
-                        .HasColumnName("empresa_id");
+                        .HasColumnName("empresa_id")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<Guid>("UsuarioId")
                         .HasColumnType("uuid")
-                        .HasColumnName("usuario_id");
+                        .HasColumnName("usuario_id")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.HasKey("Id")
                         .HasName("pk_membresias");
@@ -160,6 +351,8 @@ namespace Bastion.Identidad.Infrastructure.Migrations
                         .HasDatabaseName("ix_membresias_usuario_id_empresa_id");
 
                     b.ToTable("membresias", "identidad");
+
+                    b.HasAnnotation("Bastion:Auditoria", "Auditada|");
                 });
 
             modelBuilder.Entity("Bastion.Identidad.Domain.Usuarios.RolDeMembresia", b =>
@@ -176,6 +369,8 @@ namespace Bastion.Identidad.Infrastructure.Migrations
                         .HasName("pk_roles_de_membresia");
 
                     b.ToTable("roles_de_membresia", "identidad");
+
+                    b.HasAnnotation("Bastion:Auditoria", "Auditada|");
                 });
 
             modelBuilder.Entity("Bastion.Identidad.Domain.Usuarios.Usuario", b =>
@@ -187,44 +382,60 @@ namespace Bastion.Identidad.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("BloqueadoEn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("bloqueado_en");
+                        .HasColumnName("bloqueado_en")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<string>("Correo")
                         .IsRequired()
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)")
-                        .HasColumnName("correo");
+                        .HasColumnName("correo")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("creado_en");
+                        .HasColumnName("creado_en")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("estado");
+                        .HasColumnName("estado")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<string>("HashDeContrasena")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("hash_de_contrasena");
+                        .HasColumnName("hash_de_contrasena")
+                        .HasAnnotation("Bastion:Auditoria", "Secreta|resumen de credencial: el historial de resumenes es un boton de ataque");
 
                     b.Property<int>("IntentosFallidos")
                         .HasColumnType("integer")
-                        .HasColumnName("intentos_fallidos");
+                        .HasColumnName("intentos_fallidos")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("nombre");
+                        .HasColumnName("nombre")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<DateTimeOffset?>("RechazadoHasta")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("rechazado_hasta");
+                        .HasColumnName("rechazado_hasta")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<DateTimeOffset?>("UltimoAccesoEn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("ultimo_acceso_en");
+                        .HasColumnName("ultimo_acceso_en")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin")
+                        .HasAnnotation("Bastion:Auditoria", "NoAuditada|es el testigo de concurrencia (xmin): lo pone PostgreSQL en cada escritura y no es un dato del negocio. Auditar su cambio sería anotar que hubo un cambio en la misma fila que ya anota cuál fue.");
 
                     b.HasKey("Id")
                         .HasName("pk_usuarios");
@@ -234,6 +445,8 @@ namespace Bastion.Identidad.Infrastructure.Migrations
                         .HasDatabaseName("ix_usuarios_correo");
 
                     b.ToTable("usuarios", "identidad");
+
+                    b.HasAnnotation("Bastion:Auditoria", "Auditada|");
                 });
 
             modelBuilder.Entity("Bastion.Identidad.Domain.Roles.PermisoDeRol", b =>

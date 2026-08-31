@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Organizacion.Application.Ejercicios;
 using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Contracts.Comun;
@@ -42,12 +43,13 @@ public sealed class EjerciciosController(
     [ProducesResponseType(typeof(EjercicioDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Obtener(Guid id, CancellationToken cancelacion) =>
-        Responder(await obtener.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+        ResponderConVersion(await obtener.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
 
     /// <summary>Abre un ejercicio.</summary>
     /// <param name="peticion">Datos del ejercicio.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost]
+    [AdmiteIdempotencia]
     [ExigePermiso(PermisosDeOrganizacion.EjercicioCrear)]
     [ProducesResponseType(typeof(EjercicioDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -62,6 +64,7 @@ public sealed class EjerciciosController(
 
     /// <summary>Cambia las fechas de un ejercicio abierto.</summary>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="peticion">Las fechas nuevas.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPut("{id:guid}")]
@@ -70,22 +73,35 @@ public sealed class EjerciciosController(
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Modificar(
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Modificar(
         Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
         [FromBody] ModificarEjercicioDto peticion,
         CancellationToken cancelacion) =>
-        Responder(await modificar.EjecutarAsync(id, peticion, cancelacion).ConfigureAwait(false));
+        ResponderExigiendoVersionAsync(
+            ifMatch,
+            version => modificar.EjecutarAsync(id, version, peticion, cancelacion));
 
     /// <summary>Borra un ejercicio que todavía no tiene series.</summary>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpDelete("{id:guid}")]
     [ExigePermiso(PermisosDeOrganizacion.EjercicioEliminar)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Eliminar(Guid id, CancellationToken cancelacion) =>
-        ResponderSinContenido(await eliminar.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Eliminar(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => eliminar.EjecutarAsync(id, version, cancelacion));
 
     /// <summary>Cierra el ejercicio (R9).</summary>
     /// <remarks>
@@ -93,13 +109,21 @@ public sealed class EjerciciosController(
     /// cualquiera congele el año. Con su permiso detrás, se abre.
     /// </remarks>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost("{id:guid}/cierre")]
     [ExigePermiso(PermisosDeOrganizacion.EjercicioCerrar)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Cerrar(Guid id, CancellationToken cancelacion) =>
-        ResponderSinContenido(await cerrar.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Cerrar(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => cerrar.EjecutarAsync(id, version, cancelacion));
 
     /// <summary>Reabre un ejercicio cerrado (R9).</summary>
     /// <remarks>
@@ -108,11 +132,19 @@ public sealed class EjerciciosController(
     /// presentaron modelos.
     /// </remarks>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpDelete("{id:guid}/cierre")]
     [ExigePermiso(PermisosDeOrganizacion.EjercicioReabrir)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Reabrir(Guid id, CancellationToken cancelacion) =>
-        ResponderSinContenido(await reabrir.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Reabrir(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => reabrir.EjecutarAsync(id, version, cancelacion));
 }

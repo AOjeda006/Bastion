@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Empresas;
 
@@ -22,17 +23,19 @@ public interface IBloquearEmpresa
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador de la empresa.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IBloquearEmpresa"/>
 internal sealed class BloquearEmpresa(
     IRepositorioDeEmpresas empresas,
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones,
     TimeProvider reloj) : IBloquearEmpresa
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
     {
         Empresa? empresa = await empresas.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -40,6 +43,8 @@ internal sealed class BloquearEmpresa(
         {
             return Resultado.Fallo(ErroresDeEmpresa.NoEncontrada(id));
         }
+
+        versiones.Exigir(empresa, version);
 
         // Bloquear lo ya bloqueado no es un error: el dominio lo trata como idempotente y no
         // mueve la fecha del primer bloqueo, de la que cuelga el plazo de prescripción. Así, un

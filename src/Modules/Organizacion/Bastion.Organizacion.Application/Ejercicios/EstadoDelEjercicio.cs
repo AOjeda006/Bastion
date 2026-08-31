@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Domain.Ejercicios;
 
@@ -15,8 +16,9 @@ public interface ICerrarEjercicio
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <summary>
@@ -32,16 +34,18 @@ public interface IReabrirEjercicio
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="ICerrarEjercicio"/>
 internal sealed class CerrarEjercicio(
     IRepositorioDeEjercicios ejercicios,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : ICerrarEjercicio
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones) : ICerrarEjercicio
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
     {
         Ejercicio? ejercicio = await ejercicios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -49,6 +53,8 @@ internal sealed class CerrarEjercicio(
         {
             return Resultado.Fallo(ErroresDeEjercicio.NoEncontrado(id));
         }
+
+        versiones.Exigir(ejercicio, version);
 
         ejercicio.Cerrar();
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
@@ -60,9 +66,10 @@ internal sealed class CerrarEjercicio(
 /// <inheritdoc cref="IReabrirEjercicio"/>
 internal sealed class ReabrirEjercicio(
     IRepositorioDeEjercicios ejercicios,
-    IUnidadTrabajoDeOrganizacion unidadTrabajo) : IReabrirEjercicio
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones) : IReabrirEjercicio
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
     {
         Ejercicio? ejercicio = await ejercicios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -70,6 +77,8 @@ internal sealed class ReabrirEjercicio(
         {
             return Resultado.Fallo(ErroresDeEjercicio.NoEncontrado(id));
         }
+
+        versiones.Exigir(ejercicio, version);
 
         ejercicio.Reabrir();
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

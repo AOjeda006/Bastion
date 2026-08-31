@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Identidad.Application.Usuarios;
 using Bastion.Identidad.Contracts;
 using Bastion.Identidad.Contracts.Comun;
@@ -56,12 +57,13 @@ public sealed class UsuariosController(
     [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Obtener(Guid id, CancellationToken cancelacion) =>
-        Responder(await obtener.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+        ResponderConVersion(await obtener.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
 
     /// <summary>Da de alta un usuario en la empresa activa.</summary>
     /// <param name="peticion">Correo, nombre y contraseña inicial.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost]
+    [AdmiteIdempotencia]
     [ExigePermiso(PermisosDeIdentidad.UsuarioCrear)]
     [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -76,37 +78,59 @@ public sealed class UsuariosController(
 
     /// <summary>Cambia el nombre de un usuario.</summary>
     /// <param name="id">Identificador del usuario.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="peticion">Los datos nuevos.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPut("{id:guid}")]
     [ExigePermiso(PermisosDeIdentidad.UsuarioModificar)]
     [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Modificar(
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Modificar(
         Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
         [FromBody] ModificarUsuarioDto peticion,
         CancellationToken cancelacion) =>
-        Responder(await modificar.EjecutarAsync(id, peticion, cancelacion).ConfigureAwait(false));
+        ResponderExigiendoVersionAsync(
+            ifMatch,
+            version => modificar.EjecutarAsync(id, version, peticion, cancelacion));
 
     /// <summary>Bloquea un usuario (R16). No lo borra.</summary>
     /// <param name="id">Identificador del usuario.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpDelete("{id:guid}")]
     [ExigePermiso(PermisosDeIdentidad.UsuarioBloquear)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Bloquear(Guid id, CancellationToken cancelacion) =>
-        ResponderSinContenido(await bloquear.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Bloquear(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => bloquear.EjecutarAsync(id, version, cancelacion));
 
     /// <summary>Devuelve a un usuario bloqueado a la actividad.</summary>
     /// <param name="id">Identificador del usuario.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost("{id:guid}/desbloqueo")]
     [ExigePermiso(PermisosDeIdentidad.UsuarioDesbloquear)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Desbloquear(Guid id, CancellationToken cancelacion) =>
-        ResponderSinContenido(await desbloquear.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Desbloquear(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => desbloquear.EjecutarAsync(id, version, cancelacion));
 
     /// <summary>Cambia la contraseña PROPIA, presentando la actual.</summary>
     /// <remarks>

@@ -96,14 +96,21 @@ public sealed class ElFiltroDeEmpresaTests(PostgresConTodosLosModulos postgres) 
         // B lleva `organizacion.almacen.modificar`: la puerta se le abre. Lo que no puede es que
         // se le abra sobre una fila que no es suya. Un filtro que protege el listado y deja pasar
         // esto sale verde en todas las lecturas y es exactamente el agujero.
-        using HttpResponseMessage escritura = await enB.PutAsJsonAsync(
+        // El If-Match va a mano y con un valor cualquiera, porque B no puede leer la fila para
+        // sacar el suyo: el GET le da 404. Y ese es justo el orden que hay que comprobar. Si la
+        // versión se mirara antes que la existencia, B recibiría un 412 —«esa no es la versión
+        // actual»— y acabaría de enterarse de que la fila existe, que es la mitad de lo que R8
+        // esconde. Con 404, B no distingue una fila ajena de una que no está.
+        using HttpResponseMessage escritura = await enB.EnviarConVersionAsync(
+            HttpMethod.Put,
             $"{Almacenes}/{deA.Id}",
-            new ModificarAlmacenDto
+            "\"1\"",
+            JsonContent.Create(new ModificarAlmacenDto
             {
                 Nombre = "Tomado por B",
                 Tipo = "Fisico",
                 Direccion = Escenario.Domicilio(),
-            });
+            }));
 
         escritura.StatusCode.ShouldBe(HttpStatusCode.NotFound, await Escenario.Detalle(escritura));
 
@@ -123,7 +130,8 @@ public sealed class ElFiltroDeEmpresaTests(PostgresConTodosLosModulos postgres) 
         // El borrado es un bloqueo (art. 32 LOPDGDD), así que la fila sigue ahí y se puede mirar
         // en qué estado ha quedado. Un bloqueo ajeno no cambia la fila pero SÍ la deja inservible
         // para su dueño: es una escritura destructiva con nombre suave.
-        using HttpResponseMessage borrado = await enB.DeleteAsync($"{Almacenes}/{deA.Id}");
+        using HttpResponseMessage borrado = await enB.EnviarConVersionAsync(
+            HttpMethod.Delete, $"{Almacenes}/{deA.Id}", "\"1\"");
 
         borrado.StatusCode.ShouldBe(HttpStatusCode.NotFound, await Escenario.Detalle(borrado));
 

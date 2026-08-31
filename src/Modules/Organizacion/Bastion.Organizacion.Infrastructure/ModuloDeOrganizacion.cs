@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Organizacion.Application;
 using Bastion.Organizacion.Application.Almacenes;
 using Bastion.Organizacion.Application.Ejercicios;
@@ -53,6 +54,13 @@ public static class ModuloDeOrganizacion
         // los casos de uso de Organización confirmarían sobre el contexto ajeno: cero filas, sin
         // excepción y sin rastro.
         servicios.AddScoped<IUnidadTrabajoDeOrganizacion, UnidadDeTrabajoDeOrganizacion>();
+        servicios.AddScoped<IVersionesDeOrganizacion, VersionesDeOrganizacion>();
+
+        // Y el almacén de claves de idempotencia (R10), con la clave del módulo: el filtro del
+        // borde resuelve el suyo por el segmento de la ruta, para que la clave y el trabajo caigan
+        // en la transacción del MISMO contexto.
+        servicios.AgregarAlmacenDeIdempotencia<AlmacenDeIdempotenciaDeOrganizacion>(
+            OrganizacionDbContext.Esquema);
 
         servicios.AddScoped<IRepositorioDeEmpresas, RepositorioDeEmpresas>();
         servicios.AddScoped<IRepositorioDeEjercicios, RepositorioDeEjercicios>();

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Almacenes;
@@ -10,20 +11,25 @@ public interface IModificarAlmacen
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del almacén.</param>
+    /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="peticion">Los datos nuevos.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<Resultado<AlmacenDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarAlmacenDto peticion,
         CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IModificarAlmacen"/>
-internal sealed class ModificarAlmacen(IRepositorioDeAlmacenes almacenes, IUnidadTrabajoDeOrganizacion unidadTrabajo)
-    : IModificarAlmacen
+internal sealed class ModificarAlmacen(
+    IRepositorioDeAlmacenes almacenes,
+    IUnidadTrabajoDeOrganizacion unidadTrabajo,
+    IVersionesDeOrganizacion versiones) : IModificarAlmacen
 {
     public async Task<Resultado<AlmacenDto>> EjecutarAsync(
         Guid id,
+        VersionDeRecurso version,
         ModificarAlmacenDto peticion,
         CancellationToken cancelacion)
     {
@@ -35,6 +41,8 @@ internal sealed class ModificarAlmacen(IRepositorioDeAlmacenes almacenes, IUnida
         {
             return Resultado.Fallo<AlmacenDto>(ErroresDeAlmacen.NoEncontrado(id));
         }
+
+        versiones.Exigir(almacen, version);
 
         if (almacen.Estado == EstadoDeAlmacen.Bloqueado)
         {

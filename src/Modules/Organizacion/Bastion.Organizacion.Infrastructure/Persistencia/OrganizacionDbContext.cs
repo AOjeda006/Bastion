@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Domain.Ejercicios;
@@ -103,6 +104,11 @@ public sealed class OrganizacionDbContext(
         // transacción que el cambio, y la migra el módulo Auditoría (ADR-0013).
         ConfiguracionDeLaBandeja.Mapear(modelBuilder, migra: false);
 
+        // Y la tabla de claves de idempotencia (R10), otra vez igual: se mapea aquí para que el
+        // recibo de la petición caiga en la misma transacción que el trabajo, y la migra el
+        // módulo Auditoría.
+        ConfiguracionDeIdempotencia.Mapear(modelBuilder, migra: false);
+
         // R8, una línea por entidad y a la vista. `EmpresaDelFiltro` es una propiedad de la
         // instancia: EF Core la lee en CADA consulta, no al construir el modelo. Y `== null` no es
         // una válvula de escape silenciosa: la propiedad solo devuelve nulo dentro de un ámbito sin
@@ -135,5 +141,11 @@ public sealed class OrganizacionDbContext(
         // abre un ámbito con su motivo, no porque aquí falte una línea.
         modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
             evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);
+
+        // Y el recibo de las peticiones repetibles (R10), por lo mismo que la cola: es un dato
+        // de la empresa que la pidió. Sin filtro, una consulta sobre esta tabla enseñaría desde
+        // dentro de una empresa qué está dando de alta otra, y con qué respuesta.
+        modelBuilder.Entity<RegistroDeIdempotencia>().HasQueryFilter(
+            recibo => EmpresaDelFiltro == null || recibo.EmpresaId == EmpresaDelFiltro);
     }
 }

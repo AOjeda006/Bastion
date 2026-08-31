@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -12,7 +13,7 @@ public interface IObtenerEmpresa
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador de la empresa.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado<EmpresaDto>> EjecutarAsync(Guid id, CancellationToken cancelacion);
+    Task<Resultado<ConVersion<EmpresaDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve una página de empresas.</summary>
@@ -31,15 +32,17 @@ public interface IListarEmpresas
 }
 
 /// <inheritdoc cref="IObtenerEmpresa"/>
-internal sealed class ObtenerEmpresa(IRepositorioDeEmpresas empresas) : IObtenerEmpresa
+internal sealed class ObtenerEmpresa(
+    IRepositorioDeEmpresas empresas,
+    IVersionesDeOrganizacion versiones) : IObtenerEmpresa
 {
-    public async Task<Resultado<EmpresaDto>> EjecutarAsync(Guid id, CancellationToken cancelacion)
+    public async Task<Resultado<ConVersion<EmpresaDto>>> EjecutarAsync(Guid id, CancellationToken cancelacion)
     {
         Empresa? empresa = await empresas.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
         return empresa is null
-            ? Resultado.Fallo<EmpresaDto>(ErroresDeEmpresa.NoEncontrada(id))
-            : Resultado.Correcto(empresa.ADto());
+            ? Resultado.Fallo<ConVersion<EmpresaDto>>(ErroresDeEmpresa.NoEncontrada(id))
+            : Resultado.Correcto(new ConVersion<EmpresaDto>(empresa.ADto(), versiones.De(empresa)));
     }
 }
 

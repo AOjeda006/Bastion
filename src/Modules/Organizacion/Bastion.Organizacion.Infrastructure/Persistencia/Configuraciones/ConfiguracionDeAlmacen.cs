@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Domain.Empresas;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,8 @@ internal sealed class ConfiguracionDeAlmacen : IEntityTypeConfiguration<Almacen>
         // Maestro: donde esta el stock. Su alta, su codigo y su bloqueo dejan traza.
         almacen.SeAudita();
         almacen.HasKey(fila => fila.Id);
+
+        almacen.LlevaTestigoDeConcurrencia();
 
         almacen.Property(fila => fila.EmpresaId).IsRequired().SeAudita();
 
