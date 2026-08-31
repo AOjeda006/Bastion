@@ -59,7 +59,10 @@ internal sealed class ConfiguracionDeEmpresa : IEntityTypeConfiguration<Empresa>
         // de la LOPDGDD, así que se guarda con zona horaria.
         empresa.Property(fila => fila.BloqueadaEn).SeAudita();
 
-        empresa.OwnsOne(fila => fila.DomicilioFiscal, ConfiguracionDeDireccion.Mapear);
-        empresa.Navigation(fila => fila.DomicilioFiscal).IsRequired();
+        empresa.ComplexProperty(fila => fila.DomicilioFiscal, direccion =>
+        {
+            direccion.IsRequired();
+            ConfiguracionDeDireccion.Mapear(direccion);
+        });
     }
 }

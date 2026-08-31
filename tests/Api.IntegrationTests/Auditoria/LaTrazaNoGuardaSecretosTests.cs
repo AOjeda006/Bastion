@@ -138,7 +138,11 @@ public sealed class LaTrazaNoGuardaSecretosTests(PostgresConTodosLosModulos post
                 continue;
             }
 
-            foreach (IProperty propiedad in tipo.GetProperties())
+            // Con camino: un secreto guardado dentro de un tipo complejo vive en una columna de
+            // ESTA tabla igual que los demás, pero `GetProperties()` no lo devuelve. Sin este
+            // recorrido, la comprobación de más abajo —que ningún valor secreto acabe escrito en
+            // la traza— dejaría de mirar precisamente las columnas que nadie ve.
+            foreach ((_, IReadOnlyProperty propiedad) in tipo.PropiedadesConCamino())
             {
                 if (propiedad.Auditoria().Que == ClasificacionDeAuditoria.Secreta)
                 {

@@ -224,9 +224,24 @@ public sealed class InterceptorDeAuditoria(
         }
     }
 
-    private static void Apuntar(Borrador borrador, EntityEntry entrada, string prefijo)
+    private static void Apuntar(Borrador borrador, EntityEntry entrada, string prefijo) =>
+        Apuntar(borrador, entrada.State, entrada.Properties, entrada.ComplexProperties, prefijo);
+
+    // LAS DE UN TIPO COMPLEJO TAMBIÉN, y por eso este método recibe las dos colecciones en vez de
+    // la entrada entera. Un tipo POSEÍDO llega aquí por su cuenta —EF Core lo sigue como una
+    // entrada más del rastreador, y `Recoger` lo pliega en su dueño—; un tipo COMPLEJO no: sus
+    // propiedades cuelgan de la entrada del dueño y `entrada.Properties` NO las devuelve. Sin esta
+    // recursión, mover un objeto de valor a tipo complejo deja de auditar sus columnas sin que
+    // nada falle. Medido en el 0.10: con la dirección compleja y esto sin escribir, el único rojo
+    // de las 152 pruebas de integración fue el que mira la traza de una dirección.
+    private static void Apuntar(
+        Borrador borrador,
+        EntityState estado,
+        IEnumerable<PropertyEntry> propiedades,
+        IEnumerable<ComplexPropertyEntry> complejas,
+        string prefijo)
     {
-        foreach (PropertyEntry propiedad in entrada.Properties)
+        foreach (PropertyEntry propiedad in propiedades)
         {
             if (propiedad.Metadata.Auditoria().Que != ClasificacionDeAuditoria.Auditada)
             {
@@ -237,15 +252,25 @@ public sealed class InterceptorDeAuditoria(
 
             // Un alta no lleva `antes` y una baja no lleva `despues`: el hueco ES la información, y
             // rellenarlo con un nulo lo confundiría con «cambió a nulo».
-            if (entrada.State != EntityState.Added)
+            if (estado != EntityState.Added)
             {
                 detalle[Antes] = ParaLaTraza(propiedad, propiedad.OriginalValue);
             }
 
-            if (entrada.State != EntityState.Deleted)
+            if (estado != EntityState.Deleted)
             {
                 detalle[Despues] = ParaLaTraza(propiedad, propiedad.CurrentValue);
             }
+        }
+
+        foreach (ComplexPropertyEntry compleja in complejas)
+        {
+            Apuntar(
+                borrador,
+                estado,
+                compleja.Properties,
+                compleja.ComplexProperties,
+                $"{prefijo}{compleja.Metadata.Name}.");
         }
     }
 

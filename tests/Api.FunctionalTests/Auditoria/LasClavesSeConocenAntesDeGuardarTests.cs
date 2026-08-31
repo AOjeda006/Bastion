@@ -97,9 +97,9 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         // escritura y marcada como testigo—, que es lo que mete el valor en el WHERE del UPDATE.
         List<string> impostoras = [.. Modelos()
             .SelectMany(modelo => modelo.GetEntityTypes())
-            .SelectMany(tipo => tipo.GetProperties()
-                .Where(propiedad => EsDelServidor(propiedad) && !propiedad.EsElTestigo())
-                .Select(propiedad => $"{tipo.ShortName()}.{propiedad.Name}"))];
+            .SelectMany(tipo => tipo.PropiedadesConCamino()
+                .Where(par => EsDelServidor(par.Propiedad) && !par.Propiedad.EsElTestigo())
+                .Select(par => $"{tipo.ShortName()}.{par.Camino}"))];
 
         impostoras.ShouldBeEmpty("esto lo genera el servidor y no es el testigo de concurrencia");
     }
@@ -126,13 +126,15 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     private static bool EsClienteQuienLaPone(IProperty clave) =>
         clave.ClrType == typeof(Guid) || clave.ClrType == typeof(Guid?);
 
-    private static IEnumerable<string> Donde(IModel modelo, Func<IProperty, bool> condicion) =>
+    // Con camino, para que una propiedad de un tipo complejo no se escape: `GetProperties()` no
+    // las devuelve, y un DEFAULT puesto ahí dentro se saltaría este inventario entero.
+    private static IEnumerable<string> Donde(IModel modelo, Func<IReadOnlyProperty, bool> condicion) =>
         modelo.GetEntityTypes()
-            .SelectMany(tipo => tipo.GetProperties()
-                .Where(condicion)
-                .Select(propiedad => $"{tipo.ShortName()}.{propiedad.Name}"));
+            .SelectMany(tipo => tipo.PropiedadesConCamino()
+                .Where(par => condicion(par.Propiedad))
+                .Select(par => $"{tipo.ShortName()}.{par.Camino}"));
 
-    private static bool EsAuditadaYDelServidor(IProperty propiedad) =>
+    private static bool EsAuditadaYDelServidor(IReadOnlyProperty propiedad) =>
         propiedad.Auditoria().Que == ClasificacionDeAuditoria.Auditada && EsDelServidor(propiedad);
 
     // Las cinco formas que tiene un valor de venir del servidor, cada una con su nombre: un
@@ -140,7 +142,7 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     // que de verdad distingue «la pone la base» de «la pone el cliente al insertar»—, algo que se
     // regenera en cada UPDATE (la forma de un `rowversion`), y el testigo de concurrencia, que
     // en PostgreSQL es `xmin`.
-    private static bool EsDelServidor(IProperty propiedad) =>
+    private static bool EsDelServidor(IReadOnlyProperty propiedad) =>
         propiedad.GetDefaultValueSql() is not null
         || propiedad.GetComputedColumnSql() is not null
         || propiedad.GetValueGenerationStrategy() != NpgsqlValueGenerationStrategy.None

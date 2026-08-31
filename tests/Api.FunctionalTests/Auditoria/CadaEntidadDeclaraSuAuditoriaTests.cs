@@ -21,6 +21,15 @@ namespace Bastion.Api.FunctionalTests.Auditoria;
 /// propiedad nueva también.
 /// </para>
 /// <para>
+/// <b>Los tipos complejos entran por su camino.</b> Una entidad poseída sale en
+/// <c>GetEntityTypes()</c> y por eso se le puede exigir que no repita la clasificación de su
+/// dueño; un tipo complejo no sale, y tampoco tiene dónde guardarla —el lector
+/// <c>Auditoria()</c> de nivel de tipo pide un <c>IReadOnlyEntityType</c>, que un
+/// <c>IComplexType</c> no es—, así que ahí no hace falta una prueba: no compila. Lo que sí hacía
+/// falta es que sus propiedades no se escapen, y de eso se ocupan
+/// <c>PropiedadesConCamino()</c> y el caso que fija cuáles son.
+/// </para>
+/// <para>
 /// <b>Falla cerrado en los dos sentidos.</b> Sin clasificar no se audita —que es la dirección
 /// segura para un secreto— y además se ve. La alternativa, «se audita todo salvo lo que alguien
 /// marque», deja que un resumen de credencial añadido el año que viene entre en una tabla que por
@@ -29,6 +38,15 @@ namespace Bastion.Api.FunctionalTests.Auditoria;
 /// </remarks>
 public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
 {
+    // Los tipos complejos del modelo y cuántas propiedades escalares aporta cada uno. La lista
+    // ENTERA y en los dos sentidos, como la de los testigos del ADR-0015: es lo único que impide
+    // que este fichero se quede verde por estar mirando donde ya no hay nada.
+    private static readonly string[] s_tiposComplejos =
+    [
+        "Almacen.Direccion: 6",
+        "Empresa.DomicilioFiscal: 6",
+    ];
+
     private readonly ApiSinDependencias _api = new();
 
     public void Dispose() => _api.Dispose();
@@ -62,8 +80,8 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         List<string> mudas = [.. Entidades()
             .Where(SeAudita)
             .SelectMany(tipo => Clasificables(tipo)
-                .Where(propiedad => propiedad.Auditoria().Que == ClasificacionDeAuditoria.SinClasificar)
-                .Select(propiedad => $"{tipo.ShortName()}.{propiedad.Name}"))];
+                .Where(par => par.Propiedad.Auditoria().Que == ClasificacionDeAuditoria.SinClasificar)
+                .Select(par => $"{tipo.ShortName()}.{par.Camino}"))];
 
         mudas.ShouldBeEmpty(
             "cada propiedad de una entidad auditada dice `SeAudita()`, `NoSeAudita(motivo)` o " +
@@ -75,10 +93,10 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
     public void Toda_propiedad_que_queda_fuera_o_es_secreta_lleva_su_motivo()
     {
         List<string> sinMotivo = [.. Entidades()
-            .SelectMany(tipo => tipo.GetProperties()
-                .Where(propiedad => propiedad.Auditoria() is
+            .SelectMany(tipo => tipo.PropiedadesConCamino()
+                .Where(par => par.Propiedad.Auditoria() is
                     { Que: ClasificacionDeAuditoria.NoAuditada or ClasificacionDeAuditoria.Secreta, Motivo.Length: 0 })
-                .Select(propiedad => $"{tipo.ShortName()}.{propiedad.Name}"))];
+                .Select(par => $"{tipo.ShortName()}.{par.Camino}"))];
 
         sinMotivo.ShouldBeEmpty("un secreto se nombra; un hueco se explica");
     }
@@ -92,9 +110,9 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         // siguiente persona las lee como si fueran verdad.
         List<string> huerfanas = [.. Entidades()
             .Where(tipo => !SeAudita(tipo))
-            .SelectMany(tipo => tipo.GetProperties()
-                .Where(propiedad => propiedad.Auditoria().Que != ClasificacionDeAuditoria.SinClasificar)
-                .Select(propiedad => $"{tipo.ShortName()}.{propiedad.Name}"))];
+            .SelectMany(tipo => tipo.PropiedadesConCamino()
+                .Where(par => par.Propiedad.Auditoria().Que != ClasificacionDeAuditoria.SinClasificar)
+                .Select(par => $"{tipo.ShortName()}.{par.Camino}"))];
 
         huerfanas.ShouldBeEmpty("su entidad no se audita, así que esta marca no la lee nadie");
     }
@@ -110,14 +128,48 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         // Una `Direccion` no cambia por su cuenta: cambia porque cambia la empresa o el almacén de
         // la que cuelga. Que dijera lo suyo abriría la puerta a que dijese lo CONTRARIO que su
         // dueño, y entonces habría que decidir cuál gana — una pregunta que es mejor no tener.
+        // Desde el 0.10 recorre un conjunto VACÍO: la dirección era el único tipo poseído del
+        // modelo y ahora es complejo. Se queda porque la regla no ha caducado —un poseído nuevo
+        // volvería a caer aquí—, pero se dice que hoy no puede fallar, que es lo que distingue
+        // una red de una que parece una red.
         repetidas.ShouldBeEmpty("hereda de su dueño; no se clasifica aparte");
+    }
+
+    [Fact]
+    public void Las_propiedades_de_un_tipo_complejo_entran_en_este_barrido()
+    {
+        // El caso que hace que los de arriba signifiquen algo. Un tipo COMPLEJO no es una entidad:
+        // no sale en `GetEntityTypes()` y `GetProperties()` NO devuelve sus propiedades. Medido en
+        // el 0.10 antes de escribir esto: con la direccion mapeada como tipo complejo y los
+        // barridos sin ampliar, DOCE propiedades salieron de la clasificación —152 escalares a
+        // 138— y los catorce casos siguieron en VERDE. Un barrido que mira donde no hay nada no
+        // avisa de nada, y este es el que se pone rojo cuando eso pasa.
+        //
+        // Se deriva de `PropiedadesConCamino()`, que es el mismo recorrido que usan los casos de
+        // arriba: así esto no comprueba una lista paralela, sino el recorrido de verdad. Y por eso
+        // vale también para un tipo complejo anidado dentro de otro, que aparecería con su camino
+        // entero.
+        List<string> complejos = [.. Entidades()
+            .SelectMany(tipo => tipo.PropiedadesConCamino()
+                .Where(par => par.Camino.Contains('.', StringComparison.Ordinal))
+                .Select(par => $"{tipo.ShortName()}.{par.Camino[..par.Camino.LastIndexOf('.')]}"))
+            .GroupBy(camino => camino, StringComparer.Ordinal)
+            .Select(grupo => $"{grupo.Key}: {grupo.Count()}")];
+
+        complejos.Sort(StringComparer.Ordinal);
+
+        string.Join(", ", complejos).ShouldBe(
+            string.Join(", ", s_tiposComplejos),
+            "un tipo complejo que desaparece del modelo, o que cambia de forma, se ve aquí. Si " +
+            "esto se pone rojo, comprueba primero que las propiedades que faltan no se hayan " +
+            "quedado sin clasificar en silencio.");
     }
 
     // Las que hay que clasificar: las escalares que no son la clave. La clave no se clasifica
     // porque no es un valor que cambie, es la fila de la que se habla, y va en su propia columna
     // de la traza (`entidad_id`).
-    private static IEnumerable<IProperty> Clasificables(IEntityType tipo) =>
-        tipo.GetProperties().Where(propiedad => !propiedad.IsPrimaryKey());
+    private static IEnumerable<(string Camino, IReadOnlyProperty Propiedad)> Clasificables(IEntityType tipo) =>
+        tipo.PropiedadesConCamino().Where(par => !par.Propiedad.IsPrimaryKey());
 
     private static bool SeAudita(IEntityType tipo)
     {

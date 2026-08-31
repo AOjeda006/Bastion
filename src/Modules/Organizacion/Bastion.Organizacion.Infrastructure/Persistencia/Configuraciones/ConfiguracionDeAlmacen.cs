@@ -44,8 +44,11 @@ internal sealed class ConfiguracionDeAlmacen : IEntityTypeConfiguration<Almacen>
 
         // Dirección OPCIONAL: un almacén virtual o de tránsito no está en ningún sitio, y
         // exigirle una dirección obligaría a inventarla. Las seis columnas quedan anulables.
-        almacen.OwnsOne(fila => fila.Direccion, ConfiguracionDeDireccion.Mapear);
-        almacen.Navigation(fila => fila.Direccion).IsRequired(false);
+        almacen.ComplexProperty(fila => fila.Direccion, direccion =>
+        {
+            direccion.IsRequired(false);
+            ConfiguracionDeDireccion.Mapear(direccion);
+        });
 
         almacen.HasIndex(fila => new { fila.EmpresaId, fila.Codigo }).IsUnique();
 
