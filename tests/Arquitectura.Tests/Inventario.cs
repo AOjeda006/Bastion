@@ -174,6 +174,67 @@ internal static class Inventario
         };
 
     /// <summary>
+    /// El grafo de referencias de proyecto entre los quince <c>.csproj</c> de módulo, como
+    /// <c>Origen -&gt; Destino</c>. Entero, y se compara entero.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Existe por un agujero que encontró la batería de mutaciones de este mismo ítem, y se cuenta
+    /// aquí porque es la clase de cosa que no se vuelve a descubrir sola: NetArchTest lee <b>IL</b>,
+    /// y una referencia de proyecto que nadie usa no emite IL. Se le puede poner a
+    /// <c>Bastion.Identidad.Application</c> una referencia a <c>Bastion.Organizacion.Domain</c> —el
+    /// cruce que la regla 1 prohíbe— y las catorce reglas anteriores siguen verdes mientras no haya
+    /// una línea que la ejerza. Tampoco avisa el compilador: una referencia sin usar no es un aviso.
+    /// </para>
+    /// <para>
+    /// Y no es un caso rebuscado, es el orden natural de las cosas: primero se añade la referencia
+    /// —porque se va a necesitar—, y la línea que la usa llega después, en otro commit, quizá de
+    /// otra mano. Un carril que solo mire el IL da luz verde al primer commit y rojo al segundo, que
+    /// es tarde: para entonces la autorización para cruzar ya estaba concedida y revisada.
+    /// </para>
+    /// <para>
+    /// Así que se vigilan dos cosas distintas y por separado: el <b>uso</b>, en el IL, con las
+    /// reglas de arriba; y el <b>permiso</b>, en el <c>.csproj</c>, aquí.
+    /// </para>
+    /// </remarks>
+    internal static readonly IReadOnlySet<string> AristasDeProyecto = new SortedSet<string>(
+        StringComparer.Ordinal)
+    {
+        "Auditoria.Application -> Auditoria.Contracts",
+        "Auditoria.Application -> Auditoria.Domain",
+        "Auditoria.Application -> BuildingBlocks.Application",
+        "Auditoria.Domain -> BuildingBlocks.Domain",
+        "Auditoria.Endpoints -> Auditoria.Application",
+        "Auditoria.Infrastructure -> Auditoria.Application",
+        "Auditoria.Infrastructure -> BuildingBlocks.Infrastructure",
+
+        "Identidad.Application -> BuildingBlocks.Application",
+        "Identidad.Application -> Identidad.Contracts",
+        "Identidad.Application -> Identidad.Domain",
+
+        // El único cruce entre módulos, y va por el `Contracts` del dueño. Es la misma frontera que
+        // vigila `El_unico_cruce_entre_modulos_va_por_contratos`, pero vista un paso antes: allí se
+        // comprueba lo que Identidad USA de Organización; aquí, lo que tiene PERMISO para usar.
+        "Identidad.Application -> Organizacion.Contracts",
+
+        "Identidad.Domain -> BuildingBlocks.Domain",
+        "Identidad.Endpoints -> BuildingBlocks.Infrastructure",
+        "Identidad.Endpoints -> Identidad.Application",
+        "Identidad.Infrastructure -> BuildingBlocks.Infrastructure",
+        "Identidad.Infrastructure -> Identidad.Application",
+
+        "Organizacion.Application -> BuildingBlocks.Application",
+        "Organizacion.Application -> Organizacion.Contracts",
+        "Organizacion.Application -> Organizacion.Domain",
+        "Organizacion.Contracts -> BuildingBlocks.Domain",
+        "Organizacion.Domain -> BuildingBlocks.Domain",
+        "Organizacion.Endpoints -> BuildingBlocks.Infrastructure",
+        "Organizacion.Endpoints -> Organizacion.Application",
+        "Organizacion.Infrastructure -> BuildingBlocks.Infrastructure",
+        "Organizacion.Infrastructure -> Organizacion.Application",
+    };
+
+    /// <summary>
     /// Las puertas públicas de los <c>Contracts</c>: toda interfaz que un módulo ofrece a los
     /// demás, con lo que hace. Es la lista entera y se compara entera.
     /// </summary>

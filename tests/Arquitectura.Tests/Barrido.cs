@@ -82,8 +82,8 @@ internal static class Barrido
 
         resultado.SelectedTypesForTesting.Count.ShouldBe(
             esperados,
-            $"la regla «{regla}» dice cubrir {Numero(esperados)} tipos de " +
-            $"{Numero(claves.Count)} ensamblados y ha seleccionado " +
+            $"la regla «{regla}» dice cubrir {Cuantos(esperados, "tipo")} de " +
+            $"{Cuantos(claves.Count, "ensamblado")} y ha seleccionado " +
             $"{Numero(resultado.SelectedTypesForTesting.Count)}: el selector se ha quedado corto, " +
             "y lo que no se selecciona no se comprueba");
 
@@ -93,8 +93,7 @@ internal static class Barrido
 
         // 3. La regla.
         resultado.IsSuccessful.ShouldBeTrue(
-            $"{regla} — y estos {Numero(resultado.FailingTypes.Count)} tipos la cruzan:" +
-                Environment.NewLine +
+            Cruzan(regla, resultado.FailingTypes.Count) + Environment.NewLine +
                 Ensamblados.Enumerar(resultado.FailingTypes.Select(Describir)));
     }
 
@@ -117,4 +116,18 @@ internal static class Barrido
             : tipo.FullName + " — " + tipo.Explanation;
 
     private static string Numero(int cuantos) => cuantos.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>Un recuento con su nombre en singular o en plural: «1 tipo», «43 tipos».</summary>
+    private static string Cuantos(int cuantos, string nombre) =>
+        cuantos == 1 ? "1 " + nombre : Numero(cuantos) + " " + nombre + "s";
+
+    /// <summary>
+    /// La cabecera del fallo, concordada. El mensaje de una regla rota es lo único que va a leer
+    /// quien la rompa —probablemente a las dos de la mañana y en mitad de un rebase—, así que se
+    /// escribe como se habla: «y este tipo la cruza», no «y estos 1 tipos la cruzan».
+    /// </summary>
+    private static string Cruzan(string regla, int cuantos) =>
+        cuantos == 1
+            ? $"{regla} — y este tipo la cruza:"
+            : $"{regla} — y estos {Numero(cuantos)} tipos la cruzan:";
 }

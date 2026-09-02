@@ -42,6 +42,7 @@ public sealed class LasReglasDeEsteCarrilTests
         // §4, regla 1 (y lo que se puede decir de la 5): entre módulos, solo por el contrato.
         "LasFronterasEntreModulosTests.El_unico_cruce_entre_modulos_va_por_contratos",
         "LasFronterasEntreModulosTests.Las_puertas_publicas_de_los_contratos_son_las_declaradas",
+        "LasFronterasEntreModulosTests.Las_referencias_de_proyecto_son_las_declaradas",
         "LasFronterasEntreModulosTests.Ningun_modulo_ve_el_interior_de_otro",
 
         // §4, regla 2 y el reparto por capas: siempre hacia dentro.

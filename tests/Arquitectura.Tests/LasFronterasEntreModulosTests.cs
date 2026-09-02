@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using NetArchTest.Rules;
 using Shouldly;
 
@@ -22,6 +24,14 @@ namespace Bastion.Arquitectura.Tests;
 /// <c>Bastion.Auditoria.Domain</c>, que hoy es un ensamblado sin un solo tipo, sería una
 /// prohibición que no puede dispararse: nadie puede depender de lo que no hay. Sale verde y no
 /// protege nada, que es exactamente lo que este ítem viene a impedir.
+/// </para>
+/// <para>
+/// Las tres primeras reglas leen <b>IL</b>, y por eso hay una cuarta que no:
+/// <c>Las_referencias_de_proyecto_son_las_declaradas</c> lee los <c>.csproj</c>. Una referencia de
+/// proyecto que todavía no usa nadie no emite IL, así que el cruce prohibido se puede
+/// <b>autorizar</b> hoy y <b>ejercer</b> dentro de tres commits, y las otras tres reglas no dirían
+/// nada hasta el tercero. Lo comprobó la batería de mutaciones de este ítem. Uso y permiso son dos
+/// hechos distintos y se vigilan por separado.
 /// </para>
 /// </remarks>
 public sealed class LasFronterasEntreModulosTests
@@ -135,6 +145,57 @@ public sealed class LasFronterasEntreModulosTests
             customMessage: "las interfaces públicas de los Contracts no son las declaradas:" + Environment.NewLine +
             Ensamblados.Enumerar(encontradas));
     }
+
+    [Fact]
+    public void Las_referencias_de_proyecto_son_las_declaradas()
+    {
+        string modulos = Path.Combine(Ensamblados.Raiz(), "src", "Modules");
+
+        IReadOnlyList<string> proyectos =
+        [
+            .. Directory.EnumerateFiles(modulos, "*.csproj", SearchOption.AllDirectories)
+                .Order(StringComparer.Ordinal),
+        ];
+
+        // La afirmación de conjunto no vacío de esta regla, con su número: los tres módulos
+        // montados llevan cinco proyectos cada uno. Los trece que faltan no tienen ni `.csproj`,
+        // así que un barrido que encontrara menos de quince estaría mirando menos módulos de los
+        // que hay y —sin esta línea— no lo diría.
+        proyectos.Count.ShouldBe(
+            15,
+            "el barrido de referencias tiene que encontrar los cinco proyectos de cada uno de los " +
+            "tres módulos montados, y ha encontrado " +
+            proyectos.Count.ToString(CultureInfo.InvariantCulture));
+
+        IReadOnlyList<string> encontradas =
+        [
+            .. from proyecto in proyectos
+               let origen = Corto(Path.GetFileNameWithoutExtension(proyecto))
+               from referencia in Regex.Matches(
+                   File.ReadAllText(proyecto),
+                   "<ProjectReference\\s+Include=\"(?<destino>[^\"]+)\"")
+               let destino = Corto(Path.GetFileNameWithoutExtension(
+                   referencia.Groups["destino"].Value.Replace('\\', '/')))
+               orderby origen + " -> " + destino, StringComparer.Ordinal
+               select origen + " -> " + destino,
+        ];
+
+        // El PERMISO para cruzar, que va un paso por delante del cruce. Las demás reglas leen IL, y
+        // una referencia que todavía no usa nadie no emite IL: se comprobó en la batería de este
+        // ítem y las catorce salían verdes. Aquí no, porque aquí se lee el `.csproj`.
+        encontradas.ShouldBe(
+            [.. Inventario.AristasDeProyecto],
+            customMessage: "las referencias de proyecto no son las declaradas:" + Environment.NewLine +
+            Ensamblados.Enumerar(encontradas));
+    }
+
+    /// <summary>
+    /// El nombre del proyecto sin la raíz: <c>Bastion.Identidad.Domain</c> → <c>Identidad.Domain</c>.
+    /// </summary>
+    private static string Corto(string proyecto) =>
+        proyecto.StartsWith(Inventario.Raiz + ".", StringComparison.Ordinal)
+            ? proyecto[(Inventario.Raiz.Length + 1)..]
+            : proyecto;
 
     private static IReadOnlyList<string> Montados() =>
     [
