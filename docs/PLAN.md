@@ -1369,6 +1369,153 @@ escritas, es **cada regla vista en rojo por una violación deliberada antes de a
   `index.html`— y no era inerte: Vite copia `public/` al raíz de `dist`, así que el `.gitkeep`
   viajaba a la imagen y **nginx lo servía con 200**. Se borra.
 
+### Auditoría previa a la fase 1 (2026-09-02)
+
+La fase 0 se cerró cumpliendo su criterio **ítem por ítem**, y eso se re-midió antes de nada: build
+`0 Advertencia(s), 0 Errores`; **403** casos rápidos en 5 ensamblados y **207** de integración en 2,
+ejecutados de nuevo en local; los **12** *commits* de `a9c54e7..ce4f083` con `%G?` = `G`, autor único
+y cero *trailers*; checklist sin pendientes. El informe de cierre no exageraba nada.
+
+Pero el criterio que se cumplió es el del **Anexo A.3**, y A.3 es más estrecho que el plan maestro.
+Esta auditoría contrasta lo construido contra el plan maestro entero y contra la biblioteca, no
+contra el checklist. Salen **seis hallazgos**. Tres tienen solución objetiva y se aplican; tres se
+llevaron al usuario porque cambiaban cómo se estructura la fase 1, y los decidió él.
+
+#### F1 · La internacionalización nunca se instaló, y el plan la daba por hecha
+
+El §3 la fija: `react-i18next`, es/en, con el motivo escrito al lado — *«Los textos fuera del código
+**desde el primer día**: meterlos después es un refactor global»*. El §10 le da sitio: `app/`.
+
+No es que se decidiera no hacerla: **es que nadie la echó de menos**. Este mismo PLAN se la asignó al
+0.11 dos veces —*«No hay enrutador, ni caché de servidor, ni formularios, **ni i18n**, ni cliente de
+API: todo eso es el ítem 0.11»*, y *«cuando el frontal tenga enrutador, caché de servidor,
+formularios, **i18n** y cliente de API, medir lo que pesa»*—. El 0.11 entregó enrutador, caché,
+formularios y cliente; i18n no, y su criterio de aceptación tampoco la nombraba, así que el ítem se
+cerró en verde sin que nada lo señalara. Es la forma de error que persigue toda la fase: **una
+comprobación que no cubre lo que se creía que cubría**, y aquí el hueco estaba en el criterio mismo.
+
+Hoy el frontal son **49 ficheros** y unos **diez** llevan texto visible. La fase 1 —Terceros con su
+ficha, direcciones, contactos y condiciones de pago; Catálogo con artículos, categorías, tarifas y
+códigos de barras— los multiplica. El aviso del §3 no es retórico: el coste crece con cada pantalla
+escrita antes de ponerlo.
+
+**Decidido por el usuario:** se hace **antes** de la fase 1, como ítem **0.14**.
+
+#### F2 · Organización quedó a medias, y el criterio de la fase 1 depende justo de lo que falta
+
+El §7.1 le da a Organización siete agregados: Empresa, Ejercicio, SerieDocumental, **Impuesto**,
+**Divisa + TipoCambio**, **UnidadMedida + ConversionUM**, y Almacen + **Ubicacion**. El A.3 · 0.4
+pidió solo cuatro: *«CRUD de `Empresa`, `Ejercicio`, `Serie` y `Almacen`»*. Se hizo exactamente eso,
+sin ampliar alcance —que era lo correcto— y los otros tres **no se anotaron en ninguna parte**:
+
+```
+grep -rn "Impuesto|UnidadMedida|TipoCambio|Ubicacion"  src/         ->  0
+grep -n  "Impuesto|UnidadMedida|TipoCambio"            docs/PLAN.md ->  0
+```
+
+El problema es que el criterio de aceptación de la **fase 1** (§15) es *«alta de cliente/proveedor
+con NIF validado y de artículo con **unidad, impuesto** y tarifa»*, y el Artículo del §7.3 lleva
+«unidad base, impuesto por defecto». Por la **regla de frontera 4**, Catálogo no puede definirse los
+suyos: guarda el id y **valida contra el contrato de Organización** — un contrato que hoy no expone
+ninguno de los dos. **La fase 1 no puede cumplir su propio criterio con lo que hay.**
+
+No es un fallo de ejecución: es una inconsistencia del plan maestro entre §5 («Organización = fase
+0»), A.3 (que pidió cuatro agregados) y §15 (que necesita los otros). Por el §2 de `CLAUDE.md`, eso
+es exactamente un caso de «resulta inviable al montarlo → se pregunta».
+
+**Decidido por el usuario:** se completa Organización **entera** —los cuatro agregados que faltan,
+con sus semillas y su cargador— antes de la fase 1, como ítem **0.15**.
+
+#### F3 · `db/semillas` estaba en `.dockerignore`: la misma avería muda que el 0.13 acababa de quitar
+
+`.dockerignore` excluía `db/semillas` en la línea de al lado del comentario que explica por qué se
+retiró `db/migraciones` (ADR-0021). Hoy era inofensivo porque la carpeta está vacía; el §12 dice que
+las semillas —**PGC, tipos de IVA, unidades, países**— son ficheros versionados «que un comando
+carga», y ese comando será el mismo contenedor migrador.
+
+El día que exista: la imagen se construye sin los ficheros, el cargador encuentra cero, y **«cero
+semillas» es indistinguible de «no había nada que cargar»**. Es la avería del ADR-0021 replantada en
+el sitio de al lado, y **F2 la activa**: los tipos de IVA y las unidades *son* semillas.
+
+**Solución objetiva, aplicada.** La línea se retira. Su efecto no se puede comprobar hoy —no hay
+semillas—, así que la comprobación se ata al **0.15**, donde el cargador afirmará conjunto no vacío
+y la CI mirará dentro de la imagen. Un `.dockerignore` corregido y sin nada que copiar no prueba
+nada por sí solo.
+
+#### F4 · `features/` no espejaba los módulos, y había un conflicto normativo sin resolver
+
+Dos fuentes normativas se contradicen, y nadie lo había notado:
+
+- **§10:** *«Las carpetas de `features/` **espejan los módulos del backend**»*, con el árbol
+  `features/ventas/`, `features/compras/`, `features/inventario/`…
+- **`stacks/react/convenciones.md`:36:** *«Organiza por **funcionalidad**, no por tipo técnico:
+  `src/features/<funcionalidad>/{api,model,ui}`»*.
+
+El 0.11 siguió la biblioteca: `acceso`, `almacenes`, `empresas`, `inicio` — que son **recursos**, no
+módulos (`almacenes` y `empresas` son ambos de `organizacion`; `acceso` es `identidad`). Sin decisión
+registrada, porque el conflicto no se vio.
+
+Hoy da igual. En la fase 1 deja de dar igual, y por una razón concreta: el §7.2 dice que *«un tercero
+puede ser cliente y proveedor a la vez»* — es **un solo agregado**. Repartiendo por recurso salen
+`features/clientes` y `features/proveedores` compartiendo ficha, direcciones, contactos y condiciones
+de pago; y como la regla —del §10 **y** de la biblioteca, línea 39— es que **«una funcionalidad nunca
+importa de otra»**, todo eso tendría que subir a `shared/`: código de dominio dentro del sistema de
+componentes, que es justo lo que `shared/` no debe ser. Con Catálogo es peor.
+
+**Decidido por el usuario: gana el §10.** `features/` espeja los módulos del backend. Son **4
+carpetas y 14 ficheros** hoy; después de la fase 1, veinte y pico. Se reordena como ítem **0.16**.
+Las dos fuentes dejan de estar en conflicto porque el §10 es la más específica: la biblioteca dice
+«por funcionalidad y no por tipo técnico» —contra `components/`, `hooks/`, `pages/`—, y un módulo del
+backend **es** una funcionalidad; el plan maestro solo fija cuál es el corte.
+
+#### F5 · La «batería mínima» de `AGENTS.md` ya no era la que ejecuta la CI
+
+`AGENTS.md` decía: *«la batería mínima es `dotnet build` + `dotnet test` + `dotnet format
+--verify-no-changes` + `npm run build` + `npm run lint`. **Es exactamente lo que ejecuta la CI**»*.
+Había dejado de serlo. La CI ejecuta además **«Contrato»** (regenera el cliente y compara),
+**«Migraciones»** (modelo sin cambios pendientes), **«OpenAPI»** (contrato versionado al día),
+`npm run typecheck`, `npm run format:check` y `npm run test`.
+
+Seis comprobaciones que un agente siguiendo `AGENTS.md` al pie de la letra **no correría antes de dar
+un ítem por hecho** — y las tres primeras son las que más rojos causaron en el 0.11 y el 0.13. Es la
+instrucción que gobierna cuándo se declara algo terminado, así que estaba mintiendo justo donde más
+caro sale.
+
+**Solución objetiva, aplicada.** La batería se reescribe con lo que la CI ejerce de verdad, marcando
+cuál es el orden barato (lo que falla en segundos, primero) y qué exige Docker.
+
+#### F6 · `docs/dominio/` estaba vacío
+
+El §12 lo define como *«glosario del lenguaje ubicuo + diagramas E-R y de estados»*, y
+`principios/ddd.md` pone el lenguaje ubicuo en su lista de «siempre». Hay tres módulos construidos,
+21 ADR y 3.374 líneas de PLAN, y ahí solo había un `.gitkeep`.
+
+Importa **ahora** y no antes porque la fase 1 es donde el vocabulario se dispara y donde más se paga
+no tenerlo fijado: *tercero* / *cliente* / *proveedor*, *artículo* / *referencia*, *tarifa* /
+*precio*, *unidad base* / *unidad de compra*. Palabras que, sin acordarse antes, se acuerdan tres
+veces distintas en tres pantallas.
+
+**Solución objetiva, aplicada.** Se siembra `docs/dominio/glosario.md` con el vocabulario **ya
+construido** —lo que existe en código hoy, no lo que vendrá— y se amplía al abrir cada módulo. Un
+glosario que inventa términos por adelantado es peor que no tenerlo: fija nombres antes de conocer
+el dominio.
+
+#### Lo que se auditó decisión a decisión, y aguanta
+
+Se revisaron todas las decisiones registradas de los trece ítems, las tomadas por el agente y las
+consultadas al usuario. Estas parecían candidatas a replantearse y **no lo son**; queda escrito para
+no volver a abrirlas:
+
+| Decisión | Por qué se sostiene |
+|---|---|
+| **El contador de serie es una columna, no una `SEQUENCE`** | El §6 pide «secuencia dedicada con bloqueo», pero una `SEQUENCE` de PostgreSQL **no es transaccional** y deja huecos al hacer *rollback*, y R5 exige «correlativa y **sin huecos**». La regla se contradecía; ADR-0007 §5 lo resuelve. Anulación correcta. |
+| **El *outbox* con cerrojo consultivo y un solo lector** | `FOR UPDATE SKIP LOCKED` se evaluó y se descartó **por escrito porque pierde el orden**, y R15 necesitará un consumidor serializado. Decisión de la 0.8 que ya miraba a la fase 5. |
+| **No existe ningún `Activo`** | `grep "bool Activo" src/` → cero. R16 exige que `Bloqueo` no se confunda con borrado lógico, y no hay dónde confundirlos. |
+| **La deriva del reloj (R15), aparcada** | ADR-0003 la aparca **con su mecanismo ya construido**: las sondas se agregan por etiqueta, así que añadirla es registrar una comprobación más. Aparcar con el enchufe puesto no es deuda. |
+| **`Context` y no Zustand para la sesión** | No es desviación: `stacks/react/convenciones.md`:83 dice «con **Context** si cambia poco; Zustand si cambia a menudo». La sesión cambia al entrar y al cambiar de empresa. |
+| **Sin EF Core InMemory; solo el *hasher* de ASP.NET Core Identity** | Ambas son las que manda `testing.md` y `herramientas/autenticacion.md`. Adoptar el resto de Identity habría traído su modelo de usuario, que R11 y R12 contradicen. |
+| **`Notificaciones` sin carpeta, pero declarado** | `ElInventarioDeModulosTests` lo marca `Presencia.SinCarpeta` y **compara la lista entera** contra los dieciséis del §5. Ausente y declarado no es lo mismo que olvidado. |
+
 ## Estado actual
 
 **Ítem 0.13 cerrado, y con él la FASE 0 entera:**
@@ -1627,7 +1774,14 @@ ensamblados **añadidos a las dos listas declaradas** del recuento de la CI.
 arranque —«no hay ningún usuario»— es una lectura y una escritura sin transacción común. Hoy hay una
 sola réplica y por eso no importa; el día que haya dos, importa antes que nada.
 
-**Dónde retomar exactamente:** la **fase 1 · Maestros**. Criterio del §15: alta de
+**Dónde retomar exactamente:** los tres ítems de la **addenda** —0.14, 0.15 y 0.16, en ese
+orden—, y **no** la fase 1. Salen de la auditoría previa a la fase 1 (ver *Decisiones tomadas*) y son
+cimientos que la fase 1 da por puestos: la i18n que el §3 manda «desde el primer día», los cuatro
+agregados de Organización que el §7.1 le da y sin los cuales el criterio del §15 no se puede cumplir,
+y el reparto de `features/` que fija el §10. **El orden importa:** el 0.16 mueve los mismos ficheros
+que el 0.14 traduce, así que al revés se tocan dos veces.
+
+Después de esos tres, la **fase 1 · Maestros**. Criterio del §15: alta de
 cliente/proveedor con NIF validado y de artículo con unidad, impuesto y tarifa; listados paginados
 y filtrados en servidor; dominio cubierto por tests. Contenido: Terceros y Catálogo completos,
 tarifas, importación CSV y búsquedas.
@@ -3015,6 +3169,34 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   estricto de la de `Humo`.
   Los **tres** *jobs* de la CI en verde — [run 33634114140](https://github.com/AOjeda006/Bastion/actions/runs/33634114140),
   con **403** casos rápidos en 5 ensamblados y **207** de integración en 2.
+
+### Addenda de la fase 0 — los tres ítems que abre la auditoría (2026-09-02)
+
+> **Estos tres NO son del Anexo A.3.** A.3 está cerrado y cumplido entero. Salen de la auditoría
+> previa a la fase 1 y los decidió el usuario tras verlos expuestos; el porqué de cada uno está en
+> *Decisiones tomadas → Auditoría previa a la fase 1*. Se numeran 0.14–0.16 porque son cimientos, y
+> el §15 dice que una fase termina desplegable y que nunca hay dos fases abiertas a la vez: entrar en
+> la 1 arrastrando esto sería abrir las dos.
+
+- [ ] **0.14 · Internacionalización del frontal** — criterio de aceptación: `react-i18next` montado
+  en `app/` con `es` y `en`; **ningún texto visible escrito en un componente**, comprobado por un
+  test que barre los `.tsx` y no por inspección; los títulos de `rutas.tsx` —que alimentan
+  `<title>`, el `<h1>` y el anuncio de `aria-live`— pasan por el mismo diccionario; cambiar de
+  idioma repinta sin recargar; las dos traducciones tienen **las mismas claves**, comparadas como
+  listas y no como recuentos.
+- [ ] **0.15 · Organización, entera** — criterio de aceptación: `Impuesto`, `Divisa` + `TipoCambio`,
+  `UnidadMedida` + `ConversionUM` y `Ubicacion` en el dominio, con su persistencia, sus migraciones
+  en `db/migraciones/Organizacion/` y su contrato bajo `/api/v1/organizacion/`; semillas de tipos de
+  IVA y unidades en `db/semillas/` cargadas por el migrador; y el cargador **afirmando conjunto no
+  vacío**, con la CI mirando dentro de la imagen que los ficheros están.
+  **F3 no se da por arreglado con la línea de `.dockerignore`**: quitarla deja que el contexto las
+  copie, pero `Dockerfile.api` publica solo `/publicado`, así que hay que publicarlas también
+  —`<Content Include>`— o no llegarán al contenedor que las carga.
+- [ ] **0.16 · `features/` espeja los módulos, y el glosario arranca** — criterio de aceptación:
+  `features/identidad/` y `features/organizacion/` sustituyen a `acceso`, `almacenes`, `empresas` e
+  `inicio`; `inicio` queda donde le corresponda por no ser de ningún módulo; una regla comprobable
+  —no una convención escrita— impide que una funcionalidad importe de otra; y `docs/dominio/`
+  estrena el glosario del lenguaje ubicuo **con lo ya construido**.
 
 ## Imports pendientes de `CLAUDE.md`
 
