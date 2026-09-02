@@ -1516,7 +1516,166 @@ no volver a abrirlas:
 | **Sin EF Core InMemory; solo el *hasher* de ASP.NET Core Identity** | Ambas son las que manda `testing.md` y `herramientas/autenticacion.md`. Adoptar el resto de Identity habría traído su modelo de usuario, que R11 y R12 contradicen. |
 | **`Notificaciones` sin carpeta, pero declarado** | `ElInventarioDeModulosTests` lo marca `Presencia.SinCarpeta` y **compara la lista entera** contra los dieciséis del §5. Ausente y declarado no es lo mismo que olvidado. |
 
+### Tomadas por el agente de desarrollo — ítem 0.14 (2026-09-02)
+
+- **Los diccionarios son módulos de TypeScript, no `.json`.** Es la decisión de la que cuelgan las
+  demás. `es.ts` exporta el objeto **sin `as const`** —así `typeof es` tiene las claves literales y
+  los valores como `string`— y de ahí sale el tipo `Diccionario`, que `en.ts` cumple entero. La
+  consecuencia: **una clave que falte en un idioma no compila**. Con `.json` no habría comprobación
+  ninguna; con `.json` y un test, la habría el día que alguien ejecutara el test. Medido con la
+  mutación 4: añadir una clave solo al castellano da `TS2741` nombrando la que falta.
+
+- **Un solo espacio de nombres, `traduccion`.** i18next admite repartir el diccionario por módulos y
+  cargarlos por separado. Se descarta hoy: partirlo hace que `t()` deje de comprobarse contra UN
+  tipo y permite que la misma clave viva en dos sitios, y el diccionario entero son unos pocos
+  kilobytes. Cuando pese, se parte; no antes.
+
+- **Fábrica `crearI18n()`, no la instancia global de `i18next`.** Exactamente el mismo motivo que
+  `crearCache()` en el 0.11: la instancia global es estado compartido entre tests, y un test que
+  cambia el idioma se lo dejaría cambiado al siguiente. `montarAplicacion` recibe además el idioma
+  **explícito**; tomarlo del detectado ataría los tests al `navigator.language` de la máquina que
+  los corre, y el mismo test pasaría en local y fallaría en la CI.
+
+- **La tabla de rutas guarda `claveDeTitulo`, no `titulo`, y su tipo es
+  `keyof Diccionario['rutas']`.** Es la doctrina del contraejemplo aplicada al frontal: no basta con
+  que la clave se traduzca, hay que hacer que escribir una frase ahí **no compile**. El título se
+  usa en tres sitios —`<title>`, el `<h1>` y el anuncio de `aria-live`—, así que un literal en la
+  tabla no se quedaría sin traducir en uno: se quedaría sin traducir en los tres.
+
+- **La capa de red deja de escribir frases y pasa a devolver MOTIVOS.** Es el cambio de forma del
+  ítem, y no estaba previsto: `shared/api/errores.ts` y `shared/api/sesiones.ts` —que son red, no
+  pantalla— escribían castellano y se lo daban pintado a los componentes. Con dos idiomas eso obliga
+  a una de dos cosas malas: o la capa de red llama a `t()` —y entonces sabe de presentación, y
+  además tiene que resolver el idioma fuera de React, donde no hay contexto—, o el texto sale
+  siempre en el idioma en que se escribió. Ahora devuelven uniones exactas —`MotivoDeFallo`,
+  `MotivoDeAcceso`, `MotivoDeCambioDeEmpresa`— y traduce quien pinta. Cada operación devuelve **su**
+  unión y no una común: así la pantalla de acceso no tiene que contemplar «no se ha podido cambiar
+  de empresa», que ahí no puede pasar, y el compilador la obliga a cubrir los dos que sí.
+
+- **Los mensajes de Zod son claves.** `esquemaDeAcceso` es una constante de módulo: se evalúa una
+  vez al importarlo, fuera de React y antes de que haya idioma. Una frase escrita ahí quedaría
+  fijada en el idioma de ese instante para toda la vida de la pestaña y **no cambiaría al cambiar de
+  idioma**. Guardando la clave, traduce el componente en cada pintada.
+
+- **El `lang` del documento lo mantiene el motor, no el componente que cambia el idioma.**
+  `crearI18n` se suscribe a `languageChanged` y lo actualiza ahí. Ponerlo en el selector sería un
+  invariante que depende de que alguien se acuerde de llamarlo, y dejaría de ser cierto en cuanto el
+  idioma se cambiara desde otro sitio. No es cosmético: **WCAG 3.1.1**, y de él dependen la voz que
+  elige un lector de pantalla y la separación silábica. Es justo lo que no se ve en una captura.
+
+- **La prohibición de texto suelto es una regla que se ejecuta: `i18next/no-literal-string`.** Un
+  barrido escrito a mano habría sido una prohibición tecleada —lo que la doctrina del contraejemplo
+  desaconseja— y habría que mantenerle la expresión regular. La regla va en modo `jsx-text-only` y
+  cubre el texto de JSX; `className`, `id`, `to` y compañía quedan fuera adrede, porque incluirlos
+  obligaría a una excepción por línea que acabaría apagando la regla de hecho. Corre en el paso
+  «Linter» que ya existía, así que no añade tiempo a la CI.
+
+- **La marca se excluye de la regla; no entra en el diccionario.** «Bastion» se escribe igual en los
+  dos idiomas —lo dice el glosario y el Anexo A.1—, y meterla como clave sería invitar a que alguien
+  la traduzca. Va en `words.exclude` con el motivo escrito al lado.
+
+- **`<Trans>` solo donde el énfasis está DENTRO de la frase.** Las dos primeras líneas de la portada
+  llevan `<strong>` en medio, y dónde cae el énfasis cambia con el idioma. La alternativa —partir la
+  frase en tres cachos y concatenarlos— deja al traductor sin la frase entera y se rompe en cuanto
+  un idioma pone el nombre al final. Por lo mismo hay dos claves enteras para «estás operando con
+  X» —con y sin la coletilla del selector— en vez de una frase más un trozo cosido.
+
+- **Sin `i18next-browser-languagedetector`.** La detección son veinte líneas: `localStorage`, si no
+  `navigator.language`, si no castellano. Traer un paquete para eso es lo que `AGENTS.md` llama
+  adoptar algo «porque siempre fue gratis». Y todos los accesos al depósito van en `try`:
+  `localStorage` **lanza** —no devuelve `null`— en una ventana privada con las cookies bloqueadas, y
+  una excepción ahí dejaría la aplicación sin arrancar por no poder leer una preferencia.
+
+- **`MensajeDePantallaRota` sale a su propio fichero.** Un límite de error tiene que ser una clase
+  —`getDerivedStateFromError` no existe en *hooks*— y una clase no puede llamar a `useTranslation`.
+  Se sacó el mensaje a un componente de función, y eso encendió `react-refresh/only-export-components`
+  —**0 avisos antes, 1 después**, medido—, porque el fichero pasaba a mezclar clase y función. Por
+  eso vive aparte y no dentro.
+
+#### Las cinco mutaciones, cada una aplicada, ejecutada y revertida
+
+| # | Qué se rompió | Qué se puso rojo |
+|---|---|---|
+| 1 | Un `<p>` con texto escrito a mano en `PaginaNoEncontrada` | `npm run lint` — `i18next/no-literal-string`, nombrando el fichero y la línea |
+| 2 | `crearI18n` deja de seguir a `languageChanged` para el `lang` | `ElCambioDeIdioma` — `expected 'es' to be 'en'` |
+| 3 | El título de la ruta sale del diccionario castellano en vez de `t()` | `ElCambioDeIdioma` — dos casos: el encabezado no llega a «Warehouses» y el anuncio se queda en castellano |
+| 4 | Una clave solo en `es.ts`, sin pareja en `en.ts` | **La compilación** — `TS2741`, nombrando la clave que falta |
+| 5 | Cuatro textos de `en.ts` copiados del castellano | `ElCambioDeIdioma` — «Hay 5 textos idénticos en los dos idiomas», con la lista |
+
+La 4 es la que más protege y la única que no es un test: el error llega antes de ejecutar nada.
+La 5 es la que cubre el agujero que la 4 deja abierto —copiar el castellano cumple el tipo, cumple
+la comparación de claves y deja media aplicación sin traducir—, y por eso compara **valores** y no
+solo claves. Su umbral es «menos de 4 iguales» y no «ninguno»: `{{titulo}} · Bastion` es idéntico en
+los dos idiomas legítimamente, y exigir cero obligaría a inventarle una diferencia.
+
+#### Lo que se encontró por el camino y no estaba previsto
+
+- **El frontal no pinta nunca `ProblemDetails.detail`.** Se comprobó antes de empezar, porque de
+  eso dependía si la i18n tocaba también a la API: si los mensajes del servidor llegaran a pantalla,
+  o la API tendría que traducir por `Accept-Language`, o devolver códigos. No hace falta ninguna de
+  las dos: todo lo que lee una persona está escrito en el frontal. **Pero la decisión vuelve** el
+  día que un error de validación se le enseñe al usuario con el texto del servidor, y ese día es la
+  fase 1. Queda anotado como riesgo.
+
+- **El presupuesto de tamaño se queda corto.** Medido a los dos lados: **490 kB antes, 554 kB
+  después**, con el tope de la CI en **600 kB**. Los 64 kB son `i18next` más `react-i18next` más los
+  dos diccionarios. Quedan 46 kB de margen y la fase 1 trae Terceros y Catálogo enteros: el tope hay
+  que revisarlo, y con un número razonado, no subiéndolo cuando salte. Anotado como riesgo.
+
+- **Los avisos de `act(...)` de los tests son de antes.** Salían 92 y siguen saliendo 92, contados a
+  los dos lados con el mismo comando. No los trae la i18n, así que no se arreglan aquí; queda dicho
+  para que el siguiente que los vea no los persiga en el sitio equivocado.
+
 ## Estado actual
+
+**Ítem 0.14 cerrado — la internacionalización que el §3 pedía «desde el primer día»:**
+el frontal habla castellano e inglés, **ningún texto visible está escrito en un componente**, y que
+siga siendo así lo vigila una regla del linter y no un acuerdo.
+
+Es el primero de los tres ítems de la **addenda**, que no salen del Anexo A.3 sino de la auditoría
+previa a la fase 1. La i18n no se había decidido no hacer: se había perdido. El 0.11 la tenía
+asignada por escrito en este mismo PLAN —dos veces— y cerró en verde sin ella porque su criterio de
+aceptación tampoco la nombraba.
+
+Lo que llega con él: `app/i18n/` con los dos diccionarios tipados, la fábrica del motor y la
+detección de idioma; `SelectorDeIdioma`; `MensajeDePantallaRota`; la tabla de rutas guardando
+**claves** de título en vez de frases; y `shared/api` devolviendo **motivos** en vez de castellano.
+
+### Lo que el criterio del 0.14 pedía, y dónde está probado
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| `react-i18next` montado en `app/` con `es` y `en` | `app/i18n/index.ts`, colgado del `I18nextProvider` más externo de `Proveedores`. |
+| **Ningún texto visible escrito en un componente**, comprobado y no inspeccionado | `i18next/no-literal-string` en `eslint.config.js`, vista en rojo (mutación 1). |
+| Los títulos de `rutas.tsx` pasan por el mismo diccionario | `ElCambioDeIdioma` → «al elegir English cambia la pantalla ENTERA»; el `<h1>`, el `<title>` y el anuncio, los tres. |
+| Cambiar de idioma repinta **sin recargar** | El mismo caso: se cambia con el `<select>` y se espera al encabezado nuevo, sin remontar nada. |
+| Las dos traducciones tienen **las mismas claves**, comparadas como listas | El tipo `Diccionario` (mutación 4, error de compilación) **y** `ElCambioDeIdioma` → «los dos diccionarios traen EXACTAMENTE las mismas claves, y no están vacíos». |
+
+Y dos cosas que el criterio no pedía y estaban debajo: el **`lang` del documento** sigue al idioma
+(WCAG 3.1.1, mutación 2) y **ninguna traducción se ha quedado sin traducir** (mutación 5) — copiar
+el castellano en `en.ts` cumple el tipo y cumple la comparación de claves.
+
+### Verificado en local, con la salida real
+
+```
+npm run typecheck        ->  sin errores
+npm run lint             ->  sin errores ni avisos
+npm run format:check     ->  All matched files use Prettier code style!
+npm run test             ->  8 ficheros, 39 casos, 39 pasados   (eran 32)
+npm run build            ->  built in 2.18s;  dist = 554 kB  (tope 600)
+npm run api + git status ->  esquema.ts sin cambios
+scripts/comprobar-migraciones.sh -> Auditoría 3, Organización 3, Identidad 3; el modelo coincide
+```
+
+El backend no se toca en este ítem; se pasa igual porque la batería de `AGENTS.md` es la de la CI y
+un ítem no se declara hecho con media batería.
+
+**Dónde retomar exactamente:** ítem **0.15**, Organización entera. Criterio: `Impuesto`, `Divisa` +
+`TipoCambio`, `UnidadMedida` + `ConversionUM` y `Ubicacion` en el dominio, con su persistencia, sus
+migraciones en `db/migraciones/Organizacion/` y su contrato bajo `/api/v1/organizacion/`; semillas
+de tipos de IVA y unidades en `db/semillas/` cargadas por el migrador; y el cargador **afirmando
+conjunto no vacío**. Ojo con lo que el 0.14 dejó anotado: quitar `db/semillas` del `.dockerignore`
+**no basta**, porque `Dockerfile.api` publica solo `/publicado`.
 
 **Ítem 0.13 cerrado, y con él la FASE 0 entera:**
 [run 33634114140](https://github.com/AOjeda006/Bastion/actions/runs/33634114140) sobre `518775c`, los **tres**
@@ -3178,7 +3337,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 > el §15 dice que una fase termina desplegable y que nunca hay dos fases abiertas a la vez: entrar en
 > la 1 arrastrando esto sería abrir las dos.
 
-- [ ] **0.14 · Internacionalización del frontal** — criterio de aceptación: `react-i18next` montado
+- [x] **0.14 · Internacionalización del frontal** — criterio de aceptación: `react-i18next` montado
   en `app/` con `es` y `en`; **ningún texto visible escrito en un componente**, comprobado por un
   test que barre los `.tsx` y no por inspección; los títulos de `rutas.tsx` —que alimentan
   `<title>`, el `<h1>` y el anuncio de `aria-live`— pasan por el mismo diccionario; cambiar de
@@ -3219,6 +3378,20 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTO (2026-09-02) · El presupuesto de tamaño del frontal se queda corto.** La CI corta en
+  **600 kB** (`du -sk --exclude='*.map' dist`). Tras el 0.14 son **554 kB**: la i18n costó 64, de
+  490 a 554, medido a los dos lados. Quedan **46 kB** y la fase 1 trae Terceros y Catálogo enteros,
+  con sus formularios y sus tablas. Hay que revisar el tope **con un número razonado** —qué tarda en
+  cargar y con qué red— y no subirlo el día que salte, que es como un presupuesto deja de serlo.
+
+- **ABIERTO (2026-09-02) · El día que un mensaje del servidor se le enseñe al usuario, la i18n
+  vuelve a la mesa.** Hoy el frontal **no pinta nunca** `ProblemDetails.detail`: todo lo que lee una
+  persona está escrito en el frontal, y por eso el 0.14 no tocó la API. Pero las validaciones de la
+  fase 1 —un NIF con la letra mal, un código de artículo repetido— son justo las que apetece
+  enseñar con el texto que manda el servidor. Ese día hay que decidir entre que la API traduzca por
+  `Accept-Language` o que devuelva códigos y traduzca el frontal. **La respuesta por defecto es la
+  segunda**, porque mantiene la API sin saber de presentación; pero se decide, no se hereda.
 
 - **CERRADO (2026-09-02) · `UnidadDeTrabajoPorModuloTests` fija sus ensamblados a mano, y le falta
   uno.** `tests/Api.FunctionalTests/Composicion/UnidadDeTrabajoPorModuloTests.cs` declara
