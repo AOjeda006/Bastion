@@ -10,7 +10,13 @@
 **/*.tsbuildinfo
 **/.eslintcache
 docs
-db/migraciones
+# `db/migraciones` estuvo AQUÍ hasta el ítem 0.13, y era una avería muda. Las migraciones viven
+# fuera de los proyectos (§14) y cada `Bastion.<Modulo>.Infrastructure.csproj` las mete con un
+# `<Compile Include="../../../../db/migraciones/<Modulo>/**/*.cs" />`. Un glob que no casa con nada
+# no es un error: compila igual, y el ensamblado publicado sale SIN migraciones. La imagen se
+# construía bien, arrancaba bien, y `Migrate()` habría aplicado cero migraciones sin decir nada.
+# Solo se copian los `.cs` de migración; `db/semillas` sigue fuera.
+db/semillas
 deploy/.env
 .env
 .env.*

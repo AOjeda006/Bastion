@@ -8,6 +8,46 @@
 
 name: bastion
 
+# La imagen de la API y su entorno se declaran AQUÍ, una sola vez, porque los usan DOS servicios:
+# el que atiende peticiones y el que aplica las migraciones. Dos bloques copiados son dos bloques
+# que divergen, y el día que divergieran el migrador prepararía un esquema que no es el que la API
+# espera, sin que nada lo dijera.
+x-imagen-de-la-api: &imagen-de-la-api
+  image: bastion-api:local
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile.api
+
+x-entorno-de-la-api: &entorno-de-la-api
+  ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+  ASPNETCORE_HTTP_PORTS: '8080'
+  ConnectionStrings__Bastion: 'Host=postgres;Port=5432;Database=${POSTGRES_DB:-bastion_dev};Username=${POSTGRES_USER:-bastion};Password=${POSTGRES_PASSWORD};Include Error Detail=true'
+  # Telemetría por OTLP al recolector; la aplicación no sabe quién hay detrás
+  # (`herramientas/observabilidad.md`: OpenTelemetry es la frontera con el proveedor).
+  OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector:4317'
+  OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc'
+  OTEL_SERVICE_NAME: 'bastion-api'
+  OTEL_RESOURCE_ATTRIBUTES: 'service.namespace=bastion,deployment.environment=local'
+  # El emisor, la audiencia y la clave de firma se leen del entorno; NUNCA del repositorio.
+  # Los nombres son los de `OpcionesDeJwt` y se leen tal cual, sin seccion: una variable
+  # `Jwt__SigningKey` acabaria en la clave de configuracion `Jwt:SigningKey`, que no lee
+  # nadie, y la API se negaria a arrancar diciendo que falta JWT_SIGNING_KEY.
+  JWT_ISSUER: ${JWT_ISSUER:-https://localhost}
+  JWT_AUDIENCE: ${JWT_AUDIENCE:-bastion-web}
+  JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?define JWT_SIGNING_KEY en deploy/.env}
+  # Semilla de arranque: la primera empresa y la primera cuenta, y solo si no hay ninguna.
+  # Van SIN valor por omision a proposito: si falta una, la semilla no se aplica y lo dice en
+  # el registro. Unas credenciales por omision son unas credenciales conocidas, y la
+  # instalacion que nadie configuro es exactamente la que las conservaria.
+  BASTION_SEMILLA_ADMIN_CORREO: ${BASTION_SEMILLA_ADMIN_CORREO:-}
+  BASTION_SEMILLA_ADMIN_CONTRASENA: ${BASTION_SEMILLA_ADMIN_CONTRASENA:-}
+  BASTION_SEMILLA_EMPRESA_NIF: ${BASTION_SEMILLA_EMPRESA_NIF:-}
+  BASTION_SEMILLA_EMPRESA_RAZON_SOCIAL: ${BASTION_SEMILLA_EMPRESA_RAZON_SOCIAL:-}
+  BASTION_SEMILLA_EMPRESA_CALLE: ${BASTION_SEMILLA_EMPRESA_CALLE:-}
+  BASTION_SEMILLA_EMPRESA_CODIGO_POSTAL: ${BASTION_SEMILLA_EMPRESA_CODIGO_POSTAL:-}
+  BASTION_SEMILLA_EMPRESA_POBLACION: ${BASTION_SEMILLA_EMPRESA_POBLACION:-}
+  BASTION_SEMILLA_EMPRESA_PAIS: ${BASTION_SEMILLA_EMPRESA_PAIS:-ES}
+
 services:
   # --------------------------------------------------------------- base de datos
   postgres:
@@ -34,46 +74,50 @@ services:
       retries: 20
       start_period: 10s
 
+  # ------------------------------------------- migraciones (contenedor de un solo uso)
+  # QUIÉN APLICA EL DDL, que hasta ahora no lo aplicaba nadie. La API no: este contenedor,
+  # que es el MISMO artefacto invocado con `--migrar`, aplica lo que falte y sale. Los demás
+  # esperan a que salga BIEN (`service_completed_successfully`), así que el esquema pasa a ser
+  # un paso del despliegue con su propio resultado —verde o rojo, atribuible, con su registro—
+  # en vez de un efecto secundario de que arranque un servidor web. El precio de esta opción y
+  # el de las dos descartadas, en `docs/adr/adr-0021`.
+  migraciones:
+    <<: *imagen-de-la-api
+    command: ['--migrar']
+    # Explícito, y no por omisión: con `unless-stopped` —la política de los demás servicios—
+    # este contenedor volvería a arrancar cada vez que termina, que es siempre.
+    restart: 'no'
+    environment:
+      <<: *entorno-de-la-api
+      # Lo único que cambia respecto de la API. Sin extremo no se registra el exportador (ver
+      # `Program.cs`): un proceso que vive tres segundos no alcanza a exportar nada, y sí
+      # alcanza a llenar el registro de errores de red contra un recolector que quizá ni está.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ''
+      OTEL_SERVICE_NAME: 'bastion-migraciones'
+    # La sonda de la imagen pregunta por HTTP a un proceso que aquí no escucha. Sin esto, el
+    # contenedor acabaría marcado como enfermo habiendo hecho su trabajo perfectamente.
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # --------------------------------------------------------------- API (host único)
   api:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.api
+    <<: *imagen-de-la-api
     restart: unless-stopped
-    environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      ASPNETCORE_HTTP_PORTS: '8080'
-      ConnectionStrings__Bastion: 'Host=postgres;Port=5432;Database=${POSTGRES_DB:-bastion_dev};Username=${POSTGRES_USER:-bastion};Password=${POSTGRES_PASSWORD};Include Error Detail=true'
-      # Telemetría por OTLP al recolector; la aplicación no sabe quién hay detrás
-      # (`herramientas/observabilidad.md`: OpenTelemetry es la frontera con el proveedor).
-      OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector:4317'
-      OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc'
-      OTEL_SERVICE_NAME: 'bastion-api'
-      OTEL_RESOURCE_ATTRIBUTES: 'service.namespace=bastion,deployment.environment=local'
-      # El emisor, la audiencia y la clave de firma se leen del entorno; NUNCA del repositorio.
-      # Los nombres son los de `OpcionesDeJwt` y se leen tal cual, sin seccion: una variable
-      # `Jwt__SigningKey` acabaria en la clave de configuracion `Jwt:SigningKey`, que no lee
-      # nadie, y la API se negaria a arrancar diciendo que falta JWT_SIGNING_KEY.
-      JWT_ISSUER: ${JWT_ISSUER:-https://localhost}
-      JWT_AUDIENCE: ${JWT_AUDIENCE:-bastion-web}
-      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?define JWT_SIGNING_KEY en deploy/.env}
-      # Semilla de arranque: la primera empresa y la primera cuenta, y solo si no hay ninguna.
-      # Van SIN valor por omision a proposito: si falta una, la semilla no se aplica y lo dice en
-      # el registro. Unas credenciales por omision son unas credenciales conocidas, y la
-      # instalacion que nadie configuro es exactamente la que las conservaria.
-      BASTION_SEMILLA_ADMIN_CORREO: ${BASTION_SEMILLA_ADMIN_CORREO:-}
-      BASTION_SEMILLA_ADMIN_CONTRASENA: ${BASTION_SEMILLA_ADMIN_CONTRASENA:-}
-      BASTION_SEMILLA_EMPRESA_NIF: ${BASTION_SEMILLA_EMPRESA_NIF:-}
-      BASTION_SEMILLA_EMPRESA_RAZON_SOCIAL: ${BASTION_SEMILLA_EMPRESA_RAZON_SOCIAL:-}
-      BASTION_SEMILLA_EMPRESA_CALLE: ${BASTION_SEMILLA_EMPRESA_CALLE:-}
-      BASTION_SEMILLA_EMPRESA_CODIGO_POSTAL: ${BASTION_SEMILLA_EMPRESA_CODIGO_POSTAL:-}
-      BASTION_SEMILLA_EMPRESA_POBLACION: ${BASTION_SEMILLA_EMPRESA_POBLACION:-}
-      BASTION_SEMILLA_EMPRESA_PAIS: ${BASTION_SEMILLA_EMPRESA_PAIS:-ES}
+    environment: *entorno-de-la-api
     ports:
       - '${API_PORT:-8080}:8080'
     depends_on:
       postgres:
         condition: service_healthy
+      # El esquema tiene que estar puesto ANTES de que la API atienda nada —y antes de que
+      # siembre, que es lo primero que hace—. `service_started` no valdría: diría que sí en
+      # cuanto el migrador arranca, no cuando termina. `service_healthy` tampoco: un contenedor
+      # que sale no llega a estar sano nunca.
+      migraciones:
+        condition: service_completed_successfully
       otel-collector:
         condition: service_started
     healthcheck:

@@ -364,11 +364,26 @@ jobs:
 
       # Las credenciales se generan aquí y mueren con el runner. En el repositorio no hay
       # —ni puede haber— un `deploy/.env`: está en .gitignore y en .dockerignore.
+      #
+      # Las siete `BASTION_SEMILLA_*` se rellenan desde el 0.13, y no es cosmética: hasta ahora
+      # iban vacías, la semilla no se aplicaba, y ese camino —el que crea la primera empresa y la
+      # primera cuenta— NO LO EJERCÍA NADIE. La primera vez que se rellenaron, contra el compose
+      # de antes de este ítem, la API ni arrancaba: la semilla consulta `organizacion.empresas`
+      # antes de crear nada y la tabla no existía (ADR-0021). La contraseña se sortea aquí y no se
+      # imprime en ningún sitio; las de más abajo son datos de una empresa inventada, no secretos.
       - name: Preparar deploy/.env
         run: |
           {
             echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
             echo "JWT_SIGNING_KEY=$(openssl rand -base64 48)"
+            echo "BASTION_SEMILLA_ADMIN_CORREO=admin@bastion.local"
+            echo "BASTION_SEMILLA_ADMIN_CONTRASENA=$(openssl rand -base64 24)"
+            echo "BASTION_SEMILLA_EMPRESA_NIF=B12345674"
+            echo "BASTION_SEMILLA_EMPRESA_RAZON_SOCIAL=Bastion Humo SL"
+            echo "BASTION_SEMILLA_EMPRESA_CALLE=Calle Mayor 1"
+            echo "BASTION_SEMILLA_EMPRESA_CODIGO_POSTAL=28013"
+            echo "BASTION_SEMILLA_EMPRESA_POBLACION=Madrid"
+            echo "BASTION_SEMILLA_EMPRESA_PAIS=ES"
           } > deploy/.env
 
       # Valida e interpola el fichero sin levantar nada. `--quiet` es obligatorio: la salida
@@ -399,6 +414,42 @@ jobs:
       - name: Estado de los servicios
         run: docker compose -f deploy/docker-compose.yml ps --all
 
+      # El migrador es un PASO DEL DESPLIEGUE con su propio resultado, así que tiene su propio
+      # paso aquí: `--wait` no lo mira —un contenedor que sale no llega a estar sano nunca— y sin
+      # esto su código de salida solo se vería reflejado en que la API no arranca, que es una
+      # forma pésima de enterarse. Se comprueba además que aplicó ALGO: «cero migraciones» y
+      # «esquema al día» salen las dos con 0, y sobre una base recién creada la primera es el
+      # síntoma de un ensamblado publicado sin migraciones (ADR-0021).
+      - name: El migrador ha dejado el esquema al día, y lo dice
+        run: |
+          CONTENEDOR=$(docker compose -f deploy/docker-compose.yml ps --all --quiet migraciones | head -1)
+          if [ -z "$CONTENEDOR" ]; then
+            echo "::error title=Migrador::No existe el contenedor del servicio migraciones."
+            exit 1
+          fi
+          CODIGO=$(docker inspect --format '{{.State.ExitCode}}' "$CONTENEDOR")
+          echo "El migrador ha salido con código $CODIGO."
+          docker compose -f deploy/docker-compose.yml logs --no-color migraciones
+          test "$CODIGO" = "0"
+          REGISTRO=$(docker compose -f deploy/docker-compose.yml logs --no-color migraciones)
+          # Por NOMBRE, no por cuenta. Un `grep -c` diría «tres» con tres líneas del mismo
+          # contexto, y el fallo que hay que cazar aquí es justo ese: un contexto que deja de
+          # migrarse porque alguien lo quitó de `MigradorDeArranque`. La lista está escrita a mano
+          # a propósito —el módulo nuevo de la fase 1 tiene que añadirse aquí— y su contraejemplo
+          # es que los tres nombres existen hoy: si uno deja de existir, este paso se pone rojo
+          # diciendo cuál.
+          FALTAN=
+          for CONTEXTO in AuditoriaDbContext OrganizacionDbContext IdentidadDbContext; do
+            echo "$REGISTRO" | grep -q "\"Contexto\":\"${CONTEXTO}\".*EsquemaMigrado" \
+              || echo "$REGISTRO" | grep -q "EsquemaMigrado.*\"Contexto\":\"${CONTEXTO}\"" \
+              || FALTAN="${FALTAN} ${CONTEXTO}"
+          done
+          if [ -n "$FALTAN" ]; then
+            echo "::error title=Migrador::Sobre una base recién creada los TRES contextos con persistencia tienen que migrarse, y estos no lo dicen:${FALTAN}."
+            exit 1
+          fi
+          echo "::notice title=Migrador::Esquema aplicado por los tres contextos: Auditoría, Organización e Identidad."
+
       - name: La API responde a su sonda de VIDA
         run: |
           RESPUESTA=$(curl --fail --silent --show-error http://localhost:8080/health/live)
@@ -423,6 +474,55 @@ jobs:
           CODIGO=$(curl --silent --output /dev/null --write-out '%{http_code}' "$RUTA")
           echo "GET /api/v1/organizacion/empresas sin credenciales -> $CODIGO"
           test "$CODIGO" = "401"
+
+      # LA SONDA QUE LEE UNA TABLA, y el motivo de que exista está medido: hasta el 0.13 este job
+      # comprobaba la sonda de vida, la de disponibilidad, que el frontal carga, que reenvía /api
+      # y que las trazas llegan. NINGUNA de esas peticiones toca una tabla. La de disponibilidad
+      # pregunta si PostgreSQL acepta conexiones y responde, y eso es verdad sobre una base vacía:
+      # el entorno estaba verde y no podía atender una petición que leyera datos. Contra el
+      # despliegue de antes de este ítem, este mismo paso daba 500 — que es lo que lo convierte en
+      # una sonda y no en un adorno.
+      #
+      # Inicia sesión DE VERDAD con la cuenta sembrada: no se forja ningún testigo aquí, igual que
+      # no se forja en los tests de integración. La contraseña se lee del `.env` que este job
+      # generó y no se imprime.
+      - name: Iniciar sesión con la cuenta sembrada devuelve un testigo
+        run: |
+          CONTRASENA=$(sed -n 's/^BASTION_SEMILLA_ADMIN_CONTRASENA=//p' deploy/.env)
+          test -n "$CONTRASENA"
+          CODIGO=$(curl --silent --output sesion.json --write-out '%{http_code}' \
+            --request POST http://localhost:8080/api/v1/identidad/sesiones \
+            --header 'Content-Type: application/json' \
+            --data "$(jq -n --arg c admin@bastion.local --arg p "$CONTRASENA" '{correo:$c,contrasena:$p}')")
+          echo "POST /api/v1/identidad/sesiones -> $CODIGO"
+          if [ "$CODIGO" != "200" ]; then
+            echo "::error title=Sesión::La cuenta sembrada no ha podido iniciar sesión (HTTP ${CODIGO}). Sin esquema o sin semilla, esta llamada es la primera que lo nota."
+            exit 1
+          fi
+          TESTIGO=$(jq -r '.tokenDeAcceso // empty' sesion.json)
+          test -n "$TESTIGO"
+          # El testigo es una credencial viva: se guarda en un fichero del runner, nunca en la
+          # salida ni en `$GITHUB_ENV`. Se anota solo su longitud, que no revela nada.
+          printf '%s' "$TESTIGO" > testigo.txt
+          echo "::notice title=Sesión::La cuenta sembrada ha iniciado sesión; el testigo tiene ${#TESTIGO} caracteres."
+
+      - name: Una petición que LEE UNA TABLA devuelve los datos sembrados
+        run: |
+          CODIGO=$(curl --silent --output empresas.json --write-out '%{http_code}' \
+            http://localhost:8080/api/v1/organizacion/empresas \
+            --header "Authorization: Bearer $(cat testigo.txt)")
+          echo "GET /api/v1/organizacion/empresas con testigo -> $CODIGO"
+          test "$CODIGO" = "200"
+          RAZON=$(jq -r '.elementos[0].razonSocial // empty' empresas.json)
+          TOTAL=$(jq -r '.total // 0' empresas.json)
+          echo "total=$TOTAL razonSocial=$RAZON"
+          # El total se compara además con cero: una lista vacía es un 200 perfectamente formado,
+          # y es exactamente lo que devolvería un esquema recién migrado sin sembrar.
+          if [ "$TOTAL" -lt 1 ] || [ "$RAZON" != "Bastion Humo SL" ]; then
+            echo "::error title=Lectura::El listado de empresas no trae la empresa sembrada (total=${TOTAL}, razonSocial=${RAZON})."
+            exit 1
+          fi
+          echo "::notice title=Lectura::El entorno desplegado sirve datos: ${TOTAL} empresa(s), la primera «${RAZON}»."
 
       - name: El frontal carga
         run: |
@@ -481,7 +581,11 @@ jobs:
           done
           # Lo decisivo cuando un servicio queda `unhealthy` es la SALIDA de la sonda, que
           # no aparece en los registros del contenedor: la guarda el demonio.
-          for SERVICIO in postgres api web otel-collector jaeger; do
+          # `migraciones` va el primero de la lista a propósito: si el esquema no se aplicó, todo
+          # lo demás falla por consecuencia, y lo que hay que leer es su registro, no el de la API
+          # quejándose de una tabla que no existe. No tiene sonda —se le desactiva—, así que
+          # siempre entra por la rama de «no está sano», que aquí es justo lo que se quiere.
+          for SERVICIO in migraciones postgres api web otel-collector jaeger; do
             CONTENEDOR=$(docker compose -f deploy/docker-compose.yml ps --all --quiet "$SERVICIO" | head -1)
             [ -n "$CONTENEDOR" ] || continue
             SALUD=$(docker inspect --format '{{json .State.Health}}' "$CONTENEDOR" 2>/dev/null || echo 'sin sonda')

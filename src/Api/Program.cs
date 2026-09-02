@@ -31,7 +31,12 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+// El modo MIGRADOR se decide antes de construir nada. El DDL no lo aplica el arranque de la API:
+// lo aplica este mismo artefacto invocado con `--migrar`, que migra y sale (`MigradorDeArranque`,
+// y el porqué entero en `docs/adr/adr-0021`). Aquí solo se mira si toca.
+bool migrarYSalir = MigradorDeArranque.LoPiden(args);
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(MigradorDeArranque.SinElArgumento(args));
 
 string rutaDeVida = "/health/live";
 string rutaDeDisponibilidad = "/health/ready";
@@ -246,6 +251,14 @@ builder.Services.AgregarContratoDeLaApi();
 
 WebApplication app = builder.Build();
 
+// Se sale AQUÍ, antes de montar la tubería y antes de sembrar: el migrador no atiende peticiones
+// y no crea datos. Aplica el DDL que falte, dice en el registro qué ha aplicado y devuelve el
+// código de salida que el compose lee para decidir si arranca la API.
+if (migrarYSalir)
+{
+    return await app.MigrarYSalirAsync();
+}
+
 // Lo PRIMERO de la tubería: un manejador de excepciones solo cubre lo que tiene por dentro.
 // Y va por fuera del registro de peticiones a propósito: si fuera al revés, cada 500 se
 // registraría dos veces con su traza entera, una por cada uno.
@@ -288,6 +301,8 @@ if (cadenaDeConexion.Length > 0)
 }
 
 await app.RunAsync();
+
+return 0;
 
 static bool EsSonda(PathString ruta) => ruta.StartsWithSegments("/health");
 
