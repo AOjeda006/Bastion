@@ -25,7 +25,11 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // `'hidden'` y no `true`: el mapa se genera —hace falta para leer una traza de producción—
+    // pero el fragmento no lo anuncia con su comentario `sourceMappingURL`, así que ningún
+    // navegador se lo descarga solo. Y la imagen de nginx no lo sirve: `Dockerfile.web` lo borra
+    // del raíz servido, porque un mapa publicado es el código fuente publicado.
+    sourcemap: 'hidden',
     // Presupuesto de tamaño: la CI avisa si un fragmento se dispara. Un ERP acaba
     // cargando tablas, gráficas y un cliente de API generado; sin un tope, el arranque
     // se degrada un poco en cada sprint y nadie lo nota hasta que molesta.

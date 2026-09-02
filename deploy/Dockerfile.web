@@ -22,6 +22,15 @@ FROM nginxinc/nginx-unprivileged:1.29-alpine AS final
 
 COPY --from=build /origen/dist /usr/share/nginx/html
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY deploy/nginx-cabeceras-de-seguridad.conf /etc/nginx/cabeceras-de-seguridad.conf
+
+# Los mapas de fuentes NO se sirven. Se generan (`sourcemap: 'hidden'`) porque hacen falta para
+# leer una traza, y se quedan en el artefacto que publica la CI; aquí se borran, porque publicar el
+# mapa es publicar el código. Se hace con `find` y no con `rm assets/*.map` para que el día que un
+# mapa salga de otra carpeta siga desapareciendo.
+USER root
+RUN find /usr/share/nginx/html -name '*.map' -delete
+USER 101
 
 EXPOSE 8080
 
