@@ -1273,7 +1273,237 @@ escritas, es **cada regla vista en rojo por una violación deliberada antes de a
   **`db/migraciones/.gitkeep`**, con dieciocho ficheros versionados dentro desde hace ítems: **se
   borra también**. Ningún otro andamio de la fase 0 se queda sin llenar.
 
+### Tomadas por el agente de desarrollo — ítem 0.13 (2026-09-02)
+
+- **El criterio de este ítem ya se cumplía el día que empezó, y ese era el problema.** Había
+  *workflow*, compilaba, pasaba linter, corría los tres carriles de tests y salía verde de punta a
+  punta. Un ítem cuyo criterio literal ya está satisfecho es el que se cierra sin hacer nada. Lo que
+  se ha hecho es preguntar qué afirma de verdad cada verde, y el resultado fueron seis cosas que
+  daban verde sin comprobar lo que decían.
+
+- **Quién aplica el esquema en un despliegue: un contenedor de un solo uso, no el arranque de la
+  API.** La deuda más antigua de la fase, abierta el 26 de agosto con el 0.4. El mismo artefacto
+  invocado con `--migrar` aplica las migraciones de los tres contextos en orden y sale; los demás
+  servicios esperan a `service_completed_successfully`. Se descarta migrar en el arranque —cómodo
+  con una réplica, avería con dos: DDL simultáneo, y el cambio de esquema lo aplica «la réplica que
+  arranque primero», o sea nadie— y se descarta un paso con `dotnet ef database update` —necesita el
+  SDK en el contenedor y migraría desde el **código fuente**, no desde el artefacto que se
+  despliega—. El argumento entero, con el precio de la elegida, en **ADR-0021**.
+
+- **Se pide por argumento y no por variable de entorno.** Una variable se hereda: basta con que
+  alguien la ponga en el `.env` compartido para que *todas* las réplicas se conviertan en
+  migradoras. Un argumento se escribe servicio a servicio y se ve en `docker compose config`.
+
+- **El `.dockerignore` excluía `db/migraciones`, y eso era una avería muda.** Salió al probar el
+  migrador dentro de un contenedor por primera vez: dijo «el esquema ya estaba al día» tres veces y
+  salió con **0** sobre una base sin una sola tabla. Las migraciones viven fuera de los proyectos
+  (§14) y entran por un `<Compile Include="../../db/migraciones/…" />`; sin la carpeta en el
+  contexto de construcción el glob no casaba con nada, y **un glob vacío no da error**: compila
+  igual y el ensamblado publicado sale sin migraciones. Dos arreglos, no uno: se quita la exclusión
+  **y** el migrador afirma que conoce al menos una migración antes de mirar si hay pendientes. Cero
+  migraciones conocidas significa un ensamblado mal construido, no una base al día.
+
+- **El *job* de Humo gana la sonda que le faltaba: una petición que LEE UNA TABLA.** Las cinco que
+  había —vida, disponibilidad, el frontal carga, el frontal reenvía `/api`, las trazas llegan—
+  **ninguna toca una tabla**; la de disponibilidad pregunta si PostgreSQL acepta conexiones y
+  responde, y eso es cierto sobre una base vacía. La nueva inicia sesión con la cuenta sembrada y
+  lista empresas con el testigo. Medida contra el despliegue anterior daba **500**, y con los tres
+  esquemas tirados vuelve a darlo mientras las otras cinco siguen verdes (mutación 6).
+
+- **Las siete `BASTION_SEMILLA_*` se rellenan en la CI.** Iban vacías, así que la semilla se saltaba
+  con un aviso y **nadie ejercía ese camino**. La primera vez que se rellenaron, contra el compose
+  anterior, la API ni arrancaba. La contraseña se sortea en el propio *job* y no se imprime.
+
+- **El suelo de casos se acompaña de la lista de ensamblados, en los DOS carriles.** El suelo es una
+  red gruesa y protegía menos de lo que parecía: en el carril rápido, de cinco ensamblados cubría
+  dos —perder los 103 de `Api.FunctionalTests` deja 300 clavados, y la comparación es «menor que»—;
+  en el de integración, de dos cubría uno. Ahora la lista se declara y **se compara entera, en las
+  dos direcciones**: el que desaparece se nombra, el que aparece obliga a declararlo, y solo cuenta
+  el que ejecuta al menos un caso.
+
+- **Ningún comentario de recuento vuelve a afirmar cuántos casos hay.** El del carril de integración
+  decía «142 (114 de la API + 28 de Organización)» cuando llevaba 206, y llevaba ítems mintiendo.
+  Un número escrito en un comentario no lo actualiza nadie: la cuenta la publica cada *run* como
+  anotación. Donde queda un número —el del carril rápido— está marcado como **medida del 0.13** y
+  está ahí como argumento, no como inventario.
+
+- **Las capas de aplicación se descubren; ya no se teclean.** `UnidadDeTrabajoPorModuloTests`
+  declaraba dos `typeof(...)` y llevaba desde el 0.9 sin `Bastion.Auditoria.Application`. Ahora
+  salen de los `Bastion.*.Application.dll` que arrastra `Bastion.Api`, menos el bloque común, con la
+  afirmación de conjunto no vacío del ADR-0020. El módulo de la fase 1 entra solo.
+
+- **El barrido de permisos vive en el carril de INTEGRACIÓN, y esa es la decisión.** Lo que hay que
+  comparar no es una constante de C#: es lo que la API sirve por `GET /api/v1/identidad/roles/permisos`,
+  que exige `identidad.rol.ver`. Eso pide un inicio de sesión de verdad y, por tanto, una base de
+  datos. El carril funcional tiene el host pero no la base, así que allí solo se llegaría **forjando
+  un testigo** —lo que este proyecto no hace nunca— y probaría el manejador de permisos, no el
+  catálogo. Comparar contra las constantes diría que dos listas escritas a mano coinciden.
+
+- **Las cuatro publicaciones colgadas del aviso de Node.js 20 se resuelven de dos maneras
+  distintas.** Leídas las notas de versión antes: `upload-artifact` v5 y v6 pasan a Node 24 y exigen
+  runner ≥ 2.327.1 —`ubuntu-latest` va muy por encima—, v7 añade subida directa opcional;
+  `download-artifact` v8 pasa a **errar** ante un hash que no cuadra (antes solo avisaba) y deja de
+  desempaquetar a ciegas: mira el `Content-Type`. Se suben a v7 y v8. Los dos de docker
+  —`build-push-action` y `setup-buildx-action`— **desaparecen con el *job* que los usaba**.
+
+- **Se retira el *job* `imagenes`, que es la salida que `PLAN.md` dejaba abierta.** Construía las
+  dos imágenes sin publicarlas, con los mismos `needs` y los mismos dos Dockerfile que `Humo`, que
+  las construye, las **arranca** y les hace peticiones. Una afirmación que es subconjunto estricto
+  de otra no añade cobertura: añade minutos y una segunda cosa que actualizar. Se pierde la caché
+  `type=gha` de buildx, que `compose build` no usa igualmente.
+
+- **Publicar no es haber publicado lo que se dice.** `upload-artifact` sale verde subiendo un zip
+  vacío si el `path` no casa con nada. Los tres artefactos se bajan ahora en el mismo *run* y se les
+  mira dentro: el `dist` con su `index.html`, el `openapi.json` **comparado byte a byte** con el del
+  repositorio, y los `.trx` de los **dos** carriles —que estén los dos es lo que distingue «se
+  subieron los resultados» de «se subió la mitad»—.
+
+- **Se retira el `mkdir -p ~/.nuget/packages` del ADR-0002.** Existía porque los `packages.lock.json`
+  solo tenían entradas `"type": "Project"` y ningún `restore` creaba la carpeta. Hoy tienen 17
+  directas, 102 transitivas y 31 centrales. La retirada estaba prescrita para este ítem, no antes.
+
+- **`frontend/public/` sobraba, y además se estaba publicando.** De las tres carpetas vacías que
+  quedaban con `.gitkeep`, dos tienen dueño escrito en el plan maestro: `db/semillas/` recibe los
+  datos maestros versionados que un comando carga (§14) y `docs/dominio/` el modelo y el glosario
+  del lenguaje ubicuo. La tercera no la nombra nadie —ni el plan maestro, ni `vite.config.ts`, ni el
+  `index.html`— y no era inerte: Vite copia `public/` al raíz de `dist`, así que el `.gitkeep`
+  viajaba a la imagen y **nginx lo servía con 200**. Se borra.
+
 ## Estado actual
+
+**Ítem 0.13 cerrado, y con él la FASE 0 entera:**
+[run 33634114140](https://github.com/AOjeda006/Bastion/actions/runs/33634114140) sobre `518775c`, los **tres**
+*jobs* en `success` —Frontal, Backend y Humo (docker compose)—, con **403** casos rápidos, **207**
+de integración contra PostgreSQL 17.6 y **46** operaciones de OpenAPI. Son tres y no cuatro porque
+este ítem retira el *job* `Imágenes de contenedor`.
+
+El ítem entró con su criterio de aceptación **ya satisfecho** —había *workflow*, compilaba, pasaba
+linter, corría los tres carriles y salía verde de punta a punta— y salió con seis verdes que no
+probaban lo que decían convertidos en rojos comprobados. Lo que llega con él: `MigradorDeArranque`
+y el servicio `migraciones` del *compose*, la sonda de Humo que **lee una tabla**, la lista de
+ensamblados en los dos recuentos, el descubrimiento de las capas de aplicación, el barrido de los
+permisos del frontal contra el catálogo que sirve la API, y **ADR-0021**.
+
+### Lo que el criterio del 0.13 pedía, y dónde está probado
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| ***Workflow* que compila** | *Job* `Backend`, paso «Compilar» (`--configuration Release --no-restore`); `Frontal`, paso «Construir». |
+| **Pasa linter** | `Frontal`: «Tipos», «Linter» y «Formato». `Backend`: «Formato» (`dotnet format --verify-no-changes`). |
+| **Tests de dominio** | Paso «Tests de dominio y de arquitectura», **403** casos, con el suelo **y** la lista de cinco ensamblados comparada entera. |
+| **Tests con Testcontainers** | Paso «Tests de integración (Testcontainers)», **207** casos contra PostgreSQL 17.6, con la lista de dos ensamblados comparada entera. |
+| **Tests de arquitectura** | Los 15 del 0.12, dentro del carril rápido y nombrados en la lista de ensamblados. |
+| **Verde de punta a punta** | Los tres *jobs* en `success` en el mismo *run*, con el entorno completo levantado y **sirviendo datos**. |
+| *(añadido por el ítem)* **Que el verde afirme algo** | Seis mutaciones, cada una aplicada, ejecutada y revertida. La tabla está abajo. |
+
+### Verificado en local, con la salida real
+
+```
+dotnet build Bastion.sln -c Release           -> 0 Advertencia(s), 0 Errores
+carril rápido      403 casos (403 correctos)  -> 5 ensamblados, la lista casa
+carril integración 207 casos (207 correctos)  -> 2 ensamblados, la lista casa
+frontend                                      -> 32 tests en 7 ficheros; build 490 kB
+docker compose up --wait                      -> postgres, migraciones(0), api, web, otel, jaeger
+POST /api/v1/identidad/sesiones               -> 200, testigo de 1763 caracteres
+GET  /api/v1/organizacion/empresas + testigo  -> 200, total=1, «Bastion Humo SL»
+GET  /api/v1/organizacion/empresas sin nada   -> 401
+```
+
+### Las seis mutaciones, cada una aplicada, ejecutada y revertida
+
+Aquí se rompe **el workflow**, no el código: lo que hay que ver en rojo son los cerrojos de la CI.
+
+| # | La mutación | Cerrojo que la caza | Rojo |
+|---|---|---|---|
+| 1 | `Bastion.Identidad.UnitTests` sale de `Bastion.sln` | recuento por lista de ensamblados | `exit 1` · «No ha corrido ningún caso de: Bastion.Identidad.UnitTests.dll» |
+| 2 | el contrato versionado cambia un campo y nadie regenera el cliente | «Contrato» (frontal) | `exit 1` · el diff entero dentro de la anotación |
+| 3 | `docs/api/openapi.json` se queda atrás del que produce la API | «OpenAPI» (backend) | `exit 1` · «versionado 148583 bytes, recién generado 148495» |
+| 4 | `DivisaBase` pasa de `HasMaxLength(3)` a `(4)` sin migración | «Migraciones» | `exit 1` · «El modelo de Organizacion tiene cambios sin migrar», con la orden que lo arregla |
+| 5 | se borra el método entero de una regla de arquitectura | `LasReglasDeEsteCarrilTests` | 1 de 14 · nombra `LasFronterasEntreModulosTests.Ningun_modulo_ve_el_interior_de_otro` |
+| 6 | `DROP SCHEMA` de los tres esquemas del entorno desplegado | la sonda nueva de Humo | `exit 1` · HTTP 500 al iniciar sesión, con las cinco sondas viejas en verde |
+
+#### La primera, entera
+
+Es la mutación que el 0.12 dejó escrita como la que ninguna defensa cazaba: **desaparece un
+ensamblado de tests entero.** `dotnet sln remove tests/Identidad.UnitTests/…`, dieciocho líneas
+menos en `Bastion.sln`, que es exactamente lo que deja borrar una carpeta de tests.
+
+Lo que dice el árbol después:
+
+```
+dotnet build Bastion.sln -c Release    -> 0 Errores
+dotnet test  … Category!=Integracion   -> salió con 0
+                                          111 BuildingBlocks · 116 Organizacion
+                                           15 Arquitectura   · 103 Api.Functional
+                                          345 casos, 0 con error
+```
+
+**El carril está verde por todos los medios ordinarios.** Y el suelo, que era la única defensa hasta
+este ítem, también lo deja pasar: 345 es mayor que 300. Esta mutación se habría entregado en verde.
+
+Lo que dice el paso de la CI sobre esos mismos resultados:
+
+```
+::error title=Dominio y arquitectura::No ha corrido ningún caso de: Bastion.Identidad.UnitTests.dll .
+  Un ensamblado que ya no se encuentra, o cuyos casos han dejado de casar con el filtro, sale con
+  código 0 y solo baja el total.
+Dominio y arquitectura: 345 casos (345 correctos, 0 con error, 0 omitidos) en 6 ensamblados — …
+::error title=Dominio y arquitectura::Los ensamblados que han corrido no son los declarados.
+  Han corrido: Bastion.Api.FunctionalTests.dll Bastion.Arquitectura.Tests.dll
+  Bastion.BuildingBlocks.UnitTests.dll Bastion.Organizacion.UnitTests.dll .
+EXIT=1
+```
+
+**Rojo por el nombre del que falta, no por un número que baja.** Que es la diferencia entre un
+informe que dice «mira a ver por qué hay menos tests» y uno que dice cuál falta.
+
+#### La sexta, entera
+
+Con el entorno completo en pie y verde, se tiran los tres esquemas:
+
+```
+DROP SCHEMA identidad CASCADE; DROP SCHEMA organizacion CASCADE; DROP SCHEMA auditoria CASCADE;
+```
+
+El entorno desplegado se queda **sin una sola tabla**. Lo que contestan los pasos del *job*:
+
+```
+La API responde a su sonda de VIDA          -> /health/live  = Healthy               EXIT 0
+La sonda de DISPONIBILIDAD ve PostgreSQL    -> /health/ready = Healthy,
+                                               «PostgreSQL acepta conexiones
+                                                y responde»                          EXIT 0
+La API no atiende a quien no se identifica  -> 401                                   EXIT 0
+Iniciar sesión con la cuenta sembrada       -> 500                                   EXIT 1  <--
+Una petición que LEE UNA TABLA              -> total=0                               EXIT 1  <--
+El frontal carga                                                                     EXIT 0
+El frontal reenvía /api a la API            -> 401                                   EXIT 0
+La imagen del frontal no publica los mapas                                           EXIT 0
+Las trazas llegan al visor                  -> Jaeger conoce bastion-api             EXIT 0
+```
+
+**Siete sondas verdes sobre una base sin tablas.** No es una hipótesis: es literalmente el estado en
+el que este proyecto llevaba desde el 26 de agosto, y por eso no se veía. Las dos que fallan son las
+dos que añade este ítem. *Si la sonda nueva no hubiera fallado antes del arreglo, no sería la
+sonda* — falla, con el mismo 500 que se midió al empezar.
+
+Revertida relanzando el migrador y reiniciando la API: `200` y «Bastion Humo SL» otra vez.
+
+### Dos falsos rojos —y un falso verde— del instrumento, no del proyecto
+
+Los tres salieron midiendo, y los tres habrían pasado por hallazgos si no se comprueba el aparato:
+
+- **La mutación 2, en su primera forma, se borró sola.** Se editó `esquema.ts` a mano esperando ver
+  «Contrato» en rojo, y salió verde: el paso **regenera** el fichero antes de comparar, así que la
+  edición desapareció antes de que nadie la mirara. El cerrojo estaba bien; la mutación estaba mal.
+  La buena es mover el contrato y no regenerar el cliente.
+- **La mutación 4, en su primera forma, dio verde por culpa del extractor.** El paso «Migraciones»
+  lleva `CONFIGURACION: Release` en su bloque `env:`, y el arnés que saca los `run:` del YAML no
+  copia el `env:`. Sin él, `dotnet ef --no-build` leyó el ensamblado de **Debug**, que no tenía la
+  mutación dentro. Con su entorno, rojo a la primera.
+- **Los 38 pasos «con sintaxis mala» de la primera comprobación.** El arnés escribía los ficheros
+  temporales con una ruta de Windows que `bash` no sabe abrir, así que los 38 fallaron con «No such
+  file or directory» y ninguno llegó a analizarse. Un rojo total y uniforme no suele ser un
+  hallazgo: suele ser el aparato.
 
 **Ítem 0.12 cerrado, con la CI en verde:**
 [run 33603428022](https://github.com/AOjeda006/Bastion/actions/runs/33603428022) sobre `0e8b93e`,
@@ -2639,8 +2869,18 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   caben aquí —son SQL y DDL— y el ADR dice dónde están. **403** casos rápidos.
   Los cuatro *jobs* de la CI en verde — [run 33603428022](https://github.com/AOjeda006/Bastion/actions/runs/33603428022),
   con **403** casos rápidos y **206** de integración.
-- [ ] **0.13 · Integración continua** — criterio de aceptación: *workflow* que compila, pasa linter,
+- [x] **0.13 · Integración continua** — criterio de aceptación: *workflow* que compila, pasa linter,
   tests de dominio, tests con Testcontainers y tests de arquitectura; verde de punta a punta.
+  El criterio literal ya se cumplía al empezar el ítem, así que lo que se ha hecho es **comprobar
+  que el verde afirmaba lo que decía**: seis mutaciones aplicadas, ejecutadas y revertidas, cada una
+  con su rojo. Trae el arreglo de la deuda más antigua de la fase —**nadie aplicaba las migraciones
+  en el entorno desplegado** (ADR-0021)— y la sonda que lo habría visto: una petición que **lee una
+  tabla** y devuelve los datos sembrados, medida contra el estado anterior, donde daba **500**.
+  Los recuentos dejan de ser un suelo y pasan a comparar **listas de ensamblados** en los dos
+  carriles. El *job* `Imágenes de contenedor` se retira: su afirmación era un subconjunto
+  estricto de la de `Humo`.
+  Los **tres** *jobs* de la CI en verde — [run 33634114140](https://github.com/AOjeda006/Bastion/actions/runs/33634114140),
+  con **403** casos rápidos en 5 ensamblados y **207** de integración en 2.
 
 ## Imports pendientes de `CLAUDE.md`
 
