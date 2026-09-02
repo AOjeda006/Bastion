@@ -18,9 +18,17 @@ import { QueryClient } from '@tanstack/react-query';
  * Devuelve también el enrutador, y no por comodidad: es la única forma de comprobar que el filtro o
  * la página están EN LA URL. Un `useState` daría exactamente la misma pantalla, y la diferencia
  * —que el enlace se puede compartir y la vuelta atrás funciona— solo se ve mirando la ubicación.
+ *
+ * Y devuelve la caché por un motivo parecido pero distinto: lo que se pinta prueba el EFECTO, y la
+ * caché dice la CAUSA. Un test que solo mire la pantalla sí caza que se han quedado filas del
+ * inquilino anterior, pero se entera cinco segundos más tarde y por plazo agotado, con un mensaje
+ * que no menciona ni la caché ni la empresa. Mirando la caché, el mismo fallo se nombra en
+ * milisegundos. Las dos cosas y no una: quien mire solo la caché estará probando la implementación
+ * de hoy en vez de la promesa.
  */
 export interface AplicacionMontada extends RenderResult {
   readonly enrutador: ReturnType<typeof createMemoryRouter>;
+  readonly cache: QueryClient;
 }
 
 export function montarAplicacion(rutaInicial = '/'): AplicacionMontada {
@@ -36,5 +44,5 @@ export function montarAplicacion(rutaInicial = '/'): AplicacionMontada {
     </Proveedores>,
   );
 
-  return { ...pintado, enrutador };
+  return { ...pintado, enrutador, cache };
 }

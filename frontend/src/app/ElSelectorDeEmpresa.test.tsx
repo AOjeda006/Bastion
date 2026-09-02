@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -5,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { ALFA, BETA } from '@/pruebas/datos.ts';
 import { abrirSesionSimulada } from '@/pruebas/servidor.ts';
 import { montarAplicacion } from '@/pruebas/montar.tsx';
+import { clavesDeAlmacenes } from '@/features/almacenes/api/claves.ts';
+import type { PaginaDeAlmacenes } from '@/features/almacenes/model/almacen.ts';
 import { leerSesion } from '@/shared/sesion/deposito.ts';
 
 /**
@@ -17,17 +20,51 @@ import { leerSesion } from '@/shared/sesion/deposito.ts';
  *
  * Dos empresas de verdad, con un almacén distinto cada una. Se pinta la lista de Alfa, se cambia a
  * Beta, y se exige que lo que se ve sea de Beta y que lo de Alfa ya no esté.
+ *
+ * Eso prueba el efecto, pero un test que SOLO prueba el efecto avisa mal: si la caché deja de
+ * vaciarse, la fila de Beta no llega a aparecer y el fallo sale por plazo agotado cinco segundos
+ * después, sin nombrar la causa. Así que el caso mira además la caché justo después del cambio.
  */
+
+/**
+ * Los nombres de almacén que quedan GUARDADOS en la caché, vengan de la página que vengan.
+ *
+ * Por prefijo y con la fábrica de claves de la funcionalidad, no con una clave tecleada aquí: una
+ * clave escrita a mano se parece a la buena, no lo es, y no encontraría nada — que en un test es
+ * exactamente el verde que no protege.
+ */
+function nombresEnCache(cache: QueryClient): string[] {
+  return cache
+    .getQueriesData<PaginaDeAlmacenes>({ queryKey: clavesDeAlmacenes.todo })
+    .flatMap(([, pagina]) => pagina?.elementos ?? [])
+    .map((almacen) => almacen.nombre);
+}
+
 describe('El selector de empresa', () => {
   it('al cambiar de empresa, la lista pasa a ser la de la otra', async () => {
     abrirSesionSimulada(ALFA.id);
     const usuario = userEvent.setup();
-    montarAplicacion('/almacenes');
+    const { cache } = montarAplicacion('/almacenes');
 
     expect(await screen.findByText('Nave central de Alfa')).toBeInTheDocument();
 
     await usuario.selectOptions(screen.getByRole('combobox', { name: 'Empresa' }), BETA.id);
 
+    // PRIMERO LA CAUSA, que es la que falla rápido y con nombre.
+    //
+    // En cuanto la sesión es la de Beta, el vaciado de la caché YA ha ocurrido: el testigo nuevo y
+    // el reinicio van en la misma línea síncrona del selector, y nada puede observar el hueco entre
+    // los dos. Así que a partir de este punto la caché puede estar vacía o traer ya a Beta, pero
+    // NUNCA a Alfa; si trae a Alfa, es que no se vació, y este `expect` lo dice en milisegundos
+    // imprimiendo la fila que sobró.
+    await waitFor(() => {
+      expect(leerSesion()?.empresaActivaId).toBe(BETA.id);
+    });
+    expect(nombresEnCache(cache)).not.toContain('Nave central de Alfa');
+
+    // Y DESPUÉS EL EFECTO, que es lo que de verdad se promete y lo único que seguiría valiendo el
+    // día que el vaciado se haga de otra manera. Estas dos líneas no sobran por tener la de arriba:
+    // la de arriba sabe cómo está hecho hoy, estas saben lo que hay que ver.
     expect(await screen.findByText('Nave central de Beta')).toBeInTheDocument();
 
     // Y lo de Alfa YA NO ESTÁ. Sin esta línea el test pasaría con la caché sin vaciar mientras la
