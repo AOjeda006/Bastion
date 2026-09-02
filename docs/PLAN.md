@@ -1505,6 +1505,96 @@ Los tres salieron midiendo, y los tres habrían pasado por hallazgos si no se co
   file or directory» y ninguno llegó a analizarse. Un rojo total y uniforme no suele ser un
   hallazgo: suele ser el aparato.
 
+### La fase 0, criterio por criterio, comprobado por algo observable
+
+El cierre **no se apoya en que los ítems estén marcados**. Cada criterio literal del Anexo A.3 se ha
+vuelto a comprobar contra algo que se puede mirar hoy: un caso nombrado de los **610** que corren en
+los siete ensamblados cuyas listas compara la CI **enteras** —así que «existe» y «ha corrido» son la
+misma cosa en un *run* verde—, o la salida de un paso del *run* que cierra la fase.
+
+| Ítem | Lo observable |
+|---|---|
+| **0.1** andamiaje y solución | `ElInventarioDeModulosTests.Cada_carpeta_de_modulo_tiene_sus_cinco_capas` y `.Cada_tipo_vive_en_el_espacio_de_nombres_de_su_ensamblado` comparan la estructura del §12 y del §5 contra el disco. `dotnet build` y `npm run build`, pasos «Compilar» y «Construir». |
+| **0.2** `docker compose up` | *Job* `Humo`: seis servicios con `--wait`, `/health/live` = Healthy, el frontal sirve su `index.html`, y `Jaeger conoce bastion-api`. |
+| **0.3** bloque común | `ReglaDeRedondeoR6Tests.SegunR6_SeRedondeaUnaVezPorParDeBaseYTipo`, `ImporteTests.Cuota_EnElPuntoMedioDeLaUnidadMinima_RedondeaAlejandoseDelCero`, `PoliticaDeErroresTests.UnErrorDeNegocio_LlevaLosCamposDelRfc9457`. |
+| **0.4** módulo Organización | `ContratoDeOrganizacionTests` recorre los cuatro recursos sobre HTTP; `EsquemaDelModuloTests.El_historial_de_migraciones_vive_en_el_esquema_del_modulo_y_no_en_public`. El paso «Migraciones» cuenta las de cada módulo y exige cero cambios sin migrar. |
+| **0.5** módulo Identidad | `SesionesYTokensTests.El_correo_que_no_existe_y_la_contrasena_mala_dan_la_MISMA_respuesta`, `CadaAccionDeclaraSuPermisoTests.Toda_accion_o_exige_un_permiso_o_esta_en_la_lista_de_excepciones`, `SinEmpresaNoSeConsultaTests.Con_claim_devuelve_la_empresa_del_claim_y_no_otra`. **Y desde este ítem también fuera del banco de pruebas:** el paso de Humo que inicia sesión contra el entorno desplegado. |
+| **0.6** filtro multiempresa | Las dos mitades, literales: `ElFiltroDeEmpresaTests.El_padron_de_empresas_no_se_lee_desde_otra_empresa` (y `.El_total_de_la_pagina_tampoco_cuenta_las_filas_de_otra_empresa`) y `NingunaPeticionNombraLaEmpresaTests.Ninguna_accion_recibe_la_empresa_por_la_peticion`. |
+| **0.7** módulo Auditoría | `LaTrazaEsDeSoloAnadidoTests.Un_UPDATE_sobre_una_fila_de_traza_lo_rechaza_el_motor` —lo rechaza el motor, no el código— y `UnCambioEnUnMaestroDejaSuRastroTests.El_alta_de_un_almacen_deja_una_fila_con_quien_donde_y_que`. |
+| **0.8** *outbox* transaccional | Las tres cláusulas por separado: `ElEventoVaEnLaMismaTransaccionTests.La_empresa_y_su_evento_los_escribe_LA_MISMA_transaccion`, `ElTrabajoDeFondoVaciaLaColaTests.Lo_que_esta_pendiente_acaba_publicado`, `ReprocesarNoDuplicaTests.El_mismo_evento_dos_veces_deja_su_efecto_una_sola`. |
+| **0.9** idempotencia y concurrencia | Los cuatro códigos del criterio, cada uno con su caso: `LaMismaClaveDevuelveElMismoRecursoTests.El_reintento_con_la_misma_clave_devuelve_los_mismos_bytes_y_no_crea_otro`, `LaVersionViajaDeLaLecturaALaEscrituraTests.Una_version_obsoleta_es_412_y_trae_la_actual`, `.Sin_la_cabecera_es_428_y_no_toca_nada`, `ContratoDeOrganizacionTests.Suprimir_una_serie_que_ya_ha_numerado_es_409`. |
+| **0.10** `Bloqueado` y fechas | `LaFilaBloqueadaSigueEnLaBaseTests.Suprimir_por_la_API_deja_la_fila_entera_con_su_motivo_y_su_fecha` (R16), `ContratoDeOrganizacionTests.La_direccion_va_y_vuelve_en_los_seis_campos_de_R17`, `LasFechasDicenDeQueTipoSonTests.No_hay_ni_una_fecha_que_no_diga_si_lleva_zona` (R14). |
+| **0.11** *shell* de React | 32 tests en 7 ficheros (`LaPantallaDeAcceso`, `ElSelectorDeEmpresa`, `LasRutasProtegidas`, `ElCambioDeRuta`, `ElBarridoDeRutas`, `ElTestigoDeAcceso`, `ElListadoDeAlmacenes`), y el paso «Contrato», que **regenera** el cliente desde `docs/api/openapi.json` y falla si difiere del versionado. |
+| **0.12** tests de arquitectura | Las 15 reglas, más `LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas`, que es la que impide que borrar una regla baje el color. |
+| **0.13** integración continua | Este mismo *run*, con los recuentos por ensamblado comparados enteros y las seis mutaciones de arriba. |
+
+**Lo que este repaso encontró y no estaba marcado:** nada del A.3, y una cosa fuera de él. Los tres
+`.gitkeep` que no pertenecen a los sesenta del andamiaje modular se miraron uno a uno: `db/semillas/`
+y `docs/dominio/` los nombra el plan maestro y se quedan; `frontend/public/` no lo nombra nadie —ni
+el §12, ni `vite.config.ts`, ni el `index.html`— y **no era inerte**: Vite copia `public/` al raíz de
+`dist`, así que el fichero viajaba a la imagen y nginx lo servía. Comprobado por el efecto antes de
+borrarlo: `GET /.gitkeep` devolvía **200**.
+
+### El veredicto de las nueve notas abiertas
+
+Ninguna se queda sin veredicto. Cuatro se cierran aquí; cuatro siguen abiertas **y eso es la
+decisión, no un descuido**; una es de vigilancia.
+
+| Nota | Veredicto |
+|---|---|
+| `UnidadDeTrabajoPorModuloTests` teclea sus ensamblados | **Cerrada** (`71357f2`). La lista se descubre de lo que arrastra `Bastion.Api` filtrando `Bastion.*.Application`. Un ensamblado de aplicación nuevo entra solo. |
+| el suelo de recuento protege dos ensamblados de cinco | **Cerrada** (`caacfd7`). Se comparan **listas de ensamblados**, en los dos carriles, en las dos direcciones. Mutación 1. |
+| los identificadores de permiso están escritos a mano | **Cerrada** (`d4e2352`). Barrido que compara la lista de `permisos.ts` contra el catálogo que sirve la API. Vive en el carril de **integración**, porque necesita la API en pie: el catálogo es un *endpoint*, no un `enum` del documento. |
+| el *compose* no aplica las migraciones | **Cerrada** (`e6425d3`, **ADR-0021**). La deuda más antigua de la fase, del 26 de agosto. |
+| la renovación de sesión asierta el cuerpo | **Abierta, con la decisión tomada.** Sigue el **ADR-0019**: escribir el esquema de Zod a mano es la duplicación que la regla del contrato prohíbe. Lo desbloquea un generador de esquemas desde el OpenAPI, o que las aserciones dejen de ser una sola. Nada de eso ha cambiado. |
+| lo bloqueado sigue sin camino de lectura | **Abierta, con la decisión tomada.** Necesita un motivo nuevo —administración—, su permiso y un ADR sobre el art. 32. Es trabajo de dominio, no de armazón: lo mira la fase que traiga ese motivo. |
+| el contrato describe los enteros como `integer \| string` | **Abierta, con la decisión tomada.** El documento describe con honestidad lo que la API acepta; estrechar el servidor para que el cliente quede cómodo sería mover el contrato para que encaje el consumidor. Se estrecha en la traducción, en un solo sitio. |
+| `auditoria.claves_de_idempotencia` crece sin límite | **Abierta, y la mirada del 0.13 ya ocurrió.** Esta nota citaba el 0.13 «junto con quién aplica las migraciones». Lo segundo se ha resuelto —ADR-0021—, y con ello **el mecanismo ya existe**: una limpieza sería una migración más aplicada por el mismo paso del despliegue. Lo que sigue faltando no es mecanismo, es el dato: **cuánto tarda un cliente real en reintentar**, y eso no está en el código. Sin él, borrar es adivinar, y adivinar mal no encoge la tabla: quita la garantía. |
+| en Node 25 el `localStorage` de los tests no es el de jsdom | **De vigilancia, no de arreglo.** El remiendo de `setupTests.ts` está puesto y comentado. Se revisa **al subir de versión de Node**: el día que el de jsdom vuelva a ganar, el remiendo sobra y hay que quitarlo, no dejarlo tapando al bueno. |
+
+### Traspaso a la fase 1
+
+**Qué hereda.** Un monolito modular con tres módulos vivos —Organización, Identidad, Auditoría—,
+**46** acciones bajo `/api/v1/{modulo}/{recurso}`, todas denegadas por omisión salvo cinco
+declaradas; un armazón de React con el cliente **generado** del contrato; y una CI de tres carriles
+en la que el verde afirma algo. Un módulo nuevo de la fase 1 entra por sitios ya construidos: sus
+cinco capas (el inventario las cuenta), su esquema y su carpeta en `db/migraciones/<Modulo>/`, su
+`DbContext` **añadido a `MigradorDeArranque` en el orden que le toque respecto de Auditoría**, y sus
+ensamblados **añadidos a las dos listas declaradas** del recuento de la CI.
+
+**Qué imports se añaden a `CLAUDE.md` al empezar** (Anexo A.2.3, y solo estos dos):
+`@../BibliotecaDocumentacion/herramientas/proteccion-datos.md` y
+`@../BibliotecaDocumentacion/patrones/soft-delete.md`.
+
+**Qué invariantes de la fase 0 son portantes** —romper uno no da un fallo local, da una avería muda:
+
+1. **Ninguna acción pide `If-Match` e `Idempotency-Key` a la vez.** Son mecanismos distintos con
+   preguntas distintas: la clave dice «esta petición ya la hice» y la versión dice «el recurso ha
+   cambiado desde que lo leí». Juntas en una misma acción, el reintento devuelve el recibo guardado
+   sin volver a comprobar la versión, y la protección optimista deja de existir sin que nada se
+   ponga rojo. Lo vigila `TodaEscrituraDiceComoSeProtegeTests.Ninguna_accion_pide_los_dos_mecanismos_a_la_vez`,
+   sobre el inventario entero de acciones que cambian estado.
+2. **La lista de seis testigos del ADR-0015 se compara entera.** No basta con que los seis existan:
+   `LasClavesSeConocenAntesDeGuardarTests.Las_entidades_del_tipo_base_y_las_que_llevan_testigo_son_las_MISMAS`
+   compara **tres** listas enteras entre sí —las que heredan de `EntidadBase`, las que llevan `xmin`
+   y la del ADR-0015—, y `.Todo_lo_que_genera_el_servidor_es_de_verdad_un_testigo_de_concurrencia`
+   cierra el otro lado. Una entidad nueva con `xmin` obliga a tocar el ADR; no basta con compilar.
+3. **Toda regla afirma también que su conjunto no está vacío, y ese conteo se compara** (ADR-0020).
+   Trece de los dieciséis módulos del §5 no existen todavía: una regla que se aplique a lo que hay
+   pasa por vacuidad y no dice nada. La fase 1 estrena módulos, o sea que estrena conjuntos: es
+   justo cuando esta regla paga.
+4. **El filtro de empresa se salta en tres sitios y solo en tres**, declarados y comparados
+   (`ElFiltroNoSeSaltaPorAhiTests`). R8 es del compilador y del barrido, no de la disciplina.
+5. **El esquema lo aplica el migrador, y la API no migra nunca al arrancar** (ADR-0021). Cualquier
+   entorno nuevo hereda la forma: primero el migrador, y solo si termina bien, la aplicación.
+6. **Toda entidad dice si se audita y toda fecha dice si lleva zona**, por barrido y no por
+   convención (`CadaEntidadDeclaraSuAuditoriaTests`, `LasFechasDicenDeQueTipoSonTests`). Una entidad
+   nueva que no lo diga pone el carril en rojo el mismo día que se escribe, que es cuando es barato.
+
+**Lo que la fase 1 debe mirar el primer día:** con más de una réplica, la guarda de la semilla de
+arranque —«no hay ningún usuario»— es una lectura y una escritura sin transacción común. Hoy hay una
+sola réplica y por eso no importa; el día que haya dos, importa antes que nada.
+
 **Ítem 0.12 cerrado, con la CI en verde:**
 [run 33603428022](https://github.com/AOjeda006/Bastion/actions/runs/33603428022) sobre `0e8b93e`,
 los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor—,
@@ -2904,7 +2994,7 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
-- **ABIERTO (2026-09-02) · `UnidadDeTrabajoPorModuloTests` fija sus ensamblados a mano, y le falta
+- **CERRADO (2026-09-02) · `UnidadDeTrabajoPorModuloTests` fija sus ensamblados a mano, y le falta
   uno.** `tests/Api.FunctionalTests/Composicion/UnidadDeTrabajoPorModuloTests.cs` declara
   `s_capasDeAplicacion` con dos `typeof(...)` —Organización e Identidad— y **no incluye
   `Bastion.Auditoria.Application`**. Hoy no cambia nada, porque ese ensamblado está vacío; el día que
@@ -2914,7 +3004,10 @@ cuando hace falta el porqué.
   `Bastion.Api` —filtrando `Bastion.*.Application`— en vez de tecleada. **No se arregla en el 0.12
   a propósito:** es de otro ítem, y la única forma de arreglarlo desde el carril de arquitectura
   sería duplicar allí el inventario, que es peor que el problema. Sitio natural: el **0.13**.
-- **ABIERTO (2026-09-02) · el suelo de recuento de la CI protege dos ensamblados de cinco.** El paso
+  **Cerrado ahí** (`71357f2`): la lista se descubre de los ensamblados que arrastra `Bastion.Api`
+  filtrando `Bastion.*.Application`, y se compara entera en las dos direcciones. Un ensamblado de
+  aplicación nuevo entra solo, y uno que desaparezca pone la regla en rojo.
+- **CERRADO (2026-09-02) · el suelo de recuento de la CI protege dos ensamblados de cinco.** El paso
   rápido falla si el total baja de 300, y hoy hay 403 en cinco ensamblados. Perder uno entero deja:
   111 → 292 ✅, 116 → 287 ✅, **103 → 300 ❌** (el suelo compara con «menor que», así que 300 clavados
   pasa), **58 → 345 ❌**, **15 → 388 ❌**. O sea que `Api.FunctionalTests`, `Identidad.UnitTests` y
@@ -2929,6 +3022,11 @@ cuando hace falta el porqué.
   ensamblados · `Bastion.BuildingBlocks.UnitTests.dll` 111, `Bastion.Organizacion.UnitTests.dll`
   116, …»—, así que el dato ya está calculado y a la vista; lo único que falta es **compararlo**
   contra una lista declarada. Es del **0.13**, el ítem de la revisión final del flujo.
+  **Cerrado ahí** (`caacfd7`): los dos carriles reciben además la **lista declarada** de sus
+  ensamblados y `scripts/ci/recuento-de-tests.sh` la compara entera, en las dos direcciones
+  —falta uno, o corre uno que nadie declaró—. Comprobado por el efecto sacando
+  `Bastion.Identidad.UnitTests` de la solución: el árbol compila, el carril sale con 0 y 345
+  casos, el suelo lo deja pasar, y el paso de la CI falla **nombrando el que falta**.
 
 - **ABIERTO (2026-09-02) · la renovación de sesión asierta el cuerpo en vez de validarlo.**
   `traducirCuerpoDeSesion` hace un `as` sobre el cuerpo de la renovación, porque esa petición va con
@@ -2939,7 +3037,9 @@ cuando hace falta el porqué.
   prohíbe; cambiaría una duplicación silenciosa por una ruidosa, que es mejor pero sigue siendo
   duplicación. **Lo que lo desbloquea:** un generador de esquemas de Zod desde el OpenAPI en el que
   se confíe, o que las aserciones dejen de ser una sola. Argumento entero en el **ADR-0019**.
-- **ABIERTO (2026-09-02) · los identificadores de permiso son la única parte del contrato escrita a
+  **Repasada al cerrar la fase 0: sigue abierta, y eso es la decisión.** No ha aparecido el
+  generador en el que confiar, y las aserciones siguen siendo una sola.
+- **CERRADO (2026-09-02) · los identificadores de permiso son la única parte del contrato escrita a
   mano.** `frontend/src/shared/sesion/permisos.ts` lleva las cadenas `organizacion.almacen.ver` y
   `organizacion.empresa.ver` tecleadas. No hay de dónde generarlas: el catálogo de permisos es un
   endpoint en tiempo de ejecución, no un `enum` del documento OpenAPI, así que `openapi-typescript`
@@ -2953,6 +3053,10 @@ cuando hace falta el porqué.
   falta esperar a la fase 1: el barrido no necesita que haya más permisos para existir, y esperar
   significa entregar la fase 0 entera con la única cadena del contrato escrita a mano sin nadie que
   la compare. La forma es la de `ElFiltroNoSeSaltaPorAhiTests`, que ya lee código fuente.
+  **Cerrado ahí** (`d4e2352`), con una corrección sobre lo previsto: el barrido lee el fichero
+  fuente, sí, pero **no puede vivir en el carril rápido**, porque la otra mitad de la
+  comparación —el catálogo— solo existe con la API en pie. Vive en `Api.IntegrationTests`, que
+  ya levanta el host, y compara las dos listas enteras.
 - **ABIERTO (2026-09-02) · lo bloqueado sigue sin camino de lectura, y por tanto sin camino de
   desbloqueo desde el frontal.** Decidido en la puerta del 0.11 y sin cambios: una fila bloqueada
   contesta 404 a su propio `GET` (R16, ADR-0016), así que no aparece en ningún listado y la interfaz
@@ -2961,6 +3065,8 @@ cuando hace falta el porqué.
   siendo los tres desbloqueos y se siguen comparando enteros. Lo que haría falta es un motivo nuevo
   —administración—, su permiso, y un ADR que argumente por qué el art. 32 admite esa visualización.
   Trabajo de dominio y de derecho, no de armazón.
+  **Repasada al cerrar la fase 0: sigue abierta, y eso es la decisión.** La fase 0 no trae ese
+  motivo; lo mirará la fase que lo traiga, con su ADR.
 - **ABIERTO (2026-09-02) · el contrato describe los enteros como `integer | string`.**
   `PaginaDeAlmacenDto.total` y sus hermanos salen del OpenAPI como `type: ["integer","string"]`, en
   la petición **y** en la respuesta. No es un fallo del generador: `JsonSerializerDefaults.Web`
@@ -2970,6 +3076,8 @@ cuando hace falta el porqué.
   documento quede más cómodo sería mover el contrato para que encaje el cliente. Si algún día se
   decide lo contrario, el sitio es `JsonSerializerOptions` en el arranque de la API, y afecta a todo
   el que ya consuma el contrato.
+  **Repasada al cerrar la fase 0: sigue abierta, y eso es la decisión.** Estrechar el servidor
+  para que el cliente quede cómodo sería mover el contrato para que encaje el consumidor.
 - **ANOTADO (2026-09-02) · en Node 25 el `localStorage` del entorno de tests no es el de jsdom.**
   Node 25 define `globalThis.localStorage` como accesor propio (experimental, tras
   `--localstorage-file`) y gana al de jsdom: lo que queda es un objeto pelado, sin `setItem` ni
@@ -2978,6 +3086,8 @@ cuando hace falta el porqué.
   antes con un `TypeError`. Verde por avería del entorno, no por la propiedad. `setupTests.ts` pone
   un almacén de verdad con la API estándar. Se vigila al subir de Node: el día que el de jsdom vuelva
   a ganar, el remiendo sobra y hay que quitarlo, no dejarlo tapando al bueno.
+  **Repasada al cerrar la fase 0: de vigilancia, no de arreglo.** El disparador es subir de
+  versión de Node, no una fecha.
 - **ARREGLADO (2026-09-02) · el presupuesto de tamaño del frontal ya aprieta.** Estaba en 1024 kB
   con 205 kB de consumo: un margen de cinco veces no señala nada. Con el armazón terminado
   —enrutador, caché de servidor, formularios, validación y cliente generado— el navegador descarga
@@ -3005,7 +3115,13 @@ cuando hace falta el porqué.
   `empresa_id`, así que un borrado por antigüedad dentro de una empresa recorre un rango contiguo
   del índice. El momento natural de decidirlo es el **0.13**, junto con quién aplica las migraciones
   en un despliegue; no antes.
-- **ABIERTO (2026-08-26) · el *compose* no aplica las migraciones, así que la semilla no llega a
+  **Repasada al cerrar la fase 0: sigue abierta, y la mirada del 0.13 ya ha ocurrido.** La
+  segunda mitad de la cita —quién aplica las migraciones— está resuelta (**ADR-0021**), así
+  que el **mecanismo ya existe**: una limpieza sería una migración más, aplicada por el mismo
+  paso del despliegue. Lo que sigue faltando no es mecanismo sino el dato —cuánto tarda un
+  cliente real en reintentar—, y ese no está en el código. Sin él, borrar es adivinar; y
+  adivinar mal no encoge la tabla, quita la garantía.
+- **CERRADO (2026-08-26, en el 0.13) · el *compose* no aplica las migraciones, así que la semilla no llega a
   aplicarse ahí.** Nadie ejecuta `dotnet ef database update` ni al arrancar la API ni en el
   `docker-compose.yml`: la base del entorno local no tiene tablas. Consecuencia práctica de hoy:
   las siete variables `BASTION_SEMILLA_*` están **declaradas en el compose y vacías por omisión**,
@@ -3014,6 +3130,13 @@ cuando hace falta el porqué.
   que falta es decidir **quién** aplica las migraciones en un despliegue —un paso del compose, un
   `initContainer`, o el propio arranque de la API— y eso es materia del **0.13**, no del 0.5. Los
   tests de integración sí migran: lo hace su fixture antes de levantar el host.
+  **Cerrado en el 0.13** (`e6425d3`, **ADR-0021**): lo aplica un contenedor de un solo uso, el
+  mismo artefacto de la API invocado con `--migrar`, y el resto espera a que salga bien. La
+  deuda llevaba abierta desde el 26 de agosto y no se veía porque **ninguna sonda de Humo
+  tocaba una tabla**; hoy hay una que sí, y contra el estado anterior daba 500. De paso
+  apareció la avería que la escondía: el `.dockerignore` excluía `db/migraciones`, el
+  `<Compile Include>` no casaba con nada y la imagen se publicaba **sin una sola migración**
+  —un glob vacío no es un error—.
 - **CORREGIDO (2026-08-27) · la CI SÍ se dispara en las ramas; lo que falló fue la observación.**
   Esta nota decía que empujar `feature/0.5-identidad` (commit `7d5f3c3`) no había creado ningún
   *run* y dejaba a decisión del usuario si investigar los permisos de Actions. **La premisa era
