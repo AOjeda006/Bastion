@@ -43,8 +43,11 @@ public sealed class EmpresaTests
     {
         // Aceptarla dejaría a la empresa sin poder calcular una cuota: R6 exige saber con
         // cuántos decimales se redondea ANTES de emitir la primera factura, no después.
+        //
+        // El ejemplo era el yen hasta el 0.15, cuando entró en el catálogo con su caso dorado
+        // (cero decimales). Ahora es el dinar kuwaití, que sigue fuera.
         Should.Throw<NotSupportedException>(() => Empresa.Crear(
-            Nif.De("A58818501"), "Norte", Fiscal(), "JPY", RegimenDeIva.General, s_momento));
+            Nif.De("A58818501"), "Norte", Fiscal(), "KWD", RegimenDeIva.General, s_momento));
     }
 
     [Theory]

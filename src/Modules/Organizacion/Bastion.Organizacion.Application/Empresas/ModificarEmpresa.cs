@@ -60,7 +60,7 @@ internal sealed class ModificarEmpresa(
 
         var errores = new ErroresPorCampo();
 
-        if (!Divisas.EsConocida(peticion.DivisaBase))
+        if (!CatalogoDeDivisas.EsConocida(peticion.DivisaBase))
         {
             errores.Agregar(
                 "divisaBase",

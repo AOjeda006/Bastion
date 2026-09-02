@@ -25,7 +25,7 @@ public sealed record PrecioUnitario
     /// <summary>Crea un precio unitario reduciéndolo a la escala de precio unitario.</summary>
     /// <exception cref="ArgumentException">La divisa no es un código ISO 4217.</exception>
     public static PrecioUnitario De(decimal cantidad, string divisa) =>
-        new(Math.Round(cantidad, Decimales, MidpointRounding.AwayFromZero), Divisas.Normalizar(divisa));
+        new(Math.Round(cantidad, Decimales, MidpointRounding.AwayFromZero), CatalogoDeDivisas.Normalizar(divisa));
 
     /// <summary>Importe de multiplicar este precio por una cantidad.</summary>
     /// <remarks>

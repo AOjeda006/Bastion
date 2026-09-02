@@ -140,12 +140,12 @@ public sealed class Empresa : RaizAgregado, IBloqueable
 
     private static string DivisaBaseValida(string divisaBase)
     {
-        string normalizada = Divisas.Normalizar(divisaBase);
+        string normalizada = CatalogoDeDivisas.Normalizar(divisaBase);
 
         // Comprobar la unidad mínima AHORA y no al emitir la primera factura: una empresa cuya
         // divisa no sabemos redondear no puede calcular una cuota (R6), y descubrirlo con el
         // libro registro a medias es tarde.
-        _ = Divisas.UnidadMinima(normalizada);
+        _ = CatalogoDeDivisas.UnidadMinima(normalizada);
 
         return normalizada;
     }

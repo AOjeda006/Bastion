@@ -36,7 +36,7 @@ public sealed record Importe
     /// <summary>Crea un importe reduciéndolo a la escala de importe.</summary>
     /// <exception cref="ArgumentException">La divisa no es un código ISO 4217.</exception>
     public static Importe De(decimal cantidad, string divisa) =>
-        new(Math.Round(cantidad, Decimales, MidpointRounding.AwayFromZero), Divisas.Normalizar(divisa));
+        new(Math.Round(cantidad, Decimales, MidpointRounding.AwayFromZero), CatalogoDeDivisas.Normalizar(divisa));
 
     /// <summary>Importe nulo en la divisa indicada.</summary>
     public static Importe Cero(string divisa) => De(0m, divisa);
@@ -80,5 +80,5 @@ public sealed record Importe
     /// </remarks>
     /// <exception cref="NotSupportedException">No se conoce la unidad mínima de la divisa.</exception>
     public Importe Cuota(decimal tipo) =>
-        new(Math.Round(Cantidad * tipo, Divisas.UnidadMinima(Divisa), MidpointRounding.AwayFromZero), Divisa);
+        new(Math.Round(Cantidad * tipo, CatalogoDeDivisas.UnidadMinima(Divisa), MidpointRounding.AwayFromZero), Divisa);
 }

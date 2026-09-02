@@ -67,9 +67,13 @@ public sealed class ImporteTests
 
     // Sin unidad mínima conocida no se redondea "a dos por si acaso": un valor por omisión
     // aquí esconde el hueco. Se lanza, y la divisa se añade cuando llegue con su test.
+    //
+    // El ejemplo era USD hasta el 0.15, cuando el dólar entró en el catálogo con su caso dorado.
+    // Ahora es el dinar kuwaití, que sigue fuera y además redondea a TRES decimales: si algún día
+    // entra suponiéndole dos, el caso dorado que habrá que escribir es el que lo delata.
     [Fact]
     public void Cuota_ConUnaDivisaSinUnidadMinimaConocida_Lanza() =>
-        Should.Throw<NotSupportedException>(() => Importe.De(100m, "USD").Cuota(0.21m));
+        Should.Throw<NotSupportedException>(() => Importe.De(100m, "KWD").Cuota(0.21m));
 
     [Fact]
     public void Cero_EsElNeutroDeLaSuma() =>

@@ -48,7 +48,7 @@ internal sealed class CrearEmpresa(
                 "No es un NIF español válido: revise el carácter de control.");
         }
 
-        if (!Divisas.EsConocida(peticion.DivisaBase))
+        if (!CatalogoDeDivisas.EsConocida(peticion.DivisaBase))
         {
             errores.Agregar(
                 "divisaBase",

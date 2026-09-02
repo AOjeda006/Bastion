@@ -133,7 +133,10 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
             Nif = "12345678A",
             RazonSocial = "Prueba",
             DomicilioFiscal = Escenario.Domicilio(),
-            DivisaBase = "JPY",
+
+            // Una divisa con forma ISO correcta cuyo redondeo no se conoce. Era el yen hasta el
+            // 0.15, cuando entró en el catálogo con su caso dorado; el dinar kuwaití sigue fuera.
+            DivisaBase = "KWD",
             RegimenDeIva = "Inventado",
         });
 
