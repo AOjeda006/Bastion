@@ -580,8 +580,13 @@ jobs:
             --header "Authorization: Bearer $(cat testigo.txt)")
           echo "GET /api/v1/organizacion/empresas con testigo -> $CODIGO"
           test "$CODIGO" = "200"
-          RAZON=$(jq -r '.elementos[0].razonSocial // empty' empresas.json)
-          TOTAL=$(jq -r '.total // 0' empresas.json)
+          # `// 0` no basta: si el cuerpo no es el JSON esperado —un problem+json, una página de
+          # error— jq no devuelve 0, devuelve NADA, y entonces `[ "$TOTAL" -lt 1 ]` revienta con
+          # «integer expression expected» en vez de con el mensaje de este paso. Un paso que falla
+          # por un error de shell no dice por qué ha fallado.
+          RAZON=$(jq -r '.elementos[0].razonSocial // empty' empresas.json 2>/dev/null || true)
+          TOTAL=$(jq -r '.total // 0' empresas.json 2>/dev/null || true)
+          case "$TOTAL" in ''|*[!0-9]*) TOTAL=0 ;; esac
           echo "total=$TOTAL razonSocial=$RAZON"
           # El total se compara además con cero: una lista vacía es un 200 perfectamente formado,
           # y es exactamente lo que devolvería un esquema recién migrado sin sembrar.
