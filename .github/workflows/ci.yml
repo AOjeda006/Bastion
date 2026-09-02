@@ -113,11 +113,41 @@ jobs:
           fi
 
       - name: Publicar el frontal construido
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bastion-web-dist
           path: frontend/dist
           retention-days: 7
+
+      # PUBLICAR NO ES HABER PUBLICADO LO QUE SE DICE. `upload-artifact` sale verde habiendo
+      # subido un zip vacío si el `path` no casa con nada, y sale verde subiendo la mitad si
+      # algo queda fuera por ser oculto. Con el salto de major de este ítem (v4 -> v7) la cosa
+      # se agrava: en esta familia los cambios mayores han tocado justo el trato de nombres,
+      # de sobrescritura, de fusión y de ficheros ocultos. Un artefacto mal formado no pone
+      # rojo ningún paso; se descubre meses después, cuando alguien lo necesita.
+      #
+      # Así que se BAJA y se mira lo que hay dentro. Es la misma regla que el resto del
+      # proyecto: por el efecto, no por el fichero.
+      - name: Bajar el artefacto del frontal
+        uses: actions/download-artifact@v8
+        with:
+          name: bastion-web-dist
+          path: ${{ github.workspace }}/comprobacion/bastion-web-dist
+
+      - name: El artefacto del frontal contiene el frontal
+        working-directory: ${{ github.workspace }}
+        run: |
+          RAIZ=comprobacion/bastion-web-dist
+          test -f "$RAIZ/index.html" || { echo "::error title=Artefacto bastion-web-dist::No hay index.html dentro del artefacto."; exit 1; }
+          grep -q '<div id="root"></div>' "$RAIZ/index.html" || { echo "::error title=Artefacto bastion-web-dist::El index.html del artefacto no es el del frontal."; exit 1; }
+          JS=$(find "$RAIZ" -name '*.js' -type f | wc -l)
+          CSS=$(find "$RAIZ" -name '*.css' -type f | wc -l)
+          FICHEROS=$(find "$RAIZ" -type f | wc -l)
+          if [ "$JS" -lt 1 ] || [ "$CSS" -lt 1 ]; then
+            echo "::error title=Artefacto bastion-web-dist::Dentro hay ${FICHEROS} ficheros, ${JS} .js y ${CSS} .css. Un frontal construido lleva al menos uno de cada."
+            exit 1
+          fi
+          echo "::notice title=Artefacto bastion-web-dist::${FICHEROS} ficheros, ${JS} .js y ${CSS} .css, con index.html del frontal."
 
   # ==================================================================== BACKEND
   # Mientras `Bastion.sln` no exista (ítem 0.1 de docs/PLAN.md), este job DECLARA que
@@ -308,7 +338,7 @@ jobs:
       # como artefacto para que el frontal lo consuma en vez de escribir DTOs a mano.
       - name: Publicar el OpenAPI
         if: steps.solucion.outputs.existe == 'true' && hashFiles('docs/api/openapi.json') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openapi
           path: docs/api/openapi.json
@@ -316,45 +346,73 @@ jobs:
 
       - name: Publicar resultados de test
         if: always() && steps.solucion.outputs.existe == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: artifacts/test-results
           retention-days: 7
 
+      # Lo mismo que en el frontal, y aquí importa más: estos dos artefactos son el contrato
+      # de la API y la única prueba conservada de qué se ejecutó. Se bajan y se abre lo que
+      # traen dentro. Ver el porqué largo en el job del frontal.
+      - name: Bajar el artefacto del OpenAPI
+        if: always() && steps.solucion.outputs.existe == 'true' && hashFiles('docs/api/openapi.json') != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: openapi
+          path: comprobacion/openapi
+
+      - name: El artefacto del OpenAPI contiene el contrato
+        if: always() && steps.solucion.outputs.existe == 'true' && hashFiles('docs/api/openapi.json') != ''
+        run: |
+          FICHERO=comprobacion/openapi/openapi.json
+          test -f "$FICHERO" || { echo "::error title=Artefacto openapi::No hay openapi.json dentro del artefacto."; exit 1; }
+          # Se compara con el del repositorio, byte a byte: el artefacto tiene que ser ESE
+          # documento y no otro parecido. Y de paso se comprueba que trae rutas de verdad.
+          if ! cmp -s "$FICHERO" docs/api/openapi.json; then
+            echo "::error title=Artefacto openapi::El openapi.json del artefacto no es el del repositorio."
+            exit 1
+          fi
+          RUTAS=$(grep -o '"/api/v1/[^"]*"' "$FICHERO" | sort -u | wc -l)
+          if [ "$RUTAS" -lt 1 ]; then
+            echo "::error title=Artefacto openapi::El documento no declara ninguna ruta /api/v1/."
+            exit 1
+          fi
+          echo "::notice title=Artefacto openapi::openapi.json idéntico al del repositorio, con ${RUTAS} rutas /api/v1/."
+
+      - name: Bajar el artefacto de resultados de test
+        if: always() && steps.solucion.outputs.existe == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: test-results
+          path: comprobacion/test-results
+
+      - name: El artefacto de resultados contiene los .trx
+        if: always() && steps.solucion.outputs.existe == 'true'
+        run: |
+          RAIZ=comprobacion/test-results
+          # `upload-artifact` conserva la estructura por debajo del `path`, así que dentro
+          # tienen que estar las dos carpetas de carril con sus .trx. Que estén las DOS es lo
+          # que distingue «se subieron los resultados» de «se subió la mitad».
+          for CARRIL in dominio integracion; do
+            CUANTOS=$(find "$RAIZ/$CARRIL" -name '*.trx' -type f 2>/dev/null | wc -l)
+            if [ "$CUANTOS" -lt 1 ]; then
+              echo "::error title=Artefacto test-results::No hay ningún .trx de ${CARRIL} dentro del artefacto."
+              exit 1
+            fi
+            CASOS=$(grep -ho '<Counters[^/]*/>' "$RAIZ/$CARRIL"/*.trx | sed -n 's/.*[^A-Za-z]total="\([0-9]*\)".*/\1/p' | awk '{ s += $1 } END { print s + 0 }')
+            echo "::notice title=Artefacto test-results::${CARRIL}: ${CUANTOS} ficheros .trx con ${CASOS} casos dentro del artefacto."
+          done
+
   # ==================================================================== IMÁGENES
-  # Solo comprueba que los Dockerfile construyen; no publica nada. La publicación es
-  # cosa de `cd.yml`, que se escribirá cuando haya a dónde desplegar.
-  imagenes:
-    name: Imágenes de contenedor
-    runs-on: ubuntu-latest
-    needs: [frontend, backend]
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Construir la imagen del frontal
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: deploy/Dockerfile.web
-          push: false
-          load: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Construir la imagen de la API
-        # Igual que el job `backend`: sin solución no hay nada que construir.
-        if: hashFiles('Bastion.sln') != ''
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: deploy/Dockerfile.api
-          push: false
-          load: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  # AQUÍ HUBO UN JOB `imagenes`, y se retira en el 0.13. Construía las dos imágenes con
+  # `docker/build-push-action` sin publicarlas, con los mismos `needs: [frontend, backend]` que
+  # `Humo` y los mismos dos Dockerfile. `Humo` construye esas dos imágenes —`docker compose build`
+  # no puede no hacerlo— y además las ARRANCA y les hace peticiones. Un job cuya única afirmación
+  # es un subconjunto estricto de la de otro no añade cobertura: añade minutos y una segunda cosa
+  # que actualizar. Lo que sí se pierde es la caché `type=gha` de buildx, que `compose build` no
+  # usa; se acepta, porque el `Humo` construía ya por su cuenta y esa caché no le llegaba.
+  # `docs/PLAN.md` dejaba las dos salidas abiertas («o bien `Humo` absorbe a `Imágenes`»): es esta.
 
   # ======================================================================== HUMO
   # Levanta el entorno COMPLETO con docker compose y comprueba el criterio de aceptación
