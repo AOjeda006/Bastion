@@ -15,8 +15,16 @@ docs
 # `<Compile Include="../../../../db/migraciones/<Modulo>/**/*.cs" />`. Un glob que no casa con nada
 # no es un error: compila igual, y el ensamblado publicado sale SIN migraciones. La imagen se
 # construía bien, arrancaba bien, y `Migrate()` habría aplicado cero migraciones sin decir nada.
-# Solo se copian los `.cs` de migración; `db/semillas` sigue fuera.
-db/semillas
+#
+# `db/semillas` estuvo aquí por lo mismo, y sale por lo mismo (auditoría previa a la fase 1, F3).
+# El §12 dice que el PGC, los tipos de IVA, las unidades y los países son ficheros versionados
+# «que un comando carga», y ese comando es este mismo migrador. Excluidos del contexto, el cargador
+# habría encontrado cero — y «cero semillas» es indistinguible de «no había nada que cargar».
+# Hoy la carpeta está vacía, así que quitar la línea no PRUEBA nada, y además no BASTA:
+# `Dockerfile.api` copia `. .` en el escenario de compilación, pero el de ejecución se
+# lleva solo `/publicado`. Para que las semillas lleguen al contenedor que las carga hay
+# que publicarlas —`<Content Include>` en el proyecto— o copiarlas aparte. Eso es del
+# ítem 0.15, donde el cargador afirma conjunto no vacío y la CI mira dentro de la imagen.
 deploy/.env
 .env
 .env.*
