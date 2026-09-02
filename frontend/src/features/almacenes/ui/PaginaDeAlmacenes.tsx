@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { clavesDeAlmacenes } from '../api/claves.ts';
 import { consultarAlmacenes } from '../api/consultas.ts';
+import { motivoDeFallo } from '@/shared/api/errores.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
@@ -15,6 +17,7 @@ import { Paginador } from '@/shared/ui/Paginacion.tsx';
  * copia sería una segunda verdad que envejece justo cuando se cambia de empresa—.
  */
 export function PaginaDeAlmacenes(): React.JSX.Element {
+  const { t } = useTranslation();
   const [parametros, setParametros] = useSearchParams();
   const paginacion = leerPaginacion(parametros);
 
@@ -26,13 +29,13 @@ export function PaginaDeAlmacenes(): React.JSX.Element {
   });
 
   if (consulta.isPending) {
-    return <Cargando que="los almacenes" />;
+    return <Cargando que={t('almacenes.cargando')} />;
   }
 
   if (consulta.isError) {
     return (
       <Fallo
-        mensaje={consulta.error.message}
+        mensaje={t(`errores.${motivoDeFallo(consulta.error)}`)}
         alReintentar={() => {
           void consulta.refetch();
         }}
@@ -51,9 +54,7 @@ export function PaginaDeAlmacenes(): React.JSX.Element {
       <>
         <Vacio
           mensaje={
-            paginacion.pagina > 1
-              ? 'Esta página no tiene almacenes. Vuelve a la anterior.'
-              : 'Todavía no hay ningún almacén dado de alta en esta empresa.'
+            paginacion.pagina > 1 ? t('almacenes.paginaVacia') : t('almacenes.ningunoTodavia')
           }
         />
         <Paginador paginacion={paginacion} total={consulta.data.total} alCambiar={irA} />
@@ -64,20 +65,20 @@ export function PaginaDeAlmacenes(): React.JSX.Element {
   return (
     <>
       <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">Almacenes de la empresa activa</caption>
+        <caption className="sr-only">{t('almacenes.tabla')}</caption>
         <thead>
           <tr className="border-b border-neutral-300 text-left">
             <th scope="col" className="py-2 pr-4 font-medium">
-              Código
+              {t('almacenes.codigo')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              Nombre
+              {t('almacenes.nombre')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              Tipo
+              {t('almacenes.tipo')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              Población
+              {t('almacenes.poblacion')}
             </th>
           </tr>
         </thead>

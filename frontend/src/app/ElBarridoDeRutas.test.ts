@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 
 import { RUTAS, type DeclaracionDeRuta } from './rutas.tsx';
 import { crearRutas } from './enrutador.tsx';
+import { en } from './i18n/en.ts';
+import { es, type Diccionario } from './i18n/es.ts';
+import { IDIOMAS, type Idioma } from './i18n/idioma.ts';
+
+const DICCIONARIOS: Record<Idioma, Diccionario> = { es, en };
 
 /**
  * EL QUINTO BARRIDO — toda ruta declara qué exige.
@@ -99,12 +104,35 @@ describe('El barrido de rutas', () => {
     }
   });
 
-  it('cada ruta tiene un título distinto', () => {
+  it('cada ruta tiene un título distinto EN TODOS LOS IDIOMAS', () => {
     // No es cosmético: el título es el `<title>`, el `<h1>` y el mensaje que se le anuncia al
     // lector de pantalla al navegar. Dos vistas con el mismo título dejan ese anuncio inservible
     // —dice lo mismo antes y después— y quitan la única pista de en qué pantalla se está.
-    const titulos = RUTAS.map((r) => r.titulo);
+    //
+    // Se comprueban los títulos TRADUCIDOS y en los dos idiomas, no las claves. Que las claves
+    // sean distintas no prueba nada: es el texto lo que lee una persona, y dos claves distintas
+    // pueden traducirse igual sin que nada proteste. El bucle recorre `IDIOMAS`, así que un
+    // idioma nuevo entra en la comprobación por existir, no por acordarse de añadirlo aquí.
+    for (const idioma of IDIOMAS) {
+      const diccionario = DICCIONARIOS[idioma];
+      const titulos = RUTAS.map((r) => diccionario.rutas[r.claveDeTitulo]);
 
-    expect(new Set(titulos).size).toBe(titulos.length);
+      expect(new Set(titulos).size, `${idioma}: hay dos rutas con el mismo título`).toBe(
+        titulos.length,
+      );
+    }
+  });
+
+  it('los dos diccionarios traen las mismas claves de título, y no están vacías', () => {
+    // El tipo ya obliga a que `en` cumpla la forma de `es`, así que esto no es un duplicado del
+    // compilador: es la parte que el compilador NO puede afirmar —que el conjunto no esté vacío—.
+    // Un diccionario de rutas sin ninguna clave cumpliría el tipo y dejaría el bucle de arriba
+    // recorriendo cero elementos: verde sin haber comprobado nada.
+    for (const idioma of IDIOMAS) {
+      const claves = Object.keys(DICCIONARIOS[idioma].rutas);
+
+      expect(claves.length, `${idioma}: el diccionario de rutas está vacío`).toBe(RUTAS.length);
+      expect([...claves].sort()).toEqual([...RUTAS.map((r) => r.claveDeTitulo)].sort());
+    }
   });
 });

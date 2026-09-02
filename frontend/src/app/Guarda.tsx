@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation } from 'react-router';
 
 import type { Exigencia } from './rutas.tsx';
@@ -23,6 +24,7 @@ export function Guarda({
   exigencia: Exigencia;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const sesion = useSesion();
   const ubicacion = useLocation();
 
@@ -48,10 +50,7 @@ export function Guarda({
         role="alert"
         className="my-6 max-w-prose rounded border border-amber-300 bg-amber-50 p-4"
       >
-        <p className="text-sm text-amber-900">
-          Tu usuario no tiene permiso para ver esta pantalla en la empresa con la que estás
-          operando. Si crees que debería tenerlo, pídeselo a quien administre Bastion.
-        </p>
+        <p className="text-sm text-amber-900">{t('sesion.sinPermiso')}</p>
       </div>
     );
   }

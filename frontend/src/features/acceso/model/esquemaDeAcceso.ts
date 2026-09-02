@@ -9,18 +9,23 @@ import { z } from 'zod';
  * sabe si las credenciales son buenas.
  *
  * El tipo del formulario se INFIERE del esquema. Declararlo aparte sería tenerlo escrito dos veces.
+ *
+ * LOS MENSAJES SON CLAVES, no frases. El esquema es una constante de módulo: se evalúa una sola vez
+ * al importarlo, fuera de React y antes de que haya idioma. Una frase escrita aquí quedaría fijada
+ * en el idioma de ese instante para toda la vida de la pestaña, y no cambiaría al cambiar de
+ * idioma. Guardando la clave, quien traduce es el componente, en cada pintada.
  */
 export const esquemaDeAcceso = z.object({
   correo: z
     .string()
     .trim()
-    .min(1, 'Escribe tu correo.')
-    .max(254, 'El correo no puede pasar de 254 caracteres.')
-    .pipe(z.email('Eso no parece un correo electrónico.')),
+    .min(1, 'acceso.escribeTuCorreo')
+    .max(254, 'acceso.correoDemasiadoLargo')
+    .pipe(z.email('acceso.correoConFormatoMalo')),
   contrasena: z
     .string()
-    .min(1, 'Escribe tu contraseña.')
-    .max(128, 'La contraseña no puede pasar de 128 caracteres.'),
+    .min(1, 'acceso.escribeTuContrasena')
+    .max(128, 'acceso.contrasenaDemasiadoLarga'),
 });
 
 export type DatosDeAcceso = z.infer<typeof esquemaDeAcceso>;

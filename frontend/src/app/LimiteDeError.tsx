@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { MensajeDePantallaRota } from './MensajeDePantallaRota.tsx';
+
 /**
  * Límite de error: recoge lo que una pantalla haya roto sin llevarse por delante la aplicación.
  *
@@ -29,13 +31,6 @@ export class LimiteDeError extends Component<{ children: ReactNode }, { roto: bo
       return this.props.children;
     }
 
-    return (
-      <div role="alert" className="my-6 max-w-prose rounded border border-red-300 bg-red-50 p-4">
-        <p className="text-sm text-red-900">
-          Esta pantalla no se ha podido mostrar. Puedes seguir usando el resto de Bastion desde el
-          menú; si vuelve a pasar, avisa indicando qué estabas haciendo.
-        </p>
-      </div>
-    );
+    return <MensajeDePantallaRota />;
   }
 }

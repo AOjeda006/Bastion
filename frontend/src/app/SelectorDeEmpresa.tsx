@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 import { cambiarEmpresa } from '@/shared/api/sesiones.ts';
 import { escribirSesion } from '@/shared/sesion/deposito.ts';
@@ -28,6 +29,7 @@ import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
  * móvil—.
  */
 export function SelectorDeEmpresa(): React.JSX.Element {
+  const { t } = useTranslation();
   const sesion = useSesionAbierta();
   const cache = useQueryClient();
 
@@ -46,14 +48,14 @@ export function SelectorDeEmpresa(): React.JSX.Element {
     },
   });
 
-  const fallo = cambio.data !== undefined && 'error' in cambio.data ? cambio.data.error : null;
+  const motivo = cambio.data !== undefined && 'error' in cambio.data ? cambio.data.error : null;
 
   if (sesion.empresas.length <= 1) {
     const unica = sesion.empresas[0];
 
     return (
       <p className="text-sm text-neutral-700">
-        <span className="text-neutral-500">Empresa: </span>
+        <span className="text-neutral-500">{t('sesion.empresaEtiqueta')}</span>
         {unica?.razonSocial ?? '—'}
       </p>
     );
@@ -62,7 +64,7 @@ export function SelectorDeEmpresa(): React.JSX.Element {
   return (
     <div className="flex items-center gap-2">
       <label htmlFor="empresa-activa" className="text-sm text-neutral-500">
-        Empresa
+        {t('sesion.empresa')}
       </label>
       <select
         id="empresa-activa"
@@ -79,9 +81,9 @@ export function SelectorDeEmpresa(): React.JSX.Element {
           </option>
         ))}
       </select>
-      {fallo !== null && (
+      {motivo !== null && (
         <span role="alert" className="text-sm text-red-800">
-          {fallo}
+          {t(`sesion.${motivo}`)}
         </span>
       )}
     </div>

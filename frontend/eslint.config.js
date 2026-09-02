@@ -4,6 +4,7 @@ import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
+import i18next from 'eslint-plugin-i18next';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
@@ -36,6 +37,7 @@ export default tseslint.config(
     },
     plugins: {
       'react-refresh': reactRefresh,
+      i18next,
     },
     rules: {
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
@@ -61,6 +63,41 @@ export default tseslint.config(
       // `import type` explícito: lo que solo son tipos no debe acabar en el bundle.
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+
+      // NINGÚN TEXTO VISIBLE ESCRITO EN UN COMPONENTE (ítem 0.14).
+      //
+      // El §3 del plan maestro manda los textos fuera del codigo «desde el primer día», y la
+      // biblioteca cuenta «literales de texto sin i18n» entre sus antipatrones. Que eso sea una
+      // regla que se ejecuta y no un acuerdo escrito es la diferencia entre cumplirlo y creer que
+      // se cumple: la fase 1 trae decenas de pantallas nuevas, y basta que a UNA se le olvide para
+      // que la aplicación quede medio traducida.
+      //
+      // Cubre el texto de JSX y los atributos que LEE una persona. `className`, `id`, `to`, `type`
+      // y compañía quedan fuera adrede: no son texto, y meterlos obligaría a una excepcion por
+      // linea que acabaría apagando la regla de hecho.
+      'i18next/no-literal-string': [
+        'error',
+        {
+          mode: 'jsx-text-only',
+          'should-validate-template': true,
+          message: 'Texto suelto en un componente: llévalo al diccionario de app/i18n y usa t().',
+          callees: { exclude: ['t', 'i18n.t'] },
+          words: {
+            // Lo que no es una frase: símbolos sueltos, separadores y signos de puntuacion.
+            // Y la MARCA: «Bastion» se escribe igual en los dos idiomas (glosario, Anexo
+            // A.1). Meterla en el diccionario sería invitar a que alguien la traduzca.
+            exclude: ['^[^a-zA-Z\u00C0-\u017F]+$', '^Bastion$'],
+          },
+        },
+      ],
+    },
+  },
+  {
+    // El diccionario ES el texto: prohibirle literales sería prohibirle existir. Y los tests
+    // comprueban texto que sale en pantalla, así que tienen que poder escribirlo.
+    files: ['src/app/i18n/**/*.ts', '**/*.test.{ts,tsx}', 'src/pruebas/**/*.{ts,tsx}'],
+    rules: {
+      'i18next/no-literal-string': 'off',
     },
   },
   {

@@ -1,3 +1,4 @@
+import type { Diccionario } from './i18n/es.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 
 /**
@@ -32,16 +33,24 @@ export type Exigencia =
   | { readonly clase: 'sesion'; readonly motivo: string }
   | { readonly clase: 'permiso'; readonly permiso: string };
 
+/** Las claves de título que existen. Sale del diccionario, no de una lista escrita aparte. */
+export type ClaveDeTitulo = keyof Diccionario['rutas'];
+
 /** Una ruta de la aplicación, con todo lo que hace falta saber de ella. */
 export interface DeclaracionDeRuta {
   /** El camino, tal como se declara en el enrutador. */
   readonly ruta: string;
   /**
-   * Título único y descriptivo. Se usa en TRES sitios —`<title>`, el `<h1>` del `<main>` y el
-   * mensaje que se anuncia al navegar— y por eso es uno solo: repetir título en dos vistas deja
-   * inservible el anuncio que lo usa (`ux-ipo`, SPA, punto 2).
+   * La CLAVE del título, no el título. Se traduce al pintar, y eso es lo que hace que cambiar de
+   * idioma repinte la cabecera, el `<title>` y el anuncio sin recargar la página.
+   *
+   * Es `keyof Diccionario['rutas']` y no `string` a propósito: así una ruta nueva no puede traer
+   * aquí una frase escrita a mano —no compilaría— ni una clave que no exista en el diccionario.
+   * El título ya traducido se usa en TRES sitios —`<title>`, el `<h1>` del `<main>` y el mensaje
+   * que se anuncia al navegar— y por eso es uno solo: repetir título en dos vistas deja inservible
+   * el anuncio que lo usa (`ux-ipo`, SPA, punto 2).
    */
-  readonly titulo: string;
+  readonly claveDeTitulo: ClaveDeTitulo;
   readonly exigencia: Exigencia;
   /** Si sale en la navegación principal. Una ruta puede existir sin ser un enlace visible. */
   readonly enLaNavegacion: boolean;
@@ -51,7 +60,7 @@ export interface DeclaracionDeRuta {
 export const RUTAS: readonly DeclaracionDeRuta[] = [
   {
     ruta: '/acceso',
-    titulo: 'Iniciar sesión',
+    claveDeTitulo: 'acceso',
     exigencia: {
       clase: 'publica',
       motivo: 'Es la puerta. Exigir sesión para poder abrirla no dejaría entrar a nadie.',
@@ -61,7 +70,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
   },
   {
     ruta: '/',
-    titulo: 'Inicio',
+    claveDeTitulo: 'inicio',
     exigencia: {
       clase: 'sesion',
       motivo:
@@ -73,7 +82,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
   },
   {
     ruta: '/almacenes',
-    titulo: 'Almacenes',
+    claveDeTitulo: 'almacenes',
     exigencia: { clase: 'permiso', permiso: PERMISOS.almacenVer },
     enLaNavegacion: true,
     cargar: async () =>
@@ -81,7 +90,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
   },
   {
     ruta: '/empresas',
-    titulo: 'Empresas',
+    claveDeTitulo: 'empresas',
     exigencia: { clase: 'permiso', permiso: PERMISOS.empresaVer },
     enLaNavegacion: true,
     cargar: async () =>
@@ -89,7 +98,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
   },
   {
     ruta: '*',
-    titulo: 'Página no encontrada',
+    claveDeTitulo: 'noEncontrada',
     exigencia: {
       clase: 'publica',
       motivo:

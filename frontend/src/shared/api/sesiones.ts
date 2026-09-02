@@ -9,17 +9,26 @@ import type { Sesion } from '@/shared/sesion/sesion.ts';
  * qué datos se está trabajando, y lo que hubiera en la caché de consultas es de la empresa anterior.
  */
 
-/** Lo que devuelve una operación de sesión: la sesión, o el motivo por el que no hay. */
-export type ResultadoDeSesion = { readonly sesion: Sesion } | { readonly error: string };
+/**
+ * Por qué no se ha podido entrar. Motivos, no frases: esta capa es red y no sabe en qué idioma se
+ * está (ver el mismo razonamiento, entero, en `errores.ts`).
+ *
+ * Cada operación devuelve su unión EXACTA y no una común: así la pantalla de acceso no tiene que
+ * contemplar «no se ha podido cambiar de empresa», que ahí no puede pasar, y el compilador la
+ * obliga a cubrir los dos que sí.
+ */
+export type MotivoDeAcceso = 'credenciales' | 'sinRed';
+export type MotivoDeCambioDeEmpresa = 'cambioDeEmpresa';
 
-const CREDENCIALES = 'El correo o la contraseña no son correctos.';
-const SIN_RED = 'No se ha podido contactar con el servidor. Inténtalo de nuevo.';
+/** Lo que devuelve una operación de sesión: la sesión, o el motivo por el que no hay. */
+export type ResultadoDeSesion<M extends string> =
+  { readonly sesion: Sesion } | { readonly error: M };
 
 /** Abre sesión con correo y contraseña. */
 export async function iniciarSesion(
   correo: string,
   contrasena: string,
-): Promise<ResultadoDeSesion> {
+): Promise<ResultadoDeSesion<MotivoDeAcceso>> {
   const { data, response } = await api.POST('/api/v1/identidad/sesiones', {
     body: { correo, contrasena },
   });
@@ -27,20 +36,22 @@ export async function iniciarSesion(
   if (data === undefined) {
     // El 401 de credenciales se traduce a UN mensaje, el mismo para «no existe ese correo» y para
     // «la contraseña no es esa»: distinguirlos le diría a quien prueba correos cuáles existen.
-    return { error: response.status === 401 ? CREDENCIALES : SIN_RED };
+    return { error: response.status === 401 ? 'credenciales' : 'sinRed' };
   }
 
   return { sesion: traducirSesion(data) };
 }
 
 /** Cambia con qué empresa se opera (R8). El testigo nuevo lleva la empresa dentro. */
-export async function cambiarEmpresa(empresaId: string): Promise<ResultadoDeSesion> {
+export async function cambiarEmpresa(
+  empresaId: string,
+): Promise<ResultadoDeSesion<MotivoDeCambioDeEmpresa>> {
   const { data } = await api.PUT('/api/v1/identidad/sesiones/actual/empresa', {
     body: { empresaId },
   });
 
   if (data === undefined) {
-    return { error: 'No se ha podido cambiar de empresa. Vuelve a intentarlo.' };
+    return { error: 'cambioDeEmpresa' };
   }
 
   return { sesion: traducirSesion(data) };

@@ -1,9 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet, useLocation } from 'react-router';
 
 import { LimiteDeError } from './LimiteDeError.tsx';
 import { SelectorDeEmpresa } from './SelectorDeEmpresa.tsx';
+import { SelectorDeIdioma } from './SelectorDeIdioma.tsx';
 import { navegablesPara } from './rutas.tsx';
 import { useDeclaracionDeRuta } from './useDeclaracionDeRuta.ts';
 import { cerrarSesion } from '@/shared/api/sesiones.ts';
@@ -28,6 +30,7 @@ import { Cargando } from '@/shared/ui/Estados.tsx';
  *      en el orden de tabulación y le daría a todo el mundo una parada de más en cada pantalla.
  */
 export function Disposicion(): React.JSX.Element {
+  const { t } = useTranslation();
   const declaracion = useDeclaracionDeRuta();
   const ubicacion = useLocation();
   const sesion = useSesion();
@@ -36,8 +39,10 @@ export function Disposicion(): React.JSX.Element {
   const encabezado = useRef<HTMLHeadingElement>(null);
   const yaSeHaNavegado = useRef(false);
 
+  const titulo = t(`rutas.${declaracion.claveDeTitulo}`);
+
   useEffect(() => {
-    document.title = `${declaracion.titulo} · Bastion`;
+    document.title = t('comun.tituloDeDocumento', { titulo });
 
     // En la primera pintada NO se mueve el foco: eso no es una navegación interna, es la carga de
     // la página, y de ella ya se encarga el navegador. Robarle el foco ahí desplazaría la vista
@@ -47,9 +52,11 @@ export function Disposicion(): React.JSX.Element {
     }
 
     yaSeHaNavegado.current = true;
-  }, [declaracion.titulo, ubicacion.key]);
+    // `t` entra en las dependencias porque cambia al cambiar de idioma: sin ella, el `<title>` se
+    // quedaría en el idioma anterior hasta la siguiente navegación.
+  }, [t, titulo, ubicacion.key]);
 
-  const anuncio = `La página ${declaracion.titulo} se ha cargado.`;
+  const anuncio = t('comun.paginaCargada', { titulo });
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
@@ -57,13 +64,13 @@ export function Disposicion(): React.JSX.Element {
         href="#contenido"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:shadow"
       >
-        Saltar al contenido
+        {t('comun.saltarAlContenido')}
       </a>
 
       <div
         role="status"
         aria-live="polite"
-        aria-label="Estado de la navegación"
+        aria-label={t('comun.estadoDeLaNavegacion')}
         className="sr-only"
       >
         {anuncio}
@@ -74,7 +81,7 @@ export function Disposicion(): React.JSX.Element {
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-4 py-3">
             <span className="text-lg font-semibold tracking-tight">Bastion</span>
 
-            <nav aria-label="Principal" className="flex gap-1">
+            <nav aria-label={t('comun.navegacionPrincipal')} className="flex gap-1">
               {navegablesPara(sesion.permisos).map((ruta) => (
                 <NavLink
                   key={ruta.ruta}
@@ -88,12 +95,13 @@ export function Disposicion(): React.JSX.Element {
                     }`
                   }
                 >
-                  {ruta.titulo}
+                  {t(`rutas.${ruta.claveDeTitulo}`)}
                 </NavLink>
               ))}
             </nav>
 
             <div className="ml-auto flex items-center gap-4">
+              <SelectorDeIdioma />
               <SelectorDeEmpresa />
               <span className="text-sm text-neutral-500">{sesion.nombre}</span>
               <button
@@ -108,7 +116,7 @@ export function Disposicion(): React.JSX.Element {
                 }}
                 className="rounded border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100"
               >
-                Salir
+                {t('comun.salir')}
               </button>
             </div>
           </div>
@@ -117,7 +125,7 @@ export function Disposicion(): React.JSX.Element {
 
       <main id="contenido" className="mx-auto max-w-5xl px-4 py-6">
         <h1 ref={encabezado} tabIndex={-1} className="text-2xl font-semibold tracking-tight">
-          {declaracion.titulo}
+          {titulo}
         </h1>
 
         {/*
@@ -125,7 +133,7 @@ export function Disposicion(): React.JSX.Element {
           el mensaje de error puesto para siempre, también en la pantalla siguiente.
         */}
         <LimiteDeError key={ubicacion.pathname}>
-          <Suspense fallback={<Cargando que="la pantalla" />}>
+          <Suspense fallback={<Cargando que={t('comun.laPantalla')} />}>
             <Outlet />
           </Suspense>
         </LimiteDeError>

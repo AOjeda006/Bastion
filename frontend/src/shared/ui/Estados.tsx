@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 /**
  * Los tres estados que toda pantalla tiene que contemplar: cargando, error y vacío.
  *
@@ -7,11 +9,19 @@
  * todavía no tiene nada.
  */
 
-/** Mientras se espera. `role="status"` para que el lector de pantalla lo diga sin interrumpir. */
+/**
+ * Mientras se espera. `role="status"` para que el lector de pantalla lo diga sin interrumpir.
+ *
+ * `que` llega YA TRADUCIDO —«los almacenes», «la pantalla»— y no como clave: es un trozo de frase
+ * que en otro idioma puede ir en otro sitio, y componer traducciones concatenando es justo lo que
+ * rompe en cuanto el orden cambia. Aquí la frase entera está en el diccionario con su hueco.
+ */
 export function Cargando({ que }: { que: string }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <p role="status" className="py-8 text-sm text-neutral-500">
-      Cargando {que}…
+      {t('comun.cargando', { que })}
     </p>
   );
 }
@@ -30,6 +40,8 @@ export function Fallo({
   mensaje: string;
   alReintentar?: (() => void) | undefined;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div role="alert" className="my-6 rounded border border-red-300 bg-red-50 p-4">
       <p className="text-sm text-red-900">{mensaje}</p>
@@ -39,7 +51,7 @@ export function Fallo({
           onClick={alReintentar}
           className="mt-3 rounded border border-red-400 px-3 py-1.5 text-sm text-red-900 hover:bg-red-100"
         >
-          Volver a intentarlo
+          {t('comun.volverAIntentarlo')}
         </button>
       )}
     </div>

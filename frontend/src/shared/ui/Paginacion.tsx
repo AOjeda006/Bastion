@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import type { Paginacion } from '@/shared/lib/parametrosDeUrl.ts';
 
 /**
@@ -16,12 +18,14 @@ export function Paginador({
   total: number;
   alCambiar: (pagina: number) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   const ultima = Math.max(1, Math.ceil(total / paginacion.tamanio));
   const primero = total === 0 ? 0 : (paginacion.pagina - 1) * paginacion.tamanio + 1;
   const ultimo = Math.min(total, paginacion.pagina * paginacion.tamanio);
 
   return (
-    <nav aria-label="Paginación" className="mt-4 flex items-center gap-3 text-sm">
+    <nav aria-label={t('paginacion.nombre')} className="mt-4 flex items-center gap-3 text-sm">
       <button
         type="button"
         disabled={paginacion.pagina <= 1}
@@ -30,12 +34,12 @@ export function Paginador({
         }}
         className="rounded border border-neutral-300 px-3 py-1.5 disabled:opacity-40"
       >
-        Anterior
+        {t('paginacion.anterior')}
       </button>
       <span className="text-neutral-600">
         {total === 0
-          ? 'Sin resultados'
-          : `${String(primero)}–${String(ultimo)} de ${String(total)}`}
+          ? t('paginacion.sinResultados')
+          : t('paginacion.rango', { primero, ultimo, total })}
       </span>
       <button
         type="button"
@@ -45,7 +49,7 @@ export function Paginador({
         }}
         className="rounded border border-neutral-300 px-3 py-1.5 disabled:opacity-40"
       >
-        Siguiente
+        {t('paginacion.siguiente')}
       </button>
     </nav>
   );

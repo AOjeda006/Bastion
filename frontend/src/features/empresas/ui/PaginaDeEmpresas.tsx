@@ -1,14 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { clavesDeEmpresas } from '../api/claves.ts';
 import { consultarEmpresas } from '../api/consultas.ts';
+import { motivoDeFallo } from '@/shared/api/errores.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 
 /** Listado de empresas. Mismos tres estados y misma paginación en la URL que el de almacenes. */
 export function PaginaDeEmpresas(): React.JSX.Element {
+  const { t } = useTranslation();
   const [parametros, setParametros] = useSearchParams();
   const paginacion = leerPaginacion(parametros);
 
@@ -19,13 +22,13 @@ export function PaginaDeEmpresas(): React.JSX.Element {
   });
 
   if (consulta.isPending) {
-    return <Cargando que="las empresas" />;
+    return <Cargando que={t('empresas.cargando')} />;
   }
 
   if (consulta.isError) {
     return (
       <Fallo
-        mensaje={consulta.error.message}
+        mensaje={t(`errores.${motivoDeFallo(consulta.error)}`)}
         alReintentar={() => {
           void consulta.refetch();
         }}
@@ -42,7 +45,7 @@ export function PaginaDeEmpresas(): React.JSX.Element {
   if (consulta.data.elementos.length === 0) {
     return (
       <>
-        <Vacio mensaje="No hay ninguna empresa que puedas ver." />
+        <Vacio mensaje={t('empresas.ningunaVisible')} />
         <Paginador paginacion={paginacion} total={consulta.data.total} alCambiar={irA} />
       </>
     );
@@ -51,20 +54,20 @@ export function PaginaDeEmpresas(): React.JSX.Element {
   return (
     <>
       <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">Empresas dadas de alta</caption>
+        <caption className="sr-only">{t('empresas.tabla')}</caption>
         <thead>
           <tr className="border-b border-neutral-300 text-left">
             <th scope="col" className="py-2 pr-4 font-medium">
-              NIF
+              {t('empresas.nif')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              Razón social
+              {t('empresas.razonSocial')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              Población
+              {t('empresas.poblacion')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              Divisa
+              {t('empresas.divisa')}
             </th>
           </tr>
         </thead>

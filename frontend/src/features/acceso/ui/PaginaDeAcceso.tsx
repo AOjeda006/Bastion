@@ -2,12 +2,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 
 import { destinoSeguro, esquemaDeAcceso, type DatosDeAcceso } from '../model/esquemaDeAcceso.ts';
-import { iniciarSesion } from '@/shared/api/sesiones.ts';
+import type { Diccionario } from '@/app/i18n/es.ts';
+import { iniciarSesion, type MotivoDeAcceso } from '@/shared/api/sesiones.ts';
 import { escribirSesion } from '@/shared/sesion/deposito.ts';
 import { useSesion } from '@/shared/sesion/useSesion.ts';
+
+/**
+ * Las claves que el esquema de Zod puede poner en `message`. La aserción de abajo va contra ESTE
+ * tipo y no contra `string`: React Hook Form tipa `message` como `string | undefined` porque no
+ * sabe que aquí guardamos claves, y sin el tipo la aserción dejaría pasar cualquier cosa.
+ */
+type ClaveDeMensajeDeAcceso = `acceso.${keyof Diccionario['acceso']}`;
 
 /**
  * La puerta.
@@ -21,12 +30,13 @@ import { useSesion } from '@/shared/sesion/useSesion.ts';
  * trabajar al gestor de contraseñas (3.3.8: autenticación sin prueba cognitiva).
  */
 export function PaginaDeAcceso(): React.JSX.Element {
+  const { t } = useTranslation();
   const sesion = useSesion();
   const ubicacion = useLocation();
   const navegar = useNavigate();
   const cache = useQueryClient();
 
-  const [fallo, setFallo] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState<MotivoDeAcceso | null>(null);
 
   const {
     register,
@@ -43,12 +53,12 @@ export function PaginaDeAcceso(): React.JSX.Element {
   }
 
   const entrar = async (datos: DatosDeAcceso): Promise<void> => {
-    setFallo(null);
+    setMotivo(null);
 
     const resultado = await iniciarSesion(datos.correo, datos.contrasena);
 
     if ('error' in resultado) {
-      setFallo(resultado.error);
+      setMotivo(resultado.error);
       return;
     }
 
@@ -69,18 +79,18 @@ export function PaginaDeAcceso(): React.JSX.Element {
       }}
       className="mt-6 max-w-sm space-y-4"
     >
-      {fallo !== null && (
+      {motivo !== null && (
         <p
           role="alert"
           className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900"
         >
-          {fallo}
+          {t(`acceso.${motivo}`)}
         </p>
       )}
 
       <div>
         <label htmlFor="correo" className="block text-sm font-medium">
-          Correo
+          {t('acceso.correo')}
         </label>
         <input
           id="correo"
@@ -93,14 +103,14 @@ export function PaginaDeAcceso(): React.JSX.Element {
         />
         {errors.correo !== undefined && (
           <p id="correo-error" className="mt-1 text-sm text-red-800">
-            {errors.correo.message}
+            {t(errors.correo.message as ClaveDeMensajeDeAcceso)}
           </p>
         )}
       </div>
 
       <div>
         <label htmlFor="contrasena" className="block text-sm font-medium">
-          Contraseña
+          {t('acceso.contrasena')}
         </label>
         <input
           id="contrasena"
@@ -113,7 +123,7 @@ export function PaginaDeAcceso(): React.JSX.Element {
         />
         {errors.contrasena !== undefined && (
           <p id="contrasena-error" className="mt-1 text-sm text-red-800">
-            {errors.contrasena.message}
+            {t(errors.contrasena.message as ClaveDeMensajeDeAcceso)}
           </p>
         )}
       </div>
@@ -123,7 +133,7 @@ export function PaginaDeAcceso(): React.JSX.Element {
         disabled={isSubmitting}
         className="rounded bg-neutral-900 px-4 py-2 text-sm text-white disabled:opacity-50"
       >
-        {isSubmitting ? 'Entrando…' : 'Entrar'}
+        {isSubmitting ? t('acceso.entrando') : t('acceso.entrar')}
       </button>
     </form>
   );
