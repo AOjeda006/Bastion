@@ -1283,6 +1283,12 @@ cerrado con una línea que mira lo único que importa —qué `Authorization` sa
 la mutación pasa a fallar en **194 ms** diciendo `expected null to be 'Bearer testigo-de-1111…'`.
 Está en `ElTestigoDeAcceso.test.tsx` con el porqué escrito encima, y el commit es `72b0ca5`.
 
+La doctrina que sale de ahí —**toda aserción de tipo sobre un cuerpo de respuesta lleva un test que
+fije el campo del contrato, y ese test mira el efecto observable**— está en
+**`docs/adr/adr-0019-la-asercion-de-tipo-es-el-punto-ciego-del-contrato.md`**, junto con la
+alternativa que se descarta *por ahora* (validar el cuerpo con Zod) y la condición exacta que la
+desbloquearía.
+
 Lo único que la CI dice y aquí no se ve sigue siendo el mismo aviso ajeno a este ítem, arrastrado
 desde el 0.7 y todavía sin tocar: `actions/upload-artifact@v4` (en `Backend` y en `Frontal`) y
 `docker/build-push-action@v6` con `docker/setup-buildx-action@v3` (en `Imágenes de contenedor`)
@@ -2375,6 +2381,15 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTO (2026-09-02) · la renovación de sesión asierta el cuerpo en vez de validarlo.**
+  `traducirCuerpoDeSesion` hace un `as` sobre el cuerpo de la renovación, porque esa petición va con
+  `fetch` pelado y no llega tipada por el contrato. Es la **única** aserción de la capa y ya lleva su
+  test —la cabecera `Authorization` que sale hacia el servidor—, pero un test fija un campo y un
+  esquema valida el cuerpo entero. **Lo ortodoxo sería Zod**, y se ha descartado por ahora con
+  motivo: el esquema habría que escribirlo a mano, que es exactamente lo que la regla del contrato
+  prohíbe; cambiaría una duplicación silenciosa por una ruidosa, que es mejor pero sigue siendo
+  duplicación. **Lo que lo desbloquea:** un generador de esquemas de Zod desde el OpenAPI en el que
+  se confíe, o que las aserciones dejen de ser una sola. Argumento entero en el **ADR-0019**.
 - **ABIERTO (2026-09-02) · los identificadores de permiso son la única parte del contrato escrita a
   mano.** `frontend/src/shared/sesion/permisos.ts` lleva las cadenas `organizacion.almacen.ver` y
   `organizacion.empresa.ver` tecleadas. No hay de dónde generarlas: el catálogo de permisos es un
