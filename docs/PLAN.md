@@ -1627,6 +1627,18 @@ ensamblados **añadidos a las dos listas declaradas** del recuento de la CI.
 arranque —«no hay ningún usuario»— es una lectura y una escritura sin transacción común. Hoy hay una
 sola réplica y por eso no importa; el día que haya dos, importa antes que nada.
 
+**Dónde retomar exactamente:** la **fase 1 · Maestros**. Criterio del §15: alta de
+cliente/proveedor con NIF validado y de artículo con unidad, impuesto y tarifa; listados paginados
+y filtrados en servidor; dominio cubierto por tests. Contenido: Terceros y Catálogo completos,
+tarifas, importación CSV y búsquedas.
+
+Y una advertencia para ese primer turno, porque es la diferencia con todos los anteriores: **la
+fase 1 no tiene un Anexo A.3.** El checklist con criterios por ítem que ha guiado la fase 0 existe
+solo para ella; del §15 sale el criterio de la fase entera, no el de sus pasos. Así que lo primero
+no es escribir código, es la **puerta de clarificación** del `CLAUDE.md` §2: acordar con el usuario
+el desglose en ítems pequeños con criterio verificable y anotarlo aquí. Empezar sin eso es
+exactamente lo que este PLAN existe para impedir.
+
 **Ítem 0.12 cerrado, con la CI en verde:**
 [run 33603428022](https://github.com/AOjeda006/Bastion/actions/runs/33603428022) sobre `0e8b93e`,
 los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor—,
