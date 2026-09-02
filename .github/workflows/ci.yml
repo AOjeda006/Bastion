@@ -215,23 +215,26 @@ jobs:
             --results-directory artifacts/test-results/dominio
           resultado=$?
           set -e
-          # El suelo no es el numero de hoy (403): es el numero por debajo del cual se ha
-          # perdido algo gordo. Un suelo exacto se romperia al borrar un test de mas; uno de 1
-          # no protege.
+          # DOS defensas, y la segunda es la que de verdad protege.
           #
-          # Y hay que decir hasta donde llega, porque es menos de lo que parece. Con 403 casos
-          # en cinco ensamblados -111 BuildingBlocks, 116 Organizacion, 103 Api.Functional,
-          # 58 Identidad y 15 Arquitectura-, perder uno entero deja: 292, 287, 300, 345 y 388.
-          # El suelo falla cuando el total es MENOR que 300, asi que solo caza los dos
-          # primeros. Perder Api.Functional deja 300 clavados y PASA; perder Identidad o
-          # Arquitectura pasa de sobra.
+          # El SUELO de casos (300) es una red gruesa: no es el numero de hoy (403), sino
+          # aquel por debajo del cual se ha perdido algo gordo. Y hay que decir hasta donde
+          # llega, porque es menos de lo que parece. Con 403 casos en cinco ensamblados -111
+          # BuildingBlocks, 116 Organizacion, 103 Api.Functional, 58 Identidad y 15
+          # Arquitectura-, perder uno entero deja: 292, 287, 300, 345 y 388. El suelo falla
+          # cuando el total es MENOR que 300, asi que solo caza los dos primeros. Perder
+          # Api.Functional deja 300 clavados y PASA; perder Identidad o Arquitectura pasa de
+          # sobra. Dos de cinco, y a peor: cuanto mas grande es el total, menos se nota la
+          # perdida de una parte.
           #
-          # O sea que este suelo protege dos de cinco, y crecera peor: cuanto mas grande es el
-          # total, menos nota la perdida de una parte. La defensa que le corresponde es contar
-          # ENSAMBLADOS -lista entera y comparada, como los barridos del proyecto- y no solo
-          # casos. Va con la revision final del workflow, item 0.13.
+          # La LISTA DE ENSAMBLADOS es la defensa que corresponde, y es la del resto del
+          # proyecto: se compara entera, en las dos direcciones. Uno que desaparece se nombra
+          # -no baja un numero: falta «Bastion.Identidad.UnitTests.dll»-, y uno que aparece
+          # obliga a declararlo aqui. Solo cuenta el que ejecuta al menos un caso, asi que un
+          # ensamblado que se queda a cero porque el filtro dejo de casar tambien sale rojo.
           bash scripts/ci/recuento-de-tests.sh \
-            artifacts/test-results/dominio "Dominio y arquitectura" 300
+            artifacts/test-results/dominio "Dominio y arquitectura" 300 \
+            "Bastion.Api.FunctionalTests.dll,Bastion.Arquitectura.Tests.dll,Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,Bastion.Organizacion.UnitTests.dll"
           exit $resultado
 
       # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
@@ -288,11 +291,17 @@ jobs:
             --results-directory artifacts/test-results/integracion
           resultado=$?
           set -e
-          # Mismo criterio: hoy son 142 (114 de la API + 28 de Organización). Perder el bloque
-          # de la API deja 28, muy por debajo del suelo, y el paso falla en vez de dar verde
-          # sobre la mitad de la suite.
+          # Mismo criterio y misma pareja de defensas. Aqui el suelo protegia todavia menos, y
+          # el comentario que habia afirmaba numeros que no existian desde hacia items -«142
+          # (114 de la API + 28 de Organizacion)» cuando el carril lleva 206-. Los de verdad:
+          # 164 de Bastion.Api.IntegrationTests y 42 de Bastion.Organizacion.IntegrationTests.
+          # Con suelo 100, perder el bloque de la API deja 42 y si falla; perder Organizacion
+          # deja 164 y PASA. Uno de dos.
+          #
+          # La lista de ensamblados es la que caza los dos, y por su nombre.
           bash scripts/ci/recuento-de-tests.sh \
-            artifacts/test-results/integracion "Integración (Testcontainers)" 100
+            artifacts/test-results/integracion "Integración (Testcontainers)" 100 \
+            "Bastion.Api.IntegrationTests.dll,Bastion.Organizacion.IntegrationTests.dll"
           exit $resultado
 
       # El OpenAPI es el contrato del que se genera el cliente de TypeScript: se publica
