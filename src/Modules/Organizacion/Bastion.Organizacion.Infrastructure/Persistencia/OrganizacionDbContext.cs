@@ -5,9 +5,13 @@ using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Organizacion.Domain.Almacenes;
+using Bastion.Organizacion.Domain.Divisas;
 using Bastion.Organizacion.Domain.Ejercicios;
 using Bastion.Organizacion.Domain.Empresas;
+using Bastion.Organizacion.Domain.Impuestos;
 using Bastion.Organizacion.Domain.Series;
+using Bastion.Organizacion.Domain.Ubicaciones;
+using Bastion.Organizacion.Domain.Unidades;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Organizacion.Infrastructure.Persistencia;
@@ -71,6 +75,24 @@ public sealed class OrganizacionDbContext(
     /// <summary>Almacenes.</summary>
     public DbSet<Almacen> Almacenes => Set<Almacen>();
 
+    /// <summary>Ubicaciones dentro de los almacenes.</summary>
+    public DbSet<Ubicacion> Ubicaciones => Set<Ubicacion>();
+
+    /// <summary>Tipos impositivos, por tramos de vigencia. Maestro de la instalación (R8).</summary>
+    public DbSet<Impuesto> Impuestos => Set<Impuesto>();
+
+    /// <summary>Divisas con las que se opera. Maestro de la instalación (R8).</summary>
+    public DbSet<Divisa> Divisas => Set<Divisa>();
+
+    /// <summary>Tipos de cambio por par de divisas y día. Maestro de la instalación (R8).</summary>
+    public DbSet<TipoCambio> TiposDeCambio => Set<TipoCambio>();
+
+    /// <summary>Unidades de medida. Maestro de la instalación (R8).</summary>
+    public DbSet<UnidadMedida> UnidadesDeMedida => Set<UnidadMedida>();
+
+    /// <summary>Conversiones entre unidades. Maestro de la instalación (R8).</summary>
+    public DbSet<ConversionUM> ConversionesDeUnidades => Set<ConversionUM>();
+
     /// <summary>
     /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive
     /// el historial de migraciones y qué convención de nombres se aplica.
@@ -122,6 +144,15 @@ public sealed class OrganizacionDbContext(
             "Inquilinato", serie => EmpresaDelFiltro == null || serie.EmpresaId == EmpresaDelFiltro);
         modelBuilder.Entity<Almacen>().HasQueryFilter(
             "Inquilinato", almacen => EmpresaDelFiltro == null || almacen.EmpresaId == EmpresaDelFiltro);
+        modelBuilder.Entity<Ubicacion>().HasQueryFilter(
+            "Inquilinato", ubicacion => EmpresaDelFiltro == null || ubicacion.EmpresaId == EmpresaDelFiltro);
+
+        // Impuesto, Divisa, TipoCambio, UnidadMedida y ConversionUM NO llevan filtro, y su
+        // ausencia está declarada —una por una y con su motivo— en la lista de globales de
+        // `CadaEntidadDeclaraSuInquilinatoTests`. Es lo que la R8 llama marcar explícitamente los
+        // maestros que se comparten entre sociedades: el tipo general del IVA lo fija el BOE y el
+        // euro es el euro en todas. La consecuencia asumida es que un impuesto o una unidad
+        // creados desde una empresa se ven desde las demás, igual que un rol (ADR-0011).
 
         // R16, con la misma forma y en el mismo sitio: una línea por entidad bloqueable, a la
         // vista. `VerLoBloqueado` es otra propiedad de instancia, y vale `true` solo dentro de un
@@ -130,6 +161,8 @@ public sealed class OrganizacionDbContext(
         // esconda.
         modelBuilder.Entity<Almacen>().HasQueryFilter(
             "Bloqueo", almacen => VerLoBloqueado || !almacen.Bloqueo.EstaBloqueado);
+        modelBuilder.Entity<Ubicacion>().HasQueryFilter(
+            "Bloqueo", ubicacion => VerLoBloqueado || !ubicacion.Bloqueo.EstaBloqueado);
 
         // La empresa es la RAÍZ del inquilinato: no lleva `empresa_id` porque ella ES el
         // inquilino, así que se filtra por su propia clave. La consecuencia buscada es que el

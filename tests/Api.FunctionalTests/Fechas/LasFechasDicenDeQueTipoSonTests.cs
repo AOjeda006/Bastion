@@ -98,7 +98,15 @@ public sealed class LasFechasDicenDeQueTipoSonTests : IDisposable
             Columnas().Count(columna => EsDelTipo<DateOnly>(columna.Propiedad)));
 
         cuantas.Instantes.ShouldBeGreaterThan(10, "hay instantes de sobra en el modelo");
-        cuantas.Fechas.ShouldBe(2, "las de inicio y fin del ejercicio, que son las únicas de hoy");
+
+        // El recuento es EXACTO a propósito, no un «al menos»: una fecha de negocio nueva tiene
+        // que pasar por aquí y que alguien la nombre. Las cinco de hoy son las dos del ejercicio,
+        // las dos de la vigencia de un impuesto y la del tipo de cambio — las tres últimas, del
+        // 0.15. Ninguna tiene hora ni zona: el 1 de septiembre de 2012 el IVA subió en Madrid y
+        // en Canarias el mismo día.
+        cuantas.Fechas.ShouldBe(
+            5,
+            "las dos del ejercicio, las dos de la vigencia del impuesto y la del tipo de cambio");
     }
 
     private static bool EsDelTipo<T>(IReadOnlyProperty propiedad) =>

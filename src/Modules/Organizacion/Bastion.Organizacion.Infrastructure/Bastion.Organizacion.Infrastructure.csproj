@@ -38,4 +38,15 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
+  <ItemGroup Label="Pruebas">
+    <!--
+      Las configuraciones de EF Core son internas: son un detalle de esta capa y nadie las
+      instancia desde fuera. Lo que sí necesita nombrar el test de esquema es la restricción de
+      exclusión de `impuestos`, cuyo nombre se declara una sola vez junto a la tabla. Abrirle el
+      ensamblado a las pruebas es preferible a repetir la cadena allí: dos copias del nombre se
+      separan el día que una cambie, y el test seguiría verde preguntando por la que ya no existe.
+    -->
+    <InternalsVisibleTo Include="Bastion.Organizacion.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

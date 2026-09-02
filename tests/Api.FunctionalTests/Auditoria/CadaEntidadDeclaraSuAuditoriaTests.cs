@@ -47,6 +47,7 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         "Almacen.Direccion: 6",
         "Empresa.Bloqueo: 3",
         "Empresa.DomicilioFiscal: 6",
+        "Ubicacion.Bloqueo: 3",
         "Usuario.Bloqueo: 3",
     ];
 

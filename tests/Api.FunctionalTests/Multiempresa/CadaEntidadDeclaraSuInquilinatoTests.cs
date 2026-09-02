@@ -61,6 +61,32 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
             "por su clave entera (evento, consumidor) desde un ámbito sin inquilino. Filtrarla por " +
             "empresa sería peor que inútil: la huella tiene que impedir el reproceso PASE LO QUE " +
             "PASE con la empresa activa, y un filtro la escondería justo cuando hace falta verla",
+
+        // Los cinco maestros que el 0.15 trae del §7. Están aquí porque la R8 lo pide con estas
+        // palabras —«los maestros que se comparten entre sociedades se marcan explícitamente»—, y
+        // el §7 los distingue de los demás con su propia notación: a Empresa, Ejercicio, Serie y
+        // Almacén les pone «empresa» delante; a estos cinco, no.
+        ["Impuesto"] =
+            "un tipo impositivo lo fija el BOE, no el usuario: el general del IVA es el 21 % para " +
+            "todas las sociedades que operan en España. Consecuencia asumida, la misma que con un " +
+            "rol: un impuesto creado desde una empresa se ve desde las demás",
+
+        ["Divisa"] =
+            "el euro es el euro en todas las sociedades. Cuál usa cada una como base sí es un dato " +
+            "de la empresa, y está en la columna `divisa_base` de `empresas`, que filtra",
+
+        ["TipoCambio"] =
+            "lo publica el BCE para todo el mundo el mismo día. Filtrarlo por empresa obligaría a " +
+            "cargar la misma cotización una vez por sociedad, y dos empresas de la misma " +
+            "instalación acabarían convirtiendo el mismo día a tipos distintos",
+
+        ["UnidadMedida"] =
+            "un kilo es un kilo. Y los decimales que admite son del maestro justamente para que " +
+            "dos empresas no midan lo mismo con precisiones distintas",
+
+        ["ConversionUM"] =
+            "relaciona dos unidades que ya son globales; hacerla de empresa dejaría la conversión " +
+            "colgando de un maestro compartido, que es la mitad peor de las dos opciones",
     };
 
     // Las dos que filtran SIN llevar `empresa_id`, y por qué el filtro no es el de siempre.
