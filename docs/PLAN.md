@@ -1183,7 +1183,281 @@ tres cambiaban lo que había que construir:
   exacto que la puso. Por eso el empaquetado no lleva ninguna URL absoluta ni ninguna `VITE_API_URL`
   —que además sería un secreto en el paquete si algún día llevara algo más que un host—.
 
+### Tomadas por el agente de desarrollo — ítem 0.12 (2026-09-02)
+
+El criterio del ítem dice «NetArchTest con las reglas de frontera del §4; **fallan** si un módulo
+cruza una frontera», y el verbo es lo que ordena todo lo demás: el entregable no son las reglas
+escritas, es **cada regla vista en rojo por una violación deliberada antes de aceptarla en verde**.
+
+- **Toda regla afirma también que su conjunto no está vacío, y ese conteo se compara.** Es la
+  decisión de fondo y está entera en
+  **`docs/adr/adr-0020-una-regla-sin-afirmacion-de-conjunto-no-vacio-no-es-una-regla.md`**. El
+  motivo es cómo funciona la herramienta: si el selector no casa con nada, no hay ningún tipo que
+  incumpla, **así que la regla se cumple**. Verdad por vacuidad, verde hoy y verde el día que
+  alguien cruce la frontera, y nada en el informe la distingue de una regla que sí protege algo.
+  Todas pasan por un único punto de entrada, `Barrido.Exige`, que antes de evaluar nada comprueba
+  tres cosas: que el alcance está declarado y no está vacío, que los ensamblados leídos son los
+  declarados —comparados enteros— y que el número de tipos seleccionados es el esperado y mayor que
+  cero. **Una regla sin esas afirmaciones no cuenta como escrita.**
+
+- **Las reglas se aplican a lo que se descubre, no a una lista de nombres tecleada.** Trece de los
+  dieciséis módulos del §5 no existen. Escribirlas por nombre —«`Bastion.Ventas.Domain` no
+  referencia EF Core»— daría trece baterías verdes que no miran nada, y un informe que dice
+  «dieciséis fronteras comprobadas». `Ensamblados` descubre del disco y de la salida de compilación;
+  `Inventario` declara lo que el proyecto dice que hay; y los tests comparan las dos mitades
+  **enteras y en los dos sentidos**, que es la misma forma de los cinco barridos anteriores.
+
+- **El proyecto de test referencia SOLO la raíz de composición (`Bastion.Api`).** Referenciar módulo
+  a módulo habría sido una segunda declaración de qué módulos hay, escrita a mano en un `.csproj` y
+  comparada por nadie. Referenciando la raíz, todos los ensamblados caen en la salida y el conjunto
+  se descubre de ahí.
+
+- **Cada cadena escrita a mano lleva su contraejemplo: la capa donde ese espacio de nombres SÍ tiene
+  que aparecer.** Las prohibiciones al dominio son de fuera del proyecto —`Microsoft.EntityFrameworkCore`,
+  `Microsoft.AspNetCore`, `Npgsql`, y `Bastion.BuildingBlocks.Infrastructure`, que es la que un
+  dominio tiene más a mano— y no se pueden derivar de nada. Si la cadena está bien escrita, se
+  encuentra donde tiene que estar; si está mal, no se encuentra en ninguna parte y eso es lo que se
+  pone rojo. La cuarta mutación demuestra que sin esto la regla 2 no protege nada.
+
+- **`System.Data` se prohibió, se comprobó y se quitó ANTES de existir.** Parecía gratis —ADO.NET es
+  la otra puerta a la base de datos— y su contraejemplo salió a **cero** en las tres capas donde
+  tendría que aparecer: nadie en el proyecto depende de `System.Data`, porque el acceso a datos
+  entra por EF Core y por Npgsql. Habría sumado una regla verde que no protege nada. Queda escrito
+  en el fichero, porque es el mecanismo de este ítem funcionando sobre su propio autor.
+
+- **Hay una decimoquinta regla que NO lee IL, sino los `.csproj`.** Salió de la propia batería de
+  mutaciones: NetArchTest lee IL, y **una referencia de proyecto que todavía no usa nadie no emite
+  IL**. Se le puede poner a `Bastion.Identidad.Application` una referencia a
+  `Bastion.Organizacion.Domain` —el cruce que la regla 1 prohíbe— y las catorce reglas anteriores
+  siguen verdes; el compilador tampoco avisa, porque una referencia sin usar no es un aviso. Y es el
+  orden natural de las cosas: primero se añade la referencia, y la línea que la usa llega en otro
+  commit. Un carril que solo mire el IL aprueba el commit que **abre** la frontera y suspende el que
+  la **cruza**, que es tarde. Así que el uso se vigila en la IL y el permiso en el `.csproj`, por
+  separado, comparando el grafo de aristas entero.
+
+- **Qué regla vive en qué carril, cuando cabe en los dos.** Solo hay una:
+  `UnidadDeTrabajoPorModuloTests.NingunCasoDeUso_PideLaUnidadDeTrabajoComun`, que es un hecho de
+  tipos y NetArchTest expresaría sin esfuerzo. **Se queda donde está**, en los tests funcionales,
+  porque va en pareja con `CadaModulo_DeclaraSuPropiaUnidadDeTrabajo`, que sí necesita el contenedor
+  construido y no puede venirse aquí. Partir la pareja por pureza dejaría dos mitades que se leen
+  sin la otra. Regla general: **cuando una regla cabe en los dos carriles, va con la regla hermana
+  que solo cabe en uno.**
+
+- **El paquete: `NetArchTest.eNhancedEdition` 1.4.5, MIT declarada en el propio `.nuspec`.** Es una
+  bifurcación, y coger la bifurcación en vez del original —que tiene 15 millones de descargas y 1772
+  estrellas— es la decisión que había que justificar. Tres motivos, comprobados en el `.nuspec` y en
+  la API de GitHub el 2026-09-02: **(1) licencia** — `NetArchTest.Rules` 1.3.2 no declara ninguna en
+  el paquete (el repositorio lleva un LICENSE MIT, pero el artefacto que se descarga no lo dice, y
+  aquí ya está aprendido que «siempre fue gratis» no es una comprobación); la bifurcación la declara
+  dentro del paquete. **(2) mantenimiento** — original: 1.3.2 del 2021-05-23, último commit del
+  2023-07-03; bifurcación: 1.4.5 del 2025-06-04. **(3) `Mono.Cecil` 0.11.6 frente a 0.11.3**, y aquí
+  hay que leer ensamblados de **.NET 10**: el lector de metadatos es justo la pieza que envejece
+  mal. Lo que se pierde —53 estrellas frente a 1772, un solo mantenedor— y por qué el riesgo está
+  acotado —solo entra en proyectos de test, y la superficie usada es la API fluida de la 1.3.2,
+  común a las dos ediciones— está escrito en `Directory.Packages.props`. Va en el **carril rápido**,
+  que es donde ya estaba el paso «Tests de dominio y de arquitectura» esperándolo.
+
+- **Los identificadores de permiso escritos a mano se cierran en el 0.13, y NO aquí.** No es una
+  regla de arquitectura: este carril lee ensamblados de .NET y `frontend/src/shared/sesion/permisos.ts`
+  es TypeScript, así que no hay forma de que entre. Lo que hace falta es un barrido que compare esa
+  lista contra el catálogo que la API sirve de verdad, en la forma de `ElFiltroNoSeSaltaPorAhiTests`
+  —que ya lee código fuente—, y eso **cabe en el 0.13**. Esto corrige lo que decía la nota abierta,
+  que lo mandaba a la fase 1: el test no necesita que haya más permisos para existir, y esperar a la
+  fase 1 significa entregar la fase 0 entera con la única cadena del contrato escrita a mano sin
+  nadie que la compare.
+
+- **El `.gitkeep` de `tests/Arquitectura.Tests/` se va con este ítem, y se auditaron los demás.**
+  Quedan **63**: los **60** del andamio de módulos (doce módulos con carpeta × cinco capas, fases 1
+  a 10, deliberados) y tres carpetas legítimamente vacías —`db/semillas/`, `docs/dominio/` y
+  `frontend/public/`—, todas de fases posteriores. El único que sobraba era
+  **`db/migraciones/.gitkeep`**, con dieciocho ficheros versionados dentro desde hace ítems: **se
+  borra también**. Ningún otro andamio de la fase 0 se queda sin llenar.
+
 ## Estado actual
+
+**Ítem 0.12 cerrado, con la CI en verde:**
+[run 33603428022](https://github.com/AOjeda006/Bastion/actions/runs/33603428022) sobre `0e8b93e`,
+los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor—,
+con **403** casos rápidos y **206** de integración contra PostgreSQL 17.6, el documento OpenAPI al
+día —**46** operaciones— y el cliente generado al día con él.
+
+Cierra la fase 0 por el lado de las **fronteras**: a partir de aquí el §4 no es un acuerdo escrito en
+un documento, son **quince reglas que se ejecutan**, y cada una se ha visto en rojo por una
+violación deliberada antes de aceptarla en verde.
+
+Lo que llega con él: `tests/Arquitectura.Tests/` con sus siete ficheros y 1.183 líneas —`Inventario`
+(la mitad declarada), `Ensamblados` (la descubierta), `Barrido` (el único punto de entrada, con las
+tres afirmaciones obligatorias) y los cuatro de reglas—, el paquete `NetArchTest.eNhancedEdition` fijado
+con su licencia y su mantenimiento comprobados, y **ADR-0020** con la doctrina del carril.
+
+### Lo que el criterio del 0.12 pedía, y dónde está probado
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| **NetArchTest** | `tests/Arquitectura.Tests/`, 15 casos en el carril rápido, en el paso «Tests de dominio y de arquitectura» que ya existía. |
+| **Las reglas de frontera del §4** | Reglas **1** y la mitad expresable de la **5**: `LasFronterasEntreModulosTests` (4 casos). Regla **2** y el reparto por capas: `LasCapasVanHaciaDentroTests` (3 casos). Las reglas **3** y **4** son hechos de SQL y de DDL y no caben aquí: están en los tests de esquema contra PostgreSQL de verdad; el mapa completo, con dónde está cubierta cada una, está en el ADR-0020. |
+| **Fallan si un módulo cruza una frontera** | Siete mutaciones, cada una aplicada, ejecutada y revertida. La tabla está abajo. |
+| *(añadido por el ítem)* **Que ninguna regla esté mirando al vacío** | `ElInventarioDeModulosTests` (7 casos) sostiene a las demás: qué módulos hay, qué capas tienen y **cuáles llevan tipos**. Y `LasReglasDeEsteCarrilTests` compara la lista de las quince por su nombre, que es lo único que caza una regla borrada. |
+
+### Verificado en local, con la salida real
+
+- `dotnet build Bastion.sln` → **0 errores, 0 advertencias** (con `TreatWarningsAsErrors`).
+- `dotnet format --verify-no-changes` → sin cambios.
+- `dotnet test Bastion.sln --filter "Category!=Integracion"` → **403** casos en verde, repartidos:
+  111 `BuildingBlocks.UnitTests` · 116 `Organizacion.UnitTests` · 58 `Identidad.UnitTests` ·
+  **15 `Arquitectura.Tests`** · 103 `Api.FunctionalTests`. Eran 388 al cerrar el 0.11.
+- Frontal: **32** casos de Vitest en 7 ficheros, sin cambios respecto al 0.11 salvo la aserción
+  rápida que se le añadió al selector de empresa (tarea previa a este ítem).
+
+### Las siete mutaciones —con dos variantes—, cada una aplicada, ejecutada y revertida
+
+Las seis que pedía el encargo, más una séptima que salió de ejecutar las otras. Dos llevan variante
+porque la forma literal de la mutación no era la interesante: la **1b** ni siquiera compila, y la
+**5b** es la 5 llevada hasta el final.
+
+| # | Qué se rompe | Qué se pone rojo |
+|---|---|---|
+| **1** | `Bastion.Organizacion.Domain` depende de `Bastion.BuildingBlocks.Infrastructure` (referencia + una clase que la usa) | `El_dominio_no_conoce_la_infraestructura_ni_el_framework`: *«el dominio no sabe que existe una base de datos ni un servidor web (§4, regla 2) — y este tipo la cruza: 1. `Bastion.Organizacion.Domain.Almacenes.MutacionUno` — Has dependency on: `Bastion.BuildingBlocks.Infrastructure.Auditoria.EscrituraEnOtraEmpresaException`»* |
+| **1b** | La forma literal: `Domain` depende del `Infrastructure` de **su propio** módulo | **No compila.** `error MSB4006: Existe una dependencia circular en el gráfico de dependencias`. Ahí el guardián es el compilador, y por eso la mutación 1 se reformuló contra la infraestructura común, que sí compila y sí es la puerta que un dominio tiene más a mano |
+| **2** | `Bastion.Identidad.Application` depende de `Bastion.Organizacion.Domain` (el interior de otro módulo) | **Dos reglas.** `Ningun_modulo_ve_el_interior_de_otro`: *«Identidad solo puede ver el Contracts de otro módulo, nunca su interior — y este tipo la cruza: 1. `Bastion.Identidad.Application.Arranque.MutacionDos` — Has dependency on: `Bastion.Organizacion.Domain.Empresas.RegimenDeIva`»*. Y `El_unico_cruce_entre_modulos_va_por_contratos`, que además dice cuál sobra: `*"Identidad.Application -> Bastion.Organizacion.Domain"*` |
+| **3** | `Bastion.Organizacion.Domain` toca el framework: `PackageReference` a EF Core y un método que recibe un `DbContext` | `El_dominio_no_conoce_la_infraestructura_ni_el_framework`: *«… y este tipo la cruza: 1. `Bastion.Organizacion.Domain.Almacenes.MutacionTres` — Has dependency on: `Microsoft.EntityFrameworkCore.DbContext`»* |
+| **4** | **Ni una línea de código.** Una letra en el inventario: `Microsoft.EntityFramworkCore` | `La_prohibicion_al_dominio_puede_dispararse`. **Y la regla que da nombre a la frontera se queda verde.** Entera, abajo |
+| **5a** | Un módulo nuevo con su andamio de cinco capas, sin declararlo | `Las_carpetas_de_modulo_son_las_declaradas`, con la lista entera y `"Almacenaje"` de más |
+| **5b** | Y además compilando y llegando a la salida | **Cuatro reglas.** `Los_ensamblados_modulares_de_la_salida_son_los_declarados`, `Cada_ensamblado_modular_lleva_los_tipos_que_el_inventario_declara`, `Ningun_modulo_ve_el_interior_de_otro` (*«los módulos a los que se les aplica la frontera no son los que el inventario declara montados»*) y la de las carpetas |
+| **6** | Se borra una regla entera del fichero (`El_dominio_no_conoce_…`, quince líneas) | `Las_reglas_de_este_carril_son_las_declaradas`, con las dos listas enteras y el total bajando de 15 a 14. Ninguna otra se entera: la suite sale **más rápida y con un caso menos que nadie echa de menos** |
+| **7** | La referencia de proyecto que cruza la frontera, **sin una sola línea que la use** | Al principio, **nada**: las catorce reglas verdes. Es el hallazgo que trajo la regla quince. Con ella, `Las_referencias_de_proyecto_son_las_declaradas` |
+
+### La cuarta, entera
+
+Es la que había que leer saliera como saliera, y salió como no convenía. La mutación es de **una
+letra** y no toca ni una línea de código de producción: en `Inventario.ProhibidasAlDominio`,
+`Microsoft.EntityFrameworkCore` pasa a `Microsoft.EntityFramworkCore`. Compila, pasa `dotnet format`,
+pasa los analizadores. Y para que la pregunta fuera la de verdad se aplicó **junto con la mutación
+3**: el selector roto **y** el dominio de Organización importando de verdad un `DbContext`.
+
+```
+Con error: 1, Superado: 13, Omitido: 0, Total: 14, Duración: 1 s
+
+  LasCapasVanHaciaDentroTests.La_prohibicion_al_dominio_puede_dispararse [FAIL]
+  Mensaje de error:
+   Shouldly.ShouldAssertException : mudas
+    should be empty but had
+1
+    item and was
+["«Microsoft.EntityFramworkCore»: ni un tipo de Infrastructure depende de eso, así que
+prohibírselo al dominio no puede fallar nunca. O la cadena está mal escrita, o eso ya no se
+usa en el proyecto y la prohibición sobra"]
+
+  Additional Info:
+    estas prohibiciones no pueden dispararse:
+1. «Microsoft.EntityFramworkCore»: ni un tipo de Infrastructure depende de eso, así que
+   prohibírselo al dominio no puede fallar nunca. O la cadena está mal escrita, o eso ya no
+   se usa en el proyecto y la prohibición sobra
+```
+
+Lo que hay que leer en esa salida no es el rojo, es **cuál de los catorce es**. `El_dominio_no_conoce_la_infraestructura_ni_el_framework`
+—la regla que lleva el nombre de la frontera, la que el criterio del ítem pide— **está entre los
+trece verdes, con un `DbContext` dentro del dominio**. Su conjunto seleccionado no cambia: sigue
+siendo todos los tipos del dominio, los mismos de siempre. La condición tampoco: nadie depende de
+`Microsoft.EntityFramworkCore`, porque eso no existe. Verde por vacuidad, y sin ninguna señal.
+
+Lo único que se movió fue el contraejemplo, que es la afirmación que una regla de arquitectura
+corriente **no lleva**: la cadena dejó de encontrarse en la capa donde tiene que estar.
+
+Y aquí está la parte que hay que guardar, porque es la que avisó la vez anterior y la que no habría
+avisado esta: **el falso verde del 0.11 se cazó porque el resultado era inverosímil**. Este no lo
+sería. Trece verdes y un rojo en un test con nombre de comprobación auxiliar es exactamente el
+aspecto que tiene un carril sano; si el contraejemplo no existiera, catorce verdes tendrían el mismo
+aspecto. **La única alarma disponible era la regla escrita de antemano**, y por eso está escrita de
+antemano.
+
+### Lo que este carril NO cubre, y dónde está cubierto
+
+La tabla completa está en el ADR-0020. En corto:
+
+- **Reglas 3 y 4 del §4** (ninguna consulta cruza esquemas, ninguna clave ajena entre esquemas): son
+  SQL y DDL, no tipos. Viven en `EsquemaDeIdentidadTests` y `EsquemaDelModuloTests`, contra
+  PostgreSQL de verdad. El SQL crudo lo vigila `ElFiltroNoSeSaltaPorAhiTests`, leyendo el código.
+- **La mitad de ejecución de la regla 5**: los tests de la bandeja de salida (ADR-0013).
+- **La composición en ejecución**: qué resuelve el contenedor no está en la IL de nadie —
+  `UnidadDeTrabajoPorModuloTests`.
+- **El frontal**: es TypeScript. Sus fronteras las vigilan el contrato generado (ADR-0018) y los
+  barridos de rutas y permisos.
+
+### Lo que se encontró por el camino y no estaba previsto
+
+1. **`Bastion.Auditoria.{Domain,Contracts,Application,Endpoints}` compilan a ensamblados con CERO
+   tipos.** El módulo del 0.7 registra los cambios desde un interceptor de EF Core, así que todo lo
+   suyo vive en `Infrastructure`. No es un fallo —es la forma que tiene ese módulo hoy—, pero sí lo
+   sería no decirlo: aplicarles las fronteras del §4 habría dado **cuatro verdes por vacuidad**, y
+   el informe habría dicho que Auditoría cumple las cinco. Está declarado en
+   `Inventario.EnsambladosConTipos` y comparado por
+   `Cada_ensamblado_modular_lleva_los_tipos_que_el_inventario_declara`. Consecuencia escrita en voz
+   alta: **a Auditoría no se le comprueba hoy ni una sola regla de capas.** El día que estrene su
+   primera entidad de dominio, el inventario se pone rojo y obliga a añadir la línea, que es el día
+   en que esas reglas empiezan a proteger algo.
+2. **`System.Data` no llegó a ser una regla**, porque su propio contraejemplo la tumbó: cero tipos
+   dependen de ella en las tres capas donde tendría que aparecer.
+3. **Una referencia de proyecto sin usar es invisible para NetArchTest**, y de ahí la regla quince.
+   Ver la mutación 7.
+4. **`UnidadDeTrabajoPorModuloTests` tiene la misma avería que este ítem viene a evitar, en el otro
+   carril.** Su `s_capasDeAplicacion` fija dos ensamblados a mano con `typeof(...)` y **no incluye
+   `Bastion.Auditoria.Application`**. Hoy da igual, porque está vacío; el día que Auditoría estrene
+   un caso de uso, esa regla dejará de cubrirlo **en silencio y sin cambiar de color**. No se toca
+   aquí —es de otro ítem y arreglarlo duplicando el inventario sería peor—, pero queda anotado en
+   *Notas / riesgos* con la forma que tendría el arreglo.
+5. **El suelo de recuento de la CI protege dos ensamblados de cinco, y el comentario que lo
+   explicaba era falso.** El paso rápido falla si el total baja de 300. Perder `Arquitectura.Tests`
+   entero deja 388 y pasa — eso ya estaba anotado al escribirlo. Lo que apareció al hacer la cuenta
+   completa es que tampoco caza la pérdida de `Api.FunctionalTests` (403 − 103 = **300 clavados**, y
+   la comparación es «menor que») ni la de `Identidad.UnitTests` (345); y que el comentario del
+   *workflow* afirmaba lo contrario, cosa que ya era falsa con 388 casos. El comentario queda
+   corregido con los números reales; **contar ensamblados** es del 0.13.
+
+### Lo que la CI encontró y en local no se veía
+
+**Nada sobre el carril nuevo, y merece decirse así.** Los 15 casos salieron igual en local y en la
+CI, en `Debug` y en `Release`: el descubrimiento sube desde `AppContext.BaseDirectory` buscando
+`Bastion.sln`, y eso funciona igual desde `bin/Debug` que desde `bin/Release`. Era el riesgo real de
+un carril que lee del disco, y se comprobó a propósito antes de empujar.
+
+Lo que sí aporta la CI y aquí no se ve son los **206 casos de integración** contra PostgreSQL 17.6,
+que necesitan Docker: siguen verdes, o sea que mover el §4 a reglas ejecutables no ha tocado nada de
+la persistencia. Y el desglose por ensamblado del `::notice::`, que es lo que permitió hacer la
+cuenta del suelo y descubrir que el comentario del *workflow* era falso.
+
+El único aviso sigue siendo el ajeno de siempre, arrastrado desde el 0.7 y todavía sin tocar:
+`actions/upload-artifact@v4` (en `Backend` y en `Frontal`) y `docker/build-push-action@v6` con
+`docker/setup-buildx-action@v3` (en `Imágenes de contenedor`) apuntan a Node.js 20, en desuso, y el
+ejecutor los fuerza a Node.js 24. No es un fallo; es del 0.13.
+
+**Dónde retomar exactamente:** ítem **0.13**, integración continua. Criterio: *workflow* que compila,
+pasa linter, tests de dominio, tests con Testcontainers y tests de arquitectura; verde de punta a
+punta. Es el último de la fase 0, y llega con cinco cosas ya nombradas esperándole:
+
+1. **El suelo de recuento cuenta casos, no ensamblados, y protege dos de cinco.** Con 403 casos y
+   un suelo de 300, perder un ensamblado entero deja 292, 287, **300**, **345** o **388** según cuál
+   sea: solo los dos primeros bajan del suelo. `Api.FunctionalTests`, `Identidad.UnitTests` y
+   `Arquitectura.Tests` podrían no ejecutarse **enteros** con la CI en verde. **Contar ensamblados**
+   —lista entera y comparada— es el arreglo, y es de este ítem.
+2. **El aviso de Node.js 20**, arrastrado desde el 0.7 y todavía sin tocar:
+   `actions/upload-artifact@v4` (en `Backend` y en `Frontal`) y `docker/build-push-action@v6` con
+   `docker/setup-buildx-action@v3` (en `Imágenes de contenedor`) apuntan a Node.js 20, en desuso, y
+   el ejecutor los fuerza a Node.js 24.
+3. **Los identificadores de permiso escritos a mano** (`frontend/src/shared/sesion/permisos.ts`).
+   Decidido en este ítem que **no** es de arquitectura y que su sitio es el 0.13: un barrido que
+   compare esa lista contra el catálogo que la API sirve de verdad, en la forma de
+   `ElFiltroNoSeSaltaPorAhiTests`, que ya lee código fuente.
+4. **`UnidadDeTrabajoPorModuloTests.s_capasDeAplicacion` está fijado a mano** y le falta
+   `Bastion.Auditoria.Application`. Ver *Notas / riesgos*.
+5. **`Humo` e `Imágenes de contenedor` construyen la misma imagen dos veces**, anotado desde el 0.6
+   para consolidar aquí.
+
+Y una cosa que **no** hereda: las fronteras del §4 ya no son un documento. Si el 0.13 mueve un
+proyecto de sitio, cambia una referencia o toca la raíz de composición, hay quince reglas que lo
+dicen por su nombre antes de que llegue a `main`.
+
+---
 
 **Ítem 0.11 cerrado, con la CI en verde:**
 [run 33581760198](https://github.com/AOjeda006/Bastion/actions/runs/33581760198) sobre `72b0ca5`,
@@ -2354,8 +2628,17 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Los cuatro *jobs* de la CI en verde — [run 33581760198](https://github.com/AOjeda006/Bastion/actions/runs/33581760198),
   con **388** casos rápidos, **206** de integración y **46** operaciones de OpenAPI publicados como
   `::notice::`.
-- [ ] **0.12 · Tests de arquitectura** — criterio de aceptación: NetArchTest con las reglas de
+- [x] **0.12 · Tests de arquitectura** — criterio de aceptación: NetArchTest con las reglas de
   frontera del §4; **fallan** si un módulo cruza una frontera.
+  **Quince** reglas, cada una vista en rojo por una violación deliberada antes de aceptarla en
+  verde: siete mutaciones aplicadas, ejecutadas y revertidas. La doctrina del carril —**toda regla
+  afirma también que su conjunto no está vacío, y ese conteo se compara**— está en el **ADR-0020**,
+  y la sostiene `ElInventarioDeModulosTests`: trece de los dieciséis módulos del §5 no existen y
+  cuatro de las cinco capas de Auditoría están vacías, así que las reglas se aplican a lo que se
+  descubre y lo descubierto se compara entero contra lo declarado. Reglas **3** y **4** del §4 no
+  caben aquí —son SQL y DDL— y el ADR dice dónde están. **403** casos rápidos.
+  Los cuatro *jobs* de la CI en verde — [run 33603428022](https://github.com/AOjeda006/Bastion/actions/runs/33603428022),
+  con **403** casos rápidos y **206** de integración.
 - [ ] **0.13 · Integración continua** — criterio de aceptación: *workflow* que compila, pasa linter,
   tests de dominio, tests con Testcontainers y tests de arquitectura; verde de punta a punta.
 
@@ -2381,6 +2664,32 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTO (2026-09-02) · `UnidadDeTrabajoPorModuloTests` fija sus ensamblados a mano, y le falta
+  uno.** `tests/Api.FunctionalTests/Composicion/UnidadDeTrabajoPorModuloTests.cs` declara
+  `s_capasDeAplicacion` con dos `typeof(...)` —Organización e Identidad— y **no incluye
+  `Bastion.Auditoria.Application`**. Hoy no cambia nada, porque ese ensamblado está vacío; el día que
+  Auditoría estrene su primer caso de uso, la regla dejará de cubrirlo **sin ponerse roja y sin
+  cambiar de color**, que es exactamente la avería que el ítem 0.12 existe para impedir en el otro
+  carril. **Lo que haría falta:** que la lista se descubra de los ensamblados que arrastra
+  `Bastion.Api` —filtrando `Bastion.*.Application`— en vez de tecleada. **No se arregla en el 0.12
+  a propósito:** es de otro ítem, y la única forma de arreglarlo desde el carril de arquitectura
+  sería duplicar allí el inventario, que es peor que el problema. Sitio natural: el **0.13**.
+- **ABIERTO (2026-09-02) · el suelo de recuento de la CI protege dos ensamblados de cinco.** El paso
+  rápido falla si el total baja de 300, y hoy hay 403 en cinco ensamblados. Perder uno entero deja:
+  111 → 292 ✅, 116 → 287 ✅, **103 → 300 ❌** (el suelo compara con «menor que», así que 300 clavados
+  pasa), **58 → 345 ❌**, **15 → 388 ❌**. O sea que `Api.FunctionalTests`, `Identidad.UnitTests` y
+  `Arquitectura.Tests` podrían dejar de ejecutarse **enteros** con la CI en verde. Esto se descubrió
+  al cerrar el 0.12 haciendo la cuenta: el comentario del *workflow* afirmaba que el suelo cazaba la
+  pérdida de cualquiera de los cuatro grandes, y era **falso** —lo era ya con 388—. El comentario
+  está corregido con los números de verdad; el arreglo no. **Lo que haría falta:** contar
+  **ensamblados** además de casos, con la lista entera comparada contra la declarada, que es la
+  forma de los demás barridos del proyecto. Y empeora sola: cuanto mayor es el total, menos nota la
+  pérdida de una parte. **Es más barato de lo que parece:** `scripts/ci/recuento-de-tests.sh` ya
+  cuenta y publica el desglose por ensamblado —el `::notice::` dice literalmente «403 casos … en 7
+  ensamblados · `Bastion.BuildingBlocks.UnitTests.dll` 111, `Bastion.Organizacion.UnitTests.dll`
+  116, …»—, así que el dato ya está calculado y a la vista; lo único que falta es **compararlo**
+  contra una lista declarada. Es del **0.13**, el ítem de la revisión final del flujo.
+
 - **ABIERTO (2026-09-02) · la renovación de sesión asierta el cuerpo en vez de validarlo.**
   `traducirCuerpoDeSesion` hace un `as` sobre el cuerpo de la renovación, porque esa petición va con
   `fetch` pelado y no llega tipada por el contrato. Es la **única** aserción de la capa y ya lleva su
@@ -2398,8 +2707,12 @@ cuando hace falta el porqué.
   pantalla, porque la comprobación es «¿está este permiso en la lista que trae la sesión?»— pero
   sigue siendo una cadena que nadie compara con la del servidor. **Lo que haría falta:** que el
   catálogo de permisos salga en el contrato (un `enum` en algún DTO, o un endpoint que lo enumere y
-  un barrido que compare las dos listas enteras, como los cinco que ya hay). Es trabajo de la fase 1,
-  cuando haya más de dos permisos y la lista deje de caber en la cabeza.
+  un barrido que compare las dos listas enteras, como los cinco que ya hay). **Sitio: el 0.13**, y
+  eso corrige lo que decía antes esta nota. En el 0.12 se comprobó que **no** es una regla de
+  arquitectura —ese carril lee ensamblados de .NET y esto es TypeScript—, pero también que no hace
+  falta esperar a la fase 1: el barrido no necesita que haya más permisos para existir, y esperar
+  significa entregar la fase 0 entera con la única cadena del contrato escrita a mano sin nadie que
+  la compare. La forma es la de `ElFiltroNoSeSaltaPorAhiTests`, que ya lee código fuente.
 - **ABIERTO (2026-09-02) · lo bloqueado sigue sin camino de lectura, y por tanto sin camino de
   desbloqueo desde el frontal.** Decidido en la puerta del 0.11 y sin cambios: una fila bloqueada
   contesta 404 a su propio `GET` (R16, ADR-0016), así que no aparece en ningún listado y la interfaz
