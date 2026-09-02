@@ -157,15 +157,11 @@ jobs:
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
-      # `actions/setup-dotnet` falla en su POST-step si la carpeta de paquetes no existe, y
-      # hoy no existe: los `packages.lock.json` solo tienen entradas "type": "Project", cero
-      # paquetes de NuGet, así que ningún `restore` la crea. Un job con build, formato y tests
-      # en verde se quedaba en rojo por eso (ADR-0002). Deja de hacer falta cuando lleguen
-      # paquetes de verdad; mientras tanto, no estorba.
-      - name: Asegurar la carpeta de paquetes
-        if: steps.solucion.outputs.existe == 'true'
-        run: mkdir -p ~/.nuget/packages
-
+      # Aquí hubo un `mkdir -p ~/.nuget/packages` desde el ADR-0002, y se retira en el 0.13
+      # porque su motivo ya no existe: `actions/setup-dotnet` fallaba en su POST-step cuando la
+      # carpeta de paquetes no se creaba nunca, y no se creaba porque los `packages.lock.json`
+      # solo tenían entradas "type": "Project". Hoy tienen 17 directas, 102 transitivas y 31
+      # centrales, así que `restore` la crea él. La retirada estaba prescrita para este ítem.
       - name: Restaurar
         if: steps.solucion.outputs.existe == 'true'
         run: dotnet restore Bastion.sln
