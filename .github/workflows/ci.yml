@@ -219,7 +219,9 @@ jobs:
           #
           # El SUELO de casos (300) es una red gruesa: no es el numero de hoy (403), sino
           # aquel por debajo del cual se ha perdido algo gordo. Y hay que decir hasta donde
-          # llega, porque es menos de lo que parece. Con 403 casos en cinco ensamblados -111
+          # llega, porque es menos de lo que parece. La cuenta que sigue es la MEDIDA DEL 0.13,
+          # y esta aqui como argumento, no como inventario: el numero de hoy lo publica este
+          # paso como anotacion en cada run. Con 403 casos en cinco ensamblados -111
           # BuildingBlocks, 116 Organizacion, 103 Api.Functional, 58 Identidad y 15
           # Arquitectura-, perder uno entero deja: 292, 287, 300, 345 y 388. El suelo falla
           # cuando el total es MENOR que 300, asi que solo caza los dos primeros. Perder
@@ -291,12 +293,14 @@ jobs:
             --results-directory artifacts/test-results/integracion
           resultado=$?
           set -e
-          # Mismo criterio y misma pareja de defensas. Aqui el suelo protegia todavia menos, y
-          # el comentario que habia afirmaba numeros que no existian desde hacia items -«142
-          # (114 de la API + 28 de Organizacion)» cuando el carril lleva 206-. Los de verdad:
-          # 164 de Bastion.Api.IntegrationTests y 42 de Bastion.Organizacion.IntegrationTests.
-          # Con suelo 100, perder el bloque de la API deja 42 y si falla; perder Organizacion
-          # deja 164 y PASA. Uno de dos.
+          # Mismo criterio y misma pareja de defensas. Aqui el suelo protegia todavia menos: el
+          # carril son DOS ensamblados muy desiguales, y perder el pequeño deja al grande por
+          # encima del suelo. De dos, cubria uno.
+          #
+          # Y este comentario NO dice cuantos casos hay, a proposito. El que habia si lo decia
+          # -«142 (114 de la API + 28 de Organizacion)»- y llevaba items mintiendo, porque un
+          # numero escrito en un comentario no lo actualiza nadie. La cuenta de verdad la publica
+          # este mismo paso como anotacion en cada run, que es donde no puede quedarse vieja.
           #
           # La lista de ensamblados es la que caza los dos, y por su nombre.
           bash scripts/ci/recuento-de-tests.sh \
