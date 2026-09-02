@@ -10,8 +10,13 @@ import type { Sesion } from './sesion.ts';
  * módulo lo resuelve sin exponerlo por ninguna parte más: React se suscribe con
  * `useSyncExternalStore` y ve exactamente lo mismo que ve la capa de red, sin copiarlo.
  *
- * Es la única pieza de estado global de cliente que hay (`stacks/react`: identidad, tema e idioma).
- * No se guarda nada en `localStorage`: al recargar, la sesión se recupera de la cookie de refresco.
+ * De las tres piezas que `stacks/react` admite como estado global de cliente —identidad, tema e
+ * idioma— aquí vive la primera. El idioma llegó en el ítem 0.14 y vive en `app/i18n`, que es su
+ * sitio según el §10; el tema todavía no existe.
+ *
+ * La diferencia entre las dos importa: el IDIOMA sí se guarda en `localStorage`, porque es una
+ * preferencia y perderla al recargar molesta. La SESIÓN no se guarda en ninguna parte: al recargar
+ * se recupera de la cookie de refresco, que es `HttpOnly` y no la puede leer ningún script.
  */
 
 let actual: Sesion | null = null;

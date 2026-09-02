@@ -3,6 +3,8 @@ import { RouterProvider, createMemoryRouter } from 'react-router';
 
 import { Proveedores } from '@/app/Proveedores.tsx';
 import { crearRutas } from '@/app/enrutador.tsx';
+import { crearI18n } from '@/app/i18n/index.ts';
+import type { Idioma } from '@/app/i18n/idioma.ts';
 import { QueryClient } from '@tanstack/react-query';
 
 /**
@@ -29,20 +31,26 @@ import { QueryClient } from '@tanstack/react-query';
 export interface AplicacionMontada extends RenderResult {
   readonly enrutador: ReturnType<typeof createMemoryRouter>;
   readonly cache: QueryClient;
+  readonly i18n: ReturnType<typeof crearI18n>;
 }
 
-export function montarAplicacion(rutaInicial = '/'): AplicacionMontada {
+export function montarAplicacion(rutaInicial = '/', idioma: Idioma = 'es'): AplicacionMontada {
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
+  // Instancia de i18n NUEVA en cada montaje, y con el idioma dicho a mano. Si se tomara el idioma
+  // detectado, los tests dependerían del `navigator.language` de la máquina que los corre, y el
+  // mismo test pasaría aquí y fallaría en la CI.
+  const i18n = crearI18n(idioma);
+
   const enrutador = createMemoryRouter(crearRutas(), { initialEntries: [rutaInicial] });
 
   const pintado = render(
-    <Proveedores cache={cache}>
+    <Proveedores cache={cache} i18n={i18n}>
       <RouterProvider router={enrutador} />
     </Proveedores>,
   );
 
-  return { ...pintado, enrutador, cache };
+  return { ...pintado, enrutador, cache, i18n };
 }
