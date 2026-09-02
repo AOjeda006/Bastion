@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests de arquitectura: las fronteras del §4 comprobadas sobre los ENSAMBLADOS COMPILADOS.
+    Carril rápido, sin Docker y sin base de datos — los ejecuta el paso «Tests de dominio y de
+    arquitectura» de la CI junto con los unitarios.
+
+    Referencia a `Bastion.Api` Y NADA MÁS, y no por comodidad: la Api es el raíz de composición, o
+    sea el ÚNICO proyecto que ve a todos los módulos. Referenciarla arrastra al directorio de
+    salida los cinco ensamblados de cada módulo montado, y por ahí es por donde este carril los
+    DESCUBRE. Nombrar aquí los proyectos uno a uno tendría el fallo que este ítem viene a cazar: el
+    módulo que alguien monte mañana y se olvide de añadir a la lista no se comprobaría, y la lista
+    seguiría verde.
+  -->
+
+  <ItemGroup Label="Sujeto de prueba">
+    <ProjectReference Include="../../src/Api/Bastion.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Marco de pruebas">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NetArchTest.eNhancedEdition" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

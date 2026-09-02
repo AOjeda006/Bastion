@@ -168,4 +168,34 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
   </ItemGroup>
 
+  <!--
+    Tests de arquitectura (item 0.12). Las fronteras del §4 comprobadas sobre los ensamblados
+    compilados, leyendo la IL con Mono.Cecil.
+
+    Se coge la EDICION BIFURCADA, y esa es la decision que hay que justificar, porque el original
+    -NetArchTest.Rules, de Ben Morris- es el que tiene los 15 millones de descargas y las 1772
+    estrellas. Tres motivos, comprobados en el nuspec y en la API de GitHub el 2026-09-02:
+
+      1. LICENCIA. `NetArchTest.Rules` 1.3.2 NO DECLARA NINGUNA en el paquete: su .nuspec no trae
+         <license> ni <licenseUrl>, solo un <copyright>. El repositorio si lleva un LICENSE MIT,
+         pero el artefacto que se descarga no lo dice, y en este repositorio ya esta aprendida la
+         leccion de que «siempre fue gratis» no es una comprobacion. La bifurcacion declara
+         `<license type="expression">MIT</license>` dentro del propio paquete.
+      2. MANTENIMIENTO. Original: ultima version 1.3.2 del 2021-05-23, ultimo commit del
+         2023-07-03. Bifurcacion: 1.4.5 del 2025-06-04, mismo dia que su ultimo commit. Que el
+         original este parado no lo descarta por si solo -una herramienta de analisis estatico
+         puede estar terminada- pero se anota, y sumado a lo de la licencia decide.
+      3. Mono.Cecil 0.11.6 frente a 0.11.3. Aqui hay que LEER ensamblados de .NET 10, y el lector
+         de metadatos es justo la pieza que envejece mal.
+
+    Lo que se pierde: 53 estrellas frente a 1772, y una sola persona manteniendola (NeVeSpl). El
+    riesgo esta acotado porque el paquete solo se usa en tests -no entra en ningun artefacto que se
+    despliegue- y porque su superficie usada aqui es la API fluida de la 1.3.2, que es comun a las
+    dos ediciones: si algun dia hay que volver al original, se cambia el paquete y no los tests.
+    Tiene ademas una incidencia abierta pidiendo que firmen el ensamblado (#9); no afecta.
+  -->
+  <ItemGroup Label="Tests de arquitectura">
+    <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
+  </ItemGroup>
+
 </Project>
