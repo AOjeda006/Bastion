@@ -1137,7 +1137,173 @@ tres cambiaban lo que había que construir:
   a confirmar. Motivo de revocación nuevo, `EmpresaSuprimida`, sin migración porque se guarda con
   `HasConversion<string>()`.
 
+**Decisiones tomadas al construirlo**, todas reversibles menos la primera:
+
+- **Sin librería de primitivas accesibles.** Ni Radix ni equivalente. Todos los controles del
+  armazón tienen elemento nativo —`<select>` para el selector de empresa, `<button>`, `<a>`,
+  `<table>` con `<caption>` y `<th scope>`, `<label for>`— y `stacks/react` dice «elemento nativo
+  antes que ARIA». Una librería de primitivas se paga en descargas y en una capa más entre el rol y
+  el marcado, y aquí no compraría nada: llegará cuando haga falta un diálogo modal, un menú o un
+  combo con autocompletado, que es donde lo nativo se acaba. **Se anota porque es una desviación de
+  lo esperable**, no porque sea barata de cambiar.
+
+- **El cambio de empresa reinicia con `resetQueries()`, no con `clear()`.** Es contraintuitivo y
+  costó un test: `clear()` parece lo más contundente y hace menos. Vacía el almacén, pero no toca a
+  los observadores ya montados, que se quedan enseñando su último resultado —el de la empresa
+  anterior— sin volver a pedir nada, porque su consulta ya no existe. `resetQueries()` los devuelve
+  a su estado inicial **y** vuelve a pedir lo que está en pantalla. Al entrar y al salir sí basta
+  `clear()`: ahí no hay ninguna pantalla de datos montada. Lo cazó el test que mira lo que se pinta;
+  uno de «se ha llamado a `clear()`» lo habría dado por bueno.
+
+- **El testigo no forma parte de ninguna clave de consulta, y la empresa tampoco.** La empresa va
+  dentro del testigo, así que las mismas claves devuelven otras filas según con quién se opere. Es
+  exactamente por eso que el cambio vacía la caché **entera** en vez de invalidar una lista de
+  claves elegidas a mano: esa lista es la que alguien olvidará ampliar al añadir la séptima pantalla.
+
+- **Los permisos son la única parte del contrato escrita a mano** (`shared/sesion/permisos.ts`). No
+  hay de dónde generarlos: el catálogo es un endpoint en tiempo de ejecución, no un `enum` del
+  OpenAPI. El modo de fallo está elegido: una constante mal escrita **esconde** la pantalla en vez
+  de enseñarla, porque la comprobación es «¿está este permiso en la lista?». Queda en *Notas /
+  riesgos*.
+
+- **`total` llega del contrato como `integer | string`, y se estrecha en la traducción.** No es un
+  fallo del generador: `JsonSerializerDefaults.Web` implica `NumberHandling = AllowReadingFromString`,
+  y el documento describe honestamente lo que la API acepta. Se resuelve en un sitio
+  (`shared/api/enteros.ts`) y no cambiando el servidor: tocar la serialización para que el documento
+  quede más cómodo sería mover el contrato para que encaje el cliente, que es al revés. Mismo
+  criterio que el `[Produces]` del ADR-0018.
+
+- **La CI comprueba también el cliente generado.** Que `docs/api/openapi.json` esté al día no dice
+  nada de `esquema.ts`: entre uno y otro cabe un contrato nuevo con un cliente viejo, que **compila**
+  —el compilador solo ve el fichero generado— y miente en ejecución. Es el mismo cerrojo, un eslabón
+  más abajo.
+
+- **La API se sirve por el mismo origen, también en el contenedor.** nginx reenvía `/api/`. No es
+  comodidad: la cookie de refresco es `__Host-bastion-refresco` y ese prefijo solo viaja al origen
+  exacto que la puso. Por eso el empaquetado no lleva ninguna URL absoluta ni ninguna `VITE_API_URL`
+  —que además sería un secreto en el paquete si algún día llevara algo más que un host—.
+
 ## Estado actual
+
+**Ítem 0.11 cerrado, con la CI en verde:**
+[run 33581760198](https://github.com/AOjeda006/Bastion/actions/runs/33581760198) sobre `72b0ca5`,
+los cuatro *jobs* en `success` —Backend, Frontal, Humo (docker compose) e Imágenes de contenedor—,
+los dos recuentos del backend publicados: **388** casos rápidos y **206** de integración contra
+PostgreSQL 17.6, y el carril de frontal con **32** casos de Vitest, el documento OpenAPI al día
+—**46** operaciones— y el cliente generado al día con él.
+
+Cierra la fase 0 por el lado del **frontal**: a partir de aquí hay una aplicación en la que se entra,
+se cambia de empresa y se navega, y los tipos que cruzan la red salen del contrato y no de la
+memoria de nadie.
+
+Lo que llega con él: el cliente tipado (`shared/api/`), el depósito de sesión en memoria con su
+renovación compartida (`shared/sesion/`), la tabla de rutas con su exigencia declarada y el quinto
+barrido (`app/rutas.tsx`, `app/ElBarridoDeRutas.test.ts`), la disposición con los tres pasos del
+cambio de ruta accesible, el selector de empresa que reinicia la caché entera, la pantalla de acceso
+y dos listados de solo lectura; y en despliegue, el reenvío de `/api/` por nginx, la CSP y los mapas
+de fuentes fuera de la imagen.
+
+### Lo que el criterio del 0.11 pedía, y dónde está probado
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| **Login** | `LaPantallaDeAcceso.test.tsx`, 5 casos: valida antes de salir a la red (0 peticiones), el correo mal escrito se dice aquí, unas credenciales malas dan **un** mensaje que no distingue cuál de las dos falla, el botón no deja mandarlo dos veces, y estando dentro no se ofrece entrar otra vez. |
+| **Selector de empresa** | `ElSelectorDeEmpresa.test.tsx`, 3 casos. El que importa pinta la lista de Alfa, cambia a Beta y exige que se vea «Nave central de Beta» **y** que «Nave central de Alfa» ya no esté. Con dos empresas de verdad y mirando lo que se pinta, no si se llamó a `clear()`. |
+| **Layout** | `ElCambioDeRuta.test.tsx`, caso 3: el primer enlace de la página es el salto al contenido, apunta a `#contenido`, y el `<main>` lleva ese `id`. |
+| **Rutas protegidas** | `LasRutasProtegidas.test.tsx`, 5 casos: sin sesión se va a la pantalla de acceso, tras entrar se vuelve **a donde se iba**, sin el permiso se explica en vez de enseñar una pantalla rota, la navegación no ofrece lo que no se puede ver, y una dirección que no existe se dice y da salida. |
+| **Cliente de API generado desde el OpenAPI** | `npm run api` genera `shared/api/esquema.ts` de `docs/api/openapi.json`; el paso `Contrato` de la CI lo vuelve a generar y falla si difiere — `::notice title=Contrato::… está al día`. Ni un tipo del contrato escrito a mano. |
+| **Cambio de ruta accesible: `<title>`** | `ElCambioDeRuta.test.tsx`, caso 1: `document.title` pasa de `Inicio · Bastion` a `Almacenes · Bastion`, y el barrido exige que **los cinco títulos sean distintos** —un título repetido no dice a dónde se ha llegado—. |
+| **…`role="status"`** | Mismo caso, buscándolo **por rol y nombre accesible**: si `getByRole` lo encuentra es que está en el árbol de accesibilidad, o sea que no se escondió con `display:none`. Se comprueba su texto y su `aria-live="polite"`. |
+| **…foco** | Mismo caso: `document.activeElement` es el `<h1>` del `<main>`. Y un caso aparte exige `tabindex="-1"` **explícito**: con `0` el foco también llegaría y a cambio todo el mundo se comería una parada de más con el tabulador. |
+| Que toda ruta diga qué exige | `ElBarridoDeRutas.test.ts`, 5 casos, con las listas comparadas **enteras en los dos sentidos** y la partición contada: **5 = 2 públicas + 1 de sesión + 2 de permiso**, con los caminos exactos de cada grupo. Lo que no exige permiso explica por qué con una frase de verdad (más de veinte caracteres). |
+| Que el testigo no acabe en el navegador | `ElTestigoDeAcceso.test.tsx`, 5 casos: `localStorage` y `sessionStorage` vacíos tras entrar, un 401 renueva y repite **una** vez, si la renovación tampoco vale no se entra en bucle, dos peticiones caducadas comparten **una** renovación, y la cabecera `Authorization` lleva el campo del contrato. |
+| Que una pantalla esté terminada | `ElListadoDeAlmacenes.test.tsx`, 6 casos: cargando, error **con salida que de verdad reintenta**, vacío diciendo qué está vacío, la página escrita en la URL y leída de la URL, y una página disparatada que no rompe nada. |
+
+### Verificado en local, con la salida real
+
+- `npx tsc -b --force` → limpio. `npx eslint .` → limpio. `npx prettier --check .` → limpio.
+- `npx vitest run` → **32** correctos en 7 ficheros, 0 con error.
+- `npm run build` → 490 kB de descarga (fragmento mayor: `index`, 331 kB; segundo: `zod`, 82 kB).
+- `dotnet build Bastion.sln` → **0 advertencias / 0 errores**; `dotnet format --verify-no-changes` → limpio.
+- `dotnet test --filter "Category!=Integracion"` → **388** correctos, 0 con error
+  (111 comunes + 116 Organización + 58 Identidad + 103 funcionales).
+- El carril de **integración no se ejecutó en local**: el demonio de Docker no estaba levantado en
+  esta máquina, así que Testcontainers no podía arrancar nada. Los **206** casos salen de la CI, que
+  es donde se ejecutaron de verdad. Se dice porque un carril que no se ha ejecutado no se cuenta
+  como ejecutado.
+
+### Las seis mutaciones, cada una aplicada, ejecutada y revertida
+
+| # | Mutación | Qué se puso rojo | Diagnóstico |
+|---|---|---|---|
+| 1 | El cambio de empresa deja de reiniciar la caché | `ElSelectorDeEmpresa` → «al cambiar de empresa, la lista pasa a ser la de la otra» | Rojo, pero **por plazo agotado a los 5 s**: la fila de Beta no llega a aparecer. Caza la mutación; el mensaje no la nombra. |
+| 2 | El testigo se guarda en `localStorage` | `ElTestigoDeAcceso` → «no llega nunca a localStorage ni a sessionStorage» | Impecable: el fallo **imprime el testigo guardado**, con la empresa dentro. |
+| 3a | `tabIndex={-1}` → `{0}` | Solo «el destino del foco no entra en el orden de tabulación» | El caso del foco sigue **verde**, como su propio comentario predice. Por eso hay dos casos y no uno. |
+| 3b | `tabIndex={-1}` quitado | Los dos casos del foco | El foco ya no llega: un `<h1>` sin `tabindex` no es enfocable por programación. |
+| 4 | El anunciador escondido con `display:none` | `ElCambioDeRuta` → «anuncia, retitula y mueve el foco» | «Unable to find an accessible element with the role "status"». Es exactamente el mecanismo: fuera del árbol de accesibilidad, fuera del lector de pantalla. |
+| 5a | Ruta `/informes` metida a mano en el enrutador | Los **dos** barridos de lista entera | Nombra la ruta: `expected [ '/informes' ] to deeply equal []`. |
+| 5b | `/almacenes` degradada de permiso a sesión | La partición contada | Nombra el camino: `expected [ '/', '/almacenes' ] to deeply equal [ '/' ]`. |
+| 6 | Un tipo del contrato escrito a mano | **Ver abajo. Es el hallazgo del ítem.** | |
+
+Y una nota sobre el propio método, porque estuvo a punto de colarse un falso resultado: el primer
+intento de la 3a salió **verde**, y no porque el test fuera ciego. El guion de mutación había
+sustituido la primera aparición de `tabIndex={-1}` en el fichero, que está **dentro de un comentario
+de documentación**, no en el JSX. Mutar un comentario no mata a nadie. Se detectó porque el
+resultado era inverosímil —ese test asserta el atributo literalmente— y se repitió apuntando al
+marcado. Un verde en una mutación hay que mirarlo dos veces: la primera explicación es casi siempre
+que la mutación no se aplicó donde se creía.
+
+### La sexta, entera
+
+Se probó en los tres sitios donde cabía, y dieron tres resultados distintos.
+
+**6a — en un traductor de funcionalidad** (`features/almacenes/api/consultas.ts`, `AlmacenDto`
+tecleado con `direccion.ciudad` en vez de `poblacion`). La caza el **compilador**, en el sitio y con
+nombre y apellidos: `Property 'ciudad' is missing in type '{ calle… poblacion… }'`. El linter
+también, por el import que se queda sin usar. Los seis tests del listado siguen **verdes** — y está
+bien que sigan: el valor llega tipado por el cliente generado, así que esto no es un agujero.
+
+**6b — en la traducción de sesión** (`shared/api/traduccion.ts`, `SesionDto` tecleado con `token` en
+vez de `tokenDeAcceso`). La cazan **el compilador y tres tests**. Tampoco hay agujero.
+
+**6c — detrás de la aserción de tipo, que es el punto ciego.** La renovación va con `fetch` pelado
+—el cliente tipado no puede renovarse a sí mismo sin morderse la cola— y su cuerpo llega como
+`unknown`, así que `traducirCuerpoDeSesion` hace un `as`. **Una aserción es el único sitio de toda
+la capa donde el compilador no ve el contrato.** Con el tipo escrito a mano ahí: `tsc` limpio,
+`eslint` limpio, y cada sesión recuperada de la cookie sale con el testigo en `undefined`.
+
+Los tests **sí** lo cazaban. Y ese era el problema: lo cazaban **de rebote**. Se ponían rojos dos
+listados —el del selector de empresa y el del botón de reintento— por agotar su plazo de espera
+cinco segundos después, en tests que no hablan de sesiones ni de testigos. Ese es exactamente el
+rojo que se archiva como «test intermitente» y se vuelve a lanzar. Y los cuatro tests que **sí**
+hablaban del testigo seguían verdes, porque sus manejadores simulados no miraban la cabecera.
+
+Así que el hallazgo no es «no lo caza nada», sino algo peor de detectar: **lo cazaba mal**. Se ha
+cerrado con una línea que mira lo único que importa —qué `Authorization` sale hacia el servidor— y
+la mutación pasa a fallar en **194 ms** diciendo `expected null to be 'Bearer testigo-de-1111…'`.
+Está en `ElTestigoDeAcceso.test.tsx` con el porqué escrito encima, y el commit es `72b0ca5`.
+
+Lo único que la CI dice y aquí no se ve sigue siendo el mismo aviso ajeno a este ítem, arrastrado
+desde el 0.7 y todavía sin tocar: `actions/upload-artifact@v4` (en `Backend` y en `Frontal`) y
+`docker/build-push-action@v6` con `docker/setup-buildx-action@v3` (en `Imágenes de contenedor`)
+apuntan a Node.js 20, en desuso, y el ejecutor los fuerza a Node.js 24. No es un fallo; es del 0.13.
+
+**Dónde retomar exactamente:** ítem **0.12**, tests de arquitectura. Criterio: NetArchTest con las
+reglas de frontera del §4; **fallan** si un módulo cruza una frontera. Tres cosas que hereda de aquí:
+
+1. **Hay cinco barridos de lista entera, y el quinto vive en el frontal.** Los cuatro del backend
+   comparan listas de tipos o de ficheros; `ElBarridoDeRutas.test.ts` compara la tabla de rutas
+   contra el enrutador ya construido, y cuenta la partición. El 0.12 añade los suyos con NetArchTest:
+   **la forma es la misma** —lista entera, en los dos sentidos, con el inventario escrito— y conviene
+   que lo siga siendo, porque es lo que impide que un barrido nuevo nazca verde sin mirar.
+2. **El frontal ya consume el contrato, así que una frontera rota se nota más lejos.** Si el 0.12
+   mueve tipos entre capas para satisfacer una regla de arquitectura, el documento OpenAPI cambia,
+   `esquema.ts` cambia con él, y el paso `Contrato` de la CI lo dice. Es un efecto deseado: la
+   comprobación de fronteras y la del contrato se sostienen la una a la otra.
+3. **Ningún test de arquitectura se ha adelantado.** El 0.11 no ha añadido NetArchTest ni ha tocado
+   las referencias entre proyectos: lo que hay es lo que dejó el 0.10.
+
+---
 
 **Ítem 0.10 cerrado, con la CI en verde:**
 [run 33436800074](https://github.com/AOjeda006/Bastion/actions/runs/33436800074) sobre `1ba9669`,
@@ -2169,9 +2335,19 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   el orden barridos → rojo → mapeo.
   Los cuatro *jobs* de la CI en verde — [run 33436800074](https://github.com/AOjeda006/Bastion/actions/runs/33436800074),
   con **388** casos rápidos y **202** de integración publicados como `::notice::`.
-- [ ] **0.11 · Shell de React** — criterio de aceptación: login, selector de empresa, layout, rutas
+- [x] **0.11 · Shell de React** — criterio de aceptación: login, selector de empresa, layout, rutas
   protegidas y cliente de API **generado desde el OpenAPI**; cambio de ruta accesible (`<title>`,
   `role="status"`, foco).
+  Cliente generado con `openapi-typescript` desde `docs/api/openapi.json`, y la CI lo vuelve a
+  generar: ni un tipo del contrato escrito a mano. Testigo de acceso **solo en memoria**; lo que
+  sobrevive a la recarga es la cookie `HttpOnly`. El cambio de empresa reinicia la caché **entera**
+  con `resetQueries()` —`clear()` deja a los observadores montados enseñando la empresa anterior— y
+  se prueba con dos empresas de verdad, mirando lo que se pinta. Quinto barrido: toda ruta declara
+  su exigencia, con la partición contada **5 = 2 + 1 + 2** y las listas comparadas enteras.
+  **32** casos de Vitest con Testing Library y MSW en la frontera de red.
+  Los cuatro *jobs* de la CI en verde — [run 33581760198](https://github.com/AOjeda006/Bastion/actions/runs/33581760198),
+  con **388** casos rápidos, **206** de integración y **46** operaciones de OpenAPI publicados como
+  `::notice::`.
 - [ ] **0.12 · Tests de arquitectura** — criterio de aceptación: NetArchTest con las reglas de
   frontera del §4; **fallan** si un módulo cruza una frontera.
 - [ ] **0.13 · Integración continua** — criterio de aceptación: *workflow* que compila, pasa linter,
@@ -2199,6 +2375,57 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTO (2026-09-02) · los identificadores de permiso son la única parte del contrato escrita a
+  mano.** `frontend/src/shared/sesion/permisos.ts` lleva las cadenas `organizacion.almacen.ver` y
+  `organizacion.empresa.ver` tecleadas. No hay de dónde generarlas: el catálogo de permisos es un
+  endpoint en tiempo de ejecución, no un `enum` del documento OpenAPI, así que `openapi-typescript`
+  no las ve. El modo de fallo está elegido y es el bueno —una constante mal escrita **esconde** la
+  pantalla, porque la comprobación es «¿está este permiso en la lista que trae la sesión?»— pero
+  sigue siendo una cadena que nadie compara con la del servidor. **Lo que haría falta:** que el
+  catálogo de permisos salga en el contrato (un `enum` en algún DTO, o un endpoint que lo enumere y
+  un barrido que compare las dos listas enteras, como los cinco que ya hay). Es trabajo de la fase 1,
+  cuando haya más de dos permisos y la lista deje de caber en la cabeza.
+- **ABIERTO (2026-09-02) · lo bloqueado sigue sin camino de lectura, y por tanto sin camino de
+  desbloqueo desde el frontal.** Decidido en la puerta del 0.11 y sin cambios: una fila bloqueada
+  contesta 404 a su propio `GET` (R16, ADR-0016), así que no aparece en ningún listado y la interfaz
+  no tiene desde dónde ofrecer el desbloqueo. **La respuesta NO es un `IgnoreQueryFilters` en el
+  frontal ni ensanchar el ámbito existente**: los tres sitios que abren `ViendoLoBloqueado` siguen
+  siendo los tres desbloqueos y se siguen comparando enteros. Lo que haría falta es un motivo nuevo
+  —administración—, su permiso, y un ADR que argumente por qué el art. 32 admite esa visualización.
+  Trabajo de dominio y de derecho, no de armazón.
+- **ABIERTO (2026-09-02) · el contrato describe los enteros como `integer | string`.**
+  `PaginaDeAlmacenDto.total` y sus hermanos salen del OpenAPI como `type: ["integer","string"]`, en
+  la petición **y** en la respuesta. No es un fallo del generador: `JsonSerializerDefaults.Web`
+  implica `NumberHandling = AllowReadingFromString`, y el documento describe con honestidad lo que
+  la API acepta. Se estrecha en la traducción (`shared/api/enteros.ts`), en un solo sitio y con el
+  motivo escrito. **No se ha tocado el servidor a propósito:** cambiar la serialización para que el
+  documento quede más cómodo sería mover el contrato para que encaje el cliente. Si algún día se
+  decide lo contrario, el sitio es `JsonSerializerOptions` en el arranque de la API, y afecta a todo
+  el que ya consuma el contrato.
+- **ANOTADO (2026-09-02) · en Node 25 el `localStorage` del entorno de tests no es el de jsdom.**
+  Node 25 define `globalThis.localStorage` como accesor propio (experimental, tras
+  `--localstorage-file`) y gana al de jsdom: lo que queda es un objeto pelado, sin `setItem` ni
+  `clear`. Importa porque envenena justo el test que más importa: «el testigo no llega a
+  `localStorage`» pasaría siempre —incluso guardándolo— porque la línea que lo guardara reventaría
+  antes con un `TypeError`. Verde por avería del entorno, no por la propiedad. `setupTests.ts` pone
+  un almacén de verdad con la API estándar. Se vigila al subir de Node: el día que el de jsdom vuelva
+  a ganar, el remiendo sobra y hay que quitarlo, no dejarlo tapando al bueno.
+- **ARREGLADO (2026-09-02) · el presupuesto de tamaño del frontal ya aprieta.** Estaba en 1024 kB
+  con 205 kB de consumo: un margen de cinco veces no señala nada. Con el armazón terminado
+  —enrutador, caché de servidor, formularios, validación y cliente generado— el navegador descarga
+  **490 kB**, y el tope baja a **600**: lo medido más un margen corto, que es la recomendación que el
+  propio 0.10 dejó escrita. El fragmento mayor son 331 kB (`index`), y el segundo 82 kB (`zod`).
+- **ARREGLADO (2026-09-02) · los mapas de fuentes ya no se publican.** `sourcemap: 'hidden'`: se
+  generan —hacen falta para leer una traza y viajan en el artefacto de la CI— pero no llevan el
+  comentario `sourceMappingURL` que los enlaza, `deploy/Dockerfile.web` los borra del raíz servido y
+  nginx contesta 404 a cualquiera que quede. Tres cerrojos porque publicar el mapa es publicar el
+  código, y con uno solo basta con que alguien copie el `dist` a mano.
+- **ARREGLADO (2026-09-02) · las cabeceras de seguridad no llegaban a `/assets/`.** `add_header` no
+  se hereda al bloque de dentro si el de dentro tiene el suyo, y `location /assets/` declaraba su
+  `Cache-Control`: se quedaba sin `nosniff`, sin CSP y sin `X-Frame-Options` **justo por donde se
+  sirve todo el JavaScript**. Es un fallo mudo —la portada las lleva, que es donde uno mira—.
+  Ahora viven en `deploy/nginx-cabeceras-de-seguridad.conf` y se incluyen en cada `location` que
+  las necesita.
 - **ABIERTO (2026-08-31) · `auditoria.claves_de_idempotencia` crece sin límite, y es a propósito.**
   El 0.9 no trae política de retención, y no por olvido. Un recibo de idempotencia es lo que impide
   que un reintento duplique un alta: **borrarlo reabre exactamente la ventana que la tabla cierra**,
