@@ -5,3 +5,6 @@ package-lock.json
 *.tsbuildinfo
 # El cliente de la API se GENERA desde el OpenAPI: no se formatea ni se edita a mano.
 src/shared/api/generated
+
+# Generado por `npm run api` desde el contrato OpenAPI: no se formatea a mano.
+src/shared/api/esquema.ts

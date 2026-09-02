@@ -7,7 +7,12 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', '*.tsbuildinfo'] },
+  // `src/shared/api/esquema.ts` se GENERA con `npm run api` desde `docs/api/openapi.json`.
+  // No se linta lo que no se escribe: las reglas de estilo se aplican a las decisiones de
+  // quien escribe, y aqui no hay ninguna que corregir — habria que corregir el generador.
+  {
+    ignores: ['dist', 'coverage', 'node_modules', '*.tsbuildinfo', 'src/shared/api/esquema.ts'],
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
