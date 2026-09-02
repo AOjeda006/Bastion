@@ -41,11 +41,27 @@ public sealed record CrearTipoCambioDto
     /// Cuántas unidades de destino cuesta una de origen.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Se redondea a seis decimales, que es la precisión con la que publica el BCE. El límite
     /// superior no es un tope de negocio sino una red: una tasa de siete cifras enteras es
     /// siempre un dedazo, y vale más rechazarla que convertir un importe por un millón.
+    /// </para>
+    /// <para>
+    /// <b><c>ParseLimitsInInvariantCulture</c> no es opcional aquí, es lo que hace que esto
+    /// funcione.</b> Sin él, <see cref="RangeAttribute"/> interpreta las dos cadenas con la
+    /// cultura ACTUAL, y Bastion corre en <c>es-ES</c>, donde el punto separa millares: el
+    /// atributo revienta al construirse y la acción entera contesta <c>500</c> a cualquier
+    /// petición con cuerpo. No se descubrió leyendo esto —se descubrió con
+    /// <c>LaPuertaDeCadaAccionTests</c>—, y para que no vuelva a colarse hay una regla escrita en
+    /// <c>LosLimitesSeLeenEnCulturaInvarianteTests</c>.
+    /// </para>
     /// </remarks>
-    [Range(typeof(decimal), "0.000001", "1000000", ErrorMessage = "La tasa va de {1} a {2}.")]
+    [Range(
+        typeof(decimal),
+        "0.000001",
+        "1000000",
+        ParseLimitsInInvariantCulture = true,
+        ErrorMessage = "La tasa va de {1} a {2}.")]
     public decimal Tasa { get; init; }
 }
 
@@ -59,6 +75,11 @@ public sealed record CrearTipoCambioDto
 public sealed record ModificarTipoCambioDto
 {
     /// <summary>Cuántas unidades de destino cuesta una de origen.</summary>
-    [Range(typeof(decimal), "0.000001", "1000000", ErrorMessage = "La tasa va de {1} a {2}.")]
+    [Range(
+        typeof(decimal),
+        "0.000001",
+        "1000000",
+        ParseLimitsInInvariantCulture = true,
+        ErrorMessage = "La tasa va de {1} a {2}.")]
     public decimal Tasa { get; init; }
 }

@@ -31,8 +31,22 @@ public sealed record CrearConversionUmDto
     [Required(ErrorMessage = "La unidad de destino es obligatoria.")]
     public Guid UnidadDestinoId { get; init; }
 
-    /// <summary>Por cuánto hay que multiplicar para pasar de origen a destino.</summary>
-    [Range(typeof(decimal), "0.000001", "1000000", ErrorMessage = "El factor va de {1} a {2}.")]
+    /// <summary>
+    /// Por cuánto hay que multiplicar para pasar de origen a destino.
+    /// </summary>
+    /// <remarks>
+    /// <b><c>ParseLimitsInInvariantCulture</c> no es adorno: sin él esta acción devuelve 500.</b>
+    /// <see cref="RangeAttribute"/> convierte sus dos límites con la cultura ACTUAL, y en
+    /// <c>es-ES</c> —que es la de Bastion— el punto separa millares, así que <c>"0.000001"</c> no
+    /// es un decimal y el atributo lanza dentro del enlazado de modelos. Lo cuenta entero
+    /// <c>TipoCambioDto</c>, y lo vigila <c>LosLimitesSeLeenEnCulturaInvarianteTests</c>.
+    /// </remarks>
+    [Range(
+        typeof(decimal),
+        "0.000001",
+        "1000000",
+        ParseLimitsInInvariantCulture = true,
+        ErrorMessage = "El factor va de {1} a {2}.")]
     public decimal Factor { get; init; }
 }
 
@@ -46,6 +60,11 @@ public sealed record CrearConversionUmDto
 public sealed record ModificarConversionUmDto
 {
     /// <summary>Por cuánto hay que multiplicar para pasar de origen a destino.</summary>
-    [Range(typeof(decimal), "0.000001", "1000000", ErrorMessage = "El factor va de {1} a {2}.")]
+    [Range(
+        typeof(decimal),
+        "0.000001",
+        "1000000",
+        ParseLimitsInInvariantCulture = true,
+        ErrorMessage = "El factor va de {1} a {2}.")]
     public decimal Factor { get; init; }
 }

@@ -6872,7 +6872,7 @@
           },
           "factor": {
             "maximum": 1000000,
-            "minimum": 1,
+            "minimum": 0.000001,
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
             "type": [
               "number",
@@ -7131,7 +7131,7 @@
           },
           "tasa": {
             "maximum": 1000000,
-            "minimum": 1,
+            "minimum": 0.000001,
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
             "type": [
               "number",
@@ -7613,7 +7613,7 @@
         "properties": {
           "factor": {
             "maximum": 1000000,
-            "minimum": 1,
+            "minimum": 0.000001,
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
             "type": [
               "number",
@@ -7767,7 +7767,7 @@
         "properties": {
           "tasa": {
             "maximum": 1000000,
-            "minimum": 1,
+            "minimum": 0.000001,
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
             "type": [
               "number",
