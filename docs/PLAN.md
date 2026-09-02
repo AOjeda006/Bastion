@@ -1505,6 +1505,38 @@ Los tres salieron midiendo, y los tres habrían pasado por hallazgos si no se co
   file or directory» y ninguno llegó a analizarse. Un rojo total y uniforme no suele ser un
   hallazgo: suele ser el aparato.
 
+### Un *run* cancelado no es un *run* verde
+
+`concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }` está puesto desde el 0.2 y
+es lo correcto —un empujón nuevo mata el trabajo del anterior, que ya no interesa—, pero introduce
+un **tercer estado** que no es ni verde ni rojo, y que en la interfaz no se parece a un fallo.
+
+Medido por el efecto, empujando estos dos *commits* de documentación con segundos de diferencia:
+
+```
+ce9dc37  ->  run 33635719223   status=completed   conclusion=cancelled
+         y sus tres jobs igual: Frontal=cancelled, Backend=cancelled, Humo=cancelled
+73ac90f  ->  run 33635733634   status=completed   conclusion=success
+```
+
+El primero **no llegó a afirmar nada** de lo que este PLAN da por comprobado, y sin embargo no
+aparece en rojo. La consecuencia práctica: cualquier comprobación escrita como «no ha fallado»
+—`conclusion != failure`, o mirar solo si hay una cruz roja— da por bueno un *run* que se murió a
+mitad. Y la ocasión de equivocarse no es rara: es exactamente la de empujar dos veces seguidas al
+cerrar un ítem, que es lo que se acaba de hacer.
+
+**La regla, entonces, es de registro y se escribe aquí porque no la vigila ninguna máquina:** un
+ítem se anota como cerrado **solo con `conclusion: success` sobre un `head_sha` concreto**, y ese
+identificador se copia al PLAN. La ausencia de `failure` no basta, porque `cancelled` también carece
+de ella. Es la misma forma de error que el ítem entero persigue —un verde que tiene el aspecto
+correcto y no prueba lo que dice—, solo que aquí el que se equivoca es el que lee, no el que corre.
+
+Y una consecuencia del propio experimento que conviene dejar dicha: el *run* que cierra el ítem
+es **33634114140 sobre `518775c`**, el último *commit* con código. Los dos de documentación han
+vuelto a pasar los tres carriles enteros (33635733634), así que el árbol que se lleva a `main`
+está probado; pero el identificador que se anota es siempre el del `head_sha` que se comprobó,
+no «el último verde que hubiera».
+
 ### La fase 0, criterio por criterio, comprobado por algo observable
 
 El cierre **no se apoya en que los ítems estén marcados**. Cada criterio literal del Anexo A.3 se ha
