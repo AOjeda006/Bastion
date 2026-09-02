@@ -1626,7 +1626,189 @@ los dos idiomas legítimamente, y exigir cero obligaría a inventarle una difere
   los dos lados con el mismo comando. No los trae la i18n, así que no se arreglan aquí; queda dicho
   para que el siguiente que los vea no los persiga en el sitio equivocado.
 
+### Tomadas por el agente de desarrollo — ítem 0.15 (2026-09-03)
+
+- **Los cinco maestros nuevos son globales, y la marca es una entrada escrita.** `Impuesto`,
+  `Divisa`, `TipoCambio`, `UnidadMedida` y `ConversionUM` no llevan `EmpresaId`. Es la R8 aplicada
+  —«los maestros que se comparten entre sociedades se marcan explícitamente»—, y el §7 lo dice con
+  su notación: a `Empresa`, `Ejercicio`, `Serie` y `Almacén` les pone «empresa» delante; a estos,
+  no. La marca **no** es la ausencia de la interfaz, que no se distingue de un olvido: es la entrada
+  con su motivo en la lista de globales del barrido de inquilinato, comparada en los dos sentidos.
+  `Ubicacion` sí lo lleva, y propio, aunque su almacén ya tenga uno: el filtro de la R8 se evalúa
+  sobre las columnas de la fila, y sin ella un listado que empezara por ubicaciones enseñaría las de
+  otra empresa.
+
+- **Un impuesto no se edita: se sucede.** El general pasó del 18 % al 21 % el 1 de septiembre de
+  2012 y una factura de agosto lleva el 18 para siempre. `Modificar` no recibe ni el porcentaje ni
+  el tramo, así que reescribir la facturación hacia atrás no es difícil: **no compila**. El código,
+  por lo mismo, NO es único —hay una fila por tramo—; lo que no puede haber es solape.
+
+- **Lo que un índice único no sabe decir lo dice un `EXCLUDE USING gist`.** Dos tramos del mismo
+  código no pueden pisarse, y el rango va cerrado por los dos lados (`daterange(..., '[]')`), que es
+  el que caza el solape de un solo día. La aplicación pregunta antes con `HaySolapeAsync` aunque la
+  base ya lo prohíba: un 409 con su motivo es mejor respuesta que un 500, y el cierre lo vuelve a
+  preguntar porque cerrar más tarde un tramo ya cerrado lo alarga.
+
+- **La `Divisa` de la tabla y el catálogo de redondeo no se pueden separar.** `Crear` exige que el
+  redondeo se conozca y los decimales son una propiedad CALCULADA, no una columna: cuántos tiene el
+  euro es una regla fiscal, y en una columna cualquiera escribe un 3 y la facturación redondea mal
+  sin que nada falle. El catálogo crece a cinco —el yen con cero decimales, que es el contraejemplo
+  que impide «simplificar» esto a una constante 2— y **siguen quedando divisas fuera**, para que la
+  puerta que rechaza lo desconocido tenga algo que rechazar.
+
+- **Los decimales de una unidad de medida SÍ son columna, y el contraste está escrito.** No hay
+  norma que consultar sobre a cuántos decimales se pesa. Lo que no se puede es **bajarlos** después:
+  cada existencia ya registrada de 1,250 kg pasaría a ser un número que la propia unidad dice que no
+  existe.
+
+- **Tres controladores escriben su ruta en vez de heredarla.** El host publica las URL en minúsculas,
+  así que `[controller]` daría `/tiposdecambio` en un contrato que después no se puede cambiar sin
+  romper a quien ya lo use. Para eso se parte la constante en `Prefijo` y `RutaBase`.
+
+- **Las semillas son ficheros de datos en `db/semillas/`, no código.** Un `.json` que se puede leer
+  y revisar sin compilar nada, y que la CI enseña en un *diff* legible: un tipo de IVA que cambia es
+  una línea en un fichero, no un despliegue de código. Se admiten **comentarios** (JSONC, con
+  `ReadCommentHandling = Skip`) porque la mitad del valor del fichero es el porqué de cada fila —de
+  dónde sale el 4 %, por qué las retenciones empiezan en 2016—, y ese porqué no cabe en ninguna
+  columna. Que los comentarios se parsean está probado, no supuesto.
+
+- **Qué entra en las semillas y qué no.** Entran los doce tramos de impuesto del régimen general
+  —IVA general por sus tres saltos (16, 18, 21), reducido por los suyos, superreducido, exento y las
+  cuatro retenciones— y quince unidades de medida. **No** entran el IGIC ni los recargos de
+  equivalencia ni las conversiones entre unidades: los tres dependen de la instalación —dónde está
+  la empresa, a qué régimen está acogida, qué cabe en su caja— y no del país, así que sembrarlos
+  sería decidir por el usuario. El motivo está escrito en la cabecera de cada fichero, que es donde
+  se lee cuando alguien va a añadir una fila.
+
+- **Las carga el MIGRADOR, no el arranque de la API**, por lo mismo que las migraciones: con dos
+  réplicas, dos procesos cargarían a la vez y el segundo se estrellaría contra el índice único. El
+  migrador es un contenedor de un solo uso y su código de salida es la señal que mira el *compose*.
+
+- **La carga es repetible y no borra.** El migrador corre en **cada** despliegue. Cada fila se busca
+  por su identidad natural —el código en las unidades, el código **más** el primer día de vigencia
+  en los impuestos, porque buscarlo solo por el código daría «ya está» a partir del segundo
+  despliegue y dejaría fuera todos los tramos menos el primero— y solo se añade si falta. Lo que ya
+  está no se toca: una instalación que renombró «Caja» a «Caja de 12» no quiere que el siguiente
+  despliegue se lo devuelva. Y quitar una fila del `.json` **no** la borra: un impuesto sembrado
+  puede llevar meses en las líneas de una factura (R16).
+
+- **Un `SaveChanges` por fichero**, no uno por fila ni uno para todo: la granularidad es la del
+  fallo. Si el `.json` de impuestos trae un tramo solapado, lo que hay que dejar fuera es ese
+  fichero, no las unidades, que no tienen nada que ver.
+
+- **El ámbito sin inquilino se abre con un motivo propio, `CargaDeMaestros`.** No se reutiliza
+  `SemillaDeArranque` porque el motivo acaba en una columna de la traza y son dos hechos distintos
+  —lo mismo que argumentó `PublicacionDeEventos` cuando le tocó—. Y el ámbito **no** está para poder
+  consultar los maestros, que no llevan filtro: está para que el interceptor de auditoría pueda
+  escribir el alta, porque sin empresa y sin ámbito **lanza**. Es el segundo camino de todo el
+  sistema sin petición detrás, y está declarado con su cuenta en `ElFiltroNoSeSaltaPorAhiTests`.
+
+- **La afirmación de conjunto no vacío se dice dos veces, y la segunda es la que cierra.** La
+  primera mira el FICHERO —que llegó y que trae filas—; la segunda cuenta **en la base** después de
+  guardar. Entre las dos hay sitio para el fallo mudo: un `SaveChanges` sobre el contexto equivocado
+  devuelve cero filas sin quejarse, y sin el segundo recuento la carga saldría con 0 habiendo dejado
+  el catálogo vacío. El registro se emite **siempre**, también cuando no se añade nada, porque un
+  cargador silencioso no distingue «ya estaban» de «no he mirado».
+
+- **F3 tenía dos mitades y solo se veía una.** Quitar `db/semillas` del `.dockerignore` deja que el
+  contexto de construcción las copie, pero `Dockerfile.api` publica solo `/publicado`: sin
+  `<Content Include ... CopyToPublishDirectory>` en el `.csproj` de Infrastructure no llegan al
+  contenedor que las carga. El `Include` es un **glob** —una semilla nueva no se olvida de copiar—,
+  y la lista de qué ficheros tienen que estar se escribe **a mano** en `SemillasDeOrganizacion`: si
+  fuera también un glob, borrar un fichero dejaría el barrido comparando la nada consigo misma.
+
+- **El hallazgo del ítem, y no estaba previsto: `[Range]` con límites de texto los lee en la cultura
+  de la máquina.** `[Range(typeof(decimal), "0.000001", "1000000")]` convierte sus dos cadenas la
+  primera vez que valida, con `CurrentCulture`. En es-ES el punto separa millares, y eso rompía las
+  cuatro acciones de tipos de cambio y conversiones por dos sitios a la vez: al validar lanzaba
+  `ArgumentException` **dentro** del enlazado de modelos —500 a toda petición con cuerpo, también a
+  las correctas—, y al generar el contrato el mismo texto sí se leía, como `1`, así que
+  `docs/api/openapi.json` llevaba publicado `"minimum": 1` para una tasa que admite un millonésimo.
+  Lo encontró `LaPuertaDeCadaAccionTests`, que sondea todas las rutas; no lo habría encontrado
+  ningún test de esas acciones, porque no había ninguno. La regla que lo impide,
+  `LosLimitesSeLeenEnCulturaInvarianteTests`, **fija la cultura a mano**: el ejecutor de la CI corre
+  en en-US, donde el punto sí es el separador decimal, así que un test que se conformara con la
+  cultura del que lo ejecuta sería verde justo en la máquina que tiene que avisar.
+
+#### Las tres mutaciones de la rebanada de semillas, aplicadas, ejecutadas y revertidas
+
+| # | Qué se rompió | Qué se puso rojo |
+|---|---|---|
+| 1 | Se quita el `<ItemGroup Label="Semillas">` del `.csproj` | `LasSemillasLleganDondeSeCarganTests` — **5 de 12** casos, justo los que dependen de lo publicado; los 7 de carpeta temporal siguen verdes, que es como se sabe que el rojo señala lo que dice |
+| 2 | Se invierte la condición de deduplicado de impuestos (no se añade ninguno) | Los **5** casos de `LaCargaDeSemillasTests`, y con el diagnóstico del propio cargador: «trae 12 filas y en la base hay 0» — o sea, lo caza la afirmación sobre la BASE, no el test |
+| 3 | Se quita `ParseLimitsInInvariantCulture` de un atributo | Las **dos** reglas nuevas: `ArgumentException :: 0.000001 is not a valid value for Decimal`, y `CrearTipoCambioDto.Tasa` nombrado en la lista de límites a merced de la máquina |
+
+La 2 es la que más importa: prueba que la guarda que se afirma es la del recuento **en la base**, y
+no la del fichero, que en esa mutación seguía diciendo 12 tan contenta.
+
 ## Estado actual
+
+**Ítem 0.15 cerrado — Organización, entera, y F2 y F3 con ella:**
+[run 33690830912](https://github.com/AOjeda006/Bastion/actions/runs/33690830912) sobre `1366751`, los
+**tres** *jobs* en `success` —Frontal (bastion-web), Backend (Bastion.sln) y Humo (docker compose)—,
+con los dos pasos nuevos de Humo mirando **dentro de la imagen** que las semillas están y **dentro
+de la base** que el migrador las metió.
+
+Los seis agregados que el §7 pedía y no estaban —`Impuesto`, `Divisa`, `TipoCambio`,
+`UnidadMedida`, `ConversionUM` y `Ubicacion`— llegan enteros: dominio, persistencia con su
+migración, contrato bajo `/api/v1/organizacion/` con **21 acciones nuevas**, y las semillas de tipos
+de IVA y unidades cargándose desde dentro de la imagen. Terceros y Catálogo, que abren la fase 1,
+los necesitaban puestos.
+
+Lo que llega con él: seis tablas nuevas en el esquema `organizacion` con la restricción de exclusión
+que prohíbe el solape de tramos; seis controladores y sus casos de uso; `db/semillas/` con doce
+tramos de impuesto y quince unidades; `CargadorDeSemillasDeOrganizacion`, que el migrador llama
+después de aplicar el esquema; el motivo `CargaDeMaestros`; y dos pasos nuevos en el *job* `Humo`
+que miran **dentro de la imagen** y **dentro de la base**.
+
+Y un hallazgo que no estaba en el criterio: cuatro `[Range]` con los límites escritos como texto
+devolvían 500 y publicaban un mínimo falso en el contrato. Corregido, y con su regla escrita.
+
+### Lo que el criterio del 0.15 pedía, y dónde está probado
+
+| Lo que pedía el criterio | Dónde se prueba |
+|---|---|
+| Los cinco maestros **en el dominio** | `Organizacion.UnitTests`, **180** casos; entre ellos los dos que dejan escrito un porqué (ir y volver por el inverso redondeado de 1/12 no devuelve la cantidad de partida; los dos bordes del tramo se aplican). |
+| **Su persistencia** y sus migraciones en `db/migraciones/Organizacion/` | `scripts/comprobar-migraciones.sh` → Organización **4**, «el modelo y las migraciones coinciden»; `Organizacion.IntegrationTests`, **65** casos contra PostgreSQL 17.6, con el `EXCLUDE USING gist` visto **rechazar** un solape y **aceptar** la sucesión normal. |
+| **Su contrato** bajo `/api/v1/organizacion/` | `docs/api/openapi.json` versionado, **73** operaciones y 41 rutas; `CadaAccionDeclaraSuPermisoTests` exige permiso en las 21 nuevas. |
+| **Semillas** de tipos de IVA y unidades en `db/semillas/` **cargadas por el migrador** | `MigradorDeArranque` las carga tras migrar; probado contra PostgreSQL de verdad en `LaCargaDeSemillasTests` (5 casos) y **por el efecto** en el *compose* real. |
+| El cargador **afirmando conjunto no vacío** | Dos afirmaciones: sobre el fichero y sobre la **base** después de guardar; la segunda vista roja en la mutación 2. |
+| **La CI mirando dentro de la imagen** que los ficheros están | *Job* `Humo`, paso «Las semillas viajan DENTRO de la imagen» (`ls` dentro del contenedor, comparado con la lista esperada) y «El migrador ha dejado los maestros DENTRO de la base». |
+| **F3 no se da por arreglado con la línea de `.dockerignore`** | `<Content Include>` en el `.csproj` de Infrastructure, visto rojo al quitarlo (mutación 1) — y el `.dockerignore` lleva ahora escrito por qué las dos mitades son dos. |
+
+### Verificado en local, con la salida real
+
+```
+dotnet build Bastion.sln                        ->  0 Advertencia(s), 0 Errores
+dotnet format Bastion.sln --verify-no-changes   ->  exit 0, sin salida
+carril rápido (Category!=Integracion)           ->  489 casos: 118 BuildingBlocks + 58 Identidad +
+                                                    180 Organización + 15 Arquitectura + 118 funcionales
+tests/Organizacion.IntegrationTests             ->  65 casos    (eran 60)
+tests/Api.IntegrationTests                      ->  165 casos   (eran 164 + 1 en rojo: el 500 del rango)
+scripts/comprobar-migraciones.sh                ->  Auditoría 3, Organización 4, Identidad 3; coinciden
+scripts/generar-openapi.sh --comprobar          ->  al día: 73 operaciones
+npm run api + git status                        ->  esquema.ts sin cambios
+```
+
+Y por el efecto, contra el *compose* de verdad y no contra un doble:
+
+```
+migrador, primera vuelta   ->  ImpuestosNuevos 12, DelFichero 12, EnLaBase 12
+                               UnidadesNuevas  15, DelFichero 15, EnLaBase 15
+migrador, segunda vuelta   ->  Nuevos 0 y 0, EnLaBase 12 y 15          (es idempotente)
+auditoría                  ->  CargaDeMaestros|Impuesto|12 · CargaDeMaestros|UnidadMedida|15
+los dos pasos nuevos de Humo, ejecutados a mano verbatim:
+                               impuestos=12  unidades=15  iva_general_vigente=21.00
+dotnet publish                                  ->  /publicado/semillas/ con los dos ficheros
+```
+
+**Dónde retomar exactamente:** ítem **0.16**, `features/` espeja los módulos y arranca el glosario.
+Criterio: `features/identidad/` y `features/organizacion/` sustituyen a `acceso`, `almacenes`,
+`empresas` e `inicio`; `inicio` queda donde le corresponda por no ser de ningún módulo; una regla
+**comprobable** —no una convención escrita— impide que una funcionalidad importe de otra; y
+`docs/dominio/` estrena el glosario del lenguaje ubicuo con lo ya construido. Es el último de la
+addenda: cerrado, se entra en la fase 1, que **no tiene Anexo A.3** y por tanto pasa antes por la
+puerta de clarificación.
 
 **Ítem 0.14 cerrado — la internacionalización que el §3 pedía «desde el primer día»:**
 el frontal habla castellano e inglés, **ningún texto visible está escrito en un componente**, y que
@@ -3343,7 +3525,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   `<title>`, el `<h1>` y el anuncio de `aria-live`— pasan por el mismo diccionario; cambiar de
   idioma repinta sin recargar; las dos traducciones tienen **las mismas claves**, comparadas como
   listas y no como recuentos.
-- [ ] **0.15 · Organización, entera** — criterio de aceptación: `Impuesto`, `Divisa` + `TipoCambio`,
+- [x] **0.15 · Organización, entera** — criterio de aceptación: `Impuesto`, `Divisa` + `TipoCambio`,
   `UnidadMedida` + `ConversionUM` y `Ubicacion` en el dominio, con su persistencia, sus migraciones
   en `db/migraciones/Organizacion/` y su contrato bajo `/api/v1/organizacion/`; semillas de tipos de
   IVA y unidades en `db/semillas/` cargadas por el migrador; y el cargador **afirmando conjunto no
