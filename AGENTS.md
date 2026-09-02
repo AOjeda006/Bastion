@@ -98,6 +98,9 @@ Desde la raíz del repositorio.
 | **Tests frontal** | `npm --prefix frontend run test` |
 | **Lint / formato frontal** | `npm --prefix frontend run lint` · `npm --prefix frontend run format:check` |
 | **Tipos frontal** | `npm --prefix frontend run typecheck` |
+| **Contrato al día** (el cliente generado) | `npm --prefix frontend run api` y que `git status --porcelain -- frontend/src/shared/api/esquema.ts` salga **vacío** |
+| **Migraciones al día** (el modelo no tiene cambios pendientes) | `bash scripts/comprobar-migraciones.sh` |
+| **OpenAPI al día** (el contrato versionado) | `bash scripts/generar-openapi.sh --comprobar` |
 | **Arranque local completo** | `docker compose -f deploy/docker-compose.yml up --build` |
 | **Parar y limpiar volúmenes** | `docker compose -f deploy/docker-compose.yml down -v` |
 
@@ -105,7 +108,33 @@ Desde la raíz del repositorio.
 > los comandos de compose llevan `-f deploy/docker-compose.yml`. Un `docker compose up` a secas desde
 > la raíz no encuentra nada.
 
-**Antes de dar por hecho un ítem**, la batería mínima es: `dotnet build` + `dotnet test` +
-`dotnet format --verify-no-changes` + `npm --prefix frontend run build` + `npm --prefix frontend run lint`.
-Es exactamente lo que ejecuta la CI (`.github/workflows/ci.yml`); pasarlo en local antes de
-commitear evita el ciclo caro de descubrirlo en el *runner*.
+**Antes de dar por hecho un ítem**, esta es la batería, **en este orden**, que es el de lo barato
+primero: lo que falla en segundos tiene que fallar antes de que arranques Docker.
+
+```bash
+# 1. Segundos, sin compilar nada. Los tres que más rojos han causado en la CI.
+npm --prefix frontend run api && git status --porcelain -- frontend/src/shared/api/esquema.ts
+bash scripts/comprobar-migraciones.sh
+bash scripts/generar-openapi.sh --comprobar
+
+# 2. Frontal. `lint` NO cubre ni los tipos ni el formato: son tres pasos distintos.
+npm --prefix frontend run typecheck
+npm --prefix frontend run lint
+npm --prefix frontend run format:check
+npm --prefix frontend run test
+npm --prefix frontend run build
+
+# 3. Backend. El carril rápido no necesita Docker; el de integración sí.
+dotnet build Bastion.sln
+dotnet format Bastion.sln --verify-no-changes
+dotnet test Bastion.sln --filter "Category!=Integracion"
+dotnet test Bastion.sln --filter "Category=Integracion"
+```
+
+Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:
+`docker compose -f deploy/docker-compose.yml up --build`.
+
+> **Esta lista tiene que seguir siendo la de `.github/workflows/ci.yml`.** Dejó de serlo entre el
+> 0.11 y el 0.13 —le faltaban «Contrato», «Migraciones», «OpenAPI», `typecheck`, `format:check` y
+> `test`— y eso convierte esta instrucción en el peor sitio posible para una mentira: es la que
+> decide cuándo se declara terminado un ítem. **Al tocar el *workflow*, se toca esto.**
