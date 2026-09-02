@@ -1,0 +1,175 @@
+// Tipos impositivos españoles, por tramos de vigencia (§12: fichero versionado que un comando
+// carga; el comando es el migrador).
+//
+// SE ADMITEN COMENTARIOS, y no es una licencia cualquiera: el cargador abre el lector con
+// `JsonCommentHandling.Skip` a propósito, porque un tipo impositivo sin su fecha de publicación
+// al lado es un número que nadie puede comprobar. La alternativa —dejar la explicación en un
+// `.md` hermano— separa el dato de su justificación en el primer `git mv`.
+//
+// UN IMPUESTO NO SE EDITA: SE SUCEDE. El general del IVA pasó del 18 % al 21 % el 1 de septiembre
+// de 2012, y una factura de agosto de ese año sigue llevando el 18 para siempre. Por eso cada
+// cambio de tipo es una FILA MÁS con su tramo, y no una corrección de la anterior. Los tramos de
+// un mismo código no pueden pisarse, y eso no lo vigila este fichero: lo prohíbe PostgreSQL con
+// una restricción de exclusión sobre `(codigo, daterange(vigente_desde, vigente_hasta))`. Si
+// alguien edita aquí un `vigenteHasta` y lo solapa con el tramo siguiente, el migrador se cae.
+//
+// LOS TRAMOS ABIERTOS LLEVAN `vigenteHasta: null` y no una fecha lejana: «sigue vigente» y «vence
+// el 31/12/9999» son cosas distintas, y solo la primera se puede cerrar el día que el BOE lo diga.
+//
+// QUÉ NO ESTÁ AQUÍ, Y POR QUÉ:
+//   · El IGIC canario. Tiene sus propios tipos y su propio calendario de cambios, y una
+//     instalación peninsular que se lo encontrara sembrado tendría en la lista impuestos que no
+//     puede aplicar. Se da de alta desde la aplicación, que es donde se ve lo que se elige.
+//   · Los recargos de equivalencia. Van ligados al tipo de IVA de la operación, no son un
+//     impuesto suelto, y su modelo es del módulo de Facturación (fase 2).
+//
+// LAS CUENTAS SON DEL PGC 2007: 477 IVA repercutido, 472 IVA soportado, 4751 Hacienda Pública
+// acreedora por retenciones practicadas, 473 Hacienda Pública retenciones y pagos a cuenta.
+// Se siembran ya, aunque Contabilidad sea de la fase 5: el dato es correcto hoy y no cuesta nada,
+// y rellenarlas a mano en cada instalación es exactamente el trabajo que una semilla evita.
+[
+  // ------------------------------------------------------------------ IVA general
+  // 16 % desde la Ley 42/1994; 18 % con el RDL 8/2010; 21 % con el RDL 20/2012.
+  {
+    "codigo": "IVA-GENERAL",
+    "nombre": "IVA general (16 %)",
+    "tipo": "Iva",
+    "porcentaje": 16,
+    "vigenteDesde": "1995-01-01",
+    "vigenteHasta": "2010-06-30",
+    "cuentaRepercutido": "477",
+    "cuentaSoportado": "472"
+  },
+  {
+    "codigo": "IVA-GENERAL",
+    "nombre": "IVA general (18 %)",
+    "tipo": "Iva",
+    "porcentaje": 18,
+    "vigenteDesde": "2010-07-01",
+    "vigenteHasta": "2012-08-31",
+    "cuentaRepercutido": "477",
+    "cuentaSoportado": "472"
+  },
+  {
+    "codigo": "IVA-GENERAL",
+    "nombre": "IVA general (21 %)",
+    "tipo": "Iva",
+    "porcentaje": 21,
+    "vigenteDesde": "2012-09-01",
+    "vigenteHasta": null,
+    "cuentaRepercutido": "477",
+    "cuentaSoportado": "472"
+  },
+
+  // ----------------------------------------------------------------- IVA reducido
+  // Mismo calendario que el general, y por eso mismo: los dos cambiaron en las mismas normas.
+  {
+    "codigo": "IVA-REDUCIDO",
+    "nombre": "IVA reducido (7 %)",
+    "tipo": "Iva",
+    "porcentaje": 7,
+    "vigenteDesde": "1995-01-01",
+    "vigenteHasta": "2010-06-30",
+    "cuentaRepercutido": "477",
+    "cuentaSoportado": "472"
+  },
+  {
+    "codigo": "IVA-REDUCIDO",
+    "nombre": "IVA reducido (8 %)",
+    "tipo": "Iva",
+    "porcentaje": 8,
+    "vigenteDesde": "2010-07-01",
+    "vigenteHasta": "2012-08-31",
+    "cuentaRepercutido": "477",
+    "cuentaSoportado": "472"
+  },
+  {
+    "codigo": "IVA-REDUCIDO",
+    "nombre": "IVA reducido (10 %)",
+    "tipo": "Iva",
+    "porcentaje": 10,
+    "vigenteDesde": "2012-09-01",
+    "vigenteHasta": null,
+    "cuentaRepercutido": "477",
+    "cuentaSoportado": "472"
+  },
+
+  // ------------------------------------------------------------ IVA superreducido
+  // Un solo tramo: el 4 % no se ha movido desde 1995. La fila existe igual, con su tramo abierto,
+  // porque «no ha cambiado nunca» y «no lo tenemos modelado» tienen que poder distinguirse.
+  {
+    "codigo": "IVA-SUPERREDUCIDO",
+    "nombre": "IVA superreducido (4 %)",
+    "tipo": "Iva",
+    "porcentaje": 4,
+    "vigenteDesde": "1995-01-01",
+    "vigenteHasta": null,
+    "cuentaRepercutido": "477",
+    "cuentaSoportado": "472"
+  },
+
+  // -------------------------------------------------------------------- IVA al 0 %
+  // El tipo cero de las entregas intracomunitarias y las exportaciones. NO es lo mismo que «esta
+  // operación no lleva impuesto»: la operación se declara, con base imponible y cuota cero, y la
+  // diferencia se ve en el modelo 303. Sin esta fila habría que representarlo con la ausencia de
+  // impuesto, que es justo la confusión que crea.
+  {
+    "codigo": "IVA-CERO",
+    "nombre": "IVA al 0 % (exportación e intracomunitaria)",
+    "tipo": "Iva",
+    "porcentaje": 0,
+    "vigenteDesde": "1995-01-01",
+    "vigenteHasta": null,
+    "cuentaRepercutido": "477",
+    "cuentaSoportado": "472"
+  },
+
+  // ------------------------------------------------------------------- Retenciones
+  // Los tramos empiezan en 2016 y no antes a propósito: 2015 tuvo DOS tipos dentro del mismo año
+  // —el RDL 9/2015 bajó el de profesionales a mitad de ejercicio—, y sembrar mal ese tramo es
+  // peor que no sembrarlo. Quien necesite retenciones anteriores las da de alta, que para eso el
+  // modelo es de tramos.
+  //
+  // Una retención RESTA por ser retención, no por llevar el signo puesto: el porcentaje va en
+  // positivo y quien calcula sabe qué hacer con un `TipoDeImpuesto.Retencion`.
+  {
+    "codigo": "RET-PROF",
+    "nombre": "Retención IRPF profesionales (15 %)",
+    "tipo": "Retencion",
+    "porcentaje": 15,
+    "vigenteDesde": "2016-01-01",
+    "vigenteHasta": null,
+    "cuentaRepercutido": "4751",
+    "cuentaSoportado": "473"
+  },
+  {
+    "codigo": "RET-PROF-INICIO",
+    "nombre": "Retención IRPF profesionales, inicio de actividad (7 %)",
+    "tipo": "Retencion",
+    "porcentaje": 7,
+    "vigenteDesde": "2016-01-01",
+    "vigenteHasta": null,
+    "cuentaRepercutido": "4751",
+    "cuentaSoportado": "473"
+  },
+  {
+    "codigo": "RET-ALQUILER",
+    "nombre": "Retención por arrendamiento urbano (19 %)",
+    "tipo": "Retencion",
+    "porcentaje": 19,
+    "vigenteDesde": "2016-01-01",
+    "vigenteHasta": null,
+    "cuentaRepercutido": "4751",
+    "cuentaSoportado": "473"
+  },
+  {
+    "codigo": "RET-CAPITAL",
+    "nombre": "Retención sobre capital mobiliario (19 %)",
+    "tipo": "Retencion",
+    "porcentaje": 19,
+    "vigenteDesde": "2016-01-01",
+    "vigenteHasta": null,
+    "cuentaRepercutido": "4751",
+    "cuentaSoportado": "473"
+  }
+]

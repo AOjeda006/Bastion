@@ -16,15 +16,18 @@ docs
 # no es un error: compila igual, y el ensamblado publicado sale SIN migraciones. La imagen se
 # construía bien, arrancaba bien, y `Migrate()` habría aplicado cero migraciones sin decir nada.
 #
-# `db/semillas` estuvo aquí por lo mismo, y sale por lo mismo (auditoría previa a la fase 1, F3).
+# `db/semillas` estuvo aquí por lo mismo, y salió por lo mismo (auditoría previa a la fase 1, F3).
 # El §12 dice que el PGC, los tipos de IVA, las unidades y los países son ficheros versionados
 # «que un comando carga», y ese comando es este mismo migrador. Excluidos del contexto, el cargador
 # habría encontrado cero — y «cero semillas» es indistinguible de «no había nada que cargar».
-# Hoy la carpeta está vacía, así que quitar la línea no PRUEBA nada, y además no BASTA:
-# `Dockerfile.api` copia `. .` en el escenario de compilación, pero el de ejecución se
-# lleva solo `/publicado`. Para que las semillas lleguen al contenedor que las carga hay
-# que publicarlas —`<Content Include>` en el proyecto— o copiarlas aparte. Eso es del
-# ítem 0.15, donde el cargador afirma conjunto no vacío y la CI mira dentro de la imagen.
+#
+# QUITAR LA LÍNEA NO BASTABA, y en el ítem 0.15 se cerró la otra mitad: `Dockerfile.api` copia
+# `. .` en el escenario de compilación, pero el de ejecución se lleva solo `/publicado`. Las
+# semillas llegan ahí por el `<Content Include>` de `Bastion.Organizacion.Infrastructure.csproj`,
+# con `CopyToPublishDirectory`. Y que sigan llegando no se confía a que estas dos cosas estén
+# escritas: el cargador afirma conjunto no vacío —en el fichero Y en la base—,
+# `LasSemillasLleganDondeSeCarganTests` lo mira en la salida de la compilación, y el job `Humo`
+# lo mira DENTRO de la imagen ya construida.
 deploy/.env
 .env
 .env.*

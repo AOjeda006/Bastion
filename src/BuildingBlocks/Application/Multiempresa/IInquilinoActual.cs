@@ -116,4 +116,18 @@ public enum MotivoSinInquilino
     /// empresa porque publica eventos» de «alguien perdió la empresa por el camino».
     /// </remarks>
     PublicacionDeEventos,
+
+    /// <summary>
+    /// La carga de los maestros de <c>db/semillas/</c> —tipos de IVA, unidades de medida—, que
+    /// hace el migrador después de aplicar el esquema. <b>No hay petición y no hay empresa</b>:
+    /// son maestros de la <i>instalación</i> (R8), compartidos por todas las sociedades, así que
+    /// no existe una a la que pertenezcan.
+    /// </summary>
+    /// <remarks>
+    /// Motivo propio y no <see cref="SemillaDeArranque"/> reutilizado, por lo mismo que argumenta
+    /// <see cref="PublicacionDeEventos"/>: el motivo acaba en una columna de la traza, y «la
+    /// instalación cargó los tipos de IVA» y «el arranque creó la primera empresa» son dos hechos
+    /// distintos que conviene poder separar el día que uno de los dos salga mal.
+    /// </remarks>
+    CargaDeMaestros,
 }

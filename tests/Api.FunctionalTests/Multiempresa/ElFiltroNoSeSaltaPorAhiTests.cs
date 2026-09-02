@@ -130,6 +130,15 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // este ámbito no es que viera menos eventos — es que reventaría en cada vuelta, porque
         // fuera de un ámbito y sin claim la empresa del filtro no existe.
         ["src/BuildingBlocks/Infrastructure/BandejaDeSalida/PublicadorDeLaBandeja.cs"] = 1,
+
+        // El segundo sin petición detrás, y del 0.15: el migrador carga los maestros de
+        // `db/semillas/` —tipos de IVA y unidades— antes de que exista ninguna empresa. El ámbito
+        // NO está para poder consultarlos: ni `Impuesto` ni `UnidadMedida` llevan filtro, porque
+        // son maestros de la instalación (R8). Está para que la traza de cada alta se pueda
+        // escribir: sin empresa y sin ámbito, el interceptor de auditoría lanza. La cuenta es 1
+        // porque la apertura cubre los dos ficheros; si se partiera en dos, aquí se vería.
+        ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Semillas/" +
+         "CargadorDeSemillasDeOrganizacion.cs"] = 1,
     };
 
     // Lo mismo para el ámbito que ve lo bloqueado. Es una lista aparte y no una más en la de

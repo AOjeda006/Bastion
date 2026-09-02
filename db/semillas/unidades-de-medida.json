@@ -1,0 +1,59 @@
+// Unidades de medida de la instalación (§12: fichero versionado que un comando carga).
+//
+// Admite comentarios por lo mismo que `impuestos.json`, y aquí hacen aún más falta: lo único que
+// no se explica solo de este fichero es la columna de decimales.
+//
+// LOS DECIMALES SON DEL MAESTRO, y son lo único de esta lista que hay que pensar. Cuántos admite
+// una unidad decide qué cantidades se pueden registrar con ella, y BAJARLOS DESPUÉS NO ES POSIBLE:
+// convertiría cada existencia de 1,250 kg ya guardada en un número que la unidad dice que no puede
+// existir. Por eso `UnidadMedida.Modificar` solo cambia el nombre. Si una instalación necesita
+// pesar a miligramos, la respuesta es una unidad nueva y su conversión, no editar esta.
+//
+// Los valores de aquí abajo van por lo alto de lo razonable a propósito: sobrar precisión no
+// rompe nada —una cantidad entera se guarda igual de bien en una columna con tres decimales—, y
+// faltar sí. Cero solo donde partir la unidad no significa nada.
+//
+// QUÉ NO ESTÁ AQUÍ: las conversiones entre unidades (kg↔g, l↔ml, m↔cm). Existen en el modelo y
+// tienen su alta en `/api/v1/organizacion/conversiones-de-unidades`, pero el factor de conversión
+// depende del envase de cada instalación en cuanto se sale de las del SI —una «caja» no son doce
+// unidades en todas partes—, y sembrar solo las tres del SI dejaría una lista a medias que parece
+// completa. La semilla siembra unidades; las equivalencias las declara quien monta el almacén.
+[
+  // La unidad por omisión de cualquier alta de artículo. Cero decimales: no existe medio tornillo,
+  // y admitir 0,5 unidades convierte un error de tecleo en una existencia imposible de servir.
+  { "codigo": "UD", "nombre": "Unidad", "decimales": 0 },
+
+  // ------------------------------------------------------------------------- Peso
+  // Tres decimales en el kilogramo: es el gramo, que es la resolución de cualquier báscula
+  // comercial. Con dos, un artículo de 1,250 kg no se puede registrar.
+  { "codigo": "KG", "nombre": "Kilogramo", "decimales": 3 },
+  { "codigo": "G", "nombre": "Gramo", "decimales": 0 },
+  { "codigo": "T", "nombre": "Tonelada", "decimales": 3 },
+
+  // ---------------------------------------------------------------------- Volumen
+  { "codigo": "L", "nombre": "Litro", "decimales": 3 },
+  { "codigo": "ML", "nombre": "Mililitro", "decimales": 0 },
+
+  // -------------------------------------------------------------------- Longitud
+  // Dos decimales en el metro: el centímetro. Quien corte a milímetros mide en MM, que es una
+  // unidad distinta y no un metro con más precisión.
+  { "codigo": "M", "nombre": "Metro", "decimales": 2 },
+  { "codigo": "CM", "nombre": "Centímetro", "decimales": 0 },
+  { "codigo": "MM", "nombre": "Milímetro", "decimales": 0 },
+
+  // ------------------------------------------------------- Superficie y volumen
+  { "codigo": "M2", "nombre": "Metro cuadrado", "decimales": 2 },
+  { "codigo": "M3", "nombre": "Metro cúbico", "decimales": 3 },
+
+  // ------------------------------------------------------------------- Servicios
+  // La hora se factura en fracciones: dos decimales llegan al cuarto de hora sin redondeos, que
+  // es como se factura de verdad un servicio.
+  { "codigo": "H", "nombre": "Hora", "decimales": 2 },
+  { "codigo": "DIA", "nombre": "Día", "decimales": 2 },
+
+  // ------------------------------------------------------------------- Embalajes
+  // Cuántas unidades lleva cada uno es una conversión, y esa la declara cada instalación: aquí
+  // solo consta que la unidad de venta existe.
+  { "codigo": "CAJA", "nombre": "Caja", "decimales": 0 },
+  { "codigo": "PAL", "nombre": "Palé", "decimales": 0 }
+]

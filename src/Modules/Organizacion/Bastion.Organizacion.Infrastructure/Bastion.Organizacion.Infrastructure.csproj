@@ -26,6 +26,35 @@
   </ItemGroup>
 
   <!--
+    Las semillas del §12 —tipos de IVA y unidades de medida—, que viven también fuera del proyecto
+    y por lo mismo. Aquí NO basta con incluirlas: no se compilan, se LEEN en tiempo de ejecución,
+    así que tienen que llegar al directorio del ensamblado.
+
+    `Link` es lo que decide su ruta de destino, y por eso no es cosmético: sin él, el fichero se
+    copiaría a la raíz de la salida, y el cargador busca en `<base>/semillas/`. Con él, la carpeta
+    se reproduce igual en `bin/`, en `/publicado` y dentro de la imagen.
+
+    `CopyToPublishDirectory` va ADEMÁS de `CopyToOutputDirectory`, y esa es la mitad que faltaba en
+    la auditoría F3: quitar `db/semillas` del `.dockerignore` mete los ficheros en el CONTEXTO de
+    construcción, pero `Dockerfile.api` se lleva a la imagen final solo `/publicado`. Sin esta
+    línea el contenedor que las carga no las vería, y `dotnet publish` no diría nada.
+
+    El `Include` es un glob y la lista de las que se cargan está escrita a mano en
+    `SemillasDeOrganizacion`: el glob copia lo que haya, y la lista escrita es la que se pone roja
+    si aparece un `.json` que nadie lee o desaparece uno que sí.
+
+    Que sigan llegando de verdad no se confía a que este bloque esté escrito: lo comprueba
+    `LasSemillasLleganDondeSeCarganTests` en la salida de la compilación, y la CI mirando DENTRO de
+    la imagen.
+  -->
+  <ItemGroup Label="Semillas">
+    <Content Include="../../../../db/semillas/*.json"
+             Link="semillas/%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
     EF Core y su proveedor de PostgreSQL. `Design` va aquí, y no en el host, porque es el
     proyecto donde `dotnet ef migrations add` genera y compila: sin él, la herramienta no
     encuentra el ensamblado de migraciones del módulo.

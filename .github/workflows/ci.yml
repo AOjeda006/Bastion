@@ -517,6 +517,61 @@ jobs:
           fi
           echo "::notice title=Migrador::Esquema aplicado por los tres contextos: Auditoría, Organización e Identidad."
 
+      # LA MITAD DE F3 QUE NO SE VE COMPILANDO. `db/semillas` salió del `.dockerignore`, y eso
+      # solo mete los ficheros en el CONTEXTO de construcción: `Dockerfile.api` se lleva a la
+      # imagen final únicamente `/publicado`. Que lleguen ahí depende del `<Content Include>` con
+      # `CopyToPublishDirectory` de `Bastion.Organizacion.Infrastructure.csproj`, y
+      # `dotnet publish` no dice ni una palabra si eso se cae. Aquí se mira DENTRO de la imagen ya
+      # construida, que es el único sitio donde la respuesta es la del despliegue.
+      #
+      # La lista va ESCRITA A MANO y se compara entera, no con un `grep -c`: un `find` que no
+      # encuentra nada devuelve cero líneas SIN error, que es exactamente el fallo que este paso
+      # viene a cazar. Comparadas las dos listas, ni faltar ni sobrar pasa desapercibido.
+      - name: Las semillas viajan DENTRO de la imagen
+        run: |
+          LISTAR="cd /app/semillas 2>/dev/null && ls -1 *.json 2>/dev/null | sort"
+          ENCONTRADAS=$(docker compose -f deploy/docker-compose.yml exec -T api sh -c "$LISTAR" || true)
+          # Sin comillas a propósito: colapsa los saltos de línea a espacios para poder comparar
+          # la lista entera de una vez. Y si no hay nada, `$ENCONTRADAS` queda vacía, que no es
+          # igual a lo esperado — que es lo que tiene que pasar.
+          ENCONTRADAS=$(echo $ENCONTRADAS)
+          ESPERADAS="impuestos.json unidades-de-medida.json"
+          echo "En /app/semillas de la imagen: ${ENCONTRADAS:-(nada)}"
+          if [ "$ENCONTRADAS" != "$ESPERADAS" ]; then
+            echo "::error title=Semillas::Dentro de la imagen no están las semillas que el migrador carga. El <Content Include> de Bastion.Organizacion.Infrastructure no las está publicando."
+            exit 1
+          fi
+          echo "::notice title=Semillas::Las dos semillas viajan dentro de la imagen, en /app/semillas."
+
+      # Y AHORA POR EL EFECTO, que es lo que de verdad importa: que los ficheros estén dentro de
+      # la imagen no dice que el migrador los haya cargado. Se cuentan las filas EN LA BASE del
+      # entorno desplegado, y se comprueba además un dato concreto —el tipo general del IVA
+      # vigente— porque un recuento mayor que cero lo cumpliría igual una carga que hubiera metido
+      # cualquier cosa. El migrador ya afirma conjunto no vacío por dentro y sale con 1 si no
+      # cuadra; esto es la comprobación independiente, desde fuera y sobre la base de verdad.
+      - name: El migrador ha dejado los maestros DENTRO de la base
+        run: |
+          # Las credenciales son las del compose: usuario y base van por omisión, y la contraseña
+          # no hace falta porque `psql` entra por el socket local del propio contenedor.
+          consultar() {
+            docker compose -f deploy/docker-compose.yml exec -T postgres psql -U bastion -d bastion_dev -tAc "$1"
+          }
+          IMPUESTOS=$(consultar 'select count(*) from organizacion.impuestos')
+          UNIDADES=$(consultar 'select count(*) from organizacion.unidades_de_medida')
+          VIGENTE=$(consultar "select porcentaje from organizacion.impuestos where codigo = 'IVA-GENERAL' and vigente_hasta is null")
+          echo "impuestos=$IMPUESTOS unidades=$UNIDADES iva_general_vigente=$VIGENTE"
+          case "$IMPUESTOS" in ''|*[!0-9]*) IMPUESTOS=0 ;; esac
+          case "$UNIDADES" in ''|*[!0-9]*) UNIDADES=0 ;; esac
+          if [ "$IMPUESTOS" -lt 1 ] || [ "$UNIDADES" -lt 1 ]; then
+            echo "::error title=Semillas::El esquema está migrado pero los maestros no están dentro (impuestos=${IMPUESTOS}, unidades=${UNIDADES}). Un catálogo de impuestos vacío no da error hasta la primera factura."
+            exit 1
+          fi
+          if [ "$VIGENTE" != "21.00" ]; then
+            echo "::error title=Semillas::El IVA general vigente sembrado es «${VIGENTE}» y tenía que ser 21.00. O la semilla se ha editado, o hay más de un tramo abierto."
+            exit 1
+          fi
+          echo "::notice title=Semillas::Maestros cargados por el migrador: ${IMPUESTOS} tramos de impuesto y ${UNIDADES} unidades; el IVA general vigente es del ${VIGENTE} %."
+
       - name: La API responde a su sonda de VIDA
         run: |
           RESPUESTA=$(curl --fail --silent --show-error http://localhost:8080/health/live)

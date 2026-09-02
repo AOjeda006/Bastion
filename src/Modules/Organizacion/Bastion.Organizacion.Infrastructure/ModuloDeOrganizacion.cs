@@ -14,6 +14,7 @@ using Bastion.Organizacion.Application.Unidades;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
+using Bastion.Organizacion.Infrastructure.Semillas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -82,6 +83,11 @@ public static class ModuloDeOrganizacion
         servicios.AddScoped<IRepositorioDeUnidadesDeMedida, RepositorioDeUnidadesDeMedida>();
         servicios.AddScoped<IRepositorioDeConversiones, RepositorioDeConversiones>();
         servicios.AddScoped<IRepositorioDeUbicaciones, RepositorioDeUbicaciones>();
+
+        // El cargador de las semillas del §12. Lo resuelve el MIGRADOR, no el arranque de la API:
+        // se registra aquí porque es quien tiene el contexto, y se invoca desde `src/Api`, que es
+        // el único proyecto que ve esta capa.
+        servicios.AddScoped<CargadorDeSemillasDeOrganizacion>();
 
         // Lo ÚNICO que este módulo expone a los demás, y va bajo el tipo de su `Contracts`. Se
         // registra aquí porque quien lo implementa es esta capa; quien lo consume —Identidad, al
