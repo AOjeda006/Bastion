@@ -32,7 +32,7 @@ export function leerTestigo(): string | null {
  *
  * Se llama al entrar, al renovar, al cambiar de empresa y al salir. Cada una de esas cosas emite un
  * testigo NUEVO, y por tanto cambia también qué se puede ver: quien cambia de empresa tiene que
- * tirar además la caché de consultas (ver `usarCambioDeEmpresa`).
+ * reiniciar además la caché de consultas entera (ver `app/SelectorDeEmpresa.tsx`).
  */
 export function escribirSesion(sesion: Sesion | null): void {
   actual = sesion;

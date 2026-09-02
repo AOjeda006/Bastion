@@ -43,6 +43,34 @@ describe('El testigo de acceso', () => {
     expect(volcado(sessionStorage)).toBe('');
   });
 
+  it('el testigo que sale en la cabecera es el campo del contrato, no uno parecido', async () => {
+    abrirSesionSimulada();
+
+    let autorizacion: string | null = null;
+    servidor.use(
+      http.get('/api/v1/organizacion/almacenes', ({ request }) => {
+        autorizacion = request.headers.get('Authorization');
+        return HttpResponse.json(almacenesDe(ALFA.id));
+      }),
+    );
+
+    montarAplicacion('/almacenes');
+    await screen.findByText('Nave central de Alfa');
+
+    // Este test existe por un agujero concreto, encontrado con la mutación 6 del ítem.
+    //
+    // La sesión que se recupera de la cookie NO pasa por el cliente tipado: la renovación va con
+    // `fetch` pelado —el cliente tipado no puede renovarse a sí mismo sin morderse la cola— y su
+    // cuerpo llega como `unknown`. Ahí hay una aserción de tipo, y una aserción es el único sitio
+    // de toda la capa donde el compilador no ve el contrato: un tipo escrito a mano con
+    // `token` en vez de `tokenDeAcceso` compila, pasa el linter, y deja el testigo en `undefined`.
+    //
+    // Sin esta línea eso se cazaba de rebote, con dos listados agotando su plazo de espera cinco
+    // segundos después — el tipo de rojo que se archiva como «test intermitente». Ahora falla aquí,
+    // diciendo qué cabecera salió.
+    expect(autorizacion).toBe(`Bearer testigo-de-${ALFA.id}`);
+  });
+
   it('un 401 pide una sesión nueva y repite la petición una sola vez', async () => {
     abrirSesionSimulada();
 
