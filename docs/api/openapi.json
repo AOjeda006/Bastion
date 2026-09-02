@@ -168,7 +168,7 @@
           "Roles"
         ],
         "summary": "Devuelve el catálogo de permisos que se pueden conceder.",
-        "description": "Exige `rol.ver` y no es una consulta pública de conveniencia: enumerar los permisos que\r\nexiste es enumerar lo que el sistema sabe hacer, y eso es un mapa que a un anónimo no se le\r\nda. La ruta va antes que `{id:guid}` por claridad; no compiten, porque\r\n`permisos` no casa con la restricción `:guid`.",
+        "description": "Exige `rol.ver` y no es una consulta pública de conveniencia: enumerar los permisos que\nexiste es enumerar lo que el sistema sabe hacer, y eso es un mapa que a un anónimo no se le\nda. La ruta va antes que `{id:guid}` por claridad; no compiten, porque\n`permisos` no casa con la restricción `:guid`.",
         "operationId": "Roles_Permisos",
         "responses": {
           "200": {
@@ -276,7 +276,7 @@
           "Roles"
         ],
         "summary": "Cambia el nombre y los permisos de un rol.",
-        "description": "Permiso propio, distinto del de crear: crear un rol vacío no le da a nadie nada, mientras\r\nque modificar uno le cambia los permisos a todos los que ya lo tienen asignado.",
+        "description": "Permiso propio, distinto del de crear: crear un rol vacío no le da a nadie nada, mientras\nque modificar uno le cambia los permisos a todos los que ya lo tienen asignado.",
         "operationId": "Roles_Modificar",
         "parameters": [
           {
@@ -522,7 +522,7 @@
           "Sesiones"
         ],
         "summary": "Cambia el token de refresco por una sesión nueva.",
-        "description": "No lleva cuerpo: lo que autoriza es la cookie. Un token de refresco en el cuerpo tendría\r\nque haberlo leído el JavaScript de algún sitio, y ese sitio sería el que no puede existir.",
+        "description": "No lleva cuerpo: lo que autoriza es la cookie. Un token de refresco en el cuerpo tendría\nque haberlo leído el JavaScript de algún sitio, y ese sitio sería el que no puede existir.",
         "operationId": "Sesiones_Renovar",
         "responses": {
           "200": {
@@ -590,7 +590,7 @@
           "Sesiones"
         ],
         "summary": "Cambia con qué empresa se está operando (R8).",
-        "description": "Autenticada pero SIN permiso: elegir entre las empresas a las que uno ya pertenece no es una\r\nfacultad que se conceda, es lo que significa pertenecer a varias. Lo que sí se comprueba\r\n—dentro— es que pertenezca a la que pide.",
+        "description": "Autenticada pero SIN permiso: elegir entre las empresas a las que uno ya pertenece no es una\nfacultad que se conceda, es lo que significa pertenecer a varias. Lo que sí se comprueba\n—dentro— es que pertenezca a la que pide.",
         "operationId": "Sesiones_CambiarEmpresa",
         "requestBody": {
           "content": {
@@ -1132,7 +1132,7 @@
           "Usuarios"
         ],
         "summary": "Devuelve a un usuario bloqueado a la actividad.",
-        "description": "<b>Es la única escritura del sistema sin `If-Match`.</b> No es un descuido ni una\r\n        excepción de comodidad: desde el 0.10 un recurso bloqueado no se lee por ningún camino\r\n        ordinario, y el `ETag` se obtiene leyendo. Exigir aquí una versión sería exigir una\r\n        llave que no se puede conseguir, y dejaría la puerta cerrada para siempre. Lo que el\r\n        `If-Match` evita —pisar el cambio de otro— aquí no puede pasar: mientras el recurso\r\n        está bloqueado ninguna otra escritura llega hasta él, y desbloquear dos veces deja el mismo\r\n        resultado que desbloquear una (ADR-0017).",
+        "description": "<b>Es la única escritura del sistema sin `If-Match`.</b> No es un descuido ni una\n        excepción de comodidad: desde el 0.10 un recurso bloqueado no se lee por ningún camino\n        ordinario, y el `ETag` se obtiene leyendo. Exigir aquí una versión sería exigir una\n        llave que no se puede conseguir, y dejaría la puerta cerrada para siempre. Lo que el\n        `If-Match` evita —pisar el cambio de otro— aquí no puede pasar: mientras el recurso\n        está bloqueado ninguna otra escritura llega hasta él, y desbloquear dos veces deja el mismo\n        resultado que desbloquear una (ADR-0017).",
         "operationId": "Usuarios_Desbloquear",
         "parameters": [
           {
@@ -1182,7 +1182,7 @@
           "Usuarios"
         ],
         "summary": "Cambia la contraseña PROPIA, presentando la actual.",
-        "description": "La única acción autenticada del sistema que no exige permiso, y no es una excepción\r\ncaprichosa: la autorización es saber la contraseña de ahora, que se presenta en el cuerpo.\r\nSobre quién se opera no se pregunta —sale del <i>claim</i>—, así que aquí no se puede tocar\r\nla cuenta de otro ni escribiéndolo aposta.",
+        "description": "La única acción autenticada del sistema que no exige permiso, y no es una excepción\ncaprichosa: la autorización es saber la contraseña de ahora, que se presenta en el cuerpo.\nSobre quién se opera no se pregunta —sale del <i>claim</i>—, así que aquí no se puede tocar\nla cuenta de otro ni escribiéndolo aposta.",
         "operationId": "Usuarios_CambiarContrasenaPropia",
         "requestBody": {
           "content": {
@@ -1659,7 +1659,7 @@
           "Usuarios"
         ],
         "summary": "Le retira un rol a un usuario en una empresa.",
-        "description": "Permiso propio, distinto del de asignar: hacer y deshacer no son la misma facultad. Quien\r\nreparte roles no tiene por qué poder quitarle el suyo al administrador.",
+        "description": "Permiso propio, distinto del de asignar: hacer y deshacer no son la misma facultad. Quien\nreparte roles no tiene por qué poder quitarle el suyo al administrador.",
         "operationId": "Usuarios_RetirarRol",
         "parameters": [
           {
@@ -2140,7 +2140,7 @@
           "Almacenes"
         ],
         "summary": "Bloquea un almacén. No lo borra.",
-        "description": "Cada movimiento de existencias apunta a su almacén para siempre: borrar la fila rompería el\r\nhistórico de valoración, que no se puede reconstruir después.",
+        "description": "Cada movimiento de existencias apunta a su almacén para siempre: borrar la fila rompería el\nhistórico de valoración, que no se puede reconstruir después.",
         "operationId": "Almacenes_Bloquear",
         "parameters": [
           {
@@ -2237,7 +2237,7 @@
           "Almacenes"
         ],
         "summary": "Devuelve un almacén bloqueado a la operativa.",
-        "description": "Sin puerta HTTP en el 0.4 por lo mismo que el desbloqueo de empresa, y abierta hoy por lo\r\nmismo: detrás de su permiso, que no es el de bloquear.",
+        "description": "Sin puerta HTTP en el 0.4 por lo mismo que el desbloqueo de empresa, y abierta hoy por lo\nmismo: detrás de su permiso, que no es el de bloquear.",
         "operationId": "Almacenes_Desbloquear",
         "parameters": [
           {
@@ -2794,7 +2794,7 @@
           "Ejercicios"
         ],
         "summary": "Cierra el ejercicio (R9).",
-        "description": "Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que\r\ncualquiera congele el año. Con su permiso detrás, se abre.",
+        "description": "Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que\ncualquiera congele el año. Con su permiso detrás, se abre.",
         "operationId": "Ejercicios_Cerrar",
         "parameters": [
           {
@@ -2889,7 +2889,7 @@
           "Ejercicios"
         ],
         "summary": "Reabre un ejercicio cerrado (R9).",
-        "description": "El cierre es el sub-recurso, así que reabrir es borrarlo. Lleva permiso propio y distinto\r\ndel de cerrar: reabrir vuelve a admitir apuntes en un periodo del que probablemente ya se\r\npresentaron modelos.",
+        "description": "El cierre es el sub-recurso, así que reabrir es borrarlo. Lleva permiso propio y distinto\ndel de cerrar: reabrir vuelve a admitir apuntes en un periodo del que probablemente ya se\npresentaron modelos.",
         "operationId": "Ejercicios_Reabrir",
         "parameters": [
           {
@@ -3377,7 +3377,7 @@
           "Empresas"
         ],
         "summary": "Bloquea una empresa (R16). No la borra.",
-        "description": "El verbo es `DELETE` porque es lo que el cliente quiere decir —«quítame esto de en\r\nmedio»— y lo que se hace por debajo es bloquear: una empresa puede ser un empresario\r\nindividual, y el art. 32 de la LOPDGDD manda bloquear, no destruir.",
+        "description": "El verbo es `DELETE` porque es lo que el cliente quiere decir —«quítame esto de en\nmedio»— y lo que se hace por debajo es bloquear: una empresa puede ser un empresario\nindividual, y el art. 32 de la LOPDGDD manda bloquear, no destruir.",
         "operationId": "Empresas_Bloquear",
         "parameters": [
           {
@@ -3474,7 +3474,7 @@
           "Empresas"
         ],
         "summary": "Devuelve una empresa bloqueada a la actividad.",
-        "description": "    No existe el DELETE inverso, así que es un POST a un sub-recurso. El\r\n      estado de la ficha no es un recurso que se sustituya con PUT: es el desenlace de una\r\n      operación con nombre propio, y por eso tiene permiso propio.\r\n    En el 0.4 esta operación existía en el dominio y no tenía puerta HTTP, porque abrirla sin\r\nautorización habría dejado a cualquiera revirtiendo bloqueos del art. 32. Con el permiso\r\ndetrás, ese motivo desaparece.",
+        "description": "    No existe el DELETE inverso, así que es un POST a un sub-recurso. El\n      estado de la ficha no es un recurso que se sustituya con PUT: es el desenlace de una\n      operación con nombre propio, y por eso tiene permiso propio.\n    En el 0.4 esta operación existía en el dominio y no tenía puerta HTTP, porque abrirla sin\nautorización habría dejado a cualquiera revirtiendo bloqueos del art. 32. Con el permiso\ndetrás, ese motivo desaparece.",
         "operationId": "Empresas_Desbloquear",
         "parameters": [
           {
@@ -3915,7 +3915,7 @@
           "Series"
         ],
         "summary": "Suprime una serie que todavía no ha numerado.",
-        "description": "`204` mientras es un borrador; `409` en cuanto ha numerado una sola vez, porque\r\n        entonces ya forma parte del libro registro (§9 y R11).",
+        "description": "`204` mientras es un borrador; `409` en cuanto ha numerado una sola vez, porque\n        entonces ya forma parte del libro registro (§9 y R11).",
         "operationId": "Series_Eliminar",
         "parameters": [
           {
@@ -4172,7 +4172,7 @@
                 "type": "null"
               },
               {
-                "description": "Dónde está. Opcional en el contrato porque un almacén virtual o de tránsito no está en\r\nningún sitio; para uno físico la exige el dominio, que es quien sabe la regla.",
+                "description": "Dónde está. Opcional en el contrato porque un almacén virtual o de tránsito no está en\nningún sitio; para uno físico la exige el dominio, que es quien sabe la regla.",
                 "$ref": "#/components/schemas/DireccionDto"
               }
             ]

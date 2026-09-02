@@ -32,7 +32,28 @@ internal static class ContratoDeLaApi
             opciones.CreateSchemaReferenceId = NombreDelEsquema;
             opciones.AddDocumentTransformer(PonerPortadaYEsquemaDeAcceso);
             opciones.AddOperationTransformer(PonerIdentificadorYQuitarLaDescripcionPrestada);
+            opciones.AddDocumentTransformer(QuitarLosRetornosDeCarroDeLosEsquemas);
         });
+
+    /// <summary>El mismo texto se genere donde se genere: sin retornos de carro.</summary>
+    /// <remarks>
+    /// <para>
+    /// Las descripciones salen de los comentarios de documentación, y el compilador escribe el
+    /// fichero XML con el salto de línea de la PLATAFORMA —no con el del fichero fuente, que en
+    /// este repositorio es LF en todas partes—. Un mismo comentario de tres líneas entra en el
+    /// documento como <c>\r\n</c> generado en Windows y como <c>\n</c> generado en Linux.
+    /// </para>
+    /// <para>
+    /// Eso hace que el documento no sea reproducible, y un artefacto versionado que la CI vuelve a
+    /// generar TIENE que serlo: si no, el paso de comprobación se pone rojo por el sistema
+    /// operativo de quien lo generó y no por un cambio de contrato. Se normaliza aquí, en el punto
+    /// donde se produce, y no en el fichero después: el que arregla la salida en vez de la causa
+    /// deja el problema esperando al siguiente campo que se añada.
+    /// </para>
+    /// </remarks>
+    /// <param name="texto">Descripción tal como llega del fichero XML, o <c>null</c>.</param>
+    private static string? SinRetornosDeCarro(string? texto) =>
+        texto?.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
 
     /// <summary>El nombre con el que un tipo aparece en <c>components/schemas</c>.</summary>
     /// <remarks>
@@ -131,6 +152,26 @@ internal static class ContratoDeLaApi
 
         operacion.RequestBody?.Description = null;
 
+        operacion.Summary = SinRetornosDeCarro(operacion.Summary);
+        operacion.Description = SinRetornosDeCarro(operacion.Description);
+
+        foreach (IOpenApiParameter parametro in operacion.Parameters ?? [])
+        {
+            if (parametro is OpenApiParameter propio)
+            {
+                propio.Description = SinRetornosDeCarro(propio.Description);
+            }
+        }
+
+        foreach (IOpenApiResponse respuesta in
+            operacion.Responses?.Values ?? Enumerable.Empty<IOpenApiResponse>())
+        {
+            if (respuesta is OpenApiResponse propia)
+            {
+                propia.Description = SinRetornosDeCarro(propia.Description);
+            }
+        }
+
         // Lo anónimo se declara anónimo. Son tres acciones en todo el sistema —abrir, renovar y
         // cerrar sesión— y el contrato tiene que decirlo, porque un cliente generado que mande el
         // testigo al iniciar sesión no falla: simplemente hace algo que nadie ha pensado.
@@ -141,6 +182,89 @@ internal static class ContratoDeLaApi
         operacion.Security = anonima ? [] : [Exige()];
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>Lo mismo para los esquemas, que traen la descripción de cada DTO y de cada campo.</summary>
+    /// <remarks>
+    /// <para>
+    /// Va como transformador de DOCUMENTO y no de esquema, aunque lo que toque sean esquemas. Un
+    /// transformador de esquema ve el esquema del TIPO mientras se construye, y ahí la propiedad
+    /// que estorba todavía no tiene la forma final: probado, deja pasar el caso. Al documento se
+    /// llega con todo montado.
+    /// </para>
+    /// <para>
+    /// Hay que bajar hasta las propiedades —eso lo enseñó el guardián de
+    /// <c>scripts/generar-openapi.sh</c>, que dejó pasar catorce sitios y paró en el decimoquinto—
+    /// y también por los <c>oneOf</c>: una propiedad opcional que apunta a otro DTO sale como
+    /// «nulo o esta referencia», y la descripción se queda colgada de la referencia, que no es un
+    /// <see cref="OpenApiSchema"/>.
+    /// </para>
+    /// <para>
+    /// Solo se escribe donde hay algo que arreglar. Leer la descripción de una referencia puede
+    /// devolver la del tipo al que apunta; asignarla sin mirar la clavaría como descripción propia
+    /// en cada sitio donde ese tipo se usa, y eso sí cambiaría el documento.
+    /// </para>
+    /// </remarks>
+    /// <param name="documento">Documento ya montado.</param>
+    /// <param name="contexto">De dónde salió; no se usa.</param>
+    /// <param name="cancelacion">Cancelación de la generación.</param>
+    private static Task QuitarLosRetornosDeCarroDeLosEsquemas(
+        OpenApiDocument documento,
+        OpenApiDocumentTransformerContext contexto,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(documento);
+
+        foreach (IOpenApiSchema esquema in documento.Components?.Schemas?.Values ??
+            Enumerable.Empty<IOpenApiSchema>())
+        {
+            Normalizar(esquema);
+        }
+
+        return Task.CompletedTask;
+
+        static void Normalizar(IOpenApiSchema nodo)
+        {
+            if (nodo.Description is string descripcion &&
+                descripcion.Contains('\r', StringComparison.Ordinal))
+            {
+                switch (nodo)
+                {
+                    case OpenApiSchema propio:
+                        propio.Description = SinRetornosDeCarro(descripcion);
+                        break;
+
+                    case OpenApiSchemaReference referencia:
+                        referencia.Description = SinRetornosDeCarro(descripcion);
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            // Por debajo de una referencia no se sigue: lo que hay al otro lado es un esquema del
+            // catálogo, y a ese lo visita el transformador por su cuenta. Es también lo que impide
+            // que un DTO que se contiene a sí mismo mande el recorrido a dar vueltas.
+            if (nodo is not OpenApiSchema rama)
+            {
+                return;
+            }
+
+            IEnumerable<IOpenApiSchema> hijos =
+            [
+                .. rama.Properties?.Values ?? Enumerable.Empty<IOpenApiSchema>(),
+                .. rama.OneOf ?? Enumerable.Empty<IOpenApiSchema>(),
+                .. rama.AnyOf ?? Enumerable.Empty<IOpenApiSchema>(),
+                .. rama.AllOf ?? Enumerable.Empty<IOpenApiSchema>(),
+                .. rama.Items is null ? [] : new[] { rama.Items },
+            ];
+
+            foreach (IOpenApiSchema hijo in hijos)
+            {
+                Normalizar(hijo);
+            }
+        }
     }
 
     private static OpenApiSecurityRequirement Exige() => new()

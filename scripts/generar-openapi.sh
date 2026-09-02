@@ -60,11 +60,23 @@ fi
 # Se normaliza al escribir, no al comparar: el fichero versionado tiene que ser byte a byte el
 # mismo se genere en Windows o en Linux. Fines de línea LF —lo que dice `.gitattributes`— y un
 # salto final, que la herramienta no pone y que todo lo demás del repositorio lleva.
+#
+# El `tr` quita retornos de carro REALES, los del fichero. Los que rompieron la reproducibilidad la
+# primera vez eran otra cosa: la secuencia `\r` DENTRO de una cadena JSON, porque el compilador
+# escribe el XML de documentación con el salto de línea de la plataforma. Eso se arregla donde se
+# produce (`ContratoDeLaApi.SinRetornosDeCarro`) y aquí solo se comprueba, porque un arreglo en el
+# generador que alguien deshaga sin querer tiene que volver a doler aquí y no tres semanas después.
 normalizar() {
   tr -d '\r' < "$GENERADO" > "$1"
 
   if [ -n "$(tail -c 1 "$1")" ]; then
     printf '\n' >> "$1"
+  fi
+
+  if grep -q -F '\r' "$1"; then
+    echo "::error title=OpenAPI::El documento trae la secuencia \\r dentro de alguna cadena, así que NO es reproducible: en Linux saldría \\n y la comprobación se pondría roja por el sistema operativo de quien lo generó. Se normaliza en src/Api/Arranque/ContratoDeLaApi.cs; si el texto ha aparecido en un sitio nuevo, hay que normalizarlo también ahí."
+    grep -n -F '\r' "$1" | head -5
+    exit 1
   fi
 }
 
