@@ -121,6 +121,15 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "ADEMÁS de que el bloqueo de la empresa siga tapando a sus almacenes: si un almacén " +
             "quedara legible mientras su empresa está bloqueada, habría ETag y no habría exención",
 
+        // La cuarta, del 0.15, y por el mismo argumento que las otras tres de Organización.
+        ["UbicacionesController.Desbloquear"] =
+            "igual que la del almacén: una ubicación bloqueada no se deja leer, así que no emite " +
+            "ETag y la precondición pediría una llave que no se puede conseguir. El testigo de " +
+            "concurrencia se sigue comprobando dentro de la petición; lo que desaparece es la " +
+            "cabecera que el cliente cita (ADR-0017). DEPENDE DE lo mismo que la del almacén " +
+            "—que ninguna lectura de la API entregue una ubicación bloqueada— y ADEMÁS de que el " +
+            "bloqueo del almacén y el de la empresa sigan tapando lo que cuelga de ellos",
+
         ["UsuariosController.Desbloquear"] =
             "igual que las dos de Organización. Y aquí conviene dejar escrito lo que NO es: esto " +
             "levanta el bloqueo del art. 32, no el rechazo temporal por intentos fallidos, que " +
@@ -248,22 +257,26 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(46, "acciones en total");
-        cambian.Count.ShouldBe(32, "acciones que cambian estado");
+        todas.Count.ShouldBe(73, "acciones en total");
+        cambian.Count.ShouldBe(47, "acciones que cambian estado");
 
-        // Trece y no dieciséis desde el 0.10: los tres `Desbloquear` dejaron de exigir If-Match, y
-        // los tres se han mudado al cajón de las exentas, que pasa de diez a trece. El total de
-        // acciones que cambian estado no se mueve, y eso es lo que dice que fue una mudanza y no
-        // una acción nueva que se ha colado sin protección.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(13, "operaciones que exigen If-Match");
+        // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
+        // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
+        // porque cerrar un tramo va aparte— y el desbloqueo de ubicación, que se une a los otros
+        // tres del cajón de las exentas por el argumento del ADR-0017.
+        //
+        // Trece y no dieciséis fue el número del 0.10: los tres `Desbloquear` dejaron de exigir
+        // If-Match y se mudaron al cajón de las exentas sin mover el total, que es lo que dice que
+        // fue una mudanza y no una acción nueva colada sin protección.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(21, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(6, "rutas que admiten Idempotency-Key");
-        s_exentas.Count.ShouldBe(13, "acciones exentas con motivo escrito");
+            .ShouldBe(12, "rutas que admiten Idempotency-Key");
+        s_exentas.Count.ShouldBe(14, "acciones exentas con motivo escrito");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (13 + 6 + s_exentas.Count).ShouldBe(cambian.Count);
+        (21 + 12 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     private static IEnumerable<Accion> QueCambianEstado() =>

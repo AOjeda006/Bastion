@@ -96,6 +96,83 @@ public static class PermisosDeOrganizacion
     /// <summary>Deshacer la baja de un almacén.</summary>
     public const string AlmacenDesbloquear = "organizacion.almacen.desbloquear";
 
+    /// <summary>Consultar tipos impositivos.</summary>
+    public const string ImpuestoVer = "organizacion.impuesto.ver";
+
+    /// <summary>Dar de alta un tramo de un tipo impositivo.</summary>
+    public const string ImpuestoCrear = "organizacion.impuesto.crear";
+
+    /// <summary>Cambiar el nombre o las cuentas contables de un tramo.</summary>
+    /// <remarks>
+    /// No incluye el porcentaje ni las fechas: un impuesto no se edita, se sucede. Subir el IVA
+    /// del 18 % al 21 % es cerrar un tramo y abrir otro, y por eso lo hacen dos permisos
+    /// distintos de este.
+    /// </remarks>
+    public const string ImpuestoModificar = "organizacion.impuesto.modificar";
+
+    /// <summary>Poner fecha de fin a un tramo vigente.</summary>
+    /// <remarks>
+    /// Aparte de <see cref="ImpuestoModificar"/> porque cierra un periodo fiscal: a partir del día
+    /// siguiente, una factura que use ese código no encuentra tipo y la emisión se para.
+    /// </remarks>
+    public const string ImpuestoCerrar = "organizacion.impuesto.cerrar";
+
+    /// <summary>Consultar divisas.</summary>
+    public const string DivisaVer = "organizacion.divisa.ver";
+
+    /// <summary>Dar de alta una divisa de las que el catálogo sabe redondear.</summary>
+    public const string DivisaCrear = "organizacion.divisa.crear";
+
+    /// <summary>Cambiar el nombre de una divisa.</summary>
+    public const string DivisaModificar = "organizacion.divisa.modificar";
+
+    /// <summary>Consultar cotizaciones.</summary>
+    public const string TipoCambioVer = "organizacion.tipo-cambio.ver";
+
+    /// <summary>Registrar la cotización de un día.</summary>
+    public const string TipoCambioCrear = "organizacion.tipo-cambio.crear";
+
+    /// <summary>Rectificar la tasa de una cotización ya registrada.</summary>
+    /// <remarks>
+    /// Aparte de <see cref="TipoCambioCrear"/> y con motivo: la cotización de un día pasado ya ha
+    /// convertido importes, y cambiarla cambia lo que valían. Registrar la de hoy no.
+    /// </remarks>
+    public const string TipoCambioModificar = "organizacion.tipo-cambio.modificar";
+
+    /// <summary>Consultar unidades de medida.</summary>
+    public const string UnidadMedidaVer = "organizacion.unidad-medida.ver";
+
+    /// <summary>Dar de alta una unidad de medida.</summary>
+    public const string UnidadMedidaCrear = "organizacion.unidad-medida.crear";
+
+    /// <summary>Cambiar el nombre de una unidad de medida.</summary>
+    public const string UnidadMedidaModificar = "organizacion.unidad-medida.modificar";
+
+    /// <summary>Consultar conversiones entre unidades.</summary>
+    public const string ConversionUmVer = "organizacion.conversion-um.ver";
+
+    /// <summary>Dar de alta una conversión entre dos unidades.</summary>
+    public const string ConversionUmCrear = "organizacion.conversion-um.crear";
+
+    /// <summary>Cambiar el factor de una conversión.</summary>
+    public const string ConversionUmModificar = "organizacion.conversion-um.modificar";
+
+    /// <summary>Consultar ubicaciones.</summary>
+    public const string UbicacionVer = "organizacion.ubicacion.ver";
+
+    /// <summary>Dar de alta una ubicación dentro de un almacén.</summary>
+    public const string UbicacionCrear = "organizacion.ubicacion.crear";
+
+    /// <summary>Cambiar las coordenadas o la descripción de una ubicación.</summary>
+    public const string UbicacionModificar = "organizacion.ubicacion.modificar";
+
+    /// <summary>Dar de baja una ubicación (R16).</summary>
+    public const string UbicacionBloquear = "organizacion.ubicacion.bloquear";
+
+    /// <summary>Deshacer la baja de una ubicación.</summary>
+    public const string UbicacionDesbloquear = "organizacion.ubicacion.desbloquear";
+
+
     /// <summary>Todos los permisos del módulo, que es lo que el host junta en el catálogo.</summary>
     /// <remarks>
     /// La lista se escribe a mano y no por reflexión sobre las constantes. Por reflexión, quitar
@@ -125,5 +202,26 @@ public static class PermisosDeOrganizacion
         AlmacenModificar,
         AlmacenBloquear,
         AlmacenDesbloquear,
+        ImpuestoVer,
+        ImpuestoCrear,
+        ImpuestoModificar,
+        ImpuestoCerrar,
+        DivisaVer,
+        DivisaCrear,
+        DivisaModificar,
+        TipoCambioVer,
+        TipoCambioCrear,
+        TipoCambioModificar,
+        UnidadMedidaVer,
+        UnidadMedidaCrear,
+        UnidadMedidaModificar,
+        ConversionUmVer,
+        ConversionUmCrear,
+        ConversionUmModificar,
+        UbicacionVer,
+        UbicacionCrear,
+        UbicacionModificar,
+        UbicacionBloquear,
+        UbicacionDesbloquear,
     ];
 }

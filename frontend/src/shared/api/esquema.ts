@@ -382,6 +382,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizacion/conversiones-de-unidades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de conversiones. */
+        get: operations["ConversionesDeUnidades_Listar"];
+        put?: never;
+        /** Da de alta una conversión entre dos unidades. */
+        post: operations["ConversionesDeUnidades_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/conversiones-de-unidades/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una conversión. */
+        get: operations["ConversionesDeUnidades_Obtener"];
+        /** Corrige el factor de una conversión. */
+        put: operations["ConversionesDeUnidades_Modificar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/divisas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de divisas. */
+        get: operations["Divisas_Listar"];
+        put?: never;
+        /** Da de alta una divisa. */
+        post: operations["Divisas_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/divisas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una divisa. */
+        get: operations["Divisas_Obtener"];
+        /** Cambia el nombre de una divisa. */
+        put: operations["Divisas_Modificar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/ejercicios": {
         parameters: {
             query?: never;
@@ -513,6 +585,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizacion/impuestos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de tramos. */
+        get: operations["Impuestos_Listar"];
+        put?: never;
+        /**
+         * Abre un tramo de un tipo impositivo.
+         * @description Es un `POST` a la colección y no un `PUT` sobre el impuesto: subir el IVA general
+         *     del 18 % al 21 % no cambia una fila, añade otra. Las facturas de agosto de 2012 siguen
+         *     llevando el 18 % para siempre.
+         */
+        post: operations["Impuestos_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/impuestos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve un tramo. */
+        get: operations["Impuestos_Obtener"];
+        /** Cambia el nombre y las cuentas contables de un tramo. */
+        put: operations["Impuestos_Modificar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/impuestos/{id}/cierre": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pone fecha de fin a un tramo vigente.
+         * @description Sub-recurso y no un campo del `PUT`: cerrar un tramo deja al código sin tipo a partir
+         *     del día siguiente, y eso va detrás de su propio permiso.
+         */
+        post: operations["Impuestos_Cerrar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/series": {
         parameters: {
             query?: never;
@@ -549,6 +683,145 @@ export interface paths {
          *             entonces ya forma parte del libro registro (§9 y R11).
          */
         delete: operations["Series_Eliminar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/tipos-de-cambio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de cotizaciones, de la más reciente a la más antigua. */
+        get: operations["TiposDeCambio_Listar"];
+        put?: never;
+        /** Registra la cotización de un día. */
+        post: operations["TiposDeCambio_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/tipos-de-cambio/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una cotización. */
+        get: operations["TiposDeCambio_Obtener"];
+        /** Rectifica la tasa de una cotización. */
+        put: operations["TiposDeCambio_Modificar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/ubicaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de ubicaciones. */
+        get: operations["Ubicaciones_Listar"];
+        put?: never;
+        /** Da de alta una ubicación dentro de un almacén. */
+        post: operations["Ubicaciones_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/ubicaciones/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una ubicación. */
+        get: operations["Ubicaciones_Obtener"];
+        /** Cambia las coordenadas y la descripción de una ubicación. */
+        put: operations["Ubicaciones_Modificar"];
+        post?: never;
+        /**
+         * Bloquea una ubicación. No la borra.
+         * @description Cada movimiento de existencias apunta a la ubicación de la que salió y a la que entró:
+         *     borrar la fila dejaría ese histórico señalando a algo que no existe.
+         */
+        delete: operations["Ubicaciones_Bloquear"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/ubicaciones/{id}/desbloqueo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Devuelve una ubicación bloqueada a la operativa.
+         * @description Sin `If-Match`, igual que el desbloqueo del almacén y por lo mismo: el `ETag` se
+         *     obtiene leyendo, y una ubicación bloqueada no se lee por ningún camino ordinario. Exigir
+         *     aquí una versión sería pedir una llave que no se puede conseguir (ADR-0017).
+         */
+        post: operations["Ubicaciones_Desbloquear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/unidades-de-medida": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de unidades de medida. */
+        get: operations["UnidadesDeMedida_Listar"];
+        put?: never;
+        /** Da de alta una unidad de medida. */
+        post: operations["UnidadesDeMedida_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/unidades-de-medida/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una unidad de medida. */
+        get: operations["UnidadesDeMedida_Obtener"];
+        /**
+         * Cambia el nombre de una unidad de medida.
+         * @description Los decimales no viajan en el cuerpo: bajarlos dejaría inválidas las existencias ya
+         *     registradas con más precisión, sin tocarlas ni avisar.
+         */
+        put: operations["UnidadesDeMedida_Modificar"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -606,6 +879,14 @@ export interface components {
              */
             empresaId: string;
         };
+        /** @description Lo que hace falta para cerrar un tramo vigente. */
+        CerrarImpuestoDto: {
+            /**
+             * Format: date
+             * @description Último día en que el tramo rige, incluido.
+             */
+            ultimoDia: string;
+        };
         /** @description A qué empresa se da de alta al usuario. */
         ConcederPertenenciaDto: {
             /**
@@ -613,6 +894,29 @@ export interface components {
              * @description Empresa a la que se da de alta.
              */
             empresaId: string;
+        };
+        /** @description Una conversión entre dos unidades de medida, tal como sale de la API. */
+        ConversionUmDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la conversión.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Unidad desde la que se convierte.
+             */
+            unidadOrigenId: string;
+            /**
+             * Format: uuid
+             * @description Unidad a la que se convierte.
+             */
+            unidadDestinoId: string;
+            /**
+             * Format: double
+             * @description Por cuánto hay que multiplicar para pasar de origen a destino.
+             */
+            factor: number | string;
         };
         /** @description Lo que hace falta para dar de alta un almacén. */
         CrearAlmacenDto: {
@@ -623,6 +927,31 @@ export interface components {
             direccion?: null | components["schemas"]["DireccionDto"];
             /** @description Tipo de almacén, como texto. */
             tipo: string;
+        };
+        /** @description Lo que hace falta para dar de alta una conversión. */
+        CrearConversionUmDto: {
+            /**
+             * Format: uuid
+             * @description Unidad desde la que se convierte.
+             */
+            unidadOrigenId: string;
+            /**
+             * Format: uuid
+             * @description Unidad a la que se convierte.
+             */
+            unidadDestinoId: string;
+            /**
+             * Format: double
+             * @description Por cuánto hay que multiplicar para pasar de origen a destino.
+             */
+            factor?: number | string;
+        };
+        /** @description Lo que hace falta para dar de alta una divisa. */
+        CrearDivisaDto: {
+            /** @description Código ISO 4217 de tres letras. Se normaliza a mayúsculas. */
+            codigo: string;
+            /** @description Nombre con el que se la conoce. */
+            nombre: string;
         };
         /** @description Lo que hace falta para abrir un ejercicio. */
         CrearEjercicioDto: {
@@ -655,6 +984,34 @@ export interface components {
             /** @description Régimen de IVA, como texto. */
             regimenDeIva: string;
         };
+        /** @description Lo que hace falta para abrir un tramo de un tipo impositivo. */
+        CrearImpuestoDto: {
+            /** @description Código del impuesto. Se normaliza a mayúsculas. */
+            codigo: string;
+            /** @description Nombre con el que se le conoce. */
+            nombre: string;
+            /** @description Clase de impuesto, como texto. */
+            tipo: string;
+            /**
+             * Format: double
+             * @description El tipo aplicable, en tanto por ciento.
+             */
+            porcentaje?: number | string;
+            /**
+             * Format: date
+             * @description Primer día en que rige, incluido.
+             */
+            vigenteDesde: string;
+            /**
+             * Format: date
+             * @description Último día en que rige, incluido. Nulo si el tramo queda abierto.
+             */
+            vigenteHasta?: null | string;
+            /** @description Cuenta contable del impuesto repercutido, o nula si todavía no se sabe. */
+            cuentaRepercutido?: null | string;
+            /** @description Cuenta contable del impuesto soportado, o nula si todavía no se sabe. */
+            cuentaSoportado?: null | string;
+        };
         /** @description Lo que hace falta para crear un rol. */
         CrearRolDto: {
             /** @description Código estable. Se normaliza a minúsculas. */
@@ -677,6 +1034,59 @@ export interface components {
             codigo: string;
             /** @description Plantilla con la que se compone el número del documento. */
             formato: string;
+        };
+        /** @description Lo que hace falta para registrar la cotización de un día. */
+        CrearTipoCambioDto: {
+            /**
+             * Format: uuid
+             * @description Divisa de la que se convierte.
+             */
+            divisaOrigenId: string;
+            /**
+             * Format: uuid
+             * @description Divisa a la que se convierte.
+             */
+            divisaDestinoId: string;
+            /**
+             * Format: date
+             * @description Día al que corresponde la cotización.
+             */
+            fecha: string;
+            /**
+             * Format: double
+             * @description Cuántas unidades de destino cuesta una de origen.
+             */
+            tasa?: number | string;
+        };
+        /** @description Lo que hace falta para dar de alta una ubicación. */
+        CrearUbicacionDto: {
+            /**
+             * Format: uuid
+             * @description Almacén en el que está la ubicación.
+             */
+            almacenId: string;
+            /** @description Código de la ubicación. Se normaliza a mayúsculas. */
+            codigo: string;
+            /** @description Pasillo. Opcional: no todos los almacenes se organizan por coordenadas. */
+            pasillo?: null | string;
+            /** @description Estante. */
+            estante?: null | string;
+            /** @description Hueco. */
+            hueco?: null | string;
+            /** @description Descripción libre. */
+            descripcion?: null | string;
+        };
+        /** @description Lo que hace falta para dar de alta una unidad de medida. */
+        CrearUnidadMedidaDto: {
+            /** @description Código de la unidad. Se normaliza a mayúsculas. */
+            codigo: string;
+            /** @description Nombre con el que se la conoce. */
+            nombre: string;
+            /**
+             * Format: int32
+             * @description Cuántos decimales admite una cantidad expresada en esta unidad.
+             */
+            decimales?: number | string;
         };
         /** @description Lo que hace falta para dar de alta un usuario. */
         CrearUsuarioDto: {
@@ -701,6 +1111,23 @@ export interface components {
             subdivision?: null | string;
             /** @description País en ISO 3166-1 alfa-2, dos letras. */
             pais: string;
+        };
+        /** @description Una divisa que esta instalación usa, tal como sale de la API. */
+        DivisaDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la divisa.
+             */
+            id: string;
+            /** @description Código ISO 4217 de tres letras, en mayúsculas. */
+            codigo: string;
+            /** @description Nombre con el que se la conoce. */
+            nombre: string;
+            /**
+             * Format: int32
+             * @description A cuántos decimales se redondea un importe en esta divisa.
+             */
+            decimales: number | string;
         };
         /** @description Un ejercicio contable, tal como sale de la API. */
         EjercicioDto: {
@@ -760,6 +1187,39 @@ export interface components {
             /** @description Régimen de IVA, como texto. */
             regimenDeIva: string;
         };
+        /** @description Un tramo de un tipo impositivo, tal como sale de la API. */
+        ImpuestoDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del tramo.
+             */
+            id: string;
+            /** @description Código del impuesto, en mayúsculas. <b>Se repite entre tramos.</b> */
+            codigo: string;
+            /** @description Nombre con el que se le conoce. */
+            nombre: string;
+            /** @description Clase de impuesto, como texto. */
+            tipo: string;
+            /**
+             * Format: double
+             * @description El tipo aplicable, en tanto por ciento.
+             */
+            porcentaje: number | string;
+            /**
+             * Format: date
+             * @description Primer día en que rige, incluido.
+             */
+            vigenteDesde: string;
+            /**
+             * Format: date
+             * @description Último día en que rige, incluido, o nulo si sigue vigente.
+             */
+            vigenteHasta: null | string;
+            /** @description Cuenta contable del IVA repercutido, o nula. */
+            cuentaRepercutido: null | string;
+            /** @description Cuenta contable del IVA soportado, o nula. */
+            cuentaSoportado: null | string;
+        };
         /** @description Lo que hace falta para iniciar sesión. */
         IniciarSesionDto: {
             /** @description Correo con el que se identifica. */
@@ -790,6 +1250,19 @@ export interface components {
             /** @description Tipo de almacén, como texto. */
             tipo: string;
         };
+        /** @description Lo que se puede cambiar de una conversión. */
+        ModificarConversionUmDto: {
+            /**
+             * Format: double
+             * @description Por cuánto hay que multiplicar para pasar de origen a destino.
+             */
+            factor?: number | string;
+        };
+        /** @description Lo que se puede cambiar de una divisa. */
+        ModificarDivisaDto: {
+            /** @description Nombre con el que se la conoce. */
+            nombre: string;
+        };
         /** @description Lo que se puede cambiar de un ejercicio abierto: sus fechas. */
         ModificarEjercicioDto: {
             /**
@@ -814,6 +1287,15 @@ export interface components {
             /** @description Régimen de IVA, como texto. */
             regimenDeIva: string;
         };
+        /** @description Lo que se puede cambiar de un tramo ya abierto. */
+        ModificarImpuestoDto: {
+            /** @description Nombre con el que se le conoce. */
+            nombre: string;
+            /** @description Cuenta contable del impuesto repercutido, o nula. */
+            cuentaRepercutido?: null | string;
+            /** @description Cuenta contable del impuesto soportado, o nula. */
+            cuentaSoportado?: null | string;
+        };
         /** @description Lo que se puede cambiar de un rol: el nombre y la lista ENTERA de permisos. */
         ModificarRolDto: {
             /** @description Nombre para la interfaz. */
@@ -826,6 +1308,30 @@ export interface components {
             /** @description Plantilla con la que se compone el número del documento. */
             formato: string;
         };
+        /** @description Lo que se puede rectificar de una cotización. */
+        ModificarTipoCambioDto: {
+            /**
+             * Format: double
+             * @description Cuántas unidades de destino cuesta una de origen.
+             */
+            tasa?: number | string;
+        };
+        /** @description Lo que se puede cambiar de una ubicación. */
+        ModificarUbicacionDto: {
+            /** @description Pasillo, o nulo. */
+            pasillo?: null | string;
+            /** @description Estante, o nulo. */
+            estante?: null | string;
+            /** @description Hueco, o nulo. */
+            hueco?: null | string;
+            /** @description Descripción libre, o nula. */
+            descripcion?: null | string;
+        };
+        /** @description Lo que se puede cambiar de una unidad de medida. */
+        ModificarUnidadMedidaDto: {
+            /** @description Nombre con el que se la conoce. */
+            nombre: string;
+        };
         /** @description Lo que se puede cambiar de un usuario. */
         ModificarUsuarioDto: {
             /** @description Nombre para la interfaz. */
@@ -835,6 +1341,46 @@ export interface components {
         PaginaDeAlmacenDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["AlmacenDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeConversionUmDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["ConversionUmDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeDivisaDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["DivisaDto"][];
             /**
              * Format: int32
              * @description Número de página, empezando en 1.
@@ -892,6 +1438,26 @@ export interface components {
             total: number | string;
         };
         /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeImpuestoDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["ImpuestoDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
         PaginaDeRolDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["RolDto"][];
@@ -915,6 +1481,66 @@ export interface components {
         PaginaDeSerieDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["SerieDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeTipoCambioDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["TipoCambioDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeUbicacionDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["UbicacionDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeUnidadMedidaDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["UnidadMedidaDto"][];
             /**
              * Format: int32
              * @description Número de página, empezando en 1.
@@ -1048,6 +1674,79 @@ export interface components {
             empresas: components["schemas"]["EmpresaDeSesionDto"][];
             /** @description Permisos que tiene en la empresa activa, para la interfaz. */
             permisos: string[];
+        };
+        /** @description La cotización de un par de divisas en un día, tal como sale de la API. */
+        TipoCambioDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la cotización.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Divisa de la que se convierte.
+             */
+            divisaOrigenId: string;
+            /**
+             * Format: uuid
+             * @description Divisa a la que se convierte.
+             */
+            divisaDestinoId: string;
+            /**
+             * Format: date
+             * @description Día al que corresponde la cotización.
+             */
+            fecha: string;
+            /**
+             * Format: double
+             * @description Cuántas unidades de destino cuesta una de origen.
+             */
+            tasa: number | string;
+        };
+        /** @description Una ubicación dentro de un almacén, tal como sale de la API. */
+        UbicacionDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la ubicación.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Empresa a la que pertenece (R8).
+             */
+            empresaId: string;
+            /**
+             * Format: uuid
+             * @description Almacén en el que está.
+             */
+            almacenId: string;
+            /** @description Código de la ubicación, en mayúsculas y único dentro del almacén. */
+            codigo: string;
+            /** @description Pasillo, o nulo si el almacén no se organiza así. */
+            pasillo: null | string;
+            /** @description Estante, o nulo. */
+            estante: null | string;
+            /** @description Hueco, o nulo. */
+            hueco: null | string;
+            /** @description Descripción libre, o nula. */
+            descripcion: null | string;
+        };
+        /** @description Una unidad de medida, tal como sale de la API. */
+        UnidadMedidaDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la unidad.
+             */
+            id: string;
+            /** @description Código de la unidad, en mayúsculas. */
+            codigo: string;
+            /** @description Nombre con el que se la conoce. */
+            nombre: string;
+            /**
+             * Format: int32
+             * @description Cuántos decimales admite una cantidad expresada en esta unidad.
+             */
+            decimales: number | string;
         };
         /** @description Un usuario, tal como sale de la API. */
         UsuarioDto: {
@@ -2303,6 +3002,393 @@ export interface operations {
             };
         };
     };
+    ConversionesDeUnidades_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeConversionUmDto"];
+                    "application/json": components["schemas"]["PaginaDeConversionUmDto"];
+                    "text/json": components["schemas"]["PaginaDeConversionUmDto"];
+                };
+            };
+        };
+    };
+    ConversionesDeUnidades_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearConversionUmDto"];
+                "text/json": components["schemas"]["CrearConversionUmDto"];
+                "application/*+json": components["schemas"]["CrearConversionUmDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ConversionUmDto"];
+                    "application/json": components["schemas"]["ConversionUmDto"];
+                    "text/json": components["schemas"]["ConversionUmDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ConversionesDeUnidades_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la conversión. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ConversionUmDto"];
+                    "application/json": components["schemas"]["ConversionUmDto"];
+                    "text/json": components["schemas"]["ConversionUmDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ConversionesDeUnidades_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la conversión. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarConversionUmDto"];
+                "text/json": components["schemas"]["ModificarConversionUmDto"];
+                "application/*+json": components["schemas"]["ModificarConversionUmDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ConversionUmDto"];
+                    "application/json": components["schemas"]["ConversionUmDto"];
+                    "text/json": components["schemas"]["ConversionUmDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Divisas_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeDivisaDto"];
+                    "application/json": components["schemas"]["PaginaDeDivisaDto"];
+                    "text/json": components["schemas"]["PaginaDeDivisaDto"];
+                };
+            };
+        };
+    };
+    Divisas_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearDivisaDto"];
+                "text/json": components["schemas"]["CrearDivisaDto"];
+                "application/*+json": components["schemas"]["CrearDivisaDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["DivisaDto"];
+                    "application/json": components["schemas"]["DivisaDto"];
+                    "text/json": components["schemas"]["DivisaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Divisas_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la divisa. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["DivisaDto"];
+                    "application/json": components["schemas"]["DivisaDto"];
+                    "text/json": components["schemas"]["DivisaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Divisas_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la divisa. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarDivisaDto"];
+                "text/json": components["schemas"]["ModificarDivisaDto"];
+                "application/*+json": components["schemas"]["ModificarDivisaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["DivisaDto"];
+                    "application/json": components["schemas"]["DivisaDto"];
+                    "text/json": components["schemas"]["DivisaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     Ejercicios_Listar: {
         parameters: {
             query?: {
@@ -2968,6 +4054,282 @@ export interface operations {
             };
         };
     };
+    Impuestos_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeImpuestoDto"];
+                    "application/json": components["schemas"]["PaginaDeImpuestoDto"];
+                    "text/json": components["schemas"]["PaginaDeImpuestoDto"];
+                };
+            };
+        };
+    };
+    Impuestos_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearImpuestoDto"];
+                "text/json": components["schemas"]["CrearImpuestoDto"];
+                "application/*+json": components["schemas"]["CrearImpuestoDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ImpuestoDto"];
+                    "application/json": components["schemas"]["ImpuestoDto"];
+                    "text/json": components["schemas"]["ImpuestoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Impuestos_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tramo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ImpuestoDto"];
+                    "application/json": components["schemas"]["ImpuestoDto"];
+                    "text/json": components["schemas"]["ImpuestoDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Impuestos_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tramo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarImpuestoDto"];
+                "text/json": components["schemas"]["ModificarImpuestoDto"];
+                "application/*+json": components["schemas"]["ModificarImpuestoDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ImpuestoDto"];
+                    "application/json": components["schemas"]["ImpuestoDto"];
+                    "text/json": components["schemas"]["ImpuestoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Impuestos_Cerrar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tramo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CerrarImpuestoDto"];
+                "text/json": components["schemas"]["CerrarImpuestoDto"];
+                "application/*+json": components["schemas"]["CerrarImpuestoDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ImpuestoDto"];
+                    "application/json": components["schemas"]["ImpuestoDto"];
+                    "text/json": components["schemas"]["ImpuestoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     Series_Listar: {
         parameters: {
             query?: {
@@ -3201,6 +4563,680 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    TiposDeCambio_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeTipoCambioDto"];
+                    "application/json": components["schemas"]["PaginaDeTipoCambioDto"];
+                    "text/json": components["schemas"]["PaginaDeTipoCambioDto"];
+                };
+            };
+        };
+    };
+    TiposDeCambio_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearTipoCambioDto"];
+                "text/json": components["schemas"]["CrearTipoCambioDto"];
+                "application/*+json": components["schemas"]["CrearTipoCambioDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TipoCambioDto"];
+                    "application/json": components["schemas"]["TipoCambioDto"];
+                    "text/json": components["schemas"]["TipoCambioDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    TiposDeCambio_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la cotización. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TipoCambioDto"];
+                    "application/json": components["schemas"]["TipoCambioDto"];
+                    "text/json": components["schemas"]["TipoCambioDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    TiposDeCambio_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la cotización. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarTipoCambioDto"];
+                "text/json": components["schemas"]["ModificarTipoCambioDto"];
+                "application/*+json": components["schemas"]["ModificarTipoCambioDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TipoCambioDto"];
+                    "application/json": components["schemas"]["TipoCambioDto"];
+                    "text/json": components["schemas"]["TipoCambioDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ubicaciones_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeUbicacionDto"];
+                    "application/json": components["schemas"]["PaginaDeUbicacionDto"];
+                    "text/json": components["schemas"]["PaginaDeUbicacionDto"];
+                };
+            };
+        };
+    };
+    Ubicaciones_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearUbicacionDto"];
+                "text/json": components["schemas"]["CrearUbicacionDto"];
+                "application/*+json": components["schemas"]["CrearUbicacionDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["UbicacionDto"];
+                    "application/json": components["schemas"]["UbicacionDto"];
+                    "text/json": components["schemas"]["UbicacionDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ubicaciones_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la ubicación. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["UbicacionDto"];
+                    "application/json": components["schemas"]["UbicacionDto"];
+                    "text/json": components["schemas"]["UbicacionDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ubicaciones_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la ubicación. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarUbicacionDto"];
+                "text/json": components["schemas"]["ModificarUbicacionDto"];
+                "application/*+json": components["schemas"]["ModificarUbicacionDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["UbicacionDto"];
+                    "application/json": components["schemas"]["UbicacionDto"];
+                    "text/json": components["schemas"]["UbicacionDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ubicaciones_Bloquear: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la ubicación. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ubicaciones_Desbloquear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la ubicación. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnidadesDeMedida_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeUnidadMedidaDto"];
+                    "application/json": components["schemas"]["PaginaDeUnidadMedidaDto"];
+                    "text/json": components["schemas"]["PaginaDeUnidadMedidaDto"];
+                };
+            };
+        };
+    };
+    UnidadesDeMedida_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearUnidadMedidaDto"];
+                "text/json": components["schemas"]["CrearUnidadMedidaDto"];
+                "application/*+json": components["schemas"]["CrearUnidadMedidaDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["UnidadMedidaDto"];
+                    "application/json": components["schemas"]["UnidadMedidaDto"];
+                    "text/json": components["schemas"]["UnidadMedidaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnidadesDeMedida_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la unidad. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["UnidadMedidaDto"];
+                    "application/json": components["schemas"]["UnidadMedidaDto"];
+                    "text/json": components["schemas"]["UnidadMedidaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnidadesDeMedida_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la unidad. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarUnidadMedidaDto"];
+                "text/json": components["schemas"]["ModificarUnidadMedidaDto"];
+                "application/*+json": components["schemas"]["ModificarUnidadMedidaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["UnidadMedidaDto"];
+                    "application/json": components["schemas"]["UnidadMedidaDto"];
+                    "text/json": components["schemas"]["UnidadMedidaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

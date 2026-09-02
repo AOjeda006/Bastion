@@ -35,8 +35,18 @@ namespace Bastion.Organizacion.Endpoints.Comun;
 [Route(RutaBase)]
 public abstract class ControladorDeOrganizacion : ControllerBase
 {
-    /// <summary>Ruta base del módulo, con la versión desde el primer día (§9).</summary>
-    public const string RutaBase = "api/v1/organizacion/[controller]";
+    /// <summary>Prefijo del módulo, con la versión desde el primer día (§9).</summary>
+    /// <remarks>
+    /// Aparte de <see cref="RutaBase"/> porque hay recursos cuyo nombre no cabe en el segmento que
+    /// genera <c>[controller]</c>. El enrutado del host pasa las URL a minúsculas, así que
+    /// <c>TiposDeCambioController</c> se publicaría como <c>/tiposdecambio</c>, sin separación
+    /// entre palabras. Esos controladores declaran su ruta con este prefijo y el segmento escrito
+    /// —<c>tipos-de-cambio</c>— en vez de heredar la de abajo.
+    /// </remarks>
+    public const string Prefijo = "api/v1/organizacion";
+
+    /// <summary>Ruta base del módulo: el prefijo más el nombre del controlador.</summary>
+    public const string RutaBase = Prefijo + "/[controller]";
 
     /// <summary>Convierte el desenlace de un caso de uso que devuelve valor en respuesta.</summary>
     /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>

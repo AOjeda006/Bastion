@@ -2281,6 +2281,772 @@
         ]
       }
     },
+    "/api/v1/organizacion/conversiones-de-unidades": {
+      "get": {
+        "tags": [
+          "ConversionesDeUnidades"
+        ],
+        "summary": "Devuelve una página de conversiones.",
+        "operationId": "ConversionesDeUnidades_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeConversionUmDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeConversionUmDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeConversionUmDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "ConversionesDeUnidades"
+        ],
+        "summary": "Da de alta una conversión entre dos unidades.",
+        "operationId": "ConversionesDeUnidades_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearConversionUmDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearConversionUmDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearConversionUmDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/conversiones-de-unidades/{id}": {
+      "get": {
+        "tags": [
+          "ConversionesDeUnidades"
+        ],
+        "summary": "Devuelve una conversión.",
+        "operationId": "ConversionesDeUnidades_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la conversión.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "ConversionesDeUnidades"
+        ],
+        "summary": "Corrige el factor de una conversión.",
+        "operationId": "ConversionesDeUnidades_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la conversión.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarConversionUmDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarConversionUmDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarConversionUmDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionUmDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/divisas": {
+      "get": {
+        "tags": [
+          "Divisas"
+        ],
+        "summary": "Devuelve una página de divisas.",
+        "operationId": "Divisas_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeDivisaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeDivisaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeDivisaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Divisas"
+        ],
+        "summary": "Da de alta una divisa.",
+        "operationId": "Divisas_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearDivisaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearDivisaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearDivisaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/divisas/{id}": {
+      "get": {
+        "tags": [
+          "Divisas"
+        ],
+        "summary": "Devuelve una divisa.",
+        "operationId": "Divisas_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la divisa.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Divisas"
+        ],
+        "summary": "Cambia el nombre de una divisa.",
+        "operationId": "Divisas_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la divisa.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarDivisaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarDivisaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarDivisaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/organizacion/ejercicios": {
       "get": {
         "tags": [
@@ -3518,6 +4284,554 @@
         ]
       }
     },
+    "/api/v1/organizacion/impuestos": {
+      "get": {
+        "tags": [
+          "Impuestos"
+        ],
+        "summary": "Devuelve una página de tramos.",
+        "operationId": "Impuestos_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeImpuestoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeImpuestoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeImpuestoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Impuestos"
+        ],
+        "summary": "Abre un tramo de un tipo impositivo.",
+        "description": "Es un `POST` a la colección y no un `PUT` sobre el impuesto: subir el IVA general\ndel 18 % al 21 % no cambia una fila, añade otra. Las facturas de agosto de 2012 siguen\nllevando el 18 % para siempre.",
+        "operationId": "Impuestos_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearImpuestoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearImpuestoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearImpuestoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/impuestos/{id}": {
+      "get": {
+        "tags": [
+          "Impuestos"
+        ],
+        "summary": "Devuelve un tramo.",
+        "operationId": "Impuestos_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tramo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Impuestos"
+        ],
+        "summary": "Cambia el nombre y las cuentas contables de un tramo.",
+        "operationId": "Impuestos_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tramo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarImpuestoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarImpuestoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarImpuestoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/impuestos/{id}/cierre": {
+      "post": {
+        "tags": [
+          "Impuestos"
+        ],
+        "summary": "Pone fecha de fin a un tramo vigente.",
+        "description": "Sub-recurso y no un campo del `PUT`: cerrar un tramo deja al código sin tipo a partir\ndel día siguiente, y eso va detrás de su propio permiso.",
+        "operationId": "Impuestos_Cerrar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tramo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CerrarImpuestoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CerrarImpuestoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CerrarImpuestoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpuestoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/organizacion/series": {
       "get": {
         "tags": [
@@ -4025,6 +5339,1311 @@
           { }
         ]
       }
+    },
+    "/api/v1/organizacion/tipos-de-cambio": {
+      "get": {
+        "tags": [
+          "TiposDeCambio"
+        ],
+        "summary": "Devuelve una página de cotizaciones, de la más reciente a la más antigua.",
+        "operationId": "TiposDeCambio_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTipoCambioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTipoCambioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTipoCambioDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "TiposDeCambio"
+        ],
+        "summary": "Registra la cotización de un día.",
+        "operationId": "TiposDeCambio_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTipoCambioDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTipoCambioDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTipoCambioDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/tipos-de-cambio/{id}": {
+      "get": {
+        "tags": [
+          "TiposDeCambio"
+        ],
+        "summary": "Devuelve una cotización.",
+        "operationId": "TiposDeCambio_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la cotización.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "TiposDeCambio"
+        ],
+        "summary": "Rectifica la tasa de una cotización.",
+        "operationId": "TiposDeCambio_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la cotización.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTipoCambioDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTipoCambioDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTipoCambioDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/ubicaciones": {
+      "get": {
+        "tags": [
+          "Ubicaciones"
+        ],
+        "summary": "Devuelve una página de ubicaciones.",
+        "operationId": "Ubicaciones_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUbicacionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUbicacionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUbicacionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Ubicaciones"
+        ],
+        "summary": "Da de alta una ubicación dentro de un almacén.",
+        "operationId": "Ubicaciones_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUbicacionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUbicacionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUbicacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/ubicaciones/{id}": {
+      "get": {
+        "tags": [
+          "Ubicaciones"
+        ],
+        "summary": "Devuelve una ubicación.",
+        "operationId": "Ubicaciones_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la ubicación.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Ubicaciones"
+        ],
+        "summary": "Cambia las coordenadas y la descripción de una ubicación.",
+        "operationId": "Ubicaciones_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la ubicación.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUbicacionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUbicacionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUbicacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Ubicaciones"
+        ],
+        "summary": "Bloquea una ubicación. No la borra.",
+        "description": "Cada movimiento de existencias apunta a la ubicación de la que salió y a la que entró:\nborrar la fila dejaría ese histórico señalando a algo que no existe.",
+        "operationId": "Ubicaciones_Bloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la ubicación.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/ubicaciones/{id}/desbloqueo": {
+      "post": {
+        "tags": [
+          "Ubicaciones"
+        ],
+        "summary": "Devuelve una ubicación bloqueada a la operativa.",
+        "description": "Sin `If-Match`, igual que el desbloqueo del almacén y por lo mismo: el `ETag` se\nobtiene leyendo, y una ubicación bloqueada no se lee por ningún camino ordinario. Exigir\naquí una versión sería pedir una llave que no se puede conseguir (ADR-0017).",
+        "operationId": "Ubicaciones_Desbloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la ubicación.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/unidades-de-medida": {
+      "get": {
+        "tags": [
+          "UnidadesDeMedida"
+        ],
+        "summary": "Devuelve una página de unidades de medida.",
+        "operationId": "UnidadesDeMedida_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUnidadMedidaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUnidadMedidaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeUnidadMedidaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "UnidadesDeMedida"
+        ],
+        "summary": "Da de alta una unidad de medida.",
+        "operationId": "UnidadesDeMedida_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUnidadMedidaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUnidadMedidaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUnidadMedidaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/unidades-de-medida/{id}": {
+      "get": {
+        "tags": [
+          "UnidadesDeMedida"
+        ],
+        "summary": "Devuelve una unidad de medida.",
+        "operationId": "UnidadesDeMedida_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la unidad.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "UnidadesDeMedida"
+        ],
+        "summary": "Cambia el nombre de una unidad de medida.",
+        "description": "Los decimales no viajan en el cuerpo: bajarlos dejaría inválidas las existencias ya\nregistradas con más precisión, sin tocarlas ni avisar.",
+        "operationId": "UnidadesDeMedida_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la unidad.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUnidadMedidaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUnidadMedidaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarUnidadMedidaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
     }
   },
   "components": {
@@ -4132,6 +6751,20 @@
         },
         "description": "Con qué empresa se sigue operando."
       },
+      "CerrarImpuestoDto": {
+        "required": [
+          "ultimoDia"
+        ],
+        "type": "object",
+        "properties": {
+          "ultimoDia": {
+            "type": "string",
+            "description": "Último día en que el tramo rige, incluido.",
+            "format": "date"
+          }
+        },
+        "description": "Lo que hace falta para cerrar un tramo vigente."
+      },
       "ConcederPertenenciaDto": {
         "required": [
           "empresaId"
@@ -4145,6 +6778,42 @@
           }
         },
         "description": "A qué empresa se da de alta al usuario."
+      },
+      "ConversionUmDto": {
+        "required": [
+          "id",
+          "unidadOrigenId",
+          "unidadDestinoId",
+          "factor"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la conversión.",
+            "format": "uuid"
+          },
+          "unidadOrigenId": {
+            "type": "string",
+            "description": "Unidad desde la que se convierte.",
+            "format": "uuid"
+          },
+          "unidadDestinoId": {
+            "type": "string",
+            "description": "Unidad a la que se convierte.",
+            "format": "uuid"
+          },
+          "factor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Por cuánto hay que multiplicar para pasar de origen a destino.",
+            "format": "double"
+          }
+        },
+        "description": "Una conversión entre dos unidades de medida, tal como sale de la API."
       },
       "CrearAlmacenDto": {
         "required": [
@@ -4183,6 +6852,59 @@
           }
         },
         "description": "Lo que hace falta para dar de alta un almacén."
+      },
+      "CrearConversionUmDto": {
+        "required": [
+          "unidadOrigenId",
+          "unidadDestinoId"
+        ],
+        "type": "object",
+        "properties": {
+          "unidadOrigenId": {
+            "type": "string",
+            "description": "Unidad desde la que se convierte.",
+            "format": "uuid"
+          },
+          "unidadDestinoId": {
+            "type": "string",
+            "description": "Unidad a la que se convierte.",
+            "format": "uuid"
+          },
+          "factor": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Por cuánto hay que multiplicar para pasar de origen a destino.",
+            "format": "double"
+          }
+        },
+        "description": "Lo que hace falta para dar de alta una conversión."
+      },
+      "CrearDivisaDto": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string",
+            "description": "Código ISO 4217 de tres letras. Se normaliza a mayúsculas."
+          },
+          "nombre": {
+            "maxLength": 60,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se la conoce."
+          }
+        },
+        "description": "Lo que hace falta para dar de alta una divisa."
       },
       "CrearEjercicioDto": {
         "required": [
@@ -4252,6 +6974,76 @@
         },
         "description": "Lo que hace falta para dar de alta una empresa."
       },
+      "CrearImpuestoDto": {
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "vigenteDesde"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código del impuesto. Se normaliza a mayúsculas."
+          },
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se le conoce."
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Clase de impuesto, como texto."
+          },
+          "porcentaje": {
+            "maximum": 100,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "El tipo aplicable, en tanto por ciento.",
+            "format": "double"
+          },
+          "vigenteDesde": {
+            "type": "string",
+            "description": "Primer día en que rige, incluido.",
+            "format": "date"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Último día en que rige, incluido. Nulo si el tramo queda abierto.",
+            "format": "date"
+          },
+          "cuentaRepercutido": {
+            "maxLength": 9,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuenta contable del impuesto repercutido, o nula si todavía no se sabe."
+          },
+          "cuentaSoportado": {
+            "maxLength": 9,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuenta contable del impuesto soportado, o nula si todavía no se sabe."
+          }
+        },
+        "description": "Lo que hace falta para abrir un tramo de un tipo impositivo."
+      },
       "CrearRolDto": {
         "required": [
           "codigo",
@@ -4313,6 +7105,133 @@
           }
         },
         "description": "Lo que hace falta para crear una serie."
+      },
+      "CrearTipoCambioDto": {
+        "required": [
+          "divisaOrigenId",
+          "divisaDestinoId",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "divisaOrigenId": {
+            "type": "string",
+            "description": "Divisa de la que se convierte.",
+            "format": "uuid"
+          },
+          "divisaDestinoId": {
+            "type": "string",
+            "description": "Divisa a la que se convierte.",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Día al que corresponde la cotización.",
+            "format": "date"
+          },
+          "tasa": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cuántas unidades de destino cuesta una de origen.",
+            "format": "double"
+          }
+        },
+        "description": "Lo que hace falta para registrar la cotización de un día."
+      },
+      "CrearUbicacionDto": {
+        "required": [
+          "almacenId",
+          "codigo"
+        ],
+        "type": "object",
+        "properties": {
+          "almacenId": {
+            "type": "string",
+            "description": "Almacén en el que está la ubicación.",
+            "format": "uuid"
+          },
+          "codigo": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código de la ubicación. Se normaliza a mayúsculas."
+          },
+          "pasillo": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Pasillo. Opcional: no todos los almacenes se organizan por coordenadas."
+          },
+          "estante": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Estante."
+          },
+          "hueco": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Hueco."
+          },
+          "descripcion": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Descripción libre."
+          }
+        },
+        "description": "Lo que hace falta para dar de alta una ubicación."
+      },
+      "CrearUnidadMedidaDto": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "maxLength": 10,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código de la unidad. Se normaliza a mayúsculas."
+          },
+          "nombre": {
+            "maxLength": 60,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se la conoce."
+          },
+          "decimales": {
+            "maximum": 6,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos decimales admite una cantidad expresada en esta unidad.",
+            "format": "int32"
+          }
+        },
+        "description": "Lo que hace falta para dar de alta una unidad de medida."
       },
       "CrearUsuarioDto": {
         "required": [
@@ -4396,6 +7315,40 @@
           }
         },
         "description": "Una dirección estructurada, en los seis campos que exige R17."
+      },
+      "DivisaDto": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "decimales"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la divisa.",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código ISO 4217 de tres letras, en mayúsculas."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre con el que se la conoce."
+          },
+          "decimales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "A cuántos decimales se redondea un importe en esta divisa.",
+            "format": "int32"
+          }
+        },
+        "description": "Una divisa que esta instalación usa, tal como sale de la API."
       },
       "EjercicioDto": {
         "required": [
@@ -4502,6 +7455,76 @@
         },
         "description": "Una empresa, tal como sale de la API."
       },
+      "ImpuestoDto": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "tipo",
+          "porcentaje",
+          "vigenteDesde",
+          "vigenteHasta",
+          "cuentaRepercutido",
+          "cuentaSoportado"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del tramo.",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del impuesto, en mayúsculas. <b>Se repite entre tramos.</b>"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre con el que se le conoce."
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Clase de impuesto, como texto."
+          },
+          "porcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "El tipo aplicable, en tanto por ciento.",
+            "format": "double"
+          },
+          "vigenteDesde": {
+            "type": "string",
+            "description": "Primer día en que rige, incluido.",
+            "format": "date"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Último día en que rige, incluido, o nulo si sigue vigente.",
+            "format": "date"
+          },
+          "cuentaRepercutido": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuenta contable del IVA repercutido, o nula."
+          },
+          "cuentaSoportado": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuenta contable del IVA soportado, o nula."
+          }
+        },
+        "description": "Un tramo de un tipo impositivo, tal como sale de la API."
+      },
       "IniciarSesionDto": {
         "required": [
           "correo",
@@ -4585,6 +7608,38 @@
         },
         "description": "Lo que se puede cambiar de un almacén."
       },
+      "ModificarConversionUmDto": {
+        "type": "object",
+        "properties": {
+          "factor": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Por cuánto hay que multiplicar para pasar de origen a destino.",
+            "format": "double"
+          }
+        },
+        "description": "Lo que se puede cambiar de una conversión."
+      },
+      "ModificarDivisaDto": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 60,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se la conoce."
+          }
+        },
+        "description": "Lo que se puede cambiar de una divisa."
+      },
       "ModificarEjercicioDto": {
         "required": [
           "fechaDeInicio",
@@ -4637,6 +7692,39 @@
         },
         "description": "Lo que se puede cambiar de una empresa ya dada de alta."
       },
+      "ModificarImpuestoDto": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se le conoce."
+          },
+          "cuentaRepercutido": {
+            "maxLength": 9,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuenta contable del impuesto repercutido, o nula."
+          },
+          "cuentaSoportado": {
+            "maxLength": 9,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuenta contable del impuesto soportado, o nula."
+          }
+        },
+        "description": "Lo que se puede cambiar de un tramo ya abierto."
+      },
       "ModificarRolDto": {
         "required": [
           "nombre"
@@ -4674,6 +7762,80 @@
         },
         "description": "Lo que se puede cambiar de una serie: su formato."
       },
+      "ModificarTipoCambioDto": {
+        "type": "object",
+        "properties": {
+          "tasa": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cuántas unidades de destino cuesta una de origen.",
+            "format": "double"
+          }
+        },
+        "description": "Lo que se puede rectificar de una cotización."
+      },
+      "ModificarUbicacionDto": {
+        "type": "object",
+        "properties": {
+          "pasillo": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Pasillo, o nulo."
+          },
+          "estante": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Estante, o nulo."
+          },
+          "hueco": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Hueco, o nulo."
+          },
+          "descripcion": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Descripción libre, o nula."
+          }
+        },
+        "description": "Lo que se puede cambiar de una ubicación."
+      },
+      "ModificarUnidadMedidaDto": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 60,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se la conoce."
+          }
+        },
+        "description": "Lo que se puede cambiar de una unidad de medida."
+      },
       "ModificarUsuarioDto": {
         "required": [
           "nombre"
@@ -4702,6 +7864,98 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AlmacenDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeConversionUmDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversionUmDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeDivisaDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DivisaDto"
             },
             "description": "Los de esta página, en el orden pedido."
           },
@@ -4827,6 +8081,52 @@
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
+      "PaginaDeImpuestoDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImpuestoDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
       "PaginaDeRolDto": {
         "required": [
           "elementos",
@@ -4886,6 +8186,144 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SerieDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeTipoCambioDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TipoCambioDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeUbicacionDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UbicacionDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeUnidadMedidaDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnidadMedidaDto"
             },
             "description": "Los de esta página, en el orden pedido."
           },
@@ -5187,6 +8625,145 @@
         },
         "description": "Una sesión abierta: el token de acceso y con qué se está operando."
       },
+      "TipoCambioDto": {
+        "required": [
+          "id",
+          "divisaOrigenId",
+          "divisaDestinoId",
+          "fecha",
+          "tasa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la cotización.",
+            "format": "uuid"
+          },
+          "divisaOrigenId": {
+            "type": "string",
+            "description": "Divisa de la que se convierte.",
+            "format": "uuid"
+          },
+          "divisaDestinoId": {
+            "type": "string",
+            "description": "Divisa a la que se convierte.",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Día al que corresponde la cotización.",
+            "format": "date"
+          },
+          "tasa": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cuántas unidades de destino cuesta una de origen.",
+            "format": "double"
+          }
+        },
+        "description": "La cotización de un par de divisas en un día, tal como sale de la API."
+      },
+      "UbicacionDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "almacenId",
+          "codigo",
+          "pasillo",
+          "estante",
+          "hueco",
+          "descripcion"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la ubicación.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "Almacén en el que está.",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código de la ubicación, en mayúsculas y único dentro del almacén."
+          },
+          "pasillo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Pasillo, o nulo si el almacén no se organiza así."
+          },
+          "estante": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Estante, o nulo."
+          },
+          "hueco": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Hueco, o nulo."
+          },
+          "descripcion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Descripción libre, o nula."
+          }
+        },
+        "description": "Una ubicación dentro de un almacén, tal como sale de la API."
+      },
+      "UnidadMedidaDto": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "decimales"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la unidad.",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código de la unidad, en mayúsculas."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre con el que se la conoce."
+          },
+          "decimales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos decimales admite una cantidad expresada en esta unidad.",
+            "format": "int32"
+          }
+        },
+        "description": "Una unidad de medida, tal como sale de la API."
+      },
       "UsuarioDto": {
         "required": [
           "id",
@@ -5250,13 +8827,31 @@
       "name": "Almacenes"
     },
     {
+      "name": "ConversionesDeUnidades"
+    },
+    {
+      "name": "Divisas"
+    },
+    {
       "name": "Ejercicios"
     },
     {
       "name": "Empresas"
     },
     {
+      "name": "Impuestos"
+    },
+    {
       "name": "Series"
+    },
+    {
+      "name": "TiposDeCambio"
+    },
+    {
+      "name": "Ubicaciones"
+    },
+    {
+      "name": "UnidadesDeMedida"
     }
   ]
 }

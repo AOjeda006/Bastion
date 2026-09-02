@@ -1,7 +1,11 @@
 using Bastion.Organizacion.Application.Almacenes;
+using Bastion.Organizacion.Application.Divisas;
 using Bastion.Organizacion.Application.Ejercicios;
 using Bastion.Organizacion.Application.Empresas;
+using Bastion.Organizacion.Application.Impuestos;
 using Bastion.Organizacion.Application.Series;
+using Bastion.Organizacion.Application.Ubicaciones;
+using Bastion.Organizacion.Application.Unidades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -57,6 +61,39 @@ public static class CasosDeUsoDeOrganizacion
         servicios.AddScoped<IModificarAlmacen, ModificarAlmacen>();
         servicios.AddScoped<IBloquearAlmacen, BloquearAlmacen>();
         servicios.AddScoped<IDesbloquearAlmacen, DesbloquearAlmacen>();
+
+        servicios.AddScoped<ICrearImpuesto, CrearImpuesto>();
+        servicios.AddScoped<IObtenerImpuesto, ObtenerImpuesto>();
+        servicios.AddScoped<IListarImpuestos, ListarImpuestos>();
+        servicios.AddScoped<IModificarImpuesto, ModificarImpuesto>();
+        servicios.AddScoped<ICerrarImpuesto, CerrarImpuesto>();
+
+        servicios.AddScoped<ICrearDivisa, CrearDivisa>();
+        servicios.AddScoped<IObtenerDivisa, ObtenerDivisa>();
+        servicios.AddScoped<IListarDivisas, ListarDivisas>();
+        servicios.AddScoped<IModificarDivisa, ModificarDivisa>();
+
+        servicios.AddScoped<ICrearTipoCambio, CrearTipoCambio>();
+        servicios.AddScoped<IObtenerTipoCambio, ObtenerTipoCambio>();
+        servicios.AddScoped<IListarTiposDeCambio, ListarTiposDeCambio>();
+        servicios.AddScoped<IModificarTipoCambio, ModificarTipoCambio>();
+
+        servicios.AddScoped<ICrearUnidadMedida, CrearUnidadMedida>();
+        servicios.AddScoped<IObtenerUnidadMedida, ObtenerUnidadMedida>();
+        servicios.AddScoped<IListarUnidadesDeMedida, ListarUnidadesDeMedida>();
+        servicios.AddScoped<IModificarUnidadMedida, ModificarUnidadMedida>();
+
+        servicios.AddScoped<ICrearConversionUm, CrearConversionUm>();
+        servicios.AddScoped<IObtenerConversionUm, ObtenerConversionUm>();
+        servicios.AddScoped<IListarConversionesUm, ListarConversionesUm>();
+        servicios.AddScoped<IModificarConversionUm, ModificarConversionUm>();
+
+        servicios.AddScoped<ICrearUbicacion, CrearUbicacion>();
+        servicios.AddScoped<IObtenerUbicacion, ObtenerUbicacion>();
+        servicios.AddScoped<IListarUbicaciones, ListarUbicaciones>();
+        servicios.AddScoped<IModificarUbicacion, ModificarUbicacion>();
+        servicios.AddScoped<IBloquearUbicacion, BloquearUbicacion>();
+        servicios.AddScoped<IDesbloquearUbicacion, DesbloquearUbicacion>();
 
         // El reloj como servicio, y no `DateTimeOffset.UtcNow` esparcido por los casos de uso:
         // así un test puede fijar el instante y comprobar la fecha de bloqueo sin esperar a que

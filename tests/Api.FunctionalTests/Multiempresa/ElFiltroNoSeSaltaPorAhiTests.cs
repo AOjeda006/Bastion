@@ -138,12 +138,17 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
     private static readonly Dictionary<string, int> s_aperturasDeBloqueoPermitidas =
         new(StringComparer.Ordinal)
         {
-            // Los tres desbloqueos, y nada más. La razón es de lógica y no de permisos: para levantar
-            // un bloqueo hay que poder leer lo que está bloqueado, y eso -por definición- lo tapa el
-            // filtro. Ninguna consulta ordinaria está en esta lista, y ese es el punto.
+            // Los cuatro desbloqueos, y nada más. La razón es de lógica y no de permisos: para
+            // levantar un bloqueo hay que poder leer lo que está bloqueado, y eso -por definición-
+            // lo tapa el filtro. Ninguna consulta ordinaria está en esta lista, y ese es el punto.
             ["src/Modules/Organizacion/Bastion.Organizacion.Application/Almacenes/DesbloquearAlmacen.cs"] = 1,
             ["src/Modules/Organizacion/Bastion.Organizacion.Application/Empresas/DesbloquearEmpresa.cs"] = 1,
             ["src/Modules/Identidad/Bastion.Identidad.Application/Usuarios/AdministracionDeUsuarios.cs"] = 1,
+
+            // El cuarto, del 0.15. El fichero lleva las dos mitades -bloquear y desbloquear- y la
+            // apertura es UNA: si algún día fueran dos, este recuento se pondría rojo y habría que
+            // mirar cuál de las dos ha empezado a ver lo que no debe.
+            ["src/Modules/Organizacion/Bastion.Organizacion.Application/Ubicaciones/BloquearUbicacion.cs"] = 1,
         };
 
     // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de

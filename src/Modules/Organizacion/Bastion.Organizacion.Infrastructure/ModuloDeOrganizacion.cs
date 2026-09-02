@@ -4,9 +4,13 @@ using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Organizacion.Application;
 using Bastion.Organizacion.Application.Almacenes;
+using Bastion.Organizacion.Application.Divisas;
 using Bastion.Organizacion.Application.Ejercicios;
 using Bastion.Organizacion.Application.Empresas;
+using Bastion.Organizacion.Application.Impuestos;
 using Bastion.Organizacion.Application.Series;
+using Bastion.Organizacion.Application.Ubicaciones;
+using Bastion.Organizacion.Application.Unidades;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
@@ -72,6 +76,12 @@ public static class ModuloDeOrganizacion
         servicios.AddScoped<IRepositorioDeEjercicios, RepositorioDeEjercicios>();
         servicios.AddScoped<IRepositorioDeSeries, RepositorioDeSeries>();
         servicios.AddScoped<IRepositorioDeAlmacenes, RepositorioDeAlmacenes>();
+        servicios.AddScoped<IRepositorioDeImpuestos, RepositorioDeImpuestos>();
+        servicios.AddScoped<IRepositorioDeDivisas, RepositorioDeDivisas>();
+        servicios.AddScoped<IRepositorioDeTiposDeCambio, RepositorioDeTiposDeCambio>();
+        servicios.AddScoped<IRepositorioDeUnidadesDeMedida, RepositorioDeUnidadesDeMedida>();
+        servicios.AddScoped<IRepositorioDeConversiones, RepositorioDeConversiones>();
+        servicios.AddScoped<IRepositorioDeUbicaciones, RepositorioDeUbicaciones>();
 
         // Lo ÚNICO que este módulo expone a los demás, y va bajo el tipo de su `Contracts`. Se
         // registra aquí porque quien lo implementa es esta capa; quien lo consume —Identidad, al
