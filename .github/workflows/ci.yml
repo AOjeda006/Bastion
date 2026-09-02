@@ -52,6 +52,30 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # El mismo cerrojo que `docs/api/openapi.json`, un eslabón más abajo. Que el documento esté al
+      # día no dice nada del cliente: `esquema.ts` se genera de él, se versiona, y entre uno y otro
+      # cabe perfectamente un contrato nuevo con un cliente viejo — que compila, porque el
+      # compilador solo ve el fichero generado, y miente en tiempo de ejecución. Nunca se escribe a
+      # mano un tipo del contrato, y esto es lo que lo comprueba.
+      - name: Contrato — el cliente generado no se ha quedado atrás
+        run: |
+          npm run api
+          # `git status` y no `git diff`: si el fichero generado no estuviera versionado, `git diff`
+          # no vería nada y el paso daría verde sin haber comprobado nada. `status` lo ve igual.
+          ESTADO="$(git status --porcelain -- src/shared/api/esquema.ts)"
+          if [ -z "$ESTADO" ]; then
+            echo "::notice title=Contrato::src/shared/api/esquema.ts está al día con docs/api/openapi.json."
+            exit 0
+          fi
+          # El diff va DENTRO de la anotación: los registros de un job devuelven 403 sin
+          # autenticar, así que un `echo` aquí sería un diagnóstico que no se puede leer desde
+          # fuera. Es la misma razón que en el paso de OpenAPI del backend.
+          DIFERENCIAS="$(git diff -- src/shared/api/esquema.ts | head -80)"
+          [ -n "$DIFERENCIAS" ] || DIFERENCIAS="$ESTADO"
+          ESCAPADO="$(printf '%s' "$DIFERENCIAS" | awk '{ gsub(/%/, "%25"); printf "%s%%0A", $0 }')"
+          echo "::error title=Contrato::El cliente generado se ha quedado atrás. Regenéralo y commitéalo: cd frontend && npm run api%0A%0A${ESCAPADO}"
+          exit 1
+
       - name: Tipos
         run: npm run typecheck
 
@@ -71,9 +95,15 @@ jobs:
       # no en el arranque del usuario seis meses después. Por eso se mide lo que el navegador
       # DESCARGA y se excluyen los `.map`: un sourcemap pesa más que el bundle y no se descarga
       # al arrancar, así que contarlo medía otra cosa distinta de la que dice esta frase.
+      #
+      # 1024 kB era el tope del andamiaje y sobraba cinco veces: un presupuesto que no puede saltar
+      # ocupa el sitio del que sí avisaría. Con el shell terminado —enrutador, caché de servidor,
+      # formularios, validación y cliente generado— lo que el navegador descarga son 490 kB, así
+      # que el tope BAJA a 600: lo medido más un margen corto. El día que suba, sube con su motivo
+      # escrito aquí y no porque nadie lo estuviera mirando.
       - name: Presupuesto de tamaño
         run: |
-          TOPE_KB=1024
+          TOPE_KB=600
           TAMANO_KB=$(du -sk --exclude='*.map' dist | cut -f1)
           echo "Tamaño de dist/: ${TAMANO_KB} kB (tope ${TOPE_KB} kB)"
           echo "### Frontal: ${TAMANO_KB} kB / ${TOPE_KB} kB" >> "$GITHUB_STEP_SUMMARY"
@@ -388,6 +418,25 @@ jobs:
           curl --fail --silent --show-error http://localhost:5173/ -o pagina.html
           grep -q '<div id="root"></div>' pagina.html
           grep -q '<title>Bastion</title>' pagina.html
+
+      # El frontal y la API TIENEN que compartir origen: la cookie de refresco es
+      # `__Host-bastion-refresco`, y ese prefijo solo viaja al origen exacto que la puso. Todo el
+      # diseño del testigo depende de eso, así que se comprueba por el efecto —una petición que
+      # entra por el puerto del frontal y la contesta la API— y no leyendo el `nginx.conf`.
+      - name: El frontal reenvía /api a la API, por el mismo origen
+        run: |
+          RUTA=http://localhost:5173/api/v1/organizacion/empresas
+          CODIGO=$(curl --silent --output /dev/null --write-out '%{http_code}' "$RUTA")
+          echo "GET (por el frontal) /api/v1/organizacion/empresas sin credenciales -> $CODIGO"
+          test "$CODIGO" = "401"
+
+      # Un mapa de fuentes es el código fuente. Se genera, se publica como artefacto de la CI, y
+      # NO se sirve: la imagen los borra y nginx contesta 404 a cualquiera que quede.
+      - name: La imagen del frontal no publica los mapas de fuentes
+        run: |
+          MAPA=$(docker compose -f deploy/docker-compose.yml exec -T web sh -c "find /usr/share/nginx/html -name '*.map' | head -1")
+          echo "Mapas dentro de la imagen: [${MAPA}]"
+          test -z "$MAPA"
 
       # La instrumentación no se comprueba mirando si el paquete está en el csproj, sino
       # preguntándole al visor si le ha llegado algo.

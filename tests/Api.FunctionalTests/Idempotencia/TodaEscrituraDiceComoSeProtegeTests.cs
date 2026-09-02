@@ -96,25 +96,39 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // exigían If-Match y lo perdieron porque R16 dejó su llave fuera del alcance del cliente.
         // El argumento entero está en el ADR-0017; aquí va el resumen, una vez por acción porque
         // cada una tiene su matiz.
+        //
+        // Y cada una NOMBRA LA CONDICIÓN DE LA QUE DEPENDE. Un motivo que solo explica por qué hoy
+        // no hace falta la cabecera envejece en silencio: el día que la condición cambie, la
+        // exención seguirá aquí pareciendo razonada, y nadie sabrá que dejó de serlo. Escrita la
+        // condición, quien la cambie se encuentra con la frase que dice que esto caduca.
         ["EmpresasController.Desbloquear"] =
             "no puede exigir If-Match desde el 0.10: la etiqueta se obtiene leyendo el recurso, y " +
             "una empresa bloqueada contesta 404 a su propio GET. Una precondición cuya llave no " +
             "hay manera de conseguir no es una precondición, es un muro. Y no hace falta: " +
             "mientras está bloqueada ninguna otra escritura llega a la fila —todas la piden al " +
             "repositorio y el filtro no se la da—, así que no hay con quién competir; desbloquear " +
-            "dos veces deja el mismo estado (ADR-0017)",
+            "dos veces deja el mismo estado (ADR-0017). DEPENDE DE que el filtro `Bloqueo` siga " +
+            "tapando la empresa en TODA lectura que llegue por la API: el día que un endpoint " +
+            "abra `ViendoLoBloqueado(...)` y devuelva una empresa bloqueada con su ETag, la llave " +
+            "vuelve a existir, esta exención caduca y hay que volver a exigir If-Match aquí",
 
         ["AlmacenesController.Desbloquear"] =
             "lo mismo, y con la misma consecuencia: el almacén bloqueado no emite ETag porque no " +
             "se deja leer. El testigo de concurrencia SIGUE comprobándose dentro de la petición " +
             "—se lee la fila y se guarda en la misma transacción—; lo que desaparece es la " +
-            "precondición que el cliente cita, no la protección (ADR-0017)",
+            "precondición que el cliente cita, no la protección (ADR-0017). DEPENDE DE lo mismo " +
+            "que la de Empresas —que ninguna lectura de la API entregue un almacén bloqueado— y " +
+            "ADEMÁS de que el bloqueo de la empresa siga tapando a sus almacenes: si un almacén " +
+            "quedara legible mientras su empresa está bloqueada, habría ETag y no habría exención",
 
         ["UsuariosController.Desbloquear"] =
             "igual que las dos de Organización. Y aquí conviene dejar escrito lo que NO es: esto " +
             "levanta el bloqueo del art. 32, no el rechazo temporal por intentos fallidos, que " +
             "vive en `rechazado_hasta`, se levanta solo y nunca sacó al usuario de las consultas " +
-            "(ADR-0017)",
+            "(ADR-0017). DEPENDE DE dos cosas, no de una: de que el usuario bloqueado siga sin " +
+            "poder leerse —sin lectura no hay ETag—, y de que `rechazado_hasta` siga siendo un " +
+            "mecanismo aparte. Si algún día el rechazo temporal se levantara por esta misma " +
+            "acción, la acción dejaría de ser la de un solo efecto que aquí se describe",
     };
 
     private readonly ApiSinDependencias _api = new();
