@@ -2385,6 +2385,74 @@ paginación (**0029**) — este último deja escrito **por qué la regla de `Con
 parecía**, porque es la corrección de una creencia y no solo una decisión.
 
 
+### Tomadas por el agente de desarrollo — ítem 1.2 (2026-09-03)
+
+**1. Los tres puertos contestan un `EstadoDeMaestro`, no un `bool`.** El ADR-0023 dice que una fila
+retirada «no se ofrece para operaciones nuevas, pero **sigue resolviendo** para lo que ya apunta a
+ella». Eso son **dos preguntas**, y un puerto que solo conteste una deja un agujero en cualquiera de
+los dos sentidos: contestando solo «existe» se dan de alta artículos con unidades retiradas;
+contestando solo «se puede usar» el histórico se queda sin poder resolver la unidad de un albarán de
+hace tres años. `EstadoDeMaestro` tiene `NoExiste = 0`, `SeOfreceParaLoNuevo` y
+`SoloResuelveLoViejo`. **Se fija ahora aunque la retirada sea del 1.7**, porque el consumidor es
+Catálogo en el **1.8**: descubrir el estado que falta entonces sería cambiar el contrato con una
+pantalla a medias. El cero es `NoExiste` a propósito — un `default(EstadoDeMaestro)` que llegue por
+un camino que no pasó por el puerto no autoriza nada.
+
+**2. El de impuestos lleva la fecha de devengo como parámetro; los otros dos no.** Un impuesto no
+«existe» o «no existe»: rige **entre dos fechas**. El IVA general al 18 % dejó de regir el 31 de
+agosto de 2012 y sigue teniendo que resolver una rectificativa de 2011. Preguntar «¿vale este
+impuesto?» sin decir para qué fecha no tiene respuesta, así que la fecha va en la firma. Divisa y
+unidad no tienen tramos: hoy contestan dos de los tres valores, y el tercero llega con el 1.7.
+
+**3. Los tres maestros no son bloqueables, y está comprobado, no supuesto.** `Impuesto`, `Divisa` y
+`UnidadMedida` son `: EntidadBase` y nada más — ni `IBloqueable`, ni filtro de empresa. Importaba
+comprobarlo antes de escribir los puertos: si alguno lo fuera, el puerto heredaría el 404 de la R16
+sobre lo bloqueado y el consumidor **no podría distinguir «no existe» de «no puedes verlo»**. Lo
+prueba `Los_tres_puertos_contestan_sin_empresa_activa_y_sin_ver_lo_bloqueado`, que los ejerce con el
+inquilino y el acceso que **lanzan en cuanto alguien les pregunta**: que contesten sin excepción es
+la prueba, y el día que alguien les ponga un filtro el test revienta diciendo cuál de los dos ha
+sido.
+
+**4. La regla de dos fuentes NO es una igualdad, y aplicarla como tal saldría roja el primer día.**
+El descubrimiento por reflexión **infradetecta por diseño**: encuentra un identificador ajeno cuando
+el nombre de la propiedad casa con el del módulo dueño, y hay uno que existe desde el 0.5 y no casa
+— `TokenDeRefresco.EmpresaActivaId`, que apunta a Organización. (No es un agujero: `ConstructorDeSesion`
+y `RenovarSesion` lo comprueban contra el selector que sale de `IConsultaDeEmpresas`. Es la **prueba
+viva** de por qué hace falta la lista declarada.) Así que la regla son **cinco afirmaciones** y
+ninguna es una igualdad:
+
+| # | Afirmación | Qué agujero tapa |
+|---|---|---|
+| 1 | Todo lo **descubierto** está en la lista, con su puerto | El identificador ajeno con nombre que casa y nadie declaró |
+| 2 | Toda **declaración** sigue correspondiendo a una propiedad del dominio | La entrada que sobrevive al borrado de su propiedad y engorda un inventario muerto |
+| 3 | Las **dos fuentes** encuentran algo | La vacuidad: un patrón de descubrimiento roto, o una lista vaciada |
+| 4 | Cada módulo de la lista tiene su **cruce declarado y su puerto**, y el puerto existe y es del dueño | La mitad que convierte la regla en protección y no en inventario |
+| 5 | **Ningún** `Guid …Id` del dominio se queda sin clasificar | El identificador ajeno con **nombre que no casa** y sin declarar |
+
+**La quinta no estaba en el enunciado y es la que decide si el ADR-0024 protege o solo describe.**
+Se comprobó por mutación: un `DivisaPreferidaId` en un agregado de Identidad —cruzado, con nombre que
+no casa, sin declarar— lo caza **exactamente un test**, el quinto; los otros veintidós pasan. Con las
+cuatro afirmaciones del enunciado esa mutación se habría quedado **verde**.
+
+**5. Con dos entradas en la lista y una en el descubrimiento, la regla se ve trabajar hoy.** No hace
+falta esperar a Catálogo. Los sujetos que hay son reales: `Membresia.EmpresaId` (que el
+descubrimiento sí encuentra) y `TokenDeRefresco.EmpresaActivaId` (que no), más siete identificadores
+del **mismo** módulo que la quinta afirmación obliga a clasificar. Una regla cuyo primer sujeto
+llegara en el 1.8 sería una regla que nadie ha visto trabajar.
+
+**6. El texto que lee una persona cuando falla una validación lo escribe el frontal** — la decisión
+que quedaba abierta de la puerta de clarificación, contestada: se mapea el **`type` estable** del
+`ProblemDetails`, y la API **no** negocia idioma por `Accept-Language`. El motivo, las tres cosas que
+obliga a montar y las tres alternativas descartadas están en el **ADR-0030**; los criterios que
+genera están en el **ítem 1.6** del checklist.
+
+> **Una nota de orden sobre esto último.** El criterio se ha escrito en el **1.6** siguiendo la
+> instrucción, pero el **1.5** ya trae `features/terceros/` con alta, NIF validado y un conflicto por
+> identificador bloqueado — o sea, la primera pantalla donde alguien lee un mensaje de validación. Si
+> el artefacto de `type` y el barrido ampliado no existen en el 1.5, ese ítem escribirá textos a mano
+> y el 1.6 los reescribirá. Queda dicho aquí, no movido.
+
+
 ## Estado actual
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
@@ -2401,9 +2469,69 @@ cláusulas «DEPENDE DE»** del ADR-0017 (por eso construye un listado y no un `
 de Terceros quedaría fuera del barrido sin que nada se pusiera rojo — se arregla en el **1.3**, o
 sea antes de que ese controlador exista.
 
-**Una decisión esencial sigue abierta a propósito:** quién escribe el texto que lee una persona
-cuando falla una validación. Se cayó de la tanda al redactarla, así que **no se hereda un default**;
-se pregunta antes de empezar el **1.5**, que es el primer ítem donde muerde.
+**La decisión que quedaba abierta ya está contestada** (2026-09-03, con el 1.2): quién escribe el
+texto que lee una persona cuando falla una validación → **el frontal**, mapeando el `type` estable del
+`ProblemDetails`; la API no negocia idioma por `Accept-Language`. **ADR-0030**, con sus tres criterios
+en el ítem **1.6** y una nota de orden sobre el 1.5 en *Decisiones tomadas → ítem 1.2*.
+
+**Ítem 1.2 cerrado — la cuarta vía tiene quien la pare, y la quinta afirmación es la que la para:**
+`Organizacion.Contracts` publica `IConsultaDeImpuestos`, `IConsultaDeUnidadesDeMedida` e
+`IConsultaDeDivisas`, los tres implementados, registrados y probados contra PostgreSQL; el cruce de
+Identidad a `Organizacion.Contracts` está declarado; y `LosIdentificadoresAjenosTests` afirma las
+cinco cosas de la tabla de *Decisiones tomadas → ítem 1.2*.
+
+**Lo que hay que leer primero de este ítem.** La segunda mutación —un identificador de otro módulo
+con **nombre que no casa** y **sin declarar**— **se queda verde con las cuatro afirmaciones del
+enunciado**. La caza una sola cosa, y es la quinta afirmación, que no estaba: «ningún `Guid …Id` del
+dominio se queda sin clasificar». Sin ella el ADR-0024 **describiría** la cuarta vía sin cerrarla,
+porque el descubrimiento por nombre es exactamente lo que un identificador mal nombrado esquiva. Con
+ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en uno.
+
+El carril de arquitectura pasa de **18 a 23** casos.
+
+### Verificado en local, con la salida real
+
+```
+frontal: api / typecheck / lint / format:check / build   ->  exit 0 los cinco
+         esquema.ts sin cambios tras regenerar el cliente
+         test  ->  9 ficheros, 46 casos
+         presupuesto  ->  arranque 391/450 KiB en 3 ficheros · total servido 532/900 KiB
+
+migraciones:  Auditoria 3, Organizacion 4, Identidad 3, y el modelo coincide con ellas
+openapi:      el documento versionado está al día — 73 operaciones (este ítem no añade
+              endpoints: un puerto de lectura entre módulos se resuelve EN PROCESO, no
+              por HTTP, y que el contrato no se mueva es la comprobación de eso)
+
+backend: dotnet build      ->  0 errores, 0 advertencias
+         dotnet format --verify-no-changes  ->  exit 0
+         carril rápido     ->  118 + 58 + 180 + 23 + 118 = 497 casos, 0 con error
+         carril integración -> NO EJECUTADO AQUÍ: el demonio de Docker sigue parado.
+                               `docker info` -> «failed to connect to the docker API at
+                               npipe:////./pipe/dockerDesktopLinuxEngine». Los 237 casos
+                               (72 + 165) «fallan» en 101 ms y 209 ms con
+                               DockerUnavailableException: «Docker is either not running
+                               or misconfigured — Failed to connect to Docker endpoint at
+                               'npipe://./pipe/docker_engine'». Es la forma que tiene
+                               Testcontainers de decir que no hay dónde levantar PostgreSQL,
+                               no un fallo del código. Los SIETE casos nuevos de
+                               `LosPuertosDeLecturaTests` están entre esos 237 y quien los
+                               verifica es la CI.
+```
+
+### Las ocho mutaciones del 1.2, cada una aplicada, ejecutada y revertida
+
+| # | Mutación | Rojo por | Qué enseña |
+|---|---|---|---|
+| 1 | `DivisaId` en un agregado de Identidad, sin puerto | **Afirmación 1** | La del enunciado: el descubrimiento por nombre encuentra el identificador ajeno y exige su declaración |
+| 2 | `DivisaPreferidaId` en un agregado de Identidad, **nombre que no casa y sin declarar** | **Afirmación 5, y solo ella** | La que decide el ítem: con las cuatro del enunciado **habría salido verde**. Los otros 22 casos pasan |
+| 3 | El arnés: romper el patrón de descubrimiento (`EndsWith("Id")` → `EndsWith("Idx")`) sin tocar el dominio | **Afirmación 3** (y la 2 de rebote) | El arnés no tiene arnés: una regla que deja de mirar se pone **verde**, no roja, salvo que alguien afirme que encuentra algo |
+| 4 | Borrar la declaración de `TokenDeRefresco.EmpresaActivaId` | **Afirmación 5** | El identificador que el descubrimiento **no** ve queda igualmente cubierto |
+| 5 | Dejar una declaración con la clave de una propiedad que no existe | **Afirmaciones 2 y 5** | La lista no puede engordar con inventario muerto |
+| 6 | Declarar un cruce con el campo `Puerto` vacío | **Afirmación 1** | Declarar no basta: hay que decir **qué** lo valida |
+| 7 | Apuntar el `Puerto` a `…Sesiones.IPuertoInventado` | **Afirmación 4** | Un puerto tecleado que no existe no es un puerto: «no está entre las puertas públicas declaradas» |
+| 8 | Cambiar el cruce declarado por otro que no cubre el identificador | **Afirmación 4** | El permiso de cruzar y el identificador que lo necesita son **el mismo** hecho, y se comparan |
+
+Y el control después de la batería, con el árbol restaurado: **23 de 23 en verde**.
 
 **Ítem 1.1 cerrado — el presupuesto ya mide lo que dice medir:**
 [run 33779064545](https://github.com/AOjeda006/Bastion/actions/runs/33779064545) sobre `c3e0119`,
@@ -4346,12 +4474,18 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   estática una ruta diferida sube el arranque de **391 a 507 KiB** (rojo) mientras el `du` de antes
   **baja de 554 a 546 kB** — o sea que la métrica vieja se ponía **más verde** ante un empeoramiento
   real.
-- [ ] **1.2 · Los puertos de lectura de Organización, y la cuarta vía en rojo** — criterio de
+- [x] **1.2 · Los puertos de lectura de Organización, y la cuarta vía en rojo** — criterio de
   aceptación: `IConsultaDeImpuestos`, `IConsultaDeUnidadesDeMedida` e `IConsultaDeDivisas` en
   `Organizacion.Contracts`, con lo mínimo que cada consumidor necesita; el cruce declarado en
   `s_crucesDeclarados` **en el mismo commit** que su primer consumidor; y la **regla de dos
   fuentes** —lista declarada más descubrimiento por reflexión, comparadas enteras y en los dos
   sentidos— vista en **rojo** con su mutación: un `DivisaId` en un agregado sin puerto.
+  Los tres puertos contestan un `EstadoDeMaestro` de **tres valores** —no un `bool`—, porque el
+  ADR-0023 obliga a distinguir «existe» de «vale para un alta nueva». La regla vive en
+  `LosIdentificadoresAjenosTests` y **no es una igualdad**: son **cinco** afirmaciones, y la quinta
+  no estaba en el enunciado — se añadió porque es la única que caza un identificador ajeno con
+  **nombre que no casa y sin declarar**. Ocho mutaciones, ocho rojos, cada una con la afirmación que
+  la cazó, en *Estado actual*.
 - [ ] **1.3 · El contrato de listado, y los tipos de paginación consolidados** — criterio de
   aceptación: filtro y orden en servidor con tope; la búsqueda por **cuerpo** con cursor opaco, de
   modo que **ni la URL ni el enlace a la página siguiente** lleven el criterio, con su exención de
@@ -4373,6 +4507,15 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   IBAN validado, `CondicionPago` con el tope de **60 días de la Ley 3/2004 contado desde la
   entrega**, y `LimiteCredito` **solo como importe**. Fuera, por la raya de la P6: `MandatoSEPA`
   (fase 6) y el riesgo vivo (fase 4).
+  Y, por el **ADR-0030**, lo que hace falta para que el frontal escriba el texto de una validación
+  desde el `type` del `ProblemDetails`: (a) el conjunto de `type` emitibles llega al frontal en un
+  **artefacto generado y versionado** con el mismo trato que `openapi.json` —se genera, se versiona,
+  la CI lo vuelve a generar y compara—; (b) el barrido de diccionarios enteros
+  (`ElCambioDeIdioma.test.tsx`) pasa a comparar **también** los `type` contra sus entradas, de modo
+  que un `type` sin texto sea rojo el día que se escribe y no el día que alguien ve una clave sin
+  traducir; y (c) en ejecución, un `type` desconocido cae al mensaje genérico **con el identificador
+  de traza** que el `ProblemDetails` ya lleva. Los errores **por campo** no entran: ahí el servidor
+  nombra el campo y el frontal pone su etiqueta, y eso ya estaba resuelto.
 - [ ] **1.7 · La retirada y las dos conversiones** — criterio de aceptación: el **ADR-0023
   implementado entero** —retirada en los cuatro maestros de instalación, tolerancia de la conversión
   inversa, resolutor de conversiones encadenadas con **error con nombre**—, y **antes** de que
