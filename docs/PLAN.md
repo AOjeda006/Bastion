@@ -4425,6 +4425,18 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **CERRADO (2026-09-03) · un test del frontal miraba `document.title` sin esperar al efecto que lo
+  pone.** Saltó donde peor se interpreta: en la CI, sobre un commit que **solo tocaba un `.md`**
+  —`ElCambioDeIdioma.test.tsx:41`, «expected `''` to be `'Almacenes · Bastion'`»—, después de pasar
+  en todas las ejecuciones anteriores. No era una regresión: el `<h1>` y el `<title>` salen del
+  mismo componente pero **por caminos distintos**, el primero en el pintado y el segundo en un
+  `useEffect`, así que `findByRole` puede resolver **antes** de que el efecto haya corrido. Se
+  reprodujo en local lanzando seis copias del fichero a la vez —falló una, con el mismo mensaje—,
+  que es la contención que tiene el *runner* cuando va cargado. Arreglado esperando, como ya hacían
+  los otros dos sitios que miran el título; el `lang` de la línea de al lado se queda **sin**
+  esperar a propósito, porque lo pone `crearI18n` antes del `render`. **La regla que deja:** una
+  aserción sobre algo que pone un efecto se espera; una sobre algo que pasó antes de montar, no.
+
 - **ABIERTO (2026-09-03) · el bloqueo del art. 32 no tiene fecha de vencimiento ni proceso de
   destrucción.** `proteccion-datos.md` entra con la fase 1 y es tajante: bloquear es «identificar y
   reservar» **solo durante el plazo de prescripción**, y pasado ese plazo **hay que destruir**. Un

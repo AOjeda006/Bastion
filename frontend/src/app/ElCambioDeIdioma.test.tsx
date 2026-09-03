@@ -37,8 +37,21 @@ describe('El cambio de idioma', () => {
     montarAplicacion('/almacenes', 'es');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Almacenes' })).toBeInTheDocument();
+
+    // El `lang` sí se mira a pelo, y no por descuido: lo pone `crearI18n`, que corre ANTES del
+    // `render`. Cuando el `<h1>` existe, el `lang` lleva puesto desde antes de que hubiera árbol.
     expect(document.documentElement.lang).toBe('es');
-    expect(document.title).toBe('Almacenes · Bastion');
+
+    // El `<title>` no. Lo pone un efecto de `Disposicion`, y un efecto se ejecuta DESPUÉS del
+    // pintado — o sea, después del instante en que `findByRole` ha podido resolver. Mirarlo sin
+    // esperar es una carrera que se gana casi siempre: pasó en todas las ejecuciones de esta suite
+    // hasta que la perdió en la CI, sobre un commit que solo tocaba un `.md`. Se reprodujo aquí
+    // lanzando seis copias de este fichero a la vez —falló una, con este mismo mensaje—, que es lo
+    // que hace la CI cuando el runner va cargado. Los otros dos sitios que miran el título ya
+    // esperaban así; este era el único que no.
+    await waitFor(() => {
+      expect(document.title).toBe('Almacenes · Bastion');
+    });
   });
 
   it('al elegir English cambia la pantalla ENTERA, sin recargar', async () => {
