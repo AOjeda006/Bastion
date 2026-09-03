@@ -156,7 +156,25 @@ describe('El barrido de las fronteras', () => {
   });
 
   it('ESLint prohíbe de verdad cada par, escrito con alias y escrito con camino relativo', async () => {
-    const eslint = new ESLint({ cwd: RAIZ });
+    // `disallowAutomaticSingleRunInference` NO es un adorno: sin él este barrido entero es
+    // VACUO en la CI, y en verde.
+    //
+    // `typescript-eslint` mira `process.env.CI` y, si vale `'true'`, deduce «ejecución única» y
+    // se ahorra el programa de TypeScript en modo vigilancia. El ahorro es real y para
+    // `npm run lint` es lo correcto. Pero sin ese programa no hay dónde meter un contenido en
+    // memoria: `lintText` acaba analizando **el fichero que hay en disco**, no el texto que se le
+    // pasa. Y el fichero de disco está limpio, así que ESLint no marca nada — ni el import
+    // prohibido, ni un `any` descarado.
+    //
+    // Se descubrió porque la CI se puso roja donde la máquina de desarrollo estaba verde, y se
+    // reprodujo en local con `CI=true`. La bandera se pone AQUÍ y no en el entorno del proceso:
+    // solo la necesita este motor, que es el único que lintea texto inventado.
+    const eslint = new ESLint({
+      cwd: RAIZ,
+      overrideConfig: {
+        languageOptions: { parserOptions: { disallowAutomaticSingleRunInference: true } },
+      },
+    });
 
     /**
      * Lo que ESLint dice de un texto, en dos mitades: los avisos de la frontera y TODO lo demás.
