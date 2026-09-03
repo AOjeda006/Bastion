@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Identidad.Contracts.Roles;
 using Bastion.Identidad.Contracts.Sesiones;
 using Bastion.Identidad.Contracts.Usuarios;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Empresas;
 using Shouldly;
-
-// Los dos módulos tienen su propio PaginaDe<T> porque Contracts no referencia nada, ni siquiera
-// los bloques comunes (§4). Aquí, que ve a los dos, hay que decir de cuál se habla.
-using PaginaDeRoles = Bastion.Identidad.Contracts.Comun.PaginaDe<Bastion.Identidad.Contracts.Roles.RolDto>;
 
 namespace Bastion.Api.IntegrationTests.Api;
 
@@ -129,8 +126,8 @@ public static class Escenario
 
     private static async Task<Guid> RolDeAdministracionAsync(HttpClient cliente)
     {
-        PaginaDeRoles? roles = await cliente
-            .GetFromJsonAsync<PaginaDeRoles>($"{RutaDeRoles}?page=1&size=200")
+        PaginaDe<RolDto>? roles = await cliente
+            .GetFromJsonAsync<PaginaDe<RolDto>>($"{RutaDeRoles}?page=1&size=200")
             .ConfigureAwait(false);
 
         roles.ShouldNotBeNull();

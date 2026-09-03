@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -17,12 +19,8 @@ public interface IObtenerUnidadMedida
 }
 
 /// <summary>Devuelve una página de unidades de medida.</summary>
-public interface IListarUnidadesDeMedida
+public interface IListarUnidadesDeMedida : IListado<UnidadMedidaDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<UnidadMedidaDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve una conversión por su identificador.</summary>
@@ -35,12 +33,8 @@ public interface IObtenerConversionUm
 }
 
 /// <summary>Devuelve una página de conversiones.</summary>
-public interface IListarConversionesUm
+public interface IListarConversionesUm : IListado<ConversionUmDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<ConversionUmDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IObtenerUnidadMedida"/>
@@ -64,6 +58,8 @@ internal sealed class ObtenerUnidadMedida(
 internal sealed class ListarUnidadesDeMedida(IRepositorioDeUnidadesDeMedida unidades)
     : IListarUnidadesDeMedida
 {
+    public IReadOnlySet<string> CamposOrdenables => unidades.CamposOrdenables;
+
     public async Task<PaginaDe<UnidadMedidaDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)
@@ -102,6 +98,8 @@ internal sealed class ObtenerConversionUm(
 internal sealed class ListarConversionesUm(IRepositorioDeConversiones conversiones)
     : IListarConversionesUm
 {
+    public IReadOnlySet<string> CamposOrdenables => conversiones.CamposOrdenables;
+
     public async Task<PaginaDe<ConversionUmDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)

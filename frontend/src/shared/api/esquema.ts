@@ -1784,6 +1784,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -2145,6 +2147,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -2720,6 +2724,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -3007,6 +3013,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -3206,6 +3214,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -3394,6 +3404,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -3772,6 +3784,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -4059,6 +4073,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -4335,6 +4351,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -4601,6 +4619,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -4800,6 +4820,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -5087,6 +5109,8 @@ export interface operations {
             query?: {
                 page?: number | string;
                 size?: number | string;
+                sort?: string;
+                q?: string;
             };
             header?: never;
             path?: never;

@@ -1,3 +1,6 @@
+using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Organizacion.Application.Ubicaciones;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Ubicaciones;
@@ -23,14 +26,33 @@ internal sealed class RepositorioDeUbicaciones(OrganizacionDbContext contexto)
             ubicacion => ubicacion.AlmacenId == almacenId && ubicacion.Codigo == codigo,
             cancelacion);
 
+    // Por omisión, agrupadas por almacén: una ubicación se lee dentro de su almacén, y una lista
+    // que los entremezcla obliga a leerla entera para saber qué hay en uno.
+    private static readonly CriteriosDe<Ubicacion> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["almacen"] = (Expression<Func<Ubicacion, Guid>>)(ubicacion => ubicacion.AlmacenId),
+            ["codigo"] = (Expression<Func<Ubicacion, string>>)(ubicacion => ubicacion.Codigo),
+        },
+        PorOmision = "almacen",
+        Desempate = ordenada => ordenada
+            .ThenBy(ubicacion => ubicacion.Codigo)
+            .ThenBy(ubicacion => ubicacion.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return ubicacion => EF.Functions.ILike(ubicacion.Codigo, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     public Task<PaginaDe<Ubicacion>> ListarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion) =>
-        contexto.Ubicaciones
-            .OrderBy(ubicacion => ubicacion.AlmacenId)
-            .ThenBy(ubicacion => ubicacion.Codigo)
-            .ThenBy(ubicacion => ubicacion.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        contexto.Ubicaciones.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(Ubicacion ubicacion) => contexto.Ubicaciones.Add(ubicacion);
 }

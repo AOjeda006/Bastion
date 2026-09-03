@@ -11,14 +11,21 @@
       "bastion.buildingblocks.application": {
         "type": "Project",
         "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
           "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
         }
+      },
+      "bastion.buildingblocks.contracts": {
+        "type": "Project"
       },
       "bastion.buildingblocks.domain": {
         "type": "Project"
       },
       "bastion.identidad.contracts": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )"
+        }
       },
       "bastion.identidad.domain": {
         "type": "Project",
@@ -29,6 +36,7 @@
       "bastion.organizacion.contracts": {
         "type": "Project",
         "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
           "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
         }
       }

@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Almacenes;
 
 namespace Bastion.Organizacion.Application.Almacenes;
 
 /// <summary>Acceso a los almacenes guardados.</summary>
-public interface IRepositorioDeAlmacenes
+public interface IRepositorioDeAlmacenes : IOrdenaPor
 {
     /// <summary>El almacén con ese identificador, o nulo si no hay ninguno.</summary>
     Task<Almacen?> ObtenerAsync(Guid id, CancellationToken cancelacion);

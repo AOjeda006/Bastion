@@ -10,6 +10,12 @@
 
   <ItemGroup>
     <ProjectReference Include="../Domain/Bastion.BuildingBlocks.Domain.csproj" />
+    <!--
+      Y los contratos comunes desde el 1.3: el puerto de un listado habla de `Paginacion` y de
+      `PaginaDe`, que son contrato publicado y no dominio. `Contracts` no referencia nada, asi
+      que esta linea no arrastra nada detras.
+    -->
+    <ProjectReference Include="../Contracts/Bastion.BuildingBlocks.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

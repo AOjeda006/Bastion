@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Impuestos;
 
 namespace Bastion.Organizacion.Application.Impuestos;
 
 /// <summary>Acceso a los tramos de tipo impositivo guardados.</summary>
-public interface IRepositorioDeImpuestos
+public interface IRepositorioDeImpuestos : IOrdenaPor
 {
     /// <summary>El tramo con ese identificador, o nulo si no hay ninguno.</summary>
     Task<Impuesto?> ObtenerAsync(Guid id, CancellationToken cancelacion);

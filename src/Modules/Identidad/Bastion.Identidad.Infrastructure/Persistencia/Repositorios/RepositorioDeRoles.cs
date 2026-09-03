@@ -1,5 +1,7 @@
+using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Identidad.Application.Roles;
-using Bastion.Identidad.Contracts.Comun;
 using Bastion.Identidad.Domain.Roles;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,11 +24,28 @@ internal sealed class RepositorioDeRoles(IdentidadDbContext contexto) : IReposit
     public Task<bool> ExisteAsync(Guid id, CancellationToken cancelacion) =>
         contexto.Roles.AnyAsync(rol => rol.Id == id, cancelacion);
 
+    private static readonly CriteriosDe<Rol> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["codigo"] = (Expression<Func<Rol, string>>)(rol => rol.Codigo),
+            ["nombre"] = (Expression<Func<Rol, string>>)(rol => rol.Nombre),
+        },
+        PorOmision = "codigo",
+        Desempate = ordenada => ordenada.ThenBy(rol => rol.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return rol => EF.Functions.ILike(rol.Codigo, patron, Filtros.Escape)
+                || EF.Functions.ILike(rol.Nombre, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     public Task<PaginaDe<Rol>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
-        ConPermisos
-            .OrderBy(rol => rol.Codigo)
-            .ThenBy(rol => rol.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        ConPermisos.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     // La unión de los permisos de varios roles, resuelta en la base y no en memoria: es la
     // consulta del camino del login, y traerse los roles enteros para unirlos aquí sería traerse

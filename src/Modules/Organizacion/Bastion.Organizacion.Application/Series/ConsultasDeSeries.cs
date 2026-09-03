@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -17,12 +19,8 @@ public interface IObtenerSerie
 }
 
 /// <summary>Devuelve una página de series.</summary>
-public interface IListarSeries
+public interface IListarSeries : IListado<SerieDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<SerieDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IObtenerSerie"/>
@@ -43,6 +41,8 @@ internal sealed class ObtenerSerie(
 /// <inheritdoc cref="IListarSeries"/>
 internal sealed class ListarSeries(IRepositorioDeSeries series) : IListarSeries
 {
+    public IReadOnlySet<string> CamposOrdenables => series.CamposOrdenables;
+
     public async Task<PaginaDe<SerieDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)

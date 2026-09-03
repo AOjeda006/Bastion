@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -17,12 +19,8 @@ public interface IObtenerDivisa
 }
 
 /// <summary>Devuelve una página de divisas.</summary>
-public interface IListarDivisas
+public interface IListarDivisas : IListado<DivisaDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<DivisaDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve una cotización por su identificador.</summary>
@@ -35,12 +33,8 @@ public interface IObtenerTipoCambio
 }
 
 /// <summary>Devuelve una página de cotizaciones.</summary>
-public interface IListarTiposDeCambio
+public interface IListarTiposDeCambio : IListado<TipoCambioDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<TipoCambioDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IObtenerDivisa"/>
@@ -63,6 +57,8 @@ internal sealed class ObtenerDivisa(
 /// <inheritdoc cref="IListarDivisas"/>
 internal sealed class ListarDivisas(IRepositorioDeDivisas divisas) : IListarDivisas
 {
+    public IReadOnlySet<string> CamposOrdenables => divisas.CamposOrdenables;
+
     public async Task<PaginaDe<DivisaDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)
@@ -98,6 +94,8 @@ internal sealed class ObtenerTipoCambio(
 /// <inheritdoc cref="IListarTiposDeCambio"/>
 internal sealed class ListarTiposDeCambio(IRepositorioDeTiposDeCambio cambios) : IListarTiposDeCambio
 {
+    public IReadOnlySet<string> CamposOrdenables => cambios.CamposOrdenables;
+
     public async Task<PaginaDe<TipoCambioDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)

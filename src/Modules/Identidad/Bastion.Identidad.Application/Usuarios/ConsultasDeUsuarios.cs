@@ -1,9 +1,10 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Comun;
 using Bastion.Identidad.Application.Roles;
-using Bastion.Identidad.Contracts.Comun;
 using Bastion.Identidad.Contracts.Usuarios;
 using Bastion.Identidad.Domain.Roles;
 using Bastion.Identidad.Domain.Usuarios;
@@ -20,12 +21,8 @@ public interface IObtenerUsuario
 }
 
 /// <summary>Devuelve una página de usuarios de la empresa activa.</summary>
-public interface IListarUsuarios
+public interface IListarUsuarios : IListado<UsuarioDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<UsuarioDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <summary>Devuelve las pertenencias de un usuario, con los roles de cada una.</summary>
@@ -62,6 +59,8 @@ internal sealed class ListarUsuarios(
     IUsuarioActual usuarioActual,
     IRepositorioDeUsuarios usuarios) : IListarUsuarios
 {
+    public IReadOnlySet<string> CamposOrdenables => usuarios.CamposOrdenables;
+
     public async Task<PaginaDe<UsuarioDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)

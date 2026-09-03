@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Divisas;
 
 namespace Bastion.Organizacion.Application.Divisas;
 
 /// <summary>Acceso a las divisas guardadas.</summary>
-public interface IRepositorioDeDivisas
+public interface IRepositorioDeDivisas : IOrdenaPor
 {
     /// <summary>La divisa con ese identificador, o nula si no hay ninguna.</summary>
     Task<Divisa?> ObtenerAsync(Guid id, CancellationToken cancelacion);
@@ -31,7 +33,7 @@ public interface IRepositorioDeDivisas
 }
 
 /// <summary>Acceso a las cotizaciones guardadas.</summary>
-public interface IRepositorioDeTiposDeCambio
+public interface IRepositorioDeTiposDeCambio : IOrdenaPor
 {
     /// <summary>La cotización con ese identificador, o nula si no hay ninguna.</summary>
     Task<TipoCambio?> ObtenerAsync(Guid id, CancellationToken cancelacion);

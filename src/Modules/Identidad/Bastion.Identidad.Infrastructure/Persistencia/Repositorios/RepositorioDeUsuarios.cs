@@ -1,6 +1,8 @@
+using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Identificacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Identidad.Application.Usuarios;
-using Bastion.Identidad.Contracts.Comun;
 using Bastion.Identidad.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,11 +49,31 @@ internal sealed class RepositorioDeUsuarios(IdentidadDbContext contexto) : IRepo
                 cancelacion)
             .ConfigureAwait(false);
 
+    // Ordenar POR correo no pone ningún correo en la URL —`?sort=correo` solo nombra el campo—,
+    // pero FILTRAR por correo sí: `?q=ana@ejemplo.es` acaba en el historial del navegador, en el
+    // enlace que se copia y en el registro de acceso del servidor de delante. Por eso el filtro
+    // de este listado mira el nombre y nada más, y buscar por correo va por cuerpo (ADR-0025).
+    private static readonly CriteriosDe<Usuario> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["correo"] = (Expression<Func<Usuario, Correo>>)(usuario => usuario.Correo),
+            ["nombre"] = (Expression<Func<Usuario, string>>)(usuario => usuario.Nombre),
+        },
+        PorOmision = "correo",
+        Desempate = ordenada => ordenada.ThenBy(usuario => usuario.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return usuario => EF.Functions.ILike(usuario.Nombre, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     public Task<PaginaDe<Usuario>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
-        contexto.Usuarios
-            .OrderBy(usuario => usuario.Correo)
-            .ThenBy(usuario => usuario.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        contexto.Usuarios.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     // El listado se acota a la empresa activa aquí, dentro de la consulta, y no filtrando en
     // memoria lo que ya se ha traído: filtrar después significa que la página 1 puede venir vacía
@@ -62,9 +84,7 @@ internal sealed class RepositorioDeUsuarios(IdentidadDbContext contexto) : IRepo
         CancellationToken cancelacion) =>
         contexto.Usuarios
             .Where(usuario => usuario.Membresias.Any(membresia => membresia.EmpresaId == empresaId))
-            .OrderBy(usuario => usuario.Correo)
-            .ThenBy(usuario => usuario.Id)
-            .PaginarAsync(paginacion, cancelacion);
+            .PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(Usuario usuario) => contexto.Usuarios.Add(usuario);
 

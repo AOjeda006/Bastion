@@ -1,5 +1,6 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Identificacion;
-using Bastion.Identidad.Contracts.Comun;
 using Bastion.Identidad.Domain.Usuarios;
 
 namespace Bastion.Identidad.Application.Usuarios;
@@ -9,7 +10,7 @@ namespace Bastion.Identidad.Application.Usuarios;
 /// El puerto lo declara la capa que lo CONSUME y lo implementa Infrastructure. Ninguno de sus
 /// métodos confirma nada: eso lo decide el caso de uso a través de <c>IUnidadTrabajo</c>.
 /// </remarks>
-public interface IRepositorioDeUsuarios
+public interface IRepositorioDeUsuarios : IOrdenaPor
 {
     /// <summary>El usuario con ese identificador, con sus pertenencias, o nulo.</summary>
     /// <param name="id">Identificador del usuario.</param>

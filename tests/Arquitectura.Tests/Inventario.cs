@@ -128,13 +128,22 @@ internal static class Inventario
 
     /// <summary>
     /// El bloque común, que no es un módulo pero sí tiene capas y sí las tiene que respetar. Sus
-    /// tres ensamblados están nombrados a mano porque son tres y no van a crecer con las fases; y
-    /// aun así se comparan, porque una regla que se aplique a dos de los tres no lo diría.
+    /// ensamblados están nombrados a mano, y se comparan enteros: una regla que se aplique a tres
+    /// de los cuatro no lo diría.
     /// </summary>
+    /// <remarks>
+    /// Hasta el ítem 1.3 esta lista tenía tres líneas y decía que «son tres y no van a crecer con
+    /// las fases». Creció en el 1.3, con <c>BuildingBlocks.Contracts</c>. Aquella frase era una
+    /// PREDICCIÓN escrita con la forma de una regla, y el mecanismo hizo lo suyo: el ensamblado
+    /// nuevo puso el test rojo el mismo día y obligó a escribir su línea. Lo que se corrige aquí
+    /// no es la lista —esa se corrige sola— sino la frase, que prometía un futuro que no le
+    /// tocaba prometer.
+    /// </remarks>
     internal static readonly IReadOnlySet<string> ComunesConTipos = new SortedSet<string>(
         StringComparer.Ordinal)
     {
         "BuildingBlocks.Application",
+        "BuildingBlocks.Contracts",
         "BuildingBlocks.Domain",
         "BuildingBlocks.Infrastructure",
     };
@@ -217,6 +226,12 @@ internal static class Inventario
         // comprueba lo que Identidad USA de Organización; aquí, lo que tiene PERMISO para usar.
         "Identidad.Application -> Organizacion.Contracts",
 
+        // Los dos `Contracts` de módulo ven los contratos comunes desde el 1.3, y NO ven el
+        // dominio de su propio módulo. La frontera del §4 prohíbe lo segundo, no lo primero:
+        // `BuildingBlocks.Contracts` no es el interior de nadie, no referencia nada, y todos los
+        // módulos lo alcanzan ya por sus otras capas. El motivo entero, en el ADR-0029.
+        "Identidad.Contracts -> BuildingBlocks.Contracts",
+
         "Identidad.Domain -> BuildingBlocks.Domain",
         "Identidad.Endpoints -> BuildingBlocks.Infrastructure",
         "Identidad.Endpoints -> Identidad.Application",
@@ -226,6 +241,7 @@ internal static class Inventario
         "Organizacion.Application -> BuildingBlocks.Application",
         "Organizacion.Application -> Organizacion.Contracts",
         "Organizacion.Application -> Organizacion.Domain",
+        "Organizacion.Contracts -> BuildingBlocks.Contracts",
         "Organizacion.Contracts -> BuildingBlocks.Domain",
         "Organizacion.Domain -> BuildingBlocks.Domain",
         "Organizacion.Endpoints -> BuildingBlocks.Infrastructure",

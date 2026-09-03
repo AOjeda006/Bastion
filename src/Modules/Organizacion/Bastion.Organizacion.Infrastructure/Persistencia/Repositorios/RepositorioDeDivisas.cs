@@ -1,3 +1,6 @@
+using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Organizacion.Application.Divisas;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Divisas;
@@ -30,11 +33,28 @@ internal sealed class RepositorioDeDivisas(OrganizacionDbContext contexto) : IRe
         return encontradas == ids.Distinct().Count();
     }
 
+    private static readonly CriteriosDe<Divisa> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["codigo"] = (Expression<Func<Divisa, string>>)(divisa => divisa.Codigo),
+            ["nombre"] = (Expression<Func<Divisa, string>>)(divisa => divisa.Nombre),
+        },
+        PorOmision = "codigo",
+        Desempate = ordenada => ordenada.ThenBy(divisa => divisa.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return divisa => EF.Functions.ILike(divisa.Codigo, patron, Filtros.Escape)
+                || EF.Functions.ILike(divisa.Nombre, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     public Task<PaginaDe<Divisa>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
-        contexto.Divisas
-            .OrderBy(divisa => divisa.Codigo)
-            .ThenBy(divisa => divisa.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        contexto.Divisas.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(Divisa divisa) => contexto.Divisas.Add(divisa);
 }
@@ -57,14 +77,27 @@ internal sealed class RepositorioDeTiposDeCambio(OrganizacionDbContext contexto)
                 && cambio.Fecha == fecha,
             cancelacion);
 
+    // Sin filtro de texto: una cotización no tiene ningún campo de texto que buscar. Declararlo
+    // vacío diría que `?q=` funciona y no filtra nada, que es peor que decir que no hay.
+    private static readonly CriteriosDe<TipoCambio> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["fecha"] = (Expression<Func<TipoCambio, DateOnly>>)(cambio => cambio.Fecha),
+            ["tasa"] = (Expression<Func<TipoCambio, decimal>>)(cambio => cambio.Tasa),
+        },
+        PorOmision = "fecha",
+        // La más reciente primero: quien mira cotizaciones busca la de hoy, no la del año pasado.
+        DescendentePorOmision = true,
+        Desempate = ordenada => ordenada.ThenBy(cambio => cambio.Id),
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     public Task<PaginaDe<TipoCambio>> ListarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion) =>
-        // La más reciente primero: quien mira cotizaciones busca la de hoy, no la del año pasado.
-        contexto.TiposDeCambio
-            .OrderByDescending(cambio => cambio.Fecha)
-            .ThenBy(cambio => cambio.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        contexto.TiposDeCambio.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(TipoCambio tipoCambio) => contexto.TiposDeCambio.Add(tipoCambio);
 }

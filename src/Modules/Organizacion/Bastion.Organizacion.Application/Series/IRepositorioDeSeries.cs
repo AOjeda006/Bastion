@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Series;
 
 namespace Bastion.Organizacion.Application.Series;
 
 /// <summary>Acceso a las series de numeración guardadas.</summary>
-public interface IRepositorioDeSeries
+public interface IRepositorioDeSeries : IOrdenaPor
 {
     /// <summary>La serie con ese identificador, o nulo si no hay ninguna.</summary>
     Task<Serie?> ObtenerAsync(Guid id, CancellationToken cancelacion);

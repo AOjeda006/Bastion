@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -17,12 +19,8 @@ public interface IObtenerUbicacion
 }
 
 /// <summary>Devuelve una página de ubicaciones.</summary>
-public interface IListarUbicaciones
+public interface IListarUbicaciones : IListado<UbicacionDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<UbicacionDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IObtenerUbicacion"/>
@@ -46,6 +44,8 @@ internal sealed class ObtenerUbicacion(
 /// <inheritdoc cref="IListarUbicaciones"/>
 internal sealed class ListarUbicaciones(IRepositorioDeUbicaciones ubicaciones) : IListarUbicaciones
 {
+    public IReadOnlySet<string> CamposOrdenables => ubicaciones.CamposOrdenables;
+
     public async Task<PaginaDe<UbicacionDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)

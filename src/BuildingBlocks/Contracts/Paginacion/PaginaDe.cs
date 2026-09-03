@@ -1,4 +1,4 @@
-namespace Bastion.Identidad.Contracts.Comun;
+namespace Bastion.BuildingBlocks.Contracts.Paginacion;
 
 /// <summary>
 /// Una página de una colección, con lo que hace falta para pedir la siguiente.

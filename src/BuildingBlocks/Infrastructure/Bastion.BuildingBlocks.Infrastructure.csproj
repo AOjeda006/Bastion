@@ -8,6 +8,11 @@
 
   <ItemGroup>
     <ProjectReference Include="../Application/Bastion.BuildingBlocks.Application.csproj" />
+    <!--
+      Y los contratos comunes desde el 1.3, por `Paginacion` y `PaginaDe`: el modelo de
+      consulta del borde y el paginador de EF Core viven aqui y hablan de esos dos tipos.
+    -->
+    <ProjectReference Include="../Contracts/Bastion.BuildingBlocks.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

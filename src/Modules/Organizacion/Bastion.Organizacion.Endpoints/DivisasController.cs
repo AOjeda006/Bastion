@@ -1,5 +1,7 @@
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Organizacion.Application.Divisas;
 using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Contracts.Comun;
@@ -18,7 +20,7 @@ public sealed class DivisasController(
     IModificarDivisa modificar) : ControladorDeOrganizacion
 {
     /// <summary>Devuelve una página de divisas.</summary>
-    /// <param name="consulta">Paginación pedida (<c>page</c> y <c>size</c>).</param>
+    /// <param name="consulta">Paginación, orden y filtro (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeOrganizacion.DivisaVer)]
@@ -29,7 +31,7 @@ public sealed class DivisasController(
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
-        return Ok(await listar.EjecutarAsync(consulta.APaginacion(), cancelacion).ConfigureAwait(false));
+        return await ResponderListadoAsync(consulta, listar, cancelacion).ConfigureAwait(false);
     }
 
     /// <summary>Devuelve una divisa.</summary>

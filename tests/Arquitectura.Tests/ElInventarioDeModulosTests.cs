@@ -142,7 +142,7 @@ public sealed class ElInventarioDeModulosTests
     }
 
     [Fact]
-    public void El_bloque_comun_tiene_sus_tres_capas_y_todas_llevan_tipos()
+    public void El_bloque_comun_tiene_las_capas_declaradas_y_todas_llevan_tipos()
     {
         IReadOnlyList<string> conTipos =
         [
@@ -154,8 +154,12 @@ public sealed class ElInventarioDeModulosTests
 
         // `BuildingBlocks` no es un módulo y no entra en el mapa del §5, pero la regla 2 le vale
         // igual y de hecho le vale más: una fuga de infraestructura en el DOMINIO COMÚN la heredan
-        // los dieciséis módulos a la vez. Se comprueba aquí que sus tres capas existen y llevan
-        // tipos, porque es lo que da derecho a aplicarles la regla en el fichero de al lado.
+        // los dieciséis módulos a la vez. Se comprueba aquí que sus capas existen y llevan tipos,
+        // porque es lo que da derecho a aplicarles la regla en el fichero de al lado.
+        //
+        // El nombre no dice cuántas son, y eso es del 1.3: decía «sus tres capas» y el bloque
+        // común pasó a tener cuatro. Un número dentro de un nombre es una afirmación que nadie
+        // comprueba — la comprobación de verdad es la comparación de abajo, que sí se pone roja.
         conTipos.ShouldBe([.. Inventario.ComunesConTipos.Order(StringComparer.Ordinal)]);
     }
 

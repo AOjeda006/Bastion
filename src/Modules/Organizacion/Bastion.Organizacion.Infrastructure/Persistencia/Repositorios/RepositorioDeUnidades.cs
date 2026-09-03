@@ -1,3 +1,6 @@
+using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Organizacion.Application.Unidades;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Unidades;
@@ -28,13 +31,30 @@ internal sealed class RepositorioDeUnidadesDeMedida(OrganizacionDbContext contex
         return encontradas == ids.Distinct().Count();
     }
 
+    private static readonly CriteriosDe<UnidadMedida> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["codigo"] = (Expression<Func<UnidadMedida, string>>)(unidad => unidad.Codigo),
+            ["nombre"] = (Expression<Func<UnidadMedida, string>>)(unidad => unidad.Nombre),
+        },
+        PorOmision = "codigo",
+        Desempate = ordenada => ordenada.ThenBy(unidad => unidad.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return unidad => EF.Functions.ILike(unidad.Codigo, patron, Filtros.Escape)
+                || EF.Functions.ILike(unidad.Nombre, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     public Task<PaginaDe<UnidadMedida>> ListarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion) =>
-        contexto.UnidadesDeMedida
-            .OrderBy(unidad => unidad.Codigo)
-            .ThenBy(unidad => unidad.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        contexto.UnidadesDeMedida.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(UnidadMedida unidad) => contexto.UnidadesDeMedida.Add(unidad);
 }
@@ -56,14 +76,27 @@ internal sealed class RepositorioDeConversiones(OrganizacionDbContext contexto)
                 && conversion.UnidadDestinoId == unidadDestinoId,
             cancelacion);
 
+    // Sin filtro de texto: una conversión son dos identificadores y un factor, y no hay ningún
+    // texto que buscar.
+    private static readonly CriteriosDe<ConversionUM> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["origen"] = (Expression<Func<ConversionUM, Guid>>)(conversion => conversion.UnidadOrigenId),
+            ["factor"] = (Expression<Func<ConversionUM, decimal>>)(conversion => conversion.Factor),
+        },
+        PorOmision = "origen",
+        Desempate = ordenada => ordenada
+            .ThenBy(conversion => conversion.UnidadDestinoId)
+            .ThenBy(conversion => conversion.Id),
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     public Task<PaginaDe<ConversionUM>> ListarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion) =>
-        contexto.ConversionesDeUnidades
-            .OrderBy(conversion => conversion.UnidadOrigenId)
-            .ThenBy(conversion => conversion.UnidadDestinoId)
-            .ThenBy(conversion => conversion.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        contexto.ConversionesDeUnidades.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(ConversionUM conversion) => contexto.ConversionesDeUnidades.Add(conversion);
 }

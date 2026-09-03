@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Identidad.Contracts.Usuarios;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Comun;

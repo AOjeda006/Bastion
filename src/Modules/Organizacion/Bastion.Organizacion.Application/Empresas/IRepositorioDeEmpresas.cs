@@ -1,3 +1,5 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Empresas;
@@ -10,7 +12,7 @@ namespace Bastion.Organizacion.Application.Empresas;
 /// (`principios/clean-architecture.md`). Ninguno de sus métodos confirma nada: eso lo decide el
 /// caso de uso a través de <c>IUnidadTrabajo</c>.
 /// </remarks>
-public interface IRepositorioDeEmpresas
+public interface IRepositorioDeEmpresas : IOrdenaPor
 {
     /// <summary>La empresa con ese identificador, o nulo si no hay ninguna.</summary>
     Task<Empresa?> ObtenerAsync(Guid id, CancellationToken cancelacion);

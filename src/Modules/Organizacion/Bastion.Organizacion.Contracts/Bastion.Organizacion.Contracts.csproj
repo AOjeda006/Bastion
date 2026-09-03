@@ -19,6 +19,12 @@
 
   <ItemGroup>
     <ProjectReference Include="../../../BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+    <!--
+      Y los contratos comunes desde el 1.3, por `Paginacion` y `PaginaDe`, que estaban copiados
+      letra por letra aquí y en Identidad. Mismo razonamiento que la línea de arriba: es núcleo
+      compartido, no el interior de un módulo. ADR-0029.
+    -->
+    <ProjectReference Include="../../../BuildingBlocks/Contracts/Bastion.BuildingBlocks.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

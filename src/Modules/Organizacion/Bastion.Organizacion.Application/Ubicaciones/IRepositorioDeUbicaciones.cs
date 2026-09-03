@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Ubicaciones;
 
 namespace Bastion.Organizacion.Application.Ubicaciones;
 
 /// <summary>Acceso a las ubicaciones guardadas.</summary>
-public interface IRepositorioDeUbicaciones
+public interface IRepositorioDeUbicaciones : IOrdenaPor
 {
     /// <summary>La ubicación con ese identificador, o nula si no hay ninguna.</summary>
     Task<Ubicacion?> ObtenerAsync(Guid id, CancellationToken cancelacion);

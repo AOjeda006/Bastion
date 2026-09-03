@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -17,12 +19,8 @@ public interface IObtenerEjercicio
 }
 
 /// <summary>Devuelve una página de ejercicios.</summary>
-public interface IListarEjercicios
+public interface IListarEjercicios : IListado<EjercicioDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<EjercicioDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IObtenerEjercicio"/>
@@ -43,6 +41,8 @@ internal sealed class ObtenerEjercicio(
 /// <inheritdoc cref="IListarEjercicios"/>
 internal sealed class ListarEjercicios(IRepositorioDeEjercicios ejercicios) : IListarEjercicios
 {
+    public IReadOnlySet<string> CamposOrdenables => ejercicios.CamposOrdenables;
+
     public async Task<PaginaDe<EjercicioDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)

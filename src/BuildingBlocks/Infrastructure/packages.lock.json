@@ -40,8 +40,12 @@
       "bastion.buildingblocks.application": {
         "type": "Project",
         "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
           "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
         }
+      },
+      "bastion.buildingblocks.contracts": {
+        "type": "Project"
       },
       "bastion.buildingblocks.domain": {
         "type": "Project"

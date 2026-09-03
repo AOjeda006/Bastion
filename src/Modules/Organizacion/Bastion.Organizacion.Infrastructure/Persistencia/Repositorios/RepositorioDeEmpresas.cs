@@ -1,4 +1,7 @@
+using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Identificacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Organizacion.Application.Empresas;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Empresas;
@@ -29,14 +32,33 @@ internal sealed class RepositorioDeEmpresas(OrganizacionDbContext contexto) : IR
     public Task<bool> EstaActivaAsync(Guid id, CancellationToken cancelacion) =>
         contexto.Empresas.AnyAsync(empresa => empresa.Id == id, cancelacion);
 
+    // El NIF NO está aquí, ni entre los ordenables ni en el filtro, y es la decisión del
+    // ADR-0025 escrita en el sitio donde se puede desobedecer: `?q=` viaja en la URL, o sea en el
+    // historial del navegador, en el enlace que se copia y en el registro de acceso del servidor
+    // de delante. Buscar empresas por NIF va por cuerpo, con `POST .../buscar`.
+    private static readonly CriteriosDe<Empresa> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["razonSocial"] = (Expression<Func<Empresa, string>>)(empresa => empresa.RazonSocial),
+        },
+        PorOmision = "razonSocial",
+        Desempate = ordenada => ordenada.ThenBy(empresa => empresa.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return empresa => EF.Functions.ILike(empresa.RazonSocial, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     // Orden estable y explícito. Sin `ORDER BY`, PostgreSQL no promete ningún orden entre
     // consultas, así que la página 2 podría repetir o saltarse filas de la 1 sin que nadie
-    // hubiera tocado nada.
+    // hubiera tocado nada; el desempate por identificador lo pone el paginador común.
     public Task<PaginaDe<Empresa>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
-        contexto.Empresas
-            .OrderBy(empresa => empresa.RazonSocial)
-            .ThenBy(empresa => empresa.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        contexto.Empresas.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(Empresa empresa) => contexto.Empresas.Add(empresa);
 }

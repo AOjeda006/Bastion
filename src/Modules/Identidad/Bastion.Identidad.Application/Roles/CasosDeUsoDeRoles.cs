@@ -1,9 +1,10 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Comun;
-using Bastion.Identidad.Contracts.Comun;
 using Bastion.Identidad.Contracts.Roles;
 using Bastion.Identidad.Domain.Roles;
 
@@ -28,12 +29,8 @@ public interface IObtenerRol
 }
 
 /// <summary>Devuelve una página de roles.</summary>
-public interface IListarRoles
+public interface IListarRoles : IListado<RolDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<RolDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <summary>Cambia el nombre y los permisos de un rol.</summary>
@@ -117,6 +114,8 @@ internal sealed class ObtenerRol(
 /// <inheritdoc cref="IListarRoles"/>
 internal sealed class ListarRoles(IRepositorioDeRoles roles) : IListarRoles
 {
+    public IReadOnlySet<string> CamposOrdenables => roles.CamposOrdenables;
+
     public async Task<PaginaDe<RolDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion)
     {
         PaginaDe<Rol> pagina = await roles.ListarAsync(paginacion, cancelacion).ConfigureAwait(false);

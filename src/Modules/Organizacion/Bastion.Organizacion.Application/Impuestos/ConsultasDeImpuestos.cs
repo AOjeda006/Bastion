@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -17,12 +19,8 @@ public interface IObtenerImpuesto
 }
 
 /// <summary>Devuelve una página de tramos de impuesto.</summary>
-public interface IListarImpuestos
+public interface IListarImpuestos : IListado<ImpuestoDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<ImpuestoDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IObtenerImpuesto"/>
@@ -45,6 +43,8 @@ internal sealed class ObtenerImpuesto(
 /// <inheritdoc cref="IListarImpuestos"/>
 internal sealed class ListarImpuestos(IRepositorioDeImpuestos impuestos) : IListarImpuestos
 {
+    public IReadOnlySet<string> CamposOrdenables => impuestos.CamposOrdenables;
+
     public async Task<PaginaDe<ImpuestoDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)

@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Contracts.Comun;
@@ -23,12 +25,8 @@ public interface IObtenerEmpresa
 /// anotaciones antes de llegar, y una colección vacía es una respuesta correcta, no un error
 /// (ADR-0004: el <c>Resultado</c> es para lo que PUEDE fallar de verdad).
 /// </remarks>
-public interface IListarEmpresas
+public interface IListarEmpresas : IListado<EmpresaDto>
 {
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página se pide y de qué tamaño.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<EmpresaDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="IObtenerEmpresa"/>
@@ -49,6 +47,8 @@ internal sealed class ObtenerEmpresa(
 /// <inheritdoc cref="IListarEmpresas"/>
 internal sealed class ListarEmpresas(IRepositorioDeEmpresas empresas) : IListarEmpresas
 {
+    public IReadOnlySet<string> CamposOrdenables => empresas.CamposOrdenables;
+
     public async Task<PaginaDe<EmpresaDto>> EjecutarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion)

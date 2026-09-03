@@ -1,10 +1,11 @@
-using Bastion.Identidad.Contracts.Comun;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Identidad.Domain.Roles;
 
 namespace Bastion.Identidad.Application.Roles;
 
 /// <summary>Acceso a los roles guardados.</summary>
-public interface IRepositorioDeRoles
+public interface IRepositorioDeRoles : IOrdenaPor
 {
     /// <summary>El rol con ese identificador, con sus permisos, o nulo.</summary>
     /// <param name="id">Identificador del rol.</param>

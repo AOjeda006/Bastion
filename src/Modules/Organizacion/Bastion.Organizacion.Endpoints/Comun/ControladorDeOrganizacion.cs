@@ -1,7 +1,9 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bastion.Organizacion.Endpoints.Comun;
@@ -47,6 +49,20 @@ public abstract class ControladorDeOrganizacion : ControllerBase
 
     /// <summary>Ruta base del módulo: el prefijo más el nombre del controlador.</summary>
     public const string RutaBase = Prefijo + "/[controller]";
+
+    /// <summary>
+    /// Atiende un listado: valida el orden pedido contra lo que el listado admite y responde con
+    /// la página, o con un <c>400</c> que dice qué campos valen.
+    /// </summary>
+    /// <typeparam name="TDto">Lo que se publica de cada elemento.</typeparam>
+    /// <param name="consulta">Los parámetros tal como han llegado en la URL.</param>
+    /// <param name="listado">El caso de uso, que es quien dice por qué campos deja ordenar.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    protected Task<IActionResult> ResponderListadoAsync<TDto>(
+        ConsultaPaginada consulta,
+        IListado<TDto> listado,
+        CancellationToken cancelacion) =>
+        RespuestasDeListado.ResponderAsync(this, consulta, listado, cancelacion);
 
     /// <summary>Convierte el desenlace de un caso de uso que devuelve valor en respuesta.</summary>
     /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>

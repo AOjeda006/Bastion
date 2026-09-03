@@ -34,7 +34,7 @@ public sealed class LasReglasDeEsteCarrilTests
         "ElInventarioDeModulosTests.Cada_carpeta_de_modulo_tiene_sus_cinco_capas",
         "ElInventarioDeModulosTests.Cada_ensamblado_modular_lleva_los_tipos_que_el_inventario_declara",
         "ElInventarioDeModulosTests.Cada_tipo_vive_en_el_espacio_de_nombres_de_su_ensamblado",
-        "ElInventarioDeModulosTests.El_bloque_comun_tiene_sus_tres_capas_y_todas_llevan_tipos",
+        "ElInventarioDeModulosTests.El_bloque_comun_tiene_las_capas_declaradas_y_todas_llevan_tipos",
         "ElInventarioDeModulosTests.El_mapa_de_modulos_declara_los_dieciseis_del_quinto_apartado",
         "ElInventarioDeModulosTests.Las_carpetas_de_modulo_son_las_declaradas",
         "ElInventarioDeModulosTests.Los_ensamblados_modulares_de_la_salida_son_los_declarados",

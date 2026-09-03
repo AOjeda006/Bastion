@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Ejercicios;
 
 namespace Bastion.Organizacion.Application.Ejercicios;
 
 /// <summary>Acceso a los ejercicios guardados.</summary>
-public interface IRepositorioDeEjercicios
+public interface IRepositorioDeEjercicios : IOrdenaPor
 {
     /// <summary>El ejercicio con ese identificador, o nulo si no hay ninguno.</summary>
     Task<Ejercicio?> ObtenerAsync(Guid id, CancellationToken cancelacion);

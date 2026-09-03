@@ -1,3 +1,6 @@
+using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Organizacion.Application.Almacenes;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Almacenes;
@@ -15,11 +18,28 @@ internal sealed class RepositorioDeAlmacenes(OrganizacionDbContext contexto) : I
         contexto.Almacenes.AnyAsync(
             almacen => almacen.EmpresaId == empresaId && almacen.Codigo == codigo, cancelacion);
 
+    private static readonly CriteriosDe<Almacen> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["codigo"] = (Expression<Func<Almacen, string>>)(almacen => almacen.Codigo),
+            ["nombre"] = (Expression<Func<Almacen, string>>)(almacen => almacen.Nombre),
+        },
+        PorOmision = "codigo",
+        Desempate = ordenada => ordenada.ThenBy(almacen => almacen.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return almacen => EF.Functions.ILike(almacen.Codigo, patron, Filtros.Escape)
+                || EF.Functions.ILike(almacen.Nombre, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     public Task<PaginaDe<Almacen>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
-        contexto.Almacenes
-            .OrderBy(almacen => almacen.Codigo)
-            .ThenBy(almacen => almacen.Id)
-            .PaginarAsync(paginacion, cancelacion);
+        contexto.Almacenes.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(Almacen almacen) => contexto.Almacenes.Add(almacen);
 }

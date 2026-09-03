@@ -1,3 +1,6 @@
+using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Organizacion.Application.Impuestos;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Impuestos;
@@ -31,12 +34,34 @@ internal sealed class RepositorioDeImpuestos(OrganizacionDbContext contexto) : I
                 && desde <= (impuesto.VigenteHasta ?? DateOnly.MaxValue),
             cancelacion);
 
-    public Task<PaginaDe<Impuesto>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
-        contexto.Impuestos
-            .OrderBy(impuesto => impuesto.Codigo)
+    // El desempate lleva la vigencia porque un impuesto es varios tramos con el mismo código:
+    // sin ella, los tramos de un mismo código salen en el orden que quiera el plan de ejecución,
+    // y el primero de la lista —el que se lee como «el vigente»— cambia entre dos consultas.
+    private static readonly CriteriosDe<Impuesto> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["codigo"] = (Expression<Func<Impuesto, string>>)(impuesto => impuesto.Codigo),
+            ["nombre"] = (Expression<Func<Impuesto, string>>)(impuesto => impuesto.Nombre),
+            ["porcentaje"] = (Expression<Func<Impuesto, decimal>>)(impuesto => impuesto.Porcentaje),
+        },
+        PorOmision = "codigo",
+        Desempate = ordenada => ordenada
             .ThenByDescending(impuesto => impuesto.VigenteDesde)
-            .ThenBy(impuesto => impuesto.Id)
-            .PaginarAsync(paginacion, cancelacion);
+            .ThenBy(impuesto => impuesto.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return impuesto => EF.Functions.ILike(impuesto.Codigo, patron, Filtros.Escape)
+                || EF.Functions.ILike(impuesto.Nombre, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
+    public Task<PaginaDe<Impuesto>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
+        contexto.Impuestos.PaginarAsync(paginacion, s_criterios, cancelacion);
 
     public void Agregar(Impuesto impuesto) => contexto.Impuestos.Add(impuesto);
 }
