@@ -9,6 +9,14 @@
  * Es un módulo de TypeScript y no un `.json` por lo mismo: un JSON no se comprueba. Una clave que
  * falte en un idioma tiene que ser un error de compilación, no un texto que sale en el idioma
  * equivocado el día que alguien abre esa pantalla.
+ *
+ * **Los espacios de nombres de primer nivel son una partición, y está comprobada.** O son del
+ * armazón —`comun`, `paginacion`, `rutas`, `sesion`, `errores`, `inicio`: lo que no es de ningún
+ * módulo— o son una funcionalidad de `src/features/`, y entonces el nombre es EL DE LA CARPETA y
+ * dentro hay un espacio por recurso. `ElBarridoDeLasFronteras` compara las dos listas enteras
+ * contra el disco, en los dos sentidos: renombrar una carpeta sin renombrar su espacio de nombres
+ * deja un diccionario que describe una estructura que ya no existe, y el compilador no dice nada
+ * porque una clave es una cadena.
  */
 export const es = {
   comun: {
@@ -52,20 +60,6 @@ export const es = {
     cambioDeEmpresa: 'No se ha podido cambiar de empresa. Vuelve a intentarlo.',
   },
 
-  acceso: {
-    correo: 'Correo',
-    contrasena: 'Contraseña',
-    entrar: 'Entrar',
-    entrando: 'Entrando…',
-    credenciales: 'El correo o la contraseña no son correctos.',
-    sinRed: 'No se ha podido contactar con el servidor. Inténtalo de nuevo.',
-    escribeTuCorreo: 'Escribe tu correo.',
-    correoDemasiadoLargo: 'El correo no puede pasar de 254 caracteres.',
-    correoConFormatoMalo: 'Eso no parece un correo electrónico.',
-    escribeTuContrasena: 'Escribe tu contraseña.',
-    contrasenaDemasiadoLarga: 'La contraseña no puede pasar de 128 caracteres.',
-  },
-
   errores: {
     sinPermiso: 'No tienes permiso para consultar esto con la empresa con la que estás operando.',
     sesionCaducada: 'Tu sesión ha caducado. Vuelve a entrar.',
@@ -73,6 +67,8 @@ export const es = {
     carga: 'No se han podido cargar los datos. Inténtalo de nuevo.',
   },
 
+  // Las dos pantallas del armazón (`app/paginas/`). No son de ningún módulo, así que su espacio de
+  // nombres tampoco lo es: el porqué está en el README de esa carpeta.
   inicio: {
     saludo: 'Hola, <strong>{{nombre}}</strong>.',
     operandoCon: 'Estás operando con <strong>{{empresa}}</strong>.',
@@ -88,25 +84,43 @@ export const es = {
     volverAlInicio: 'Volver al inicio',
   },
 
-  almacenes: {
-    cargando: 'los almacenes',
-    tabla: 'Almacenes de la empresa activa',
-    codigo: 'Código',
-    nombre: 'Nombre',
-    tipo: 'Tipo',
-    poblacion: 'Población',
-    paginaVacia: 'Esta página no tiene almacenes. Vuelve a la anterior.',
-    ningunoTodavia: 'Todavía no hay ningún almacén dado de alta en esta empresa.',
+  identidad: {
+    acceso: {
+      correo: 'Correo',
+      contrasena: 'Contraseña',
+      entrar: 'Entrar',
+      entrando: 'Entrando…',
+      credenciales: 'El correo o la contraseña no son correctos.',
+      sinRed: 'No se ha podido contactar con el servidor. Inténtalo de nuevo.',
+      escribeTuCorreo: 'Escribe tu correo.',
+      correoDemasiadoLargo: 'El correo no puede pasar de 254 caracteres.',
+      correoConFormatoMalo: 'Eso no parece un correo electrónico.',
+      escribeTuContrasena: 'Escribe tu contraseña.',
+      contrasenaDemasiadoLarga: 'La contraseña no puede pasar de 128 caracteres.',
+    },
   },
 
-  empresas: {
-    cargando: 'las empresas',
-    tabla: 'Empresas dadas de alta',
-    nif: 'NIF',
-    razonSocial: 'Razón social',
-    poblacion: 'Población',
-    divisa: 'Divisa',
-    ningunaVisible: 'No hay ninguna empresa que puedas ver.',
+  organizacion: {
+    almacenes: {
+      cargando: 'los almacenes',
+      tabla: 'Almacenes de la empresa activa',
+      codigo: 'Código',
+      nombre: 'Nombre',
+      tipo: 'Tipo',
+      poblacion: 'Población',
+      paginaVacia: 'Esta página no tiene almacenes. Vuelve a la anterior.',
+      ningunoTodavia: 'Todavía no hay ningún almacén dado de alta en esta empresa.',
+    },
+
+    empresas: {
+      cargando: 'las empresas',
+      tabla: 'Empresas dadas de alta',
+      nif: 'NIF',
+      razonSocial: 'Razón social',
+      poblacion: 'Población',
+      divisa: 'Divisa',
+      ningunaVisible: 'No hay ninguna empresa que puedas ver.',
+    },
   },
 };
 

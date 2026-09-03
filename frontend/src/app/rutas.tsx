@@ -66,7 +66,8 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
       motivo: 'Es la puerta. Exigir sesión para poder abrirla no dejaría entrar a nadie.',
     },
     enLaNavegacion: false,
-    cargar: async () => (await import('@/features/acceso/ui/PaginaDeAcceso.tsx')).PaginaDeAcceso,
+    cargar: async () =>
+      (await import('@/features/identidad/acceso/ui/PaginaDeAcceso.tsx')).PaginaDeAcceso,
   },
   {
     ruta: '/',
@@ -78,7 +79,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
         'negocio, así que no hay permiso que pedir; lo que sí hace falta es haber entrado.',
     },
     enLaNavegacion: true,
-    cargar: async () => (await import('@/features/inicio/ui/PaginaDeInicio.tsx')).PaginaDeInicio,
+    cargar: async () => (await import('@/app/paginas/PaginaDeInicio.tsx')).PaginaDeInicio,
   },
   {
     ruta: '/almacenes',
@@ -86,7 +87,8 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
     exigencia: { clase: 'permiso', permiso: PERMISOS.almacenVer },
     enLaNavegacion: true,
     cargar: async () =>
-      (await import('@/features/almacenes/ui/PaginaDeAlmacenes.tsx')).PaginaDeAlmacenes,
+      (await import('@/features/organizacion/almacenes/ui/PaginaDeAlmacenes.tsx'))
+        .PaginaDeAlmacenes,
   },
   {
     ruta: '/empresas',
@@ -94,7 +96,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
     exigencia: { clase: 'permiso', permiso: PERMISOS.empresaVer },
     enLaNavegacion: true,
     cargar: async () =>
-      (await import('@/features/empresas/ui/PaginaDeEmpresas.tsx')).PaginaDeEmpresas,
+      (await import('@/features/organizacion/empresas/ui/PaginaDeEmpresas.tsx')).PaginaDeEmpresas,
   },
   {
     ruta: '*',
@@ -106,8 +108,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
         'autorizado» a una URL mal escrita mandaría a buscar un permiso en vez de una errata.',
     },
     enLaNavegacion: false,
-    cargar: async () =>
-      (await import('@/features/inicio/ui/PaginaNoEncontrada.tsx')).PaginaNoEncontrada,
+    cargar: async () => (await import('@/app/paginas/PaginaNoEncontrada.tsx')).PaginaNoEncontrada,
   },
 ];
 

@@ -29,7 +29,7 @@ export function PaginaDeAlmacenes(): React.JSX.Element {
   });
 
   if (consulta.isPending) {
-    return <Cargando que={t('almacenes.cargando')} />;
+    return <Cargando que={t('organizacion.almacenes.cargando')} />;
   }
 
   if (consulta.isError) {
@@ -54,7 +54,9 @@ export function PaginaDeAlmacenes(): React.JSX.Element {
       <>
         <Vacio
           mensaje={
-            paginacion.pagina > 1 ? t('almacenes.paginaVacia') : t('almacenes.ningunoTodavia')
+            paginacion.pagina > 1
+              ? t('organizacion.almacenes.paginaVacia')
+              : t('organizacion.almacenes.ningunoTodavia')
           }
         />
         <Paginador paginacion={paginacion} total={consulta.data.total} alCambiar={irA} />
@@ -65,20 +67,20 @@ export function PaginaDeAlmacenes(): React.JSX.Element {
   return (
     <>
       <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('almacenes.tabla')}</caption>
+        <caption className="sr-only">{t('organizacion.almacenes.tabla')}</caption>
         <thead>
           <tr className="border-b border-neutral-300 text-left">
             <th scope="col" className="py-2 pr-4 font-medium">
-              {t('almacenes.codigo')}
+              {t('organizacion.almacenes.codigo')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              {t('almacenes.nombre')}
+              {t('organizacion.almacenes.nombre')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              {t('almacenes.tipo')}
+              {t('organizacion.almacenes.tipo')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              {t('almacenes.poblacion')}
+              {t('organizacion.almacenes.poblacion')}
             </th>
           </tr>
         </thead>

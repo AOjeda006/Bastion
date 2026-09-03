@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { ALFA, BETA } from '@/pruebas/datos.ts';
 import { abrirSesionSimulada } from '@/pruebas/servidor.ts';
 import { montarAplicacion } from '@/pruebas/montar.tsx';
-import { clavesDeAlmacenes } from '@/features/almacenes/api/claves.ts';
-import type { PaginaDeAlmacenes } from '@/features/almacenes/model/almacen.ts';
+import { clavesDeAlmacenes } from '@/features/organizacion/almacenes/api/claves.ts';
+import type { PaginaDeAlmacenes } from '@/features/organizacion/almacenes/model/almacen.ts';
 import { leerSesion } from '@/shared/sesion/deposito.ts';
 
 /**

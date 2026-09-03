@@ -22,7 +22,7 @@ export function PaginaDeEmpresas(): React.JSX.Element {
   });
 
   if (consulta.isPending) {
-    return <Cargando que={t('empresas.cargando')} />;
+    return <Cargando que={t('organizacion.empresas.cargando')} />;
   }
 
   if (consulta.isError) {
@@ -45,7 +45,7 @@ export function PaginaDeEmpresas(): React.JSX.Element {
   if (consulta.data.elementos.length === 0) {
     return (
       <>
-        <Vacio mensaje={t('empresas.ningunaVisible')} />
+        <Vacio mensaje={t('organizacion.empresas.ningunaVisible')} />
         <Paginador paginacion={paginacion} total={consulta.data.total} alCambiar={irA} />
       </>
     );
@@ -54,20 +54,20 @@ export function PaginaDeEmpresas(): React.JSX.Element {
   return (
     <>
       <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('empresas.tabla')}</caption>
+        <caption className="sr-only">{t('organizacion.empresas.tabla')}</caption>
         <thead>
           <tr className="border-b border-neutral-300 text-left">
             <th scope="col" className="py-2 pr-4 font-medium">
-              {t('empresas.nif')}
+              {t('organizacion.empresas.nif')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              {t('empresas.razonSocial')}
+              {t('organizacion.empresas.razonSocial')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              {t('empresas.poblacion')}
+              {t('organizacion.empresas.poblacion')}
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
-              {t('empresas.divisa')}
+              {t('organizacion.empresas.divisa')}
             </th>
           </tr>
         </thead>

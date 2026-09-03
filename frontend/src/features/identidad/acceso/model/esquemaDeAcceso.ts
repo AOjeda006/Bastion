@@ -19,13 +19,13 @@ export const esquemaDeAcceso = z.object({
   correo: z
     .string()
     .trim()
-    .min(1, 'acceso.escribeTuCorreo')
-    .max(254, 'acceso.correoDemasiadoLargo')
-    .pipe(z.email('acceso.correoConFormatoMalo')),
+    .min(1, 'identidad.acceso.escribeTuCorreo')
+    .max(254, 'identidad.acceso.correoDemasiadoLargo')
+    .pipe(z.email('identidad.acceso.correoConFormatoMalo')),
   contrasena: z
     .string()
-    .min(1, 'acceso.escribeTuContrasena')
-    .max(128, 'acceso.contrasenaDemasiadoLarga'),
+    .min(1, 'identidad.acceso.escribeTuContrasena')
+    .max(128, 'identidad.acceso.contrasenaDemasiadoLarga'),
 });
 
 export type DatosDeAcceso = z.infer<typeof esquemaDeAcceso>;

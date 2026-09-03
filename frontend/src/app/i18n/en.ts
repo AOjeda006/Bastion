@@ -47,20 +47,6 @@ export const en: Diccionario = {
     cambioDeEmpresa: 'The company could not be changed. Try again.',
   },
 
-  acceso: {
-    correo: 'Email',
-    contrasena: 'Password',
-    entrar: 'Sign in',
-    entrando: 'Signing in…',
-    credenciales: 'The email or the password is not correct.',
-    sinRed: 'The server could not be reached. Try again.',
-    escribeTuCorreo: 'Enter your email.',
-    correoDemasiadoLargo: 'The email cannot be longer than 254 characters.',
-    correoConFormatoMalo: 'That does not look like an email address.',
-    escribeTuContrasena: 'Enter your password.',
-    contrasenaDemasiadoLarga: 'The password cannot be longer than 128 characters.',
-  },
-
   errores: {
     sinPermiso: 'You do not have permission to view this at the company you are working with.',
     sesionCaducada: 'Your session has expired. Sign in again.',
@@ -83,24 +69,42 @@ export const en: Diccionario = {
     volverAlInicio: 'Back to home',
   },
 
-  almacenes: {
-    cargando: 'the warehouses',
-    tabla: 'Warehouses of the active company',
-    codigo: 'Code',
-    nombre: 'Name',
-    tipo: 'Type',
-    poblacion: 'Town',
-    paginaVacia: 'This page has no warehouses. Go back to the previous one.',
-    ningunoTodavia: 'No warehouse has been registered at this company yet.',
+  identidad: {
+    acceso: {
+      correo: 'Email',
+      contrasena: 'Password',
+      entrar: 'Sign in',
+      entrando: 'Signing in…',
+      credenciales: 'The email or the password is not correct.',
+      sinRed: 'The server could not be reached. Try again.',
+      escribeTuCorreo: 'Enter your email.',
+      correoDemasiadoLargo: 'The email cannot be longer than 254 characters.',
+      correoConFormatoMalo: 'That does not look like an email address.',
+      escribeTuContrasena: 'Enter your password.',
+      contrasenaDemasiadoLarga: 'The password cannot be longer than 128 characters.',
+    },
   },
 
-  empresas: {
-    cargando: 'the companies',
-    tabla: 'Registered companies',
-    nif: 'Tax ID',
-    razonSocial: 'Legal name',
-    poblacion: 'Town',
-    divisa: 'Currency',
-    ningunaVisible: 'There is no company you can see.',
+  organizacion: {
+    almacenes: {
+      cargando: 'the warehouses',
+      tabla: 'Warehouses of the active company',
+      codigo: 'Code',
+      nombre: 'Name',
+      tipo: 'Type',
+      poblacion: 'Town',
+      paginaVacia: 'This page has no warehouses. Go back to the previous one.',
+      ningunoTodavia: 'No warehouse has been registered at this company yet.',
+    },
+
+    empresas: {
+      cargando: 'the companies',
+      tabla: 'Registered companies',
+      nif: 'Tax ID',
+      razonSocial: 'Legal name',
+      poblacion: 'Town',
+      divisa: 'Currency',
+      ningunaVisible: 'There is no company you can see.',
+    },
   },
 };

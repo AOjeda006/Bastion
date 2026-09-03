@@ -16,7 +16,7 @@ import { useSesion } from '@/shared/sesion/useSesion.ts';
  * tipo y no contra `string`: React Hook Form tipa `message` como `string | undefined` porque no
  * sabe que aquí guardamos claves, y sin el tipo la aserción dejaría pasar cualquier cosa.
  */
-type ClaveDeMensajeDeAcceso = `acceso.${keyof Diccionario['acceso']}`;
+type ClaveDeMensajeDeAcceso = `identidad.acceso.${keyof Diccionario['identidad']['acceso']}`;
 
 /**
  * La puerta.
@@ -84,13 +84,13 @@ export function PaginaDeAcceso(): React.JSX.Element {
           role="alert"
           className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900"
         >
-          {t(`acceso.${motivo}`)}
+          {t(`identidad.acceso.${motivo}`)}
         </p>
       )}
 
       <div>
         <label htmlFor="correo" className="block text-sm font-medium">
-          {t('acceso.correo')}
+          {t('identidad.acceso.correo')}
         </label>
         <input
           id="correo"
@@ -110,7 +110,7 @@ export function PaginaDeAcceso(): React.JSX.Element {
 
       <div>
         <label htmlFor="contrasena" className="block text-sm font-medium">
-          {t('acceso.contrasena')}
+          {t('identidad.acceso.contrasena')}
         </label>
         <input
           id="contrasena"
@@ -133,7 +133,7 @@ export function PaginaDeAcceso(): React.JSX.Element {
         disabled={isSubmitting}
         className="rounded bg-neutral-900 px-4 py-2 text-sm text-white disabled:opacity-50"
       >
-        {isSubmitting ? t('acceso.entrando') : t('acceso.entrar')}
+        {isSubmitting ? t('identidad.acceso.entrando') : t('identidad.acceso.entrar')}
       </button>
     </form>
   );
