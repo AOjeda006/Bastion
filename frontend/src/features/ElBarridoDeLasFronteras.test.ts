@@ -148,14 +148,66 @@ describe('El barrido de las fronteras', () => {
   it('ESLint prohíbe de verdad cada par, escrito con alias y escrito con camino relativo', async () => {
     const eslint = new ESLint({ cwd: RAIZ });
 
-    async function restringidos(codigo: string, fichero: string): Promise<string[]> {
+    /**
+     * Lo que ESLint dice de un texto, en dos mitades: los avisos de la frontera y TODO lo demás.
+     *
+     * Lo demás no sobra. Cuando esta comprobación falla, la pregunta siempre es la misma —¿la
+     * regla no prohíbe, o es que ESLint no ha llegado a aplicarla?— y sin ver los otros mensajes
+     * no se puede responder: un fichero fuera del proyecto de TypeScript, una configuración que
+     * no casa, un error del analizador, todos se parecen a «no ha marcado nada». Va al mensaje
+     * del fallo para que un rojo en la CI, cuyos registros no se pueden leer sin autenticar, se
+     * diagnostique con lo que cabe en la anotación.
+     */
+    async function analizar(
+      codigo: string,
+      fichero: string,
+    ): Promise<{ frontera: string[]; contexto: string }> {
       const [resultado] = await eslint.lintText(codigo, { filePath: fichero });
 
-      expect(resultado?.messages.filter((aviso) => aviso.fatal === true) ?? []).toEqual([]);
+      // Un resultado ausente NO es un fichero limpio: es un fichero que ESLint ha decidido no
+      // mirar. Se dicen igual —cero avisos de frontera— y significan lo contrario.
+      expect(
+        resultado,
+        `ESLint no ha devuelto ningún resultado para '${fichero}': lo está ignorando, así que ` +
+          'este barrido no puede afirmar nada de la regla',
+      ).toBeDefined();
 
-      return (resultado?.messages ?? [])
+      const mensajes = resultado?.messages ?? [];
+
+      const frontera = mensajes
         .filter((aviso) => aviso.ruleId === 'no-restricted-imports')
         .map((aviso) => aviso.message);
+
+      // La pregunta que hay que poder responder desde la anotación de la CI: ¿la regla no
+      // prohíbe, o es que a este fichero no le aplica la configuración que la lleva?
+      const configuracion = (await eslint.calculateConfigForFile(fichero)) as {
+        rules?: Record<string, unknown>;
+      };
+      const reglaAplicada = configuracion.rules?.['no-restricted-imports'];
+
+      const otros = mensajes
+        .filter((aviso) => aviso.ruleId !== 'no-restricted-imports')
+        .map(
+          (aviso) =>
+            `[${aviso.ruleId ?? (aviso.fatal === true ? 'FATAL' : 'sin regla')}] ${aviso.message}`,
+        );
+
+      return {
+        frontera,
+        contexto:
+          ` — ESLint miró '${relative(RAIZ, fichero)}' (raíz ${RAIZ}); ` +
+          `la configuración que le aplica ${reglaAplicada === undefined ? 'NO LLEVA' : `lleva (${JSON.stringify(reglaAplicada).slice(0, 160)})`} ` +
+          `no-restricted-imports; y dijo: ` +
+          (otros.length === 0 ? 'nada más' : otros.join(' · ')),
+      };
+    }
+
+    async function restringidos(codigo: string, fichero: string): Promise<string[]> {
+      const { frontera, contexto } = await analizar(codigo, fichero);
+
+      expect(frontera, `no debería haber avisos de frontera${contexto}`).toBeDefined();
+
+      return frontera;
     }
 
     let paresComprobados = 0;
@@ -177,15 +229,19 @@ describe('El barrido de las fronteras', () => {
           .join('/');
         const conRelativo = `import '${subiendo}/loQueSea.ts';\n`;
 
+        const conAliasVisto = await analizar(conAlias, testigo!);
         expect(
-          await restringidos(conAlias, testigo!),
-          `${funcionalidad} puede importar de ${otra} con el alias, y no debería`,
+          conAliasVisto.frontera,
+          `${funcionalidad} puede importar de ${otra} con el alias, y no debería` +
+            conAliasVisto.contexto,
         ).not.toEqual([]);
 
+        const conRelativoVisto = await analizar(conRelativo, testigo!);
         expect(
-          await restringidos(conRelativo, testigo!),
+          conRelativoVisto.frontera,
           `${funcionalidad} puede importar de ${otra} subiendo por caminos relativos ` +
-            `('${conRelativo.trim()}'), y no debería`,
+            `('${conRelativo.trim()}'), y no debería` +
+            conRelativoVisto.contexto,
         ).not.toEqual([]);
 
         paresComprobados += 1;
