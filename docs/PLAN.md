@@ -2476,7 +2476,7 @@ en el ítem **1.6** y una nota de orden sobre el 1.5 en *Decisiones tomadas → 
 
 **Ítem 1.2 cerrado — la cuarta vía tiene quien la pare, y la quinta afirmación es la que la para:**
 [run 33806271861](https://github.com/AOjeda006/Bastion/actions/runs/33806271861) sobre `c54f783`,
-los **cuatro** *jobs* en `success` —el humo con Docker incluido— y **237 de 237** en el carril de
+los **tres** *jobs* en `success` —Backend, Frontal y Humo— y **237 de 237** en el carril de
 integración, que es donde viven los siete casos nuevos que aquí no se podían ejecutar. El mismo
 árbol, ya en `main`, en el
 [run 33806915660](https://github.com/AOjeda006/Bastion/actions/runs/33806915660).
