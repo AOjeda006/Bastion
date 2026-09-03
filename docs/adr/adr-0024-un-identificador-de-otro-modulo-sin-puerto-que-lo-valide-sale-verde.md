@@ -67,6 +67,33 @@ delata entra por la lista, lo que nadie declara entra por la reflexión, y una e
 cualquiera de las dos también es roja, porque una declaración que ya no corresponde a nada es un
 permiso concedido sobre algo que cambió.
 
+### Actualización (2026-09-03, al implementarlo en el ítem 1.2): no es una igualdad
+
+Lo de arriba dice «**comparadas enteras y en los dos sentidos**», que es la forma que usan los otros
+seis barridos del proyecto. **Para esta regla no vale, y aplicada así sale roja el primer día.**
+
+El motivo es que aquí las dos fuentes **no describen lo mismo**. En un barrido corriente —las rutas
+del frontal, las reglas de este carril— las dos listas son dos vistas del mismo conjunto, así que la
+igualdad es la afirmación correcta. Aquí no: el descubrimiento por reflexión **infradetecta por
+diseño**, porque solo encuentra el identificador cuando el nombre de la propiedad casa con el del
+módulo dueño. Y ya hay un caso en el repositorio: `TokenDeRefresco.EmpresaActivaId` apunta a
+Organización desde el **0.5** y no casa. Exigir la igualdad haría roja una lista que está bien.
+
+Lo correcto es **contención con simetría por el otro lado**, y son **cinco** afirmaciones. La quinta
+no estaba en este ADR y es la que decide si la regla protege o solo describe:
+
+1. Todo lo **descubierto** está en la lista, con su puerto.
+2. Toda **declaración** sigue correspondiendo a una propiedad del dominio.
+3. Las **dos fuentes** encuentran algo — la afirmación de conjunto no vacío del ADR-0020.
+4. Cada módulo de la lista tiene su **cruce declarado** y su **puerto**, y el puerto existe, es
+   público y es del dueño.
+5. **Ningún** `Guid …Id` del dominio se queda sin clasificar: o casa por nombre, o está declarado.
+
+Sin la quinta, un identificador ajeno con **nombre que no casa y sin declarar** —`DivisaPreferidaId`,
+`UnidadBaseId`— se queda **verde**, que es exactamente la cuarta vía que este ADR abrió para cerrar.
+Comprobado por mutación: cae en un test y en uno solo. La tabla de las ocho mutaciones está en
+`docs/PLAN.md` → *Estado actual* → ítem 1.2.
+
 ### La mutación que la valida
 
 Añadir un `DivisaId` a un agregado que no tenga puerto, ejecutar, ver el rojo, revertir. Sin ese
