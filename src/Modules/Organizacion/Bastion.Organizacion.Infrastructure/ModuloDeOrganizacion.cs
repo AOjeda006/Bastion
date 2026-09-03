@@ -11,7 +11,10 @@ using Bastion.Organizacion.Application.Impuestos;
 using Bastion.Organizacion.Application.Series;
 using Bastion.Organizacion.Application.Ubicaciones;
 using Bastion.Organizacion.Application.Unidades;
+using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Empresas;
+using Bastion.Organizacion.Contracts.Impuestos;
+using Bastion.Organizacion.Contracts.Unidades;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 using Bastion.Organizacion.Infrastructure.Semillas;
@@ -89,10 +92,18 @@ public static class ModuloDeOrganizacion
         // el único proyecto que ve esta capa.
         servicios.AddScoped<CargadorDeSemillasDeOrganizacion>();
 
-        // Lo ÚNICO que este módulo expone a los demás, y va bajo el tipo de su `Contracts`. Se
-        // registra aquí porque quien lo implementa es esta capa; quien lo consume —Identidad, al
-        // guardar una pertenencia— no sabe que existe este ensamblado.
+        // Lo que este módulo expone a los demás, y va bajo el tipo de su `Contracts`. Se registra
+        // aquí porque quien lo implementa es esta capa; quien lo consume —Identidad, al guardar una
+        // pertenencia— no sabe que existe este ensamblado.
         servicios.AddScoped<IConsultaDeEmpresas, ConsultaDeEmpresas>();
+
+        // Los tres del ítem 1.2, que hoy no tienen consumidor: Catálogo los estrena en el 1.8. No
+        // se adelantan por gusto, sino porque son la mitad que convierte la regla del ADR-0024 en
+        // una protección — un identificador de otro módulo obliga a que exista el puerto que lo
+        // valida, y un puerto que no existe no se puede exigir.
+        servicios.AddScoped<IConsultaDeImpuestos, ConsultaDeImpuestos>();
+        servicios.AddScoped<IConsultaDeUnidadesDeMedida, ConsultaDeUnidadesDeMedida>();
+        servicios.AddScoped<IConsultaDeDivisas, ConsultaDeDivisas>();
 
         // Los eventos que emite este módulo, con el nombre que llevan en la cola. Se declaran
         // AQUÍ y no en los bloques comunes: un catálogo central obligaría a tocar código común

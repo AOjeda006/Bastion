@@ -39,21 +39,6 @@ public sealed class LasFronterasEntreModulosTests
     /// <summary>Las capas que son el INTERIOR de un módulo: todo menos <c>Contracts</c>.</summary>
     private static readonly string[] s_interiores = ["Domain", "Application", "Infrastructure", "Endpoints"];
 
-    /// <summary>
-    /// Los cruces entre módulos que hay hoy, con su motivo. Se compara la lista entera: un cruce
-    /// nuevo no puede aparecer sin escribir su línea aquí, y una línea que sobra delata un cruce
-    /// que se quitó y una autorización que sigue concedida.
-    /// </summary>
-    private static readonly IReadOnlyDictionary<string, string> s_crucesDeclarados =
-        new SortedDictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["Identidad.Application -> Bastion.Organizacion.Contracts"] =
-                "el único, y va por donde tiene que ir. Al abrir sesión o al cambiar de empresa, " +
-                "Identidad pregunta a Organización si esa empresa existe y no está bloqueada " +
-                "antes de meterla en el testigo. Lectura, por el contrato del dueño, resuelta en " +
-                "proceso: ni un JOIN entre esquemas ni una llamada HTTP.",
-        };
-
     [Fact]
     public void Ningun_modulo_ve_el_interior_de_otro()
     {
@@ -112,7 +97,7 @@ public sealed class LasFronterasEntreModulosTests
         IReadOnlyList<string> ordenados = [.. encontrados.Order(StringComparer.Ordinal)];
 
         ordenados.ShouldBe(
-            [.. s_crucesDeclarados.Keys],
+            [.. Inventario.CrucesDeclarados.Keys],
             customMessage: "los cruces entre módulos no son los declarados:" + Environment.NewLine +
             Ensamblados.Enumerar(encontrados));
     }

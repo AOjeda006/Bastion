@@ -235,6 +235,27 @@ internal static class Inventario
     };
 
     /// <summary>
+    /// Los cruces entre módulos que hay hoy, con su motivo. Se compara la lista entera: un cruce
+    /// nuevo no puede aparecer sin escribir su línea aquí, y una línea que sobra delata un cruce
+    /// que se quitó y una autorización que sigue concedida.
+    /// </summary>
+    /// <remarks>
+    /// Vive aquí y no dentro de <c>LasFronterasEntreModulosTests</c> porque la lee <b>otra</b>
+    /// regla: <c>LosIdentificadoresAjenosTests</c> exige que todo módulo que guarde un
+    /// identificador de otro tenga su cruce declarado. Dos listas de cruces —una por regla— serían
+    /// dos verdades que se separan el día que alguien actualice una.
+    /// </remarks>
+    internal static readonly IReadOnlyDictionary<string, string> CrucesDeclarados =
+        new SortedDictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Identidad.Application -> Bastion.Organizacion.Contracts"] =
+                "el único, y va por donde tiene que ir. Al abrir sesión o al cambiar de empresa, " +
+                "Identidad pregunta a Organización si esa empresa existe y no está bloqueada " +
+                "antes de meterla en el testigo. Lectura, por el contrato del dueño, resuelta en " +
+                "proceso: ni un JOIN entre esquemas ni una llamada HTTP.",
+        };
+
+    /// <summary>
     /// Las puertas públicas de los <c>Contracts</c>: toda interfaz que un módulo ofrece a los
     /// demás, con lo que hace. Es la lista entera y se compara entera.
     /// </summary>
@@ -249,8 +270,117 @@ internal static class Inventario
     internal static readonly IReadOnlyDictionary<string, string> PuertasPublicas =
         new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
+            ["Bastion.Organizacion.Contracts.Divisas.IConsultaDeDivisas"] =
+                "LECTURA: en qué estado está una divisa, para quien guarde su identificador — la " +
+                "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe.",
+
             ["Bastion.Organizacion.Contracts.Empresas.IConsultaDeEmpresas"] =
                 "LECTURA: Identidad le pregunta a Organización si una empresa existe y no está " +
                 "bloqueada, para poder emitir un testigo con ella dentro. No escribe.",
+
+            ["Bastion.Organizacion.Contracts.Impuestos.IConsultaDeImpuestos"] =
+                "LECTURA: en qué estado está un tramo de impuesto para una fecha de devengo, " +
+                "para quien guarde su identificador — el impuesto por defecto del artículo " +
+                "(§7.3). No escribe.",
+
+            ["Bastion.Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida"] =
+                "LECTURA: en qué estado está una unidad de medida, para quien guarde su " +
+                "identificador — la unidad base del artículo (§7.3). No escribe.",
+        };
+
+    /// <summary>
+    /// Un identificador de otro módulo guardado en el dominio: a qué apunta, y por dónde se
+    /// valida.
+    /// </summary>
+    /// <param name="Apunta">
+    /// Nombre del tipo de dominio al que apunta, o cadena vacía si no apunta a ninguna entidad.
+    /// </param>
+    /// <param name="Puerto">
+    /// Nombre completo de la interfaz del <c>Contracts</c> del dueño que lo valida. Vacío cuando el
+    /// dueño es el propio módulo —ahí no hay frontera que cruzar— o cuando no apunta a nada.
+    /// </param>
+    /// <param name="Motivo">Por qué el nombre no se explica solo.</param>
+    internal sealed record Identificador(string Apunta, string Puerto, string Motivo);
+
+    /// <summary>
+    /// Todo <c>Guid</c> del dominio acabado en <c>Id</c> cuyo nombre <b>no</b> case con el de un
+    /// tipo del dominio, dicho a mano: a qué apunta y por dónde se valida.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Es la <b>fuente declarada</b> del ADR-0024, y la razón por la que hay dos. El descubrimiento
+    /// por nombre —<c>EmpresaId</c> → <c>Empresa</c>— es barato y no se olvida, pero
+    /// <b>infradetecta por diseño</b>: <c>TokenDeRefresco.EmpresaActivaId</c> apunta a una empresa
+    /// desde el 0.5 y ninguna heurística por nombre lo dice. El caso que viene, la <i>unidad
+    /// base</i> del §7.3, se llamará <c>UnidadBaseId</c> y tampoco casará.
+    /// </para>
+    /// <para>
+    /// Por eso la comparación <b>no es una igualdad</b>: el descubrimiento tiene que estar contenido
+    /// en esta lista, no ser igual a ella. Lo que sí es simétrico es que una entrada que ya no
+    /// corresponde a ninguna propiedad es roja: una declaración que sobrevive a su motivo es un
+    /// permiso concedido sobre algo que cambió.
+    /// </para>
+    /// </remarks>
+    internal static readonly IReadOnlyDictionary<string, Identificador> IdentificadoresDeclarados =
+        new SortedDictionary<string, Identificador>(StringComparer.Ordinal)
+        {
+            ["ConversionUM.UnidadDestinoId"] = new(
+                "UnidadMedida",
+                "",
+                "el papel va en el nombre —origen y destino— y por eso no casa con el del tipo. " +
+                "Mismo módulo: no cruza ninguna frontera."),
+
+            ["ConversionUM.UnidadOrigenId"] = new(
+                "UnidadMedida",
+                "",
+                "el papel va en el nombre —origen y destino— y por eso no casa con el del tipo. " +
+                "Mismo módulo: no cruza ninguna frontera."),
+
+            ["EventoDeIntegracion.EventoId"] = new(
+                "",
+                "",
+                "no apunta a nada: es su PROPIA identidad, la clave de deduplicación de la " +
+                "bandeja. Se llama EventoId y no Id porque un evento no es una EntidadBase, y ese " +
+                "nombre es justo el que engaña a una heurística de sufijos."),
+
+            ["Membresia.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "el nombre SÍ casa, y aun así se declara: lo que la lista aporta aquí no es " +
+                "descubrirlo, es decir POR DÓNDE se valida. Sin el puerto escrito, la regla sabría " +
+                "que hay un cruce y no podría exigir que alguien lo compruebe."),
+
+            ["TokenDeRefresco.EmpresaActivaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "la prueba viva de por qué hace falta esta lista: apunta a una empresa desde el " +
+                "0.5 y el nombre no lo dice. Lo validan ConstructorDeSesion y RenovarSesion contra " +
+                "el selector que sale del puerto."),
+
+            ["TokenDeRefresco.SustituidoPorId"] = new(
+                "TokenDeRefresco",
+                "",
+                "apunta a otro token de la misma cadena de rotación: mismo tipo y mismo módulo. " +
+                "El nombre dice el papel —«la emisión que lo sustituyó»— y no el tipo, que es " +
+                "otra vez el caso que ninguna heurística por nombre resuelve."),
+
+            ["TokenDeRefresco.FamiliaId"] = new(
+                "",
+                "",
+                "no apunta a ninguna entidad: agrupa la cadena de refrescos que nace de un mismo " +
+                "inicio de sesión, para poder revocarla entera. Se declara porque un Guid sin " +
+                "clasificar es exactamente lo que esta regla persigue."),
+
+            ["TipoCambio.DivisaDestinoId"] = new(
+                "Divisa",
+                "",
+                "el papel va en el nombre —origen y destino— y por eso no casa con el del tipo. " +
+                "Mismo módulo: no cruza ninguna frontera."),
+
+            ["TipoCambio.DivisaOrigenId"] = new(
+                "Divisa",
+                "",
+                "el papel va en el nombre —origen y destino— y por eso no casa con el del tipo. " +
+                "Mismo módulo: no cruza ninguna frontera."),
         };
 }
