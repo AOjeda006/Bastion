@@ -47,6 +47,16 @@ const ESPACIOS_DEL_ARMAZON = ['comun', 'paginacion', 'rutas', 'sesion', 'errores
 
 const DICCIONARIOS = { es, en };
 
+/**
+ * EL CANARIO. Un `any` en un fichero de una funcionalidad, que la configuración del proyecto tiene
+ * que marcar siempre.
+ *
+ * Existe porque «ESLint no ha marcado nada» tiene dos causas que se dicen igual y significan lo
+ * contrario: que la frontera no prohíba, o que ESLint no esté mirando ese fichero. Si el canario
+ * calla, lo segundo; y entonces TODO el barrido de abajo sería verde sin haber comprobado nada.
+ */
+const CANARIO = 'const loQueSea: any = 1;\nexport { loQueSea };\n';
+
 function carpetasDe(directorio: string): string[] {
   return readdirSync(directorio, { withFileTypes: true })
     .filter((entrada) => entrada.isDirectory())
@@ -161,7 +171,7 @@ describe('El barrido de las fronteras', () => {
     async function analizar(
       codigo: string,
       fichero: string,
-    ): Promise<{ frontera: string[]; contexto: string }> {
+    ): Promise<{ frontera: string[]; todos: string[]; contexto: string }> {
       const [resultado] = await eslint.lintText(codigo, { filePath: fichero });
 
       // Un resultado ausente NO es un fichero limpio: es un fichero que ESLint ha decidido no
@@ -174,6 +184,11 @@ describe('El barrido de las fronteras', () => {
 
       const mensajes = resultado?.messages ?? [];
 
+      const todos = mensajes.map(
+        (aviso) =>
+          `[${aviso.ruleId ?? (aviso.fatal === true ? 'FATAL' : 'sin regla')}] ${aviso.message}`,
+      );
+
       const frontera = mensajes
         .filter((aviso) => aviso.ruleId === 'no-restricted-imports')
         .map((aviso) => aviso.message);
@@ -185,29 +200,45 @@ describe('El barrido de las fronteras', () => {
       };
       const reglaAplicada = configuracion.rules?.['no-restricted-imports'];
 
-      const otros = mensajes
-        .filter((aviso) => aviso.ruleId !== 'no-restricted-imports')
-        .map(
-          (aviso) =>
-            `[${aviso.ruleId ?? (aviso.fatal === true ? 'FATAL' : 'sin regla')}] ${aviso.message}`,
-        );
+      // `calculateConfigForFile` contesta qué configuración le TOCA a un fichero, no si ESLint
+      // va a mirarlo: un fichero ignorado sale con su regla y sin un solo aviso.
+      const ignorado = await eslint.isPathIgnored(fichero);
+
+      const otros = todos.filter((linea) => !linea.startsWith('[no-restricted-imports]'));
 
       return {
         frontera,
+        todos,
         contexto:
-          ` — ESLint miró '${relative(RAIZ, fichero)}' (raíz ${RAIZ}); ` +
-          `la configuración que le aplica ${reglaAplicada === undefined ? 'NO LLEVA' : `lleva (${JSON.stringify(reglaAplicada).slice(0, 160)})`} ` +
+          ` — ESLint ${ESLint.version} miró '${relative(RAIZ, fichero)}' ` +
+          `(raíz ${RAIZ}${ignorado ? ', Y LO TIENE POR IGNORADO' : ''}) ` +
+          `y linteó ${JSON.stringify(codigo)}; la configuración que le aplica ` +
+          `${reglaAplicada === undefined ? 'NO LLEVA' : `lleva ${JSON.stringify(reglaAplicada)}`} ` +
           `no-restricted-imports; y dijo: ` +
           (otros.length === 0 ? 'nada más' : otros.join(' · ')),
       };
     }
 
-    async function restringidos(codigo: string, fichero: string): Promise<string[]> {
-      const { frontera, contexto } = await analizar(codigo, fichero);
-
-      expect(frontera, `no debería haber avisos de frontera${contexto}`).toBeDefined();
-
-      return frontera;
+    /**
+     * El mismo ESLint con una configuración inline que NO es la del proyecto y solo lleva la
+     * frontera. Es la contrapregunta de `analizar`: separa «el patrón no casa» de «la
+     * configuración del proyecto no le llega a este fichero».
+     */
+    function motorSuelto(otra: string): ESLint {
+      return new ESLint({
+        cwd: RAIZ,
+        overrideConfigFile: true,
+        overrideConfig: {
+          files: ['**/*.{ts,tsx}'],
+          languageOptions: { ecmaVersion: 2022, sourceType: 'module' },
+          rules: {
+            'no-restricted-imports': [
+              'error',
+              { patterns: [{ group: [`@/features/${otra}`, `**/${otra}/**`] }] },
+            ],
+          },
+        },
+      });
     }
 
     let paresComprobados = 0;
@@ -221,6 +252,34 @@ describe('El barrido de las fronteras', () => {
         testigo,
         `${funcionalidad} no tiene ni un fichero .ts con el que probar`,
       ).toBeDefined();
+
+      // DOS PREGUNTAS DE CONTROL ANTES DE CREERLE NADA A UN SILENCIO, y en este orden, porque la
+      // primera que falle es la que nombra la capa rota:
+      //
+      // 1. ¿ESLint mira siquiera este fichero? Si el canario calla, lo de abajo no prueba nada.
+      const canario = await analizar(CANARIO, testigo!);
+      expect(
+        canario.todos,
+        `ESLint no ha marcado un 'any' descarado en el testigo de ${funcionalidad}: no está ` +
+          `mirando ese fichero, así que este barrido no puede afirmar nada` +
+          canario.contexto,
+      ).not.toEqual([]);
+
+      // 2. ¿Sabe este motor prohibir estos patrones? Con una configuración inline que solo lleva
+      //    la frontera. Si aquí prohíbe y con la del proyecto no, el que falla es el reparto de la
+      //    configuración; si aquí tampoco, el que no casa es el PATRÓN.
+      const otraCualquiera = enDisco.find((cual) => cual !== funcionalidad);
+      const suelto = await motorSuelto(otraCualquiera!).lintText(
+        `import '@/features/${otraCualquiera!}/loQueSea.ts';\n`,
+        { filePath: testigo! },
+      );
+      expect(
+        (suelto[0]?.messages ?? []).map(
+          (aviso) => `[${aviso.ruleId ?? 'sin regla'}] ${aviso.message}`,
+        ),
+        `el motor de ESLint no prohíbe '@/features/${otraCualquiera!}/…' ni con una ` +
+          `configuración que no lleva otra cosa: el patrón no casa en este entorno`,
+      ).not.toEqual([]);
 
       for (const otra of enDisco.filter((cual) => cual !== funcionalidad)) {
         const conAlias = `import '@/features/${otra}/loQueSea.ts';\n`;
@@ -257,9 +316,11 @@ describe('El barrido de las fronteras', () => {
         `import '@/app/i18n/es.ts';\n`,
         `import '@/features/${funcionalidad}/loQueSea.ts';\n`,
       ]) {
+        const visto = await analizar(permitido, testigo!);
+
         expect(
-          await restringidos(permitido, testigo!),
-          `${funcionalidad} no puede escribir ${permitido.trim()}, y sí debería`,
+          visto.frontera,
+          `${funcionalidad} no puede escribir ${permitido.trim()}, y sí debería` + visto.contexto,
         ).toEqual([]);
       }
     }
