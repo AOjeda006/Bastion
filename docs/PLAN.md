@@ -1981,7 +1981,434 @@ el bloqueo de la R16, y las dos van a convivir en las mismas tablas.
 - **`[Range]` con límites de texto se lee en cultura invariante**, y la sensibilidad a la cultura la
   exige `.editorconfig` y no un lote de analizadores.
 
+### Tomadas por el agente de desarrollo — puerta de clarificación de la fase 1 (2026-09-03)
+
+> **Doce preguntas, planteadas todas juntas y contestadas todas juntas**, como manda el `CLAUDE.md`
+> §2. No se escribió una línea de código antes de tenerlas resueltas, y ese es el punto: la fase 1
+> **no tiene Anexo A.3**. El §15 da el criterio de la fase entera —«alta de cliente/proveedor con NIF
+> validado y de artículo con unidad, impuesto y tarifa; listados paginados y filtrados en servidor;
+> dominio cubierto por tests»— y nada más. El desglose en ítems es una **decisión**, no un literal
+> que copiar, y por eso vive aquí.
+>
+> **Tres cosas no se preguntaron**, porque el plan maestro ya las decide y reabrirlas sería tocar el
+> §7:
+>
+> - **El modelo de tarifa** lo fija el §7.3: `Tarifa` con vigencia y divisa; `LineaTarifa` por
+>   artículo **o** categoría, con precio **o** descuento, escalado por cantidad. Lo que el §7.3 **no**
+>   fija —precedencia, exclusividad, solape, ausencia— sí se decidió, y está en P5.
+> - **La unicidad del identificador fiscal** la fija el §7.2: «su identidad es única por CIF **y**
+>   empresa». Dentro de una empresa no se repite; entre empresas sí. Lo que quedaba abierto está
+>   en P4.
+> - **`Tercero` es un solo agregado con roles** (§7.2), así que es **una** carpeta `terceros/` y no
+>   `clientes/` y `proveedores/`.
+
+#### P1 · El desglose en ítems — once, con dos ajustes sobre lo propuesto
+
+**Decidido:** once ítems, cada uno con criterio verificable, en el orden de la tabla de más abajo.
+Dos cambios sobre la propuesta inicial del agente, los dos del usuario y los dos con el mismo
+motivo —**decidir barato hoy en vez de urgente mañana**—:
+
+1. **El presupuesto del frontal pasa de último a primero.** El propio P11 demuestra que la métrica
+   ya mide mal **hoy**, y que la fase 1 va a añadir pantallas diferidas que engordan el número sin
+   empeorar el arranque. Dejarlo al final significa que salta en mitad de Catálogo, con una pantalla
+   a medias, y ahí es cuando un tope se sube por prisa — que es exactamente lo que la nota abierta
+   del riesgo dice que no se haga.
+2. **El contrato de listado absorbe el P12.** Se está tocando ese contrato y están a punto de nacer
+   dos módulos más: es el momento más barato que va a existir para consolidar los tipos de
+   paginación. Después son cuatro copias.
+
+**Por qué el cruce mutuo es ítem propio.** Del §7 salen dos dependencias en sentidos opuestos:
+`Tercero.TarifaAsignada` mira a Catálogo y `ArticuloProveedor` mira a Terceros. Ninguno de los dos
+módulos puede hacerse entero primero, así que la mutualidad se hace **visible** en un ítem en vez de
+colarse dentro de otro.
+
+**§15 respetado:** la fase termina desplegable y no hay dos fases abiertas a la vez. Nada de la fase
+2 en adelante entra aquí — en particular `CodigoBarras`, que arrastra
+`negocio/identificacion-articulos/convenciones.md`, y ese import es de la **fase 2**.
+
+#### P2 · La cuarta vía en rojo — regla por reflexión, con dos fuentes
+
+**El problema.** De los cuatro caminos por los que Catálogo puede tocar a Organización, tres se
+ponen rojos solos: una clave foránea entre esquemas la rechaza el SQL, tocar `Organizacion.Domain`
+lo rechaza el compilador, y referenciar `Organizacion.Contracts` sin declarar el cruce lo rechaza
+`LasFronterasEntreModulosTests`. El cuarto —**guardar `unidad_id` sin validarlo contra nadie**— sale
+**verde en todas partes**. Es el camino equivocado que no avisa.
+
+**Decidido:** una regla nueva del carril de arquitectura, con **dos fuentes independientes
+comparadas enteras y en los dos sentidos**, que es el patrón de `funcionalidades.ts` y el de
+`Inventario`:
+
+- **La lista declarada a mano** de las propiedades que son identificadores de otro módulo, con su
+  dueño. Entra por aquí lo que el nombre no delata.
+- **El descubrimiento por reflexión** sobre el dominio compilado: todo `Guid` de un agregado cuyo
+  nombre case con un agregado de otro módulo. Entra por aquí lo que nadie declare.
+
+Y para cada entrada, la exigencia: **tiene que existir un cruce declarado hacia el `Contracts` de
+ese módulo**.
+
+**Por qué dos fuentes y no una.** La heurística de nombres sola tiene un agujero que aparece en el
+primer caso real: el §7.3 le da al artículo una **unidad base**, y ese campo se llamará
+`UnidadBaseId`, no `UnidadMedidaId`. No casa, la regla calla, y el agujero queda abierto justo donde
+se abrió para cerrarlo. La lista declarada sola tiene el agujero simétrico: un `DivisaId` que nadie
+apunte no existe para la regla. Cada fuente tapa el fallo de la otra, y compararlas enteras es lo
+que impide que una envejezca en silencio.
+
+**Mutación que la valida:** añadir `DivisaId` a un agregado que no tenga puerto, y ver el rojo.
+
+**Lo que se descarta, y por qué.** Declarar la línea de `s_crucesDeclarados` **antes** que el código
+—para que el rojo llegue el día que Catálogo compile sin usar el puerto— tiene un precio que no se
+puede pagar: la comparación es **entera y en los dos sentidos**, así que una línea declarada sin
+código que la ejerza deja el carril **en rojo desde que se escribe**. Eso choca de frente con «cada
+commit deja el árbol verde» (`AGENTS.md`). El puerto, su primer consumidor y su línea de cruce van
+en el **mismo commit**; lo que obliga al siguiente agregado no es el orden de escritura, es la regla
+de P2.
+
+#### P3 · El cruce mutuo Terceros ↔ Catálogo — los dos, declarados, en ítem propio
+
+**Decidido:** se aceptan los dos cruces, cada uno por el `Contracts` del módulo dueño y declarado en
+`s_crucesDeclarados`, en el ítem 1.10.
+
+No es un ciclo de proyectos —`Contracts` no arrastra el interior de su módulo, así que compila—,
+pero sí una dependencia mutua entre módulos, y por eso se hace visible en vez de repartirla.
+
+**Descartado el evento de integración** para uno de los dos sentidos: son **lecturas**, no
+reacciones a un cambio, y el §4 ya dice que las lecturas van por la interfaz del `Contracts` del
+dueño resuelta en proceso. Un evento pagaría coste de bandeja, de idempotencia y de orden a cambio
+de nada.
+
+#### P4 · Qué valida «NIF validado»
+
+**Decidido:** **NIF, NIE y CIF con su letra de control**, validados de verdad en el objeto de valor.
+El identificador extranjero se guarda como **identificador opaco con su país**, sin validar y
+marcado como tal. **Nada de VIES en el camino del alta**, pero con su hueco previsto: el campo de
+estado —*sin verificar · verificado · rechazado*, con su fecha— **existe desde el primer día**, para
+que la comprobación diferida sea un caso de uso nuevo y no una migración sobre datos.
+
+**Por qué no VIES ahora.** Es un servicio externo con caída y con latencia: meterlo en el camino del
+alta convierte un formulario en una integración, y la primera indisponibilidad ajena impide dar de
+alta un cliente. Y el dato que de verdad decide el IVA es el **territorio fiscal**, que el §7.2 ya
+hace campo propio y que VIES no aporta.
+
+**Las dos coletillas:**
+
+- **Tercero sin identificador fiscal: sí, con el rol restringido.** Puede ser cliente de contado; no
+  puede ser proveedor ni entrar en factura hasta que lo tenga. La regla vive en el dominio, no en el
+  formulario.
+- **NIF de un tercero bloqueado: son DOS caminos, no uno, y el matiz es del usuario.** Resolverlo con
+  el ítem 1.4 no basta: quien da un alta normalmente **no** tendrá el permiso de ver lo bloqueado, y
+  un mensaje que diga «está bloqueado» **publica la existencia de un dato del art. 32 a alguien sin
+  derecho a saberlo**. Así que:
+  - **el alta** devuelve un conflicto que **no revela** —«no se puede dar de alta con ese
+    identificador; consulta con administración»—, sin confirmar ni desmentir que exista una fila;
+  - **el administrador**, con su permiso y por el camino del 1.4, sí la encuentra y puede levantarla.
+
+  Va escrito así en el **ADR-0027**, porque es la clase de detalle que se decide una vez y se copia
+  mal diez veces.
+
+#### P5 · Lo que el §7.3 no fija de las tarifas — cinco decisiones
+
+1. **Precedencia: artículo > categoría más cercana > … > raíz.** No basta con «gana la más
+   específica»: como la categoría es **jerárquica con padre** (ver *Lo que decide el agente*), un
+   artículo puede casar con una línea de su categoría **y** con otra de la categoría padre, y las
+   dos son «por categoría». Sin la precedencia completa, el desempate lo decide **el orden en que
+   salgan las filas**, que es un no-determinismo silencioso. El caso que hay que probar es
+   exactamente ese: **dos líneas de categoría a distinta profundidad**.
+2. **Precio o descuento, excluyentes en el propio objeto de valor.** Los dos juntos son dos maneras
+   de decir lo mismo con un orden de aplicación invisible.
+3. **Solape de vigencias prohibido con restricción de exclusión**, igual que los tramos de impuesto
+   del 0.15. La máquina ya sabe hacerlo; dejarlo a la aplicación es dejarlo a una carrera.
+4. **Sin tarifa aplicable: error de negocio con nombre, nunca precio cero.** Mismo criterio que la
+   decisión 3 del ADR-0023.
+5. **`Tercero.TarifaAsignada` entra en la fase 1**, dentro del ítem de cruces (1.10). Sin él la
+   tarifa por cliente no existe y el criterio del §15 se queda a medias.
+
+#### P6 · Hasta dónde llega Terceros en esta fase — la raya entre maestro y movimiento
+
+El §7.2 cuelga seis cosas del tercero. Tres son de fase 1 sin discusión (`Direccion`, `Contacto`,
+régimen fiscal). Las otras tres tienen dueño más adelante:
+
+| | Fase 1 | Su fase |
+|---|---|---|
+| `CuentaBancaria` (IBAN, BIC) | dato maestro del tercero | — |
+| `MandatoSEPA` | — | **6 · Tesorería**, con las remesas |
+| `CondicionPago` | plazos y tope legal de 60 días | — |
+| `LimiteCredito` | el **importe** | el **riesgo vivo** y el bloqueo por impago son **4 · Ventas** |
+
+**El criterio:** en la fase 1 entra lo que es **maestro**; lo que necesita **movimientos** para
+significar algo entra con el módulo que los genera. Meter `MandatoSEPA` ahora es escribir una
+máquina de estados —incluida la baja automática a los 36 meses— que **nada ejercita**: es la
+vacuidad del ADR-0020 en forma de tabla.
+
+#### P7 · Cuándo entra la retirada del ADR-0023 — ítem propio, antes de Catálogo
+
+**Decidido:** ítem 1.7, propio, **antes** del primer ítem de Catálogo, con sus dos hermanos —la
+tolerancia de la conversión inversa y el resolutor de conversiones encadenadas con su error con
+nombre—.
+
+El disparador escrito en el ADR-0023 es «con el primer módulo que los referencie, no antes», y ese
+momento es Catálogo usando `UnidadMedida`. Metido **dentro** del ítem de Catálogo, el criterio de
+ese ítem dejaría de ser verificable de un vistazo: son cambios de contrato en cuatro recursos de
+Organización más una regla de aplicación. Y dejarlo **para el final** significa que Catálogo nace
+pudiendo apuntar a una unidad que ya nadie debería ofrecer.
+
+#### P8 · El NIF no viaja en la cadena de consulta
+
+`herramientas/api-rest.md` es explícito —«un dato sensible no viaja en la cadena de consulta»— y
+`proteccion-datos.md` entra con esta fase. Hoy los listados solo llevan `?page=&size=` y `PaginaDe`
+no devuelve enlaces, así que la decisión se toma limpia y no hay que deshacer nada.
+
+**Decidido:** la búsqueda va por **`POST .../buscar` con el criterio en el cuerpo**, la paginación
+en el cuerpo también, y la respuesta devuelve un **cursor opaco** en lugar de una URL que
+reintroduzca el criterio. **La comprobación no termina en la entrada:** el enlace a la página
+siguiente que fabrica el servidor tampoco puede llevar el criterio dentro.
+
+**Descartado** mitigar en el proxy (no registrar la cadena de consulta): confía la protección a un
+componente que no vive en este repositorio, y el historial del navegador y la analítica del cliente
+siguen ahí. **Descartado** partir el listado en dos formas según el filtro: la asimetría que nadie
+recuerda seis meses después.
+
+**El efecto secundario, y su exención.** Un `POST` que no crea nada choca con la lectura ingenua de
+REST; queda documentado en el **ADR-0025**. Y tiene una consecuencia concreta sobre lo construido:
+`TodaEscrituraDiceComoSeProtegeTests` reparte las acciones **por el verbo**, así que
+`POST .../buscar` cae del lado de las que cambian estado y el barrido pedirá `If-Match` o
+`Idempotency-Key` para una búsqueda. Necesita **su exención con motivo escrito** en `s_exentas`, que
+ya se compara entera en los dos sentidos. Es una línea, y se escribe **con el endpoint**, no cuando
+el carril se ponga rojo: la tentación entonces sería ensanchar la partición, que es peor.
+
+#### P9 · La importación CSV — aislamiento por fila, idempotencia por fichero, y el hash
+
+**Unidad de aislamiento: la fila.** Es literalmente lo que pide `principios/manejo-errores.md`: en
+un bucle que procesa muchos elementos, el fallo de uno no puede ser el fallo de la vuelta. Un CSV de
+tres mil filas de un cliente real no puede convertirse en un «no» sin diagnóstico.
+
+**Idempotencia (R10): una importación es UNA operación.** Con `Idempotency-Key`, el reenvío del
+mismo fichero devuelve **el resultado guardado** sin reimportar. **Descartado** hacerla N
+operaciones —una por fila con clave derivada—: multiplicaría por tres mil las filas de
+`auditoria.claves_de_idempotencia`, que **ya crece sin política de retención y es riesgo abierto**.
+
+**El segundo cerrojo, que es lo que hace segura a la decisión anterior:** se guarda el **hash del
+contenido** junto al resultado. Misma clave con **fichero distinto** es un **error explícito**, no
+el informe equivocado devuelto con cara de acierto.
+
+**En el criterio del ítem:** con aislamiento por fila, el informe dice **qué filas fallaron, por qué
+y en qué línea** — es lo único que permite corregir y reimportar solo esas. Y esa reimportación es
+**fichero distinto → hash distinto → clave nueva**: coherente, y dicho en voz alta para que nadie lo
+lea como una fuga de la idempotencia.
+
+#### P10 · El camino de lectura de lo bloqueado — ítem propio, con dos correcciones de hecho
+
+**Sí lo necesita el desglose, y no por comodidad.** Sin él, el alta de un tercero cuyo NIF está
+bloqueado choca contra un índice único sobre una fila **invisible**, y el mensaje sería «duplicado»
+señalando a nada (ver P4).
+
+**Dos correcciones al análisis previo, comprobadas en el código:**
+
+1. **El motivo ya existe.** `MotivoParaVerLoBloqueado.AdministracionDelBloqueo` está construido en
+   `src/BuildingBlocks/Application/Bloqueos/IAccesoALoBloqueado.cs` y en uso. **No hay que crearlo.**
+2. **Son cuatro sitios, no tres.** `s_aperturasDeBloqueoPermitidas` lista `DesbloquearAlmacen`,
+   `DesbloquearEmpresa`, `AdministracionDeUsuarios` y `BloquearUbicacion`. Terceros sería el
+   **quinto**. Importa porque esa lista **se compara entera y en los dos sentidos**: escribir «tres»
+   ahí es escribir un rojo.
+
+Así que el ítem **no construye el motivo**: construye el **camino de listado** —una consulta que
+enseñe lo bloqueado a un rol nominativo y trazado—, con su permiso y su ADR.
+
+**Y lo que el `proteccion-datos.md` añade y hoy no existe:** el art. 32 exige que el bloqueo tenga
+**fecha de vencimiento y proceso de destrucción**. No entra en el ítem —es materia de retención, y
+la fase 1 no tiene con qué decidir el plazo— pero **entra como riesgo anotado con su fecha**, no en
+silencio.
+
+#### P11 · El presupuesto del frontal — dos topes, y el criterio que ya estaba escrito
+
+**Lo medido hoy:** `dist` son **554 kB** de un tope de 600. Pero el desglose enseña que el `dist`
+está **partido en fragmentos y las rutas se cargan tarde**: `index` 380 kB, `schemas` (zod) 84,
+`PaginaDeAcceso` 36, css 12, `Paginacion` 12. El paso de la CI hace
+`du -sk --exclude='*.map' dist`, o sea que **suma también los fragmentos que el navegador no
+descarga al arrancar**. Su propio comentario dice que mide «lo que el navegador descarga», y con
+carga diferida **eso dejó de ser cierto**.
+
+**La consecuencia es al revés de como parece:** la fase 1 va a añadir pantallas **diferidas**, que
+engordan el número sin empeorar el arranque, y el presupuesto saltaría por algo que **no es el
+problema que existe para vigilar**.
+
+**Decidido: dos topes, con el cálculo escrito.**
+
+- **Arranque ≤ 450 kB** — el fragmento de entrada más sus importaciones estáticas y el CSS. Hoy son
+  ≈400 kB; en una 4G de 1,6 Mbps efectivos, ~2 s de descarga, dentro del segundo y medio a dos y
+  medio que se considera aceptable para el primer render útil. Margen corto sobre lo medido, que es
+  la regla que ya dejó escrita el 0.10.
+- **Total ≤ 900 kB** — holgado a propósito: vigila el crecimiento global sin castigar el troceo.
+
+**Y lo importante, que es de dónde sale el criterio y no el número:** el propio paso de la CI ya
+excluye los `.map` con este razonamiento escrito —«no se descarga al arrancar, así que contarlo
+medía otra cosa distinta de la que dice esta frase»—. Ese argumento vale **palabra por palabra**
+para los fragmentos diferidos. Esto **no cambia el criterio: lo aplica donde dejó de aplicarse
+solo.** Así queda en el **ADR-0028**.
+
+#### P12 · Los tipos de paginación se consolidan — y la premisa de la pregunta era falsa
+
+La pregunta se planteó como «¿seguimos copiando o tocamos el §4?». **Comprobado en el código, no hay
+§4 que tocar.**
+
+**Uno.** `Contracts` **ya** referencia el núcleo común, y solo en un módulo:
+
+```
+Bastion.Organizacion.Contracts.csproj  ->  Bastion.BuildingBlocks.Domain.csproj
+Bastion.Identidad.Contracts.csproj     ->  (ninguna)
+Bastion.Auditoria.Contracts.csproj     ->  (ninguna)
+```
+
+O sea que hoy **no hay regla**: hay una **incoherencia entre dos módulos**, con la puerta abierta y
+uno solo entrando por ella.
+
+**Dos.** La regla de capas no dice lo que la pregunta suponía. `LasCapasVanHaciaDentroTests`
+prohíbe que `Contracts` arrastre **el interior de su propio módulo**, y el motivo está escrito ahí
+mismo: «si el contrato arrastrase el `Domain`, cualquier módulo que lo referenciara —que es lo que la
+regla 1 le PERMITE hacer— acabaría viendo el dominio ajeno por transitividad». **El bloque común no
+es interior de nadie**: todos pueden verlo, así que la transitividad que justifica la regla **no
+existe en este caso**.
+
+**Tres.** Dos de los cuatro tipos ni siquiera están en `Contracts`: `ConsultaPaginada` vive en
+`Endpoints` y `Paginador` en `Infrastructure`, y las dos capas **ya** referencian
+`BuildingBlocks.Infrastructure`. Para esos dos no hay ni discusión.
+
+**Cuatro.** Son duplicados de verdad, no parientes: `diff` entre los dos `Paginacion.cs` devuelve
+**una sola línea**, la del `namespace`; los dos `PaginaDe.cs`, lo mismo.
+
+**Con eso, seguir copiando deja de ser la opción barata:** sería institucionalizar **dieciséis
+ficheros idénticos** —cuatro tipos por cuatro módulos— más un barrido que los vigile para siempre,
+contra un principio que la biblioteca declara sin matices. Un barrido que compara copias no es una
+defensa: es la cuota anual de una deuda que no hacía falta contraer.
+
+**Decidido, y cómo:**
+
+- **`Bastion.BuildingBlocks.Contracts`**, nuevo y mínimo, con `Paginacion` y `PaginaDe`. Es su sitio
+  semántico: son tipos **de contrato**, no de dominio.
+- **`ConsultaPaginada` y `Paginador`** se van a los comunes que sus capas ya referencian.
+- **Identidad y Organización pasan a usarlos y sus copias se borran.** Que digan lo mismo **por
+  construcción**, no por vigilancia.
+
+**Aviso previsto:** `Inventario.ComunesConTipos` declara tres ensamblados comunes con un comentario
+que dice que «son tres y **no van a crecer con las fases**». El cuarto lo pondrá **rojo**, y hay que
+actualizar la línea. Eso es el mecanismo funcionando como se diseñó — y la ocasión de corregir el
+comentario, que resultó ser **una predicción y no una regla**.
+
+#### Lo que decide el agente, por trivial o reversible
+
+- **Categoría jerárquica con padre y comprobación de ciclos**, no ruta materializada: la ruta
+  optimiza consultas que todavía no existen. Es la que obliga a completar la precedencia de P5.
+- **Idioma del tercero** restringido a los del diccionario del frontal.
+- **Orden por omisión** de cada listado, declarado en el caso de uso y no heredado del motor.
+- **Nombres de permisos** siguiendo `modulo.recurso.accion`, como el catálogo ya existente.
+- **Dónde vive cada barrido nuevo**, siguiendo el carril que ya le corresponde por lo que lee.
+
+#### Lo que se encontró al comprobar las decisiones contra el código
+
+Cuatro cosas que no estaban en la tanda y que cambian el trabajo. Las dos primeras son **averías
+mudas** que la fase 1 activa; las dos últimas, consecuencias del P12.
+
+1. **El ítem 1.4 caduca dos exenciones del ADR-0017, y ellas mismas lo dicen.** Las exenciones de
+   `EmpresasController.Desbloquear`, `AlmacenesController.Desbloquear`,
+   `UbicacionesController.Desbloquear` y `UsuariosController.Desbloquear` llevan escrita **la
+   condición de la que dependen**: «DEPENDE DE que el filtro `Bloqueo` siga tapando la empresa en
+   **TODA lectura que llegue por la API**: el día que un endpoint abra `ViendoLoBloqueado(...)` y
+   devuelva una empresa bloqueada **con su ETag**, la llave vuelve a existir, esta exención caduca y
+   hay que volver a exigir `If-Match` aquí». El ítem 1.4 hace exactamente eso.
+
+   **La cláusula tiene dos mitades y solo una se rompe si el camino es de listado.** Un **listado**
+   de lo bloqueado rompe la primera mitad —ya no es «toda lectura»— pero **no entrega ETag**, que es
+   lo que resucita la llave; un **`GET` individual** rompe las dos y obliga a devolver el `If-Match`
+   a los cuatro desbloqueos. **Decidido: el 1.4 construye SOLO el listado**, que es además lo único
+   que hace falta —del listado sale el identificador, y el desbloqueo no pide etiqueta—. Y **entra en
+   el criterio del ítem** reescribir la mitad rota de las cuatro cláusulas: una condición que ha
+   dejado de ser cierta y sigue ahí es una exención que parece razonada y no lo es.
+
+2. **`TodaEscrituraDiceComoSeProtegeTests` fija sus ensamblados a mano, y la fase 1 lo deja ciego.**
+   Su `Todas()` enumera `typeof(ControladorDeOrganizacion).Assembly` y
+   `typeof(ControladorDeIdentidad).Assembly`, tecleados. El día que exista `Terceros.Endpoints`, el
+   barrido **dejará de mirarlo sin ponerse rojo y sin cambiar de color** — un controlador nuevo
+   entero sin `If-Match`, sin `Idempotency-Key` y sin exención, y el informe diciendo que se
+   comprobó. Es **la misma avería** que se cerró en el 0.13 para `UnidadDeTrabajoPorModuloTests`, y
+   es hoy la última lista de ensamblados tecleada del proyecto.
+
+   **Decidido:** se arregla con la receta ya aceptada aquí —descubrir los ensamblados que arrastra
+   `Bastion.Api` filtrando `Bastion.*.Endpoints`, y comparar la lista entera en las dos
+   direcciones—, y **va en el 1.3**, o sea **antes** de que exista el primer controlador nuevo. Se
+   arregla cuando cuesta una tarde, no cuando ya escondió algo.
+
+3. **`Inventario.ComunesConTipos` se pondrá rojo con el cuarto común**, como estaba previsto (P12).
+
+4. **`Paginador.cs` de Organización arrastra un resto de edición en su comentario de documentación**
+   —una etiqueta suelta dentro de una palabra—, que compila porque es XML válido. No se arregla por
+   separado: ese fichero **desaparece** con la consolidación del P12.
+
+#### Lo que faltó en la tanda, y por tanto no se supone
+
+**El octavo tema que el usuario puso sobre la mesa —«quién escribe el texto que lee una persona
+cuando falla una validación»— se cayó de la tanda al redactarla.** No se contestó porque no se
+preguntó, así que **no se hereda un default**: queda como decisión abierta con fecha de caducidad.
+
+- **Dónde muerde:** en el **1.5**, que es el primer ítem con una validación que apetece enseñar con
+  el texto del servidor (un NIF con la letra mal). Los ítems 1.1 a 1.4 no la tocan.
+- **Las opciones:** que la API traduzca por `Accept-Language`, o que devuelva un `type` estable y lo
+  traduzca el frontal.
+- **Lo que ya está escrito** en *Notas / riesgos* desde el 0.14: «la respuesta por defecto es la
+  segunda, porque mantiene la API sin saber de presentación; **pero se decide, no se hereda**». Y
+  encaja con lo construido —el `type` de `ProblemDetails` **ya es contrato**—, pero eso es un
+  argumento, no una respuesta.
+- **Se pregunta antes de empezar el 1.5**, y sale de ahí un ADR si la respuesta es de arquitectura.
+
+#### El desglose de la fase 1, definitivo
+
+> Once ítems. Entre paréntesis, el número que tenía en la propuesta inicial, para que no se pierda
+> nada al leer el historial de esta decisión.
+
+| # | Ítem | Criterio de aceptación |
+|---|---|---|
+| **1.1** | El presupuesto del frontal, remedido *(era 1.11)* | Dos métricas —arranque frente a total— con topes **450 / 900 kB** razonados con el cálculo escrito; la CI mide **lo que dice medir**, comprobado con la cifra de antes y la de después |
+| **1.2** | Los puertos de lectura de Organización, y la cuarta vía en rojo *(1.1)* | `IConsultaDeImpuestos`, `IConsultaDeUnidadesDeMedida` e `IConsultaDeDivisas` en `Organizacion.Contracts`; el cruce declarado en el mismo commit que su primer consumidor; la **regla de dos fuentes** de P2 vista en rojo con su mutación (`DivisaId` sin puerto) |
+| **1.3** | El contrato de listado, y los tipos de paginación consolidados *(1.2 + P12)* | Filtro y orden en servidor con tope; búsqueda por cuerpo, **sin dato sensible en la URL ni en el enlace a la página siguiente**, con su exención escrita en `s_exentas`; `BuildingBlocks.Contracts` con `Paginacion` y `PaginaDe`, `ConsultaPaginada` y `Paginador` en sus comunes, las ocho copias borradas; y `TodaEscrituraDiceComoSeProtegeTests` **descubriendo** sus ensamblados |
+| **1.4** | El camino de lectura de lo bloqueado *(1.3)* | **Listado** —no `GET` individual— de lo bloqueado, con su permiso y su ADR; `s_aperturasDeBloqueoPermitidas` comparada entera con **cinco** sitios; y la mitad caducada de las cuatro cláusulas «DEPENDE DE» del ADR-0017 reescrita |
+| **1.5** | Terceros: el agregado y su identidad *(1.4)* | Alta con **NIF/NIE/CIF validado de verdad**, extranjero opaco con país y estado de verificación; dirección estructurada (R17); roles; unicidad por (empresa, NIF); el alta contra un bloqueado devuelve un conflicto **que no revela**; listado paginado y filtrado; `features/terceros/` |
+| **1.6** | Terceros: lo que cuelga *(1.5)* | `Contacto`, `CuentaBancaria` con IBAN validado, `CondicionPago` con el tope de 60 días **contado desde la entrega**, `LimiteCredito` (solo el importe) — la raya de P6 |
+| **1.7** | La retirada y las dos conversiones *(1.6)* | ADR-0023 implementado entero: retirada en los cuatro maestros de instalación, tolerancia de la conversión inversa, resolutor de encadenadas con **error con nombre**. Antes de que Catálogo los referencie |
+| **1.8** | Catálogo: artículo y categoría *(1.7)* | Alta de artículo con unidad e impuesto **validados por los puertos del 1.2**; categoría **jerárquica con ciclos comprobados**; listado paginado y filtrado; `features/catalogo/` |
+| **1.9** | Tarifas *(1.8)* | Vigencia y divisa; línea por artículo o categoría; escalado por cantidad; **la precedencia completa de P5 probada con dos líneas de categoría a distinta profundidad**; solape prohibido por restricción de exclusión; sin tarifa aplicable, error con nombre |
+| **1.10** | Los dos cruces mutuos *(1.9)* | `ArticuloProveedor` y `Tercero.TarifaAsignada`, cada uno por el `Contracts` del dueño y **declarado** |
+| **1.11** | Importación CSV *(1.10)* | Aislamiento **por fila**; idempotencia **por fichero** con `Idempotency-Key` **y hash del contenido** —misma clave con fichero distinto, error explícito—; informe con **línea y motivo** de cada fila rechazada |
+
+**Los ADR que salen de esta puerta**, numerados del 0024 en adelante: la cuarta vía y su regla de dos
+fuentes (**0024**), la búsqueda sin dato sensible en la URL (**0025**), la idempotencia de la
+importación con el hash (**0026**), la lectura de lo bloqueado y los dos caminos del art. 32
+(**0027**), el presupuesto de arranque frente a total (**0028**) y la consolidación de los tipos de
+paginación (**0029**) — este último deja escrito **por qué la regla de `Contracts` no era la que
+parecía**, porque es la corrección de una creencia y no solo una decisión.
+
+
 ## Estado actual
+
+**Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
+doce preguntas planteadas juntas y contestadas juntas, con su motivo, en *Decisiones tomadas →
+puerta de clarificación de la fase 1*; **once ítems** con criterio verificable en el *Checklist* →
+*Fase 1 · Maestros*; y **seis ADR** nuevos, del **0024** al **0029**. `CLAUDE.md` estrena los dos
+imports del Anexo A.2.3 que entran con la fase y se quedan: `proteccion-datos.md` y
+`soft-delete.md`.
+
+Dos cosas que salieron de comprobar las decisiones **contra el código** y que no estaban en la
+tanda, las dos averías mudas que la fase 1 activa: el ítem 1.4 **caduca la mitad de las cuatro
+cláusulas «DEPENDE DE»** del ADR-0017 (por eso construye un listado y no un `GET` individual), y
+`TodaEscrituraDiceComoSeProtegeTests` **fija sus ensamblados a mano**, así que el primer controlador
+de Terceros quedaría fuera del barrido sin que nada se pusiera rojo — se arregla en el **1.3**, o
+sea antes de que ese controlador exista.
+
+**Una decisión esencial sigue abierta a propósito:** quién escribe el texto que lee una persona
+cuando falla una validación. Se cayó de la tanda al redactarla, así que **no se hereda un default**;
+se pregunta antes de empezar el **1.5**, que es el primer ítem donde muerde.
+
+**Dónde retomar exactamente:** el ítem **1.1**, el presupuesto del frontal remedido. Va primero a
+propósito: la métrica de hoy suma fragmentos que el navegador no descarga al arrancar, y esta fase
+añade pantallas diferidas — dejarlo para el final es garantizar que el tope salte en mitad de
+Catálogo y se suba por prisa.
 
 **Ítem 0.16 cerrado — `features/` espeja los módulos, y la frontera dejó de ser un acuerdo escrito:**
 [run 33738721080](https://github.com/AOjeda006/Bastion/actions/runs/33738721080) sobre `6f21d3b`,
@@ -3838,15 +4265,87 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   —no una convención escrita— impide que una funcionalidad importe de otra; y `docs/dominio/`
   estrena el glosario del lenguaje ubicuo **con lo ya construido**.
 
+### Fase 1 · Maestros (2026-09-03)
+
+> **La fase 1 no tiene Anexo A.3.** El §15 da el criterio de la fase entera —«alta de
+> cliente/proveedor con NIF validado y de artículo con unidad, impuesto y tarifa; listados paginados
+> y filtrados en servidor; dominio cubierto por tests»— y el desglose en ítems lo acordaron usuario
+> y agente en la **puerta de clarificación de la fase 1**, cuyas doce respuestas con su motivo están
+> en *Decisiones tomadas*. Este checklist es el resultado; **no se reordena ni se amplía** por
+> iniciativa propia, igual que el A.3.
+
+- [ ] **1.1 · El presupuesto del frontal, remedido** — criterio de aceptación: dos métricas
+  —**arranque** frente a **total**— en vez de una; topes **450 kB** y **900 kB** con el cálculo
+  escrito (qué tarda en cargar y con qué red); y la CI midiendo **lo que dice medir**, comprobado
+  enseñando la cifra de antes y la de después. Motivo del orden: la métrica de hoy suma fragmentos
+  que el navegador no descarga al arrancar, y la fase 1 añade pantallas diferidas — el tope saltaría
+  por lo que no es el problema, y en mitad de Catálogo.
+- [ ] **1.2 · Los puertos de lectura de Organización, y la cuarta vía en rojo** — criterio de
+  aceptación: `IConsultaDeImpuestos`, `IConsultaDeUnidadesDeMedida` e `IConsultaDeDivisas` en
+  `Organizacion.Contracts`, con lo mínimo que cada consumidor necesita; el cruce declarado en
+  `s_crucesDeclarados` **en el mismo commit** que su primer consumidor; y la **regla de dos
+  fuentes** —lista declarada más descubrimiento por reflexión, comparadas enteras y en los dos
+  sentidos— vista en **rojo** con su mutación: un `DivisaId` en un agregado sin puerto.
+- [ ] **1.3 · El contrato de listado, y los tipos de paginación consolidados** — criterio de
+  aceptación: filtro y orden en servidor con tope; la búsqueda por **cuerpo** con cursor opaco, de
+  modo que **ni la URL ni el enlace a la página siguiente** lleven el criterio, con su exención de
+  `s_exentas` escrita **con el endpoint**; `Bastion.BuildingBlocks.Contracts` con `Paginacion` y
+  `PaginaDe`, `ConsultaPaginada` y `Paginador` en los comunes que sus capas ya referencian, y las
+  copias de Identidad y Organización **borradas**; y `TodaEscrituraDiceComoSeProtegeTests`
+  **descubriendo** sus ensamblados de `Bastion.Api` en vez de tenerlos tecleados.
+- [ ] **1.4 · El camino de lectura de lo bloqueado** — criterio de aceptación: **listado** —y no
+  `GET` individual, a propósito— de lo bloqueado para un rol nominativo y trazado, con su permiso y
+  su ADR; `s_aperturasDeBloqueoPermitidas` comparada entera con **cinco** sitios; y reescrita la
+  mitad que caduca de las cuatro cláusulas «DEPENDE DE» del ADR-0017, porque una condición que ya no
+  es cierta y sigue escrita es una exención que **parece** razonada.
+- [ ] **1.5 · Terceros: el agregado y su identidad** — criterio de aceptación: alta con **NIF, NIE o
+  CIF validados de verdad** (letra de control), extranjero como identificador **opaco con país** y
+  con estado de verificación; dirección **estructurada** (R17); roles sobre un solo agregado (§7.2);
+  unicidad por **(empresa, NIF)**; el alta contra un identificador bloqueado devuelve un conflicto
+  **que no revela**; listado paginado y filtrado por el contrato del 1.3; y `features/terceros/`.
+- [ ] **1.6 · Terceros: lo que cuelga** — criterio de aceptación: `Contacto`, `CuentaBancaria` con
+  IBAN validado, `CondicionPago` con el tope de **60 días de la Ley 3/2004 contado desde la
+  entrega**, y `LimiteCredito` **solo como importe**. Fuera, por la raya de la P6: `MandatoSEPA`
+  (fase 6) y el riesgo vivo (fase 4).
+- [ ] **1.7 · La retirada y las dos conversiones** — criterio de aceptación: el **ADR-0023
+  implementado entero** —retirada en los cuatro maestros de instalación, tolerancia de la conversión
+  inversa, resolutor de conversiones encadenadas con **error con nombre**—, y **antes** de que
+  Catálogo referencie `UnidadMedida`, que es el disparador que el propio ADR dejó escrito.
+- [ ] **1.8 · Catálogo: artículo y categoría** — criterio de aceptación: alta de artículo con unidad
+  e impuesto **validados por los puertos del 1.2** (no guardados a ciegas); `Categoria` jerárquica
+  con **comprobación de ciclos**; listado paginado y filtrado; y `features/catalogo/`. Fuera:
+  `CodigoBarras`, que es de la **fase 2** con su import.
+- [ ] **1.9 · Tarifas** — criterio de aceptación: `Tarifa` con vigencia y divisa y `LineaTarifa` por
+  artículo o categoría con escalado por cantidad (§7.3); **precio o descuento excluyentes** en el
+  objeto de valor; **solape de vigencias prohibido por restricción de exclusión**; sin tarifa
+  aplicable, **error de negocio con nombre y nunca precio cero**; y la **precedencia completa**
+  —artículo > categoría más cercana > … > raíz— probada con el caso que la distingue: **dos líneas
+  de categoría a distinta profundidad**.
+- [ ] **1.10 · Los dos cruces mutuos** — criterio de aceptación: `ArticuloProveedor` (Catálogo →
+  `Terceros.Contracts`) y `Tercero.TarifaAsignada` (Terceros → `Catalogo.Contracts`), cada uno por
+  el `Contracts` de su dueño, resuelto en proceso y **declarado**. Es ítem propio porque la
+  dependencia es **mutua** y eso se ve, no se reparte.
+- [ ] **1.11 · Importación CSV** — criterio de aceptación: **unidad de aislamiento = la fila**, de
+  modo que un fichero con filas malas importa las buenas; **idempotencia por fichero** —una
+  importación es UNA operación, y el reenvío con la misma `Idempotency-Key` devuelve el resultado
+  guardado sin reimportar—, con el **hash del contenido** guardado al lado, de manera que la misma
+  clave con **otro fichero** sea un error explícito; e informe con **línea y motivo** de cada fila
+  rechazada, que es lo único que permite corregir y reimportar solo esas.
+
+
 ## Imports pendientes de `CLAUDE.md`
 
 `CLAUDE.md` ya trae el **núcleo permanente** (A.2.1) y los de **fase 0** (A.2.2). Los de abajo
 **no están puestos a propósito**: cada import cuesta contexto en **cada** turno, así que se añaden
 al empezar su fase y se quedan (Anexo A.2.3).
 
+> **Los dos de la fase 1 ya están puestos** (2026-09-03, al abrir la puerta de clarificación de
+> la fase): `herramientas/proteccion-datos.md` y `patrones/soft-delete.md`. El segundo no era
+> opcional: la **retirada** del ADR-0023 es un final de vida que **no** es el bloqueo de la R16,
+> y las dos van a convivir en las mismas tablas.
+
 | Al empezar la fase | Añadir a `CLAUDE.md` |
 |---|---|
-| **1 · Maestros** | `@../BibliotecaDocumentacion/herramientas/proteccion-datos.md`<br>`@../BibliotecaDocumentacion/patrones/soft-delete.md` |
 | **2 · Inventario** | `@../BibliotecaDocumentacion/negocio/identificacion-articulos/convenciones.md` |
 | **5 · Facturación** | `@../BibliotecaDocumentacion/negocio/facturacion-espana/convenciones.md`<br>`@../BibliotecaDocumentacion/negocio/verifactu/convenciones.md`<br>`@../BibliotecaDocumentacion/negocio/iva-espana/convenciones.md` |
 | **6 · Tesorería** | `@../BibliotecaDocumentacion/negocio/pagos-y-cobros/convenciones.md` |
@@ -3860,14 +4359,47 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
-- **ABIERTO (2026-09-02) · El presupuesto de tamaño del frontal se queda corto.** La CI corta en
+- **ABIERTO (2026-09-03) · el bloqueo del art. 32 no tiene fecha de vencimiento ni proceso de
+  destrucción.** `proteccion-datos.md` entra con la fase 1 y es tajante: bloquear es «identificar y
+  reservar» **solo durante el plazo de prescripción**, y pasado ese plazo **hay que destruir**. Un
+  estado de bloqueo sin vencimiento «convierte una obligación de conservación acotada en conservación
+  indefinida, que es otra infracción». Hoy `Empresa`, `Almacen`, `Ubicacion` y `Usuario` llevan
+  bloqueo **con su fecha de bloqueo**, que es la mitad buena; lo que no existe es ni el plazo ni el
+  proceso que lo aplica. **No entra en el ítem 1.4 a propósito:** ese ítem construye el camino de
+  lectura, y el plazo es materia de retención —cuánto dura la prescripción de cada responsabilidad—,
+  que no se decide leyendo código. **Lo que lo desbloquea:** el plazo, dicho por quien pueda decirlo.
+  **Emparentado** con la nota de `auditoria.claves_de_idempotencia`: las dos son políticas de
+  retención sin dato con el que calibrarlas, y las dos tienen ya el mecanismo —una migración aplicada
+  por el paso de despliegue del ADR-0021—.
+
+- **ABIERTO (2026-09-03) · el frontal no tiene forma de aprovechar el listado de lo bloqueado
+  mientras la lectura individual no exista.** Decidido en la puerta de la fase 1: el ítem 1.4
+  construye **listado y no `GET` individual**, porque el individual emitiría `ETag` y **caducaría
+  las cuatro exenciones del ADR-0017**, devolviendo `If-Match` a los cuatro desbloqueos. Es la
+  decisión correcta y tiene un precio que conviene tener escrito: desde el listado se puede
+  desbloquear —el identificador basta y el desbloqueo no pide etiqueta— pero **no se puede abrir la
+  ficha** de lo bloqueado para mirarla antes. Si algún día hiciera falta esa ficha, no es un cambio
+  de pantalla: es volver a exigir `If-Match` en cuatro acciones y reescribir el ADR-0017.
+
+- **DECIDIDO (2026-09-03), PENDIENTE DE HACER en el ítem 1.1 · El presupuesto de tamaño del frontal
+  se queda corto — y además mide otra cosa.** Al razonarlo en la puerta de la fase 1 apareció lo que
+  esta nota no veía: el `dist` está **partido en fragmentos y las rutas se cargan tarde**, así que
+  `du -sk --exclude='*.map' dist` **suma también lo que el navegador NO descarga al arrancar**
+  (554 kB de total contra ≈400 kB de arranque). El paso contradice su propio comentario, igual que
+  lo contradecía cuando medía los `.map`. **Decidido: dos métricas y dos topes —arranque ≤ 450 kB,
+  total ≤ 900 kB— con el cálculo escrito**, y el criterio no es nuevo: es el mismo con el que ya se
+  excluyeron los mapas, aplicado donde dejó de aplicarse solo (ADR-0028). Texto original: La CI corta en
   **600 kB** (`du -sk --exclude='*.map' dist`). Tras el 0.14 son **554 kB**: la i18n costó 64, de
   490 a 554, medido a los dos lados. Quedan **46 kB** y la fase 1 trae Terceros y Catálogo enteros,
   con sus formularios y sus tablas. Hay que revisar el tope **con un número razonado** —qué tarda en
   cargar y con qué red— y no subirlo el día que salte, que es como un presupuesto deja de serlo.
 
-- **ABIERTO (2026-09-02) · El día que un mensaje del servidor se le enseñe al usuario, la i18n
-  vuelve a la mesa.** Hoy el frontal **no pinta nunca** `ProblemDetails.detail`: todo lo que lee una
+- **ABIERTO (2026-09-02), CON FECHA DESDE EL 2026-09-03 · El día que un mensaje del servidor se le
+  enseñe al usuario, la i18n vuelve a la mesa.** Este era el octavo tema que el usuario puso sobre
+  la mesa al abrir la fase 1, y **se cayó de la tanda de preguntas al redactarla**: no se contestó
+  porque no se preguntó. **No se hereda el default**; se pregunta antes de empezar el **1.5**, que
+  es el primer ítem con una validación —un NIF con la letra mal— que apetece enseñar con el texto
+  del servidor. Texto original: Hoy el frontal **no pinta nunca** `ProblemDetails.detail`: todo lo que lee una
   persona está escrito en el frontal, y por eso el 0.14 no tocó la API. Pero las validaciones de la
   fase 1 —un NIF con la letra mal, un código de artículo repetido— son justo las que apetece
   enseñar con el texto que manda el servidor. Ese día hay que decidir entre que la API traduzca por
@@ -3947,6 +4479,17 @@ cuando hace falta el porqué.
   Trabajo de dominio y de derecho, no de armazón.
   **Repasada al cerrar la fase 0: sigue abierta, y eso es la decisión.** La fase 0 no trae ese
   motivo; lo mirará la fase que lo traiga, con su ADR.
+  **La trae la fase 1: es el ítem 1.4** (2026-09-03), con **dos correcciones de hecho** sobre lo que
+  decía esta nota. Primera: **el motivo ya existe** —`MotivoParaVerLoBloqueado.AdministracionDelBloqueo`
+  está construido y en uso—, así que el ítem no lo crea, crea el **camino de listado**. Segunda:
+  **son cuatro sitios, no tres** —`DesbloquearAlmacen`, `DesbloquearEmpresa`, `AdministracionDeUsuarios`
+  y `BloquearUbicacion`—, y Terceros será el quinto; como la lista se compara entera y en los dos
+  sentidos, escribir «tres» ahí es escribir un rojo. Y una consecuencia que no se veía: las cuatro
+  exenciones del ADR-0017 llevan escrita la condición de la que dependen —«que ninguna lectura de la
+  API entregue una fila bloqueada… con su ETag»—, así que el 1.4 **caduca su primera mitad**. Por eso
+  construye **un listado y no un `GET` individual**: el listado no emite ETag, o sea que no resucita
+  la llave y las cuatro exenciones siguen en pie; reescribir la mitad caducada entra en el criterio
+  del ítem.
 - **ABIERTO (2026-09-02) · el contrato describe los enteros como `integer | string`.**
   `PaginaDeAlmacenDto.total` y sus hermanos salen del OpenAPI como `type: ["integer","string"]`, en
   la petición **y** en la respuesta. No es un fallo del generador: `JsonSerializerDefaults.Web`

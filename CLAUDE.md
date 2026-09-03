@@ -37,6 +37,10 @@ Sigue estas convenciones como **fuente de verdad** de estilo y buenas prácticas
 @../BibliotecaDocumentacion/patrones/inyeccion-dependencias.md
 @../BibliotecaDocumentacion/patrones/repository-y-dto.md
 
+<!-- Fase 1 · Maestros (Anexo A.2.3). Entran al empezar la fase y se quedan. -->
+@../BibliotecaDocumentacion/herramientas/proteccion-datos.md
+@../BibliotecaDocumentacion/patrones/soft-delete.md
+
 > Si necesitas el **porqué** de una convención, consulta su `referencia.md` hermano. Para código,
 > guíate por los `convenciones.md`.
 
@@ -118,12 +122,16 @@ vive **en disco**, no en el chat:
 - **Stack:** C# 14 sobre **.NET 10 (LTS)** · ASP.NET Core · **EF Core 10** + Npgsql ·
   **PostgreSQL 17+** (un esquema por módulo, `snake_case`) · **React 19 + TypeScript + Vite** ·
   Docker Compose · GitHub Actions · Serilog + OpenTelemetry · xUnit + Testcontainers + NetArchTest.
-- **Objetivo de este encargo:** completar la **fase 0 (Cimientos)**. El checklist con sus criterios
-  de aceptación está en `docs/PLAN.md`; no lo amplíes ni lo reordenes por tu cuenta.
+- **Objetivo de este encargo:** completar la **fase 1 (Maestros)** — Terceros y Catálogo completos,
+  tarifas, importación CSV y búsquedas. La **fase 0 está cerrada** (run 33739991499 sobre `fe7059d`).
+  El checklist con sus criterios de aceptación está en `docs/PLAN.md`; no lo amplíes ni lo reordenes
+  por tu cuenta. Ojo: la fase 1 **no tiene Anexo A.3** — sus once ítems los acordó la *puerta de
+  clarificación de la fase 1*, y su motivo está en `docs/PLAN.md` → *Decisiones tomadas*.
 - **Restricciones / no-objetivos:**
   - **No toques `../BibliotecaDocumentacion`.** Es de solo lectura. Los aprendizajes se dejan como
     ADR en `docs/adr/`; la biblioteca se enriquece **al terminar el proyecto**, no a mitad.
-  - **No adelantes fases.** Lo que sea de la fase 1 en adelante no se hace ahora, ni "de paso".
+  - **No adelantes fases.** Lo que sea de la fase 2 en adelante no se hace ahora, ni "de paso" —
+    en particular `CodigoBarras`, que arrastra un import de la fase 2.
   - **Nada de secretos** en ficheros ni en prosa: variables de entorno y `.gitignore`.
 - **Identidad, fijada y no negociable** (Anexo A.1): solución `Bastion.sln` · raíz de espacios de
   nombres `Bastion` (`Bastion.Facturacion.Domain`, `Bastion.Inventario.Application`…), sin repetir
