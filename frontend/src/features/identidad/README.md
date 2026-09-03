@@ -2,7 +2,7 @@
 
 Espeja el módulo **Identidad** del backend (`Bastion.Identidad.*`, `/api/v1/identidad/`). Dentro,
 una carpeta por recurso; entre funcionalidades, nada: `identidad` no importa de `organizacion` ni al
-revés, y eso lo impide una regla de ESLint, no un acuerdo (`docs/adr/adr-0021`).
+revés, y eso lo impide una regla de ESLint, no un acuerdo (`docs/adr/adr-0022`).
 
 Lo que esta funcionalidad necesita saber de la empresa activa lo lee de `shared/sesion/`, que es
 donde vive. Bajar la sesión aquí dentro sería obligar a `organizacion` a importar de `identidad`

@@ -3,7 +3,7 @@
  *
  * Una funcionalidad **es un módulo del backend** (§10 del plan maestro), no un recurso: `almacenes`
  * y `empresas` son dos recursos del mismo módulo y viven los dos dentro de `organizacion/`. Dentro
- * de una funcionalidad no hay fronteras; entre dos, no se importa nada (`docs/adr/adr-0021`).
+ * de una funcionalidad no hay fronteras; entre dos, no se importa nada (`docs/adr/adr-0022`).
  *
  * **Por qué está escrita a mano si el disco ya lo dice.** Porque una lista que se descubre sola no
  * puede desmentir al disco: si el barrido se rompe, o alguien renombra una carpeta, la lista

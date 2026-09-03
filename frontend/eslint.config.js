@@ -75,7 +75,7 @@ const fronterasEntreFuncionalidades = FUNCIONALIDADES.map((funcionalidad) => ({
           message:
             `Una funcionalidad no importa de otra: '${funcionalidad}' no puede usar ` +
             `'${otra}'. Si las dos necesitan lo mismo, sube ESO a shared/ —no la pantalla—, o ` +
-            'pregúntate si de verdad son dos módulos distintos (docs/adr/adr-0021).',
+            'pregúntate si de verdad son dos módulos distintos (docs/adr/adr-0022).',
         })),
       },
     ],
@@ -140,6 +140,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 
       // NINGÚN TEXTO VISIBLE ESCRITO EN UN COMPONENTE (ítem 0.14).
+      //
+      // `eslint-plugin-i18next` lleva licencia **ISC** (permisiva), comprobada antes de
+      // adoptarlo. Anotada aquí y no en el mensaje del commit: el dato tiene que estar donde
+      // se lee la decisión, no en un historial al que hay que saber preguntar.
       //
       // El §3 del plan maestro manda los textos fuera del codigo «desde el primer día», y la
       // biblioteca cuenta «literales de texto sin i18n» entre sus antipatrones. Que eso sea una

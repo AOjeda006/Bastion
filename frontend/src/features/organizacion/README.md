@@ -2,7 +2,7 @@
 
 Espeja el módulo **Organización** del backend (`Bastion.Organizacion.*`, `/api/v1/organizacion/`).
 Dentro, una carpeta por recurso; entre funcionalidades, nada: `organizacion` no importa de
-`identidad` ni al revés, y eso lo impide una regla de ESLint, no un acuerdo (`docs/adr/adr-0021`).
+`identidad` ni al revés, y eso lo impide una regla de ESLint, no un acuerdo (`docs/adr/adr-0022`).
 
 **El corte es el módulo y no el recurso**, y esa es la decisión del ítem 0.16. `almacenes` y
 `empresas` son dos recursos del mismo módulo, así que comparten funcionalidad y pueden compartir
