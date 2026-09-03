@@ -91,26 +91,30 @@ jobs:
       - name: Construir
         run: npm run build
 
-      # Presupuesto de tamaño (§14): que el frontal engorde tiene que doler en la CI,
-      # no en el arranque del usuario seis meses después. Por eso se mide lo que el navegador
-      # DESCARGA y se excluyen los `.map`: un sourcemap pesa más que el bundle y no se descarga
-      # al arrancar, así que contarlo medía otra cosa distinta de la que dice esta frase.
+      # Presupuesto de tamaño (§14): que el frontal engorde tiene que doler en la CI, no en el
+      # arranque del usuario seis meses después.
       #
-      # 1024 kB era el tope del andamiaje y sobraba cinco veces: un presupuesto que no puede saltar
-      # ocupa el sitio del que sí avisaría. Con el shell terminado —enrutador, caché de servidor,
-      # formularios, validación y cliente generado— lo que el navegador descarga son 490 kB, así
-      # que el tope BAJA a 600: lo medido más un margen corto. El día que suba, sube con su motivo
-      # escrito aquí y no porque nadie lo estuviera mirando.
+      # SON DOS TOPES Y NO UNO desde el ítem 1.1, y el motivo es que el de antes había dejado de
+      # medir lo que decía. Este paso hacía `du -sk --exclude='*.map' dist` contra 600 kB, con el
+      # razonamiento correcto escrito al lado —los `.map` no se descargan al arrancar, así que
+      # contarlos «medía otra cosa distinta de la que dice esta frase»—. Desde el 0.11 las rutas se
+      # cargan tarde, así que ESE MISMO razonamiento se le aplica al propio `du`: sumaba siete
+      # fragmentos que el navegador no pide al arrancar.
+      #
+      # Y no era un tope laxo: era un tope que castigaba lo correcto. Comprobado por el efecto al
+      # decidirlo —haciendo estática una ruta que estaba diferida, el arranque saltó de 391 a 507
+      # KiB y el `du` de antes BAJÓ de 554 a 546 kB, o sea que la métrica vieja se ponía MÁS verde
+      # ante un empeoramiento real—.
+      #
+      #   arranque (450 KiB) — lo que `index.html` referencia, que es lo que se paga antes de
+      #                        pintar nada. Hoy 391 KiB: ~2 s en una 4G de 1,6 Mbps efectivos.
+      #   total    (900 KiB) — todo lo servido menos los mapas. Vigila el crecimiento global sin
+      #                        castigar el troceo. Hoy 532 KiB.
+      #
+      # El día que suban, suben con su motivo escrito y no porque nadie los estuviera mirando.
+      # Argumento entero en `docs/adr/adr-0028-el-presupuesto-mide-el-arranque-no-la-suma-de-los-fragmentos.md`.
       - name: Presupuesto de tamaño
-        run: |
-          TOPE_KB=600
-          TAMANO_KB=$(du -sk --exclude='*.map' dist | cut -f1)
-          echo "Tamaño de dist/: ${TAMANO_KB} kB (tope ${TOPE_KB} kB)"
-          echo "### Frontal: ${TAMANO_KB} kB / ${TOPE_KB} kB" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$TAMANO_KB" -gt "$TOPE_KB" ]; then
-            echo "::error::El frontal supera el presupuesto de tamaño (${TAMANO_KB} kB > ${TOPE_KB} kB)."
-            exit 1
-          fi
+        run: bash ../scripts/ci/presupuesto-del-frontal.sh dist 450 900
 
       - name: Publicar el frontal construido
         uses: actions/upload-artifact@v7

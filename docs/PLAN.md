@@ -2405,10 +2405,61 @@ sea antes de que ese controlador exista.
 cuando falla una validación. Se cayó de la tanda al redactarla, así que **no se hereda un default**;
 se pregunta antes de empezar el **1.5**, que es el primer ítem donde muerde.
 
-**Dónde retomar exactamente:** el ítem **1.1**, el presupuesto del frontal remedido. Va primero a
-propósito: la métrica de hoy suma fragmentos que el navegador no descarga al arrancar, y esta fase
-añade pantallas diferidas — dejarlo para el final es garantizar que el tope salte en mitad de
-Catálogo y se suba por prisa.
+**Ítem 1.1 cerrado — el presupuesto ya mide lo que dice medir.** El paso de la CI pasa de una cifra
+a dos, calculadas por `scripts/ci/presupuesto-del-frontal.sh`: **arranque 391/450 KiB** (lo que
+`index.html` referencia, que es lo que se paga antes de pintar nada) y **total servido 532/900 KiB**.
+Se suman **bytes** y no bloques de disco, así que la cifra local y la del *runner* son la misma y un
+ajuste de presupuesto ya no cuesta un *run* (el 0.1 dejó escrito lo contrario: 1097 kB en local
+contra 1104 en el *runner*).
+
+### Verificado en local, con la salida real
+
+```
+frontal: api / typecheck / lint / format:check / build   ->  exit 0 los cinco
+         esquema.ts sin cambios tras regenerar el cliente
+         test  ->  9 ficheros, 46 casos
+         presupuesto  ->  arranque 391/450 KiB en 3 ficheros · total servido 532/900 KiB
+
+migraciones:  Organizacion 4, Identidad 3, y el modelo coincide con ellas
+openapi:      el documento versionado está al día — 73 operaciones
+
+backend: dotnet build      ->  0 errores
+         dotnet format --verify-no-changes  ->  exit 0
+         carril rápido     ->  118 + 58 + 180 + 18 + 118 = 492 casos
+         carril integración -> NO EJECUTADO AQUÍ: el demonio de Docker está parado
+                               (`docker info` -> exit 1, cliente 29.7.2 sin servidor).
+                               Los 230 casos «fallan» en 112 ms y 224 ms, que es la forma
+                               que tiene Testcontainers de decir que no hay dónde levantar
+                               PostgreSQL. Este ítem no toca ni una línea de backend
+                               —documentación, un guion de bash y un paso del workflow—,
+                               así que la verificación de ese carril es la de la CI.
+```
+
+### Las siete mutaciones del 1.1, cada una aplicada, ejecutada y revertida
+
+| # | Mutación | Qué hizo |
+|---|---|---|
+| 1 | `src=` → `data-src=` en `index.html` | **rojo**: «el arranque no incluye ningún .js» |
+| 2 | quitar el `<script type="module">` entero | **rojo**: el mismo, por el otro camino |
+| 3 | borrar `index.html` | **rojo**: «sin él no se sabe qué descarga el navegador» |
+| 4 | apuntar a un `dist` que no existe | **rojo**: «¿se ha ejecutado el build?» |
+| 5 | bajar el tope de arranque a 300 KiB | **rojo**, y solo el de arranque |
+| 6 | bajar el tope total a 400 KiB | **rojo**, y solo el total |
+| 7 | **hacer estática una ruta diferida** | **rojo**: arranque **391 → 507 KiB** |
+
+**La séptima es el ítem entero.** Es un empeoramiento real —116 KiB más antes de poder pintar nada—
+y la métrica anterior no solo no lo cazaba: **bajaba**, de 554 a 546 kB, porque con un fragmento
+menos `du` redondea a menos bloques. O sea que el presupuesto viejo se ponía **más verde** ante un
+empeoramiento. Esa es la clase de falso verde que el ADR-0022 y el ADR-0020 persiguen, aquí en el
+paso que decide si el frontal ha engordado.
+
+**Y la primera mutación destapó un fallo del propio guion**, que es para lo que existen: `data-src=`
+casaba con `src=` porque el patrón no exigía nada delante, así que la mutación que pretendía romper
+el parseo salió **verde**. El patrón pasa a exigir un espacio, y el motivo queda escrito en el
+guion.
+
+**Dónde retomar exactamente:** el ítem **1.2**, los puertos de lectura de Organización y la cuarta
+vía en rojo (ADR-0024).
 
 **Ítem 0.16 cerrado — `features/` espeja los módulos, y la frontera dejó de ser un acuerdo escrito:**
 [run 33738721080](https://github.com/AOjeda006/Bastion/actions/runs/33738721080) sobre `6f21d3b`,
@@ -4274,12 +4325,18 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 > en *Decisiones tomadas*. Este checklist es el resultado; **no se reordena ni se amplía** por
 > iniciativa propia, igual que el A.3.
 
-- [ ] **1.1 · El presupuesto del frontal, remedido** — criterio de aceptación: dos métricas
-  —**arranque** frente a **total**— en vez de una; topes **450 kB** y **900 kB** con el cálculo
+- [x] **1.1 · El presupuesto del frontal, remedido** — criterio de aceptación: dos métricas
+  —**arranque** frente a **total**— en vez de una; topes **450 KiB** y **900 KiB** con el cálculo
   escrito (qué tarda en cargar y con qué red); y la CI midiendo **lo que dice medir**, comprobado
   enseñando la cifra de antes y la de después. Motivo del orden: la métrica de hoy suma fragmentos
   que el navegador no descarga al arrancar, y la fase 1 añade pantallas diferidas — el tope saltaría
   por lo que no es el problema, y en mitad de Catálogo.
+  Lo mide `scripts/ci/presupuesto-del-frontal.sh`, que suma **bytes** y no bloques de disco, publica
+  el desglose fichero a fichero y **falla si no ha mirado nada**. Decisión en el **ADR-0028**.
+  Probado con **siete mutaciones**, y la séptima es la que enseña por qué existía el ítem: hacer
+  estática una ruta diferida sube el arranque de **391 a 507 KiB** (rojo) mientras el `du` de antes
+  **baja de 554 a 546 kB** — o sea que la métrica vieja se ponía **más verde** ante un empeoramiento
+  real.
 - [ ] **1.2 · Los puertos de lectura de Organización, y la cuarta vía en rojo** — criterio de
   aceptación: `IConsultaDeImpuestos`, `IConsultaDeUnidadesDeMedida` e `IConsultaDeDivisas` en
   `Organizacion.Contracts`, con lo mínimo que cada consumidor necesita; el cruce declarado en
@@ -4381,14 +4438,17 @@ cuando hace falta el porqué.
   ficha** de lo bloqueado para mirarla antes. Si algún día hiciera falta esa ficha, no es un cambio
   de pantalla: es volver a exigir `If-Match` en cuatro acciones y reescribir el ADR-0017.
 
-- **DECIDIDO (2026-09-03), PENDIENTE DE HACER en el ítem 1.1 · El presupuesto de tamaño del frontal
+- **CERRADO (2026-09-03, en el ítem 1.1) · El presupuesto de tamaño del frontal
   se queda corto — y además mide otra cosa.** Al razonarlo en la puerta de la fase 1 apareció lo que
   esta nota no veía: el `dist` está **partido en fragmentos y las rutas se cargan tarde**, así que
   `du -sk --exclude='*.map' dist` **suma también lo que el navegador NO descarga al arrancar**
   (554 kB de total contra ≈400 kB de arranque). El paso contradice su propio comentario, igual que
   lo contradecía cuando medía los `.map`. **Decidido: dos métricas y dos topes —arranque ≤ 450 kB,
   total ≤ 900 kB— con el cálculo escrito**, y el criterio no es nuevo: es el mismo con el que ya se
-  excluyeron los mapas, aplicado donde dejó de aplicarse solo (ADR-0028). Texto original: La CI corta en
+  excluyeron los mapas, aplicado donde dejó de aplicarse solo (ADR-0028).
+  **Hecho:** `scripts/ci/presupuesto-del-frontal.sh`, con siete mutaciones, y la séptima enseñando
+  que la métrica vieja **bajaba** (554 → 546 kB) mientras el arranque empeoraba (391 → 507 KiB).
+  Texto original: La CI corta en
   **600 kB** (`du -sk --exclude='*.map' dist`). Tras el 0.14 son **554 kB**: la i18n costó 64, de
   490 a 554, medido a los dos lados. Quedan **46 kB** y la fase 1 trae Terceros y Catálogo enteros,
   con sus formularios y sus tablas. Hay que revisar el tope **con un número razonado** —qué tarda en

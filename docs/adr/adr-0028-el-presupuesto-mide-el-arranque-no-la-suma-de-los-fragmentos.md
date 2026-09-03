@@ -28,7 +28,7 @@ al arrancar:
 
 | Fichero | Bytes | ¿Al arrancar? |
 |---|---:|---|
-| `index.html` | 453 | **sí** |
+| `index.html` | 450 | **sí** |
 | `assets/index-*.js` | 388 139 | **sí** (lo referencia el `<script type="module">`) |
 | `assets/index-*.css` | 11 648 | **sí** (lo referencia el `<link rel="stylesheet">`) |
 | `assets/schemas-*.js` | 82 030 | no — llega con la primera ruta que valide |
@@ -39,7 +39,7 @@ al arrancar:
 | `assets/PaginaDeAlmacenes-*.js` | 2 375 | no |
 | `assets/PaginaNoEncontrada-*.js` | 402 | no |
 
-**Arranque: 400 240 B (391 KiB). Suma de todo lo servido: 543 939 B (532 KiB).** El paso mide lo
+**Arranque: 400 237 B (391 KiB). Suma de todo lo servido: 543 936 B (532 KiB).** El paso mide lo
 segundo y afirma lo primero.
 
 La consecuencia es al revés de como parece. **No es que el presupuesto sea laxo: es que castiga lo

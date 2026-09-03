@@ -103,6 +103,7 @@ Desde la raíz del repositorio.
 | **Formato backend** | `dotnet format Bastion.sln --verify-no-changes` (sin `--verify-no-changes` para arreglar) |
 | **Migraciones** (por módulo, cada uno con su `DbContext`) | `dotnet ef migrations add <Nombre> --project src/Modules/<Modulo>/Bastion.<Modulo>.Infrastructure --startup-project src/Api --output-dir ../../../../db/migraciones/<Modulo>` |
 | **Build frontal** | `npm --prefix frontend run build` |
+| **Presupuesto del frontal** (arranque y total, en KiB) | `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` |
 | **Tests frontal** | `npm --prefix frontend run test` |
 | **Lint / formato frontal** | `npm --prefix frontend run lint` · `npm --prefix frontend run format:check` |
 | **Tipos frontal** | `npm --prefix frontend run typecheck` |
@@ -131,6 +132,7 @@ npm --prefix frontend run lint
 npm --prefix frontend run format:check
 npm --prefix frontend run test
 npm --prefix frontend run build
+bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
 
 # 3. Backend. El carril rápido no necesita Docker; el de integración sí.
 dotnet build Bastion.sln
@@ -145,4 +147,7 @@ Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes 
 > **Esta lista tiene que seguir siendo la de `.github/workflows/ci.yml`.** Dejó de serlo entre el
 > 0.11 y el 0.13 —le faltaban «Contrato», «Migraciones», «OpenAPI», `typecheck`, `format:check` y
 > `test`— y eso convierte esta instrucción en el peor sitio posible para una mentira: es la que
-> decide cuándo se declara terminado un ítem. **Al tocar el *workflow*, se toca esto.**
+> decide cuándo se declara terminado un ítem. **Al tocar el *workflow*, se toca esto.** El
+> presupuesto entró aquí en el 1.1, cuando pasó a ser un guion que se puede ejecutar en local: los
+> bytes no dependen del sistema de ficheros, así que la cifra de esta máquina y la del *runner* son
+> la misma (ADR-0028).
