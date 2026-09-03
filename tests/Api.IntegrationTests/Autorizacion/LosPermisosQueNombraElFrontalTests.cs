@@ -53,10 +53,28 @@ public sealed class LosPermisosQueNombraElFrontalTests(PostgresConTodosLosModulo
     private const string FicheroDeclarado = "frontend/src/shared/sesion/permisos.ts";
 
     /// <summary>
-    /// Un literal entrecomillado que empieza por letra minúscula y lleva al menos un punto.
+    /// Un literal entrecomillado que empieza por letra minúscula y lleva al menos un punto,
+    /// anotando si viene precedido de una llamada a <c>t(</c>.
     /// </summary>
+    /// <remarks>
+    /// <b>Por qué hace falta distinguir la llamada al traductor.</b> Desde el ítem 0.16 los
+    /// espacios de nombres del diccionario son <b>las funcionalidades que hay en disco</b>, que
+    /// espejan los módulos del backend. Eso hizo que una clave de traducción
+    /// —<c>organizacion.almacenes.tabla</c>— pasara a tener exactamente la misma forma que un
+    /// permiso —<c>organizacion.almacen.ver</c>—: minúsculas, puntos y el mismo primer segmento.
+    /// El filtro por prefijo dejó de distinguirlas, y quince claves de traducción entraron como
+    /// permisos inexistentes.
+    /// <para>
+    /// La distinción es semántica y no de forma: <b>un literal que el código le entrega al
+    /// traductor no es un permiso.</b> Se resta por ocurrencia y no por valor, así que la misma
+    /// cadena escrita en otro sitio se sigue comprobando; y es una resta, así que un permiso
+    /// escrito en cualquier otro lugar sigue entrando. Que la resta no se lo haya comido todo lo
+    /// afirman las dos anclas del caso: hay candidatos, y el fichero que los declara aporta
+    /// alguno.
+    /// </para>
+    /// </remarks>
     private static readonly Regex s_literal = new(
-        "['\"](?<valor>[a-z][a-z0-9]*(?:\\.[a-z0-9]+)+)['\"]",
+        "(?<traducido>\\bt\\s*\\(\\s*)?['\"](?<valor>[a-z][a-z0-9]*(?:\\.[a-z0-9]+)+)['\"]",
         RegexOptions.CultureInvariant,
         TimeSpan.FromSeconds(5));
 
@@ -128,6 +146,9 @@ public sealed class LosPermisosQueNombraElFrontalTests(PostgresConTodosLosModulo
                where Path.GetExtension(ruta) is ".ts" or ".tsx"
                let relativa = Path.GetRelativePath(raiz, ruta).Replace('\\', '/')
                from coincidencia in s_literal.Matches(File.ReadAllText(ruta)).Cast<Match>()
+               // Lo que va dentro de `t(` es una clave del diccionario, no un permiso. Desde
+               // el 0.16 las dos cosas tienen la misma forma, y solo el sitio las distingue.
+               where coincidencia.Groups["traducido"].Length == 0
                let valor = coincidencia.Groups["valor"].Value
                // El primer segmento tiene que ser un módulo que publica permisos. Sin este filtro
                // entrarían nombres de fichero y de paquete, que también son minúsculas con puntos.

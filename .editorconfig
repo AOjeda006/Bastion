@@ -269,6 +269,21 @@ dotnet_naming_rule.parameters_and_locals_are_camel_case.symbols = parameters_and
 dotnet_naming_rule.parameters_and_locals_are_camel_case.style = camel_case
 dotnet_naming_rule.parameters_and_locals_are_camel_case.severity = error
 
+# --- Sensibilidad a la cultura: exigida aquí, no heredada de un paquete ---
+# `InvariantGlobalization` es `false` a propósito (Directory.Build.props): Bastion formatea
+# en es-ES y ordena con acentos y 'ñ'. Eso convierte cada llamada que usa la cultura actual
+# sin decirlo en un fallo que solo aparece en la máquina con la cultura equivocada.
+#
+# Estas cuatro YA rompían el build antes del 0.16 — comprobado por el efecto: una sonda con
+# `ToUpper()`, `int.ToString()` y `StartsWith(string)` da 4 errores—, pero rompían por venir
+# dentro de `AnalysisLevel=latest-recommended`, que es un lote que Microsoft recompone en
+# cada SDK. Con `latest-default` la misma sonda da CERO. Escritas aquí, la garantía deja de
+# depender de qué meta el lote el año que viene: la pide este repositorio.
+dotnet_diagnostic.CA1304.severity = error
+dotnet_diagnostic.CA1305.severity = error
+dotnet_diagnostic.CA1310.severity = error
+dotnet_diagnostic.CA1311.severity = error
+
 # ================================================================= C# — migraciones
 # Las genera EF Core: no se formatean a mano ni se les exige documentación XML.
 [db/migraciones/**/*.cs]

@@ -82,6 +82,14 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
 - **Antes de adoptar una dependencia, comprueba su licencia.** MediatR, AutoMapper y
   FluentAssertions 8 pasaron a licencia comercial en 2025. Hay equivalentes libres (Shouldly,
   Mapperly, un despachador propio). No se adopta nada "porque siempre fue gratis".
+- **La licencia comprobada se escribe donde se lee la decisión, y NUNCA como última línea del
+  commit.** NuGet, en el bloque de comentario de `Directory.Packages.props`; npm, en la
+  cabecera del módulo o de la regla que adopta el paquete. Una línea final con forma
+  `Clave: valor` **es un trailer** para git —`git log --format='%(trailers)'` la devuelve— y esa
+  forma tiene que quedar vacía en todos los commits, porque es la que sirve para comprobar de
+  un vistazo que no se ha colado ninguno de sesión, de herramienta ni de terceros. La licencia
+  va en la prosa del cuerpo, si va. (Los commits `2398889` y `309f594` la llevan como trailer;
+  están publicados y no se reescriben — el dato se movió a su sitio en el 0.16.)
 
 ## Comandos del proyecto (parte variable)
 

@@ -13,6 +13,10 @@ import { idiomaInicial, marcarIdiomaDelDocumento, type Idioma } from './idioma.t
  * que `t()` deja de comprobarse contra UN tipo y que una clave puede vivir en dos sitios. El
  * diccionario entero pesa unos pocos kilobytes: no hay nada que repartir todavía.
  *
+ * LICENCIAS, comprobadas antes de adoptarlos (ítem 0.14): `i18next` **MIT** y `react-i18next`
+ * **MIT**. Se anotan aquí, junto a la adopción, y no en el mensaje del commit: un dato que solo
+ * vive en el historial hay que ir a buscarlo sabiendo ya que existe.
+ *
  * SIN `Suspense`. Los diccionarios se importan, no se descargan: al primer renderizado ya están.
  * Dejar `useSuspense` activado montaría una espera para algo que nunca espera, y esa espera sí se
  * nota — es un parpadeo en cada pantalla.
