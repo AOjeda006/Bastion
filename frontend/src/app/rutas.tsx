@@ -1,4 +1,5 @@
 import type { Diccionario } from './i18n/es.ts';
+import type { Funcionalidad } from '@/features/funcionalidades.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 
 /**
@@ -36,10 +37,30 @@ export type Exigencia =
 /** Las claves de título que existen. Sale del diccionario, no de una lista escrita aparte. */
 export type ClaveDeTitulo = keyof Diccionario['rutas'];
 
+/**
+ * De quién es una pantalla: de una funcionalidad, o del armazón.
+ *
+ * `'armazon'` no es un cajón de sastre. Son las pantallas que **no son de ningún módulo** —la
+ * portada y la de «no encontrada»—, y viven en `app/paginas/` por eso mismo. Meterlas en una
+ * funcionalidad les daría un dueño que no tienen, y como una funcionalidad no importa de otra, la
+ * primera pantalla de otro módulo que quisiera enlazarlas se daría contra la frontera.
+ */
+export type Duenio = 'armazon' | Funcionalidad;
+
 /** Una ruta de la aplicación, con todo lo que hace falta saber de ella. */
 export interface DeclaracionDeRuta {
   /** El camino, tal como se declara en el enrutador. */
   readonly ruta: string;
+  /**
+   * Quién es el dueño de la pantalla, y **dónde tiene que vivir su módulo**: bajo
+   * `@/features/<duenio>/` si es de una funcionalidad, bajo `@/app/` si es del armazón.
+   *
+   * No es documentación: `ElBarridoDeRutas` saca del `cargar` la ruta del módulo que importa y la
+   * compara con esto. Mover una pantalla del armazón a dentro de una funcionalidad —o al revés—
+   * sin cambiar aquí quién manda pone el barrido en rojo. Con cambiarlo, deja de ser un descuido y
+   * pasa a ser una decisión, que es justo lo que una declaración sirve para distinguir.
+   */
+  readonly duenio: Duenio;
   /**
    * La CLAVE del título, no el título. Se traduce al pintar, y eso es lo que hace que cambiar de
    * idioma repinte la cabecera, el `<title>` y el anuncio sin recargar la página.
@@ -60,6 +81,7 @@ export interface DeclaracionDeRuta {
 export const RUTAS: readonly DeclaracionDeRuta[] = [
   {
     ruta: '/acceso',
+    duenio: 'identidad',
     claveDeTitulo: 'acceso',
     exigencia: {
       clase: 'publica',
@@ -71,6 +93,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
   },
   {
     ruta: '/',
+    duenio: 'armazon',
     claveDeTitulo: 'inicio',
     exigencia: {
       clase: 'sesion',
@@ -83,6 +106,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
   },
   {
     ruta: '/almacenes',
+    duenio: 'organizacion',
     claveDeTitulo: 'almacenes',
     exigencia: { clase: 'permiso', permiso: PERMISOS.almacenVer },
     enLaNavegacion: true,
@@ -92,6 +116,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
   },
   {
     ruta: '/empresas',
+    duenio: 'organizacion',
     claveDeTitulo: 'empresas',
     exigencia: { clase: 'permiso', permiso: PERMISOS.empresaVer },
     enLaNavegacion: true,
@@ -100,6 +125,7 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
   },
   {
     ruta: '*',
+    duenio: 'armazon',
     claveDeTitulo: 'noEncontrada',
     exigencia: {
       clase: 'publica',

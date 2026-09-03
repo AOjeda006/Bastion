@@ -1,3 +1,5 @@
+import { readdirSync } from 'node:fs';
+
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -6,6 +8,79 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import i18next from 'eslint-plugin-i18next';
 import prettier from 'eslint-config-prettier';
+
+// LAS FUNCIONALIDADES, DESCUBIERTAS DEL DISCO.
+//
+// Se leen las carpetas de `src/features/` en vez de escribirlas aquí para que una funcionalidad
+// nueva quede vallada por existir, y no por que alguien se acuerde de venir a este fichero. Lo que
+// alguien AFIRMA que hay está en `src/features/funcionalidades.ts`, y el barrido compara las dos
+// listas enteras contra el disco.
+const FUNCIONALIDADES = readdirSync(new URL('./src/features', import.meta.url), {
+  withFileTypes: true,
+})
+  .filter((entrada) => entrada.isDirectory())
+  .map((entrada) => entrada.name)
+  .sort();
+
+// LA AFIRMACIÓN DE CONJUNTO NO VACÍO, Y VA AQUÍ PORQUE AQUÍ ES DONDE PUEDE FALLAR EN SILENCIO.
+//
+// Una regla de ESLint cuyo patrón no case con nada PASA. Si esta lectura devolviera cero carpetas
+// —otro directorio de trabajo, una carpeta renombrada, un `src/features/` que se ha quedado sin
+// subcarpetas—, el bucle de abajo generaría cero reglas y `npm run lint` saldría verde sin prohibir
+// nada. Con menos de dos funcionalidades no hay ninguna frontera que vigilar, así que si eso pasa
+// es que el descubrimiento está roto: mejor reventar la configuración que lintar sin regla.
+if (FUNCIONALIDADES.length < 2) {
+  throw new Error(
+    'La regla de fronteras no ha encontrado al menos dos funcionalidades en src/features/ ' +
+      `(encontradas: ${JSON.stringify(FUNCIONALIDADES)}). Sin ellas no prohibiría nada y el lint ` +
+      'saldría verde sin comprobar la frontera. Revisa src/features/ y el directorio de trabajo.',
+  );
+}
+
+/**
+ * UNA FUNCIONALIDAD NUNCA IMPORTA DE OTRA — una regla por funcionalidad.
+ *
+ * El §10 del plan maestro y `stacks/react/convenciones.md`:39 lo mandan; hasta el 0.16 era un
+ * acuerdo escrito, que es otra manera de decir que no lo comprobaba nadie. Ahora lo dice ESLint,
+ * y `ElBarridoDeLasFronteras` comprueba —lintando de verdad un import prohibido entre cada par—
+ * que lo dice **para todas** las funcionalidades que hay en disco.
+ *
+ * Lo que la regla NO prohíbe, y es a propósito: `@/shared/**` y `@/app/**`. La frontera va de
+ * funcionalidad a funcionalidad. `organizacion` necesita saber con qué empresa se opera y eso vive
+ * en `shared/sesion/`; si la regla obligara a bajar la sesión dentro de `identidad`, la regla
+ * estaría mal, no la estructura.
+ *
+ * Dos patrones por funcionalidad prohibida, y los dos hacen falta —se ha comprobado quitando cada
+ * uno y viendo cuál se queda corto—:
+ *
+ * - El del alias. Los patrones se leen como los de `.gitignore`, así que `@/features/otra` a secas
+ *   ya cubre todo lo que cuelga: no hace falta escribir la cola.
+ * - El ancho, el que solo pide que el nombre aparezca como carpeta a cualquier profundidad. Es el
+ *   que atrapa el camino relativo que sube y vuelve a bajar (`../../../otra/loQueSea.ts`), donde la
+ *   palabra `features` ni siquiera aparece. Sin él, esa forma pasa: el lint sale verde y la
+ *   frontera no existe.
+ *
+ * El precio del ancho es que una carpeta de `shared/` o de `app/` que se llamara igual que una
+ * funcionalidad quedaría prohibida sin querer. Que no exista ninguna es una de las cosas que
+ * comprueba el barrido, así que el precio está vigilado.
+ */
+const fronterasEntreFuncionalidades = FUNCIONALIDADES.map((funcionalidad) => ({
+  files: [`src/features/${funcionalidad}/**/*.{ts,tsx}`],
+  rules: {
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: FUNCIONALIDADES.filter((otra) => otra !== funcionalidad).map((otra) => ({
+          group: [`@/features/${otra}`, `**/${otra}/**`],
+          message:
+            `Una funcionalidad no importa de otra: '${funcionalidad}' no puede usar ` +
+            `'${otra}'. Si las dos necesitan lo mismo, sube ESO a shared/ —no la pantalla—, o ` +
+            'pregúntate si de verdad son dos módulos distintos (docs/adr/adr-0021).',
+        })),
+      },
+    ],
+  },
+}));
 
 export default tseslint.config(
   // `src/shared/api/esquema.ts` se GENERA con `npm run api` desde `docs/api/openapi.json`.
@@ -108,4 +183,8 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
     },
   },
+  // Las fronteras van LAS ÚLTIMAS: así ningún bloque posterior las apaga sin querer. Y alcanzan
+  // también a los tests que viven dentro de una funcionalidad, que son código de esa funcionalidad
+  // y no un sitio donde la frontera se relaje.
+  ...fronterasEntreFuncionalidades,
 );

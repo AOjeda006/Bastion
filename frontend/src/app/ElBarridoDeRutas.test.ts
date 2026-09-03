@@ -6,6 +6,7 @@ import { crearRutas } from './enrutador.tsx';
 import { en } from './i18n/en.ts';
 import { es, type Diccionario } from './i18n/es.ts';
 import { IDIOMAS, type Idioma } from './i18n/idioma.ts';
+import { FUNCIONALIDADES } from '@/features/funcionalidades.ts';
 
 const DICCIONARIOS: Record<Idioma, Diccionario> = { es, en };
 
@@ -86,6 +87,74 @@ describe('El barrido de rutas', () => {
     expect(porClase.publica.length + porClase.sesion.length + porClase.permiso.length).toBe(
       RUTAS.length,
     );
+  });
+
+  it('la partición por dueño cuadra: 5 rutas = 2 del armazón + 1 de identidad + 2 de organizacion', () => {
+    const porDuenio = {
+      armazon: RUTAS.filter((r) => r.duenio === 'armazon'),
+      identidad: RUTAS.filter((r) => r.duenio === 'identidad'),
+      organizacion: RUTAS.filter((r) => r.duenio === 'organizacion'),
+    };
+
+    expect(porDuenio.armazon.map((r) => r.ruta)).toEqual(['/', '*']);
+    expect(porDuenio.identidad.map((r) => r.ruta)).toEqual(['/acceso']);
+    expect(porDuenio.organizacion.map((r) => r.ruta)).toEqual(['/almacenes', '/empresas']);
+    expect(
+      porDuenio.armazon.length + porDuenio.identidad.length + porDuenio.organizacion.length,
+    ).toBe(RUTAS.length);
+
+    // Y que ningún dueño sea una funcionalidad que ya no existe. El tipo lo impide hoy porque sale
+    // de `FUNCIONALIDADES`, pero el tipo se puede ensanchar de un plumazo y esto no.
+    expect(
+      RUTAS.filter((r) => r.duenio !== 'armazon' && !FUNCIONALIDADES.includes(r.duenio)).map(
+        (r) => r.ruta,
+      ),
+    ).toEqual([]);
+  });
+
+  it('el módulo que carga cada ruta vive donde dice su dueño', () => {
+    // LO QUE PERSIGUE: una pantalla que se muda. `app/paginas/` guarda lo que no es de ningún
+    // módulo; `features/<x>/` lo que sí. Mover un fichero de un sitio a otro es un `git mv` y dos
+    // imports, y no hay compilador que note que la pantalla ha cambiado de dueño — el import
+    // seguiría resolviendo perfectamente. Lo que no puede seguir cuadrando es esto.
+    //
+    // El especificador se saca del `cargar`, que es el único sitio donde está escrito. Bajo vitest
+    // la transformación de Vite ya ha resuelto el alias, así que lo que aparece es
+    // `/src/features/...`; se normalizan las tres formas —`@/`, `/src/` y a secas— y se compara. Si
+    // un día la transformación cambia y no se encuentra ningún especificador, eso sale en la
+    // primera lista y el test se pone rojo, en vez de quedarse comparando cero rutas.
+    const sinEncontrar: string[] = [];
+    const descolocadas: string[] = [];
+
+    for (const ruta of RUTAS) {
+      const encontrado = /['"]([^'"]*\/[^'"]+)['"]/.exec(ruta.cargar.toString())?.[1];
+
+      if (encontrado === undefined) {
+        sinEncontrar.push(ruta.ruta);
+        continue;
+      }
+
+      const modulo = encontrado
+        .replace(/^@\//, '')
+        .replace(/^\//, '')
+        .replace(/^src\//, '');
+      const esperado = ruta.duenio === 'armazon' ? 'app/' : `features/${ruta.duenio}/`;
+
+      if (!modulo.startsWith(esperado)) {
+        descolocadas.push(`${ruta.ruta}: dice ser de «${ruta.duenio}» pero carga ${modulo}`);
+      }
+    }
+
+    expect(
+      sinEncontrar,
+      'No se ha podido leer del `cargar` qué módulo importa. Sin eso, esta comprobación no mira ' +
+        'nada: arréglala antes de seguir.',
+    ).toEqual([]);
+    expect(
+      descolocadas,
+      'Hay pantallas que no viven donde dice su dueño. O se ha movido el fichero sin cambiar el ' +
+        '`duenio`, o al revés.',
+    ).toEqual([]);
   });
 
   it('lo que no exige permiso explica por qué, con una frase de verdad', () => {
