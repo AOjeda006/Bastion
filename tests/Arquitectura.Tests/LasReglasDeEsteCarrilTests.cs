@@ -50,6 +50,13 @@ public sealed class LasReglasDeEsteCarrilTests
         "LasCapasVanHaciaDentroTests.La_prohibicion_al_dominio_puede_dispararse",
         "LasCapasVanHaciaDentroTests.Ninguna_capa_mira_hacia_fuera_de_su_modulo",
 
+        // El glosario del lenguaje ubicuo: su tabla de agregados y el dominio compilado son la
+        // misma lista. Es lo único de docs/ que este carril vigila, y lo vigila porque es la
+        // lista que dice qué cosas hay.
+        "ElGlosarioDelDominioTests.Cada_agregado_del_glosario_dice_el_modulo_en_el_que_vive",
+        "ElGlosarioDelDominioTests.La_tabla_de_agregados_del_glosario_se_lee_y_no_esta_vacia",
+        "ElGlosarioDelDominioTests.Los_agregados_del_dominio_son_los_que_el_glosario_nombra",
+
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",
     ];
