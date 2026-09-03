@@ -74,6 +74,9 @@ comparan contra `n·(n−1)`: si el bucle se quedara corto, el número no cuadra
 Leer la configuración habría sido comprobar que el fichero pone lo que pone. Lintar es comprobar que
 ESLint **hace** lo que el fichero pone.
 
+Con una condición que costó tres rojos de la CI descubrir, y que está más abajo: **el que lintea
+también tiene que demostrar que ha mirado algo.**
+
 ### 5. Y un barrido de fuentes, porque `no-restricted-imports` tiene un punto ciego
 
 La regla ve los `import` estáticos y los `import type`. **No ve `import()` dinámico.** Así que un
@@ -143,6 +146,50 @@ regla no puede detectar un import prohibido, porque la regla ya no existe. Hacen
 Si esa mutación hubiera salido verde entera, la conclusión no habría sido «la mutación falló»: habría
 sido que la regla no prohibía nada, y ese habría sido el resultado del ítem.
 
+## El corolario, que costó tres rojos de la CI: comprobar por el efecto también se puede quedar vacío
+
+La decisión 4 dice que la regla se comprueba lintando de verdad. Lo que este ítem aprendió, y no por
+razonarlo, es que **el que lintea de verdad también necesita que alguien afirme que ha mirado algo**.
+
+Los tres *jobs* del frontal salieron rojos en la CI mientras la máquina de desarrollo estaba verde
+entera. La anotación decía que `identidad` podía importar de `organizacion` con el alias; el
+diagnóstico que se añadió al segundo intento decía además que la configuración aplicada **sí**
+llevaba `no-restricted-imports` con los patrones correctos, que el fichero no estaba ignorado, y que
+ESLint no había dicho absolutamente nada.
+
+La causa: **`typescript-eslint` mira `process.env.CI`**. Si vale `'true'` deduce «ejecución única» y
+se ahorra el programa de TypeScript en modo vigilancia (`inferSingleRun`). El ahorro es correcto
+para `eslint .`, que lee ficheros del disco. Pero sin ese programa no hay dónde poner un contenido
+en memoria, y `lintText(codigo, { filePath })` acaba analizando **el fichero que hay en disco en vez
+del texto que se le pasa**. El fichero de disco está limpio, así que ESLint no marcaba nada: ni el
+import prohibido, ni —se comprobó después— un `any` descarado.
+
+Se reprodujo en local con `CI=true` en una sola orden, después de haber descartado el sistema
+operativo, la versión de Node, la de ESLint, la del paquete `ignore` que hace de motor de patrones,
+la semántica de los globs y el orden de los pasos del *workflow*. **Ninguna de esas seis cosas era.**
+La variable de entorno no estaba en la lista de sospechosos porque no se parece a una entrada del
+problema.
+
+Dos consecuencias, y las dos están en el código:
+
+- **El arreglo:** el motor de este barrido se construye con
+  `parserOptions.disallowAutomaticSingleRunInference: true`. Va en la instancia y no en el entorno
+  del proceso: el único que lintea texto inventado es este barrido, y `npm run lint` debe seguir
+  aprovechando la ejecución única.
+- **Las dos preguntas de control**, que son la decisión 4 aplicada a sí misma. Antes de creerle a
+  ESLint un silencio, por cada testigo se comprueba (1) que marca **un `any` descarado** —el
+  canario: si calla, no está mirando ese fichero y nada de lo de abajo prueba nada— y (2) que el
+  motor prohíbe el mismo import con una configuración inline que no lleva otra cosa. La primera que
+  falle nombra la capa rota: ESLint no mira · el patrón no casa · la configuración del proyecto no
+  llega.
+
+Y una lectura que no conviene perder: **esto salió rojo, no verde**. La aserción es «que la lista de
+avisos NO esté vacía», así que un ESLint que no mira nada falla en vez de pasar. Si el barrido se
+hubiera escrito al revés —comprobando que los imports permitidos no se marcan— la ejecución única
+habría dado verde en la CI para siempre, y la frontera habría sido un adorno desde el primer día.
+La polaridad de una comprobación no es un detalle de estilo: decide qué pasa el día que el
+comprobador se rompe.
+
 ## La tabla entera
 
 | # | Mutación | Resultado |
@@ -152,6 +199,9 @@ sido que la regla no prohibía nada, y ese habría sido el resultado del ítem.
 | 2b | Quitar el patrón ancho y dejar solo el del alias | `lint` código 0; rojo **solo** en el caso del camino relativo. El alias se seguía cazando → los globs de `.gitignore` ya cubren los descendientes, y la cola explícita sobraba |
 | 3 | Renombrar `features/organizacion/` sin tocar el diccionario | **Rojo dos veces**: lista declarada contra disco, y partición de espacios de nombres del diccionario |
 | 5 | Mover `PaginaDeInicio` del armazón a dentro de una funcionalidad | `typecheck` 0, `lint` 0, fronteras verde; rojo **solo** en el barrido de rutas — que es el que se escribió para esto |
+| 6 | Un canario que ESLint no tiene por qué marcar (`export const x = 1;` en vez del `any`) | Rojo: «ESLint no ha marcado un 'any' descarado en el testigo de identidad: no está mirando ese fichero» |
+| 7 | El patrón del motor inline apuntando a `@/nada/...` | Rojo: «el motor de ESLint no prohíbe '@/features/organizacion/...' ni con una configuración que no lleva otra cosa» |
+| 2a *(otra vez, con `CI=true`)* | La misma de la 2a, en el modo en el que la CI ejecuta | Rojo, y nombrando la capa: «la configuración que le aplica **NO LLEVA** no-restricted-imports» |
 
 La 5 merece una lectura: la frontera de ESLint **no la caza**, y no es un fallo. Meter una pantalla
 del armazón dentro de una funcionalidad no cruza ninguna frontera entre funcionalidades; le presta

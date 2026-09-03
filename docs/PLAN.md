@@ -1741,7 +1741,306 @@ los dos idiomas legítimamente, y exigir cero obligaría a inventarle una difere
 La 2 es la que más importa: prueba que la guarda que se afirma es la del recuento **en la base**, y
 no la del fichero, que en esa mutación seguía diciendo 12 tan contenta.
 
+### Tomadas por el agente de desarrollo — ítem 0.16 (2026-09-03)
+
+Cierra **F4** (`features/` no espejaba los módulos) y **F6** (`docs/dominio/` estaba vacío) de la
+auditoría previa a la fase 1.
+
+- **`features/` espeja los módulos, y un recurso es una subcarpeta.** `identidad/acceso/`,
+  `organizacion/almacenes/`, `organizacion/empresas/`. **Dentro de una funcionalidad no hay
+  frontera**: `almacenes` y `empresas` son dos recursos del mismo módulo y se ven entre sí. La
+  frontera va de funcionalidad a funcionalidad, que es lo que dicen el §10 y la biblioteca.
+
+- **`inicio` no era ninguna de las dos cosas, y se va al armazón.** `PaginaDeInicio` y
+  `PaginaNoEncontrada` no son de ningún módulo del backend: no tienen recurso, ni permiso, ni
+  contrato. Meterlas en una funcionalidad les presta un dueño que no tienen y ata la portada a un
+  módulo que mañana puede desaparecer. Van a **`src/app/paginas/`**, junto a lo demás que se monta
+  una vez para todas las pantallas.
+
+- **La frontera la ejecuta ESLint, con `no-restricted-imports` del núcleo. Ningún paquete nuevo, y
+  por tanto ninguna licencia nueva que comprobar.** Se descartó un plugin de fronteras: habría
+  traído la misma vacuidad —sus capas también se declaran con globs— más una dependencia y una
+  licencia, para hacer lo que la regla del núcleo hace con dos patrones.
+
+- **La regla se genera del disco.** `eslint.config.js` lee las carpetas de `src/features/` y emite
+  una configuración por funcionalidad. Así una funcionalidad nueva queda vallada **por existir**, y
+  no porque alguien recuerde venir a añadir dos líneas.
+
+- **Y revienta si encuentra menos de dos.** Con cero o una no hay frontera que vigilar: el bucle
+  generaría cero reglas y `npm run lint` saldría verde sin prohibir nada. Es la afirmación de
+  conjunto no vacío (ADR-0020) puesta en el único sitio donde ese fallo ocurre sin que se note.
+
+- **La lista declarada la escribe una persona, y se compara entera contra el disco.**
+  `src/features/funcionalidades.ts`. Una lista que se descubre sola no puede desmentir al disco: si
+  el barrido se rompe o alguien renombra una carpeta, cambia con ella y todo sigue verde. Se compara
+  en los dos sentidos — carpeta sin declarar, roja; declaración sin carpeta, roja.
+
+- **Y la regla se comprueba POR EL EFECTO, no leyendo la configuración.** El barrido instancia
+  ESLint y, para **cada par ordenado**, lintea un import prohibido —en las dos formas: alias y
+  camino relativo— y exige que lo marque; y lintea tres que NO debe marcar (`@/shared/…`,
+  `@/app/…` y la propia funcionalidad). Los pares se cuentan contra `n·(n−1)`. Leer la
+  configuración habría comprobado que el fichero pone lo que pone.
+
+- **Un barrido de fuentes aparte, porque `no-restricted-imports` no ve `import()` dinámico.**
+  Resuelve todos los especificadores escritos bajo `src/features/` y comprueba a mano que ninguno
+  cruza, con su propio recuento de especificadores mirados.
+
+- **Dos patrones por funcionalidad prohibida, y no tres** — comprobado quitando cada uno. Los globs
+  se leen con semántica de `.gitignore`, así que `@/features/otra` **a secas ya cubre lo que
+  cuelga**: la cola explícita sobraba. El segundo, el ancho, es el que atrapa
+  `../../../otra/loQueSea.ts`, donde la palabra `features` ni aparece. Su precio —que una carpeta de
+  `shared/` o `app/` llamada como una funcionalidad quedaría prohibida sin querer— es una
+  comprobación más del barrido, no una nota.
+
+- **Lo que la regla NO prohíbe, a propósito: lo que cuelga de `shared/` y de `app/`.**
+  `organizacion` necesita saber con qué empresa se opera, y eso vive en `shared/sesion/`. Si la
+  regla obligara a bajar la sesión dentro de `identidad`, la regla estaría mal, no la estructura. El
+  único cruce al armazón que hay hoy es `PaginaDeAcceso.tsx` importando `type { Diccionario }` de
+  `@/app/i18n/es.ts`: un tipo, del diccionario, que es del armazón por definición.
+
+- **Los espacios de nombres de los diccionarios son las funcionalidades que hay en disco**, lista
+  entera y en los dos sentidos, en `es.ts` y en `en.ts`. Mover carpetas sin mover los espacios de
+  nombres dejaría los diccionarios describiendo una estructura que ya no existe, y **TypeScript no
+  diría nada, porque una clave es una cadena**.
+
+- **Toda ruta declara de quién es su pantalla**, y el barrido de rutas saca del `cargar` qué módulo
+  importa de verdad y comprueba que vive donde su dueño dice. Sin eso, mover una pantalla del
+  armazón a dentro de una funcionalidad es un `git mv` y dos imports que compilan, lintan y pasan.
+
+- **Del glosario, solo una lista deja de ser prosa: la de agregados.** Se compara contra el dominio
+  compilado, entera, en los dos sentidos, y con el módulo de cada uno. Es la que más caro sale
+  desactualizada, porque es la que dice qué cosas hay. El resto —objetos de valor, entidades hijas,
+  conceptos— **sigue siendo prosa, y el fichero lo dice de sí mismo**: clasificar un objeto de valor
+  no es algo que la reflexión lea sin una lista de excepciones a mano, y esa lista convertiría una
+  comprobación en una convención con pasos extra.
+
+- **El glosario no se estrenó: ya existía (`428331f`) y se había quedado atrás.** Reservaba para el
+  0.15 seis términos que el 0.15 construyó, y avisaba de un choque de nombres —«Divisa» sería el
+  código que acompaña al importe **y** el agregado de Organización— que hay que contar resuelto. Se
+  fusionó: no se ha perdido ni un término de los que había, y la columna «y qué **no** es» se queda,
+  que es la mitad que hace útil un glosario.
+
+#### Lo que decidió el glosario y se implementa en la FASE 1 (ADR-0023)
+
+Escribir la definición de cuatro términos obligó a decidir tres cosas que no lo estaban. **Están
+decididas y NO implementadas**: hoy no protegerían nada, porque no hay todavía una sola operación
+transaccional que apunte a una divisa o a una unidad.
+
+1. **Los cuatro maestros de instalación tendrán una retirada.** `Divisa`, `TipoCambio`,
+   `UnidadMedida` y `ConversionUM` se crean y se editan y no se puede hacer nada más con ellos: en
+   el contrato tienen `GET`/`POST` y `GET`/`PUT`, y **ni `DELETE`, ni `/cierre`, ni `/desbloqueo`**
+   —al contrario que `Impuesto`, que sí tiene `/cierre`—. Y `Modificar` es estrecho: solo el nombre
+   en `Divisa` y `UnidadMedida`, solo la tasa en `TipoCambio`, solo el factor en `ConversionUM`. Un
+   **código** mal escrito, unos **decimales** equivocados o un **par o una fecha** que no eran son
+   permanentes, y como son maestros de instalación se ven **desde todas las empresas**. La salida se
+   llamará **retirada**: ni bloqueo —el bloqueo es el artículo 32 de la LOPDGDD y habla de datos
+   personales, que una divisa no tiene— ni cierre —el cierre es el final de una línea temporal, y
+   una unidad no se sucede—. Lo retirado no se ofrece para lo nuevo y **sigue resolviendo** para lo
+   que ya apunta a ello. Ningún `DELETE`, nunca.
+2. **Si la inversa de una conversión está declarada, tiene que ser la inversa.** Los dos sentidos
+   son filas independientes a propósito, pero nada acotaba cuánto podían discrepar: hoy conviven
+   `caja→unidad = 12` y `unidad→caja = 0,5` sin un solo error. Se exige
+   `|f·g − 1| ≤ 5·10⁻⁷·(f + g)`, que **no es una tolerancia inventada**: es exactamente la que
+   impone guardar cada factor redondeado a seis decimales. Admite las dos lecturas razonables de
+   1/12 y rechaza 0,5 por seis órdenes de magnitud. Va en la **capa de aplicación**, porque
+   relaciona dos instancias del agregado y la R12 dice una transacción, un agregado.
+3. **Una conversión encadenada no compone.** Con `kg→g` y `g→mg` pero sin `kg→mg`, se responde un
+   **error de negocio con nombre**, nunca un cero, nunca un nulo, nunca el producto. Encadenar
+   multiplica el error de redondeo, y con varias cadenas posibles el número dependería de cuál
+   eligiera el buscador de caminos: una entrada invisible en un dato de negocio.
+
+#### Las higienes del cierre, y lo que la medición corrigió
+
+- **`CA1304`, `CA1305` y `CA1310` no había que activarlas: ya rompían el build.** Comprobado por el
+  efecto con una sonda de tres líneas —`ToUpper()`, `int.ToString()`, `StartsWith(string)`—, que da
+  cuatro errores (también `CA1311`). Lo que sí faltaba es de quién dependía: rompían por venir
+  dentro de `AnalysisLevel=latest-recommended`, un lote que Microsoft recompone en cada SDK — con
+  `latest-default`, la misma sonda da **cero**. Escritas en `.editorconfig`, la garantía la pide
+  este repositorio y no un lote. `CA1307` no salta ni forzando la categoría entera: no hay nada que
+  encender ahí, y decirlo es parte del resultado.
+- **La licencia se escribe donde se lee la decisión, y nunca como última línea del commit.** Una
+  línea final con forma `Clave: valor` **es un trailer** —`git log --format='%(trailers)'` la
+  devuelve—, y esa forma tiene que quedar vacía para que sirva de comprobación de que no se ha
+  colado ninguno de sesión, de herramienta ni de terceros. Los dos commits del 0.14 (`2398889`,
+  `309f594`) la llevan así; están publicados y **no se reescriben**. El dato se movió a su sitio
+  —i18next y react-i18next (MIT) a la cabecera del motor de traducción, eslint-plugin-i18next (ISC)
+  junto a su regla— y la convención quedó escrita en `AGENTS.md`.
+
+#### Lo que se encontró por el camino y no estaba previsto
+
+**El renombrado hizo que una clave de traducción tuviera la forma exacta de un permiso.** Al pasar
+los espacios de nombres del diccionario a espejar los módulos, `organizacion.almacenes.tabla` quedó
+indistinguible de `organizacion.almacen.ver` para `LosPermisosQueNombraElFrontalTests`, que reconoce
+un permiso por «minúsculas con puntos y primer segmento de módulo». **Quince claves entraron como
+permisos que la API no sirve**, y el caso se puso rojo en el carril de integración — no en el
+frontal, que estaba verde entero.
+
+Importa cómo falló: **rojo, no cero ficheros**. El barrido tiene dos anclas —hay candidatos, y el
+fichero que los declara aporta alguno— y por eso el renombrado lo rompió en vez de vaciarlo. Es el
+mismo modo de fallo que los siete casos de carpeta temporal del 0.15, resuelto al revés y a tiempo.
+
+La corrección no toca los espacios de nombres, que son la decisión del ítem: **la distinción no es
+de forma, es de sitio**. Un literal que el código le entrega al traductor no es un permiso. Se resta
+por ocurrencia y no por valor —la misma cadena en otro sitio se sigue comprobando— y es una resta,
+así que un permiso escrito en cualquier otro lugar sigue entrando.
+
+**Con `CI=true`, ESLint linteaba el fichero del disco y no el texto inventado — y el barrido por el
+efecto se quedaba sin nada que comprobar.** El frontal salió rojo en la CI tres veces con la máquina
+de desarrollo verde entera. La causa no era el sistema operativo, ni la versión de Node, ni la de
+ESLint, ni la del paquete `ignore`, ni la semántica de los globs, ni el orden de los pasos del
+*workflow*: se descartaron las seis. Era que **`typescript-eslint` mira `process.env.CI`** y, si
+vale `'true'`, deduce «ejecución única» y no monta el programa de TypeScript en modo vigilancia —
+sin el cual `lintText(codigo, { filePath })` analiza **el fichero del disco** en lugar del texto que
+se le pasa. El fichero de disco está limpio, así que ESLint no marcaba nada.
+
+Se reprodujo en local con `CI=true` en una sola orden. Arreglo: el motor de este barrido se
+construye con `parserOptions.disallowAutomaticSingleRunInference: true`, en la instancia y no en el
+entorno, porque `npm run lint` sí debe aprovechar la ejecución única. Y con él, **dos preguntas de
+control por testigo**, que son la comprobación por el efecto aplicada a sí misma: que ESLint marque
+un `any` descarado en ese fichero (el canario), y que el motor prohíba el mismo import con una
+configuración inline que no lleva otra cosa. La primera que falle nombra la capa rota.
+
+**Salió rojo y no verde por la polaridad de la aserción**, y eso no es suerte: el barrido exige que
+la lista de avisos **no** esté vacía, así que un ESLint que no mira nada falla. Escrito al revés
+—comprobando que lo permitido no se marca— la ejecución única habría dado verde en la CI para
+siempre. Está en el ADR-0022.
+
+#### Las mutaciones, cada una aplicada, ejecutada y revertida
+
+| # | Qué se rompió | Qué se puso rojo |
+|---|---|---|
+| 1 | Un import de `@/features/organizacion/…` dentro de `identidad/acceso/model/` | **Dos veces**: `npm run lint` código 1 con el mensaje de la regla, y el barrido de imports nombrando fichero y destino |
+| 2a | El `files:` de la regla apuntando a una carpeta que no existe, **sin tocar ningún import** | **`lint` código 0. Verde total.** Solo el caso que lintea de verdad: «identidad puede importar de organizacion con el alias, y no debería». El barrido de imports siguió verde, y es correcto: ningún import cruzó |
+| 2b | Quitar el patrón ancho, dejando solo el del alias | `lint` código 0; rojo **solo** en el caso del camino relativo. El alias se seguía cazando → los globs de `.gitignore` ya cubren los descendientes, y la cola explícita sobraba |
+| 3 | Renombrar `features/organizacion/` sin tocar el diccionario | **Dos veces**: lista declarada contra disco, y partición de espacios de nombres del diccionario |
+| 4 | Borrar del glosario un término que sí existe (`Serie`) | «Sobran en el glosario: []. Faltan: [Serie]». Y atribuyéndolo a otro módulo: «Serie: el glosario dice «Identidad» y vive en Organizacion» |
+| 5 | Mover `PaginaDeInicio` del armazón a dentro de una funcionalidad | `typecheck` 0, `lint` 0, fronteras verde; rojo **solo** en el barrido de rutas |
+| 6 | `organizacion.almacen.inventar` en `permisos.ts`, tras arreglar el reconocedor de permisos | `LosPermisosQueNombraElFrontalTests` → rojo, nombrando fichero y valor: la resta no se comió el barrido |
+| 7 | El canario convertido en algo que ESLint no marca (`export const x = 1;`) | «ESLint no ha marcado un 'any' descarado en el testigo de identidad: no está mirando ese fichero» |
+| 8 | El patrón del motor inline apuntando a `@/nada/…` | «el motor de ESLint no prohíbe '@/features/organizacion/…' ni con una configuración que no lleva otra cosa» |
+| 2a *bis* | La 2a otra vez, **con `CI=true`**, que es el modo en el que la CI ejecuta | Rojo, y nombrando la capa: «la configuración que le aplica **NO LLEVA** no-restricted-imports». Antes del arreglo, ese mismo modo dejaba el barrido sin nada que mirar |
+
+**La 2a es el hallazgo del ítem.** Una regla de ESLint cuyo patrón no case con nada **pasa**: ni un
+aviso, ni un «0 ficheros comprobados». Y la mitad que suele olvidarse es que la comprobación que
+mira el código **no puede** detectarlo, porque el código está bien; y la que mira la regla no puede
+detectar un import prohibido, porque la regla ya no existe. Hacen falta las dos.
+
+**La 5 tiene lectura.** La frontera de ESLint no la caza, y no es un fallo: meter una pantalla del
+armazón dentro de una funcionalidad no cruza ninguna frontera **entre funcionalidades**; le presta
+un dueño que no tiene. Es otra regla, y por eso hay otra regla.
+
+
+#### El traspaso a la fase 1
+
+**Dónde retomar exactamente: la fase 0 está cerrada; lo siguiente es la FASE 1 (Maestros).** El
+0.16 era el último ítem con criterio escrito de antemano. La fase 1 **no tiene Anexo A.3**, así que
+**antes de tocar nada pasa por la puerta de clarificación**: se leen el objetivo, este PLAN y las
+convenciones, se identifica toda decisión esencial sin especificar que admita varias opciones
+viables, y se preguntan **todas juntas, en una sola tanda**, sin empezar a trabajar hasta tener
+respuesta.
+
+**Lo que hereda, y que ya no hay que decidir:**
+
+- **Tres cosas decididas y sin implementar, que son suyas** (ADR-0023): la **retirada** de los
+  cuatro maestros de instalación —con el primer módulo que los referencie, no antes—, la
+  comprobación de que la inversa de una conversión es la inversa, y el resolutor de conversiones que
+  responde un error con nombre en vez de componer una cadena.
+- **El corte de `features/`**: espeja los módulos del backend. Terceros es **un solo agregado** con
+  roles (§7.2), así que es **una sola funcionalidad** `terceros/` con los recursos que haga falta
+  dentro — no `clientes/` y `proveedores/`, que era justo lo que F4 vio venir.
+- **El glosario**, que ya no se puede quedar atrás en su parte más cara: un agregado nuevo sin
+  entrada en `docs/dominio/glosario.md` pone el carril de arquitectura en rojo el día que se
+  escribe. Los términos que la fase 1 estrene se añaden **cuando existan**, y la sección
+  *Reservado* dice cuáles están ya con dueño: Tercero, Artículo, Categoría, Tarifa.
+
+**Los imports del Anexo A.2.3 que se añaden a `CLAUDE.md` al empezar** (y se quedan):
+
+```
+@../BibliotecaDocumentacion/herramientas/proteccion-datos.md
+@../BibliotecaDocumentacion/patrones/soft-delete.md
+```
+
+`soft-delete.md` no es opcional aquí: la **retirada** del ADR-0023 es un final de vida que **no** es
+el bloqueo de la R16, y las dos van a convivir en las mismas tablas.
+
+**Los invariantes de la fase 0 que ahora sostienen peso**, y que romper sale caro:
+
+- **Ninguna regla sin afirmación de conjunto no vacío** (ADR-0020, y ADR-0022 para el frontal). Son
+  siete barridos en el backend y dos en el frontal; `LasReglasDeEsteCarrilTests` los cuenta por su
+  nombre, así que añadir o quitar una regla obliga a escribir la línea.
+- **Toda regla nueva se ve en rojo antes de aceptarse en verde.** No es estilo: es el único modo de
+  distinguir una regla que protege de una que se lee bien.
+- **El inventario de módulos manda el alcance.** Cuando la fase 1 estrene `Terceros.Domain` con su
+  primer tipo, hay que declararlo en `Inventario.EnsambladosConTipos` — si no, sus fronteras salen
+  verdes por vacuidad, y el informe dirá que se comprobaron.
+- **El contrato se genera y se versiona**, y el cliente del frontal se genera de él: nada de
+  `docs/api/openapi.json` ni de `src/shared/api/esquema.ts` se escribe a mano.
+- **Los permisos que teclea el frontal los sirve la API**, y desde el 0.16 el reconocedor distingue
+  una clave de traducción de un permiso por el **sitio**, no por la forma. Un módulo nuevo entra en
+  ese barrido el día que publica su primer permiso, sin tocar nada.
+- **`[Range]` con límites de texto se lee en cultura invariante**, y la sensibilidad a la cultura la
+  exige `.editorconfig` y no un lote de analizadores.
+
 ## Estado actual
+
+**Ítem 0.16 cerrado — `features/` espeja los módulos, y la frontera dejó de ser un acuerdo escrito:**
+[run 33738721080](https://github.com/AOjeda006/Bastion/actions/runs/33738721080) sobre `6f21d3b`,
+los **tres** *jobs* en `success`. Cierra **F4** y **F6** de la auditoría previa a la fase 1, y con él **la fase 0
+entera**: es el último ítem con criterio escrito de antemano.
+
+`src/features/` tiene ahora dos carpetas —`identidad` y `organizacion`—, que son módulos del
+backend y no recursos; `acceso`, `almacenes` y `empresas` bajan a subcarpetas dentro de ellas, y las
+dos pantallas que no son de ningún módulo se van a `src/app/paginas/`, que es donde vive lo que se
+monta una vez para todas. Los diccionarios se movieron con las carpetas, y ya no pueden dejar de
+moverse: sus espacios de nombres **son** las funcionalidades que hay en disco, comparados enteros y
+en los dos sentidos, en `es.ts` y en `en.ts`.
+
+Lo que llega con él: la regla que impide que una funcionalidad importe de otra, ejecutada por
+ESLint y **generada de las carpetas que hay en disco**; `funcionalidades.ts`, que afirma a mano
+cuántas hay; `ElBarridoDeLasFronteras`, cinco casos que comprueban la regla **por el efecto** —le
+piden a ESLint que linte un import prohibido entre cada par y exigen que lo marque— más el barrido
+de especificadores que tapa el punto ciego de los `import()` dinámicos; el dueño declarado de cada
+ruta con el barrido que comprueba que el módulo que carga vive donde su dueño dice; el glosario del
+lenguaje ubicuo fusionado con lo ya construido y con su tabla de agregados **comparada contra el
+dominio compilado**; y los ADR **0022** y **0023**.
+
+### Verificado en local, con la salida real
+
+```
+frontal: format:check / typecheck / lint / build   ->  exit 0 los cuatro
+frontal: npm run test                              ->  9 ficheros, 46 casos   (eran 8 y 39)
+frontal: CI=true npm run test                      ->  9 ficheros, 46 casos   (el modo de la CI)
+dotnet build Bastion.sln                           ->  0 Advertencia(s), 0 Errores
+dotnet format Bastion.sln --verify-no-changes      ->  exit 0, sin salida
+carril rápido (Category!=Integracion)              ->  492 casos: 118 BuildingBlocks + 58 Identidad +
+                                                       180 Organización + 18 Arquitectura + 118 funcionales
+tests/Organizacion.IntegrationTests                ->  65 casos
+tests/Api.IntegrationTests                         ->  165 casos
+scripts/comprobar-migraciones.sh                   ->  Auditoría 3, Organización 4, Identidad 3; coinciden
+scripts/generar-openapi.sh --comprobar             ->  al día: 73 operaciones
+```
+
+El carril de arquitectura pasa de 15 a **18**: las tres reglas del glosario. El del frontal, de 39 a
+**46**: los cinco del barrido de fronteras y los dos nuevos del de rutas.
+
+### Lo que la CI encontró y en local no se veía
+
+**Que el barrido por el efecto estaba vacío justo donde importaba.** Tres runs rojos del *job*
+Frontal con la máquina de desarrollo verde entera, en el único caso que lintea de verdad. No era el
+sistema operativo, ni Node, ni ESLint, ni el paquete `ignore`, ni los globs, ni el orden de los
+pasos —se descartaron los seis, uno de ellos reproduciendo el *job* completo dentro de un contenedor
+`node:22`—: **`typescript-eslint` mira `process.env.CI`**, deduce «ejecución única» y no monta el
+programa de TypeScript en modo vigilancia; sin él, `lintText(codigo, { filePath })` analiza el
+fichero **del disco** en vez del texto que se le pasa, y el del disco está limpio.
+
+Se reprodujo en local con `CI=true`. El arreglo va en la instancia
+(`parserOptions.disallowAutomaticSingleRunInference: true`) y no en el entorno, porque
+`npm run lint` sí debe aprovechar la ejecución única. Con él llegan **dos preguntas de control por
+testigo** —el canario y el motor inline—, que son la comprobación por el efecto aplicada a sí misma.
+
+Y la lectura que se queda: **salió rojo por la polaridad de la aserción**. El barrido exige que la
+lista de avisos no esté vacía, así que un ESLint que no mira nada falla; escrito al revés habría
+dado verde en la CI para siempre.
 
 **Ítem 0.15 cerrado — Organización, entera, y F2 y F3 con ella:**
 [run 33690830912](https://github.com/AOjeda006/Bastion/actions/runs/33690830912) sobre `1366751`, los
@@ -3533,7 +3832,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **F3 no se da por arreglado con la línea de `.dockerignore`**: quitarla deja que el contexto las
   copie, pero `Dockerfile.api` publica solo `/publicado`, así que hay que publicarlas también
   —`<Content Include>`— o no llegarán al contenedor que las carga.
-- [ ] **0.16 · `features/` espeja los módulos, y el glosario arranca** — criterio de aceptación:
+- [x] **0.16 · `features/` espeja los módulos, y el glosario arranca** — criterio de aceptación:
   `features/identidad/` y `features/organizacion/` sustituyen a `acceso`, `almacenes`, `empresas` e
   `inicio`; `inicio` queda donde le corresponda por no ser de ningún módulo; una regla comprobable
   —no una convención escrita— impide que una funcionalidad importe de otra; y `docs/dominio/`
