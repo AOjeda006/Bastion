@@ -2518,6 +2518,31 @@ backend: dotnet build      ->  0 errores, 0 advertencias
                                verifica es la CI.
 ```
 
+### Lo que la CI encontró y en local no se veía
+
+El primer *run* del 1.2 —[33805185736](https://github.com/AOjeda006/Bastion/actions/runs/33805185736)
+sobre `e087c56`— salió **rojo en el carril de integración**, y con razón: `Divisa.Crear("PTX", …)`
+**lanza**. El catálogo de divisas de los bloques comunes rechaza lo que no sabe redondear, porque una
+divisa guardada sin saber con cuántos decimales redondea es una factura mal calculada esperando. O
+sea que el código inventado que valía para un impuesto —`PTO-VIG`, que solo mide 20 caracteres— **no
+existe** para una divisa.
+
+**Lo que enseña no es el fallo, es cómo se encontró.** Un test que no se puede ejecutar aquí —el
+demonio de Docker está parado— se empujó **compilando**, y compilar no ejerce nada: `Crear` lanza en
+ejecución, no en el compilador. La regla que queda escrita: **cuando un carril no se puede ejecutar
+en local, hay que ejercer en local todo lo del carril que no necesita el carril.** Aquí eso eran las
+cuatro llamadas a las factorías del dominio, que no tocan la base de datos y tardan 19 ms. Se hizo
+con un test canario temporal, que confirmó que de las cuatro **solo fallaba una** — y eso es lo que
+convierte «hay algo roto en 237 casos» en «está roto esto». Corregido con `JPY`, que además es el
+contraejemplo de cero decimales del propio catálogo.
+
+Y no se arregló mirando la salida de la CI: el registro del *job* pide permisos de administrador
+(`403 Must have admin rights to Repository`) y el artefacto tampoco se puede bajar sin credenciales.
+Lo que sí se puede leer sin ellas son los **pasos** del *job*, y ahí estaba dicho: falló «Tests de
+integración (Testcontainers)», y los tres rojos de detrás —«Publicar el OpenAPI» omitido, «Bajar el
+artefacto» y «El artefacto contiene el contrato»— eran **consecuencia**, no causa. La anotación «No
+hay openapi.json dentro del artefacto» era la más ruidosa y la que menos decía.
+
 ### Las ocho mutaciones del 1.2, cada una aplicada, ejecutada y revertida
 
 | # | Mutación | Rojo por | Qué enseña |

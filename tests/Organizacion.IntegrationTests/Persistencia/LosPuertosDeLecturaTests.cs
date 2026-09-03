@@ -97,7 +97,11 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
     [Fact]
     public async Task La_divisa_dada_de_alta_se_ofrece_y_la_que_no_esta_no_existe()
     {
-        var divisa = Divisa.Crear("PTX", "Divisa de prueba del puerto", s_momento);
+        // El yen y no un código inventado: `Divisa.Crear` rechaza lo que el catálogo de los
+        // bloques comunes no sabe redondear, porque una divisa guardada sin saber con cuántos
+        // decimales redondea es una factura mal calculada esperando. Las semillas del §12 no
+        // cargan divisas, así que la tabla está vacía y el índice único no tiene con qué chocar.
+        var divisa = Divisa.Crear("JPY", "Yen japonés", s_momento);
         await GuardarAsync(contexto => contexto.Divisas.Add(divisa));
 
         await using OrganizacionDbContext contexto = postgres.AbrirContexto();
