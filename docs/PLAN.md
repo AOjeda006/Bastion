@@ -2405,12 +2405,20 @@ sea antes de que ese controlador exista.
 cuando falla una validación. Se cayó de la tanda al redactarla, así que **no se hereda un default**;
 se pregunta antes de empezar el **1.5**, que es el primer ítem donde muerde.
 
-**Ítem 1.1 cerrado — el presupuesto ya mide lo que dice medir.** El paso de la CI pasa de una cifra
-a dos, calculadas por `scripts/ci/presupuesto-del-frontal.sh`: **arranque 391/450 KiB** (lo que
-`index.html` referencia, que es lo que se paga antes de pintar nada) y **total servido 532/900 KiB**.
-Se suman **bytes** y no bloques de disco, así que la cifra local y la del *runner* son la misma y un
-ajuste de presupuesto ya no cuesta un *run* (el 0.1 dejó escrito lo contrario: 1097 kB en local
-contra 1104 en el *runner*).
+**Ítem 1.1 cerrado — el presupuesto ya mide lo que dice medir:**
+[run 33779064545](https://github.com/AOjeda006/Bastion/actions/runs/33779064545) sobre `c3e0119`,
+los **tres** *jobs* en `success` (y el mismo árbol, ya en `main`, en el
+[run 33779690080](https://github.com/AOjeda006/Bastion/actions/runs/33779690080)).
+
+El paso de la CI pasa de una cifra a dos, calculadas por `scripts/ci/presupuesto-del-frontal.sh`:
+**arranque 391/450 KiB** (lo que `index.html` referencia, que es lo que se paga antes de pintar
+nada) y **total servido 532/900 KiB**. Se suman **bytes** y no bloques de disco, así que la cifra
+local y la del *runner* son la misma y un ajuste de presupuesto ya no cuesta un *run* (el 0.1 dejó
+escrito lo contrario: 1097 kB en local contra 1104 en el *runner*).
+
+**Y esa promesa se comprobó, no se supuso.** El `::notice::` del *runner* dice, palabra por palabra,
+lo mismo que la ejecución local: `Frontal · arranque 391/450 KiB en 3 ficheros · total servido
+532/900 KiB`. Es la primera medida del proyecto en la que las dos máquinas dan el mismo número.
 
 ### Verificado en local, con la salida real
 
@@ -2432,7 +2440,8 @@ backend: dotnet build      ->  0 errores
                                que tiene Testcontainers de decir que no hay dónde levantar
                                PostgreSQL. Este ítem no toca ni una línea de backend
                                —documentación, un guion de bash y un paso del workflow—,
-                               así que la verificación de ese carril es la de la CI.
+                               así que la verificación de ese carril es la de la CI, y la
+                               dio: 230 casos, 230 correctos, 0 con error.
 ```
 
 ### Las siete mutaciones del 1.1, cada una aplicada, ejecutada y revertida
