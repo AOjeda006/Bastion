@@ -50,6 +50,15 @@ public sealed class LasReglasDeEsteCarrilTests
         "LasCapasVanHaciaDentroTests.La_prohibicion_al_dominio_puede_dispararse",
         "LasCapasVanHaciaDentroTests.Ninguna_capa_mira_hacia_fuera_de_su_modulo",
 
+        // ADR-0024, la cuarta vía: un identificador de otro módulo guardado sin nada que lo valide
+        // no lo rechaza ni el SQL, ni el compilador, ni las tres reglas de arriba. Estas cinco
+        // afirmaciones son las que lo rechazan.
+        "LosIdentificadoresAjenosTests.Cada_modulo_de_la_lista_tiene_su_cruce_y_su_puerto",
+        "LosIdentificadoresAjenosTests.Las_dos_fuentes_encuentran_algo",
+        "LosIdentificadoresAjenosTests.Ningun_identificador_del_dominio_se_queda_sin_clasificar",
+        "LosIdentificadoresAjenosTests.Toda_declaracion_sigue_correspondiendo_a_una_propiedad_del_dominio",
+        "LosIdentificadoresAjenosTests.Todo_identificador_de_otro_modulo_esta_declarado_con_su_puerto",
+
         // El glosario del lenguaje ubicuo: su tabla de agregados y el dominio compilado son la
         // misma lista. Es lo único de docs/ que este carril vigila, y lo vigila porque es la
         // lista que dice qué cosas hay.
