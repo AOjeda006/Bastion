@@ -2475,6 +2475,11 @@ texto que lee una persona cuando falla una validación → **el frontal**, mapea
 en el ítem **1.6** y una nota de orden sobre el 1.5 en *Decisiones tomadas → ítem 1.2*.
 
 **Ítem 1.2 cerrado — la cuarta vía tiene quien la pare, y la quinta afirmación es la que la para:**
+[run 33806271861](https://github.com/AOjeda006/Bastion/actions/runs/33806271861) sobre `c54f783`,
+los **cuatro** *jobs* en `success` —el humo con Docker incluido— y **237 de 237** en el carril de
+integración, que es donde viven los siete casos nuevos que aquí no se podían ejecutar. El mismo
+árbol, ya en `main`, en el
+[run 33806915660](https://github.com/AOjeda006/Bastion/actions/runs/33806915660).
 `Organizacion.Contracts` publica `IConsultaDeImpuestos`, `IConsultaDeUnidadesDeMedida` e
 `IConsultaDeDivisas`, los tres implementados, registrados y probados contra PostgreSQL; el cruce de
 Identidad a `Organizacion.Contracts` está declarado; y `LosIdentificadoresAjenosTests` afirma las
@@ -2535,6 +2540,13 @@ cuatro llamadas a las factorías del dominio, que no tocan la base de datos y ta
 con un test canario temporal, que confirmó que de las cuatro **solo fallaba una** — y eso es lo que
 convierte «hay algo roto en 237 casos» en «está roto esto». Corregido con `JPY`, que además es el
 contraejemplo de cero decimales del propio catálogo.
+
+**Los tres *runs* de esta rama, y por qué son tres.** El primero
+([33805047002](https://github.com/AOjeda006/Bastion/actions/runs/33805047002), sobre `b6aaf60`) salió
+**cancelado**, no verde: lo reemplazó el empujón siguiente, y un *run* cancelado no es un *run* verde
+—la lección del 0.16—. El segundo (33805185736, sobre `e087c56`) es el rojo de arriba. El tercero
+([33806271861](https://github.com/AOjeda006/Bastion/actions/runs/33806271861), sobre `c54f783`) es el
+que cierra.
 
 Y no se arregló mirando la salida de la CI: el registro del *job* pide permisos de administrador
 (`403 Must have admin rights to Repository`) y el artefacto tampoco se puede bajar sin credenciales.
