@@ -10,8 +10,12 @@
     otro módulo en el contenedor de este —y con él un segundo historial de migraciones que
     rompería EsquemaDelModuloTests, que cuenta exactamente uno—.
 
-    Todo lo de aquí lleva `[Trait("Category", "Integracion")]`: es lo que separa la batería
-    rápida (sin Docker) de la completa en `AGENTS.md` y en los dos pasos de la CI.
+    Todo lo de aquí lleva `[Trait("Category", "Integracion")]` MENOS una excepción declarada, del
+    ítem 1.3: `LaTraduccionASqlTests` genera el SQL de los listados sin ejecutarlo, y para eso
+    hace falta el proveedor de Npgsql y el modelo, no un servidor. Es la parte del carril que no
+    necesita el carril, y por tanto la que tiene que poder ejercerse con Docker parado; vive aquí
+    porque este es el único proyecto que ve los repositorios (`InternalsVisibleTo`, abajo). Si
+    algún día necesita una fila, deja de ser esa excepción y le toca el rasgo.
   -->
 
   <ItemGroup Label="Sujeto de prueba">
