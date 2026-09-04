@@ -2801,7 +2801,32 @@ catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *De
 1.2*.
 
 **Ítem 1.4 cerrado — lo bloqueado se puede mirar, y mirarlo no devuelve la llave:**
-RUN_QUE_CIERRA
+run **33906512809** sobre `73c2836`, en `main`, **success**, con **3 jobs contados en el propio
+run** (`total_count: 3` de la API, no de la memoria): Backend `101132593744` ✓, Frontal
+`101132594066` ✓ y Humo `101133688191` ✓ — el de Humo esta vez **corrió**, no se omitió. Los tres
+carriles tal como el run los publica:
+
+```
+Dominio y arquitectura: 528 casos (528 correctos, 0 con error, 0 omitidos) en 7 ensamblados
+  — BuildingBlocks.UnitTests 132, Organizacion.UnitTests 180, Organizacion.IntegrationTests 5,
+    Identidad.UnitTests 58, Api.FunctionalTests 129, Api.IntegrationTests 1, Arquitectura.Tests 23
+
+Integración (Testcontainers): 241 casos (241 correctos, 0 con error, 0 omitidos) en 7 ensamblados
+  — Organizacion.IntegrationTests 72, Api.IntegrationTests 169, y 0 en los otros cinco
+
+Frontal: arranque 391/450 KiB en 3 ficheros · total servido 532/900 KiB
+         `esquema.ts` al día con `docs/api/openapi.json`
+         artefacto: 18 ficheros, 8 .js y 1 .css
+
+OpenAPI:  75 operaciones, 43 rutas /api/v1/, y el fichero del artefacto idéntico al del repositorio
+Migraciones: modelo y migraciones coinciden en todos los módulos con persistencia
+Humo: el migrador aplica los tres contextos, la cuenta sembrada inicia sesión (testigo de 2721
+      caracteres) y el entorno desplegado sirve 1 empresa
+```
+
+El run **anterior**, `33904700389` en `main` (y su gemelo `33904703923` en la rama), salió **rojo**
+por un fallo de composición que en local no miraba nadie. Está contado entero abajo, en
+*Verificado en local → La sexta, que no puse yo*.
 `GET /api/v1/organizacion/bloqueados` entrega las empresas, almacenes y ubicaciones bloqueados de la
 empresa activa, con su fecha de bloqueo y su **fecha de vencimiento**, a quien tenga
 `organizacion.bloqueado.ver` y dejando en el registro **quién** ha preguntado. Es el **quinto** sitio
@@ -5315,7 +5340,8 @@ cuando hace falta el porqué.
   censaba `Arquitectura.Tests` y solo ese ensamblado desde el 0.12; los otros tres carriles con reglas
   tenían **287 casos** que se podían borrar dejando la suite verde, más rápida y con una frontera sin
   guardián. **Cerrado** con `tests/Comun/CensoDeReglas.cs` compartido por `Compile Include` y una lista
-  escrita por ensamblado: **310 nombres** censados en los cuatro carriles, comparados enteros y en los
+  escrita por ensamblado: **316 nombres** censados en los cuatro carriles (134 + 118 + 41 + 23,
+  contados con grep sobre las cuatro listas), comparados enteros y en los
   dos sentidos. Comprobado por el efecto: borrar `El_barrido_ve_los_cuerpos_y_reconoce_un_testigo` deja
   el carril en 125 casos verdes y **solo** el censo se pone rojo, nombrando la regla. Y de paso salió
   un falso verde de la versión original —`orderby nombre, StringComparer.Ordinal` son dos claves de
