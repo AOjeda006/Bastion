@@ -382,6 +382,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizacion/bloqueados": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve una página de lo que está bloqueado en esta empresa.
+         * @description Cada llamada queda anotada en el registro con el motivo del acceso y con <b>quién</b>
+         *     pregunta: eso es lo que convierte esto en la vía «separada, nominativa y trazada» que pide
+         *     el art. 32, y no en una consulta más con un permiso distinto.
+         */
+        get: operations["Bloqueados_Listar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/conversiones-de-unidades": {
         parameters: {
             query?: never;
@@ -890,6 +912,37 @@ export interface components {
              */
             rolId: string;
         };
+        /** @description Un recurso bloqueado, tal como sale del único camino que enseña lo bloqueado (ADR-0027). */
+        BloqueadoDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del recurso bloqueado. Es lo que pide su desbloqueo.
+             */
+            id: string;
+            /** @description Qué es: `Empresa`, `Almacen` o `Ubicacion`, como texto. */
+            tipo: string;
+            /**
+             * @description Código del recurso, o nulo si su tipo no tiene: una empresa se identifica por su razón social y
+             *     no por un código. El nulo dice «este tipo no tiene código», no «no se ha podido leer».
+             */
+            codigo: null | string;
+            /** @description Con qué nombre se le reconoce: razón social, nombre o descripción. */
+            nombre: string;
+            /**
+             * Format: date-time
+             * @description Cuándo se bloqueó. De aquí arranca el plazo.
+             */
+            bloqueadoEn: string;
+            /** @description Por qué se bloqueó, como texto. */
+            motivo: string;
+            /**
+             * Format: date-time
+             * @description Cuándo termina la reserva, o nulo si <b>no vence</b>. El nulo es información y no un hueco: un
+             *     almacén retirado se conserva por razón contable y sus datos no son de nadie. Quien lo pinte
+             *     tiene que escribir «no vence» y no dejar la celda vacía.
+             */
+            venceEn: null | string;
+        };
         /** @description El criterio con el que se busca una empresa, y por dónde seguir. Viaja en el <b>cuerpo</b>. */
         BuscarEmpresasDto: {
             /** @description NIF exacto. Se normaliza igual que en el alta, así que admite puntos y guiones. */
@@ -1381,6 +1434,26 @@ export interface components {
         PaginaDeAlmacenDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["AlmacenDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeBloqueadoDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["BloqueadoDto"][];
             /**
              * Format: int32
              * @description Número de página, empezando en 1.
@@ -3056,6 +3129,33 @@ export interface operations {
                     "text/plain": components["schemas"]["ProblemDetails"];
                     "application/json": components["schemas"]["ProblemDetails"];
                     "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Bloqueados_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeBloqueadoDto"];
+                    "application/json": components["schemas"]["PaginaDeBloqueadoDto"];
+                    "text/json": components["schemas"]["PaginaDeBloqueadoDto"];
                 };
             };
         };

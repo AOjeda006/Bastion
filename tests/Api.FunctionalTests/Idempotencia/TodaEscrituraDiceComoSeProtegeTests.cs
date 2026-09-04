@@ -101,25 +101,49 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // no hace falta la cabecera envejece en silencio: el día que la condición cambie, la
         // exención seguirá aquí pareciendo razonada, y nadie sabrá que dejó de serlo. Escrita la
         // condición, quien la cambie se encuentra con la frase que dice que esto caduca.
+        //
+        // EN EL ÍTEM 1.4 CADUCÓ, y esto es lo que pasa cuando eso ocurre. `GET .../bloqueados`
+        // (ADR-0027) es una lectura de la API que entrega filas bloqueadas, así que la mitad
+        // literal de estas frases -«que ninguna lectura de la API entregue X bloqueado»- dejó de
+        // ser cierta. No se han borrado: se reescriben DICIENDO QUÉ LAS SUSTITUYE, porque una
+        // condición que se borra deja la exención otra vez sin apoyo escrito y al siguiente que
+        // lea esto sin manera de saber que hubo una.
+        //
+        // Y lo que las sustituye ya no es una frase. La condición que hoy sostiene las cuatro
+        // -que ningún camino de lectura entregue un recurso bloqueado CON TESTIGO DE VERSIÓN- la
+        // afirman dos reglas que se ponen rojas: `NingunaLecturaEntregaTestigoDeVersionTests`,
+        // sobre el contrato entero de la API, y `Ningun_camino_que_ve_lo_bloqueado_emite_un_
+        // testigo_de_version`, sobre el código que abre el ámbito. La prosa no falla; esas sí.
         ["EmpresasController.Desbloquear"] =
             "no puede exigir If-Match desde el 0.10: la etiqueta se obtiene leyendo el recurso, y " +
             "una empresa bloqueada contesta 404 a su propio GET. Una precondición cuya llave no " +
             "hay manera de conseguir no es una precondición, es un muro. Y no hace falta: " +
             "mientras está bloqueada ninguna otra escritura llega a la fila —todas la piden al " +
             "repositorio y el filtro no se la da—, así que no hay con quién competir; desbloquear " +
-            "dos veces deja el mismo estado (ADR-0017). DEPENDE DE que el filtro `Bloqueo` siga " +
-            "tapando la empresa en TODA lectura que llegue por la API: el día que un endpoint " +
-            "abra `ViendoLoBloqueado(...)` y devuelva una empresa bloqueada con su ETag, la llave " +
-            "vuelve a existir, esta exención caduca y hay que volver a exigir If-Match aquí",
+            "dos veces deja el mismo estado (ADR-0017). DEPENDE DE que ninguna lectura de la API " +
+            "entregue una empresa bloqueada CON SU ETIQUETA. Hasta el 1.4 esto se decía más " +
+            "ancho -que ninguna lectura entregara una empresa bloqueada, punto- y esa mitad " +
+            "CADUCÓ ahí: `GET .../bloqueados` es exactamente eso (ADR-0027). Lo que la sustituye " +
+            "es más estrecho y sigue siendo lo que importa, porque la llave que If-Match pediría " +
+            "es la etiqueta y no la fila: ese listado no emite ninguna. Y ya no es una promesa " +
+            "escrita, la afirman `NingunaLecturaEntregaTestigoDeVersionTests` y la regla de " +
+            "caminos disjuntos de `ElFiltroNoSeSaltaPorAhiTests`. El día que una lectura de lo " +
+            "bloqueado emita versión -una ficha individual, o un campo de más en el DTO del " +
+            "listado-, esas dos se ponen rojas, esta exención caduca de verdad y hay que volver a " +
+            "exigir If-Match aquí",
 
         ["AlmacenesController.Desbloquear"] =
             "lo mismo, y con la misma consecuencia: el almacén bloqueado no emite ETag porque no " +
             "se deja leer. El testigo de concurrencia SIGUE comprobándose dentro de la petición " +
             "—se lee la fila y se guarda en la misma transacción—; lo que desaparece es la " +
             "precondición que el cliente cita, no la protección (ADR-0017). DEPENDE DE lo mismo " +
-            "que la de Empresas —que ninguna lectura de la API entregue un almacén bloqueado— y " +
-            "ADEMÁS de que el bloqueo de la empresa siga tapando a sus almacenes: si un almacén " +
-            "quedara legible mientras su empresa está bloqueada, habría ETag y no habría exención",
+            "que la de Empresas —que ninguna lectura de la API entregue un almacén bloqueado CON " +
+            "SU ETIQUETA, después de que el 1.4 caducara la mitad ancha de esa frase— y ADEMÁS " +
+            "de que el bloqueo de la empresa siga tapando a sus almacenes: si un almacén quedara " +
+            "legible con etiqueta mientras su empresa está bloqueada, habría ETag y no habría " +
+            "exención. La segunda mitad NO ha caducado y no la cubre ninguna de las dos reglas de " +
+            "versión: la sostiene que el listado de lo bloqueado abre el ámbito del bloqueo y " +
+            "ninguno más, así que el filtro de empresa sigue puesto ahí dentro (R8)",
 
         // La cuarta, del 0.15, y por el mismo argumento que las otras tres de Organización.
         ["UbicacionesController.Desbloquear"] =
@@ -127,8 +151,10 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "ETag y la precondición pediría una llave que no se puede conseguir. El testigo de " +
             "concurrencia se sigue comprobando dentro de la petición; lo que desaparece es la " +
             "cabecera que el cliente cita (ADR-0017). DEPENDE DE lo mismo que la del almacén " +
-            "—que ninguna lectura de la API entregue una ubicación bloqueada— y ADEMÁS de que el " +
-            "bloqueo del almacén y el de la empresa sigan tapando lo que cuelga de ellos",
+            "—que ninguna lectura de la API entregue una ubicación bloqueada CON SU ETIQUETA, " +
+            "que es lo que quedó de esa frase cuando el 1.4 le caducó la mitad ancha— y ADEMÁS " +
+            "de que el bloqueo del almacén y el de la empresa sigan tapando lo que cuelga de " +
+            "ellos",
 
         // La quinta no es un desbloqueo ni se le parece: es una BÚSQUEDA. Entró en el ítem 1.3
         // con el endpoint, no cuando el carril se puso rojo, que es lo que pedía el ADR-0025 —y
@@ -151,9 +177,15 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "levanta el bloqueo del art. 32, no el rechazo temporal por intentos fallidos, que " +
             "vive en `rechazado_hasta`, se levanta solo y nunca sacó al usuario de las consultas " +
             "(ADR-0017). DEPENDE DE dos cosas, no de una: de que el usuario bloqueado siga sin " +
-            "poder leerse —sin lectura no hay ETag—, y de que `rechazado_hasta` siga siendo un " +
-            "mecanismo aparte. Si algún día el rechazo temporal se levantara por esta misma " +
-            "acción, la acción dejaría de ser la de un solo efecto que aquí se describe",
+            "emitir etiqueta, y de que `rechazado_hasta` siga siendo un mecanismo aparte. La " +
+            "primera mitad NO caducó en el 1.4 y conviene decir por qué: el acceso reservado del " +
+            "art. 32 se construyó en Organización y lista empresas, almacenes y ubicaciones, no " +
+            "usuarios, así que aquí sigue sin haber ninguna lectura. Aun así se dice ya en la " +
+            "forma estrecha —sin etiqueta, en vez de sin lectura— porque el día que Identidad " +
+            "tenga su listado de lo bloqueado, lo que sostenga esta exención será lo mismo que " +
+            "sostiene las tres de Organización, y estará afirmado por las mismas dos reglas. Si " +
+            "algún día el rechazo temporal se levantara por esta misma acción, la acción dejaría " +
+            "de ser la de un solo efecto que aquí se describe",
     };
 
     private readonly ApiSinDependencias _api = new();
@@ -273,7 +305,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(74, "acciones en total");
+        todas.Count.ShouldBe(75, "acciones en total");
         cambian.Count.ShouldBe(48, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
@@ -290,6 +322,13 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // eso sube el total, sube el de escrituras y sube el cajón de las exentas, los tres a la
         // vez y en uno: una acción que subiera dos de los tres sería una que se protege o una que
         // se coló sin motivo escrito.
+        //
+        // Setenta y cinco desde el ítem 1.4, y esta vez sube UNO SOLO: `GET .../bloqueados` es el
+        // acceso reservado del art. 32 (ADR-0027) y es una lectura, así que no cambia estado, no
+        // exige If-Match, no admite Idempotency-Key y no está exenta de nada. Que suba solo el
+        // total es la forma que tiene este recuento de decir que se ha añadido un camino de
+        // LECTURA; el día que uno de los otros cuatro números se moviera con él, lo que se habría
+        // colado sería una escritura.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(21, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(12, "rutas que admiten Idempotency-Key");

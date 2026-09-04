@@ -68,10 +68,34 @@ public enum MotivoParaVerLoBloqueado
     /// leer está —por definición— bloqueado.
     /// </summary>
     /// <remarks>
-    /// El acceso de jueces, Fiscalía y Administraciones competentes que el artículo 32 reserva
-    /// <b>no</b> tiene aquí su motivo, y no es un olvido: no existe todavía el camino que lo
-    /// serviría. Cuando exista traerá el suyo, y traerlo antes sería una rama que nadie recorre y
-    /// que nadie prueba.
+    /// <b>Este motivo NO es el del artículo 32</b>, y la diferencia se ve en quién lo abre: lo
+    /// abren los cuatro desbloqueos, y lo abren por una necesidad mecánica —leer la fila que van a
+    /// escribir— y no por un derecho de acceso. Quien desbloquea no está consultando datos
+    /// reservados: está levantando la reserva.
     /// </remarks>
     AdministracionDelBloqueo,
+
+    /// <summary>
+    /// La vía de acceso que el artículo 32 de la LOPDGDD reserva a jueces, Fiscalía y
+    /// Administraciones competentes durante el plazo de prescripción: separada de la consulta
+    /// ordinaria, nominativa y trazada.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Hasta el ítem 1.4 este valor no existía, y su ausencia estaba escrita aquí</b> con estas
+    /// palabras: «no existe todavía el camino que lo serviría. Cuando exista traerá el suyo, y
+    /// traerlo antes sería una rama que nadie recorre y que nadie prueba». El camino existe desde el
+    /// 1.4 —el listado de lo bloqueado, con su permiso propio— así que el valor entra ahora y no
+    /// antes, que es justo lo que aquella frase pedía.
+    /// </para>
+    /// <para>
+    /// <b>Va aparte de <see cref="AdministracionDelBloqueo"/> y no reutiliza el suyo</b>, aunque
+    /// abrir el ámbito haga lo mismo en los dos casos. Lo que se anota en el registro es el motivo,
+    /// y el registro es la traza que el artículo 32 exige: con un solo valor, la consulta de un juez
+    /// y el clic de un administrador que desbloquea un almacén dejan la misma línea, y la pregunta
+    /// «quién ha mirado datos reservados y cuándo» deja de tener respuesta. Son dos hechos
+    /// jurídicamente distintos y tienen que ser dos líneas distintas.
+    /// </para>
+    /// </remarks>
+    AccesoReservadoDelArticulo32,
 }

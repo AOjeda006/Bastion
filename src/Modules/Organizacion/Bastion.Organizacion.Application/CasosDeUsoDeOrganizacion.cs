@@ -1,4 +1,5 @@
 using Bastion.Organizacion.Application.Almacenes;
+using Bastion.Organizacion.Application.Bloqueos;
 using Bastion.Organizacion.Application.Divisas;
 using Bastion.Organizacion.Application.Ejercicios;
 using Bastion.Organizacion.Application.Empresas;
@@ -62,6 +63,11 @@ public static class CasosDeUsoDeOrganizacion
         servicios.AddScoped<IModificarAlmacen, ModificarAlmacen>();
         servicios.AddScoped<IBloquearAlmacen, BloquearAlmacen>();
         servicios.AddScoped<IDesbloquearAlmacen, DesbloquearAlmacen>();
+
+        // El acceso reservado del art. 32 (ADR-0027). Va suelto y no dentro de un recurso porque
+        // no es de ninguno: lista las tres entidades bloqueables del módulo a la vez, y es el
+        // ÚNICO caso de uso de lectura que abre el ámbito de bloqueo.
+        servicios.AddScoped<IListarLoBloqueado, ListarLoBloqueado>();
 
         servicios.AddScoped<ICrearImpuesto, CrearImpuesto>();
         servicios.AddScoped<IObtenerImpuesto, ObtenerImpuesto>();

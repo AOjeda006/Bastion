@@ -2329,6 +2329,87 @@
         ]
       }
     },
+    "/api/v1/organizacion/bloqueados": {
+      "get": {
+        "tags": [
+          "Bloqueados"
+        ],
+        "summary": "Devuelve una página de lo que está bloqueado en esta empresa.",
+        "description": "Cada llamada queda anotada en el registro con el motivo del acceso y con <b>quién</b>\npregunta: eso es lo que convierte esto en la vía «separada, nominativa y trazada» que pide\nel art. 32, y no en una consulta más con un permiso distinto.",
+        "operationId": "Bloqueados_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeBloqueadoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeBloqueadoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeBloqueadoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/organizacion/conversiones-de-unidades": {
       "get": {
         "tags": [
@@ -6982,6 +7063,58 @@
         },
         "description": "Qué rol se asigna o se retira, y en qué empresa."
       },
+      "BloqueadoDto": {
+        "required": [
+          "id",
+          "tipo",
+          "codigo",
+          "nombre",
+          "bloqueadoEn",
+          "motivo",
+          "venceEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del recurso bloqueado. Es lo que pide su desbloqueo.",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Qué es: `Empresa`, `Almacen` o `Ubicacion`, como texto."
+          },
+          "codigo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Código del recurso, o nulo si su tipo no tiene: una empresa se identifica por su razón social y\nno por un código. El nulo dice «este tipo no tiene código», no «no se ha podido leer»."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Con qué nombre se le reconoce: razón social, nombre o descripción."
+          },
+          "bloqueadoEn": {
+            "type": "string",
+            "description": "Cuándo se bloqueó. De aquí arranca el plazo.",
+            "format": "date-time"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se bloqueó, como texto."
+          },
+          "venceEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cuándo termina la reserva, o nulo si <b>no vence</b>. El nulo es información y no un hueco: un\nalmacén retirado se conserva por razón contable y sus datos no son de nadie. Quien lo pinte\ntiene que escribir «no vence» y no dejar la celda vacía.",
+            "format": "date-time"
+          }
+        },
+        "description": "Un recurso bloqueado, tal como sale del único camino que enseña lo bloqueado (ADR-0027)."
+      },
       "BuscarEmpresasDto": {
         "type": "object",
         "properties": {
@@ -8208,6 +8341,52 @@
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
+      "PaginaDeBloqueadoDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BloqueadoDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
       "PaginaDeConversionUmDto": {
         "required": [
           "elementos",
@@ -9170,6 +9349,9 @@
     },
     {
       "name": "Almacenes"
+    },
+    {
+      "name": "Bloqueados"
     },
     {
       "name": "ConversionesDeUnidades"

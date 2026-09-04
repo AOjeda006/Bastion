@@ -99,11 +99,11 @@ public sealed class LaTraduccionASqlTests
         SortedSet<string> repositorios = new(
             sondas.Select(sonda => sonda.Repositorio), StringComparer.Ordinal);
 
-        // Los diez listados de Organización del ítem 1.3. El número está escrito porque un
-        // repositorio que perdiera su campo de criterios —y con él su orden— desaparecería de
-        // aquí sin ruido, y el listado seguiría respondiendo, sin `ORDER BY`, con páginas que se
-        // pisan entre sí.
-        repositorios.Count.ShouldBe(10, "repositorios de Organización que listan: " +
+        // Los diez listados de Organización del ítem 1.3, más el de lo bloqueado del 1.4. El
+        // número está escrito porque un repositorio que perdiera su campo de criterios —y con él
+        // su orden— desaparecería de aquí sin ruido, y el listado seguiría respondiendo, sin
+        // `ORDER BY`, con páginas que se pisan entre sí.
+        repositorios.Count.ShouldBe(11, "repositorios de Organización que listan: " +
             string.Join(", ", repositorios));
 
         // Y la pregunta de control: la consulta que el propio repositorio de empresas advierte que
@@ -163,6 +163,46 @@ public sealed class LaTraduccionASqlTests
             "una consulta que EF Core no sabe traducir ha llegado igualmente al proveedor, así " +
             "que este discriminante dice que sí a todo y la afirmación de arriba no vale nada. " +
             Describir(intraducible));
+    }
+
+    /// <summary>
+    /// El listado de lo bloqueado se traduce <b>entero</b>: unión, recuento, orden y corte.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Va aparte de las sondas por lo mismo que la búsqueda: las sondas traducen el orden y el
+    /// filtro por separado, y aquí lo que hay que ejercer es la consulta COMPUESTA. El recuento va
+    /// por delante del corte y se hace sobre el <c>UNION ALL</c>; el <c>OrderBy</c> se aplica
+    /// después de una proyección a un tipo propio; y el <c>AsNoTracking</c> cae sobre algo que no
+    /// es una entidad. Cualquiera de las tres cosas puede no traducirse sin que ninguna sonda lo
+    /// note.
+    /// </para>
+    /// <para>
+    /// El discriminante es el mismo que el de la búsqueda —si en la cadena hay una
+    /// <see cref="DbException"/>, el SQL se generó y el proveedor llegó a intentar hablar— y por el
+    /// mismo motivo: el mensaje de fuera depende del idioma del ejecutor.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task El_listado_de_lo_bloqueado_se_traduce_entero()
+    {
+        using OrganizacionDbContext contexto = Abrir();
+        var repositorio = new RepositorioDeLoBloqueado(contexto);
+
+        var paginacion = new Paginacion
+        {
+            Pagina = 2,
+            Tamanio = 20,
+            Orden = new Orden("nombre", Descendente: true),
+            Filtro = "texto de prueba",
+        };
+
+        Exception fallo = await Should.ThrowAsync<Exception>(
+            () => repositorio.ListarAsync(paginacion, CancellationToken.None));
+
+        LlegoALaBase(fallo).ShouldBeTrue(
+            "el listado de lo bloqueado no ha llegado a hablar con el proveedor: se ha roto antes, " +
+            "traduciendo. " + Describir(fallo));
     }
 
     private static bool LlegoALaBase(Exception fallo)
@@ -241,7 +281,7 @@ public sealed class LaTraduccionASqlTests
         CriteriosDe<T> criterios)
         where T : class
     {
-        IQueryable<T> origen = contexto.Set<T>();
+        IQueryable<T> origen = Origen<T>(contexto, repositorio);
 
         yield return new Sonda(
             repositorio,
@@ -266,6 +306,50 @@ public sealed class LaTraduccionASqlTests
                 $"{repositorio} ?q=",
                 () => origen.Where(filtro("texto de prueba")).ToQueryString());
         }
+    }
+
+    /// <summary>
+    /// De dónde sale la consulta de partida de un listado.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Casi siempre es <c>contexto.Set&lt;T&gt;()</c>: se ordena sobre una entidad del modelo. El
+    /// listado de lo bloqueado del ítem 1.4 no, porque ordena sobre una PROYECCIÓN —une tres
+    /// tablas en una sola forma— y una proyección no tiene <c>Set</c>. Ese repositorio publica su
+    /// consulta como un método estático que devuelve <c>IQueryable&lt;T&gt;</c>, y aquí se busca
+    /// <b>por el tipo que devuelve</b>, no por el nombre, igual que el campo de criterios.
+    /// </para>
+    /// <para>
+    /// <b>Y si no aparece ninguna de las dos, esto LANZA en vez de saltarse el repositorio.</b>
+    /// Saltárselo sería el modo de fallo que este fichero existe para quitar: el listado se
+    /// quedaría sin comprobar y el barrido seguiría verde, que es peor que no tener barrido.
+    /// </para>
+    /// </remarks>
+    private static IQueryable<T> Origen<T>(OrganizacionDbContext contexto, string repositorio)
+        where T : class
+    {
+        if (contexto.Model.FindEntityType(typeof(T)) is not null)
+        {
+            return contexto.Set<T>();
+        }
+
+        MethodInfo? publica = typeof(OrganizacionDbContext).Assembly.GetTypes()
+            .Single(tipo => tipo.Name == repositorio)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
+            .FirstOrDefault(metodo => metodo.ReturnType == typeof(IQueryable<T>)
+                && metodo.GetParameters() is [{ ParameterType: var uno }]
+                && uno == typeof(OrganizacionDbContext));
+
+        if (publica is null)
+        {
+            throw new InvalidOperationException(
+                $"{repositorio} lista sobre {typeof(T).Name}, que no es una entidad del modelo, y " +
+                "no publica un método estático que devuelva su consulta. Sin uno, este barrido no " +
+                "puede comprobar que sus órdenes y su filtro se traducen a SQL, y se quedaría " +
+                "verde sin haber mirado este listado.");
+        }
+
+        return (IQueryable<T>)publica.Invoke(null, [contexto])!;
     }
 
     private sealed record Sonda(string Repositorio, string Nombre, Func<string> Sql);

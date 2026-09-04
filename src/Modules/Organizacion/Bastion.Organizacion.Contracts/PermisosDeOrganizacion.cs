@@ -172,6 +172,26 @@ public static class PermisosDeOrganizacion
     /// <summary>Deshacer la baja de una ubicación.</summary>
     public const string UbicacionDesbloquear = "organizacion.ubicacion.desbloquear";
 
+    /// <summary>Ver lo que está bloqueado: el acceso reservado del artículo 32.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es un permiso propio y no la suma de los cinco «ver» de arriba</b>, y esa es la decisión
+    /// (ADR-0027). Bloquear es impedir el tratamiento incluida la visualización, y el art. 32 de la
+    /// LOPDGDD reserva el acceso a jueces, Fiscalía y Administraciones competentes: lo que hace
+    /// falta es una vía <b>separada, nominativa y trazada</b>, no el rol de administrador de
+    /// siempre. Quien consulta almacenes a diario no tiene por qué ver los que se retiraron, y
+    /// quien tiene que levantar un bloqueo hecho por error no necesita para eso ningún otro
+    /// permiso.
+    /// </para>
+    /// <para>
+    /// <b>No hay verbos hermanos, y su ausencia también es la decisión.</b> No existe
+    /// <c>bloqueado.crear</c> ni <c>bloqueado.modificar</c>: lo bloqueado no se edita —tratarlo es
+    /// justo lo que el artículo prohíbe—, se ve para poder desbloquearlo, y desbloquear ya tiene su
+    /// permiso en cada recurso.
+    /// </para>
+    /// </remarks>
+    public const string BloqueadoVer = "organizacion.bloqueado.ver";
+
 
     /// <summary>Todos los permisos del módulo, que es lo que el host junta en el catálogo.</summary>
     /// <remarks>
@@ -223,5 +243,6 @@ public static class PermisosDeOrganizacion
         UbicacionModificar,
         UbicacionBloquear,
         UbicacionDesbloquear,
+        BloqueadoVer,
     ];
 }

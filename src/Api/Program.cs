@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Bastion.Api.Arranque;
 using Bastion.Auditoria.Infrastructure;
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
@@ -125,6 +126,12 @@ var opcionesDeJwt = OpcionesDeJwt.De(
     builder.Configuration[OpcionesDeJwt.VariableDeEmisor],
     builder.Configuration[OpcionesDeJwt.VariableDeAudiencia],
     builder.Configuration[OpcionesDeJwt.VariableDeClave]);
+
+// Cuánto dura un bloqueo del art. 32 aquí. A diferencia de las tres de arriba, esta SÍ tiene valor
+// por omisión —seis años, el del art. 30 del Código de Comercio— porque un plazo por omisión es una
+// decisión defendible y escrita, no un secreto conocido. Lo que no vale es ponerla y equivocarse:
+// eso lanza aquí, antes de escuchar.
+var retencion = PoliticaDeRetencion.De(builder.Configuration[PoliticaDeRetencion.VariableDelPlazo]);
 IHealthChecksBuilder salud = builder.Services.AddHealthChecks();
 
 if (cadenaDeConexion.Length == 0)
@@ -172,7 +179,7 @@ builder.Services.AgregarBandejaDeSalida(publica: cadenaDeConexion.Length > 0);
 builder.Services.AgregarIdempotencia();
 
 builder.Services.AgregarModuloDeAuditoria(cadenaDeConexion);
-builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion);
+builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion, retencion);
 builder.Services.AgregarModuloDeIdentidad(cadenaDeConexion, opcionesDeJwt);
 
 // --------------------------------------------------------------------- autenticación

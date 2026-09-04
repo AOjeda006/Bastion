@@ -1,9 +1,11 @@
+using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Organizacion.Application;
 using Bastion.Organizacion.Application.Almacenes;
+using Bastion.Organizacion.Application.Bloqueos;
 using Bastion.Organizacion.Application.Divisas;
 using Bastion.Organizacion.Application.Ejercicios;
 using Bastion.Organizacion.Application.Empresas;
@@ -36,11 +38,20 @@ public static class ModuloDeOrganizacion
     /// <summary>Registra el contexto, los repositorios y los casos de uso del módulo.</summary>
     /// <param name="servicios">Colección de servicios del <i>composition root</i>.</param>
     /// <param name="cadenaDeConexion">Cadena de conexión a PostgreSQL.</param>
+    /// <param name="retencion">Cuánto dura un bloqueo del art. 32 en esta instalación.</param>
     public static IServiceCollection AgregarModuloDeOrganizacion(
         this IServiceCollection servicios,
-        string cadenaDeConexion)
+        string cadenaDeConexion,
+        PoliticaDeRetencion retencion)
     {
         ArgumentNullException.ThrowIfNull(servicios);
+        ArgumentNullException.ThrowIfNull(retencion);
+
+        // La política de retención llega YA CONSTRUIDA desde el arranque, igual que las opciones
+        // del JWT: si la variable está puesta y mal, la aplicación no llega a escuchar. Construida
+        // aquí dentro, un plazo mal escrito se descubriría al pintar el primer listado de
+        // bloqueados, que es meses después de desplegarlo.
+        servicios.AddSingleton(retencion);
 
         servicios.AddDbContext<OrganizacionDbContext>((alcance, opciones) =>
         {
@@ -86,6 +97,10 @@ public static class ModuloDeOrganizacion
         servicios.AddScoped<IRepositorioDeUnidadesDeMedida, RepositorioDeUnidadesDeMedida>();
         servicios.AddScoped<IRepositorioDeConversiones, RepositorioDeConversiones>();
         servicios.AddScoped<IRepositorioDeUbicaciones, RepositorioDeUbicaciones>();
+
+        // El único repositorio del módulo que trae filas bloqueadas, y por eso está aparte de los
+        // diez de arriba: no es el repositorio de un recurso, es una consulta que cruza tres.
+        servicios.AddScoped<IRepositorioDeLoBloqueado, RepositorioDeLoBloqueado>();
 
         // El cargador de las semillas del §12. Lo resuelve el MIGRADOR, no el arranque de la API:
         // se registra aquí porque es quien tiene el contexto, y se invoca desde `src/Api`, que es

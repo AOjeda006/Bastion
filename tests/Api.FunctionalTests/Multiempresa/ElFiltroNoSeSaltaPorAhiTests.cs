@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Shouldly;
 
 namespace Bastion.Api.FunctionalTests.Multiempresa;
@@ -147,9 +148,13 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
     private static readonly Dictionary<string, int> s_aperturasDeBloqueoPermitidas =
         new(StringComparer.Ordinal)
         {
-            // Los cuatro desbloqueos, y nada más. La razón es de lógica y no de permisos: para
-            // levantar un bloqueo hay que poder leer lo que está bloqueado, y eso -por definición-
-            // lo tapa el filtro. Ninguna consulta ordinaria está en esta lista, y ese es el punto.
+            // Los cuatro desbloqueos y UNA lectura, desde el ítem 1.4. Hasta entonces la razón
+            // de estar aquí era siempre la misma y de lógica, no de permisos: para levantar un
+            // bloqueo hay que poder leer lo que está bloqueado, y eso -por definición- lo tapa el
+            // filtro. Ahora hay una segunda razón, y es la del art. 32 en sí: el acceso reservado
+            // tiene que existir para poder ejercerse, porque un bloqueo que no se puede ni mirar
+            // no se puede rectificar. Lo que NO ha cambiado es el punto de la lista: ninguna
+            // consulta ORDINARIA está aquí, y la que se ha añadido tiene permiso propio.
             ["src/Modules/Organizacion/Bastion.Organizacion.Application/Almacenes/DesbloquearAlmacen.cs"] = 1,
             ["src/Modules/Organizacion/Bastion.Organizacion.Application/Empresas/DesbloquearEmpresa.cs"] = 1,
             ["src/Modules/Identidad/Bastion.Identidad.Application/Usuarios/AdministracionDeUsuarios.cs"] = 1,
@@ -158,6 +163,23 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             // apertura es UNA: si algún día fueran dos, este recuento se pondría rojo y habría que
             // mirar cuál de las dos ha empezado a ver lo que no debe.
             ["src/Modules/Organizacion/Bastion.Organizacion.Application/Ubicaciones/BloquearUbicacion.cs"] = 1,
+
+            // La quinta, del ítem 1.4, y la primera que NO desbloquea: es el listado del acceso
+            // reservado del art. 32 (ADR-0027). Se declara con lo que la distingue de las otras
+            // cuatro, porque quien lea esta lista dentro de un año tiene que poder saber por qué
+            // una LECTURA está aquí:
+            //
+            //   - abre el ámbito con su propio motivo (`AccesoReservadoDelArticulo32`) y no con
+            //     el de la administración del bloqueo, para que la traza distinga a una persona
+            //     mirando datos reservados de un desbloqueo operando sobre ellos;
+            //   - exige un permiso propio (`organizacion.bloqueado.ver`), que no viene con el de
+            //     ver empresas ni con el de desbloquear;
+            //   - y NO emite versión, que es de lo que dependen las cuatro exenciones de
+            //     `If-Match` de los desbloqueos. Eso lo afirma la regla de aquí abajo.
+            //
+            // La apertura es UNA y cubre el listado entero. Si algún día fueran dos, este recuento
+            // se pone rojo y hay que mirar qué otro camino ha empezado a ver lo reservado.
+            ["src/Modules/Organizacion/Bastion.Organizacion.Application/Bloqueos/ConsultasDeLoBloqueado.cs"] = 1,
         };
 
     // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de
@@ -266,6 +288,113 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // desbloqueo se quedó sin su apertura y dejó de encontrar lo que iba a desbloquear, que
         // es un 404 en una operación que existe justamente para eso.
         Enumerar(aperturas).ShouldBe(Enumerar(s_aperturasDeBloqueoPermitidas));
+    }
+
+    /// <summary>
+    /// Los caminos que ven lo bloqueado y los que emiten versión son conjuntos <b>disjuntos</b>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Es la mitad que sobrevive de las cuatro cláusulas «DEPENDE DE» del ADR-0017, convertida en
+    /// algo que se pone rojo. Hasta el ítem 1.4 esas cuatro exenciones de <c>If-Match</c> decían
+    /// «ninguna lectura de la API entrega un recurso bloqueado», y ese ítem construye justamente
+    /// una. Lo que sigue siendo cierto, y lo que las sostiene ahora, es más estrecho: la lectura de
+    /// lo bloqueado <b>no emite versión</b>, así que la llave que <c>If-Match</c> pediría sigue sin
+    /// existir.
+    /// </para>
+    /// <para>
+    /// <b>Por fichero y no por método</b>, y es a propósito: la frontera de este proyecto para el
+    /// ámbito de bloqueo ya es el fichero —<c>s_aperturasDeBloqueoPermitidas</c> cuenta aperturas
+    /// por fichero— y un caso de uso que viera lo bloqueado y produjera un <c>ConVersion&lt;T&gt;</c>
+    /// en el mismo fichero es exactamente el cambio que hay que parar, esté o no en el mismo método.
+    /// </para>
+    /// <para>
+    /// Y con <b>las dos mitades afirmadas no vacías</b>: si un día no hubiera ningún camino que ve
+    /// lo bloqueado, o ninguno que emite versión, la intersección saldría vacía por no haber nada
+    /// que intersecar y esta regla estaría diciendo que sí sin haber mirado (ADR-0020).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void Ningun_camino_que_ve_lo_bloqueado_emite_un_testigo_de_version()
+    {
+        SortedSet<string> venLoBloqueado = new(StringComparer.Ordinal);
+        SortedSet<string> emitenVersion = new(StringComparer.Ordinal);
+
+        foreach ((string ruta, string codigo) in CodigoDeProduccion())
+        {
+            if (Veces(codigo, ".ViendoLoBloqueado(") > 0)
+            {
+                venLoBloqueado.Add(ruta);
+            }
+
+            // `ConVersion<` y no `ConVersion` a secas: lo segundo casaría con el propio fichero que
+            // declara el tipo y con cualquier `using`, y convertiría la regla en una que se
+            // dispara por nombrar el concepto en vez de por usarlo.
+            if (Veces(codigo, "ConVersion<") > 0)
+            {
+                emitenVersion.Add(ruta);
+            }
+        }
+
+        venLoBloqueado.ShouldNotBeEmpty(
+            "no hay ni un camino que abra `ViendoLoBloqueado(...)`: la intersección de abajo " +
+            "saldría vacía por no tener nada que intersecar, y esta regla diría que sí sin mirar");
+
+        emitenVersion.ShouldNotBeEmpty(
+            "no hay ni un camino que produzca `ConVersion<T>`: igual que arriba, la regla se " +
+            "quedaría mirando al vacío y saldría verde");
+
+        List<string> losDos = [.. venLoBloqueado.Intersect(emitenVersion, StringComparer.Ordinal)];
+
+        losDos.ShouldBeEmpty(
+            "estos ficheros ven lo bloqueado Y producen un recurso con su versión: " +
+            string.Join(", ", losDos) + ". Eso resucita la llave que las cuatro exenciones de " +
+            "If-Match de los desbloqueos —empresa, almacén, ubicación y usuario— dan por " +
+            "inalcanzable. O deja de emitirse la versión por ese camino, o esas cuatro exenciones " +
+            "caducan y hay que volver a exigir If-Match en las cuatro (ADR-0017, ADR-0027)");
+    }
+
+    /// <summary>
+    /// Cada motivo declarado para ver lo bloqueado tiene un sitio que lo usa, y cada sitio usa uno
+    /// declarado.
+    /// </summary>
+    /// <remarks>
+    /// <c>MotivoParaVerLoBloqueado</c> es una lista cerrada, y hasta el ítem 1.4 tenía un solo
+    /// valor y ninguna regla encima. Un enumerado de motivos legales se estropea por los dos lados:
+    /// un valor declarado <b>que nadie usa</b> es la rama que nadie recorre y nadie prueba —lo dice
+    /// el comentario del propio enumerado— y un motivo nuevo que aparece en el código <b>sin estar
+    /// declarado</b> ni compilaría, pero uno declarado y usado en un sitio que nadie ha decidido,
+    /// sí. Por eso las dos listas, enteras y en los dos sentidos.
+    /// </remarks>
+    [Fact]
+    public void Cada_motivo_para_ver_lo_bloqueado_tiene_su_sitio_y_cada_sitio_su_motivo()
+    {
+        SortedSet<string> declarados = new(
+            Enum.GetNames<MotivoParaVerLoBloqueado>(), StringComparer.Ordinal);
+
+        declarados.ShouldNotBeEmpty("el enumerado de motivos no tiene ni un valor");
+
+        SortedSet<string> usados = new(StringComparer.Ordinal);
+
+        foreach ((_, string codigo) in CodigoDeProduccion())
+        {
+            foreach (Match cita in Regex.Matches(
+                codigo,
+                @"MotivoParaVerLoBloqueado\.(\w+)",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(5)))
+            {
+                usados.Add(cita.Groups[1].Value);
+            }
+        }
+
+        usados.ShouldBe(
+            declarados,
+            customMessage:
+            "los motivos que el código usa no son los que el enumerado declara. Usados: " +
+            string.Join(", ", usados) + ". Declarados: " + string.Join(", ", declarados) +
+            ". Un valor declarado que nadie usa es una rama que nadie prueba; uno usado por un " +
+            "camino que nadie ha declarado es una puerta al art. 32 que no ha decidido nadie");
     }
 
     [Fact]
