@@ -3,7 +3,7 @@ tipo: referencia
 stack: [csharp, dotnet, aspnetcore, postgresql]
 aplica_a: [seguridad, rgpd, api-rest, ddd]
 tags: [adr, r16, lopdgdd, art-32, bloqueo, datos-personales, if-match, etag]
-revisado: 2026-09-03
+revisado: 2026-09-04
 ---
 
 # ADR-0027: Lo bloqueado se lee por un camino nominativo — y el alta no dice si va por ahí
@@ -37,9 +37,10 @@ existencia de un dato del art. 32 a alguien sin derecho a saberlo**.
 
 ### 1. Hay un camino de lectura de lo bloqueado, y es un **listado**
 
-Una consulta que enseñe lo bloqueado, con su **permiso propio**, abriendo el ámbito con el motivo
-que **ya existe** (`MotivoParaVerLoBloqueado.AdministracionDelBloqueo`) y quedando **anotada en el
-registro**, que es lo que ese ámbito ya hace. Es lo que `proteccion-datos.md` exige para el art. 32:
+Una consulta que enseñe lo bloqueado, con su **permiso propio**, abriendo el ámbito con **su
+propio motivo** (`MotivoParaVerLoBloqueado.AccesoReservadoDelArticulo32` — ver la *Corrección del
+2026-09-04*, que sustituye a lo que aquí decía) y quedando **anotada en el registro**, que es lo que
+ese ámbito ya hace. Es lo que `proteccion-datos.md` exige para el art. 32:
 «una vía de acceso **separada, nominativa y trazada**, no el rol de administrador de siempre».
 
 Ese sitio es el **quinto** de `s_aperturasDeBloqueoPermitidas`, y la lista se compara entera y en los
@@ -108,3 +109,36 @@ deja el crónico.
   vencimiento y proceso de destrucción**, y eso no existe. No entra aquí porque el plazo es materia
   de retención y no se decide leyendo código. Queda como riesgo abierto con su fecha, no en
   silencio.
+
+## Corrección del 2026-09-04 (al implementarlo, ítem 1.4)
+
+Dos cosas que este ADR daba por decididas cambiaron al montarlo. Se escriben aquí en vez de
+reescribir el texto de arriba: lo que se decidió el día 3 con la información del día 3 sigue siendo
+lo que se decidió, y lo que hace falta saber es **qué lo sustituye y por qué**.
+
+**1. El listado NO reutiliza el motivo que ya existía: estrena el segundo valor del enum.** La
+decisión 1 decía «el motivo que ya existe (`AdministracionDelBloqueo`)». Al escribirlo se vio que
+son **dos cosas distintas y la traza tiene que distinguirlas**: `AdministracionDelBloqueo` es el
+sistema operando sobre el bloqueo —bloquear, desbloquear, comprobar—, y esto es **una persona
+mirando datos personales reservados por el art. 32**. Meterlas bajo la misma etiqueta hace ilegible
+justo el registro que el art. 32 obliga a llevar: el día que haya que responder «quién ha visto
+esto», la traza diría «administración del bloqueo» para las dos. Y era además la deuda que el propio
+enum tenía escrita: su comentario prometía un segundo valor «cuando exista un camino de lectura»,
+que es este ítem. `MotivoParaVerLoBloqueado` pasa a ser una lista cerrada de **dos**, comparada
+entera y en los dos sentidos por su propia regla.
+
+**2. El «lo que este ADR NO resuelve» del final queda resuelto, y en el mismo ítem.** Decía que el
+art. 32 exige fecha de vencimiento y que eso no existía. Existe desde el 1.4:
+`PoliticaDeRetencion` (en `BuildingBlocks.Domain`) responde **cuándo vence un bloqueo**, el plazo
+cuelga **del motivo** —`SupresionSolicitada` vence, `CeseDeUso` no vence nunca, porque un almacén
+retirado se conserva por razón contable y sus datos no son de nadie—, el plazo por omisión son
+**seis años** (art. 30 del Código de Comercio, el suelo más largo de los que le aplican a una pyme) y
+es configurable por instalación. La fecha de vencimiento **sale en el listado**: sin ella, la lectura
+del art. 32 enseñaría una conservación acotada como si fuera indefinida, que es la infracción por el
+otro lado. Lo que **sigue sin existir** es el *proceso de destrucción* al vencer: hoy el vencimiento
+se ve, no se ejecuta. Eso continúa como riesgo abierto en `docs/PLAN.md`, con su fecha.
+
+Lo que **no** cambió: sigue siendo un listado y no un `GET`, sigue sin emitir `ETag`, y las cuatro
+exenciones de `If-Match` del ADR-0017 siguen en pie por la segunda mitad de su cláusula. Esa mitad
+ya no es una nota de confianza: la sostienen dos reglas que se ponen rojas si un DTO de lectura
+lleva un testigo de versión o si la respuesta del listado emite la cabecera.
