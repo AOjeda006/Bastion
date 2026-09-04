@@ -2699,7 +2699,15 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
-**Ítem 1.3 cerrado — el universo se descubre, y la copia divergente ya no compila:** el run que cierra queda anotado en el commit `docs(plan)` de cierre.
+**Ítem 1.3 cerrado — el universo se descubre, y la copia divergente ya no compila:**
+[run 33831276412](https://github.com/AOjeda006/Bastion/actions/runs/33831276412) sobre `edd0048`,
+en verde con sus **tres jobs contados en el propio run** (`total_count: 3`) y ni un paso no verde:
+Frontal 17 pasos, Backend 21, Humo 24. Los tres carriles con la cifra que publicó el run, no la que
+se recuerda: **dominio y arquitectura 503 casos** (503 correctos, 0 con error) en 7 ensamblados,
+**integración 237** (237 correctos, 0 con error) en 7, y el frontal con el contrato al día y el
+presupuesto en 391/450 KiB de arranque y 532/900 KiB de total. El humo levantó el compose entero:
+una empresa servida, sesión iniciada, y los maestros del migrador —12 tramos de impuesto, 15
+unidades, IVA general vigente al 21,00 %—.
 Los cuatro tipos de paginación viven en `Bastion.BuildingBlocks.Contracts` y las **ocho copias** de
 Identidad y Organización están borradas; los doce listados aceptan `?sort=` y `?q=` con su lista
 blanca y su tope; `POST /api/v1/organizacion/empresas/buscar` busca por **cuerpo** con cursor opaco,
