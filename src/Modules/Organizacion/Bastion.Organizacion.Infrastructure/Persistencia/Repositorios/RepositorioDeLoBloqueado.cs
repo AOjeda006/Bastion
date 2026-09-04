@@ -114,7 +114,7 @@ internal sealed class RepositorioDeLoBloqueado(OrganizacionDbContext contexto) :
                 almacen.Id,
                 Tipo = TipoDeRecursoBloqueado.Almacen,
                 Codigo = (string?)almacen.Codigo,
-                Nombre = almacen.Nombre,
+                almacen.Nombre,
                 Desde = almacen.Bloqueo.Desde!.Value,
                 Motivo = almacen.Bloqueo.Motivo!.Value,
             });

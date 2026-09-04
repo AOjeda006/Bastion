@@ -338,16 +338,11 @@ public sealed class LaTraduccionASqlTests
             .GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
             .FirstOrDefault(metodo => metodo.ReturnType == typeof(IQueryable<T>)
                 && metodo.GetParameters() is [{ ParameterType: var uno }]
-                && uno == typeof(OrganizacionDbContext));
-
-        if (publica is null)
-        {
-            throw new InvalidOperationException(
+                && uno == typeof(OrganizacionDbContext)) ?? throw new InvalidOperationException(
                 $"{repositorio} lista sobre {typeof(T).Name}, que no es una entidad del modelo, y " +
                 "no publica un método estático que devuelva su consulta. Sin uno, este barrido no " +
                 "puede comprobar que sus órdenes y su filtro se traducen a SQL, y se quedaría " +
                 "verde sin haber mirado este listado.");
-        }
 
         return (IQueryable<T>)publica.Invoke(null, [contexto])!;
     }

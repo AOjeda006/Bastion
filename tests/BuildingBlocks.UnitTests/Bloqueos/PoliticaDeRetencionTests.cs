@@ -31,7 +31,7 @@ public sealed class PoliticaDeRetencionTests
     [Fact]
     public void Una_supresion_vence_al_cumplirse_el_plazo_desde_la_fecha_del_bloqueo()
     {
-        PoliticaDeRetencion politica = PoliticaDeRetencion.De("4");
+        var politica = PoliticaDeRetencion.De("4");
 
         politica.VenceEn(Bloqueado(MotivoDeBloqueo.SupresionSolicitada))
             .ShouldBe(s_momento.AddYears(4));

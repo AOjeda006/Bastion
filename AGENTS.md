@@ -137,8 +137,22 @@ bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
 # 3. Backend. El carril rápido no necesita Docker; el de integración sí.
 dotnet build Bastion.sln
 dotnet format Bastion.sln --verify-no-changes
-dotnet test Bastion.sln --filter "Category!=Integracion"
-dotnet test Bastion.sln --filter "Category=Integracion"
+dotnet test Bastion.sln --filter "Category!=Integracion" \
+  --logger trx --results-directory artifacts/test-results/dominio
+dotnet test Bastion.sln --filter "Category=Integracion" \
+  --logger trx --results-directory artifacts/test-results/integracion
+
+# 4. El recuento, que es QUIEN DECIDE el desenlace de los dos pasos de la CI. `dotnet test`
+#    dice «ningún caso falla»; esto dice «han corrido exactamente los ensamblados que tenían
+#    que correr». Un cambio que altera QUÉ corre —un rasgo, un filtro, un proyecto de test
+#    nuevo— es invisible para el primero por construcción, y puso rojo el run 33830689761 con
+#    la batería entera en verde. Las dos listas son las del workflow, literalmente.
+bash scripts/ci/recuento-de-tests.sh \
+  artifacts/test-results/dominio "Dominio y arquitectura" 300 \
+  "Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,Bastion.Organizacion.IntegrationTests.dll,Bastion.Organizacion.UnitTests.dll"
+bash scripts/ci/recuento-de-tests.sh \
+  artifacts/test-results/integracion "Integración (Testcontainers)" 100 \
+  "Bastion.Api.IntegrationTests.dll,Bastion.Organizacion.IntegrationTests.dll"
 ```
 
 Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:

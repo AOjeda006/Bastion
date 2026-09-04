@@ -2676,6 +2676,94 @@ Puede existir como fichero muerto en un rincón que nadie importe; lo que no pue
 listado. Que es la diferencia que se pedía comprobar.
 
 
+### Tomadas por el agente de desarrollo — ítem 1.4 (2026-09-04)
+
+**1. El listado reutiliza el contrato del 1.3 y no estrena un segundo idioma de listado.**
+`IListarLoBloqueado : IListado<BloqueadoDto>`, `CriteriosDe<RecursoBloqueado>` con sus ordenables
+(`tipo`, `codigo`, `nombre`, `fecha`, por omisión `fecha` descendente y desempate por `Id`) y el
+mismo `?page`, `?size`, `?sort`, `?q` que los otros doce. No es pereza: los cuatro parámetros de
+consulta que la API acepta están **declarados** en `NingunCriterioSensibleViajaEnLaUrlTests`, y un
+listado con su propia forma habría entrado ahí como excepción el primer día.
+
+**2. El motivo nuevo, contra lo que decía el ADR-0027.** Ese ADR dejó escrito que el listado abriría
+el ámbito «con el motivo que ya existe». Se decidió lo contrario y el ADR lleva su **corrección
+fechada**: `AdministracionDelBloqueo` es el sistema operando sobre un bloqueo y esto es una persona
+mirando datos personales reservados, y bajo la misma etiqueta la traza del art. 32 no las distingue
+—que es justo para lo que sirve—. Era además la deuda que el propio enumerado tenía escrita en su
+comentario: «un segundo valor cuando exista un camino de lectura». Consecuencia:
+`MotivoParaVerLoBloqueado` pasa a lista cerrada de dos **con regla propia**, comparada entera y en
+los dos sentidos contra las citas del código de producción.
+
+**3. El vencimiento cuelga del MOTIVO, no de un número global.** Los dos motivos son de naturalezas
+distintas: `SupresionSolicitada` reserva datos personales y **vence** —pasado el plazo procede
+destruirlos—, y `CeseDeUso` **no vence nunca**, porque un almacén retirado se conserva por razón
+contable y sus datos no son de nadie. Poner caducidad a los dos por igual pondría a destruir un dato
+mercantil que hay que guardar. **Seis años por omisión** con procedencia: el art. 30 del Código de
+Comercio, que es el suelo más largo de los que le aplican a una pyme española (cuatro la prescripción
+tributaria del art. 66 LGT, cinco las acciones personales del art. 1964 CC); se elige el más largo
+porque un bloqueo que venciera antes que la obligación de conservar destruiría lo que todavía hay que
+poder enseñar. **Configurable por instalación** (`BASTION_PLAZO_DE_SUPRESION_ANIOS`), a diferencia de
+`OpcionesDeLaBandeja`, que dice por escrito que no tiene variable «porque nadie ha necesitado
+cambiarlos sin recompilar»: aquí el caso existe y no es hipotético. Ausente vale y significa el de
+omisión; **puesta y mal** no vale y **para el arranque**, porque eso es alguien intentando configurar
+algo y consiguiendo otra cosa. Y el `switch` sobre el motivo es exhaustivo y lanza: un tercer motivo
+tiene que **decidir** si vence, no heredar el «no vence» en silencio.
+
+**4. La traza dice QUIÉN, y eso cambió una línea que ya existía.** Hasta este ítem la anotación del
+ámbito llevaba solo el motivo, y bastaba mientras el único camino era desbloquear: la escritura
+siguiente dejaba su propia fila de auditoría con el usuario dentro. **Una consulta no escribe nada**,
+así que si no lo dice esa línea no lo dice nadie, y el art. 32 no reserva el acceso «a la
+administración» sino a personas concretas. El usuario va **anulable y sin lanzar**: el ámbito también
+se abre fuera de una petición —arranque, trabajos de fondo— y ahí no hay usuario; un `Guid.Empty` de
+relleno pasaría por un usuario de verdad en cuanto alguien leyera el registro.
+
+**5. El rastro de la lectura NO es una fila de auditoría, y eso ya estaba resuelto.** El criterio
+pedía que la traza no dependiera de la integridad referencial de lo que audita ni impidiera destruir
+lo observado. Se comprobó en vez de reinventarlo: `RegistroDeAuditoria` no tiene **ninguna** clave
+foránea —guarda identificadores sueltos— y una lectura no dispara el interceptor, que solo mira
+entidades modificadas. O sea que la traza de esta consulta es la línea del `ILogger`, que no ata nada
+y no impide destruir la fila el día que su bloqueo venza.
+
+**6. El censo, extendido a los cuatro carriles que tienen reglas —con el coste medido.** El usuario
+lo autorizó explícitamente para este ítem. Medido antes de decidir, no estimado: `Api.FunctionalTests`
+112 `[Fact]` + 2 `[Theory]`, `Api.IntegrationTests` 124 + 9, `Organizacion.IntegrationTests` 30 + 10
+—**287 casos** sin censo— frente a `Arquitectura.Tests` 23 + 0, que sí lo tenía desde el 0.12. El
+coste real es **una lista escrita por ensamblado** y un fichero compartido, porque el mecanismo ya
+existía: no había que inventar nada. Las tres UnitTests (`BuildingBlocks` 56+16, `Identidad` 43+5,
+`Organizacion` 92+28) se quedan **fuera a propósito**: son tests de dominio, no reglas de frontera, y
+borrar uno se nota en el comportamiento; borrar una regla de frontera no se nota en nada. Es una raya
+movible, no un olvido.
+
+**7. Dos trampas de EF Core que aparecieron en rojo y valen para el próximo listado.**
+(a) `Concat`/`Union` **no** se traducen después de una proyección de cliente: las tres ramas
+proyectaban a `new RecursoBloqueado(...)` y salieron **diez pruebas en rojo** con «Unable to translate
+set operation after client projection has been applied». Se diagnosticó con una sonda temporal que
+demostró que las ramas con **tipo anónimo** sí se unen (`UNION ALL`), y la construcción del tipo
+propio se movió **detrás** de la unión. (b) El `ORDER BY` a través de esa proyección solo se traduce
+si la proyección es un **inicializador de objeto**; con una llamada a constructor, EF la inlinea en la
+clave de orden y no sabe traducirla. Por eso `RecursoBloqueado` es un `record` con propiedades
+`init` y no un `record` posicional. Las dos las cazó `LaTraduccionASqlTests`, **sin contenedor**.
+
+**8. Lo que este ítem NO toca**, dicho para que no se lea como un olvido: ni Terceros, ni el
+artefacto de `type` del ADR-0030 (es el **1.5**), ni Catálogo, ni la retirada del ADR-0023 (el
+**1.7**). Y no hay pantalla: el listado existe en la API y el frontal no lo consume todavía, que es
+lo que la nota de riesgo de la ficha individual ya decía.
+
+**9. Ninguna dependencia nueva.** `git diff --name-only b75b312..HEAD -- '*packages.lock.json'`
+devuelve **cero** ficheros: los cuatro `.csproj` tocados añaden un `<Compile Include>` y ninguna
+`PackageReference`, y `frontend/package*.json` no se mueven. No hay licencias que comprobar porque no
+hay paquete que comprobar.
+
+**10. Un error de proceso, escrito porque costó trabajo de verdad.** Al revertir la segunda mutación
+se usó `git checkout -- <fichero>` sobre un fichero que tenía **trabajo del ítem sin commitear**, y
+eso lo devolvió a HEAD: se perdieron las ~128 líneas que el 1.4 había añadido a
+`ElFiltroNoSeSaltaPorAhiTests.cs` —la quinta apertura declarada y las **dos reglas nuevas**—. Se
+rehicieron, y el propio censo del §4 sirvió de comprobante de que la reconstrucción era completa: su
+lista declarada volvió a casar nombre a nombre. **La regla que deja:** antes de una tanda de
+mutaciones, o se commitea lo que hay, o se respalda **todo** lo modificado y no solo lo no rastreado;
+`git checkout --` no distingue entre «deshaz la mutación» y «deshaz el ítem».
+
+
 ## Estado actual
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
@@ -2698,6 +2786,60 @@ texto que lee una persona cuando falla una validación → **el frontal**, mapea
 en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su primer uso, porque el
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
+
+**Ítem 1.4 cerrado — lo bloqueado se puede mirar, y mirarlo no devuelve la llave:**
+RUN_QUE_CIERRA
+`GET /api/v1/organizacion/bloqueados` entrega las empresas, almacenes y ubicaciones bloqueados de la
+empresa activa, con su fecha de bloqueo y su **fecha de vencimiento**, a quien tenga
+`organizacion.bloqueado.ver` y dejando en el registro **quién** ha preguntado. Es el **quinto** sitio
+de `s_aperturasDeBloqueoPermitidas`, declarado con lo que lo distingue de los otros cuatro, y el
+primero que no desbloquea.
+
+**Lo que hay que leer primero de este ítem.** La afirmación del enunciado —«algo que se ponga rojo si
+un camino de lectura de la API entrega un recurso bloqueado con testigo de versión»— se escribió
+**antes** que el endpoint y se miró en rojo **con un DTO que sí lo llevaba**: la mutación 1 de la
+tabla, entera más abajo. Salen dos rojos y no uno, y son preguntas distintas:
+`Ningun_camino_que_ve_lo_bloqueado_emite_un_testigo_de_version` mira el **código fuente** —los
+ficheros que abren el ámbito y los que producen `ConVersion<T>` tienen que ser disjuntos— y
+`Ninguna_respuesta_de_la_api_lleva_testigo_de_version_en_el_cuerpo` mira el **contrato**, recorriendo
+los tipos que cada acción declara devolver. La segunda es la que nombra el endpoint y el campo.
+
+**El motivo nuevo, y por qué no se reutilizó el que había.** El ADR-0027 decía en su decisión 1 que
+el listado abriría el ámbito «con el motivo que ya existe». Al montarlo se vio que son dos cosas
+distintas y que **la traza tiene que distinguirlas**: `AdministracionDelBloqueo` es el sistema
+operando sobre el bloqueo, y esto es una persona **mirando datos personales reservados**. Bajo la
+misma etiqueta, el registro que el art. 32 obliga a llevar diría lo mismo para las dos. El ADR lleva
+su **corrección fechada** en vez de reescribir el texto de aquel día. Y con el segundo valor, el
+enumerado pasa a ser una lista cerrada de dos con su propia regla, comparada entera y en los dos
+sentidos: un valor declarado que nadie usa es una rama que nadie prueba.
+
+**El vencimiento, que no estaba en el enunciado del ítem y sí en la nota abierta.** Un bloqueo del
+art. 32 sin fecha de fin convierte una conservación acotada en indefinida, que es la infracción por
+el otro lado; enseñar el listado sin esa columna habría sido enseñar lo segundo como si fuera lo
+primero. `PoliticaDeRetencion` la contesta, y el plazo cuelga **del motivo**:
+`SupresionSolicitada` vence, `CeseDeUso` **no vence nunca** —un almacén retirado se conserva por
+razón contable y sus datos no son de nadie—, seis años por omisión (art. 30 del Código de Comercio,
+el suelo más largo de los que le aplican a una pyme) y configurable por instalación. El `switch` es
+exhaustivo y **lanza**: un tercer motivo tendría que decidir si vence en vez de heredar el «no
+vence» que nadie habría decidido, y eso lo afirma un test con un motivo fuera del enumerado.
+
+**El censo, autorizado explícitamente para este ítem.** `LasReglasDeEsteCarrilTests` censaba
+**Arquitectura.Tests y solo ese ensamblado** desde el 0.12; los otros tres carriles con reglas
+—`Api.FunctionalTests`, `Api.IntegrationTests` y `Organizacion.IntegrationTests`— tenían la rendija
+abierta con **287 casos** dentro. Ahora los cuatro se censan contra su lista escrita, **310 nombres**
+en total, con la consulta que los descubre en **un solo sitio** (`tests/Comun/CensoDeReglas.cs`,
+enlazado con `Compile Include`): tres copias divergirían el día que una contara los `[Theory]` y otra
+no. Las tres UnitTests se quedan fuera a propósito —son tests de dominio, no reglas de frontera— y
+eso es una raya que se puede mover, no un olvido.
+
+**Y el censo trajo un falso verde que llevaba ahí desde el 0.12.** `LasReglasDeEsteCarrilTests`
+ordenaba con `orderby nombre, StringComparer.Ordinal`, que **no** es «ordena por nombre con este
+comparador»: en la sintaxis de consulta son **dos claves de orden** —el nombre con el comparador de
+la **cultura** y, a igualdad, una constante—, así que el ordinal no se aplicaba nunca. Con los 23
+nombres de Arquitectura los dos órdenes coinciden y el carril salía verde; con 133 dejan de
+coincidir, porque la cultura ordena «El_contador» antes que «El_NIF» y el ordinal al revés. Es la
+misma familia que la nota de la cultura del ejecutor: verde justo en la máquina que tenía que avisar.
+Corregido con `Order(StringComparer.Ordinal)` explícito, en el fichero compartido.
 
 **Ítem 1.3 cerrado — el universo se descubre, y la copia divergente ya no compila:**
 [run 33831276412](https://github.com/AOjeda006/Bastion/actions/runs/33831276412) sobre `edd0048`,
@@ -2767,6 +2909,136 @@ porque el descubrimiento por nombre es exactamente lo que un identificador mal n
 ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en uno.
 
 El carril de arquitectura pasa de **18 a 23** casos.
+
+### Verificado en local, con la salida real — ítem 1.4
+
+```
+frontal: api / typecheck / lint / format:check / build   ->  exit 0 los cinco
+         esquema.ts regenerado desde openapi.json y SIN cambios (el DTO nuevo ya
+         estaba dentro): `git status --porcelain` sobre el fichero, vacío
+         test  ->  9 ficheros, 46 casos, 0 en rojo
+         presupuesto  ->  arranque 391/450 KiB en 3 ficheros · total servido 532/900 KiB
+                          (el ítem no toca el frontal: los mismos números que el 1.3)
+
+migraciones:  Auditoria 3, Organizacion 4, Identidad 3, y el modelo coincide con ellas
+              (este ítem NO toca el esquema: añade una lectura sobre lo que ya hay)
+openapi:      el documento versionado está al día — 75 operaciones, una más que el 1.3,
+              y es GET /api/v1/organizacion/bloqueados. El 75 sale de dos fuentes que no
+              se derivan una de otra: el guion del contrato y el recuento de
+              `El_barrido_encuentra_el_inventario_entero`
+
+backend: dotnet build      ->  0 errores, 0 advertencias
+         dotnet format --verify-no-changes  ->  exit 0 (tres avisos corregidos antes:
+                               IDE0037, IDE0007 e IDE0270 en el código nuevo)
+         carril rápido     ->  132 + 180 + 58 + 1 + 23 + 5 + 126 = 525 casos, 0 con error
+                               (BuildingBlocks / Organizacion.Unit / Identidad /
+                                Api.Integration SIN Docker / Arquitectura /
+                                Organizacion.Integration SIN Docker / Functional)
+         carril integración -> NO EJECUTADO AQUÍ: el demonio de Docker sigue parado.
+                               `docker info` -> «failed to connect to the docker API at
+                               npipe:////./pipe/dockerDesktopLinuxEngine; ... open
+                               //./pipe/dockerDesktopLinuxEngine: The system cannot find
+                               the file specified». Cliente 29.7.2 presente, servidor no.
+                               Lo verifica la CI, en el run de arriba.
+
+recuento:     el guion de la CI sobre los .trx de esta máquina, y esta vez ANTES de
+              empujar y no después: ROJO nombrando «Bastion.Api.IntegrationTests.dll»
+              como ensamblado no declarado, y VERDE —525 casos en 7 ensamblados— tras
+              declararlo. Es la pareja que dice que la línea del workflow es el arreglo
+
+licencias:    `git diff --name-only b75b312..HEAD -- '*packages.lock.json'` -> CERO
+              ficheros. Los cuatro `.csproj` tocados añaden un `<Compile Include>` y
+              ninguna `PackageReference`; `frontend/package*.json` tampoco se mueven.
+              La frase sale del diff, no de la memoria
+```
+
+**Lo del carril parado, con nombre y apellidos.** De lo que este ítem añade y necesitaría PostgreSQL,
+**la parte que no necesita el servidor se ejerció aquí**, y es justo la que más podía romperse:
+`LaTraduccionASqlTests.El_listado_de_lo_bloqueado_se_traduce_entero` ejecuta el `ListarAsync` real
+contra `Host=127.0.0.1;Port=1` y comprueba que **llegó a la base** — o sea que la consulta se tradujo
+entera y lo único que falló fue la conexión. Eso cubre las dos trampas que este listado tenía:
+`Concat` de tres ramas después de una proyección (EF no lo traduce si la proyección es a un tipo
+propio) y el `ORDER BY` a través de esa proyección (solo lo traduce si es un inicializador de
+objeto, no una llamada a constructor). Las dos aparecieron **en rojo** al montarlo y están contadas
+en *Decisiones tomadas → ítem 1.4*. Lo que queda para el carril de integración es lo que de verdad
+necesita filas: los **cuatro** casos de `ElAccesoReservadoDelArticulo32Tests` —que la fila bloqueada
+desaparezca del camino ordinario y aparezca en este, que la supresión traiga su vencimiento a seis
+años, que la respuesta **no lleve `ETag`** ni un testigo dentro del JSON, y que lo bloqueado de otra
+empresa no asome— y el censo de los 134 casos de ese carril.
+
+#### Las cinco mutaciones del 1.4, cada una aplicada, ejecutada y revertida
+
+| # | Mutación | Desenlace | Quién la caza |
+|---|---|---|---|
+| 1 | **`BloqueadoDto` con `string Version` por fila**, rellenado desde el instante del bloqueo | **Rojo ×1** en el carril rápido | `Ninguna_respuesta_de_la_api_lleva_testigo_de_version_en_el_cuerpo`, nombrando la ruta y el campo. Entera abajo |
+| 2 | El quinto `ViendoLoBloqueado(...)` **sin declarar** en `s_aperturasDeBloqueoPermitidas` | **Rojo ×1** | `El_ambito_que_ve_lo_bloqueado_solo_se_abre_donde_esta_declarado`, con las dos listas enteras y el fichero de más |
+| 3 | El motivo nuevo **declarado y sin usar** (el listado vuelve a abrir con `AdministracionDelBloqueo`) | **Rojo ×1** | `Cada_motivo_para_ver_lo_bloqueado_tiene_su_sitio_y_cada_sitio_su_motivo`: «Usados: AdministracionDelBloqueo. Declarados: AccesoReservadoDelArticulo32, AdministracionDelBloqueo» |
+| 4 | El listado **sirviendo lo bloqueado sin registrar quién pregunta**: fuera el ámbito, y `.IgnoreQueryFilters()` en las tres ramas del repositorio | **Rojo ×3** | `Ninguna_llamada_de_las_que_rodean_el_filtro_aparece_en_el_codigo` (nombrando el fichero y la llamada), más las dos de arriba, que dejan de tener quinta apertura y motivo usado |
+| 5 | Una regla **borrada** de su ensamblado (`El_barrido_ve_los_cuerpos_y_reconoce_un_testigo`, en `Api.FunctionalTests`) | **Rojo ×1**, y es el ÚNICO | `ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados`. Sin el censo del §4, el carril habría salido verde con 125 casos en vez de 126 |
+
+**Una variante de la 5 que no llega a ser mutación:** quitar el `[Fact]` y dejar el método público
+—la forma más silenciosa de apagar una regla— **no compila**: `xUnit1013` la para en el analizador.
+La que sí compila es borrar el método entero, que es la que está en la tabla.
+
+**Y un arreglo que salió de mirar el rojo de la 5.** El censo se ponía rojo, sí, pero volcaba los
+**115 nombres** de las dos listas y marcaba el punto en el que se desplazan — cuando su propio
+encabezado dice que existe para decir **cuál** falta y no cuántos. Ahora compara primero las
+diferencias en los dos sentidos y el rojo empieza por el nombre: «estas reglas están declaradas en
+`Bastion.Api.FunctionalTests` y ya no las ejecuta nadie: `NingunaLecturaEntregaTestigoDeVersionTests.El_barrido_ve_los_cuerpos_y_reconoce_un_testigo`».
+La comparación entera se queda detrás, que es la que no depende de que las diferencias estén bien
+calculadas.
+
+#### La primera, entera
+
+Es la del ítem, así que va con lo que la provocó. El DTO del listado nació **sin** ningún campo de
+versión, y su documentación dice por qué; la mutación le añade uno con la excusa más razonable que
+hay —«para poder desbloquear con `If-Match` desde aquí mismo»—:
+
+```csharp
+public sealed record BloqueadoDto(
+    Guid Id,
+    string Tipo,
+    string? Codigo,
+    string Nombre,
+    DateTimeOffset BloqueadoEn,
+    string Motivo,
+    DateTimeOffset? VenceEn,
+    string Version);          // <- la mutación
+```
+
+y en el caso de uso, rellenándolo:
+
+```csharp
+retencion.VenceEn(...),
+recurso.BloqueadoEn.Ticks.ToString(CultureInfo.InvariantCulture));   // <- la mutación
+```
+
+Compila, pasa el formateador, y el listado sigue funcionando igual de bien. El carril rápido:
+
+```
+Bastion.Api.FunctionalTests.Bloqueos.NingunaLecturaEntregaTestigoDeVersionTests
+  .Ninguna_respuesta_de_la_api_lleva_testigo_de_version_en_el_cuerpo [FAIL]
+
+  Shouldly.ShouldAssertException : fugas should be empty but had 1 item and was
+  ["GET /api/v1/organizacion/bloqueados -> BloqueadoDto.Version (es el testigo de
+    concurrencia optimista tal cual. En el cuerpo obliga a que esté también en las
+    listas, que se leen sin rastreo y no lo traen: el mismo campo valdría una cosa en
+    una respuesta y cero en otra)"]
+
+  Additional Info:
+    estas respuestas entregan un testigo de versión en el cuerpo, así que la llave que
+    las cuatro exenciones de If-Match de los desbloqueos dan por inalcanzable ya se
+    puede conseguir leyendo. O se quita el campo, o esas cuatro exenciones caducan y
+    hay que volver a exigir If-Match
+
+Con error! - Con error: 1, Superado: 125, Total: 126 - Bastion.Api.FunctionalTests.dll
+```
+
+Eso es exactamente lo que el ítem pedía: la mitad que sobrevive de las cuatro cláusulas «DEPENDE DE»
+convertida en algo que **se pone rojo**, y roja **antes** de que el endpoint existiera. En el carril
+de integración hay además la misma pregunta hecha por el cable —`ETag` ausente y ninguno de
+`version/etag/xmin/rowversion/concurrencia` dentro del JSON—, con su comprobación de no vaciedad para
+que no la conteste una página vacía.
 
 ### Verificado en local, con la salida real — ítem 1.3
 
@@ -4856,11 +5128,20 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   la **tabla de enrutado** y se compara con una segunda fuente en disco; el criterio sensible lo
   vigila un barrido nuevo sobre el **explorador de API**, que reconoce los listados por lo que
   **devuelven** y no por cómo se llaman. Cinco mutaciones en *Estado actual*.
-- [ ] **1.4 · El camino de lectura de lo bloqueado** — criterio de aceptación: **listado** —y no
+- [x] **1.4 · El camino de lectura de lo bloqueado** — criterio de aceptación: **listado** —y no
   `GET` individual, a propósito— de lo bloqueado para un rol nominativo y trazado, con su permiso y
   su ADR; `s_aperturasDeBloqueoPermitidas` comparada entera con **cinco** sitios; y reescrita la
   mitad que caduca de las cuatro cláusulas «DEPENDE DE» del ADR-0017, porque una condición que ya no
   es cierta y sigue escrita es una exención que **parece** razonada.
+  `GET /api/v1/organizacion/bloqueados` con permiso propio (`organizacion.bloqueado.ver`), motivo
+  propio (`AccesoReservadoDelArticulo32`, el **segundo** valor del enumerado, que pasa a ser lista
+  cerrada comparada en los dos sentidos) y la traza anotando **quién** pregunta y no solo con qué
+  motivo. El DTO **no lleva versión**, y eso ya no es una nota de confianza: son **dos** reglas que
+  se ponen rojas —una sobre el contrato entero y otra sobre la respuesta de verdad—. La mitad
+  caducada de las cuatro cláusulas está reescrita diciendo qué la sustituye. Y el bloqueo estrena
+  **fecha de vencimiento** (`PoliticaDeRetencion`: seis años del art. 30 del Código de Comercio,
+  colgando del motivo, configurable por instalación), que cierra media nota abierta desde el 0.11.
+  Cinco mutaciones en *Estado actual*, y la primera entera con el DTO que la provocó.
 - [ ] **1.5 · Terceros: el agregado y su identidad** — criterio de aceptación: alta con **NIF, NIE o
   CIF validados de verdad** (letra de control), extranjero como identificador **opaco con país** y
   con estado de verificación; dirección **estructurada** (R17); roles sobre un solo agregado (§7.2);
@@ -4934,6 +5215,46 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTO (2026-09-04) · los tests del frontal sueltan 91 avisos de `act(...)`, en seis ficheros.**
+  `An update to <X> inside a test was not wrapped in act(...)` sale **91** veces en una ejecución
+  limpia de `npm run test`, repartidos así: `ElListadoDeAlmacenes.test.tsx` 24,
+  `ElCambioDeIdioma.test.tsx` 17, `LasRutasProtegidas.test.tsx` 17, `ElSelectorDeEmpresa.test.tsx` 14,
+  `LaPantallaDeAcceso.test.tsx` 10 y `ElCambioDeRuta.test.tsx` 9. Los componentes que los provocan son
+  pocos y se repiten: `SelectorDeEmpresa` 21, `Guarda` 21, `Disposicion` 21, `RouterProvider` 20,
+  `PaginaDeInicio` 7 y `PaginaNoEncontrada` 1 — o sea que **no** son seis problemas, es un puñado de
+  efectos que se resuelven después de que la aserción ya haya mirado. **Por qué importa y no es
+  ruido:** es la misma familia que el flake del 0.14 —`document.title` mirado antes de que el efecto
+  lo pusiera, rojo en la CI sobre un commit que solo tocaba un `.md`—, y un aviso de `act()` dice
+  literalmente que hay una actualización de estado fuera de la ventana que el test controla. Hoy los
+  46 casos pasan; el día que el *runner* vaya cargado, alguno de estos es el candidato. **No entra en
+  el criterio del 1.4** —el ítem no toca el frontal— y queda anotado con los ficheros medidos, no
+  recordados. **Lo que lo cerraría:** envolver la interacción que dispara el efecto, no envolverlo
+  todo: `waitFor` sobre lo que pone un efecto y nada más, que es la regla que dejó el 0.14.
+
+- **CERRADO (2026-09-04, en el ítem 1.4) · el censo de reglas cubría un carril de cuatro.** Anotado
+  al cerrar el 1.3 como candidato, y autorizado por el usuario para este ítem. `LasReglasDeEsteCarrilTests`
+  censaba `Arquitectura.Tests` y solo ese ensamblado desde el 0.12; los otros tres carriles con reglas
+  tenían **287 casos** que se podían borrar dejando la suite verde, más rápida y con una frontera sin
+  guardián. **Cerrado** con `tests/Comun/CensoDeReglas.cs` compartido por `Compile Include` y una lista
+  escrita por ensamblado: **310 nombres** censados en los cuatro carriles, comparados enteros y en los
+  dos sentidos. Comprobado por el efecto: borrar `El_barrido_ve_los_cuerpos_y_reconoce_un_testigo` deja
+  el carril en 125 casos verdes y **solo** el censo se pone rojo, nombrando la regla. Y de paso salió
+  un falso verde de la versión original —`orderby nombre, StringComparer.Ordinal` son dos claves de
+  orden y el comparador ordinal no se aplicaba nunca— que era invisible con 23 nombres y deja de serlo
+  con 133.
+
+- **CERRADO (2026-09-04, en el ítem 1.4) · la batería local de `AGENTS.md` no ejecutaba el guion que
+  decide el desenlace de la CI.** Anotado al cerrar el 1.3, cuando el run 33830689761 salió rojo con
+  la batería entera en verde: `dotnet test` dice «ningún caso falla» y `scripts/ci/recuento-de-tests.sh`
+  dice «han corrido exactamente los ensamblados que tenían que correr», y un cambio que altera **qué**
+  corre es invisible para el primero por construcción. Se dejó como candidato «para el ítem que toque
+  el carril», y este lo toca: el censo hace que `Bastion.Api.IntegrationTests.dll` empiece a correr en
+  el carril rápido. **Cerrado** añadiendo los dos recuentos a la batería de `AGENTS.md`, con las
+  listas del *workflow* literalmente y con los `--logger trx --results-directory` que hacen falta para
+  poder ejecutarlos. Verificado en este mismo ítem antes de empujar: rojo con la lista vieja
+  nombrando el ensamblado, verde con la nueva.
+
+
 - **CERRADO (2026-09-03) · un test del frontal miraba `document.title` sin esperar al efecto que lo
   pone.** Saltó donde peor se interpreta: en la CI, sobre un commit que **solo tocaba un `.md`**
   —`ElCambioDeIdioma.test.tsx:41`, «expected `''` to be `'Almacenes · Bastion'`»—, después de pasar
@@ -4955,6 +5276,14 @@ cuando hace falta el porqué.
   proceso que lo aplica. **No entra en el ítem 1.4 a propósito:** ese ítem construye el camino de
   lectura, y el plazo es materia de retención —cuánto dura la prescripción de cada responsabilidad—,
   que no se decide leyendo código. **Lo que lo desbloquea:** el plazo, dicho por quien pueda decirlo.
+  **MEDIA NOTA CERRADA (2026-09-04, en el ítem 1.4), y la otra media sigue abierta.** El plazo lo dijo
+  el usuario al abrir el ítem —cuelga del motivo, `SupresionSolicitada` vence y `CeseDeUso` no,
+  **seis años** por omisión (art. 30 del Código de Comercio) y configurable por instalación— y está
+  implementado en `PoliticaDeRetencion`, con el vencimiento **saliendo en el listado del art. 32**:
+  enseñar la reserva sin su fecha de fin habría sido enseñar una conservación indefinida como si fuera
+  acotada. **Lo que sigue sin existir es el proceso de destrucción al vencer:** hoy el vencimiento se
+  **ve**, no se **ejecuta**, y una fila vencida se queda ahí hasta que alguien la mire. Eso necesita
+  un trabajo de fondo con su ventana y su registro, y sitio propio en la hoja de ruta.
   **Emparentado** con la nota de `auditoria.claves_de_idempotencia`: las dos son políticas de
   retención sin dato con el que calibrarlas, y las dos tienen ya el mecanismo —una migración aplicada
   por el paso de despliegue del ADR-0021—.

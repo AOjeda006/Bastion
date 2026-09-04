@@ -87,6 +87,29 @@ internal static class CensoDeReglas
             "`TheoryAttribute` ha dejado de derivar de `FactAttribute`, así que este censo ya no " +
             "ve los `[Theory]` y se pueden borrar sin que nada se ponga rojo");
 
+        // Las DIFERENCIAS antes que la comparación entera, y no es cosmética. Este censo existe
+        // para decir CUÁL falta y no cuántos faltan —lo dice su propio encabezado—, y un
+        // `ShouldBe` de dos listas de ciento y pico nombres no lo dice: vuelca las dos enteras y
+        // marca el punto en el que se desplazan, que hay que leer contando. Con esto, lo primero
+        // que aparece en el rojo es el nombre.
+        SortedSet<string> declaradasEnOrden = new(declaradas, StringComparer.Ordinal);
+        SortedSet<string> encontradasEnOrden = new(encontradas, StringComparer.Ordinal);
+
+        List<string> faltan = [.. declaradasEnOrden.Except(encontradasEnOrden, StringComparer.Ordinal)];
+        List<string> sobran = [.. encontradasEnOrden.Except(declaradasEnOrden, StringComparer.Ordinal)];
+
+        faltan.ShouldBeEmpty(
+            $"estas reglas están declaradas en {ensamblado.GetName().Name} y ya no las ejecuta " +
+            "nadie: " + string.Join(", ", faltan) + ". Una regla borrada no deja hueco —la suite " +
+            "sale verde y más rápida— y la frontera que guardaba se queda sin nadie");
+
+        sobran.ShouldBeEmpty(
+            $"estas reglas corren en {ensamblado.GetName().Name} y no están declaradas: " +
+            string.Join(", ", sobran) + ". Añadirlas a la lista no es papeleo: es el momento en " +
+            "el que alguien decide si de verdad protegen algo");
+
+        // Y la comparación entera de todas formas, que es la que no depende de que las dos
+        // diferencias de arriba estén bien calculadas.
         encontradas.ShouldBe([.. declaradas.Order(StringComparer.Ordinal)]);
     }
 }
