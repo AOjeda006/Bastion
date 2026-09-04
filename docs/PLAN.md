@@ -2369,7 +2369,7 @@ preguntó, así que **no se hereda un default**: queda como decisión abierta co
 | **1.2** | Los puertos de lectura de Organización, y la cuarta vía en rojo *(1.1)* | `IConsultaDeImpuestos`, `IConsultaDeUnidadesDeMedida` e `IConsultaDeDivisas` en `Organizacion.Contracts`; el cruce declarado en el mismo commit que su primer consumidor; la **regla de dos fuentes** de P2 vista en rojo con su mutación (`DivisaId` sin puerto) |
 | **1.3** | El contrato de listado, y los tipos de paginación consolidados *(1.2 + P12)* | Filtro y orden en servidor con tope; búsqueda por cuerpo, **sin dato sensible en la URL ni en el enlace a la página siguiente**, con su exención escrita en `s_exentas`; `BuildingBlocks.Contracts` con `Paginacion` y `PaginaDe`, `ConsultaPaginada` y `Paginador` en sus comunes, las ocho copias borradas; y `TodaEscrituraDiceComoSeProtegeTests` **descubriendo** sus ensamblados |
 | **1.4** | El camino de lectura de lo bloqueado *(1.3)* | **Listado** —no `GET` individual— de lo bloqueado, con su permiso y su ADR; `s_aperturasDeBloqueoPermitidas` comparada entera con **cinco** sitios; y la mitad caducada de las cuatro cláusulas «DEPENDE DE» del ADR-0017 reescrita |
-| **1.5** | Terceros: el agregado y su identidad *(1.4)* | Alta con **NIF/NIE/CIF validado de verdad**, extranjero opaco con país y estado de verificación; dirección estructurada (R17); roles; unicidad por (empresa, NIF); el alta contra un bloqueado devuelve un conflicto **que no revela**; listado paginado y filtrado; `features/terceros/` |
+| **1.5** | Terceros: el agregado y su identidad *(1.4)* | Alta con **NIF/NIE/CIF validado de verdad**, extranjero opaco con país y estado de verificación; dirección estructurada (R17); roles; unicidad por (empresa, NIF); el alta contra un bloqueado devuelve un conflicto **que no revela**; listado paginado y filtrado; `features/terceros/`. Y el **ADR-0030**, movido aquí desde el 1.6 en el ítem 1.3: el artefacto de `type` y el barrido, **antes** que el primer texto que los use |
 | **1.6** | Terceros: lo que cuelga *(1.5)* | `Contacto`, `CuentaBancaria` con IBAN validado, `CondicionPago` con el tope de 60 días **contado desde la entrega**, `LimiteCredito` (solo el importe) — la raya de P6 |
 | **1.7** | La retirada y las dos conversiones *(1.6)* | ADR-0023 implementado entero: retirada en los cuatro maestros de instalación, tolerancia de la conversión inversa, resolutor de encadenadas con **error con nombre**. Antes de que Catálogo los referencie |
 | **1.8** | Catálogo: artículo y categoría *(1.7)* | Alta de artículo con unidad e impuesto **validados por los puertos del 1.2**; categoría **jerárquica con ciclos comprobados**; listado paginado y filtrado; `features/catalogo/` |
@@ -2446,11 +2446,234 @@ que quedaba abierta de la puerta de clarificación, contestada: se mapea el **`t
 obliga a montar y las tres alternativas descartadas están en el **ADR-0030**; los criterios que
 genera están en el **ítem 1.6** del checklist.
 
-> **Una nota de orden sobre esto último.** El criterio se ha escrito en el **1.6** siguiendo la
-> instrucción, pero el **1.5** ya trae `features/terceros/` con alta, NIF validado y un conflicto por
-> identificador bloqueado — o sea, la primera pantalla donde alguien lee un mensaje de validación. Si
-> el artefacto de `type` y el barrido ampliado no existen en el 1.5, ese ítem escribirá textos a mano
-> y el 1.6 los reescribirá. Queda dicho aquí, no movido.
+> **Una nota de orden sobre esto último, resuelta en el ítem 1.3 (2026-09-04).** El criterio se
+> escribió en el **1.6** siguiendo la instrucción y **se ha movido al 1.5**, con el mecanismo —(a) el
+> artefacto de `type` generado y versionado y (b) el barrido comparándolo contra los diccionarios—
+> **antes** que el primer texto que lo use.
+>
+> El motivo no es que el 1.5 traiga la primera pantalla, que también: es que **el catálogo de `type`
+> no está vacío hoy**. `PoliticaDeErrores.BaseDeTipos` y `ErrorDeOperacion.Codigo` ya componen
+> `/errors/{codigo}` en los dos módulos montados, así que el artefacto y el barrido tienen sujetos
+> desde el primer día y se pueden ver en rojo — que es la condición que el ADR-0020 le pone a
+> cualquier regla nueva. Escrito en el 1.6, el 1.5 habría llenado `features/terceros/` de textos a
+> mano y el 1.6 habría sido una reescritura, no una implementación; y el barrido habría nacido con
+> las excepciones de esos textos ya dentro.
+>
+> Queda anotado aquí para que dentro de tres ítems nadie lo lea como un descuido: **no es que el 1.6
+> perdiera un criterio, es que el 1.5 lo necesita antes.**
+
+
+### Tomadas por el agente de desarrollo — ítem 1.3 (2026-09-04)
+
+**1. Paginar y buscar son DOS parejas de tipos, no una.** `Paginacion`/`PaginaDe<T>` para el listado
+ordinario; `Recorrido`/`TramoDe<T>` para la búsqueda. La alternativa era un solo `PaginaDe` que
+llevara número, total y cursor — y entonces `Total = 0` en cada búsqueda y `CursorSiguiente = null`
+en cada listado, o sea **la mitad de los campos vacíos en cada respuesta**. Un cliente no puede
+distinguir «vacío porque esta forma no lo usa» de «vacío porque no hay», así que ese tipo miente
+siempre y obliga a documentar fuera del contrato cuál de sus mitades vale. Dos tipos con nombres
+que dicen lo que son cuestan un fichero más y no mienten ninguna vez. `TramoDe<T>` **no lleva
+total**, y tampoco por pereza: contar un conjunto filtrado cuesta un recorrido entero en cada tramo,
+que es justo lo que un cursor viene a evitar; el listado sí lo lleva porque su total es el de la
+tabla y sale barato (§9, «con el total cuando es barato calcularlo»).
+
+**2. La lista de campos por los que se deja ordenar tiene UN dueño, y no hay regla que la compare
+con nada.** Se descartó lo que parecía natural —los nombres declarados en `Contracts` y el mapa a
+columnas en `Infrastructure`—: son dos listas, divergen, y entonces hace falta una tercera cosa que
+las compare. Lo que hay es un solo diccionario, `CriteriosDe<T>.Ordenables`, en el repositorio, y
+**sus claves SON la lista blanca**. Sube al borde por el tipo: `IOrdenaPor` → `IListado<TDto>` →
+`ConsultaPaginada.APaginacion(camposOrdenables)`, que devuelve `400` con los campos admitidos
+nombrados. Un `?sort=` que el borde no rechace y llegue al paginador **lanza**, porque a esas
+alturas es un error de programación y no una entrada (ADR-0004).
+
+**3. Las claves de orden son `LambdaExpression` y no `Expression<Func<T, object>>`.** Con `object`,
+el compilador inserta un `Convert` en el árbol, y ese `Convert` no revienta al compilar: revienta en
+ejecución y **solo** sobre las propiedades con conversor de valor —`Usuario.Correo`, `Empresa.Nif`—,
+o sea que la pantalla que lo estrena da un 500 y las demás no. El precio es un `(Expression<Func<T,
+K>>)` explícito por entrada del diccionario, y está escrito al lado.
+
+**4. El universo de `Todas()` se descubre; no se escribe.** Sale de
+`IActionDescriptorCollectionProvider` —la tabla de enrutado del host, no una reconstrucción suya por
+reflexión—, así que un módulo entra en el barrido **en el momento en que se monta**, que es el mismo
+momento en que sus acciones empiezan a atender peticiones. Y lleva una segunda fuente que no se
+deriva de la primera: los ensamblados `Bastion.<Modulo>.Endpoints` **del disco** con controladores
+dentro. Se comparan **enteras**, y la igualdad es legítima porque las dos describen el mismo
+conjunto: un módulo con controladores es un módulo que se monta. Añadir un tercer `typeof` habría
+arreglado hoy lo mismo que se rompería con Catálogo.
+
+**5. El barrido del criterio sensible mira el explorador de API, y reconoce los listados por lo que
+DEVUELVEN.** El explorador es la misma fuente de la que sale `docs/api/openapi.json` y por tanto el
+cliente del frontal; una reconstrucción por reflexión que mirase `[FromQuery]` **se saltaría** los
+parámetros que en un `GET` se enlazan desde la URL por convenio, que es exactamente la fuga que la
+regla existe para ver. Y los listados se reconocen por su tipo de respuesta —`PaginaDe<>` o
+`TramoDe<>`— y no por que el método se llame `Listar`: la heurística por nombre es la que el ítem 1.2
+tumbó, y se le escapa el primero que se llame `Consultar` **en silencio**. La comparación con los
+doce campos sensibles es **por contención y sin distinguir mayúsculas**, para que `nifDelCliente`
+cuente igual que `nif`; y la lista de los cuatro parámetros que hoy aceptan los listados
+—`page`, `q`, `size`, `sort`— se compara **entera**, de modo que uno nuevo obliga a decidirlo donde
+están escritos los motivos.
+
+**6. `POST /api/v1/organizacion/empresas/buscar` nace con su exención escrita**, no cuando el carril
+se pone rojo. La partición de `TodaEscrituraDiceComoSeProtegeTests` reparte **por el verbo**, así que
+una búsqueda por `POST` cae del lado de las escrituras y el barrido le pide `If-Match` o
+`Idempotency-Key`. Lo que **no** se hace es ensanchar la partición: es correcta y no tiene falsos
+negativos, y aflojarla para acomodar un caso cambia una lista de excepciones razonadas por una regla
+que ya no distingue (ADR-0025). La línea está en `s_exentas` con su cláusula «DEPENDE DE»: el día que
+una búsqueda apunte algo —un registro de lo buscado, una lista de recientes—, la exención caduca.
+
+**7. El cursor lleva posición y nada más, y el recorrido va por el identificador.** El `Id` es un
+GUID v7: sus primeros bits son el instante de creación, así que ascendente por identificador **es**
+por antigüedad de alta —un orden con sentido, no un capricho— y además es único, con lo que el
+«después de esto» no necesita desempate ni comparación de tuplas y cae sobre la clave primaria. Se
+leen `tamaño + 1` filas para distinguir «no hay más» de «hay más», sin contar el conjunto entero.
+«Opaco» aquí significa que el cliente no lo construye ni lo interpreta —lo que permite cambiar la
+clave del recorrido sin romper a nadie—, no que esté cifrado: dentro va la posición del último
+elemento que el cliente ya tiene delante. **El criterio no entra en el cursor**: lo reenvía el
+cliente en el cuerpo del `POST` siguiente. Si entrara, el NIF volvería al cliente en una cadena que
+se copia y se comparte, que es la fuga del ADR-0025 entrando por la puerta de al lado.
+
+**8. Que `Contracts` vea el bloque común no es tocar el §4.** La regla de capas prohíbe que un
+`Contracts` arrastre el **interior de su propio módulo**; el núcleo común lo ven ya todas las capas
+de todos los módulos. Está argumentado en el **ADR-0029** y se comprueba en
+`LasFronterasEntreModulosTests.Las_referencias_de_proyecto_son_las_declaradas`, donde las dos aristas
+nuevas —`Identidad.Contracts -> BuildingBlocks.Contracts` y `Organizacion.Contracts ->
+BuildingBlocks.Contracts`— están declaradas.
+
+**9. El comentario de `Inventario.ComunesConTipos` era una predicción, no una regla.** Decía que los
+comunes «no van a crecer con las fases»; la fase 1 los ha hecho crecer en su tercer ítem. Se ha
+reescrito para que diga lo que de verdad afirma —qué comunes hay y que todos llevan tipos— y el
+nombre del test perdió el número: `El_bloque_comun_tiene_sus_tres_capas…` pasó a
+`El_bloque_comun_tiene_las_capas_declaradas…`, porque **un número dentro de un nombre es una
+afirmación que nadie comprueba**.
+
+**10. El carril de integración se ejerce en local en la parte que no necesita el carril.**
+`LaTraduccionASqlTests` vive en `Organizacion.IntegrationTests` **sin** el rasgo `Integracion`, y es
+la única excepción declarada de ese proyecto —su cabecera lo dice—: generar el SQL necesita el
+proveedor de Npgsql y el modelo, no un servidor, y ese proyecto es el único que ve los repositorios.
+Descubre los diez listados del módulo por el **tipo** de su campo de criterios —no por el nombre del
+campo— y traduce el orden de omisión, cada campo ordenable en los dos sentidos y el filtro. Lleva su
+pregunta de control —la consulta que entra en el `.Valor` de un valor convertido tiene que
+romperse— porque si `ToQueryString` dejara de traducir, el silencio no diría nada. La búsqueda se
+sondea aparte y por el efecto: se ejecuta contra un sitio donde no hay nadie y se afirma **de qué**
+se queja, mirando si en la cadena de excepciones hay una `DbException` —el tipo, no el mensaje, que
+habría dependido del idioma del ejecutor—, con su contraria en el mismo test.
+
+**11. Ninguna dependencia nueva.** El fichero de bloqueo suma **un** proyecto —
+`Bastion.BuildingBlocks.Contracts`, `"type": "Project"`— y **cero** entradas `Direct` o
+`Transitive`. No hay licencias que comprobar porque no hay paquete que comprobar.
+
+**12. Lo que este ítem NO toca**, dicho para que no se lea como un olvido: ni Terceros, ni Catálogo,
+ni tarifas, ni la retirada del ADR-0023. El camino de lectura de lo bloqueado es el **1.4**. El
+artefacto de `type` del ADR-0030 es el **1.5** (ver la nota de orden del ítem 1.2, resuelta arriba).
+
+#### Lo que este ítem deja abierto y no arregla
+
+`LasReglasDeEsteCarrilTests` es el **censo de Arquitectura.Tests y solo de ese ensamblado**: se
+descubre con `typeof(LasReglasDeEsteCarrilTests).Assembly`. Sus reglas siguen siendo **23** y lo
+único que cambió allí fue la línea del test renombrado. Las afirmaciones nuevas de este ítem —tres en
+`Api.FunctionalTests` y tres en `Organizacion.IntegrationTests`— viven en carriles **sin censo**, así
+que borrar una de ellas dejaría la suite verde, más rápida y con una regla menos que nadie echa de
+menos. Es la misma rendija que `LasReglasDeEsteCarrilTests` tapó para su carril en el 0.12, abierta
+en otros dos. **No se cierra aquí** porque no está en el criterio del 1.3 y el checklist no se amplía
+por iniciativa propia; queda anotado como candidato, con su motivo, para quien decida el alcance del
+siguiente ítem.
+
+#### Las cinco mutaciones del 1.3, cada una aplicada, ejecutada y revertida
+
+| # | Mutación | Desenlace | Quién la caza |
+|---|---|---|---|
+| 1 | Un controlador de un módulo montado **fuera** del universo que la lista escrita a mano nombraba (`POST /api/v1/terceros/fichas`, sin protección) | **Rojo ×4** | `Toda_accion_que_cambia_estado_dice_como_se_protege`, `El_universo_cubre_a_todos_los_modulos_montados`, `El_barrido_encuentra_el_inventario_entero` y `Toda_accion_o_exige_un_permiso_o_esta_en_la_lista_de_excepciones` |
+| 2 | Un `[FromQuery(Name = "nif")]` en el listado de empresas | **Rojo ×2** | `Ningun_listado_recibe_un_criterio_sensible_por_la_url` (con el motivo del campo impreso) y `El_barrido_ve_los_listados_y_sus_parametros` |
+| 3 | El descubrimiento del barrido nuevo apuntando a un tipo que ningún listado devuelve | **Rojo ×1** | Solo `El_barrido_ve_los_listados_y_sus_parametros`. La regla de al lado salió **verde recorriendo una lista vacía**, que es exactamente lo que la afirmación de conjunto no vacío existe para cazar (ADR-0020) |
+| 4 | Divergir una copia consolidada: `TamanioMaximo = 5000` en un módulo | **Imposible ×3** — no rojo | El compilador, tres veces. Ver abajo |
+| 5 | Quitar la exención de `EmpresasController.Buscar` de `s_exentas` | **Rojo ×2** | `Toda_accion_que_cambia_estado_dice_como_se_protege` (nombrando la acción) y `El_barrido_encuentra_el_inventario_entero` (15 esperadas, 14 encontradas) |
+
+#### La primera, entera
+
+Es la que decide si el arreglo es estructural o aplazado, así que se hizo con su contraste. Se añadió
+un controlador **montado y enrutado** que vive fuera de `Bastion.Organizacion.Endpoints` y de
+`Bastion.Identidad.Endpoints` —los dos ensamblados que el universo escrito a mano nombraba—, con una
+escritura sin `If-Match` ni `Idempotency-Key`:
+
+```csharp
+[ApiController]
+[Route("api/v1/terceros/fichas")]
+public sealed class MutacionUnoControladorDeTerceros : ControllerBase
+{
+    [HttpPost]
+    public IActionResult Crear() => Ok();
+}
+```
+
+Con el universo descubierto, **cuatro rojos**, y cada uno dice algo distinto:
+
+```
+sinDecirlo    should be empty but had 1 item and was ["MutacionUnoControladorDeTerceros.Crear"]
+sinDeclarar   should be empty but had 1 item and was ["MutacionUnoControladorDeTerceros.Crear"]
+enrutados     should be ["identidad", "organizacion"]
+              but was    ["identidad", "organizacion", "terceros"]
+todas.Count   should be 74 but was 75
+```
+
+Después, **con la mutación puesta**, se restauró el universo escrito a mano —los dos `typeof`, sobre
+la misma tabla de enrutado— y se volvió a ejecutar solo ese fichero:
+
+```
+Correctas! - Con error: 0, Superado: 7, Omitido: 0, Total: 7
+```
+
+**Siete verdes con un `POST` sin proteger atendiendo peticiones.** Eso es lo que quedaba en pie: no
+que faltara un `typeof`, sino que el barrido no tenía forma de enterarse de que faltaba. Las dos
+mitades —el controlador y el universo viejo— se revirtieron y el fichero volvió a 121 de 121.
+
+#### La cuarta, entera — y no sale roja porque no llega a existir
+
+El enunciado pedía comprobar que divergir una copia consolidada **es imposible, no rojo**. Se
+intentaron las tres formas que hay, de la más ingenua a la única que de verdad importaría.
+
+**Forma literal: cambiar `TamanioMaximo` en un módulo.** No hay dónde. En todo el repositorio la
+constante se **declara una vez**:
+
+```
+src/BuildingBlocks/Contracts/Paginacion/Paginacion.cs:31:    public const int TamanioMaximo = 200;
+```
+
+y sus dos usos —`ConsultaPaginada` y `BuscarEmpresasDto`— resuelven a esa. La edición no tiene
+objetivo.
+
+**Forma 1: recrear la copia en `Bastion.Organizacion.Contracts.Comun` con 5000.** El compilador la
+rechaza, y no por una regla que alguien escribió:
+
+```
+error CS0104: 'Paginacion' es una referencia ambigua entre
+  'Bastion.Organizacion.Contracts.Comun.Paginacion' y
+  'Bastion.BuildingBlocks.Contracts.Paginacion.Paginacion'
+```
+
+**Forma 2: divergir el borde.** Una `ConsultaPaginadaDeOrganizacion` con tope 5000, enlazada en
+`EmpresasController.Listar`:
+
+```
+error CS1503: Argumento 1: no se puede convertir de
+  'Bastion.Organizacion.Endpoints.Comun.ConsultaPaginadaDeOrganizacion' a
+  'Bastion.BuildingBlocks.Infrastructure.Listados.ConsultaPaginada'
+```
+
+**Forma 3: saltarse el ayudante común.** Una `Paginacion` propia en un espacio de nombres que no
+importa nadie —para que exista sin ambigüedad— pasada **directamente** al caso de uso, sin pasar por
+`ResponderListadoAsync`:
+
+```
+error CS1503: Argumento 1: no se puede convertir de
+  'Bastion.Organizacion.Endpoints.Paginado.Paginacion' a
+  'Bastion.BuildingBlocks.Contracts.Paginacion.Paginacion'
+```
+
+Las tres son **errores de compilación**, no pruebas en rojo. Y el motivo es el mismo en las tres, y
+es lo que distingue consolidar de copiar a un sitio nuevo: el tipo que atraviesa el camino de
+listado está fijado por `IListado<TDto>.EjecutarAsync(Paginacion, …)` y por
+`ConsultaPaginada.APaginacion(...)`, así que **una copia divergente no tiene por dónde entrar**.
+Puede existir como fichero muerto en un rincón que nadie importe; lo que no puede es llegar a un
+listado. Que es la diferencia que se pedía comprobar.
 
 
 ## Estado actual
@@ -2472,7 +2695,32 @@ sea antes de que ese controlador exista.
 **La decisión que quedaba abierta ya está contestada** (2026-09-03, con el 1.2): quién escribe el
 texto que lee una persona cuando falla una validación → **el frontal**, mapeando el `type` estable del
 `ProblemDetails`; la API no negocia idioma por `Accept-Language`. **ADR-0030**, con sus tres criterios
-en el ítem **1.6** y una nota de orden sobre el 1.5 en *Decisiones tomadas → ítem 1.2*.
+en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su primer uso, porque el
+catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
+1.2*.
+
+**Ítem 1.3 cerrado — el universo se descubre, y la copia divergente ya no compila:** el run que cierra queda anotado en el commit `docs(plan)` de cierre.
+Los cuatro tipos de paginación viven en `Bastion.BuildingBlocks.Contracts` y las **ocho copias** de
+Identidad y Organización están borradas; los doce listados aceptan `?sort=` y `?q=` con su lista
+blanca y su tope; `POST /api/v1/organizacion/empresas/buscar` busca por **cuerpo** con cursor opaco,
+con su exención escrita **en el mismo commit que el endpoint**; y `Todas()` lee su universo de la
+tabla de enrutado del host, contrastada con los ensamblados `Endpoints` del disco.
+
+**Lo que hay que leer primero de este ítem.** La **cuarta mutación** —divergir una copia
+consolidada, `TamanioMaximo = 5000` en un módulo— **no sale roja: no llega a existir**. Se
+intentaron las tres formas que hay y las tres las para el **compilador** (`CS0104` la copia del
+contrato, `CS1503` la del borde, `CS1503` la que se salta el ayudante común y llama al caso de uso
+directamente). Es la diferencia entre consolidar y copiar a un sitio nuevo, y está contada entera en
+*Decisiones tomadas → ítem 1.3*. La **primera** también está entera, y por el motivo contrario: con
+el universo escrito a mano restaurado y un `POST` sin proteger atendiendo peticiones, el fichero da
+**siete verdes**; con el universo descubierto, **cuatro rojos**.
+
+**Y una rendija que este ítem deja abierta a propósito:** `LasReglasDeEsteCarrilTests` censa
+**Arquitectura.Tests y solo ese ensamblado** —sigue en **23** reglas, y allí lo único que cambió fue
+la línea del test renombrado—. Las seis afirmaciones nuevas del 1.3 viven en `Api.FunctionalTests` y
+en `Organizacion.IntegrationTests`, que **no tienen censo**: borrar una de ellas dejaría la suite
+verde. No entra en el criterio del 1.3 y el checklist no se amplía por iniciativa propia, así que
+queda anotado con su motivo, no tapado.
 
 **Ítem 1.2 cerrado — la cuarta vía tiene quien la pare, y la quinta afirmación es la que la para:**
 [run 33806271861](https://github.com/AOjeda006/Bastion/actions/runs/33806271861) sobre `c54f783`,
@@ -2494,7 +2742,46 @@ ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en
 
 El carril de arquitectura pasa de **18 a 23** casos.
 
-### Verificado en local, con la salida real
+### Verificado en local, con la salida real — ítem 1.3
+
+```
+frontal: api / typecheck / lint / format:check / build   ->  exit 0 los cinco
+         esquema.ts regenerado desde openapi.json (el POST /buscar y TramoDeEmpresaDto)
+         test  ->  9 ficheros, 46 casos
+         presupuesto  ->  arranque 391/450 KiB en 3 ficheros · total servido 532/900 KiB
+
+migraciones:  Auditoria 3, Organizacion 4, Identidad 3, y el modelo coincide con ellas
+              (este ítem no toca el esquema: consolida tipos y añade una LECTURA)
+openapi:      el documento versionado está al día — 74 operaciones, una más que el 1.2,
+              y es POST /api/v1/organizacion/empresas/buscar. El 74 sale de dos fuentes
+              que no se derivan una de otra: el guion del contrato y el recuento de
+              `El_barrido_encuentra_el_inventario_entero`
+
+backend: dotnet build      ->  0 errores, 0 advertencias
+         dotnet format --verify-no-changes  ->  exit 0
+         carril rápido     ->  118 + 180 + 58 + 3 + 121 + 23 = 503 casos, 0 con error
+                               (BuildingBlocks / Organizacion.Unit / Identidad /
+                                Organizacion.Integration SIN Docker / Functional /
+                                Arquitectura)
+         carril integración -> NO EJECUTADO AQUÍ: el demonio de Docker sigue parado.
+                               `docker info` -> «failed to connect to the docker API at
+                               npipe:////./pipe/dockerDesktopLinuxEngine; ... open
+                               //./pipe/dockerDesktopLinuxEngine: The system cannot find
+                               the file specified». Cliente 29.7.2 presente, servidor no.
+                               Lo verifica la CI, en el run de arriba.
+```
+
+**Lo del carril parado, con nombre y apellidos.** De las tres consultas nuevas que sí necesitarían
+PostgreSQL para ejercerse enteras, **la parte que no necesita el servidor se ejerció aquí**:
+`LaTraduccionASqlTests` genera el SQL de los diez listados de Organización —orden de omisión, cada
+campo ordenable en los dos sentidos, y el filtro— y de la búsqueda con su cursor, sin contenedor y en
+dos segundos. Lo que queda para el carril de integración es lo que de verdad necesita filas: que el
+`ILIKE` encuentre lo que tiene que encontrar y que el «después de esto» del cursor no repita ni se
+salte ninguna. Eso lo verifica la CI. **Lo de Identidad no tiene ese ejercicio local**: ningún
+proyecto de pruebas ve sus repositorios, así que sus tres listados solo se traducen de verdad en el
+carril de integración.
+
+### Verificado en local, con la salida real — ítem 1.2
 
 ```
 frontal: api / typecheck / lint / format:check / build   ->  exit 0 los cinco
@@ -4523,13 +4810,20 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   no estaba en el enunciado — se añadió porque es la única que caza un identificador ajeno con
   **nombre que no casa y sin declarar**. Ocho mutaciones, ocho rojos, cada una con la afirmación que
   la cazó, en *Estado actual*.
-- [ ] **1.3 · El contrato de listado, y los tipos de paginación consolidados** — criterio de
+- [x] **1.3 · El contrato de listado, y los tipos de paginación consolidados** — criterio de
   aceptación: filtro y orden en servidor con tope; la búsqueda por **cuerpo** con cursor opaco, de
   modo que **ni la URL ni el enlace a la página siguiente** lleven el criterio, con su exención de
   `s_exentas` escrita **con el endpoint**; `Bastion.BuildingBlocks.Contracts` con `Paginacion` y
   `PaginaDe`, `ConsultaPaginada` y `Paginador` en los comunes que sus capas ya referencian, y las
   copias de Identidad y Organización **borradas**; y `TodaEscrituraDiceComoSeProtegeTests`
   **descubriendo** sus ensamblados de `Bastion.Api` en vez de tenerlos tecleados.
+  Los tipos de recorrido son **cuatro y dos parejas**: `Paginacion`/`PaginaDe` para el listado y
+  `Recorrido`/`TramoDe` para la búsqueda, en vez de un tipo con la mitad de los campos vacíos en
+  cada respuesta. Las **ocho copias** están borradas y la divergencia ya **no compila** —tres formas
+  intentadas, tres errores del compilador, ninguna prueba en rojo—. El universo de `Todas()` sale de
+  la **tabla de enrutado** y se compara con una segunda fuente en disco; el criterio sensible lo
+  vigila un barrido nuevo sobre el **explorador de API**, que reconoce los listados por lo que
+  **devuelven** y no por cómo se llaman. Cinco mutaciones en *Estado actual*.
 - [ ] **1.4 · El camino de lectura de lo bloqueado** — criterio de aceptación: **listado** —y no
   `GET` individual, a propósito— de lo bloqueado para un rol nominativo y trazado, con su permiso y
   su ADR; `s_aperturasDeBloqueoPermitidas` comparada entera con **cinco** sitios; y reescrita la
@@ -4540,10 +4834,6 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   con estado de verificación; dirección **estructurada** (R17); roles sobre un solo agregado (§7.2);
   unicidad por **(empresa, NIF)**; el alta contra un identificador bloqueado devuelve un conflicto
   **que no revela**; listado paginado y filtrado por el contrato del 1.3; y `features/terceros/`.
-- [ ] **1.6 · Terceros: lo que cuelga** — criterio de aceptación: `Contacto`, `CuentaBancaria` con
-  IBAN validado, `CondicionPago` con el tope de **60 días de la Ley 3/2004 contado desde la
-  entrega**, y `LimiteCredito` **solo como importe**. Fuera, por la raya de la P6: `MandatoSEPA`
-  (fase 6) y el riesgo vivo (fase 4).
   Y, por el **ADR-0030**, lo que hace falta para que el frontal escriba el texto de una validación
   desde el `type` del `ProblemDetails`: (a) el conjunto de `type` emitibles llega al frontal en un
   **artefacto generado y versionado** con el mismo trato que `openapi.json` —se genera, se versiona,
@@ -4553,6 +4843,13 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   traducir; y (c) en ejecución, un `type` desconocido cae al mensaje genérico **con el identificador
   de traza** que el `ProblemDetails` ya lleva. Los errores **por campo** no entran: ahí el servidor
   nombra el campo y el frontal pone su etiqueta, y eso ya estaba resuelto.
+  **Dentro del 1.5, el mecanismo va antes que el primer texto que lo use**: primero (a) y (b) —el
+  artefacto y el barrido comparando—, y solo después las pantallas de Terceros. Al revés, el ítem
+  escribiría los textos a mano y el barrido nacería ya con excepciones que justificar.
+- [ ] **1.6 · Terceros: lo que cuelga** — criterio de aceptación: `Contacto`, `CuentaBancaria` con
+  IBAN validado, `CondicionPago` con el tope de **60 días de la Ley 3/2004 contado desde la
+  entrega**, y `LimiteCredito` **solo como importe**. Fuera, por la raya de la P6: `MandatoSEPA`
+  (fase 6) y el riesgo vivo (fase 4).
 - [ ] **1.7 · La retirada y las dos conversiones** — criterio de aceptación: el **ADR-0023
   implementado entero** —retirada en los cuatro maestros de instalación, tolerancia de la conversión
   inversa, resolutor de conversiones encadenadas con **error con nombre**—, y **antes** de que
