@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Empresas;
@@ -85,4 +86,45 @@ public sealed record ModificarEmpresaDto
     /// <summary>Régimen de IVA, como texto.</summary>
     [Required(ErrorMessage = "El régimen de IVA es obligatorio.")]
     public string RegimenDeIva { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// El criterio con el que se busca una empresa, y por dónde seguir. Viaja en el <b>cuerpo</b>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Por qué esto no es un <c>GET</c> con parámetros.</b> El primer criterio que alguien quiere
+/// sobre una empresa es el NIF, y un NIF identifica a una persona física cuando la empresa es un
+/// empresario individual. En la cadena de consulta acabaría en el historial del navegador, en el
+/// enlace que se copia, en el <c>Referer</c> que se manda al sitio siguiente y en el registro de
+/// acceso del servidor de delante. El listado sin criterio sigue siendo un <c>GET</c> porque
+/// <c>page</c>, <c>size</c>, <c>sort</c> y <c>q</c> no llevan nada personal (ADR-0025).
+/// </para>
+/// <para>
+/// <b>El vocabulario nace con tope</b>, por lo mismo que <c>TamanioMaximo</c> existe: dos
+/// criterios, cada uno con su longitud máxima, y un tamaño de tramo acotado. Un buscador sin tope
+/// es una descarga de la tabla que se escribe en una línea.
+/// </para>
+/// </remarks>
+public sealed record BuscarEmpresasDto
+{
+    /// <summary>NIF exacto. Se normaliza igual que en el alta, así que admite puntos y guiones.</summary>
+    /// <remarks>
+    /// Es una coincidencia EXACTA y no un «empieza por», a propósito: un NIF parcial no es un
+    /// criterio de búsqueda, es un barrido del censo de nueve en nueve caracteres.
+    /// </remarks>
+    [StringLength(20, ErrorMessage = "El NIF no puede pasar de {1} caracteres.")]
+    public string? Nif { get; init; }
+
+    /// <summary>Trozo de la razón social. No distingue mayúsculas ni acentos de más.</summary>
+    [StringLength(100, ErrorMessage = "La razón social buscada no puede pasar de {1} caracteres.")]
+    public string? RazonSocial { get; init; }
+
+    /// <summary>Por dónde seguir, tal como lo devolvió el tramo anterior. Nulo para empezar.</summary>
+    [StringLength(64, ErrorMessage = "El cursor no puede pasar de {1} caracteres.")]
+    public string? Cursor { get; init; }
+
+    /// <summary>Cuántas empresas se piden en este tramo.</summary>
+    [Range(1, Paginacion.TamanioMaximo, ErrorMessage = "El tamaño va de {1} a {2}.")]
+    public int Tamanio { get; init; } = Paginacion.TamanioPorDefecto;
 }

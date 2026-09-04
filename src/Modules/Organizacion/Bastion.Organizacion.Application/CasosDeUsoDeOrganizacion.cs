@@ -37,6 +37,7 @@ public static class CasosDeUsoDeOrganizacion
         servicios.AddScoped<ICrearEmpresa, CrearEmpresa>();
         servicios.AddScoped<IObtenerEmpresa, ObtenerEmpresa>();
         servicios.AddScoped<IListarEmpresas, ListarEmpresas>();
+        servicios.AddScoped<IBuscarEmpresas, BuscarEmpresas>();
         servicios.AddScoped<IModificarEmpresa, ModificarEmpresa>();
         servicios.AddScoped<IBloquearEmpresa, BloquearEmpresa>();
         servicios.AddScoped<IDesbloquearEmpresa, DesbloquearEmpresa>();

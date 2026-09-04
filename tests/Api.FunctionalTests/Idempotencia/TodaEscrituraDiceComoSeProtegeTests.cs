@@ -130,6 +130,22 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "—que ninguna lectura de la API entregue una ubicación bloqueada— y ADEMÁS de que el " +
             "bloqueo del almacén y el de la empresa sigan tapando lo que cuelga de ellos",
 
+        // La quinta no es un desbloqueo ni se le parece: es una BÚSQUEDA. Entró en el ítem 1.3
+        // con el endpoint, no cuando el carril se puso rojo, que es lo que pedía el ADR-0025 —y
+        // la diferencia importa: escrita con el carril en rojo, la tentación es ensanchar la
+        // partición para que las búsquedas dejen de contar como escrituras, y esa partición por
+        // verbo es correcta y no tiene falsos negativos.
+        ["EmpresasController.Buscar"] =
+            "es un POST que NO cambia estado: lee. El verbo es POST porque el criterio —el NIF de " +
+            "una empresa, que puede ser el DNI de un empresario individual— no puede viajar en la " +
+            "cadena de consulta (ADR-0025), no porque cree nada. No hay recurso previo cuya " +
+            "versión citar, así que If-Match no tiene qué exigir; y una clave de idempotencia " +
+            "guardaría la RESPUESTA, o sea que metería datos personales en " +
+            "`auditoria.claves_de_idempotencia` para ahorrar una consulta que no escribe nada. " +
+            "Repetirla no acumula: devuelve lo mismo. DEPENDE DE que siga sin escribir: el día " +
+            "que una búsqueda apunte algo —un registro de lo buscado, una lista reciente—, deja " +
+            "de ser esto y la exención caduca",
+
         ["UsuariosController.Desbloquear"] =
             "igual que las dos de Organización. Y aquí conviene dejar escrito lo que NO es: esto " +
             "levanta el bloqueo del art. 32, no el rechazo temporal por intentos fallidos, que " +
@@ -257,8 +273,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(73, "acciones en total");
-        cambian.Count.ShouldBe(47, "acciones que cambian estado");
+        todas.Count.ShouldBe(74, "acciones en total");
+        cambian.Count.ShouldBe(48, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -268,10 +284,16 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // Trece y no dieciséis fue el número del 0.10: los tres `Desbloquear` dejaron de exigir
         // If-Match y se mudaron al cajón de las exentas sin mover el total, que es lo que dice que
         // fue una mudanza y no una acción nueva colada sin protección.
+        //
+        // Setenta y cuatro y no setenta y tres desde el ítem 1.3: `POST .../empresas/buscar` es
+        // una acción nueva, y de las que cambian estado SEGÚN EL VERBO, no según lo que hace. Por
+        // eso sube el total, sube el de escrituras y sube el cajón de las exentas, los tres a la
+        // vez y en uno: una acción que subiera dos de los tres sería una que se protege o una que
+        // se coló sin motivo escrito.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(21, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(12, "rutas que admiten Idempotency-Key");
-        s_exentas.Count.ShouldBe(14, "acciones exentas con motivo escrito");
+        s_exentas.Count.ShouldBe(15, "acciones exentas con motivo escrito");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba

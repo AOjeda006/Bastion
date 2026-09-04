@@ -60,5 +60,67 @@ internal sealed class RepositorioDeEmpresas(OrganizacionDbContext contexto) : IR
     public Task<PaginaDe<Empresa>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion) =>
         contexto.Empresas.PaginarAsync(paginacion, s_criterios, cancelacion);
 
+    /// <summary>
+    /// La búsqueda del ADR-0025: criterio por cuerpo y recorrido por cursor.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El recorrido va por el identificador y no por la razón social</b>, y eso decide también
+    /// el orden. El identificador es un GUID v7: sus primeros bits son el instante de creación, o
+    /// sea que ascendente por identificador ES por antigüedad de alta, que es un orden con
+    /// sentido y no un capricho. Y como clave de recorrido tiene lo que a la razón social le
+    /// falta: es única, así que el «después de esto» no necesita desempate ni comparación de
+    /// tuplas, y cae sobre la clave primaria.
+    /// </para>
+    /// <para>
+    /// <b>Se leen `tamanio + 1` filas</b>. Es lo que distingue «no hay más» de «hay más y el
+    /// cliente aún no lo sabe» sin contar el conjunto filtrado entero — que es precisamente el
+    /// recorrido que un cursor viene a evitar. La de más se descarta; nunca se entrega.
+    /// </para>
+    /// </remarks>
+    public async Task<TramoDe<Empresa>> BuscarAsync(
+        CriterioDeEmpresas criterio,
+        Guid? desde,
+        int tamanio,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(criterio);
+
+        IQueryable<Empresa> consulta = contexto.Empresas;
+
+        // El objeto entero contra la columna, por lo mismo que en `ExisteConNifAsync`.
+        if (criterio.Nif is { } nif)
+        {
+            consulta = consulta.Where(empresa => empresa.Nif == nif);
+        }
+
+        if (criterio.RazonSocial is { } texto)
+        {
+            string patron = Filtros.Contiene(texto);
+
+            consulta = consulta.Where(
+                empresa => EF.Functions.ILike(empresa.RazonSocial, patron, Filtros.Escape));
+        }
+
+        if (desde is { } posicion)
+        {
+            consulta = consulta.Where(empresa => empresa.Id.CompareTo(posicion) > 0);
+        }
+
+        List<Empresa> leidas = await consulta
+            .OrderBy(empresa => empresa.Id)
+            .Take(tamanio + 1)
+            .ToListAsync(cancelacion)
+            .ConfigureAwait(false);
+
+        bool hayMas = leidas.Count > tamanio;
+        List<Empresa> entregadas = hayMas ? leidas[..tamanio] : leidas;
+
+        return new TramoDe<Empresa>(
+            entregadas,
+            tamanio,
+            hayMas ? Cursores.De(entregadas[^1].Id) : null);
+    }
+
     public void Agregar(Empresa empresa) => contexto.Empresas.Add(empresa);
 }

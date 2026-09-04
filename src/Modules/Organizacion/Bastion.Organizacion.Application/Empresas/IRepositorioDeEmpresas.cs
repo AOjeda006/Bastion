@@ -50,6 +50,30 @@ public interface IRepositorioDeEmpresas : IOrdenaPor
     /// <summary>Una página de empresas, con el total.</summary>
     Task<PaginaDe<Empresa>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion);
 
+    /// <summary>Un tramo de empresas que cumplen el criterio, y por dónde seguir.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>No devuelve total</b>, y no es un olvido: contar un conjunto filtrado cuesta un
+    /// recorrido entero en cada tramo, que es justo lo que un cursor viene a evitar. El listado
+    /// ordinario sí lo lleva porque su total es el de la tabla y sale barato.
+    /// </para>
+    /// <para>
+    /// <b>La posición entra ya leída</b>, como <see cref="Guid"/> y no como el cursor en crudo.
+    /// Un cursor que no se entiende es una entrada del cliente y su desenlace es un <c>400</c>,
+    /// que aquí no se sabría dar: este puerto no devuelve <c>Resultado</c> (ADR-0004). Lo lee el
+    /// caso de uso, que sí puede contestarlo.
+    /// </para>
+    /// </remarks>
+    /// <param name="criterio">Lo que se busca, ya comprobado.</param>
+    /// <param name="desde">Última empresa entregada, o nulo para empezar por el principio.</param>
+    /// <param name="tamanio">Cuántas se piden.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<TramoDe<Empresa>> BuscarAsync(
+        CriterioDeEmpresas criterio,
+        Guid? desde,
+        int tamanio,
+        CancellationToken cancelacion);
+
     /// <summary>Apunta una empresa nueva. No la graba: eso lo hace la unidad de trabajo.</summary>
     void Agregar(Empresa empresa);
 }

@@ -536,6 +536,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizacion/empresas/buscar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Busca empresas por un criterio que no puede ir en la URL.
+         * @description Es un POST que no crea nada, y choca con la lectura ingenua de REST. Es el
+         *       precio, se paga a sabiendas y está argumentado en el ADR-0025: el primer criterio que
+         *       alguien quiere sobre una empresa es el NIF, y un NIF en la cadena de consulta acaba en el
+         *       historial del navegador, en el enlace que se copia, en el Referer y en el registro
+         *       de acceso del servidor de delante. El listado sin criterio sigue siendo un GET.
+         *     La respuesta no lleva enlace a lo siguiente, lleva cursor. Un enlace lo compondría
+         *       el servidor con el criterio dentro, y habría devuelto el NIF a una URL él solo.
+         */
+        post: operations["Empresas_Buscar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/empresas/{id}": {
         parameters: {
             query?: never;
@@ -863,6 +889,20 @@ export interface components {
              * @description Rol que se asigna.
              */
             rolId: string;
+        };
+        /** @description El criterio con el que se busca una empresa, y por dónde seguir. Viaja en el <b>cuerpo</b>. */
+        BuscarEmpresasDto: {
+            /** @description NIF exacto. Se normaliza igual que en el alta, así que admite puntos y guiones. */
+            nif?: null | string;
+            /** @description Trozo de la razón social. No distingue mayúsculas ni acentos de más. */
+            razonSocial?: null | string;
+            /** @description Por dónde seguir, tal como lo devolvió el tramo anterior. Nulo para empezar. */
+            cursor?: null | string;
+            /**
+             * Format: int32
+             * @description Cuántas empresas se piden en este tramo.
+             */
+            tamanio?: number | string;
         };
         /** @description Cambio de la propia contraseña. */
         CambiarContrasenaDto: {
@@ -1702,6 +1742,18 @@ export interface components {
              * @description Cuántas unidades de destino cuesta una de origen.
              */
             tasa: number | string;
+        };
+        /** @description Un tramo de resultados de una <b>búsqueda</b>, con por dónde seguir. */
+        TramoDeEmpresaDto: {
+            /** @description Los de este tramo, en el orden del recorrido. */
+            elementos: components["schemas"]["EmpresaDto"][];
+            /**
+             * Format: int32
+             * @description Cuántos elementos se pidieron.
+             */
+            tamanio: number | string;
+            /** @description Con qué pedir el tramo siguiente, o nulo si no hay más. */
+            cursorSiguiente: null | string;
         };
         /** @description Una ubicación dentro de un almacén, tal como sale de la API. */
         UbicacionDto: {
@@ -3845,6 +3897,45 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Empresas_Buscar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuscarEmpresasDto"];
+                "text/json": components["schemas"]["BuscarEmpresasDto"];
+                "application/*+json": components["schemas"]["BuscarEmpresasDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TramoDeEmpresaDto"];
+                    "application/json": components["schemas"]["TramoDeEmpresaDto"];
+                    "text/json": components["schemas"]["TramoDeEmpresaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

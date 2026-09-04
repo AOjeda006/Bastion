@@ -24,6 +24,7 @@ public sealed class EmpresasController(
     ICrearEmpresa crear,
     IObtenerEmpresa obtener,
     IListarEmpresas listar,
+    IBuscarEmpresas buscar,
     IModificarEmpresa modificar,
     IBloquearEmpresa bloquear,
     IDesbloquearEmpresa desbloquear) : ControladorDeOrganizacion
@@ -42,6 +43,31 @@ public sealed class EmpresasController(
 
         return await ResponderListadoAsync(consulta, listar, cancelacion).ConfigureAwait(false);
     }
+
+    /// <summary>Busca empresas por un criterio que no puede ir en la URL.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es un <c>POST</c> que no crea nada</b>, y choca con la lectura ingenua de REST. Es el
+    /// precio, se paga a sabiendas y está argumentado en el ADR-0025: el primer criterio que
+    /// alguien quiere sobre una empresa es el NIF, y un NIF en la cadena de consulta acaba en el
+    /// historial del navegador, en el enlace que se copia, en el <c>Referer</c> y en el registro
+    /// de acceso del servidor de delante. El listado sin criterio sigue siendo un <c>GET</c>.
+    /// </para>
+    /// <para>
+    /// <b>La respuesta no lleva enlace a lo siguiente</b>, lleva cursor. Un enlace lo compondría
+    /// el servidor con el criterio dentro, y habría devuelto el NIF a una URL él solo.
+    /// </para>
+    /// </remarks>
+    /// <param name="peticion">Criterio y por dónde seguir.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("buscar")]
+    [ExigePermiso(PermisosDeOrganizacion.EmpresaVer)]
+    [ProducesResponseType(typeof(TramoDe<EmpresaDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Buscar(
+        [FromBody] BuscarEmpresasDto peticion,
+        CancellationToken cancelacion) =>
+        Responder(await buscar.EjecutarAsync(peticion, cancelacion).ConfigureAwait(false));
 
     /// <summary>Devuelve una empresa.</summary>
     /// <param name="id">Identificador de la empresa.</param>
