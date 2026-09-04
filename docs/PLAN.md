@@ -2722,6 +2722,24 @@ en `Organizacion.IntegrationTests`, que **no tienen censo**: borrar una de ellas
 verde. No entra en el criterio del 1.3 y el checklist no se amplía por iniciativa propia, así que
 queda anotado con su motivo, no tapado.
 
+**Y una segunda rendija, esta descubierta en rojo y no de cabeza.** El primer run de este ítem
+—[33830689761](https://github.com/AOjeda006/Bastion/actions/runs/33830689761)— salió **rojo**, y salió
+rojo *bien*: `LaTraduccionASqlTests` hace que `Bastion.Organizacion.IntegrationTests.dll` empiece a
+ejecutar casos en el **carril rápido**, y la lista de ensamblados declarados de ese paso —la defensa
+que el 0.13 puso justamente para esto— exige declararlo. Se declaró, con su motivo escrito donde está
+la lista.
+
+Lo que importa no es el arreglo, que es una línea: es que **la batería local de `AGENTS.md` no podía
+cazarlo**. La batería ejecuta los tests, pero no ejecuta `scripts/ci/recuento-de-tests.sh`, que es el
+guion que decide el desenlace del paso en la CI. Así que hoy hay una clase entera de rojo —«un ítem
+cambia qué ensamblados corren en un carril»— que pasa la batería entera en verde y solo aparece en el
+run. El propio `AGENTS.md` dice que su lista «tiene que seguir siendo la de `.github/workflows/ci.yml`»
+y se llama a sí mismo «el peor sitio posible para una mentira»; esto es una omisión de esa lista, no
+una diferencia de comandos. Se reprodujo en local con el guion real sobre los `.trx` de esta máquina
+—rojo nombrando el ensamblado, verde tras declararlo— así que no hace falta la CI para arreglarlo,
+solo para haberlo visto. **Candidato para el ítem que toque el carril**, no para este: el 1.3 no lo
+lleva en su criterio.
+
 **Ítem 1.2 cerrado — la cuarta vía tiene quien la pare, y la quinta afirmación es la que la para:**
 [run 33806271861](https://github.com/AOjeda006/Bastion/actions/runs/33806271861) sobre `c54f783`,
 los **tres** *jobs* en `success` —Backend, Frontal y Humo— y **237 de 237** en el carril de
@@ -2769,6 +2787,12 @@ backend: dotnet build      ->  0 errores, 0 advertencias
                                //./pipe/dockerDesktopLinuxEngine: The system cannot find
                                the file specified». Cliente 29.7.2 presente, servidor no.
                                Lo verifica la CI, en el run de arriba.
+
+recuento:     el guion de la CI, `scripts/ci/recuento-de-tests.sh`, sobre los .trx de
+              esta máquina: ROJO nombrando «Bastion.Organizacion.IntegrationTests.dll»
+              como ensamblado no declarado, y VERDE —503 casos en 7 ensamblados—
+              tras declararlo. Es la pareja que dice que la línea añadida al
+              workflow es el arreglo y no una coincidencia
 ```
 
 **Lo del carril parado, con nombre y apellidos.** De las tres consultas nuevas que sí necesitarían
