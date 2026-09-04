@@ -1,11 +1,11 @@
 using System.Reflection;
 using Bastion.Api.FunctionalTests.Salud;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
-using Bastion.Identidad.Endpoints.Comun;
-using Bastion.Organizacion.Endpoints.Comun;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.AspNetCore.Mvc.ActionConstraints;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
@@ -279,44 +279,129 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         (21 + 12 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
-    private static IEnumerable<Accion> QueCambianEstado() =>
+    /// <summary>
+    /// El universo del que salen las seis reglas de arriba no está vacío y cubre a todos los
+    /// módulos que publican acciones.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Es la afirmación que le faltaba a este fichero, y la que el ítem 1.2 enseñó a escribir. Los
+    /// recuentos de <c>El_barrido_encuentra_el_inventario_entero</c> dicen cuántas acciones hay,
+    /// pero no dicen de QUIÉN: con el universo escrito a mano, un módulo nuevo simplemente no
+    /// entraba, sus acciones no se contaban, y los números seguían cuadrando porque tampoco había
+    /// cambiado el número esperado. Verde por los dos lados a la vez.
+    /// </para>
+    /// <para>
+    /// Aquí se comparan DOS fuentes que no se derivan una de otra: los módulos que el host enruta
+    /// y los módulos que tienen controladores en el disco. La igualdad es legítima porque las dos
+    /// describen el mismo conjunto —un módulo con controladores es un módulo que se monta— y por
+    /// eso se comparan enteras y no por tamaño.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void El_universo_cubre_a_todos_los_modulos_montados()
+    {
+        List<Accion> todas = [.. Todas()];
+
+        todas.ShouldNotBeEmpty(
+            "la tabla de enrutado no ha devuelto ni una acción: las seis reglas de este fichero " +
+            "estarían recorriendo listas vacías y saldrían verdes sin comprobar nada");
+
+        SortedSet<string> enrutados = new(
+            todas.Select(accion => accion.Modulo), StringComparer.Ordinal);
+
+        SortedSet<string> enElDisco = ModulosConControladoresEnElDisco();
+
+        enElDisco.ShouldNotBeEmpty(
+            "no se ha encontrado ni un ensamblado Bastion.<Modulo>.Endpoints con controladores " +
+            "junto al binario de pruebas: sin segunda fuente, esta comparación no compara nada");
+
+        enrutados.ShouldBe(
+            enElDisco,
+            customMessage:
+            "los módulos que la API enruta no son los que tienen controladores en el disco. " +
+            "Enrutados: " + string.Join(", ", enrutados) + ". En el disco: " +
+            string.Join(", ", enElDisco) + ". Un módulo que solo está en el disco es un módulo " +
+            "cuyas acciones nadie atiende ni vigila");
+    }
+
+    private IEnumerable<Accion> QueCambianEstado() =>
         Todas().Where(accion => accion.CambiaEstado);
 
-    private static IEnumerable<Accion> Todas()
+    /// <summary>
+    /// Todas las acciones que la API PUBLICA, leidas de su propia tabla de enrutado.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El universo se descubre, no se escribe.</b> Hasta el item 1.3 esto era un array con un
+    /// typeof por modulo montado, y ese array es el mismo modo de fallo que el item 1.2 encontro
+    /// en otro sitio: el dia que Terceros estrene su controlador, las seis reglas de este fichero
+    /// seguirian verdes sin haber mirado ni una de sus acciones, y no habria ningun rojo que lo
+    /// dijera. Anadir un tercer typeof lo arreglaba hoy y lo rompia otra vez con Catalogo.
+    /// </para>
+    /// <para>
+    /// La tabla de enrutado no tiene ese problema porque no es la lista de nadie: es lo que el
+    /// host ha montado. Un modulo nuevo aparece aqui en cuanto se le anade su AgregarModuloDe en
+    /// el arranque, que es exactamente el momento en que sus acciones empiezan a atender
+    /// peticiones y por tanto el momento en que estas reglas tienen que empezar a mirarlas. Y es
+    /// la MISMA fuente de la que sale el enrutado real, no una reconstruccion suya por reflexion.
+    /// </para>
+    /// </remarks>
+    private IEnumerable<Accion> Todas()
     {
-        Assembly[] ensamblados =
-        [
-            typeof(ControladorDeOrganizacion).Assembly,
-            typeof(ControladorDeIdentidad).Assembly,
-        ];
+        IActionDescriptorCollectionProvider rutas =
+            _api.Services.GetRequiredService<IActionDescriptorCollectionProvider>();
 
-        foreach (Type controlador in ensamblados
-            .SelectMany(ensamblado => ensamblado.GetTypes())
-            .Where(tipo => tipo is { IsAbstract: false, IsPublic: true }
-                && typeof(ControllerBase).IsAssignableFrom(tipo)))
+        foreach (ControllerActionDescriptor accion in rutas.ActionDescriptors.Items
+            .OfType<ControllerActionDescriptor>())
         {
-            string modulo = ModuloDe(controlador);
+            MethodInfo metodo = accion.MethodInfo;
+            TypeInfo controlador = accion.ControllerTypeInfo;
 
-            foreach (MethodInfo metodo in controlador.GetMethods(
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            yield return new Accion(
+                $"{controlador.Name}.{metodo.Name}",
+                ModuloDe(accion),
+                accion.ActionConstraints?.OfType<HttpMethodActionConstraint>()
+                    .SelectMany(limite => limite.HttpMethods).Any(EsDeEscritura) ?? false,
+                metodo.GetParameters().Any(EsLaCabeceraIfMatch),
+                metodo.GetCustomAttribute<AdmiteIdempotenciaAttribute>() is not null,
+                metodo.GetCustomAttribute<AllowAnonymousAttribute>() is not null
+                    || controlador.GetCustomAttribute<AllowAnonymousAttribute>() is not null);
+        }
+    }
+
+    /// <summary>Los modulos que este ensamblado de pruebas ve en el disco, con controladores.</summary>
+    /// <remarks>
+    /// La segunda fuente de El_universo_cubre_a_todos_los_modulos_montados, y es independiente de
+    /// la primera: esta mira los ficheros que hay al lado del binario, aquella mira lo que el host
+    /// enruta. Comparadas enteras, el rojo aparece por los dos lados: un modulo con controladores
+    /// que nadie monto, y una ruta de un modulo que no esta en el disco.
+    /// </remarks>
+    private static SortedSet<string> ModulosConControladoresEnElDisco()
+    {
+        SortedSet<string> encontrados = new(StringComparer.Ordinal);
+
+        foreach (string fichero in Directory.EnumerateFiles(
+            AppContext.BaseDirectory, "Bastion.*.Endpoints.dll"))
+        {
+            string[] partes = Path.GetFileNameWithoutExtension(fichero).Split('.');
+
+            if (partes.Length != 3)
             {
-                HttpMethodAttribute[] verbos = [.. metodo.GetCustomAttributes<HttpMethodAttribute>()];
+                continue;
+            }
 
-                if (verbos.Length == 0)
-                {
-                    continue;
-                }
+            bool lleva = Assembly.LoadFrom(fichero).GetTypes()
+                .Any(tipo => tipo is { IsAbstract: false, IsPublic: true }
+                    && typeof(ControllerBase).IsAssignableFrom(tipo));
 
-                yield return new Accion(
-                    $"{controlador.Name}.{metodo.Name}",
-                    modulo,
-                    verbos.SelectMany(verbo => verbo.HttpMethods).Any(EsDeEscritura),
-                    metodo.GetParameters().Any(EsLaCabeceraIfMatch),
-                    metodo.GetCustomAttribute<AdmiteIdempotenciaAttribute>() is not null,
-                    metodo.GetCustomAttribute<AllowAnonymousAttribute>() is not null
-                        || controlador.GetCustomAttribute<AllowAnonymousAttribute>() is not null);
+            if (lleva)
+            {
+                encontrados.Add(partes[1].ToLowerInvariant());
             }
         }
+
+        return encontrados;
     }
 
     private static bool EsDeEscritura(string verbo) =>
@@ -328,19 +413,19 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "If-Match",
             StringComparison.Ordinal);
 
-    // El módulo sale de la ruta base del controlador —`api/v1/{modulo}/[controller]`—, que es de
+    // El módulo sale de la ruta YA RESUELTA —`api/v1/{modulo}/{recurso}`—, que es de
     // donde lo saca también el filtro en ejecución. Leerlo del espacio de nombres daría el mismo
     // resultado hoy y dejaría de darlo el día que uno de los dos cambiara sin el otro.
-    private static string ModuloDe(Type controlador)
+    private static string ModuloDe(ControllerActionDescriptor accion)
     {
-        string plantilla = controlador.GetCustomAttributes<RouteAttribute>(inherit: true)
-            .Select(ruta => ruta.Template)
-            .FirstOrDefault() ?? string.Empty;
+        string plantilla = accion.AttributeRouteInfo?.Template ?? string.Empty;
 
         string[] trozos = plantilla.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
         trozos.Length.ShouldBeGreaterThanOrEqualTo(
-            3, $"{controlador.Name} no tiene una ruta base con la forma api/v1/<modulo>/…");
+            3,
+            $"{accion.ControllerTypeInfo.Name}.{accion.MethodInfo.Name} no se enruta con la forma " +
+            "api/v1/<modulo>/…");
 
         return trozos[2];
     }
