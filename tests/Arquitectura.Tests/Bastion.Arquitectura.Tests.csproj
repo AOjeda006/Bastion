@@ -25,6 +25,16 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
+  <ItemGroup Label="Censo de reglas">
+    <!--
+      El descubrimiento del censo, compartido y enlazado desde `tests/Comun`. La clase que lo usa
+      vive en ESTE ensamblado —la reflexion solo alcanza al suyo— pero la consulta que descubre los
+      casos es una sola: copiada, el dia que una version cuente los `[Theory]` y otra no, el carril
+      que se quedo atras deja de censar justo lo que dejo de contar.
+    -->
+    <Compile Include="../Comun/CensoDeReglas.cs" Link="Comun/CensoDeReglas.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

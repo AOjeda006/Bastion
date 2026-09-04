@@ -1,5 +1,4 @@
-using System.Reflection;
-using Shouldly;
+using Bastion.Pruebas.Comun;
 
 namespace Bastion.Arquitectura.Tests;
 
@@ -18,6 +17,14 @@ namespace Bastion.Arquitectura.Tests;
 /// Contra eso, la lista entera y comparada, que es la misma forma que usan los otros seis
 /// barridos del proyecto. Y la lista de NOMBRES en vez de un recuento a secas: un número diría que
 /// falta uno, y esto dice cuál.
+/// </para>
+/// <para>
+/// <b>Desde el ítem 1.4 este ya no es el único carril censado</b>, y el descubrimiento se comparte
+/// en vez de copiarse. Hasta entonces esta clase era la única, y las reglas que viven fuera de este
+/// ensamblado —las del carril funcional, las de los dos de integración— se podían borrar sin que
+/// nada se pusiera rojo. Cada uno tiene ahora su <c>ElCensoDeEsteCarrilTests</c> con su lista,
+/// porque la reflexión solo alcanza al ensamblado propio; lo que no está repetido es la consulta
+/// que descubre los casos, que vive enlazada en <c>tests/Comun/CensoDeReglas.cs</c>.
 /// </para>
 /// </remarks>
 public sealed class LasReglasDeEsteCarrilTests
@@ -71,22 +78,6 @@ public sealed class LasReglasDeEsteCarrilTests
     ];
 
     [Fact]
-    public void Las_reglas_de_este_carril_son_las_declaradas()
-    {
-        IReadOnlyList<string> encontradas =
-        [
-            .. from tipo in typeof(LasReglasDeEsteCarrilTests).Assembly.GetTypes()
-               where tipo.IsPublic && tipo.IsClass
-               from metodo in tipo.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-               where metodo.GetCustomAttribute<FactAttribute>() is not null
-               orderby tipo.Name + "." + metodo.Name, StringComparer.Ordinal
-               select tipo.Name + "." + metodo.Name,
-        ];
-
-        // Entera y en los dos sentidos, como los demás barridos. De menos: una regla borrada, y
-        // aquí sale por su nombre. De más: una regla nueva sin declarar — que suena inocente y no
-        // lo es, porque la que se añade sin pasar por esta lista es la que se añade sin que nadie
-        // decida si de verdad protege algo.
-        encontradas.ShouldBe([.. s_declaradas.Order(StringComparer.Ordinal)]);
-    }
+    public void Las_reglas_de_este_carril_son_las_declaradas() =>
+        CensoDeReglas.Comprobar(typeof(LasReglasDeEsteCarrilTests).Assembly, s_declaradas);
 }

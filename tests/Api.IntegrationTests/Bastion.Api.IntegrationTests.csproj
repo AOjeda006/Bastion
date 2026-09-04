@@ -14,8 +14,14 @@
     migraciones por módulo funciona: con un solo esquema, la comprobación pasaría igual estando
     mal (ADR-0007, punto 6).
 
-    Todo lo de aquí lleva `[Trait("Category", "Integracion")]`: es lo que separa la batería
-    rápida (sin Docker) de la completa en `AGENTS.md` y en los dos pasos de la CI.
+    Todo lo de aquí lleva `[Trait("Category", "Integracion")]` —es lo que separa la batería
+    rápida (sin Docker) de la completa en `AGENTS.md` y en los dos pasos de la CI— MENOS una
+    excepción declarada, del ítem 1.4: `ElCensoDeEsteCarrilTests` compara por reflexión la lista
+    de casos de este ensamblado contra la escrita, y para eso no hace falta un servidor. Va sin
+    rasgo a propósito, porque el censo tiene que correr también cuando no hay Docker: si solo
+    corriera en el carril completo, borrar una regla pasaría desapercibido en todos los runs que
+    no lo levantan. La consecuencia es que este ensamblado corre en LOS DOS carriles, y por eso
+    está declarado en los dos en `ci.yml`.
   -->
 
   <ItemGroup Label="Sujeto de prueba">
@@ -45,6 +51,16 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup Label="Censo de reglas">
+    <!--
+      El descubrimiento del censo, compartido y enlazado desde `tests/Comun`. La clase que lo usa
+      vive en ESTE ensamblado —la reflexion solo alcanza al suyo— pero la consulta que descubre los
+      casos es una sola: copiada, el dia que una version cuente los `[Theory]` y otra no, el carril
+      que se quedo atras deja de censar justo lo que dejo de contar.
+    -->
+    <Compile Include="../Comun/CensoDeReglas.cs" Link="Comun/CensoDeReglas.cs" />
   </ItemGroup>
 
   <ItemGroup>

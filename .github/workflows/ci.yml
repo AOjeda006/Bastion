@@ -265,15 +265,25 @@ jobs:
           # obliga a declararlo aqui. Solo cuenta el que ejecuta al menos un caso, asi que un
           # ensamblado que se queda a cero porque el filtro dejo de casar tambien sale rojo.
           #
-          # `Bastion.Organizacion.IntegrationTests.dll` corre en LOS DOS carriles desde el item
-          # 1.3, y no por descuido: `LaTraduccionASqlTests` vive en ese proyecto y NO lleva
-          # `[Trait("Category", "Integracion")]` porque `ToQueryString()` compila la consulta a
-          # SQL sin abrir conexion, o sea que no necesita contenedor. El motivo esta escrito
-          # tambien en la cabecera de su `.csproj`, que es donde esta la regla que incumple.
-          # Aqui corre con 3 casos; en el carril de integracion, con los que si necesitan filas.
+          # DOS ensamblados de integracion corren tambien en ESTE carril, y ninguno por
+          # descuido. Los dos tienen dentro casos que solo usan reflexion o compilacion de
+          # consultas, sin abrir ninguna conexion: no necesitan contenedor y por eso no llevan
+          # `[Trait("Category", "Integracion")]`.
+          #
+          #   - `Bastion.Organizacion.IntegrationTests.dll`, desde el item 1.3, por
+          #     `LaTraduccionASqlTests`: `ToQueryString()` compila la consulta a SQL sin abrir
+          #     conexion. Aqui corre con 5 casos; en integracion, con los que si necesitan filas.
+          #   - `Bastion.Api.IntegrationTests.dll`, desde el item 1.4, por
+          #     `ElCensoDeEsteCarrilTests`: censa por reflexion los casos de su propio
+          #     ensamblado, y una lista de nombres no necesita base de datos. Aqui corre con 1
+          #     caso; en el carril de integracion, con los 134 declarados.
+          #
+          # El motivo esta escrito tambien en la cabecera de cada `.csproj`, que es donde esta
+          # la regla que incumplen. Declararlos AQUI no es papeleo: un ensamblado que empieza a
+          # correr en un carril sin estar declarado es lo que puso rojo el run 33830689761.
           bash scripts/ci/recuento-de-tests.sh \
             artifacts/test-results/dominio "Dominio y arquitectura" 300 \
-            "Bastion.Api.FunctionalTests.dll,Bastion.Arquitectura.Tests.dll,Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,Bastion.Organizacion.IntegrationTests.dll,Bastion.Organizacion.UnitTests.dll"
+            "Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,Bastion.Organizacion.IntegrationTests.dll,Bastion.Organizacion.UnitTests.dll"
           exit $resultado
 
       # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
