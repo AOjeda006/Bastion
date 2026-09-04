@@ -2763,6 +2763,19 @@ lista declarada volvió a casar nombre a nombre. **La regla que deja:** antes de
 mutaciones, o se commitea lo que hay, o se respalda **todo** lo modificado y no solo lo no rastreado;
 `git checkout --` no distingue entre «deshaz la mutación» y «deshaz el ítem».
 
+**11. Un método de extensión es un paquete, y ahora hay quien lo comprueba.** El requisito 2 del
+enunciado —registrar **quién** pregunta— le dio a `AccesoALoBloqueado` la dependencia `IUsuarioActual`,
+que registraba **otro** método de extensión. La API llamaba a los dos y no notó nada; el publicador de
+la bandeja, que corre fuera de una petición, llamaba solo a `AgregarInquilinato()` y reventó en la CI
+con diez casos de Integración caídos. Se arregla registrando `IUsuarioActual` ahí también, con
+`TryAddScoped` para que llamar a las dos extensiones no ponga dos descriptores del mismo servicio y el
+orden del `Program.cs` no elija implementación en silencio. **Lo que deja escrito** es
+`ElInquilinatoSeConstruyeSoloTests`, en el carril rápido: construye **todo** lo que la extensión
+registra —descubriéndolo, no tecleándolo— en un ámbito con `validateScopes: true`. La lección, que no
+es sobre Docker: un fallo de composición no necesita base de datos, necesita que alguien intente
+construir lo registrado. El relato completo, con el mensaje de la CI y el mismo mensaje reproducido en
+local en milisegundos, en *Verificado en local → La sexta, que no puse yo*.
+
 
 ## Estado actual
 
@@ -2930,10 +2943,13 @@ openapi:      el documento versionado está al día — 75 operaciones, una más
 backend: dotnet build      ->  0 errores, 0 advertencias
          dotnet format --verify-no-changes  ->  exit 0 (tres avisos corregidos antes:
                                IDE0037, IDE0007 e IDE0270 en el código nuevo)
-         carril rápido     ->  132 + 180 + 58 + 1 + 23 + 5 + 126 = 525 casos, 0 con error
+         carril rápido     ->  132 + 180 + 58 + 1 + 23 + 5 + 129 = 528 casos, 0 con error
                                (BuildingBlocks / Organizacion.Unit / Identidad /
                                 Api.Integration SIN Docker / Arquitectura /
                                 Organizacion.Integration SIN Docker / Functional)
+                               Eran 525 con 126 en Functional cuando se empujó; los tres
+                               de más son `ElInquilinatoSeConstruyeSoloTests`, la regla
+                               que salió del rojo de la CI — abajo, «La sexta»
          carril integración -> NO EJECUTADO AQUÍ: el demonio de Docker sigue parado.
                                `docker info` -> «failed to connect to the docker API at
                                npipe:////./pipe/dockerDesktopLinuxEngine; ... open
@@ -2944,7 +2960,9 @@ backend: dotnet build      ->  0 errores, 0 advertencias
 recuento:     el guion de la CI sobre los .trx de esta máquina, y esta vez ANTES de
               empujar y no después: ROJO nombrando «Bastion.Api.IntegrationTests.dll»
               como ensamblado no declarado, y VERDE —525 casos en 7 ensamblados— tras
-              declararlo. Es la pareja que dice que la línea del workflow es el arreglo
+              declararlo. Es la pareja que dice que la línea del workflow es el arreglo.
+              Repetido al final, ya con la regla de composición dentro: 528 casos en 7
+              ensamblados, y la lista declarada del workflow casa en los dos sentidos
 
 licencias:    `git diff --name-only b75b312..HEAD -- '*packages.lock.json'` -> CERO
               ficheros. Los cuatro `.csproj` tocados añaden un `<Compile Include>` y
@@ -3039,6 +3057,67 @@ convertida en algo que **se pone rojo**, y roja **antes** de que el endpoint exi
 de integración hay además la misma pregunta hecha por el cable —`ETag` ausente y ninguno de
 `version/etag/xmin/rowversion/concurrencia` dentro del JSON—, con su comprobación de no vaciedad para
 que no la conteste una página vacía.
+
+#### La sexta, que no puse yo: la que encontró la CI
+
+Las cinco de arriba son mutaciones **provocadas**. Hubo una sexta que no provoqué, y es la que más
+dice del ítem: el run **33904703923** salió **rojo**. No en el carril rápido, donde todo estaba verde,
+sino en Integración —job `101126778489`, paso 12— con **diez** casos caídos y siempre el mismo
+mensaje:
+
+```
+System.InvalidOperationException : Unable to resolve service for type
+'Bastion.BuildingBlocks.Application.Autorizacion.IUsuarioActual' while attempting to
+activate 'Bastion.BuildingBlocks.Infrastructure.Bloqueos.AccesoALoBloqueado'.
+```
+
+Los de `ReprocesarNoDuplicaTests`, `ElTrabajoDeFondoVaciaLaColaTests` y
+`LaEdadDelMasViejoSeMideTests`, más los dos de `SinLaTablaElPublicadorSeParaTests` que caen detrás. Y
+los pasos 15 y 16 —el artefacto de OpenAPI— rojos por arrastre, no por sí mismos.
+
+**Qué pasó.** El requisito 2 del enunciado —que quede registrado **quién** pregunta, no solo que se
+preguntó— le dio a `AccesoALoBloqueado` una dependencia nueva: `IUsuarioActual`. Ese servicio lo
+registra `AgregarAutorizacionPorPermisos()`; `AccesoALoBloqueado` lo registra `AgregarInquilinato()`.
+Dos métodos de extensión distintos. La API llama a los dos y no notó nada. El **publicador de la
+bandeja de salida** corre fuera de una petición, no necesita permisos y llama solo al primero: se cayó
+al construir el primer `DbContext`.
+
+**Lo que el comentario ya prometía.** `AgregarInquilinato` dice desde el 0.9 que el inquilinato y el
+acceso a lo bloqueado van juntos «porque los dos son cosas que un `DbContext` de módulo necesita para
+construirse, y separarlos dejaría un host que registra una y se olvida de la otra reventando al
+resolver el primer contexto». El paquete dejó de ser un paquete y **el comentario siguió diciendo que
+lo era**. Una promesa escrita en prosa no se pone roja.
+
+**El arreglo, y la regla que lo sostiene.** El arreglo es una línea: `AgregarInquilinato` registra
+también `IUsuarioActual` con `TryAddScoped`. `TryAdd` y no `Add`, porque la API llama además a
+`AgregarAutorizacionPorPermisos` y con `Add` a secas habría dos descriptores del mismo servicio —quien
+resuelve se queda con el último, o sea que el **orden de las llamadas del `Program.cs`** elegiría
+implementación, en silencio—. La regla es `ElInquilinatoSeConstruyeSoloTests`, tres casos en el carril
+rápido: se mira qué descriptores añade la llamada, se **descubren** en vez de teclearse —un servicio
+nuevo entra en la regla el día que se registra, no el día que alguien se acuerde—, se construyen todos
+en un ámbito con `validateScopes: true`, y se afirma que la lista no está vacía (ADR-0020: si la
+extensión dejara de registrar algo, el bucle recorrería cero servicios y su verde no significaría
+nada). El tercer caso llama dos veces y exige que el recuento de descriptores no se mueva, que es la
+afirmación del `TryAdd`.
+
+**Por qué en local no se veía, dicho sin excusa.** No es que Docker estuviera parado: un fallo de
+composición no necesita base de datos, necesita que **alguien intente construir lo registrado**, y eso
+no lo hacía nadie. La prueba es que la regla nueva reproduce el mensaje exacto de la CI en el carril
+rápido y sin contenedor. Comentando la línea del arreglo:
+
+```
+ElInquilinatoSeConstruyeSoloTests.Y_el_acceso_a_lo_bloqueado_se_construye_nombrandolo [FAIL]
+ElInquilinatoSeConstruyeSoloTests.Todo_lo_que_registra_el_inquilinato_se_puede_construir_sin_nada_mas [FAIL]
+  System.InvalidOperationException : Unable to resolve service for type
+  'Bastion.BuildingBlocks.Application.Autorizacion.IUsuarioActual' while attempting to
+  activate 'Bastion.BuildingBlocks.Infrastructure.Bloqueos.AccesoALoBloqueado'.
+
+Con error! - Con error: 2, Superado: 1, Total: 3
+```
+
+Lo que la CI tardó minutos y un contenedor en decir, el carril rápido lo dice antes de empujar. Ojo:
+esto **no cierra** la nota del carril de integración parado. Dice que el carril rápido caza una clase
+más de fallo, no que sustituya al otro.
 
 ### Verificado en local, con la salida real — ítem 1.3
 

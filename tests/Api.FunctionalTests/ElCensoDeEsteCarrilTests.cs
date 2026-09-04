@@ -81,6 +81,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElFiltroNoSeSaltaPorAhiTests.Ningun_camino_que_ve_lo_bloqueado_emite_un_testigo_de_version",
         "ElFiltroNoSeSaltaPorAhiTests.Ninguna_llamada_de_las_que_rodean_el_filtro_aparece_en_el_codigo",
 
+        // Del ítem 1.4: la promesa de `AgregarInquilinato` convertida en algo que se construye.
+        "ElInquilinatoSeConstruyeSoloTests.Todo_lo_que_registra_el_inquilinato_se_puede_construir_sin_nada_mas",
+        "ElInquilinatoSeConstruyeSoloTests.Y_el_acceso_a_lo_bloqueado_se_construye_nombrandolo",
+        "ElInquilinatoSeConstruyeSoloTests.Y_llamarlo_dos_veces_no_registra_nada_dos_veces",
+
         "ElFiltroSeLeeEnCadaConsultaTests.Dos_consultas_seguidas_con_dos_empresas_llevan_dos_filtros_distintos",
         "ElFiltroSeLeeEnCadaConsultaTests.Y_el_mismo_contexto_reutilizado_tampoco_se_queda_con_la_primera",
         "ElFiltroSeLeeEnCadaConsultaTests.Y_el_mismo_orden_al_reves_da_el_mismo_resultado",
