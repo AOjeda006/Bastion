@@ -1,6 +1,7 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
+using Bastion.Terceros.Infrastructure.Persistencia;
 using Npgsql;
 using Shouldly;
 
@@ -34,10 +35,11 @@ public sealed class EsquemaDeIdentidadTests(PostgresConTodosLosModulos postgres)
             ORDER BY table_schema
             """);
 
-        // Tres módulos migrados contra la MISMA base. Con un historial compartido, el segundo en
-        // migrar vería las migraciones del primero como suyas y las daría por aplicadas: las
-        // tablas no se crearían y el error saldría mucho después, al usarlas.
-        historiales.Count.ShouldBe(3, "un historial por módulo, ni uno más ni uno menos");
+        // Cuatro módulos migrados contra la MISMA base —Terceros entra en el ítem 1.5—. Con un
+        // historial compartido, el segundo en migrar vería las migraciones del primero como suyas
+        // y las daría por aplicadas: las tablas no se crearían y el error saldría mucho después,
+        // al usarlas.
+        historiales.Count.ShouldBe(4, "un historial por módulo, ni uno más ni uno menos");
 
         historiales.ShouldContain(
             (IdentidadDbContext.Esquema, IdentidadDbContext.TablaDelHistorial));
@@ -45,6 +47,8 @@ public sealed class EsquemaDeIdentidadTests(PostgresConTodosLosModulos postgres)
             (OrganizacionDbContext.Esquema, OrganizacionDbContext.TablaDelHistorial));
         historiales.ShouldContain(
             (AuditoriaDbContext.Esquema, AuditoriaDbContext.TablaDelHistorial));
+        historiales.ShouldContain(
+            (TercerosDbContext.Esquema, TercerosDbContext.TablaDelHistorial));
     }
 
     [Fact]

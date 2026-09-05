@@ -27,12 +27,13 @@
   <ItemGroup Label="Sujeto de prueba">
     <ProjectReference Include="../../src/Api/Bastion.Api.csproj" />
     <!--
-      Las tres Infrastructure, y solo para MIGRAR: el fixture abre cada DbContext y aplica sus
+      Las cuatro Infrastructure, y solo para MIGRAR: el fixture abre cada DbContext y aplica sus
       migraciones antes de que el host arranque. Es lo mismo que hará el paso de despliegue.
     -->
     <ProjectReference Include="../../src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Bastion.Auditoria.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Identidad/Bastion.Identidad.Infrastructure/Bastion.Identidad.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Bastion.Organizacion.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Terceros/Bastion.Terceros.Infrastructure/Bastion.Terceros.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Consulta directa al catálogo">

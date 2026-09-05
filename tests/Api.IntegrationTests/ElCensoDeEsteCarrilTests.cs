@@ -69,6 +69,22 @@ public sealed class ElCensoDeEsteCarrilTests
         "ContratoDeOrganizacionTests.Una_serie_colgada_del_ejercicio_de_otra_empresa_es_400_del_campo_ejercicioId",
         "ContratoDeOrganizacionTests.Varios_campos_malos_se_devuelven_todos_de_una_vez",
 
+        "ContratoDeTercerosTests.Crear_un_tercero_devuelve_201_con_Location_que_lleva_al_recurso",
+        "ContratoDeTercerosTests.El_cursor_del_tramo_anterior_trae_el_siguiente_y_no_repite",
+        "ContratoDeTercerosTests.El_domicilio_fiscal_va_y_vuelve_en_los_seis_campos_de_R17",
+        "ContratoDeTercerosTests.El_estado_de_verificacion_viaja_como_TEXTO_y_no_como_numero",
+        "ContratoDeTercerosTests.El_identificador_espanol_se_valida_de_verdad_y_nace_verificado",
+        "ContratoDeTercerosTests.El_identificador_extranjero_nace_marcado_como_NO_verificado",
+        "ContratoDeTercerosTests.El_listado_viene_paginado_con_su_total_y_filtra_por_nombre",
+        "ContratoDeTercerosTests.La_busqueda_por_identificador_va_por_el_CUERPO_y_lo_lee_igual_que_el_alta",
+        "ContratoDeTercerosTests.Modificar_exige_la_version_y_devuelve_el_recurso_entero_sin_tocar_el_identificador",
+        "ContratoDeTercerosTests.Un_cursor_compuesto_a_mano_es_400_y_no_un_tramo_vacio",
+        "ContratoDeTercerosTests.Un_identificador_espanol_con_el_control_mal_es_400_del_campo_del_formulario",
+        "ContratoDeTercerosTests.Un_tercero_bloqueado_no_aparece_en_la_busqueda_por_su_identificador",
+        "ContratoDeTercerosTests.Un_tercero_que_no_es_ni_cliente_ni_proveedor_es_400_y_dice_que_marque_uno",
+        "ContratoDeTercerosTests.Un_tercero_que_no_existe_es_404_con_ProblemDetails",
+        "ContratoDeTercerosTests.Una_busqueda_sin_ningun_criterio_es_400_y_dice_donde_esta_el_listado",
+
         "ElAccesoReservadoDelArticulo32Tests.El_listado_de_lo_bloqueado_no_devuelve_ninguna_llave_de_concurrencia",
         "ElAccesoReservadoDelArticulo32Tests.Lo_bloqueado_de_otra_empresa_no_asoma_por_este_camino",
         "ElAccesoReservadoDelArticulo32Tests.Un_almacen_bloqueado_desaparece_de_los_caminos_ordinarios_y_aparece_en_este",
@@ -78,6 +94,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElAltaDeUnaEmpresaSePublicaTests.El_alta_que_hace_la_semilla_se_publica_igual_y_dice_por_que_no_tiene_empresa",
 
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
+
+        "ElConflictoQueNoRevelaTests.Bloquear_un_tercero_no_libera_su_identificador_y_por_eso_desbloquear_no_choca",
+        "ElConflictoQueNoRevelaTests.El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO",
+        "ElConflictoQueNoRevelaTests.El_mismo_identificador_en_otra_empresa_se_da_de_alta_sin_conflicto",
+        "ElConflictoQueNoRevelaTests.La_traza_SI_dice_cual_de_los_dos_era_y_no_lleva_el_identificador_dentro",
 
         "ElEventoVaEnLaMismaTransaccionTests.Guardar_dos_veces_el_mismo_agregado_no_encola_el_hecho_dos_veces",
         "ElEventoVaEnLaMismaTransaccionTests.La_empresa_y_su_evento_los_escribe_LA_MISMA_transaccion",
@@ -119,6 +140,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "EsquemaDeIdentidadTests.La_membresia_guarda_el_identificador_de_empresa_y_NO_una_clave_ajena",
         "EsquemaDeIdentidadTests.Las_tablas_del_modulo_estan_en_su_esquema_y_en_snake_case",
         "EsquemaDeIdentidadTests.Los_instantes_llevan_zona_horaria",
+
+        "EsquemaDeTercerosTests.El_bloqueo_y_las_marcas_son_las_MISMAS_columnas_que_en_los_demas_modulos",
+        "EsquemaDeTercerosTests.El_identificador_fiscal_son_TRES_columnas_y_no_una_cadena_suelta",
+        "EsquemaDeTercerosTests.La_empresa_se_guarda_como_identificador_y_NO_como_clave_ajena",
+        "EsquemaDeTercerosTests.La_tabla_del_modulo_esta_en_SU_esquema_y_en_snake_case",
+        "EsquemaDeTercerosTests.La_unicidad_del_identificador_esta_EN_LA_BASE_y_abarca_tambien_lo_bloqueado",
 
         "LaEdadDelMasViejoSeMideTests.El_publicador_publica_la_edad_del_pendiente_mas_viejo",
         "LaEdadDelMasViejoSeMideTests.Y_con_la_cola_vacia_la_edad_vuelve_a_cero",

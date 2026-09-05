@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.BuildingBlocks.Contracts.Direcciones;
@@ -28,6 +29,10 @@ namespace Bastion.Api.IntegrationTests.Api;
 /// </remarks>
 public static class Escenario
 {
+    // La tabla de las veintitrés letras del DNI, con la que se GENERAN los NIF de las
+    // fixturas. Ver `NifInventado`.
+    private const string LetrasDeControl = "TRWAGMYFPDXBNJZSQVHLCKE";
+
     private const string RutaDeEmpresas = "/api/v1/organizacion/empresas";
     private const string RutaDeUsuarios = "/api/v1/identidad/usuarios";
     private const string RutaDeRoles = "/api/v1/identidad/roles";
@@ -102,6 +107,36 @@ public static class Escenario
 
         Sesiones.Llevar(cliente, sesion);
     }
+
+    /// <summary>
+    /// Un NIF de persona física <b>inventado</b>: ocho cifras y la letra que sale del resto
+    /// entre 23.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Se genera, no se pega.</b> Un NIF real es un dato personal, y una fixture no se queda en
+    /// el fichero: viaja al artefacto de resultados, al registro de la CI y al historial de git,
+    /// para siempre y sin plazo. Que la semilla sea un <c>int</c> es lo que hace imposible colar
+    /// aquí el identificador de alguien sin que se note.
+    /// </para>
+    /// <para>
+    /// Y de paso quita una clase entera de rojos que no dicen nada: una letra calculada a mano y
+    /// mal puesta se lee como «el alta de este test da 400» y se tarda un rato en ver que el test
+    /// era el equivocado.
+    /// </para>
+    /// <para>
+    /// El algoritmo completo —NIF, NIE y CIF, con las dos clases de carácter de control— tiene su
+    /// batería generada en <c>Terceros.UnitTests</c>. Aquí solo hace falta la forma más simple.
+    /// </para>
+    /// </remarks>
+    /// <param name="numero">Las ocho cifras, de 0 a 99 999 999.</param>
+    public static string NifInventado(int numero) =>
+        numero.ToString("D8", CultureInfo.InvariantCulture) + LetrasDeControl[numero % 23];
+
+    /// <summary>El mismo NIF con la letra de al lado en la tabla: el error de tecleo de verdad.</summary>
+    /// <param name="numero">Las ocho cifras, de 0 a 99 999 999.</param>
+    public static string NifConElControlCambiado(int numero) =>
+        numero.ToString("D8", CultureInfo.InvariantCulture) + LetrasDeControl[(numero + 1) % 23];
 
     /// <summary>Un cuerpo de alta de empresa que es válido de arriba abajo.</summary>
     /// <param name="nif">NIF válido y libre.</param>

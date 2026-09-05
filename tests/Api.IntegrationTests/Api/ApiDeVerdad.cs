@@ -107,8 +107,15 @@ public sealed class ApiDeVerdad(PostgresConTodosLosModulos postgres) : WebApplic
         builder.UseSetting(SemillaDeArranque.VariableDeCodigoPostal, "28001");
         builder.UseSetting(SemillaDeArranque.VariableDePoblacion, "Madrid");
 
-        // Lo unico que se anade al host, y no sustituye nada: un proveedor de registro mas, para
-        // que un 500 en la CI diga que ha reventado. Ver RegistroDeFallos.
-        builder.ConfigureLogging(registro => registro.AddProvider(new RegistroDeFallos()));
+        // Lo unico que se anade al host, y no sustituye nada: dos proveedores de registro mas.
+        // El primero, para que un 500 en la CI diga que ha reventado (RegistroDeFallos). El
+        // segundo, para poder observar lo que la API anota POR DENTRO y no cuenta en ninguna
+        // respuesta, que desde el item 1.5 es parte de lo que hay que demostrar
+        // (RegistroDeSucesos).
+        builder.ConfigureLogging(registro =>
+        {
+            registro.AddProvider(new RegistroDeFallos());
+            registro.AddProvider(new RegistroDeSucesos());
+        });
     }
 }

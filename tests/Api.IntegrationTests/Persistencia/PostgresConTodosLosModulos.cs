@@ -9,6 +9,7 @@ using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
+using Bastion.Terceros.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -235,6 +236,17 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
             opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
+    /// <summary>Un contexto de Terceros solo para aplicar migraciones.</summary>
+    /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
+    public TercerosDbContext AbrirTercerosParaMigrar()
+    {
+        DbContextOptionsBuilder<TercerosDbContext> opciones = new();
+        TercerosDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new TercerosDbContext(
+            opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
+    }
+
     // El contexto de la bandeja no tiene `Configurar` a propósito: vive en los bloques comunes,
     // que traen EF Core pero NO el proveedor de PostgreSQL, así que quien elige proveedor es el
     // módulo Auditoría en su cableado. Aquí se repite esa elección, que es la misma y es de una
@@ -313,6 +325,11 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         await using (IdentidadDbContext identidad = AbrirIdentidadParaMigrar())
         {
             await identidad.Database.MigrateAsync();
+        }
+
+        await using (TercerosDbContext terceros = AbrirTercerosParaMigrar())
+        {
+            await terceros.Database.MigrateAsync();
         }
     }
 
