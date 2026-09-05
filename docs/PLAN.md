@@ -1622,9 +1622,12 @@ los dos idiomas legítimamente, y exigir cero obligaría a inventarle una difere
   dos diccionarios. Quedan 46 kB de margen y la fase 1 trae Terceros y Catálogo enteros: el tope hay
   que revisarlo, y con un número razonado, no subiéndolo cuando salte. Anotado como riesgo.
 
-- **Los avisos de `act(...)` de los tests son de antes.** Salían 92 y siguen saliendo 92, contados a
+- **Los avisos de `act(...)` de los tests son de antes.** Salían 92 y seguían saliendo 92, contados a
   los dos lados con el mismo comando. No los trae la i18n, así que no se arreglan aquí; queda dicho
-  para que el siguiente que los vea no los persiga en el sitio equivocado.
+  para que el siguiente que los vea no los persiga en el sitio equivocado. **Corregido el 2026-09-05
+  (ítem 1.5):** ese 92 —y el 91 que se anotó al cerrar el 1.4— salieron los dos de un registro
+  **truncado**. La cifra reproducible es **109 en siete ficheros**, tres pasadas idénticas, y el
+  comando está escrito en la nota de riesgo. Lo que la nota decía sigue en pie: no los trae la i18n.
 
 ### Tomadas por el agente de desarrollo — ítem 0.15 (2026-09-03)
 
@@ -5319,13 +5322,23 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
-- **ABIERTO (2026-09-04) · los tests del frontal sueltan 91 avisos de `act(...)`, en seis ficheros.**
-  `An update to <X> inside a test was not wrapped in act(...)` sale **91** veces en una ejecución
-  limpia de `npm run test`, repartidos así: `ElListadoDeAlmacenes.test.tsx` 24,
-  `ElCambioDeIdioma.test.tsx` 17, `LasRutasProtegidas.test.tsx` 17, `ElSelectorDeEmpresa.test.tsx` 14,
-  `LaPantallaDeAcceso.test.tsx` 10 y `ElCambioDeRuta.test.tsx` 9. Los componentes que los provocan son
-  pocos y se repiten: `SelectorDeEmpresa` 21, `Guarda` 21, `Disposicion` 21, `RouterProvider` 20,
-  `PaginaDeInicio` 7 y `PaginaNoEncontrada` 1 — o sea que **no** son seis problemas, es un puñado de
+- **ABIERTO (2026-09-04, recontado el 2026-09-05) · los tests del frontal sueltan 109 avisos de
+  `act(...)`, en SIETE ficheros.** `An update to <X> inside a test was not wrapped in act(...)` sale
+  **109** veces en una ejecución limpia, y sale 109 tres pasadas seguidas: no es ruido variable.
+  El comando, escrito para que no haya que fiarse de la cifra:
+  `npm --prefix frontend run test 2>&1 | grep -c "was not wrapped in act"`, y el reparto por fichero
+  atribuyendo cada aviso al último encabezado `stderr | <fichero>` **después de quitar los códigos
+  ANSI** (sin quitarlos, el encabezado no casa y todo cae en un cajón). Reparto:
+  `ElListadoDeAlmacenes.test.tsx` 24, `ElCambioDeIdioma.test.tsx` 17, `LasRutasProtegidas.test.tsx` 17,
+  `ElCambioDeRuta.test.tsx` 14, `ElSelectorDeEmpresa.test.tsx` 14, `ElTestigoDeAcceso.test.tsx` 13 y
+  `LaPantallaDeAcceso.test.tsx` 10. Componentes: `SelectorDeEmpresa` 25, `Guarda` 25, `Disposicion` 25,
+  `RouterProvider` 24, `PaginaDeInicio` 9 y `PaginaNoEncontrada` 1.
+  **Las dos cifras anteriores estaban mal y por la misma causa.** El 91 «en seis ficheros» del 1.4 se
+  midió sobre un registro **truncado por la cola**: perdía `ElTestigoDeAcceso.test.tsx` entero (13) y
+  cinco avisos de `ElCambioDeRuta` (91 + 13 + 5 = 109). El 92 del 0.15 viene del mismo vicio. La
+  lección no es la cifra, es que **una cifra medida se publica con el comando que la mide**; está
+  escrita como regla en `AGENTS.md`.
+  Los componentes que los provocan son pocos y se repiten — o sea que **no** son siete problemas, es un puñado de
   efectos que se resuelven después de que la aserción ya haya mirado. **Por qué importa y no es
   ruido:** es la misma familia que el flake del 0.14 —`document.title` mirado antes de que el efecto
   lo pusiera, rojo en la CI sobre un commit que solo tocaba un `.md`—, y un aviso de `act()` dice

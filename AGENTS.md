@@ -91,6 +91,32 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
   va en la prosa del cuerpo, si va. (Los commits `2398889` y `309f594` la llevan como trailer;
   están publicados y no se reescriben — el dato se movió a su sitio en el 0.16.)
 
+- **El ciclo de una mutación empieza con el árbol limpio.** Una mutación se aplica para **verla
+  roja**, y se revierte. La orden de revertir no distingue intenciones: `git checkout -- <fichero>`
+  devuelve el fichero a HEAD y se lleva por delante **todo** lo no commiteado que hubiera dentro,
+  no solo la mutación. Así que:
+  1. **Antes de la tanda, el trabajo del ítem está commiteado** (el árbol verde es cuando se puede).
+  2. Se revierte con `git revert`, `git stash pop` o `git restore --source=HEAD <fichero>` **sobre
+     árbol limpio**.
+  3. Si por lo que sea la mutación cae sobre trabajo sin guardar, **la primera orden del ciclo es
+     `git stash push`**, y la última `git stash pop`.
+  4. `git checkout -- <fichero>` no se usa nunca con trabajo sin guardar dentro del fichero.
+  En el ítem 1.4 esto costó ~128 líneas de `ElFiltroNoSeSaltaPorAhiTests.cs` —una apertura declarada
+  y dos reglas enteras—, que hubo que rehacer; el reflex de «revertir con git» supone que lo bueno
+  ya está a salvo, y durante un ítem largo casi nunca lo está.
+
+- **La rama de un ítem no sobrevive a su avance rápido.** Una rama por unidad de trabajo, verde ahí,
+  `--ff-only` a `main`, y **borrada en cuanto main la contiene** —local y remota—. Una rama vieja que
+  ya está dentro de `main` no guarda nada (sus commits viven en `main`) y sí engaña: al retomar
+  parece trabajo pendiente. `git for-each-ref refs/heads/` no debería devolver más que `main` y, si
+  hay ítem en curso, su rama.
+
+- **Una cifra medida se acompaña del comando que la mide.** Un recuento sacado de un registro largo
+  puede perder la cola —o la cabeza— sin decirlo: en el 1.4 los avisos de `act(...)` se contaron dos
+  veces mal (92 y 91) por leer un log truncado, y la cifra reproducible es **109 en siete ficheros**.
+  Si la cifra va a un documento, va con la orden exacta que la produce, para que el siguiente la
+  repita en vez de creerla.
+
 ## Comandos del proyecto (parte variable)
 
 Desde la raíz del repositorio.
