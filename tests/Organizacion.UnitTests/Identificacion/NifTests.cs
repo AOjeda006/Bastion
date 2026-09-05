@@ -19,7 +19,7 @@ public sealed class NifTests
     [InlineData("Y1234567X")]
     [InlineData("Z1234567R")]
     // Persona jurídica, control numérico (letras A, B, E, H).
-    [InlineData("A58818501")]
+    [InlineData("A99999997")]
     [InlineData("B12345674")]
     // Persona jurídica, control alfabético (letras K, P, Q, R, S, N, W).
     [InlineData("P1234567D")]
@@ -33,8 +33,18 @@ public sealed class NifTests
     [Theory]
     [InlineData("12345678A")]   // DNI con la letra cambiada
     [InlineData("X1234567M")]   // NIE con la letra cambiada
-    [InlineData("A58818502")]   // CIF con el dígito de control cambiado
+    [InlineData("A99999998")]   // CIF con el dígito de control cambiado
     [InlineData("P1234567E")]   // CIF de control alfabético con la letra cambiada
+    // Y los dos que NO son «la letra cambiada» sino «la clase cambiada»: el carácter de control
+    // vale lo que tiene que valer, pero en la forma que esa inicial no admite. Es el fallo típico
+    // de las implementaciones que aceptan las dos formas para todas las iniciales, y sin estos dos
+    // casos una que lo hiciera pasaría toda esta batería:
+    //   · A99999997 controla con el dígito 7; «G» es esa misma posición en JABCDEFGHI, y la
+    //     inicial A es de control SIEMPRE numérico, así que A9999999G se rechaza.
+    //   · P1234567D controla con la letra D; «4» es esa misma posición, y la inicial P es de
+    //     control SIEMPRE alfabético, así que P12345674 se rechaza.
+    [InlineData("A9999999G")]   // control numérico escrito como letra
+    [InlineData("P12345674")]   // control alfabético escrito como dígito
     public void Un_identificador_con_el_caracter_de_control_equivocado_se_rechaza(string valor)
     {
         Nif.Intentar(valor, out Nif? nif).ShouldBeFalse($"«{valor}» no debería ser válido");

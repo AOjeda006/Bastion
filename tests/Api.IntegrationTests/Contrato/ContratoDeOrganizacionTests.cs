@@ -443,7 +443,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         // El ejercicio ajeno se crea DENTRO de la otra empresa, que es la única manera de crearlo
         // ahora, y luego se vuelve a la propia. Así el identificador que se cuela en el cuerpo es
         // uno de verdad: con un Guid inventado, el 400 lo daría el «no existe» y no la frontera.
-        EmpresaDto ajena = await Escenario.CrearEmpresaAsync(cliente, "A58818501");
+        EmpresaDto ajena = await Escenario.CrearEmpresaAsync(cliente, "A99999997");
         Guid usuarioId = await UsuarioActualAsync(cliente);
 
         await Escenario.EntrarEnAsync(cliente, usuarioId, ajena.Id);

@@ -14,7 +14,7 @@ public sealed class EmpresaTests
         "Gran Vía", "31", "28013", "Madrid", "Madrid", "ES");
 
     private static Empresa Nueva() => Empresa.Crear(
-        Nif.De("A58818501"), "Ferretería del Norte, S.L.", Fiscal(), "EUR", RegimenDeIva.General, s_momento);
+        Nif.De("A99999997"), "Ferretería del Norte, S.L.", Fiscal(), "EUR", RegimenDeIva.General, s_momento);
 
     [Fact]
     public void Una_empresa_nace_activa()
@@ -34,7 +34,7 @@ public sealed class EmpresaTests
     [Fact]
     public void La_divisa_base_se_normaliza_contra_el_catalogo_del_bloque_comun()
     {
-        Empresa.Crear(Nif.De("A58818501"), "Norte", Fiscal(), " eur ", RegimenDeIva.General, s_momento)
+        Empresa.Crear(Nif.De("A99999997"), "Norte", Fiscal(), " eur ", RegimenDeIva.General, s_momento)
             .DivisaBase.ShouldBe("EUR");
     }
 
@@ -47,7 +47,7 @@ public sealed class EmpresaTests
         // El ejemplo era el yen hasta el 0.15, cuando entró en el catálogo con su caso dorado
         // (cero decimales). Ahora es el dinar kuwaití, que sigue fuera.
         Should.Throw<NotSupportedException>(() => Empresa.Crear(
-            Nif.De("A58818501"), "Norte", Fiscal(), "KWD", RegimenDeIva.General, s_momento));
+            Nif.De("A99999997"), "Norte", Fiscal(), "KWD", RegimenDeIva.General, s_momento));
     }
 
     [Theory]
@@ -56,7 +56,7 @@ public sealed class EmpresaTests
     public void La_razon_social_es_obligatoria(string razonSocial)
     {
         Should.Throw<ArgumentException>(() => Empresa.Crear(
-            Nif.De("A58818501"), razonSocial, Fiscal(), "EUR", RegimenDeIva.General, s_momento));
+            Nif.De("A99999997"), razonSocial, Fiscal(), "EUR", RegimenDeIva.General, s_momento));
     }
 
     [Fact]
@@ -131,6 +131,6 @@ public sealed class EmpresaTests
 
         // El NIF identifica a la empresa ante la AEAT y aparece en cada factura emitida:
         // cambiarlo no es una modificación, es otra empresa.
-        empresa.Nif.Valor.ShouldBe("A58818501");
+        empresa.Nif.Valor.ShouldBe("A99999997");
     }
 }
