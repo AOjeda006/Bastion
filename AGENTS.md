@@ -136,6 +136,7 @@ Desde la raíz del repositorio.
 | **Contrato al día** (el cliente generado) | `npm --prefix frontend run api` y que `git status --porcelain -- frontend/src/shared/api/esquema.ts` salga **vacío** |
 | **Migraciones al día** (el modelo no tiene cambios pendientes) | `bash scripts/comprobar-migraciones.sh` |
 | **OpenAPI al día** (el contrato versionado) | `bash scripts/generar-openapi.sh --comprobar` |
+| **Catálogo de `type` al día** (el que lee el frontal, ADR-0030) | `bash scripts/generar-errores.sh --comprobar` |
 | **Arranque local completo** | `docker compose -f deploy/docker-compose.yml up --build` |
 | **Parar y limpiar volúmenes** | `docker compose -f deploy/docker-compose.yml down -v` |
 
@@ -151,6 +152,7 @@ primero: lo que falla en segundos tiene que fallar antes de que arranques Docker
 npm --prefix frontend run api && git status --porcelain -- frontend/src/shared/api/esquema.ts
 bash scripts/comprobar-migraciones.sh
 bash scripts/generar-openapi.sh --comprobar
+bash scripts/generar-errores.sh --comprobar
 
 # 2. Frontal. `lint` NO cubre ni los tipos ni el formato: son tres pasos distintos.
 npm --prefix frontend run typecheck
