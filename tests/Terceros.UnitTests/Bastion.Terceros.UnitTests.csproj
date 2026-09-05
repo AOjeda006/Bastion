@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests unitarios del módulo Terceros (§13: dominio puro, sin infraestructura y sin E/S).
+
+    Referencia al dominio del módulo, a su contrato, y al dominio común: `Nif` vive en
+    `BuildingBlocks.Domain` y es quien valida el carácter de control, así que la batería
+    generada de este proyecto lo necesita compilado. Ningún doble, ninguna base de datos.
+
+    Lo que NO se puede probar aquí, y por eso hay tests de integración: que el alta contra un
+    tercero bloqueado conteste lo MISMO que el alta contra uno que ya existe. Esa es una
+    propiedad de dos respuestas HTTP puestas una al lado de la otra, y aquí no hay respuestas.
+  -->
+
+  <ItemGroup Label="Sujeto de prueba">
+    <ProjectReference Include="../../src/BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Terceros/Bastion.Terceros.Domain/Bastion.Terceros.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Terceros/Bastion.Terceros.Contracts/Bastion.Terceros.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Marco de pruebas">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

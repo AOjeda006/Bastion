@@ -103,6 +103,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bastion.Terceros.Infrastruc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bastion.Terceros.Endpoints", "src\Modules\Terceros\Bastion.Terceros.Endpoints\Bastion.Terceros.Endpoints.csproj", "{982301F0-0698-4DAA-B68C-164840A39A44}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Terceros.UnitTests", "Terceros.UnitTests", "{7324F043-CF40-F9D4-371A-7CCD93EC25D8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bastion.Terceros.UnitTests", "tests\Terceros.UnitTests\Bastion.Terceros.UnitTests.csproj", "{494BDFDF-774E-4058-80EF-F79AFB2ACD41}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -497,6 +501,18 @@ Global
 		{982301F0-0698-4DAA-B68C-164840A39A44}.Release|x64.Build.0 = Release|Any CPU
 		{982301F0-0698-4DAA-B68C-164840A39A44}.Release|x86.ActiveCfg = Release|Any CPU
 		{982301F0-0698-4DAA-B68C-164840A39A44}.Release|x86.Build.0 = Release|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Debug|x64.Build.0 = Debug|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Debug|x86.Build.0 = Debug|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Release|x64.ActiveCfg = Release|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Release|x64.Build.0 = Release|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Release|x86.ActiveCfg = Release|Any CPU
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -550,5 +566,7 @@ Global
 		{43E6651C-1C8A-4ACB-8A80-E06DB4335ACF} = {805A8D50-63DC-9C2D-1F6E-9BE58443B7F7}
 		{CFFE5BE7-ED51-4203-A11B-5A5095D61A14} = {805A8D50-63DC-9C2D-1F6E-9BE58443B7F7}
 		{982301F0-0698-4DAA-B68C-164840A39A44} = {805A8D50-63DC-9C2D-1F6E-9BE58443B7F7}
+		{7324F043-CF40-F9D4-371A-7CCD93EC25D8} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{494BDFDF-774E-4058-80EF-F79AFB2ACD41} = {7324F043-CF40-F9D4-371A-7CCD93EC25D8}
 	EndGlobalSection
 EndGlobal

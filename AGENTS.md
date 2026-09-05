@@ -175,7 +175,7 @@ dotnet test Bastion.sln --filter "Category=Integracion" \
 #    la batería entera en verde. Las dos listas son las del workflow, literalmente.
 bash scripts/ci/recuento-de-tests.sh \
   artifacts/test-results/dominio "Dominio y arquitectura" 300 \
-  "Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,Bastion.Organizacion.IntegrationTests.dll,Bastion.Organizacion.UnitTests.dll"
+  "Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,Bastion.Organizacion.IntegrationTests.dll,Bastion.Organizacion.UnitTests.dll,Bastion.Terceros.UnitTests.dll"
 bash scripts/ci/recuento-de-tests.sh \
   artifacts/test-results/integracion "Integración (Testcontainers)" 100 \
   "Bastion.Api.IntegrationTests.dll,Bastion.Organizacion.IntegrationTests.dll"

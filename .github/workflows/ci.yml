@@ -283,7 +283,7 @@ jobs:
           # correr en un carril sin estar declarado es lo que puso rojo el run 33830689761.
           bash scripts/ci/recuento-de-tests.sh \
             artifacts/test-results/dominio "Dominio y arquitectura" 300 \
-            "Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,Bastion.Organizacion.IntegrationTests.dll,Bastion.Organizacion.UnitTests.dll"
+            "Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,Bastion.Organizacion.IntegrationTests.dll,Bastion.Organizacion.UnitTests.dll,Bastion.Terceros.UnitTests.dll"
           exit $resultado
 
       # Un esquema y un modelo que divergen es un despliegue roto en diferido (§14).
