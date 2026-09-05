@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Direcciones;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.BuildingBlocks.Contracts.Paginacion;

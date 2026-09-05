@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Contracts.Direcciones;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Arranque;
 using Bastion.Organizacion.Application.Empresas;

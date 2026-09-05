@@ -1,4 +1,4 @@
-using Bastion.BuildingBlocks.Domain.Direcciones;
+using Bastion.BuildingBlocks.Application.Direcciones;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Divisas;
@@ -36,28 +36,6 @@ namespace Bastion.Organizacion.Application.Comun;
 /// </remarks>
 internal static class Mapeos
 {
-    internal static DireccionDto ADto(this Direccion direccion) => new()
-    {
-        Calle = direccion.Calle,
-        Numero = direccion.Numero,
-        CodigoPostal = direccion.CodigoPostal,
-        Poblacion = direccion.Poblacion,
-        Subdivision = direccion.Subdivision,
-        Pais = direccion.Pais,
-    };
-
-    /// <summary>
-    /// Construye la dirección del dominio a partir de la del contrato.
-    /// </summary>
-    /// <remarks>
-    /// Puede lanzar, y es correcto que lo haga: la forma —obligatoriedad, longitudes y las dos
-    /// letras del país— ya la ha comprobado el borde con sus anotaciones antes de llegar aquí.
-    /// Si aun así saltara una guarda, no sería un dato malo del usuario sino una validación que
-    /// falta en el contrato, y eso es un fallo de programación (ADR-0004).
-    /// </remarks>
-    internal static Direccion ADireccion(this DireccionDto dto) => Direccion.De(
-        dto.Calle, dto.Numero, dto.CodigoPostal, dto.Poblacion, dto.Subdivision, dto.Pais);
-
     internal static EmpresaDto ADto(this Empresa empresa) => new(
         empresa.Id,
         empresa.Nif.Valor,

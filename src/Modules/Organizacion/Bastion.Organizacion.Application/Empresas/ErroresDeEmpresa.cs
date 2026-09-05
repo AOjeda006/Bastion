@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 
 namespace Bastion.Organizacion.Application.Empresas;
@@ -19,12 +20,11 @@ internal static class ErroresDeEmpresa
 
     /// <summary>La empresa del <i>claim</i> no existe o está bloqueada.</summary>
     /// <remarks>
-    /// Sin identificador en el mensaje, y no por descuido: quien recibe esto no ha escrito ninguna
-    /// empresa —le vino en el token—, así que repetírsela no le ayuda a corregir nada. Lo que
-    /// necesita saber es que su sesión apunta a una empresa que ya no opera y que tiene que volver
-    /// a entrar.
+    /// <b>Delega desde el ítem 1.5</b>, y no repite el código ni el texto. La situación no es de
+    /// este módulo —le pasa a cualquier caso de uso que mire la empresa del <i>claim</i>, y a
+    /// Terceros le pasa igual—, así que el <c>type</c> es uno solo y vive en el bloque común. Este
+    /// método se queda porque es el nombre por el que lo llaman los cinco casos de uso de aquí.
     /// </remarks>
-    internal static ErrorDeOperacion NoOperativa() => ErrorDeOperacion.Conflicto(
-        "empresa-activa-no-operativa",
-        "La empresa con la que está operando no existe o está bloqueada. Vuelva a iniciar sesión.");
+    internal static ErrorDeOperacion NoOperativa() =>
+        ErroresDeInquilinato.EmpresaActivaNoOperativa();
 }

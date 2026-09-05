@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Validacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Domain.Resultados;

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Direcciones;
 using System.ComponentModel.DataAnnotations;
 using Bastion.Organizacion.Contracts.Comun;
 

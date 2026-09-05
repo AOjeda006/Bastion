@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Validacion;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Domain.Ejercicios;
 

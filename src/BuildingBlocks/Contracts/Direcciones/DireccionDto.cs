@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Bastion.Organizacion.Contracts.Comun;
+namespace Bastion.BuildingBlocks.Contracts.Direcciones;
 
 /// <summary>
 /// Una dirección estructurada, en los seis campos que exige R17.
@@ -12,10 +12,18 @@ namespace Bastion.Organizacion.Contracts.Comun;
 /// </para>
 /// <para>
 /// Las longitudes están escritas aquí como números y no tomadas de <c>Direccion</c>, que es
-/// quien manda: este proyecto no referencia el dominio, y no puede, porque es lo único que otro
-/// módulo ve y arrastrarlo abriría el dominio por la puerta de atrás. La copia no se queda
-/// desfasada porque hay un test que compara las dos: si alguien cambia el dominio y no esto,
-/// se pone rojo.
+/// quien manda: este proyecto no referencia NADA, porque lo referencia el <c>Contracts</c> de cada
+/// módulo y arrastrar el dominio lo abriría por la puerta de atrás a todo el que leyera un
+/// contrato ajeno. La copia no se queda desfasada porque hay un test que compara las dos: si
+/// alguien cambia el dominio y no esto, se pone rojo.
+/// </para>
+/// <para>
+/// <b>Vive en el bloque común desde el ítem 1.5</b>, y no en <c>Organizacion.Contracts</c>, por lo
+/// mismo que <c>Paginacion</c> se movió en el 1.3 (ADR-0029): la necesitan Organización —empresa y
+/// almacén— y Terceros, y en la fase 5 la necesitará Facturación. La alternativa era una segunda
+/// copia con los mismos seis campos y los mismos topes, que es la que se separa de la primera el
+/// día que una se toque. Un módulo no puede referenciar el <c>Contracts</c> de otro para tomar
+/// prestado un DTO común: eso lo ata a un módulo con el que no tiene nada que ver.
 /// </para>
 /// </remarks>
 public sealed record DireccionDto

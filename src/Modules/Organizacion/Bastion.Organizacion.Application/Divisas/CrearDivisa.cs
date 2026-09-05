@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Validacion;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
