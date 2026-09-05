@@ -25,6 +25,6 @@ internal static class ErroresDeEmpresa
     /// a entrar.
     /// </remarks>
     internal static ErrorDeOperacion NoOperativa() => ErrorDeOperacion.Conflicto(
-        "empresa-no-operativa",
+        "empresa-activa-no-operativa",
         "La empresa con la que está operando no existe o está bloqueada. Vuelva a iniciar sesión.");
 }

@@ -52,6 +52,64 @@ export const en: Diccionario = {
     sesionCaducada: 'Your session has expired. Sign in again.',
     servidor: 'The server could not respond. Try again.',
     carga: 'The data could not be loaded. Try again.',
+
+    // Ver `es.ts`: las claves son las del artefacto `docs/api/errores.json`, sin camelizar.
+    tipos: {
+      'almacen-duplicado': 'There is already a warehouse with that code at this company.',
+      'almacen-no-encontrado': 'That warehouse no longer exists. Go back to the list and refresh.',
+      'codigo-de-rol-ya-usado': 'There is already a role with that code. Pick another one.',
+      'contrasena-actual-incorrecta': 'Your current password is not correct.',
+      'conversion-um-duplicada': 'There is already a conversion between those two units.',
+      'conversion-um-no-encontrada': 'That unit conversion no longer exists.',
+      'correo-ya-registrado': 'There is already an account with that email address.',
+      'credenciales-no-validas': 'The email address or the password is not correct.',
+      'datos-no-validos': 'Some fields are not valid. Check the ones marked below.',
+      'divisa-duplicada': 'There is already a currency with that code.',
+      'divisa-no-encontrada': 'That currency no longer exists.',
+      'ejercicio-cerrado': 'The financial year is closed and cannot be changed.',
+      'ejercicio-con-series':
+        'A financial year with document series cannot be deleted. Delete the series first.',
+      'ejercicio-duplicado': 'There is already a financial year with those dates at this company.',
+      'ejercicio-no-encontrado':
+        'That financial year no longer exists. Go back to the list and refresh.',
+      'empresa-activa-no-operativa':
+        'The company you are working with is no longer available. Sign in again.',
+      'empresa-ajena': 'That company is not yours, so you cannot work on it.',
+      'empresa-destino-no-operativa':
+        'The company you picked does not accept new people: it does not exist or it is blocked.',
+      'empresa-no-encontrada': 'That company no longer exists. Go back to the list and refresh.',
+      'empresa-no-pertenece': 'You do not belong to that company, so you cannot work with it.',
+      'empresa-ya-registrada': 'There is already a company with that tax number.',
+      'falta-if-match':
+        'Saving requires saying which version you are writing over. Open the form again.',
+      'idempotencia-clave-no-valida':
+        'The application sent a retry key that is not valid. Please try again.',
+      'idempotencia-cuerpo-distinto':
+        'An operation was retried with the same send key but different content. Start again.',
+      'idempotencia-no-admitida': 'This operation cannot be retried safely. Please try again.',
+      'idempotencia-sin-empresa-activa':
+        'Your session has no active company. Choose one and try again.',
+      'if-match-no-valido': 'The version the form carried is not well formed. Open it again.',
+      'impuesto-con-tramos-solapados': 'The validity ranges of that tax overlap. Check the dates.',
+      'impuesto-no-encontrado': 'That tax no longer exists.',
+      'orden-no-admitido': 'That field cannot be used for sorting.',
+      'pertenencia-no-encontrada': 'That person does not belong to the company you named.',
+      'rol-no-encontrado': 'That role no longer exists. Go back to the list and refresh.',
+      'serie-cerrada': 'The document series is closed and cannot be changed.',
+      'serie-duplicada': 'There is already a series with that code in that financial year.',
+      'serie-no-encontrada': 'That series no longer exists. Go back to the list and refresh.',
+      'serie-ya-numerada': 'The series has already numbered documents, so that cannot be changed.',
+      'sesion-no-renovable': 'Your session could not be renewed. Sign in again.',
+      'tipo-cambio-duplicado': 'There is already an exchange rate for that currency on that date.',
+      'tipo-cambio-no-encontrado': 'That exchange rate no longer exists.',
+      'ubicacion-duplicada': 'There is already a location with that code in that warehouse.',
+      'ubicacion-no-encontrada': 'That location no longer exists. Go back to the list and refresh.',
+      'unidad-medida-duplicada': 'There is already a unit of measure with that code.',
+      'unidad-medida-no-encontrada': 'That unit of measure no longer exists.',
+      'usuario-no-encontrado': 'That person no longer exists. Go back to the list and refresh.',
+      'version-obsoleta':
+        'Someone saved before you did. Open the form again so you do not overwrite their changes.',
+    },
   },
 
   inicio: {

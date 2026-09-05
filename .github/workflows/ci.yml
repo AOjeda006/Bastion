@@ -321,6 +321,24 @@ jobs:
             echo "::notice::Sin documento OpenAPI todavía (se añade en el ítem 0.11)."
           fi
 
+      # El catálogo de `type` de error es el segundo contrato versionado del proyecto, y existe por
+      # el ADR-0030: desde el 1.5 el texto que lee una persona cuando algo falla lo escribe el
+      # FRONTAL, mapeando el `type` del ProblemDetails. Si el backend estrena un código y el frontal
+      # no tiene texto, el usuario ve el mensaje genérico y nadie se entera.
+      #
+      # Mismo trato que el OpenAPI, a propósito: se genera, se versiona, y aquí se vuelve a generar
+      # y se compara. Barre el código fuente, así que no necesita ni compilar ni Docker; el guion
+      # PARA si un sitio de llamada tiene un código que no puede resolver, para que un barrido que
+      # deja de casar no devuelva menos en silencio.
+      - name: Catálogo de errores — el artefacto de `type` no se ha quedado atrás
+        if: steps.solucion.outputs.existe == 'true'
+        run: |
+          if [ -f scripts/generar-errores.sh ]; then
+            bash scripts/generar-errores.sh --comprobar
+          else
+            echo "::notice::Sin catálogo de errores todavía (se añade en el ítem 1.5)."
+          fi
+
       # Testcontainers levanta PostgreSQL de verdad. Nada de EF Core InMemory: no traduce
       # SQL real, ignora restricciones, columnas computadas y filtros globales, y da
       # falsos verdes (`stacks/dotnet/convenciones.md`).

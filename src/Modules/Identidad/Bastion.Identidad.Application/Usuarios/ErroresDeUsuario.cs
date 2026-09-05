@@ -30,7 +30,7 @@ internal static class ErroresDeUsuario
     /// identificador que no lleva a ninguna parte y nadie se enteraría hasta el primer listado.
     /// </remarks>
     internal static ErrorDeOperacion EmpresaNoOperativa() => ErrorDeOperacion.ReglaDeNegocio(
-        "empresa-no-operativa",
+        "empresa-destino-no-operativa",
         "La empresa no existe o está bloqueada, y no admite altas de usuarios.");
 
     /// <summary>La contraseña actual que se ha presentado no es la que hay.</summary>

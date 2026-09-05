@@ -67,6 +67,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "CadaEventoEstaDeclaradoTests.Ninguna_declaracion_nombra_un_evento_que_ya_no_existe",
         "CadaEventoEstaDeclaradoTests.Todos_los_nombres_tienen_la_forma_acordada",
 
+        "ElCatalogoDeTiposEsElQueLaApiEmiteTests.Cada_codigo_del_catalogo_es_una_ranura_estable_que_ErrorDeOperacion_aceptaria",
+        "ElCatalogoDeTiposEsElQueLaApiEmiteTests.Cada_tipo_del_catalogo_lleva_una_clase_de_error_que_existe_y_tiene_estado",
+        "ElCatalogoDeTiposEsElQueLaApiEmiteTests.El_catalogo_existe_y_no_esta_vacio",
+        "ElCatalogoDeTiposEsElQueLaApiEmiteTests.El_type_de_cada_entrada_es_el_que_compone_la_politica_y_no_otro",
+        "ElCatalogoDeTiposEsElQueLaApiEmiteTests.Ningun_codigo_aparece_dos_veces_en_el_catalogo",
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
         "ElCuerpoQueNoEncajaTests.El_400_del_enlace_de_modelo_sale_por_la_politica_central_con_su_traza",

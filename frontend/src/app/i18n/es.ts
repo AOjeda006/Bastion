@@ -65,6 +65,69 @@ export const es = {
     sesionCaducada: 'Tu sesión ha caducado. Vuelve a entrar.',
     servidor: 'El servidor no ha podido responder. Inténtalo de nuevo.',
     carga: 'No se han podido cargar los datos. Inténtalo de nuevo.',
+
+    // Un texto por cada `type` que la API puede emitir. Las claves son el CÓDIGO tal cual, sin
+    // camelizar: la correspondencia con `docs/api/errores.json` tiene que poder mirarse a ojo y
+    // compararse entera, y cualquier transformación en medio es una regla más que se puede
+    // equivocar. El barrido de `ElCambioDeIdioma` compara este objeto contra el artefacto en los
+    // dos sentidos, así que un `type` nuevo sin texto es rojo el día que se escribe (ADR-0030).
+    tipos: {
+      'almacen-duplicado': 'Ya hay un almacén con ese código en esta empresa.',
+      'almacen-no-encontrado': 'Ese almacén ya no existe. Vuelve al listado y actualiza.',
+      'codigo-de-rol-ya-usado': 'Ya hay un rol con ese código. Elige otro.',
+      'contrasena-actual-incorrecta': 'La contraseña actual no es correcta.',
+      'conversion-um-duplicada': 'Ya hay una conversión entre esas dos unidades.',
+      'conversion-um-no-encontrada': 'Esa conversión de unidades ya no existe.',
+      'correo-ya-registrado': 'Ya hay una cuenta con ese correo electrónico.',
+      'credenciales-no-validas': 'El correo o la contraseña no son correctos.',
+      'datos-no-validos': 'Algunos campos no son válidos. Revisa los que aparecen marcados.',
+      'divisa-duplicada': 'Ya hay una divisa con ese código.',
+      'divisa-no-encontrada': 'Esa divisa ya no existe.',
+      'ejercicio-cerrado': 'El ejercicio está cerrado y no admite cambios.',
+      'ejercicio-con-series':
+        'No se puede eliminar un ejercicio que tiene series. Elimina antes las series.',
+      'ejercicio-duplicado': 'Ya hay un ejercicio con esas fechas en esta empresa.',
+      'ejercicio-no-encontrado': 'Ese ejercicio ya no existe. Vuelve al listado y actualiza.',
+      'empresa-activa-no-operativa':
+        'La empresa con la que estás operando ya no está disponible. Vuelve a entrar.',
+      'empresa-ajena': 'Esa empresa no es la tuya, así que no puedes operar sobre ella.',
+      'empresa-destino-no-operativa':
+        'La empresa que has elegido no admite altas: no existe o está bloqueada.',
+      'empresa-no-encontrada': 'Esa empresa ya no existe. Vuelve al listado y actualiza.',
+      'empresa-no-pertenece': 'No perteneces a esa empresa, así que no puedes operar con ella.',
+      'empresa-ya-registrada': 'Ya hay una empresa con ese NIF.',
+      'falta-if-match':
+        'Para guardar hay que decir sobre qué versión se escribe. Vuelve a abrir el formulario.',
+      'idempotencia-clave-no-valida':
+        'La aplicación ha enviado una clave de repetición que no vale. Inténtalo otra vez.',
+      'idempotencia-cuerpo-distinto':
+        'Se ha repetido una operación con los mismos datos de envío pero distinto contenido. Vuelve a empezar.',
+      'idempotencia-no-admitida': 'Esta operación no admite repetición segura. Inténtalo otra vez.',
+      'idempotencia-sin-empresa-activa':
+        'Tu sesión no tiene ninguna empresa activa. Elige una y vuelve a intentarlo.',
+      'if-match-no-valido':
+        'La versión que traía el formulario no tiene forma válida. Vuelve a abrirlo.',
+      'impuesto-con-tramos-solapados':
+        'Los tramos de vigencia de ese impuesto se solapan. Revisa las fechas.',
+      'impuesto-no-encontrado': 'Ese impuesto ya no existe.',
+      'orden-no-admitido': 'No se puede ordenar por ese campo.',
+      'pertenencia-no-encontrada': 'Esa persona no pertenece a la empresa indicada.',
+      'rol-no-encontrado': 'Ese rol ya no existe. Vuelve al listado y actualiza.',
+      'serie-cerrada': 'La serie está cerrada y no admite cambios.',
+      'serie-duplicada': 'Ya hay una serie con ese código en ese ejercicio.',
+      'serie-no-encontrada': 'Esa serie ya no existe. Vuelve al listado y actualiza.',
+      'serie-ya-numerada': 'La serie ya ha numerado documentos, así que eso no se puede cambiar.',
+      'sesion-no-renovable': 'Tu sesión no se ha podido renovar. Vuelve a entrar.',
+      'tipo-cambio-duplicado': 'Ya hay un tipo de cambio para esa divisa en esa fecha.',
+      'tipo-cambio-no-encontrado': 'Ese tipo de cambio ya no existe.',
+      'ubicacion-duplicada': 'Ya hay una ubicación con ese código en ese almacén.',
+      'ubicacion-no-encontrada': 'Esa ubicación ya no existe. Vuelve al listado y actualiza.',
+      'unidad-medida-duplicada': 'Ya hay una unidad de medida con ese código.',
+      'unidad-medida-no-encontrada': 'Esa unidad de medida ya no existe.',
+      'usuario-no-encontrado': 'Esa persona ya no existe. Vuelve al listado y actualiza.',
+      'version-obsoleta':
+        'Alguien ha guardado antes que tú. Vuelve a abrir el formulario para no pisar sus cambios.',
+    },
   },
 
   // Las dos pantallas del armazón (`app/paginas/`). No son de ningún módulo, así que su espacio de

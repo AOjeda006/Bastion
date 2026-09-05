@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -119,6 +123,52 @@ describe('El cambio de idioma', () => {
     expect(enCastellano.length).toBeGreaterThan(40);
     expect(enIngles).toEqual(enCastellano);
     expect(IDIOMAS).toHaveLength(2);
+  });
+
+  it('todo `type` que la API puede emitir tiene texto, y ningún texto sobra', () => {
+    // ADR-0030: desde el ítem 1.5, el texto que lee una persona cuando algo falla lo escribe el
+    // FRONTAL a partir del `type` del ProblemDetails. Eso convierte el conjunto de `type` en
+    // contrato entre los dos lados, y un contrato que nadie compara se desincroniza sin ruido: el
+    // backend estrena un código, aquí no hay texto, y quien lo sufre ve el mensaje genérico. No
+    // hay error, no hay aviso, no hay nada — solo una frase peor.
+    //
+    // Se compara ENTERO y en los DOS sentidos, no «que no falte ninguno»:
+    //   · un `type` sin texto es el fallo de arriba;
+    //   · un texto sin `type` es un código que se borró o se renombró en el backend y dejó aquí
+    //     una entrada muerta que nadie volverá a ver, y que en la siguiente revisión alguien
+    //     copiará creyendo que sigue viva.
+    //
+    // La fuente es el artefacto versionado, el mismo fichero que la CI regenera y compara contra
+    // el código fuente (`scripts/generar-errores.sh`). Aquí NO se vuelve a barrer el backend: eso
+    // sería repetir el guion y las dos copias se separarían. Se lee lo que el guion dejó.
+    const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+    const artefacto = resolve(raiz, 'docs/api/errores.json');
+
+    const catalogo = JSON.parse(readFileSync(artefacto, 'utf8')) as {
+      base: string;
+      tipos: { codigo: string; type: string; clase: string }[];
+    };
+
+    // El ancla contra el falso verde. Si el fichero se moviera, o el `JSON.parse` devolviera algo
+    // con otra forma, `tipos` sería `undefined` y el `.map` reventaría — bien. Pero un artefacto
+    // con `"tipos": []` es JSON válido, cumple el tipo, y dejaría las dos listas vacías casando
+    // perfectamente. Eso es lo que esta línea impide.
+    expect(
+      catalogo.tipos.length,
+      `${artefacto} no trae ni un tipo: se genera con \`bash scripts/generar-errores.sh\``,
+    ).toBeGreaterThan(20);
+
+    const queEmiteLaApi = catalogo.tipos.map((tipo) => tipo.codigo).sort();
+    const queTienenTexto = Object.keys(es.errores.tipos).sort();
+
+    expect(queTienenTexto).toEqual(queEmiteLaApi);
+
+    // Y el inglés por su cuenta. El caso de arriba ya exige que los dos diccionarios tengan las
+    // mismas claves, así que esto es redundante HOY; se escribe igual porque lo que aquí importa
+    // no es que los idiomas casen entre sí, sino que CADA UNO cubra el contrato. El día que
+    // aquella comparación se relaje —o que entre un tercer idioma— esta seguiría diciendo la
+    // verdad.
+    expect(Object.keys(en.errores.tipos).sort()).toEqual(queEmiteLaApi);
   });
 
   it('ninguna traducción se ha quedado sin traducir', () => {

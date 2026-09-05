@@ -364,7 +364,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
 
         respuesta.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await LeerProblema(respuesta)).GetProperty("type").GetString()
-            .ShouldBe("/errors/empresa-no-operativa");
+            .ShouldBe("/errors/empresa-activa-no-operativa");
     }
 
     [Fact]
