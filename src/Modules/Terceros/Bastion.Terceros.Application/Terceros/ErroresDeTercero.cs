@@ -36,7 +36,11 @@ internal static class ErroresDeTercero
     /// mirarlo. Un test que decide qué trozos no cuenta es un test que decide qué se puede filtrar.
     /// </para>
     /// </remarks>
-    internal static ErrorDeOperacion IdentificacionDuplicada() => ErrorDeOperacion.Conflicto(
-        "tercero-duplicado",
-        "Esta empresa ya tiene un tercero con ese identificador fiscal.");
+    /// <param name="bloqueada">Si la ficha que estorba está bloqueada.</param>
+    internal static ErrorDeOperacion IdentificacionDuplicada(bool bloqueada) =>
+        ErrorDeOperacion.Conflicto(
+            "tercero-duplicado",
+            bloqueada
+                ? "Ese identificador fiscal pertenece a una ficha dada de baja."
+                : "Esta empresa ya tiene un tercero con ese identificador fiscal.");
 }

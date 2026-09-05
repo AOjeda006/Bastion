@@ -98,7 +98,15 @@ internal sealed class CrearTercero(
 
         if (ocupada)
         {
-            return Resultado.Fallo<TerceroDto>(ErroresDeTercero.IdentificacionDuplicada());
+            // «Un mensaje mas util»: si la ficha no se ve sin abrir el ambito, es que esta
+            // bloqueada, y asi el usuario sabe por que no puede darla de alta otra vez.
+            bool visibleSinAbrirElAmbito = await terceros
+                .ExisteLaIdentificacionAsync(
+                    empresaId, identificacion.Pais, identificacion.Numero, cancelacion)
+                .ConfigureAwait(false);
+
+            return Resultado.Fallo<TerceroDto>(
+                ErroresDeTercero.IdentificacionDuplicada(!visibleSinAbrirElAmbito));
         }
 
         var tercero = Tercero.Crear(
