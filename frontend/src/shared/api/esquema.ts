@@ -875,6 +875,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/terceros/terceros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve una página de terceros.
+         * @description Sigue siendo un `GET` porque `page`, `size`, `sort` y `q` no llevan
+         *     nada personal: `q` busca por razón social y nombre comercial, que es lo que se lee en
+         *     una pantalla, no una llave con la que cruzar ficheros.
+         */
+        get: operations["Terceros_Listar"];
+        put?: never;
+        /**
+         * Da de alta un tercero.
+         * @description El `409` significa «esta empresa ya tiene un tercero con ese identificador fiscal», y
+         *     <b>no dice si el que lo ocupa está activo o bloqueado</b>. Es una propiedad, no una
+         *     redacción: si las dos respuestas se distinguieran, cualquiera con este formulario podría
+         *     recorrer identificadores y sacar la lista de quién está dado de baja, que es lo que el
+         *     art. 32 de la LOPDGDD reserva.
+         */
+        post: operations["Terceros_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/buscar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Busca terceros por un criterio que no puede ir en la URL.
+         * @description Es un POST que no crea nada, y choca con la lectura ingenua de REST. Es el
+         *       precio, se paga a sabiendas y está argumentado en el ADR-0025. Aquí muerde más que en
+         *       empresas: el identificador fiscal de un cliente es muy a menudo el DNI de una persona
+         *       física, y buscar por él es lo que quien usa esta pantalla va a hacer todos los días. Por la
+         *       cadena de consulta quedaría escrito todos los días —historial, enlace copiado,
+         *       Referer, registro de acceso del servidor de delante—.
+         *     La respuesta no lleva enlace a lo siguiente, lleva cursor. Un enlace lo compondría el
+         *       servidor con el criterio dentro, y habría devuelto el identificador a una URL él solo.
+         */
+        post: operations["Terceros_Buscar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve un tercero. */
+        get: operations["Terceros_Obtener"];
+        /**
+         * Cambia los datos de un tercero.
+         * @description Sin el identificador fiscal, y no por olvido: aparece en cada factura ya emitida a ese
+         *     tercero. Cambiarlo no es modificar al tercero, es otro tercero. Al no estar en el contrato,
+         *     no hay manera de intentarlo.
+         */
+        put: operations["Terceros_Modificar"];
+        post?: never;
+        /**
+         * Bloquea un tercero. No lo borra.
+         * @description Es lo que procede cuando alguien ejerce su derecho de supresión: sus datos se identifican y
+         *     se reservan (art. 32 de la LOPDGDD). Borrar la fila dejaría sin cuadrar las facturas que ya
+         *     se le emitieron (R15), que es lo que la ley no permite tocar.
+         */
+        delete: operations["Terceros_Bloquear"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{id}/desbloqueo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Devuelve un tercero bloqueado a la operativa.
+         * @description <b>Sin `If-Match`, como los demás desbloqueos.</b> No es un descuido ni una excepción
+         *             de comodidad: un recurso bloqueado no se lee por ningún camino ordinario y el `ETag` se
+         *             obtiene leyendo, así que exigir aquí una versión sería exigir una llave que no se puede
+         *             conseguir y dejaría la puerta cerrada para siempre. Lo que el `If-Match` evita —pisar
+         *             el cambio de otro— aquí no puede pasar: mientras el recurso está bloqueado ninguna otra
+         *             escritura llega hasta él, y desbloquear dos veces deja el mismo resultado que desbloquear
+         *             una (ADR-0017).
+         */
+        post: operations["Terceros_Desbloquear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -954,6 +1066,25 @@ export interface components {
             /**
              * Format: int32
              * @description Cuántas empresas se piden en este tramo.
+             */
+            tamanio?: number | string;
+        };
+        /** @description El criterio con el que se busca un tercero, y por dónde seguir. Viaja en el <b>cuerpo</b>. */
+        BuscarTercerosDto: {
+            /**
+             * @description Identificador fiscal exacto. Se normaliza igual que en el alta, así que admite puntos y
+             *     guiones.
+             */
+            numero?: null | string;
+            /** @description País del identificador, en ISO 3166-1 alfa-2. Si no se dice, se busca en España. */
+            pais?: null | string;
+            /** @description Trozo de la razón social o del nombre comercial. No distingue mayúsculas. */
+            nombre?: null | string;
+            /** @description Por dónde seguir, tal como lo devolvió el tramo anterior. Nulo para empezar. */
+            cursor?: null | string;
+            /**
+             * Format: int32
+             * @description Cuántos terceros se piden en este tramo.
              */
             tamanio?: number | string;
         };
@@ -1128,6 +1259,21 @@ export interface components {
             /** @description Plantilla con la que se compone el número del documento. */
             formato: string;
         };
+        /** @description Lo que hace falta para dar de alta un tercero. */
+        CrearTerceroDto: {
+            /** @description Con qué identificador fiscal se le conoce. */
+            identificacion: components["schemas"]["IdentificacionDeAltaDto"];
+            /** @description Razón social, o nombre y apellidos si es una persona física. */
+            razonSocial: string;
+            /** @description Nombre comercial, si opera con uno distinto del fiscal. */
+            nombreComercial?: null | string;
+            /** @description Domicilio fiscal, en los seis campos de R17. */
+            domicilioFiscal: components["schemas"]["DireccionDto"];
+            /** @description Se le vende. */
+            esCliente?: boolean;
+            /** @description Se le compra. */
+            esProveedor?: boolean;
+        };
         /** @description Lo que hace falta para registrar la cotización de un día. */
         CrearTipoCambioDto: {
             /**
@@ -1280,6 +1426,25 @@ export interface components {
             /** @description Régimen de IVA, como texto. */
             regimenDeIva: string;
         };
+        /** @description Con qué identificador se da de alta un tercero. */
+        IdentificacionDeAltaDto: {
+            /** @description País emisor, en ISO 3166-1 alfa-2. `ES` exige un NIF, NIE o CIF válido. */
+            pais: string;
+            /** @description El identificador. Se normaliza igual que un NIF, así que admite puntos y guiones. */
+            numero: string;
+        };
+        /** @description Con qué identificador fiscal se conoce a un tercero, tal como sale de la API. */
+        IdentificacionFiscalDto: {
+            /** @description País emisor, en ISO 3166-1 alfa-2. */
+            pais: string;
+            /** @description El identificador, ya normalizado. */
+            numero: string;
+            /**
+             * @description Cuánto se ha comprobado, como texto: `VerificadoPorAlgoritmo` para un NIF, un NIE o un CIF
+             *     cuyo carácter de control cuadra; `NoVerificado` para todo lo demás.
+             */
+            verificacion: string;
+        };
         /** @description Un tramo de un tipo impositivo, tal como sale de la API. */
         ImpuestoDto: {
             /**
@@ -1400,6 +1565,19 @@ export interface components {
         ModificarSerieDto: {
             /** @description Plantilla con la que se compone el número del documento. */
             formato: string;
+        };
+        /** @description Lo que se puede cambiar de un tercero ya dado de alta. */
+        ModificarTerceroDto: {
+            /** @description Razón social, o nombre y apellidos si es una persona física. */
+            razonSocial: string;
+            /** @description Nombre comercial, si opera con uno distinto del fiscal. */
+            nombreComercial?: null | string;
+            /** @description Domicilio fiscal, en los seis campos de R17. */
+            domicilioFiscal: components["schemas"]["DireccionDto"];
+            /** @description Se le vende. */
+            esCliente?: boolean;
+            /** @description Se le compra. */
+            esProveedor?: boolean;
         };
         /** @description Lo que se puede rectificar de una cotización. */
         ModificarTipoCambioDto: {
@@ -1611,6 +1789,26 @@ export interface components {
             total: number | string;
         };
         /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeTerceroDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["TerceroDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
         PaginaDeTipoCambioDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["TipoCambioDto"][];
@@ -1788,6 +1986,31 @@ export interface components {
             /** @description Permisos que tiene en la empresa activa, para la interfaz. */
             permisos: string[];
         };
+        /** @description Un tercero, tal como sale de la API. */
+        TerceroDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del tercero.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Empresa a la que pertenece la ficha (R8).
+             */
+            empresaId: string;
+            /** @description Su identificador fiscal, con país y estado de verificación. */
+            identificacion: components["schemas"]["IdentificacionFiscalDto"];
+            /** @description Razón social, o nombre y apellidos. */
+            razonSocial: string;
+            /** @description Nombre comercial, si opera con uno distinto. */
+            nombreComercial: null | string;
+            /** @description Domicilio fiscal, estructurado (R17). */
+            domicilioFiscal: components["schemas"]["DireccionDto"];
+            /** @description Se le vende. */
+            esCliente: boolean;
+            /** @description Se le compra. */
+            esProveedor: boolean;
+        };
         /** @description La cotización de un par de divisas en un día, tal como sale de la API. */
         TipoCambioDto: {
             /**
@@ -1820,6 +2043,18 @@ export interface components {
         TramoDeEmpresaDto: {
             /** @description Los de este tramo, en el orden del recorrido. */
             elementos: components["schemas"]["EmpresaDto"][];
+            /**
+             * Format: int32
+             * @description Cuántos elementos se pidieron.
+             */
+            tamanio: number | string;
+            /** @description Con qué pedir el tramo siguiente, o nulo si no hay más. */
+            cursorSiguiente: null | string;
+        };
+        /** @description Un tramo de resultados de una <b>búsqueda</b>, con por dónde seguir. */
+        TramoDeTerceroDto: {
+            /** @description Los de este tramo, en el orden del recorrido. */
+            elementos: components["schemas"]["TerceroDto"][];
             /**
              * Format: int32
              * @description Cuántos elementos se pidieron.
@@ -5474,6 +5709,323 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Terceros_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeTerceroDto"];
+                    "application/json": components["schemas"]["PaginaDeTerceroDto"];
+                    "text/json": components["schemas"]["PaginaDeTerceroDto"];
+                };
+            };
+        };
+    };
+    Terceros_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearTerceroDto"];
+                "text/json": components["schemas"]["CrearTerceroDto"];
+                "application/*+json": components["schemas"]["CrearTerceroDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TerceroDto"];
+                    "application/json": components["schemas"]["TerceroDto"];
+                    "text/json": components["schemas"]["TerceroDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Terceros_Buscar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuscarTercerosDto"];
+                "text/json": components["schemas"]["BuscarTercerosDto"];
+                "application/*+json": components["schemas"]["BuscarTercerosDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TramoDeTerceroDto"];
+                    "application/json": components["schemas"]["TramoDeTerceroDto"];
+                    "text/json": components["schemas"]["TramoDeTerceroDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Terceros_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tercero. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TerceroDto"];
+                    "application/json": components["schemas"]["TerceroDto"];
+                    "text/json": components["schemas"]["TerceroDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Terceros_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarTerceroDto"];
+                "text/json": components["schemas"]["ModificarTerceroDto"];
+                "application/*+json": components["schemas"]["ModificarTerceroDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TerceroDto"];
+                    "application/json": components["schemas"]["TerceroDto"];
+                    "text/json": components["schemas"]["TerceroDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Terceros_Bloquear: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Terceros_Desbloquear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tercero. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

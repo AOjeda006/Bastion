@@ -161,6 +161,16 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // la diferencia importa: escrita con el carril en rojo, la tentación es ensanchar la
         // partición para que las búsquedas dejen de contar como escrituras, y esa partición por
         // verbo es correcta y no tiene falsos negativos.
+        ["TercerosController.Desbloquear"] =
+            "el cuarto por el mismo argumento del ADR-0017, y el primero en un módulo que aún no " +
+            "tiene listado de lo bloqueado: un tercero bloqueado no se lee por ningún camino " +
+            "ordinario, así que no hay etiqueta que citar y exigirla sería cerrar la puerta con " +
+            "la llave dentro. DEPENDE DE lo mismo que las tres de Organización: de que ninguna " +
+            "lectura entregue un tercero bloqueado CON SU ETIQUETA. Que hoy no exista " +
+            "`GET .../terceros/bloqueados` no hace la exención más sólida, la hace menos " +
+            "interesante; cuando ese listado se construya, lo que la sostenga será exactamente lo " +
+            "que sostiene a las otras tres, y lo afirmarán las mismas dos reglas",
+
         ["EmpresasController.Buscar"] =
             "es un POST que NO cambia estado: lee. El verbo es POST porque el criterio —el NIF de " +
             "una empresa, que puede ser el DNI de un empresario individual— no puede viajar en la " +
@@ -171,6 +181,17 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "Repetirla no acumula: devuelve lo mismo. DEPENDE DE que siga sin escribir: el día " +
             "que una búsqueda apunte algo —un registro de lo buscado, una lista reciente—, deja " +
             "de ser esto y la exención caduca",
+
+        ["TercerosController.Buscar"] =
+            "gemela de la de empresas y con más motivo: el criterio es el identificador fiscal de " +
+            "un tercero, que muy a menudo ES el DNI de una persona física, y por la cadena de " +
+            "consulta quedaría escrito en el historial, en el enlace que se copia y en el " +
+            "registro de acceso del servidor de delante (ADR-0025). POST porque el criterio no " +
+            "puede viajar en la URL, no porque cree nada. Una clave de idempotencia guardaría la " +
+            "RESPUESTA, o sea que metería esos mismos datos en " +
+            "`auditoria.claves_de_idempotencia`. DEPENDE DE que siga sin escribir: el día que la " +
+            "búsqueda apunte algo —una lista de recientes, una traza de lo buscado— deja de ser " +
+            "esto y la exención caduca",
 
         ["UsuariosController.Desbloquear"] =
             "igual que las dos de Organización. Y aquí conviene dejar escrito lo que NO es: esto " +
@@ -305,8 +326,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(75, "acciones en total");
-        cambian.Count.ShouldBe(48, "acciones que cambian estado");
+        todas.Count.ShouldBe(82, "acciones en total");
+        cambian.Count.ShouldBe(53, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -329,15 +350,23 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // total es la forma que tiene este recuento de decir que se ha añadido un camino de
         // LECTURA; el día que uno de los otros cuatro números se moviera con él, lo que se habría
         // colado sería una escritura.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(21, "operaciones que exigen If-Match");
+        //
+        // Ochenta y dos desde el ítem 1.5, y los cinco números se mueven a la vez porque lo que
+        // entra es un MÓDULO entero, no una acción: Terceros publica siete rutas —dos lecturas,
+        // el alta con clave, la modificación y el bloqueo con If-Match, y las dos exentas—. El
+        // reparto, sumado, es la comprobación: +7 al total, +5 a las que cambian estado, +2 a
+        // If-Match, +1 a Idempotency-Key y +2 al cajón de las exentas. Si las siete hubieran
+        // entrado sin que subiera ninguno de los cuatro repartos, serían siete lecturas; si
+        // subiera el total y no el reparto, sería una escritura sin protección ni motivo escrito.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(23, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(12, "rutas que admiten Idempotency-Key");
-        s_exentas.Count.ShouldBe(15, "acciones exentas con motivo escrito");
+            .ShouldBe(13, "rutas que admiten Idempotency-Key");
+        s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (21 + 12 + s_exentas.Count).ShouldBe(cambian.Count);
+        (23 + 13 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

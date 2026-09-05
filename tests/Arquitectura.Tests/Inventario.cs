@@ -66,6 +66,7 @@ internal static class Inventario
             ["Auditoria"] = Presencia.Montado,
             ["Identidad"] = Presencia.Montado,
             ["Organizacion"] = Presencia.Montado,
+            ["Terceros"] = Presencia.Montado,
 
             ["Catalogo"] = Presencia.Andamio,
             ["Compras"] = Presencia.Andamio,
@@ -76,7 +77,6 @@ internal static class Inventario
             ["Inventario"] = Presencia.Andamio,
             ["Produccion"] = Presencia.Andamio,
             ["Rrhh"] = Presencia.Andamio,
-            ["Terceros"] = Presencia.Andamio,
             ["Tesoreria"] = Presencia.Andamio,
             ["Ventas"] = Presencia.Andamio,
 
@@ -124,6 +124,12 @@ internal static class Inventario
         "Organizacion.Domain",
         "Organizacion.Endpoints",
         "Organizacion.Infrastructure",
+
+        "Terceros.Application",
+        "Terceros.Contracts",
+        "Terceros.Domain",
+        "Terceros.Endpoints",
+        "Terceros.Infrastructure",
     };
 
     /// <summary>
@@ -248,6 +254,24 @@ internal static class Inventario
         "Organizacion.Endpoints -> Organizacion.Application",
         "Organizacion.Infrastructure -> BuildingBlocks.Infrastructure",
         "Organizacion.Infrastructure -> Organizacion.Application",
+
+        "Terceros.Application -> BuildingBlocks.Application",
+
+        // El SEGUNDO cruce entre módulos, y va por donde el primero: el `Contracts` del
+        // dueño. Un tercero es de la empresa que lo conoce y guarda su Guid sin clave ajena
+        // —vive en otro esquema, regla 4—, así que quien comprueba que esa empresa existe
+        // y no está bloqueada es Organización, a través de `IConsultaDeEmpresas`.
+        "Terceros.Application -> Organizacion.Contracts",
+
+        "Terceros.Application -> Terceros.Contracts",
+        "Terceros.Application -> Terceros.Domain",
+        "Terceros.Contracts -> BuildingBlocks.Contracts",
+        "Terceros.Contracts -> BuildingBlocks.Domain",
+        "Terceros.Domain -> BuildingBlocks.Domain",
+        "Terceros.Endpoints -> BuildingBlocks.Infrastructure",
+        "Terceros.Endpoints -> Terceros.Application",
+        "Terceros.Infrastructure -> BuildingBlocks.Infrastructure",
+        "Terceros.Infrastructure -> Terceros.Application",
     };
 
     /// <summary>
@@ -269,6 +293,12 @@ internal static class Inventario
                 "Identidad pregunta a Organización si esa empresa existe y no está bloqueada " +
                 "antes de meterla en el testigo. Lectura, por el contrato del dueño, resuelta en " +
                 "proceso: ni un JOIN entre esquemas ni una llamada HTTP.",
+
+            ["Terceros.Application -> Bastion.Organizacion.Contracts"] =
+                "el segundo, y por la misma puerta. Un tercero pertenece a la empresa que lo " +
+                "conoce, así que el alta pregunta a Organización si la empresa del claim " +
+                "existe y sigue activa antes de colgarle una ficha. Sin esta pregunta, la " +
+                "ausencia de clave ajena entre esquemas sería un agujero en vez de una frontera.",
         };
 
     /// <summary>
@@ -365,6 +395,14 @@ internal static class Inventario
                 "el nombre SÍ casa, y aun así se declara: lo que la lista aporta aquí no es " +
                 "descubrirlo, es decir POR DÓNDE se valida. Sin el puerto escrito, la regla sabría " +
                 "que hay un cruce y no podría exigir que alguien lo compruebe."),
+
+            ["Tercero.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del de la membresía, y por el mismo motivo: el nombre casa, pero lo que " +
+                "hace falta escribir es POR DÓNDE se comprueba. Lo valida CrearTercero contra el " +
+                "puerto antes de construir el agregado, porque un tercero colgado de una empresa " +
+                "que no existe o que está bloqueada es una ficha que nadie va a volver a ver."),
 
             ["TokenDeRefresco.EmpresaActivaId"] = new(
                 "Empresa",

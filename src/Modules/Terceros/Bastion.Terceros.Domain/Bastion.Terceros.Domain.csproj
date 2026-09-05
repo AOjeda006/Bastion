@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dominio del módulo Terceros (§4): el agregado `Tercero`, su identidad fiscal y sus roles.
+
+    Su única referencia permitida es el dominio base, de donde salen `Nif`, `Direccion`,
+    `Bloqueo` y `EntidadBase`. Ni EF Core, ni ASP.NET Core, ni nada de infraestructura
+    (§4, regla de frontera 2). Lo comprueba el test de arquitectura.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

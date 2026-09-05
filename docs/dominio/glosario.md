@@ -56,6 +56,7 @@ todas las sociedades, declarado como tal y con su motivo escrito en
 | Impuesto | `Impuesto` | Organización | Instalación | Un **tramo vigente** de un tipo impositivo, con su porcentaje y sus fechas. **No es «el IVA»**: el código no es único, y `IVA-GENERAL` tiene tantas filas como veces cambió el tipo. Un impuesto no se edita, se sucede: se cierra el tramo vigente y se crea el siguiente. |
 | Rol | `Rol` | Identidad | Instalación | Un manojo de permisos con nombre. **No es un permiso, y no es un poder**: la autorización nunca pregunta por el rol, pregunta por el permiso, para poder cambiar el reparto sin tocar el código. Quién tiene qué rol se dice **por empresa**, en la membresía. |
 | Serie | `Serie` | Organización | Empresa | La numeración de un tipo de documento en una empresa y un ejercicio, con su **contador**. El contador **no es una `SEQUENCE` de PostgreSQL**: es una columna. Una secuencia no es transaccional y deja huecos al hacer *rollback*, y la R5 exige correlativa y **sin huecos** (ADR-0007 §5). |
+| Tercero | `Tercero` | Terceros | Empresa | Con quién opera una empresa: identificación fiscal, razón social, domicilio fiscal y los dos papeles. **Es un solo agregado**, no dos: `EsCliente` y `EsProveedor` son papeles del mismo tercero, y el mismo NIF que te compra puede venderte. **No es «el cliente»** ni «el proveedor». No se borra: se bloquea, porque una persona física ejerce supresión y sus facturas emitidas no se pueden tocar (R15, art. 32 de la LOPDGDD). |
 | Tipo de cambio | `TipoCambio` | Organización | Instalación | Cuánto valía una divisa en otra un día concreto. Lleva **las dos divisas escritas**: la base es un campo de cada empresa, así que una sola columna dejaría la tasa sin dirección. Se lee «tantas unidades de destino por una de origen». |
 | Ubicación | `Ubicacion` | Organización | Empresa | Un hueco concreto dentro de un almacén: pasillo, estante, hueco. Es opcional **para el almacén**, no para el sistema. Lleva su propia `empresa_id` aunque su almacén ya la tenga, para que el filtro sea el mismo que el de todas las demás tablas. |
 | Unidad de medida | `UnidadMedida` | Organización | Instalación | Una unidad en la que se cuenta la mercancía: unidad, kilogramo, metro, caja. Los decimales **sí** son una columna aquí, al revés que en la divisa: cuántos admite el kilo lo decide quien monta el catálogo, no el BOE. |
@@ -106,6 +107,16 @@ solo existe durante una sesión:
 | **Token de refresco** | El que canjea un testigo nuevo, con rotación y motivo de revocación. Se guarda **su resumen**, no el token: la fila es tan sensible como una contraseña. | No viaja en cada petición. |
 | **Empresa activa** | Aquella con la que un usuario está operando **ahora**, dentro de la sesión. | No es «la empresa del usuario»: un usuario con varias membresías cambia de empresa activa sin volver a entrar. |
 
+## Terceros
+
+Su único agregado —**Tercero**— está arriba. Aquí, lo que vive dentro de él:
+
+| Término | Qué es | Y qué **no** es |
+|---|---|---|
+| **Identificación fiscal** | Objeto de valor con **país, número y estado de verificación**. Con `ES` el número es un NIF y se comprueba de verdad la letra de control; con cualquier otro país es opaco. | **No es el `Nif` de una empresa.** El de la empresa es siempre español y siempre válido —es el inquilino—; el de un tercero puede ser extranjero, y entonces no hay algoritmo que lo valide. Y **no es una cadena**: sin el país, el mismo número identificaría a dos personas distintas. |
+| **Estado de verificación** | Si el número se ha llegado a comprobar: `VerificadoPorAlgoritmo` cuando lo validó la letra de control, `SinVerificar` cuando no había con qué. | **No es «válido / inválido».** Lo que no se puede validar se marca como no validado, no se da por bueno. Crecerá con un tercer valor el día que se consulte el VIES; por eso se guarda como texto y no como entero. |
+| **Papel** | `EsCliente` y `EsProveedor`, los dos booleanos que dicen qué hace este tercero. Un tercero tiene al menos uno. | No son dos tipos ni dos tablas. Dos filas para el mismo NIF serían dos verdades sobre la misma persona, y la que se corrigiera sería la que alguien tuviera delante. |
+
 ## Auditoría
 
 | Término | Qué es | Y qué **no** es |
@@ -130,16 +141,14 @@ Las palabras del frontal son las mismas, y su reparto en carpetas también:
 Estas palabras ya tienen dueño en el §7 y **no se pueden usar para otra cosa**, ni buscarles
 sinónimo. Se definen aquí cuando se construyan, no antes:
 
-- **Tercero** — Terceros (§7.2). Es **un solo agregado** con roles `EsCliente` y `EsProveedor`:
-  «cliente» y «proveedor» son **papeles del mismo tercero**, no dos entidades. Fase 1.
 - **Artículo**, **Categoría**, **Tarifa** — Catálogo (§7.3). Fase 1.
 - **Retirada** — el final de vida de un maestro de instalación. La palabra **ya está decidida y
   todavía no existe en el código**: es la decisión 1 de aquí abajo, escrita en el **ADR-0023**, y se
   implementa en la fase 1. No es un bloqueo ni un cierre, y no se le puede llamar de otra manera.
 
 > Lo que este apartado reservaba para el ítem 0.15 —**Impuesto**, **Divisa** + **TipoCambio**,
-> **UnidadMedida** + **ConversionUM**, **Ubicacion**— ya está construido y ha subido a la tabla de
-> agregados.
+> **UnidadMedida** + **ConversionUM**, **Ubicacion**— y para el 1.5 —**Tercero**— ya está
+> construido y ha subido a la tabla de agregados.
 
 ---
 

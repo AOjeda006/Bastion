@@ -1,5 +1,5 @@
-using Bastion.BuildingBlocks.Contracts.Direcciones;
 using System.ComponentModel.DataAnnotations;
+using Bastion.BuildingBlocks.Contracts.Direcciones;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Almacenes;

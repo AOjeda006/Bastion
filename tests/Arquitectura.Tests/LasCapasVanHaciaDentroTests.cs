@@ -76,6 +76,10 @@ public sealed class LasCapasVanHaciaDentroTests
         "Organizacion.Contracts",
         "Organizacion.Domain",
         "Organizacion.Infrastructure",
+        "Terceros.Application",
+        "Terceros.Contracts",
+        "Terceros.Domain",
+        "Terceros.Infrastructure",
     ];
 
     [Fact]

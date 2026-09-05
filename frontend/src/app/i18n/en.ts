@@ -102,6 +102,10 @@ export const en: Diccionario = {
       'serie-no-encontrada': 'That series no longer exists. Go back to the list and refresh.',
       'serie-ya-numerada': 'The series has already numbered documents, so that cannot be changed.',
       'sesion-no-renovable': 'Your session could not be renewed. Sign in again.',
+      'tercero-duplicado':
+        'This company already has a business partner with that tax identifier.',
+      'tercero-no-encontrado':
+        'That business partner no longer exists. Go back to the list and refresh.',
       'tipo-cambio-duplicado': 'There is already an exchange rate for that currency on that date.',
       'tipo-cambio-no-encontrado': 'That exchange rate no longer exists.',
       'ubicacion-duplicada': 'There is already a location with that code in that warehouse.',

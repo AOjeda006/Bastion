@@ -38,6 +38,8 @@
     { "codigo": "serie-no-encontrada", "type": "/errors/serie-no-encontrada", "clase": "NoEncontrado" },
     { "codigo": "serie-ya-numerada", "type": "/errors/serie-ya-numerada", "clase": "Conflicto" },
     { "codigo": "sesion-no-renovable", "type": "/errors/sesion-no-renovable", "clase": "NoAutenticado" },
+    { "codigo": "tercero-duplicado", "type": "/errors/tercero-duplicado", "clase": "Conflicto" },
+    { "codigo": "tercero-no-encontrado", "type": "/errors/tercero-no-encontrado", "clase": "NoEncontrado" },
     { "codigo": "tipo-cambio-duplicado", "type": "/errors/tipo-cambio-duplicado", "clase": "Conflicto" },
     { "codigo": "tipo-cambio-no-encontrado", "type": "/errors/tipo-cambio-no-encontrado", "clase": "NoEncontrado" },
     { "codigo": "ubicacion-duplicada", "type": "/errors/ubicacion-duplicada", "clase": "Conflicto" },

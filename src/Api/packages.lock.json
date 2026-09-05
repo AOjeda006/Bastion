@@ -513,6 +513,47 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
         }
       },
+      "bastion.terceros.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Organizacion.Contracts": "[1.0.0, )",
+          "Bastion.Terceros.Contracts": "[1.0.0, )",
+          "Bastion.Terceros.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.terceros.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.terceros.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.terceros.endpoints": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Terceros.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.terceros.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Terceros.Application": "[1.0.0, )",
+          "EFCore.NamingConventions": "[10.0.1, )",
+          "Microsoft.EntityFrameworkCore": "[10.0.9, )",
+          "Microsoft.EntityFrameworkCore.Design": "[10.0.9, )",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.9, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
+        }
+      },
       "EFCore.NamingConventions": {
         "type": "CentralTransitive",
         "requested": "[10.0.1, )",

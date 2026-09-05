@@ -98,4 +98,34 @@ public enum MotivoParaVerLoBloqueado
     /// </para>
     /// </remarks>
     AccesoReservadoDelArticulo32,
+
+    /// <summary>
+    /// Comprobar que un identificador fiscal no lo tiene ya nadie en esa empresa, antes de dar de
+    /// alta a un tercero. Mira lo bloqueado porque la unicidad lo abarca.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Entra en el ítem 1.5 porque es cuando aparece el primer camino que lo necesita</b>, que
+    /// es la regla de esta lista desde que se escribió. Y lo necesita por una decisión tomada a
+    /// propósito: la unicidad de (empresa, identificador) <b>abarca también las fichas
+    /// bloqueadas</b>, así que el alta tiene que poder ver una ficha bloqueada para saber que
+    /// choca con ella. Con una unicidad parcial no haría falta este motivo —y a cambio el
+    /// desbloqueo tendría que resolver una colisión que hoy no puede existir—.
+    /// </para>
+    /// <para>
+    /// <b>No reutiliza <see cref="AdministracionDelBloqueo"/></b> por lo mismo que ese no reutiliza
+    /// el del artículo 32: lo que el registro anota es el motivo, y con un solo valor «alguien ha
+    /// dado de alta un cliente» y «alguien ha levantado una baja» dejarían la misma línea. Y son
+    /// hechos de distinto peso: por esta puerta se mira mucho —cada alta— y no se escribe nada
+    /// sobre lo bloqueado; por la otra se mira poco y se levanta una reserva.
+    /// </para>
+    /// <para>
+    /// <b>Lo que se ve por aquí no sale por la respuesta</b>, y eso no lo garantiza este
+    /// enumerado: lo garantiza la forma del puerto. <c>ExisteLaIdentificacionAsync</c> devuelve un
+    /// booleano, así que el caso de uso que abre este ámbito no llega a saber si lo que estorba
+    /// estaba activo o bloqueado. El ámbito sirve para que la pregunta sea correcta, no para
+    /// traerse los datos reservados a la capa de arriba.
+    /// </para>
+    /// </remarks>
+    ComprobacionDeUnicidadDeIdentificador,
 }

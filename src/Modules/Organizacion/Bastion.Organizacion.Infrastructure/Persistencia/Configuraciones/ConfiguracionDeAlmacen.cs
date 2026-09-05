@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
+using Bastion.BuildingBlocks.Infrastructure.Direcciones;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Domain.Empresas;

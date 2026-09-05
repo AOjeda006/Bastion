@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Controladores REST del módulo Terceros, bajo /api/v1/terceros/{recurso} (Anexo A.1).
+
+    Biblioteca de clases con FrameworkReference, no SDK Web: el host es uno solo (src/Api) y este
+    proyecto solo aporta controladores. Microsoft.AspNetCore.App es una referencia al framework
+    compartido, no un paquete de NuGet, así que no lleva versión ni entra en
+    Directory.Packages.props.
+  -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Terceros.Application/Bastion.Terceros.Application.csproj" />
+    <!--
+      El bloque común de Infrastructure, y solo por la política de errores y las respuestas con
+      versión: es donde el §12 sitúa la traducción de un error de negocio a ProblemDetails, y esa
+      traducción ES HTTP, igual que este proyecto. NO se referencia la Infrastructure DEL MÓDULO:
+      los controladores hablan con casos de uso, nunca con repositorios (§4).
+    -->
+    <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

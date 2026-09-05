@@ -142,14 +142,14 @@ public sealed class LasFronterasEntreModulosTests
                 .Order(StringComparer.Ordinal),
         ];
 
-        // La afirmación de conjunto no vacío de esta regla, con su número: los tres módulos
-        // montados llevan cinco proyectos cada uno. Los trece que faltan no tienen ni `.csproj`,
-        // así que un barrido que encontrara menos de quince estaría mirando menos módulos de los
+        // La afirmación de conjunto no vacío de esta regla, con su número: los cuatro módulos
+        // montados llevan cinco proyectos cada uno. Los doce que faltan no tienen ni `.csproj`,
+        // así que un barrido que encontrara menos de veinte estaría mirando menos módulos de los
         // que hay y —sin esta línea— no lo diría.
         proyectos.Count.ShouldBe(
-            15,
+            20,
             "el barrido de referencias tiene que encontrar los cinco proyectos de cada uno de los " +
-            "tres módulos montados, y ha encontrado " +
+            "cuatro módulos montados, y ha encontrado " +
             proyectos.Count.ToString(CultureInfo.InvariantCulture));
 
         IReadOnlyList<string> encontradas =

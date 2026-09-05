@@ -124,6 +124,8 @@ export const es = {
       'serie-no-encontrada': 'Esa serie ya no existe. Vuelve al listado y actualiza.',
       'serie-ya-numerada': 'La serie ya ha numerado documentos, así que eso no se puede cambiar.',
       'sesion-no-renovable': 'Tu sesión no se ha podido renovar. Vuelve a entrar.',
+      'tercero-duplicado': 'Esta empresa ya tiene un tercero con ese identificador fiscal.',
+      'tercero-no-encontrado': 'Ese tercero ya no existe. Vuelve al listado y actualiza.',
       'tipo-cambio-duplicado': 'Ya hay un tipo de cambio para esa divisa en esa fecha.',
       'tipo-cambio-no-encontrado': 'Ese tipo de cambio ya no existe.',
       'ubicacion-duplicada': 'Ya hay una ubicación con ese código en ese almacén.',

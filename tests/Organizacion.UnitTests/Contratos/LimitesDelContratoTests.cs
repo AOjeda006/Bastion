@@ -1,6 +1,6 @@
-using Bastion.BuildingBlocks.Contracts.Direcciones;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using Bastion.BuildingBlocks.Contracts.Direcciones;
 using Bastion.BuildingBlocks.Domain.Direcciones;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.Organizacion.Contracts.Comun;

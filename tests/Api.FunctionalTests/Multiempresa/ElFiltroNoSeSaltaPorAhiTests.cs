@@ -180,6 +180,33 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             // La apertura es UNA y cubre el listado entero. Si algún día fueran dos, este recuento
             // se pone rojo y hay que mirar qué otro camino ha empezado a ver lo reservado.
             ["src/Modules/Organizacion/Bastion.Organizacion.Application/Bloqueos/ConsultasDeLoBloqueado.cs"] = 1,
+
+            // El sexto desbloqueo, del ítem 1.5: el de un tercero. Misma razón mecánica que los
+            // cinco anteriores y ninguna novedad.
+            ["src/Modules/Terceros/Bastion.Terceros.Application/Terceros/DesbloquearTercero.cs"] = 1,
+
+            // Y la SÉPTIMA, que es la primera que no desbloquea ni lee lo reservado: un ALTA. Es
+            // la que más explicación necesita de toda la lista.
+            //
+            //   - Por qué mira: la unicidad de (empresa, identificador fiscal) abarca también las
+            //     fichas bloqueadas —decisión del ítem 1.5, escrita en `docs/PLAN.md`, y no algo
+            //     que decidiera el índice por omisión—. Si el alta no viera lo bloqueado, diría
+            //     que el identificador está libre cuando no lo está, y la fila chocaría después
+            //     contra la restricción y saldría como un 500 en vez de como el conflicto que es.
+            //   - Qué se trae de dentro: un BOOLEANO, y solo uno. El puerto
+            //     (`IRepositorioDeTerceros.ExisteLaIdentificacionAsync`) no entrega si el que
+            //     estorba estaba activo o bloqueado, así que la respuesta no puede distinguirlos.
+            //     Si las dos respuestas se distinguieran, el formulario de alta sería el censo de
+            //     las bajas del art. 32, recorrible identificador a identificador.
+            //   - Dónde queda escrito cuál era: en el registro, desde la implementación del
+            //     repositorio, que es quien lo sabe. En la respuesta, en ninguna parte.
+            //   - Cuánto dura: el ámbito envuelve SOLO la pregunta. Ni la creación ni el
+            //     `ConfirmarAsync` corren dentro, que es lo que pasaría con un `using` de
+            //     declaración en vez del bloque.
+            //
+            // La apertura es UNA. Si algún día fueran dos, este recuento se pone rojo y hay que
+            // mirar qué otra cosa ha empezado a mirar lo bloqueado durante un alta.
+            ["src/Modules/Terceros/Bastion.Terceros.Application/Terceros/CrearTercero.cs"] = 1,
         };
 
     // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de
@@ -190,6 +217,7 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         "src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Persistencia/AuditoriaDbContext.cs",
         "src/Modules/Identidad/Bastion.Identidad.Infrastructure/Persistencia/IdentidadDbContext.cs",
         "src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/OrganizacionDbContext.cs",
+        "src/Modules/Terceros/Bastion.Terceros.Infrastructure/Persistencia/TercerosDbContext.cs",
 
         // No es un módulo, y por eso está aquí abajo y con su línea: es el contexto con el que el
         // trabajo de fondo lee la bandeja. Define el filtro por lo mismo que los otros tres -la

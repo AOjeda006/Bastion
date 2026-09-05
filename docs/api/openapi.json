@@ -6992,6 +6992,618 @@
           { }
         ]
       }
+    },
+    "/api/v1/terceros/terceros": {
+      "get": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Devuelve una página de terceros.",
+        "description": "Sigue siendo un `GET` porque `page`, `size`, `sort` y `q` no llevan\nnada personal: `q` busca por razón social y nombre comercial, que es lo que se lee en\nuna pantalla, no una llave con la que cruzar ficheros.",
+        "operationId": "Terceros_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTerceroDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTerceroDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTerceroDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Da de alta un tercero.",
+        "description": "El `409` significa «esta empresa ya tiene un tercero con ese identificador fiscal», y\n<b>no dice si el que lo ocupa está activo o bloqueado</b>. Es una propiedad, no una\nredacción: si las dos respuestas se distinguieran, cualquiera con este formulario podría\nrecorrer identificadores y sacar la lista de quién está dado de baja, que es lo que el\nart. 32 de la LOPDGDD reserva.",
+        "operationId": "Terceros_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTerceroDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTerceroDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTerceroDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/buscar": {
+      "post": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Busca terceros por un criterio que no puede ir en la URL.",
+        "description": "Es un POST que no crea nada, y choca con la lectura ingenua de REST. Es el\n  precio, se paga a sabiendas y está argumentado en el ADR-0025. Aquí muerde más que en\n  empresas: el identificador fiscal de un cliente es muy a menudo el DNI de una persona\n  física, y buscar por él es lo que quien usa esta pantalla va a hacer todos los días. Por la\n  cadena de consulta quedaría escrito todos los días —historial, enlace copiado,\n  Referer, registro de acceso del servidor de delante—.\nLa respuesta no lleva enlace a lo siguiente, lleva cursor. Un enlace lo compondría el\n  servidor con el criterio dentro, y habría devuelto el identificador a una URL él solo.",
+        "operationId": "Terceros_Buscar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuscarTercerosDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuscarTercerosDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuscarTercerosDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TramoDeTerceroDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TramoDeTerceroDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TramoDeTerceroDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{id}": {
+      "get": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Devuelve un tercero.",
+        "operationId": "Terceros_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Cambia los datos de un tercero.",
+        "description": "Sin el identificador fiscal, y no por olvido: aparece en cada factura ya emitida a ese\ntercero. Cambiarlo no es modificar al tercero, es otro tercero. Al no estar en el contrato,\nno hay manera de intentarlo.",
+        "operationId": "Terceros_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTerceroDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTerceroDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTerceroDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Bloquea un tercero. No lo borra.",
+        "description": "Es lo que procede cuando alguien ejerce su derecho de supresión: sus datos se identifican y\nse reservan (art. 32 de la LOPDGDD). Borrar la fila dejaría sin cuadrar las facturas que ya\nse le emitieron (R15), que es lo que la ley no permite tocar.",
+        "operationId": "Terceros_Bloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{id}/desbloqueo": {
+      "post": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Devuelve un tercero bloqueado a la operativa.",
+        "description": "<b>Sin `If-Match`, como los demás desbloqueos.</b> No es un descuido ni una excepción\n        de comodidad: un recurso bloqueado no se lee por ningún camino ordinario y el `ETag` se\n        obtiene leyendo, así que exigir aquí una versión sería exigir una llave que no se puede\n        conseguir y dejaría la puerta cerrada para siempre. Lo que el `If-Match` evita —pisar\n        el cambio de otro— aquí no puede pasar: mientras el recurso está bloqueado ninguna otra\n        escritura llega hasta él, y desbloquear dos veces deja el mismo resultado que desbloquear\n        una (ADR-0017).",
+        "operationId": "Terceros_Desbloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
     }
   },
   "components": {
@@ -7158,6 +7770,59 @@
           }
         },
         "description": "El criterio con el que se busca una empresa, y por dónde seguir. Viaja en el <b>cuerpo</b>."
+      },
+      "BuscarTercerosDto": {
+        "type": "object",
+        "properties": {
+          "numero": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Identificador fiscal exacto. Se normaliza igual que en el alta, así que admite puntos y\nguiones."
+          },
+          "pais": {
+            "maxLength": 2,
+            "minLength": 2,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "País del identificador, en ISO 3166-1 alfa-2. Si no se dice, se busca en España."
+          },
+          "nombre": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Trozo de la razón social o del nombre comercial. No distingue mayúsculas."
+          },
+          "cursor": {
+            "maxLength": 64,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Por dónde seguir, tal como lo devolvió el tramo anterior. Nulo para empezar."
+          },
+          "tamanio": {
+            "maximum": 200,
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos terceros se piden en este tramo.",
+            "format": "int32"
+          }
+        },
+        "description": "El criterio con el que se busca un tercero, y por dónde seguir. Viaja en el <b>cuerpo</b>."
       },
       "CambiarContrasenaDto": {
         "required": [
@@ -7550,6 +8215,48 @@
         },
         "description": "Lo que hace falta para crear una serie."
       },
+      "CrearTerceroDto": {
+        "required": [
+          "identificacion",
+          "razonSocial",
+          "domicilioFiscal"
+        ],
+        "type": "object",
+        "properties": {
+          "identificacion": {
+            "description": "Con qué identificador fiscal se le conoce.",
+            "$ref": "#/components/schemas/IdentificacionDeAltaDto"
+          },
+          "razonSocial": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Razón social, o nombre y apellidos si es una persona física."
+          },
+          "nombreComercial": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Nombre comercial, si opera con uno distinto del fiscal."
+          },
+          "domicilioFiscal": {
+            "description": "Domicilio fiscal, en los seis campos de R17.",
+            "$ref": "#/components/schemas/DireccionDto"
+          },
+          "esCliente": {
+            "type": "boolean",
+            "description": "Se le vende."
+          },
+          "esProveedor": {
+            "type": "boolean",
+            "description": "Se le compra."
+          }
+        },
+        "description": "Lo que hace falta para dar de alta un tercero."
+      },
       "CrearTipoCambioDto": {
         "required": [
           "divisaOrigenId",
@@ -7899,6 +8606,51 @@
         },
         "description": "Una empresa, tal como sale de la API."
       },
+      "IdentificacionDeAltaDto": {
+        "required": [
+          "pais",
+          "numero"
+        ],
+        "type": "object",
+        "properties": {
+          "pais": {
+            "maxLength": 2,
+            "minLength": 2,
+            "type": "string",
+            "description": "País emisor, en ISO 3166-1 alfa-2. `ES` exige un NIF, NIE o CIF válido."
+          },
+          "numero": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "description": "El identificador. Se normaliza igual que un NIF, así que admite puntos y guiones."
+          }
+        },
+        "description": "Con qué identificador se da de alta un tercero."
+      },
+      "IdentificacionFiscalDto": {
+        "required": [
+          "pais",
+          "numero",
+          "verificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "pais": {
+            "type": "string",
+            "description": "País emisor, en ISO 3166-1 alfa-2."
+          },
+          "numero": {
+            "type": "string",
+            "description": "El identificador, ya normalizado."
+          },
+          "verificacion": {
+            "type": "string",
+            "description": "Cuánto se ha comprobado, como texto: `VerificadoPorAlgoritmo` para un NIF, un NIE o un CIF\ncuyo carácter de control cuadra; `NoVerificado` para todo lo demás."
+          }
+        },
+        "description": "Con qué identificador fiscal se conoce a un tercero, tal como sale de la API."
+      },
       "ImpuestoDto": {
         "required": [
           "id",
@@ -8205,6 +8957,43 @@
           }
         },
         "description": "Lo que se puede cambiar de una serie: su formato."
+      },
+      "ModificarTerceroDto": {
+        "required": [
+          "razonSocial",
+          "domicilioFiscal"
+        ],
+        "type": "object",
+        "properties": {
+          "razonSocial": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Razón social, o nombre y apellidos si es una persona física."
+          },
+          "nombreComercial": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Nombre comercial, si opera con uno distinto del fiscal."
+          },
+          "domicilioFiscal": {
+            "description": "Domicilio fiscal, en los seis campos de R17.",
+            "$ref": "#/components/schemas/DireccionDto"
+          },
+          "esCliente": {
+            "type": "boolean",
+            "description": "Se le vende."
+          },
+          "esProveedor": {
+            "type": "boolean",
+            "description": "Se le compra."
+          }
+        },
+        "description": "Lo que se puede cambiar de un tercero ya dado de alta."
       },
       "ModificarTipoCambioDto": {
         "type": "object",
@@ -8709,6 +9498,52 @@
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
+      "PaginaDeTerceroDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TerceroDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
       "PaginaDeTipoCambioDto": {
         "required": [
           "elementos",
@@ -9115,6 +9950,59 @@
         },
         "description": "Una sesión abierta: el token de acceso y con qué se está operando."
       },
+      "TerceroDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "identificacion",
+          "razonSocial",
+          "nombreComercial",
+          "domicilioFiscal",
+          "esCliente",
+          "esProveedor"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del tercero.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece la ficha (R8).",
+            "format": "uuid"
+          },
+          "identificacion": {
+            "description": "Su identificador fiscal, con país y estado de verificación.",
+            "$ref": "#/components/schemas/IdentificacionFiscalDto"
+          },
+          "razonSocial": {
+            "type": "string",
+            "description": "Razón social, o nombre y apellidos."
+          },
+          "nombreComercial": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Nombre comercial, si opera con uno distinto."
+          },
+          "domicilioFiscal": {
+            "description": "Domicilio fiscal, estructurado (R17).",
+            "$ref": "#/components/schemas/DireccionDto"
+          },
+          "esCliente": {
+            "type": "boolean",
+            "description": "Se le vende."
+          },
+          "esProveedor": {
+            "type": "boolean",
+            "description": "Se le compra."
+          }
+        },
+        "description": "Un tercero, tal como sale de la API."
+      },
       "TipoCambioDto": {
         "required": [
           "id",
@@ -9169,6 +10057,40 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/EmpresaDto"
+            },
+            "description": "Los de este tramo, en el orden del recorrido."
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos se pidieron.",
+            "format": "int32"
+          },
+          "cursorSiguiente": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Con qué pedir el tramo siguiente, o nulo si no hay más."
+          }
+        },
+        "description": "Un tramo de resultados de una <b>búsqueda</b>, con por dónde seguir."
+      },
+      "TramoDeTerceroDto": {
+        "required": [
+          "elementos",
+          "tamanio",
+          "cursorSiguiente"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TerceroDto"
             },
             "description": "Los de este tramo, en el orden del recorrido."
           },
@@ -9379,6 +10301,9 @@
     },
     {
       "name": "UnidadesDeMedida"
+    },
+    {
+      "name": "Terceros"
     }
   ]
 }

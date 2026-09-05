@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Casos de uso del módulo Terceros: un tipo por operación, sus puertos y sus DTOs internos.
+    Nada de bus en memoria: un caso de uso es una interfaz con su implementación registrada en el
+    contenedor (§3 del plan maestro).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Terceros.Domain/Bastion.Terceros.Domain.csproj" />
+    <ProjectReference Include="../Bastion.Terceros.Contracts/Bastion.Terceros.Contracts.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Application/Bastion.BuildingBlocks.Application.csproj" />
+
+    <!--
+      Contracts de Organización, y SOLO Contracts (§4, regla de frontera 1). Un tercero pertenece
+      a una empresa y guarda su Guid sin clave ajena, porque la empresa vive en otro esquema
+      (regla 4); lo que impide que ahí acabe un identificador inventado —o el de una empresa dada
+      de baja— es `IConsultaDeEmpresas`, resuelta en proceso. Es una llamada a método, no una
+      petición HTTP, y desde luego no un JOIN contra `organizacion.empresas`.
+    -->
+    <ProjectReference Include="../../Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
+    Solo las ABSTRACCIONES del contenedor, para publicar `AgregarCasosDeUsoDeTerceros`. Las
+    implementaciones de los casos de uso son `internal` a propósito —fuera del módulo solo se ve
+    la interfaz—, y eso obliga a que quien las registre viva en este mismo ensamblado.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>
