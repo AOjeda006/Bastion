@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router';
 
 import { clavesDeAlmacenes } from '../api/claves.ts';
 import { consultarAlmacenes } from '../api/consultas.ts';
-import { motivoDeFallo } from '@/shared/api/errores.ts';
+import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
@@ -18,6 +18,7 @@ import { Paginador } from '@/shared/ui/Paginacion.tsx';
  */
 export function PaginaDeAlmacenes(): React.JSX.Element {
   const { t } = useTranslation();
+  const textoDeFallo = useTextoDeFallo();
   const [parametros, setParametros] = useSearchParams();
   const paginacion = leerPaginacion(parametros);
 
@@ -35,7 +36,7 @@ export function PaginaDeAlmacenes(): React.JSX.Element {
   if (consulta.isError) {
     return (
       <Fallo
-        mensaje={t(`errores.${motivoDeFallo(consulta.error)}`)}
+        mensaje={textoDeFallo(consulta.error)}
         alReintentar={() => {
           void consulta.refetch();
         }}

@@ -52,6 +52,8 @@ export const en: Diccionario = {
     sesionCaducada: 'Your session has expired. Sign in again.',
     servidor: 'The server could not respond. Try again.',
     carga: 'The data could not be loaded. Try again.',
+    desconocido:
+      'The operation could not be completed. If it happens again, quote this reference: {{traza}}.',
 
     // Ver `es.ts`: las claves son las del artefacto `docs/api/errores.json`, sin camelizar.
     tipos: {

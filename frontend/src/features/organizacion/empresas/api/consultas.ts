@@ -27,12 +27,14 @@ function traducir(dto: EmpresaDto): Empresa {
  * lo primero sin lo segundo, y es lo normal para quien no administra.
  */
 export async function consultarEmpresas(paginacion: Paginacion): Promise<PaginaDeEmpresas> {
-  const { data, response } = await api.GET('/api/v1/organizacion/empresas', {
+  const { data, error, response } = await api.GET('/api/v1/organizacion/empresas', {
     params: { query: { page: paginacion.pagina, size: paginacion.tamanio } },
   });
 
   if (data === undefined) {
-    throw fallo(response.status);
+    // El cuerpo del error va con el estado: de él salen el `type` y la traza, que son
+    // lo que decide qué frase lee una persona (ADR-0030, y `useTextoDeFallo`).
+    throw fallo(response.status, error);
   }
 
   return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };

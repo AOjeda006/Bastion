@@ -5324,7 +5324,10 @@ cuando hace falta el porqué.
 
 - **ABIERTO (2026-09-04, recontado el 2026-09-05) · los tests del frontal sueltan 109 avisos de
   `act(...)`, en SIETE ficheros.** `An update to <X> inside a test was not wrapped in act(...)` sale
-  **109** veces en una ejecución limpia, y sale 109 tres pasadas seguidas: no es ruido variable.
+  **109** veces en una ejecución limpia. Medido nueve veces: 109 en ocho de ellas y **105** en una,
+  o sea que la cifra es estable de sobra para servir de línea base pero **no es determinista** —y esa
+  variación es, ella misma, la prueba de lo que la nota dice: hay actualizaciones de estado que caen
+  fuera de la ventana que el test controla, y a veces llegan y a veces no.
   El comando, escrito para que no haya que fiarse de la cifra:
   `npm --prefix frontend run test 2>&1 | grep -c "was not wrapped in act"`, y el reparto por fichero
   atribuyendo cada aviso al último encabezado `stderr | <fichero>` **después de quitar los códigos

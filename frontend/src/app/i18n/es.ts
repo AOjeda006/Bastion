@@ -65,6 +65,12 @@ export const es = {
     sesionCaducada: 'Tu sesión ha caducado. Vuelve a entrar.',
     servidor: 'El servidor no ha podido responder. Inténtalo de nuevo.',
     carga: 'No se han podido cargar los datos. Inténtalo de nuevo.',
+    // El camino (c) del ADR-0030: la API ha contestado con un `type` que este frontal no
+    // conoce, o sea que las dos partes se han desincronizado. La referencia es el `traceId`
+    // del ProblemDetails, el mismo que Serilog escribe: es lo único que permite ir al
+    // registro y ver qué pasó de verdad.
+    desconocido:
+      'No se ha podido completar la operación. Si vuelve a pasar, indica esta referencia: {{traza}}.',
 
     // Un texto por cada `type` que la API puede emitir. Las claves son el CÓDIGO tal cual, sin
     // camelizar: la correspondencia con `docs/api/errores.json` tiene que poder mirarse a ojo y

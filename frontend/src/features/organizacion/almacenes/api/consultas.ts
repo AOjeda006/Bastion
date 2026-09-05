@@ -26,12 +26,14 @@ function traducir(dto: AlmacenDto): Almacen {
 
 /** Pide una página de almacenes de la empresa con la que se está operando. */
 export async function consultarAlmacenes(paginacion: Paginacion): Promise<PaginaDeAlmacenes> {
-  const { data, response } = await api.GET('/api/v1/organizacion/almacenes', {
+  const { data, error, response } = await api.GET('/api/v1/organizacion/almacenes', {
     params: { query: { page: paginacion.pagina, size: paginacion.tamanio } },
   });
 
   if (data === undefined) {
-    throw fallo(response.status);
+    // El cuerpo del error va con el estado: de él salen el `type` y la traza, que son
+    // lo que decide qué frase lee una persona (ADR-0030, y `useTextoDeFallo`).
+    throw fallo(response.status, error);
   }
 
   return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
