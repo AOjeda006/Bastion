@@ -124,6 +124,15 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
       (await import('@/features/organizacion/empresas/ui/PaginaDeEmpresas.tsx')).PaginaDeEmpresas,
   },
   {
+    ruta: '/terceros',
+    duenio: 'terceros',
+    claveDeTitulo: 'terceros',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.terceroVer },
+    enLaNavegacion: true,
+    cargar: async () =>
+      (await import('@/features/terceros/terceros/ui/PaginaDeTerceros.tsx')).PaginaDeTerceros,
+  },
+  {
     ruta: '*',
     duenio: 'armazon',
     claveDeTitulo: 'noEncontrada',

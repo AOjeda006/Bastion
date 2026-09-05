@@ -1,8 +1,10 @@
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
-import { ALFA, almacenesDe, sesionDto } from './datos.ts';
+import { ALFA, almacenesDe, sesionDto, tercerosDe } from './datos.ts';
 import type { components } from '@/shared/api/esquema.ts';
+import { traducirSesion } from '@/shared/api/traduccion.ts';
+import { escribirSesion } from '@/shared/sesion/deposito.ts';
 
 /**
  * El servidor simulado, EN LA FRONTERA DE RED.
@@ -23,6 +25,14 @@ export const servidorSimulado = {
   peticionesDeAlmacenes: 0,
   /** Si el listado responde con un fallo, y con cuál. */
   falloDeAlmacenes: null as number | null,
+  /**
+   * El `q` con el que se ha pedido el listado de terceros, una entrada por petición.
+   *
+   * Es la lista y no un contador: lo que hay que poder afirmar es que el filtro LLEGA al servidor,
+   * y una pantalla que filtrara en el navegador pintaría exactamente lo mismo con la lista vacía.
+   */
+  busquedasDeTerceros: [] as string[],
+  falloDeTerceros: null as number | null,
 };
 
 /** Deja al servidor sin sesión y sin cuentas pendientes. Se llama entre test y test. */
@@ -30,12 +40,29 @@ export function reiniciarServidor(): void {
   servidorSimulado.sesion = null;
   servidorSimulado.peticionesDeAlmacenes = 0;
   servidorSimulado.falloDeAlmacenes = null;
+  servidorSimulado.busquedasDeTerceros = [];
+  servidorSimulado.falloDeTerceros = null;
 }
 
 /** Abre sesión en el servidor simulado, como si ya se hubiera entrado en una recarga anterior. */
 export function abrirSesionSimulada(empresaId = ALFA.id, permisos?: string[]): void {
   servidorSimulado.sesion =
     permisos === undefined ? sesionDto(empresaId) : sesionDto(empresaId, permisos);
+}
+
+/**
+ * Como la anterior, pero con la sesión YA en el depósito del navegador.
+ *
+ * Es lo que hace falta para `montarPantalla`, que no monta `ProveedorDeSesion` y por tanto no pide
+ * la sesión con la cookie: se deja escrita donde la habría dejado esa recuperación. Y se escribe
+ * **traduciendo el DTO**, con el mismo traductor que usa la aplicación, no componiendo a mano un
+ * objeto con la forma que le conviene al test — que es el falso verde clásico de las fixtures.
+ */
+export function abrirSesionYaRecuperada(empresaId = ALFA.id, permisos?: string[]): void {
+  const dto = permisos === undefined ? sesionDto(empresaId) : sesionDto(empresaId, permisos);
+
+  servidorSimulado.sesion = dto;
+  escribirSesion(traducirSesion(dto));
 }
 
 export const servidor = setupServer(
@@ -87,6 +114,23 @@ export const servidor = setupServer(
     const testigo = request.headers.get('Authorization')?.replace('Bearer testigo-de-', '') ?? '';
 
     return HttpResponse.json(almacenesDe(testigo));
+  }),
+
+  // Igual que el de almacenes, responde SEGÚN EL TESTIGO: la empresa activa va dentro del token y
+  // el filtro de inquilinato (R8) es cosa del servidor. Y anota el `q` que le llega, que es lo
+  // único que distingue una pantalla que filtra en el servidor de una que se trae todo y filtra en
+  // el navegador — las dos pintan lo mismo.
+  http.get('/api/v1/terceros/terceros', ({ request }) => {
+    const consulta = new URL(request.url).searchParams;
+    servidorSimulado.busquedasDeTerceros.push(consulta.get('q') ?? '');
+
+    if (servidorSimulado.falloDeTerceros !== null) {
+      return new HttpResponse(null, { status: servidorSimulado.falloDeTerceros });
+    }
+
+    const testigo = request.headers.get('Authorization')?.replace('Bearer testigo-de-', '') ?? '';
+
+    return HttpResponse.json(tercerosDe(testigo, consulta.get('q') ?? ''));
   }),
 
   http.get('/api/v1/organizacion/empresas', () =>

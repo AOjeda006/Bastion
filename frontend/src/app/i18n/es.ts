@@ -48,6 +48,7 @@ export const es = {
     inicio: 'Inicio',
     almacenes: 'Almacenes',
     empresas: 'Empresas',
+    terceros: 'Terceros',
     noEncontrada: 'Página no encontrada',
   },
 
@@ -191,6 +192,46 @@ export const es = {
       poblacion: 'Población',
       divisa: 'Divisa',
       ningunaVisible: 'No hay ninguna empresa que puedas ver.',
+    },
+  },
+
+  terceros: {
+    terceros: {
+      cargando: 'los terceros',
+      tabla: 'Terceros de la empresa activa',
+      identificador: 'Identificador fiscal',
+      razonSocial: 'Razón social',
+      poblacion: 'Población',
+      papel: 'Papel',
+
+      // El filtro dice por qué busca, y no es un adorno: quien lee «Buscar» prueba con el NIF, no
+      // lo encuentra y concluye que el tercero no existe. Decir por dónde busca este recuadro
+      // ahorra esa alta duplicada. Por NIF se busca desde la ficha, y va por el cuerpo (ADR-0025).
+      filtro: 'Buscar por razón social o nombre comercial',
+      filtrar: 'Buscar',
+
+      paginaVacia: 'Esta página no tiene terceros. Vuelve a la anterior.',
+      ningunoTodavia: 'Todavía no hay ningún tercero dado de alta en esta empresa.',
+      ningunoConEsteFiltro: 'Ningún tercero coincide con «{{filtro}}».',
+
+      verificacion: {
+        verificado: 'Comprobado',
+        verificadoDetalle: 'El carácter de control del identificador cuadra.',
+        sinVerificar: 'Sin comprobar',
+        sinVerificarDetalle:
+          'Este identificador no se puede comprobar por su forma —es extranjero, o no sigue el ' +
+          'formato español—, así que puede estar mal tecleado. Revísalo antes de facturar.',
+        desconocida: 'Sin comprobar',
+        desconocidaDetalle:
+          'Esta versión de la pantalla no sabe interpretar el estado de comprobación que ha ' +
+          'llegado. Trátalo como no comprobado y avisa a quien administre Bastion.',
+      },
+
+      papeles: {
+        cliente: 'Cliente',
+        proveedor: 'Proveedor',
+        ambos: 'Cliente y proveedor',
+      },
     },
   },
 };

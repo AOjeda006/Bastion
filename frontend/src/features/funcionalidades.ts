@@ -16,7 +16,7 @@
  * precisamente lo que el barrido comprueba, y además lo comprueba **por el efecto**: pide a ESLint
  * que linte un import prohibido entre cada par y exige que lo marque.
  */
-export const FUNCIONALIDADES = ['identidad', 'organizacion'] as const;
+export const FUNCIONALIDADES = ['identidad', 'organizacion', 'terceros'] as const;
 
 /** Una de las funcionalidades que existen. No es `string`: una errata no compila. */
 export type Funcionalidad = (typeof FUNCIONALIDADES)[number];

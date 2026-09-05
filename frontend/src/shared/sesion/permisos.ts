@@ -13,4 +13,5 @@
 export const PERMISOS = {
   almacenVer: 'organizacion.almacen.ver',
   empresaVer: 'organizacion.empresa.ver',
+  terceroVer: 'terceros.tercero.ver',
 } as const;

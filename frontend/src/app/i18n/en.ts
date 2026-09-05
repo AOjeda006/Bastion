@@ -35,6 +35,7 @@ export const en: Diccionario = {
     inicio: 'Home',
     almacenes: 'Warehouses',
     empresas: 'Companies',
+    terceros: 'Business partners',
     noEncontrada: 'Page not found',
   },
 
@@ -102,8 +103,7 @@ export const en: Diccionario = {
       'serie-no-encontrada': 'That series no longer exists. Go back to the list and refresh.',
       'serie-ya-numerada': 'The series has already numbered documents, so that cannot be changed.',
       'sesion-no-renovable': 'Your session could not be renewed. Sign in again.',
-      'tercero-duplicado':
-        'This company already has a business partner with that tax identifier.',
+      'tercero-duplicado': 'This company already has a business partner with that tax identifier.',
       'tercero-no-encontrado':
         'That business partner no longer exists. Go back to the list and refresh.',
       'tipo-cambio-duplicado': 'There is already an exchange rate for that currency on that date.',
@@ -169,6 +169,43 @@ export const en: Diccionario = {
       poblacion: 'Town',
       divisa: 'Currency',
       ningunaVisible: 'There is no company you can see.',
+    },
+  },
+
+  terceros: {
+    terceros: {
+      cargando: 'the business partners',
+      tabla: 'Business partners of the active company',
+      identificador: 'Tax ID',
+      razonSocial: 'Legal name',
+      poblacion: 'Town',
+      papel: 'Role',
+
+      filtro: 'Search by legal name or trading name',
+      filtrar: 'Search',
+
+      paginaVacia: 'This page has no business partners. Go back to the previous one.',
+      ningunoTodavia: 'No business partner has been registered at this company yet.',
+      ningunoConEsteFiltro: 'No business partner matches “{{filtro}}”.',
+
+      verificacion: {
+        verificado: 'Checked',
+        verificadoDetalle: 'The check character of the tax ID adds up.',
+        sinVerificar: 'Not checked',
+        sinVerificarDetalle:
+          'This tax ID cannot be checked from its shape —it is foreign, or it does not follow ' +
+          'the Spanish format—, so it may contain a typo. Review it before invoicing.',
+        desconocida: 'Not checked',
+        desconocidaDetalle:
+          'This version of the screen does not know how to read the check status that arrived. ' +
+          'Treat it as unchecked and tell whoever administers Bastion.',
+      },
+
+      papeles: {
+        cliente: 'Customer',
+        proveedor: 'Supplier',
+        ambos: 'Customer and supplier',
+      },
     },
   },
 };

@@ -71,7 +71,7 @@ describe('El barrido de rutas', () => {
     expect([...montadas].sort()).toEqual([...declaradas].sort());
   });
 
-  it('la partición cuadra: 5 rutas = 2 públicas + 1 de sesión + 2 de permiso', () => {
+  it('la partición cuadra: 6 rutas = 2 públicas + 1 de sesión + 3 de permiso', () => {
     const porClase = {
       publica: RUTAS.filter((r) => r.exigencia.clase === 'publica'),
       sesion: RUTAS.filter((r) => r.exigencia.clase === 'sesion'),
@@ -80,27 +80,32 @@ describe('El barrido de rutas', () => {
 
     // Contada, como las del backend: si mañana hay seis rutas, este número obliga a mirar en cuál
     // de las tres clases ha caído la nueva en vez de dejar que se cuele en la más cómoda.
-    expect(RUTAS).toHaveLength(5);
+    expect(RUTAS).toHaveLength(6);
     expect(porClase.publica.map((r) => r.ruta)).toEqual(['/acceso', '*']);
     expect(porClase.sesion.map((r) => r.ruta)).toEqual(['/']);
-    expect(porClase.permiso.map((r) => r.ruta)).toEqual(['/almacenes', '/empresas']);
+    expect(porClase.permiso.map((r) => r.ruta)).toEqual(['/almacenes', '/empresas', '/terceros']);
     expect(porClase.publica.length + porClase.sesion.length + porClase.permiso.length).toBe(
       RUTAS.length,
     );
   });
 
-  it('la partición por dueño cuadra: 5 rutas = 2 del armazón + 1 de identidad + 2 de organizacion', () => {
+  it('la partición por dueño cuadra: 6 rutas = 2 del armazón + 1 de identidad + 2 de organizacion + 1 de terceros', () => {
     const porDuenio = {
       armazon: RUTAS.filter((r) => r.duenio === 'armazon'),
       identidad: RUTAS.filter((r) => r.duenio === 'identidad'),
       organizacion: RUTAS.filter((r) => r.duenio === 'organizacion'),
+      terceros: RUTAS.filter((r) => r.duenio === 'terceros'),
     };
 
     expect(porDuenio.armazon.map((r) => r.ruta)).toEqual(['/', '*']);
     expect(porDuenio.identidad.map((r) => r.ruta)).toEqual(['/acceso']);
     expect(porDuenio.organizacion.map((r) => r.ruta)).toEqual(['/almacenes', '/empresas']);
+    expect(porDuenio.terceros.map((r) => r.ruta)).toEqual(['/terceros']);
     expect(
-      porDuenio.armazon.length + porDuenio.identidad.length + porDuenio.organizacion.length,
+      porDuenio.armazon.length +
+        porDuenio.identidad.length +
+        porDuenio.organizacion.length +
+        porDuenio.terceros.length,
     ).toBe(RUTAS.length);
 
     // Y que ningún dueño sea una funcionalidad que ya no existe. El tipo lo impide hoy porque sale
