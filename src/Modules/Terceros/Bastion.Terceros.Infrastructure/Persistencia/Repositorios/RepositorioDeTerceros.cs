@@ -46,7 +46,8 @@ internal sealed partial class RepositorioDeTerceros(
         bool? bloqueado = await contexto.Terceros
             .Where(tercero => tercero.EmpresaId == empresaId
                 && tercero.Identificacion.Pais == pais
-                && tercero.Identificacion.Numero == numero)
+                && tercero.Identificacion.Numero == numero
+                && !tercero.Bloqueo.EstaBloqueado)
             .Select(tercero => (bool?)tercero.Bloqueo.EstaBloqueado)
             .FirstOrDefaultAsync(cancelacion)
             .ConfigureAwait(false);
