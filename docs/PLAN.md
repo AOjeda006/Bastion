@@ -2780,6 +2780,149 @@ construir lo registrado. El relato completo, con el mensaje de la CI y el mismo 
 local en milisegundos, en *Verificado en local → La sexta, que no puse yo*.
 
 
+### Tomadas por el agente de desarrollo — ítem 1.5 (2026-09-05)
+
+**1. La unicidad de (empresa, identificador) abarca TAMBIÉN lo bloqueado, y la decisión no la toma
+el índice.** El enunciado del ítem cruza dos cosas —unicidad por (empresa, NIF) y bloqueo— y avisa de
+que lo que no vale es que decida el índice por omisión. Son dos opciones de verdad y las dos tienen
+coste: un índice **parcial** (`WHERE NOT bloqueado`) libera el identificador al bloquear la ficha, y
+entonces desbloquear puede encontrarse **dos filas con la misma llave** y alguien tiene que deshacer
+a mano un empate con datos personales por medio; un índice **incondicional** deja el identificador
+ocupado durante todo el plazo del art. 32, y quien quiera volver a operar con ese tercero tiene que
+desbloquear el que hay en vez de dar de alta otro. Se elige el **incondicional**, porque un
+desbloqueo que puede fallar por una colisión creada mientras tanto no es reversible, y el art. 32
+exige poder devolver la ficha a su sitio. La contrapartida está escrita donde se paga
+(`ErroresDeTercero`, `IRepositorioDeTerceros`) y comprobada **por el efecto**, no por la
+configuración: `Bloquear_un_tercero_no_libera_su_identificador_y_por_eso_desbloquear_no_choca` da de
+alta, bloquea, vuelve a intentar el alta —409— y luego desbloquea y comprueba que la ficha vuelve
+entera con su identificador. Y `La_unicidad_del_identificador_esta_EN_LA_BASE_y_abarca_tambien_lo_bloqueado`
+se lo pregunta a `pg_index` con `indpred IS NULL`, que es la mitad que dice que **no hay predicado
+parcial**: sin esa condición el test pasaría igual con el índice contrario.
+
+**2. El índice está escrito a mano en la migración, y eso obliga a que lo vigile otro.** EF Core 10
+**no sabe indexar miembros de un tipo complejo**: se intentaron las dos formas y las dos fallan —con
+el selector, «no es una expresión de acceso a miembro válida»; con los nombres, «la propiedad
+"Identificacion.Pais" no se puede añadir al tipo "Tercero"»—. La alternativa era degradar la
+identificación a **tipo poseído**, que sí admite índices, y se descartó: un poseído tiene identidad
+sintetizada y EF lo sigue como una entidad más (ADR-0016), o sea que el mapeo mentiría sobre el
+modelo para conseguir un índice. Se escribe con `CreateIndex` en la migración. Lo que eso rompe hay
+que decirlo: como el modelo **no conoce** el índice, `has-pending-model-changes` no puede echarlo en
+falta, así que borrarlo de la migración no pondría roja ninguna comprobación de migraciones. Quien lo
+nota es el test de esquema, que lo busca **en la base** — que además es donde de verdad importa.
+
+**3. La indistinguibilidad del conflicto se sostiene en CUATRO decisiones de estructura, no en una
+redacción.** El criterio pide que el alta contra un bloqueado devuelva un conflicto que no revela, y
+lo que se ha buscado es que la redacción no pueda romperlo:
+
+- (a) el puerto devuelve un **booleano** —`ExisteLaIdentificacionAsync`—, así que no es que el caso
+  de uso decida no mirar si el que estorba estaba bloqueado: **no lo tiene**. Un enumerado de tres
+  valores habría dejado la propiedad en manos de que nadie escribiera un `if`, y la primera vez que
+  alguien quisiera «un mensaje más útil» lo escribiría.
+- (b) `ErroresDeTercero.IdentificacionDuplicada()` **no recibe parámetros y no lleva el número
+  dentro** —al revés que el almacén duplicado, que sí lo lleva—, porque con el número las dos
+  respuestas dejarían de ser comparables enteras y la comparación tendría que normalizar el cuerpo. Un
+  test que decide qué trozos no cuenta es un test que decide qué se puede filtrar.
+- (c) el **tiempo** es el tercer canal, y los dos desenlaces hacen literalmente la misma consulta —un
+  índice, una fila—: no hay un camino que además cargue el bloqueo ni uno que se ahorre la lectura.
+  Iguales **por construcción**, no por haberlos medido.
+- (d) cuál de los dos era **sí** queda escrito, pero en el registro y desde la implementación, que es
+  quien lo sabe: suceso **8400** con `{Bloqueada}`, la empresa y el instante, y **sin el identificador
+  fiscal dentro** — un NIF es un dato personal y el registro se agrega, se exporta y se conserva con
+  menos ceremonia que la base de datos.
+
+El ámbito de bloqueo se abre **solo alrededor de la pregunta** y no hasta el `ConfirmarAsync`: si
+llegara hasta la grabación, se grabaría con el filtro de R16 apagado, que es mucho más de lo que aquí
+hace falta.
+
+**4. La fuga que este ítem NO cierra, dicha porque existe.** Quien tenga a la vez
+`terceros.tercero.ver` y `terceros.tercero.crear` puede **correlacionar dos respuestas**: la búsqueda
+por identificador (`POST .../buscar`) no encuentra la ficha bloqueada —una consulta ordinaria no ve lo
+bloqueado— y el alta con ese mismo identificador contesta 409. «No aparece y sin embargo está
+ocupado» solo puede significar una cosa. Cerrarlo pide algo que no es de este ítem —separar los dos
+permisos, o hacer que la búsqueda mienta igual que el alta— y el checklist no se amplía por iniciativa
+propia. Queda anotado con su nombre: lo que este ítem garantiza es que **una sola respuesta** no lo
+diga, y eso es lo que estaba en el criterio.
+
+**5. Un tercero bloqueado no aparece en NINGÚN listado, y esto lo estrena el 1.5.** El listado del
+art. 32 que construyó el 1.4 recorre `TipoDeRecursoBloqueado`, que tiene exactamente tres valores
+—`Empresa`, `Almacen`, `Ubicacion`—. Un tercero bloqueado desaparece del camino ordinario, como debe,
+y **no asoma por el camino reservado**, que es donde debería. O sea que hoy la única forma de saber
+que existe es intentar darlo de alta otra vez, que es justo el canal que el punto 3 cierra. No se
+arregla aquí porque el enumerado, el permiso y el DTO de ese listado son del módulo Organización y
+ampliarlos es cambiar el criterio del 1.4, ya cerrado; se anota como **deuda con nombre** para el ítem
+que toque la retirada (1.7) o el que abra ese listado a más módulos.
+
+**6. Los datos de prueba del identificador fiscal se GENERAN, y por eso la batería prueba el
+algoritmo en las dos direcciones.** Un NIF real es un dato personal, y en una fixture queda en el
+repositorio, en el artefacto de resultados y en el registro de la CI, para siempre y sin plazo. No hay
+ni uno: `IdentificadoresInventados` calcula el carácter de control de números inventados
+—`"TRWAGMYFPDXBNJZSQVHLCKE"[n % 23]` para el NIF, y el doblado de las posiciones pares para el CIF— y
+`LaBateriaGeneradaTests` los recorre **en los dos sentidos**: el generado con su control se acepta, y
+el mismo número con **cualquiera de los otros 22** controles se rechaza. Eso segundo es lo que
+convierte la batería en una prueba del algoritmo y no en una lista de ejemplos: un validador que
+aceptara cualquier letra pasaría la mitad de arriba entera. En el frontal, lo mismo: los
+identificadores de `datos.ts` son `00000001R`, `00000002W` y `00000003A`, derivados con el mismo
+algoritmo y documentados como tales, más uno extranjero opaco.
+
+**7. El artefacto de `type` fue primero, y el orden se cobró.** Es la condición que el 1.3 dejó
+escrita —«el mecanismo antes que el primer texto que lo use»— y se cumplió literalmente: los dos
+primeros commits del ítem son el generador (`scripts/generar-errores.sh`), `docs/api/errores.json`, su
+paso en la CI y el barrido de diccionarios comparándolo; las pantallas de Terceros vinieron después.
+La consecuencia práctica es que `tercero-duplicado`, `tercero-no-encontrado` y los demás **nacieron
+con texto en los dos idiomas el día que se escribieron**, sin una sola excepción que justificar en el
+barrido. Al revés, el ítem habría escrito los textos a mano y el barrido habría nacido con la lista de
+lo que no cumple.
+
+**8. `Terceros.UnitTests` nace SIN censo, siguiendo la raya que puso el 1.4.** El censo cubre los
+cuatro carriles con **reglas** —afirmaciones sobre un universo descubierto, cuyo borrado no se nota en
+nada—; los tres proyectos `*.UnitTests` se quedaron fuera a propósito porque son tests de dominio y
+borrar uno sí se nota en el comportamiento. El cuarto proyecto unitario se crea con el mismo criterio,
+y no por omisión. Es una raya movible; moverla no es de este ítem.
+
+**9. El frontal entrega el listado del criterio y NO la búsqueda por cuerpo.** El criterio pide
+«listado paginado y filtrado» y `features/terceros/`, y eso está: `/terceros` con `?pagina=`,
+`?tamanio=` y `?busqueda=` en la URL, el sello de verificación pintado **siempre** —también cuando
+está comprobado— y el papel, que dice «cliente y proveedor» cuando son las dos cosas porque es **una**
+ficha. El recuadro de filtro **no busca por identificador fiscal**, y es el ADR-0025 aplicado donde se
+puede desobedecer: lo que se teclea ahí acaba en el historial del navegador, en el enlace que se copia,
+en la cabecera `Referer` y en el registro de acceso del servidor de delante. Buscar por identificador
+existe en la API, va por el cuerpo con `POST .../buscar`, y **el frontal todavía no lo usa**: es
+alcance que el criterio no pide y que se deja anotado en vez de colarlo. El servidor simulado de los
+tests **no filtra por identificador a propósito**, para que ningún test pueda pasar contra un servidor
+que sí lo hiciera.
+
+**10. El régimen fiscal del §7.2 no está en el criterio de ningún ítem, y queda anotado.** El modelo
+de dominio del plan maestro se lo pone a `Tercero`; el criterio escrito del **1.5** no lo nombra, y el
+del **1.6** tampoco —ese enumera `Contacto`, `CuentaBancaria`, `CondicionPago` y `LimiteCredito`—. No
+se añade por iniciativa propia (el checklist no se amplía) y no se da por olvidado: si es del 1.6, hay
+que decirlo allí; si es de facturación, hay que decir de qué fase. Es una pregunta, no una tarea.
+
+**11. Los tests nuevos montan la PANTALLA, no la aplicación, y la cifra está medida.** Montar el
+armazón (`montarAplicacion`) cuesta exactamente **cuatro** avisos de «not wrapped in act» por montaje
+—`SelectorDeEmpresa`, `Guarda`, `Disposicion` y `RouterProvider`—, con carga perezosa de la ruta y sin
+ella, y saltan **después** de que el ámbito de `act` se cierre, así que envolver no los quita: se
+probaron las dos formas, y una de ellas —sondear dentro de un `act` asíncrono— **cuelga**, porque
+React no repinta dentro de un ámbito `act` asíncrono. La salida es `montarPantalla`, que monta la
+pantalla bajo prueba con su enrutador de memoria, su caché y su i18n: **cero avisos**. Los nueve casos
+nuevos del listado y los del texto de fallo entran con cero, y la cifra global se queda en **109 en
+siete ficheros**, la misma antes y después. Cerrar esos 109 no es de este ítem; no aumentarlos, sí.
+
+**12. Una desviación entre la batería de `AGENTS.md` y la CI, encontrada al diseñar la mutación 4.**
+La CI comprueba desde este ítem que `docs/api/errores.json` no se ha quedado atrás (paso «Catálogo de
+errores»), y la batería de aceptación de `AGENTS.md` **no lo nombraba**: quien la pasara entera en
+local podía empujar un `type` nuevo sin regenerar el artefacto y descubrirlo en el run. Es la misma
+familia que la rendija del recuento que anotó el 1.3 —«el paso de CI no es solo su comando»— y se
+arregla igual: la línea en la tabla y en el bloque de la batería. Salió de preguntarse **quién** iba a
+poner roja la mutación 4, no de leer el fichero por encima.
+
+**13. Ninguna dependencia nueva, y la frase sale del diff.** Los conjuntos de paquetes resueltos de
+todos los `packages.lock.json` a los dos lados: **145 en `main`, 150 en la rama**, y las cinco entradas
+de diferencia son los cinco proyectos nuevos del propio módulo (`bastion.terceros.domain`,
+`.contracts`, `.application`, `.infrastructure`, `.endpoints`). **Cero paquetes de terceros añadidos,
+cero retirados**, `Directory.Packages.props` sin tocar, y `frontend/package.json` y `package-lock.json`
+sin mover. No hay licencias que comprobar porque no hay paquete que comprobar.
+
+
 ## Estado actual
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
@@ -2950,6 +3093,179 @@ porque el descubrimiento por nombre es exactamente lo que un identificador mal n
 ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en uno.
 
 El carril de arquitectura pasa de **18 a 23** casos.
+
+### Verificado en local, con la salida real — ítem 1.5
+
+```
+contrato:     npm run api  ->  `esquema.ts` regenerado y SIN cambios
+                              (`git status --porcelain` sobre el fichero, vacío)
+migraciones:  Auditoria 3, Organizacion 4, Identidad 3, Terceros 1 — y el modelo
+              coincide con ellas en los cuatro
+openapi:      documento versionado al día — 82 operaciones (75 en el 1.4: las SIETE
+              del módulo son las de Terceros)
+catálogo de `type`: al día — 47 tipos, de 52 sitios de llamada. Es el artefacto que
+              este ítem estrena (ADR-0030), y su paso EXISTÍA en la CI y NO en la
+              batería de AGENTS.md: arreglado en el primer commit de esta tanda
+
+frontal: typecheck / lint / format:check / test / build  ->  exit 0 los cinco
+         test  ->  11 ficheros, 63 casos, 0 en rojo (eran 9 y 46 en el 1.4)
+         presupuesto  ->  arranque 402/450 KiB en 3 ficheros · total servido 548/900 KiB
+                          el trozo nuevo es `PaginaDeTerceros-CiAyuBs4.js`, 4,64 kB
+         act()  ->  109 avisos en 7 ficheros, la MISMA cifra antes y después.
+                    Los dos ficheros de test nuevos —`ElListadoDeTerceros.test.tsx` y
+                    `ElTextoDeUnFallo.test.tsx`— no aparecen en el desglose: entran
+                    con CERO
+
+backend: dotnet build  ->  0 Advertencia(s), 0 Errores
+         dotnet format --verify-no-changes  ->  exit 0
+         carril rápido  ->  574 casos (574 correctos, 0 con error, 0 omitidos) en 8
+                            ensamblados, medido con el guion de la CI sobre los .trx
+                            de esta máquina y con `artifacts/test-results` borrado antes:
+                            BuildingBlocks.UnitTests 132, Organizacion.UnitTests 182,
+                            Identidad.UnitTests 58, Terceros.UnitTests 39,
+                            Organizacion.IntegrationTests 5, Arquitectura.Tests 23,
+                            Api.FunctionalTests 134, Api.IntegrationTests 1
+                            (528 en 7 ensamblados en el 1.4: +46 casos y +1 ensamblado)
+         carril integración -> NO EJECUTADO AQUÍ. Abajo, con firma.
+
+licencias:   los conjuntos de paquetes resueltos de TODOS los `packages.lock.json` a
+             los dos lados: 145 en `main`, 150 en la rama, y las cinco de diferencia
+             son los cinco proyectos nuevos del propio módulo. CERO paquetes de
+             terceros añadidos y cero retirados; `Directory.Packages.props` sin tocar
+             y `frontend/package*.json` sin mover. Sale del diff, no de la memoria
+```
+
+**El carril de integración no se ha ejecutado aquí, y esto es lo que hay que creerse y lo que no.**
+El demonio de Docker sigue parado en esta máquina. Ejecutado de todos modos, el guion de la CI
+contesta:
+
+```
+Integración (Testcontainers): 271 casos (0 correctos, 271 con error, 0 omitidos) en 8 ensamblados
+  — Organizacion.IntegrationTests 72, Api.IntegrationTests 199, y 0 en los otros seis
+```
+
+Los 271 son **el mismo error repetido**, no 271 fallos: `DotNet.Testcontainers.Builders.
+DockerUnavailableException : Docker is either not running or misconfigured … Failed to connect to
+Docker endpoint at 'npipe://./pipe/docker_engine'`. **Ni uno solo de esos casos se ha ejecutado**, así
+que de este carril no se afirma nada desde aquí: eran 241 en el 1.4 y son 271, o sea que el ítem
+añade **30 casos de integración** que en esta máquina no han corrido. Los verifica la CI.
+
+**Con qué se ha ejercido en su lugar.** Dos cosas, y conviene separarlas porque valen distinto:
+
+1. **Lo que no necesita servidor se ha ejercido de verdad, y es la mitad más algorítmica del ítem.**
+   La validación de NIF, NIE y CIF vive entera en `Terceros.UnitTests` —39 casos, sin contenedor—, y
+   con ella la batería generada en los dos sentidos. Las reglas de contrato del ítem —que ninguna
+   respuesta lleve testigo de versión en el cuerpo, que cada acción declare su permiso, que el
+   catálogo de `type` sea el que la API emite— corren en `Api.FunctionalTests`, con el host en pie y
+   sin una sola dependencia externa: 134 casos, todos aquí.
+2. **Lo que sí necesita PostgreSQL se ha ejercido EN LA CI, y a propósito.** Las dos mutaciones de la
+   tabla que solo el carril de integración puede cazar —la 1 y la 3— se empujaron cada una en su
+   rama para que la CI las ejecutara de verdad, en vez de darlas por rojas. Los dos runs, sus números
+   y su desenlace están en la tabla. Es la diferencia entre «esto lo cazaría el carril de
+   integración» y «esto lo cazó el carril de integración, run tal».
+
+Lo que queda sin ejercer en ningún sitio hasta el run del ítem son los **30 casos nuevos en verde**:
+que el alta devuelva 201 con `Location`, que el domicilio vaya y vuelva en los seis campos de R17, que
+el cursor no repita, que el listado pagine con su total. Esos los dice el run, y solo el run.
+
+#### Las seis mutaciones del 1.5, cada una aplicada, ejecutada y revertida
+
+Las cuatro primeras filas se ejecutaron **en esta máquina**; la 1 y la 3 necesitan PostgreSQL, así que
+se empujaron en su propia rama y las ejecutó la CI. Todas se aplicaron sobre **árbol limpio y con el
+trabajo del ítem ya commiteado**, y se revirtieron con `git restore --source=HEAD` o borrando el
+fichero — nunca con `git checkout --`, que es la orden que en el 1.4 se llevó por delante 128 líneas
+de trabajo sin guardar.
+
+| # | Mutación | Desenlace | Quién la caza |
+|---|---|---|---|
+| 1 | **El conflicto del alta distingue lo bloqueado de lo que ya existe**: `IdentificacionDuplicada(bool bloqueada)` con dos redacciones, y una segunda consulta fuera del ámbito para saber cuál es | **Rojo en la CI**, [run 33974541031](https://github.com/AOjeda006/Bastion/actions/runs/33974541031) — Backend en `failure` en el paso 13, *Tests de integración (Testcontainers)*. Compila con 0 avisos, y el **carril rápido entero, el formato, las migraciones, el OpenAPI y el catálogo de `type` pasan en verde**: no la ve nadie más | `ElConflictoQueNoRevelaTests.El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO`. Entera abajo, con las dos respuestas puestas una al lado de la otra |
+| 2 | **El CIF acepta el carácter de control de la clase equivocada**: la rama de iniciales alfabéticas admite además el dígito | **Rojo ×2** en el carril rápido | `LaBateriaGeneradaTests.El_control_de_la_clase_equivocada_se_rechaza` (Terceros) y `NifTests.Un_identificador_con_el_caracter_de_control_equivocado_se_rechaza(valor: "P12345674")` (Organización). Dos carriles distintos y ninguno de los dos escrito para el otro |
+| 3 | **La unicidad del alta deja de ver las fichas bloqueadas**: `&& !tercero.Bloqueo.EstaBloqueado` en el `Where` del repositorio | **Rojo en la CI**, [run 33974591347](https://github.com/AOjeda006/Bastion/actions/runs/33974591347) — Backend en `failure` en el mismo paso 13. Igual que la 1: compila, y el carril rápido entero sale verde | `Bloquear_un_tercero_no_libera_su_identificador_y_por_eso_desbloquear_no_choca` y `El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO`. El alta pasa el filtro y choca contra el índice único, que sigue siendo incondicional |
+| 4 | **Un código de error nuevo sin regenerar el artefacto** (`regimen-fiscal-no-admitido`) | **Rojo ×1**, y antes de compilar nada | `scripts/generar-errores.sh --comprobar`: «El catálogo de errores ha cambiado y `docs/api/errores.json` se ha quedado atrás», con el diff de la entrada que falta. Es el paso que la batería de `AGENTS.md` no nombraba |
+| 5 | **`TerceroDto` con un campo de versión**, copiado a mano como `uint` para que no dependa de que exista un tipo | **Rojo ×1** en el carril rápido, nombrando **las cinco** respuestas | `NingunaLecturaEntregaTestigoDeVersionTests.Ninguna_respuesta_de_la_api_lleva_testigo_de_version_en_el_cuerpo`, la regla del 1.4: «estas respuestas entregan un testigo de versión en el cuerpo, así que la llave que las cuatro exenciones de `If-Match` de los desbloqueos dan por inalcanzable ya se puede conseguir leyendo» |
+| 6 | **Una regla nueva en un carril, sin su línea en el censo** (`MutacionSeisTests` en `Api.FunctionalTests`) | **Rojo ×1** | `ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados`: «estas reglas corren en `Bastion.Api.FunctionalTests` y no están declaradas: `MutacionSeisTests.Una_regla_nueva_que_nadie_ha_declarado`» |
+
+**Un intento fallido de la 5, que dice algo del proyecto.** La primera forma —poner en el DTO el tipo
+`VersionDeRecurso` de BuildingBlocks— **no llega a compilar**, y no por la regla sino por la
+arquitectura: ese tipo vive en `BuildingBlocks.Application`, y `Terceros.Contracts` no puede
+referenciar Application. La segunda —copiar el `uint` a mano— sí compila, y es además «la forma en que
+esto se cuela de verdad», que es lo que dice el comentario de la propia regla. La tercera cosa que
+apareció es de rutina: sin `<param name="Version">` el compilador para con `CS1573` antes de que la
+regla llegue a mirar nada, o sea que la mutación hay que **terminarla** para que la comprobación
+signifique algo.
+
+**Y lo que dicen las mutaciones 1 y 3 juntas.** Las dos compilan, las dos pasan `dotnet format`, las
+dos pasan el carril rápido entero —574 casos—, las dos pasan las migraciones, el OpenAPI y el catálogo
+de `type`, y las dos rompen la propiedad del ítem. O sea que **de estas dos averías no avisa nada que
+se pueda ejecutar sin Docker**, y esa es exactamente la razón por la que valía la pena gastar dos runs
+en verlas rojas en vez de razonarlas.
+
+#### La primera, entera
+
+Es la del ítem, así que va con las dos respuestas puestas una al lado de la otra, que es lo que la
+propiedad exige comparar. Sin mutar, el cuerpo que contesta el alta contra un tercero **activo** y el
+que contesta el alta contra uno **bloqueado** son el mismo carácter a carácter salvo `traceId`:
+
+```json
+{
+  "type":     "/errors/tercero-duplicado",
+  "title":    "Conflicto",
+  "status":   409,
+  "detail":   "Esta empresa ya tiene un tercero con ese identificador fiscal.",
+  "instance": "/api/v1/terceros/terceros",
+  "traceId":  "«el de cada petición»"
+}
+```
+
+La mutación le da al error el parámetro que no tenía y una redacción por caso:
+
+```csharp
+internal static ErrorDeOperacion IdentificacionDuplicada(bool bloqueada) =>
+    ErrorDeOperacion.Conflicto(
+        "tercero-duplicado",
+        bloqueada
+            ? "Ese identificador fiscal pertenece a una ficha dada de baja."
+            : "Esta empresa ya tiene un tercero con ese identificador fiscal.");
+```
+
+y en el caso de uso, la segunda consulta —fuera del ámbito— que le dice cuál es, con la excusa más
+razonable que hay escrita en su propio comentario, «un mensaje más útil»:
+
+```csharp
+bool visibleSinAbrirElAmbito = await terceros
+    .ExisteLaIdentificacionAsync(empresaId, identificacion.Pais, identificacion.Numero, cancelacion)
+    .ConfigureAwait(false);
+
+return Resultado.Fallo<TerceroDto>(
+    ErroresDeTercero.IdentificacionDuplicada(!visibleSinAbrirElAmbito));
+```
+
+Con eso, las dos respuestas dejan de ser la misma en el campo `detail`, y el test falla comparándolas
+enteras — no leyendo una y buscándole la palabra «bloqueado» dentro:
+
+```
+las dos respuestas de conflicto se distinguen, así que el formulario de alta dice quién está bloqueado.
+   contra el activo:    …"detail":"Esta empresa ya tiene un tercero con ese identificador fiscal."…
+   contra el bloqueado: …"detail":"Ese identificador fiscal pertenece a una ficha dada de baja."…
+```
+
+**Por qué el test compara y no lee.** Un caso que afirmara «el mensaje no dice *bloqueado*» se quedaría
+verde con esta mutación cambiándole tres palabras a la redacción —«ese identificador está reservado»—
+y la fuga seguiría abierta: quien tenga el formulario de alta puede recorrer identificadores fiscales
+y sacar la lista de quién está dado de baja en esa empresa, que es justo lo que el art. 32 de la
+LOPDGDD manda reservar. Por eso lo que se compara es el **estado, el `Content-Type`, y el cuerpo
+entero con las claves ordenadas y solo `traceId` normalizado** — y por eso el `detail` no lleva el
+número dentro, que si no las dos respuestas no serían comparables enteras y habría que decidir qué
+trozos no cuentan.
+
+**Y el testigo que impide el falso verde.** El mismo caso da de alta antes contra un identificador
+**libre** y exige `201`. Sin esa línea, un servidor que contestara 409 a todo —o que estuviera roto de
+la misma manera en los dos caminos— pasaría por indistinguible sin haber comprobado nada. La otra
+mitad va en dirección contraria y es un caso aparte: `La_traza_SI_dice_cual_de_los_dos_era_y_no_lleva_
+el_identificador_dentro` exige **dos** anotaciones del suceso 8400, una con `bloqueada: True` y otra
+con `bloqueada: False`, y que ninguna de las dos lleve el número fiscal. Sin él, «la traza lo
+registra» sería una promesa escrita en un comentario.
+
 
 ### Verificado en local, con la salida real — ítem 1.4
 
@@ -5249,7 +5565,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **fecha de vencimiento** (`PoliticaDeRetencion`: seis años del art. 30 del Código de Comercio,
   colgando del motivo, configurable por instalación), que cierra media nota abierta desde el 0.11.
   Cinco mutaciones en *Estado actual*, y la primera entera con el DTO que la provocó.
-- [ ] **1.5 · Terceros: el agregado y su identidad** — criterio de aceptación: alta con **NIF, NIE o
+- [x] **1.5 · Terceros: el agregado y su identidad** — criterio de aceptación: alta con **NIF, NIE o
   CIF validados de verdad** (letra de control), extranjero como identificador **opaco con país** y
   con estado de verificación; dirección **estructurada** (R17); roles sobre un solo agregado (§7.2);
   unicidad por **(empresa, NIF)**; el alta contra un identificador bloqueado devuelve un conflicto
@@ -5266,6 +5582,23 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **Dentro del 1.5, el mecanismo va antes que el primer texto que lo use**: primero (a) y (b) —el
   artefacto y el barrido comparando—, y solo después las pantallas de Terceros. Al revés, el ítem
   escribiría los textos a mano y el barrido nacería ya con excepciones que justificar.
+  **Hecho, y el orden se respetó**: los dos primeros commits son el generador de
+  `docs/api/errores.json`, su paso en la CI y el barrido de diccionarios comparándolo; las pantallas
+  vinieron después, así que ningún `type` de Terceros nació sin texto. El módulo estrena **siete
+  rutas** —listado, alta, búsqueda por cuerpo, ficha, modificación, bloqueo y desbloqueo—, la
+  identificación es un **tipo complejo de tres columnas** (país, número, verificación) validado de
+  verdad para `ES` y opaco para el resto, y el domicilio fiscal es **obligatorio**, al revés que el de
+  un almacén. La unicidad por (empresa, identificador) **abarca lo bloqueado** y es una decisión
+  escrita, no la del índice por omisión: se comprueba en la base con `indpred IS NULL` y por el efecto
+  con el desbloqueo que no choca. El conflicto que no revela se afirma **comparando las dos respuestas
+  enteras**, no leyendo una, y la traza sí distingue por dentro sin llevar el número fiscal. La
+  batería del carácter de control está **generada** —ni un identificador fiscal real en fixtures,
+  semillas ni prosa— y recorre las dos direcciones. Seis mutaciones en *Estado actual*, dos de ellas
+  ejecutadas en la CI porque solo el carril de integración las caza, y la primera entera con las dos
+  respuestas puestas una al lado de la otra. Queda anotado lo que NO entra: la pantalla de búsqueda
+  por cuerpo, el régimen fiscal del §7.2 —que no está en el criterio de ningún ítem— y que un tercero
+  bloqueado no aparece en ningún listado, porque el del art. 32 solo recorre empresas, almacenes y
+  ubicaciones.
 - [ ] **1.6 · Terceros: lo que cuelga** — criterio de aceptación: `Contacto`, `CuentaBancaria` con
   IBAN validado, `CondicionPago` con el tope de **60 días de la Ley 3/2004 contado desde la
   entrega**, y `LimiteCredito` **solo como importe**. Fuera, por la raya de la P6: `MandatoSEPA`
@@ -5321,6 +5654,29 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTO (2026-09-05, ítem 1.5) · el conflicto no revela, pero DOS respuestas juntas sí.** El alta
+  contra un identificador ocupado contesta lo mismo esté la ficha activa o bloqueada, y eso está
+  comparado entero. Lo que queda abierto es la **correlación**: quien tenga a la vez
+  `terceros.tercero.ver` y `terceros.tercero.crear` puede buscar el identificador —`POST .../buscar`
+  no lo encuentra, porque una consulta ordinaria no ve lo bloqueado— y luego intentar el alta, que
+  contesta 409. «No aparece y sin embargo está ocupado» solo significa una cosa. **No entra en el
+  criterio del 1.5**, que habla de una respuesta, y cerrarlo pide una decisión de las de preguntar:
+  separar los dos permisos, o que la búsqueda mienta igual que el alta. Se anota, no se tapa.
+
+- **ABIERTO (2026-09-05, ítem 1.5) · un tercero bloqueado no aparece en NINGÚN listado.** El listado
+  del art. 32 que construyó el 1.4 recorre `TipoDeRecursoBloqueado`, que tiene tres valores: `Empresa`,
+  `Almacen` y `Ubicacion`. Un tercero bloqueado desaparece del camino ordinario —como debe— y **no
+  asoma por el reservado**, que es donde el art. 32 espera encontrarlo. Ampliar el enumerado toca el
+  permiso y el DTO de un listado del módulo Organización, o sea el criterio del 1.4 ya cerrado, así que
+  no se hace aquí. Candidato para el **1.7** o para el ítem que abra ese listado a más módulos.
+
+- **ABIERTO (2026-09-05, ítem 1.5) · el régimen fiscal del §7.2 no está en el criterio de ningún
+  ítem.** El modelo de dominio del plan maestro se lo pone a `Tercero`. El criterio escrito del 1.5 no
+  lo nombra y el del 1.6 tampoco —enumera `Contacto`, `CuentaBancaria`, `CondicionPago` y
+  `LimiteCredito`—. El checklist no se amplía por iniciativa propia, así que queda como **pregunta**:
+  si es del 1.6, hay que escribirlo allí; si es de facturación, hay que decir de qué fase. Lo que no
+  puede quedarse es sin dueño, porque entonces se descubre el día que haya que emitir una factura.
 
 - **ABIERTO (2026-09-04, recontado el 2026-09-05) · los tests del frontal sueltan 109 avisos de
   `act(...)`, en SIETE ficheros.** `An update to <X> inside a test was not wrapped in act(...)` sale
