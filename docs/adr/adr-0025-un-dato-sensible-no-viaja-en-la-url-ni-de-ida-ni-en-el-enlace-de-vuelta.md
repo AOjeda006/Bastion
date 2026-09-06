@@ -38,7 +38,7 @@ con el criterio y la paginación dentro. El listado sin criterio sigue siendo un
 
 **2. La comprobación no termina en la entrada.** La respuesta pagina con un **cursor opaco**, no con
 una URL a la página siguiente. Un servidor que responde «la siguiente página está en
-`…/buscar?nif=12345678Z&page=2`» ha vuelto a meter el dato en una URL él solo, y encima con su
+`…/buscar?nif=00000001R&page=2`» ha vuelto a meter el dato en una URL él solo, y encima con su
 firma: el cliente la seguirá, quedará en su historial y viajará en el `Referer`. **El cursor no
 lleva el criterio en claro**, y esa es su razón de ser aquí; que además pagine mejor sobre conjuntos
 grandes es una ventaja, no el motivo.

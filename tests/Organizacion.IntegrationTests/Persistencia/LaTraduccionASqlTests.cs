@@ -110,7 +110,7 @@ public sealed class LaTraduccionASqlTests
         // NO se puede escribir —entrar en el `.Valor` de un valor convertido— tiene que romperse
         // aquí. Si esto no lanzara, el silencio del test de al lado no significaría nada.
         Should.Throw<InvalidOperationException>(
-            () => contexto.Empresas.Where(empresa => empresa.Nif.Valor == "B12345674").ToQueryString(),
+            () => contexto.Empresas.Where(empresa => empresa.Nif.Valor == "B99999997").ToQueryString(),
             "entrar en el `.Valor` de un valor convertido se traduce, así que esta prueba ya no " +
             "distingue una consulta traducible de una que no lo es");
     }
@@ -145,7 +145,7 @@ public sealed class LaTraduccionASqlTests
         using OrganizacionDbContext contexto = Abrir();
         var repositorio = new RepositorioDeEmpresas(contexto);
 
-        var criterio = new CriterioDeEmpresas(Nif.De("B12345674"), "construcciones");
+        var criterio = new CriterioDeEmpresas(Nif.De("B99999997"), "construcciones");
 
         Exception fallo = await Should.ThrowAsync<Exception>(
             () => repositorio.BuscarAsync(criterio, Guid.CreateVersion7(), 20, CancellationToken.None));
@@ -156,7 +156,7 @@ public sealed class LaTraduccionASqlTests
 
         Exception intraducible = await Should.ThrowAsync<Exception>(
             () => contexto.Empresas
-                .Where(empresa => empresa.Nif.Valor == "B12345674")
+                .Where(empresa => empresa.Nif.Valor == "B99999997")
                 .ToListAsync(CancellationToken.None));
 
         LlegoALaBase(intraducible).ShouldBeFalse(

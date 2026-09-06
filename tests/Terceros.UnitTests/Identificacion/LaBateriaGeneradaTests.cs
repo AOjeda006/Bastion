@@ -178,8 +178,11 @@ public sealed class LaBateriaGeneradaTests
         // Y el carácter de control NO viene con la semilla: se calcula. Si alguien sustituyera el
         // generador por una tabla de valores, esta comprobación seguiría verde —no puede verlo—,
         // pero el tipo de las semillas obliga a que el último carácter salga de un cálculo.
-        Dni(12_345_678).Valido.ShouldBe(
-            "12345678" + LetrasDePersonaFisica[12_345_678 % 23],
+        // El número es uno cualquiera de la lista, pero NO el de ocho cifras consecutivas: esa
+        // comprobación materializaría como literal esperado justo el identificador que todos los
+        // manuales copian, que es el que este fichero se niega a escribir.
+        Dni(45_454_545).Valido.ShouldBe(
+            "45454545" + LetrasDePersonaFisica[45_454_545 % 23],
             "la letra del DNI es la posición «resto entre 23» de la tabla, no una elección");
     }
 

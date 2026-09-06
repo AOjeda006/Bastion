@@ -12,9 +12,11 @@ namespace Bastion.Organizacion.UnitTests.Identificacion;
 /// <b>Ni un identificador fiscal real, y por eso todos tienen esta pinta.</b> Un NIF real es un
 /// dato personal, y en una fixture no se borra nunca: queda en el fichero, en el artefacto de
 /// resultados y en el registro de la CI. Los de aquí son números inventados —ceros y nueves— con
-/// su carácter de control <b>calculado</b>, no ejemplos pegados de una página web: el «12345678Z»
-/// de todos los manuales es un DNI que existe, y el CIF que había aquí antes era el de una empresa
-/// de verdad. La batería exhaustiva, generada y recorrida en los dos sentidos, está en
+/// su carácter de control <b>calculado</b>, no ejemplos pegados de una página web: el DNI de ocho
+/// dígitos consecutivos que sale en todos los manuales existe y es de alguien, y el CIF que había
+/// aquí antes era el de una empresa de verdad. Ni siquiera se escriben aquí para señalarlos, que
+/// es el motivo de que esta frase los describa en vez de citarlos. La batería exhaustiva, generada
+/// y recorrida en los dos sentidos, está en
 /// <c>Bastion.Terceros.UnitTests.Identificacion.LaBateriaGeneradaTests</c>.
 /// </remarks>
 public sealed class NifTests

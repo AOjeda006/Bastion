@@ -54,7 +54,7 @@ public sealed class LimitesDelContratoTests
     [Fact]
     public void El_NIF_del_contrato_no_lleva_tope_de_longitud_porque_se_normaliza_antes()
     {
-        // Un NIF se escribe con guiones y espacios («B-12345678», «12345678 Z») y se normaliza
+        // Un NIF se escribe con guiones y espacios («B-9999999 7», «00000001 R») y se normaliza
         // al construirlo. Un StringLength(9) en el contrato rechazaría con un 400 de forma algo
         // que es perfectamente válido, antes de que nadie haya llegado a normalizarlo.
         Nif.Longitud.ShouldBe(9);

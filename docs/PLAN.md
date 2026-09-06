@@ -3012,6 +3012,24 @@ lo que las sostiene es el conjunto de casos rojos **nombrados**, no el color del
 la pregunta que faltaba no era «¿el dominio cumple la regla?» sino «¿la regla mira lo que dice
 mirar?».
 
+**Y una consecuencia del 1.5 que se cobró fuera del 1.5: ningún identificador fiscal real, tampoco
+en los ficheros que el ítem no tocaba.** El 1.5 dejó escrito en `NifTests` que el DNI de ocho cifras
+consecutivas de todos los manuales **existe y es de alguien**, y que el CIF que había antes era el de
+una empresa de verdad — y a la vez los dejó vivos en cinco sitios fuera de Terceros: la **semilla** de
+la CI (`BASTION_SEMILLA_EMPRESA_NIF`), la *fixture* de MSW del frontal, dos ficheros de test de
+Organización, la **prosa** del ADR-0025, y hasta un comentario que los citaba para señalarlos. El
+cierre del ítem lo pedía con esas tres palabras exactas —«fixtures, semillas ni prosa»—, así que se
+cierra: todo pasa a números inventados con su carácter de control **calculado** (`B99999997`,
+`00000001R`, y `00000001A` donde el caso pedía un control equivocado a propósito), y las citas se
+reescriben para **describirlos sin escribirlos**.
+
+Lo que **no** se toca, y con motivo: las semillas numéricas de `LaBateriaGeneradaTests`. Un generador
+que recorre quince números por las veintitrés letras produce identificadores válidos, y **todo
+identificador válido es de alguien o lo será** — eso no lo arregla ningún generador, y pretenderlo
+sería una promesa falsa. La regla que sí se puede cumplir es la que el ítem escribió: **no pegar el
+ejemplo conocido**. Por eso la única semilla que se movió es la que materializaba como literal
+esperado justo el número canónico.
+
 **Ítem 1.4 cerrado — lo bloqueado se puede mirar, y mirarlo no devuelve la llave:**
 run **33906512809** sobre `73c2836`, en `main`, **success**, con **3 jobs contados en el propio
 run** (`total_count: 3` de la API, no de la memoria): Backend `101132593744` ✓, Frontal

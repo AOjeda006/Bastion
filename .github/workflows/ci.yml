@@ -484,7 +484,7 @@ jobs:
             echo "JWT_SIGNING_KEY=$(openssl rand -base64 48)"
             echo "BASTION_SEMILLA_ADMIN_CORREO=admin@bastion.local"
             echo "BASTION_SEMILLA_ADMIN_CONTRASENA=$(openssl rand -base64 24)"
-            echo "BASTION_SEMILLA_EMPRESA_NIF=B12345674"
+            echo "BASTION_SEMILLA_EMPRESA_NIF=B99999997"
             echo "BASTION_SEMILLA_EMPRESA_RAZON_SOCIAL=Bastion Humo SL"
             echo "BASTION_SEMILLA_EMPRESA_CALLE=Calle Mayor 1"
             echo "BASTION_SEMILLA_EMPRESA_CODIGO_POSTAL=28013"

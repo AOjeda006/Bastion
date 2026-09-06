@@ -111,7 +111,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         using HttpClient cliente = await _api.ComoAdministradorAsync();
 
         HttpResponseMessage respuesta = await cliente.PostAsJsonAsync(
-            Empresas, Escenario.NuevaEmpresa("12345678A"));
+            Empresas, Escenario.NuevaEmpresa("00000001A"));
 
         respuesta.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
@@ -131,7 +131,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
 
         HttpResponseMessage respuesta = await cliente.PostAsJsonAsync(Empresas, new CrearEmpresaDto
         {
-            Nif = "12345678A",
+            Nif = "00000001A",
             RazonSocial = "Prueba",
             DomicilioFiscal = Escenario.Domicilio(),
 

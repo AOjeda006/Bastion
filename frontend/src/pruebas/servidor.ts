@@ -138,7 +138,7 @@ export const servidor = setupServer(
       elementos: [
         {
           id: ALFA.id,
-          nif: 'B12345674',
+          nif: 'B99999997',
           razonSocial: ALFA.razonSocial,
           domicilioFiscal: {
             calle: 'Calle Uno',
