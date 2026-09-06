@@ -2971,6 +2971,47 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
+**Ítem 1.5 cerrado — el agregado, su identidad fiscal, y un conflicto que no revela:**
+run **34046817118** sobre `279b8c7`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3` de la API, no de la memoria): Frontal `101523261565` ✓ (17 pasos, 0 omitidos),
+Backend `101523261629` ✓ (22 pasos, 0 omitidos) y Humo `101523797385` ✓ (24 pasos, 1 omitido). Los
+tres carriles tal como el run los publica:
+
+```
+Dominio y arquitectura: 576 casos (576 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+  — BuildingBlocks.UnitTests 132, Organizacion.UnitTests 182, Organizacion.IntegrationTests 5,
+    Api.FunctionalTests 136, Api.IntegrationTests 1, Identidad.UnitTests 58,
+    Arquitectura.Tests 23, Terceros.UnitTests 39
+    (528 en 7 ensamblados en el 1.4: +48 casos y +1 ensamblado)
+
+Integración (Testcontainers): 271 casos (271 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+  — Organizacion.IntegrationTests 72, Api.IntegrationTests 199, y 0 en los otros seis
+    (241 en el 1.4: +30 casos, que son los que en esta máquina NO se pudieron ejecutar)
+
+Frontal: arranque 402/450 KiB en 3 ficheros · total servido 548/900 KiB
+         `esquema.ts` al día con `docs/api/openapi.json`
+         artefacto: 20 ficheros, 9 .js y 1 .css
+
+OpenAPI:  82 operaciones, 47 rutas /api/v1/, y el fichero del artefacto idéntico al del repositorio
+Catálogo de `type`: 47 tipos, de 52 sitios de llamada — el artefacto que estrena el ítem (ADR-0030)
+Migraciones: modelo y migraciones coinciden en todos los módulos con persistencia
+Humo: el migrador aplica los tres contextos, la cuenta sembrada inicia sesión (testigo de 2903
+      caracteres), el entorno desplegado sirve 1 empresa y las semillas cargan 12 tramos de
+      impuesto y 15 unidades
+```
+
+**Y este ítem se cierra con una advertencia que vale más que el verde.** El primer run del ítem —el
+[34045461496](https://github.com/AOjeda006/Bastion/actions/runs/34045461496)— salió **rojo por un
+caso de 271**, y el caso acusaba al producto: la traza no anotaba lo que el art. 32 obliga a anotar.
+No era el producto: era el **captador**, que llevaba desde que se escribió sin recibir una sola línea.
+Está contado entero en *Verificado en local* → *La avería que la CI destapó*, y arreglado en
+`dbabdea` con su canario en el carril rápido. Dos consecuencias que sobreviven al ítem: **(a)** las
+dos filas de la tabla de mutaciones que ejecutó la CI se compararon contra una **línea base roja**, y
+lo que las sostiene es el conjunto de casos rojos **nombrados**, no el color del *job* — corregido en
+`279b8c7` en vez de dejado escrito; **(b)** un arnés de pruebas es código sin nadie detrás, así que
+la pregunta que faltaba no era «¿el dominio cumple la regla?» sino «¿la regla mira lo que dice
+mirar?».
+
 **Ítem 1.4 cerrado — lo bloqueado se puede mirar, y mirarlo no devuelve la llave:**
 run **33906512809** sobre `73c2836`, en `main`, **success**, con **3 jobs contados en el propio
 run** (`total_count: 3` de la API, no de la memoria): Backend `101132593744` ✓, Frontal
