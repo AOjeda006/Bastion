@@ -2922,6 +2922,31 @@ de diferencia son los cinco proyectos nuevos del propio módulo (`bastion.tercer
 cero retirados**, `Directory.Packages.props` sin tocar, y `frontend/package.json` y `package-lock.json`
 sin mover. No hay licencias que comprobar porque no hay paquete que comprobar.
 
+**14. Los captadores del registro son sumideros de Serilog, y ahora tienen quien los vigile.**
+Lo destapó el run del propio ítem, el
+[34045461496](https://github.com/AOjeda006/Bastion/actions/runs/34045461496), con **un caso rojo de
+271**: la mitad de §1 que dice que *la traza sí registra cuál de los dos era* esperaba dos sucesos
+anotados y leyó **cero**. No era el producto. `src/Api/Program.cs` hace `ClearProviders()` y luego
+`AddSerilog(...)`, que instala `SerilogLoggerFactory`, y esa fábrica **ignora todo `ILoggerProvider`
+ajeno**: `RegistroDeSucesos` y `RegistroDeFallos` eran proveedores, así que nunca recibieron nada.
+Cero significaba «no hay cable» y se leía como «la API no anota» — las dos lecturas son
+indistinguibles desde el test, que es lo que lo hace peligroso.
+
+Se pasan los dos a `ILogEventSink`. **La decisión de verdad no es esa, es dónde vive el enganche:**
+`tests/Comun/CapturaDeRegistro.cs`, compartido por los dos carriles y **no copiado**. Lo que se rompió
+fue el enganche, así que un canario con su propia copia habría comprobado su copia; el de ahora
+—`ElCaptadorDeRegistroCapturaTests`, en `Api.FunctionalTests`— ejecuta **la misma línea** que ejecuta
+`ApiDeVerdad`. Y va al **carril rápido**, no al de integración, porque un cable roto no necesita
+PostgreSQL para notarse: donde estaba, avisó en la CI y no en la máquina de quien lo rompió.
+
+**Lo que además se descubrió por el camino y vale la pena no olvidar:** `RegistroDeFallos` llevaba sin
+funcionar desde que se escribió, y su motivo era precisamente que los registros de un *job* devuelven
+403 sin autenticar. En el [run 33974591347](https://github.com/AOjeda006/Bastion/actions/runs/33974591347)
+hay un `500` de verdad y detrás ni una línea de `· registro del servidor:`. Un arnés de pruebas es
+código sin nadie detrás: la primera pregunta ante una regla nueva no es «¿el dominio la cumple?» sino
+**«¿la regla mira lo que dice mirar?»**. El desarrollo entero está en *Verificado en local* →
+*La avería que la CI destapó*, con las dos mutaciones que ponen rojo el canario.
+
 
 ## Estado actual
 
@@ -3118,21 +3143,27 @@ frontal: typecheck / lint / format:check / test / build  ->  exit 0 los cinco
 
 backend: dotnet build  ->  0 Advertencia(s), 0 Errores
          dotnet format --verify-no-changes  ->  exit 0
-         carril rápido  ->  574 casos (574 correctos, 0 con error, 0 omitidos) en 8
+         carril rápido  ->  576 casos (576 correctos, 0 con error, 0 omitidos) en 8
                             ensamblados, medido con el guion de la CI sobre los .trx
                             de esta máquina y con `artifacts/test-results` borrado antes:
                             BuildingBlocks.UnitTests 132, Organizacion.UnitTests 182,
                             Identidad.UnitTests 58, Terceros.UnitTests 39,
                             Organizacion.IntegrationTests 5, Arquitectura.Tests 23,
-                            Api.FunctionalTests 134, Api.IntegrationTests 1
-                            (528 en 7 ensamblados en el 1.4: +46 casos y +1 ensamblado)
+                            Api.FunctionalTests 136, Api.IntegrationTests 1
+                            (528 en 7 ensamblados en el 1.4: +48 casos y +1 ensamblado.
+                            Los DOS últimos son el canario del captador de registro, que
+                            entró después de que la CI destapara el falso verde)
          carril integración -> NO EJECUTADO AQUÍ. Abajo, con firma.
 
 licencias:   los conjuntos de paquetes resueltos de TODOS los `packages.lock.json` a
              los dos lados: 145 en `main`, 150 en la rama, y las cinco de diferencia
              son los cinco proyectos nuevos del propio módulo. CERO paquetes de
              terceros añadidos y cero retirados; `Directory.Packages.props` sin tocar
-             y `frontend/package*.json` sin mover. Sale del diff, no de la memoria
+             y `frontend/package*.json` sin mover. Sale del diff, no de la memoria.
+             Un `packages.lock.json` SÍ cambia —el de `Api.IntegrationTests`, donde
+             Serilog pasa de `CentralTransitive` a `Direct` al arreglar los captadores—
+             y no mueve la cifra: mismo nombre, misma versión, mismo `contentHash`.
+             Cambia quién lo pide, no qué se resuelve, y por tanto ninguna licencia
 ```
 
 **El carril de integración no se ha ejecutado aquí, y esto es lo que hay que creerse y lo que no.**
@@ -3178,9 +3209,9 @@ de trabajo sin guardar.
 
 | # | Mutación | Desenlace | Quién la caza |
 |---|---|---|---|
-| 1 | **El conflicto del alta distingue lo bloqueado de lo que ya existe**: `IdentificacionDuplicada(bool bloqueada)` con dos redacciones, y una segunda consulta fuera del ámbito para saber cuál es | **Rojo en la CI**, [run 33974541031](https://github.com/AOjeda006/Bastion/actions/runs/33974541031) — Backend en `failure` en el paso 13, *Tests de integración (Testcontainers)*. Compila con 0 avisos, y el **carril rápido entero, el formato, las migraciones, el OpenAPI y el catálogo de `type` pasan en verde**: no la ve nadie más | `ElConflictoQueNoRevelaTests.El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO`. Entera abajo, con las dos respuestas puestas una al lado de la otra |
+| 1 | **El conflicto del alta distingue lo bloqueado de lo que ya existe**: `IdentificacionDuplicada(bool bloqueada)` con dos redacciones, y una segunda consulta fuera del ámbito para saber cuál es | **Rojo en la CI, con la línea base ya en rojo por otra cosa** (aviso debajo de la tabla), [run 33974541031](https://github.com/AOjeda006/Bastion/actions/runs/33974541031) — Backend en `failure` en el paso 13, *Tests de integración (Testcontainers)*. Compila con 0 avisos, y el **carril rápido entero, el formato, las migraciones, el OpenAPI y el catálogo de `type` pasan en verde**: no la ve nadie más | `ElConflictoQueNoRevelaTests.El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO`. Entera abajo, con las dos respuestas puestas una al lado de la otra |
 | 2 | **El CIF acepta el carácter de control de la clase equivocada**: la rama de iniciales alfabéticas admite además el dígito | **Rojo ×2** en el carril rápido | `LaBateriaGeneradaTests.El_control_de_la_clase_equivocada_se_rechaza` (Terceros) y `NifTests.Un_identificador_con_el_caracter_de_control_equivocado_se_rechaza(valor: "P12345674")` (Organización). Dos carriles distintos y ninguno de los dos escrito para el otro |
-| 3 | **La unicidad del alta deja de ver las fichas bloqueadas**: `&& !tercero.Bloqueo.EstaBloqueado` en el `Where` del repositorio | **Rojo en la CI**, [run 33974591347](https://github.com/AOjeda006/Bastion/actions/runs/33974591347) — Backend en `failure` en el mismo paso 13. Igual que la 1: compila, y el carril rápido entero sale verde | `Bloquear_un_tercero_no_libera_su_identificador_y_por_eso_desbloquear_no_choca` y `El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO`. El alta pasa el filtro y choca contra el índice único, que sigue siendo incondicional |
+| 3 | **La unicidad del alta deja de ver las fichas bloqueadas**: `&& !tercero.Bloqueo.EstaBloqueado` en el `Where` del repositorio | **Rojo en la CI, con la línea base ya en rojo por otra cosa** (aviso debajo de la tabla), [run 33974591347](https://github.com/AOjeda006/Bastion/actions/runs/33974591347) — Backend en `failure` en el mismo paso 13. Igual que la 1: compila, y el carril rápido entero sale verde | `Bloquear_un_tercero_no_libera_su_identificador_y_por_eso_desbloquear_no_choca` y `El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO`. El alta pasa el filtro y choca contra el índice único, que sigue siendo incondicional |
 | 4 | **Un código de error nuevo sin regenerar el artefacto** (`regimen-fiscal-no-admitido`) | **Rojo ×1**, y antes de compilar nada | `scripts/generar-errores.sh --comprobar`: «El catálogo de errores ha cambiado y `docs/api/errores.json` se ha quedado atrás», con el diff de la entrada que falta. Es el paso que la batería de `AGENTS.md` no nombraba |
 | 5 | **`TerceroDto` con un campo de versión**, copiado a mano como `uint` para que no dependa de que exista un tipo | **Rojo ×1** en el carril rápido, nombrando **las cinco** respuestas | `NingunaLecturaEntregaTestigoDeVersionTests.Ninguna_respuesta_de_la_api_lleva_testigo_de_version_en_el_cuerpo`, la regla del 1.4: «estas respuestas entregan un testigo de versión en el cuerpo, así que la llave que las cuatro exenciones de `If-Match` de los desbloqueos dan por inalcanzable ya se puede conseguir leyendo» |
 | 6 | **Una regla nueva en un carril, sin su línea en el censo** (`MutacionSeisTests` en `Api.FunctionalTests`) | **Rojo ×1** | `ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados`: «estas reglas corren en `Bastion.Api.FunctionalTests` y no están declaradas: `MutacionSeisTests.Una_regla_nueva_que_nadie_ha_declarado`» |
@@ -3195,10 +3226,75 @@ regla llegue a mirar nada, o sea que la mutación hay que **terminarla** para qu
 signifique algo.
 
 **Y lo que dicen las mutaciones 1 y 3 juntas.** Las dos compilan, las dos pasan `dotnet format`, las
-dos pasan el carril rápido entero —574 casos—, las dos pasan las migraciones, el OpenAPI y el catálogo
+dos pasan el carril rápido entero —574 casos entonces, 576 ahora—, las dos pasan las migraciones, el OpenAPI y el catálogo
 de `type`, y las dos rompen la propiedad del ítem. O sea que **de estas dos averías no avisa nada que
 se pueda ejecutar sin Docker**, y esa es exactamente la razón por la que valía la pena gastar dos runs
 en verlas rojas en vez de razonarlas.
+
+> **Aviso sobre las dos filas que ejecutó la CI: la línea base contra la que se compararon NO
+> estaba en verde.** Cuando se empujaron las mutaciones 1 y 3, el run del propio ítem —el
+> [34045461496](https://github.com/AOjeda006/Bastion/actions/runs/34045461496)— ya salía rojo por
+> **un caso de 271**: `ElConflictoQueNoRevelaTests.La_traza_SI_dice_cual_de_los_dos_era_y_no_lleva_
+> el_identificador_dentro`, con `anotados.Count should be 2 but was 0`. Un rojo comparado contra un
+> rojo no demuestra por sí solo lo que dice la tabla, y decirlo de otro modo sería exactamente el
+> falso verde con los colores cambiados. Lo que sostiene las dos filas es el **recuento de casos
+> rojos**, leído en las anotaciones de cada run: la base tiene **1**, la mutación 1 tiene **2** —el
+> caso añadido es `El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO`, y su
+> mensaje enseña los dos `detail` distintos— y la mutación 3 tiene **3** —los mismos, más
+> `Bloquear_un_tercero_no_libera_su_identificador_y_por_eso_desbloquear_no_choca`, los dos con
+> `500 Internal Server Error`, que es el choque contra el índice único que la mutación predice—.
+> Cada mutación añade **sus** rojos, nombrados, y ninguno de ellos es el de la base. La atribución
+> se sostiene; la afirmación «sobre verde», no, y por eso se corrige aquí en vez de dejarla escrita.
+>
+> El rojo de la base tenía causa propia y está arreglado en `dbabdea`, en su fila de abajo.
+
+#### La avería que la CI destapó y que ningún carril miraba: **el arnés no tenía arnés**
+
+El caso rojo de la base no era un fallo del producto. Era el **captador** el que no capturaba.
+
+`src/Api/Program.cs` hace `builder.Logging.ClearProviders()` y a continuación
+`builder.Services.AddSerilog(...)`, que instala `SerilogLoggerFactory` — una fábrica de registro que
+**ignora todo `ILoggerProvider` que no sea el suyo**. `RegistroDeSucesos` y `RegistroDeFallos` eran
+proveedores, enganchados con `builder.ConfigureLogging(r => r.AddProvider(...))`. Entre la API que
+escribía y el captador que existía **no había ningún cable**.
+
+Lo que hace esto peor que un test mal escrito es cómo se lee el resultado. El test preguntaba
+«¿cuántos sucesos se anotaron?», recibía **cero**, y cero tiene dos lecturas indistinguibles desde
+fuera: «la API no anota» —un fallo del producto, que es lo que el rojo parecía decir— y «no hay
+cable». La segunda es la verdadera, y no había nada que las separara.
+
+**Y el gemelo llevaba roto desde el día que se escribió.** `RegistroDeFallos` existe por un motivo
+muy concreto: los registros de un *job* de la CI devuelven 403 sin autenticar, así que un `500` allí
+es una pared, y este captador adjunta el registro del servidor al mensaje de la aserción —que sí sale
+publicado como anotación—. En el run de la mutación 3, el
+[33974591347](https://github.com/AOjeda006/Bastion/actions/runs/33974591347), hay un `500` de verdad
+y detrás **ni una línea** de `· registro del servidor:`. O sea que el diagnóstico falló en el
+escenario exacto para el que fue construido, y no se supo hasta ahora. Eso no es una deducción: es lo
+que enseña la anotación de aquel run.
+
+**El arreglo, y por qué está donde está.** Los dos captadores pasan a ser `ILogEventSink` de Serilog,
+que es lo que esa fábrica sí reparte. El enganche vive en `tests/Comun/CapturaDeRegistro.cs`,
+**compartido y no copiado**, y esa decisión es la que da valor al canario: lo que se rompió no fue el
+captador sino **cómo se enganchaba**, así que un canario con su propio enganche habría comprobado su
+propia copia y habría dejado sin vigilar la línea que falla.
+`ElCaptadorDeRegistroCapturaTests` ejecuta **esa misma línea** y vive en `Api.FunctionalTests`, el
+carril rápido, porque un cable roto no necesita PostgreSQL para notarse — puesto donde solo corre con
+Docker delante, habría avisado en la CI y no en la máquina de quien lo rompe, que es literalmente lo
+que acaba de pasar.
+
+Sus dos casos se vieron rojos, cada uno con su mutación sobre árbol limpio y revertida con
+`git restore --source=HEAD`:
+
+| Mutación sobre `CapturaDeRegistro` | Desenlace |
+|---|---|
+| El sumidero se registra pero no se engancha (`WriteTo.Sink` fuera del bucle) | **Rojo ×1** — `Lo_que_la_API_escribe_llega_al_sumidero_con_su_identificador_de_suceso`. Es la avería original, reproducida |
+| `EventIdDe` se queda con el primer entero que encuentre, se llame como se llame | **Rojo ×1** — `Un_evento_sin_identificador_de_suceso_no_se_lee_como_si_tuviera_uno`. Un captador que recoge de más miente igual que uno que no recoge |
+
+**Lo que este ítem aprende y no estaba escrito en ninguna regla.** Un arnés de pruebas —un captador,
+un espía, un doble— es código sin nadie detrás: si deja de funcionar, lo que se ve no es un rojo sino
+un verde, o un rojo que acusa al sitio equivocado. La pregunta que faltaba hacerse no era «¿el
+dominio cumple la regla?» sino «¿la regla mira lo que dice mirar?». Aquí la respuesta llevaba siendo
+que no desde el ítem que lo escribió.
 
 #### La primera, entera
 
