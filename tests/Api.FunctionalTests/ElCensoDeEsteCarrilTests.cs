@@ -67,6 +67,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "CadaEventoEstaDeclaradoTests.Ninguna_declaracion_nombra_un_evento_que_ya_no_existe",
         "CadaEventoEstaDeclaradoTests.Todos_los_nombres_tienen_la_forma_acordada",
 
+        "ElCaptadorDeRegistroCapturaTests.Lo_que_la_API_escribe_llega_al_sumidero_con_su_identificador_de_suceso",
+        "ElCaptadorDeRegistroCapturaTests.Un_evento_sin_identificador_de_suceso_no_se_lee_como_si_tuviera_uno",
+
         "ElCatalogoDeTiposEsElQueLaApiEmiteTests.Cada_codigo_del_catalogo_es_una_ranura_estable_que_ErrorDeOperacion_aceptaria",
         "ElCatalogoDeTiposEsElQueLaApiEmiteTests.Cada_tipo_del_catalogo_lleva_una_clase_de_error_que_existe_y_tiene_estado",
         "ElCatalogoDeTiposEsElQueLaApiEmiteTests.El_catalogo_existe_y_no_esta_vacio",

@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
+using System.Globalization;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace Bastion.Api.IntegrationTests.Api;
 
@@ -17,11 +19,17 @@ namespace Bastion.Api.IntegrationTests.Api;
 /// <para>
 /// Esto lo arregla por el único sitio por el que se puede: el host de pruebas se ejecuta en el
 /// mismo proceso que el test, así que su registro se puede capturar y adjuntar al mensaje de la
-/// aserción, que sí sale publicado como anotación. No toca ni un servicio del contenedor: es un
-/// proveedor de registro más.
+/// aserción, que sí sale publicado como anotación. No toca ni un servicio del contenedor.
+/// </para>
+/// <para>
+/// <b>Y hasta el ítem 1.5 no capturaba nada</b>, escrito como <c>ILoggerProvider</c>: la fábrica de
+/// registro del host es la de Serilog e ignora todo proveedor ajeno. Se vio con las dos respuestas
+/// de una mutación en la CI —un <c>500</c> de verdad, y detrás ni una línea de registro—, o sea en
+/// el escenario exacto para el que esto existe. Ahora es un sumidero, y el enganche está en
+/// <see cref="Bastion.Pruebas.Comun.CapturaDeRegistro"/> con su canario en el carril rápido.
 /// </para>
 /// </remarks>
-public sealed class RegistroDeFallos : ILoggerProvider
+public sealed class RegistroDeFallos : ILogEventSink
 {
     private const int Recordados = 10;
 
@@ -34,60 +42,48 @@ public sealed class RegistroDeFallos : ILoggerProvider
             Environment.NewLine + "· ", s_fallos);
 
     /// <inheritdoc/>
-    public ILogger CreateLogger(string categoryName) => new Anotador(categoryName);
-
-    /// <inheritdoc/>
-    public void Dispose() => GC.SuppressFinalize(this);
-
-    private sealed class Anotador(string categoria) : ILogger
+    public void Emit(LogEvent logEvent)
     {
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
+        ArgumentNullException.ThrowIfNull(logEvent);
 
-        public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Error;
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
+        if (logEvent.Level < LogEventLevel.Error)
         {
-            if (!IsEnabled(logLevel))
-            {
-                return;
-            }
-
-            ArgumentNullException.ThrowIfNull(formatter);
-
-            // El tipo y el mensaje de la excepción, y la primera línea de la pila: lo justo para
-            // saber a qué fichero ir. La pila entera convertiría cada rojo en una pared de texto.
-            string donde = exception is null
-                ? string.Empty
-                : $" — {exception.GetType().Name}: {exception.Message} @ {PrimeraLinea(exception)}";
-
-            s_fallos.Enqueue($"[{categoria}] {formatter(state, exception)}{donde}");
-
-            while (s_fallos.Count > Recordados)
-            {
-                s_fallos.TryDequeue(out _);
-            }
+            return;
         }
 
-        private static string PrimeraLinea(Exception excepción)
+        // El tipo y el mensaje de la excepción, y la primera línea de la pila: lo justo para
+        // saber a qué fichero ir. La pila entera convertiría cada rojo en una pared de texto.
+        string donde = logEvent.Exception is null
+            ? string.Empty
+            : $" — {logEvent.Exception.GetType().Name}: {logEvent.Exception.Message}"
+              + $" @ {PrimeraLinea(logEvent.Exception)}";
+
+        string categoria = logEvent.Properties.TryGetValue("SourceContext", out LogEventPropertyValue? origen)
+            ? origen.ToString().Trim('"')
+            : "sin categoría";
+
+        s_fallos.Enqueue(
+            $"[{categoria}] {logEvent.RenderMessage(CultureInfo.InvariantCulture)}{donde}");
+
+        while (s_fallos.Count > Recordados)
         {
-            Exception raiz = excepción;
-
-            while (raiz.InnerException is not null)
-            {
-                raiz = raiz.InnerException;
-            }
-
-            string pila = raiz.StackTrace ?? string.Empty;
-            int salto = pila.IndexOf('\n', StringComparison.Ordinal);
-            string primera = salto < 0 ? pila : pila[..salto];
-
-            return raiz == excepción ? primera.Trim() : $"{raiz.GetType().Name}: {raiz.Message}";
+            s_fallos.TryDequeue(out _);
         }
+    }
+
+    private static string PrimeraLinea(Exception excepción)
+    {
+        Exception raiz = excepción;
+
+        while (raiz.InnerException is not null)
+        {
+            raiz = raiz.InnerException;
+        }
+
+        string pila = raiz.StackTrace ?? string.Empty;
+        int salto = pila.IndexOf('\n', StringComparison.Ordinal);
+        string primera = salto < 0 ? pila : pila[..salto];
+
+        return raiz == excepción ? primera.Trim() : $"{raiz.GetType().Name}: {raiz.Message}";
     }
 }

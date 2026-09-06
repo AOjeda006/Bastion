@@ -2,9 +2,10 @@ using System.Security.Cryptography;
 using Bastion.Api.Arranque;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.Identidad.Infrastructure.Seguridad;
+using Bastion.Pruebas.Comun;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.TestHost;
 
 namespace Bastion.Api.IntegrationTests.Api;
 
@@ -107,15 +108,20 @@ public sealed class ApiDeVerdad(PostgresConTodosLosModulos postgres) : WebApplic
         builder.UseSetting(SemillaDeArranque.VariableDeCodigoPostal, "28001");
         builder.UseSetting(SemillaDeArranque.VariableDePoblacion, "Madrid");
 
-        // Lo unico que se anade al host, y no sustituye nada: dos proveedores de registro mas.
+        // Lo unico que se anade al host, y no sustituye nada: dos SUMIDEROS de Serilog mas.
         // El primero, para que un 500 en la CI diga que ha reventado (RegistroDeFallos). El
         // segundo, para poder observar lo que la API anota POR DENTRO y no cuenta en ninguna
         // respuesta, que desde el item 1.5 es parte de lo que hay que demostrar
         // (RegistroDeSucesos).
-        builder.ConfigureLogging(registro =>
-        {
-            registro.AddProvider(new RegistroDeFallos());
-            registro.AddProvider(new RegistroDeSucesos());
-        });
+        //
+        // SUMIDEROS y no `ILoggerProvider`, y la diferencia no es de estilo: `Program.cs` hace
+        // `ClearProviders()` y luego `AddSerilog(...)`, que sustituye la fabrica de registro por la
+        // de Serilog — y esa fabrica ignora todo proveedor ajeno. Escritos como proveedores, los
+        // dos captadores no recibian NADA, y un test que preguntaba cuantos sucesos se anotaron
+        // recibia cero. El enganche vive en `CapturaDeRegistro`, compartido con el canario del
+        // carril rapido que lo vigila.
+        builder.ConfigureTestServices(
+            servicios => CapturaDeRegistro.Registrar(
+                servicios, new RegistroDeFallos(), new RegistroDeSucesos()));
     }
 }

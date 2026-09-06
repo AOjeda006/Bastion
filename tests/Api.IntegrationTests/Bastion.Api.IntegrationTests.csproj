@@ -54,6 +54,14 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
+  <ItemGroup Label="Captura del registro">
+    <!--
+      Serilog explicito y no por transitividad de la API: los dos captadores de este ensamblado son
+      ILogEventSink, y un paquete que se usa se declara. Apache-2.0.
+    -->
+    <PackageReference Include="Serilog" />
+  </ItemGroup>
+
   <ItemGroup Label="Censo de reglas">
     <!--
       El descubrimiento del censo, compartido y enlazado desde `tests/Comun`. La clase que lo usa
@@ -62,6 +70,7 @@
       que se quedo atras deja de censar justo lo que dejo de contar.
     -->
     <Compile Include="../Comun/CensoDeReglas.cs" Link="Comun/CensoDeReglas.cs" />
+    <Compile Include="../Comun/CapturaDeRegistro.cs" Link="Comun/CapturaDeRegistro.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
+using System.Globalization;
+using Bastion.Pruebas.Comun;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace Bastion.Api.IntegrationTests.Api;
 
@@ -18,15 +21,19 @@ namespace Bastion.Api.IntegrationTests.Api;
 /// Sin esto, «la traza lo registra» sería una promesa escrita en un comentario.
 /// </para>
 /// <para>
+/// <b>Es un sumidero de Serilog y no un <c>ILoggerProvider</c>, y esa palabra costó un run.</b>
+/// Escrito como proveedor no recogía nada: <c>Program.cs</c> sustituye la fábrica de registro por
+/// la de Serilog, que ignora todo proveedor ajeno. El enganche vive en
+/// <see cref="CapturaDeRegistro"/>, compartido, para que el canario del carril rápido ejerza la
+/// misma línea que el host de integración.
+/// </para>
+/// <para>
 /// <b>Solo los identificadores declarados en <see cref="Observados"/>.</b> Recoger todo lo que la
 /// API escribe al nivel de información sería quedarse con cada consulta de cada test de este
 /// carril. La lista es corta a propósito: lo que entra aquí es lo que un test mira.
 /// </para>
-/// <para>
-/// <b>No sustituye ningún servicio</b>: es un proveedor de registro más, igual que el otro.
-/// </para>
 /// </remarks>
-public sealed class RegistroDeSucesos : ILoggerProvider
+public sealed class RegistroDeSucesos : ILogEventSink
 {
     /// <summary>
     /// Los identificadores de suceso que este captador recoge, y quién los mira.
@@ -56,43 +63,30 @@ public sealed class RegistroDeSucesos : ILoggerProvider
     }
 
     /// <inheritdoc/>
-    public ILogger CreateLogger(string categoryName) => new Anotador();
+    public void Emit(LogEvent logEvent)
+    {
+        ArgumentNullException.ThrowIfNull(logEvent);
 
-    /// <inheritdoc/>
-    public void Dispose() => GC.SuppressFinalize(this);
+        int? eventId = CapturaDeRegistro.EventIdDe(logEvent);
+
+        if (eventId is null || !Observados.Contains(eventId.Value))
+        {
+            return;
+        }
+
+        // Cultura invariante y no la de la máquina: hay tests que afirman sobre este texto, y un
+        // mensaje con un número o una fecha dentro se renderiza distinto en cada portátil.
+        s_sucesos.Enqueue(
+            new Suceso(eventId.Value, logEvent.RenderMessage(CultureInfo.InvariantCulture)));
+
+        while (s_sucesos.Count > Recordados && s_sucesos.TryDequeue(out _))
+        {
+            // El anillo se queda con los últimos; lo viejo ya no lo mira nadie.
+        }
+    }
 
     /// <summary>Un suceso anotado: qué fue y con qué texto.</summary>
     /// <param name="EventId">Identificador del suceso.</param>
     /// <param name="Mensaje">El mensaje ya formateado.</param>
     public sealed record Suceso(int EventId, string Mensaje);
-
-    private sealed class Anotador : ILogger
-    {
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Information;
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-
-            if (!IsEnabled(logLevel) || !Observados.Contains(eventId.Id))
-            {
-                return;
-            }
-
-            s_sucesos.Enqueue(new Suceso(eventId.Id, formatter(state, exception)));
-
-            while (s_sucesos.Count > Recordados && s_sucesos.TryDequeue(out _))
-            {
-                // El anillo se queda con los últimos; lo viejo ya no lo mira nadie.
-            }
-        }
-    }
 }
