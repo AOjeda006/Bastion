@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
@@ -56,6 +57,14 @@ public static class ModuloDeTerceros
             TercerosDbContext.Esquema);
 
         servicios.AddScoped<IRepositorioDeTerceros, RepositorioDeTerceros>();
+
+        // Lo que este módulo aporta al listado del art. 32. Cierra la nota que el ítem 1.5 dejó
+        // abierta: un tercero bloqueado desaparecía del camino ordinario —correcto— y tampoco
+        // asomaba por el reservado, que es donde el artículo espera encontrarlo.
+        //
+        // `AddScoped` a secas y NO `TryAddScoped`, por lo mismo que en los otros dos módulos: se
+        // registran bajo el mismo tipo y el listado los resuelve todos como `IEnumerable`.
+        servicios.AddScoped<IConsultaDeLoBloqueado, ConsultaDeLoBloqueadoDeTerceros>();
 
         // Sin cargador de semillas: Terceros no tiene maestros de instalación que sembrar. Un
         // tercero lo da de alta una empresa; no viene con el producto.

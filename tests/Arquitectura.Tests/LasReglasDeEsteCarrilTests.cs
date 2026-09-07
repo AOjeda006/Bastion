@@ -66,6 +66,20 @@ public sealed class LasReglasDeEsteCarrilTests
         "LosIdentificadoresAjenosTests.Toda_declaracion_sigue_correspondiendo_a_una_propiedad_del_dominio",
         "LosIdentificadoresAjenosTests.Todo_identificador_de_otro_modulo_esta_declarado_con_su_puerto",
 
+        // El art. 32 alcanza a TODO lo que se bloquea: la lista cerrada que publica el listado y
+        // la marca `IBloqueable` del dominio son el mismo conjunto, en las dos direcciones. La
+        // doctrina estaba escrita en el comentario de la propia interfaz y el barrido no existía,
+        // así que la lista se quedó vieja dos veces sin que nada se pusiera rojo.
+        //
+        // Y la cuarta afirmación es la que hace que las otras tres sirvan de algo: el enumerado es
+        // una lista de NOMBRES, así que se pone verde en cuanto alguien añade el valor, y las filas
+        // las trae quien implementa el puerto. Sin ella, el arreglo del ítem 1.6 se podía dar por
+        // hecho añadiendo dos líneas a un `enum`.
+        "LoBloqueadoSeVeEnteroTests.El_barrido_ve_los_agregados_que_se_bloquean",
+        "LoBloqueadoSeVeEnteroTests.Ningun_valor_de_la_lista_nombra_algo_que_ya_no_se_bloquea",
+        "LoBloqueadoSeVeEnteroTests.Todo_agregado_bloqueable_esta_en_la_lista_del_articulo_32",
+        "LoBloqueadoSeVeEnteroTests.Todo_modulo_que_bloquea_contesta_por_lo_suyo",
+
         // El glosario del lenguaje ubicuo: su tabla de agregados y el dominio compilado son la
         // misma lista. Es lo único de docs/ que este carril vigila, y lo vigila porque es la
         // lista que dice qué cosas hay.

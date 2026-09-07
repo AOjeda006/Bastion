@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
@@ -98,9 +99,14 @@ public static class ModuloDeOrganizacion
         servicios.AddScoped<IRepositorioDeConversiones, RepositorioDeConversiones>();
         servicios.AddScoped<IRepositorioDeUbicaciones, RepositorioDeUbicaciones>();
 
-        // El único repositorio del módulo que trae filas bloqueadas, y por eso está aparte de los
-        // diez de arriba: no es el repositorio de un recurso, es una consulta que cruza tres.
-        servicios.AddScoped<IRepositorioDeLoBloqueado, RepositorioDeLoBloqueado>();
+        // Lo que este módulo aporta al listado del art. 32, y por eso está aparte de los diez de
+        // arriba: no es el repositorio de un recurso, es la respuesta a «qué tengo bloqueado».
+        //
+        // Va con `AddScoped` a secas y NO con `TryAddScoped`: los tres módulos se registran bajo el
+        // mismo tipo y el listado los resuelve todos como `IEnumerable`. Con `TryAdd`, el segundo
+        // en registrarse se descartaría en silencio y el listado saldría corto —bien formado, con
+        // menos filas—, que es exactamente el defecto que este ítem viene a cerrar.
+        servicios.AddScoped<IConsultaDeLoBloqueado, ConsultaDeLoBloqueadoDeOrganizacion>();
 
         // El cargador de las semillas del §12. Lo resuelve el MIGRADOR, no el arranque de la API:
         // se registra aquí porque es quien tiene el contexto, y se invoca desde `src/Api`, que es

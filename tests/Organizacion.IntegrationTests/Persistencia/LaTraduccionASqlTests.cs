@@ -99,11 +99,16 @@ public sealed class LaTraduccionASqlTests
         SortedSet<string> repositorios = new(
             sondas.Select(sonda => sonda.Repositorio), StringComparer.Ordinal);
 
-        // Los diez listados de Organización del ítem 1.3, más el de lo bloqueado del 1.4. El
-        // número está escrito porque un repositorio que perdiera su campo de criterios —y con él
-        // su orden— desaparecería de aquí sin ruido, y el listado seguiría respondiendo, sin
+        // Los diez listados de Organización del ítem 1.3. Eran once hasta el 1.6: el de lo
+        // bloqueado, del 1.4, dejó de ser un repositorio de este módulo -era la obligación
+        // transversal del art. 32 montada dentro de Organización, que es el defecto que el 1.6
+        // cerró- y su traducción se comprueba ahora en `Bastion.Api.IntegrationTests`, con los
+        // tres módulos que la componen.
+        //
+        // El número está escrito porque un repositorio que perdiera su campo de criterios -y con
+        // él su orden- desaparecería de aquí sin ruido, y el listado seguiría respondiendo, sin
         // `ORDER BY`, con páginas que se pisan entre sí.
-        repositorios.Count.ShouldBe(11, "repositorios de Organización que listan: " +
+        repositorios.Count.ShouldBe(10, "repositorios de Organización que listan: " +
             string.Join(", ", repositorios));
 
         // Y la pregunta de control: la consulta que el propio repositorio de empresas advierte que
@@ -165,45 +170,13 @@ public sealed class LaTraduccionASqlTests
             Describir(intraducible));
     }
 
-    /// <summary>
-    /// El listado de lo bloqueado se traduce <b>entero</b>: unión, recuento, orden y corte.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Va aparte de las sondas por lo mismo que la búsqueda: las sondas traducen el orden y el
-    /// filtro por separado, y aquí lo que hay que ejercer es la consulta COMPUESTA. El recuento va
-    /// por delante del corte y se hace sobre el <c>UNION ALL</c>; el <c>OrderBy</c> se aplica
-    /// después de una proyección a un tipo propio; y el <c>AsNoTracking</c> cae sobre algo que no
-    /// es una entidad. Cualquiera de las tres cosas puede no traducirse sin que ninguna sonda lo
-    /// note.
-    /// </para>
-    /// <para>
-    /// El discriminante es el mismo que el de la búsqueda —si en la cadena hay una
-    /// <see cref="DbException"/>, el SQL se generó y el proveedor llegó a intentar hablar— y por el
-    /// mismo motivo: el mensaje de fuera depende del idioma del ejecutor.
-    /// </para>
-    /// </remarks>
-    [Fact]
-    public async Task El_listado_de_lo_bloqueado_se_traduce_entero()
-    {
-        using OrganizacionDbContext contexto = Abrir();
-        var repositorio = new RepositorioDeLoBloqueado(contexto);
-
-        var paginacion = new Paginacion
-        {
-            Pagina = 2,
-            Tamanio = 20,
-            Orden = new Orden("nombre", Descendente: true),
-            Filtro = "texto de prueba",
-        };
-
-        Exception fallo = await Should.ThrowAsync<Exception>(
-            () => repositorio.ListarAsync(paginacion, CancellationToken.None));
-
-        LlegoALaBase(fallo).ShouldBeTrue(
-            "el listado de lo bloqueado no ha llegado a hablar con el proveedor: se ha roto antes, " +
-            "traduciendo. " + Describir(fallo));
-    }
+    // El listado de lo bloqueado tenía aquí su caso, y se lo llevó el ítem 1.6 a
+    // `Bastion.Api.IntegrationTests` -> `ElListadoDelArticulo32SeTraduceEnteroTests`. No es un
+    // traslado de conveniencia: desde el 1.6 ese listado lo componen TRES módulos, y este
+    // proyecto solo ve Organización. Dejándolo aquí, las proyecciones de Identidad y de Terceros
+    // se habrían quedado sin barrido -por construcción, que es exactamente el defecto que el
+    // ítem 1.6 vino a cerrar-, y este fichero certificaría «el listado se traduce entero» mirando
+    // un tercio.
 
     private static bool LlegoALaBase(Exception fallo)
     {

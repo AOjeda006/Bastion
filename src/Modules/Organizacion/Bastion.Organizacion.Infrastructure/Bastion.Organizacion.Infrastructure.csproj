@@ -76,6 +76,12 @@
       separan el día que una cambie, y el test seguiría verde preguntando por la que ya no existe.
     -->
     <InternalsVisibleTo Include="Bastion.Organizacion.IntegrationTests" />
+    <!--
+      Y al proyecto que ve los tres modulos, desde el item 1.6: la proyeccion de lo bloqueado la
+      pide el barrido de traduccion del listado del art. 32, que dejo de poder vivir en el proyecto
+      de un solo modulo el dia que el listado paso a componerse de tres.
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
   </ItemGroup>
 
 </Project>

@@ -16,6 +16,10 @@
     necesita el carril, y por tanto la que tiene que poder ejercerse con Docker parado; vive aquí
     porque este es el único proyecto que ve los repositorios (`InternalsVisibleTo`, abajo). Si
     algún día necesita una fila, deja de ser esa excepción y le toca el rasgo.
+
+    Lo que ese barrido ya NO cubre, desde el ítem 1.6, es el listado del art. 32: dejó de servirlo
+    un repositorio de este módulo y pasó a componerse de tres, así que su traducción se comprueba
+    en `Bastion.Api.IntegrationTests`, que es el único proyecto que ve las tres infraestructuras.
   -->
 
   <ItemGroup Label="Sujeto de prueba">

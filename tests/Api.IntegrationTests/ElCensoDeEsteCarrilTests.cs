@@ -95,6 +95,15 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
+        // Del ítem 1.6, y son el SEGUNDO caso de este ensamblado que corre también en el carril
+        // rápido: traducen consultas a SQL, y traducir no abre conexión. Están aquí porque desde el
+        // 1.6 el listado del art. 32 lo componen tres módulos, y este es el único proyecto de
+        // pruebas que ve las tres infraestructuras; en `Organizacion.IntegrationTests`, donde vivía
+        // el barrido, «entero» habría pasado a significar un tercio.
+        "ElListadoDelArticulo32SeTraduceEnteroTests.La_comprobacion_puede_dispararse",
+        "ElListadoDelArticulo32SeTraduceEnteroTests.Las_proyecciones_declaradas_son_las_que_implementan_el_puerto",
+        "ElListadoDelArticulo32SeTraduceEnteroTests.Todo_orden_del_listado_se_traduce_en_los_tres_modulos",
+
         "ElConflictoQueNoRevelaTests.Bloquear_un_tercero_no_libera_su_identificador_y_por_eso_desbloquear_no_choca",
         "ElConflictoQueNoRevelaTests.El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO",
         "ElConflictoQueNoRevelaTests.El_mismo_identificador_en_otra_empresa_se_da_de_alta_sin_conflicto",

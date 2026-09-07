@@ -35,4 +35,15 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
+  <ItemGroup Label="Pruebas">
+    <!--
+      La proyeccion de lo bloqueado es interna -es un detalle de esta capa- y el barrido que
+      comprueba que el listado del art. 32 se TRADUCE a SQL necesita una puerta por donde pedirla:
+      ordena sobre una proyeccion, que no es una entidad y no tiene `Set<T>()`. Ese barrido vive en
+      `Bastion.Api.IntegrationTests` desde el item 1.6, porque desde el 1.6 el listado lo componen
+      TRES modulos y ese es el unico proyecto de pruebas que los ve a los tres.
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

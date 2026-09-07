@@ -2971,6 +2971,66 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
+**Ítem 1.6 EN CURSO — primero el agujero del art. 32, que es un defecto de cumplimiento en código
+ya entregado.** Cinco agregados del proyecto se bloquean (`Empresa`, `Almacen`, `Ubicacion`,
+`Tercero`, `Usuario`) y el listado del art. 32 veía **tres**. `Usuario` faltaba desde el **1.4** —una
+persona física que ejerce su derecho de supresión, el caso más nítido del artículo— y `Tercero` desde
+el **1.5**. Está contado entero en **ADR-0031**; lo esencial:
+
+- **La regla va primero y se mira roja.** `LoBloqueadoSeVeEnteroTests` compara
+  `TipoDeRecursoBloqueado` contra los tipos que implementan `IBloqueable`, en las dos direcciones y
+  con su ancla. Escrita **antes** del arreglo sale roja con **dos supervivientes a la vez**, que es
+  la mutación 1 de la tabla del ítem. La doctrina ya estaba escrita —en el comentario de la propia
+  `IBloqueable`, desde el día que se escribió— y el barrido que la ejerce no existía: la lista se
+  quedó vieja **dos ítems seguidos** con la suite en verde.
+- **Y una segunda regla, porque la primera se puede cumplir sin arreglar nada.**
+  `Todo_modulo_que_bloquea_contesta_por_lo_suyo`: el enumerado es una lista de nombres y se pone
+  verde en cuanto alguien añade el valor. Un valor declarado que ningún módulo contesta es **peor**
+  que el agujero — el contrato promete un tipo de recurso que no aparece nunca, así que quien audite
+  leerá «no hay usuarios bloqueados» en vez de «nadie los está buscando».
+- **El arreglo no inventa arquitectura.** Cada módulo que bloquea expone `IConsultaDeLoBloqueado` y
+  el listado compone. El puerto vive en el **bloque común** y no en el `Contracts` de nadie, porque
+  aquí hay varios dueños y un consumidor; el consumidor resuelve `IEnumerable<…>`, así que un módulo
+  nuevo entra registrando su implementación. Sin `JOIN` entre esquemas y sin llamada HTTP — y **sin
+  cruce nuevo que declarar**: al estar el puerto en el bloque común no aparece ninguna referencia de
+  proyecto entre módulos.
+- **El repositorio anterior llevaba escrito por qué esto «no se podía hacer», y la mitad era falsa.**
+  Decía que no hay forma de saber cuántas filas traer de cada fuente sin traerlas todas. Para la
+  página *k* bastan las `salto + tamaño` primeras de **cada** fuente: es la cota de una fusión
+  k-vías, y no es asintóticamente peor que el `UNION` con `OFFSET` que sustituye.
+- **Dos defectos los encontró el barrido nuevo, antes de salir de la rama.** El de traducción a SQL
+  se mudó de `Organizacion.IntegrationTests` a `Api.IntegrationTests` —allí «entero» habría pasado a
+  significar un tercio, que es el mismo defecto en pequeño— y en cuanto miró los tres módulos puso
+  rojas las nueve combinaciones de orden de Identidad: **(a)** una condición de membresía escrita a
+  mano duplicaba un invariante que el filtro global de `Usuario` ya impone, y sumada a la navegación
+  que ese filtro expande no se traducía; **(b)** `Codigo = usuario.Correo.Valor` tampoco, porque
+  `Correo` se mapea con conversor y `.Valor` no es una columna. Habrían sido nueve `?sort=`
+  convertidos en un 500 justo en la pantalla que se abre para rectificar un bloqueo por error.
+- **En este listado no viaja ningún identificador de persona:** ni el NIF del tercero ni el correo
+  del usuario. Para levantar un bloqueo hecho por error bastan el nombre y el identificador de la
+  fila, que es lo que el desbloqueo pide.
+- **`BuildingBlocks.Infrastructure` estrena el proveedor de Npgsql**, porque el filtro compartido usa
+  `ILIKE`. Su `.csproj` decía «EF Core, no el proveedor: este proyecto no sabe contra qué base
+  corre», y la frase **ya era falsa cuando se escribió** —dos párrafos más abajo admitía mapear una
+  columna `jsonb`—. Se corrige la frase en vez de esconder el hecho detrás de tres copias del filtro.
+
+Carril rápido en local sobre esta mitad, con el comando que lo mide
+(`dotnet test Bastion.sln -c Release --no-build --filter "Category!=Integracion" --logger trx` +
+`scripts/ci/recuento-de-tests.sh`):
+
+```
+Dominio y arquitectura: 582 casos (582 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+  — BuildingBlocks.UnitTests 132, Identidad.UnitTests 58, Terceros.UnitTests 39,
+    Organizacion.UnitTests 182, Organizacion.IntegrationTests 4, Arquitectura.Tests 27,
+    Api.FunctionalTests 136, Api.IntegrationTests 4
+```
+
+Contra los **576 en 8 ensamblados** del 1.5 (`279b8c7`): +1 regla de arquitectura (23→27 incluye las
+tres del barrido nuevo del art. 32 más la del puerto), +3 casos en `Api.IntegrationTests` (el barrido
+de traducción, que corre sin Docker) y −1 en `Organizacion.IntegrationTests` (el caso que se mudó).
+**Integración no se ha podido ejercer en local: no hay Docker en esta máquina.** Lo que sí se ejerció
+en su lugar está en el informe del ítem.
+
 **Ítem 1.5 cerrado — el agregado, su identidad fiscal, y un conflicto que no revela:**
 run **34046817118** sobre `279b8c7`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3` de la API, no de la memoria): Frontal `101523261565` ✓ (17 pasos, 0 omitidos),
@@ -5819,12 +5879,15 @@ cuando hace falta el porqué.
   criterio del 1.5**, que habla de una respuesta, y cerrarlo pide una decisión de las de preguntar:
   separar los dos permisos, o que la búsqueda mienta igual que el alta. Se anota, no se tapa.
 
-- **ABIERTO (2026-09-05, ítem 1.5) · un tercero bloqueado no aparece en NINGÚN listado.** El listado
-  del art. 32 que construyó el 1.4 recorre `TipoDeRecursoBloqueado`, que tiene tres valores: `Empresa`,
-  `Almacen` y `Ubicacion`. Un tercero bloqueado desaparece del camino ordinario —como debe— y **no
-  asoma por el reservado**, que es donde el art. 32 espera encontrarlo. Ampliar el enumerado toca el
-  permiso y el DTO de un listado del módulo Organización, o sea el criterio del 1.4 ya cerrado, así que
-  no se hace aquí. Candidato para el **1.7** o para el ítem que abra ese listado a más módulos.
+- **CERRADA (2026-09-07, ítem 1.6) · un tercero bloqueado no aparecía en NINGÚN listado — y un
+  usuario bloqueado tampoco, desde el 1.4.** La nota se abrió en el 1.5 mirando a `Tercero` y **se
+  quedaba corta**: el listado nació corto en el **1.4**, sin los usuarios bloqueados, que son personas
+  físicas y el caso más nítido del artículo. Y el motivo no era un olvido, era **estructural** —el
+  enumerado vivía en `Organizacion.Application` y el repositorio unía tres tablas de un solo esquema,
+  así que por construcción no alcanzaba a Identidad ni a Terceros—. Cerrada con la regla que lo pone
+  rojo escrita **antes** del arreglo (roja con los dos supervivientes) y con el patrón de puertos del
+  1.2: cada módulo que bloquea contesta por lo suyo y el listado compone. **ADR-0031**, y el detalle
+  en *Estado actual* → *Ítem 1.6*.
 
 - **ABIERTO (2026-09-05, ítem 1.5) · el régimen fiscal del §7.2 no está en el criterio de ningún
   ítem.** El modelo de dominio del plan maestro se lo pone a `Tercero`. El criterio escrito del 1.5 no

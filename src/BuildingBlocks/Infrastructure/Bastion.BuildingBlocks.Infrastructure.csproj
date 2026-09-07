@@ -18,11 +18,28 @@
   <ItemGroup>
     <PackageReference Include="Npgsql" />
     <!--
-      EF Core, no el proveedor. Aqui vive la base de los DbContext de modulo (§12) y con ella el
-      unico sitio del que sale la empresa por la que filtra el inquilinato. Quien elige PostgreSQL
-      sigue siendo la Infrastructure de cada modulo: este proyecto no sabe contra que base corre.
+      EF Core. Aqui vive la base de los DbContext de modulo (§12) y con ella el unico sitio del
+      que sale la empresa por la que filtra el inquilinato.
     -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <!--
+      Y EL PROVEEDOR, desde el item 1.6. Hasta entonces este bloque decia «EF Core, no el
+      proveedor: este proyecto no sabe contra que base corre», y la frase ya era falsa cuando se
+      escribio: dos parrafos mas abajo se admite que aqui se mapea una columna `jsonb`, que es
+      PostgreSQL y no otra cosa. El item 1.6 la vuelve falsa del todo -el filtro compartido del
+      listado del art. 32 usa `ILIKE`, que es API del proveedor- asi que se corrige la frase en
+      vez de esconder el hecho detras de una copia por modulo.
+
+      Lo que se gana a cambio es lo que el item vino a arreglar: filtro, orden, recuento y corte
+      del listado del art. 32 escritos UNA vez. Repartidos entre los tres modulos que bloquean,
+      el dia que uno se dejara el `ESCAPE` o la intercalacion `C` el listado saldria verde con una
+      pagina mal ordenada, que no se ve mirando la pantalla.
+
+      Y la frontera que de verdad se cuida sigue intacta, que es la que este mismo fichero ya
+      declaraba como la buena: Domain y Application no saben de persistencia. Este proyecto es
+      Infrastructure; elegir PostgreSQL aqui es lo que le toca.
+    -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <!--
       Y el paquete relacional, desde el 0.7. Aqui se mapea la tabla de traza (§12 pone la
       auditoria en este proyecto), y mapear una TABLA es relacional por definicion: `ToTable`,

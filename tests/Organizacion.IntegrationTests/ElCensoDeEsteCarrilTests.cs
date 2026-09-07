@@ -68,7 +68,6 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaCargaDeSemillasTests.Los_tramos_del_IVA_general_entran_los_tres_y_solo_uno_queda_abierto",
 
         "LaTraduccionASqlTests.El_barrido_ve_los_listados_y_reconoce_una_consulta_intraducible",
-        "LaTraduccionASqlTests.El_listado_de_lo_bloqueado_se_traduce_entero",
         "LaTraduccionASqlTests.La_busqueda_por_criterio_y_su_cursor_se_traducen_a_sql",
         "LaTraduccionASqlTests.Todo_orden_y_todo_filtro_declarado_se_traduce_a_sql",
 

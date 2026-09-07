@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
@@ -66,6 +67,17 @@ public static class ModuloDeIdentidad
         servicios.AddScoped<IRepositorioDeUsuarios, RepositorioDeUsuarios>();
         servicios.AddScoped<IRepositorioDeRoles, RepositorioDeRoles>();
         servicios.AddScoped<IRepositorioDeTokensDeRefresco, RepositorioDeTokensDeRefresco>();
+
+        // Lo que este módulo aporta al listado del art. 32: los usuarios bloqueados, que son el
+        // caso más nítido del artículo porque son personas físicas. Faltaban desde el ítem 1.4, y
+        // no por olvido: el listado lo servía un repositorio de Organización que unía tres tablas
+        // de Organización, así que ningún módulo más podía asomar por él aunque bloqueara.
+        //
+        // `AddScoped` a secas y NO `TryAddScoped`: los tres módulos se registran bajo el mismo
+        // tipo y el listado los resuelve todos como `IEnumerable`. Con `TryAdd`, el segundo en
+        // registrarse se descartaría en silencio y el listado saldría corto —bien formado, con
+        // menos filas—, que es exactamente el defecto que este ítem viene a cerrar.
+        servicios.AddScoped<IConsultaDeLoBloqueado, ConsultaDeLoBloqueadoDeIdentidad>();
 
         // El hasher es SINGLETON, y no por ahorro: su resumen de relleno —el que iguala el tiempo
         // de un correo que no existe con el de uno que sí— se calcula en el constructor y cuesta

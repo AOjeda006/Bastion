@@ -22,18 +22,39 @@ namespace Bastion.Organizacion.Application.Bloqueos;
 /// volvería a existir: las cuatro exenciones de los desbloqueos caducarían a la vez. De un listado
 /// sale el identificador, que es lo único que el desbloqueo necesita.
 /// </para>
+/// <para>
+/// <b>Vive en Organización y pregunta por todos, y esa mezcla es deliberada.</b> La obligación es
+/// transversal —cualquier módulo que bloquee tiene que asomar aquí— pero la ruta y el permiso son
+/// de la administración de la instalación, que es lo que Organización ya es. Lo que cambió en el
+/// ítem 1.6 es de dónde salen las filas: antes las traía un repositorio de este módulo que unía
+/// tres tablas de este módulo, así que por construcción no alcanzaba a Identidad ni a Terceros y
+/// los usuarios y los terceros bloqueados llevaban dos ítems sin aparecer. Ahora cada módulo que
+/// bloquea contesta por lo suyo tras <c>IConsultaDeLoBloqueado</c> y esto compone.
+/// </para>
 /// </remarks>
 public interface IListarLoBloqueado : IListado<BloqueadoDto>
 {
 }
 
 /// <inheritdoc cref="IListarLoBloqueado"/>
+/// <remarks>
+/// <para>
+/// <b>Los puertos llegan como <c>IEnumerable</c> y sin nombrar a ninguno.</b> Es lo que hace que
+/// añadir un módulo que bloquee sea registrar su puerto y nada más; y es también lo que obliga a
+/// que exista la regla de arquitectura que compara la lista de agregados bloqueables contra el
+/// enumerado, porque una colección vacía o incompleta no se distingue de una completa mirando este
+/// fichero: contestaría una página bien formada con menos filas de las que hay.
+/// </para>
+/// </remarks>
 internal sealed class ListarLoBloqueado(
-    IRepositorioDeLoBloqueado bloqueados,
+    IEnumerable<IConsultaDeLoBloqueado> modulos,
     IAccesoALoBloqueado acceso,
     PoliticaDeRetencion retencion) : IListarLoBloqueado
 {
-    public IReadOnlySet<string> CamposOrdenables => bloqueados.CamposOrdenables;
+    // Sale de la composición y ya no de un repositorio de este módulo: el orden es del listado
+    // entero, no de las tablas de Organización. Antes lo publicaba el repositorio, así que un
+    // módulo nuevo podía aportar filas y no tener nada que decir sobre por dónde se ordenan.
+    public IReadOnlySet<string> CamposOrdenables => ComposicionDeLoBloqueado.CamposOrdenables;
 
     public async Task<PaginaDe<BloqueadoDto>> EjecutarAsync(
         Paginacion paginacion, CancellationToken cancelacion)
@@ -42,10 +63,16 @@ internal sealed class ListarLoBloqueado(
         // administración de bloqueo: es el acceso reservado del art. 32, con su motivo propio y su
         // permiso propio. La apertura anota en el registro el motivo Y QUIÉN pregunta, que es lo
         // que convierte esto en una vía trazada y no en una consulta más.
+        //
+        // Y sigue siendo UNA sola apertura aunque ahora se consulten tres módulos: el ámbito vive
+        // en un `AsyncLocal` del bloque común y lo leen los tres contextos, así que abrirlo aquí
+        // los destapa a los tres a la vez. Un puerto que se abriera el ámbito por su cuenta
+        // convertiría una apertura declarada en una puerta, y lo vería el censo del carril.
         using IDisposable _ = acceso.ViendoLoBloqueado(MotivoParaVerLoBloqueado.AccesoReservadoDelArticulo32);
 
-        PaginaDe<RecursoBloqueado> pagina =
-            await bloqueados.ListarAsync(paginacion, cancelacion).ConfigureAwait(false);
+        PaginaDe<RecursoBloqueado> pagina = await ComposicionDeLoBloqueado
+            .ComponerAsync(modulos, paginacion, cancelacion)
+            .ConfigureAwait(false);
 
         return new PaginaDe<BloqueadoDto>(
             [.. pagina.Elementos.Select(ADto)],
