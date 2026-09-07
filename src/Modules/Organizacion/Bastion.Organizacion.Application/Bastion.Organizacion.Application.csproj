@@ -24,4 +24,20 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup Label="Pruebas">
+    <!--
+      La desigualdad de la inversa y la decisión de no encadenar son ARITMÉTICA y una rama, no
+      E/S: no necesitan PostgreSQL, así que su testigo no puede estar detrás de Docker. Hasta el
+      ítem 1.7 lo estaba, y eso significa que el día que alguien cambie el `≤` por un `<` la
+      máquina en la que lo escribe sale verde y el aviso llega seis minutos después, en el runner
+      — si es que el runner es el único sitio donde corre.
+
+      Se abre a `Bastion.Organizacion.IntegrationTests` porque es el proyecto que ya alberga, por
+      decisión declarada en su propio `.csproj`, «la parte del carril que no necesita el carril»:
+      `LaTraduccionASqlTests` desde el ítem 1.3. Las implementaciones de los casos de uso son
+      `internal` a propósito y no se abren al mundo por esto: se abren a un ensamblado nombrado.
+    -->
+    <InternalsVisibleTo Include="Bastion.Organizacion.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

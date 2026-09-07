@@ -45,6 +45,20 @@ public sealed class ElCensoDeEsteCarrilTests
     [
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
+        // Del ítem 1.7, y son la SEGUNDA excepción declarada de este carril: aritmética y una
+        // rama, sin base. Su motivo está en `LaAritmeticaDeLaInversaTests` — un caso frontera al
+        // que solo se llega levantando un contenedor es un caso frontera que nadie ejerce
+        // mientras escribe el cambio que lo rompe.
+        "LaAritmeticaDeLaInversaTests.El_margen_sale_de_la_escala_y_no_de_un_numero_elegido",
+        "LaAritmeticaDeLaInversaTests.El_par_declarado_se_resuelve_y_dice_si_esta_retirada",
+        "LaAritmeticaDeLaInversaTests.El_par_de_la_frontera_se_separa_EXACTAMENTE_el_margen",
+        "LaAritmeticaDeLaInversaTests.El_par_que_habria_que_encadenar_no_se_resuelve",
+        "LaAritmeticaDeLaInversaTests.La_desigualdad_acepta_el_redondeo_legitimo_y_rechaza_el_otro_numero",
+        "LaAritmeticaDeLaInversaTests.La_inversa_implausible_se_rechaza_con_su_codigo_y_no_reventando",
+        "LaAritmeticaDeLaInversaTests.La_modificacion_vuelve_a_comprobar_la_inversa",
+        "LaAritmeticaDeLaInversaTests.Sin_la_fila_del_sentido_contrario_no_hay_nada_que_comprobar",
+        "LaAritmeticaDeLaInversaTests.Una_modificacion_que_respeta_la_inversa_se_guarda",
+
         "EsquemaDelModuloTests.El_NIF_lleva_tope_porque_su_longitud_es_una_regla_y_no_una_estimacion",
         "EsquemaDelModuloTests.El_contador_de_la_serie_es_una_columna_y_NO_una_secuencia_de_PostgreSQL",
         "EsquemaDelModuloTests.El_domicilio_fiscal_esta_en_campos_estructurados",
