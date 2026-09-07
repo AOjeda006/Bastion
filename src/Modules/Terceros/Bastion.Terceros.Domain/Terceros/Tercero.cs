@@ -1,6 +1,8 @@
 using Bastion.BuildingBlocks.Domain.Bloqueos;
+using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Direcciones;
 using Bastion.BuildingBlocks.Domain.Entidades;
+using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 
 namespace Bastion.Terceros.Domain.Terceros;
@@ -40,6 +42,10 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
     /// <summary>Tope del nombre comercial. El mismo, porque es la misma clase de dato.</summary>
     public const int LongitudMaximaDeNombreComercial = 120;
 
+    private readonly List<Contacto> _contactos = [];
+    private readonly List<CuentaBancaria> _cuentasBancarias = [];
+    private readonly List<CondicionPago> _condicionesPago = [];
+
     private Tercero(
         Guid id,
         Guid empresaId,
@@ -49,6 +55,7 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
         Direccion domicilioFiscal,
         bool esCliente,
         bool esProveedor,
+        RegimenFiscal regimenFiscal,
         DateTimeOffset momento)
         : base(momento)
     {
@@ -60,6 +67,7 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
         DomicilioFiscal = domicilioFiscal;
         EsCliente = esCliente;
         EsProveedor = esProveedor;
+        RegimenFiscal = regimenFiscal;
         Bloqueo = Bloqueo.Ninguno();
     }
 
@@ -70,6 +78,7 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
         Identificacion = null!;
         RazonSocial = null!;
         DomicilioFiscal = null!;
+        RegimenFiscal = null!;
         Bloqueo = null!;
     }
 
@@ -110,6 +119,45 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
     /// <summary>Se le compra.</summary>
     public bool EsProveedor { get; private set; }
 
+    /// <summary>Dónde tributa y bajo qué condiciones especiales.</summary>
+    public RegimenFiscal RegimenFiscal { get; private set; }
+
+    /// <summary>
+    /// Cuánto se le fía, si se le fía.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es un <see cref="Importe"/>, o sea que LLEVA SU DIVISA, y esa es la decisión.</b> El
+    /// enunciado admitía la otra —heredar la de la empresa y dejarlo escrito—, y se ha descartado
+    /// por una razón que no es de gusto: <see cref="Importe"/> es el tipo de dinero de este
+    /// proyecto y no existe sin divisa; guardar aquí un <c>decimal</c> pelado convertiría el
+    /// límite de crédito en la única cantidad de dinero del sistema que no dice de qué es. Y la
+    /// herencia implícita tiene un modo de fallo silencioso: el día que alguien cambie la divisa
+    /// base de la empresa, todos los límites ya guardados cambiarían de significado sin que
+    /// ninguna fila se toque.
+    /// </para>
+    /// <para>
+    /// Lo que sí hereda es <b>lo que se ofrece por omisión</b>: la divisa base de la empresa
+    /// (<c>Empresa.DivisaBase</c>, que es un código ISO, no un identificador). Eso es de la
+    /// pantalla y del caso de uso, no del modelo.
+    /// </para>
+    /// <para>
+    /// <b>Solo el importe.</b> El riesgo vivo, el disponible y el bloqueo por exceso que nombra el
+    /// §7.2 son cálculo sobre documentos que todavía no existen: esa es la raya de la fase 6. Un
+    /// «disponible» guardado en esta fila sería un número que nadie recalcula.
+    /// </para>
+    /// </remarks>
+    public Importe? LimiteCredito { get; private set; }
+
+    /// <summary>Las personas con las que se habla en su casa.</summary>
+    public IReadOnlyList<Contacto> Contactos => _contactos;
+
+    /// <summary>Sus cuentas, con como mucho una preferente.</summary>
+    public IReadOnlyList<CuentaBancaria> CuentasBancarias => _cuentasBancarias;
+
+    /// <summary>Sus condiciones de pago, como mucho una por rol.</summary>
+    public IReadOnlyList<CondicionPago> CondicionesPago => _condicionesPago;
+
     /// <inheritdoc/>
     public Bloqueo Bloqueo { get; private set; }
 
@@ -124,10 +172,12 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
         Direccion domicilioFiscal,
         bool esCliente,
         bool esProveedor,
+        RegimenFiscal regimenFiscal,
         DateTimeOffset momento)
     {
         ArgumentNullException.ThrowIfNull(identificacion);
         ArgumentNullException.ThrowIfNull(domicilioFiscal);
+        ArgumentNullException.ThrowIfNull(regimenFiscal);
 
         if (empresaId == Guid.Empty)
         {
@@ -146,6 +196,7 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
             domicilioFiscal,
             esCliente,
             esProveedor,
+            regimenFiscal,
             momento);
     }
 
@@ -155,14 +206,13 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
         string? nombreComercial,
         Direccion domicilioFiscal,
         bool esCliente,
-        bool esProveedor)
+        bool esProveedor,
+        RegimenFiscal regimenFiscal)
     {
         ArgumentNullException.ThrowIfNull(domicilioFiscal);
+        ArgumentNullException.ThrowIfNull(regimenFiscal);
 
-        Bloqueo.ExigirQueNoEsteBloqueado(
-            "Un tercero bloqueado",
-            "el art. 32 de la LOPDGDD impide el tratamiento de los datos bloqueados, y " +
-            "modificarlos es tratarlos");
+        ExigirQueSePuedaTratar();
 
         ExigirAlgunRol(esCliente, esProveedor);
 
@@ -172,6 +222,180 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
         DomicilioFiscal = domicilioFiscal;
         EsCliente = esCliente;
         EsProveedor = esProveedor;
+        RegimenFiscal = regimenFiscal;
+    }
+
+    /// <summary>Cuelga un contacto de la ficha.</summary>
+    /// <param name="nombre">Nombre de la persona.</param>
+    /// <param name="cargo">Qué hace en casa del tercero.</param>
+    /// <param name="correo">Correo profesional.</param>
+    /// <param name="telefono">Teléfono profesional.</param>
+    /// <param name="momento">Cuándo, del reloj inyectado.</param>
+    public Contacto AgregarContacto(
+        string nombre,
+        string? cargo,
+        Correo? correo,
+        string? telefono,
+        DateTimeOffset momento)
+    {
+        ExigirQueSePuedaTratar();
+
+        var contacto = Contacto.Crear(Id, nombre, cargo, correo, telefono, momento);
+        _contactos.Add(contacto);
+
+        return contacto;
+    }
+
+    /// <summary>Quita un contacto.</summary>
+    /// <param name="contactoId">Cuál.</param>
+    public void QuitarContacto(Guid contactoId)
+    {
+        ExigirQueSePuedaTratar();
+        _contactos.RemoveAll(contacto => contacto.Id == contactoId);
+    }
+
+    /// <summary>
+    /// Cuelga una cuenta bancaria, y si es la preferente, baja a la que lo fuera.
+    /// </summary>
+    /// <remarks>
+    /// <b>La coordinación vive aquí y no en el caso de uso</b>, porque «como mucho una preferente»
+    /// es un invariante <b>del conjunto</b> de cuentas de esta ficha, y el sitio donde un
+    /// invariante de conjunto se puede sostener es el agregado que lo contiene. En el caso de uso
+    /// habría que acordarse en cada uno de los que tocan cuentas; aquí no hay dónde olvidarse. La
+    /// otra mitad —dos peticiones a la vez— la sostiene el índice único, no esto.
+    /// </remarks>
+    /// <param name="iban">El IBAN, ya validado.</param>
+    /// <param name="bic">El BIC, si se conoce.</param>
+    /// <param name="alias">Con qué nombre se distingue de las demás.</param>
+    /// <param name="esPreferente">Si pasa a ser la de por omisión.</param>
+    /// <param name="momento">Cuándo, del reloj inyectado.</param>
+    public CuentaBancaria AgregarCuentaBancaria(
+        Iban iban,
+        string? bic,
+        string? alias,
+        bool esPreferente,
+        DateTimeOffset momento)
+    {
+        ArgumentNullException.ThrowIfNull(iban);
+        ExigirQueSePuedaTratar();
+
+        if (_cuentasBancarias.Exists(cuenta =>
+            string.Equals(cuenta.Iban.Valor, iban.Valor, StringComparison.Ordinal)))
+        {
+            throw new InvalidOperationException(
+                "Esta ficha ya tiene esa cuenta. Repetirla dejaría dos filas que el fichero de " +
+                "adeudos no sabría distinguir.");
+        }
+
+        // Si es la primera, es la preferente aunque nadie lo pida: una ficha con cuentas y sin
+        // ninguna preferente obliga a elegir a quien pague, y elegiría por el orden de la base.
+        bool preferente = esPreferente || _cuentasBancarias.Count == 0;
+
+        if (preferente)
+        {
+            foreach (CuentaBancaria anterior in _cuentasBancarias)
+            {
+                anterior.MarcarPreferente(false);
+            }
+        }
+
+        var cuentaNueva =
+            CuentaBancaria.Crear(Id, iban, bic, alias, preferente, momento);
+        _cuentasBancarias.Add(cuentaNueva);
+
+        return cuentaNueva;
+    }
+
+    /// <summary>Hace preferente una de las cuentas que ya tiene.</summary>
+    /// <param name="cuentaId">Cuál.</param>
+    public void MarcarCuentaPreferente(Guid cuentaId)
+    {
+        ExigirQueSePuedaTratar();
+
+        CuentaBancaria elegida = _cuentasBancarias.Find(cuenta => cuenta.Id == cuentaId)
+            ?? throw new InvalidOperationException(
+                "Esa cuenta no es de esta ficha, así que no se puede hacer preferente.");
+
+        foreach (CuentaBancaria cuenta in _cuentasBancarias)
+        {
+            cuenta.MarcarPreferente(cuenta.Id == elegida.Id);
+        }
+    }
+
+    /// <summary>Quita una cuenta.</summary>
+    /// <remarks>
+    /// Si la que se va era la preferente y quedan otras, la más antigua toma el relevo: dejar la
+    /// ficha con cuentas y sin preferente es el estado que obliga a elegir a quien pague.
+    /// </remarks>
+    /// <param name="cuentaId">Cuál.</param>
+    public void QuitarCuentaBancaria(Guid cuentaId)
+    {
+        ExigirQueSePuedaTratar();
+
+        CuentaBancaria? cuenta = _cuentasBancarias.Find(fila => fila.Id == cuentaId);
+
+        if (cuenta is null)
+        {
+            return;
+        }
+
+        _cuentasBancarias.Remove(cuenta);
+
+        if (cuenta.EsPreferente && _cuentasBancarias.Count > 0)
+        {
+            _cuentasBancarias[0].MarcarPreferente(true);
+        }
+    }
+
+    /// <summary>
+    /// Fija la condición de pago de un rol: la crea, o cambia la que ya hubiera.
+    /// </summary>
+    /// <remarks>
+    /// Es una sola operación y no un alta más una modificación porque «como mucho una por rol» es,
+    /// otra vez, un invariante del conjunto.
+    /// </remarks>
+    /// <param name="rol">Si es la condición como cliente o como proveedor.</param>
+    /// <param name="diasDePlazo">Días naturales desde la entrega. Como mucho, sesenta.</param>
+    /// <param name="diaDePagoFijo">Día del mes en que se paga, de 1 a 28.</param>
+    /// <param name="descuentoPorProntoPago">Porcentaje de descuento por pagar antes.</param>
+    /// <param name="momento">Cuándo, del reloj inyectado.</param>
+    public CondicionPago FijarCondicionPago(
+        RolDeCondicionPago rol,
+        int diasDePlazo,
+        int? diaDePagoFijo,
+        decimal? descuentoPorProntoPago,
+        DateTimeOffset momento)
+    {
+        ExigirQueSePuedaTratar();
+
+        CondicionPago? existente = _condicionesPago.Find(condicion => condicion.Rol == rol);
+
+        if (existente is not null)
+        {
+            existente.Modificar(diasDePlazo, diaDePagoFijo, descuentoPorProntoPago);
+            return existente;
+        }
+
+        var condicionNueva = CondicionPago.Crear(
+            Id, rol, diasDePlazo, diaDePagoFijo, descuentoPorProntoPago, momento);
+        _condicionesPago.Add(condicionNueva);
+
+        return condicionNueva;
+    }
+
+    /// <summary>Fija —o retira, con <c>null</c>— el límite de crédito.</summary>
+    /// <param name="limite">El importe con su divisa, o <c>null</c> para quitarlo.</param>
+    public void FijarLimiteDeCredito(Importe? limite)
+    {
+        ExigirQueSePuedaTratar();
+
+        if (limite is not null && limite.Cantidad < 0m)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(limite), limite.Cantidad, "Un límite de crédito no puede ser negativo.");
+        }
+
+        LimiteCredito = limite;
     }
 
     /// <inheritdoc/>
@@ -191,6 +415,19 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
     /// siguiente con un conflicto que nadie entiende, y no se puede usar para nada. Se rechaza al
     /// crearla, que es cuando todavía no le ha pasado eso a nadie.
     /// </remarks>
+    /// <summary>
+    /// Lo que el art. 32 impide: tratar los datos de una ficha bloqueada.
+    /// </summary>
+    /// <remarks>
+    /// Colgarle un contacto o cambiarle la cuenta es tratarlos igual que cambiarle la razón
+    /// social, así que la puerta es la misma para todas las operaciones del agregado.
+    /// </remarks>
+    private void ExigirQueSePuedaTratar() =>
+        Bloqueo.ExigirQueNoEsteBloqueado(
+            "Un tercero bloqueado",
+            "el art. 32 de la LOPDGDD impide el tratamiento de los datos bloqueados, y " +
+            "modificarlos es tratarlos");
+
     private static void ExigirAlgunRol(bool esCliente, bool esProveedor)
     {
         if (!esCliente && !esProveedor)

@@ -35,6 +35,23 @@ public static class CasosDeUsoDeTerceros
         servicios.AddScoped<IBloquearTercero, BloquearTercero>();
         servicios.AddScoped<IDesbloquearTercero, DesbloquearTercero>();
 
+        // Lo que cuelga de la ficha. Un tipo por operación, igual que arriba: lo que un
+        // controlador puede hacer se lee en su constructor.
+        servicios.AddScoped<IListarContactos, ListarContactos>();
+        servicios.AddScoped<IAgregarContacto, AgregarContacto>();
+        servicios.AddScoped<IQuitarContacto, QuitarContacto>();
+
+        servicios.AddScoped<IListarCuentasBancarias, ListarCuentasBancarias>();
+        servicios.AddScoped<IAgregarCuentaBancaria, AgregarCuentaBancaria>();
+        servicios.AddScoped<IMarcarCuentaPreferente, MarcarCuentaPreferente>();
+        servicios.AddScoped<IQuitarCuentaBancaria, QuitarCuentaBancaria>();
+
+        servicios.AddScoped<IListarCondicionesPago, ListarCondicionesPago>();
+        servicios.AddScoped<IFijarCondicionPago, FijarCondicionPago>();
+
+        servicios.AddScoped<IObtenerLimiteCredito, ObtenerLimiteCredito>();
+        servicios.AddScoped<IFijarLimiteCredito, FijarLimiteCredito>();
+
         // Mismo criterio que en Organización: el reloj como servicio, y `TryAdd` para que un test
         // que ya haya puesto un reloj falso conserve el suyo.
         servicios.TryAddSingleton(TimeProvider.System);

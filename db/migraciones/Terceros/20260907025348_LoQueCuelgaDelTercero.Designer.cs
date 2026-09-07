@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Bastion.Terceros.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bastion.Terceros.Infrastructure.Migrations
 {
     [DbContext(typeof(TercerosDbContext))]
-    partial class TercerosDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260907025348_LoQueCuelgaDelTercero")]
+    partial class LoQueCuelgaDelTercero
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

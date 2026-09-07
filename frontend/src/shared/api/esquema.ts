@@ -875,6 +875,177 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/terceros/terceros/{terceroId}/contactos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve los contactos de un tercero. */
+        get: operations["LoQueCuelgaDelTercero_ListarContactos"];
+        put?: never;
+        /** Cuelga un contacto de un tercero. */
+        post: operations["LoQueCuelgaDelTercero_AgregarContacto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{terceroId}/contactos/{contactoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Quita un contacto de un tercero.
+         * @description <b>Aquí sí se borra la fila</b>, y no choca con el art. 32: el contacto no es el interesado
+         *             de la ficha, y nada de lo emitido cuelga de él. Conservarlo no protegería ninguna cuenta y
+         *             sí mantendría el nombre y el teléfono de alguien que dejó de tener relación con el negocio.
+         */
+        delete: operations["LoQueCuelgaDelTercero_QuitarContacto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{terceroId}/cuentas-bancarias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve las cuentas bancarias de un tercero.
+         * @description <b>El IBAN sale entero.</b> Quien tiene el permiso de terceros de esta empresa es quien va a
+         *             pagar por esa cuenta, y una pantalla que enseñara `ES99****1234` no serviría para
+         *             comprobar que el número es el que puso el proveedor en su factura. Lo que no lo enseña es el
+         *             registro, que es donde se queda para siempre.
+         */
+        get: operations["LoQueCuelgaDelTercero_ListarCuentasBancarias"];
+        put?: never;
+        /** Cuelga una cuenta bancaria de un tercero. */
+        post: operations["LoQueCuelgaDelTercero_AgregarCuentaBancaria"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{terceroId}/cuentas-bancarias/{cuentaId}/preferente": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hace preferente una de las cuentas del tercero.
+         * @description <b>Como mucho una preferente por ficha</b>, y eso lo sostienen dos cosas a la vez: el
+         *             agregado, que baja la anterior en la misma operación, y un índice único parcial
+         *             `(tercero_id) WHERE es_preferente`, que es lo que queda cuando llegan dos peticiones a
+         *             la vez. Sobre si la restricción ve las filas bloqueadas, <b>es la misma decisión del ítem
+         *             1.5</b>: sin predicado de bloqueo. Aquí además no podría ser otra, porque el bloqueo vive en
+         *             el tercero y las cuentas que compiten son siempre del mismo.
+         */
+        post: operations["LoQueCuelgaDelTercero_MarcarCuentaPreferente"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{terceroId}/cuentas-bancarias/{cuentaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quita una cuenta bancaria del tercero. */
+        delete: operations["LoQueCuelgaDelTercero_QuitarCuentaBancaria"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{terceroId}/condiciones-pago": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve las condiciones de pago del tercero. */
+        get: operations["LoQueCuelgaDelTercero_ListarCondicionesPago"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{terceroId}/condiciones-pago/{rol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Fija la condición de pago de un rol.
+         * @description Es un PUT y el rol va en la ruta: la condición de un rol es un recurso —hay
+         *       una, o no hay ninguna—, así que fijarla dos veces con el mismo cuerpo deja el mismo estado.
+         *       Con el rol en el cuerpo, un PUT sobre la del cliente podría cambiar la del proveedor.
+         *     El plazo son días desde la ENTREGA, y como mucho sesenta (art. 4 de la Ley 3/2004),
+         *       que no es un valor por omisión configurable: es un invariante, y un plazo mayor no es una
+         *       condición peor, es una cláusula nula. Aquí no se calcula ningún vencimiento: Terceros no ve
+         *       entregas.
+         */
+        put: operations["LoQueCuelgaDelTercero_FijarCondicionPago"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{terceroId}/limite-credito": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve el límite de crédito del tercero. */
+        get: operations["LoQueCuelgaDelTercero_ObtenerLimiteCredito"];
+        /**
+         * Fija —o retira— el límite de crédito del tercero.
+         * @description <b>Solo el importe con su divisa.</b> Consumo, disponible y bloqueo por exceso no son de
+         *             este ítem: eso necesita ver los pedidos y las facturas pendientes, que es la fase 6.
+         */
+        put: operations["LoQueCuelgaDelTercero_FijarLimiteCredito"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/terceros/terceros": {
         parameters: {
             query?: never;
@@ -1119,6 +1290,86 @@ export interface components {
              */
             empresaId: string;
         };
+        /** @description Lo que hace falta para fijar la condición de pago de un rol. */
+        CondicionPagoDeAltaDto: {
+            /**
+             * Format: int32
+             * @description Días naturales desde la entrega o la prestación.
+             */
+            diasDePlazo?: number | string;
+            /**
+             * Format: int32
+             * @description Día del mes en que se paga, del 1 al 28.
+             */
+            diaDePagoFijo?: null | number | string;
+            /**
+             * Format: double
+             * @description Porcentaje de descuento por pagar antes.
+             */
+            descuentoPorProntoPago?: null | number | string;
+        };
+        /** @description Una condición de pago del tercero, tal como sale de la API. */
+        CondicionPagoDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la condición.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description La ficha de la que cuelga.
+             */
+            terceroId: string;
+            /** @description De qué cara es: `Cliente` o `Proveedor`. */
+            rol: string;
+            /**
+             * Format: int32
+             * @description Días naturales <b>desde la entrega</b>. Como mucho, sesenta.
+             */
+            diasDePlazo: number | string;
+            /**
+             * Format: int32
+             * @description Día del mes en que se paga, si lo hay.
+             */
+            diaDePagoFijo: null | number | string;
+            /**
+             * Format: double
+             * @description Porcentaje de descuento por pagar antes, si lo hay.
+             */
+            descuentoPorProntoPago: null | number | string;
+        };
+        /** @description Lo que hace falta para colgar o cambiar un contacto. */
+        ContactoDeAltaDto: {
+            /** @description Nombre de la persona. */
+            nombre: string;
+            /** @description Qué hace en casa del tercero. */
+            cargo?: null | string;
+            /** @description Correo profesional. */
+            correo?: null | string;
+            /** @description Teléfono profesional. */
+            telefono?: null | string;
+        };
+        /** @description Un contacto del tercero, tal como sale de la API. */
+        ContactoDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del contacto.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description La ficha de la que cuelga.
+             */
+            terceroId: string;
+            /** @description Nombre de la persona. */
+            nombre: string;
+            /** @description Qué hace en casa del tercero. */
+            cargo: null | string;
+            /** @description Correo profesional. */
+            correo: null | string;
+            /** @description Teléfono profesional. */
+            telefono: null | string;
+        };
         /** @description Una conversión entre dos unidades de medida, tal como sale de la API. */
         ConversionUmDto: {
             /**
@@ -1273,6 +1524,8 @@ export interface components {
             esCliente?: boolean;
             /** @description Se le compra. */
             esProveedor?: boolean;
+            /** @description Dónde tributa y bajo qué condiciones especiales. */
+            regimenFiscal?: components["schemas"]["RegimenFiscalDeAltaDto"];
         };
         /** @description Lo que hace falta para registrar la cotización de un día. */
         CrearTipoCambioDto: {
@@ -1335,6 +1588,38 @@ export interface components {
             nombre: string;
             /** @description Contraseña inicial. */
             contrasena: string;
+        };
+        /** @description Lo que hace falta para colgar una cuenta bancaria. */
+        CuentaBancariaDeAltaDto: {
+            /** @description El IBAN. Admite los espacios con los que se imprime. */
+            iban: string;
+            /** @description El BIC, si se conoce. Ocho u once posiciones. */
+            bic?: null | string;
+            /** @description Con qué nombre se distingue de las demás. */
+            alias?: null | string;
+            /** @description Si pasa a ser la de por omisión. */
+            esPreferente?: boolean;
+        };
+        /** @description Una cuenta bancaria del tercero, tal como sale de la API. */
+        CuentaBancariaDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la cuenta.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description La ficha de la que cuelga.
+             */
+            terceroId: string;
+            /** @description El IBAN, normalizado y sin espacios. */
+            iban: string;
+            /** @description El BIC, si se conoce. */
+            bic: null | string;
+            /** @description Con qué nombre se distingue de las demás. */
+            alias: null | string;
+            /** @description Si es la que se usa cuando nadie dice otra cosa. */
+            esPreferente: boolean;
         };
         /** @description Una dirección estructurada, en los seis campos que exige R17. */
         DireccionDto: {
@@ -1490,6 +1775,31 @@ export interface components {
              */
             empresaId?: null | string;
         };
+        /** @description Lo que hace falta para fijar —o retirar— el límite de crédito. */
+        LimiteCreditoDeAltaDto: {
+            /**
+             * Format: double
+             * @description El importe. Nulo retira el límite.
+             */
+            cantidad?: null | number | string;
+            /** @description La divisa, en ISO 4217. Obligatoria si hay cantidad. */
+            divisa?: null | string;
+        };
+        /** @description El límite de crédito de un tercero, tal como sale de la API. */
+        LimiteCreditoDto: {
+            /**
+             * Format: uuid
+             * @description La ficha de la que cuelga.
+             */
+            terceroId: string;
+            /**
+             * Format: double
+             * @description El importe. Nulo si no se le fía.
+             */
+            cantidad: null | number | string;
+            /** @description La divisa del importe, en ISO 4217. Nula si no se le fía. */
+            divisa: null | string;
+        };
         /** @description La pertenencia de un usuario a una empresa, con sus roles ahí. */
         MembresiaDto: {
             /**
@@ -1578,6 +1888,8 @@ export interface components {
             esCliente?: boolean;
             /** @description Se le compra. */
             esProveedor?: boolean;
+            /** @description Dónde tributa y bajo qué condiciones especiales. */
+            regimenFiscal?: components["schemas"]["RegimenFiscalDeAltaDto"];
         };
         /** @description Lo que se puede rectificar de una cotización. */
         ModificarTipoCambioDto: {
@@ -1896,6 +2208,31 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        /** @description Con qué régimen fiscal se da de alta o se modifica un tercero. */
+        RegimenFiscalDeAltaDto: {
+            /** @description Dónde tributa. Uno de los cinco del §7.2; si no se dice, península y Baleares. */
+            territorio?: string;
+            /** @description Si es minorista en recargo de equivalencia. */
+            recargoDeEquivalencia?: boolean;
+            /** @description Si está acogido al criterio de caja. */
+            criterioDeCaja?: boolean;
+            /** @description Si sus facturas llevan retención de IRPF. */
+            sujetoARetencionIrpf?: boolean;
+        };
+        /** @description El régimen fiscal de un tercero, tal como viaja por la API. */
+        RegimenFiscalDto: {
+            /**
+             * @description Dónde tributa: `PeninsulaYBaleares`, `Canarias`, `CeutaYMelilla`,
+             *     `UnionEuropea` o `TercerosPaises`.
+             */
+            territorio: string;
+            /** @description Si es minorista en recargo de equivalencia. */
+            recargoDeEquivalencia: boolean;
+            /** @description Si está acogido al criterio de caja. */
+            criterioDeCaja: boolean;
+            /** @description Si sus facturas llevan retención de IRPF. */
+            sujetoARetencionIrpf: boolean;
+        };
         /** @description Cambio de la contraseña de OTRO usuario, por quien tiene el permiso. */
         RestablecerContrasenaDto: {
             /** @description La contraseña nueva. */
@@ -2010,6 +2347,8 @@ export interface components {
             esCliente: boolean;
             /** @description Se le compra. */
             esProveedor: boolean;
+            /** @description Dónde tributa y bajo qué condiciones especiales. */
+            regimenFiscal: components["schemas"]["RegimenFiscalDto"];
         };
         /** @description La cotización de un par de divisas en un día, tal como sale de la API. */
         TipoCambioDto: {
@@ -5672,6 +6011,649 @@ export interface operations {
                     "text/plain": components["schemas"]["UnidadMedidaDto"];
                     "application/json": components["schemas"]["UnidadMedidaDto"];
                     "text/json": components["schemas"]["UnidadMedidaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_ListarContactos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ContactoDto"][];
+                    "application/json": components["schemas"]["ContactoDto"][];
+                    "text/json": components["schemas"]["ContactoDto"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_AgregarContacto: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactoDeAltaDto"];
+                "text/json": components["schemas"]["ContactoDeAltaDto"];
+                "application/*+json": components["schemas"]["ContactoDeAltaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ContactoDto"];
+                    "application/json": components["schemas"]["ContactoDto"];
+                    "text/json": components["schemas"]["ContactoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_QuitarContacto: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+                /** @description Identificador del contacto. */
+                contactoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_ListarCuentasBancarias: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CuentaBancariaDto"][];
+                    "application/json": components["schemas"]["CuentaBancariaDto"][];
+                    "text/json": components["schemas"]["CuentaBancariaDto"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_AgregarCuentaBancaria: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CuentaBancariaDeAltaDto"];
+                "text/json": components["schemas"]["CuentaBancariaDeAltaDto"];
+                "application/*+json": components["schemas"]["CuentaBancariaDeAltaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CuentaBancariaDto"];
+                    "application/json": components["schemas"]["CuentaBancariaDto"];
+                    "text/json": components["schemas"]["CuentaBancariaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_MarcarCuentaPreferente: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+                /** @description Identificador de la cuenta. */
+                cuentaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CuentaBancariaDto"];
+                    "application/json": components["schemas"]["CuentaBancariaDto"];
+                    "text/json": components["schemas"]["CuentaBancariaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_QuitarCuentaBancaria: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+                /** @description Identificador de la cuenta. */
+                cuentaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_ListarCondicionesPago: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CondicionPagoDto"][];
+                    "application/json": components["schemas"]["CondicionPagoDto"][];
+                    "text/json": components["schemas"]["CondicionPagoDto"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_FijarCondicionPago: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+                /** @description De qué cara es: `Cliente` o `Proveedor`. */
+                rol: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CondicionPagoDeAltaDto"];
+                "text/json": components["schemas"]["CondicionPagoDeAltaDto"];
+                "application/*+json": components["schemas"]["CondicionPagoDeAltaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CondicionPagoDto"];
+                    "application/json": components["schemas"]["CondicionPagoDto"];
+                    "text/json": components["schemas"]["CondicionPagoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_ObtenerLimiteCredito: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["LimiteCreditoDto"];
+                    "application/json": components["schemas"]["LimiteCreditoDto"];
+                    "text/json": components["schemas"]["LimiteCreditoDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_FijarLimiteCredito: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LimiteCreditoDeAltaDto"];
+                "text/json": components["schemas"]["LimiteCreditoDeAltaDto"];
+                "application/*+json": components["schemas"]["LimiteCreditoDeAltaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["LimiteCreditoDto"];
+                    "application/json": components["schemas"]["LimiteCreditoDto"];
+                    "text/json": components["schemas"]["LimiteCreditoDto"];
                 };
             };
             /** @description Bad Request */

@@ -34,6 +34,7 @@ public sealed record IdentificacionFiscalDto(string Pais, string Numero, string 
 /// <param name="DomicilioFiscal">Domicilio fiscal, estructurado (R17).</param>
 /// <param name="EsCliente">Se le vende.</param>
 /// <param name="EsProveedor">Se le compra.</param>
+/// <param name="RegimenFiscal">Dónde tributa y bajo qué condiciones especiales.</param>
 public sealed record TerceroDto(
     Guid Id,
     Guid EmpresaId,
@@ -42,7 +43,8 @@ public sealed record TerceroDto(
     string? NombreComercial,
     DireccionDto DomicilioFiscal,
     bool EsCliente,
-    bool EsProveedor);
+    bool EsProveedor,
+    RegimenFiscalDto RegimenFiscal);
 
 /// <summary>
 /// Con qué identificador se da de alta un tercero.
@@ -104,6 +106,12 @@ public sealed record CrearTerceroDto
 
     /// <summary>Se le compra.</summary>
     public bool EsProveedor { get; init; }
+
+    /// <summary>Dónde tributa y bajo qué condiciones especiales.</summary>
+    /// <remarks>
+    /// Si no se dice, el régimen común: territorio de aplicación del IVA y sin especialidades.
+    /// </remarks>
+    public RegimenFiscalDeAltaDto RegimenFiscal { get; init; } = new();
 }
 
 /// <summary>
@@ -134,6 +142,12 @@ public sealed record ModificarTerceroDto
 
     /// <summary>Se le compra.</summary>
     public bool EsProveedor { get; init; }
+
+    /// <summary>Dónde tributa y bajo qué condiciones especiales.</summary>
+    /// <remarks>
+    /// Si no se dice, el régimen común: territorio de aplicación del IVA y sin especialidades.
+    /// </remarks>
+    public RegimenFiscalDeAltaDto RegimenFiscal { get; init; } = new();
 }
 
 /// <summary>

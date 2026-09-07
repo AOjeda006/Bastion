@@ -87,6 +87,8 @@ export const es = {
       'conversion-um-no-encontrada': 'Esa conversión de unidades ya no existe.',
       'correo-ya-registrado': 'Ya hay una cuenta con ese correo electrónico.',
       'credenciales-no-validas': 'El correo o la contraseña no son correctos.',
+      'cuenta-bancaria-duplicada': 'Esta ficha ya tiene esa cuenta bancaria.',
+      'cuenta-bancaria-no-encontrada': 'Esta ficha no tiene esa cuenta bancaria.',
       'datos-no-validos': 'Algunos campos no son válidos. Revisa los que aparecen marcados.',
       'divisa-duplicada': 'Ya hay una divisa con ese código.',
       'divisa-no-encontrada': 'Esa divisa ya no existe.',

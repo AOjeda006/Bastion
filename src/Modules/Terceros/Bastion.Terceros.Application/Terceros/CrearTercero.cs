@@ -49,6 +49,9 @@ internal sealed class CrearTercero(
         IdentificacionFiscal? identificacion = Identificaciones.Leer(
             peticion.Identificacion.Pais, peticion.Identificacion.Numero, "identificacion.", errores);
 
+        RegimenFiscal? regimen =
+            RegimenesFiscales.Leer(peticion.RegimenFiscal, "regimenFiscal.", errores);
+
         // La invariante es del dominio y allí LANZA. Aquí se adelanta porque el usuario no ha
         // hecho nada absurdo: ha dejado sin marcar dos casillas del formulario, y merece que se le
         // diga cuáles.
@@ -60,7 +63,7 @@ internal sealed class CrearTercero(
                 "dos cosas.");
         }
 
-        if (errores.Hay || identificacion is null)
+        if (errores.Hay || identificacion is null || regimen is null)
         {
             return Resultado.Fallo<TerceroDto>(errores.AError());
         }
@@ -109,6 +112,7 @@ internal sealed class CrearTercero(
             peticion.DomicilioFiscal.ADireccion(),
             peticion.EsCliente,
             peticion.EsProveedor,
+            regimen,
             reloj.GetUtcNow());
 
         terceros.Agregar(tercero);

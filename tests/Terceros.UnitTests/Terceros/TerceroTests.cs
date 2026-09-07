@@ -59,7 +59,8 @@ public sealed class TerceroTests
             nombreComercial: null,
             s_domicilio,
             esCliente: false,
-            esProveedor: false));
+            esProveedor: false,
+            RegimenFiscal.Comun()));
     }
 
     [Fact]
@@ -73,6 +74,7 @@ public sealed class TerceroTests
             s_domicilio,
             esCliente: true,
             esProveedor: false,
+            RegimenFiscal.Comun(),
             s_momento));
     }
 
@@ -96,7 +98,8 @@ public sealed class TerceroTests
             nombreComercial: null,
             s_domicilio,
             esCliente: true,
-            esProveedor: false));
+            esProveedor: false,
+            RegimenFiscal.Comun()));
     }
 
     [Fact]
@@ -108,7 +111,13 @@ public sealed class TerceroTests
         tercero.Desbloquear();
 
         tercero.Bloqueo.EstaBloqueado.ShouldBeFalse();
-        tercero.Modificar("Otra Razón", null, s_domicilio, esCliente: true, esProveedor: true);
+        tercero.Modificar(
+            "Otra Razón",
+            null,
+            s_domicilio,
+            esCliente: true,
+            esProveedor: true,
+            RegimenFiscal.Comun());
         tercero.EsProveedor.ShouldBeTrue();
     }
 
@@ -127,7 +136,8 @@ public sealed class TerceroTests
         Tercero tercero = Alta();
         IdentificacionFiscal antes = tercero.Identificacion;
 
-        tercero.Modificar("Otra Razón", "Otro Nombre", s_domicilio, true, true);
+        tercero.Modificar(
+            "Otra Razón", "Otro Nombre", s_domicilio, true, true, RegimenFiscal.Comun());
 
         tercero.Identificacion.ShouldBe(antes);
     }
@@ -160,7 +170,8 @@ public sealed class TerceroTests
         string razonSocial = "Razón Social",
         string? nombreComercial = null,
         bool esCliente = true,
-        bool esProveedor = false) =>
+        bool esProveedor = false,
+        RegimenFiscal? regimenFiscal = null) =>
         Tercero.Crear(
             Guid.CreateVersion7(),
             IdentificacionFiscal.Espanola(NifInventado()),
@@ -169,5 +180,6 @@ public sealed class TerceroTests
             s_domicilio,
             esCliente,
             esProveedor,
+            regimenFiscal ?? RegimenFiscal.Comun(),
             s_momento);
 }

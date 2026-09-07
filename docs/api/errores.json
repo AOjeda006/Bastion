@@ -9,6 +9,8 @@
     { "codigo": "conversion-um-no-encontrada", "type": "/errors/conversion-um-no-encontrada", "clase": "NoEncontrado" },
     { "codigo": "correo-ya-registrado", "type": "/errors/correo-ya-registrado", "clase": "Conflicto" },
     { "codigo": "credenciales-no-validas", "type": "/errors/credenciales-no-validas", "clase": "NoAutenticado" },
+    { "codigo": "cuenta-bancaria-duplicada", "type": "/errors/cuenta-bancaria-duplicada", "clase": "Conflicto" },
+    { "codigo": "cuenta-bancaria-no-encontrada", "type": "/errors/cuenta-bancaria-no-encontrada", "clase": "NoEncontrado" },
     { "codigo": "datos-no-validos", "type": "/errors/datos-no-validos", "clase": "Validacion" },
     { "codigo": "divisa-duplicada", "type": "/errors/divisa-duplicada", "clase": "Conflicto" },
     { "codigo": "divisa-no-encontrada", "type": "/errors/divisa-no-encontrada", "clase": "NoEncontrado" },

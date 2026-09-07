@@ -66,6 +66,8 @@ export const en: Diccionario = {
       'conversion-um-no-encontrada': 'That unit conversion no longer exists.',
       'correo-ya-registrado': 'There is already an account with that email address.',
       'credenciales-no-validas': 'The email address or the password is not correct.',
+      'cuenta-bancaria-duplicada': 'This record already has that bank account.',
+      'cuenta-bancaria-no-encontrada': 'This record has no such bank account.',
       'datos-no-validos': 'Some fields are not valid. Check the ones marked below.',
       'divisa-duplicada': 'There is already a currency with that code.',
       'divisa-no-encontrada': 'That currency no longer exists.',

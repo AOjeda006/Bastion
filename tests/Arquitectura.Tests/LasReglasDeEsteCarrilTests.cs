@@ -87,6 +87,13 @@ public sealed class LasReglasDeEsteCarrilTests
         "ElGlosarioDelDominioTests.La_tabla_de_agregados_del_glosario_se_lee_y_no_esta_vacia",
         "ElGlosarioDelDominioTests.Los_agregados_del_dominio_son_los_que_el_glosario_nombra",
 
+        // Ningún identificador fiscal ni ningún IBAN con forma de real se queda escrito. El
+        // ítem 1.5 lo dejó como prosa y lo limpió a mano; una limpieza a mano se deshace.
+        "NingunDatoConFormaDeRealTests.Cada_detector_encuentra_lo_que_dice_buscar",
+        "NingunDatoConFormaDeRealTests.El_barrido_lee_los_ficheros_del_repositorio",
+        "NingunDatoConFormaDeRealTests.Las_formas_declaradas_son_las_que_el_barrido_detecta",
+        "NingunDatoConFormaDeRealTests.Ningun_dato_con_forma_de_real_se_queda_escrito",
+
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",
     ];

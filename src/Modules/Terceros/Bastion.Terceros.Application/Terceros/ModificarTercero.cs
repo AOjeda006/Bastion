@@ -52,6 +52,9 @@ internal sealed class ModificarTercero(
         // DESDE un ámbito abierto a propósito, que es el único sitio desde el que se puede llegar.
         var errores = new ErroresPorCampo();
 
+        RegimenFiscal? regimen =
+            RegimenesFiscales.Leer(peticion.RegimenFiscal, "regimenFiscal.", errores);
+
         if (!peticion.EsCliente && !peticion.EsProveedor)
         {
             errores.Agregar(
@@ -60,7 +63,7 @@ internal sealed class ModificarTercero(
                 "dos cosas.");
         }
 
-        if (errores.Hay)
+        if (errores.Hay || regimen is null)
         {
             return Resultado.Fallo<TerceroDto>(errores.AError());
         }
@@ -70,7 +73,8 @@ internal sealed class ModificarTercero(
             peticion.NombreComercial,
             peticion.DomicilioFiscal.ADireccion(),
             peticion.EsCliente,
-            peticion.EsProveedor);
+            peticion.EsProveedor,
+            regimen);
 
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 

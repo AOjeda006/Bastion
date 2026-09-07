@@ -18,6 +18,21 @@ internal sealed partial class RepositorioDeTerceros(
 
     /// <inheritdoc/>
     /// <remarks>
+    /// Tres <c>Include</c> y no una consulta con <c>join</c>: EF Core los resuelve en consultas
+    /// separadas o en una sola según le convenga, y lo que aquí importa es que el agregado llegue
+    /// entero al caso de uso. Sin <c>AsSplitQuery</c> explícito porque las tres colecciones de una
+    /// ficha son pequeñas —un puñado de contactos, dos o tres cuentas, dos condiciones— y la
+    /// explosión cartesiana que ese modo evita necesita colecciones grandes para doler.
+    /// </remarks>
+    public Task<Tercero?> ObtenerConLoQueCuelgaAsync(Guid id, CancellationToken cancelacion) =>
+        contexto.Terceros
+            .Include(tercero => tercero.Contactos)
+            .Include(tercero => tercero.CuentasBancarias)
+            .Include(tercero => tercero.CondicionesPago)
+            .FirstOrDefaultAsync(tercero => tercero.Id == id, cancelacion);
+
+    /// <inheritdoc/>
+    /// <remarks>
     /// <para>
     /// <b>Una consulta, un índice, una fila, y la misma en los dos desenlaces.</b> No hay un
     /// camino que cargue el bloqueo y otro que se lo ahorre: se lee siempre la misma columna de la

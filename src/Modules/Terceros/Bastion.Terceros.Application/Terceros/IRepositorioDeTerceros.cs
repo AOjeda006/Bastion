@@ -77,6 +77,22 @@ public interface IRepositorioDeTerceros : IOrdenaPor
         int tamanio,
         CancellationToken cancelacion);
 
+    /// <summary>
+    /// El tercero con lo que le cuelga —contactos, cuentas y condiciones— o nulo si no hay
+    /// ninguno.
+    /// </summary>
+    /// <remarks>
+    /// <b>Un método aparte y no un `Include` en <see cref="ObtenerAsync"/></b>: la lectura de la
+    /// ficha y su modificación traen la fila sola, y cargarle de paso tres colecciones haría que
+    /// cada alta de tercero pagara tres consultas que no mira nadie. Lo que obliga a que exista es
+    /// que las invariantes de conjunto —una preferente, una condición por rol, ningún IBAN
+    /// repetido— las sostiene el agregado, y un agregado que no tiene sus hijos cargados no puede
+    /// sostener nada: decidiría sobre una lista vacía y creería que todo cabe.
+    /// </remarks>
+    /// <param name="id">Identificador del tercero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<Tercero?> ObtenerConLoQueCuelgaAsync(Guid id, CancellationToken cancelacion);
+
     /// <summary>Apunta un tercero nuevo. No lo graba: eso lo hace la unidad de trabajo.</summary>
     void Agregar(Tercero tercero);
 }

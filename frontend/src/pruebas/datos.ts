@@ -122,6 +122,12 @@ const FICHAS: Record<string, TerceroDto[]> = {
       },
       esCliente: true,
       esProveedor: false,
+      regimenFiscal: {
+        territorio: 'PeninsulaYBaleares',
+        recargoDeEquivalencia: false,
+        criterioDeCaja: false,
+        sujetoARetencionIrpf: false,
+      },
     },
     {
       id: 'ccccccc1-0000-0000-0000-000000000002',
@@ -139,6 +145,12 @@ const FICHAS: Record<string, TerceroDto[]> = {
       },
       esCliente: false,
       esProveedor: true,
+      regimenFiscal: {
+        territorio: 'UnionEuropea',
+        recargoDeEquivalencia: false,
+        criterioDeCaja: false,
+        sujetoARetencionIrpf: false,
+      },
     },
     {
       id: 'ccccccc1-0000-0000-0000-000000000003',
@@ -156,6 +168,12 @@ const FICHAS: Record<string, TerceroDto[]> = {
       },
       esCliente: true,
       esProveedor: true,
+      regimenFiscal: {
+        territorio: 'PeninsulaYBaleares',
+        recargoDeEquivalencia: false,
+        criterioDeCaja: true,
+        sujetoARetencionIrpf: false,
+      },
     },
   ],
   [BETA.id]: [
@@ -175,6 +193,12 @@ const FICHAS: Record<string, TerceroDto[]> = {
       },
       esCliente: true,
       esProveedor: false,
+      regimenFiscal: {
+        territorio: 'Canarias',
+        recargoDeEquivalencia: true,
+        criterioDeCaja: false,
+        sujetoARetencionIrpf: false,
+      },
     },
   ],
 };

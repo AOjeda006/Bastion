@@ -326,8 +326,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(82, "acciones en total");
-        cambian.Count.ShouldBe(53, "acciones que cambian estado");
+        todas.Count.ShouldBe(93, "acciones en total");
+        cambian.Count.ShouldBe(60, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -358,7 +358,17 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // If-Match, +1 a Idempotency-Key y +2 al cajón de las exentas. Si las siete hubieran
         // entrado sin que subiera ninguno de los cuatro repartos, serían siete lecturas; si
         // subiera el total y no el reparto, sería una escritura sin protección ni motivo escrito.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(23, "operaciones que exigen If-Match");
+        //
+        // Noventa y tres desde el ítem 1.6, y el reparto dice de qué clase son las once nuevas:
+        // +11 al total, +7 a las que cambian estado, +7 a If-Match, y CERO a Idempotency-Key y
+        // cero al cajón de las exentas. Las cuatro que no cambian estado son las lecturas de lo
+        // que cuelga —contactos, cuentas, condiciones y límite—. Que Idempotency-Key no se mueva
+        // es la afirmación importante: colgar un contacto o una cuenta PARECE un alta, y si lo
+        // fuera llevaría clave; no lo es, porque lo que se modifica es el agregado, que sí tiene
+        // versión previa que citar. Los dos mecanismos a la vez están prohibidos por el test de
+        // arriba, así que la única manera de que ese número hubiera subido sería quitando el
+        // If-Match — y entonces dos peticiones simultáneas sobre la misma ficha se pisarían.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(30, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(13, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
@@ -366,7 +376,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (23 + 13 + s_exentas.Count).ShouldBe(cambian.Count);
+        (30 + 13 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

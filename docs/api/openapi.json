@@ -6993,6 +6993,1272 @@
         ]
       }
     },
+    "/api/v1/terceros/terceros/{terceroId}/contactos": {
+      "get": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Devuelve los contactos de un tercero.",
+        "operationId": "LoQueCuelgaDelTercero_ListarContactos",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContactoDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContactoDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContactoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Cuelga un contacto de un tercero.",
+        "operationId": "LoQueCuelgaDelTercero_AgregarContacto",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactoDeAltaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactoDeAltaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactoDeAltaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{terceroId}/contactos/{contactoId}": {
+      "delete": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Quita un contacto de un tercero.",
+        "description": "<b>Aquí sí se borra la fila</b>, y no choca con el art. 32: el contacto no es el interesado\n        de la ficha, y nada de lo emitido cuelga de él. Conservarlo no protegería ninguna cuenta y\n        sí mantendría el nombre y el teléfono de alguien que dejó de tener relación con el negocio.",
+        "operationId": "LoQueCuelgaDelTercero_QuitarContacto",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "contactoId",
+            "in": "path",
+            "description": "Identificador del contacto.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{terceroId}/cuentas-bancarias": {
+      "get": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Devuelve las cuentas bancarias de un tercero.",
+        "description": "<b>El IBAN sale entero.</b> Quien tiene el permiso de terceros de esta empresa es quien va a\n        pagar por esa cuenta, y una pantalla que enseñara `ES99****1234` no serviría para\n        comprobar que el número es el que puso el proveedor en su factura. Lo que no lo enseña es el\n        registro, que es donde se queda para siempre.",
+        "operationId": "LoQueCuelgaDelTercero_ListarCuentasBancarias",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CuentaBancariaDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CuentaBancariaDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CuentaBancariaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Cuelga una cuenta bancaria de un tercero.",
+        "operationId": "LoQueCuelgaDelTercero_AgregarCuentaBancaria",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuentaBancariaDeAltaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuentaBancariaDeAltaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuentaBancariaDeAltaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{terceroId}/cuentas-bancarias/{cuentaId}/preferente": {
+      "post": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Hace preferente una de las cuentas del tercero.",
+        "description": "<b>Como mucho una preferente por ficha</b>, y eso lo sostienen dos cosas a la vez: el\n        agregado, que baja la anterior en la misma operación, y un índice único parcial\n        `(tercero_id) WHERE es_preferente`, que es lo que queda cuando llegan dos peticiones a\n        la vez. Sobre si la restricción ve las filas bloqueadas, <b>es la misma decisión del ítem\n        1.5</b>: sin predicado de bloqueo. Aquí además no podría ser otra, porque el bloqueo vive en\n        el tercero y las cuentas que compiten son siempre del mismo.",
+        "operationId": "LoQueCuelgaDelTercero_MarcarCuentaPreferente",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cuentaId",
+            "in": "path",
+            "description": "Identificador de la cuenta.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{terceroId}/cuentas-bancarias/{cuentaId}": {
+      "delete": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Quita una cuenta bancaria del tercero.",
+        "operationId": "LoQueCuelgaDelTercero_QuitarCuentaBancaria",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cuentaId",
+            "in": "path",
+            "description": "Identificador de la cuenta.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{terceroId}/condiciones-pago": {
+      "get": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Devuelve las condiciones de pago del tercero.",
+        "operationId": "LoQueCuelgaDelTercero_ListarCondicionesPago",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CondicionPagoDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CondicionPagoDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CondicionPagoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{terceroId}/condiciones-pago/{rol}": {
+      "put": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Fija la condición de pago de un rol.",
+        "description": "Es un PUT y el rol va en la ruta: la condición de un rol es un recurso —hay\n  una, o no hay ninguna—, así que fijarla dos veces con el mismo cuerpo deja el mismo estado.\n  Con el rol en el cuerpo, un PUT sobre la del cliente podría cambiar la del proveedor.\nEl plazo son días desde la ENTREGA, y como mucho sesenta (art. 4 de la Ley 3/2004),\n  que no es un valor por omisión configurable: es un invariante, y un plazo mayor no es una\n  condición peor, es una cláusula nula. Aquí no se calcula ningún vencimiento: Terceros no ve\n  entregas.",
+        "operationId": "LoQueCuelgaDelTercero_FijarCondicionPago",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "rol",
+            "in": "path",
+            "description": "De qué cara es: `Cliente` o `Proveedor`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CondicionPagoDeAltaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CondicionPagoDeAltaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CondicionPagoDeAltaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CondicionPagoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CondicionPagoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CondicionPagoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{terceroId}/limite-credito": {
+      "get": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Devuelve el límite de crédito del tercero.",
+        "operationId": "LoQueCuelgaDelTercero_ObtenerLimiteCredito",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimiteCreditoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimiteCreditoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimiteCreditoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Fija —o retira— el límite de crédito del tercero.",
+        "description": "<b>Solo el importe con su divisa.</b> Consumo, disponible y bloqueo por exceso no son de\n        este ítem: eso necesita ver los pedidos y las facturas pendientes, que es la fase 6.",
+        "operationId": "LoQueCuelgaDelTercero_FijarLimiteCredito",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LimiteCreditoDeAltaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LimiteCreditoDeAltaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LimiteCreditoDeAltaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimiteCreditoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimiteCreditoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimiteCreditoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/terceros/terceros": {
       "get": {
         "tags": [
@@ -7888,6 +9154,195 @@
         },
         "description": "A qué empresa se da de alta al usuario."
       },
+      "CondicionPagoDeAltaDto": {
+        "type": "object",
+        "properties": {
+          "diasDePlazo": {
+            "maximum": 60,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Días naturales desde la entrega o la prestación.",
+            "format": "int32"
+          },
+          "diaDePagoFijo": {
+            "maximum": 28,
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Día del mes en que se paga, del 1 al 28.",
+            "format": "int32"
+          },
+          "descuentoPorProntoPago": {
+            "maximum": 100,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Porcentaje de descuento por pagar antes.",
+            "format": "double"
+          }
+        },
+        "description": "Lo que hace falta para fijar la condición de pago de un rol."
+      },
+      "CondicionPagoDto": {
+        "required": [
+          "id",
+          "terceroId",
+          "rol",
+          "diasDePlazo",
+          "diaDePagoFijo",
+          "descuentoPorProntoPago"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la condición.",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "description": "La ficha de la que cuelga.",
+            "format": "uuid"
+          },
+          "rol": {
+            "type": "string",
+            "description": "De qué cara es: `Cliente` o `Proveedor`."
+          },
+          "diasDePlazo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Días naturales <b>desde la entrega</b>. Como mucho, sesenta.",
+            "format": "int32"
+          },
+          "diaDePagoFijo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Día del mes en que se paga, si lo hay.",
+            "format": "int32"
+          },
+          "descuentoPorProntoPago": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Porcentaje de descuento por pagar antes, si lo hay.",
+            "format": "double"
+          }
+        },
+        "description": "Una condición de pago del tercero, tal como sale de la API."
+      },
+      "ContactoDeAltaDto": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre de la persona."
+          },
+          "cargo": {
+            "maxLength": 60,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Qué hace en casa del tercero."
+          },
+          "correo": {
+            "maxLength": 254,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Correo profesional."
+          },
+          "telefono": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Teléfono profesional."
+          }
+        },
+        "description": "Lo que hace falta para colgar o cambiar un contacto."
+      },
+      "ContactoDto": {
+        "required": [
+          "id",
+          "terceroId",
+          "nombre",
+          "cargo",
+          "correo",
+          "telefono"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del contacto.",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "description": "La ficha de la que cuelga.",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la persona."
+          },
+          "cargo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Qué hace en casa del tercero."
+          },
+          "correo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Correo profesional."
+          },
+          "telefono": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Teléfono profesional."
+          }
+        },
+        "description": "Un contacto del tercero, tal como sale de la API."
+      },
       "ConversionUmDto": {
         "required": [
           "id",
@@ -8253,6 +9708,10 @@
           "esProveedor": {
             "type": "boolean",
             "description": "Se le compra."
+          },
+          "regimenFiscal": {
+            "description": "Dónde tributa y bajo qué condiciones especiales.",
+            "$ref": "#/components/schemas/RegimenFiscalDeAltaDto"
           }
         },
         "description": "Lo que hace falta para dar de alta un tercero."
@@ -8412,6 +9871,89 @@
           }
         },
         "description": "Lo que hace falta para dar de alta un usuario."
+      },
+      "CuentaBancariaDeAltaDto": {
+        "required": [
+          "iban"
+        ],
+        "type": "object",
+        "properties": {
+          "iban": {
+            "maxLength": 42,
+            "minLength": 0,
+            "type": "string",
+            "description": "El IBAN. Admite los espacios con los que se imprime."
+          },
+          "bic": {
+            "maxLength": 11,
+            "minLength": 8,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El BIC, si se conoce. Ocho u once posiciones."
+          },
+          "alias": {
+            "maxLength": 60,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Con qué nombre se distingue de las demás."
+          },
+          "esPreferente": {
+            "type": "boolean",
+            "description": "Si pasa a ser la de por omisión."
+          }
+        },
+        "description": "Lo que hace falta para colgar una cuenta bancaria."
+      },
+      "CuentaBancariaDto": {
+        "required": [
+          "id",
+          "terceroId",
+          "iban",
+          "bic",
+          "alias",
+          "esPreferente"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la cuenta.",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "description": "La ficha de la que cuelga.",
+            "format": "uuid"
+          },
+          "iban": {
+            "type": "string",
+            "description": "El IBAN, normalizado y sin espacios."
+          },
+          "bic": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El BIC, si se conoce."
+          },
+          "alias": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Con qué nombre se distingue de las demás."
+          },
+          "esPreferente": {
+            "type": "boolean",
+            "description": "Si es la que se usa cuando nadie dice otra cosa."
+          }
+        },
+        "description": "Una cuenta bancaria del tercero, tal como sale de la API."
       },
       "DireccionDto": {
         "required": [
@@ -8751,6 +10293,65 @@
         },
         "description": "Lo que hace falta para iniciar sesión."
       },
+      "LimiteCreditoDeAltaDto": {
+        "type": "object",
+        "properties": {
+          "cantidad": {
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "El importe. Nulo retira el límite.",
+            "format": "double"
+          },
+          "divisa": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La divisa, en ISO 4217. Obligatoria si hay cantidad."
+          }
+        },
+        "description": "Lo que hace falta para fijar —o retirar— el límite de crédito."
+      },
+      "LimiteCreditoDto": {
+        "required": [
+          "terceroId",
+          "cantidad",
+          "divisa"
+        ],
+        "type": "object",
+        "properties": {
+          "terceroId": {
+            "type": "string",
+            "description": "La ficha de la que cuelga.",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "El importe. Nulo si no se le fía.",
+            "format": "double"
+          },
+          "divisa": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La divisa del importe, en ISO 4217. Nula si no se le fía."
+          }
+        },
+        "description": "El límite de crédito de un tercero, tal como sale de la API."
+      },
       "MembresiaDto": {
         "required": [
           "empresaId",
@@ -8991,6 +10592,10 @@
           "esProveedor": {
             "type": "boolean",
             "description": "Se le compra."
+          },
+          "regimenFiscal": {
+            "description": "Dónde tributa y bajo qué condiciones especiales.",
+            "$ref": "#/components/schemas/RegimenFiscalDeAltaDto"
           }
         },
         "description": "Lo que se puede cambiar de un tercero ya dado de alta."
@@ -9766,6 +11371,58 @@
           }
         }
       },
+      "RegimenFiscalDeAltaDto": {
+        "type": "object",
+        "properties": {
+          "territorio": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "description": "Dónde tributa. Uno de los cinco del §7.2; si no se dice, península y Baleares."
+          },
+          "recargoDeEquivalencia": {
+            "type": "boolean",
+            "description": "Si es minorista en recargo de equivalencia."
+          },
+          "criterioDeCaja": {
+            "type": "boolean",
+            "description": "Si está acogido al criterio de caja."
+          },
+          "sujetoARetencionIrpf": {
+            "type": "boolean",
+            "description": "Si sus facturas llevan retención de IRPF."
+          }
+        },
+        "description": "Con qué régimen fiscal se da de alta o se modifica un tercero."
+      },
+      "RegimenFiscalDto": {
+        "required": [
+          "territorio",
+          "recargoDeEquivalencia",
+          "criterioDeCaja",
+          "sujetoARetencionIrpf"
+        ],
+        "type": "object",
+        "properties": {
+          "territorio": {
+            "type": "string",
+            "description": "Dónde tributa: `PeninsulaYBaleares`, `Canarias`, `CeutaYMelilla`,\n`UnionEuropea` o `TercerosPaises`."
+          },
+          "recargoDeEquivalencia": {
+            "type": "boolean",
+            "description": "Si es minorista en recargo de equivalencia."
+          },
+          "criterioDeCaja": {
+            "type": "boolean",
+            "description": "Si está acogido al criterio de caja."
+          },
+          "sujetoARetencionIrpf": {
+            "type": "boolean",
+            "description": "Si sus facturas llevan retención de IRPF."
+          }
+        },
+        "description": "El régimen fiscal de un tercero, tal como viaja por la API."
+      },
       "RestablecerContrasenaDto": {
         "required": [
           "nueva"
@@ -9959,7 +11616,8 @@
           "nombreComercial",
           "domicilioFiscal",
           "esCliente",
-          "esProveedor"
+          "esProveedor",
+          "regimenFiscal"
         ],
         "type": "object",
         "properties": {
@@ -9999,6 +11657,10 @@
           "esProveedor": {
             "type": "boolean",
             "description": "Se le compra."
+          },
+          "regimenFiscal": {
+            "description": "Dónde tributa y bajo qué condiciones especiales.",
+            "$ref": "#/components/schemas/RegimenFiscalDto"
           }
         },
         "description": "Un tercero, tal como sale de la API."
@@ -10301,6 +11963,9 @@
     },
     {
       "name": "UnidadesDeMedida"
+    },
+    {
+      "name": "LoQueCuelgaDelTercero"
     },
     {
       "name": "Terceros"
