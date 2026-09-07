@@ -25,17 +25,28 @@ namespace Bastion.BuildingBlocks.Infrastructure.Listados;
 /// Los números salen de <see cref="Paginacion"/>, que es quien los define; aquí solo se anotan.
 /// </para>
 /// <para>
-/// <b>Estos cuatro nombres son todos los parámetros de consulta que tiene un listado</b>, y eso lo
-/// vigila una regla del carril funcional, no una costumbre: ninguna acción de listado declara como
-/// parámetro de consulta ningún campo de la lista de sensibles (ADR-0025). El día que alguien
-/// añada un <c>?nif=</c> «porque es cómodo», ese NIF acabaría en el historial del navegador, en el
-/// enlace que se copia y en el registro de acceso del servidor de delante.
+/// <b>Estos cuatro nombres son los de todo listado</b>, y la lista completa de lo que la API
+/// acepta por la URL en un listado la vigila una regla del carril funcional, no una costumbre:
+/// <c>NingunCriterioSensibleViajaEnLaUrlTests</c> compara los parámetros de todas las acciones de
+/// listado contra los nombres declarados allí, y ninguno es un campo de la lista de sensibles
+/// (ADR-0025). El día que alguien añada un <c>?nif=</c> «porque es cómodo», ese NIF acabaría en el
+/// historial del navegador, en el enlace que se copia y en el registro de acceso del servidor de
+/// delante — y esa regla se pone roja antes.
+/// </para>
+/// <para>
+/// <b>Dejó de ser <c>sealed</c> en el ítem 1.7, y solo para esto:</b> los cuatro maestros de
+/// instalación que se pueden retirar (ADR-0023) enlazan
+/// <see cref="ConsultaDeMaestro"/>, que añade <c>?retiradas=</c>. Un quinto campo aquí se lo
+/// habría publicado a los doce listados —incluidos los que no tienen retirada— y eso es una
+/// mentira del contrato de las que no fallan. Heredar es lo que permite que el parámetro exista
+/// solo donde significa algo sin duplicar la validación de los otros cuatro, que es lo que este
+/// tipo existe para no duplicar.
 /// </para>
 /// <para>
 /// Vive en el bloque común desde el ítem 1.3; estaba duplicada en Identidad y en Organización.
 /// </para>
 /// </remarks>
-public sealed record ConsultaPaginada
+public record ConsultaPaginada
 {
     /// <summary>Código del error con el que se rechaza un <c>?sort=</c> que no se admite.</summary>
     /// <remarks>
@@ -88,7 +99,7 @@ public sealed record ConsultaPaginada
     /// no, en vez de recibir una página bien formada ordenada por otra cosa.
     /// </remarks>
     /// <param name="camposOrdenables">Los nombres que este recurso admite en <c>?sort=</c>.</param>
-    public Resultado<Paginacion> APaginacion(IReadOnlySet<string> camposOrdenables)
+    public virtual Resultado<Paginacion> APaginacion(IReadOnlySet<string> camposOrdenables)
     {
         ArgumentNullException.ThrowIfNull(camposOrdenables);
 

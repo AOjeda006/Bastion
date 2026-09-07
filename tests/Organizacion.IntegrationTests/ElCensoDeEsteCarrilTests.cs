@@ -81,7 +81,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LosPuertosDeLecturaTests.El_tramo_cerrado_sigue_resolviendo_lo_viejo_pero_no_se_ofrece",
         "LosPuertosDeLecturaTests.El_tramo_que_todavia_no_ha_entrado_tampoco_se_ofrece",
         "LosPuertosDeLecturaTests.La_divisa_dada_de_alta_se_ofrece_y_la_que_no_esta_no_existe",
+        "LosPuertosDeLecturaTests.La_divisa_retirada_deja_de_ofrecerse_y_sigue_resolviendo",
         "LosPuertosDeLecturaTests.La_unidad_dada_de_alta_se_ofrece_y_la_que_no_esta_no_existe",
+        "LosPuertosDeLecturaTests.La_unidad_retirada_deja_de_ofrecerse_y_sigue_resolviendo",
         "LosPuertosDeLecturaTests.Los_tres_puertos_contestan_sin_empresa_activa_y_sin_ver_lo_bloqueado",
 
         "MaestrosDelSeptimoApartadoTests.Dos_impuestos_distintos_conviven_en_las_mismas_fechas",

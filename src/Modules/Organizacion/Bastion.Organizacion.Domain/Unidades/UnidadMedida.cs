@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Entidades;
+using Bastion.BuildingBlocks.Domain.Retiradas;
 
 namespace Bastion.Organizacion.Domain.Unidades;
 
@@ -25,7 +26,7 @@ namespace Bastion.Organizacion.Domain.Unidades;
 /// todo lo que se mida con ella.
 /// </para>
 /// </remarks>
-public sealed class UnidadMedida : EntidadBase
+public sealed class UnidadMedida : EntidadBase, IRetirable
 {
     /// <summary>Tope del código: cabe en una línea de albarán.</summary>
     public const int LongitudMaximaDeCodigo = 10;
@@ -98,6 +99,15 @@ public sealed class UnidadMedida : EntidadBase
     /// </remarks>
     /// <param name="nombre">Nombre con el que se muestra.</param>
     public void Modificar(string nombre) => Nombre = NombreValido(nombre);
+
+    /// <inheritdoc />
+    public bool EstaRetirada { get; private set; }
+
+    /// <inheritdoc />
+    public void Retirar() => EstaRetirada = true;
+
+    /// <inheritdoc />
+    public void Reincorporar() => EstaRetirada = false;
 
     /// <summary>Deja el código en la forma exacta en la que se guarda.</summary>
     /// <param name="codigo">Código tal como lo escribieron.</param>

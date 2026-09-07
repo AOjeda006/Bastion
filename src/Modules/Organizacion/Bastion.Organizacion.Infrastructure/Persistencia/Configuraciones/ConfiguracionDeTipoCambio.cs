@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.BuildingBlocks.Infrastructure.Retiradas;
 using Bastion.Organizacion.Domain.Divisas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -40,6 +41,10 @@ internal sealed class ConfiguracionDeTipoCambio : IEntityTypeConfiguration<TipoC
 
         // Un par de divisas y un día dan UN tipo de cambio. Dos filas iguales harían que la
         // conversión dependiera de cuál devolviera antes el plan de ejecución.
+        // ADR-0023: no se ofrece para lo nuevo, sigue resolviendo lo viejo. La columna es de
+        // este maestro y no de `EntidadBase`: retirarse no le pasa a todo el mundo.
+        ConfiguracionDeRetirada.Mapear(cambio);
+
         cambio.HasIndex(fila => new { fila.DivisaOrigenId, fila.DivisaDestinoId, fila.Fecha })
             .IsUnique();
 

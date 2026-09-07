@@ -12,14 +12,36 @@ namespace Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 internal sealed class ConsultaDeUnidadesDeMedida(OrganizacionDbContext contexto)
     : IConsultaDeUnidadesDeMedida
 {
-    // Hoy solo hay dos respuestas posibles, y la tercera —`SoloResuelveLoViejo`— llega con la
-    // retirada del ítem 1.7, que es cuando `UnidadMedida` tendrá con qué contestarla. La rama no se
-    // escribe todavía a propósito: un `if` sobre una columna que no existe no se puede probar, y un
-    // camino que ningún test recorre es peor que uno que no está.
-    public async Task<EstadoDeMaestro> EstadoDeAsync(Guid unidadId, CancellationToken cancelacion) =>
-        await contexto.UnidadesDeMedida
-            .AnyAsync(unidad => unidad.Id == unidadId, cancelacion)
-            .ConfigureAwait(false)
-            ? EstadoDeMaestro.SeOfreceParaLoNuevo
-            : EstadoDeMaestro.NoExiste;
+    /// <summary>Las tres respuestas, desde el ítem 1.7.</summary>
+    /// <remarks>
+    /// <para>
+    /// La tercera —<c>SoloResuelveLoViejo</c>— llegaba «con la retirada del ítem 1.7», y llegó. Lo
+    /// que ese comentario no traía era nada que comprobara que llegaba: el enumerado tenía un valor
+    /// que dos de sus tres productores no podían contestar, en verde y durante cuatro ítems. Eso lo
+    /// vigila ahora <c>LaMatrizDePuertoYEstadoTests</c>, que compara la lista cerrada contra el
+    /// conjunto de puertos que la producen y exige que cada casilla esté afirmada por un caso.
+    /// </para>
+    /// <para>
+    /// <b>Una sola consulta y no dos</b>, por lo mismo que en las divisas: dos lecturas dejan un
+    /// hueco en el que la fila cambia, y la respuesta describiría un estado que no fue verdad en
+    /// ningún instante. El nulo del anulable <b>es</b> la respuesta a «¿existe?».
+    /// </para>
+    /// </remarks>
+    /// <param name="unidadId">Identificador de la unidad de medida.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public async Task<EstadoDeMaestro> EstadoDeAsync(Guid unidadId, CancellationToken cancelacion)
+    {
+        bool? retirada = await contexto.UnidadesDeMedida
+            .Where(unidad => unidad.Id == unidadId)
+            .Select(unidad => (bool?)unidad.EstaRetirada)
+            .FirstOrDefaultAsync(cancelacion)
+            .ConfigureAwait(false);
+
+        return retirada switch
+        {
+            null => EstadoDeMaestro.NoExiste,
+            true => EstadoDeMaestro.SoloResuelveLoViejo,
+            false => EstadoDeMaestro.SeOfreceParaLoNuevo,
+        };
+    }
 }

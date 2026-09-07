@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Entidades;
+using Bastion.BuildingBlocks.Domain.Retiradas;
 
 namespace Bastion.Organizacion.Domain.Divisas;
 
@@ -34,7 +35,7 @@ namespace Bastion.Organizacion.Domain.Divisas;
 /// partida, y esa diferencia aparece como un descuadre de céntimos que nadie sabe de dónde sale.
 /// </para>
 /// </remarks>
-public sealed class TipoCambio : EntidadBase
+public sealed class TipoCambio : EntidadBase, IRetirable
 {
     /// <summary>Decimales de la tasa: los que publica el BCE.</summary>
     public const int DecimalesDeLaTasa = 6;
@@ -114,6 +115,15 @@ public sealed class TipoCambio : EntidadBase
     /// <summary>Corrige la tasa. Ni las divisas ni la fecha: eso sería otra fila.</summary>
     /// <param name="tasa">Unidades de destino por una unidad de origen.</param>
     public void Modificar(decimal tasa) => Tasa = TasaValida(tasa);
+
+    /// <inheritdoc />
+    public bool EstaRetirada { get; private set; }
+
+    /// <inheritdoc />
+    public void Retirar() => EstaRetirada = true;
+
+    /// <inheritdoc />
+    public void Reincorporar() => EstaRetirada = false;
 
     private static decimal TasaValida(decimal tasa)
     {

@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Domain.Retiradas;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.BuildingBlocks.Infrastructure.Listados;
@@ -52,7 +53,8 @@ public static class Paginador
         ArgumentNullException.ThrowIfNull(paginacion);
         ArgumentNullException.ThrowIfNull(criterios);
 
-        IQueryable<T> filtrada = Filtrar(consulta, paginacion.Filtro, criterios);
+        IQueryable<T> ofrecidas = SinLasRetiradas(consulta, paginacion.IncluyeRetiradas);
+        IQueryable<T> filtrada = Filtrar(ofrecidas, paginacion.Filtro, criterios);
 
         long total = await filtrada.LongCountAsync(cancelacion).ConfigureAwait(false);
 
@@ -106,6 +108,46 @@ public static class Paginador
         var ordenada = (IOrderedQueryable<T>)aplicar.Invoke(null, [consulta, clave])!;
 
         return criterios.Desempate(ordenada);
+    }
+
+    /// <summary>
+    /// Quita del listado lo retirado, salvo que se pidan (ADR-0023).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Aquí y no en cada repositorio.</b> El ADR-0023 dice que la colección excluye lo retirado
+    /// por omisión, y eso es una frase sobre <b>todo</b> maestro retirable, presente y futuro.
+    /// Escrita una vez por repositorio serían cuatro copias hoy y cinco el día que aparezca el
+    /// quinto maestro — y la quinta se olvidaría, sin que nada fallara: el listado seguiría
+    /// contestando <c>200</c> con una fila de más. Puesto aquí, la única manera de que un maestro
+    /// retirable no lo cumpla es que no pagine, y entonces no es un listado.
+    /// </para>
+    /// <para>
+    /// <b>Antes de contar</b>, a propósito: el total que viaja en la página tiene que ser el de lo
+    /// que se ofrece. Contar todo y devolver menos deja al cliente paginando hacia páginas vacías.
+    /// </para>
+    /// <para>
+    /// La condición se compone como árbol de expresión sobre la propiedad de la entidad concreta y
+    /// no como un <c>Where</c> sobre <see cref="IRetirable"/>: EF Core traduce el acceso a la
+    /// propiedad mapeada, y un acceso a través de la interfaz no lo es.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="T">La entidad que se lista.</typeparam>
+    /// <param name="consulta">La consulta de partida.</param>
+    /// <param name="incluyeRetiradas">Si el cliente ha pedido verlas.</param>
+    private static IQueryable<T> SinLasRetiradas<T>(IQueryable<T> consulta, bool incluyeRetiradas)
+        where T : class
+    {
+        if (incluyeRetiradas || !typeof(IRetirable).IsAssignableFrom(typeof(T)))
+        {
+            return consulta;
+        }
+
+        ParameterExpression fila = Expression.Parameter(typeof(T), "fila");
+
+        return consulta.Where(Expression.Lambda<Func<T, bool>>(
+            Expression.Not(Expression.Property(fila, nameof(IRetirable.EstaRetirada))),
+            fila));
     }
 
     private static IQueryable<T> Filtrar<T>(IQueryable<T> consulta, string? filtro, CriteriosDe<T> criterios)

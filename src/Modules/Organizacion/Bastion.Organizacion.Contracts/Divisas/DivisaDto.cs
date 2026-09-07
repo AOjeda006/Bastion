@@ -7,6 +7,12 @@ namespace Bastion.Organizacion.Contracts.Divisas;
 /// <param name="Codigo">Código ISO 4217 de tres letras, en mayúsculas.</param>
 /// <param name="Nombre">Nombre con el que se la conoce.</param>
 /// <param name="Decimales">A cuántos decimales se redondea un importe en esta divisa.</param>
+/// <param name="Retirada">
+/// Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que
+/// ya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con
+/// <c>?retiradas=true</c>— y porque el <c>GET</c> por identificador la devuelve siempre: sin este
+/// campo, quien la lee no tiene manera de distinguirla de una que sí se ofrece.
+/// </param>
 /// <remarks>
 /// <b><paramref name="Decimales"/> sale pero no se guarda.</b> Cuántos decimales tiene un euro no
 /// lo decide quien monta la instalación: son dos, y el yen no tiene ninguno. Ese dato vive en el
@@ -14,7 +20,12 @@ namespace Bastion.Organizacion.Contracts.Divisas;
 /// —que no puede ir a la base a preguntarlo— y porque una fila editable dejaría redondear el euro
 /// a tres decimales sin que nada protestara.
 /// </remarks>
-public sealed record DivisaDto(Guid Id, string Codigo, string Nombre, int Decimales);
+public sealed record DivisaDto(
+    Guid Id,
+    string Codigo,
+    string Nombre,
+    int Decimales,
+    bool Retirada);
 
 /// <summary>
 /// Lo que hace falta para dar de alta una divisa.

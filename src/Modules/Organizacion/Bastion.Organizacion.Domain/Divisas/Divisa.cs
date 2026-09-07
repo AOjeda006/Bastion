@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Entidades;
+using Bastion.BuildingBlocks.Domain.Retiradas;
 
 namespace Bastion.Organizacion.Domain.Divisas;
 
@@ -36,7 +37,7 @@ namespace Bastion.Organizacion.Domain.Divisas;
 /// sociedades. Cuál usa cada una como base es un campo <b>de la empresa</b>, y ese sí filtra.
 /// </para>
 /// </remarks>
-public sealed class Divisa : EntidadBase
+public sealed class Divisa : EntidadBase, IRetirable
 {
     /// <summary>Tope del nombre con el que se muestra.</summary>
     public const int LongitudMaximaDeNombre = 60;
@@ -83,6 +84,15 @@ public sealed class Divisa : EntidadBase
     /// <summary>Cambia el nombre. El código no: es el identificador natural de la fila.</summary>
     /// <param name="nombre">Nombre con el que se muestra.</param>
     public void Modificar(string nombre) => Nombre = NombreValido(nombre);
+
+    /// <inheritdoc />
+    public bool EstaRetirada { get; private set; }
+
+    /// <inheritdoc />
+    public void Retirar() => EstaRetirada = true;
+
+    /// <inheritdoc />
+    public void Reincorporar() => EstaRetirada = false;
 
     /// <summary>Deja el código en la forma exacta en la que se guarda.</summary>
     /// <remarks>

@@ -89,26 +89,30 @@ internal static class Mapeos
         divisa.Id,
         divisa.Codigo,
         divisa.Nombre,
-        divisa.Decimales);
+        divisa.Decimales,
+        divisa.EstaRetirada);
 
     internal static TipoCambioDto ADto(this TipoCambio cambio) => new(
         cambio.Id,
         cambio.DivisaOrigenId,
         cambio.DivisaDestinoId,
         cambio.Fecha,
-        cambio.Tasa);
+        cambio.Tasa,
+        cambio.EstaRetirada);
 
     internal static UnidadMedidaDto ADto(this UnidadMedida unidad) => new(
         unidad.Id,
         unidad.Codigo,
         unidad.Nombre,
-        unidad.Decimales);
+        unidad.Decimales,
+        unidad.EstaRetirada);
 
     internal static ConversionUmDto ADto(this ConversionUM conversion) => new(
         conversion.Id,
         conversion.UnidadOrigenId,
         conversion.UnidadDestinoId,
-        conversion.Factor);
+        conversion.Factor,
+        conversion.EstaRetirada);
 
     internal static UbicacionDto ADto(this Ubicacion ubicacion) => new(
         ubicacion.Id,

@@ -7,13 +7,24 @@ namespace Bastion.Organizacion.Contracts.Unidades;
 /// <param name="Codigo">Código de la unidad, en mayúsculas.</param>
 /// <param name="Nombre">Nombre con el que se la conoce.</param>
 /// <param name="Decimales">Cuántos decimales admite una cantidad expresada en esta unidad.</param>
+/// <param name="Retirada">
+/// Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que
+/// ya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con
+/// <c>?retiradas=true</c>— y porque el <c>GET</c> por identificador la devuelve siempre: sin este
+/// campo, quien la lee no tiene manera de distinguirla de una que sí se ofrece.
+/// </param>
 /// <remarks>
 /// <b>Aquí los decimales SÍ son una columna</b>, al revés que en una divisa, y el contraste es la
 /// mitad de lo que hay que entender de los dos maestros. Los de una divisa los fija una regla
 /// fiscal que no elige nadie; los de un kilo los elige quien monta el almacén —hay quien pesa a
 /// gramos y quien no— y por eso viajan en la fila.
 /// </remarks>
-public sealed record UnidadMedidaDto(Guid Id, string Codigo, string Nombre, int Decimales);
+public sealed record UnidadMedidaDto(
+    Guid Id,
+    string Codigo,
+    string Nombre,
+    int Decimales,
+    bool Retirada);
 
 /// <summary>Lo que hace falta para dar de alta una unidad de medida.</summary>
 public sealed record CrearUnidadMedidaDto

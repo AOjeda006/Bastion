@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.BuildingBlocks.Infrastructure.Retiradas;
 using Bastion.Organizacion.Domain.Unidades;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -36,6 +37,10 @@ internal sealed class ConfiguracionDeUnidadMedida : IEntityTypeConfiguration<Uni
         // pesa no lo dice ninguna norma, lo decide quien monta el almacén. El motivo entero está
         // escrito en la propia entidad.
         unidad.Property(fila => fila.Decimales).IsRequired().SeAudita();
+
+        // ADR-0023: no se ofrece para lo nuevo, sigue resolviendo lo viejo. La columna es de
+        // este maestro y no de `EntidadBase`: retirarse no le pasa a todo el mundo.
+        ConfiguracionDeRetirada.Mapear(unidad);
 
         unidad.HasIndex(fila => fila.Codigo).IsUnique();
     }

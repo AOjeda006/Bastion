@@ -143,6 +143,74 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
     }
 
     [Fact]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeDivisas), EstadoDeMaestro.SoloResuelveLoViejo)]
+    public async Task La_divisa_retirada_deja_de_ofrecerse_y_sigue_resolviendo()
+    {
+        // La casilla que estuvo vacía desde que se escribió el enumerado. El comentario del puerto
+        // decía «la tercera llega con la retirada» y hasta el ítem 1.7 no llegaba: `EstadoDeAsync`
+        // solo sabía contestar dos de los tres valores, y ninguna regla lo miraba.
+        //
+        // Las dos respuestas de la MISMA fila, y por eso los dos `ShouldBe` van juntos: uno solo
+        // no distingue «retirada» de «borrada». La segunda mitad —que el identificador sigue
+        // resolviendo— es la que separa la retirada del bloqueo, que responde como si no existiera.
+        var divisa = Divisa.Crear("USD", "Dólar estadounidense", s_momento);
+        await GuardarAsync(contexto => contexto.Divisas.Add(divisa));
+
+        await using OrganizacionDbContext antes = postgres.AbrirContexto();
+
+        (await new ConsultaDeDivisas(antes).EstadoDeAsync(divisa.Id, CancellationToken.None))
+            .ShouldBe(
+                EstadoDeMaestro.SeOfreceParaLoNuevo,
+                "recién dada de alta, una divisa se ofrece: sin esta mitad, un puerto que " +
+                "contestara siempre `SoloResuelveLoViejo` pasaría el caso de abajo");
+
+        await GuardarAsync(contexto =>
+        {
+            Divisa guardada = contexto.Divisas.Single(fila => fila.Id == divisa.Id);
+            guardada.Retirar();
+        });
+
+        await using OrganizacionDbContext despues = postgres.AbrirContexto();
+
+        (await new ConsultaDeDivisas(despues).EstadoDeAsync(divisa.Id, CancellationToken.None))
+            .ShouldBe(
+                EstadoDeMaestro.SoloResuelveLoViejo,
+                "retirada, la divisa NO se ofrece para operaciones nuevas y NO desaparece: una " +
+                "factura emitida en ella tiene que poder seguir diciendo en qué se emitió");
+    }
+
+    [Fact]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeUnidadesDeMedida), EstadoDeMaestro.SoloResuelveLoViejo)]
+    public async Task La_unidad_retirada_deja_de_ofrecerse_y_sigue_resolviendo()
+    {
+        // La otra casilla huérfana, y la que más se nota: Catálogo pregunta por este puerto antes
+        // de dejar dar de alta un artículo. Sin esta respuesta, o se podía seguir eligiendo una
+        // unidad que ya no debía ofrecerse, o retirarla habría dejado sin resolver los albaranes
+        // viejos. Las dos salidas eran malas y ninguna daba error.
+        var unidad = UnidadMedida.Crear("PTR", "Unidad de prueba retirada", 2, s_momento);
+        await GuardarAsync(contexto => contexto.UnidadesDeMedida.Add(unidad));
+
+        await using OrganizacionDbContext antes = postgres.AbrirContexto();
+
+        (await new ConsultaDeUnidadesDeMedida(antes).EstadoDeAsync(unidad.Id, CancellationToken.None))
+            .ShouldBe(EstadoDeMaestro.SeOfreceParaLoNuevo);
+
+        await GuardarAsync(contexto =>
+        {
+            UnidadMedida guardada = contexto.UnidadesDeMedida.Single(fila => fila.Id == unidad.Id);
+            guardada.Retirar();
+        });
+
+        await using OrganizacionDbContext despues = postgres.AbrirContexto();
+
+        (await new ConsultaDeUnidadesDeMedida(despues).EstadoDeAsync(unidad.Id, CancellationToken.None))
+            .ShouldBe(
+                EstadoDeMaestro.SoloResuelveLoViejo,
+                "la unidad retirada no se ofrece para un artículo nuevo y sigue resolviendo la " +
+                "de un albarán de hace tres años");
+    }
+
+    [Fact]
     [CubreEstadoDeMaestro(typeof(IConsultaDeImpuestos), EstadoDeMaestro.NoExiste)]
     public async Task El_impuesto_que_no_esta_no_existe()
     {

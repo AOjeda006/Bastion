@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.BuildingBlocks.Infrastructure.Retiradas;
 using Bastion.Organizacion.Domain.Divisas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -45,6 +46,10 @@ internal sealed class ConfiguracionDeDivisa : IEntityTypeConfiguration<Divisa>
 
         // Una divisa, una fila. Sin esto, dos «EUR» con nombres distintos y ninguna forma de
         // decidir cuál es la buena.
+        // ADR-0023: no se ofrece para lo nuevo, sigue resolviendo lo viejo. La columna es de
+        // este maestro y no de `EntidadBase`: retirarse no le pasa a todo el mundo.
+        ConfiguracionDeRetirada.Mapear(divisa);
+
         divisa.HasIndex(fila => fila.Codigo).IsUnique();
     }
 }

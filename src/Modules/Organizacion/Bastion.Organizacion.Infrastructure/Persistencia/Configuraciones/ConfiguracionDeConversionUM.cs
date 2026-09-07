@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.BuildingBlocks.Infrastructure.Retiradas;
 using Bastion.Organizacion.Domain.Unidades;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -38,6 +39,10 @@ internal sealed class ConfiguracionDeConversionUM : IEntityTypeConfiguration<Con
         // Ojo con lo que este índice NO dice: CAJA→UD y UD→CAJA son dos pares distintos y las dos
         // filas conviven a propósito, cada una con su factor pensado. La entidad explica por qué
         // el inverso no se calcula solo.
+        // ADR-0023: no se ofrece para lo nuevo, sigue resolviendo lo viejo. La columna es de
+        // este maestro y no de `EntidadBase`: retirarse no le pasa a todo el mundo.
+        ConfiguracionDeRetirada.Mapear(conversion);
+
         conversion.HasIndex(fila => new { fila.UnidadOrigenId, fila.UnidadDestinoId }).IsUnique();
 
         conversion.HasOne<UnidadMedida>()

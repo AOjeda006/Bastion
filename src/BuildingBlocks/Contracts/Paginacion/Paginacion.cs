@@ -57,6 +57,27 @@ public sealed record Paginacion
     /// </remarks>
     public string? Filtro { get; init; }
 
+    /// <summary>
+    /// Si el listado trae también lo retirado (ADR-0023). Por omisión, no.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El valor por omisión es la decisión, no un descuido.</b> El ADR-0023 dice que la
+    /// colección de un maestro de instalación excluye lo retirado <i>por omisión</i>: quien monta
+    /// un albarán tiene que ver lo que puede usar, y una lista con las divisas muertas dentro es
+    /// una lista en la que se elige mal. Verlas es el caso raro —arreglar un <c>EURO</c> mal
+    /// tecleado—, y el caso raro se pide.
+    /// </para>
+    /// <para>
+    /// <b>Está aquí y no solo en el borde</b> porque quien tiene que aplicarlo es el repositorio,
+    /// que es donde vive el filtro; y <b>lo pone únicamente el modelo de consulta de los maestros
+    /// retirables</b>, que es el único que publica <c>?retiradas=</c>. Los demás listados enlazan
+    /// un <c>ConsultaPaginada</c> que no tiene ese parámetro, así que aquí les llega siempre
+    /// <c>false</c> y no hay manera de que la URL diga otra cosa.
+    /// </para>
+    /// </remarks>
+    public bool IncluyeRetiradas { get; init; }
+
     /// <summary>Cuántos elementos hay que saltarse para llegar a esta página.</summary>
     public int Salto => (Pagina - 1) * Tamanio;
 }

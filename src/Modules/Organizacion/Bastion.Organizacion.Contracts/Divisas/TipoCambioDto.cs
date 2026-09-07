@@ -8,6 +8,12 @@ namespace Bastion.Organizacion.Contracts.Divisas;
 /// <param name="DivisaDestinoId">Divisa a la que se convierte.</param>
 /// <param name="Fecha">Día al que corresponde la cotización.</param>
 /// <param name="Tasa">Cuántas unidades de destino cuesta una de origen.</param>
+/// <param name="Retirada">
+/// Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que
+/// ya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con
+/// <c>?retiradas=true</c>— y porque el <c>GET</c> por identificador la devuelve siempre: sin este
+/// campo, quien la lee no tiene manera de distinguirla de una que sí se ofrece.
+/// </param>
 /// <remarks>
 /// <b>Lleva las DOS divisas, y el §7 solo nombraba una.</b> Allí la terna era «(fecha, divisa,
 /// tasa)», con una base implícita; pero la divisa base es un campo de cada empresa y la R8 deja
@@ -20,7 +26,8 @@ public sealed record TipoCambioDto(
     Guid DivisaOrigenId,
     Guid DivisaDestinoId,
     DateOnly Fecha,
-    decimal Tasa);
+    decimal Tasa,
+    bool Retirada);
 
 /// <summary>Lo que hace falta para registrar la cotización de un día.</summary>
 public sealed record CrearTipoCambioDto
