@@ -3031,6 +3031,39 @@ de traducción, que corre sin Docker) y −1 en `Organizacion.IntegrationTests` 
 **Integración no se ha podido ejercer en local: no hay Docker en esta máquina.** Lo que sí se ejerció
 en su lugar está en el informe del ítem.
 
+Mutaciones de esta mitad, **cada una con su línea base nombrada**, sobre árbol limpio y revertidas
+sin `git checkout --`:
+
+| # | Mutación | Línea base | Resultado |
+|---|---|---|---|
+| 1 | La regla de la lista cerrada, **antes del arreglo** | `e3a9e9e` (main al abrir la rama) | 🔴 `["Tercero", "Usuario"]` — los dos supervivientes a la vez |
+| 2 | `ConsultaDeLoBloqueadoDeTerceros` deja de implementar el puerto (y se comenta su `AddScoped`) | `f9913d9` (la rama, con el arreglo) | 🔴 `mudos: ["Terceros"]` |
+
+La **1** se midió en un árbol aparte de `e3a9e9e` con la regla copiada dentro y nada más: es
+literalmente «la regla, antes del arreglo». Salieron **2 verdes y 1 roja** de 3 — los verdes son el
+ancla (ve tres agregados bloqueables, así que no se cumple en vacío) y la dirección «ningún valor
+sobra».
+
+La **2** deja ver por qué hacen falta las dos reglas:
+`Todo_agregado_bloqueable_esta_en_la_lista_del_articulo_32` se quedó **verde** con la mutación
+puesta. El valor `Tercero` seguía declarado y nadie lo contestaba — el falso verde exacto que la
+segunda regla existe para cazar.
+
+**El «antes» de los `act()`, medido donde toca.** La regla nueva del ítem dice que toda cifra de
+antes y después nombra el commit de cada extremo, y que el «antes» es **main al abrir la rama**:
+
+```
+e3a9e9e (main al abrir) — 109 avisos `not wrapped in act`, en 7 ficheros de prueba
+cd frontend && npm ci && npm test -- --run 2>&1 | grep -c "not wrapped in act"
+(11 ficheros, 63 casos, todos verdes)
+```
+
+Y eso **corrige el «antes» que se dio en el 1.5**: allí se apuntaron «91 en seis ficheros» como
+punto de partida, pero se midieron sobre un árbol que ya llevaba el código del ítem. Medido sobre
+main limpio salen **109 en siete**, que es la misma cifra que el «después» de aquel ítem: los
+dieciocho avisos **no los trajo el 1.5**. La comparación de entonces no demostraba lo que decía —
+que es exactamente el motivo por el que la regla se escribió.
+
 **Ítem 1.5 cerrado — el agregado, su identidad fiscal, y un conflicto que no revela:**
 run **34046817118** sobre `279b8c7`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3` de la API, no de la memoria): Frontal `101523261565` ✓ (17 pasos, 0 omitidos),
