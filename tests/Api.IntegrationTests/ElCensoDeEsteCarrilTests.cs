@@ -188,6 +188,19 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaFilaBloqueadaSigueEnLaBaseTests.Desbloquear_por_su_puerta_devuelve_la_MISMA_fila_y_no_una_copia",
         "LaFilaBloqueadaSigueEnLaBaseTests.Suprimir_por_la_API_deja_la_fila_entera_con_su_motivo_y_su_fecha",
 
+        // Del ítem 1.7. Las dos mitades del ADR-0023 que solo se ven contra PostgreSQL: la
+        // desigualdad de la inversa la comprueba la capa de aplicación leyendo la fila contraria
+        // —una lectura, no una rama— y el resolutor falla o no según lo que haya declarado en la
+        // tabla.
+        "LaInversaYElResolutorTests.El_par_que_habria_que_encadenar_no_se_resuelve",
+        "LaInversaYElResolutorTests.El_par_que_se_separa_exactamente_el_margen_entra_y_el_de_al_lado_no",
+        "LaInversaYElResolutorTests.El_redondeo_de_la_inversa_entra_solo_si_la_escala_lo_explica",
+        "LaInversaYElResolutorTests.El_sentido_contrario_no_se_deduce_invirtiendo",
+        "LaInversaYElResolutorTests.La_inversa_que_no_lo_es_se_rechaza_en_el_alta",
+        "LaInversaYElResolutorTests.La_modificacion_vuelve_a_comprobar_la_inversa",
+        "LaInversaYElResolutorTests.Una_conversion_retirada_sigue_resolviendo_y_lo_dice",
+        "LaInversaYElResolutorTests.Una_conversion_retirada_sigue_restringiendo_a_su_inversa",
+
         "LaMismaClaveDevuelveElMismoRecursoTests.De_dos_peticiones_simultaneas_con_la_misma_clave_solo_una_hace_el_trabajo",
         "LaMismaClaveDevuelveElMismoRecursoTests.El_recibo_y_el_almacen_llevan_el_mismo_xmin",
         "LaMismaClaveDevuelveElMismoRecursoTests.El_reintento_con_la_misma_clave_devuelve_los_mismos_bytes_y_no_crea_otro",
@@ -204,6 +217,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaPuertaDeCadaAccionTests.Ninguna_accion_contesta_con_un_fallo_del_servidor_al_sondeo",
         "LaPuertaDeCadaAccionTests.Sin_credenciales_toda_accion_protegida_responde_401",
         "LaPuertaDeCadaAccionTests.Una_ruta_que_no_existe_es_404_para_quien_si_se_ha_identificado",
+
+        // Y la línea que separa la retirada del bloqueo, que la decide una consulta traducida a
+        // SQL y no una rama en C#.
+        "LaRetiradaNoEsUnBloqueoTests.El_GET_por_identificador_sigue_devolviendo_la_fila_retirada",
+        "LaRetiradaNoEsUnBloqueoTests.La_API_no_atiende_el_borrado_de_una_divisa",
+        "LaRetiradaNoEsUnBloqueoTests.La_coleccion_excluye_lo_retirado_por_omision_y_lo_trae_al_pedirlo",
+        "LaRetiradaNoEsUnBloqueoTests.Reincorporar_la_vuelve_a_ofrecer_y_no_crea_una_fila_nueva",
 
         "LaTrazaEsDeSoloAnadidoTests.Un_DELETE_sobre_una_fila_de_traza_lo_rechaza_el_motor",
         "LaTrazaEsDeSoloAnadidoTests.Un_INSERT_sin_empresa_y_sin_motivo_lo_rechaza_la_tabla",
