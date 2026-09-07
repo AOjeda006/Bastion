@@ -4089,13 +4089,15 @@ backend: dotnet build  ->  0 Advertencia(s), 0 Errores
          carril integración -> NO EJECUTADO AQUÍ. Abajo, con firma.
 
 licencias:   una sola línea de `PackageReference` añadida en todo el `git diff` del ítem
-             —`Npgsql.EntityFrameworkCore.PostgreSQL`, en `Terceros.Infrastructure` y en
-             `Organizacion.Infrastructure`—, y **no es un paquete nuevo**: ya estaba en
-             `Directory.Packages.props` (10.0.3), que el ítem no toca, y su licencia
-             —PostgreSQL, permisiva estilo BSD— está ya declarada allí. `frontend/
-             package.json` y `package-lock.json`, sin mover. Ninguna licencia nueva
-             entra con este ítem, y sale del diff, no de la memoria:
-             `git diff e3a9e9e..HEAD -- '*.csproj' 'Directory.Packages.props'`
+             —`Npgsql.EntityFrameworkCore.PostgreSQL`, en `BuildingBlocks.Infrastructure`,
+             que es el bloque común y NO un módulo—, y **no es un paquete nuevo**: ya
+             estaba en `Directory.Packages.props` (10.0.3), que el ítem no toca, y su
+             licencia —PostgreSQL, permisiva estilo BSD— está ya declarada allí.
+             `frontend/package.json` y `package-lock.json`, sin mover. Ninguna licencia
+             nueva entra con este ítem. Y el comando importa, porque el primero que usé
+             —`grep -B25`— atribuye por CERCANÍA y me hizo nombrar dos módulos que no
+             eran; la atribución sale de la cabecera del propio diff:
+             `git diff e3a9e9e..3a937a3 -- '*.csproj' | awk '/^diff --git/{f=$4} /^\+.*PackageReference/{print f" -> "$0}'`
 ```
 
 **Los `act()`, con los dos extremos nombrados y esta vez medidos los dos.** El «después» del ítem se
