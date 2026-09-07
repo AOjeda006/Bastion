@@ -3112,6 +3112,113 @@ a Npgsql a `BuildingBlocks.Infrastructure` —que ya estaba en el grafo por tran
 licencias que comprobar porque no hay paquete que comprobar.**
 
 
+### Tomadas por el agente de desarrollo — ítem 1.7 (2026-09-07)
+
+**1. La retirada se ve en la colección con un parámetro de listado, `?retiradas=true`, y no con un
+extremo aparte.** El ADR-0023 dice «el `GET` de la colección la excluye **por omisión**», y «por
+omisión» implica que hay un modo de verlas: quien tecleó `EURO` en vez de `EUR` y la retiró tiene
+que poder encontrarla para arreglarla. Las dos formas posibles eran un parámetro o un extremo
+nominativo, y el proyecto ya tiene el segundo montado —el listado del artículo 32 del ADR-0027—, así
+que la pregunta es **por qué aquel es un extremo aparte y este no**. La respuesta es entera del
+ADR-0027 y no una preferencia: aquel camino existe porque lo que enseña son **datos personales
+reservados**, y `proteccion-datos.md` exige para el art. 32 «una vía de acceso separada, nominativa
+y trazada»; por eso tiene permiso propio, motivo propio de apertura del ámbito y queda anotado en el
+registro. Una divisa retirada no tiene nada de eso: **no hay dato personal, no hay art. 32, no hay
+nada que trazar**. Copiar allí la forma del bloqueo sería copiar su coste —cuatro permisos nuevos,
+cuatro rutas nuevas, cuatro consultas nuevas— para proteger algo que no necesita protección, y
+además diría en el contrato que ver una divisa retirada es un acto reservado, que es falso.
+
+  Consecuencias, todas queridas:
+
+  - **Pasa por el contrato de listado del 1.3**: es un `[FromQuery]` de un modelo que hereda de
+    `ConsultaPaginada`, con lo que se valida como los otros cuatro y hereda el tope de `size`.
+    Construido a mano en el controlador se saltaría la validación entera, que es lo que el propio
+    `ConsultaPaginada` explica que no puede pasar.
+  - **No es un criterio sensible**, y eso no se afirma de palabra: `NingunCriterioSensibleViajaEnLaUrl`
+    compara la lista **entera** de parámetros de todos los listados contra `{page, q, size, sort}`,
+    así que el quinto nombre **pone esa regla roja** y obliga a declararlo ahí, junto a los motivos.
+    Es exactamente el disparador que esa regla dice tener: «un parámetro nuevo —sensible o no— pone
+    esto rojo y obliga a decidirlo aquí».
+  - **Solo lo declaran los cuatro maestros retirables.** El parámetro vive en un modelo de consulta
+    aparte (`ConsultaDeMaestro`), no en `ConsultaPaginada`: metido ahí, los doce listados —roles,
+    usuarios, terceros— publicarían en el OpenAPI un `?retiradas=` que no miran, que es una mentira
+    del contrato y de las que no fallan.
+  - **Dos valores y no tres.** `?retiradas=true` incluye las retiradas junto a las demás; omitido o
+    `false`, no. No hay un tercer «solo las retiradas»: cada elemento publica su `retirada`, así que
+    ese caso lo compone el cliente filtrando, y un tercer valor sería una segunda manera de decir lo
+    mismo con su propia rama que probar.
+
+**2. Una fila retirada SIGUE restringiendo a su inversa.** Es la pregunta que abre la decisión 2 del
+ADR-0023 en cuanto se cruza con la 1, y la respuesta no es obvia, así que va escrita y no puesta por
+omisión. Si `A→B` está retirada y alguien da de alta o modifica `B→A`, la tolerancia
+`|f·g − 1| ≤ 5·10⁻⁷·(f + g)` **se comprueba igual**, contra el factor de la fila retirada.
+
+  El motivo es literal del ADR: una fila retirada «**sigue resolviendo** para lo que ya apunta a
+  ella». Sigue resolviendo significa que **sigue siendo verdad**, y dos filas que se contradicen
+  siguen contradiciéndose aunque una de ellas ya no se ofrezca: el albarán de hace tres años que
+  resuelve por `A→B` y el que se emita mañana por `B→A` darían cantidades que no cuadran, que es
+  exactamente el descuadre sin autor que la decisión 2 existe para impedir. La alternativa —que
+  retirar una fila la saque de la comprobación— convierte la retirada en **una manera de saltarse la
+  regla**: bastaría retirar el sentido incómodo para poder declarar cualquier número en el otro. Una
+  salida que la propia regla ofrece no es una salida: es un agujero con permiso.
+
+  Lo que **sí** cambia con la retirada es la otra mitad, y por el mismo motivo: la fila retirada **no
+  se ofrece**, así que no se puede dar de alta una conversión nueva sobre una unidad retirada. Las
+  dos frases son la misma —«no se ofrece para lo nuevo, sigue resolviendo lo viejo»— leídas en los
+  dos sentidos.
+
+**3. La retirada es un booleano, sin fecha y sin motivo.** Es la tercera decisión, la de forma, y
+tiene su porqué. El bloqueo lleva fecha y motivo porque el art. 32 los exige —de la fecha cuelga el
+plazo de prescripción y del motivo cuelga si vence—, y nada de eso aplica aquí. Una fecha, además,
+tendría un coste que no se ve: invitaría a un `EstadoDeAsync(id, fecha)` en los puertos y convertiría
+la retirada en **una línea temporal**, que es justo lo que el ADR-0023 dice que la retirada **no
+es** —«no es un cierre; una unidad de medida no se sucede: deja de usarse»—. Quién la retiró y cuándo
+ya está guardado: `ModificadoEn` lo pone el interceptor de marcas y la traza de auditoría guarda el
+cambio de columna con su autor. Un motivo enumerado sería una lista cerrada más, sin ningún consumidor
+que ramifique sobre ella, que es la vacuidad del ADR-0020 en forma de columna.
+
+**4. La retirada se deshace, con `DELETE .../{id}/retirada`.** No lo dice el ADR, y hay que decidirlo:
+el motivo por el que la retirada existe es que «el alta equivocada es permanente **y visible desde
+todas las empresas de la instalación**», y una retirada irreversible sería un error nuevo con
+exactamente el mismo radio. La forma no se inventa: es la del cierre de un ejercicio,
+`POST`/`DELETE` sobre el mismo subrecurso, que ya está en el módulo. Son dos permisos por maestro
+—`retirar` y `reincorporar`—, como `bloquear`/`desbloquear` y `cerrar`/`reabrir`, porque deshacer una
+retirada no es la misma facultad que hacerla.
+
+  Y no es un `DELETE` del recurso: **ninguno de los cuatro tiene `DELETE` sobre su elemento, nunca**,
+  que es lo que el ADR prohíbe. La distinción es de ruta y así se comprueba: lo prohibido es
+  `DELETE /{recurso}/{id}`; `DELETE /{recurso}/{id}/retirada` es el verbo que levanta un subrecurso,
+  igual que `DELETE /ejercicios/{id}/cierre` convive con el `DELETE` del ejercicio sin ser el mismo.
+
+**5. `TipoCambio` y `ConversionUM` no tienen puerto de consumo, y su retirada no es vacía.** Hay que
+escribirlo porque es justo la pregunta que el ADR-0020 obliga a hacerse —«¿esto lo mira alguien?»— y
+la respuesta no se ve de un vistazo. `Divisa` y `UnidadMedida` tienen `IConsultaDeDivisas` e
+`IConsultaDeUnidadesDeMedida`, así que su retirada es observable desde **otro módulo**: Catálogo
+pregunta y recibe `SoloResuelveLoViejo`. Los otros dos no tienen puerto: nadie fuera de Organización
+pregunta hoy por una cotización ni por una conversión. **Eso no las hace vacías.** Su retirada es
+observable por **sus propios `GET`**, que es un camino real y ejercitado: la colección deja de
+traerlas, el elemento las sigue devolviendo, y el resolutor de conversiones —que es de este mismo
+ítem— deja de ofrecer una conversión retirada para una operación nueva. La diferencia con el caso
+vacío del ADR-0020 es exactamente esa: allí la columna existía y **ningún camino la leía**; aquí hay
+tres caminos que la leen, y ninguno de ellos necesita que exista un puerto entre módulos.
+
+**6. Dos defectos del factor, encontrados al leer para la decisión 2 y arreglados aquí.** No estaban
+en el encargo; salen de que la decisión 2 del ADR se apoya en el rango del factor para afirmar que
+«la regla es **total**, no tiene casos en los que se calle».
+
+  - **`FactorValido` redondea DESPUÉS de comprobar el cero.** El orden era: rechazar `factor <= 0`,
+    y luego `decimal.Round(factor, 6, AwayFromZero)`. Con eso, `0,0000001` pasa la comprobación
+    —es mayor que cero— y se **guarda como cero**, que es literalmente el fallo que el comentario
+    de al lado dice impedir: «cero convertiría cualquier existencia en nada, y en silencio». Se
+    invierte el orden: se redondea primero y se comprueba el número que se va a guardar.
+  - **El rango `[0,000001, 1000000]` que el ADR cita no lo comprobaba nadie.** El suelo lo daba de
+    hecho el redondeo a seis decimales una vez corregido lo anterior; el techo no existía. Importa
+    porque el argumento de totalidad de la decisión 2 —«la inversa de cualquier factor válido cae
+    también dentro del rango»— se apoya en él: sin techo, un factor de `10¹⁵` tiene una inversa que
+    no se puede declarar con seis decimales, y la regla tendría un caso en el que se calla. Queda
+    comprobado en el dominio, con el rango escrito como constantes y citado el ADR.
+
+
 ## Estado actual
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
