@@ -1,3 +1,4 @@
+using Bastion.Api.FunctionalTests.Persistencia;
 using Bastion.Api.FunctionalTests.Salud;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Identidad.Infrastructure.Persistencia;
@@ -47,6 +48,15 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         "Almacen.Direccion: 6",
         "Empresa.Bloqueo: 3",
         "Empresa.DomicilioFiscal: 6",
+
+        // Los cinco de Terceros, que hasta el ítem 1.6 no estaban aquí porque este barrido
+        // no miraba el modelo de Terceros. `LimiteCredito` y `RegimenFiscal` son del 1.6.
+        "Tercero.Bloqueo: 3",
+        "Tercero.DomicilioFiscal: 6",
+        "Tercero.Identificacion: 3",
+        "Tercero.LimiteCredito: 2",
+        "Tercero.RegimenFiscal: 4",
+
         "Ubicacion.Bloqueo: 3",
         "Usuario.Bloqueo: 3",
     ];
@@ -182,14 +192,7 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         return (dueno ?? tipo).Auditoria().Que == ClasificacionDeAuditoria.Auditada;
     }
 
-    private IEnumerable<IEntityType> Entidades()
-    {
-        using IServiceScope alcance = _api.Services.CreateScope();
-
-        return
-        [
-            .. alcance.ServiceProvider.GetRequiredService<OrganizacionDbContext>().Model.GetEntityTypes(),
-            .. alcance.ServiceProvider.GetRequiredService<IdentidadDbContext>().Model.GetEntityTypes(),
-        ];
-    }
+    // Descubiertos, no enumerados: hasta el ítem 1.6 esta lista decía «cada entidad declara su
+    // auditoría» mirando dos módulos de cinco. El porqué largo, en `LosModelosDeCadaModulo`.
+    private IEnumerable<IEntityType> Entidades() => LosModelosDeCadaModulo.Entidades(_api.Services);
 }

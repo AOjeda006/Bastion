@@ -76,6 +76,22 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
 
         ["Set<PermisoDeRol>"] =
             "PermisoDeRol es parte del rol; consultarlo suelto lo saca de su dueño",
+
+        // Los tres hijos del tercero, por lo mismo: no filtran por empresa -lo hace la ficha de
+        // la que cuelgan-, así que solo son seguros mientras se lean por un `Include` desde ella.
+        // El de `Contacto` importa más que los otros dos: esa tabla lleva nombre, correo y
+        // teléfono de personas identificadas, y una consulta suelta los serviría de todas las
+        // empresas a la vez.
+        ["Set<Contacto>"] =
+            "Contacto no filtra -lo hace el tercero del que cuelga- y lleva datos personales: " +
+            "consultarlo suelto sirve los contactos de todas las empresas",
+
+        ["Set<CuentaBancaria>"] =
+            "CuentaBancaria no filtra -lo hace el tercero del que cuelga- y su IBAN es criterio " +
+            "sensible",
+
+        ["Set<CondicionPago>"] =
+            "CondicionPago no filtra: lo hace el tercero del que cuelga",
     };
 
     // Los sitios donde una de esas llamadas SÍ está, con su motivo. La lista nació con una sola

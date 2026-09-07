@@ -1,3 +1,4 @@
+using Bastion.Api.FunctionalTests.Persistencia;
 using Bastion.Api.FunctionalTests.Salud;
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
@@ -118,12 +119,11 @@ public sealed class LasFechasDicenDeQueTipoSonTests : IDisposable
     {
         using IServiceScope alcance = _api.Services.CreateScope();
 
-        return
-        [
-            .. Del(alcance.ServiceProvider.GetRequiredService<OrganizacionDbContext>()),
-            .. Del(alcance.ServiceProvider.GetRequiredService<IdentidadDbContext>()),
-            .. Del(alcance.ServiceProvider.GetRequiredService<AuditoriaDbContext>()),
-        ];
+        // Descubiertos, no enumerados: hasta el ítem 1.6 faltaba Terceros, y con él todas sus
+        // fechas. El porqué largo, en `LosModelosDeCadaModulo`.
+        return [.. LosModelosDeCadaModulo.Contextos()
+            .Select(tipo => (DbContext)alcance.ServiceProvider.GetRequiredService(tipo))
+            .SelectMany(Del)];
     }
 
     private static IEnumerable<(string Donde, IReadOnlyProperty Propiedad, string? Tipo)> Del(

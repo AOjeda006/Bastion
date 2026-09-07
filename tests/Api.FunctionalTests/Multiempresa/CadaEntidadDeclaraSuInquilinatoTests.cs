@@ -1,3 +1,4 @@
+using Bastion.Api.FunctionalTests.Persistencia;
 using Bastion.Api.FunctionalTests.Salud;
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
@@ -50,6 +51,27 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
         ["RolDeMembresia"] =
             "asignación dependiente de la pertenencia, que sí filtra; no tiene DbSet ni consulta " +
             "propia, y que siga sin tenerlos lo comprueba ElFiltroNoSeSaltaPorAhiTests",
+
+        // Los tres hijos del tercero, con el mismo motivo que `RolDeMembresia` y la misma
+        // condición: son partes del agregado, no recursos que se consulten por su cuenta. No
+        // tienen `DbSet` -el único del módulo es el de `Tercero`- y se leen siempre por un
+        // `Include` desde la ficha, que SÍ filtra por empresa. Que sigan sin consultarse sueltos
+        // lo vigila `ElFiltroNoSeSaltaPorAhiTests`, que prohibe su `Set<>` por nombre.
+        //
+        // No estaban aquí hasta el ítem 1.6, y no por una decisión: este barrido no miraba el
+        // modelo de Terceros. O sea que durante todo el módulo, «ninguna entidad se queda sin
+        // filtro y sin motivo» se decía de tres contextos de cinco.
+        ["Contacto"] =
+            "es parte del agregado del tercero, que sí filtra; no tiene DbSet ni consulta propia. " +
+            "Lleva datos personales de una persona identificada, así que el que no se consulte " +
+            "suelto no es una comodidad: es lo que sostiene la R8 sobre esta tabla",
+
+        ["CuentaBancaria"] =
+            "parte del agregado del tercero, que sí filtra; no tiene DbSet ni consulta propia. " +
+            "Su IBAN es criterio sensible y se busca por cuerpo, nunca por una consulta suelta",
+
+        ["CondicionPago"] =
+            "parte del agregado del tercero, que sí filtra; no tiene DbSet ni consulta propia",
 
         ["TokenDeRefresco"] =
             "una emisión de refresco es de una sesión, no de una empresa: se busca por su resumen " +
@@ -175,18 +197,13 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
     {
         using IServiceScope alcance = _api.Services.CreateScope();
 
-        return
-        [
-            .. Entidades(alcance.ServiceProvider.GetRequiredService<OrganizacionDbContext>()),
-            .. Entidades(alcance.ServiceProvider.GetRequiredService<IdentidadDbContext>()),
-            .. Entidades(alcance.ServiceProvider.GetRequiredService<AuditoriaDbContext>()),
-
-            // No es de ningún módulo, y entra igual: es el contexto con el que el trabajo de fondo
-            // lee la bandeja, y sus entidades son las mismas dos. Que estén aquí es lo que impide
-            // que alguien le quite el filtro a ESTE contexto -que es el que corre sin petición y
-            // sin empresa- dejando puestos los de los módulos.
-            .. Entidades(alcance.ServiceProvider.GetRequiredService<ContextoDeLaBandeja>()),
-        ];
+        // Descubiertos, no enumerados. La bandeja entraba ya a mano —no es de ningún módulo, y es
+        // el contexto que corre sin petición y sin empresa—; Terceros no entraba, y por eso hasta
+        // el ítem 1.6 «cada entidad declara su inquilinato» se decía de tres contextos de cinco. El
+        // porqué largo, en `LosModelosDeCadaModulo`.
+        return [.. LosModelosDeCadaModulo.Contextos()
+            .Select(tipo => (DbContext)alcance.ServiceProvider.GetRequiredService(tipo))
+            .SelectMany(Entidades)];
     }
 
     private static IEnumerable<IEntityType> Entidades(DbContext contexto) =>
