@@ -3211,12 +3211,25 @@ en el encargo; salen de que la decisión 2 del ADR se apoya en el rango del fact
     —es mayor que cero— y se **guarda como cero**, que es literalmente el fallo que el comentario
     de al lado dice impedir: «cero convertiría cualquier existencia en nada, y en silencio». Se
     invierte el orden: se redondea primero y se comprueba el número que se va a guardar.
-  - **El rango `[0,000001, 1000000]` que el ADR cita no lo comprobaba nadie.** El suelo lo daba de
-    hecho el redondeo a seis decimales una vez corregido lo anterior; el techo no existía. Importa
-    porque el argumento de totalidad de la decisión 2 —«la inversa de cualquier factor válido cae
-    también dentro del rango»— se apoya en él: sin techo, un factor de `10¹⁵` tiene una inversa que
-    no se puede declarar con seis decimales, y la regla tendría un caso en el que se calla. Queda
-    comprobado en el dominio, con el rango escrito como constantes y citado el ADR.
+  - **Y hay que decir hasta dónde llegaba, porque no llegaba a la API.** El `[Range(0.000001,
+    1000000)]` de `CrearConversionUmDto` y `ModificarConversionUmDto` rechaza `0,0000001` antes de
+    llegar al dominio, así que **por HTTP el defecto no era alcanzable**. Lo era por cualquier otro
+    camino que construya la entidad —una semilla, otro módulo, una prueba—, y sobre todo lo era
+    como *promesa*: la guarda del dominio decía proteger de algo de lo que no protegía, y quien la
+    leyera lo daría por cerrado. Un defecto tapado por una validación de otra capa sigue siendo un
+    defecto, y además del tipo peor: el día que alguien llame al dominio desde donde no hay `[Range]`
+    aparece sin previo aviso.
+  - **El rango `[0,000001, 1000000]` que el ADR cita solo estaba en el borde, y escrito a mano dos
+    veces.** El dominio no lo comprobaba: el suelo lo daba de hecho el redondeo a seis decimales una
+    vez corregido lo anterior, y el techo no existía en ninguna capa por debajo de la anotación.
+    Importa porque el argumento de totalidad de la decisión 2 —«la inversa de cualquier factor
+    válido cae también dentro del rango»— se apoya en él: sin techo, un factor de `10¹⁵` tiene una
+    inversa que no se puede declarar con seis decimales, y la regla tendría un caso en el que se
+    calla. Queda comprobado **en el dominio**, con el rango escrito una sola vez como constantes de
+    `ConversionUM` y citado el ADR; y como las dos anotaciones del borde tienen que llevar
+    literales de compilación —`[Range]` no admite otra cosa—, hay una regla que compara los cuatro
+    literales contra las dos constantes, que es la única manera de que dos fuentes escritas en
+    sitios distintos no se separen en silencio.
 
 
 ## Estado actual
