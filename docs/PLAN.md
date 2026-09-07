@@ -3590,7 +3590,8 @@ cd frontend && npm ci && npm test -- --run 2>&1 | grep -c "not wrapped in act"
 —generado—, dos textos de `i18n` y las *fixtures*. Ni un componente, ni una pantalla. Un cambio en
 esta cifra habría sido la señal de que el ítem se metió donde no le tocaba.
 
-**Las ocho mutaciones del ítem, cada una con su línea base nombrada.** Todas sobre árbol limpio,
+**Las ocho primeras mutaciones del ítem, cada una con su línea base nombrada** —las seis
+restantes van con la segunda mitad del ítem, más abajo—**.** Todas sobre árbol limpio,
 aplicadas con copia de respaldo y revertidas **restaurando esa copia** —nunca con `git checkout --`,
 que se llevaría por delante todo lo no commiteado del fichero—, y con `git status --porcelain` vacío
 comprobado después de cada una. Cuando la mutación toca el modelo, se **reconstruye Debug** antes de
@@ -3693,6 +3694,118 @@ mordiendo: para eso habría que reaplicar la mutación en un run, y no se ha hec
 afirma que **el agujero está identificado, la regla escrita y el caso verde sobre código correcto**;
 no que se haya visto rojo con la mutación puesta. La diferencia importa: un caso que pasa sobre
 código bueno todavía puede ser un caso que pasa siempre.
+
+**El culpable, nombrado por el registro que faltaba.** El suceso 8501 salió en las anotaciones del
+[run 34120375406](https://github.com/AOjeda006/Bastion/actions/runs/34120375406) con lo que hacía
+falta y nada más: `Contacto:Modified`, `CuentaBancaria:Modified`, `CondicionPago:Modified`. Los tres
+hijos, en estado de **modificación** en el momento del choque. Y el caso permanente que lo escribe
+—`Un_choque_de_verdad_deja_en_la_traza_QUE_choco_y_en_que_estado`— salió **verde** en ese mismo run:
+el desenlace 8500 sobre la raíz, con `Tercero:Modified` y su `versionActual`, funciona.
+
+**Y una corrección antes de que la corrigiera el run: la inferencia tenía tres ramas y se enunció
+una.** Que `ActualAsync` devuelva nulo puede salir porque (a) ninguna entrada lleve testigo, porque
+(b) lo lleve y `GetDatabaseValuesAsync` devuelva nulo, o porque (c) lo lleve, se lea, y el valor no
+case con `is uint`. Se afirmó (a) como si fuera la única —el mismo error de estrechar una
+enumeración, tercera vez—. El suceso 8501 las distingue por construcción, y sus entradas dijeron que
+era (a): entre las entradas del choque no aparece `Tercero`.
+
+**El mecanismo, y el ADR que ya lo contaba.** EF Core decide si una entidad recién aparecida en la
+colección de un padre ya seguido es un alta o una fila que ya existía mirando si su clave **se
+rellena al insertar**. Por convención marca toda clave `Guid` como `OnAdd`; aquí la pone la fábrica
+del dominio —`Guid.CreateVersion7()`, a propósito, por localidad de índice—, así que venía siempre
+puesta, EF concluía «ya existía» y emitía un `UPDATE` contra una fila que no estaba: cero filas,
+choque, 412.
+
+Eso es **exactamente el ADR-0010**, aceptado el 26-08-2026, cuatro fases antes. Allí salía `500`
+porque no existía el manejador de choques; aquí sale `412`, y es **peor**: un 500 se investiga, un
+412 se lee como «alguien guardó antes que tú», que es plausible y falso.
+
+**Lo que el ADR-0010 daba por sabido y no lo era.** Descartaba por escrito una alternativa:
+*«`ValueGeneratedNever()` en el mapeo. No sirve: la regla de EF Core es "la clave está puesta", y con
+generación desactivada está puesta siempre»*. Es falso, y se midió sobre el modelo real y sin base
+de datos:
+
+| Declaración de la clave | Estado del hijo tras `DetectChanges()` |
+|---|---|
+| `ValueGeneratedOnAdd` (la convención de EF para `Guid`) | `Modified` → `UPDATE` → 412 |
+| `ValueGeneratedNever` | `Added` → `INSERT` |
+
+La pregunta que EF se hace no es si el valor está puesto, sino si la clave es **de las que se
+rellenan al insertar**. Declarada `Never` no lo es. No cambió EF Core: cambió que el modelo dejó de
+decirle algo que no era verdad. Queda en el **ADR-0032**, que sustituye esa frase del ADR-0010 y
+deja en pie todo lo demás —incluido `Registrar`, que ahora es redundante y no se retira aquí: eso es
+tocar un camino de Identidad que este ítem no tiene por qué tocar—.
+
+**El arreglo es una declaración, no un rodeo.** La convención de cierre `LaClaveLaPoneElDominio`
+marca `ValueGeneratedNever` toda propiedad `Guid` de una clave primaria, en los cinco contextos que
+heredan de `ContextoDeModulo`. Una convención y no una línea por configuración porque no es mapeo de
+una entidad: es una propiedad del sistema entero, y una lista por configuración es una lista de la
+que la próxima entidad se cae sin ruido. **Sin migración**: `ValueGenerated` sobre una clave `Guid`
+no produce diferencia relacional, y `comprobar-migraciones.sh` sigue diciendo que modelo y
+migraciones coinciden en los cuatro módulos.
+
+**El fallo pasó de necesitar PostgreSQL a durar un segundo.** `LoQueCuelgaNaceComoAltaTests` cuelga
+los tres hijos de una ficha seguida y afirma el estado de la entrada. Sin contenedor, en el carril
+rápido, y con su canario al lado —que el modelo tenga las tres entidades, que la ficha quede
+`Unchanged`, y que una modificación de verdad salga `Modified`—, porque si nada se detectara,
+`Added` podría salir por no haberse decidido nada.
+
+**Y el hallazgo de segundo orden, que es el que más vale.** La regla que debía cazar esto existía,
+miraba **justo esta propiedad** y la daba por buena: `Toda_entidad_tiene_su_clave_completa_antes_de_guardar`
+filtraba por `ValueGenerated.OnAdd` y después exoneraba en bloque a toda clave `Guid`, con el motivo
+escrito de que en un `Guid` eso no significa que la ponga la base. Cierto **del `INSERT`**, y ciego
+al otro uso de `OnAdd`. Hoy no exime: exige la declaración positiva.
+
+**Pero es que además no miraba Terceros.** Cinco reglas recorren el modelo entero —inquilinato,
+auditoría, fechas, claves, tipos complejos— y cada una traía su lista de contextos **escrita a
+mano**, con dos o tres dentro. Terceros entró en la fase 1 y no se añadió a ninguna: durante todo el
+módulo, cuatro reglas que dicen «cada entidad declara…» lo estuvieron diciendo de **dos módulos de
+cinco**, en verde. Es el defecto del artículo 32 con otra cara y en el mismo ítem —una obligación
+transversal enumerada a mano, ciega a lo que llegue después—. Ahora el universo **se descubre**
+(toda clase concreta que hereda de `ContextoDeModulo`) con su lista declarada al lado, para que un
+descubrimiento corto salga rojo en vez de silencioso.
+
+Lo que encontró al mirar Terceros por primera vez, todo declarado ya:
+
+- **`Tercero.Version` faltaba** del inventario del ADR-0015, que se compara entero.
+- **Los cinco tipos complejos de `Tercero`** no estaban en el barrido de auditoría —`LimiteCredito`
+  y `RegimenFiscal`, del propio 1.6, incluidos—.
+- **Los tres hijos heredan del tipo base y no llevan testigo.** Es exactamente la divergencia que
+  ese caso anunciaba que algún día habría que declarar; ahora está declarada con su motivo —el
+  testigo que gobierna su edición es el del tercero— en vez de permitida en blanco.
+- **Y los tres no filtraban por empresa ni declaraban por qué**, que es un hueco de R8 del propio
+  1.6. Se cierra como `RolDeMembresia`: motivo escrito **más** su `Set<>` prohibido por nombre. El
+  de `Contacto` pesa más que los otros dos, porque esa tabla lleva nombre, correo y teléfono de
+  personas identificadas y una consulta suelta los serviría de todas las empresas a la vez.
+
+**Y una tercera vez lo mismo, esta ya sin excusa: dos ADR con el mismo número.** El ítem escribió
+dos —el del artículo 32 y el de la clave— y los dos salieron `ADR-0031`. No lo cazó nadie: son dos
+ficheros de texto, y ningún barrido miraba su numeración. No es cosmético, porque **el número es la
+manera de citar un ADR** —lo citan los `remarks` del código, los mensajes de las aserciones, el PLAN
+y los demás ADR—, así que un número compartido vuelve ambigua toda cita ya escrita: quien busque
+«ADR-0031» encuentra dos decisiones distintas y no sabe cuál avalaba lo que estaba leyendo. Se
+renumera el más nuevo a **ADR-0032** —fichero, título, las dos citas del ADR-0010 y las dos de
+`LasPertenenciasNuevasSeInsertanTests`— y, antes de arreglarlo, se escribe la regla y **se ve roja
+con la colisión puesta**: `ElNumeroDeUnAdrEsSuyoYDeNadieMasTests`. Tres afirmaciones, porque
+renumerar es renombrar un fichero y renombrar un fichero deja la cabecera diciendo el número viejo,
+que es la misma colisión escondida dentro.
+
+**Seis mutaciones más, sobre árbol limpio**, revertidas restaurando copia —nunca con
+`git checkout --`— y con `git status --porcelain` vacío y `grep -rn "MUTACION" src tests` sin
+resultados después. Las cuatro primeras sobre la línea base `ecdd796`; las dos últimas sobre
+`f2ab8d1`:
+
+| # | Mutación | Línea base | Rojo |
+|---|---|---|---|
+| 9 | La convención **no se registra** | `ecdd796` | **Triple, y en dos módulos**: el efecto en Terceros (`Lo_que_se_cuelga…`), el canario del ADR-0010 en Identidad (`Colgarla_del_usuario…`) y la declaración (`Toda_entidad_tiene_su_clave_completa…`) |
+| 10 | `TercerosDbContext` fuera de la lista declarada | `ecdd796` | `El_universo_de_modelos_es_el_declarado` |
+| 11 | La ficha del arnés **no queda seguida** | `ecdd796` | Los **dos** casos de `LoQueCuelgaNaceComoAltaTests` — el canario es lo que impide que el principal salga verde por no haber decidido nada |
+| 12 | `Contacto` sin su motivo declarado | `ecdd796` | `Ninguna_entidad_del_modelo_se_queda_sin_filtro_y_sin_motivo` |
+| 13 | La cabecera de un ADR deja de decir el número de su fichero | `f2ab8d1` | `Cada_ADR_lleva_en_su_titulo_el_numero_de_su_nombre_de_fichero` |
+| 14 | El barrido de ADR mira la carpeta equivocada (`docs/adr` → `docs`) | `f2ab8d1` | `El_barrido_encuentra_los_ADR_del_repositorio` |
+
+La afirmación que falta en esa tabla es la de la colisión, y falta porque **no hizo falta mutarla**:
+se vio roja contra el árbol real, con los dos `ADR-0031` dentro, antes de renumerar nada.
 
 **Ítem 1.5 cerrado — el agregado, su identidad fiscal, y un conflicto que no revela:**
 run **34046817118** sobre `279b8c7`, **success**, con **3 jobs contados en el propio run**
