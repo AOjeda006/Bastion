@@ -8,8 +8,12 @@ tags: [adr, ef-core, change-tracker, guid-v7, agregados, 500]
 
 # ADR-0010: Una entidad hija con clave propia no se da de alta sola
 
-- **Estado:** aceptado
+- **Estado:** aceptado, con una alternativa reabierta
 - **Fecha:** 2026-08-26
+- **Sustituido en parte por:** el [ADR-0031](adr-0031-la-clave-declarada-never-es-lo-que-hace-que-un-hijo-nazca-como-alta.md).
+  El diagnóstico y la decisión de este ADR siguen en pie; lo que se sustituye es el descarte de
+  `ValueGeneratedNever()` de la lista de alternativas, que se midió en el ítem 1.6 y resulta ser
+  falso.
 
 ## Contexto
 
@@ -69,8 +73,11 @@ Las alternativas se descartaron por lo que costaban:
   rompe otra cosa: `AsignarRol` construye `RolDeMembresia(Id, rolId)`, así que una pertenencia sin
   identidad hasta el `SaveChanges` deja roles colgando de `Guid.Empty` en cuanto alguien escriba
   el caso de uso que hace las dos cosas seguidas.
-- **`ValueGeneratedNever()` en el mapeo.** No sirve: la regla de EF Core es «la clave está puesta»,
-  y con generación desactivada está puesta siempre.
+- ~~**`ValueGeneratedNever()` en el mapeo.** No sirve: la regla de EF Core es «la clave está
+  puesta», y con generación desactivada está puesta siempre.~~ **Esto es falso**, y se midió en el
+  ítem 1.6: la pregunta que EF se hace no es si el valor está puesto, sino si la clave es de las
+  que se rellenan AL INSERTAR. Declarada `Never` no lo es, y el hijo sale `Added`. Es la
+  decisión que toma el ADR-0031.
 - **Clave compuesta `(usuario_id, empresa_id)`**, que es la identidad real de una pertenencia y
   haría desaparecer el problema por construcción (es lo que salva a `RolDeMembresia`). Es
   probablemente lo correcto a largo plazo, pero cambia el esquema, la migración y la clave ajena

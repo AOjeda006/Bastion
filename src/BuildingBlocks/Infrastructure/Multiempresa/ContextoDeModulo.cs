@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.BuildingBlocks.Infrastructure.Multiempresa;
@@ -65,4 +66,24 @@ public abstract class ContextoDeModulo(
     /// permiso —o la falta de permiso— del primero que pasó por aquí.
     /// </remarks>
     protected bool VerLoBloqueado => bloqueados.Abierto;
+
+    /// <summary>
+    /// Declara lo que vale para el modelo de <b>todos</b> los módulos, no para una entidad.
+    /// </summary>
+    /// <remarks>
+    /// Aquí y no en cada <c>OnModelCreating</c>: las derivadas sobrescriben aquel para aplicar sus
+    /// configuraciones y <b>no llaman al de base</b> —no tienen por qué—, así que una línea puesta
+    /// allí se perdería en cuanto alguien escribiera un contexto nuevo. <c>ConfigureConventions</c>
+    /// no lo sobrescribe nadie, y una convención de cierre se aplica al modelo ya montado, después
+    /// de todas las configuraciones.
+    /// </remarks>
+    /// <param name="configurationBuilder">El constructor de convenciones del modelo.</param>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(configurationBuilder);
+
+        base.ConfigureConventions(configurationBuilder);
+
+        configurationBuilder.Conventions.Add(_ => new LaClaveLaPoneElDominio());
+    }
 }

@@ -51,22 +51,46 @@ public sealed class LasPertenenciasNuevasSeInsertanTests : IDisposable
         Estado(contexto, usuario.Membresias.Single()).ShouldBe(EntityState.Added);
     }
 
+    /// <summary>
+    /// Colgarla del usuario y nada más <b>ya basta</b>, desde que la clave se declara puesta.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Este caso afirmaba lo contrario, y se puso rojo en el ítem 1.6</b> —que es para lo que
+    /// estaba puesto—. Pedía <c>Modified</c> y decía de sí mismo: «es un canario, no una
+    /// bendición; el día que EF Core cambie de criterio, este test se pondrá rojo y el rodeo podrá
+    /// desaparecer». Lo que cambió no fue EF Core: fue que el modelo dejó de mentirle. El ADR-0010
+    /// había descartado <c>ValueGeneratedNever()</c> por escrito —«no sirve: la regla de EF Core es
+    /// "la clave está puesta", y con generación desactivada está puesta siempre»— y eso es
+    /// <b>falso</b>: lo que EF mira no es si el valor es distinto del de por defecto, sino si la
+    /// clave es de las que se generan <b>al insertar</b>. Declarada <c>Never</c>, no lo es, y el
+    /// hijo nuevo sale <c>Added</c>. Medido, no supuesto; lo dice el ADR-0031, que sustituye a esa
+    /// parte del ADR-0010.
+    /// </para>
+    /// <para>
+    /// Sigue siendo un canario, ahora del lado contrario: si un día vuelve a salir
+    /// <c>Modified</c>, la convención <c>LaClaveLaPoneElDominio</c> ha dejado de aplicarse a este
+    /// modelo y todas las altas de hijos de este sistema vuelven a ser un 412.
+    /// </para>
+    /// </remarks>
     [Fact]
-    public void Sin_registrarla_EF_Core_la_daria_por_existente()
+    public void Colgarla_del_usuario_ya_basta_porque_la_clave_se_declara_puesta()
     {
         using IServiceScope alcance = _api.Services.CreateScope();
         IdentidadDbContext contexto = Contexto(alcance);
 
         Usuario usuario = ComoSiViniraDeLaBase(contexto);
 
-        // Colgarla del usuario y nada más: el camino que parecía suficiente.
         Membresia membresia = usuario.Conceder(Guid.CreateVersion7());
 
         contexto.ChangeTracker.DetectChanges();
 
-        // Es un canario, no una bendición: fija POR QUÉ existe `Registrar`. El día que EF Core
-        // cambie de criterio, este test se pondrá rojo y el rodeo podrá desaparecer.
-        Estado(contexto, membresia).ShouldBe(EntityState.Modified);
+        Estado(contexto, membresia).ShouldBe(
+            EntityState.Added,
+            "un hijo con clave propia colgado de un padre ya seguido tiene que salir como ALTA. " +
+            "Si sale `Modified`, la convención `LaClaveLaPoneElDominio` no se está aplicando a " +
+            "este modelo, y toda alta de hijo de este sistema es un UPDATE contra una fila que no " +
+            "existe —o sea, un 412—. Ver ADR-0031.");
     }
 
     [Fact]

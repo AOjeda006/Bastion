@@ -124,6 +124,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaColaSeDefiendeSolaTests.Un_evento_sin_declarar_lo_dice_al_volcarlo_y_no_al_leerlo",
         "LaColaSeDefiendeSolaTests.Una_fila_lleva_empresa_o_lleva_el_motivo_por_el_que_no_la_lleva",
 
+        "LasClavesSeConocenAntesDeGuardarTests.El_universo_de_modelos_es_el_declarado",
         "LasClavesSeConocenAntesDeGuardarTests.Las_entidades_del_tipo_base_y_las_que_llevan_testigo_son_las_MISMAS",
         "LasClavesSeConocenAntesDeGuardarTests.Lo_unico_que_genera_el_servidor_son_los_testigos_de_concurrencia",
         "LasClavesSeConocenAntesDeGuardarTests.Ninguna_propiedad_auditada_la_pone_la_base_de_datos",
@@ -135,8 +136,8 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasFechasDicenDeQueTipoSonTests.Toda_fecha_de_calendario_se_guarda_sin_zona_horaria",
         "LasFechasDicenDeQueTipoSonTests.Todo_instante_se_guarda_con_zona_horaria",
 
+        "LasPertenenciasNuevasSeInsertanTests.Colgarla_del_usuario_ya_basta_porque_la_clave_se_declara_puesta",
         "LasPertenenciasNuevasSeInsertanTests.Con_el_usuario_recien_creado_la_pertenencia_ya_salia_bien",
-        "LasPertenenciasNuevasSeInsertanTests.Sin_registrarla_EF_Core_la_daria_por_existente",
         "LasPertenenciasNuevasSeInsertanTests.Un_rol_nuevo_sobre_una_pertenencia_que_ya_existia_tambien_sale_como_alta",
         "LasPertenenciasNuevasSeInsertanTests.Una_pertenencia_concedida_a_un_usuario_ya_guardado_sale_como_alta",
 

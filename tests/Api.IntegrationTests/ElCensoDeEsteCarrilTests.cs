@@ -230,6 +230,8 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.La_hora_del_cambio_sale_del_reloj_inyectado_y_no_del_de_la_base",
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.Un_cambio_por_la_API_mueve_una_marca_y_deja_la_otra_donde_estaba",
 
+        "LoQueCuelgaNaceComoAltaTests.El_arnes_ve_el_modelo_y_distingue_un_alta_de_una_modificacion",
+        "LoQueCuelgaNaceComoAltaTests.Lo_que_se_cuelga_de_una_ficha_ya_guardada_sale_como_ALTA",
         "LosPermisosQueNombraElFrontalTests.Todo_permiso_que_el_frontal_teclea_lo_sirve_la_api",
 
         "NadieEscribeEnLaEmpresaDeOtroTests.Con_la_empresa_de_uno_no_estorba",
