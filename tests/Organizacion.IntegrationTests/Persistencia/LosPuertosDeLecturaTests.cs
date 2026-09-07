@@ -1,4 +1,7 @@
 using Bastion.Organizacion.Contracts.Comun;
+using Bastion.Organizacion.Contracts.Divisas;
+using Bastion.Organizacion.Contracts.Impuestos;
+using Bastion.Organizacion.Contracts.Unidades;
 using Bastion.Organizacion.Domain.Divisas;
 using Bastion.Organizacion.Domain.Impuestos;
 using Bastion.Organizacion.Domain.Unidades;
@@ -41,6 +44,7 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
     private static readonly DateTimeOffset s_momento = new(2026, 1, 15, 9, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeImpuestos), EstadoDeMaestro.SeOfreceParaLoNuevo)]
     public async Task El_impuesto_que_rige_en_la_fecha_se_ofrece_para_lo_nuevo()
     {
         Impuesto tramo = ImpuestoConTramo("PTO-VIG", new DateOnly(2012, 9, 1), null);
@@ -52,6 +56,7 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
     }
 
     [Fact]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeImpuestos), EstadoDeMaestro.SoloResuelveLoViejo)]
     public async Task El_tramo_cerrado_sigue_resolviendo_lo_viejo_pero_no_se_ofrece()
     {
         // El caso del ADR-0023 con el ejemplo que de verdad ocurrió: el IVA general al 18 % dejó de
@@ -95,6 +100,8 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
     }
 
     [Fact]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeDivisas), EstadoDeMaestro.SeOfreceParaLoNuevo)]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeDivisas), EstadoDeMaestro.NoExiste)]
     public async Task La_divisa_dada_de_alta_se_ofrece_y_la_que_no_esta_no_existe()
     {
         // El yen y no un código inventado: `Divisa.Crear` rechaza lo que el catálogo de los
@@ -118,6 +125,8 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
     }
 
     [Fact]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeUnidadesDeMedida), EstadoDeMaestro.SeOfreceParaLoNuevo)]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeUnidadesDeMedida), EstadoDeMaestro.NoExiste)]
     public async Task La_unidad_dada_de_alta_se_ofrece_y_la_que_no_esta_no_existe()
     {
         var unidad = UnidadMedida.Crear("PTU", "Unidad de prueba del puerto", 2, s_momento);
@@ -134,6 +143,7 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
     }
 
     [Fact]
+    [CubreEstadoDeMaestro(typeof(IConsultaDeImpuestos), EstadoDeMaestro.NoExiste)]
     public async Task El_impuesto_que_no_esta_no_existe()
     {
         (await EstadoDelImpuestoAsync(Guid.CreateVersion7(), new DateOnly(2026, 3, 31)))

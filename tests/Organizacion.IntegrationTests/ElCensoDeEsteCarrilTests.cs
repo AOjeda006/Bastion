@@ -67,6 +67,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaCargaDeSemillasTests.La_carga_deja_dentro_todo_lo_que_trae_el_fichero",
         "LaCargaDeSemillasTests.Los_tramos_del_IVA_general_entran_los_tres_y_solo_uno_queda_abierto",
 
+        "LaMatrizDePuertoYEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta",
+        "LaMatrizDePuertoYEstadoTests.Cada_cubrimiento_declarado_apunta_a_un_puerto_de_verdad",
+        "LaMatrizDePuertoYEstadoTests.Cada_cubrimiento_vive_en_un_caso_que_corre_contra_la_base",
+        "LaMatrizDePuertoYEstadoTests.La_matriz_no_esta_vacia",
+
         "LaTraduccionASqlTests.El_barrido_ve_los_listados_y_reconoce_una_consulta_intraducible",
         "LaTraduccionASqlTests.La_busqueda_por_criterio_y_su_cursor_se_traducen_a_sql",
         "LaTraduccionASqlTests.Todo_orden_y_todo_filtro_declarado_se_traduce_a_sql",
