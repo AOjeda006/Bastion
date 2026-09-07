@@ -3361,11 +3361,128 @@ instalado y el demonio no arranca en esta máquina.
 contenedor: `scripts/comprobar-migraciones.sh` (el modelo no tiene cambios pendientes y la migración
 cuadra con él), `CadaEntidadDeclaraSuAuditoriaTests` en el carril rápido (las cuatro configuraciones
 nuevas declaran la auditoría de **cada** propiedad), los 27 casos de `LoQueCuelgaDelTerceroTests`
-sobre los invariantes del agregado, y la compilación del proyecto de integración con sus 15 casos de
-esquema nuevos, que al menos garantiza que las consultas están escritas y el ensamblado carga. **Lo
-que solo el run puede decir** es lo que de verdad falta: que la migración se **aplique** —los tres
-pasos de añadir, rellenar y cerrar—, que los tres `CHECK` y el índice parcial estén en la base
-después de aplicarla, y que los 15 casos nuevos pasen. Se dice antes de empujar, no después.
+sobre los invariantes del agregado, y la compilación del proyecto de integración con sus **veinte
+casos nuevos** —los 15 de `EsquemaDeTercerosTests` y los 10 de `ContratoDeLoQueCuelgaTests`, de los
+que 5 ya existían—, que al menos garantiza que las consultas están escritas y el ensamblado carga.
+**Lo que solo el run puede decir** es lo que de verdad falta: que la migración se **aplique** —los
+tres pasos de añadir, rellenar y cerrar—, que los tres `CHECK` y el índice parcial estén en la base
+después de aplicarla, que los 15 casos de esquema pasen, y que los 10 de contrato pasen —entre ellos
+el que tapa el agujero de la mutación 7, que **ninguna máquina ha visto correr todavía**—. Se dice
+antes de empujar, no después.
+
+**Los `act()` del frontal, con los dos extremos nombrados.** La regla que salió del 1.5 se aplica
+desde aquí: toda cifra de «antes y después» dice sobre qué commit se midió cada extremo, y el
+«antes» es `main` al abrir la rama.
+
+```
+cd frontend && npm ci && npm test -- --run 2>&1 | grep -c "not wrapped in act"
+```
+
+- **Antes — `e3a9e9e`** (main al abrir): **109 avisos en 7 ficheros**.
+- **Después — `c7b9f80`** (el árbol que se lleva a main al cerrar): **109 avisos en 7 ficheros**,
+  con el mismo reparto: `ElCambioDeIdioma` 17, `ElCambioDeRuta` 14, `ElSelectorDeEmpresa` 14,
+  `LasRutasProtegidas` 17, `LaPantallaDeAcceso` 10, `ElListadoDeAlmacenes` 24, `ElTestigoDeAcceso` 13.
+
+**No se mueve, y el motivo está en el `git diff`:** el ítem toca del frontal solo `esquema.ts`
+—generado—, dos textos de `i18n` y las *fixtures*. Ni un componente, ni una pantalla. Un cambio en
+esta cifra habría sido la señal de que el ítem se metió donde no le tocaba.
+
+**Las ocho mutaciones del ítem, cada una con su línea base nombrada.** Todas sobre árbol limpio,
+aplicadas con copia de respaldo y revertidas **restaurando esa copia** —nunca con `git checkout --`,
+que se llevaría por delante todo lo no commiteado del fichero—, y con `git status --porcelain` vacío
+comprobado después de cada una. Cuando la mutación toca el modelo, se **reconstruye Debug** antes de
+medir y antes de dar por revertida: `comprobar-migraciones.sh` corre con `--no-build` y lee los
+binarios del disco, no el código.
+
+| # | Mutación | Línea base | Resultado |
+|---|---|---|---|
+| 1 | La regla de la lista cerrada de tipos bloqueables, **escrita antes del arreglo** | `e3a9e9e` (main al abrir la rama) | **Rojo**, con los dos supervivientes nombrados |
+| 2 | Un módulo que bloquea y **no expone su puerto** de consulta | `f9913d9` | **Rojo**, con el módulo nombrado |
+| 3 | Un IBAN con el control válido y la **longitud de otro país** | `81b44fe` | **Rojo** |
+| 4 | Un IBAN **con forma de real** en una *fixture* del frontal | `81b44fe` | **Rojo**, con el sitio y el valor enmascarado |
+| 5 | `CondicionPago` aceptando **90 días** | `81b44fe` | **Rojo** en el dominio, en el borde y en el `CHECK` de la migración |
+| 6 | La cuenta **por omisión duplicada** | `81b44fe` | **Rojo** por el efecto: dos preferentes en la ficha |
+| 7 | `LimiteCredito` **sin divisa**, heredando en silencio la de la empresa | `81b44fe`, y otra vez sobre `c7b9f80` | **VERDE las dos veces en el carril rápido** — el hallazgo del ítem, abajo entero |
+| 8 | Una **regla nueva fuera del censo** de su carril | `c7b9f80` | **Rojo**, con la regla nombrada |
+
+**La 1, entera.** No es una mutación del código: es la regla escrita **contra el árbol tal como
+estaba**, que es el orden que pedía el encargo —«el trabajo no empieza por añadir dos valores al
+enum; empieza por la pregunta de por qué nada se puso rojo»—. Sobre `e3a9e9e`, `TipoDeRecursoBloqueado`
+tenía tres valores y cinco agregados implementaban el bloqueo. Con
+`dotnet test tests/Arquitectura.Tests/Bastion.Arquitectura.Tests.csproj --filter LoBloqueadoSeVeEntero`:
+
+```
+[xUnit.net]     Bastion.Arquitectura.Tests.LoBloqueadoSeVeEnteroTests
+                .Todo_agregado_bloqueable_esta_en_la_lista_del_articulo_32 [FAIL]
+  Shouldly.ShouldAssertException : sinSitio
+      should be empty but had
+  2
+      items and was
+  ["Tercero", "Usuario"]
+
+  Additional Info:
+      estos agregados se pueden bloquear y NO aparecen en `TipoDeRecursoBloqueado`, así que lo
+      que se les reserva no sale en el listado del art. 32 y nadie puede consultarlo. No basta
+      con añadir el valor: el enumerado vive en un módulo y la obligación es transversal, así
+      que el módulo dueño tiene que exponer su puerto:
+  · Tercero
+  · Usuario
+  Stack Trace:
+    tests/Arquitectura.Tests/LoBloqueadoSeVeEnteroTests.cs(108,0)
+
+Con error! - Con error: 1, Superado: 2, Omitido: 0, Total: 3
+```
+
+Los dos supervivientes son los que el listado no veía, y el mensaje ya dice que el arreglo **no** es
+añadir dos valores al enumerado. Ese rojo doble —el de aquí y el de la mutación 2— es el entregable
+del primer trozo del ítem; el arreglo vino después, en `f9913d9`.
+
+**La 4, entera.** Sobre `81b44fe`, se cambió en `frontend/src/pruebas/datos.ts` un IBAN de relleno
+por uno con el cuerpo variado y el control calculado —es decir, indistinguible de uno de verdad—.
+El valor no se escribe aquí, que es precisamente lo que la regla defiende:
+
+```
+MUTACION 4 aplicada en frontend/src/pruebas/datos.ts
+  Con error Bastion.Arquitectura.Tests.NingunDatoConFormaDeRealTests
+            .Ningun_dato_con_forma_de_real_se_queda_escrito [355 ms]
+  Mensaje de error:
+   Shouldly.ShouldAssertException : hallazgos
+    should be empty but had
+1
+    item and was
+["frontend/src/pruebas/datos.ts:231 · IBAN «ES********************98»"]
+
+Additional Info:
+    estos sitios llevan escrito un dato con forma de real que no sale del espacio inventado de
+    este proyecto. Un identificador válido es de alguien, y de un repositorio no se borra:
+    sustitúyelo por un valor de relleno con su control calculado, como hace el resto de la suite.
+
+Con error! - Con error: 1, Superado: 3, Omitido: 0, Total: 4
+```
+
+Tres cosas que este rojo demuestra y que un negativo genérico no habría demostrado: que el barrido
+**alcanza al frontal** y no solo a `src/` y `tests/` de C#; que **enmascara lo que encuentra** —el
+mensaje enseña el país y dos cifras, no el número—; y que la extensión al IBAN reutiliza el mismo
+mecanismo del identificador fiscal en vez de duplicarlo, porque la lista de formas prohibidas se
+compara **entera y en los dos sentidos** contra lo que el barrido sabe detectar.
+
+**La 7 salió verde, y ese es el segundo hallazgo del ítem.** La mutación era la del encargo: quitar
+la exigencia de divisa en `FijarLimiteCredito.LeerImporte` y devolver `Importe.De(cantidad, "EUR")`
+cuando el cuerpo no la trae. Con ella puesta, el carril rápido entero siguió en **624/624**, sin un
+solo caso rojo. La decisión «la divisa NO se hereda en silencio» estaba escrita en un `remarks` y en
+un comentario, y **no la guardaba ningún test**: `Terceros.UnitTests` no referencia `Application` a
+propósito (§13 — «dominio puro, sin infraestructura y sin E/S»), y `Api.FunctionalTests` no puede
+llegar al caso de uso porque este carga el agregado **antes** de validar, que es el orden 404-antes-
+que-400 que sigue todo el código. Su única casa posible es el contrato con base de verdad.
+
+Escrito en `c7b9f80`: `ContratoDeLoQueCuelgaTests`, diez casos, y el que cierra el agujero afirma
+**el efecto** y no solo el código —400, el campo `divisa`, y que al releer el recurso **sigue sin
+haber límite**—, porque el modo de fallo que importa no es dejar de contestar 400: es contestar 200
+con una divisa que nadie escribió. **Y aquí está el límite honesto: esa regla vive en el carril de
+integración, que esta máquina no puede ejecutar.** Reaplicada la mutación sobre `c7b9f80`, el carril
+rápido volvió a salir verde —lo esperado, porque los diez casos nuevos no corren en él—. El run de
+la CI es el primero que los ejecuta, y hasta que ese run esté leído, lo único que se puede afirmar
+de la 7 es que **el agujero está identificado y la regla escrita**, no que se haya visto morder.
 
 **Ítem 1.5 cerrado — el agregado, su identidad fiscal, y un conflicto que no revela:**
 run **34046817118** sobre `279b8c7`, **success**, con **3 jobs contados en el propio run**
@@ -6154,6 +6271,29 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   IBAN validado, `CondicionPago` con el tope de **60 días de la Ley 3/2004 contado desde la
   entrega**, y `LimiteCredito` **solo como importe**. Fuera, por la raya de la P6: `MandatoSEPA`
   (fase 6) y el riesgo vivo (fase 4).
+  **El ítem empezó por otro sitio, y esa es la primera anotación**: antes de lo que cuelga se cerró
+  el **agujero del art. 32** —cinco agregados implementan el bloqueo y el listado solo veía tres—,
+  y se cerró en el orden que corresponde: primero la regla que pregunta *por qué nada se puso rojo*,
+  vista roja con los dos supervivientes nombrados, y el arreglo después. No se añadieron dos valores
+  a un enumerado: el enumerado vive en un módulo y la obligación es transversal, así que cada módulo
+  que bloquea expone su **puerto de consulta** y la composición los junta —sin `JOIN` entre esquemas
+  y sin llamada HTTP—, con una segunda regla que lo exige.
+  **Lo que cuelga, hecho**: `Contacto` (cuatro campos, **sin campo de notas**, y su ausencia es la
+  decisión), `CuentaBancaria` con IBAN validado por **mod-97 y longitud por país** sobre los 37 de
+  SEPA —batería generada, en las dos direcciones y con **un negativo por cada motivo distinto**:
+  longitud, país inexistente y control malo—, `CondicionPago` con el tope de 60 días puesto en los
+  **tres sitios** (dominio, borde y `CHECK` de la base) y sin calcular ningún vencimiento, y
+  `LimiteCredito` con **su divisa explícita**, `numeric(18,4)` por R6, que **no se hereda en
+  silencio** de `Empresa.DivisaBase`. Entra también el **régimen fiscal del §7.2** —alcance
+  comprometido sin casa—, con el corte de `LimiteCredito`: tres de sus cuatro condiciones como
+  columnas con `CHECK` y **ningún comportamiento**; el tipo de retención se queda fuera porque ya
+  tiene dueño desde el 1.2.
+  **Las tres notas abiertas, resueltas**: la correlación buscar/alta pasa a *Decisiones* con sus
+  tres salidas costeadas —no la puede tomar el agente—; el art. 32, cerrado en código; y el régimen
+  fiscal, con el corte que se sostiene y el trozo que no, dicho.
+  **Ocho mutaciones con su línea base nombrada**, seis rojas y **dos verdes que valen más**: la 7
+  destapó que la decisión de la divisa no la guardaba ningún test, y su regla —escrita ya— vive en el
+  carril de integración, que esta máquina no ejecuta.
 - [ ] **1.7 · La retirada y las dos conversiones** — criterio de aceptación: el **ADR-0023
   implementado entero** —retirada en los cuatro maestros de instalación, tolerancia de la conversión
   inversa, resolutor de conversiones encadenadas con **error con nombre**—, y **antes** de que
