@@ -386,6 +386,166 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             HttpStatusCode.PreconditionRequired, await Escenario.Detalle(respuesta));
     }
 
+    /// <summary>
+    /// Colgar un contacto <b>mueve la versión de la ficha</b>, y la etiqueta anterior deja de valer.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El caso que faltaba, y el que habría ahorrado el run 34097268237.</b> Los otros diez
+    /// miran cada ruta por su lado; este mira el invariante que las cruza: quien cita una versión
+    /// para escribir, escribe, y por tanto esa versión avanza. Si no avanza, dos personas pueden
+    /// colgar cosas sobre la misma foto sin enterarse — que es exactamente lo que el <c>If-Match</c>
+    /// está ahí para impedir.
+    /// </para>
+    /// <para>
+    /// Y se afirma <b>en los dos sentidos</b>, porque cada uno caza un fallo distinto. Que la
+    /// etiqueta cambie caza la versión que se queda quieta. Que la vieja dé <b>412</b> caza lo
+    /// contrario: un borde que devuelva una etiqueta nueva cada vez —la hora, un contador— sin que
+    /// el testigo de la base tenga nada que ver con ella.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Colgar_un_contacto_MUEVE_la_version_de_la_ficha_y_la_vieja_ya_no_vale()
+    {
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(Escenario.NifInventado(141));
+        TerceroDto tercero = await CrearAsync(cliente, Escenario.NifInventado(31_000_011));
+        string ficha = $"{Terceros}/{tercero.Id}";
+
+        string antes = await cliente.EtiquetaDeAsync(ficha);
+
+        using (HttpResponseMessage colgado = await cliente.EnviarConVersionAsync(
+            HttpMethod.Post,
+            $"{ficha}/contactos",
+            antes,
+            JsonContent.Create(new ContactoDeAltaDto { Nombre = "Persona de contacto" })))
+        {
+            colgado.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(colgado));
+        }
+
+        string despues = await cliente.EtiquetaDeAsync(ficha);
+
+        despues.ShouldNotBe(
+            antes, "colgar algo del agregado tiene que mover la versión del agregado");
+
+        // Y la vieja ya no vale: la etiqueta no es un adorno que cambia por su cuenta, sale del
+        // testigo que la base compara.
+        using HttpResponseMessage conLaVieja = await cliente.EnviarConVersionAsync(
+            HttpMethod.Post,
+            $"{ficha}/contactos",
+            antes,
+            JsonContent.Create(new ContactoDeAltaDto { Nombre = "Otra persona" }));
+
+        conLaVieja.StatusCode.ShouldBe(
+            HttpStatusCode.PreconditionFailed, await Escenario.Detalle(conLaVieja));
+    }
+
+    /// <summary>
+    /// Un contacto se cuelga y se descuelga, y la lista queda como estaba.
+    /// </summary>
+    /// <remarks>
+    /// El recorrido entero de la ruta que menos reglas tiene, que es justo por lo que hace falta:
+    /// las otras se comprueban por su invariante y esta no tiene ninguno, así que sin este caso el
+    /// alta y la baja de contactos serían las únicas escrituras del ítem que nada ejerce.
+    /// </remarks>
+    [Fact]
+    public async Task Un_contacto_se_cuelga_y_se_descuelga_y_la_lista_queda_vacia()
+    {
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(Escenario.NifInventado(142));
+        TerceroDto tercero = await CrearAsync(cliente, Escenario.NifInventado(31_000_012));
+
+        ContactoDto colgado;
+
+        using (HttpResponseMessage alta = await EscribirAsync(
+            cliente,
+            tercero.Id,
+            HttpMethod.Post,
+            "contactos",
+            new ContactoDeAltaDto { Nombre = "Persona de contacto", Cargo = "Compras" }))
+        {
+            alta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(alta));
+            colgado = (await alta.Content.ReadFromJsonAsync<ContactoDto>())!;
+        }
+
+        colgado.Nombre.ShouldBe("Persona de contacto");
+        colgado.Cargo.ShouldBe("Compras");
+        (await ContactosAsync(cliente, tercero.Id)).Count.ShouldBe(1);
+
+        using (HttpResponseMessage baja = await EscribirAsync(
+            cliente, tercero.Id, HttpMethod.Delete, $"contactos/{colgado.Id}"))
+        {
+            baja.StatusCode.ShouldBe(HttpStatusCode.NoContent, await Escenario.Detalle(baja));
+        }
+
+        (await ContactosAsync(cliente, tercero.Id)).ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Ascender una cuenta a preferente baja a la que lo era, y sigue quedando <b>una</b>.
+    /// </summary>
+    /// <remarks>
+    /// La otra puerta a la misma restricción: en
+    /// <c>Una_segunda_cuenta_preferente_baja_a_la_primera</c> la preferencia llega en el alta; aquí
+    /// llega después, por su propia ruta. Son dos caminos de código distintos hasta el mismo
+    /// invariante, y el que se olvida de bajar a la anterior es normalmente este.
+    /// </remarks>
+    [Fact]
+    public async Task Ascender_una_cuenta_a_preferente_baja_a_la_que_lo_era()
+    {
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(Escenario.NifInventado(143));
+        TerceroDto tercero = await CrearAsync(cliente, Escenario.NifInventado(31_000_013));
+
+        await ColgarCuentaAsync(cliente, tercero.Id, IbanInventado, preferente: true);
+        CuentaBancariaDto segunda =
+            await ColgarCuentaAsync(cliente, tercero.Id, OtroIbanInventado, preferente: false);
+
+        using (HttpResponseMessage ascenso = await EscribirAsync(
+            cliente,
+            tercero.Id,
+            HttpMethod.Post,
+            $"cuentas-bancarias/{segunda.Id}/preferente"))
+        {
+            ascenso.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(ascenso));
+        }
+
+        IReadOnlyList<CuentaBancariaDto> cuentas = await CuentasAsync(cliente, tercero.Id);
+
+        cuentas.Count(cuenta => cuenta.EsPreferente).ShouldBe(1);
+        cuentas.Single(cuenta => cuenta.EsPreferente).Id.ShouldBe(segunda.Id);
+    }
+
+    /// <summary>
+    /// Descolgar una cuenta la quita a ella y deja en pie a las demás.
+    /// </summary>
+    /// <remarks>
+    /// La segunda mitad es la que no sobra. Un borrado que se lleve por delante la colección entera
+    /// —o que borre por IBAN en vez de por identificador— pasaría igual de bien un caso que solo
+    /// mirase que la borrada ya no está.
+    /// </remarks>
+    [Fact]
+    public async Task Descolgar_una_cuenta_la_quita_a_ella_y_deja_en_pie_a_las_demas()
+    {
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(Escenario.NifInventado(144));
+        TerceroDto tercero = await CrearAsync(cliente, Escenario.NifInventado(31_000_014));
+
+        CuentaBancariaDto primera =
+            await ColgarCuentaAsync(cliente, tercero.Id, IbanInventado, preferente: false);
+        CuentaBancariaDto segunda =
+            await ColgarCuentaAsync(cliente, tercero.Id, OtroIbanInventado, preferente: false);
+
+        using (HttpResponseMessage baja = await EscribirAsync(
+            cliente,
+            tercero.Id,
+            HttpMethod.Delete,
+            $"cuentas-bancarias/{primera.Id}"))
+        {
+            baja.StatusCode.ShouldBe(HttpStatusCode.NoContent, await Escenario.Detalle(baja));
+        }
+
+        IReadOnlyList<CuentaBancariaDto> cuentas = await CuentasAsync(cliente, tercero.Id);
+
+        cuentas.Select(cuenta => cuenta.Id).ShouldBe([segunda.Id]);
+    }
+
     private async Task<HttpClient> EnUnaEmpresaNuevaAsync(string nif)
     {
         (HttpClient cliente, _) = await _api.EnUnaEmpresaNuevaAsync(nif);
@@ -414,6 +574,21 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
 
     // La versión sale SIEMPRE de la ficha y se lee justo antes de cada escritura: lo que cuelga no
     // tiene ETag propio, y cada escritura que sale bien deja la anterior caducada.
+    // La misma, para las rutas que no llevan cuerpo. Y no es `JsonContent.Create<object?>(null)`:
+    // eso manda la cadena `null` con `Content-Type: application/json`, que es un cuerpo, solo que
+    // uno que no dice nada.
+    private static async Task<HttpResponseMessage> EscribirAsync(
+        HttpClient cliente,
+        Guid terceroId,
+        HttpMethod metodo,
+        string subruta)
+    {
+        string ficha = $"{Terceros}/{terceroId}";
+        string etiqueta = await cliente.EtiquetaDeAsync(ficha);
+
+        return await cliente.EnviarConVersionAsync(metodo, $"{ficha}/{subruta}", etiqueta);
+    }
+
     private static async Task<HttpResponseMessage> EscribirAsync<T>(
         HttpClient cliente,
         Guid terceroId,
@@ -436,6 +611,36 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
         respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(respuesta));
 
         return (await respuesta.Content.ReadFromJsonAsync<LimiteCreditoDto>())!;
+    }
+
+    private static async Task<CuentaBancariaDto> ColgarCuentaAsync(
+        HttpClient cliente,
+        Guid terceroId,
+        string iban,
+        bool preferente)
+    {
+        using HttpResponseMessage respuesta = await EscribirAsync(
+            cliente,
+            terceroId,
+            HttpMethod.Post,
+            "cuentas-bancarias",
+            new CuentaBancariaDeAltaDto { Iban = iban, EsPreferente = preferente });
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(respuesta));
+
+        return (await respuesta.Content.ReadFromJsonAsync<CuentaBancariaDto>())!;
+    }
+
+    private static async Task<IReadOnlyList<ContactoDto>> ContactosAsync(
+        HttpClient cliente,
+        Guid terceroId)
+    {
+        using HttpResponseMessage respuesta =
+            await cliente.GetAsync($"{Terceros}/{terceroId}/contactos");
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(respuesta));
+
+        return (await respuesta.Content.ReadFromJsonAsync<List<ContactoDto>>())!;
     }
 
     private static async Task<IReadOnlyList<CuentaBancariaDto>> CuentasAsync(

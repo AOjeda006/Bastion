@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Entidades;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -35,10 +36,51 @@ public class Versiones(DbContext contexto) : IVersiones
         new((uint)Testigo(entidad).CurrentValue!);
 
     /// <inheritdoc/>
-    public void Exigir(object entidad, VersionDeRecurso version) =>
-        Testigo(entidad).OriginalValue = version.Valor;
+    /// <remarks>
+    /// <para>
+    /// <b>Y de paso deja la entidad TOCADA, que no es un extra: es lo que hace que la versión se
+    /// mueva.</b> Meter el testigo en el <c>WHERE</c> solo sirve si hay un <c>UPDATE</c> donde
+    /// meterlo. Una escritura que solo cambia lo que <b>cuelga</b> del agregado —colgar un
+    /// contacto, quitar una cuenta— deja la fila del agregado <c>Unchanged</c>: EF Core arma
+    /// entonces un mandato sin ninguna columna que asignar, la sentencia no toca ninguna fila y
+    /// el guardado sale por <c>DbUpdateConcurrencyException</c>, que el borde traduce a un
+    /// <b>412 perpetuo</b> — la escritura correcta es imposible y el mensaje dice que el recurso
+    /// «ha cambiado mientras usted lo editaba», que es mentira.
+    /// </para>
+    /// <para>
+    /// Salió en el run <c>34097268237</c>, en las tres rutas de lo que cuelga del tercero que
+    /// llegan a guardar. Y la separación era limpia: las que modifican la propia ficha —el límite
+    /// de crédito— pasaban; las que solo insertan un hijo, no.
+    /// </para>
+    /// <para>
+    /// <b>Aquí y no en cada caso de uso.</b> Es el mismo argumento que el de
+    /// <c>InterceptorDeMarcasDeTiempo</c>: sostenerlo a mano significa que el día que alguien
+    /// escriba la séptima ruta que cuelga algo y no se acuerde, la versión deja de moverse. Y no
+    /// es magia: quien <b>exige</b> una versión para escribir está diciendo que escribe, así que
+    /// la marca de modificación de esa fila tiene que avanzar. Para las escrituras que ya cambian
+    /// el agregado no cambia nada —el interceptor ya movía <c>ModificadoEn</c>—, y para un
+    /// <c>Eliminar</c> posterior tampoco, porque <c>Remove</c> manda sobre el estado.
+    /// </para>
+    /// </remarks>
+    public void Exigir(object entidad, VersionDeRecurso version)
+    {
+        EntityEntry entrada = Entrada(entidad);
 
-    private PropertyEntry Testigo(object entidad)
+        entrada.Property(TestigoDeConcurrencia.Nombre).OriginalValue = version.Valor;
+
+        // El `is` y no un `as` a ciegas: no toda entidad con testigo lleva las dos marcas de
+        // `EntidadBase`, y forzar la propiedad en una que no la tiene sería una excepción por
+        // reflexión en mitad de una escritura buena.
+        if (entrada.Entity is EntidadBase)
+        {
+            entrada.Property(nameof(EntidadBase.ModificadoEn)).IsModified = true;
+        }
+    }
+
+    private PropertyEntry Testigo(object entidad) =>
+        Entrada(entidad).Property(TestigoDeConcurrencia.Nombre);
+
+    private EntityEntry Entrada(object entidad)
     {
         ArgumentNullException.ThrowIfNull(entidad);
 
@@ -50,6 +92,6 @@ public class Versiones(DbContext contexto) : IVersiones
                 "consulta con AsNoTracking(), proyecte el testigo en el Select con " +
                 $"EF.Property<uint>(entidad, \"{TestigoDeConcurrencia.Nombre}\").");
 
-        return entrada.Property(TestigoDeConcurrencia.Nombre);
+        return entrada;
     }
 }

@@ -158,34 +158,56 @@ namespace Bastion.Terceros.Infrastructure.Migrations
                  WHERE territorio_fiscal IS NULL;
                 """);
 
+            // Y EL `oldNullable: true` NO ES DECORACIÓN. `AlterColumn` construye una operación con
+            // una columna «vieja» cuyos valores por omisión son los del tipo: sin decirle que
+            // antes era anulable, el generador de Npgsql compara `IsNullable` nuevo (false) con
+            // `OldColumn.IsNullable` (false), no ve diferencia y NO EMITE `SET NOT NULL`. La
+            // migración se aplica entera, sin error, y deja las cuatro columnas anulables. Salió
+            // en el run 34097268237, con las cuatro filas rojas de
+            // `Lo_que_toda_fila_tiene_que_llevar_es_NOT_NULL_y_sin_DEFAULT` — que es exactamente
+            // la regla que se escribió para esto: el modelo dice NOT NULL, el esquema decía otra
+            // cosa, y ningún barrido sobre el modelo podía verlo.
             migrationBuilder.AlterColumn<string>(
                 name: "territorio_fiscal",
                 schema: "terceros",
                 table: "terceros",
                 type: "character varying(20)",
                 maxLength: 20,
-                nullable: false);
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "character varying(20)",
+                oldMaxLength: 20,
+                oldNullable: true);
 
             migrationBuilder.AlterColumn<bool>(
                 name: "recargo_de_equivalencia",
                 schema: "terceros",
                 table: "terceros",
                 type: "boolean",
-                nullable: false);
+                nullable: false,
+                oldClrType: typeof(bool),
+                oldType: "boolean",
+                oldNullable: true);
 
             migrationBuilder.AlterColumn<bool>(
                 name: "criterio_de_caja",
                 schema: "terceros",
                 table: "terceros",
                 type: "boolean",
-                nullable: false);
+                nullable: false,
+                oldClrType: typeof(bool),
+                oldType: "boolean",
+                oldNullable: true);
 
             migrationBuilder.AlterColumn<bool>(
                 name: "sujeto_a_retencion_irpf",
                 schema: "terceros",
                 table: "terceros",
                 type: "boolean",
-                nullable: false);
+                nullable: false,
+                oldClrType: typeof(bool),
+                oldType: "boolean",
+                oldNullable: true);
 
             migrationBuilder.AddCheckConstraint(
                 name: "ck_terceros_limite_credito_completo",

@@ -43,11 +43,15 @@ public sealed class ElCensoDeEsteCarrilTests
     /// </summary>
     private static readonly string[] s_declarados =
     [
+        "ContratoDeLoQueCuelgaTests.Ascender_una_cuenta_a_preferente_baja_a_la_que_lo_era",
         "ContratoDeLoQueCuelgaTests.Colgar_algo_sin_citar_la_version_de_la_ficha_es_428",
+        "ContratoDeLoQueCuelgaTests.Colgar_un_contacto_MUEVE_la_version_de_la_ficha_y_la_vieja_ya_no_vale",
+        "ContratoDeLoQueCuelgaTests.Descolgar_una_cuenta_la_quita_a_ella_y_deja_en_pie_a_las_demas",
         "ContratoDeLoQueCuelgaTests.El_mismo_IBAN_dos_veces_en_la_misma_ficha_es_409_y_sin_el_numero_dentro",
         "ContratoDeLoQueCuelgaTests.Noventa_dias_de_plazo_son_400_y_el_mensaje_lleva_el_tope_y_la_norma",
         "ContratoDeLoQueCuelgaTests.Sesenta_dias_clavados_se_aceptan_porque_el_tope_es_el_maximo_y_no_un_veto",
         "ContratoDeLoQueCuelgaTests.Un_IBAN_con_el_control_mal_es_400_y_no_dice_CUAL_de_las_tres_condiciones_fallo",
+        "ContratoDeLoQueCuelgaTests.Un_contacto_se_cuelga_y_se_descuelga_y_la_lista_queda_vacia",
         "ContratoDeLoQueCuelgaTests.Un_limite_con_su_divisa_va_y_vuelve_y_se_lee_igual_en_el_GET",
         "ContratoDeLoQueCuelgaTests.Un_limite_sin_divisa_es_400_y_despues_NO_hay_limite_heredado_de_la_empresa",
         "ContratoDeLoQueCuelgaTests.Una_divisa_que_el_catalogo_no_conoce_sale_por_su_campo_y_no_por_un_500",

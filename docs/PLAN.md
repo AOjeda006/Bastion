@@ -3370,6 +3370,85 @@ después de aplicarla, que los 15 casos de esquema pasen, y que los 10 de contra
 el que tapa el agujero de la mutación 7, que **ninguna máquina ha visto correr todavía**—. Se dice
 antes de empujar, no después.
 
+**Y el run lo dijo: 34097268237 salió ROJO, con dos defectos de producto que ningún carril local
+podía ver.** Se anota entero porque es el resultado del párrafo anterior: lo que se dijo que solo el
+run podía decir, lo dijo, y dijo que no. Los **tres jobs contados en el run** (`total_count: 3`):
+Backend `101663584575` **failure** en 22 pasos, Frontal `101663584755` success en 17, Humo
+`101664678865` skipped. Recuentos que publicó: **dominio 624 casos en 8 ensamblados, 0 rojos**;
+**integración 313 casos en 8 ensamblados, 7 rojos**. Los 7 son dos defectos, no siete.
+
+- **Defecto A — la migración dejó las cuatro columnas del régimen ANULABLES, y el modelo decía
+  `NOT NULL`.** Cuatro filas rojas de
+  `Lo_que_toda_fila_tiene_que_llevar_es_NOT_NULL_y_sin_DEFAULT(tabla: "terceros", columna: …)`, con
+  el mensaje `should be (NO, ) but was (YES, )` sobre `territorio_fiscal`,
+  `recargo_de_equivalencia`, `criterio_de_caja` y `sujeto_a_retencion_irpf`. **La causa es una
+  omisión que no da error ni aviso:** `MigrationBuilder.AlterColumn(..., nullable: false)` **sin**
+  `oldNullable: true` construye una operación cuya columna «vieja» tiene los valores por omisión del
+  tipo, así que el generador de Npgsql compara `IsNullable` nuevo (`false`) contra
+  `OldColumn.IsNullable` (`false`), no ve diferencia y **no emite `SET NOT NULL`**. La migración se
+  aplica entera, sin fallar, y deja el tercer paso sin hacer.
+- **Y esto es exactamente el hueco que la regla existía para tapar.** El modelo sí decía `NOT NULL`
+  —`b1.Property<string>("Territorio").IsRequired()` en el *snapshot*—, así que
+  `has-pending-model-changes` no tenía nada que ver, y **ningún barrido sobre el modelo podía
+  encontrarlo**: el modelo estaba bien y el esquema estaba mal. Solo lo ve quien mira la base
+  después de aplicar la migración, que es el único sitio donde vive la diferencia.
+- **Arreglado, y comprobado en local sin contenedor** — que es lo que aquí sí se puede ejercer: las
+  cuatro `AlterColumn` llevan ya sus parámetros de columna vieja, y `dotnet ef migrations script`
+  —que no se conecta a ninguna base— emite ahora las cuatro sentencias que faltaban:
+
+  ```
+  dotnet ef migrations script 20260905044708_EsquemaInicialDeTerceros \
+    20260907025348_LoQueCuelgaDelTercero --context TercerosDbContext --no-build
+
+  UPDATE terceros.terceros SET territorio_fiscal = 'PeninsulaYBaleares', … WHERE territorio_fiscal IS NULL;
+  ALTER TABLE terceros.terceros ALTER COLUMN territorio_fiscal SET NOT NULL;
+  ALTER TABLE terceros.terceros ALTER COLUMN recargo_de_equivalencia SET NOT NULL;
+  ALTER TABLE terceros.terceros ALTER COLUMN criterio_de_caja SET NOT NULL;
+  ALTER TABLE terceros.terceros ALTER COLUMN sujeto_a_retencion_irpf SET NOT NULL;
+  ```
+
+  Y `grep -i default` sobre el guion entero no encuentra nada: los tres pasos de añadir, rellenar y
+  cerrar, sin `DEFAULT` que se quede detrás.
+
+- **Defecto B — citar la versión de la ficha para colgarle algo daba 412 SIEMPRE.** Tres filas rojas
+  —`Una_segunda_cuenta_preferente_baja_a_la_primera_y_solo_queda_UNA`,
+  `El_mismo_IBAN_dos_veces_en_la_misma_ficha_es_409_y_sin_el_numero_dentro` y
+  `Sesenta_dias_clavados_se_aceptan_porque_el_tope_es_el_maximo_y_no_un_veto`—, todas con
+  `should be HttpStatusCode.OK but was HttpStatusCode.PreconditionFailed` y el cuerpo
+  `{"type":"/errors/version-obsoleta","title":"La versión ya no es la actual","status":412,…}`.
+- **La atribución sale de una partición limpia, no de una corazonada.** De los diez casos de
+  contrato, los tres rojos son **exactamente** los que llegan a `SaveChanges` tocando **solo hijos**;
+  los cuatro del límite de crédito pasaron porque `FijarLimiteDeCredito` modifica la propia ficha, y
+  los otros tres pasaron porque nunca llegan a guardar. La causa: `Versiones.Exigir` ponía el
+  `OriginalValue` del testigo, pero una escritura que solo inserta un hijo deja la fila del agregado
+  en `Unchanged`; EF Core arma entonces un mandato sin columnas que asignar, la sentencia no toca
+  ninguna fila, el guardado sale por `DbUpdateConcurrencyException` y el borde lo traduce a un 412
+  **perpetuo** — la escritura correcta era imposible, y el mensaje decía que otro la había pisado,
+  que era mentira.
+- **Arreglado en `Versiones.Exigir`, y no en los seis casos de uso.** Quien **exige** una versión
+  para escribir está diciendo que escribe: ahora, además del `OriginalValue`, marca `ModificadoEn`
+  como modificada cuando la entidad es una `EntidadBase`. El interceptor de marcas de tiempo le pone
+  entonces un valor nuevo de verdad, el `UPDATE` tiene algo que asignar y el testigo avanza. Es el
+  mismo argumento que ya estaba escrito en `InterceptorDeMarcasDeTiempo`: **sostenerlo a mano
+  significa que el día que alguien escriba la séptima ruta que cuelga algo y no se acuerde, la
+  versión deja de moverse sin que nada falle.** Para las 27 escrituras que ya modifican el agregado
+  no cambia una sola sentencia, y para `EliminarSerie` tampoco, porque `Remove` manda sobre el
+  estado. Los treinta llamantes de `Exigir` se han comprobado uno a uno: los treinta son casos de
+  uso de escritura, ninguno es una lectura.
+- **Y el caso que faltaba es el que habría ahorrado el run.** Los diez de contrato miraban cada ruta
+  por su lado; ninguno miraba el invariante que las cruza. `ContratoDeLoQueCuelgaTests` pasa de 10 a
+  **14 casos**: `Colgar_un_contacto_MUEVE_la_version_de_la_ficha_y_la_vieja_ya_no_vale` —que afirma
+  las dos direcciones, porque cada una caza un fallo distinto: que la etiqueta cambie caza la versión
+  quieta, y que la vieja dé 412 caza un borde que devolviera etiquetas nuevas sin relación con el
+  testigo— más los tres recorridos de escritura que nada ejercía (alta y baja de contacto, ascenso a
+  preferente, baja de cuenta). Los cuatro, en el censo de su carril.
+- **El límite honesto, dicho igual que el de la mutación 7:** los cuatro casos nuevos y el arreglo
+  del defecto B viven en el **carril de integración**, que esta máquina no puede ejecutar, y el
+  proyecto rechaza a propósito EF Core InMemory y no tiene arnés de SQLite —así que no hay dónde
+  ponerlos en el carril rápido sin inventar arquitectura—. Del arreglo A sí hay prueba local (el
+  guion SQL de arriba); del B, **hasta que el run siguiente esté leído, lo único que se puede afirmar
+  es que la causa está identificada por partición y el arreglo escrito**, no que se haya visto morder.
+
 **Los `act()` del frontal, con los dos extremos nombrados.** La regla que salió del 1.5 se aplica
 desde aquí: toda cifra de «antes y después» dice sobre qué commit se midió cada extremo, y el
 «antes» es `main` al abrir la rama.
@@ -3481,8 +3560,15 @@ haber límite**—, porque el modo de fallo que importa no es dejar de contestar
 con una divisa que nadie escribió. **Y aquí está el límite honesto: esa regla vive en el carril de
 integración, que esta máquina no puede ejecutar.** Reaplicada la mutación sobre `c7b9f80`, el carril
 rápido volvió a salir verde —lo esperado, porque los diez casos nuevos no corren en él—. El run de
-la CI es el primero que los ejecuta, y hasta que ese run esté leído, lo único que se puede afirmar
-de la 7 es que **el agujero está identificado y la regla escrita**, no que se haya visto morder.
+la CI es el primero que los ejecuta.
+
+**Y leído el run 34097268237, esto es lo que se puede decir de la 7 y no más.** Los cuatro casos del
+límite de crédito **corrieron y pasaron** sobre el código bueno, así que la regla existe, se ejecuta
+y afirma algo — que es lo que faltaba por saber. Lo que **sigue sin haberse visto** es la regla
+mordiendo: para eso habría que reaplicar la mutación en un run, y no se ha hecho. Así que de la 7 se
+afirma que **el agujero está identificado, la regla escrita y el caso verde sobre código correcto**;
+no que se haya visto rojo con la mutación puesta. La diferencia importa: un caso que pasa sobre
+código bueno todavía puede ser un caso que pasa siempre.
 
 **Ítem 1.5 cerrado — el agregado, su identidad fiscal, y un conflicto que no revela:**
 run **34046817118** sobre `279b8c7`, **success**, con **3 jobs contados en el propio run**
