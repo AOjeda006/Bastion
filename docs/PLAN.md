@@ -3425,6 +3425,7 @@ Backend `101663584575` **failure** en 22 pasos, Frontal `101663584755` success e
   ninguna fila, el guardado sale por `DbUpdateConcurrencyException` y el borde lo traduce a un 412
   **perpetuo** — la escritura correcta era imposible, y el mensaje decía que otro la había pisado,
   que era mentira.
+- **DESMENTIDO por el run siguiente — se deja escrito, no se borra.** Lo que sigue se escribió como el arreglo del defecto B y no lo era; el bloque de abajo lo cuenta. El cambio se queda en el código por otro motivo, que también está abajo.
 - **Arreglado en `Versiones.Exigir`, y no en los seis casos de uso.** Quien **exige** una versión
   para escribir está diciendo que escribe: ahora, además del `OriginalValue`, marca `ModificadoEn`
   como modificada cuando la entidad es una `EntidadBase`. El interceptor de marcas de tiempo le pone
@@ -3435,6 +3436,15 @@ Backend `101663584575` **failure** en 22 pasos, Frontal `101663584755` success e
   no cambia una sola sentencia, y para `EliminarSerie` tampoco, porque `Remove` manda sobre el
   estado. Los treinta llamantes de `Exigir` se han comprobado uno a uno: los treinta son casos de
   uso de escritura, ninguno es una lectura.
+- **Y de paso tapa un silencio de la bandeja de salida, que nadie había pedido mirar.**
+  `InterceptorDeLaBandeja` solo publica los eventos de un agregado si además `SeEstaGuardando` —es
+  decir, si su estado es `Added`, `Modified` o `Deleted`—. Con la raíz en `Unchanged`, una escritura
+  que solo tocara hijos y registrara un evento de dominio en la raíz **se habría guardado sin
+  publicar nada, y sin fallar**. Hoy ninguna lo hace, así que no es un defecto observado: es un
+  filo que estaba puesto y que ya no está. Los otros dos interceptores se han mirado igual:
+  `InterceptorDeAuditoria` escribirá ahora una fila de traza para la ficha además de la del hijo
+  —que es lo correcto, porque la ficha ha cambiado—, y ninguna prueba existente cuenta filas de
+  traza de escrituras de este tipo, porque hasta ahora todas fallaban.
 - **Y el caso que faltaba es el que habría ahorrado el run.** Los diez de contrato miraban cada ruta
   por su lado; ninguno miraba el invariante que las cruza. `ContratoDeLoQueCuelgaTests` pasa de 10 a
   **14 casos**: `Colgar_un_contacto_MUEVE_la_version_de_la_ficha_y_la_vieja_ya_no_vale` —que afirma
@@ -3449,6 +3459,45 @@ Backend `101663584575` **failure** en 22 pasos, Frontal `101663584755` success e
   guion SQL de arriba); del B, **hasta que el run siguiente esté leído, lo único que se puede afirmar
   es que la causa está identificada por partición y el arreglo escrito**, no que se haya visto morder.
 
+**El run 34101097530 sobre `57838b2`: el defecto A está cerrado y el B NO, y mi atribución del B era
+falsa.** Se escribe entero porque la parte que importa es la segunda. Los **tres jobs contados en el
+run** (`total_count: 3`): Frontal `101675496804` success en 17 pasos, Backend `101675497155`
+**failure** en 22, Humo `101676750179` skipped. Recuentos que publicó el propio run: **dominio 624
+casos en 8 ensamblados, 0 rojos**; **integración 317 casos en 8 ensamblados, 7 rojos**. Los tres
+pasos rojos del Backend son uno: «Tests de integración», y detrás «Bajar el artefacto del OpenAPI» y
+«El artefacto del OpenAPI contiene el contrato», que caen porque el anterior no llegó a subirlo.
+
+- **Defecto A, CERRADO.** Las cuatro filas de
+  `Lo_que_toda_fila_tiene_que_llevar_es_NOT_NULL_y_sin_DEFAULT` **han desaparecido** del run. Es la
+  confirmación por el efecto de lo que el guion SQL ya decía en local: los `oldNullable: true`
+  emiten las cuatro sentencias y la migración cierra su tercer paso.
+- **Defecto B, ABIERTO — y con la atribución anterior desmentida.** Los 7 rojos son ahora los 3 de
+  antes más los 4 casos nuevos, todos con `should be OK but was PreconditionFailed` y **todos en la
+  PRIMERA escritura** de su caso. Es decir: el cambio en `Versiones.Exigir` no movió nada. La
+  explicación que se escribió —la ficha en `Unchanged`, el mandato sin columnas, el `UPDATE` de cero
+  filas— **era falsa**, y conviene decir por qué se creyó: la partición encajaba perfectamente (los
+  cuatro casos del límite pasaban, los que solo tocan hijos no), y una partición limpia que encaja
+  con una explicación plausible se parece mucho a una prueba sin serlo.
+- **Lo que el run SÍ deja probado, y apunta a otro sitio.** El cuerpo del 412 es
+  `ObsoletaYSinRecurso` —«Este recurso ha cambiado o ha desaparecido»— y no `Obsoleta(actual)`.
+  `ManejadorDeVersionObsoleta.ActualAsync` solo devuelve nulo cuando **ninguna** de las entradas del
+  choque tiene la propiedad del testigo. **La ficha la tiene.** Luego el `DbUpdateConcurrencyException`
+  no lo levanta la ficha: lo levanta una entrada sin testigo —un hijo, o una fila de traza—. Eso
+  descarta la ficha entera, que era donde estaba mirando.
+- **Y una hipótesis descartada con su experimento, para que nadie la repita.** Se sospechó que la
+  columna de sistema `xmin` no sobreviviera a la subconsulta que EF Core genera al mezclar
+  `Include` de colecciones con `FirstOrDefault` —`FROM (SELECT … LIMIT 1) AS t0`—, lo que habría
+  hecho que la versión leída fuese basura. Se comprobó **en local y sin base de datos**, con una
+  sonda temporal que imprime `ToQueryString()` de las dos consultas del repositorio: `t.xmin` está
+  en la proyección de la consulta simple, en la de los tres `LEFT JOIN` y **también dentro de la
+  subconsulta con `LIMIT`**. La hipótesis es falsa. La sonda se ha borrado; lo que queda es esto
+  escrito.
+- **Lo que falta para cerrarlo es el texto de la excepción**, que dice qué entidad esperaba afectar
+  a una fila y afectó a cero. Está en el registro del job `101675497155`, y
+  `/actions/jobs/{id}/logs` contesta **403** sin credencial. Las anotaciones del *check run* —que sí
+  son públicas y de donde sale todo lo anterior— publican el nombre del caso y la aserción, pero no
+  el registro de la aplicación. **Pedido al usuario**, que lo había ofrecido.
+
 **Los `act()` del frontal, con los dos extremos nombrados.** La regla que salió del 1.5 se aplica
 desde aquí: toda cifra de «antes y después» dice sobre qué commit se midió cada extremo, y el
 «antes» es `main` al abrir la rama.
@@ -3458,9 +3507,17 @@ cd frontend && npm ci && npm test -- --run 2>&1 | grep -c "not wrapped in act"
 ```
 
 - **Antes — `e3a9e9e`** (main al abrir): **109 avisos en 7 ficheros**.
-- **Después — `c7b9f80`** (el árbol que se lleva a main al cerrar): **109 avisos en 7 ficheros**,
+- **Después — `57838b2`** (el árbol que se lleva a main al cerrar): **109 avisos en 7 ficheros**,
   con el mismo reparto: `ElCambioDeIdioma` 17, `ElCambioDeRuta` 14, `ElSelectorDeEmpresa` 14,
   `LasRutasProtegidas` 17, `LaPantallaDeAcceso` 10, `ElListadoDeAlmacenes` 24, `ElTestigoDeAcceso` 13.
+
+> **Y el extremo «después» se midió en `c7b9f80`, no en `57838b2`: hay que decirlo y hay que
+> justificarlo.** Entre los dos hay dos commits que arreglan lo que destapó el run 34097268237, y
+> ninguno toca el frontal — `git diff --stat c7b9f80 57838b2 -- frontend/` sale **vacío**, es decir,
+> el árbol de `frontend/` es idéntico byte a byte. La cifra vale para `57838b2` porque el código que
+> la produce es el mismo, y la comprobación que lo sostiene está escrita aquí para que se pueda
+> repetir. La alternativa —dar el número sin decir en qué commit se midió— es justo lo que la regla
+> que salió del 1.5 prohíbe.
 
 **No se mueve, y el motivo está en el `git diff`:** el ítem toca del frontal solo `esquema.ts`
 —generado—, dos textos de `i18n` y las *fixtures*. Ni un componente, ni una pantalla. Un cambio en

@@ -48,9 +48,19 @@ public class Versiones(DbContext contexto) : IVersiones
     /// «ha cambiado mientras usted lo editaba», que es mentira.
     /// </para>
     /// <para>
-    /// Salió en el run <c>34097268237</c>, en las tres rutas de lo que cuelga del tercero que
-    /// llegan a guardar. Y la separación era limpia: las que modifican la propia ficha —el límite
-    /// de crédito— pasaban; las que solo insertan un hijo, no.
+    /// <b>Y esto NO es el arreglo del 412 que salía en esas rutas.</b> Se escribió creyendo que sí
+    /// —el run <c>34097268237</c> daba 412 justo en las escrituras que solo tocan hijos, y la
+    /// explicación encajaba—, y el run <c>34101097530</c>, con esto ya puesto, volvió a dar los
+    /// mismos 412. La atribución era falsa y queda dicho aquí para que nadie la reutilice: el
+    /// choque no lo levanta la ficha, porque <c>ManejadorDeVersionObsoleta</c> contestó
+    /// «ya no queda recurso», y ese mensaje solo sale cuando <b>ninguna</b> de las entradas del
+    /// choque lleva testigo — y la ficha lo lleva.
+    /// </para>
+    /// <para>
+    /// Lo que este método sí sostiene, y por lo que se queda, es el invariante de la etiqueta:
+    /// insertar un hijo no cambia el <c>xmin</c> de la fila del padre, así que sin tocar la ficha
+    /// su <c>ETag</c> no se movería y dos clientes podrían colgar cosas sobre la misma foto
+    /// creyendo cada uno que la tenía al día.
     /// </para>
     /// <para>
     /// <b>Aquí y no en cada caso de uso.</b> Es el mismo argumento que el de
