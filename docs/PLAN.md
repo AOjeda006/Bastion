@@ -3135,7 +3135,49 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
-**Ítem 1.6 EN CURSO — primero el agujero del art. 32, que es un defecto de cumplimiento en código
+**Ítem 1.6 cerrado — lo que cuelga del tercero, y la misma lección tres veces:**
+run **34125157573** sobre `911ba5c`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3` de la API, no de la memoria): Backend `101752010394` ✓ (22 pasos, 0 omitidos),
+Frontal `101752010729` ✓ (17 pasos, 0 omitidos) y Humo `101753229252` ✓ (24 pasos, 1 omitido). Los
+tres carriles tal como el run los publica:
+
+```
+Dominio y arquitectura: 630 casos (630 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+  — Organizacion.UnitTests 182, BuildingBlocks.UnitTests 132, Organizacion.IntegrationTests 4,
+    Identidad.UnitTests 58, Api.FunctionalTests 137, Api.IntegrationTests 6,
+    Arquitectura.Tests 34, Terceros.UnitTests 77
+    (576 en el 1.5, los mismos 8 ensamblados: +54 casos)
+
+Integración (Testcontainers): 318 casos (318 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+  — Organizacion.IntegrationTests 72, Api.IntegrationTests 246, y 0 en los otros seis
+    (271 en el 1.5: +47 casos, que son los que en esta máquina NO se pudieron ejecutar)
+
+Frontal: arranque 403/450 KiB en 3 ficheros · total servido 548/900 KiB  (402 en el 1.5)
+         `esquema.ts` al día con `docs/api/openapi.json`
+         artefacto: 20 ficheros, 9 .js y 1 .css
+
+OpenAPI:  93 operaciones, 55 rutas /api/v1/, y el fichero del artefacto idéntico al del
+          repositorio  (82 operaciones y 47 rutas en el 1.5)
+Catálogo de `type`: 49 tipos, de 54 sitios de llamada  (47 de 52 en el 1.5)
+Migraciones: modelo y migraciones coinciden en todos los módulos con persistencia
+             — Auditoría 3, Organización 4, Identidad 3, Terceros 2
+Humo: el migrador aplica los tres contextos, la cuenta sembrada inicia sesión (testigo de 3204
+      caracteres), el entorno desplegado sirve 1 empresa y las semillas cargan 12 tramos de
+      impuesto y 15 unidades
+```
+
+**El ítem se cierra con una lección que le salió tres veces, y la tercera ya sin excusa.** Las tres
+son la misma: **una obligación transversal enumerada a mano es ciega a lo que llegue después**, y
+mientras esté en verde nadie la mira. (1) El listado del artículo 32 enumeraba tres agregados de
+cinco, y el enumerado vivía dentro de un módulo. (2) Las cinco reglas que recorren el modelo entero
+enumeraban sus contextos a mano y ninguna incluía Terceros, así que cuatro reglas que dicen «cada
+entidad declara…» lo estuvieron diciendo de dos módulos de cinco. (3) Los dos ADR del propio ítem
+salieron con el mismo número, porque la numeración no la miraba nadie. Las tres se cierran igual:
+**el universo se descubre**, con su lista declarada al lado para que un descubrimiento corto salga
+rojo en vez de silencioso. Lo que no arregla ninguna de las tres es la cuarta que todavía no se ha
+visto — y por eso la forma importa más que los arreglos.
+
+**La primera mitad — el agujero del art. 32, que es un defecto de cumplimiento en código
 ya entregado.** Cinco agregados del proyecto se bloquean (`Empresa`, `Almacen`, `Ubicacion`,
 `Tercero`, `Usuario`) y el listado del art. 32 veía **tres**. `Usuario` faltaba desde el **1.4** —una
 persona física que ejerce su derecho de supresión, el caso más nítido del artículo— y `Tercero` desde
@@ -4013,6 +4055,88 @@ porque el descubrimiento por nombre es exactamente lo que un identificador mal n
 ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en uno.
 
 El carril de arquitectura pasa de **18 a 23** casos.
+
+### Verificado en local, con la salida real — ítem 1.6
+
+Medido sobre `911ba5c`, que es el árbol que se lleva a `main`, con la batería de `AGENTS.md`
+entera y en su orden.
+
+```
+contrato:     npm run api  ->  `esquema.ts` regenerado y SIN cambios
+                              (`git status --porcelain` sobre el fichero, vacío)
+migraciones:  Auditoria 3, Organizacion 4, Identidad 3, Terceros 2 — y el modelo
+              coincide con ellas en los cuatro. La convención `LaClaveLaPoneElDominio`
+              NO añade migración: `ValueGenerated` sobre una clave `Guid` no produce
+              diferencia relacional
+openapi:      documento versionado al día — 93 operaciones (82 en el 1.5)
+catálogo de `type`: al día — 49 tipos, de 54 sitios de llamada (47 de 52 en el 1.5)
+
+frontal: typecheck / lint / format:check / test / build  ->  exit 0 los cinco
+         test  ->  11 ficheros, 63 casos, 0 en rojo (los mismos que en el 1.5)
+         presupuesto  ->  arranque 403/450 KiB en 3 ficheros · total servido 548/900 KiB
+         act()  ->  109 avisos en 7 ficheros
+
+backend: dotnet build  ->  0 Advertencia(s), 0 Errores
+         dotnet format --verify-no-changes  ->  exit 0
+         carril rápido  ->  630 casos (630 correctos, 0 con error, 0 omitidos) en 8
+                            ensamblados, medido con el guion de la CI sobre los .trx
+                            de esta máquina y con `artifacts/test-results` borrado antes:
+                            BuildingBlocks.UnitTests 132, Terceros.UnitTests 77,
+                            Identidad.UnitTests 58, Organizacion.UnitTests 182,
+                            Organizacion.IntegrationTests 4, Arquitectura.Tests 34,
+                            Api.FunctionalTests 137, Api.IntegrationTests 6
+                            (576 en el 1.5, los mismos 8 ensamblados: +54 casos)
+         carril integración -> NO EJECUTADO AQUÍ. Abajo, con firma.
+
+licencias:   una sola línea de `PackageReference` añadida en todo el `git diff` del ítem
+             —`Npgsql.EntityFrameworkCore.PostgreSQL`, en `Terceros.Infrastructure` y en
+             `Organizacion.Infrastructure`—, y **no es un paquete nuevo**: ya estaba en
+             `Directory.Packages.props` (10.0.3), que el ítem no toca, y su licencia
+             —PostgreSQL, permisiva estilo BSD— está ya declarada allí. `frontend/
+             package.json` y `package-lock.json`, sin mover. Ninguna licencia nueva
+             entra con este ítem, y sale del diff, no de la memoria:
+             `git diff e3a9e9e..HEAD -- '*.csproj' 'Directory.Packages.props'`
+```
+
+**Los `act()`, con los dos extremos nombrados y esta vez medidos los dos.** El «después» del ítem se
+había medido en `c7b9f80` y se sostenía sobre un `git diff` vacío de `frontend/`. Al cerrar se
+vuelve a medir, ya sobre el árbol final:
+
+```
+cd frontend && npm ci && npm test -- --run 2>&1 | grep -c "not wrapped in act"
+```
+
+- **Antes — `e3a9e9e`** (main al abrir): **109 avisos en 7 ficheros**.
+- **Después — `911ba5c`** (el árbol que se lleva a main): **109 avisos en 7 ficheros**, y el mismo
+  reparto exacto: `ElListadoDeAlmacenes` 24, `ElCambioDeIdioma` 17, `LasRutasProtegidas` 17,
+  `ElSelectorDeEmpresa` 14, `ElCambioDeRuta` 14, `ElTestigoDeAcceso` 13, `LaPantallaDeAcceso` 10.
+
+`git diff --stat c7b9f80 911ba5c -- frontend/` sigue saliendo **vacío**, así que la medida de
+`c7b9f80` valía; lo que la sostiene ahora no es ese argumento sino la medición del extremo real.
+
+**El carril de integración no se ha ejecutado aquí, y esto es lo que hay que creerse y lo que no.**
+El demonio de Docker sigue parado en esta máquina. Ejecutado de todos modos, el guion de la CI
+contesta:
+
+```
+Integración (Testcontainers): 318 casos (0 correctos, 318 con error, 0 omitidos) en 8 ensamblados
+  — Organizacion.IntegrationTests 72, Api.IntegrationTests 246, y 0 en los otros seis
+```
+
+Los 318 son **el mismo error repetido**, no 318 fallos: `DotNet.Testcontainers.Builders.
+DockerUnavailableException : Docker is either not running or misconfigured … Details: Failed to
+connect to Docker endpoint at 'npipe://./pipe/docker_engine' … System.TimeoutException : The
+operation has timed out.` **Ni uno solo de esos casos se ha ejecutado.** Lo que sí dice esa salida
+—y es lo único que dice— es que el barrido local **alcanza exactamente los mismos 318 casos** que
+la CI ejecutó en verde: no falta ninguno por descubrir, falta el demonio.
+
+**Y lo que se ejerció en su lugar, que es la parte que este ítem sí puede reclamar.** El defecto
+central del ítem se veía **solo** en ese carril —siete rutas contestando 412 contra PostgreSQL— y
+resultó no necesitarlo: decidir si una entrada es alta o modificación necesita el proveedor y el
+modelo, no un servidor. `LoQueCuelgaNaceComoAltaTests` lo comprueba con la cadena de conexión
+apuntando al puerto 1, en el carril rápido, en un segundo, y con su canario al lado. Lo mismo hacen
+las cinco reglas de modelo, que leen el modelo ya construido sin abrir conexión. La regla nueva de
+los ADR (`ElNumeroDeUnAdrEsSuyoYDeNadieMasTests`) tampoco necesita nada: lee el árbol.
 
 ### Verificado en local, con la salida real — ítem 1.5
 
@@ -6590,7 +6714,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   por cuerpo, el régimen fiscal del §7.2 —que no está en el criterio de ningún ítem— y que un tercero
   bloqueado no aparece en ningún listado, porque el del art. 32 solo recorre empresas, almacenes y
   ubicaciones.
-- [ ] **1.6 · Terceros: lo que cuelga** — criterio de aceptación: `Contacto`, `CuentaBancaria` con
+- [x] **1.6 · Terceros: lo que cuelga** — criterio de aceptación: `Contacto`, `CuentaBancaria` con
   IBAN validado, `CondicionPago` con el tope de **60 días de la Ley 3/2004 contado desde la
   entrega**, y `LimiteCredito` **solo como importe**. Fuera, por la raya de la P6: `MandatoSEPA`
   (fase 6) y el riesgo vivo (fase 4).
@@ -6614,9 +6738,15 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **Las tres notas abiertas, resueltas**: la correlación buscar/alta pasa a *Decisiones* con sus
   tres salidas costeadas —no la puede tomar el agente—; el art. 32, cerrado en código; y el régimen
   fiscal, con el corte que se sostiene y el trozo que no, dicho.
-  **Ocho mutaciones con su línea base nombrada**, seis rojas y **dos verdes que valen más**: la 7
+  **Catorce mutaciones con su línea base nombrada**, doce rojas y **dos verdes que valen más**: la 7
   destapó que la decisión de la divisa no la guardaba ningún test, y su regla —escrita ya— vive en el
   carril de integración, que esta máquina no ejecuta.
+  **Y el ítem no terminó donde parecía**: contra PostgreSQL, las **siete** rutas que escriben un
+  hijo contestaban `412`, y ninguna de las que rechazan antes de escribir fallaba. La causa era el
+  modelo diciendo que las claves `Guid` se rellenan al insertar cuando las pone la fábrica del
+  dominio, y con eso EF marcaba los tres hijos como modificación. **ADR-0032**, con su convención
+  de cierre, su caso de un segundo y sin Docker, y los cuatro huecos de declaración que aparecieron
+  al descubrir el universo de modelos en vez de enumerarlo.
 - [ ] **1.7 · La retirada y las dos conversiones** — criterio de aceptación: el **ADR-0023
   implementado entero** —retirada en los cuatro maestros de instalación, tolerancia de la conversión
   inversa, resolutor de conversiones encadenadas con **error con nombre**—, y **antes** de que
