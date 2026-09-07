@@ -25,16 +25,21 @@ public sealed class TiposDeCambioController(
     ICrearTipoCambio crear,
     IObtenerTipoCambio obtener,
     IListarTiposDeCambio listar,
-    IModificarTipoCambio modificar) : ControladorDeOrganizacion
+    IModificarTipoCambio modificar,
+    IRetirarTipoCambio retirar,
+    IReincorporarTipoCambio reincorporar) : ControladorDeOrganizacion
 {
     /// <summary>Devuelve una página de cotizaciones, de la más reciente a la más antigua.</summary>
-    /// <param name="consulta">Paginación, orden y filtro (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>).</param>
+    /// <param name="consulta">
+    /// Paginación, orden, filtro y retiradas (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>,
+    /// <c>retiradas</c>). Por omisión, las retiradas <b>no</b> salen (ADR-0023).
+    /// </param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeOrganizacion.TipoCambioVer)]
     [ProducesResponseType(typeof(PaginaDe<TipoCambioDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
-        [FromQuery] ConsultaPaginada consulta,
+        [FromQuery] ConsultaDeMaestro consulta,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
@@ -90,4 +95,51 @@ public sealed class TiposDeCambioController(
         ResponderExigiendoVersionAsync(
             ifMatch,
             version => modificar.EjecutarAsync(id, version, peticion, cancelacion));
+
+    /// <summary>Retira una cotización: deja de ofrecerse para operaciones nuevas (ADR-0023).</summary>
+    /// <remarks>
+    /// Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner
+    /// y quitar la misma cosa. Lo que el ADR prohíbe para siempre es el <c>DELETE</c> del recurso
+    /// entero, que no existe ni va a existir; esto borra la retirada, no la fila. El <c>GET</c> por
+    /// identificador sigue devolviéndola después, al revés que una fila bloqueada.
+    /// </remarks>
+    /// <param name="id">Identificador de la cotización.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("{id:guid}/retirada")]
+    [ExigePermiso(PermisosDeOrganizacion.TipoCambioRetirar)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Retirar(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => retirar.EjecutarAsync(id, version, cancelacion));
+
+    /// <summary>Vuelve a ofrecer una cotización retirada.</summary>
+    /// <remarks>
+    /// Permiso propio y distinto del de retirar, como <c>cerrar</c>/<c>reabrir</c>: los cuatro
+    /// maestros son de instalación (R8), así que retirar por error deja sin esa cotización a todas las
+    /// empresas, y deshacerlo tiene que poder autorizarse aparte.
+    /// </remarks>
+    /// <param name="id">Identificador de la cotización.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpDelete("{id:guid}/retirada")]
+    [ExigePermiso(PermisosDeOrganizacion.TipoCambioReincorporar)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Reincorporar(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => reincorporar.EjecutarAsync(id, version, cancelacion));
 }

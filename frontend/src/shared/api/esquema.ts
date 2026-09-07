@@ -440,6 +440,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizacion/conversiones-de-unidades/resolucion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resuelve la conversión declarada entre dos unidades, o falla con nombre (ADR-0023).
+         * @description Un par no declarado es un 404 con nombre, y nunca un número. Con kg→g y
+         *           g→mg dados de alta, preguntar kg→mg responde
+         *           conversion-um-no-declarada, no 1000000: encadenar dos factores redondeados
+         *           multiplica el error, y el sistema no inventa una conversión que nadie declaró. Tampoco
+         *           devuelve cero ni nulo, que son las otras dos maneras de que el error salga a la superficie
+         *           convertido en una cantidad.
+         *         resolucion y no {id:guid}: el segmento no casa con la restricción de la ruta
+         *           de al lado, así que las dos conviven sin ambigüedad.
+         *         Permiso de lectura, el mismo que ver conversiones: resolver es leer la fila que ya está
+         *     publicada en la colección, y una fila retirada también resuelve —eso es exactamente lo que
+         *     «sigue resolviendo para lo que ya apunta a ella» significa—, así que la respuesta dice si lo
+         *     está.
+         */
+        get: operations["ConversionesDeUnidades_Resolver"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/conversiones-de-unidades/{id}/retirada": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retira una conversión: deja de ofrecerse para operaciones nuevas (ADR-0023).
+         * @description Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner
+         *     y quitar la misma cosa. Lo que el ADR prohíbe para siempre es el `DELETE` del recurso
+         *     entero, que no existe ni va a existir; esto borra la retirada, no la fila. El `GET` por
+         *     identificador sigue devolviéndola después, al revés que una fila bloqueada.
+         */
+        post: operations["ConversionesDeUnidades_Retirar"];
+        /**
+         * Vuelve a ofrecer una conversión retirada.
+         * @description Permiso propio y distinto del de retirar, como `cerrar`/`reabrir`: los cuatro
+         *     maestros son de instalación (R8), así que retirar por error deja sin esa conversión a todas las
+         *     empresas, y deshacerlo tiene que poder autorizarse aparte.
+         */
+        delete: operations["ConversionesDeUnidades_Reincorporar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/divisas": {
         parameters: {
             query?: never;
@@ -471,6 +531,35 @@ export interface paths {
         put: operations["Divisas_Modificar"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/divisas/{id}/retirada": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retira una divisa: deja de ofrecerse para operaciones nuevas (ADR-0023).
+         * @description Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner
+         *     y quitar la misma cosa. Lo que el ADR prohíbe para siempre es el `DELETE` del recurso
+         *     entero, que no existe ni va a existir; esto borra la retirada, no la fila. El `GET` por
+         *     identificador sigue devolviéndola después, al revés que una fila bloqueada.
+         */
+        post: operations["Divisas_Retirar"];
+        /**
+         * Vuelve a ofrecer una divisa retirada.
+         * @description Permiso propio y distinto del de retirar, como `cerrar`/`reabrir`: los cuatro
+         *     maestros son de instalación (R8), así que retirar por error deja sin esa divisa a todas las
+         *     empresas, y deshacerlo tiene que poder autorizarse aparte.
+         */
+        delete: operations["Divisas_Reincorporar"];
         options?: never;
         head?: never;
         patch?: never;
@@ -772,6 +861,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizacion/tipos-de-cambio/{id}/retirada": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retira una cotización: deja de ofrecerse para operaciones nuevas (ADR-0023).
+         * @description Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner
+         *     y quitar la misma cosa. Lo que el ADR prohíbe para siempre es el `DELETE` del recurso
+         *     entero, que no existe ni va a existir; esto borra la retirada, no la fila. El `GET` por
+         *     identificador sigue devolviéndola después, al revés que una fila bloqueada.
+         */
+        post: operations["TiposDeCambio_Retirar"];
+        /**
+         * Vuelve a ofrecer una cotización retirada.
+         * @description Permiso propio y distinto del de retirar, como `cerrar`/`reabrir`: los cuatro
+         *     maestros son de instalación (R8), así que retirar por error deja sin esa cotización a todas las
+         *     empresas, y deshacerlo tiene que poder autorizarse aparte.
+         */
+        delete: operations["TiposDeCambio_Reincorporar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/ubicaciones": {
         parameters: {
             query?: never;
@@ -870,6 +988,35 @@ export interface paths {
         put: operations["UnidadesDeMedida_Modificar"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/unidades-de-medida/{id}/retirada": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retira una unidad de medida: deja de ofrecerse para operaciones nuevas (ADR-0023).
+         * @description Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner
+         *     y quitar la misma cosa. Lo que el ADR prohíbe para siempre es el `DELETE` del recurso
+         *     entero, que no existe ni va a existir; esto borra la retirada, no la fila. El `GET` por
+         *     identificador sigue devolviéndola después, al revés que una fila bloqueada.
+         */
+        post: operations["UnidadesDeMedida_Retirar"];
+        /**
+         * Vuelve a ofrecer una unidad de medida retirada.
+         * @description Permiso propio y distinto del de retirar, como `cerrar`/`reabrir`: los cuatro
+         *     maestros son de instalación (R8), así que retirar por error deja sin esa unidad a todas las
+         *     empresas, y deshacerlo tiene que poder autorizarse aparte.
+         */
+        delete: operations["UnidadesDeMedida_Reincorporar"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1392,6 +1539,13 @@ export interface components {
              * @description Por cuánto hay que multiplicar para pasar de origen a destino.
              */
             factor: number | string;
+            /**
+             * @description Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que
+             *     ya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con
+             *     `?retiradas=true`— y porque el `GET` por identificador la devuelve siempre: sin este
+             *     campo, quien la lee no tiene manera de distinguirla de una que sí se ofrece.
+             */
+            retirada: boolean;
         };
         /** @description Lo que hace falta para dar de alta un almacén. */
         CrearAlmacenDto: {
@@ -1652,6 +1806,13 @@ export interface components {
              * @description A cuántos decimales se redondea un importe en esta divisa.
              */
             decimales: number | string;
+            /**
+             * @description Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que
+             *     ya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con
+             *     `?retiradas=true`— y porque el `GET` por identificador la devuelve siempre: sin este
+             *     campo, quien la lee no tiene manera de distinguirla de una que sí se ofrece.
+             */
+            retirada: boolean;
         };
         /** @description Un ejercicio contable, tal como sale de la API. */
         EjercicioDto: {
@@ -2233,6 +2394,35 @@ export interface components {
             /** @description Si sus facturas llevan retención de IRPF. */
             sujetoARetencionIrpf: boolean;
         };
+        /** @description La conversión que resuelve un par de unidades, tal como sale del resolutor. */
+        ResolucionDeConversionDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la fila que resuelve el par.
+             */
+            conversionId: string;
+            /**
+             * Format: uuid
+             * @description Unidad desde la que se convierte.
+             */
+            unidadOrigenId: string;
+            /**
+             * Format: uuid
+             * @description Unidad a la que se convierte.
+             */
+            unidadDestinoId: string;
+            /**
+             * Format: double
+             * @description Por cuánto hay que multiplicar para pasar de origen a destino.
+             */
+            factor: number | string;
+            /**
+             * @description Si la fila que resuelve está retirada (ADR-0023). Sale porque una fila retirada <b>sigue
+             *     resolviendo</b> —es lo que sigue haciendo— y quien la use para una operación nueva tiene
+             *     derecho a saber que ese camino ya no se ofrece.
+             */
+            retirada: boolean;
+        };
         /** @description Cambio de la contraseña de OTRO usuario, por quien tiene el permiso. */
         RestablecerContrasenaDto: {
             /** @description La contraseña nueva. */
@@ -2377,6 +2567,13 @@ export interface components {
              * @description Cuántas unidades de destino cuesta una de origen.
              */
             tasa: number | string;
+            /**
+             * @description Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que
+             *     ya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con
+             *     `?retiradas=true`— y porque el `GET` por identificador la devuelve siempre: sin este
+             *     campo, quien la lee no tiene manera de distinguirla de una que sí se ofrece.
+             */
+            retirada: boolean;
         };
         /** @description Un tramo de resultados de una <b>búsqueda</b>, con por dónde seguir. */
         TramoDeEmpresaDto: {
@@ -2446,6 +2643,13 @@ export interface components {
              * @description Cuántos decimales admite una cantidad expresada en esta unidad.
              */
             decimales: number | string;
+            /**
+             * @description Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que
+             *     ya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con
+             *     `?retiradas=true`— y porque el `GET` por identificador la devuelve siempre: sin este
+             *     campo, quien la lee no tiene manera de distinguirla de una que sí se ofrece.
+             */
+            retirada: boolean;
         };
         /** @description Un usuario, tal como sale de la API. */
         UsuarioDto: {
@@ -3737,6 +3941,7 @@ export interface operations {
     ConversionesDeUnidades_Listar: {
         parameters: {
             query?: {
+                retiradas?: boolean;
                 page?: number | string;
                 size?: number | string;
                 sort?: string;
@@ -3935,9 +4140,160 @@ export interface operations {
             };
         };
     };
+    ConversionesDeUnidades_Resolver: {
+        parameters: {
+            query?: {
+                /** @description Unidad de la que se parte. */
+                origen?: string;
+                /** @description Unidad a la que se llega. */
+                destino?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ResolucionDeConversionDto"];
+                    "application/json": components["schemas"]["ResolucionDeConversionDto"];
+                    "text/json": components["schemas"]["ResolucionDeConversionDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ConversionesDeUnidades_Retirar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la conversión. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ConversionesDeUnidades_Reincorporar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la conversión. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     Divisas_Listar: {
         parameters: {
             query?: {
+                retiradas?: boolean;
                 page?: number | string;
                 size?: number | string;
                 sort?: string;
@@ -4089,6 +4445,118 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDetails"];
                     "text/json": components["schemas"]["ProblemDetails"];
                 };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Divisas_Retirar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la divisa. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Divisas_Reincorporar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la divisa. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -5382,6 +5850,7 @@ export interface operations {
     TiposDeCambio_Listar: {
         parameters: {
             query?: {
+                retiradas?: boolean;
                 page?: number | string;
                 size?: number | string;
                 sort?: string;
@@ -5544,6 +6013,118 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDetails"];
                     "text/json": components["schemas"]["ProblemDetails"];
                 };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    TiposDeCambio_Retirar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la cotización. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    TiposDeCambio_Reincorporar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la cotización. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -5872,6 +6453,7 @@ export interface operations {
     UnidadesDeMedida_Listar: {
         parameters: {
             query?: {
+                retiradas?: boolean;
                 page?: number | string;
                 size?: number | string;
                 sort?: string;
@@ -6023,6 +6605,118 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDetails"];
                     "text/json": components["schemas"]["ProblemDetails"];
                 };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnidadesDeMedida_Retirar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la unidad. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnidadesDeMedida_Reincorporar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la unidad. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {

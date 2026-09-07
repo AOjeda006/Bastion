@@ -326,8 +326,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(93, "acciones en total");
-        cambian.Count.ShouldBe(60, "acciones que cambian estado");
+        todas.Count.ShouldBe(102, "acciones en total");
+        cambian.Count.ShouldBe(68, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -368,7 +368,27 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // versión previa que citar. Los dos mecanismos a la vez están prohibidos por el test de
         // arriba, así que la única manera de que ese número hubiera subido sería quitando el
         // If-Match — y entonces dos peticiones simultáneas sobre la misma ficha se pisarían.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(30, "operaciones que exigen If-Match");
+        //
+        // Ciento dos desde el ítem 1.7, y el reparto separa las nueve nuevas en dos clases. Ocho
+        // son la retirada de los cuatro maestros de instalación —`POST` y `DELETE` de
+        // `{id}/retirada` en divisas, cotizaciones, unidades y conversiones—: +8 al total, +8 a
+        // las que cambian estado y +8 a If-Match, con Idempotency-Key y el cajón de las exentas
+        // quietos. Que suban los tres a la vez es lo que dice que son escrituras protegidas y no
+        // ocho puertas nuevas sin candado: retirar una divisa la quita de en medio en TODA la
+        // instalación (R8), así que quien la retira tiene que estar citando la versión que vio.
+        //
+        // La novena es `GET .../conversiones-de-unidades/resolucion`, que sube el total y NADA
+        // más, igual que hizo el listado de lo bloqueado en el 1.4: es una lectura. Y aquí el
+        // reparto afirma algo del ADR-0023 que ninguna otra regla mira: resolver un par NO es una
+        // escritura, no crea la conversión que falta ni la deduce encadenando dos factores; si
+        // este número se hubiera movido con el otro, lo que se habría colado es exactamente eso.
+        //
+        // El `DELETE` de las ocho no contradice el «ningún DELETE, nunca» del ADR: lo prohibido es
+        // `DELETE /{recurso}/{id}`, que borraría la fila, y de ese sigue sin haber ni uno para los
+        // cuatro —lo vigila `NingunMaestroRetirableSeBorraTests`—. Estos ocho borran la retirada,
+        // que es un sub-recurso, como `DELETE /ejercicios/{id}/cierre` convive con el borrado del
+        // ejercicio sin ser lo mismo.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(38, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(13, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
@@ -376,7 +396,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (30 + 13 + s_exentas.Count).ShouldBe(cambian.Count);
+        (38 + 13 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

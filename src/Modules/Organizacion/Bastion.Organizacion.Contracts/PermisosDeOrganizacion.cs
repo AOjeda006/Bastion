@@ -126,6 +126,20 @@ public static class PermisosDeOrganizacion
     /// <summary>Cambiar el nombre de una divisa.</summary>
     public const string DivisaModificar = "organizacion.divisa.modificar";
 
+    /// <summary>Retirar una divisa: dejar de ofrecerla para operaciones nuevas (ADR-0023).</summary>
+    /// <remarks>
+    /// Aparte de <see cref="DivisaModificar"/> y con motivo: retirar una divisa la quita de la lista con la que se opera en TODA la instalación
+    /// (R8), y cambiarle el nombre no.
+    /// </remarks>
+    public const string DivisaRetirar = "organizacion.divisa.retirar";
+
+    /// <summary>Volver a ofrecer una divisa retirada.</summary>
+    /// <remarks>
+    /// Aparte de <see cref="DivisaRetirar"/>, como <c>bloquear</c>/<c>desbloquear</c> y
+    /// <c>cerrar</c>/<c>reabrir</c>: deshacer una retirada no es la misma facultad que hacerla.
+    /// </remarks>
+    public const string DivisaReincorporar = "organizacion.divisa.reincorporar";
+
     /// <summary>Consultar cotizaciones.</summary>
     public const string TipoCambioVer = "organizacion.tipo-cambio.ver";
 
@@ -139,6 +153,20 @@ public static class PermisosDeOrganizacion
     /// </remarks>
     public const string TipoCambioModificar = "organizacion.tipo-cambio.modificar";
 
+    /// <summary>Retirar una cotización: dejar de ofrecerla para operaciones nuevas (ADR-0023).</summary>
+    /// <remarks>
+    /// Aparte de <see cref="TipoCambioModificar"/> y con motivo: es la única salida que tiene una cotización dada de alta con el par o la fecha
+    /// equivocados, porque `Modificar` solo toca la tasa y no hay borrado.
+    /// </remarks>
+    public const string TipoCambioRetirar = "organizacion.tipo-cambio.retirar";
+
+    /// <summary>Volver a ofrecer una cotización retirada.</summary>
+    /// <remarks>
+    /// Aparte de <see cref="TipoCambioRetirar"/>, como <c>bloquear</c>/<c>desbloquear</c> y
+    /// <c>cerrar</c>/<c>reabrir</c>: deshacer una retirada no es la misma facultad que hacerla.
+    /// </remarks>
+    public const string TipoCambioReincorporar = "organizacion.tipo-cambio.reincorporar";
+
     /// <summary>Consultar unidades de medida.</summary>
     public const string UnidadMedidaVer = "organizacion.unidad-medida.ver";
 
@@ -148,6 +176,20 @@ public static class PermisosDeOrganizacion
     /// <summary>Cambiar el nombre de una unidad de medida.</summary>
     public const string UnidadMedidaModificar = "organizacion.unidad-medida.modificar";
 
+    /// <summary>Retirar una unidad de medida: dejar de ofrecerla para operaciones nuevas (ADR-0023).</summary>
+    /// <remarks>
+    /// Aparte de <see cref="UnidadMedidaModificar"/> y con motivo: una unidad retirada deja de poder elegirse para artículos nuevos en todo el
+    /// catálogo, y renombrarla no cambia nada de eso.
+    /// </remarks>
+    public const string UnidadMedidaRetirar = "organizacion.unidad-medida.retirar";
+
+    /// <summary>Volver a ofrecer una unidad de medida retirada.</summary>
+    /// <remarks>
+    /// Aparte de <see cref="UnidadMedidaRetirar"/>, como <c>bloquear</c>/<c>desbloquear</c> y
+    /// <c>cerrar</c>/<c>reabrir</c>: deshacer una retirada no es la misma facultad que hacerla.
+    /// </remarks>
+    public const string UnidadMedidaReincorporar = "organizacion.unidad-medida.reincorporar";
+
     /// <summary>Consultar conversiones entre unidades.</summary>
     public const string ConversionUmVer = "organizacion.conversion-um.ver";
 
@@ -156,6 +198,20 @@ public static class PermisosDeOrganizacion
 
     /// <summary>Cambiar el factor de una conversión.</summary>
     public const string ConversionUmModificar = "organizacion.conversion-um.modificar";
+
+    /// <summary>Retirar una conversión: dejar de ofrecerla para operaciones nuevas (ADR-0023).</summary>
+    /// <remarks>
+    /// Aparte de <see cref="ConversionUmModificar"/> y con motivo: corregir un factor arregla la conversión; retirarla la saca de en medio, y una
+    /// conversión retirada sigue restringiendo a su inversa.
+    /// </remarks>
+    public const string ConversionUmRetirar = "organizacion.conversion-um.retirar";
+
+    /// <summary>Volver a ofrecer una conversión retirada.</summary>
+    /// <remarks>
+    /// Aparte de <see cref="ConversionUmRetirar"/>, como <c>bloquear</c>/<c>desbloquear</c> y
+    /// <c>cerrar</c>/<c>reabrir</c>: deshacer una retirada no es la misma facultad que hacerla.
+    /// </remarks>
+    public const string ConversionUmReincorporar = "organizacion.conversion-um.reincorporar";
 
     /// <summary>Consultar ubicaciones.</summary>
     public const string UbicacionVer = "organizacion.ubicacion.ver";
@@ -229,15 +285,23 @@ public static class PermisosDeOrganizacion
         DivisaVer,
         DivisaCrear,
         DivisaModificar,
+        DivisaRetirar,
+        DivisaReincorporar,
         TipoCambioVer,
         TipoCambioCrear,
         TipoCambioModificar,
+        TipoCambioRetirar,
+        TipoCambioReincorporar,
         UnidadMedidaVer,
         UnidadMedidaCrear,
         UnidadMedidaModificar,
+        UnidadMedidaRetirar,
+        UnidadMedidaReincorporar,
         ConversionUmVer,
         ConversionUmCrear,
         ConversionUmModificar,
+        ConversionUmRetirar,
+        ConversionUmReincorporar,
         UbicacionVer,
         UbicacionCrear,
         UbicacionModificar,

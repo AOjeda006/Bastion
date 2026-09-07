@@ -2419,6 +2419,13 @@
         "operationId": "ConversionesDeUnidades_Listar",
         "parameters": [
           {
+            "name": "retiradas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -2819,6 +2826,273 @@
         ]
       }
     },
+    "/api/v1/organizacion/conversiones-de-unidades/resolucion": {
+      "get": {
+        "tags": [
+          "ConversionesDeUnidades"
+        ],
+        "summary": "Resuelve la conversión declarada entre dos unidades, o falla con nombre (ADR-0023).",
+        "description": "    Un par no declarado es un 404 con nombre, y nunca un número. Con kg→g y\n      g→mg dados de alta, preguntar kg→mg responde\n      conversion-um-no-declarada, no 1000000: encadenar dos factores redondeados\n      multiplica el error, y el sistema no inventa una conversión que nadie declaró. Tampoco\n      devuelve cero ni nulo, que son las otras dos maneras de que el error salga a la superficie\n      convertido en una cantidad.\n    resolucion y no {id:guid}: el segmento no casa con la restricción de la ruta\n      de al lado, así que las dos conviven sin ambigüedad.\n    Permiso de lectura, el mismo que ver conversiones: resolver es leer la fila que ya está\npublicada en la colección, y una fila retirada también resuelve —eso es exactamente lo que\n«sigue resolviendo para lo que ya apunta a ella» significa—, así que la respuesta dice si lo\nestá.",
+        "operationId": "ConversionesDeUnidades_Resolver",
+        "parameters": [
+          {
+            "name": "origen",
+            "in": "query",
+            "description": "Unidad de la que se parte.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "destino",
+            "in": "query",
+            "description": "Unidad a la que se llega.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolucionDeConversionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolucionDeConversionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolucionDeConversionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/conversiones-de-unidades/{id}/retirada": {
+      "post": {
+        "tags": [
+          "ConversionesDeUnidades"
+        ],
+        "summary": "Retira una conversión: deja de ofrecerse para operaciones nuevas (ADR-0023).",
+        "description": "Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner\ny quitar la misma cosa. Lo que el ADR prohíbe para siempre es el `DELETE` del recurso\nentero, que no existe ni va a existir; esto borra la retirada, no la fila. El `GET` por\nidentificador sigue devolviéndola después, al revés que una fila bloqueada.",
+        "operationId": "ConversionesDeUnidades_Retirar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la conversión.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "ConversionesDeUnidades"
+        ],
+        "summary": "Vuelve a ofrecer una conversión retirada.",
+        "description": "Permiso propio y distinto del de retirar, como `cerrar`/`reabrir`: los cuatro\nmaestros son de instalación (R8), así que retirar por error deja sin esa conversión a todas las\nempresas, y deshacerlo tiene que poder autorizarse aparte.",
+        "operationId": "ConversionesDeUnidades_Reincorporar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la conversión.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/organizacion/divisas": {
       "get": {
         "tags": [
@@ -2827,6 +3101,13 @@
         "summary": "Devuelve una página de divisas.",
         "operationId": "Divisas_Listar",
         "parameters": [
+          {
+            "name": "retiradas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
           {
             "name": "page",
             "in": "query",
@@ -3141,6 +3422,198 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/divisas/{id}/retirada": {
+      "post": {
+        "tags": [
+          "Divisas"
+        ],
+        "summary": "Retira una divisa: deja de ofrecerse para operaciones nuevas (ADR-0023).",
+        "description": "Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner\ny quitar la misma cosa. Lo que el ADR prohíbe para siempre es el `DELETE` del recurso\nentero, que no existe ni va a existir; esto borra la retirada, no la fila. El `GET` por\nidentificador sigue devolviéndola después, al revés que una fila bloqueada.",
+        "operationId": "Divisas_Retirar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la divisa.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Divisas"
+        ],
+        "summary": "Vuelve a ofrecer una divisa retirada.",
+        "description": "Permiso propio y distinto del de retirar, como `cerrar`/`reabrir`: los cuatro\nmaestros son de instalación (R8), así que retirar por error deja sin esa divisa a todas las\nempresas, y deshacerlo tiene que poder autorizarse aparte.",
+        "operationId": "Divisas_Reincorporar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la divisa.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "404": {
             "description": "Not Found",
@@ -5649,6 +6122,13 @@
         "operationId": "TiposDeCambio_Listar",
         "parameters": [
           {
+            "name": "retiradas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -5982,6 +6462,198 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/tipos-de-cambio/{id}/retirada": {
+      "post": {
+        "tags": [
+          "TiposDeCambio"
+        ],
+        "summary": "Retira una cotización: deja de ofrecerse para operaciones nuevas (ADR-0023).",
+        "description": "Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner\ny quitar la misma cosa. Lo que el ADR prohíbe para siempre es el `DELETE` del recurso\nentero, que no existe ni va a existir; esto borra la retirada, no la fila. El `GET` por\nidentificador sigue devolviéndola después, al revés que una fila bloqueada.",
+        "operationId": "TiposDeCambio_Retirar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la cotización.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "TiposDeCambio"
+        ],
+        "summary": "Vuelve a ofrecer una cotización retirada.",
+        "description": "Permiso propio y distinto del de retirar, como `cerrar`/`reabrir`: los cuatro\nmaestros son de instalación (R8), así que retirar por error deja sin esa cotización a todas las\nempresas, y deshacerlo tiene que poder autorizarse aparte.",
+        "operationId": "TiposDeCambio_Reincorporar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la cotización.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "404": {
             "description": "Not Found",
@@ -6612,6 +7284,13 @@
         "operationId": "UnidadesDeMedida_Listar",
         "parameters": [
           {
+            "name": "retiradas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -6926,6 +7605,198 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/unidades-de-medida/{id}/retirada": {
+      "post": {
+        "tags": [
+          "UnidadesDeMedida"
+        ],
+        "summary": "Retira una unidad de medida: deja de ofrecerse para operaciones nuevas (ADR-0023).",
+        "description": "Sub-recurso, como el cierre del ejercicio, y por lo mismo: retirar y reincorporar son poner\ny quitar la misma cosa. Lo que el ADR prohíbe para siempre es el `DELETE` del recurso\nentero, que no existe ni va a existir; esto borra la retirada, no la fila. El `GET` por\nidentificador sigue devolviéndola después, al revés que una fila bloqueada.",
+        "operationId": "UnidadesDeMedida_Retirar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la unidad.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "UnidadesDeMedida"
+        ],
+        "summary": "Vuelve a ofrecer una unidad de medida retirada.",
+        "description": "Permiso propio y distinto del de retirar, como `cerrar`/`reabrir`: los cuatro\nmaestros son de instalación (R8), así que retirar por error deja sin esa unidad a todas las\nempresas, y deshacerlo tiene que poder autorizarse aparte.",
+        "operationId": "UnidadesDeMedida_Reincorporar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la unidad.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "404": {
             "description": "Not Found",
@@ -9348,7 +10219,8 @@
           "id",
           "unidadOrigenId",
           "unidadDestinoId",
-          "factor"
+          "factor",
+          "retirada"
         ],
         "type": "object",
         "properties": {
@@ -9375,6 +10247,10 @@
             ],
             "description": "Por cuánto hay que multiplicar para pasar de origen a destino.",
             "format": "double"
+          },
+          "retirada": {
+            "type": "boolean",
+            "description": "Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que\nya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con\n`?retiradas=true`— y porque el `GET` por identificador la devuelve siempre: sin este\ncampo, quien la lee no tiene manera de distinguirla de una que sí se ofrece."
           }
         },
         "description": "Una conversión entre dos unidades de medida, tal como sale de la API."
@@ -10014,7 +10890,8 @@
           "id",
           "codigo",
           "nombre",
-          "decimales"
+          "decimales",
+          "retirada"
         ],
         "type": "object",
         "properties": {
@@ -10039,6 +10916,10 @@
             ],
             "description": "A cuántos decimales se redondea un importe en esta divisa.",
             "format": "int32"
+          },
+          "retirada": {
+            "type": "boolean",
+            "description": "Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que\nya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con\n`?retiradas=true`— y porque el `GET` por identificador la devuelve siempre: sin este\ncampo, quien la lee no tiene manera de distinguirla de una que sí se ofrece."
           }
         },
         "description": "Una divisa que esta instalación usa, tal como sale de la API."
@@ -11423,6 +12304,47 @@
         },
         "description": "El régimen fiscal de un tercero, tal como viaja por la API."
       },
+      "ResolucionDeConversionDto": {
+        "required": [
+          "conversionId",
+          "unidadOrigenId",
+          "unidadDestinoId",
+          "factor",
+          "retirada"
+        ],
+        "type": "object",
+        "properties": {
+          "conversionId": {
+            "type": "string",
+            "description": "Identificador de la fila que resuelve el par.",
+            "format": "uuid"
+          },
+          "unidadOrigenId": {
+            "type": "string",
+            "description": "Unidad desde la que se convierte.",
+            "format": "uuid"
+          },
+          "unidadDestinoId": {
+            "type": "string",
+            "description": "Unidad a la que se convierte.",
+            "format": "uuid"
+          },
+          "factor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Por cuánto hay que multiplicar para pasar de origen a destino.",
+            "format": "double"
+          },
+          "retirada": {
+            "type": "boolean",
+            "description": "Si la fila que resuelve está retirada (ADR-0023). Sale porque una fila retirada <b>sigue\nresolviendo</b> —es lo que sigue haciendo— y quien la use para una operación nueva tiene\nderecho a saber que ese camino ya no se ofrece."
+          }
+        },
+        "description": "La conversión que resuelve un par de unidades, tal como sale del resolutor."
+      },
       "RestablecerContrasenaDto": {
         "required": [
           "nueva"
@@ -11671,7 +12593,8 @@
           "divisaOrigenId",
           "divisaDestinoId",
           "fecha",
-          "tasa"
+          "tasa",
+          "retirada"
         ],
         "type": "object",
         "properties": {
@@ -11703,6 +12626,10 @@
             ],
             "description": "Cuántas unidades de destino cuesta una de origen.",
             "format": "double"
+          },
+          "retirada": {
+            "type": "boolean",
+            "description": "Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que\nya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con\n`?retiradas=true`— y porque el `GET` por identificador la devuelve siempre: sin este\ncampo, quien la lee no tiene manera de distinguirla de una que sí se ofrece."
           }
         },
         "description": "La cotización de un par de divisas en un día, tal como sale de la API."
@@ -11843,7 +12770,8 @@
           "id",
           "codigo",
           "nombre",
-          "decimales"
+          "decimales",
+          "retirada"
         ],
         "type": "object",
         "properties": {
@@ -11868,6 +12796,10 @@
             ],
             "description": "Cuántos decimales admite una cantidad expresada en esta unidad.",
             "format": "int32"
+          },
+          "retirada": {
+            "type": "boolean",
+            "description": "Si la fila se ha retirado: no se ofrece para operaciones nuevas, pero sigue resolviendo lo que\nya apunta a ella (ADR-0023). Sale en el DTO porque el listado puede traerla —con\n`?retiradas=true`— y porque el `GET` por identificador la devuelve siempre: sin este\ncampo, quien la lee no tiene manera de distinguirla de una que sí se ofrece."
           }
         },
         "description": "Una unidad de medida, tal como sale de la API."

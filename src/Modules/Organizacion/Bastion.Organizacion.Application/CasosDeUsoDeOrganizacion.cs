@@ -79,21 +79,33 @@ public static class CasosDeUsoDeOrganizacion
         servicios.AddScoped<IObtenerDivisa, ObtenerDivisa>();
         servicios.AddScoped<IListarDivisas, ListarDivisas>();
         servicios.AddScoped<IModificarDivisa, ModificarDivisa>();
+        servicios.AddScoped<IRetirarDivisa, RetirarDivisa>();
+        servicios.AddScoped<IReincorporarDivisa, ReincorporarDivisa>();
 
         servicios.AddScoped<ICrearTipoCambio, CrearTipoCambio>();
         servicios.AddScoped<IObtenerTipoCambio, ObtenerTipoCambio>();
         servicios.AddScoped<IListarTiposDeCambio, ListarTiposDeCambio>();
         servicios.AddScoped<IModificarTipoCambio, ModificarTipoCambio>();
+        servicios.AddScoped<IRetirarTipoCambio, RetirarTipoCambio>();
+        servicios.AddScoped<IReincorporarTipoCambio, ReincorporarTipoCambio>();
 
         servicios.AddScoped<ICrearUnidadMedida, CrearUnidadMedida>();
         servicios.AddScoped<IObtenerUnidadMedida, ObtenerUnidadMedida>();
         servicios.AddScoped<IListarUnidadesDeMedida, ListarUnidadesDeMedida>();
         servicios.AddScoped<IModificarUnidadMedida, ModificarUnidadMedida>();
+        servicios.AddScoped<IRetirarUnidadMedida, RetirarUnidadMedida>();
+        servicios.AddScoped<IReincorporarUnidadMedida, ReincorporarUnidadMedida>();
 
         servicios.AddScoped<ICrearConversionUm, CrearConversionUm>();
         servicios.AddScoped<IObtenerConversionUm, ObtenerConversionUm>();
         servicios.AddScoped<IListarConversionesUm, ListarConversionesUm>();
         servicios.AddScoped<IModificarConversionUm, ModificarConversionUm>();
+        servicios.AddScoped<IRetirarConversionUm, RetirarConversionUm>();
+        servicios.AddScoped<IReincorporarConversionUm, ReincorporarConversionUm>();
+
+        // El resolutor (ADR-0023, decisión 3). Es de lectura y no tiene `Listar` detrás: quien
+        // pregunta por un par quiere ese par o un error con nombre, no una página de candidatas.
+        servicios.AddScoped<IResolverConversionUm, ResolverConversionUm>();
 
         servicios.AddScoped<ICrearUbicacion, CrearUbicacion>();
         servicios.AddScoped<IObtenerUbicacion, ObtenerUbicacion>();

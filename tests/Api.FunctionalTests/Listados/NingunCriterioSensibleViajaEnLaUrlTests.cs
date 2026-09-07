@@ -13,7 +13,8 @@ namespace Bastion.Api.FunctionalTests.Listados;
 /// <remarks>
 /// <para>
 /// <b>Por qué una regla y no una convención.</b> El ADR-0025 se cumple hoy por construcción: los
-/// doce listados solo llevan <c>page</c>, <c>size</c>, <c>sort</c> y <c>q</c>. Eso dura hasta que
+/// listados solo llevan <c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c> y —los cuatro maestros de
+/// instalación— <c>retiradas</c>. Eso dura hasta que
 /// alguien añada un <c>?nif=</c> porque es cómodo para la pantalla de terceros. No rompería
 /// ningún test —funcionaría— y el NIF pasaría a quedar escrito en el historial del navegador, en
 /// el enlace que se copia por chat, en la referencia que el navegador manda al sitio siguiente y
@@ -124,14 +125,28 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
         // La lista entera de lo que los listados aceptan por la URL, hoy. Un parámetro nuevo
         // —sensible o no— pone esto rojo y obliga a decidirlo aquí, que es donde están escritos
         // los motivos, en vez de en el controlador donde se añadió.
+        //
+        // `retiradas` entró en el ítem 1.7 y este rojo es el que obligó a justificarlo. Es un
+        // booleano de los cuatro maestros de INSTALACIÓN —divisas, cotizaciones, unidades y
+        // conversiones (R8)—: dice si la página incluye también las retiradas, que por omisión no
+        // salen (ADR-0023). No identifica a nadie ni acota por nadie: lo que deja escrito en el
+        // registro de acceso es «alguien pidió ver también las divisas retiradas», que no es un
+        // dato de nadie. Por eso va en la URL y no en el cuerpo, y por eso NO es un extremo
+        // aparte: lo que hace nominativo y trazado al listado de lo bloqueado (ADR-0027) es que
+        // expone datos personales del art. 32, y una divisa no tiene ninguno. Cobrar cuatro
+        // permisos y cuatro rutas por una protección que aquí no protege de nada, además,
+        // declararía en el contrato que ver una divisa retirada es un acto reservado, y no lo es.
         parametros.ShouldBe(
-            new SortedSet<string>(StringComparer.Ordinal) { "page", "q", "size", "sort" },
-            customMessage: "los parámetros de consulta de los listados no son los cuatro del " +
+            new SortedSet<string>(StringComparer.Ordinal)
+            {
+                "page", "q", "retiradas", "size", "sort",
+            },
+            customMessage: "los parámetros de consulta de los listados no son los cinco del " +
             "contrato: " + string.Join(", ", parametros));
 
         // Y las dos preguntas de control, porque un silencio de la regla de al lado solo vale si
         // esa regla sabe hablar: tiene que ver la fuga en un nombre compuesto y tiene que callarse
-        // con uno de los cuatro de arriba.
+        // con uno de los cinco de arriba.
         Contiene("nifDelCliente", "nif").ShouldBeTrue(
             "la comparación no ve un campo sensible dentro de un nombre compuesto, que es " +
             "justamente como se escriben los parámetros de verdad");
