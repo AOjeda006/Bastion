@@ -864,60 +864,94 @@ Todo lo de abajo está razonado en
 
 #### Qué recurso lleva qué, decidido con un barrido y no de memoria
 
-`TodaEscrituraDiceComoSeProtegeTests` recorre por reflexión los dos ensamblados de *endpoints*.
-Hoy: **46 acciones**, de ellas **32** cambian estado — **13** exigen `If-Match`, **6** admiten
-`Idempotency-Key` y **13** están exentas con su motivo escrito. Los números están fijados en el
-propio test: un barrido cuya enumeración devuelva nada saldría verde por la peor de las razones.
+`TodaEscrituraDiceComoSeProtegeTests` recorre la **tabla de enrutado del host** (desde el 1.3; hasta
+entonces eran dos `typeof` escritos a mano, y por eso el primer controlador de Terceros habría
+quedado fuera sin ponerse nada rojo). Hoy: **93 acciones**, de ellas **60** cambian estado — **30**
+exigen `If-Match`, **13** admiten `Idempotency-Key` y **17** están exentas con su motivo escrito.
+Los números están fijados en el propio test: un barrido cuya enumeración devuelva nada saldría verde
+por la peor de las razones.
 
-> **Movido en el 0.10** (eran 16 y 10). Los tres `POST /{id}/desbloqueo` pasaron de exigir
-> `If-Match` a estar exentos con su motivo: R16 hace que un recurso bloqueado no emita `ETag`, así
-> que la precondición pedía una llave que el propio mecanismo esconde. El argumento entero está en
-> el [ADR-0017](adr/adr-0017-el-desbloqueo-no-puede-pedir-una-llave-que-el-bloqueo-esconde.md). El
-> total de acciones que cambian estado **no se mueve**, y eso es lo que dice que fue una mudanza y
-> no una acción nueva colada sin protección. Las tablas de abajo están ya con los números de hoy.
+> **Rehechas enteras en el 1.6, y esa es la anotación que importa.** Los números del test se han ido
+> moviendo ítem a ítem —cada uno los sube y lo ve rojo si no lo hace—, pero **las tablas de aquí
+> abajo se quedaron en las del 0.10** (46 acciones, 32 escrituras, 13 · 6 · 13) y así llegaron hasta
+> el 1.5. Nada lo puso rojo porque **una tabla en un `.md` no es una fuente que ningún test compare**:
+> es prosa, y la prosa no falla. El recorrido real fue 0.9 → 46/32/**16·6·10**, 0.10 → 46/32/**13·6·13**
+> (mudanza de los tres desbloqueos, ADR-0017) y hoy 93/60/**30·13·17**. Se rehacen ahora porque el 1.6
+> las vuelve a mover (+11 acciones, +7 escrituras, +7 `If-Match`, cero `Idempotency-Key`), y una tabla
+> que se copia mal dos veces seguidas es una tabla en la que ya no se puede confiar.
 
-**Los seis recursos que emiten `ETag` en su lectura por identificador:**
+**Los trece recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de agregado
+con `GET /{id}`, que es la misma lista de las trece altas de más abajo:
 
 | Recurso | Ruta del `GET` que emite el `ETag` |
 |---|---|
 | Almacén | `GET /api/v1/organizacion/almacenes/{id}` |
+| Conversión de unidades | `GET /api/v1/organizacion/conversiones-de-unidades/{id}` |
+| Divisa | `GET /api/v1/organizacion/divisas/{id}` |
 | Ejercicio | `GET /api/v1/organizacion/ejercicios/{id}` |
 | Empresa | `GET /api/v1/organizacion/empresas/{id}` |
+| Impuesto | `GET /api/v1/organizacion/impuestos/{id}` |
 | Serie | `GET /api/v1/organizacion/series/{id}` |
+| Tipo de cambio | `GET /api/v1/organizacion/tipos-de-cambio/{id}` |
+| Ubicación | `GET /api/v1/organizacion/ubicaciones/{id}` |
+| Unidad de medida | `GET /api/v1/organizacion/unidades-de-medida/{id}` |
 | Rol | `GET /api/v1/identidad/roles/{id}` |
 | Usuario | `GET /api/v1/identidad/usuarios/{id}` |
+| Tercero | `GET /api/v1/terceros/terceros/{id}` |
 
 Los listados **no** lo emiten: un `ETag` sobre una página sería el de la página, no el de cada
 elemento, y un cliente que lo devolviera en un `If-Match` estaría citando una versión que no es la
 del recurso que escribe.
 
-**Las trece operaciones que exigen `If-Match`:**
+**Las treinta operaciones que exigen `If-Match`:**
 
 | Recurso | Operaciones |
 |---|---|
 | Almacén | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
+| Conversión de unidades | `PUT /{id}` |
+| Divisa | `PUT /{id}` |
 | Ejercicio | `PUT /{id}`, `DELETE /{id}`, `POST /{id}/cierre`, `DELETE /{id}/cierre` |
 | Empresa | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
+| Impuesto | `PUT /{id}`, `POST /{id}/cierre` |
 | Serie | `PUT /{id}`, `DELETE /{id}` |
+| Tipo de cambio | `PUT /{id}` |
+| Ubicación | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
+| Unidad de medida | `PUT /{id}` |
 | Rol | `PUT /{id}` |
 | Usuario | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
+| Tercero | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
+| Tercero — lo que cuelga *(1.6)* | `POST /{terceroId}/contactos`, `DELETE /{terceroId}/contactos/{contactoId}`, `POST /{terceroId}/cuentas-bancarias`, `DELETE /{terceroId}/cuentas-bancarias/{cuentaId}`, `POST /{terceroId}/cuentas-bancarias/{cuentaId}/preferente`, `PUT /{terceroId}/condiciones-pago/{rol}`, `PUT /{terceroId}/limite-credito` |
 
 Las subrutas —el bloqueo, el cierre— citan la versión **del recurso**, no una suya: no son otro
 recurso, son otra puerta al mismo. Es lo que hace que bloquear un almacén y modificarlo compitan por
 la misma versión, que es lo que se quiere.
 
-**Las seis rutas que admiten `Idempotency-Key`** — las seis altas, y solo ellas:
+Y las **siete del 1.6** son la misma idea llevada a lo que cuelga: un contacto y una cuenta no tienen
+`ETag` propio ni testigo de concurrencia propio, así que **citan el de la ficha**. Colgar un contacto
+mientras otro cambia la razón social es un choque de verdad —los dos escriben el mismo agregado— y se
+quiere que la segunda escritura se lleve el `412`. Ninguna de las siete admite `Idempotency-Key`, y no
+por descuido: no son altas de un recurso nuevo con vida propia, son modificaciones de un agregado que
+ya existe, y para eso el mecanismo que protege es el otro.
+
+**Las trece rutas que admiten `Idempotency-Key`** — las trece altas, y solo ellas:
 
 | Ruta | Módulo | Almacén que la atiende |
 |---|---|---|
 | `POST /api/v1/organizacion/almacenes` | `organizacion` | `AlmacenDeIdempotenciaDeOrganizacion` |
+| `POST /api/v1/organizacion/conversiones-de-unidades` | `organizacion` | ídem |
+| `POST /api/v1/organizacion/divisas` | `organizacion` | ídem |
 | `POST /api/v1/organizacion/ejercicios` | `organizacion` | ídem |
 | `POST /api/v1/organizacion/empresas` | `organizacion` | ídem |
+| `POST /api/v1/organizacion/impuestos` | `organizacion` | ídem |
 | `POST /api/v1/organizacion/series` | `organizacion` | ídem |
+| `POST /api/v1/organizacion/tipos-de-cambio` | `organizacion` | ídem |
+| `POST /api/v1/organizacion/ubicaciones` | `organizacion` | ídem |
+| `POST /api/v1/organizacion/unidades-de-medida` | `organizacion` | ídem |
 | `POST /api/v1/identidad/roles` | `identidad` | `AlmacenDeIdempotenciaDeIdentidad` |
 | `POST /api/v1/identidad/usuarios` | `identidad` | ídem |
+| `POST /api/v1/terceros/terceros` | `terceros` | `AlmacenDeIdempotenciaDeTerceros` |
 
-**Y las trece exentas, con el motivo resumido** (el entero está en el test):
+**Y las diecisiete exentas, con el motivo resumido** (el entero está en el test):
 
 | Acción | Por qué |
 |---|---|
@@ -932,6 +966,18 @@ la misma versión, que es lo que se quiere.
 | `Empresas.Desbloquear` (0.10) | Una empresa bloqueada contesta `404` a su propio `GET`, así que no hay `ETag` que citar. Y no hace falta: mientras está bloqueada ninguna otra escritura llega a la fila, y desbloquear dos veces deja el mismo estado |
 | `Almacenes.Desbloquear` (0.10) | Lo mismo. El testigo de concurrencia **sigue** comparándose dentro de la petición; lo que desaparece es la precondición que cita el cliente, no la protección |
 | `Usuarios.Desbloquear` (0.10) | Igual que las dos de Organización. Levanta el bloqueo del art. 32, **no** el rechazo temporal por intentos fallidos, que vive en `rechazado_hasta` y se levanta solo |
+| `Ubicaciones.Desbloquear` (1.1) | La cuarta del ADR-0017, por el mismo motivo que las otras tres |
+| `Terceros.Desbloquear` (1.5) | La quinta, y la que cierra la lista: los cinco agregados bloqueables del art. 32 tienen hoy su desbloqueo exento por la misma razón |
+| `Empresas.Buscar` (1.3) | Es una **lectura** que viaja por `POST` para no poner criterios sensibles en la URL (ADR-0025). No cambia estado aunque el verbo lo sugiera, así que ninguno de los dos mecanismos le corresponde. **DEPENDE DE** que siga sin efectos: el día que una búsqueda guarde algo —un histórico, una preferencia— esta exención deja de valer |
+| `Terceros.Buscar` (1.5) | Lo mismo, y con más motivo: sus criterios incluyen el identificador fiscal, que es justo lo que no puede ir en una URL |
+
+> Los **cinco desbloqueos** son el mismo argumento repetido cinco veces, y están escritos uno a uno a
+> propósito: cada uno **nombra la condición de la que depende**, para que quien la cambie se
+> encuentre con la frase que dice que esa exención caduca. En el 1.4 caducó media frase de las cuatro
+> que había entonces —`GET .../bloqueados` es una lectura que sí entrega filas bloqueadas— y se
+> reescribieron **diciendo qué las sustituye**: hoy las sostiene que ningún camino de lectura entregue
+> un recurso bloqueado **con testigo de versión**, y eso lo afirman dos reglas que se ponen rojas, no
+> un párrafo.
 
 #### La prueba fuerte del 0.9: siete mutaciones, y la que no llegó a mutar
 
@@ -2948,6 +2994,124 @@ código sin nadie detrás: la primera pregunta ante una regla nueva no es «¿el
 *La avería que la CI destapó*, con las dos mutaciones que ponen rojo el canario.
 
 
+### Tomadas por el agente de desarrollo — ítem 1.6 (2026-09-07)
+
+**1. La correlación buscar/alta no se cierra en este ítem, y deja de ser una nota abierta: es una
+decisión con su razonamiento escrito.** El hecho está comprobado y no ha cambiado: `POST
+.../terceros/buscar` no encuentra una ficha bloqueada —una consulta ordinaria no ve lo bloqueado— y
+`POST .../terceros` contesta `409` si su identificador está ocupado, esté la ficha activa o bloqueada.
+Cada respuesta por separado no revela nada; **las dos juntas, sí**: quien tenga a la vez
+`terceros.tercero.ver` y `terceros.tercero.crear` aprende que existe una ficha bloqueada con ese
+identificador, y «no aparece y sin embargo está ocupado» solo significa una cosa. Las tres salidas
+posibles, con lo que cuesta cada una:
+
+  - **Separar los permisos** para que nadie tenga los dos. Es una decisión de **política de
+    permisos**, no de código: en una pyme de cinco personas, quien da de alta un cliente es la misma
+    persona que lo busca antes para no duplicarlo. Cierra el canal y rompe el trabajo diario.
+  - **Que la búsqueda mienta igual que el alta** —que devuelva la ficha bloqueada— rompe R16 y el
+    art. 32 a la vez: el bloqueo existe precisamente para que no aparezca.
+  - **Que el alta deje de distinguir**: contestar `201` con una ficha nueva sobre un identificador
+    ocupado. Rompe la unicidad de (empresa, identificador), que es la decisión 1 del 1.5.
+
+  Ninguna es gratis, así que **no la toma el agente**: es de las de preguntar. Se anota aquí con las
+  tres opciones y su coste para que la pregunta llegue entera al día que se conteste, y **no vuelve a
+  *Notas / riesgos*** porque no es un riesgo que se descubra: es un cruce conocido, medido y
+  documentado. Lo que sí queda cerrado del 1.5 es lo que su criterio pedía —una respuesta que no
+  revela—, y eso está comparado entero.
+
+**2. El régimen fiscal del §7.2 entra en el 1.6, y el corte que se sostiene son tres condiciones de
+cuatro.** Contesta la pregunta que el 1.5 dejó abierta (decisión 10 de aquel ítem). **No es alcance
+nuevo:** está en el modelo de dominio del plan maestro y se quedó sin ítem al desglosar la fase —
+alcance comprometido sin casa—, y su sitio es el tercero, porque dejarlo para la fase 3 obliga a
+migrar un maestro con datos dentro. El corte es el de `LimiteCredito`: lista cerrada de valores con
+su `CHECK` y nada más. Entra `TerritorioFiscal` (cinco valores) y entran los tres booleanos —recargo
+de equivalencia, criterio de caja, sujeto a retención de IRPF—, y **se sostiene porque los cuatro son
+hechos declarados del tercero**, no resultados de un cálculo: que un minorista esté en recargo es
+algo que él dice y que su ficha registra, igual que su domicilio. **Lo que no se sostiene y se deja
+fuera es el tipo de retención**: ahí sí es cierto que el valor no significa nada sin la regla que lo
+aplica, y además ya tiene dueño desde el 1.2 —`Impuesto` con `TipoDeImpuesto.Retencion`—, así que
+meterlo aquí obligaría a declarar un cruce entre módulos (ADR-0024). El booleano dice **si** se le
+retiene; **cuánto**, quien ya lo sabe.
+
+**3. `LimiteCredito` lleva su divisa; no la hereda de la empresa.** El criterio del ítem dice «solo el
+importe» y no cierra esto, así que hacía falta decidirlo o escribir por qué no. Un importe sin divisa
+sería **la única cantidad de dinero del sistema que no dice de qué es**. Heredar `Empresa.DivisaBase`
+—que es como se llama; **`DivisaPreferidaId` no existe**, era el nombre que traía la nota— tiene un
+modo de fallo mudo: cambiar la divisa base de la empresa reinterpretaría todos los límites ya
+guardados sin tocar una fila y sin que nada fallara. Así que el límite es un `Importe?`, con
+`numeric(18,4)` —nunca coma flotante, nunca el `money` del motor— y un `CHECK` que obliga a que la
+cantidad y la divisa estén o falten **juntas**. Lo que la pantalla ofrezca por omisión es de la
+pantalla. Consumo, disponible y bloqueo por exceso no son de este ítem: esa es la raya de P6.
+
+**4. La cuenta preferente por tercero es una restricción, y ve las filas bloqueadas: es la misma
+decisión del 1.5, sin matices.** Índice único parcial sobre `(tercero_id)` con filtro `es_preferente`,
+más el invariante en el agregado. El índice es de la base y no conoce el filtro global, igual que el
+de (empresa, identificador). **Y aquí no podría ser de otra manera**, que es lo interesante: el
+bloqueo del art. 32 vive en el **padre**, no en la cuenta, así que dos cuentas que compiten por ser
+la preferente están siempre en el mismo estado. La pregunta que en el 1.5 tenía dos respuestas
+posibles con costes distintos, aquí solo tiene una — y por eso no se rehace el razonamiento: se cita.
+
+**5. `Contacto` no tiene campo de notas, y es una decisión.** Los cuatro campos —nombre, cargo,
+correo, teléfono— pasaron las cuatro preguntas (finalidad, plazo, quién lo ve, categoría especial) y
+están contestadas una a una en la cabecera de la entidad, con la base escrita: el art. 19 de la
+LOPDGDD ampara los datos de contacto de quien presta servicios en una persona jurídica **siempre que
+se refieran a esa actividad**. Eso cubre el teléfono del departamento de compras; **no cubre el móvil
+personal de nadie**, y como el modelo no puede distinguir un número de otro, lo que hace es no
+invitar a guardarlo —un solo teléfono, el del puesto—. El campo de notas se descarta porque un `text`
+libre en la ficha de una persona es donde acaban «está de baja», «es el yerno del dueño» y «no lo
+llames los viernes»: categorías especiales que **ninguna** de las cuatro preguntas podría contestar.
+Cuando haga falta anotar el trato comercial, su sitio es el CRM del §7.11.
+
+**6. La tabla de longitudes del IBAN es la zona SEPA —37 países—, no el registro entero de la ISO.**
+Aceptar los más de ochenta del registro haría creer que esta instalación puede domiciliar un adeudo
+contra cualquiera de ellos, y es falso: fuera de SEPA hace falta una transferencia internacional, con
+su comisión y su plazo. Añadir un país es cambiar la tabla, con su motivo. Los territorios de ultramar
+no llevan código propio y por eso no aparecen.
+
+**7. El barrido de datos con forma de real declara lo que se PERMITE, no lo que se prohíbe.** Es la
+decisión de diseño de `NingunDatoConFormaDeRealTests` y sale de la propia restricción del encargo: una
+lista de valores prohibidos tendría que llevarlos escritos, y **escribir un IBAN real para prohibirlo
+es exactamente el daño que se está evitando** —«tampoco para señalarlos»—. Así que cada forma declara
+su espacio inventado y todo lo que tenga la forma y esté fuera es rojo. Por lo mismo, los mensajes de
+fallo dan fichero, línea y forma **enmascarada**: un registro de CI que imprime lo que ha cazado
+contiene justo lo que la regla existe para sacar del repositorio.
+
+**8. Las siete escrituras nuevas exigen `If-Match` y ninguna admite `Idempotency-Key`.** No son altas
+de un recurso con vida propia: son modificaciones de un agregado que ya existe, y citan **el testigo
+de la ficha**, no uno suyo. De ahí que las entidades hijas no lleven testigo de concurrencia propio —
+colgar un contacto mientras otro cambia la razón social es un choque de verdad y se quiere que la
+segunda escritura se lleve el `412`—. El censo se mueve **+11 acciones, +7 escrituras, +7 `If-Match`,
+cero idempotencia y cero exenciones**, y esa forma del movimiento es la comprobación de que la
+decisión se aplicó: si alguna hubiera acabado en el cajón de las exentas, se vería.
+
+**9. Un controlador para lo que cuelga, no cuatro.** `LoQueCuelgaDelTerceroController` monta las once
+rutas bajo `/terceros/{terceroId:guid}/…`. Son subrecursos de **una** ficha y comparten el
+`[Route]`, la versión que exigen y el 404 de la ficha inexistente; partirlo en cuatro habría
+duplicado esas tres cosas cuatro veces. La regla que vigila que escribir y modificar no compartan
+permiso sigue cumpliéndose porque los permisos son **siete**, uno por escritura, no uno por
+controlador.
+
+**10. `ObtenerConLoQueCuelgaAsync` es un método aparte del repositorio, no un `Include` metido en el
+de siempre.** Cargar las tres colecciones en toda lectura de un tercero son tres consultas por nada
+en el caso común —el listado, la ficha, el límite de crédito—. Y al revés, operar sobre el agregado
+**sin** sus hijos es peor que lento: `AgregarCuentaBancaria` decidiría sobre una lista vacía y creería
+que no hay ninguna preferente. Los dos caminos existen y cada uno dice cuál usa.
+
+**11. Las tres tablas del censo del 0.9 se han rehecho enteras, y el motivo es una lección.** Llevaban
+desde el **0.10** con sus números —46 acciones, 13 · 6 · 13— mientras el test iba subiendo hasta 93 y
+30 · 13 · 17. Nada se puso rojo porque **una tabla en un `.md` no es una fuente que ningún test
+compare**: es prosa, y la prosa no falla. Es la misma familia que el «antes» mal medido de los
+`act()` del 1.5, y la salida es la misma que allí: la cifra que se publica va con lo que la produce.
+Aquí, con la lista enumerada al lado del número, para que la próxima copia se pueda contrastar.
+
+**12. Ninguna dependencia nueva, y la frase sale del diff.** Conjuntos de paquetes **resueltos** de
+todos los `packages.lock.json` a los dos lados: **150 en `main` y 150 en la rama**, sin una sola
+entrada de diferencia en ninguno de los dos sentidos. Los `.csproj` que cambian mueven la referencia
+a Npgsql a `BuildingBlocks.Infrastructure` —que ya estaba en el grafo por transitividad—, y
+`Directory.Packages.props`, `frontend/package.json` y `package-lock.json` no se tocan. **No hay
+licencias que comprobar porque no hay paquete que comprobar.**
+
+
 ## Estado actual
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
@@ -3063,6 +3227,145 @@ punto de partida, pero se midieron sobre un árbol que ya llevaba el código del
 main limpio salen **109 en siete**, que es la misma cifra que el «después» de aquel ítem: los
 dieciocho avisos **no los trajo el 1.5**. La comparación de entonces no demostraba lo que decía —
 que es exactamente el motivo por el que la regla se escribió.
+
+**Ítem 1.6, segunda mitad — lo que cuelga del tercero.** Tres entidades hijas (`Contacto`,
+`CuentaBancaria`, `CondicionPago`), un valor opcional en la propia ficha (`LimiteCredito`) y el
+régimen fiscal del §7.2. Once casos de uso, un controlador, once rutas nuevas y siete permisos.
+
+- **El IBAN se valida de verdad, y la batería prueba las tres negativas por separado.** `Iban` vive
+  en `BuildingBlocks.Domain.Identificacion`, al lado de `Nif`: mod-97-10 sobre la cadena reordenada
+  con las letras convertidas a dígitos, **más la longitud por país**, que no es la misma en todos.
+  La tabla son los **37 países de la zona SEPA** y no el registro entero de la ISO, con el motivo
+  escrito: aceptar los ochenta y pico haría creer que esta instalación puede domiciliar un adeudo
+  contra cualquiera de ellos. Los casos se generan **con su control calculado** —`IbanesInventados`—
+  y se ejercen en las dos direcciones: que acepte los válidos de los 37 países, y que rechace **por
+  cada motivo distinto** con su caso propio (`Un_control_cambiado_se_rechaza`,
+  `Una_longitud_de_otro_pais_se_rechaza_aunque_el_control_cuadre`,
+  `Un_pais_que_no_existe_se_rechaza_aunque_el_control_cuadre`). Un negativo genérico habría pasado
+  con cualquiera de las tres comprobaciones puesta y las otras dos quitadas.
+- **El barrido del 1.5 se extiende al IBAN, y cambia de forma para poder hacerlo.**
+  `NingunDatoConFormaDeRealTests` es una **lista cerrada de formas** —hoy dos: IBAN e identificador
+  fiscal español— comparada entera en los dos sentidos contra los detectores implementados, con su
+  afirmación de que cada detector encuentra algo y de que el barrido está leyendo ficheros de verdad.
+  La decisión de diseño está escrita en su cabecera: **la lista se declara por lo que se PERMITE**,
+  no por lo que se prohíbe, porque una lista de valores prohibidos tendría que llevarlos escritos —y
+  escribir un IBAN real para prohibirlo es exactamente el daño—. Cada forma declara su **espacio
+  inventado** y todo lo que tenga la forma y esté fuera es rojo. Por lo mismo, **los mensajes no
+  publican lo que encuentran**: fichero, línea y forma enmascarada, porque un registro de CI que
+  imprime el IBAN cazado contiene justo lo que la regla existe para sacar del repositorio.
+- **Los sesenta días son un invariante del dominio, no un valor por omisión.** `CondicionPago`
+  guarda **el plazo** —`DiasMaximosDePlazo = 60`— y lo exige el dominio lanzando, la aplicación
+  adelantándolo como error de campo para que se pueda explicar, y la base con
+  `ck_condiciones_pago_plazo_legal`. Tres sitios, y el que manda es el del dominio: la interfaz que
+  no ofrece 90 no impide guardarlo desde una importación de CSV o desde un test. Los dos lados del
+  límite se prueban **en el mismo fichero** (`[InlineData(0, 30, 60)]` acepta,
+  `[InlineData(61, 90, 120)]` rechaza), para que un `>` escrito donde va un `>=` no se pueda
+  esconder. **Y aquí no se calcula ningún vencimiento:** Terceros no tiene entregas.
+- **Hasta dónde llega el invariante, dicho sin exagerarlo.** Con `DiaDePagoFijo` puesto, la fecha
+  efectiva de pago **puede pasar de 60 días** aunque el plazo guardado sean 30: un plazo de 30 días
+  sobre una entrega del día 2, redondeado al día de pago 25 del mes siguiente, se va más allá. Esa
+  comprobación es de donde se calcula el vencimiento —la fase 3— y allí tiene que **recortar al día
+  60**, no rechazar. Escribirlo aquí sería computar fechas, que es meterse en la fase 3; callarlo
+  sería dejar creer que el tope está cerrado por este ítem, y no lo está.
+- **`LimiteCredito` lleva su divisa, y no la hereda.** Es un `Importe?` —`numeric(18,4)` más el
+  código ISO, nunca coma flotante ni el `money` del motor—, con `ck_terceros_limite_credito_completo`
+  para que las dos columnas estén o falten juntas. La alternativa era heredar `Empresa.DivisaBase`
+  (el campo se llama así; **`DivisaPreferidaId` no existe**, y era el nombre que traía la nota), y se
+  descarta por su **modo de fallo mudo**: el día que alguien cambie la divisa base de la empresa,
+  todos los límites guardados cambiarían de significado sin que se toque una sola fila y sin que
+  falle nada. Lo que la pantalla ofrezca por omisión es otra cosa y es de la pantalla. Consumo,
+  disponible y bloqueo por exceso **no son de este ítem**: esa es la raya de P6.
+- **Una sola cuenta preferente por tercero, y es una restricción.** Índice único parcial
+  `ix_cuentas_bancarias_una_preferente_por_tercero` sobre `(tercero_id)` con filtro `es_preferente`,
+  más el invariante en el agregado: la primera cuenta nace preferente, marcar otra degrada a la
+  anterior y quitar la preferente promueve a otra. **¿La restricción ve las filas bloqueadas? Es la
+  misma decisión del 1.5** —la de (empresa, NIF)—: el índice es de la base y no conoce el filtro
+  global, así que las ve todas. Y aquí, además, **no podría ser de otra manera y eso es lo
+  interesante**: el bloqueo del art. 32 vive en el **padre**, no en la cuenta, así que dos cuentas
+  que compiten por ser la preferente están siempre en el mismo estado. La pregunta que en el 1.5
+  tenía dos respuestas posibles, aquí solo tiene una.
+- **El régimen fiscal entra, con el corte que se sostiene — tres de cuatro.** Está en el §7.2 del
+  plan maestro y se quedó sin ítem al desglosar la fase: alcance comprometido sin casa, y su sitio es
+  el tercero. `RegimenFiscal` es un valor con `TerritorioFiscal` (cinco valores, `CHECK`
+  `ck_terceros_territorio_fiscal`) y tres booleanos: recargo de equivalencia, criterio de caja y
+  sujeto a retención de IRPF. **El corte se sostiene porque los cuatro son hechos declarados del
+  tercero**, no resultados de un cálculo — que un minorista esté en recargo de equivalencia es algo
+  que él dice y que su ficha registra, igual que su domicilio. **Lo que NO entra, y se dice: el tipo
+  de retención.** Ese sí es un valor sin significado sin la regla que lo aplica, y además ya tiene
+  dueño desde el 1.2 (`Impuesto` con `TipoDeImpuesto.Retencion`), así que ponerlo aquí obligaría a
+  declarar un cruce entre módulos (ADR-0024) — bastante más que «el campo y nada más». El booleano
+  dice *si* se le retiene; *cuánto* es de quien ya lo sabe.
+- **Los tres universos del 1.3 y el 1.4 miraron solos, sin que hubiera que apuntarlos**, que era la
+  prueba: la tabla de enrutado descubrió las once rutas nuevas (`TodaEscrituraDiceComoSeProtege`
+  pasó de 82 a 93 acciones y puso rojo `El_barrido_encuentra_el_inventario_entero`), el testigo de
+  versión en el cuerpo siguió verde porque ninguno de los cuatro DTO nuevos lo lleva, y el criterio
+  sensible en la URL **no necesitó ni una línea nueva en el censo**: `iban` ya estaba en
+  `s_sensibles` desde el 1.3, y **no se ha añadido ninguna ruta que busque por IBAN**. Si algún día
+  se busca por él, va por cuerpo.
+- **Y una regla del carril que NO se ha podido ver roja en local, dicha como tal.**
+  `EsquemaDeTercerosTests` compara la lista de tablas del esquema **entera** y afirma que no hay
+  **ninguna** clave ajena; con tres tablas nuevas y sus tres claves en cascada, iba a ponerse roja
+  por partida doble en la CI. La vigilancia funcionó —nadie tuvo que apuntarla— pero **está en el
+  carril de integración**, así que aquí se detectó leyéndola, no ejecutándola. Aprovechando que es
+  el único sitio que ve la base de verdad, se ha extendido de 5 casos a 15: el índice **parcial** de
+  la cuenta preferente (contrastado a propósito con el del identificador, que no puede llevar
+  predicado), la unicidad de (tercero, IBAN) —y **no** global, porque la misma cuenta puede ser de
+  dos terceros—, los tres `CHECK`, el valor 60 del tope escrito en el suyo, las cuatro columnas del
+  régimen y las dos del límite con su escala, el `ON DELETE CASCADE` de los tres hijos por el
+  derecho de supresión, y la regla de `NOT NULL` **sin `DEFAULT`** sobre las cuatro columnas que
+  este ítem añadió a una tabla con filas dentro — que es exactamente la que dice si la migración de
+  tres pasos hizo lo que promete. Y se dice lo que **no** son: leen la definición de la restricción,
+  no meten una fila para ver si muerde. Cazan que se borre o se escriba mal, no un motor que la
+  ignore.
+- **Y dos reglas más se pusieron rojas sin que nadie las llamara**, las dos por lo mismo —una
+  entidad nueva es un compromiso que hay que declarar en varios sitios—: `ElGlosarioDelDominioTests`
+  exigió las tres filas de las entidades hijas, y
+  `CadaAccionDeclaraSuPermisoTests.Escribir_y_modificar_no_comparten_permiso` cazó que
+  `terceros.tercero.modificar` estaba abriendo **ocho** acciones. De ahí los siete permisos nuevos,
+  uno por escritura, cada uno con su motivo escrito.
+
+**Los `Idempotency-Key` no se mueven, y eso es la mitad del resultado.** El ítem suma **+11
+acciones**, **+7 que cambian estado**, **+7 `If-Match`**, y **cero** al cajón de idempotencia y cero
+al de las exentas. Las siete escrituras nuevas son modificaciones de un agregado que ya existe, no
+altas de un recurso nuevo, así que el mecanismo que les toca es el otro —y las tablas del 0.9, que
+llevaban desde el 0.10 sin rehacerse, se han rehecho enteras en *Decisiones tomadas → ítem 0.9*.
+
+Carril rápido en local con el ítem entero, con el comando que lo mide —**el mismo del *workflow***,
+que es lo que `AGENTS.md` exige desde el 1.3—:
+
+```
+dotnet test Bastion.sln --filter "Category!=Integracion" \
+  --logger trx --results-directory artifacts/test-results/dominio
+bash scripts/ci/recuento-de-tests.sh artifacts/test-results/dominio \
+  "Dominio y arquitectura" 300 "<los ocho ensamblados de ci.yml>"
+
+Dominio y arquitectura: 624 casos (624 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+  — BuildingBlocks.UnitTests 132, Identidad.UnitTests 58, Terceros.UnitTests 77,
+    Organizacion.UnitTests 182, Organizacion.IntegrationTests 4, Api.FunctionalTests 136,
+    Arquitectura.Tests 31, Api.IntegrationTests 4
+```
+
+Contra los **576 en 8 ensamblados** de `main` al abrir la rama (`e3a9e9e`): **+48 casos**, y el
+reparto dice de dónde sale cada uno — Terceros.UnitTests 39→77 (los 27 de lo que cuelga y los 11 de
+la batería del IBAN), Arquitectura.Tests 23→31 (las tres del art. 32, la del puerto y las cuatro del
+barrido de datos con forma de real), Api.IntegrationTests 1→4 y Organizacion.IntegrationTests 5→4
+(el caso que se mudó de proyecto). Lo demás no se mueve.
+
+**Integración no se ha podido ejercer en local, y esta es la firma:** `docker info` responde, pero
+`docker version` contesta `failed to connect to the docker API at
+npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running:
+open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.` — el cliente está
+instalado y el demonio no arranca en esta máquina.
+
+**Lo que se ejerció en su lugar, y lo que queda para el run.** En lugar de los tests que necesitan
+contenedor: `scripts/comprobar-migraciones.sh` (el modelo no tiene cambios pendientes y la migración
+cuadra con él), `CadaEntidadDeclaraSuAuditoriaTests` en el carril rápido (las cuatro configuraciones
+nuevas declaran la auditoría de **cada** propiedad), los 27 casos de `LoQueCuelgaDelTerceroTests`
+sobre los invariantes del agregado, y la compilación del proyecto de integración con sus 15 casos de
+esquema nuevos, que al menos garantiza que las consultas están escritas y el ensamblado carga. **Lo
+que solo el run puede decir** es lo que de verdad falta: que la migración se **aplique** —los tres
+pasos de añadir, rellenar y cerrar—, que los tres `CHECK` y el índice parcial estén en la base
+después de aplicarla, y que los 15 casos nuevos pasen. Se dice antes de empujar, no después.
 
 **Ítem 1.5 cerrado — el agregado, su identidad fiscal, y un conflicto que no revela:**
 run **34046817118** sobre `279b8c7`, **success**, con **3 jobs contados en el propio run**
@@ -5903,14 +6206,14 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
-- **ABIERTO (2026-09-05, ítem 1.5) · el conflicto no revela, pero DOS respuestas juntas sí.** El alta
-  contra un identificador ocupado contesta lo mismo esté la ficha activa o bloqueada, y eso está
-  comparado entero. Lo que queda abierto es la **correlación**: quien tenga a la vez
-  `terceros.tercero.ver` y `terceros.tercero.crear` puede buscar el identificador —`POST .../buscar`
-  no lo encuentra, porque una consulta ordinaria no ve lo bloqueado— y luego intentar el alta, que
-  contesta 409. «No aparece y sin embargo está ocupado» solo significa una cosa. **No entra en el
-  criterio del 1.5**, que habla de una respuesta, y cerrarlo pide una decisión de las de preguntar:
-  separar los dos permisos, o que la búsqueda mienta igual que el alta. Se anota, no se tapa.
+- **TRASLADADA A *DECISIONES* (2026-09-07, ítem 1.6) · el conflicto no revela, pero DOS respuestas
+  juntas sí.** El hecho sigue siendo el que se anotó en el 1.5 y no ha cambiado: la búsqueda no
+  encuentra lo bloqueado, el alta contesta `409` igual esté la ficha activa o bloqueada, y quien
+  tenga los dos permisos deduce lo que ninguna de las dos respuestas dice por separado. Deja de estar
+  aquí porque **no es un riesgo que se descubra**: es un cruce conocido, medido y con las tres
+  salidas posibles escritas —separar permisos, que la búsqueda mienta, o que el alta deje de
+  distinguir— cada una con lo que cuesta. Ninguna la puede tomar el agente, así que la pregunta queda
+  planteada entera en *Decisiones tomadas → ítem 1.6*, decisión **1**.
 
 - **CERRADA (2026-09-07, ítem 1.6) · un tercero bloqueado no aparecía en NINGÚN listado — y un
   usuario bloqueado tampoco, desde el 1.4.** La nota se abrió en el 1.5 mirando a `Tercero` y **se
@@ -5922,12 +6225,15 @@ cuando hace falta el porqué.
   1.2: cada módulo que bloquea contesta por lo suyo y el listado compone. **ADR-0031**, y el detalle
   en *Estado actual* → *Ítem 1.6*.
 
-- **ABIERTO (2026-09-05, ítem 1.5) · el régimen fiscal del §7.2 no está en el criterio de ningún
-  ítem.** El modelo de dominio del plan maestro se lo pone a `Tercero`. El criterio escrito del 1.5 no
-  lo nombra y el del 1.6 tampoco —enumera `Contacto`, `CuentaBancaria`, `CondicionPago` y
-  `LimiteCredito`—. El checklist no se amplía por iniciativa propia, así que queda como **pregunta**:
-  si es del 1.6, hay que escribirlo allí; si es de facturación, hay que decir de qué fase. Lo que no
-  puede quedarse es sin dueño, porque entonces se descubre el día que haya que emitir una factura.
+- **CERRADA (2026-09-07, ítem 1.6) · el régimen fiscal del §7.2 ya tiene ítem, y es el 1.6.** Era una
+  pregunta —«si es del 1.6 hay que escribirlo allí; si es de facturación, de qué fase»— y se contesta
+  por lo que era: **alcance comprometido sin casa**, no alcance nuevo. Su sitio es el tercero, y
+  dejarlo para la fase 3 obligaría a migrar un maestro con datos dentro. Entra con el corte de
+  `LimiteCredito` —lista cerrada de valores con su `CHECK` y ningún comportamiento— y el corte se
+  sostiene en **tres condiciones de cuatro**: territorio, recargo de equivalencia, criterio de caja y
+  el booleano de si se le retiene. **El tipo de retención se queda fuera**, y ese es el trozo donde el
+  corte no aguantaba: no significa nada sin la regla que lo aplica, y ya tiene dueño desde el 1.2.
+  Razonamiento entero en *Decisiones tomadas → ítem 1.6*, decisión **2**.
 
 - **ABIERTO (2026-09-04, recontado el 2026-09-05) · los tests del frontal sueltan 109 avisos de
   `act(...)`, en SIETE ficheros.** `An update to <X> inside a test was not wrapped in act(...)` sale
