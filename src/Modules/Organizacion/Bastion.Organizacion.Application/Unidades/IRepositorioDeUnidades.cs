@@ -35,6 +35,28 @@ public interface IRepositorioDeConversiones : IOrdenaPor
     /// <summary>Indica si ese par de unidades ya tiene conversión.</summary>
     Task<bool> ExisteAsync(Guid unidadOrigenId, Guid unidadDestinoId, CancellationToken cancelacion);
 
+    /// <summary>La conversión declarada para ese par, o nula si no hay ninguna.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Trae las retiradas también</b>, y eso es la decisión 2 del ítem 1.7 traducida a una
+    /// consulta. Sus dos clientes la necesitan así: el resolutor, porque una fila retirada «sigue
+    /// resolviendo» —es literalmente lo que sigue haciendo—; y la comprobación de la inversa,
+    /// porque si retirar una fila la sacara de la comprobación, retirar el sentido incómodo sería
+    /// la manera de declarar cualquier número en el otro.
+    /// </para>
+    /// <para>
+    /// El par es la identidad de la fila —hay un índice único sobre él—, así que devuelve una o
+    /// ninguna, no una lista.
+    /// </para>
+    /// </remarks>
+    /// <param name="unidadOrigenId">Unidad de la que se parte.</param>
+    /// <param name="unidadDestinoId">Unidad a la que se llega.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<ConversionUM?> DelParAsync(
+        Guid unidadOrigenId,
+        Guid unidadDestinoId,
+        CancellationToken cancelacion);
+
     /// <summary>Una página de conversiones, con el total.</summary>
     Task<PaginaDe<ConversionUM>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion);
 

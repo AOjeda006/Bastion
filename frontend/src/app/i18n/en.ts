@@ -63,6 +63,9 @@ export const en: Diccionario = {
       'codigo-de-rol-ya-usado': 'There is already a role with that code. Pick another one.',
       'contrasena-actual-incorrecta': 'Your current password is not correct.',
       'conversion-um-duplicada': 'There is already a conversion between those two units.',
+      'conversion-um-inversa-implausible':
+        'The opposite direction is already declared and that factor is not its inverse.',
+      'conversion-um-no-declarada': 'No conversion is declared between those two units. Add one.',
       'conversion-um-no-encontrada': 'That unit conversion no longer exists.',
       'correo-ya-registrado': 'There is already an account with that email address.',
       'credenciales-no-validas': 'The email address or the password is not correct.',

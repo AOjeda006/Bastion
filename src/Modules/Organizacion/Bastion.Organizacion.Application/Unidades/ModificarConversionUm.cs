@@ -51,6 +51,22 @@ internal sealed class ModificarConversionUm(
 
         versiones.Exigir(conversion, version);
 
+        // La misma comprobación que en el alta, y NO es un extra. Si se da de alta A→B, luego B→A,
+        // y después alguien modifica la primera, el par vuelve a poder contradecirse: una regla que
+        // solo mirase el alta deja pasar exactamente el camino por el que se rompe. Se compara
+        // contra la inversa TAL COMO ESTÉ en este momento, retirada incluida.
+        ConversionUM? inversa = await conversiones
+            .DelParAsync(conversion.UnidadDestinoId, conversion.UnidadOrigenId, cancelacion)
+            .ConfigureAwait(false);
+
+        Resultado plausible = LaInversaEsPlausible.Comprobar(
+            inversa, ConversionUM.RedondearFactor(peticion.Factor));
+
+        if (!plausible.EsCorrecto)
+        {
+            return Resultado.Fallo<ConversionUmDto>(plausible.Error!);
+        }
+
         conversion.Modificar(peticion.Factor);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 

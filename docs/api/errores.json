@@ -6,6 +6,8 @@
     { "codigo": "codigo-de-rol-ya-usado", "type": "/errors/codigo-de-rol-ya-usado", "clase": "Conflicto" },
     { "codigo": "contrasena-actual-incorrecta", "type": "/errors/contrasena-actual-incorrecta", "clase": "Validacion" },
     { "codigo": "conversion-um-duplicada", "type": "/errors/conversion-um-duplicada", "clase": "Conflicto" },
+    { "codigo": "conversion-um-inversa-implausible", "type": "/errors/conversion-um-inversa-implausible", "clase": "Conflicto" },
+    { "codigo": "conversion-um-no-declarada", "type": "/errors/conversion-um-no-declarada", "clase": "NoEncontrado" },
     { "codigo": "conversion-um-no-encontrada", "type": "/errors/conversion-um-no-encontrada", "clase": "NoEncontrado" },
     { "codigo": "correo-ya-registrado", "type": "/errors/correo-ya-registrado", "clase": "Conflicto" },
     { "codigo": "credenciales-no-validas", "type": "/errors/credenciales-no-validas", "clase": "NoAutenticado" },

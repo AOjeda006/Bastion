@@ -76,6 +76,18 @@ internal sealed class RepositorioDeConversiones(OrganizacionDbContext contexto)
                 && conversion.UnidadDestinoId == unidadDestinoId,
             cancelacion);
 
+    // Sin `IgnoreQueryFilters` y sin filtrar por retirada: el par es la identidad de la fila, y
+    // una retirada SIGUE resolviendo. Es lo que necesitan sus dos clientes —el resolutor y la
+    // comprobación de la inversa— y está decidido por escrito (ítem 1.7, decisión 2).
+    public Task<ConversionUM?> DelParAsync(
+        Guid unidadOrigenId,
+        Guid unidadDestinoId,
+        CancellationToken cancelacion) =>
+        contexto.ConversionesDeUnidades.FirstOrDefaultAsync(
+            conversion => conversion.UnidadOrigenId == unidadOrigenId
+                && conversion.UnidadDestinoId == unidadDestinoId,
+            cancelacion);
+
     // Sin filtro de texto: una conversión son dos identificadores y un factor, y no hay ningún
     // texto que buscar.
     private static readonly CriteriosDe<ConversionUM> s_criterios = new()

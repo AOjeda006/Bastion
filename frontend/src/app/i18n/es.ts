@@ -84,6 +84,10 @@ export const es = {
       'codigo-de-rol-ya-usado': 'Ya hay un rol con ese código. Elige otro.',
       'contrasena-actual-incorrecta': 'La contraseña actual no es correcta.',
       'conversion-um-duplicada': 'Ya hay una conversión entre esas dos unidades.',
+      'conversion-um-inversa-implausible':
+        'El sentido contrario ya está declarado y ese factor no es su inverso.',
+      'conversion-um-no-declarada':
+        'No hay conversión declarada entre esas dos unidades. Dala de alta.',
       'conversion-um-no-encontrada': 'Esa conversión de unidades ya no existe.',
       'correo-ya-registrado': 'Ya hay una cuenta con ese correo electrónico.',
       'credenciales-no-validas': 'El correo o la contraseña no son correctos.',

@@ -63,6 +63,24 @@ internal sealed class CrearConversionUm(
                 "otra: dos factores para el mismo par convertirían la misma cantidad a dos valores."));
         }
 
+        // ADR-0023, decisión 2: si la fila del sentido contrario está declarada, este factor tiene
+        // que ser su inversa dentro del margen que impone la escala. Se lee POR EL PAR y no por
+        // identificador, y trae también las retiradas — una fila retirada sigue resolviendo, así
+        // que sigue siendo verdad y sigue restringiendo (decisión 2 del ítem 1.7).
+        ConversionUM? inversa = await conversiones
+            .DelParAsync(peticion.UnidadDestinoId, peticion.UnidadOrigenId, cancelacion)
+            .ConfigureAwait(false);
+
+        // Con el factor YA redondeado: es el número que se va a guardar, y el ADR compara los dos
+        // sentidos «ambos ya redondeados a seis decimales».
+        Resultado plausible = LaInversaEsPlausible.Comprobar(
+            inversa, ConversionUM.RedondearFactor(peticion.Factor));
+
+        if (!plausible.EsCorrecto)
+        {
+            return Resultado.Fallo<ConversionUmDto>(plausible.Error!);
+        }
+
         var conversion = ConversionUM.Crear(
             peticion.UnidadOrigenId, peticion.UnidadDestinoId, peticion.Factor, reloj.GetUtcNow());
 
