@@ -44,8 +44,14 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
     private const string OtroIbanInventado = "ES8200000000000000000000";
     private const string IbanConElControlMal = "ES7999999999999999999999";
 
+    // Los dos desenlaces del choque, declarados en `RegistroDeSucesos.Observados`.
+    private const int SucesoDelChoque = 8500;
+    private const int SucesoDelChoqueSinVersion = 8501;
+
     private readonly ApiDeVerdad _api = new(postgres);
     private readonly List<HttpClient> _clientes = [];
+
+    static ContratoDeLoQueCuelgaTests() => RegistroDeSucesos.Olvidar();
 
     public void Dispose()
     {
@@ -273,7 +279,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             "condiciones-pago/Cliente",
             new CondicionPagoDeAltaDto { DiasDePlazo = 60 });
 
-        respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(respuesta));
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(respuesta));
 
         CondicionPagoDto fijada =
             (await respuesta.Content.ReadFromJsonAsync<CondicionPagoDto>())!;
@@ -306,7 +312,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             "cuentas-bancarias",
             new CuentaBancariaDeAltaDto { Iban = IbanInventado, EsPreferente = true }))
         {
-            primera.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(primera));
+            primera.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(primera));
         }
 
         using (HttpResponseMessage segunda = await EscribirAsync(
@@ -316,7 +322,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             "cuentas-bancarias",
             new CuentaBancariaDeAltaDto { Iban = OtroIbanInventado, EsPreferente = true }))
         {
-            segunda.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(segunda));
+            segunda.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(segunda));
         }
 
         IReadOnlyList<CuentaBancariaDto> cuentas = await CuentasAsync(cliente, tercero.Id);
@@ -347,7 +353,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             "cuentas-bancarias",
             new CuentaBancariaDeAltaDto { Iban = IbanInventado }))
         {
-            primera.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(primera));
+            primera.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(primera));
         }
 
         using HttpResponseMessage repetida = await EscribirAsync(
@@ -419,7 +425,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             antes,
             JsonContent.Create(new ContactoDeAltaDto { Nombre = "Persona de contacto" })))
         {
-            colgado.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(colgado));
+            colgado.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(colgado));
         }
 
         string despues = await cliente.EtiquetaDeAsync(ficha);
@@ -462,7 +468,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             "contactos",
             new ContactoDeAltaDto { Nombre = "Persona de contacto", Cargo = "Compras" }))
         {
-            alta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(alta));
+            alta.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(alta));
             colgado = (await alta.Content.ReadFromJsonAsync<ContactoDto>())!;
         }
 
@@ -473,7 +479,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
         using (HttpResponseMessage baja = await EscribirAsync(
             cliente, tercero.Id, HttpMethod.Delete, $"contactos/{colgado.Id}"))
         {
-            baja.StatusCode.ShouldBe(HttpStatusCode.NoContent, await Escenario.Detalle(baja));
+            baja.StatusCode.ShouldBe(HttpStatusCode.NoContent, await DetalleAsync(baja));
         }
 
         (await ContactosAsync(cliente, tercero.Id)).ShouldBeEmpty();
@@ -504,7 +510,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             HttpMethod.Post,
             $"cuentas-bancarias/{segunda.Id}/preferente"))
         {
-            ascenso.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(ascenso));
+            ascenso.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(ascenso));
         }
 
         IReadOnlyList<CuentaBancariaDto> cuentas = await CuentasAsync(cliente, tercero.Id);
@@ -538,12 +544,116 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             HttpMethod.Delete,
             $"cuentas-bancarias/{primera.Id}"))
         {
-            baja.StatusCode.ShouldBe(HttpStatusCode.NoContent, await Escenario.Detalle(baja));
+            baja.StatusCode.ShouldBe(HttpStatusCode.NoContent, await DetalleAsync(baja));
         }
 
         IReadOnlyList<CuentaBancariaDto> cuentas = await CuentasAsync(cliente, tercero.Id);
 
         cuentas.Select(cuenta => cuenta.Id).ShouldBe([segunda.Id]);
+    }
+
+    /// <summary>
+    /// Un choque de verdad deja en la traza <b>qué</b> chocó y en qué estado, con su traza — y sin
+    /// un solo valor dentro.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Esto no es instrumentación de un fallo concreto: es el agujero de la política de errores,
+    /// cerrado.</b> Un 412 es de las pocas respuestas que no puede llevar dentro por qué pasó —el
+    /// cuerpo dice «alguien guardó antes», nunca <b>qué</b> chocó—, así que el único sitio donde
+    /// eso puede constar es la traza. Y el cuerpo publica un <c>traceId</c> justamente para que
+    /// alguien lo pegue y aparezca la petición: sin esta anotación, ese <c>traceId</c> era una
+    /// promesa que el sistema no cumplía, y cada choque futuro volvía a ser un misterio.
+    /// </para>
+    /// <para>
+    /// <b>Y afirma también lo que NO puede llevar.</b> Entre lo que puede chocar hay tablas con
+    /// datos personales; un volcado de valores publicaría el teléfono de alguien en un registro
+    /// que se agrega y se conserva. Por eso se comprueban las dos mitades: que el mensaje nombra
+    /// la entidad y su estado, y que no lleva ni el identificador fiscal ni la razón social.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Un_choque_de_verdad_deja_en_la_traza_QUE_choco_y_en_que_estado()
+    {
+        RegistroDeSucesos.Olvidar();
+
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(Escenario.NifInventado(145));
+        string numero = Escenario.NifInventado(31_000_015);
+        TerceroDto tercero = await CrearAsync(cliente, numero);
+        string ficha = $"{Terceros}/{tercero.Id}";
+
+        // La etiqueta de antes de tocar nada, que es la que va a quedar caducada.
+        string vieja = await cliente.EtiquetaDeAsync(ficha);
+
+        using (HttpResponseMessage primera = await cliente.EnviarConVersionAsync(
+            HttpMethod.Put, ficha, vieja, JsonContent.Create(Modificacion("Razón cambiada"))))
+        {
+            primera.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(primera));
+        }
+
+        // Y ahora la misma etiqueta otra vez: este es el choque que el diseño espera.
+        using HttpResponseMessage choque = await cliente.EnviarConVersionAsync(
+            HttpMethod.Put, ficha, vieja, JsonContent.Create(Modificacion("Razón pisada")));
+
+        choque.StatusCode.ShouldBe(
+            HttpStatusCode.PreconditionFailed, await Escenario.Detalle(choque));
+
+        JsonElement problema = await Problema(choque);
+        string traza = problema.GetProperty("traceId").GetString()!;
+
+        // Con testigo, el cuerpo SÍ puede decir la versión de ahora: es el desenlace 8500.
+        problema.TryGetProperty("versionActual", out _).ShouldBeTrue(
+            "un choque contra una entidad CON testigo tiene que poder decir la versión actual");
+
+        IReadOnlyList<RegistroDeSucesos.Suceso> anotados = RegistroDeSucesos.Con(SucesoDelChoque);
+
+        anotados.Count.ShouldBe(
+            1,
+            "el choque tiene que dejar su anotación. Si no hay ninguna, lo primero que hay que " +
+            "mirar es el captador y no la traza: `RegistroDeSucesos` solo recoge lo declarado en " +
+            "`Observados`");
+
+        string dicho = anotados[0].Mensaje;
+
+        dicho.ShouldContain(
+            "Tercero:Modified",
+            customMessage:
+            "la anotación tiene que decir QUÉ chocó y en qué estado iba; sin eso, el choque " +
+            "siguiente vuelve a ser un misterio");
+        dicho.ShouldContain(
+            traza,
+            customMessage:
+            "y tiene que llevar la MISMA traza que el cuerpo publica, que es lo que hace que " +
+            "pegar el traceId sirva para algo");
+
+        // Nombres y estados, ningún valor. La otra mitad de la regla.
+        dicho.ShouldNotContain(numero);
+        dicho.ShouldNotContain("Razón cambiada");
+        dicho.ShouldNotContain("Razón pisada");
+    }
+
+    private static ModificarTerceroDto Modificacion(string razonSocial) => new()
+    {
+        RazonSocial = razonSocial,
+        DomicilioFiscal = Escenario.Domicilio(),
+        EsCliente = true,
+        EsProveedor = true,
+    };
+
+    // El detalle de siempre MÁS lo que la API anotó por dentro sobre choques. Un 412 no puede
+    // decir en el cuerpo qué chocó, así que cuando una escritura que debía salir bien devuelve
+    // 412, el mensaje del fallo tiene que traerlo de la traza o no hay por dónde empezar.
+    private static async Task<string> DetalleAsync(HttpResponseMessage respuesta)
+    {
+        string detalle = await Escenario.Detalle(respuesta);
+
+        IEnumerable<RegistroDeSucesos.Suceso> choques =
+            [.. RegistroDeSucesos.Con(SucesoDelChoque),
+             .. RegistroDeSucesos.Con(SucesoDelChoqueSinVersion)];
+
+        string anotado = string.Join(" | ", choques.Select(suceso => suceso.Mensaje));
+
+        return string.IsNullOrEmpty(anotado) ? detalle : $"{detalle} — anotado: {anotado}";
     }
 
     private async Task<HttpClient> EnUnaEmpresaNuevaAsync(string nif)
@@ -626,7 +736,7 @@ public sealed class ContratoDeLoQueCuelgaTests(PostgresConTodosLosModulos postgr
             "cuentas-bancarias",
             new CuentaBancariaDeAltaDto { Iban = iban, EsPreferente = preferente });
 
-        respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(respuesta));
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await DetalleAsync(respuesta));
 
         return (await respuesta.Content.ReadFromJsonAsync<CuentaBancariaDto>())!;
     }

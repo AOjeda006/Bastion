@@ -67,6 +67,19 @@ omitidos=0
 desglose=""
 ENCONTRADOS=()
 
+# La PRIMERA coincidencia de un patrón en un fichero, y sin tubería.
+#
+# Antes era `grep -o ... | head -1`, y eso escribía dos `grep: write error: Broken pipe` en
+# cada ejecución: `head` cierra la tubería en cuanto tiene su línea y `grep` muere escribiendo
+# en ella. Hoy no rompe nada porque de una tubería solo cuenta el último estado —el de `head`,
+# que es 0—, pero deja una trampa armada: ESTE guion decide el rojo y el verde del carril, y el
+# día que alguien le añada `set -o pipefail` empezaría a fallar el CONTADOR en vez de lo
+# contado, que es el peor sitio donde puede aparecer un rojo. `awk` con `exit` no abre tubería
+# ninguna, se para en la primera coincidencia igual, y devuelve 0 aunque no encuentre nada.
+primera() {
+  awk -v patron="$1" 'match($0, patron) { print substr($0, RSTART, RLENGTH); exit }' "$2"
+}
+
 # Un atributo del <Counters>. `sed -n .../p` en vez de `grep`: sin coincidencia devuelve
 # vacío con código 0, y con `pipefail` un `grep` mudo tumbaría el script.
 leer_contador() {
@@ -74,7 +87,7 @@ leer_contador() {
 }
 
 for fichero in "${FICHEROS[@]}"; do
-  contadores=$(grep -o '<Counters[^/]*/>' "$fichero" | head -1 || true)
+  contadores=$(primera '<Counters[^/]*/>' "$fichero")
   if [ -z "$contadores" ]; then
     echo "::error title=${ETIQUETA}::${fichero} no tiene <Counters>: el .trx está truncado o el formato ha cambiado."
     exit 1
@@ -87,14 +100,14 @@ for fichero in "${FICHEROS[@]}"; do
 
   # Nombre del ensamblado. Primero del `codeBase` de cualquier resultado: los del runner
   # usan `/` y los de una máquina Windows `\`, se normalizan los dos.
-  ensamblado=$(grep -o 'codeBase="[^"]*"' "$fichero" | head -1 | sed 's/.*[\\/]//; s/"$//' || true)
+  ensamblado=$(primera 'codeBase="[^"]*"' "$fichero" | sed 's/.*[\\/]//; s/"$//')
 
   # Un .trx de CERO casos no tiene ningún `codeBase` —no hay resultados de los que
   # sacarlo—, y es justo el caso en el que más falta hace saber QUÉ ensamblado se quedó a
   # cero. El adaptador de xUnit deja su nombre en la salida capturada, y ese texto lo
   # escribe xUnit, no el CLI: no viene traducido.
   if [ -z "$ensamblado" ]; then
-    descubierto=$(grep -o 'Discovering: *[A-Za-z0-9._]*' "$fichero" | head -1 | sed 's/.*: *//' || true)
+    descubierto=$(primera 'Discovering: *[A-Za-z0-9._]*' "$fichero" | sed 's/.*: *//')
     [ -n "$descubierto" ] && ensamblado="${descubierto}.dll"
   fi
 

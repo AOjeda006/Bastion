@@ -381,6 +381,7 @@ jobs:
       # El OpenAPI es el contrato del que se genera el cliente de TypeScript: se publica
       # como artefacto para que el frontal lo consuma en vez de escribir DTOs a mano.
       - name: Publicar el OpenAPI
+        id: publicar_openapi
         if: steps.solucion.outputs.existe == 'true' && hashFiles('docs/api/openapi.json') != ''
         uses: actions/upload-artifact@v7
         with:
@@ -399,15 +400,25 @@ jobs:
       # Lo mismo que en el frontal, y aquí importa más: estos dos artefactos son el contrato
       # de la API y la única prueba conservada de qué se ejecutó. Se bajan y se abre lo que
       # traen dentro. Ver el porqué largo en el job del frontal.
+      #
+      # LA CONDICIÓN ES `outcome == 'success'` DEL PASO QUE SUBE, y no `always()` a secas.
+      # Con `always()`, un rojo en los tests dejaba el paso de subida SIN EJECUTAR —no lleva
+      # `always()`, y con razón: no hay nada que publicar de un job que falló— y estos dos se
+      # ejecutaban igual, buscando un artefacto que nadie había subido. Resultado: un rojo de
+      # tests fabricaba DOS errores más, «Artifact not found for name: openapi» y «No hay
+      # openapi.json dentro del artefacto», que parecen un problema del contrato y no lo son.
+      # Salió en el run 34101097530, con tres pasos rojos que eran uno. Quien lea el resumen la
+      # próxima vez perderá el tiempo ahí, y el arnés que existe para que la CI no mienta no
+      # puede ser el que miente.
       - name: Bajar el artefacto del OpenAPI
-        if: always() && steps.solucion.outputs.existe == 'true' && hashFiles('docs/api/openapi.json') != ''
+        if: always() && steps.publicar_openapi.outcome == 'success'
         uses: actions/download-artifact@v8
         with:
           name: openapi
           path: comprobacion/openapi
 
       - name: El artefacto del OpenAPI contiene el contrato
-        if: always() && steps.solucion.outputs.existe == 'true' && hashFiles('docs/api/openapi.json') != ''
+        if: always() && steps.publicar_openapi.outcome == 'success'
         run: |
           FICHERO=comprobacion/openapi/openapi.json
           test -f "$FICHERO" || { echo "::error title=Artefacto openapi::No hay openapi.json dentro del artefacto."; exit 1; }

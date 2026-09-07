@@ -51,6 +51,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ContratoDeLoQueCuelgaTests.Noventa_dias_de_plazo_son_400_y_el_mensaje_lleva_el_tope_y_la_norma",
         "ContratoDeLoQueCuelgaTests.Sesenta_dias_clavados_se_aceptan_porque_el_tope_es_el_maximo_y_no_un_veto",
         "ContratoDeLoQueCuelgaTests.Un_IBAN_con_el_control_mal_es_400_y_no_dice_CUAL_de_las_tres_condiciones_fallo",
+        "ContratoDeLoQueCuelgaTests.Un_choque_de_verdad_deja_en_la_traza_QUE_choco_y_en_que_estado",
         "ContratoDeLoQueCuelgaTests.Un_contacto_se_cuelga_y_se_descuelga_y_la_lista_queda_vacia",
         "ContratoDeLoQueCuelgaTests.Un_limite_con_su_divisa_va_y_vuelve_y_se_lee_igual_en_el_GET",
         "ContratoDeLoQueCuelgaTests.Un_limite_sin_divisa_es_400_y_despues_NO_hay_limite_heredado_de_la_empresa",

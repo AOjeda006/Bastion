@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
@@ -68,11 +69,25 @@ internal sealed partial class ManejadorDeVersionObsoleta(
 
         VersionDeRecurso? actual = await ActualAsync(choque, cancellationToken).ConfigureAwait(false);
 
-        RegistrarChoque(
-            registro,
-            httpContext.Request.Method,
-            httpContext.Request.Path.Value ?? string.Empty,
-            exception);
+        string metodo = httpContext.Request.Method;
+        string ruta = httpContext.Request.Path.Value ?? string.Empty;
+        string traza = Activity.Current?.TraceId.ToString() ?? httpContext.TraceIdentifier;
+        string entradas = Entradas(choque);
+
+        // DOS SUCESOS Y NO UNO, porque no son la misma cosa. Con versión actual, el choque es el
+        // que el diseño espera: dos personas editando la misma ficha, y el cliente tiene en el
+        // cuerpo lo que necesita para resolverlo. SIN versión actual, lo que ha chocado es algo
+        // que no lleva testigo, así que el 412 sale sin el `versionActual` que el contrato
+        // promete: eso no es tráfico normal, es una anomalía, y va en `Warning` para que no haya
+        // que ir a buscarla al nivel de información entre todas las consultas del día.
+        if (actual is null)
+        {
+            RegistrarChoqueSinVersion(registro, metodo, ruta, traza, entradas, exception);
+        }
+        else
+        {
+            RegistrarChoque(registro, metodo, ruta, traza, entradas, exception);
+        }
 
         ErrorDeOperacion error = actual is null
             ? ErroresDeConcurrencia.ObsoletaYSinRecurso()
@@ -122,9 +137,49 @@ internal sealed partial class ManejadorDeVersionObsoleta(
         return null;
     }
 
+    /// <summary>
+    /// Qué chocó: el tipo de cada entrada del choque y en qué estado iba. <b>Nombres y estados, y
+    /// ningún valor.</b>
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>La restricción de no volcar valores es la misma del ADR-0014 y aquí aprieta más.</b>
+    /// Entre lo que puede chocar hay tablas con datos personales —un contacto lleva nombre,
+    /// correo y teléfono de una persona identificada—, y esto va a un registro que se agrega, se
+    /// replica y se conserva con menos ceremonia que la base de datos. Un volcado de
+    /// <c>CurrentValues</c> publicaría el teléfono de alguien en la CI, y de un registro no se
+    /// borra. El enmascarado se hace <b>aquí, en el punto de escritura</b>, y no confiando en que
+    /// el destino filtre: por construcción, de este método no puede salir un valor porque solo
+    /// lee <c>Metadata</c> y <c>State</c>.
+    /// </para>
+    /// <para>
+    /// Y con eso basta para diagnosticar. Un choque se explica por <b>qué</b> entidad esperaba
+    /// afectar a una fila y no la afectó, y en qué estado iba —<c>Modified</c> sobre una fila que
+    /// no existe no es lo mismo que <c>Deleted</c> sobre una ya borrada—; los valores de sus
+    /// columnas no añaden nada a esa pregunta.
+    /// </para>
+    /// </remarks>
+    private static string Entradas(DbUpdateConcurrencyException choque) =>
+        choque.Entries.Count == 0
+            ? "(ninguna)"
+            : string.Join(
+                ", ",
+                choque.Entries.Select(entrada => $"{entrada.Metadata.ShortName()}:{entrada.State}"));
+
     [LoggerMessage(
+        EventId = 8500,
         Level = LogLevel.Information,
-        Message = "Choque de concurrencia en {Metodo} {Ruta}: la versión del cliente ya no era la actual.")]
+        Message = "Choque de concurrencia en {Metodo} {Ruta}: la versión del cliente ya no era la " +
+                  "actual. Traza: {Traza}. Entradas del choque: {Entradas}.")]
     private static partial void RegistrarChoque(
-        ILogger registro, string metodo, string ruta, Exception excepcion);
+        ILogger registro, string metodo, string ruta, string traza, string entradas, Exception excepcion);
+
+    [LoggerMessage(
+        EventId = 8501,
+        Level = LogLevel.Warning,
+        Message = "Choque de concurrencia SIN versión actual en {Metodo} {Ruta}: ninguna entrada " +
+                  "del choque lleva testigo, así que el 412 sale sin `versionActual`. " +
+                  "Traza: {Traza}. Entradas del choque: {Entradas}.")]
+    private static partial void RegistrarChoqueSinVersion(
+        ILogger registro, string metodo, string ruta, string traza, string entradas, Exception excepcion);
 }

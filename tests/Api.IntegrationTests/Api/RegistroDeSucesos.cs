@@ -39,10 +39,20 @@ public sealed class RegistroDeSucesos : ILogEventSink
     /// Los identificadores de suceso que este captador recoge, y quién los mira.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// 8400 — <c>RepositorioDeTerceros</c>, alta rechazada por identificador ocupado. Lo mira
     /// <c>ElConflictoQueNoRevelaTests</c>.
+    /// </para>
+    /// <para>
+    /// 8500 y 8501 — <c>ManejadorDeVersionObsoleta</c>, los dos desenlaces del choque de
+    /// concurrencia: con versión actual y sin ella. Los mira
+    /// <c>ContratoDeLoQueCuelgaTests</c>. Están aquí porque un 412 es de las pocas respuestas que
+    /// no puede llevar dentro por qué pasó —el cuerpo dice «alguien guardó antes», no <b>qué</b>
+    /// chocó—, así que lo único que puede contarlo es la traza; y una traza que nadie mira es una
+    /// promesa.
+    /// </para>
     /// </remarks>
-    public static readonly int[] Observados = [8400];
+    public static readonly int[] Observados = [8400, 8500, 8501];
 
     private const int Recordados = 50;
 

@@ -3496,7 +3496,74 @@ pasos rojos del Backend son uno: «Tests de integración», y detrás «Bajar el
   a una fila y afectó a cero. Está en el registro del job `101675497155`, y
   `/actions/jobs/{id}/logs` contesta **403** sin credencial. Las anotaciones del *check run* —que sí
   son públicas y de donde sale todo lo anterior— publican el nombre del caso y la aserción, pero no
-  el registro de la aplicación. **Pedido al usuario**, que lo había ofrecido.
+  el registro de la aplicación. **Pedido al usuario**, que lo había ofrecido — y su respuesta fue que el registro **no contiene ninguna traza del choque**: ni una linea. Lo que sigue sale de ahi.
+
+**Y la partición que se dio por buena estaba mal leída, que es la segunda vez que pasa lo mismo con
+distinta cara.** Se dijo que pasaban «los cuatro casos del límite» y fallaban «los que solo tocan
+hijos». Falso: `Sesenta_dias_clavados_se_aceptan…` es de condiciones de pago y estaba en rojo. La
+partición **real** del run es otra y es más limpia: **los siete rojos son exactamente los siete que
+esperan un OK en una ruta de colección hija, y ninguno de los que esperan un rechazo está en rojo**
+—no lo están porque fallan la validación y nunca llegan a escribir—. Reenunciada: *todo camino que
+llega a escribir un hijo falla; ninguno que no llega, falla*. Y de ahí lo que de verdad duele: **no
+queda ni un verde que demuestre que una escritura de hijo funciona.** La lección no es «mira mejor»;
+es que **una partición se comprueba enumerando los dos lados, y el lado verde no se enumeró**.
+
+**La enumeración que sí se hizo, y lo que tumba.** Se enumeraron desde el código todos los caminos
+que producen el cuerpo `ObsoletaYSinRecurso`, en vez de suponer el primero que encajaba:
+
+| Pregunta | Comando | Resultado |
+|---|---|---|
+| ¿Quién llama a `ObsoletaYSinRecurso()`? | `grep -rn ObsoletaYSinRecurso src/ tests/ frontend/src` | **Un solo llamante**: `ManejadorDeVersionObsoleta.cs:78` |
+| ¿Quién produce ese texto de `detail`? | `grep -rn "ha cambiado o ha desaparecido" src/ tests/ frontend/src` | **Un solo sitio**, el de la constante |
+| ¿Quién produce `TipoDeError.VersionObsoleta`? | `grep -rn "VersionObsoleta(" src/` | Solo `ErroresDeConcurrencia`, sus dos fábricas |
+| ¿Quién trata `DbUpdateConcurrencyException`? | `grep -rn DbUpdateConcurrencyException src/` | Solo el manejador |
+
+Y ese único llamante está **detrás de un `return false`** que descarta toda excepción que no sea
+`DbUpdateConcurrencyException`. Conclusión: **hubo choque**, y ahora está probado por enumeración y
+no supuesto. Con eso cae la hipótesis alternativa —«no hubo choque, la ficha no se encontró»—:
+una ficha que no aparece devuelve `ErroresDeTercero.NoEncontrado`, que es un **404**, no este cuerpo.
+Un filtro global que la escondiera daría 404 igual.
+
+**El agujero de la política de errores, cerrado — y no como instrumentación de este fallo.** El
+registro del job no traía ni una línea del choque, y aunque la hubiera traído no habría servido: el
+mensaje era *«la versión del cliente ya no era la actual»* y **no nombraba nada**. Un 412 es de las
+pocas respuestas que no puede decir en el cuerpo **qué** chocó, así que el único sitio donde eso
+puede constar es la traza; y el cuerpo publica un `traceId` precisamente para que alguien lo pegue y
+aparezca la petición. Sin la anotación, ese `traceId` era **una promesa que el sistema no cumplía**.
+Ahora hay dos sucesos, y son dos porque no son la misma cosa:
+
+- **8500, `Information` — el choque que el diseño espera.** Dos personas editando la misma ficha. El
+  cliente tiene en el cuerpo el `versionActual` que necesita para resolverlo.
+- **8501, `Warning` — el choque SIN versión actual.** Ninguna entrada lleva testigo, así que el 412
+  sale **sin** el `versionActual` que el contrato promete. Eso no es tráfico normal, es una
+  anomalía, y por eso no se queda en el nivel de información entre todas las consultas del día.
+
+Los dos llevan método, ruta, **la misma traza que publica el cuerpo** y las entradas del choque como
+`Tipo:Estado`. **Nombres y estados, y ningún valor**, enmascarado en el punto de escritura y no
+confiando en el destino: entre lo que puede chocar hay tablas con datos personales —un contacto
+lleva nombre, correo y teléfono de una persona identificada— y esto va a un registro que se agrega,
+se replica y se conserva con menos ceremonia que la base de datos. Por construcción no puede salir un
+valor: el ayudante solo lee `Metadata` y `State`. Lo guarda
+`Un_choque_de_verdad_deja_en_la_traza_QUE_choco_y_en_que_estado`, que afirma **las dos mitades** —que
+nombra `Tercero:Modified` y la traza, y que no lleva ni el identificador fiscal ni la razón social—.
+
+**Y dos defectos del arnés, que el usuario señaló y se confirman desde arriba.**
+
+- **La cascada del OpenAPI era cascada, y ya no.** «Publicar el OpenAPI» **no llevaba `always()`**
+  —con razón: de un job que falló no hay nada que publicar—, así que un rojo en los tests lo dejaba
+  sin ejecutar; pero los dos pasos que lo verifican **sí** llevaban `always()` y se ejecutaban
+  igual, buscando un artefacto que nadie había subido. Un rojo de tests fabricaba dos errores más
+  que **parecen del contrato y no lo son**. Ahora los dos cuelgan de
+  `steps.publicar_openapi.outcome == 'success'`: si no hubo publicación, no hay nada que verificar.
+  El arnés que existe para que la CI no mienta no puede ser el que miente.
+- **La tubería que se cerraba antes de tiempo.** `grep -o … | head -1`, tres veces en
+  `recuento-de-tests.sh`: `head` cierra la tubería y `grep` muere escribiendo en ella —de ahí los
+  `grep: write error: Broken pipe` del registro—. Hoy no rompía nada porque de una tubería solo
+  cuenta el último estado, pero **este guion decide el rojo y el verde del carril**, y el día que
+  alguien le añadiera `set -o pipefail` empezaría a fallar el **contador** en vez de lo contado.
+  Sustituido por un `awk` con `exit`, que no abre tubería, se para en la primera coincidencia igual
+  y devuelve 0 aunque no encuentre nada. Comprobado con `pipefail` puesto a propósito: mismo
+  recuento —**624 casos en 8 ensamblados**—, código 0 y sin una línea de ruido.
 
 **Los `act()` del frontal, con los dos extremos nombrados.** La regla que salió del 1.5 se aplica
 desde aquí: toda cifra de «antes y después» dice sobre qué commit se midió cada extremo, y el
