@@ -6,7 +6,7 @@ revisado: 2026-09-07
 tags: [adr, ef-core, change-tracker, guid-v7, agregados, 412, concurrencia]
 ---
 
-# ADR-0031: La clave declarada `Never` es lo que hace que un hijo nazca como alta
+# ADR-0032: La clave declarada `Never` es lo que hace que un hijo nazca como alta
 
 - **Estado:** aceptado
 - **Fecha:** 2026-09-07

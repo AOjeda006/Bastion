@@ -64,7 +64,7 @@ public sealed class LasPertenenciasNuevasSeInsertanTests : IDisposable
     /// "la clave está puesta", y con generación desactivada está puesta siempre»— y eso es
     /// <b>falso</b>: lo que EF mira no es si el valor es distinto del de por defecto, sino si la
     /// clave es de las que se generan <b>al insertar</b>. Declarada <c>Never</c>, no lo es, y el
-    /// hijo nuevo sale <c>Added</c>. Medido, no supuesto; lo dice el ADR-0031, que sustituye a esa
+    /// hijo nuevo sale <c>Added</c>. Medido, no supuesto; lo dice el ADR-0032, que sustituye a esa
     /// parte del ADR-0010.
     /// </para>
     /// <para>
@@ -90,7 +90,7 @@ public sealed class LasPertenenciasNuevasSeInsertanTests : IDisposable
             "un hijo con clave propia colgado de un padre ya seguido tiene que salir como ALTA. " +
             "Si sale `Modified`, la convención `LaClaveLaPoneElDominio` no se está aplicando a " +
             "este modelo, y toda alta de hijo de este sistema es un UPDATE contra una fila que no " +
-            "existe —o sea, un 412—. Ver ADR-0031.");
+            "existe —o sea, un 412—. Ver ADR-0032.");
     }
 
     [Fact]

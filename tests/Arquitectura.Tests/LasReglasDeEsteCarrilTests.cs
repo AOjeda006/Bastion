@@ -94,6 +94,14 @@ public sealed class LasReglasDeEsteCarrilTests
         "NingunDatoConFormaDeRealTests.Las_formas_declaradas_son_las_que_el_barrido_detecta",
         "NingunDatoConFormaDeRealTests.Ningun_dato_con_forma_de_real_se_queda_escrito",
 
+        // El número de un ADR lo lleva un fichero y solo uno. Esta regla nace de haberla
+        // incumplido en este mismo ítem: dos ADR salieron 0031 y nada se puso rojo, porque son dos
+        // ficheros de texto. El número es como se cita un ADR, así que compartirlo vuelve ambigua
+        // toda cita ya escrita.
+        "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.Cada_ADR_lleva_en_su_titulo_el_numero_de_su_nombre_de_fichero",
+        "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.El_barrido_encuentra_los_ADR_del_repositorio",
+        "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.Ningun_numero_de_ADR_lo_llevan_dos_ficheros",
+
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",
     ];
