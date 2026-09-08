@@ -39,10 +39,15 @@
   <ItemGroup Label="Sujeto de prueba">
     <ProjectReference Include="../../src/Api/Bastion.Api.csproj" />
     <!--
-      Las cuatro Infrastructure, y solo para MIGRAR: el fixture abre cada DbContext y aplica sus
-      migraciones antes de que el host arranque. Es lo mismo que hará el paso de despliegue.
+      Las Infrastructure de cada módulo con persistencia, y solo para MIGRAR: el fixture abre cada
+      DbContext y aplica sus migraciones antes de que el host arranque. Es lo mismo que hará el
+      paso de despliegue, con el mismo orden y por el mismo motivo.
+
+      No se dice cuántas son: eran «las cuatro» y con Catálogo son cinco, y una cifra escrita en un
+      comentario no la actualiza nadie. Quien quiera contarlas las tiene aquí debajo.
     -->
     <ProjectReference Include="../../src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Bastion.Auditoria.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Catalogo/Bastion.Catalogo.Infrastructure/Bastion.Catalogo.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Identidad/Bastion.Identidad.Infrastructure/Bastion.Identidad.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Bastion.Organizacion.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Terceros/Bastion.Terceros.Infrastructure/Bastion.Terceros.Infrastructure.csproj" />

@@ -43,6 +43,21 @@ public sealed class ElCensoDeEsteCarrilTests
     /// </summary>
     private static readonly string[] s_declarados =
     [
+        "ContratoDeCatalogoTests.Colgar_una_categoria_por_debajo_del_nivel_maximo_es_409_y_lo_dice",
+        "ContratoDeCatalogoTests.Crear_un_articulo_devuelve_201_con_Location_que_lleva_al_recurso",
+        "ContratoDeCatalogoTests.El_codigo_del_articulo_se_normaliza_y_el_duplicado_en_minusculas_es_409",
+        "ContratoDeCatalogoTests.El_listado_de_articulos_viene_paginado_con_su_total_y_filtra_por_categoria",
+        "ContratoDeCatalogoTests.El_tipo_del_articulo_viaja_como_TEXTO_y_no_como_numero",
+        "ContratoDeCatalogoTests.Modificar_devuelve_el_recurso_entero_y_no_hay_por_donde_tocar_el_codigo_ni_la_unidad",
+        "ContratoDeCatalogoTests.Modificar_sin_tocar_el_impuesto_no_lo_vuelve_a_preguntar_pero_cambiarlo_a_uno_caducado_SI_se_rechaza",
+        "ContratoDeCatalogoTests.Mover_una_categoria_debajo_de_su_propia_descendencia_es_409_con_type_categoria_ciclo",
+        "ContratoDeCatalogoTests.Un_articulo_que_no_existe_es_404_con_ProblemDetails",
+        "ContratoDeCatalogoTests.Un_tramo_de_impuesto_que_ya_no_rige_no_se_propone_para_un_articulo_nuevo",
+        "ContratoDeCatalogoTests.Una_categoria_no_puede_colgar_de_si_misma_ni_al_crearla_ni_al_moverla",
+        "ContratoDeCatalogoTests.Una_categoria_padre_que_no_existe_es_400_y_no_un_409_de_ciclo",
+        "ContratoDeCatalogoTests.Una_unidad_RETIRADA_no_vale_para_un_alta_y_el_articulo_que_ya_la_usa_sigue_resolviendola",
+        "ContratoDeCatalogoTests.Una_unidad_que_no_existe_es_400_y_su_type_es_DISTINGUIBLE_del_de_la_retirada",
+
         "ContratoDeLoQueCuelgaTests.Ascender_una_cuenta_a_preferente_baja_a_la_que_lo_era",
         "ContratoDeLoQueCuelgaTests.Colgar_algo_sin_citar_la_version_de_la_ficha_es_428",
         "ContratoDeLoQueCuelgaTests.Colgar_un_contacto_MUEVE_la_version_de_la_ficha_y_la_vieja_ya_no_vale",

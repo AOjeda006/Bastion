@@ -1,4 +1,5 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
+using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Terceros.Infrastructure.Persistencia;
@@ -24,6 +25,24 @@ namespace Bastion.Api.IntegrationTests.Persistencia;
 [Trait("Category", "Integracion")]
 public sealed class EsquemaDeIdentidadTests(PostgresConTodosLosModulos postgres)
 {
+    /// <summary>
+    /// Un historial por módulo con persistencia, cada uno dentro de su propio esquema.
+    /// </summary>
+    /// <remarks>
+    /// Se declara con las CONSTANTES de cada contexto y no con cadenas escritas a mano: renombrar
+    /// un esquema mueve las dos mitades a la vez y este caso seguiría verde, que es lo correcto
+    /// —lo que vigila es que cada uno tenga el suyo, no cómo se llama—. Lo que no puede pasar
+    /// desapercibido es que un módulo entre o salga, y eso lo caza la comparación de la lista.
+    /// </remarks>
+    private static readonly (string Esquema, string Tabla)[] s_historialesDeclarados =
+    [
+        (AuditoriaDbContext.Esquema, AuditoriaDbContext.TablaDelHistorial),
+        (CatalogoDbContext.Esquema, CatalogoDbContext.TablaDelHistorial),
+        (IdentidadDbContext.Esquema, IdentidadDbContext.TablaDelHistorial),
+        (OrganizacionDbContext.Esquema, OrganizacionDbContext.TablaDelHistorial),
+        (TercerosDbContext.Esquema, TercerosDbContext.TablaDelHistorial),
+    ];
+
     [Fact]
     public async Task Cada_modulo_tiene_SU_historial_de_migraciones_en_SU_esquema()
     {
@@ -35,20 +54,22 @@ public sealed class EsquemaDeIdentidadTests(PostgresConTodosLosModulos postgres)
             ORDER BY table_schema
             """);
 
-        // Cuatro módulos migrados contra la MISMA base —Terceros entra en el ítem 1.5—. Con un
-        // historial compartido, el segundo en migrar vería las migraciones del primero como suyas
-        // y las daría por aplicadas: las tablas no se crearían y el error saldría mucho después,
-        // al usarlas.
-        historiales.Count.ShouldBe(4, "un historial por módulo, ni uno más ni uno menos");
-
-        historiales.ShouldContain(
-            (IdentidadDbContext.Esquema, IdentidadDbContext.TablaDelHistorial));
-        historiales.ShouldContain(
-            (OrganizacionDbContext.Esquema, OrganizacionDbContext.TablaDelHistorial));
-        historiales.ShouldContain(
-            (AuditoriaDbContext.Esquema, AuditoriaDbContext.TablaDelHistorial));
-        historiales.ShouldContain(
-            (TercerosDbContext.Esquema, TercerosDbContext.TablaDelHistorial));
+        // Todos los módulos con persistencia migran contra la MISMA base. Con un historial
+        // compartido, el segundo en migrar vería las migraciones del primero como suyas y las
+        // daría por aplicadas: las tablas no se crearían y el error saldría mucho después, al
+        // usarlas.
+        //
+        // La lista se compara ENTERA y en las dos direcciones, en vez de contar cuántos hay y
+        // preguntar por cada uno. Un `Count.ShouldBe(4)` con cuatro `ShouldContain` detrás dice
+        // «esperaba 4 y hay 5» cuando entra un módulo, que es la mitad de la información: no dice
+        // cuál. Y, al revés, un historial que DESAPARECIERA —porque su esquema se renombró— se
+        // vería como una cifra que baja. Comparando la lista, las dos averías se nombran.
+        historiales.ShouldBe(
+            s_historialesDeclarados,
+            ignoreOrder: true,
+            "los historiales de migración que hay en la base no son los declarados. Si sobra uno, " +
+            "hay un módulo nuevo y hay que declararlo aquí; si falta, su esquema o su tabla han " +
+            "cambiado de nombre y ese módulo está migrando donde no debe");
     }
 
     [Fact]

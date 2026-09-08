@@ -6,6 +6,876 @@
     "version": "v1"
   },
   "paths": {
+    "/api/v1/catalogo/articulos": {
+      "get": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Devuelve una página de artículos.",
+        "operationId": "Articulos_Listar",
+        "parameters": [
+          {
+            "name": "categoria",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeArticuloDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeArticuloDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeArticuloDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Da de alta un artículo.",
+        "description": "El `409` puede venir de tres sitios distintos, y el `type` del ProblemDetails los\nsepara: el código ya está usado (`articulo-duplicado`), la unidad está retirada\n(`articulo-unidad-retirada`) o el tramo de impuesto no rige hoy\n(`articulo-impuesto-no-vigente`). El frontal escribe el texto humano a partir del\n`type` (ADR-0030), no del mensaje.",
+        "operationId": "Articulos_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearArticuloDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearArticuloDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearArticuloDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/articulos/{id}": {
+      "get": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Devuelve un artículo.",
+        "operationId": "Articulos_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Cambia la descripción, el tipo, el impuesto propuesto o la categoría.",
+        "description": "Ni el código ni la unidad base están entre lo que se puede cambiar, y no es el permiso\nquien lo impide: no están en el cuerpo ni en `Articulo.Modificar`.",
+        "operationId": "Articulos_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarArticuloDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarArticuloDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarArticuloDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/categorias": {
+      "get": {
+        "tags": [
+          "Categorias"
+        ],
+        "summary": "Devuelve una página de categorías.",
+        "description": "<b>Devuelve la lista plana con el padre de cada una, no el árbol montado.</b> El árbol de\n        una empresa cabe entero en una o dos páginas —diez niveles de profundidad como máximo, y en\n        la práctica dos o tres— y componerlo es una vuelta por la lista en el cliente. Servirlo\n        montado obligaría al servidor a recorrerlo entero en cada lectura para devolver justo lo que\n        se puede recomponer sin él.",
+        "operationId": "Categorias_Listar",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeCategoriaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeCategoriaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeCategoriaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Categorias"
+        ],
+        "summary": "Da de alta una categoría.",
+        "operationId": "Categorias_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearCategoriaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearCategoriaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearCategoriaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/categorias/{id}": {
+      "get": {
+        "tags": [
+          "Categorias"
+        ],
+        "summary": "Devuelve una categoría.",
+        "operationId": "Categorias_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la categoría.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Categorias"
+        ],
+        "summary": "Cambia el nombre de una categoría, o la mueve de sitio en el árbol.",
+        "description": "<b>Es la operación que puede cerrar un ciclo</b> —mover una rama debajo de su propia\n        descendencia—, y por eso la comprobación del árbol corre aquí y no solo en el alta. Los tres\n        desenlaces se distinguen por el `type`: `categoria-ciclo`,\n        `categoria-padre-no-encontrado` y `categoria-demasiado-profunda`.",
+        "operationId": "Categorias_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la categoría.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarCategoriaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarCategoriaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarCategoriaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/identidad/roles": {
       "get": {
         "tags": [
@@ -9792,6 +10662,62 @@
         },
         "description": "Un almacén, tal como sale de la API."
       },
+      "ArticuloDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "codigo",
+          "descripcion",
+          "tipo",
+          "unidadBaseId",
+          "impuestoPorDefectoId",
+          "categoriaId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del artículo.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece la ficha (R8).",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código, en mayúsculas. No cambia."
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Lo que sale impreso en una factura."
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Si es mercancía o prestación, como texto: `Bien` o `Servicio`."
+          },
+          "unidadBaseId": {
+            "type": "string",
+            "description": "Unidad en la que se cuenta, del maestro de Organización.",
+            "format": "uuid"
+          },
+          "impuestoPorDefectoId": {
+            "type": "string",
+            "description": "Tramo de impuesto propuesto, del maestro de Organización.",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Categoría en la que se clasifica, o nula.",
+            "format": "uuid"
+          }
+        },
+        "description": "Un artículo, tal como sale de la API."
+      },
       "AsignarRolDto": {
         "required": [
           "empresaId",
@@ -9996,6 +10922,45 @@
           }
         },
         "description": "Con qué empresa se sigue operando."
+      },
+      "CategoriaDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "codigo",
+          "nombre",
+          "padreId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la categoría.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código, en mayúsculas. No cambia."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre con el que se muestra."
+          },
+          "padreId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Categoría de la que cuelga, o nula si es una raíz.",
+            "format": "uuid"
+          }
+        },
+        "description": "Una categoría del árbol de clasificación, tal como sale de la API."
       },
       "CerrarImpuestoDto": {
         "required": [
@@ -10292,6 +11257,83 @@
           }
         },
         "description": "Lo que hace falta para dar de alta un almacén."
+      },
+      "CrearArticuloDto": {
+        "required": [
+          "codigo",
+          "descripcion",
+          "tipo",
+          "unidadBaseId",
+          "impuestoPorDefectoId"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "maxLength": 30,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código del artículo. Se normaliza a mayúsculas."
+          },
+          "descripcion": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "Descripción con la que se muestra y con la que se factura."
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Si es mercancía o prestación: `Bien` o `Servicio`."
+          },
+          "unidadBaseId": {
+            "type": "string",
+            "description": "Unidad en la que se cuenta este artículo. Tiene que existir y <b>ofrecerse para lo nuevo</b>.",
+            "format": "uuid"
+          },
+          "impuestoPorDefectoId": {
+            "type": "string",
+            "description": "Tramo de impuesto que se propone al facturarlo.",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Categoría en la que se clasifica, o nula para dejarlo sin clasificar.",
+            "format": "uuid"
+          }
+        },
+        "description": "Lo que hace falta para dar de alta un artículo."
+      },
+      "CrearCategoriaDto": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código de la categoría. Se normaliza a mayúsculas."
+          },
+          "nombre": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se muestra."
+          },
+          "padreId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Categoría de la que cuelga, o nula para crear una raíz.",
+            "format": "uuid"
+          }
+        },
+        "description": "Lo que hace falta para dar de alta una categoría."
       },
       "CrearConversionUmDto": {
         "required": [
@@ -11286,6 +12328,62 @@
         },
         "description": "Lo que se puede cambiar de un almacén."
       },
+      "ModificarArticuloDto": {
+        "required": [
+          "descripcion",
+          "impuestoPorDefectoId"
+        ],
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "description": "Descripción con la que se muestra y con la que se factura."
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Si es mercancía o prestación: `Bien` o `Servicio`."
+          },
+          "impuestoPorDefectoId": {
+            "type": "string",
+            "description": "Tramo de impuesto que se propone al facturarlo.",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Categoría en la que se clasifica, o nula para dejarlo sin clasificar.",
+            "format": "uuid"
+          }
+        },
+        "description": "Lo que se puede cambiar de un artículo ya dado de alta."
+      },
+      "ModificarCategoriaDto": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se muestra."
+          },
+          "padreId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Categoría de la que cuelga, o nula para dejarla como raíz.",
+            "format": "uuid"
+          }
+        },
+        "description": "Lo que se puede cambiar de una categoría ya dada de alta."
+      },
       "ModificarConversionUmDto": {
         "type": "object",
         "properties": {
@@ -11616,6 +12714,52 @@
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
+      "PaginaDeArticuloDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArticuloDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
       "PaginaDeBloqueadoDto": {
         "required": [
           "elementos",
@@ -11629,6 +12773,52 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BloqueadoDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeCategoriaDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoriaDto"
             },
             "description": "Los de esta página, en el orden pedido."
           },
@@ -12854,6 +14044,12 @@
     }
   },
   "tags": [
+    {
+      "name": "Articulos"
+    },
+    {
+      "name": "Categorias"
+    },
     {
       "name": "Roles"
     },

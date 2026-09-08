@@ -6,6 +6,7 @@ using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
@@ -247,6 +248,17 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
             opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
+    /// <summary>Un contexto de Catálogo solo para aplicar migraciones.</summary>
+    /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
+    public CatalogoDbContext AbrirCatalogoParaMigrar()
+    {
+        DbContextOptionsBuilder<CatalogoDbContext> opciones = new();
+        CatalogoDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new CatalogoDbContext(
+            opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
+    }
+
     // El contexto de la bandeja no tiene `Configurar` a propósito: vive en los bloques comunes,
     // que traen EF Core pero NO el proveedor de PostgreSQL, así que quien elige proveedor es el
     // módulo Auditoría en su cableado. Aquí se repite esa elección, que es la misma y es de una
@@ -330,6 +342,15 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         await using (TercerosDbContext terceros = AbrirTercerosParaMigrar())
         {
             await terceros.Database.MigrateAsync();
+        }
+
+        // Catálogo va el último y no depende de nadie: sus dos tablas se apuntan entre ellas y a
+        // nada más. La unidad y el impuesto de un artículo NO son claves ajenas —viven en el
+        // esquema de Organización, y entre esquemas no hay claves ajenas (§5)—, así que este DDL
+        // se aplicaría igual con la base entera vacía.
+        await using (CatalogoDbContext catalogo = AbrirCatalogoParaMigrar())
+        {
+            await catalogo.Database.MigrateAsync();
         }
     }
 
