@@ -3255,6 +3255,72 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
+**Ítem 1.7 cerrado — la retirada, las dos conversiones, y la lección por cuarta vez:**
+run **34177571670** sobre `dd89e9f`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3` de la API, no de la memoria): Backend `101909932819` ✓ (22 pasos, 0 omitidos),
+Frontal `101909932714` ✓ (17 pasos, 0 omitidos) y Humo `101910637516` ✓ (24 pasos, 1 omitido). Los
+tres carriles tal como el run los publica:
+
+```
+Dominio y arquitectura: 651 casos (651 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+  — BuildingBlocks.UnitTests 132, Organizacion.UnitTests 183, Organizacion.IntegrationTests 21,
+    Api.FunctionalTests 140, Identidad.UnitTests 58, Terceros.UnitTests 77,
+    Arquitectura.Tests 34, Api.IntegrationTests 6
+    (630 en el 1.6, los mismos 8 ensamblados: +21 casos)
+
+Integración (Testcontainers): 334 casos (334 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 260, y 0 en los otros seis
+    (318 en el 1.6: +16 casos, y esta vez los 334 se ejercieron TAMBIÉN en local)
+
+Artefacto test-results: 8 ficheros .trx con 651 casos (dominio) y 8 con 334 (integración)
+
+Frontal: arranque 403/450 KiB en 3 ficheros · total servido 549/900 KiB  (548 en el 1.6)
+         `esquema.ts` al día con `docs/api/openapi.json`
+         artefacto: 20 ficheros, 9 .js y 1 .css
+
+OpenAPI:  102 operaciones, 60 rutas /api/v1/, y el fichero del artefacto idéntico al del
+          repositorio  (93 operaciones y 55 rutas en el 1.6)
+Catálogo de `type`: 51 tipos, de 56 sitios de llamada  (49 de 54 en el 1.6)
+Migraciones: modelo y migraciones coinciden en todos los módulos con persistencia
+             — Auditoría 3, Organización 5, Identidad 3, Terceros 2
+Humo: el migrador aplica los tres contextos, la cuenta sembrada inicia sesión (testigo de 3601
+      caracteres), el entorno desplegado sirve 1 empresa y las semillas cargan 12 tramos de
+      impuesto y 15 unidades
+```
+
+**La lección, por cuarta vez, y la primera en la que se vio ANTES de escribir el arreglo.** Las tres
+anteriores se descubrieron arreglando otra cosa; esta se buscó a propósito, porque el enunciado del
+ítem ya la traía: *una obligación transversal enumerada a mano es ciega a lo que llegue después, y en
+verde no la mira nadie*. Aquí la obligación era un **enumerado de tres valores** cuyo tercero
+—`SoloResuelveLoViejo`— era inalcanzable para dos de sus tres productores, con el comentario de los
+dos diciendo «la tercera llega con la retirada» y **nada** comprobando que llegara. La regla se
+escribió primero, se commiteó **en rojo** (`cf46416`) nombrando las dos casillas, y se puso verde con
+la retirada. Es la diferencia entre arreglar un defecto y **dejar puesto lo que lo habría avisado**.
+
+**Y la forma que se lleva el ítem es la de la matriz, no la de la retirada.** `EstadoDeMaestro` es
+una lista cerrada; los puertos que la producen, un conjunto abierto. La regla descubre los dos lados
+—los valores del enumerado y las interfaces del `Contracts` que devuelven `Task<EstadoDeMaestro>`— y
+exige que cada casilla del producto tenga un caso que la afirme, con la cobertura marcada **sobre el
+caso** y no en una lista aparte: borrar el caso borra el cubrimiento, y la matriz se pone roja por la
+casilla que se quedó sin nadie. Un puerto nuevo entra con sus tres casillas por cubrir sin que nadie
+lo apunte. Es la misma pregunta del 1.6 —¿la lista cerrada y el conjunto que enumera se comparan
+enteros?— por su otra cara: allí **faltaban** valores, aquí **sobraba** uno.
+
+**Lo que este ítem añade al catálogo de trampas, y no estaba en el enunciado.** Con el `GET` por
+identificador contestando 404 a una fila retirada —la mutación 3—, cae también **reincorporar**: la
+puerta de vuelta necesita el `ETag`, y el `ETag` sale del `GET` que acaba de decir que no existe. En
+cuatro maestros de instalación (R8), donde retirar por error deja sin esa fila a **todas** las
+empresas, tratar la retirada como un bloqueo no solo esconde el dato: **convierte un error reversible
+en uno permanente**. La línea que separa las dos cosas no es una cortesía con las facturas viejas —es
+lo que sostiene la marcha atrás.
+
+**Y una decisión de sitio que costó más ver que las tres del ADR.** La desigualdad de la inversa y la
+negativa a encadenar tenían su **único** testigo detrás de Testcontainers. Ninguna de las dos abre una
+conexión: son aritmética y una rama. Con Docker parado, cambiar el `≤` por un `<` compilaba, salía
+verde, y el aviso llegaba en el *runner*. **Un caso frontera al que solo se llega levantando un
+contenedor es un caso frontera que nadie ejerce mientras escribe el cambio que lo rompe** — y por eso
+el testigo bajó al carril rápido, como segunda excepción declarada de `Organizacion.IntegrationTests`.
+
 **Ítem 1.7 — la retirada y las dos conversiones.** El ADR-0023 entero, que llevaba escrito y sin
 implementar desde la puerta de clarificación de la fase 1, y **antes** de que Catálogo referencie
 `UnidadMedida`: ese era el disparador que el propio ADR dejó puesto.
@@ -7143,10 +7209,16 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   dominio, y con eso EF marcaba los tres hijos como modificación. **ADR-0032**, con su convención
   de cierre, su caso de un segundo y sin Docker, y los cuatro huecos de declaración que aparecieron
   al descubrir el universo de modelos en vez de enumerarlo.
-- [ ] **1.7 · La retirada y las dos conversiones** — criterio de aceptación: el **ADR-0023
+- [x] **1.7 · La retirada y las dos conversiones** — criterio de aceptación: el **ADR-0023
   implementado entero** —retirada en los cuatro maestros de instalación, tolerancia de la conversión
   inversa, resolutor de conversiones encadenadas con **error con nombre**—, y **antes** de que
   Catálogo referencie `UnidadMedida`, que es el disparador que el propio ADR dejó escrito.
+  Cerrado con el run **34177571670** sobre `dd89e9f`. Las tres decisiones del ADR, más las **tres**
+  que dejaba abiertas y aquí se cierran con su motivo: cómo se ven las retiradas (parámetro del
+  listado, por contraste con el ADR-0027), que `TipoCambio` y `ConversionUM` no tienen puerto de
+  consumo sin que eso las haga vacuas, y que una fila retirada **sigue restringiendo** a su inversa.
+  Ocho mutaciones en *Estado actual*, con la 1 y la 3 enteras; la 3 destapa que un 404 ahí deja la
+  retirada sin marcha atrás.
 - [ ] **1.8 · Catálogo: artículo y categoría** — criterio de aceptación: alta de artículo con unidad
   e impuesto **validados por los puertos del 1.2** (no guardados a ciegas); `Categoria` jerárquica
   con **comprobación de ciclos**; listado paginado y filtrado; y `features/catalogo/`. Fuera:
