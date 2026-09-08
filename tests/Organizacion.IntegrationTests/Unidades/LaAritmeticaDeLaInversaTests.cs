@@ -65,8 +65,9 @@ public sealed class LaAritmeticaDeLaInversaTests
     /// <summary>La desigualdad del ADR, en los casos que la definen.</summary>
     /// <remarks>
     /// <para>
-    /// <b>El caso de <c>0,083334</c> se RECHAZA, y el enunciado del ítem lo daba por aceptado.</b>
-    /// La desigualdad está fijada y no se toca, así que manda ella: con <c>f = 12</c>,
+    /// <b>El caso de <c>0,083334</c> se RECHAZA, y el ADR-0023 lo daba por aceptado.</b> La
+    /// redacción que lo decía está sustituida por el <b>ADR-0033</b>, y el par tiene además su
+    /// propio caso con nombre más abajo. La desigualdad está fijada y no se toca: con <c>f = 12</c>,
     /// <c>|12 × 0,083334 − 1| = 8·10⁻⁶</c> y el margen es <c>5·10⁻⁷ × 12,083334 ≈ 6,04·10⁻⁶</c>, que
     /// es menor. Y el rechazo es lo correcto: <c>1/12 = 0,08333333…</c>, así que <c>0,083334</c> se
     /// separa <c>6,67·10⁻⁷</c> del valor real —más de media unidad del último decimal— y por tanto
@@ -123,6 +124,58 @@ public sealed class LaAritmeticaDeLaInversaTests
         LaInversaEsPlausible.Casan(Factor, Inverso).ShouldBeTrue(
             "el margen es el error MÁXIMO que la escala puede producir, así que separarse " +
             "exactamente eso es un redondeo legítimo y no una discrepancia: por eso es `≤`");
+    }
+
+    /// <summary>
+    /// El par que el ADR nombraba como aceptado, afirmando el <b>rechazo</b> (ADR-0033).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Existe para que el ejemplo del ADR no pueda volver a divergir de la regla del ADR.</b>
+    /// La decisión 2 del ADR-0023 decía «con <c>f = 12</c> admite <c>g ∈ {0,083333, 0,083334}</c>
+    /// —las dos lecturas razonables de 1/12—», y eso es falso: <c>1/12 = 0,08333333…</c> y
+    /// redondear a seis decimales admite <b>un</b> resultado, el más cercano. <c>0,083334</c> se
+    /// separa <c>6,67·10⁻⁷</c>, o sea más de media unidad del último decimal, así que no sale de
+    /// redondear sino de subir siempre. El ADR-0033 sustituye esa redacción; este caso es lo que
+    /// impide que la sustitución se quede solo en el documento.
+    /// </para>
+    /// <para>
+    /// Va aparte del <c>[Theory]</c> —que ya lleva la misma fila— porque una fila de una tabla no
+    /// se cita: lo que hace falta aquí es un nombre que salga en el informe cuando alguien
+    /// ensanche la tolerancia «para que entre el ejemplo del ADR», y la aritmética escrita al
+    /// lado para que se vea que el rechazo no es un margen corto sino la única respuesta posible.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void El_par_que_el_ADR_daba_por_bueno_se_rechaza_porque_no_es_un_redondeo_de_un_doceavo()
+    {
+        const decimal Factor = 12m;
+        const decimal ElQueSubeSiempre = 0.083334m;
+        const decimal ElRedondeo = 0.083333m;
+
+        // Media unidad del último decimal es lo máximo que un redondeo puede separarse del valor
+        // real. El que sube siempre pasa de ahí; el redondeo, no. Esto es la MISMA pregunta que la
+        // desigualdad, y por eso las dos tienen que contestar igual.
+        decimal unDoceavo = 1m / 12m;
+
+        Math.Abs(ElQueSubeSiempre - unDoceavo).ShouldBeGreaterThan(
+            LaInversaEsPlausible.MargenPorFactor,
+            "0,083334 se separa de 1/12 más de media unidad del último decimal, así que no es su " +
+            "redondeo a seis decimales: no hay ninguna regla de redondeo que lo produzca");
+
+        Math.Abs(ElRedondeo - unDoceavo).ShouldBeLessThanOrEqualTo(
+            LaInversaEsPlausible.MargenPorFactor,
+            "0,083333 sí lo es, y es el único que lo es");
+
+        LaInversaEsPlausible.Casan(Factor, ElQueSubeSiempre).ShouldBeFalse(
+            $"|12 × 0,083334 − 1| = {Math.Abs((Factor * ElQueSubeSiempre) - 1m)}, contra un " +
+            $"margen de {LaInversaEsPlausible.MargenPorFactor * (Factor + ElQueSubeSiempre)}. " +
+            "Ensanchar la tolerancia para que entrara sería el «número elegido por comodidad» que " +
+            "el propio ADR-0023 prohíbe");
+
+        LaInversaEsPlausible.Casan(Factor, ElRedondeo).ShouldBeTrue(
+            "y el redondeo legítimo entra con holgura, que es lo que dice la demostración del " +
+            "ADR-0033: |f·g − 1| ≤ 5·10⁻⁷·f < 5·10⁻⁷·(f + g), estricta porque g es positivo");
     }
 
     /// <summary>Sin fila inversa no hay nada que contradecir, y la regla se calla.</summary>

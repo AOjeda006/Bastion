@@ -52,6 +52,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaAritmeticaDeLaInversaTests.El_margen_sale_de_la_escala_y_no_de_un_numero_elegido",
         "LaAritmeticaDeLaInversaTests.El_par_declarado_se_resuelve_y_dice_si_esta_retirada",
         "LaAritmeticaDeLaInversaTests.El_par_de_la_frontera_se_separa_EXACTAMENTE_el_margen",
+        "LaAritmeticaDeLaInversaTests.El_par_que_el_ADR_daba_por_bueno_se_rechaza_porque_no_es_un_redondeo_de_un_doceavo",
         "LaAritmeticaDeLaInversaTests.El_par_que_habria_que_encadenar_no_se_resuelve",
         "LaAritmeticaDeLaInversaTests.La_desigualdad_acepta_el_redondeo_legitimo_y_rechaza_el_otro_numero",
         "LaAritmeticaDeLaInversaTests.La_inversa_implausible_se_rechaza_con_su_codigo_y_no_reventando",

@@ -114,8 +114,11 @@ Con `f` el factor directo y `g` el inverso, ambos ya redondeados a seis decimale
 **La tolerancia no está inventada: es exactamente la que impone la escala.** Cada factor se guarda
 redondeado a seis decimales, así que arrastra hasta media unidad del último decimal (5·10⁻⁷) de
 error; propagado al producto, eso es el margen de arriba y ni uno más. Con `f = 12` admite
-`g ∈ {0,083333, 0,083334}` —las dos lecturas razonables de 1/12— y rechaza `0,5` por seis órdenes de
-magnitud. Y como el rango declarado del factor es `[0,000001, 1000000]`, la inversa de cualquier
+`g = 0,083333` —el redondeo de 1/12 a seis decimales, que es el único que hay— y rechaza
+`0,083334` y `0,5`: la primera por poco y la segunda por seis órdenes de magnitud. **Este ejemplo
+decía antes otra cosa**, y la decía mal: ver el
+[ADR-0033](adr-0033-el-ejemplo-de-un-adr-tambien-se-comprueba.md), que sustituye la redacción
+anterior y deja el resto de esta decisión intacto. Y como el rango declarado del factor es `[0,000001, 1000000]`, la inversa de cualquier
 factor válido cae también dentro del rango: la regla es **total**, no tiene casos en los que se
 calle.
 
