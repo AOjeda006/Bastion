@@ -75,6 +75,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElCatalogoDeTiposEsElQueLaApiEmiteTests.El_catalogo_existe_y_no_esta_vacio",
         "ElCatalogoDeTiposEsElQueLaApiEmiteTests.El_type_de_cada_entrada_es_el_que_compone_la_politica_y_no_otro",
         "ElCatalogoDeTiposEsElQueLaApiEmiteTests.Ningun_codigo_aparece_dos_veces_en_el_catalogo",
+        "ElCatalogoNoGuardaDatosDeNadieTests.El_barrido_ve_catalogo_y_sabe_reconocer_un_dato_personal",
+        "ElCatalogoNoGuardaDatosDeNadieTests.Ninguna_entidad_de_catalogo_es_bloqueable",
+        "ElCatalogoNoGuardaDatosDeNadieTests.Ninguna_propiedad_de_catalogo_guarda_un_dato_de_una_persona",
+
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
         "ElCuerpoQueNoEncajaTests.El_400_del_enlace_de_modelo_sale_por_la_politica_central_con_su_traza",
@@ -164,6 +168,9 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "NingunCriterioSensibleViajaEnLaUrlTests.El_barrido_ve_los_listados_y_sus_parametros",
         "NingunCriterioSensibleViajaEnLaUrlTests.Ningun_listado_recibe_un_criterio_sensible_por_la_url",
+
+        "NingunaClaveForaneaCruzaDeEsquemaTests.El_barrido_ve_claves_foraneas_y_mas_de_un_esquema",
+        "NingunaClaveForaneaCruzaDeEsquemaTests.Ninguna_clave_foranea_cruza_de_esquema",
 
         "NingunaLecturaEntregaTestigoDeVersionTests.El_barrido_ve_los_cuerpos_y_reconoce_un_testigo",
         "NingunaLecturaEntregaTestigoDeVersionTests.Ninguna_respuesta_de_la_api_lleva_testigo_de_version_en_el_cuerpo",

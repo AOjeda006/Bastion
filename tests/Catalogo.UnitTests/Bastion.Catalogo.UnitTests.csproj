@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests unitarios del módulo Catálogo.
+
+    REFERENCIA A `Application`, Y ES LA PRIMERA VEZ EN EL PROYECTO. Los dos proyectos de
+    unitarias que ya había —Organización y Terceros— solo ven `Domain` y `Contracts`, porque lo
+    que tenían que probar eran invariantes de agregado y objetos de valor. Aquí lo que hay que
+    probar vive en la capa de aplicación y no puede vivir en otra:
+
+      - `ElMaestroSeOfreceParaLoNuevo` traduce los tres valores de `EstadoDeMaestro` a tres
+        desenlaces distintos. El dominio no puede hacerlo: `EstadoDeMaestro` es un contrato de
+        Organización y el `Domain` de Catálogo no lo ve, a propósito.
+      - `ElArbolSigueSiendoUnArbol` recorre padres a través de un PUERTO. Un ascenso por el árbol
+        no es un invariante de una instancia: hace falta el resto del árbol para decidirlo.
+
+    Y es el ítem 1.7 el que dice por qué no basta con probarlo desde integración: la aritmética y
+    las ramas que solo se ejercen detrás de Testcontainers son las que se quedan sin ejercer el
+    día que Docker no arranca. Estas corren siempre, en el carril rápido, en milisegundos.
+
+    Sin infraestructura y sin E/S (§13): los puertos se sustituyen por dobles en memoria escritos
+    a mano en `Dobles/`. Ninguna base de datos, ningún contenedor, ninguna biblioteca de dobles.
+  -->
+
+  <ItemGroup Label="Sujeto de prueba">
+    <ProjectReference Include="../../src/BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Catalogo/Bastion.Catalogo.Domain/Bastion.Catalogo.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Catalogo/Bastion.Catalogo.Contracts/Bastion.Catalogo.Contracts.csproj" />
+    <ProjectReference Include="../../src/Modules/Catalogo/Bastion.Catalogo.Application/Bastion.Catalogo.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Marco de pruebas">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
