@@ -3288,6 +3288,17 @@ Humo: el migrador aplica los tres contextos, la cuenta sembrada inicia sesión (
       impuesto y 15 unidades
 ```
 
+> **El run de arriba es sobre `dd89e9f`, y a `main` va `f9b5825`: hay que decirlo y hay que
+> justificarlo.** `f9b5825` es el commit que escribe este mismo bloque, así que no puede citar su
+> propio run. Entre los dos, `git diff --stat dd89e9f f9b5825` da **un solo fichero, `docs/PLAN.md`**:
+> ni una línea de código, de test, de contrato ni de migración. Y `f9b5825` tiene su propio run en
+> verde, el **34178017980**, también con los 3 jobs contados en él — Backend `101911192453` ✓ (22
+> pasos, 0 omitidos), Frontal `101911192553` ✓ (17, 0) y Humo `101911925167` ✓ (24, 1 omitido)—. Las
+> cifras de arriba valen para el árbol que se lleva a `main` porque el código que las produce es
+> idéntico, y la comprobación que lo sostiene está escrita aquí para que se pueda repetir. La
+> alternativa —dar el run sin decir sobre qué árbol se midió— es justo lo que la regla del 1.5
+> prohíbe.
+
 **La lección, por cuarta vez, y la primera en la que se vio ANTES de escribir el arreglo.** Las tres
 anteriores se descubrieron arreglando otra cosa; esta se buscó a propósito, porque el enunciado del
 ítem ya la traía: *una obligación transversal enumerada a mano es ciega a lo que llegue después, y en
