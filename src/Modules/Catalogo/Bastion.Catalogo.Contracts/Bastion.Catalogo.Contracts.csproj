@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lo ÚNICO público del módulo Catálogo (§4, regla de frontera 1): DTOs y permisos. Es lo que
+    otro módulo podrá referenciar — y en la fase 1 lo hará Terceros, por el cruce declarado del
+    ítem 1.10 (`Tercero.TarifaAsignada`).
+
+    NO referencia `Bastion.Catalogo.Domain`, por lo mismo que en Organización y en Terceros: si lo
+    hiciera, cualquier módulo que usara este proyecto vería el dominio ajeno por la puerta de
+    atrás.
+
+    Y HOY NO REFERENCIA NADA MÁS, tampoco los bloques comunes. Los otros dos `Contracts` de módulo
+    ven `BuildingBlocks.Contracts` porque publican cursores y tramos (`TramoDe`, ADR-0029) y
+    `BuildingBlocks.Domain` por la forma de un evento de integración (ADR-0013). Catálogo no
+    publica ninguna de las dos cosas todavía: sus listados son páginas, y la página viaja envuelta
+    en `PaginaDe<T>` que compone el borde, no el DTO. Una referencia puesta «porque los otros la
+    tienen» sería un permiso concedido sin motivo — y el permiso es justo lo que el inventario de
+    arquitectura compara entero.
+  -->
+
+</Project>

@@ -136,17 +136,28 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
         // expone datos personales del art. 32, y una divisa no tiene ninguno. Cobrar cuatro
         // permisos y cuatro rutas por una protección que aquí no protege de nada, además,
         // declararía en el contrato que ver una divisa retirada es un acto reservado, y no lo es.
+        //
+        // `categoria` entró en el ítem 1.8 y este rojo salió el mismo día, sin que nadie apuntara
+        // la regla a Catálogo: es lo que se le pedía al módulo nuevo. Acota el listado de
+        // artículos por una rama del árbol de clasificación de la propia empresa. No es un dato de
+        // nadie —una categoría no identifica a una persona ni se puede asociar a una—, así que lo
+        // que deja escrito en el registro de acceso es «alguien listó los artículos de tal rama»,
+        // que es exactamente lo que un ERP tiene que poder decir en voz alta.
+        //
+        // Y es un `Guid`, no un nombre, lo que aquí importa por una razón distinta de la
+        // habitual: un identificador opaco no filtra por sí mismo ni siquiera CÓMO se llama la
+        // rama, así que la URL no cuenta nada del catálogo a quien solo vea el registro.
         parametros.ShouldBe(
             new SortedSet<string>(StringComparer.Ordinal)
             {
-                "page", "q", "retiradas", "size", "sort",
+                "categoria", "page", "q", "retiradas", "size", "sort",
             },
-            customMessage: "los parámetros de consulta de los listados no son los cinco del " +
-            "contrato: " + string.Join(", ", parametros));
+            customMessage: "los parámetros de consulta de los listados no son los del contrato: " +
+            string.Join(", ", parametros));
 
         // Y las dos preguntas de control, porque un silencio de la regla de al lado solo vale si
         // esa regla sabe hablar: tiene que ver la fuga en un nombre compuesto y tiene que callarse
-        // con uno de los cinco de arriba.
+        // con uno de los de arriba.
         Contiene("nifDelCliente", "nif").ShouldBeTrue(
             "la comparación no ve un campo sensible dentro de un nombre compuesto, que es " +
             "justamente como se escriben los parámetros de verdad");

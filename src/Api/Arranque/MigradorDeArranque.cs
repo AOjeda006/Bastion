@@ -1,4 +1,5 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
+using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Semillas;
@@ -8,8 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Bastion.Api.Arranque;
 
 /// <summary>
-/// El modo migrador: aplica las migraciones de los tres módulos con persistencia, carga las
-/// semillas del §12 y <b>sale</b>.
+/// El modo migrador: aplica las migraciones de cada módulo con persistencia, carga las semillas
+/// del §12 y <b>sale</b>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -34,7 +35,7 @@ namespace Bastion.Api.Arranque;
 /// </para>
 /// <para>
 /// El <b>orden</b> no es alfabético y no da igual: Auditoría primero, porque es la dueña de
-/// <c>auditoria.registros</c> y los otros dos escriben ahí en cuanto guardan algo. Con el orden
+/// <c>auditoria.registros</c> y los demás escriben ahí en cuanto guardan algo. Con el orden
 /// invertido, la semilla de arranque reventaría contra una tabla que todavía no existe. Es el mismo
 /// orden que usa el arranque de los tests de integración, y por el mismo motivo.
 /// </para>
@@ -64,7 +65,7 @@ public static partial class MigradorDeArranque
             : [.. args.Where(arg => !string.Equals(arg, Argumento, StringComparison.Ordinal))];
 
     /// <summary>
-    /// Aplica las migraciones pendientes de los tres módulos, carga las semillas y devuelve el
+    /// Aplica las migraciones pendientes de cada módulo, carga las semillas y devuelve el
     /// código de salida.
     /// </summary>
     /// <param name="app">La aplicación ya construida, con los módulos registrados.</param>
@@ -88,12 +89,13 @@ public static partial class MigradorDeArranque
             await MigrarAsync<OrganizacionDbContext>(alcance, registro).ConfigureAwait(false);
             await MigrarAsync<IdentidadDbContext>(alcance, registro).ConfigureAwait(false);
             await MigrarAsync<TercerosDbContext>(alcance, registro).ConfigureAwait(false);
+            await MigrarAsync<CatalogoDbContext>(alcance, registro).ConfigureAwait(false);
 
             // Y DESPUÉS las semillas, en el mismo proceso y con el mismo código de salida. Van
             // aquí y no en el arranque de la API por lo mismo que el DDL: con dos réplicas, dos
             // procesos cargarían los maestros a la vez y el segundo se estrellaría contra el
             // índice único del primero. El orden tampoco da igual —cargar antes de migrar es
-            // insertar en tablas que aún no existen—, y por eso está detrás de las tres.
+            // insertar en tablas que aún no existen—, y por eso está detrás de todas.
             await alcance.ServiceProvider
                 .GetRequiredService<CargadorDeSemillasDeOrganizacion>()
                 .CargarAsync(CancellationToken.None)

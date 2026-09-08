@@ -14,6 +14,8 @@ using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
+using Bastion.Catalogo.Contracts;
+using Bastion.Catalogo.Infrastructure;
 using Bastion.Identidad.Contracts;
 using Bastion.Identidad.Infrastructure;
 using Bastion.Identidad.Infrastructure.Seguridad;
@@ -184,6 +186,7 @@ builder.Services.AgregarModuloDeAuditoria(cadenaDeConexion);
 builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion, retencion);
 builder.Services.AgregarModuloDeIdentidad(cadenaDeConexion, opcionesDeJwt);
 builder.Services.AgregarModuloDeTerceros(cadenaDeConexion);
+builder.Services.AgregarModuloDeCatalogo(cadenaDeConexion);
 
 // --------------------------------------------------------------------- autenticación
 // Quién es quien llama, leído del token de acceso y de ningún otro sitio. Las cuatro
@@ -223,7 +226,12 @@ builder.Services
 // El catálogo se compone AQUÍ con lo que declara cada módulo. Identidad valida contra él los
 // permisos de un rol sin ver a los otros quince módulos (§4).
 builder.Services.AgregarAutorizacionPorPermisos(
-    [.. PermisosDeOrganizacion.Todos, .. PermisosDeIdentidad.Todos, .. PermisosDeTerceros.Todos]);
+    [
+        .. PermisosDeOrganizacion.Todos,
+        .. PermisosDeIdentidad.Todos,
+        .. PermisosDeTerceros.Todos,
+        .. PermisosDeCatalogo.Todos,
+    ]);
 
 // DENEGAR POR DEFECTO. La política de respaldo se aplica a todo endpoint que no traiga metadatos
 // de autorización propios, así que olvidarse de poner el atributo CIERRA la puerta en vez de

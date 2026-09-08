@@ -591,6 +591,8 @@
           "Bastion.Auditoria.Endpoints": "[1.0.0, )",
           "Bastion.Auditoria.Infrastructure": "[1.0.0, )",
           "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Catalogo.Endpoints": "[1.0.0, )",
+          "Bastion.Catalogo.Infrastructure": "[1.0.0, )",
           "Bastion.Identidad.Endpoints": "[1.0.0, )",
           "Bastion.Identidad.Infrastructure": "[1.0.0, )",
           "Bastion.Organizacion.Endpoints": "[1.0.0, )",
@@ -666,6 +668,44 @@
           "Microsoft.EntityFrameworkCore": "[10.0.9, )",
           "Microsoft.EntityFrameworkCore.Relational": "[10.0.9, )",
           "Npgsql": "[10.0.3, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
+        }
+      },
+      "bastion.catalogo.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Catalogo.Contracts": "[1.0.0, )",
+          "Bastion.Catalogo.Domain": "[1.0.0, )",
+          "Bastion.Organizacion.Contracts": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.9, )"
+        }
+      },
+      "bastion.catalogo.contracts": {
+        "type": "Project"
+      },
+      "bastion.catalogo.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.catalogo.endpoints": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Catalogo.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.catalogo.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Catalogo.Application": "[1.0.0, )",
+          "EFCore.NamingConventions": "[10.0.1, )",
+          "Microsoft.EntityFrameworkCore": "[10.0.9, )",
+          "Microsoft.EntityFrameworkCore.Design": "[10.0.9, )",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.9, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
         }
       },

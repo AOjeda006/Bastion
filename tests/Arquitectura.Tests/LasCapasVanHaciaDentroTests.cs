@@ -68,6 +68,10 @@ public sealed class LasCapasVanHaciaDentroTests
     /// </remarks>
     private static readonly string[] s_paresComprobados =
     [
+        "Catalogo.Application",
+        "Catalogo.Contracts",
+        "Catalogo.Domain",
+        "Catalogo.Infrastructure",
         "Identidad.Application",
         "Identidad.Contracts",
         "Identidad.Domain",

@@ -231,12 +231,13 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
     private static readonly string[] s_dondeSeDefinenLosFiltros =
     [
         "src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Persistencia/AuditoriaDbContext.cs",
+        "src/Modules/Catalogo/Bastion.Catalogo.Infrastructure/Persistencia/CatalogoDbContext.cs",
         "src/Modules/Identidad/Bastion.Identidad.Infrastructure/Persistencia/IdentidadDbContext.cs",
         "src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/OrganizacionDbContext.cs",
         "src/Modules/Terceros/Bastion.Terceros.Infrastructure/Persistencia/TercerosDbContext.cs",
 
         // No es un módulo, y por eso está aquí abajo y con su línea: es el contexto con el que el
-        // trabajo de fondo lee la bandeja. Define el filtro por lo mismo que los otros tres -la
+        // trabajo de fondo lee la bandeja. Define el filtro por lo mismo que los de módulo -la
         // cola es un dato de la empresa que lo emitió- y no puede definirlo el mapeo compartido,
         // porque la expresión del filtro lee una propiedad DE LA INSTANCIA del contexto.
         "src/BuildingBlocks/Infrastructure/BandejaDeSalida/ContextoDeLaBandeja.cs",

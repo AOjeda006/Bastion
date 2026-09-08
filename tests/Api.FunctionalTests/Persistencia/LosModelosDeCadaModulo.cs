@@ -39,6 +39,7 @@ internal static class LosModelosDeCadaModulo
     internal static readonly string[] Declarados =
     [
         "AuditoriaDbContext",
+        "CatalogoDbContext",
         "ContextoDeLaBandeja",
         "IdentidadDbContext",
         "OrganizacionDbContext",

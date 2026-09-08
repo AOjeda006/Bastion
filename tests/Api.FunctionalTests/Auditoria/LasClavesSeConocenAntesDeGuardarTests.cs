@@ -49,6 +49,8 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     private static readonly string[] s_generadasPorElServidor =
     [
         "Almacen.Version",
+        "Articulo.Version",
+        "Categoria.Version",
         "ConversionUM.Version",
         "Divisa.Version",
         "Ejercicio.Version",

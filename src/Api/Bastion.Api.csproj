@@ -34,6 +34,8 @@
   <ItemGroup Label="Módulos de la fase 1">
     <ProjectReference Include="../Modules/Terceros/Bastion.Terceros.Endpoints/Bastion.Terceros.Endpoints.csproj" />
     <ProjectReference Include="../Modules/Terceros/Bastion.Terceros.Infrastructure/Bastion.Terceros.Infrastructure.csproj" />
+    <ProjectReference Include="../Modules/Catalogo/Bastion.Catalogo.Endpoints/Bastion.Catalogo.Endpoints.csproj" />
+    <ProjectReference Include="../Modules/Catalogo/Bastion.Catalogo.Infrastructure/Bastion.Catalogo.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Observabilidad y datos">

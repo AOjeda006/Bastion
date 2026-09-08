@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Casos de uso del módulo Catálogo: un tipo por operación, sus puertos y sus DTOs internos.
+    Nada de bus en memoria: un caso de uso es una interfaz con su implementación registrada en el
+    contenedor (§3 del plan maestro).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Catalogo.Domain/Bastion.Catalogo.Domain.csproj" />
+    <ProjectReference Include="../Bastion.Catalogo.Contracts/Bastion.Catalogo.Contracts.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Application/Bastion.BuildingBlocks.Application.csproj" />
+
+    <!--
+      Contracts de Organización, y SOLO Contracts (§4, regla de frontera 1). Es el TERCER cruce
+      entre módulos del sistema, y el que el ADR-0024 anunció por su nombre: el artículo guarda la
+      unidad en la que se cuenta y el tramo de impuesto que propone, los dos como `Guid` y los dos
+      sin clave ajena, porque viven en el esquema de Organización y entre esquemas no se cruza
+      (regla 4). Lo que impide que ahí acabe un identificador inventado —o el de una unidad
+      RETIRADA— son `IConsultaDeUnidadesDeMedida` e `IConsultaDeImpuestos`, resueltas en proceso.
+      Son llamadas a método, no peticiones HTTP, y desde luego no un JOIN contra
+      `organizacion.unidades_de_medida`.
+    -->
+    <ProjectReference Include="../../Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
+    Solo las ABSTRACCIONES del contenedor, para publicar `AgregarCasosDeUsoDeCatalogo`. Las
+    implementaciones de los casos de uso son `internal` a propósito —fuera del módulo solo se ve
+    la interfaz—, y eso obliga a que quien las registre viva en este mismo ensamblado.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup Label="Pruebas">
+    <!--
+      Las dos comprobaciones que este ítem pone en la capa de aplicación —`ElArbolSigueSiendoUnArbol`
+      y `ElMaestroSeOfreceParaLoNuevo`— son `internal`, como todo lo que no es contrato. Y las dos
+      son ARITMÉTICA Y RAMAS: recorrer padres contando niveles, y traducir tres valores de un
+      enumerado a tres desenlaces. Nada de eso abre una conexión, así que su testigo NO puede vivir
+      solo detrás de Testcontainers: con el motor parado el caso frontera saldría verde y el aviso
+      llegaría en otra máquina. Es la lección del ítem 1.7, aplicada antes de necesitarla.
+    -->
+    <InternalsVisibleTo Include="Bastion.Catalogo.UnitTests" />
+  </ItemGroup>
+
+</Project>

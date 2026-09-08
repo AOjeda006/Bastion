@@ -142,14 +142,27 @@ public sealed class LasFronterasEntreModulosTests
                 .Order(StringComparer.Ordinal),
         ];
 
-        // La afirmación de conjunto no vacío de esta regla, con su número: los cuatro módulos
-        // montados llevan cinco proyectos cada uno. Los doce que faltan no tienen ni `.csproj`,
-        // así que un barrido que encontrara menos de veinte estaría mirando menos módulos de los
-        // que hay y —sin esta línea— no lo diría.
+        // La afirmación de conjunto no vacío de esta regla, con su número: cada módulo montado
+        // lleva sus cinco capas, y los que aún no lo están no tienen ni `.csproj`. Un barrido que
+        // encontrara menos estaría mirando menos módulos de los que hay y —sin esta línea— no lo
+        // diría.
+        //
+        // El número se DERIVA del inventario en vez de escribirse. La versión anterior decía «20»
+        // y «los cuatro módulos montados» en la misma frase, y eso son dos cuentas que hay que
+        // mantener de acuerdo a mano: el ítem 1.8 montó el quinto módulo y la línea se puso roja
+        // por la cuenta, no por lo que la regla vigila. Derivarlo no debilita nada, porque la
+        // mitad declarada sigue estando escrita a mano —es `Inventario.Modulos`— y la comparan
+        // entera `Las_carpetas_de_modulo_son_las_declaradas` y
+        // `Los_ensamblados_modulares_de_la_salida_son_los_declarados`.
+        int esperados = Inventario.Modulos.Count(par => par.Value == Presencia.Montado)
+            * Inventario.Capas.Length;
+
         proyectos.Count.ShouldBe(
-            20,
+            esperados,
             "el barrido de referencias tiene que encontrar los cinco proyectos de cada uno de los " +
-            "cuatro módulos montados, y ha encontrado " +
+            Inventario.Modulos.Count(par => par.Value == Presencia.Montado)
+                .ToString(CultureInfo.InvariantCulture) +
+            " módulos montados, y ha encontrado " +
             proyectos.Count.ToString(CultureInfo.InvariantCulture));
 
         IReadOnlyList<string> encontradas =

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dominio del módulo Catálogo (§4): el agregado `Articulo` y el agregado `Categoria`.
+
+    Su única referencia permitida es el dominio base, de donde salen `EntidadBase` y
+    `IDeInquilino`. Ni EF Core, ni ASP.NET Core, ni nada de infraestructura (§4, regla de
+    frontera 2). Lo comprueba el test de arquitectura.
+
+    NO referencia `Bastion.Organizacion.Contracts`, aunque el artículo guarde el identificador
+    de una unidad y el de un tramo de impuesto. Esos dos son `Guid` y nada más aquí dentro: quien
+    los valida es la capa de aplicación contra los puertos del 1.2 (ADR-0024), porque validar es
+    preguntarle a otro módulo y el dominio no le pregunta nada a nadie.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

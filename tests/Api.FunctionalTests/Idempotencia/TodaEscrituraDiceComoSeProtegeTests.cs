@@ -326,8 +326,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(102, "acciones en total");
-        cambian.Count.ShouldBe(68, "acciones que cambian estado");
+        todas.Count.ShouldBe(110, "acciones en total");
+        cambian.Count.ShouldBe(72, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -388,15 +388,29 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // cuatro —lo vigila `NingunMaestroRetirableSeBorraTests`—. Estos ocho borran la retirada,
         // que es un sub-recurso, como `DELETE /ejercicios/{id}/cierre` convive con el borrado del
         // ejercicio sin ser lo mismo.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(38, "operaciones que exigen If-Match");
+        //
+        // Ciento diez desde el ítem 1.8, y otra vez entra un MÓDULO entero, como en el 1.5:
+        // Catálogo publica ocho acciones —artículos y categorías, con las mismas cuatro cada uno—.
+        // El reparto es +8 al total, +4 a las que cambian estado, +2 a If-Match, +2 a
+        // Idempotency-Key y CERO al cajón de las exentas, y esos cinco números juntos dicen la
+        // forma del módulo mejor que cualquier prosa: cuatro lecturas (dos listados y dos
+        // consultas por id), dos altas con clave y dos modificaciones citando versión. Nada
+        // exento, porque en Catálogo no hay ninguna escritura que no sea una de esas cuatro.
+        //
+        // Y no hay ningún `DELETE`, que aquí es la afirmación de fondo: un artículo no se borra ni
+        // se retira ni se bloquea. Si el cajón de las exentas se hubiera movido con este ítem,
+        // habría entrado una escritura sin candado y con motivo escrito a posteriori; si hubiera
+        // subido If-Match sin subir Idempotency-Key, las dos altas se habrían colado exigiendo una
+        // versión que un recurso que aún no existe no puede citar.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(40, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(13, "rutas que admiten Idempotency-Key");
+            .ShouldBe(15, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (38 + 13 + s_exentas.Count).ShouldBe(cambian.Count);
+        (40 + 15 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

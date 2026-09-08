@@ -67,8 +67,8 @@ internal static class Inventario
             ["Identidad"] = Presencia.Montado,
             ["Organizacion"] = Presencia.Montado,
             ["Terceros"] = Presencia.Montado,
+            ["Catalogo"] = Presencia.Montado,
 
-            ["Catalogo"] = Presencia.Andamio,
             ["Compras"] = Presencia.Andamio,
             ["Contabilidad"] = Presencia.Andamio,
             ["Crm"] = Presencia.Andamio,
@@ -112,6 +112,12 @@ internal static class Inventario
         StringComparer.Ordinal)
     {
         "Auditoria.Infrastructure",
+
+        "Catalogo.Application",
+        "Catalogo.Contracts",
+        "Catalogo.Domain",
+        "Catalogo.Endpoints",
+        "Catalogo.Infrastructure",
 
         "Identidad.Application",
         "Identidad.Contracts",
@@ -223,6 +229,28 @@ internal static class Inventario
         "Auditoria.Infrastructure -> Auditoria.Application",
         "Auditoria.Infrastructure -> BuildingBlocks.Infrastructure",
 
+        "Catalogo.Application -> BuildingBlocks.Application",
+
+        // El TERCER cruce entre módulos, y por la misma puerta que los dos primeros. Un
+        // artículo guarda tres identificadores de Organización —empresa, unidad base e
+        // impuesto por defecto— y ninguno de los tres es clave ajena: viven en otro esquema
+        // (regla 4). Quien dice si existen y si siguen ofreciéndose es Organización, por sus
+        // tres puertos de lectura.
+        "Catalogo.Application -> Organizacion.Contracts",
+
+        "Catalogo.Application -> Catalogo.Contracts",
+        "Catalogo.Application -> Catalogo.Domain",
+
+        // Catalogo.Contracts NO tiene ninguna arista, y es lo que le toca hoy: publica dos
+        // DTO y seis permisos, y ninguna de las dos cosas necesita el bloque común. El día
+        // que publique un cursor de tramos o un evento de integración, la arista aparecerá
+        // aquí y habrá que escribirla.
+        "Catalogo.Domain -> BuildingBlocks.Domain",
+        "Catalogo.Endpoints -> BuildingBlocks.Infrastructure",
+        "Catalogo.Endpoints -> Catalogo.Application",
+        "Catalogo.Infrastructure -> BuildingBlocks.Infrastructure",
+        "Catalogo.Infrastructure -> Catalogo.Application",
+
         "Identidad.Application -> BuildingBlocks.Application",
         "Identidad.Application -> Identidad.Contracts",
         "Identidad.Application -> Identidad.Domain",
@@ -288,6 +316,15 @@ internal static class Inventario
     internal static readonly IReadOnlyDictionary<string, string> CrucesDeclarados =
         new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
+            ["Catalogo.Application -> Bastion.Organizacion.Contracts"] =
+                "el tercero, y el más cargado: un artículo cuelga de una empresa y guarda " +
+                "una unidad base y un impuesto por defecto que son de Organización. Los " +
+                "tres se preguntan por su puerto antes de construir el agregado, y los dos " +
+                "últimos no preguntan «¿existe?» sino «¿en qué estado está?»: la retirada " +
+                "del ADR-0023 solo significa algo si alguien distingue lo que se ofrece " +
+                "para lo nuevo de lo que únicamente resuelve lo viejo, y ese alguien es " +
+                "este módulo.",
+
             ["Identidad.Application -> Bastion.Organizacion.Contracts"] =
                 "el único, y va por donde tiene que ir. Al abrir sesión o al cambiar de empresa, " +
                 "Identidad pregunta a Organización si esa empresa existe y no está bloqueada " +
@@ -370,6 +407,44 @@ internal static class Inventario
     internal static readonly IReadOnlyDictionary<string, Identificador> IdentificadoresDeclarados =
         new SortedDictionary<string, Identificador>(StringComparer.Ordinal)
         {
+            ["Articulo.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "tercero de la misma familia que el de la membresía y el del tercero: el nombre " +
+                "casa, y lo que hay que escribir es POR DÓNDE se comprueba. Lo pregunta " +
+                "CrearArticulo antes de construir el agregado."),
+
+            ["Articulo.ImpuestoPorDefectoId"] = new(
+                "Impuesto",
+                Raiz + ".Organizacion.Contracts.Impuestos.IConsultaDeImpuestos",
+                "el papel va en el nombre —«el que se propone si no se dice otro»— y por eso no " +
+                "casa con el del tipo. Y el puerto no contesta «existe» sino en qué ESTADO está " +
+                "el tramo para una fecha de devengo: un impuesto derogado sigue resolviendo las " +
+                "facturas de cuando regía y no se ofrece para un artículo nuevo."),
+
+            ["Articulo.UnidadBaseId"] = new(
+                "UnidadMedida",
+                Raiz + ".Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida",
+                "el caso que el ADR-0024 anunció por su nombre antes de que existiera: «se " +
+                "llamará UnidadBaseId y tampoco casará». No casa, en efecto, y por eso está " +
+                "escrito. Se valida por el estado, igual que el impuesto."),
+
+            ["Categoria.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del del artículo: el árbol de clasificación es de la empresa que lo " +
+                "monta, no del sistema. Lo comprueba CrearCategoria contra el mismo puerto."),
+
+            ["Categoria.PadreId"] = new(
+                "Categoria",
+                "",
+                "apunta a otra categoría del mismo árbol y el nombre dice el papel —«de quién " +
+                "cuelga»— y no el tipo, así que ninguna heurística por nombre lo resuelve. " +
+                "Mismo módulo y mismo esquema: aquí sí hay clave ajena, y encima una restricción " +
+                "CHECK que impide que una categoría sea su propia madre. Lo que la base de datos " +
+                "no puede ver —un ciclo de dos o más eslabones— lo comprueba " +
+                "ElArbolSigueSiendoUnArbol, en el alta y en la modificación."),
+
             ["ConversionUM.UnidadDestinoId"] = new(
                 "UnidadMedida",
                 "",
