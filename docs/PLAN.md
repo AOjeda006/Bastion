@@ -3255,6 +3255,143 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
+**Ítem 1.7 — la retirada y las dos conversiones.** El ADR-0023 entero, que llevaba escrito y sin
+implementar desde la puerta de clarificación de la fase 1, y **antes** de que Catálogo referencie
+`UnidadMedida`: ese era el disparador que el propio ADR dejó puesto.
+
+**La lección del ítem, por cuarta vez, y esta vez se vio antes de escribir el arreglo.** Una
+obligación transversal enumerada a mano es ciega a lo que llegue después, y en verde no la mira
+nadie. Aquí la obligación era `EstadoDeMaestro`: tres valores, y `SoloResuelveLoViejo` lo contestaba
+**solo** `ConsultaDeImpuestos`. Divisas y unidades no podían contestarlo —el comentario de las dos
+lo decía, «la tercera llega con la retirada», sin que nada comprobara que llegaba—, así que la lista
+cerrada tenía un valor que para dos de sus tres productores era inalcanzable. La regla que lo caza
+—`LaMatrizDePuertoYEstadoTests`— se escribió **primero y se commiteó en rojo** (`cf46416`), con las
+dos casillas nombradas, y se puso verde con la retirada.
+
+**La forma de esa regla es lo que se lleva el ítem.** Los dos lados se descubren y ninguno es una
+lista: los **valores**, del enumerado; los **puertos**, de lo que el `Contracts` publica —toda
+interfaz con un método que devuelva `Task<EstadoDeMaestro>`—; y las **casillas cubiertas**, de los
+`[CubreEstadoDeMaestro]` puestos **sobre el caso que las afirma**, no en una lista aparte. Un puerto
+nuevo entra solo, con sus tres casillas por cubrir; un caso borrado se lleva su casilla por delante y
+la matriz se pone roja. Y la matriz se afirma **no vacía** antes de compararla, que es la rendija por
+la que un cero contra cero sale verde.
+
+**La retirada, en los cuatro maestros de instalación.** `Divisa`, `TipoCambio`, `UnidadMedida` y
+`ConversionUM` implementan `IRetirable` —la marca que hace de lista, igual que `IBloqueable`—. El
+comportamiento es el literal del ADR: no se ofrece para operaciones nuevas, sigue resolviendo para lo
+que ya apunta a ella; el `GET` de la colección la excluye por omisión y el `GET` por identificador
+**la sigue devolviendo**. Y **ningún `DELETE` de la fila, para ninguno de los cuatro, nunca**: la
+prohibición la vigila `NingunMaestroRetirableSeBorra`, que descubre los dos universos —las entidades
+marcadas en los ensamblados de dominio del disco, y los recursos cuyo listado devuelve una página con
+`Retirada`— y compara sus tamaños antes de recorrerlos.
+
+**La exclusión vive en UN sitio.** `Paginador.SinLasRetiradas` monta la expresión `!fila.EstaRetirada`
+cuando el elemento es `IRetirable` y no se han pedido las retiradas. No hay cuatro repositorios
+acordándose: hay una consulta, y un quinto maestro retirable la hereda sin que nadie lo apunte.
+
+> **Decisión A — cómo se ven las retiradas: un parámetro del listado de siempre,
+> `?retiradas=true`, y no un extremo aparte.** Se decide **por contraste con el ADR-0027**, que es
+> lo que impide copiarlo por parecido: lo que hace del listado de lo bloqueado un extremo separado,
+> nominativo y trazado, **no** es que las filas estén escondidas — es que expone **datos del
+> artículo 32**. Una divisa retirada no tiene datos de nadie: verla no es un acceso reservado, es
+> mirar el maestro. Pasa por el contrato de listado del 1.3, y `retiradas` **no es un criterio
+> sensible** —no lleva identificador, ni nombre, ni nada de una persona—, así que puede viajar en la
+> URL; `NingunCriterioSensibleViajaEnLaUrl` declara ahora **cinco** nombres (`page`, `q`,
+> `retiradas`, `size`, `sort`) con ese motivo escrito en el propio caso.
+
+> **Decisión B — `TipoCambio` y `ConversionUM` no tienen puerto de consumo, y hay que decirlo.**
+> `EstadoDeMaestro` lo contestan `IConsultaDeDivisas`, `IConsultaDeUnidadesDeMedida` e
+> `IConsultaDeImpuestos`; los otros dos maestros no exponen puerto para otros módulos porque hoy no
+> los consume nadie. **Esto no convierte su retirada en vacuidad del ADR-0020:** es observable por
+> sus propios `GET` —el de la colección deja de ofrecerlas y el del identificador las sigue
+> devolviendo—, y eso es un camino real, ejercido por HTTP contra PostgreSQL. Pero la frase queda
+> escrita, porque el día que Catálogo o Facturación pidan un puerto para conversiones, la matriz
+> puerto × estado les exigirá sus tres casillas sin que nadie tenga que acordarse.
+
+**La inversa plausible (decisión 2 del ADR).** Con `f` y `g` ya redondeados a seis decimales,
+`|f·g − 1| ≤ 5·10⁻⁷·(f + g)`. En la **capa de aplicación** y al escribir, no como invariante de
+dominio: la regla relaciona **dos instancias distintas** del agregado, y un invariante que cargara
+otro agregado sería justo la grieta que la R12 cierra. El fallo es un error de negocio con nombre
+—`conversion-um-inversa-implausible`, 409—, no una excepción (ADR-0004). Y la tolerancia **se
+calcula**: `new decimal(5, 0, 0, false, DecimalesDelFactor + 1)`, para que no queden dos sitios
+diciendo lo mismo sin nada que los ate.
+
+**Se comprueba en el alta Y en la modificación**, y lo segundo no es un extra: si se da de alta
+`A→B`, luego `B→A`, y después alguien **modifica** la primera, el par vuelve a poder contradecirse.
+Un test que solo ejerza el alta deja pasar exactamente el camino por el que se rompe, y lo deja pasar
+en verde. La mutación 5 es esa.
+
+> **Decisión C — una fila retirada SIGUE restringiendo a su inversa.** «Sigue resolviendo» significa
+> que sigue siendo verdad, así que sigue acotando. Va escrita y no puesta por omisión, porque la
+> alternativa tiene una consecuencia concreta: si retirar una fila la sacara de la comprobación,
+> **retirar el sentido incómodo sería la manera de declarar cualquier número en el otro** — y una
+> salida que la propia regla ofrece no es una salida, es un agujero con permiso. Traducido a
+> consulta: `DelParAsync` trae también las retiradas, y sus dos clientes —el resolutor y la
+> comprobación de la inversa— la necesitan así por motivos distintos.
+
+> **El enunciado del ítem daba `g = 0,083334` por aceptada para `f = 12`, y la desigualdad la
+> rechaza. Manda la desigualdad, que está fijada y no se toca.** Los números: `|12 × 0,083334 − 1| =
+> 8·10⁻⁶`, contra un margen de `5·10⁻⁷ × 12,083334 = 6,0416670·10⁻⁶`. Y el rechazo **es lo
+> correcto**: `1/12 = 0,08333333…`, así que `0,083334` se separa `6,67·10⁻⁷` del valor real —más de
+> media unidad del último decimal— y por tanto **no es** un redondeo de `1/12` a seis decimales;
+> `0,083333`, a `3,33·10⁻⁷`, sí lo es y **se acepta**. Ensanchar la tolerancia para que entrara sería
+> exactamente el «número elegido por comodidad» que el ADR prohíbe. Los tres casos están escritos con
+> su aritmética en `LaAritmeticaDeLaInversaTests`.
+
+**El caso frontera, que es donde una desigualdad se equivoca de signo.** `f = 1,001` y `g = 0,999`:
+`f·g = 0,999999`, se separan `10⁻⁶`, y el margen es `5·10⁻⁷ × 2,000 = 10⁻⁶` — **exactamente igual**.
+Con `≤` entran; con `<` no. Y hay un caso aparte que **afirma esa igualdad**, porque un frontera que
+no esté en la frontera no separa los dos signos: sería un par cualquiera dentro del margen, y la
+mutación pasaría en verde. El vecino `g = 0,998999` se separa `2,001·10⁻⁶`, que además cae por debajo
+de `10⁻⁵`: por eso el mismo caso caza también la tolerancia relajada un orden de magnitud.
+
+**El resolutor (decisión 3 del ADR).** `GET /api/v1/organizacion/conversiones-um/resolucion` con las
+dos unidades. Pedir un par no declarado es `conversion-um-no-declarada`, un **404**. **Nunca un cero,
+nunca un nulo, nunca el producto de la cadena**: las tres son las tres peores maneras de equivocarse
+en un inventario —un cero convierte las existencias en nada, un nulo se propaga sin ruido, y encadenar
+multiplica el error de redondeo y hace que el número dependa de qué camino elija el buscador—. El caso
+que importa **no** es el par declarado: es `kg→g` y `g→mg` declarados, `kg→mg` preguntado, y que salga
+el error con nombre y **no un 1000000** —comprobado también sobre el cuerpo de la respuesta, que no
+puede llevar ese número ni de adorno—. Ni identidad ni simetría: `kg→kg` falla igual, y `B→A` no se
+deduce invirtiendo `A→B`.
+
+**La ruta nueva pasa por los tres universos del 1.3 y el 1.4 y por el censo, sin apuntarla a mano en
+ninguno**: tabla de enrutado, testigo de versión en el cuerpo, criterio sensible en la URL, y el
+censo de reglas de su carril. Su `type` entra en el catálogo del ADR-0030 y el frontal escribe el
+texto desde el `type`, en `es.ts` y `en.ts`.
+
+**Nueve puertas nuevas, cada una con su permiso y su prohibición.** Ocho constantes nuevas en
+`PermisosDeOrganizacion` —retirar y reincorporar son permisos **distintos**, como `cerrar`/`reabrir`:
+los cuatro maestros son de instalación (R8), así que retirar por error deja **a todas las empresas**
+sin esa fila, y deshacerlo tiene que poder autorizarse aparte—. `TodaEscrituraDiceComoSeProtege`
+cuenta ahora 102 acciones, 68 que cambian estado, con 38 exigiendo versión, 13 admitiendo
+idempotencia y 17 exentas declaradas: `38 + 13 + 17 = 68`, y esa suma es la aserción.
+
+**Un defecto que salió de comprobar la decisión 6 contra el código, y que hay que decir entero.** El
+`[Range(0.000001, 1000000)]` de los DTO significaba que el redondeo-a-cero del factor **no era
+alcanzable por HTTP**. Lo era desde cualquier otro llamante y, sobre todo, era una **promesa falsa**:
+una guarda de dominio que decía impedir algo que solo impedía el borde. El rango vive ahora en el
+dominio —`FactorMinimo` y `FactorMaximo`, con su porqué escrito— y la validación redondea **primero**
+y comprueba el número que se va a guardar; una regla barrida compara los cuatro literales del
+contrato contra las dos constantes, sin enumerar DTO.
+
+**Y una decisión de sitio, que es la que más cuesta ver.** La desigualdad de la inversa y la negativa
+a encadenar tenían su **único** testigo en `Api.IntegrationTests`, detrás de Testcontainers. Pero ni
+una comparación entre dos `decimal` ni la rama que decide no componer una cadena abren una conexión:
+son *la parte del carril que no necesita el carril*, exactamente como `LaTraduccionASqlTests` desde el
+1.3. Con Docker parado —que es como estaba esta máquina al empezar—, cambiar el `≤` por un `<`
+compilaba, salía verde, y el aviso llegaba minutos después y en otro sitio. **Un caso frontera al que
+solo se llega levantando un contenedor es un caso frontera que nadie ejerce mientras escribe el cambio
+que lo rompe.** Se añade `LaAritmeticaDeLaInversaTests` como **segunda excepción declarada** de
+`Organizacion.IntegrationTests`, con `InternalsVisibleTo` de la capa de aplicación hacia ese
+ensamblado nombrado. No sustituye a los casos por HTTP —allí se comprueba que el rechazo llega como
+409 y que el resolutor contesta 404—: aquí se comprueba el número, y ninguna de las dos afirmaciones
+implica a la otra.
+
+**Lo que el ítem no toca**, y se comprueba en el `git diff`: catálogo, artículo, categoría, tarifas,
+cruces mutuos, importación. **Nada de `Impuesto`**: su `/cierre` es correcto y el ADR dice
+expresamente que se queda como está.
+
 **Ítem 1.6 cerrado — lo que cuelga del tercero, y la misma lección tres veces:**
 run **34125157573** sobre `911ba5c`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3` de la API, no de la memoria): Backend `101752010394` ✓ (22 pasos, 0 omitidos),
@@ -4175,6 +4312,143 @@ porque el descubrimiento por nombre es exactamente lo que un identificador mal n
 ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en uno.
 
 El carril de arquitectura pasa de **18 a 23** casos.
+
+### Verificado en local, con la salida real — ítem 1.7
+
+**Toda cifra de «antes y después» nombra sus dos commits.** El «antes» es `3a937a3` (main al abrir
+la rama); el «después», `b9ca5d6` (el árbol que se lleva a main al cerrar).
+
+**Y esta vez el carril de integración SÍ se pudo ejercer en local.** Docker Desktop estaba
+instalado y **parado**, no ausente: la firma con la que fallaba era
+`DotNet.Testcontainers.Builders.DockerUnavailableException : Docker is either not running or
+misconfigured … Failed to connect to Docker endpoint at 'npipe://./pipe/docker_engine' … ----
+System.TimeoutException : The operation has timed out`, con **334 casos rojos de 334**. Arrancado el
+motor, los 334 salen verdes. Es la primera vez desde el 1.4 que las dos mitades de este informe se
+miden en la misma máquina, y es lo que hace que las **ocho** mutaciones sean atribuibles aquí en vez
+de solo en el *runner*.
+
+```
+batería:      dotnet build  ->  0 Advertencia(s), 0 Errores
+              dotnet format --verify-no-changes  ->  exit 0
+              generar-errores.sh --comprobar  ->  al día, 51 tipos de 56 sitios  (49 de 54 en el 1.6)
+              generar-openapi.sh --comprobar  ->  al día, 102 operaciones  (93 en el 1.6)
+              comprobar-migraciones.sh  ->  Organizacion 5, Identidad 3, Terceros 2, y el modelo
+                                            coincide con ellas  (Organizacion eran 4)
+
+dominio y arquitectura:
+  bash scripts/ci/recuento-de-tests.sh artifacts/test-results/dominio "Dominio y arquitectura" 300 \
+    "Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,\
+Bastion.BuildingBlocks.UnitTests.dll,Bastion.Identidad.UnitTests.dll,\
+Bastion.Organizacion.IntegrationTests.dll,Bastion.Organizacion.UnitTests.dll,Bastion.Terceros.UnitTests.dll"
+
+  651 casos (651 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+    — BuildingBlocks.UnitTests 132, Identidad.UnitTests 58, Organizacion.UnitTests 183,
+      Terceros.UnitTests 77, Organizacion.IntegrationTests 21, Arquitectura.Tests 34,
+      Api.FunctionalTests 140, Api.IntegrationTests 6
+    (630 en el 1.6 sobre `3a937a3`, los mismos 8 ensamblados: +21 casos)
+
+integración (Testcontainers):
+  bash scripts/ci/recuento-de-tests.sh artifacts/test-results/integracion "Integración (Testcontainers)" 100 \
+    "Bastion.Api.IntegrationTests.dll,Bastion.Organizacion.IntegrationTests.dll"
+
+  334 casos (334 correctos, 0 con error, 0 omitidos) en 8 ensamblados
+    — Organizacion.IntegrationTests 74, Api.IntegrationTests 260, y 0 en los otros seis
+    (318 en el 1.6 sobre `3a937a3`: +16 casos)
+
+  El +16, atribuido entero: `LaInversaYElResolutorTests` 10 (seis `[Fact]` y dos `[Theory]` de dos
+  filas), `LaRetiradaNoEsUnBloqueoTests` 4, y `LosPuertosDeLecturaTests` +2 (los dos casos de
+  `SoloResuelveLoViejo`, de `93b8e5f`).
+
+frontal: typecheck / lint / format:check / test / build  ->  exit 0 los cinco
+         test  ->  11 ficheros, 63 casos, 0 en rojo (los mismos que en el 1.6)
+         presupuesto  ->  arranque 403/450 KiB en 3 ficheros · total servido 549/900 KiB  (548 en el 1.6)
+
+  cd frontend && npm test -- --run 2>&1 | grep -c "not wrapped in act"
+    Antes  — `3a937a3`: 109 avisos en 7 ficheros
+    Después — `b9ca5d6`: 109 avisos, la MISMA cifra.
+  No se mueve, y el motivo está en el `git diff --stat 3a937a3..b9ca5d6 -- frontend/`: solo
+  `esquema.ts` (generado), `es.ts` y `en.ts`. Ni un componente, ni una pantalla.
+```
+
+**Licencias — ningún paquete nuevo, con el comando pegado y su salida.**
+
+```
+git diff 3a937a3..b9ca5d6 -- '*.csproj' | awk '/^diff --git/{f=$4} /^\+.*PackageReference/{print f" -> "$0}'
+    (sin salida)
+```
+
+Cero líneas: el ítem no añade ni una `PackageReference`. El único cambio en un `.csproj` es un
+`InternalsVisibleTo` hacia un ensamblado del propio repositorio. Se mide con `awk` sobre el
+`diff --git` y **no** con `grep -B`, que atribuye por proximidad y le cuelga el paquete al fichero
+equivocado en cuanto hay dos `.csproj` seguidos.
+
+### Las ocho mutaciones del 1.7, cada una aplicada, ejecutada y revertida
+
+Todas sobre **árbol limpio**, línea base `b9ca5d6`, aplicadas con copia de respaldo y revertidas
+**restaurando esa copia** —nunca con `git checkout --`, que se llevaría por delante todo lo no
+commiteado del fichero—. Después de la tanda: `git status --porcelain` **vacío** y
+`grep -rn MUTACION` **sin resultados**, los dos comprobados.
+
+| # | Mutación | Dónde | Qué se pone rojo |
+|---|---|---|---|
+| 1 | Quitar las dos marcas `[CubreEstadoDeMaestro(…, SoloResuelveLoViejo)]` de divisa y unidad — el estado *antes* del arreglo | `LosPuertosDeLecturaTests.cs` | `LaMatrizDePuertoYEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta`, nombrando **las dos casillas** |
+| 2 | Publicar `DELETE /divisas/{id}` | `DivisasController.cs` | `NingunMaestroRetirableSeBorraTests.Ningun_recurso_retirable_publica_el_borrado_de_una_fila` |
+| 3 | El `GET` por identificador de una fila retirada devolviendo **404** | `ConsultasDeDivisas.cs` | `LaRetiradaNoEsUnBloqueoTests.El_GET_por_identificador_sigue_devolviendo_la_fila_retirada` (y de rebote `Reincorporar_la_vuelve_a_ofrecer_y_no_crea_una_fila_nueva`) |
+| 4 | La colección incluyendo lo retirado por omisión | `Paginador.cs` | `LaRetiradaNoEsUnBloqueoTests.La_coleccion_excluye_lo_retirado_por_omision_y_lo_trae_al_pedirlo` |
+| 5 | Quitar la comprobación de la inversa de la **modificación**, dejándola solo en el alta | `ModificarConversionUm.cs` | `LaAritmeticaDeLaInversaTests.La_modificacion_vuelve_a_comprobar_la_inversa` **y** `LaInversaYElResolutorTests.La_modificacion_vuelve_a_comprobar_la_inversa` (409 → 200) |
+| 6a | `<` donde va `≤` | `LaInversaEsPlausible.cs` | `La_desigualdad_…(1.001, 0.999, casan: True)` **y** `El_par_de_la_frontera_se_separa_EXACTAMENTE_el_margen` |
+| 6b | La tolerancia relajada un orden de magnitud (`5·10⁻⁶`) | `LaInversaEsPlausible.cs` | `El_margen_sale_de_la_escala_…`, `El_par_de_la_frontera_…` y **dos** filas del `[Theory]`: `(1.001, 0.998999)` y `(12, 0.083334)`, que pasan a aceptarse |
+| 7 | El resolutor componiendo la cadena por el listado en vez de fallar | `ResolverConversionUm.cs` | `LaInversaYElResolutorTests.El_par_que_habria_que_encadenar_no_se_resuelve` (404 → 200) y, en el carril rápido, el doble negándose a listar |
+| 8 | El resolutor devolviendo una resolución vacía en vez del error con nombre | `ResolverConversionUm.cs` | `El_par_que_habria_que_encadenar_no_se_resuelve` en **los dos** carriles, más `El_sentido_contrario_no_se_deduce_invirtiendo` |
+
+**La 1 entera, porque es el hallazgo del ítem.** Es la única que no es una mutación inventada: es el
+estado **real** del repositorio antes de este trabajo, y por eso se commiteó en rojo en `cf46416`
+antes de arreglar nada.
+
+```
+Con error Bastion.Organizacion.IntegrationTests.Persistencia.LaMatrizDePuertoYEstadoTests
+          .Cada_casilla_de_puerto_por_estado_esta_cubierta
+  Shouldly.ShouldAssertException : sinDuenio
+    should be empty but had 2 items and was
+["IConsultaDeDivisas -> SoloResuelveLoViejo", "IConsultaDeUnidadesDeMedida -> SoloResuelveLoViejo"]
+
+  Additional Info:
+    hay casillas de la matriz puerto × estado que ningún caso afirma. Una casilla sin dueño
+    significa una de dos cosas, y las dos son malas: o el puerto no puede contestar ese valor —y
+    entonces la lista cerrada tiene un valor inalcanzable, que es el defecto que abrió el ítem 1.7—
+    o puede y nadie lo comprueba. Se cierra marcando con `CubreEstadoDeMaestro` el caso que lo
+    afirma, y si ese caso no existe es que hay que escribirlo
+```
+
+**La 3 entera, porque es la única línea que separa retirada de bloqueo y no la vigila nada más.**
+Las dos cosas quitan una fila de en medio sin borrarla, las dos son reversibles, y las dos se leen
+igual en un diagrama; al que venga después le va a parecer natural «unificar» los dos
+comportamientos, y el 404 es lo más fácil de copiar porque **ya está escrito** para el bloqueo.
+
+```
+Con error Bastion.Api.IntegrationTests.Retiradas.LaRetiradaNoEsUnBloqueoTests
+          .El_GET_por_identificador_sigue_devolviendo_la_fila_retirada
+  Shouldly.ShouldAssertException : lectura.StatusCode
+    should be HttpStatusCode.OK but was HttpStatusCode.NotFound
+
+  Additional Info:
+    una divisa retirada NO desaparece: se sigue devolviendo por su identificador. Eso es lo que la
+    distingue de una fila bloqueada, que responde 404 a propósito.
+    {"type":"/errors/divisa-no-encontrada","title":"Recurso no encontrado","status":404,
+     "detail":"No hay ninguna divisa con el identificador 01a07ea3-9e87-72e7-9178-91ca5a3290fc.",
+     "instance":"/api/v1/organizacion/divisas/01a07ea3-9e87-72e7-9178-91ca5a3290fc", …}
+
+Con error … .Reincorporar_la_vuelve_a_ofrecer_y_no_crea_una_fila_nueva
+  Shouldly.ShouldAssertException : lectura.StatusCode
+    should be HttpStatusCode.OK but was HttpStatusCode.NotFound
+```
+
+**Y el segundo rojo de la 3 dice algo que no estaba en el enunciado:** con el 404 puesto, la retirada
+deja de poder **deshacerse**. Reincorporar necesita el `ETag` de la fila, y el `ETag` sale del `GET`
+que acaba de contestar 404. En cuatro maestros de instalación (R8) —donde retirar por error deja sin
+esa fila a **todas** las empresas— eso convierte un error reversible en uno permanente. La línea que
+separa retirada de bloqueo no es solo una cortesía con las facturas viejas: es lo que sostiene la
+puerta de vuelta.
 
 ### Verificado en local, con la salida real — ítem 1.6
 
