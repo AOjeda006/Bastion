@@ -227,12 +227,31 @@ public sealed class ContratoDeCatalogoTests(PostgresConTodosLosModulos postgres)
 
         ArticuloDto articulo = await CrearAsync(cliente, Alta("MOD", unidad, vigente));
 
+        // Y AHORA SE CIERRA EL TRAMO DEL ARTÍCULO, que es lo que le da dientes a lo de abajo. Con
+        // el tramo todavía rigiendo, revalidar lo que nadie ha tocado y no revalidarlo se ven
+        // exactamente igual desde fuera: el caso saldría verde el día que alguien unificara las
+        // dos ramas. Derogado el tramo que el artículo ya tenía, el «sin tocarlo» de la línea
+        // siguiente es literalmente el congelador que esta decisión existe para evitar.
+        var ayer = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+
+        using (HttpResponseMessage cierre = await cliente.EnviarConVersionAsync(
+            HttpMethod.Post,
+            $"{Impuestos}/{vigente}/cierre",
+            await cliente.EtiquetaDeAsync($"{Impuestos}/{vigente}"),
+            JsonContent.Create(new CerrarImpuestoDto { UltimoDia = ayer })))
+        {
+            cierre.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cierre));
+        }
+
         using (HttpResponseMessage sinTocarlo = await cliente.ModificarAsync(
             $"{Articulos}/{articulo.Id}",
             Cambio("Otra descripción", vigente)))
         {
             sinTocarlo.StatusCode.ShouldBe(
-                HttpStatusCode.OK, await Escenario.Detalle(sinTocarlo));
+                HttpStatusCode.OK,
+                "el tramo del artículo ya no rige, y aun así la ficha tiene que poder corregirse: " +
+                "revalidar el maestro que nadie ha tocado convierte la derogación en un " +
+                "congelador. " + await Escenario.Detalle(sinTocarlo));
         }
 
         using HttpResponseMessage cambiandolo = await cliente.ModificarAsync(
