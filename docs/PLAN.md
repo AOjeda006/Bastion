@@ -3396,6 +3396,165 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
+**Ítem 1.8 cerrado — el catálogo, y la afirmación que su propio escenario no ejercía:**
+run **34424407829** sobre `f90dbed`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3` de la API, no de la memoria): Backend `102706467191` ✓ (22 pasos, 0 omitidos),
+Frontal `102706467394` ✓ (17 pasos, 0 omitidos) y Humo `102707539606` ✓ (24 pasos, 1 omitido). Los
+tres carriles tal como el run los publica:
+
+```
+Dominio y arquitectura: 682 casos (682 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — BuildingBlocks.UnitTests 132, Organizacion.UnitTests 183, Organizacion.IntegrationTests 22,
+    Api.FunctionalTests 145, Identidad.UnitTests 58, Terceros.UnitTests 77,
+    Catalogo.UnitTests 25, Arquitectura.Tests 34, Api.IntegrationTests 6
+    (651 en el 1.7 sobre `4960922`, en 8 ensamblados: +31 casos y un ensamblado nuevo)
+
+Integración (Testcontainers): 348 casos (348 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 274, y 0 en los otros siete
+    (334 en el 1.7 sobre `4960922`: +14 casos)
+
+Frontal: 13 ficheros de prueba, 81 casos, 0 avisos de `act()`
+         (109 avisos en 7 ficheros sobre `4960922`: el fondo entero, a cero)
+         arranque 410/450 KiB en 3 ficheros · total servido 564/900 KiB  (403/549 en el 1.7)
+
+OpenAPI:  110 operaciones en 64 rutas /api/v1/  (102 en 60 rutas sobre `4960922`)
+Catálogo de `type`: 63 tipos, de 68 sitios de llamada  (51 de 56 sobre `4960922`)
+Migraciones: modelo y migraciones coinciden en todos los módulos con persistencia
+             — Auditoría 3, Organización 5, Identidad 3, Terceros 2, Catálogo 1
+Censo de escrituras: 110 acciones, 72 cambian estado — 40 `If-Match`, 15 `Idempotency-Key`,
+                     17 exentas  (102/68/38·13·17 sobre `4960922`)
+Artefactos: test-results con 9 .trx y 682 casos (dominio) y 9 con 348 (integración)
+            bastion-web-dist con 26 ficheros, 12 .js y 1 .css
+Humo: el migrador aplica los CINCO contextos —Auditoría, Organización, Identidad, Terceros y
+      Catálogo—, la cuenta sembrada inicia sesión (testigo de 3819 caracteres), el entorno
+      desplegado sirve 1 empresa y las semillas cargan 12 tramos de impuesto y 15 unidades
+```
+
+> **Toda cifra de «antes y después» de arriba nombra sus dos commits**: el «antes» es `4960922`, que
+> es donde el 1.7 dejó las líneas base, y el «después» es `c87a6d2`, que es donde se midieron todas
+> en local. Entre `c87a6d2` y `f90dbed` —el commit del run— cambia **un solo fichero,
+> `.github/workflows/ci.yml`**, así que ninguna de las cifras se mueve, y el propio run las vuelve a
+> publicar idénticas. Las dos medidas de integración se tomaron **con Docker arrancado** —el carril
+> corrió entero, 348 de 348— y las del carril rápido con los dos `recuento-de-tests.sh` del workflow,
+> que son los que deciden el desenlace del paso y no `dotnet test`.
+
+**Y el ítem destapó un guardián que se había quedado corto dos módulos atrás.** El paso del humo
+comprueba **por nombre** que sobre una base recién creada cada contexto con persistencia se migra —por
+nombre y no por cuenta, para que el que falte se pueda nombrar—, y su lista seguía siendo
+`AuditoriaDbContext, OrganizacionDbContext, IdentidadDbContext` mientras `MigradorDeArranque` había
+pasado a **cinco**: Terceros entró en el 1.5 y Catálogo en el 1.8. No fallaba nada; lo que pasaba es
+que durante dos módulos **quitar del migrador el contexto de Terceros o el de Catálogo habría dejado
+el humo en verde y el contenedor sin su esquema**. Es la misma familia que las tablas del censo y que
+la aserción de la mutación 2: una lista escrita a mano solo sabe lo que alguien se acordó de escribir.
+Se completa en `f90dbed`, con su propio modo de fallo escrito al lado, y **comprobado por el efecto
+antes de tocarlo**: `docker compose -f deploy/docker-compose.yml up --build migraciones` sobre una
+base recién creada emite `EsquemaMigrado` para los cinco y el contenedor sale con código 0.
+
+**Las nueve decisiones del ítem están en *Decisiones tomadas → ítem 1.8*, y dos de ellas el enunciado
+las pedía nombradas.** El **modelo del árbol** es una **lista de adyacencia** —`PadreId` y nada más—
+elegida por lo que este módulo consulta de verdad: el filtro del listado es `WHERE categoria_id = ?`,
+una igualdad sobre columna indexada, y el árbol entero de una empresa cabe en una página que el
+frontal recompone. La *closure table* cobra su precio en la escritura —mover una rama reescribe las
+filas de cierre de todo su subárbol— por una consulta que hoy no se hace; y el día que el subárbol
+haga falta (el candidato es la precedencia de tarifas del 1.9) entran un `WITH RECURSIVE` o una
+*closure table* **derivada**, ninguna de las dos obliga a migrar el modelo. La consecuencia de la
+elección **se dice en pantalla** en vez de esconderse: el filtro acota por la categoría dicha y no
+por lo que cuelga de ella, y el mensaje de «ninguno en esta categoría» lo avisa con esas palabras.
+La **cota del ascenso** es `Categoria.ProfundidadMaxima = 10` —diez niveles por debajo de la raíz, un
+árbol de once— con dos motivos: a más profundidad lo que hay ya no es una clasificación sino un
+atributo disfrazado, y sobre todo, la cota es **lo único que convierte un cuelgue en un error** —el
+ascenso gasta una consulta por nivel y sobre datos ya cíclicos, sin cota, no falla: gira—.
+
+**Las ocho mutaciones**, cada una sobre árbol verde, aplicada, compilada, corrida y revertida
+restaurando una copia. Al terminar, `git status --porcelain` **vacío** y `grep -rn "MUTACION" src
+tests` y `grep -rn MUTACION frontend/src` **sin resultados**, los tres comprobados:
+
+| # | Mutación | Dónde | Línea base | Qué se puso rojo |
+|---|---|---|---|---|
+| 1 | La casilla de `SoloResuelveLoViejo` de la unidad devuelve `Correcto()`: **el alta pasa con una unidad retirada** | `ElMaestroSeOfreceParaLoNuevo.cs` | `9f8ff56` | **Rojo ×2** en `Catalogo.UnitTests` |
+| 2 | Se **revalida el maestro que nadie ha tocado** al modificar (fuera la condición `!=`) | `ModificarArticulo.cs` | `9f8ff56` (unidad) · `1eab397` (HTTP) | **Rojo ×1 + ×1** |
+| 3 | El ciclo se comprueba **solo en el alta** (fuera la llamada de la modificación) | `ModificarCategoria.cs` | `1eab397` | **Rojo ×2 + ×2** |
+| 4 | El **caso degenerado** —padre igual a sí misma— tratado aparte y dejado pasar | `ElArbolSigueSiendoUnArbol.cs` | `1eab397` | **Rojo ×2**: `ElArbolSigueSiendoUnArbolTests.Una_categoria_no_puede_ser_su_propia_madre` y `ElCicloSeCompruebaEnLasDosPuertasTests.Una_categoria_no_puede_pasar_a_colgar_de_si_misma` — uno por puerta |
+| 5 | El **ascenso pierde la cota** (`for … <= ProfundidadMaxima` → `while (true)`) | `ElArbolSigueSiendoUnArbol.cs` | `1eab397` | **Rojo ×3, y el del ciclo en 1 ms**: `Un_ciclo_YA_GUARDADO_no_deja_el_recorrido_dando_vueltas` con «*el recorrido de padres ha pedido 101 eslabones, más de los 100 que este doble admite […] lo que hay es un ascenso SIN COTA sobre datos que ya tienen un ciclo*», más `Colgar_un_nivel_mas_abajo_se_rechaza_por_profundidad` y `El_alta_demasiado_honda_se_rechaza_tambien`, que se quedan sin rechazo. **El caso lo demuestra; no cuelga la suite** |
+| 6 | El alta **guarda la unidad sin preguntarle a su puerto** | `CrearArticulo.cs` | `1eab397` | **Rojo ×4** en `LaCasillaDeLaRetiradaTests`: las tres casillas de la unidad más `Un_estado_que_esta_casilla_no_conoce_lanza_en_vez_de_dejar_pasar`. Y **`LosIdentificadoresAjenosTests` sigue en verde**, que es lo correcto y hay que decirlo: esa regla vigila que el cruce esté **declarado con su puerto**, no que la respuesta del puerto **decida**. Las dos mitades son de dos sitios distintos |
+| 7 | `CatalogoDbContext` **deja de heredar de `ContextoDeModulo`** y se cae del universo descubierto | `CatalogoDbContext.cs` | `1eab397` | **Rojo ×4** en `Api.FunctionalTests`, con `El_universo_de_modelos_es_el_declarado` diciendo lo que encontró: `"ContextoDeLaBandeja"` donde esperaba los seis. Y con él, dos reglas de modelo y —lo que más importa— **el arnés** `ElCatalogoNoGuardaDatosDeNadieTests.El_barrido_ve_catalogo_y_sabe_reconocer_un_dato_personal`: sin ese arnés, las reglas de «cada entidad declara…» habrían seguido verdes mirando cinco módulos de seis |
+| 8 | `UnidadBaseId` pasa a ser **clave ajena a `organizacion.unidades_de_medida`** | `CatalogoDbContext.cs` | `1eab397` | **Rojo ×3**, con `Ninguna_clave_foranea_cruza_de_esquema` nombrándola entera: `["Articulo.fk_articulos_unidades_de_medida_unidad_base_id: catalogo -> organizacion"]`. Y en el **carril rápido**, sin Docker: el modelo de EF sabe a qué esquema va cada tabla antes de que exista ninguna |
+
+**La 1, la 2 y la 3, enteras.**
+
+**Mutación 1 — el alta acepta una unidad retirada.** Cambiar la casilla de `SoloResuelveLoViejo` por
+`Resultado.Correcto()` pone rojos **dos** casos, y el segundo es el que importa:
+`Con_la_unidad_solo_resolviendo_lo_viejo_el_alta_se_rechaza`, que es el directo, y
+`Con_la_unidad_inexistente_el_alta_se_rechaza_con_OTRO_error`, que compara los dos `type` y se cae
+porque ya no hay dos. Esa segunda es la que sostiene el ADR-0030 aquí: quien teclea un identificador
+inventado tiene que corregir el identificador y quien apunta a uno retirado tiene que elegir otra
+unidad, son dos arreglos distintos, y con un solo `type` el frontal escribiría un texto que sirve
+para uno y despista en el otro. La misma mutación por HTTP la caza
+`ContratoDeCatalogoTests.Una_unidad_RETIRADA_no_vale_para_un_alta_y_el_articulo_que_ya_la_usa_sigue_resolviendola`,
+que es el caso de las dos mitades contra PostgreSQL.
+
+**Mutación 2 — el artículo que ya usaba el maestro deja de poder corregirse, y aquí la tanda encontró
+un agujero de verdad.** Quitar la condición `!=` de `ModificarArticulo` —o sea revalidar el maestro
+que nadie ha tocado— puso rojo `LaCasillaDeLaRetiradaTests.El_impuesto_que_no_se_toca_no_se_vuelve_a_preguntar`
+y **dejó verde** el caso por HTTP que afirma lo mismo,
+`Modificar_sin_tocar_el_impuesto_no_lo_vuelve_a_preguntar_pero_cambiarlo_a_uno_caducado_SI_se_rechaza`.
+El motivo: el artículo llegaba a la modificación con su tramo **todavía vigente**, y con eso
+revalidarlo y no revalidarlo se ven exactamente igual desde fuera. La aserción afirmaba una decisión
+que su propio escenario no ejercía — la misma familia que el «antes» mal medido de los `act()` del
+1.5 y que las tablas del censo. Arreglado en `1eab397`: el tramo del artículo se cierra con
+`POST /impuestos/{id}/cierre` y el último día en ayer, antes de la modificación que no lo toca. Con
+el caso ya endurecido, la mutación lo pone en **409** y el caso en rojo.
+
+> **Y la mitad de la UNIDAD no se puede romper desde `ModificarArticulo`, que es la forma más fuerte
+> de la garantía y hay que decirla como es.** La unidad base no está en `ModificarArticuloDto` ni en
+> `Articulo.Modificar`, y el puerto de unidades **no está inyectado** en ese caso de uso: unificar la
+> comprobación entre el alta y la modificación no es una línea, es cambiar la firma. Por eso la
+> mutación se ejerce por el maestro que **sí** se puede cambiar —el impuesto—, que es el mismo
+> defecto por el único sitio por donde entra. La mitad de la unidad la sostiene, contra PostgreSQL,
+> el caso de las dos mitades del contrato.
+
+**Mutación 3 — el ciclo comprobado solo en el alta.** Quitar la llamada a
+`ElArbolSigueSiendoUnArbol.ComprobarAsync` de `ModificarCategoria` pone rojos **dos casos en cada
+carril**: en el rápido, `ElCicloSeCompruebaEnLasDosPuertasTests.Mover_una_rama_debajo_de_su_propia_descendencia_se_rechaza`
+y `.Una_categoria_no_puede_pasar_a_colgar_de_si_misma`; por HTTP y contra PostgreSQL,
+`ContratoDeCatalogoTests.Mover_una_categoria_debajo_de_su_propia_descendencia_es_409_con_type_categoria_ciclo`
+y `.Una_categoria_no_puede_colgar_de_si_misma_ni_al_crearla_ni_al_moverla`. **Y el alta se queda
+entera en verde**, que es exactamente el punto: en el alta la rama del ciclo es estructuralmente
+inalcanzable —la categoría que nace todavía no está en el árbol—, así que una comprobación que solo
+mirase ahí dejaría pasar **el único camino por el que un ciclo entra**, y lo dejaría pasar sin un
+solo rojo. Es la misma forma del hueco que el 1.7 le encontró a la inversa, por su otra cara.
+
+**Lo que el módulo nuevo tuvo que descubrirse solo, y se descubrió.** Ninguna de las reglas
+transversales necesitó que se le apuntara Catálogo a mano: las cinco que recorren el modelo entero
+—inquilinato, auditoría, claves, fechas y la de claves ajenas entre esquemas— lo ven por el universo
+descubierto de `LosModelosDeCadaModulo`, que es «toda clase concreta que hereda de
+`ContextoDeModulo`»; la matriz puerto × estado del 1.7 lo ve porque descubre las interfaces del
+`Contracts` que devuelven `Task<EstadoDeMaestro>`; y los tres universos del 1.3 y el 1.4 —fronteras,
+censos de carril y rutas del frontal— comparan sus listas contra el disco en los dos sentidos. Lo
+único que se escribe a mano es el **censo de casos de `Api.FunctionalTests` y `Api.IntegrationTests`**
+y la lista `Declarados`, y las dos son a propósito: son el arnés que impide que un descubrimiento que
+deje de encontrar a nadie salga verde recorriendo una lista vacía. La mutación 7 es la prueba de que
+ese arnés funciona.
+
+**Ninguna dependencia nueva, y la frase sale del diff.** Conjuntos de paquetes **resueltos** de todos
+los `packages.lock.json` a los dos lados: **150 en `main` y 155 en la rama**, y las cinco de
+diferencia son `bastion.catalogo.domain`, `.contracts`, `.application`, `.endpoints` e
+`.infrastructure`, las cinco con `"type": "Project"` — proyectos de este repositorio, no paquetes.
+`Directory.Packages.props` no se toca, y `git diff --stat main..HEAD -- frontend/package.json
+frontend/package-lock.json` no devuelve **ni una línea**. **No hay licencias que comprobar porque no
+hay paquete de terceros que comprobar.**
+
+**Commits, firmas y trailers.** `git rev-list --count main..HEAD` → **10** sobre `f90dbed`, que es el
+commit del run; **11** contando el que escribe este bloque. Todos con `%G?` = `G`. Y el comprobante
+que el ítem pedía, `git show -s --format='%(trailers:only)'` recorrido sobre el rango entero:
+**ninguno devuelve nada** — ni un trailer, ni de sesión ni de prosa. El aviso de `SIGNING_KEY_B64` que
+suelta el enganche de arranque es un falso positivo comprobado: `git config --global commit.gpgsign`
+es `true` y las firmas lo confirman.
+
+**Fuera del ítem, y no «de paso»:** `CodigoBarras` (fase 2, con su import), las tarifas (1.9), los dos
+cruces mutuos incluido `ArticuloProveedor` (1.10), la importación CSV (1.11). Nada de existencias ni
+de movimientos.
+
 **Ítem 1.7 cerrado — la retirada, las dos conversiones, y la lección por cuarta vez:**
 run **34177571670** sobre `dd89e9f`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3` de la API, no de la memoria): Backend `101909932819` ✓ (22 pasos, 0 omitidos),
@@ -7371,10 +7530,17 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   consumo sin que eso las haga vacuas, y que una fila retirada **sigue restringiendo** a su inversa.
   Ocho mutaciones en *Estado actual*, con la 1 y la 3 enteras; la 3 destapa que un 404 ahí deja la
   retirada sin marcha atrás.
-- [ ] **1.8 · Catálogo: artículo y categoría** — criterio de aceptación: alta de artículo con unidad
+- [x] **1.8 · Catálogo: artículo y categoría** — criterio de aceptación: alta de artículo con unidad
   e impuesto **validados por los puertos del 1.2** (no guardados a ciegas); `Categoria` jerárquica
   con **comprobación de ciclos**; listado paginado y filtrado; y `features/catalogo/`. Fuera:
   `CodigoBarras`, que es de la **fase 2** con su import.
+  Cerrado con el run **34424407829** sobre `f90dbed`. Catálogo es el consumidor para el que se
+  construyó la retirada del ADR-0023: las tres casillas de `EstadoDeMaestro` significan tres cosas
+  distintas en un camino de negocio, y `SoloResuelveLoViejo` con sus **dos mitades**. Las nueve
+  decisiones en *Decisiones tomadas → ítem 1.8*, con las dos que el enunciado pedía nombradas —el
+  árbol como **lista de adyacencia** y la **cota** del ascenso— y su motivo. Ocho mutaciones en
+  *Estado actual*, con la 1, la 2 y la 3 enteras; la 2 destapa una aserción por HTTP cuyo escenario
+  no la ejercía, arreglada en `1eab397`.
 - [ ] **1.9 · Tarifas** — criterio de aceptación: `Tarifa` con vigencia y divisa y `LineaTarifa` por
   artículo o categoría con escalado por cantidad (§7.3); **precio o descuento excluyentes** en el
   objeto de valor; **solape de vigencias prohibido por restricción de exclusión**; sin tarifa
