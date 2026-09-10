@@ -1,7 +1,7 @@
 import { transferableAbortController } from 'node:util';
 
 import '@testing-library/jest-dom/vitest';
-import { configure } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 
 import { escribirSesion } from '@/shared/sesion/deposito.ts';
@@ -108,6 +108,17 @@ beforeAll(() => {
 });
 
 afterEach(() => {
+  // DESMONTAR VA PRIMERO, y el orden es lo único que hace este `cleanup()` distinto de no ponerlo.
+  //
+  // Testing Library ya desmonta sola, pero su `afterEach` se registra al importarla —o sea, ANTES
+  // que el de aquí— y vitest ejecuta los `afterEach` en orden inverso al de registro. Así que sin
+  // esta línea el depósito se vacía con la pantalla TODAVÍA MONTADA: `escribirSesion(null)` avisa a
+  // sus oyentes, `useSyncExternalStore` fuerza un repintado, y React deja un aviso «not wrapped in
+  // act» por cada test que se suscriba a la sesión. Un aviso por test, en el desmontaje, sobre algo
+  // que a nadie le importa — y el fondo de avisos es justo lo que impide distinguir el aviso que sí
+  // importa. Llamándola aquí, la de Testing Library se queda sin nada que hacer.
+  cleanup();
+
   servidor.resetHandlers();
   reiniciarServidor();
   // El depósito de sesión es una variable de módulo: si no se vacía, el test siguiente arranca con

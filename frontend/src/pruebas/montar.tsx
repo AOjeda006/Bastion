@@ -67,14 +67,19 @@ export interface PantallaMontada extends RenderResult {
 /**
  * Monta UNA PANTALLA sola, en un enrutador de memoria con su ruta y nada más.
  *
- * **Por qué existe, si ya hay `montarAplicacion`.** Porque el armazón se asienta en varios turnos
- * posteriores al montaje —el enrutador termina su navegación inicial y los tres componentes
- * suscritos a la sesión se enteran— y React deja cuatro avisos «not wrapped in act» por cada
- * montaje. Medido: cuatro, con carga perezosa de la ruta y sin ella. No son ruido inofensivo:
- * mientras el fondo sea de cuatro por test, un aviso NUEVO —el de una actualización de verdad sin
- * esperar, que es la que deja un test comprobando una pantalla a medias— no se distingue de él.
- * Montando solo la pantalla, la cuenta es cero, y entonces el primer aviso que aparezca significa
- * algo.
+ * **Por qué existe, si ya hay `montarAplicacion`.** Porque monta la pantalla SOLA, con su ruta y
+ * nada más: lo que falle aquí es de la pantalla, y no del armazón que la rodea. Un test de listado
+ * que montara la aplicación entera se pondría rojo el día que cambie la guarda, el selector de
+ * empresa o la disposición, por cosas que ese test no dice comprobar.
+ *
+ * Lo que este comentario decía hasta el ítem 1.8 —que `montarAplicacion` deja «cuatro avisos not
+ * wrapped in act por montaje, medido»— era verdad y tenía mal el diagnóstico, y por eso se corrige
+ * aquí en vez de borrarse. Los cuatro avisos no venían de que el armazón se asentara en varios
+ * turnos: venían del DESMONTAJE. El `afterEach` de `setupTests.ts` vaciaba el depósito de sesión
+ * antes de que Testing Library desmontara —los `afterEach` corren en orden inverso al de registro—,
+ * y ese aviso a los oyentes repintaba los cuatro componentes suscritos con la pantalla todavía en
+ * pie. Desmontando primero, la cuenta es CERO en los dos arneses y en la suite entera, así que el
+ * primer aviso que aparezca significa algo, se monte lo que se monte.
  *
  * **Lo que esto NO prueba, y quién lo prueba.** Que la ruta exista y esté detrás de su permiso, lo
  * dicen `ElBarridoDeRutas` y `LasRutasProtegidas`; el anuncio de cambio de ruta y el foco, `El
