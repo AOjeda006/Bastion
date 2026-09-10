@@ -559,23 +559,29 @@ jobs:
           docker compose -f deploy/docker-compose.yml logs --no-color migraciones
           test "$CODIGO" = "0"
           REGISTRO=$(docker compose -f deploy/docker-compose.yml logs --no-color migraciones)
-          # Por NOMBRE, no por cuenta. Un `grep -c` diría «tres» con tres líneas del mismo
+          # Por NOMBRE, no por cuenta. Un `grep -c` diría «cinco» con cinco líneas del mismo
           # contexto, y el fallo que hay que cazar aquí es justo ese: un contexto que deja de
           # migrarse porque alguien lo quitó de `MigradorDeArranque`. La lista está escrita a mano
-          # a propósito —el módulo nuevo de la fase 1 tiene que añadirse aquí— y su contraejemplo
-          # es que los tres nombres existen hoy: si uno deja de existir, este paso se pone rojo
-          # diciendo cuál.
+          # a propósito —el módulo nuevo tiene que añadirse aquí— y su contraejemplo es que los
+          # cinco nombres existen hoy: si uno deja de existir, este paso se pone rojo diciendo
+          # cuál.
+          #
+          # Y aquí se ve por qué esa decisión tiene un precio: la lista se quedó en TRES mientras
+          # `MigradorDeArranque` pasaba a cinco —Terceros en el 1.5, Catálogo en el 1.8—, y nada
+          # se puso rojo porque una lista escrita a mano solo sabe lo que alguien se acordó de
+          # escribir. Durante dos módulos, quitar del migrador el contexto de Terceros o el de
+          # Catálogo habría dejado el humo en verde y el contenedor sin su esquema.
           FALTAN=
-          for CONTEXTO in AuditoriaDbContext OrganizacionDbContext IdentidadDbContext; do
+          for CONTEXTO in AuditoriaDbContext OrganizacionDbContext IdentidadDbContext TercerosDbContext CatalogoDbContext; do
             echo "$REGISTRO" | grep -q "\"Contexto\":\"${CONTEXTO}\".*EsquemaMigrado" \
               || echo "$REGISTRO" | grep -q "EsquemaMigrado.*\"Contexto\":\"${CONTEXTO}\"" \
               || FALTAN="${FALTAN} ${CONTEXTO}"
           done
           if [ -n "$FALTAN" ]; then
-            echo "::error title=Migrador::Sobre una base recién creada los TRES contextos con persistencia tienen que migrarse, y estos no lo dicen:${FALTAN}."
+            echo "::error title=Migrador::Sobre una base recién creada los CINCO contextos con persistencia tienen que migrarse, y estos no lo dicen:${FALTAN}."
             exit 1
           fi
-          echo "::notice title=Migrador::Esquema aplicado por los tres contextos: Auditoría, Organización e Identidad."
+          echo "::notice title=Migrador::Esquema aplicado por los cinco contextos: Auditoría, Organización, Identidad, Terceros y Catálogo."
 
       # LA MITAD DE F3 QUE NO SE VE COMPILANDO. `db/semillas` salió del `.dockerignore`, y eso
       # solo mete los ficheros en el CONTEXTO de construcción: `Dockerfile.api` se lleva a la
