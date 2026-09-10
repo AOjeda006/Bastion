@@ -115,6 +115,24 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
         .PaginaDeAlmacenes,
   },
   {
+    ruta: '/articulos',
+    duenio: 'catalogo',
+    claveDeTitulo: 'articulos',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.articuloVer },
+    enLaNavegacion: true,
+    cargar: async () =>
+      (await import('@/features/catalogo/articulos/ui/PaginaDeArticulos.tsx')).PaginaDeArticulos,
+  },
+  {
+    ruta: '/categorias',
+    duenio: 'catalogo',
+    claveDeTitulo: 'categorias',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.categoriaVer },
+    enLaNavegacion: true,
+    cargar: async () =>
+      (await import('@/features/catalogo/categorias/ui/PaginaDeCategorias.tsx')).PaginaDeCategorias,
+  },
+  {
     ruta: '/empresas',
     duenio: 'organizacion',
     claveDeTitulo: 'empresas',

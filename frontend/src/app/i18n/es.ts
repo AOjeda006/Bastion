@@ -47,6 +47,8 @@ export const es = {
     acceso: 'Iniciar sesión',
     inicio: 'Inicio',
     almacenes: 'Almacenes',
+    articulos: 'Artículos',
+    categorias: 'Categorías',
     empresas: 'Empresas',
     terceros: 'Terceros',
     noEncontrada: 'Página no encontrada',
@@ -81,6 +83,28 @@ export const es = {
     tipos: {
       'almacen-duplicado': 'Ya hay un almacén con ese código en esta empresa.',
       'almacen-no-encontrado': 'Ese almacén ya no existe. Vuelve al listado y actualiza.',
+      'articulo-duplicado': 'Ya hay un artículo con ese código en esta empresa.',
+      'articulo-impuesto-no-encontrado':
+        'Ese impuesto no existe. Elige uno del maestro de impuestos.',
+      'articulo-impuesto-no-vigente':
+        'Ese tramo de impuesto ya no rige. Elige uno que esté vigente.',
+      'articulo-no-encontrado': 'Ese artículo ya no existe. Vuelve al listado y actualiza.',
+      'articulo-tipo-no-valido': 'El tipo de un artículo solo puede ser «Bien» o «Servicio».',
+      'articulo-unidad-no-encontrada':
+        'Esa unidad de medida no existe. Elige una del maestro de unidades.',
+      // La retirada del ADR-0023 dicha entera, con sus dos mitades: por eso no vale «esa unidad
+      // no existe». Quien lee esto tiene delante artículos que la siguen usando, y una frase que
+      // dijera que no existe le mandaría a buscar un fallo que no hay.
+      'articulo-unidad-retirada':
+        'Esa unidad está retirada: los artículos que ya la usan siguen contándose en ella, pero ' +
+        'no se puede dar de alta uno nuevo. Elige otra.',
+      'categoria-ciclo':
+        'Una categoría no puede colgar de sí misma ni de ninguna de las que cuelgan de ella.',
+      'categoria-demasiado-profunda':
+        'El árbol de categorías no admite más niveles por debajo de ese sitio.',
+      'categoria-duplicada': 'Ya hay una categoría con ese código en esta empresa.',
+      'categoria-no-encontrada': 'Esa categoría ya no existe. Vuelve al listado y actualiza.',
+      'categoria-padre-no-encontrado': 'La categoría de la que quieres colgar esta no existe.',
       'codigo-de-rol-ya-usado': 'Ya hay un rol con ese código. Elige otro.',
       'contrasena-actual-incorrecta': 'La contraseña actual no es correcta.',
       'conversion-um-duplicada': 'Ya hay una conversión entre esas dos unidades.',
@@ -160,6 +184,63 @@ export const es = {
     noEncontrada: 'Esta dirección no corresponde a ninguna pantalla de Bastion.',
     irAlAcceso: 'Ir a la pantalla de acceso',
     volverAlInicio: 'Volver al inicio',
+  },
+
+  catalogo: {
+    articulos: {
+      cargando: 'los artículos',
+      tabla: 'Artículos de la empresa activa',
+      codigo: 'Código',
+      descripcion: 'Descripción',
+      tipo: 'Tipo',
+
+      // El filtro dice por dónde busca. Quien lee «Buscar» a secas prueba con la unidad o con el
+      // impuesto —que ni se enseñan ni se filtran— y concluye que el artículo no está.
+      filtro: 'Buscar por código o descripción',
+      filtrar: 'Buscar',
+
+      filtradaPor: 'Filtrando por la categoría «{{categoria}}».',
+      filtradaPorUnaCategoria: 'Filtrando por una categoría.',
+      quitarLaCategoria: 'Quitar el filtro de categoría',
+
+      paginaVacia: 'Esta página no tiene artículos. Vuelve a la anterior.',
+      ningunoTodavia: 'Todavía no hay ningún artículo dado de alta en esta empresa.',
+      ningunoConEsteFiltro: 'Ningún artículo coincide con «{{filtro}}».',
+
+      // Dice la consecuencia de acotar por la categoría dicha y no por su subárbol: sin esa frase,
+      // una rama con hijos llenos de artículos sale vacía y parece un fallo.
+      ningunoEnEstaCategoria:
+        'Esta categoría no tiene ningún artículo. Los de las categorías que cuelgan de ella no ' +
+        'salen aquí: míralas una a una.',
+
+      tipos: {
+        bien: 'Bien',
+        servicio: 'Servicio',
+        desconocido: 'Sin reconocer',
+        desconocidoDetalle:
+          'Esta versión de la pantalla no sabe interpretar el tipo que ha llegado. Avisa a quien ' +
+          'administre Bastion.',
+      },
+    },
+
+    categorias: {
+      cargando: 'las categorías',
+      tabla: 'Árbol de categorías de la empresa activa',
+      codigo: 'Código',
+      nombre: 'Nombre',
+      nivel: 'Nivel',
+      articulos: 'Artículos',
+      verSusArticulos: 'Ver los artículos de {{categoria}}',
+
+      suelta: 'Sin su sitio',
+      sueltaDetalle:
+        'La categoría de la que cuelga no está en esta página, o el árbol guardado tiene un ' +
+        'ciclo. Se muestra igualmente: una categoría que existe y no sale es una que alguien da ' +
+        'de alta por segunda vez.',
+
+      paginaVacia: 'Esta página no tiene categorías. Vuelve a la anterior.',
+      ningunaTodavia: 'Todavía no hay ninguna categoría dada de alta en esta empresa.',
+    },
   },
 
   identidad: {

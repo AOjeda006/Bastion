@@ -13,6 +13,10 @@ type AlmacenDto = components['schemas']['AlmacenDto'];
 type PaginaDeAlmacenDto = components['schemas']['PaginaDeAlmacenDto'];
 type TerceroDto = components['schemas']['TerceroDto'];
 type PaginaDeTerceroDto = components['schemas']['PaginaDeTerceroDto'];
+type ArticuloDto = components['schemas']['ArticuloDto'];
+type PaginaDeArticuloDto = components['schemas']['PaginaDeArticuloDto'];
+type CategoriaDto = components['schemas']['CategoriaDto'];
+type PaginaDeCategoriaDto = components['schemas']['PaginaDeCategoriaDto'];
 
 /** Dos empresas de verdad, no una empresa y una variable. Se opera en las dos. */
 export const ALFA = {
@@ -25,6 +29,8 @@ export const BETA = {
 };
 
 export const PERMISOS_DE_LECTURA = [
+  'catalogo.articulo.ver',
+  'catalogo.categoria.ver',
   'organizacion.almacen.ver',
   'organizacion.empresa.ver',
   'terceros.tercero.ver',
@@ -223,6 +229,154 @@ export function tercerosDe(empresaId: string, busqueda = ''): PaginaDeTerceroDto
             .toLocaleLowerCase('es')
             .includes(buscado),
         );
+
+  return { elementos, pagina: 1, tamanio: 20, total: elementos.length };
+}
+
+/**
+ * El árbol de categorías con el que responde el servidor simulado.
+ *
+ * **Es un árbol de verdad y no una lista**: tres niveles encadenados —FERR › TORN › TUER— y una
+ * segunda raíz. Con un solo nivel, una composición que ignorara el padre pintaría exactamente lo
+ * mismo, y el caso que comprueba la sangría estaría comprobando nada.
+ *
+ * Vienen ordenadas por código, que es como las ordena la API por omisión: así el orden en el que
+ * llegan NO es el del árbol —SERV llega la segunda y se pinta la última—, que es justo lo que
+ * distingue componer el árbol de pintar la lista tal cual.
+ */
+const RAMAS: Record<string, CategoriaDto[]> = {
+  [ALFA.id]: [
+    {
+      id: 'eeeeeee1-0000-0000-0000-000000000001',
+      empresaId: ALFA.id,
+      codigo: 'FERR',
+      nombre: 'Ferretería',
+      padreId: null,
+    },
+    {
+      id: 'eeeeeee1-0000-0000-0000-000000000004',
+      empresaId: ALFA.id,
+      codigo: 'SERV',
+      nombre: 'Servicios',
+      padreId: null,
+    },
+    {
+      id: 'eeeeeee1-0000-0000-0000-000000000002',
+      empresaId: ALFA.id,
+      codigo: 'TORN',
+      nombre: 'Tornillería',
+      padreId: 'eeeeeee1-0000-0000-0000-000000000001',
+    },
+    {
+      id: 'eeeeeee1-0000-0000-0000-000000000003',
+      empresaId: ALFA.id,
+      codigo: 'TUER',
+      nombre: 'Tuercas',
+      padreId: 'eeeeeee1-0000-0000-0000-000000000002',
+    },
+  ],
+  [BETA.id]: [
+    {
+      id: 'eeeeeee2-0000-0000-0000-000000000001',
+      empresaId: BETA.id,
+      codigo: 'ELEC',
+      nombre: 'Electricidad',
+      padreId: null,
+    },
+  ],
+};
+
+/** Las categorías de una empresa, paginadas como las pagina la API. */
+export function categoriasDe(empresaId: string): PaginaDeCategoriaDto {
+  const elementos = RAMAS[empresaId] ?? [];
+
+  return { elementos, pagina: 1, tamanio: 20, total: elementos.length };
+}
+
+/** Una categoría suelta de una empresa, o `undefined` si esa empresa no la tiene. */
+export function categoriaDe(empresaId: string, id: string): CategoriaDto | undefined {
+  return (RAMAS[empresaId] ?? []).find((categoria) => categoria.id === id);
+}
+
+/**
+ * Los artículos con los que responde el servidor simulado.
+ *
+ * El `tipo` viaja como TEXTO —`Bien` o `Servicio`—, igual que en el contrato: escribirlo aquí como
+ * número dejaría verde una pantalla que luego pintaría celdas vacías contra la API de verdad. Y hay
+ * de los dos, y uno sin clasificar, porque son los tres casos que la tabla distingue.
+ *
+ * La unidad y el impuesto son identificadores de maestros de OTRO módulo y esta pantalla no los
+ * pinta; están porque el contrato los exige, y con valores que no son de ningún maestro real.
+ */
+const PIEZAS: Record<string, ArticuloDto[]> = {
+  [ALFA.id]: [
+    {
+      id: 'fffffff1-0000-0000-0000-000000000001',
+      empresaId: ALFA.id,
+      codigo: 'TOR-M6',
+      descripcion: 'Tornillo M6 zincado',
+      tipo: 'Bien',
+      unidadBaseId: 'aaaa0001-0000-0000-0000-000000000001',
+      impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
+      categoriaId: 'eeeeeee1-0000-0000-0000-000000000002',
+    },
+    {
+      id: 'fffffff1-0000-0000-0000-000000000002',
+      empresaId: ALFA.id,
+      codigo: 'TUE-M6',
+      descripcion: 'Tuerca M6 zincada',
+      tipo: 'Bien',
+      unidadBaseId: 'aaaa0001-0000-0000-0000-000000000001',
+      impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
+      categoriaId: 'eeeeeee1-0000-0000-0000-000000000003',
+    },
+    {
+      id: 'fffffff1-0000-0000-0000-000000000003',
+      empresaId: ALFA.id,
+      codigo: 'MO-TALLER',
+      descripcion: 'Mano de obra de taller',
+      tipo: 'Servicio',
+      unidadBaseId: 'aaaa0001-0000-0000-0000-000000000002',
+      impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
+      categoriaId: null,
+    },
+  ],
+  [BETA.id]: [
+    {
+      id: 'fffffff2-0000-0000-0000-000000000001',
+      empresaId: BETA.id,
+      codigo: 'CAB-25',
+      descripcion: 'Cable 2,5 mm²',
+      tipo: 'Bien',
+      unidadBaseId: 'aaaa0001-0000-0000-0000-000000000003',
+      impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
+      categoriaId: 'eeeeeee2-0000-0000-0000-000000000001',
+    },
+  ],
+};
+
+/**
+ * Los artículos de una empresa, filtrados y paginados como los pagina la API.
+ *
+ * **Acota por la categoría dicha, no por su subárbol**, exactamente como el servidor: si este doble
+ * bajara por el árbol, la pantalla podría prometer algo que la API no hace, y el aviso de «los de
+ * las categorías que cuelgan de esta no salen aquí» sería mentira contra el servidor de verdad.
+ */
+export function articulosDe(
+  empresaId: string,
+  busqueda = '',
+  categoriaId: string | null = null,
+): PaginaDeArticuloDto {
+  const todos = PIEZAS[empresaId] ?? [];
+  const buscado = busqueda.trim().toLocaleLowerCase('es');
+
+  const elementos = todos
+    .filter((articulo) => categoriaId === null || articulo.categoriaId === categoriaId)
+    .filter(
+      (articulo) =>
+        buscado === '' ||
+        [articulo.codigo, articulo.descripcion].join(' ').toLocaleLowerCase('es').includes(buscado),
+    );
 
   return { elementos, pagina: 1, tamanio: 20, total: elementos.length };
 }

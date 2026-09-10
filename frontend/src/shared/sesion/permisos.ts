@@ -12,6 +12,8 @@
  */
 export const PERMISOS = {
   almacenVer: 'organizacion.almacen.ver',
+  articuloVer: 'catalogo.articulo.ver',
+  categoriaVer: 'catalogo.categoria.ver',
   empresaVer: 'organizacion.empresa.ver',
   terceroVer: 'terceros.tercero.ver',
 } as const;

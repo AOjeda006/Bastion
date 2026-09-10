@@ -1,7 +1,15 @@
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
-import { ALFA, almacenesDe, sesionDto, tercerosDe } from './datos.ts';
+import {
+  ALFA,
+  almacenesDe,
+  articulosDe,
+  categoriaDe,
+  categoriasDe,
+  sesionDto,
+  tercerosDe,
+} from './datos.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { traducirSesion } from '@/shared/api/traduccion.ts';
 import { escribirSesion } from '@/shared/sesion/deposito.ts';
@@ -33,6 +41,16 @@ export const servidorSimulado = {
    */
   busquedasDeTerceros: [] as string[],
   falloDeTerceros: null as number | null,
+  /**
+   * Con qué criterios se ha pedido el listado de artículos, una entrada por petición.
+   *
+   * Los dos filtros juntos y no dos listas: lo que hay que poder afirmar es que la pantalla manda
+   * al servidor lo que dice la URL, y una que se trajera todo y filtrara en el navegador pintaría
+   * exactamente lo mismo con la lista vacía.
+   */
+  articulosPedidos: [] as { busqueda: string; categoria: string | null }[],
+  falloDeArticulos: null as number | null,
+  falloDeCategorias: null as number | null,
 };
 
 /** Deja al servidor sin sesión y sin cuentas pendientes. Se llama entre test y test. */
@@ -42,6 +60,9 @@ export function reiniciarServidor(): void {
   servidorSimulado.falloDeAlmacenes = null;
   servidorSimulado.busquedasDeTerceros = [];
   servidorSimulado.falloDeTerceros = null;
+  servidorSimulado.articulosPedidos = [];
+  servidorSimulado.falloDeArticulos = null;
+  servidorSimulado.falloDeCategorias = null;
 }
 
 /** Abre sesión en el servidor simulado, como si ya se hubiera entrado en una recarga anterior. */
@@ -63,6 +84,11 @@ export function abrirSesionYaRecuperada(empresaId = ALFA.id, permisos?: string[]
 
   servidorSimulado.sesion = dto;
   escribirSesion(traducirSesion(dto));
+}
+
+/** Con qué empresa se está operando, según el testigo que trae la petición. */
+function empresaDe(peticion: Request): string {
+  return peticion.headers.get('Authorization')?.replace('Bearer testigo-de-', '') ?? '';
 }
 
 export const servidor = setupServer(
@@ -131,6 +157,43 @@ export const servidor = setupServer(
     const testigo = request.headers.get('Authorization')?.replace('Bearer testigo-de-', '') ?? '';
 
     return HttpResponse.json(tercerosDe(testigo, consulta.get('q') ?? ''));
+  }),
+
+  // Los tres de Catálogo responden SEGÚN EL TESTIGO, como los anteriores: la empresa activa va
+  // dentro del token y quien filtra es el servidor (R8).
+  http.get('/api/v1/catalogo/articulos', ({ request }) => {
+    const consulta = new URL(request.url).searchParams;
+
+    servidorSimulado.articulosPedidos.push({
+      busqueda: consulta.get('q') ?? '',
+      categoria: consulta.get('categoria'),
+    });
+
+    if (servidorSimulado.falloDeArticulos !== null) {
+      return new HttpResponse(null, { status: servidorSimulado.falloDeArticulos });
+    }
+
+    return HttpResponse.json(
+      articulosDe(empresaDe(request), consulta.get('q') ?? '', consulta.get('categoria')),
+    );
+  }),
+
+  http.get('/api/v1/catalogo/categorias', ({ request }) =>
+    servidorSimulado.falloDeCategorias === null
+      ? HttpResponse.json(categoriasDe(empresaDe(request)))
+      : new HttpResponse(null, { status: servidorSimulado.falloDeCategorias }),
+  ),
+
+  http.get('/api/v1/catalogo/categorias/:id', ({ params, request }) => {
+    const id = typeof params['id'] === 'string' ? params['id'] : '';
+    const categoria = categoriaDe(empresaDe(request), id);
+
+    // Una categoría de otra empresa sale como «no existe», igual que en la API: el filtro de
+    // inquilinato no distingue «no está» de «no es tuya», y contestar cosas distintas diría a
+    // cualquiera si un identificador existe en otra empresa.
+    return categoria === undefined
+      ? new HttpResponse(null, { status: 404 })
+      : HttpResponse.json(categoria);
   }),
 
   http.get('/api/v1/organizacion/empresas', () =>

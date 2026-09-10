@@ -34,6 +34,8 @@ export const en: Diccionario = {
     acceso: 'Sign in',
     inicio: 'Home',
     almacenes: 'Warehouses',
+    articulos: 'Items',
+    categorias: 'Categories',
     empresas: 'Companies',
     terceros: 'Business partners',
     noEncontrada: 'Page not found',
@@ -60,6 +62,25 @@ export const en: Diccionario = {
     tipos: {
       'almacen-duplicado': 'There is already a warehouse with that code at this company.',
       'almacen-no-encontrado': 'That warehouse no longer exists. Go back to the list and refresh.',
+      'articulo-duplicado': 'There is already an item with that code at this company.',
+      'articulo-impuesto-no-encontrado': 'That tax does not exist. Pick one from the tax list.',
+      'articulo-impuesto-no-vigente':
+        'That tax period no longer applies. Pick one that is currently in force.',
+      'articulo-no-encontrado': 'That item no longer exists. Go back to the list and refresh.',
+      'articulo-tipo-no-valido': 'An item can only be of type “Bien” or “Servicio”.',
+      'articulo-unidad-no-encontrada':
+        'That unit of measure does not exist. Pick one from the unit list.',
+      'articulo-unidad-retirada':
+        'That unit has been withdrawn: items already using it are still counted in it, but a ' +
+        'new one cannot be registered with it. Pick another one.',
+      'categoria-ciclo':
+        'A category cannot hang from itself, nor from any of the ones hanging from it.',
+      'categoria-demasiado-profunda':
+        'The category tree does not allow any more levels below that place.',
+      'categoria-duplicada': 'There is already a category with that code at this company.',
+      'categoria-no-encontrada': 'That category no longer exists. Go back to the list and refresh.',
+      'categoria-padre-no-encontrado':
+        'The category you want to hang this one from does not exist.',
       'codigo-de-rol-ya-usado': 'There is already a role with that code. Pick another one.',
       'contrasena-actual-incorrecta': 'Your current password is not correct.',
       'conversion-um-duplicada': 'There is already a conversion between those two units.',
@@ -136,6 +157,58 @@ export const en: Diccionario = {
     noEncontrada: 'This address does not match any Bastion screen.',
     irAlAcceso: 'Go to the sign-in screen',
     volverAlInicio: 'Back to home',
+  },
+
+  catalogo: {
+    articulos: {
+      cargando: 'the items',
+      tabla: 'Items of the active company',
+      codigo: 'Code',
+      descripcion: 'Description',
+      tipo: 'Type',
+
+      filtro: 'Search by code or description',
+      filtrar: 'Search',
+
+      filtradaPor: 'Filtering by category “{{categoria}}”.',
+      filtradaPorUnaCategoria: 'Filtering by a category.',
+      quitarLaCategoria: 'Clear the category filter',
+
+      paginaVacia: 'This page has no items. Go back to the previous one.',
+      ningunoTodavia: 'No item has been registered at this company yet.',
+      ningunoConEsteFiltro: 'No item matches “{{filtro}}”.',
+      ningunoEnEstaCategoria:
+        'This category has no items. The ones in the categories hanging from it do not show up ' +
+        'here: look at them one by one.',
+
+      tipos: {
+        bien: 'Goods',
+        servicio: 'Service',
+        desconocido: 'Unrecognised',
+        desconocidoDetalle:
+          'This version of the screen does not know how to read the type that arrived. Tell ' +
+          'whoever administers Bastion.',
+      },
+    },
+
+    categorias: {
+      cargando: 'the categories',
+      tabla: 'Category tree of the active company',
+      codigo: 'Code',
+      nombre: 'Name',
+      nivel: 'Level',
+      articulos: 'Items',
+      verSusArticulos: 'See the items in {{categoria}}',
+
+      suelta: 'Out of place',
+      sueltaDetalle:
+        'The category it hangs from is not on this page, or the stored tree has a cycle. It is ' +
+        'shown anyway: a category that exists and does not show up is one somebody registers a ' +
+        'second time.',
+
+      paginaVacia: 'This page has no categories. Go back to the previous one.',
+      ningunaTodavia: 'No category has been registered at this company yet.',
+    },
   },
 
   identidad: {

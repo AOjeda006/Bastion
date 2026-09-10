@@ -4,6 +4,102 @@
  */
 
 export interface paths {
+    "/api/v1/catalogo/articulos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de artículos. */
+        get: operations["Articulos_Listar"];
+        put?: never;
+        /**
+         * Da de alta un artículo.
+         * @description El `409` puede venir de tres sitios distintos, y el `type` del ProblemDetails los
+         *     separa: el código ya está usado (`articulo-duplicado`), la unidad está retirada
+         *     (`articulo-unidad-retirada`) o el tramo de impuesto no rige hoy
+         *     (`articulo-impuesto-no-vigente`). El frontal escribe el texto humano a partir del
+         *     `type` (ADR-0030), no del mensaje.
+         */
+        post: operations["Articulos_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/articulos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve un artículo. */
+        get: operations["Articulos_Obtener"];
+        /**
+         * Cambia la descripción, el tipo, el impuesto propuesto o la categoría.
+         * @description Ni el código ni la unidad base están entre lo que se puede cambiar, y no es el permiso
+         *     quien lo impide: no están en el cuerpo ni en `Articulo.Modificar`.
+         */
+        put: operations["Articulos_Modificar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/categorias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve una página de categorías.
+         * @description <b>Devuelve la lista plana con el padre de cada una, no el árbol montado.</b> El árbol de
+         *             una empresa cabe entero en una o dos páginas —diez niveles de profundidad como máximo, y en
+         *             la práctica dos o tres— y componerlo es una vuelta por la lista en el cliente. Servirlo
+         *             montado obligaría al servidor a recorrerlo entero en cada lectura para devolver justo lo que
+         *             se puede recomponer sin él.
+         */
+        get: operations["Categorias_Listar"];
+        put?: never;
+        /** Da de alta una categoría. */
+        post: operations["Categorias_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/categorias/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una categoría. */
+        get: operations["Categorias_Obtener"];
+        /**
+         * Cambia el nombre de una categoría, o la mueve de sitio en el árbol.
+         * @description <b>Es la operación que puede cerrar un ciclo</b> —mover una rama debajo de su propia
+         *             descendencia—, y por eso la comprobación del árbol corre aquí y no solo en el alta. Los tres
+         *             desenlaces se distinguen por el `type`: `categoria-ciclo`,
+         *             `categoria-padre-no-encontrado` y `categoria-demasiado-profunda`.
+         */
+        put: operations["Categorias_Modificar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/identidad/roles": {
         parameters: {
             query?: never;
@@ -1329,6 +1425,40 @@ export interface components {
             /** @description Tipo de almacén, como texto. */
             tipo: string;
         };
+        /** @description Un artículo, tal como sale de la API. */
+        ArticuloDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del artículo.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Empresa a la que pertenece la ficha (R8).
+             */
+            empresaId: string;
+            /** @description Código, en mayúsculas. No cambia. */
+            codigo: string;
+            /** @description Lo que sale impreso en una factura. */
+            descripcion: string;
+            /** @description Si es mercancía o prestación, como texto: `Bien` o `Servicio`. */
+            tipo: string;
+            /**
+             * Format: uuid
+             * @description Unidad en la que se cuenta, del maestro de Organización.
+             */
+            unidadBaseId: string;
+            /**
+             * Format: uuid
+             * @description Tramo de impuesto propuesto, del maestro de Organización.
+             */
+            impuestoPorDefectoId: string;
+            /**
+             * Format: uuid
+             * @description Categoría en la que se clasifica, o nula.
+             */
+            categoriaId: null | string;
+        };
         /** @description Qué rol se asigna o se retira, y en qué empresa. */
         AsignarRolDto: {
             /**
@@ -1420,6 +1550,28 @@ export interface components {
              * @description Empresa que pasa a ser la activa.
              */
             empresaId: string;
+        };
+        /** @description Una categoría del árbol de clasificación, tal como sale de la API. */
+        CategoriaDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la categoría.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Empresa a la que pertenece (R8).
+             */
+            empresaId: string;
+            /** @description Código, en mayúsculas. No cambia. */
+            codigo: string;
+            /** @description Nombre con el que se muestra. */
+            nombre: string;
+            /**
+             * Format: uuid
+             * @description Categoría de la que cuelga, o nula si es una raíz.
+             */
+            padreId: null | string;
         };
         /** @description Lo que hace falta para cerrar un tramo vigente. */
         CerrarImpuestoDto: {
@@ -1556,6 +1708,42 @@ export interface components {
             direccion?: null | components["schemas"]["DireccionDto"];
             /** @description Tipo de almacén, como texto. */
             tipo: string;
+        };
+        /** @description Lo que hace falta para dar de alta un artículo. */
+        CrearArticuloDto: {
+            /** @description Código del artículo. Se normaliza a mayúsculas. */
+            codigo: string;
+            /** @description Descripción con la que se muestra y con la que se factura. */
+            descripcion: string;
+            /** @description Si es mercancía o prestación: `Bien` o `Servicio`. */
+            tipo: string;
+            /**
+             * Format: uuid
+             * @description Unidad en la que se cuenta este artículo. Tiene que existir y <b>ofrecerse para lo nuevo</b>.
+             */
+            unidadBaseId: string;
+            /**
+             * Format: uuid
+             * @description Tramo de impuesto que se propone al facturarlo.
+             */
+            impuestoPorDefectoId: string;
+            /**
+             * Format: uuid
+             * @description Categoría en la que se clasifica, o nula para dejarlo sin clasificar.
+             */
+            categoriaId?: null | string;
+        };
+        /** @description Lo que hace falta para dar de alta una categoría. */
+        CrearCategoriaDto: {
+            /** @description Código de la categoría. Se normaliza a mayúsculas. */
+            codigo: string;
+            /** @description Nombre con el que se muestra. */
+            nombre: string;
+            /**
+             * Format: uuid
+             * @description Categoría de la que cuelga, o nula para crear una raíz.
+             */
+            padreId?: null | string;
         };
         /** @description Lo que hace falta para dar de alta una conversión. */
         CrearConversionUmDto: {
@@ -1979,6 +2167,33 @@ export interface components {
             /** @description Tipo de almacén, como texto. */
             tipo: string;
         };
+        /** @description Lo que se puede cambiar de un artículo ya dado de alta. */
+        ModificarArticuloDto: {
+            /** @description Descripción con la que se muestra y con la que se factura. */
+            descripcion: string;
+            /** @description Si es mercancía o prestación: `Bien` o `Servicio`. */
+            tipo?: string;
+            /**
+             * Format: uuid
+             * @description Tramo de impuesto que se propone al facturarlo.
+             */
+            impuestoPorDefectoId: string;
+            /**
+             * Format: uuid
+             * @description Categoría en la que se clasifica, o nula para dejarlo sin clasificar.
+             */
+            categoriaId?: null | string;
+        };
+        /** @description Lo que se puede cambiar de una categoría ya dada de alta. */
+        ModificarCategoriaDto: {
+            /** @description Nombre con el que se muestra. */
+            nombre: string;
+            /**
+             * Format: uuid
+             * @description Categoría de la que cuelga, o nula para dejarla como raíz.
+             */
+            padreId?: null | string;
+        };
         /** @description Lo que se puede cambiar de una conversión. */
         ModificarConversionUmDto: {
             /**
@@ -2102,9 +2317,49 @@ export interface components {
             total: number | string;
         };
         /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeArticuloDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["ArticuloDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
         PaginaDeBloqueadoDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["BloqueadoDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeCategoriaDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["CategoriaDto"][];
             /**
              * Format: int32
              * @description Número de página, empezando en 1.
@@ -2682,6 +2937,431 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    Articulos_Listar: {
+        parameters: {
+            query?: {
+                categoria?: string;
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeArticuloDto"];
+                    "application/json": components["schemas"]["PaginaDeArticuloDto"];
+                    "text/json": components["schemas"]["PaginaDeArticuloDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearArticuloDto"];
+                "text/json": components["schemas"]["CrearArticuloDto"];
+                "application/*+json": components["schemas"]["CrearArticuloDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ArticuloDto"];
+                    "application/json": components["schemas"]["ArticuloDto"];
+                    "text/json": components["schemas"]["ArticuloDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del artículo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ArticuloDto"];
+                    "application/json": components["schemas"]["ArticuloDto"];
+                    "text/json": components["schemas"]["ArticuloDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del artículo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarArticuloDto"];
+                "text/json": components["schemas"]["ModificarArticuloDto"];
+                "application/*+json": components["schemas"]["ModificarArticuloDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ArticuloDto"];
+                    "application/json": components["schemas"]["ArticuloDto"];
+                    "text/json": components["schemas"]["ArticuloDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Categorias_Listar: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeCategoriaDto"];
+                    "application/json": components["schemas"]["PaginaDeCategoriaDto"];
+                    "text/json": components["schemas"]["PaginaDeCategoriaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Categorias_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearCategoriaDto"];
+                "text/json": components["schemas"]["CrearCategoriaDto"];
+                "application/*+json": components["schemas"]["CrearCategoriaDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CategoriaDto"];
+                    "application/json": components["schemas"]["CategoriaDto"];
+                    "text/json": components["schemas"]["CategoriaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Categorias_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la categoría. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CategoriaDto"];
+                    "application/json": components["schemas"]["CategoriaDto"];
+                    "text/json": components["schemas"]["CategoriaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Categorias_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la categoría. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarCategoriaDto"];
+                "text/json": components["schemas"]["ModificarCategoriaDto"];
+                "application/*+json": components["schemas"]["ModificarCategoriaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CategoriaDto"];
+                    "application/json": components["schemas"]["CategoriaDto"];
+                    "text/json": components["schemas"]["CategoriaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     Roles_Listar: {
         parameters: {
             query?: {
