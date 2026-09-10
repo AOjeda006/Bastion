@@ -866,22 +866,29 @@ Todo lo de abajo está razonado en
 
 `TodaEscrituraDiceComoSeProtegeTests` recorre la **tabla de enrutado del host** (desde el 1.3; hasta
 entonces eran dos `typeof` escritos a mano, y por eso el primer controlador de Terceros habría
-quedado fuera sin ponerse nada rojo). Hoy: **93 acciones**, de ellas **60** cambian estado — **30**
-exigen `If-Match`, **13** admiten `Idempotency-Key` y **17** están exentas con su motivo escrito.
+quedado fuera sin ponerse nada rojo). Hoy: **110 acciones**, de ellas **72** cambian estado — **40**
+exigen `If-Match`, **15** admiten `Idempotency-Key` y **17** están exentas con su motivo escrito.
 Los números están fijados en el propio test: un barrido cuya enumeración devuelva nada saldría verde
 por la peor de las razones.
 
-> **Rehechas enteras en el 1.6, y esa es la anotación que importa.** Los números del test se han ido
+> **Rehechas enteras en el 1.6 y otra vez en el 1.8, y esa es la anotación que importa.** Los números del test se han ido
 > moviendo ítem a ítem —cada uno los sube y lo ve rojo si no lo hace—, pero **las tablas de aquí
 > abajo se quedaron en las del 0.10** (46 acciones, 32 escrituras, 13 · 6 · 13) y así llegaron hasta
 > el 1.5. Nada lo puso rojo porque **una tabla en un `.md` no es una fuente que ningún test compare**:
 > es prosa, y la prosa no falla. El recorrido real fue 0.9 → 46/32/**16·6·10**, 0.10 → 46/32/**13·6·13**
-> (mudanza de los tres desbloqueos, ADR-0017) y hoy 93/60/**30·13·17**. Se rehacen ahora porque el 1.6
-> las vuelve a mover (+11 acciones, +7 escrituras, +7 `If-Match`, cero `Idempotency-Key`), y una tabla
-> que se copia mal dos veces seguidas es una tabla en la que ya no se puede confiar.
+> (mudanza de los tres desbloqueos, ADR-0017), 1.6 → 93/60/**30·13·17** y hoy 110/72/**40·15·17**.
+>
+> **Y volvieron a quedarse atrás en el 1.7, que es la segunda vez.** Entre `4960922` y `9f8ff56` el
+> test decía **102 acciones, 68 escrituras, 38 · 13 · 17** —lo que el 1.7 añadió con las retiradas y
+> los dos cierres— y estas tablas seguían con las del 1.6. Nada se puso rojo, por lo mismo de
+> siempre. Se rehacen enteras ahora, con el delta del 1.8 separado del que arrastraban: **+8
+> acciones, +4 escrituras, +2 `If-Match`, +2 `Idempotency-Key`, cero exentas**, que son exactamente
+> las ocho de Catálogo —cuatro por recurso: listado, lectura por identificador, alta y
+> modificación—. Una tabla que se copia mal dos veces seguidas es una tabla en la que ya no se
+> puede confiar.
 
-**Los trece recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de agregado
-con `GET /{id}`, que es la misma lista de las trece altas de más abajo:
+**Los quince recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de agregado
+con `GET /{id}`, que es la misma lista de las quince altas de más abajo:
 
 | Recurso | Ruta del `GET` que emite el `ETag` |
 |---|---|
@@ -898,12 +905,14 @@ con `GET /{id}`, que es la misma lista de las trece altas de más abajo:
 | Rol | `GET /api/v1/identidad/roles/{id}` |
 | Usuario | `GET /api/v1/identidad/usuarios/{id}` |
 | Tercero | `GET /api/v1/terceros/terceros/{id}` |
+| Artículo *(1.8)* | `GET /api/v1/catalogo/articulos/{id}` |
+| Categoría *(1.8)* | `GET /api/v1/catalogo/categorias/{id}` |
 
 Los listados **no** lo emiten: un `ETag` sobre una página sería el de la página, no el de cada
 elemento, y un cliente que lo devolviera en un `If-Match` estaría citando una versión que no es la
 del recurso que escribe.
 
-**Las treinta operaciones que exigen `If-Match`:**
+**Las cuarenta operaciones que exigen `If-Match`:**
 
 | Recurso | Operaciones |
 |---|---|
@@ -920,6 +929,8 @@ del recurso que escribe.
 | Rol | `PUT /{id}` |
 | Usuario | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
 | Tercero | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
+| Artículo *(1.8)* | `PUT /{id}` |
+| Categoría *(1.8)* | `PUT /{id}` |
 | Tercero — lo que cuelga *(1.6)* | `POST /{terceroId}/contactos`, `DELETE /{terceroId}/contactos/{contactoId}`, `POST /{terceroId}/cuentas-bancarias`, `DELETE /{terceroId}/cuentas-bancarias/{cuentaId}`, `POST /{terceroId}/cuentas-bancarias/{cuentaId}/preferente`, `PUT /{terceroId}/condiciones-pago/{rol}`, `PUT /{terceroId}/limite-credito` |
 
 Las subrutas —el bloqueo, el cierre— citan la versión **del recurso**, no una suya: no son otro
@@ -933,7 +944,7 @@ quiere que la segunda escritura se lleve el `412`. Ninguna de las siete admite `
 por descuido: no son altas de un recurso nuevo con vida propia, son modificaciones de un agregado que
 ya existe, y para eso el mecanismo que protege es el otro.
 
-**Las trece rutas que admiten `Idempotency-Key`** — las trece altas, y solo ellas:
+**Las quince rutas que admiten `Idempotency-Key`** — las quince altas, y solo ellas:
 
 | Ruta | Módulo | Almacén que la atiende |
 |---|---|---|
@@ -950,6 +961,8 @@ ya existe, y para eso el mecanismo que protege es el otro.
 | `POST /api/v1/identidad/roles` | `identidad` | `AlmacenDeIdempotenciaDeIdentidad` |
 | `POST /api/v1/identidad/usuarios` | `identidad` | ídem |
 | `POST /api/v1/terceros/terceros` | `terceros` | `AlmacenDeIdempotenciaDeTerceros` |
+| `POST /api/v1/catalogo/articulos` | `catalogo` | `AlmacenDeIdempotenciaDeCatalogo` |
+| `POST /api/v1/catalogo/categorias` | `catalogo` | ídem |
 
 **Y las diecisiete exentas, con el motivo resumido** (el entero está en el test):
 
@@ -3230,6 +3243,134 @@ en el encargo; salen de que la decisión 2 del ADR se apoya en el rango del fact
     literales de compilación —`[Range]` no admite otra cosa—, hay una regla que compara los cuatro
     literales contra las dos constantes, que es la única manera de que dos fuentes escritas en
     sitios distintos no se separen en silencio.
+
+
+
+### Tomadas por el agente de desarrollo — ítem 1.8 (2026-09-10)
+
+**1. El árbol de categorías se modela como LISTA DE ADYACENCIA, y la alternativa está costeada.**
+`Categoria` guarda `PadreId` y nada más: una columna que apunta a la misma tabla, con clave ajena a
+sí misma y dentro del mismo esquema. La alternativa seria era una *closure table* —una fila por cada
+par (antepasado, descendiente) con su distancia—, que es lo que se pone cuando lo que se consulta de
+verdad son subárboles.
+
+El criterio para elegir fue **qué va a consultar este módulo**, no qué es más general. El consumidor
+real es el **listado de artículos filtrado por categoría**, y ese filtro es `WHERE categoria_id = ?`:
+una igualdad sobre una columna indexada, que la lista de adyacencia sirve directamente y para la que
+una *closure table* no aporta nada. Lo segundo que se consulta es **el árbol entero de una empresa**
+para pintarlo, que en una lista de adyacencia es un `SELECT` plano y se compone en el cliente. La
+*closure table* cobra su precio en la escritura: mover una rama reescribe todas las filas de cierre
+de su subárbol, y esa escritura hay que mantenerla coherente con la jerarquía en cada alta y cada
+modificación. Se pagaría desde el primer día por una consulta que este módulo no hace.
+
+**Y qué pasaría el día que haga falta el subárbol.** Pasaría lo que ya está dicho en pantalla: hoy el
+filtro **acota por la categoría dicha y no por lo que cuelga de ella**, y las dos pantallas lo avisan
+con esas palabras en vez de dejar que parezca un fallo. El día que el subárbol haga falta de verdad
+—el candidato es la **precedencia de tarifas del 1.9**, que asciende de la categoría del artículo
+hasta la raíz— hay dos salidas y ninguna obliga a migrar el modelo: un `WITH RECURSIVE` de PostgreSQL
+sobre la misma columna, que con un árbol acotado a once niveles recorre como mucho once filas por
+consulta; o una *closure table* **derivada**, que se añade al lado sin tocar `PadreId` porque la
+jerarquía sigue viviendo ahí. Lo que no se puede hacer barato es al revés: quitar una *closure table*
+que ya se está manteniendo. Por eso se empieza por la que no cobra por adelantado.
+
+**2. La cota del recorrido de padres es `Categoria.ProfundidadMaxima`, y vale diez.** Diez niveles
+**por debajo** de la raíz, o sea un árbol completo de once categorías desde la raíz hasta la hoja más
+honda. El número vive en el dominio, junto a su motivo, y el caso de uso lo lee de allí: repetirlo
+sería tener dos fuentes que se separan sin que nada avise.
+
+La cota tiene **dos motivos y hay que decir los dos**. El primero es de negocio: a más de diez
+niveles, lo que hay debajo de una categoría casi nunca es una clasificación —es un atributo del
+artículo disfrazado de categoría, que es donde se acaban metiendo el color y el tamaño—, y la cota lo
+dice con un error con nombre en vez de dejar crecer un árbol que nadie puede recorrer con la vista.
+El segundo es que **la cota es lo único que convierte un cuelgue en un error**: el ascenso gasta una
+consulta por nivel, y sobre datos que ya tuvieran un ciclo —una restauración a medias, un `UPDATE` a
+mano, una importación de otro sistema— un ascenso sin cota no da error, **gira**, dentro de la
+petición y con la conexión abierta. Un servidor que no contesta es peor que cualquier rechazo, porque
+no dice de qué venía. Con la cota puesta el peor caso son once viajes a la base por alta o
+modificación con padre, y el ciclo ya guardado sale como `categoria-demasiado-profunda` con la cadena
+escrita.
+
+**Y la cota tiene un caso que la ejerce sin colgar la suite**, que es la otra mitad de la decisión:
+`Un_ciclo_YA_GUARDADO_no_deja_el_recorrido_dando_vueltas` monta dos categorías que se apuntan la una
+a la otra, comprueba que el recorrido termina **y cuenta cuántos eslabones ha pedido**. El doble de
+repositorio lleva un tope del doble —cien— que lanza con una frase que dice qué ha pasado. Sin ese
+tope, quitar la cota no daría un caso rojo: daría un caso que no termina, y el síntoma sería «la CI
+tarda», que no señala a nadie.
+
+**3. La comprobación de ciclos vive en la capa de APLICACIÓN, y se hace en las DOS puertas.** Dónde
+vive, por lo mismo que `LaInversaEsPlausible` del 1.7 —el patrón se reutiliza, no se inventa otro—:
+la regla relaciona **varias instancias** del agregado, y la R12 dice una transacción, un agregado. Un
+invariante de dominio que tuviera que cargar el resto del árbol sería justo la grieta que la R12
+cierra. Tampoco es una restricción de la base: tendría que mirar otras filas, o sea un disparador
+recursivo, con el coste y la invisibilidad que eso tiene.
+
+Y en las dos puertas porque **el hueco está en la modificación**. En el alta la rama del ciclo es
+estructuralmente inalcanzable —la categoría que nace todavía no está en el árbol, así que ningún
+antepasado suyo puede ser ella— y conviene decirlo en voz alta en vez de contar el alta como el sitio
+donde se atrapan los ciclos. Lo que el alta sí ejerce son las otras dos ramas: que el padre exista y
+que colgar de él no pase de la profundidad máxima. El ciclo lo cierra **reasignar el padre** de una
+rama debajo de su propia descendencia, y eso solo se puede hacer modificando. Es la misma forma del
+hueco que el 1.7 le encontró a la inversa, por su otra cara.
+
+**4. El caso degenerado —una categoría con ella misma como padre— NO tiene tratamiento aparte, y es
+una decisión.** Es un ciclo de longitud uno: sale por la primera vuelta del mismo recorrido, con el
+mismo `categoria-ciclo` y el mismo mensaje. Para quien lo provoca es el mismo problema, y una rama
+propia solo daría un sitio más donde equivocarse. La mutación 4 lo comprueba por el otro lado:
+tratarlo aparte —dejarlo pasar en su propia rama— pone rojos dos casos, uno por cada puerta.
+
+**5. La pregunta del art. 32 se ha hecho, no se ha supuesto: `Articulo` NO es bloqueable.** El
+artículo 32 de la LOPDGDD habla del bloqueo de **datos personales**, que es lo que hace bloqueables a
+la empresa, al usuario y al tercero. Un artículo guarda código, descripción, tipo y tres
+identificadores, y nada más: ni nombre, ni identificador fiscal, ni dirección, ni cuenta. Lo mismo la
+categoría. La respuesta está escrita en `Articulo`, en `ArticuloDto` y en `CatalogoDbContext`, y
+además **comprobada**: `ElCatalogoNoGuardaDatosDeNadieTests` recorre el modelo y afirma que ninguna
+entidad de Catálogo guarda un dato personal, y `ModuloDeCatalogo` **no** registra un aportador al
+listado del art. 32 —registrar uno vacío sería peor que no registrarlo: pondría en el informe un
+módulo que no tiene nada que aportar—.
+
+**6. Ni la unidad ni el impuesto son claves ajenas, y esa es la §5 entera.** Viven en el esquema de
+Organización y aquí se guardan como `uuid` desnudos, validados por los puertos del 1.2
+(`IConsultaDeUnidadesDeMedida`, `IConsultaDeImpuestos`). Sin esas dos preguntas las dos columnas
+aceptarían cualquier identificador, compilarían, migrarían y pasarían los tests —es la «cuarta vía»
+del ADR-0024—, y el fallo aparecería en la factura que los usa, tres fases después. Las mutaciones 6
+y 8 son las dos caras de esto: quitar la pregunta, y poner la clave ajena.
+
+**7. Catálogo es el consumidor para el que se construyó la retirada, y las tres casillas de
+`EstadoDeMaestro` significan tres cosas distintas en un camino de negocio.** `SeOfreceParaLoNuevo` →
+el alta pasa. `SoloResuelveLoViejo` → el alta se rechaza **y el artículo que ya la usaba sigue
+resolviéndola**: las dos mitades, que es lo que distingue una retirada de un borrado. `NoExiste` → el
+alta se rechaza con un `type` **distinguible** del anterior, porque son dos arreglos distintos: quien
+teclea un identificador inventado corrige el identificador, quien apunta a uno retirado elige otro
+que sí se ofrezca.
+
+La segunda mitad consiste en algo que **no se hace**: `ModificarArticulo` vuelve a preguntar
+únicamente por lo que **ha cambiado**. Revalidar el maestro que nadie ha tocado convertiría la
+retirada en un **congelador** —el día que un tramo deja de regir, cada artículo que lo propusiera se
+quedaría sin poder corregir ni su propia descripción—. Y la unidad base es el caso extremo: no se
+revalida porque **no se puede cambiar**, no está en el DTO ni en `Articulo.Modificar`.
+
+> **Y aquí la tanda de mutaciones destapó una aserción sin escenario.** El caso por HTTP que afirma
+> esto —`Modificar_sin_tocar_el_impuesto_no_lo_vuelve_a_preguntar_...`— llegaba a la modificación con
+> el tramo del artículo **todavía vigente**, y con eso revalidarlo y no revalidarlo se ven
+> exactamente igual desde fuera: la mutación 2 lo dejaba verde. Arreglado en `1eab397`, cerrando el
+> tramo del artículo —`POST /impuestos/{id}/cierre` con el último día en ayer— antes de la
+> modificación que no lo toca. Es la misma familia que el «antes» mal medido de los `act()` del 1.5:
+> una afirmación cuyo escenario no la ejerce sale verde por la peor de las razones.
+
+**8. En `/articulos` no hay desplegable de categorías, y el filtro por rama se pone desde
+`/categorias`.** Un desplegable obligaría a traerse el catálogo de categorías entero en cada visita a
+la pantalla de artículos, y a quedarse corto —sin decirlo— en la empresa que tuviera más de las que
+caben en una página. Lo que sí hay en `/articulos` es el filtro **puesto**, con el nombre de la rama
+resuelto por un `GET` por identificador y la salida para quitarlo. Ese `GET` se lanza **solo** si la
+sesión concede `catalogo.categoria.ver`: la interfaz esconde y el servidor autoriza, pero pedir lo
+que se sabe que va a contestar `403` no es esconder, es hacer ruido. Y si el nombre no llega, el
+filtro se anuncia igual sin nombre: callarlo dejaría una tabla con menos filas de las que hay y
+ninguna explicación a la vista.
+
+**9. En `/categorias` no hay filtro de texto, y también es una decisión.** Filtrar un árbol por texto
+destruye justo lo que esa pantalla enseña: al quitar las filas que no casan, lo que queda son ramas
+sueltas con sus niveles descolgados. La pantalla es la forma del árbol; quien busca un artículo lo
+busca en `/articulos`.
 
 
 ## Estado actual
