@@ -15,5 +15,6 @@ export const PERMISOS = {
   articuloVer: 'catalogo.articulo.ver',
   categoriaVer: 'catalogo.categoria.ver',
   empresaVer: 'organizacion.empresa.ver',
+  tarifaVer: 'catalogo.tarifa.ver',
   terceroVer: 'terceros.tercero.ver',
 } as const;

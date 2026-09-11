@@ -8,6 +8,7 @@ import {
   categoriaDe,
   categoriasDe,
   sesionDto,
+  tarifasDe,
   tercerosDe,
 } from './datos.ts';
 import type { components } from '@/shared/api/esquema.ts';
@@ -51,6 +52,15 @@ export const servidorSimulado = {
   articulosPedidos: [] as { busqueda: string; categoria: string | null }[],
   falloDeArticulos: null as number | null,
   falloDeCategorias: null as number | null,
+  /**
+   * Con qué criterios se ha pedido el listado de tarifas, una entrada por petición.
+   *
+   * Los dos juntos y no dos listas, por lo mismo que en artículos: lo que hay que poder afirmar es
+   * que la pantalla manda al servidor lo que dice la URL, y una que se trajera todo y filtrara en
+   * el navegador pintaría exactamente lo mismo con la lista vacía.
+   */
+  tarifasPedidas: [] as { busqueda: string; codigo: string | null }[],
+  falloDeTarifas: null as number | null,
 };
 
 /** Deja al servidor sin sesión y sin cuentas pendientes. Se llama entre test y test. */
@@ -63,6 +73,8 @@ export function reiniciarServidor(): void {
   servidorSimulado.articulosPedidos = [];
   servidorSimulado.falloDeArticulos = null;
   servidorSimulado.falloDeCategorias = null;
+  servidorSimulado.tarifasPedidas = [];
+  servidorSimulado.falloDeTarifas = null;
 }
 
 /** Abre sesión en el servidor simulado, como si ya se hubiera entrado en una recarga anterior. */
@@ -159,7 +171,7 @@ export const servidor = setupServer(
     return HttpResponse.json(tercerosDe(testigo, consulta.get('q') ?? ''));
   }),
 
-  // Los tres de Catálogo responden SEGÚN EL TESTIGO, como los anteriores: la empresa activa va
+  // Los cuatro de Catálogo responden SEGÚN EL TESTIGO, como los anteriores: la empresa activa va
   // dentro del token y quien filtra es el servidor (R8).
   http.get('/api/v1/catalogo/articulos', ({ request }) => {
     const consulta = new URL(request.url).searchParams;
@@ -194,6 +206,23 @@ export const servidor = setupServer(
     return categoria === undefined
       ? new HttpResponse(null, { status: 404 })
       : HttpResponse.json(categoria);
+  }),
+
+  http.get('/api/v1/catalogo/tarifas', ({ request }) => {
+    const consulta = new URL(request.url).searchParams;
+
+    servidorSimulado.tarifasPedidas.push({
+      busqueda: consulta.get('q') ?? '',
+      codigo: consulta.get('codigo'),
+    });
+
+    if (servidorSimulado.falloDeTarifas !== null) {
+      return new HttpResponse(null, { status: servidorSimulado.falloDeTarifas });
+    }
+
+    return HttpResponse.json(
+      tarifasDe(empresaDe(request), consulta.get('q') ?? '', consulta.get('codigo')),
+    );
   }),
 
   http.get('/api/v1/organizacion/empresas', () =>

@@ -4,10 +4,10 @@ Espeja el módulo **Catálogo** del backend (`Bastion.Catalogo.*`, `/api/v1/cata
 carpeta por recurso; entre funcionalidades, nada: `catalogo` no importa de `organizacion` ni al
 revés, y eso lo impide una regla de ESLint, no un acuerdo (`docs/adr/adr-0022`).
 
-Son **dos recursos y no uno** porque son dos cosas: un artículo es lo que se factura, una categoría
-es dónde está colocado. Dentro de la funcionalidad sí se importan entre ellos —`articulos/ui` pide
-a `categorias/api` el nombre de la rama por la que se está filtrando—, que es exactamente lo que
-distingue «una funcionalidad» de «una carpeta».
+Son **tres recursos y no uno** porque son tres cosas: un artículo es lo que se factura, una
+categoría es dónde está colocado, y una tarifa es a cuánto se vende. Dentro de la funcionalidad sí
+se importan entre ellos —`articulos/ui` pide a `categorias/api` el nombre de la rama por la que se
+está filtrando—, que es exactamente lo que distingue «una funcionalidad» de «una carpeta».
 
 ## `articulos` — los artículos de la empresa activa
 
@@ -58,6 +58,33 @@ Parámetros de URL: `?pagina=` y `?tamanio=`.
 ['categorias', 'una', id]                   → clavesDeCategorias.una(id)
 ```
 
+## `tarifas` — a cuánto se vende, y desde cuándo
+
+**Propósito.** Enseñar los tramos de tarifa de la empresa activa y **cuál de ellos rige hoy**.
+
+### Rutas
+
+| Ruta       | Exigencia                     | Título  |
+| ---------- | ----------------------------- | ------- |
+| `/tarifas` | permiso `catalogo.tarifa.ver` | Tarifas |
+
+Parámetros de URL: `?pagina=`, `?tamanio=`, `?busqueda=` y `?codigo=`. Los dos filtros son **dos
+preguntas distintas**, igual que en la API: `?busqueda=` viaja como `q` y busca texto parcial en el
+código y el nombre; `?codigo=` es igualdad exacta y responde «enséñame los tramos de ÉSTA».
+Ninguno es sensible (`docs/adr/adr-0025`): el código de una lista de precios de la propia empresa
+—`PVP`, `MAYORISTA`— no es un dato de ninguna persona, y ese nombre **tuvo que añadirse** a la lista
+declarada de `NingunCriterioSensibleViajaEnLaUrlTests`.
+
+### Claves de consulta
+
+```
+['tarifas']                                                   → clavesDeTarifas.todo
+['tarifas', 'lista']                                          → clavesDeTarifas.listas()
+['tarifas', 'lista', { pagina, tamanio, busqueda, codigo }]    → clavesDeTarifas.lista(listado)
+```
+
+`staleTime` de cinco minutos, como los otros dos: una tarifa es dato maestro.
+
 ## Lo que no es evidente
 
 - **El árbol lo compone el frontal, no el servidor.** La API devuelve la lista **plana** con el
@@ -101,6 +128,30 @@ Parámetros de URL: `?pagina=` y `?tamanio=`.
   otro módulo, y esta funcionalidad no importa de aquélla: enseñar el `uuid` no le dice nada a
   nadie. Que existan, que estén vigentes y que una unidad retirada no valga para un alta lo decide
   el servidor por sus puertos; aquí solo se traduce el `type` del error a una frase (ADR-0030).
+- **Una tarifa son VARIAS filas, y eso es lo que la pantalla de tarifas existe para enseñar.** El
+  código se repite —una fila por periodo de vigencia— y los periodos no se solapan nunca, porque lo
+  impide una restricción de exclusión de la base. Por eso el acotado por código no es un filtro más:
+  es la vista en la que la sucesión de una tarifa se lee entera y se ve si algún día se quedó sin
+  cubrir. Se llega a ella desde la propia fila, igual que al filtro por rama se llega desde el árbol.
+- **Los dos extremos de la vigencia están incluidos, y el segundo es el que se olvida:** el último
+  día de vigencia todavía rige. Es la misma convención que el `daterange(…, '[]')` de la restricción
+  de exclusión y que el `<=` de `Tarifa.RigeEl` — tres sitios y una sola convención. Con `<`, la
+  pantalla diría «ya no rige» el día en que un tramo acaba mientras la API sigue devolviendo su
+  precio, y no habría ningún error: habría dos versiones de la verdad.
+- **Las fechas se comparan como CADENAS, no como `Date`.** Llegan como días sueltos (`format: date`)
+  y `new Date('2026-09-11')` es medianoche **UTC**: al oeste de Greenwich cae en el día anterior, y
+  un tramo que empieza hoy se pintaría como futuro durante un día entero y solo para parte del
+  mundo. Los días en ISO-8601 se ordenan igual como texto que como fechas. Por lo mismo, el «hoy» se
+  compone de `getFullYear`/`getMonth`/`getDate` y no de `toISOString()`, que es el mismo error por el
+  otro lado.
+- **La pantalla de tarifas no pinta ni precios ni líneas, y no es un recorte.** Una línea nombra su
+  destino por identificador —un artículo o una categoría—, y resolver cuarenta nombres serían
+  cuarenta peticiones: exactamente el N+1 que el servidor se niega a hacer para resolver un precio, y
+  no sale más barato por hacerlo desde el navegador. Un precio, además, sin su divisa al lado es un
+  número que invita a leerse en euros, y la divisa es un maestro de **otro módulo** que esta
+  funcionalidad no puede nombrar (ADR-0022, el mismo criterio que dejó fuera la unidad y el impuesto
+  de un artículo). Quien necesita un precio lo pide donde se resuelve con su divisa pegada:
+  `GET /api/v1/catalogo/tarifas/{codigo}/precio`.
 - Los DTO salen de `shared/api/esquema.ts`, que se **genera** (`npm run api`), y se traducen al
   modelo de vista en la capa `api`: los tipos del contrato no salen de ahí.
 - La empresa **no** forma parte de ninguna clave de consulta: va dentro del testigo y quien filtra

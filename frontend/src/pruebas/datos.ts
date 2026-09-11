@@ -17,6 +17,8 @@ type ArticuloDto = components['schemas']['ArticuloDto'];
 type PaginaDeArticuloDto = components['schemas']['PaginaDeArticuloDto'];
 type CategoriaDto = components['schemas']['CategoriaDto'];
 type PaginaDeCategoriaDto = components['schemas']['PaginaDeCategoriaDto'];
+type TarifaDto = components['schemas']['TarifaDto'];
+type PaginaDeTarifaDto = components['schemas']['PaginaDeTarifaDto'];
 
 /** Dos empresas de verdad, no una empresa y una variable. Se opera en las dos. */
 export const ALFA = {
@@ -31,6 +33,7 @@ export const BETA = {
 export const PERMISOS_DE_LECTURA = [
   'catalogo.articulo.ver',
   'catalogo.categoria.ver',
+  'catalogo.tarifa.ver',
   'organizacion.almacen.ver',
   'organizacion.empresa.ver',
   'terceros.tercero.ver',
@@ -377,6 +380,124 @@ export function articulosDe(
         buscado === '' ||
         [articulo.codigo, articulo.descripcion].join(' ').toLocaleLowerCase('es').includes(buscado),
     );
+
+  return { elementos, pagina: 1, tamanio: 20, total: elementos.length };
+}
+
+/**
+ * El día que los tests de tarifas fijan como HOY, y del que depende el caso frontera de abajo.
+ *
+ * Está aquí y no en el test porque el caso que importa —un tramo que acaba **hoy** y que por tanto
+ * todavía rige— exige que el reloj simulado y la fixture digan el mismo día. Con el día escrito en
+ * dos sitios, basta con tocar uno para que el caso siga verde sin comprobar nada: el tramo pasaría
+ * a acabar ayer, «ya no rige» sería la respuesta correcta, y la inclusividad del último día dejaría
+ * de estar ejercida sin que nada se pusiera rojo.
+ */
+export const HOY_SIMULADO = '2026-09-11';
+
+/**
+ * Las tarifas con las que responde el servidor simulado.
+ *
+ * **Un código son varias filas**, que es lo que esta pantalla tiene que enseñar: `PVP` tiene dos
+ * tramos encadenados —2025 cerrado y 2026 abierto— que no se solapan, porque la base lo impide con
+ * una restricción de exclusión. Con un solo tramo por código, una pantalla que ignorara la vigencia
+ * pintaría exactamente lo mismo.
+ *
+ * Y están los tres estados que la tabla distingue: uno caducado, uno futuro, y **dos que rigen**,
+ * de los cuales uno acaba justamente hoy. Ese último es el caso frontera: el final está incluido,
+ * así que sigue rigiendo hoy y dejará de hacerlo mañana.
+ *
+ * La divisa es un identificador de un maestro de OTRO módulo y esta pantalla no la pinta; está
+ * porque el contrato la exige, con un valor que no es de ningún maestro real.
+ */
+const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
+  [ALFA.id]: [
+    {
+      id: 'aaaabbb1-0000-0000-0000-000000000001',
+      empresaId: ALFA.id,
+      codigo: 'PVP',
+      nombre: 'Precio de venta al público 2026',
+      divisaId: 'aaaa0003-0000-0000-0000-000000000001',
+      vigenteDesde: '2026-01-01',
+      vigenteHasta: null,
+    },
+    {
+      id: 'aaaabbb1-0000-0000-0000-000000000002',
+      empresaId: ALFA.id,
+      codigo: 'PVP',
+      nombre: 'Precio de venta al público 2025',
+      divisaId: 'aaaa0003-0000-0000-0000-000000000001',
+      vigenteDesde: '2025-01-01',
+      vigenteHasta: '2025-12-31',
+    },
+    {
+      id: 'aaaabbb1-0000-0000-0000-000000000003',
+      empresaId: ALFA.id,
+      codigo: 'MAYORISTA',
+      nombre: 'Mayorista, a partir de octubre',
+      divisaId: 'aaaa0003-0000-0000-0000-000000000001',
+      vigenteDesde: '2026-10-01',
+      vigenteHasta: null,
+    },
+    {
+      id: 'aaaabbb1-0000-0000-0000-000000000004',
+      empresaId: ALFA.id,
+      codigo: 'PROMO',
+      nombre: 'Promoción de septiembre',
+      divisaId: 'aaaa0003-0000-0000-0000-000000000001',
+      vigenteDesde: '2026-09-01',
+      // Acaba HOY, y por eso todavía rige. Es el caso que separa `<=` de `<`.
+      vigenteHasta: HOY_SIMULADO,
+    },
+  ],
+  [BETA.id]: [
+    {
+      id: 'aaaabbb2-0000-0000-0000-000000000001',
+      empresaId: BETA.id,
+      codigo: 'EXPORT',
+      nombre: 'Exportación',
+      divisaId: 'aaaa0003-0000-0000-0000-000000000002',
+      vigenteDesde: '2026-01-01',
+      vigenteHasta: null,
+    },
+  ],
+};
+
+/**
+ * Las tarifas de una empresa, filtradas, **ordenadas como las ordena la API** y paginadas.
+ *
+ * El orden no es un detalle del doble: el servidor las devuelve por código y, dentro de cada uno,
+ * de la vigencia más reciente a la más antigua. Si aquí salieran en el orden en que están escritas,
+ * la pantalla podría prometer un orden que la API no da, y el rótulo que dice «del más reciente al
+ * más antiguo» sería mentira contra el servidor de verdad.
+ *
+ * Los dos filtros son dos preguntas distintas, como en la API: `codigo` es igualdad exacta sobre el
+ * código ya normalizado, y `busqueda` es texto parcial sobre el código y el nombre.
+ */
+export function tarifasDe(
+  empresaId: string,
+  busqueda = '',
+  codigo: string | null = null,
+): PaginaDeTarifaDto {
+  const todas = LISTAS_DE_PRECIOS[empresaId] ?? [];
+  const buscado = busqueda.trim().toLocaleLowerCase('es');
+  const acotado = codigo === null ? null : codigo.trim().toUpperCase();
+
+  // `[...].sort()` y no `toSorted()`: el objetivo de compilación de este frontal no llega a
+  // ES2023, y ordenar sobre una copia es lo mismo sin cambiarlo por una fixture.
+  const elementos = [
+    ...todas
+      .filter((tarifa) => acotado === null || tarifa.codigo === acotado)
+      .filter(
+        (tarifa) =>
+          buscado === '' ||
+          [tarifa.codigo, tarifa.nombre].join(' ').toLocaleLowerCase('es').includes(buscado),
+      ),
+  ].sort(
+    (una, otra) =>
+      una.codigo.localeCompare(otra.codigo, 'es') ||
+      otra.vigenteDesde.localeCompare(una.vigenteDesde),
+  );
 
   return { elementos, pagina: 1, tamanio: 20, total: elementos.length };
 }

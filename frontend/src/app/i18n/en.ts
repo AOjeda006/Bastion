@@ -37,6 +37,7 @@ export const en: Diccionario = {
     articulos: 'Items',
     categorias: 'Categories',
     empresas: 'Companies',
+    tarifas: 'Price lists',
     terceros: 'Business partners',
     noEncontrada: 'Page not found',
   },
@@ -129,6 +130,35 @@ export const en: Diccionario = {
       'serie-no-encontrada': 'That series no longer exists. Go back to the list and refresh.',
       'serie-ya-numerada': 'The series has already numbered documents, so that cannot be changed.',
       'sesion-no-renovable': 'Your session could not be renewed. Sign in again.',
+      'tarifa-divisa-no-encontrada':
+        'That currency does not exist. Pick one from the currency list.',
+      'tarifa-divisa-retirada':
+        'That currency has been withdrawn: price lists already using it still work, but a new ' +
+        'one cannot be opened with it. Pick another one.',
+      'tarifa-linea-articulo-o-categoria':
+        'A price list line sets the price of an item or of a category, and you have to pick one ' +
+        'of the two: not both, not neither.',
+      'tarifa-linea-no-encontrada':
+        'That price list line no longer exists. Go back to the list and refresh.',
+      'tarifa-linea-precio-o-descuento':
+        'A price list line carries a price or a discount, and you have to set one of the two: ' +
+        'not both, not neither.',
+      'tarifa-linea-primer-tramo-sin-cero':
+        'The first quantity band has to start at zero. Starting higher would leave the ' +
+        'quantities below it with no price.',
+      'tarifa-linea-tramo-duplicado':
+        'There is already a band starting at that quantity for that item or that category.',
+      'tarifa-no-encontrada': 'That price list no longer exists. Go back to the list and refresh.',
+      'tarifa-no-vigente':
+        'That price list exists, but none of its periods covers the date asked for. Open the ' +
+        'missing period or ask for another date.',
+      'tarifa-sin-linea-aplicable':
+        'That price list says nothing about that item at that quantity, neither its own line nor ' +
+        'any of its categories. Add the missing line: there is no price to apply here.',
+      'tarifa-vigencia-al-reves': 'The period ends before it starts. Check both dates.',
+      'tarifa-vigencias-solapadas':
+        'There is already another period of that price list covering some of those days. The ' +
+        'periods of a price list cannot overlap.',
       'tercero-duplicado': 'This company already has a business partner with that tax identifier.',
       'tercero-no-encontrado':
         'That business partner no longer exists. Go back to the list and refresh.',
@@ -208,6 +238,43 @@ export const en: Diccionario = {
 
       paginaVacia: 'This page has no categories. Go back to the previous one.',
       ningunaTodavia: 'No category has been registered at this company yet.',
+    },
+
+    tarifas: {
+      cargando: 'the price lists',
+      tabla: 'Price list periods of the active company',
+      codigo: 'Code',
+      nombre: 'Name',
+      vigencia: 'In force',
+      estado: 'Status',
+      acciones: 'Actions',
+
+      filtro: 'Search by code or name',
+      filtrar: 'Search',
+
+      desde: 'From {{desde}}',
+      entre: '{{desde}} to {{hasta}}',
+
+      verSusTramos: 'See the periods of {{codigo}}',
+
+      tramosDe:
+        'Showing the periods of price list “{{codigo}}”, newest first. A price list is several ' +
+        'rows: one per period in force, and they never overlap.',
+      quitarElCodigo: 'Clear the code filter',
+
+      estados: {
+        rige: 'In force today',
+        futura: 'Not in force yet',
+        caducada: 'No longer in force',
+        rigeDetalle:
+          'The last day in force is included: a period ending today still sets prices today, ' +
+          'and stops tomorrow.',
+      },
+
+      paginaVacia: 'This page has no price list periods. Go back to the previous one.',
+      ningunaTodavia: 'No price list has been registered at this company yet.',
+      ningunaConEsteFiltro: 'No price list matches “{{filtro}}”.',
+      ningunTramoConEseCodigo: 'No price list at this company has the code “{{codigo}}”.',
     },
   },
 

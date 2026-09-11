@@ -71,7 +71,7 @@ describe('El barrido de rutas', () => {
     expect([...montadas].sort()).toEqual([...declaradas].sort());
   });
 
-  it('la partición cuadra: 8 rutas = 2 públicas + 1 de sesión + 5 de permiso', () => {
+  it('la partición cuadra: 9 rutas = 2 públicas + 1 de sesión + 6 de permiso', () => {
     const porClase = {
       publica: RUTAS.filter((r) => r.exigencia.clase === 'publica'),
       sesion: RUTAS.filter((r) => r.exigencia.clase === 'sesion'),
@@ -80,7 +80,7 @@ describe('El barrido de rutas', () => {
 
     // Contada, como las del backend: si mañana hay seis rutas, este número obliga a mirar en cuál
     // de las tres clases ha caído la nueva en vez de dejar que se cuele en la más cómoda.
-    expect(RUTAS).toHaveLength(8);
+    expect(RUTAS).toHaveLength(9);
     expect(porClase.publica.map((r) => r.ruta)).toEqual(['/acceso', '*']);
     expect(porClase.sesion.map((r) => r.ruta)).toEqual(['/']);
     expect(porClase.permiso.map((r) => r.ruta)).toEqual([
@@ -88,6 +88,7 @@ describe('El barrido de rutas', () => {
       '/articulos',
       '/categorias',
       '/empresas',
+      '/tarifas',
       '/terceros',
     ]);
     expect(porClase.publica.length + porClase.sesion.length + porClase.permiso.length).toBe(
@@ -95,7 +96,7 @@ describe('El barrido de rutas', () => {
     );
   });
 
-  it('la partición por dueño cuadra: 8 rutas = 2 del armazón + 1 de identidad + 2 de catalogo + 2 de organizacion + 1 de terceros', () => {
+  it('la partición por dueño cuadra: 9 rutas = 2 del armazón + 1 de identidad + 3 de catalogo + 2 de organizacion + 1 de terceros', () => {
     const porDuenio = {
       armazon: RUTAS.filter((r) => r.duenio === 'armazon'),
       catalogo: RUTAS.filter((r) => r.duenio === 'catalogo'),
@@ -106,7 +107,11 @@ describe('El barrido de rutas', () => {
 
     expect(porDuenio.armazon.map((r) => r.ruta)).toEqual(['/', '*']);
     expect(porDuenio.identidad.map((r) => r.ruta)).toEqual(['/acceso']);
-    expect(porDuenio.catalogo.map((r) => r.ruta)).toEqual(['/articulos', '/categorias']);
+    expect(porDuenio.catalogo.map((r) => r.ruta)).toEqual([
+      '/articulos',
+      '/categorias',
+      '/tarifas',
+    ]);
     expect(porDuenio.organizacion.map((r) => r.ruta)).toEqual(['/almacenes', '/empresas']);
     expect(porDuenio.terceros.map((r) => r.ruta)).toEqual(['/terceros']);
     expect(

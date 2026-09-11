@@ -100,6 +100,152 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalogo/tarifas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de tramos de tarifa. */
+        get: operations["Tarifas_Listar"];
+        put?: never;
+        /**
+         * Abre un tramo de tarifa.
+         * @description El `409` puede venir de dos sitios y el `type` los separa: la divisa está retirada
+         *     (`tarifa-divisa-retirada`) o la vigencia se pisa con la de otro tramo del mismo código
+         *     (`tarifa-vigencias-solapadas`). El segundo lo contesta el caso de uso preguntando antes,
+         *     pero quien de verdad lo impide es una restricción de exclusión de la base: es la única que
+         *     cubre dos peticiones a la vez.
+         */
+        post: operations["Tarifas_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/tarifas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve un tramo de tarifa. */
+        get: operations["Tarifas_Obtener"];
+        /**
+         * Cambia el nombre de un tramo de tarifa.
+         * @description Ni el código, ni la divisa, ni la vigencia: no están en el cuerpo ni en
+         *     `Tarifa.Modificar`. Subir precios es cerrar este tramo y abrir el siguiente.
+         */
+        put: operations["Tarifas_Modificar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/tarifas/{id}/cierre": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Cierra un tramo de tarifa el día indicado.
+         * @description Es `PUT` sobre un subrecurso y no un `PATCH` de la tarifa: cerrar es la operación
+         *     con la que una tarifa da paso a la siguiente, y tiene su propio cuerpo de un solo campo.
+         *     Exige `If-Match` como cualquier otra escritura sobre algo que ya existe.
+         */
+        put: operations["Tarifas_Cerrar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/tarifas/{tarifaId}/lineas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de líneas de un tramo de tarifa. */
+        get: operations["Tarifas_ListarLineas"];
+        put?: never;
+        /**
+         * Añade una línea a un tramo de tarifa.
+         * @description El `400` tiene cuatro `type` distintos y cada uno se arregla de otra manera: la
+         *     línea trae los dos destinos o ninguno (`tarifa-linea-articulo-o-categoria`), trae precio
+         *     y descuento o ninguno de los dos (`tarifa-linea-precio-o-descuento`), o es el primer
+         *     tramo de su destino y no empieza en cero (`tarifa-linea-primer-tramo-sin-cero`). El
+         *     `409` es el tramo repetido (`tarifa-linea-tramo-duplicado`).
+         */
+        post: operations["Tarifas_CrearLinea"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/tarifas/lineas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una línea de tarifa. */
+        get: operations["Tarifas_ObtenerLinea"];
+        /**
+         * Cambia el precio o el descuento de una línea.
+         * @description Ni el destino ni la cantidad desde la que se aplica: no están en el cuerpo. Que la cantidad
+         *     no se pueda mover es lo que hace imposible abrir un hueco en una tabla de precios ya escrita.
+         */
+        put: operations["Tarifas_ModificarLinea"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/tarifas/{codigo}/precio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dice qué precio le pone esta tarifa a un artículo para una cantidad y una fecha.
+         * @description Es el extremo caliente, y sus tres fallos son tres type distintos porque son tres
+         *           arreglos distintos: el código no existe (tarifa-no-encontrada, y hay que corregir
+         *           el código), existe y ninguno de sus tramos cubre esa fecha (tarifa-no-vigente, y hay
+         *           que abrir el tramo que falta) o la tarifa rige pero no dice nada de ese artículo
+         *           (tarifa-sin-linea-aplicable, y hay que poner la línea). Ninguno de los tres es un
+         *           cero: un precio cero que nadie ha escrito entra en un documento, suma cero al total y el
+         *           descuadre aparece semanas después sin autor.
+         *         La respuesta lleva la divisa de la tarifa —que puede no ser la de la empresa, y se
+         *     acepta a propósito— y el origen del precio: si ha ganado una línea del artículo o de
+         *     una categoría, cuál, y a cuántos saltos del artículo estaba. Eso último es lo que permite
+         *     afirmar desde fuera que la precedencia elige el antepasado más cercano y no el más profundo.
+         */
+        get: operations["Tarifas_Precio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/identidad/roles": {
         parameters: {
             query?: never;
@@ -1581,6 +1727,14 @@ export interface components {
              */
             ultimoDia: string;
         };
+        /** @description Lo que hace falta para cerrar un tramo de tarifa. */
+        CerrarTarifaDto: {
+            /**
+             * Format: date
+             * @description Último día en que rige, incluido.
+             */
+            ultimoDia: string;
+        };
         /** @description A qué empresa se da de alta al usuario. */
         ConcederPertenenciaDto: {
             /**
@@ -1829,6 +1983,34 @@ export interface components {
             /** @description Cuenta contable del impuesto soportado, o nula si todavía no se sabe. */
             cuentaSoportado?: null | string;
         };
+        /** @description Lo que hace falta para añadir una línea a un tramo de tarifa. */
+        CrearLineaTarifaDto: {
+            /**
+             * Format: uuid
+             * @description Artículo al que se aplica. Exactamente uno de los dos destinos.
+             */
+            articuloId?: null | string;
+            /**
+             * Format: uuid
+             * @description Categoría a la que se aplica, y con ella todo lo que cuelgue. Exactamente uno.
+             */
+            categoriaId?: null | string;
+            /**
+             * Format: double
+             * @description Cantidad a partir de la cual se aplica, incluida.
+             */
+            cantidadDesde?: number | string;
+            /**
+             * Format: double
+             * @description Precio por unidad en la divisa de la tarifa. Uno de los dos, no los dos, y no ninguno.
+             */
+            precio?: null | number | string;
+            /**
+             * Format: double
+             * @description Descuento en tanto por ciento. Uno de los dos, no los dos, y no ninguno.
+             */
+            descuentoPorcentaje?: null | number | string;
+        };
         /** @description Lo que hace falta para crear un rol. */
         CrearRolDto: {
             /** @description Código estable. Se normaliza a minúsculas. */
@@ -1851,6 +2033,28 @@ export interface components {
             codigo: string;
             /** @description Plantilla con la que se compone el número del documento. */
             formato: string;
+        };
+        /** @description Lo que hace falta para dar de alta un tramo de tarifa. */
+        CrearTarifaDto: {
+            /** @description Código de la tarifa. Se normaliza a mayúsculas y se repite entre tramos. */
+            codigo: string;
+            /** @description Nombre con el que se muestra. */
+            nombre: string;
+            /**
+             * Format: uuid
+             * @description Divisa en la que se expresan los precios de esta tarifa.
+             */
+            divisaId: string;
+            /**
+             * Format: date
+             * @description Primer día en que rige, incluido.
+             */
+            vigenteDesde: string;
+            /**
+             * Format: date
+             * @description Último día en que rige, incluido; nulo para dejarla abierta.
+             */
+            vigenteHasta?: null | string;
         };
         /** @description Lo que hace falta para dar de alta un tercero. */
         CrearTerceroDto: {
@@ -2149,6 +2353,50 @@ export interface components {
             /** @description La divisa del importe, en ISO 4217. Nula si no se le fía. */
             divisa: null | string;
         };
+        /** @description Una línea de tarifa, tal como sale de la API. */
+        LineaTarifaDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la línea.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Empresa a la que pertenece (R8).
+             */
+            empresaId: string;
+            /**
+             * Format: uuid
+             * @description Tramo de tarifa del que cuelga.
+             */
+            tarifaId: string;
+            /**
+             * Format: uuid
+             * @description Artículo al que se aplica, o nulo si la línea es de categoría.
+             */
+            articuloId: null | string;
+            /**
+             * Format: uuid
+             * @description Categoría a la que se aplica, o nulo si la línea es de artículo.
+             */
+            categoriaId: null | string;
+            /**
+             * Format: double
+             * @description Cantidad a partir de la cual se aplica, <b>incluida</b>. El tramo llega hasta donde empieza el
+             *     siguiente, sin incluirlo: pedir exactamente 100 con tramos en 0 y en 100 aplica el de 100.
+             */
+            cantidadDesde: number | string;
+            /**
+             * Format: double
+             * @description Precio por unidad en la divisa de la tarifa, o nulo si es un descuento.
+             */
+            precio: null | number | string;
+            /**
+             * Format: double
+             * @description Descuento en tanto por ciento, o nulo si es un precio.
+             */
+            descuentoPorcentaje: null | number | string;
+        };
         /** @description La pertenencia de un usuario a una empresa, con sus roles ahí. */
         MembresiaDto: {
             /**
@@ -2240,6 +2488,19 @@ export interface components {
             /** @description Cuenta contable del impuesto soportado, o nula. */
             cuentaSoportado?: null | string;
         };
+        /** @description Lo que se puede cambiar de una línea de tarifa: el precio o el descuento. */
+        ModificarLineaTarifaDto: {
+            /**
+             * Format: double
+             * @description Precio por unidad en la divisa de la tarifa. Uno de los dos, no los dos, y no ninguno.
+             */
+            precio?: null | number | string;
+            /**
+             * Format: double
+             * @description Descuento en tanto por ciento. Uno de los dos, no los dos, y no ninguno.
+             */
+            descuentoPorcentaje?: null | number | string;
+        };
         /** @description Lo que se puede cambiar de un rol: el nombre y la lista ENTERA de permisos. */
         ModificarRolDto: {
             /** @description Nombre para la interfaz. */
@@ -2251,6 +2512,11 @@ export interface components {
         ModificarSerieDto: {
             /** @description Plantilla con la que se compone el número del documento. */
             formato: string;
+        };
+        /** @description Lo que se puede cambiar de un tramo de tarifa. */
+        ModificarTarifaDto: {
+            /** @description Nombre con el que se muestra. */
+            nombre: string;
         };
         /** @description Lo que se puede cambiar de un tercero ya dado de alta. */
         ModificarTerceroDto: {
@@ -2477,6 +2743,26 @@ export interface components {
             total: number | string;
         };
         /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeLineaTarifaDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["LineaTarifaDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
         PaginaDeRolDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["RolDto"][];
@@ -2500,6 +2786,26 @@ export interface components {
         PaginaDeSerieDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["SerieDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeTarifaDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["TarifaDto"][];
             /**
              * Format: int32
              * @description Número de página, empezando en 1.
@@ -2615,6 +2921,66 @@ export interface components {
              * @description Cuántos hay en total, no en esta página.
              */
             total: number | string;
+        };
+        /** @description El precio que una tarifa le pone a un artículo para una cantidad y una fecha, con el porqué. */
+        PrecioResueltoDto: {
+            /**
+             * Format: uuid
+             * @description Tramo de tarifa que ha resuelto el precio.
+             */
+            tarifaId: string;
+            /** @description Código de la tarifa, el que se pidió. */
+            codigo: string;
+            /**
+             * Format: uuid
+             * @description Divisa en la que está expresado el precio.
+             */
+            divisaId: string;
+            /**
+             * Format: uuid
+             * @description Artículo por el que se preguntó.
+             */
+            articuloId: string;
+            /**
+             * Format: double
+             * @description Cantidad por la que se preguntó.
+             */
+            cantidad: number | string;
+            /**
+             * Format: date
+             * @description Día para el que se ha resuelto.
+             */
+            fecha: string;
+            /**
+             * Format: double
+             * @description Precio por unidad, o nulo si la línea que gana es de descuento.
+             */
+            precio: null | number | string;
+            /**
+             * Format: double
+             * @description Descuento en tanto por ciento, o nulo si la línea es de precio.
+             */
+            descuentoPorcentaje: null | number | string;
+            /** @description string OrigenDelPrecio.Articulo o string OrigenDelPrecio.Categoria. */
+            origen: string;
+            /**
+             * Format: uuid
+             * @description Identificador del artículo o de la categoría de la línea que gana.
+             */
+            origenId: string;
+            /**
+             * Format: int32
+             * @description Cuántos saltos hacia arriba hay desde la categoría del artículo hasta la de la línea que gana:
+             *     `0` es su propia categoría, `1` la madre, y así. Nulo cuando gana una línea de
+             *     artículo. <b>Es el número que distingue una precedencia correcta de una que ordena por
+             *     profundidad</b>: una categoría más honda que la del artículo no es antepasada suya y no compite.
+             */
+            nivelDeLaCategoria: null | number | string;
+            /**
+             * Format: double
+             * @description Cantidad desde la que rige el tramo que ha ganado, incluida.
+             */
+            cantidadDesde: number | string;
         };
         ProblemDetails: {
             type?: null | string;
@@ -2767,6 +3133,38 @@ export interface components {
             empresas: components["schemas"]["EmpresaDeSesionDto"][];
             /** @description Permisos que tiene en la empresa activa, para la interfaz. */
             permisos: string[];
+        };
+        /** @description Un tramo de tarifa, tal como sale de la API. */
+        TarifaDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del tramo.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Empresa a la que pertenece (R8).
+             */
+            empresaId: string;
+            /** @description Código, en mayúsculas. Se repite entre tramos de la misma tarifa. */
+            codigo: string;
+            /** @description Nombre con el que se muestra. */
+            nombre: string;
+            /**
+             * Format: uuid
+             * @description Divisa en la que se expresan sus precios (maestro de Organización).
+             */
+            divisaId: string;
+            /**
+             * Format: date
+             * @description Primer día en que rige, incluido.
+             */
+            vigenteDesde: string;
+            /**
+             * Format: date
+             * @description Último día en que rige, incluido; nulo mientras siga vigente.
+             */
+            vigenteHasta: null | string;
         };
         /** @description Un tercero, tal como sale de la API. */
         TerceroDto: {
@@ -3351,6 +3749,579 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_Listar: {
+        parameters: {
+            query?: {
+                codigo?: string;
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeTarifaDto"];
+                    "application/json": components["schemas"]["PaginaDeTarifaDto"];
+                    "text/json": components["schemas"]["PaginaDeTarifaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_Crear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearTarifaDto"];
+                "text/json": components["schemas"]["CrearTarifaDto"];
+                "application/*+json": components["schemas"]["CrearTarifaDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TarifaDto"];
+                    "application/json": components["schemas"]["TarifaDto"];
+                    "text/json": components["schemas"]["TarifaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tramo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TarifaDto"];
+                    "application/json": components["schemas"]["TarifaDto"];
+                    "text/json": components["schemas"]["TarifaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_Modificar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tramo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarTarifaDto"];
+                "text/json": components["schemas"]["ModificarTarifaDto"];
+                "application/*+json": components["schemas"]["ModificarTarifaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TarifaDto"];
+                    "application/json": components["schemas"]["TarifaDto"];
+                    "text/json": components["schemas"]["TarifaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_Cerrar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tramo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CerrarTarifaDto"];
+                "text/json": components["schemas"]["CerrarTarifaDto"];
+                "application/*+json": components["schemas"]["CerrarTarifaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TarifaDto"];
+                    "application/json": components["schemas"]["TarifaDto"];
+                    "text/json": components["schemas"]["TarifaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_ListarLineas: {
+        parameters: {
+            query?: {
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Tramo cuyas líneas se piden. */
+                tarifaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeLineaTarifaDto"];
+                    "application/json": components["schemas"]["PaginaDeLineaTarifaDto"];
+                    "text/json": components["schemas"]["PaginaDeLineaTarifaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_CrearLinea: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Tramo al que se le añade la línea. */
+                tarifaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearLineaTarifaDto"];
+                "text/json": components["schemas"]["CrearLineaTarifaDto"];
+                "application/*+json": components["schemas"]["CrearLineaTarifaDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["LineaTarifaDto"];
+                    "application/json": components["schemas"]["LineaTarifaDto"];
+                    "text/json": components["schemas"]["LineaTarifaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_ObtenerLinea: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la línea. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["LineaTarifaDto"];
+                    "application/json": components["schemas"]["LineaTarifaDto"];
+                    "text/json": components["schemas"]["LineaTarifaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_ModificarLinea: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la línea. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarLineaTarifaDto"];
+                "text/json": components["schemas"]["ModificarLineaTarifaDto"];
+                "application/*+json": components["schemas"]["ModificarLineaTarifaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["LineaTarifaDto"];
+                    "application/json": components["schemas"]["LineaTarifaDto"];
+                    "text/json": components["schemas"]["LineaTarifaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_Precio: {
+        parameters: {
+            query?: {
+                /** @description Artículo al que se le quiere poner precio. */
+                articulo?: string;
+                /** @description Cantidad por la que se pregunta. */
+                cantidad?: number | string;
+                /** @description Día para el que se resuelve. Si no se dice, hoy. */
+                fecha?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Código de la tarifa. */
+                codigo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PrecioResueltoDto"];
+                    "application/json": components["schemas"]["PrecioResueltoDto"];
+                    "text/json": components["schemas"]["PrecioResueltoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

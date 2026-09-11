@@ -50,6 +50,7 @@ export const es = {
     articulos: 'Artículos',
     categorias: 'Categorías',
     empresas: 'Empresas',
+    tarifas: 'Tarifas',
     terceros: 'Terceros',
     noEncontrada: 'Página no encontrada',
   },
@@ -155,6 +156,42 @@ export const es = {
       'serie-no-encontrada': 'Esa serie ya no existe. Vuelve al listado y actualiza.',
       'serie-ya-numerada': 'La serie ya ha numerado documentos, así que eso no se puede cambiar.',
       'sesion-no-renovable': 'Tu sesión no se ha podido renovar. Vuelve a entrar.',
+      // Las doce de la tarifa. La de la divisa retirada dice las DOS mitades del ADR-0023, igual
+      // que la de la unidad: quien la lee tiene delante tarifas que la siguen usando, y una frase
+      // que dijera que no existe le mandaría a buscar un fallo que no hay.
+      'tarifa-divisa-no-encontrada': 'Esa divisa no existe. Elige una del maestro de divisas.',
+      'tarifa-divisa-retirada':
+        'Esa divisa está retirada: las tarifas que ya la usan se siguen expresando en ella, pero ' +
+        'no se puede abrir una nueva. Elige otra.',
+      'tarifa-linea-articulo-o-categoria':
+        'Una línea de tarifa le pone precio a un artículo o a una categoría, y hay que elegir uno ' +
+        'de los dos: ni los dos, ni ninguno.',
+      'tarifa-linea-no-encontrada':
+        'Esa línea de tarifa ya no existe. Vuelve al listado y actualiza.',
+      // Los dos negativos dichos enteros. El segundo es el que se olvida, y es el que dejaría
+      // entrar una línea que devuelve un importe que nadie escribió.
+      'tarifa-linea-precio-o-descuento':
+        'Una línea de tarifa lleva un precio o un descuento, y hay que poner uno de los dos: ni ' +
+        'los dos, ni ninguno.',
+      'tarifa-linea-primer-tramo-sin-cero':
+        'El primer tramo de cantidad tiene que empezar en cero. Empezando más arriba, las ' +
+        'cantidades por debajo se quedarían sin precio.',
+      'tarifa-linea-tramo-duplicado':
+        'Ya hay un tramo que empieza en esa cantidad para ese artículo o esa categoría.',
+      'tarifa-no-encontrada': 'Esa tarifa ya no existe. Vuelve al listado y actualiza.',
+      // «No hay tarifa» y «la hay pero no cubre ese día» no se arreglan igual, y por eso son dos
+      // frases distintas: la primera se corrige escribiendo bien el código, la segunda abriendo el
+      // tramo que falta.
+      'tarifa-no-vigente':
+        'Esa tarifa existe, pero ninguno de sus tramos cubre la fecha pedida. Abre el tramo que ' +
+        'falta o pregunta por otra fecha.',
+      'tarifa-sin-linea-aplicable':
+        'Esa tarifa no dice nada de ese artículo para esa cantidad, ni suya ni de ninguna de sus ' +
+        'categorías. Añade la línea que falta: aquí no hay precio que aplicar.',
+      'tarifa-vigencia-al-reves': 'La vigencia acaba antes de empezar. Revisa las dos fechas.',
+      'tarifa-vigencias-solapadas':
+        'Ya hay otro tramo de esa tarifa que cubre alguno de esos días. Los periodos de una ' +
+        'tarifa no se pueden solapar.',
       'tercero-duplicado': 'Esta empresa ya tiene un tercero con ese identificador fiscal.',
       'tercero-no-encontrado': 'Ese tercero ya no existe. Vuelve al listado y actualiza.',
       'tipo-cambio-duplicado': 'Ya hay un tipo de cambio para esa divisa en esa fecha.',
@@ -240,6 +277,53 @@ export const es = {
 
       paginaVacia: 'Esta página no tiene categorías. Vuelve a la anterior.',
       ningunaTodavia: 'Todavía no hay ninguna categoría dada de alta en esta empresa.',
+    },
+
+    tarifas: {
+      cargando: 'las tarifas',
+      tabla: 'Tramos de tarifa de la empresa activa',
+      codigo: 'Código',
+      nombre: 'Nombre',
+      vigencia: 'Vigencia',
+      estado: 'Estado',
+      acciones: 'Acciones',
+
+      // El filtro dice por dónde busca. «Buscar» a secas manda a probar con la divisa o con el
+      // precio —que ni se enseñan ni se filtran— y a concluir que la tarifa no está.
+      filtro: 'Buscar por código o nombre',
+      filtrar: 'Buscar',
+
+      // Las dos formas de un periodo. Enteras y con sus huecos, no a trozos: el orden de las
+      // partes cambia de un idioma a otro.
+      desde: 'Desde el {{desde}}',
+      entre: 'Del {{desde}} al {{hasta}}',
+
+      verSusTramos: 'Ver los tramos de {{codigo}}',
+
+      // Explica la FORMA del dato, no solo que hay un filtro puesto: quien llega aquí desde una
+      // fila ve por primera vez que un código son varias filas, y sin esta frase parece que la
+      // tarifa esté duplicada.
+      tramosDe:
+        'Mostrando los tramos de la tarifa «{{codigo}}», del más reciente al más antiguo. Una ' +
+        'tarifa son varias filas: una por cada periodo de vigencia, y no se solapan nunca.',
+      quitarElCodigo: 'Quitar el filtro de código',
+
+      estados: {
+        rige: 'Rige hoy',
+        futura: 'Todavía no rige',
+        caducada: 'Ya no rige',
+        rigeDetalle:
+          'El último día de vigencia está incluido: un tramo que acaba hoy sigue poniendo precio ' +
+          'hoy, y deja de hacerlo mañana.',
+      },
+
+      paginaVacia: 'Esta página no tiene tramos de tarifa. Vuelve a la anterior.',
+      ningunaTodavia: 'Todavía no hay ninguna tarifa dada de alta en esta empresa.',
+      ningunaConEsteFiltro: 'Ninguna tarifa coincide con «{{filtro}}».',
+
+      // Acotar por un código que no existe devuelve lo mismo que una tarifa recién abierta y
+      // todavía sin tramos. Decirlo evita dar de alta una tarifa que ya existe con otro código.
+      ningunTramoConEseCodigo: 'Ninguna tarifa de esta empresa tiene el código «{{codigo}}».',
     },
   },
 
