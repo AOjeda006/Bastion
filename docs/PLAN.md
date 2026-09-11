@@ -3377,6 +3377,176 @@ sueltas con sus niveles descolgados. La pantalla es la forma del árbol; quien b
 busca en `/articulos`.
 
 
+### Tomadas por el agente de desarrollo — ítem 1.9 (2026-09-11)
+
+**1. La ascendencia se pide con el ÁRBOL PLANO en UNA consulta, y no con `WITH RECURSIVE`.** El
+cierre del 1.8 dejó nombrado el día en que haría falta el subárbol —«el candidato es la precedencia
+de tarifas del 1.9»— y dos salidas costeadas: un `WITH RECURSIVE` o una *closure table* derivada.
+**No se ha elegido ninguna de las dos**, y el motivo no es de gusto: es la **prohibición de SQL
+crudo del 0.6**. `WITH RECURSIVE` no tiene forma en LINQ, así que entraría por `FromSqlRaw`, que es
+exactamente la puerta por la que el filtro de inquilinato **no pasa** —lo vigila
+`ElFiltroNoSeSaltaPorAhiTests`—. Una consulta recursiva escrita a mano sobre `catalogo.categorias`
+tendría que repetir `WHERE empresa_id = @empresa` en el término base y confiar en que nadie lo
+olvide en el recursivo; y lo que se filtra por olvido en un ascenso es la **rama de otra empresa**,
+que sale como un precio ajeno y no como un error.
+
+Lo que se hace en su lugar: **una** consulta trae `(id, padre_id)` de las categorías que el contexto
+deja ver —el inquilinato lo pone el filtro global, no una condición que alguien pueda olvidar— y el
+ascenso ocurre en memoria, con la **misma cota** `Categoria.ProfundidadMaxima` leída de donde está
+escrita. El árbol de una empresa es una clasificación, no un histórico: cabe de sobra. Y una
+categoría que no está en el mapa corta el ascenso sin una comparación de empresa escrita aquí.
+
+**Resolver un precio cuesta CUATRO consultas, y no crecen con la profundidad**: la tarifa vigente,
+el artículo, la ascendencia y las candidatas —la quinta, `ExisteElCodigoAsync`, solo se gasta por el
+camino de fallo, para separar «no hay tarifa» de «no rige hoy»—. La afirmación **no es de color, es
+una cota**, y por eso el caso se ejerce **dos veces con profundidades distintas** comparando los
+contadores entre sí: un número absoluto escrito a mano se puede actualizar al romperlo; la igualdad
+entre profundidad 1 y profundidad 11, no. Sin esa afirmación, la implementación natural —reusar el
+ascenso por padres de `ElArbolSigueSiendoUnArbol`, que gasta una consulta por nivel— **pasa todos
+los demás casos**: devuelve el precio correcto y ninguna de sus consultas es lenta por separado. Lo
+que produce es un N+1 en el camino más caliente del módulo: un documento de cuarenta líneas por
+hasta once niveles son cuatrocientas cuarenta consultas para valorar un albarán, y nada en el
+registro señala a ninguna.
+
+**2. «Más cercana» y «más profunda» no son lo mismo, y el modelo lo hace imposible de confundir.**
+Si el artículo cuelga de una categoría a profundidad 5 y hay líneas en una categoría a profundidad 3
+y en otra a profundidad 7, **gana la de 3 y la de 7 no compite siquiera**: no es antepasada suya,
+sino algo que cuelga por otro lado del árbol. Una implementación que ordenara por profundidad
+descendente pasa el caso fácil de dos líneas en la misma rama y devuelve la equivocada en cuanto hay
+una rama hermana más honda.
+
+La defensa no es una comprobación, es el tipo: **`LineaCandidata.Nivel` es el salto desde el
+artículo, no la profundidad absoluta de la categoría**. Las candidatas ya vienen de un ascenso, así
+que lo que no es antepasado **no llega** hasta la regla, y entre las que llegan el desempate es un
+mínimo. La regla no puede elegir una categoría que no sea antepasada porque no la tiene delante.
+
+Y la precedencia vive en la **capa de aplicación** y no dentro del `SELECT` que trae las candidatas,
+que es donde habría sido más cómodo: en SQL, la precedencia y el tramo solo se podrían poner rojos
+con Docker levantado, y son justo las dos reglas que tienen que poder ponerse rojas en segundos.
+
+**3. La restricción de exclusión la crea una MIGRACIÓN, con su extensión, y se comprueba por el
+efecto contra el compose.** Lo que no debe repetirse es un **rango**, no un valor, así que un índice
+único no puede expresarlo: `EXCLUDE USING gist (empresa_id WITH =, codigo WITH =, daterange(…) WITH
+&&)`. `btree_gist` hace falta porque `=` sobre `uuid` y sobre texto no son GiST de serie, y se crea
+con `CREATE EXTENSION IF NOT EXISTS` **en la migración** `20260911064712_TarifasYSusLineas` —no a
+mano en la base de desarrollo, que es lo que deja verde el local y revienta el estreno con un
+mensaje que no menciona ni la tarifa ni el solape—. El `IF NOT EXISTS` es necesario: Organización ya
+la crea en el 0.15 y el orden entre migraciones de módulos distintos no está garantizado, así que
+una base que solo tuviera Catálogo tiene que funcionar igual.
+
+**La empresa va DENTRO de la restricción**, y no es decoración: sin `empresa_id WITH =`, la tarifa
+`PVP` de una ferretería impediría que la imprenta de al lado abriera la suya, con un rechazo que
+habla de una fila que quien lo recibe no puede ni ver (R8).
+
+El rango es `daterange(vigente_desde, vigente_hasta, '[]')`: **cerrado por los dos extremos**, y
+sobre `date` y no `timestamptz`, porque la vigencia es una fecha de negocio (R14) y un `tstzrange`
+haría que el día de la frontera dependiera del huso de quien pregunta. La inclusividad está escrita
+**tres veces y es la misma a propósito**: el `'[]'` de la restricción, el `<=` de `Tarifa.RigeEl` y
+el `vigenteHasta < hoy` de `estadoDeVigencia` en el frontal. Con `[)` en un sitio y `[]` en otro, el
+día en que un tramo acaba valdría una cosa al resolver un precio y otra al comprobar el solape, y
+dos tramos consecutivos que compartieran ese día pasarían la comprobación de la aplicación para
+chocar contra la base convertidos en un 500.
+
+**Y se comprueba por el efecto, contra el compose**, no por inspección: el caso lee el `image:` del
+servicio `postgres` de `deploy/docker-compose.yml` y lo compara con la imagen del contenedor contra
+el que corre la suite —una etiqueta copiada a mano en dos sitios es lo que se queda atrás cuando uno
+de los dos sube—; y en esa imagen pregunta a `pg_extension` por `btree_gist` y a `pg_constraint` por
+`contype = 'x'`. El contenedor no ha corrido nada más que las migraciones, así que lo que hay en él
+lo puso una migración.
+
+**4. Precio o descuento: LOS DOS negativos, con la puerta doble del ADR-0004 y una tercera hoja.**
+Que no se puedan poner los dos es evidente en cuanto se escribe el tipo —el orden en que se
+aplicarían no lo dice nadie— y por eso casi siempre está. **El que se olvida es el segundo**: que no
+se pueda dejar **ninguno**. Parece inofensivo, una fila «sin precio todavía». No lo es: esa fila casa
+con el artículo, gana la precedencia y devuelve un importe que nadie escribió, y el descuadre aparece
+semanas después sin autor. Es el precio cero **por la puerta de atrás**.
+
+Las tres hojas, y no sobra ninguna: `PrecioODescuento.De` **lanza**, porque llegar ahí con el par mal
+formado es un programa mal escrito; `CrearLineaTarifa` **contesta** un error de negocio con nombre,
+porque quien manda el par es un cliente HTTP; y el `CHECK ck_lineas_tarifa_precio_o_descuento` lo
+impide en filas que no pasaron por el constructor. En el caso de uso las dos mitades se escriben
+como **una igualdad** —`peticion.Precio is not null == (peticion.DescuentoPorcentaje is not null)`—
+que no se puede dejar a medias por descuido: partirla en dos condiciones es lo que permite borrar una
+sin que la otra proteste.
+
+**Lo prohibido no es el cero, es el cero que nadie escribió.** Una muestra comercial se factura a
+cero a propósito, con su línea en el documento y su firma detrás, así que `DePrecio(0)` vale.
+
+**5. Sin línea aplicable: error con nombre, y NUNCA un cero.** Es la **decisión 3 del ADR-0023** con
+otro sujeto —un rechazo con nombre para el trabajo en el sitio exacto donde falta el dato, en vez de
+un valor supuesto que se propaga sin ruido—. Y «no hay tarifa» y «hay tarifa pero su vigencia no
+cubre esta fecha» son **dos `type` distintos**, porque se arreglan distinto: la primera escribiendo
+bien el código, la segunda abriendo el tramo que falta. Sus códigos HTTP también difieren, y con
+motivo: `tarifa-no-encontrada` es **404** —el recurso de la ruta no está—, mientras que
+`tarifa-no-vigente` y `tarifa-sin-linea-aplicable` son **400**, porque la tarifa sí está delante de
+quien pregunta. Sin la separación, el descuido normal —una tarifa caducada sin sucesora— saldría como
+«esa tarifa no existe» delante de alguien que la tiene en pantalla.
+
+**6. LA DIVISA CRUZADA SE ACEPTA** —la primera de las dos decisiones que el criterio del ítem no
+cerraba—. De las tres salidas posibles —rechazar una tarifa en divisa distinta de la de la empresa;
+aceptarla y marcarla; convertir— se elige **aceptar**. Convertir no es de este ítem, y rechazar sería
+prohibir un caso real: una tarifa de exportación en dólares en una empresa que factura en euros.
+
+Es la misma clase de decisión que la del `LimiteCredito` del 1.6 **y la respuesta es la contraria, con
+motivo**: allí un límite de crédito **sin divisa** no era legítimo —un importe sin moneda no dice
+nada— y por eso se rechaza; aquí la tarifa **sí** dice en qué moneda está, solo que en otra. Lo que
+hace que aceptarla no sea peligroso es que **el precio resuelto viaja siempre con su divisa pegada**
+(`PrecioResueltoDto.DivisaId`), así que quien lo recibe no puede sumarlo a un total en otra por
+descuido.
+
+Y la forma en que se afirma es la única que no se puede fingir: **el caso de uso no tiene por dónde**
+saber cuál es la divisa de la empresa —no recibe ese puerto— y a la de la tarifa solo le pregunta el
+**estado**. Si algún día alguien quisiera añadir la comparación, tendría que añadir antes la
+dependencia. A la divisa se le aplica el ADR-0023 entero: `NoExiste` → `tarifa-divisa-no-encontrada`
+(**400**, porque el identificador venía en el CUERPO y no en la ruta, que es el criterio del 1.7 y
+del 1.8 y aquí no se reabre) y `SoloResuelveLoViejo` → `tarifa-divisa-retirada` (**409**: retirada
+sigue resolviendo lo viejo y no se ofrece para lo nuevo, y abrir hoy una tarifa es exactamente lo
+nuevo).
+
+**7. LOS TRAMOS: la frontera cae hacia arriba, y el hueco se cierra por delante** —la segunda
+decisión abierta—. Un tramo es `[desde, siguiente)`: rige la línea de `CantidadDesde` más alta que no
+pase de la cantidad pedida (`CantidadDesde <= cantidad`, y de las que quedan la mayor). Con tramos en
+0 y en 100, **pedir exactamente 100 aplica el de 100**, que es lo que significa una tabla que dice «a
+partir de 100». El `<=` es lo que mete el borde en el tramo de arriba; con `<` caería en el de abajo
+y nadie lo vería hasta que alguien pidiera justo esa cantidad.
+
+**Y el hueco es peor que el solape.** Un solape da dos respuestas y se nota; un hueco da **ninguna**,
+y «ninguna» sale por el mismo sitio que «esta tarifa no cubre este artículo» —`tarifa-sin-linea-
+aplicable`—, así que una tabla mal escrita se lee como una tarifa incompleta y se arregla en el sitio
+equivocado. Por eso el hueco se cierra **por delante, al escribir**: el primer tramo de cada destino
+tiene que empezar en cero (`tarifa-linea-primer-tramo-sin-cero`) y dos líneas del mismo destino no
+pueden compartir `CantidadDesde` (`tarifa-linea-tramo-duplicado`). Con esas dos, la cobertura de
+`[0, ∞)` es total por construcción y no hay cantidad que se caiga entre dos tramos.
+
+El desempate se hace **por destino y no por línea suelta**, y el orden importa: primero se decide
+QUIÉN pone el precio —el artículo, o la categoría antepasada más cercana— y solo después, entre las
+líneas de ese destino, cuál tramo. Al revés —coger la mayor `CantidadDesde` de todas las candidatas—
+una línea de categoría con un tramo alto le ganaría a la línea del propio artículo, que es justo lo
+que la precedencia existe para impedir. Y el ascenso **no se corta en el primer antepasado que tenga
+alguna línea**: se recorren los niveles de menor a mayor y gana el primero con un tramo **aplicable**,
+porque una categoría cercana cuya tabla empiece por encima de la cantidad pedida no pone precio y
+cortar ahí dejaría sin resolver un artículo que la categoría madre sí cubre.
+
+**8. `Tarifa` y `LineaTarifa` viven DENTRO de Catálogo, y por eso sus claves ajenas son legítimas.**
+La alternativa era un módulo propio de precios, y se descarta porque lo que una tarifa clasifica son
+artículos y categorías: fuera de Catálogo, `articulo_id` y `categoria_id` serían identificadores
+desnudos vigilados solo por puertos, como la unidad y el impuesto (§5, regla 4). Dentro, **las claves
+foráneas a `articulo` y a `categoria` son del mismo esquema y son legítimas**: la base impide por sí
+sola que una línea apunte a un artículo que no existe, sin que nadie tenga que acordarse de
+preguntar.
+
+`Tercero.TarifaAsignada` —qué tarifa se le aplica a cada cliente— y `ArticuloProveedor` son del ítem
+**1.10** y no se adelantan: son cruces **mutuos** entre módulos y eso se ve entero o no se ve.
+
+**9. La pantalla de tarifas no suma al arranque, y el arranque se mide.** La ruta `/tarifas` es
+**perezosa** (ADR-0028): su fragmento —`PaginaDeTarifas-CVnNXvw6.js`, 5,48 kB— no se descarga hasta
+que alguien la abre. Lo único que la pantalla añade al arranque son los **diccionarios**, la fila de
+la tabla de rutas y la clave del permiso. La pantalla **no pinta precios ni líneas** a propósito: el
+listado de tarifas es el maestro —código, nombre, vigencia y estado—, y los tramos son otra pantalla;
+por eso el modelo de vista del frontal **no lleva divisa**, y es seguro precisamente porque no hay
+ningún importe que pudiera aparecer sin su moneda al lado (mismo criterio que la unidad y el impuesto
+en `articulos`, ADR-0022).
+
 ## Estado actual
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
@@ -4693,6 +4863,194 @@ porque el descubrimiento por nombre es exactamente lo que un identificador mal n
 ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en uno.
 
 El carril de arquitectura pasa de **18 a 23** casos.
+
+### Verificado en local, con la salida real — ítem 1.9
+
+**Toda cifra de «antes y después» nombra sus dos commits.** El «antes» es `8851c5f` (main al abrir
+la rama); el «después», `6e147c2` —el último commit de código de la rama; lo que viene detrás solo
+toca `docs/PLAN.md`—. Batería completa de `AGENTS.md` **con Docker arrancado**, y cada cifra con la
+orden que la mide.
+
+```
+dotnet build Bastion.sln                                   → 0 errores, 0 advertencias
+dotnet format Bastion.sln --verify-no-changes              → sin cambios
+bash scripts/generar-openapi.sh --comprobar                → al día: 120 operaciones (en 70 rutas)
+bash scripts/generar-errores.sh --comprobar                → al día: 75 tipos, de 81 sitios de llamada
+bash scripts/comprobar-migraciones.sh                      → modelo y migraciones coinciden en los 5
+                                                             módulos con persistencia (Catálogo: 2)
+```
+
+Los dos carriles, con el recuento que es **quien decide el desenlace** —`dotnet test` dice «ningún
+caso falla»; el recuento dice «han corrido exactamente los ensamblados que tenían que correr»—:
+
+```
+bash scripts/ci/recuento-de-tests.sh artifacts/test-results/dominio "Dominio y arquitectura" 300 …
+
+Dominio y arquitectura: 723 casos (723 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — BuildingBlocks.UnitTests 132, Organizacion.UnitTests 183, Identidad.UnitTests 58,
+    Terceros.UnitTests 77, Catalogo.UnitTests 66, Organizacion.IntegrationTests 22,
+    Api.FunctionalTests 145, Arquitectura.Tests 34, Api.IntegrationTests 6
+    (682 en el 1.8 sobre `8851c5f`, en 9 ensamblados: +41 casos, todos en Catalogo.UnitTests,
+     que pasa de 25 a 66)
+
+bash scripts/ci/recuento-de-tests.sh artifacts/test-results/integracion "Integración (Testcontainers)" 100 …
+
+Integración (Testcontainers): 355 casos (355 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 281, y 0 en los otros siete
+    (348 en el 1.8 sobre `8851c5f`: +7 casos, los siete de `ContratoDeTarifasTests`)
+
+Frontal: 14 ficheros de prueba, 95 casos, 0 avisos de `act()`
+  (13 ficheros y 81 casos en el 1.8: +1 fichero, +14 casos)
+```
+
+**El canal de `act()` sigue a cero, y se mide leyendo la salida de la suite**, no contando llamadas
+en el código: `npm --prefix frontend run test` no emite ni un «not wrapped in act». Desde `9f8ff56`
+un solo aviso es un hallazgo, no ruido.
+
+```
+npm --prefix frontend run api          → `shared/api/esquema.ts` sin cambios (git status limpio)
+npm --prefix frontend run typecheck    → limpio
+npm --prefix frontend run lint         → limpio
+npm --prefix frontend run format:check → All matched files use Prettier code style!
+bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
+
+Frontal · arranque 416/450 KiB en 3 ficheros · total servido 575/900 KiB
+  (410/450 y 564/900 en el 1.8: +6 KiB de arranque y +11 de total)
+```
+
+**Y por qué Catálogo sumó siete KiB al arranque en el 1.8 — medido, no supuesto.** La pregunta
+quedaba abierta del ítem anterior (403 → 410 KiB) y se contesta atribuyendo el crecimiento del
+fragmento de arranque **por módulo**, con los mapas de origen del propio `dist`. Del crecimiento de
+JavaScript, **5 349 B —el 88 %— son los dos diccionarios de idioma**; `app/rutas.tsx` puso 647 B y
+`shared/sesion/permisos.ts`, 74 B. El 17 % restante del total no era JavaScript: era la hoja de
+estilos.
+
+Este ítem **confirma la atribución en lugar de repetirla**, porque su pantalla vuelve a hacer lo
+mismo y sale el mismo reparto:
+
+```
+diferencia por módulo en el fragmento de arranque (B), de `3d1faff` a `d0ab790`:
+   +2643  src/app/i18n/es.ts
+   +2628  src/app/i18n/en.ts
+    +304  src/app/rutas.tsx
+     +32  src/shared/sesion/permisos.ts
+suma atribuida: 5607
+```
+
+La pantalla en sí **no está ahí**: `PaginaDeTarifas-CVnNXvw6.js` son 5,48 kB que el navegador no pide
+hasta que alguien abre `/tarifas`. Así que lo que una pantalla nueva cuesta en el arranque **no es la
+pantalla, son sus textos** —los de las dos lenguas, y los doce `type` de error que el barrido del
+ADR-0030 obliga a escribir—. La palanca, el día que el margen se estreche: **sacar del arranque el
+idioma que no está activo**, que hoy son ~2,6 KiB y mañana todo el crecimiento de una de las dos
+lenguas. No se hace ahora porque quedan 34 KiB de margen y cargar el diccionario aparte mete una
+espera antes de pintar el primer texto.
+
+**Dos hallazgos del arnés, ninguno del dominio, y los dos se vieron por el efecto.**
+
+**El choque de NIF entre dos ficheros del mismo carril.** Las semillas de `Escenario.NifInventado`
+escriben el NIF de la empresa que cada caso da de alta, y el NIF es único en toda la instalación. El
+censo que hice para elegir un bloque libre buscaba `NifInventado(N)` y **no vio** las llamadas de
+`ContratoDeCatalogoTests`, que pasa el número por un ayudante privado —`EnUnaEmpresaNuevaAsync(170)`—
+y solo dentro compone el NIF. Elegí 180-183, que eran suyos. Y **el rojo no salió por el fichero
+nuevo**: salió por `ContratoDeCatalogoTests.El_tipo_del_articulo_viaja_como_TEXTO_y_no_como_numero`
+con un `empresa-ya-registrada`, porque quien recibe el 409 es el que corre **después**. Se lee como
+un fallo ajeno. El bloque de este fichero es ahora el **190-193**, y el reparto está escrito en su
+comentario de clase, que es donde lo va a leer el siguiente.
+
+**Y cinco rojos del frontal que eran contención, no regresión.** La primera pasada de
+`npm --prefix frontend run test` salió con 5 ficheros y 5 casos en rojo mientras la suite entera de
+.NET corría al fondo; la propia salida lo decía —`setup 91.70s`, `environment 189.11s`— y sola, la
+misma suite da **14 ficheros y 95 casos verdes**. Queda anotado porque la conclusión fácil era la
+contraria: cinco rojos nuevos sobre un árbol que acababa de tocar el frontal parecen una regresión, y
+no lo eran.
+
+### Las ocho mutaciones del 1.9, cada una aplicada, ejecutada y revertida
+
+Todas sobre **árbol limpio**, línea base `d0ab790`, aplicadas con copia de respaldo y revertidas
+**restaurando esa copia** —nunca con `git checkout --`, que se llevaría por delante todo lo no
+commiteado del fichero—. Después de la tanda: `git status --porcelain` sin más que el trabajo del
+propio ítem y `grep -rn MUTACION src tests frontend/src db` **sin resultados**, los dos comprobados.
+
+| # | Mutación | Dónde | Qué se pone rojo |
+|---|---|---|---|
+| 1a | La precedencia ordenando por **profundidad de la categoría** en vez de por salto desde el artículo, de modo que lo que no es antepasado se cuela como «lo más hondo» | `ElAntepasadoMasCercanoGana.cs` | `ElAntepasadoMasCercanoGanaTests.La_categoria_mas_profunda_que_no_es_antepasada_no_compite` |
+| 1b | El ascenso al revés (`.Order()` → `.OrderDescending()`): gana el antepasado **más lejano** | `ElAntepasadoMasCercanoGana.cs` | `ElAntepasadoMasCercanoGanaTests.Entre_dos_categorias_antepasadas_gana_la_mas_cercana` |
+| 2 | La línea del **artículo** deja de ganar y pasa a ser el último recurso | `ElAntepasadoMasCercanoGana.cs` | `La_linea_del_articulo_le_gana_a_la_de_la_categoria` **y** `Un_tramo_de_categoria_alto_no_le_gana_a_la_linea_del_articulo` |
+| 3 | Sin línea aplicable, un DTO con precio **cero** en vez del error con nombre | `ResolverPrecio.cs` | `ResolverPrecioTests.Sin_linea_aplicable_hay_error_con_nombre_y_NUNCA_un_cero` |
+| 4 | Precio **y** descuento, los dos puestos, aceptados — **las dos hojas de la puerta a la vez** | `PrecioODescuento.cs` **y** `CrearLineaTarifa.cs` | `PrecioODescuentoTests.Con_los_dos_puestos_no_se_construye` **y** `CrearLineaTarifaTests.Con_precio_Y_descuento_se_rechaza` |
+| 5 | **Ninguno** de los dos, aceptado — otra vez las dos hojas | `PrecioODescuento.cs` **y** `CrearLineaTarifa.cs` | `PrecioODescuentoTests.Sin_ninguno_de_los_dos_tampoco` **y** `CrearLineaTarifaTests.Sin_precio_NI_descuento_tambien_y_ESTE_es_el_que_se_olvida` |
+| 6 | La **restricción de exclusión** fuera de la migración (la extensión se queda) | `20260911064712_TarifasYSusLineas.cs` | `ContratoDeTarifasTests.Dos_tramos_…_los_rechaza_la_BASE`, `El_dia_en_que_un_tramo_ACABA_todavia_cuenta_para_el_solape` **y** `La_extension_btree_gist_la_puso_la_MIGRACION_en_la_imagen_del_compose` |
+| 7 | La frontera del tramo corrida un paso (`<=` → `<`) | `ElAntepasadoMasCercanoGana.cs` | `El_tramo_se_elige_con_la_frontera_hacia_arriba(cantidad: 100, esperado: 8)` — **solo la fila del borde** |
+| 8 | La precedencia resuelta **subiendo de uno en uno** con `EslabonAsync`, reusando el ascenso de `ElArbolSigueSiendoUnArbol` | `ResolverPrecio.cs` | `Resolver_cuesta_los_mismos_viajes_sea_cual_sea_la_profundidad` en **las dos** profundidades (1 y 11) |
+
+**La 1, la 5 y la 8, enteras.**
+
+**Mutación 1 — la precedencia ordenando por profundidad.** Es la trampa del ítem: pasa el caso fácil
+—dos líneas en la misma rama— y devuelve la equivocada en cuanto hay una rama hermana más honda.
+
+```
+Con error Bastion.Catalogo.UnitTests.Catalogo.ElAntepasadoMasCercanoGanaTests
+          .La_categoria_mas_profunda_que_no_es_antepasada_no_compite
+  should be    LineaCandidata { … CategoriaId = a56826c5…, Nivel = 2, CantidadDesde = 0, Precio = 12 }
+  but was      LineaCandidata { … CategoriaId = 2e81fecc…, Nivel = , CantidadDesde = 0, Precio = 1 }
+
+  Additional Info:
+    ha ganado una línea de una categoría que no es antepasada del artículo. Es la mutación 1:
+    ordenar por profundidad pasa el caso de dos líneas en la misma rama y devuelve el precio de
+    otra rama en cuanto hay una hermana más honda
+```
+
+Un caso rojo y **solo uno**: los otros sesenta y cinco siguen verdes, que es lo que dice que la
+afirmación que la caza no es un efecto colateral de otra.
+
+**Mutación 5 — ni precio ni descuento, aceptado.** Es el negativo que se olvida, y **hace falta
+mutar las dos hojas a la vez** para que el árbol siga compilando y la mutación signifique algo: el
+caso de uso rechaza con un error con nombre y el dominio lanza, así que quitar solo una deja la otra
+contestando y la mutación no llega a la fila. Las dos hojas caen, cada una por su lado:
+
+```
+Con error Bastion.Catalogo.UnitTests.Catalogo.PrecioODescuentoTests.Sin_ninguno_de_los_dos_tampoco
+  Shouldly.ShouldAssertException : `) => PrecioODescuento.De(null, null` should throw
+    System.ArgumentException
+  but did not
+
+Con error Bastion.Catalogo.UnitTests.Catalogo.CrearLineaTarifaTests
+          .Sin_precio_NI_descuento_tambien_y_ESTE_es_el_que_se_olvida
+  Shouldly.ShouldAssertException : resultado.EsCorrecto should be False but was True
+
+  Additional Info:
+    ha entrado una línea sin precio y sin descuento. No da error al guardarla ni al leerla: da un
+    cero al facturar, y el descuadre aparece semanas después sin autor
+```
+
+**Mutación 8 — la precedencia resuelta con una consulta por nivel.** Es la única de las ocho que
+**no cambia ningún resultado**: el precio que devuelve es el correcto en los cinco casos del fichero,
+y ninguna de sus consultas es lenta por separado. Lo único que cambia es el **número de viajes**, y
+que ahora crece con la profundidad. Cae en las dos profundidades del `[Theory]`:
+
+```
+Con error Bastion.Catalogo.UnitTests.Catalogo.ResolverPrecioTests
+          .Resolver_cuesta_los_mismos_viajes_sea_cual_sea_la_profundidad(niveles: 11)
+  Shouldly.ShouldAssertException : categorias.LlamadasDeAscendencia should be 1 but was 0
+
+  Additional Info:
+    la ascendencia se pide UNA vez por resolución, con toda la cadena dentro
+```
+
+Que caiga también en `niveles: 1` —donde el número de viajes ni siquiera empeora— es la prueba de
+que la afirmación **no es un umbral** sino una cota sobre qué puerto se usa: con un solo nivel, subir
+de uno en uno cuesta lo mismo y sigue siendo el patrón que a once niveles cuesta once veces más.
+
+**Lo que la tanda destapó del arnés, y no del dominio.** Revertir con `shutil.copy2` conserva la
+fecha del fichero, así que el `.cs` restaurado quedaba **más viejo** que el ensamblado ya construido
+y MSBuild se saltaba la recompilación de ese proyecto: la mutación anterior seguía dentro del `.dll`.
+Se vio porque la mutación 7 salió roja **en dos casos** y uno de ellos era de la 5, que ya estaba
+revertida en disco —`git status --porcelain` decía que el árbol estaba limpio y el rojo era del
+binario—. Solo pasa cuando lo revertido y lo mutado están en **ensamblados distintos**: si comparten
+uno, la recompilación del proyecto entero arrastra el fichero restaurado. Se arregla tocando la fecha
+al restaurar (`os.utime(ruta, None)`), y queda anotado porque el modo de fallo simétrico es peor: una
+mutación que se copiara con fecha vieja **no se compilaría**, la suite saldría verde y la conclusión
+sería «ningún test la caza».
 
 ### Verificado en local, con la salida real — ítem 1.7
 
