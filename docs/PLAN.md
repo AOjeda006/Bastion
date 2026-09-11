@@ -3570,6 +3570,112 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
+**Ítem 1.9 cerrado — las tarifas, y la trampa que «más específica» no nombra:**
+run **34599130092** sobre `eadb7b9`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3` de la API, no de la memoria): Backend `103261880142` ✓ (22 pasos, 0 omitidos),
+Frontal `103261880427` ✓ (17 pasos, 0 omitidos) y Humo `103263491090` ✓ (24 pasos, 1 omitido).
+Los tres carriles tal como el run los publica:
+
+```
+Dominio y arquitectura: 723 casos (723 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — BuildingBlocks.UnitTests 132, Organizacion.UnitTests 183, Identidad.UnitTests 58,
+    Terceros.UnitTests 77, Catalogo.UnitTests 66, Organizacion.IntegrationTests 22,
+    Api.FunctionalTests 145, Arquitectura.Tests 34, Api.IntegrationTests 6
+    (682 en el 1.8 sobre `8851c5f`, en 9 ensamblados: +41 casos, todos en Catalogo.UnitTests)
+
+Integración (Testcontainers): 355 casos (355 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 281, y 0 en los otros siete
+    (348 en el 1.8 sobre `8851c5f`: +7 casos)
+
+Frontal: 14 ficheros de prueba, 95 casos, 0 avisos de `act()`
+  (13 y 81 en el 1.8; el canal sigue a cero, que es lo que hace que un solo aviso sea un hallazgo)
+
+Frontal · arranque 416/450 KiB en 3 ficheros · total servido 575/900 KiB  (410 y 564 en el 1.8)
+OpenAPI: 120 operaciones en 70 rutas  (110 en 64: +10 operaciones, +6 rutas)
+Catálogo de errores: 75 tipos, de 81 sitios de llamada  (63 de 68: +12 tipos, +13 sitios)
+```
+
+**Lo que hay que leer primero de este ítem.** «Gana la más específica» **no basta**, y el criterio
+lo dice por su nombre al pedir la precedencia completa. Como la categoría es jerárquica, un artículo
+casa a la vez con una línea de su propia categoría y con otra de la madre, y **las dos son «por
+categoría»**: sin la regla escrita, el desempate lo decide el orden en que salgan las filas, que es
+un no-determinismo silencioso —el mismo artículo, dos precios, según el plan de ejecución del día—.
+Y la trampa está un paso más allá: **«más cercana» y «más profunda» no son lo mismo**. Una
+implementación que ordene por profundidad descendente pasa el caso fácil de dos líneas en la misma
+rama y devuelve la equivocada en cuanto hay una rama **hermana** más honda. La defensa no es una
+comprobación sino el tipo: `LineaCandidata.Nivel` es el salto **desde el artículo**, así que lo que
+no es antepasado no llega hasta la regla. Es la **mutación 1**, y para escribirla hay que forzar el
+modelo.
+
+**Las nueve decisiones del ítem están en *Decisiones tomadas → ítem 1.9*, y dos de ellas el enunciado
+las dejaba abiertas a propósito.** La **divisa cruzada se acepta** —ni se rechaza ni se convierte—,
+que es la respuesta **contraria** a la del `LimiteCredito` del 1.6 y con motivo: un límite de crédito
+**sin divisa** no era legítimo, mientras que una tarifa de exportación en dólares es un caso real de
+una empresa que factura en euros. Lo que hace segura la decisión es que el precio resuelto viaja
+**siempre** con su divisa pegada; y lo que impide revertirla por descuido es que el caso de uso **no
+tiene el puerto** para preguntar la divisa de la empresa —a la de la tarifa solo le pregunta el
+estado—, así que añadir la comparación exigiría añadir antes la dependencia. La **frontera de los
+tramos cae hacia arriba**: `[desde, siguiente)`, de modo que pedir exactamente 100 con tramos en 0 y
+100 aplica el de 100, que es lo que significa una tabla que dice «a partir de 100»; y **el hueco se
+cierra por delante** —primer tramo en cero, sin `CantidadDesde` repetida en el mismo destino—, porque
+un hueco es peor que un solape: el solape da dos respuestas y se nota, el hueco da **ninguna** y sale
+por el mismo `type` que «esta tarifa no cubre este artículo», así que una tabla mal escrita se
+arregla en el sitio equivocado.
+
+**Y el ítem tiene un carril nuevo por una razón que no es de gusto.** `ContratoDeTarifasTests` existe
+porque hay dos cosas que el carril rápido **no puede** ejercer: la restricción de exclusión, que es
+DDL —o está en la base o no está—, y el SQL que alimenta la precedencia. La restricción se ejerce
+escribiendo **sin pasar por el caso de uso**, porque la comprobación previa cubre al cliente educado
+y no a dos peticiones simultáneas, que es el caso real. Y `btree_gist` se comprueba **por el efecto y
+contra el compose**: el caso lee el `image:` del servicio `postgres` de `deploy/docker-compose.yml`,
+lo compara con la imagen del contenedor de pruebas, y en esa imagen pregunta a `pg_extension` y a
+`pg_constraint`. El contenedor no ha corrido nada más que migraciones, así que lo que hay en él lo
+puso una migración y no una mano.
+
+**Las ocho mutaciones**, cada una sobre árbol verde, aplicada, compilada, corrida y revertida
+restaurando copia, están en *Las ocho mutaciones del 1.9*, con la **1**, la **5** y la **8** enteras.
+La 8 es la que merece leerse: **no cambia ningún resultado** —devuelve el precio correcto en los
+cinco casos y ninguna de sus consultas es lenta por separado—; lo único que cambia es el número de
+viajes, y que ahora crece con la profundidad.
+
+**Ninguna dependencia nueva, y la frase sale del diff.** Conjuntos de paquetes idénticos a los de
+`8851c5f`:
+
+```
+git diff 8851c5f..eadb7b9 -- '*.csproj' 'Directory.Packages.props' \
+  'frontend/package.json' 'frontend/package-lock.json'   → vacío
+```
+
+**Licencias: cero movimiento, y la frase sale de comparar CONJUNTOS, no de mirar el diff.** Un
+`packages.lock.json` puede cambiar sin que cambie nada que se resuelva —quién pide un paquete no es
+qué se resuelve—, así que lo que se compara es el conjunto de pares `nombre/versión` de **todos** los
+ficheros de bloqueo a los dos lados:
+
+```
+git ls-tree -r --name-only <ref> | grep 'packages.lock.json$'   (y de cada uno, sus `resolved`)
+  8851c5f → 125 pares nombre/versión distintos
+  eadb7b9 → 125   ·  diff de los dos conjuntos: IDÉNTICOS
+
+git show <ref>:frontend/package-lock.json  (entradas de `packages`)
+  8851c5f → 548   ·   eadb7b9 → 548
+```
+
+Cero paquetes de terceros añadidos y cero retirados en los dos ecosistemas, así que **ninguna
+licencia nueva que revisar**. `btree_gist`, que es lo único que este ítem incorpora de fuera del
+código, **no es una dependencia de terceros**: viene con PostgreSQL, cuya licencia —permisiva estilo
+BSD— ya estaba declarada desde el 0.15, que es cuando Organización la creó por primera vez.
+
+**Commits, firmas y trailers.** `git rev-list --count 8851c5f..eadb7b9` → **5**, los cinco firmados
+(`%G?` = `G`) y los cinco con **solo** las credenciales del usuario:
+`git log --format='%(trailers:only)' 8851c5f..eadb7b9` no imprime **ni una línea** sobre el rango
+entero. Sin PR; la rama `feature/1.9-tarifas` se llevó a `main` por fast-forward y se borró en
+`eadb7b9949d6e6c07f9bf27a75c2fb13c9c3caa6`.
+
+**Fuera del ítem, y no «de paso»:** `Tercero.TarifaAsignada` y `ArticuloProveedor` (ítem **1.10**,
+que es propio porque la dependencia es **mutua**), la importación CSV (**1.11**) y `CodigoBarras`
+(fase 2, con su import). Ninguna conversión de divisa, ninguna factura y ninguna existencia: la
+tarifa dice cuánto vale algo, y quién lo compra o cuánto queda es de otros módulos.
+
 **Ítem 1.8 cerrado — el catálogo, y la afirmación que su propio escenario no ejercía:**
 run **34424407829** sobre `f90dbed`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3` de la API, no de la memoria): Backend `102706467191` ✓ (22 pasos, 0 omitidos),
@@ -7903,12 +8009,23 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   árbol como **lista de adyacencia** y la **cota** del ascenso— y su motivo. Ocho mutaciones en
   *Estado actual*, con la 1, la 2 y la 3 enteras; la 2 destapa una aserción por HTTP cuyo escenario
   no la ejercía, arreglada en `1eab397`.
-- [ ] **1.9 · Tarifas** — criterio de aceptación: `Tarifa` con vigencia y divisa y `LineaTarifa` por
+- [x] **1.9 · Tarifas** — criterio de aceptación: `Tarifa` con vigencia y divisa y `LineaTarifa` por
   artículo o categoría con escalado por cantidad (§7.3); **precio o descuento excluyentes** en el
   objeto de valor; **solape de vigencias prohibido por restricción de exclusión**; sin tarifa
   aplicable, **error de negocio con nombre y nunca precio cero**; y la **precedencia completa**
   —artículo > categoría más cercana > … > raíz— probada con el caso que la distingue: **dos líneas
   de categoría a distinta profundidad**.
+  Cerrado con el run **34599130092** sobre `eadb7b9`. «Más específica» no basta, porque la categoría es
+  jerárquica y **«más cercana» y «más profunda» no son lo mismo**: lo que impide que una rama hermana
+  más honda se cuele es el tipo —`LineaCandidata.Nivel` es el salto **desde el artículo**—, no una
+  comprobación. Las nueve decisiones en *Decisiones tomadas → ítem 1.9*, con las dos que el enunciado
+  dejaba abiertas ya contestadas: la **divisa cruzada se acepta** —respuesta contraria a la del
+  `LimiteCredito` del 1.6, y con motivo— y la **frontera del tramo cae hacia arriba**, con el hueco
+  cerrado por delante porque un hueco es peor que un solape. Ocho mutaciones en *Estado actual*, con
+  la 1, la 5 y la 8 enteras; la 8 **no cambia ningún resultado** —solo el número de viajes—, así que
+  quien la caza es una afirmación sobre el puerto y no sobre el precio. Carril nuevo,
+  `ContratoDeTarifasTests`, porque la restricción de exclusión es DDL y `btree_gist` se comprueba
+  **por el efecto y contra el compose**.
 - [ ] **1.10 · Los dos cruces mutuos** — criterio de aceptación: `ArticuloProveedor` (Catálogo →
   `Terceros.Contracts`) y `Tercero.TarifaAsignada` (Terceros → `Catalogo.Contracts`), cada uno por
   el `Contracts` de su dueño, resuelto en proceso y **declarado**. Es ítem propio porque la
