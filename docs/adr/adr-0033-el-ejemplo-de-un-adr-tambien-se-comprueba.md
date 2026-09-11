@@ -3,18 +3,19 @@ tipo: referencia
 stack: [csharp, dotnet]
 aplica_a: [ddd, dominio, testing, documentacion]
 tags: [adr, conversiones, redondeo, tolerancia, ejemplo-trabajado, adr-0023]
-revisado: 2026-09-08
+revisado: 2026-09-11
 ---
 
 # ADR-0033: El ejemplo de un ADR también se comprueba, y este contradecía su propia desigualdad
 
 - **Estado:** aceptado
 - **Fecha:** 2026-09-08
-- **Sustituye a:** el **ejemplo trabajado** de la decisión 2 del
+- **Corrige, y no sustituye** (la diferencia está escrita más abajo, y este encabezado decía
+  «sustituye a» antes de que lo estuviera): el **ejemplo trabajado** de la decisión 2 del
   [ADR-0023](adr-0023-los-maestros-de-instalacion-se-retiran-y-una-conversion-ni-se-invierte-ni-se-encadena.md).
   El resto de esa decisión sigue en pie **entero**: la desigualdad, la escala de la que sale la
   tolerancia, el sitio donde vive la comprobación y el rechazo del número elegido por comodidad son
-  correctos y no se tocan. Lo que se sustituye son **catorce palabras**.
+  correctos y no se tocan. Lo que se corrige son **catorce palabras**.
 
 ## Contexto
 
@@ -28,7 +29,7 @@ redondeados a seis decimales, exigiendo
 
 Al escribir el caso que ejerce esa desigualdad, el ejemplo que el propio ADR daba salió **rojo**.
 
-## La redacción que se sustituye
+## La redacción que se corrige
 
 Del ADR-0023, decisión 2, tercer párrafo de *Qué se decide*:
 
@@ -88,9 +89,36 @@ del caso frontera que ya afirmaba la igualdad exacta del margen. Quien lea el AD
 test llegan a la misma respuesta, y el día que alguien vuelva a ensanchar la tolerancia «para que
 entre el ejemplo del ADR», hay un caso rojo esperándole con el nombre del par escrito.
 
+## La forma, que hasta hoy se decidía de oído: corregir en el sitio no es sustituir
+
+Esta es la tercera vez que hay que elegir entre **editar** un ADR ya aceptado y **sustituirlo** con
+otro, y las tres veces se ha elegido bien sin que la distinción estuviera escrita en ninguna parte.
+Queda escrita aquí, una sola vez, porque lo que había escrito decía lo contrario: *«una decisión
+aceptada no se edita»*, a secas, en `docs/PLAN.md`.
+
+**La frase es correcta para lo que nombra —una decisión— y falsa para lo que no nombra: un hecho.**
+Son dos cosas distintas dentro del mismo documento:
+
+| Qué cambia | Qué se hace | Por qué |
+|---|---|---|
+| **La decisión** — lo que se resolvió, o el criterio con el que se resolvió | **ADR nuevo que la sustituye**, citando la redacción anterior | La decisión anterior **rigió**: hay código, datos y commits tomados bajo ella. Borrarla deja sin explicación todo lo que se hizo mientras estuvo en pie. Es lo que hicieron el ADR-0015 sobre el punto 2 del ADR-0012 y el ADR-0032 sobre la alternativa descartada del ADR-0010 |
+| **Un hecho dentro de una decisión correcta** — un número, un ejemplo trabajado, una cita | **Se corrige en el sitio**, con una línea que dice que antes decía otra cosa y adónde ir a leer por qué | Un hecho erróneo **nunca rigió**: no hay nada que explicar, solo algo que dejar de afirmar. Y un número equivocado que se deja en pie **no se lee como historia, se lee como permiso** — el siguiente que pase por ahí lo tomará por bueno, que es exactamente lo que este ADR vino a impedir |
+
+**Las dos mitades, y por eso este ítem hizo las dos cosas.** El ejemplo del ADR-0023 se corrigió
+**dentro** del ADR-0023 —en su párrafo, donde lo lee quien va a implementar la regla— y además se
+escribió este ADR **al lado**, porque el *porqué* no cabe en el párrafo corregido y porque la
+lección —«un ejemplo con números va a un caso de prueba»— sí es una decisión, y las decisiones se
+escriben enteras. Lo que no se puede hacer es solo una de las dos: un ADR nuevo sin corregir el
+sitio deja el número falso en pie para quien no siga el enlace, y una corrección sin ADR deja el
+cambio sin motivo a la vista.
+
+**Y la prueba de cuál es cuál, cuando haya duda:** pregúntese si alguien pudo **actuar** sobre lo
+que se va a cambiar. Si alguien pudo escribir código distinto por creerlo, es una decisión y se
+sustituye. Si lo único que pudo hacer es **creerlo**, es un hecho y se corrige.
+
 ## Consecuencias
 
-- **El ADR-0023 queda más fuerte, no más débil.** La afirmación que sustituye al ejemplo es
+- **El ADR-0023 queda más fuerte, no más débil.** La afirmación que ocupa el sitio del ejemplo es
   general y demostrada —ningún redondeo legítimo se rechaza— donde la anterior era un par de
   números, uno de ellos falso.
 - **La lección, que es la única parte reutilizable.** Un ejemplo trabajado dentro de un documento

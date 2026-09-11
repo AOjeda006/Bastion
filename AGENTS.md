@@ -183,6 +183,14 @@ bash scripts/ci/recuento-de-tests.sh \
   "Bastion.Api.IntegrationTests.dll,Bastion.Organizacion.IntegrationTests.dll"
 ```
 
+> **Los avisos de `act()` del frontal son un CANAL desde el 1.8, no una cifra.** Hasta ese ítem
+> había un fondo de 109 avisos que venía del desmontaje del armazón, y con ese fondo puesto un aviso
+> nuevo no se veía: entraba en el ruido y lo único que se podía hacer con ellos era contarlos. El
+> fondo está a **cero** desde `9f8ff56`, así que a partir de ahí **un solo aviso es un hallazgo**.
+> Se diagnostica —qué efecto se quedó fuera de un `act()`, o qué aserción se hizo sobre algo que
+> todavía no había ocurrido— y se arregla. No se cuenta, no se compara contra un fondo y no se
+> tolera «porque son pocos»: el día que se toleren dos, el canal vuelve a ser una cifra.
+
 Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:
 `docker compose -f deploy/docker-compose.yml up --build`.
 

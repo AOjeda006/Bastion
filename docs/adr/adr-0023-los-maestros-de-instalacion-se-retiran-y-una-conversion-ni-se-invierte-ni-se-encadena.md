@@ -117,10 +117,11 @@ error; propagado al producto, eso es el margen de arriba y ni uno más. Con `f =
 `g = 0,083333` —el redondeo de 1/12 a seis decimales, que es el único que hay— y rechaza
 `0,083334` y `0,5`: la primera por poco y la segunda por seis órdenes de magnitud. **Este ejemplo
 decía antes otra cosa**, y la decía mal: ver el
-[ADR-0033](adr-0033-el-ejemplo-de-un-adr-tambien-se-comprueba.md), que sustituye la redacción
-anterior y deja el resto de esta decisión intacto. Y como el rango declarado del factor es `[0,000001, 1000000]`, la inversa de cualquier
-factor válido cae también dentro del rango: la regla es **total**, no tiene casos en los que se
-calle.
+[ADR-0033](adr-0033-el-ejemplo-de-un-adr-tambien-se-comprueba.md), que explica por qué y deja el
+resto de esta decisión intacto — **la corrección va aquí, en el párrafo, y no solo allí**: un
+número falso que se deja en pie no se lee como historia, se lee como permiso. Y como el rango
+declarado del factor es `[0,000001, 1000000]`, la inversa de cualquier factor válido cae también
+dentro del rango: la regla es **total**, no tiene casos en los que se calle.
 
 ### Dónde vive la comprobación
 

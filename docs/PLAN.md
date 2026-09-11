@@ -542,7 +542,11 @@ Todo lo de abajo está razonado en
   pone rojo no se añade a una lista de excepciones: se reabre el ADR. **Y así ocurrió**: el 0.9
   declaró `xmin` como testigo, el test se puso rojo como estaba escrito que haría, y la premisa se
   reenunció en el **ADR-0015**, que sustituye al punto 2 del ADR-0012 — una decisión aceptada no se
-  edita—. La fase única sigue en pie: el testigo no va a la traza.
+  edita: se sustituye, porque rigió—. La fase única sigue en pie: el testigo no va a la traza.
+  (**Un *hecho* erróneo dentro de una decisión correcta sí se corrige en el sitio**, y no es la
+  misma operación. La distinción, con la prueba para saber cuál es cuál, está escrita una sola vez
+  en el [ADR-0033](adr/adr-0033-el-ejemplo-de-un-adr-tambien-se-comprueba.md); esta frase se
+  quedaba corta y era la que había cuando el 1.8 tuvo que decidirlo de oído por tercera vez.)
 - **Solo añadido lo impide el motor.** Una función `plpgsql` y **dos** disparadores sobre
   `auditoria.registros`: uno de fila `BEFORE UPDATE OR DELETE` y otro de sentencia `BEFORE TRUNCATE`
   —los de fila no ven un `TRUNCATE`, que es justo la orden con la que se vaciaría la tabla de un
