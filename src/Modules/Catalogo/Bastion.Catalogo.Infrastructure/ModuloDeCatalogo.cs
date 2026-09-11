@@ -57,6 +57,8 @@ public static class ModuloDeCatalogo
 
         servicios.AddScoped<IRepositorioDeArticulos, RepositorioDeArticulos>();
         servicios.AddScoped<IRepositorioDeCategorias, RepositorioDeCategorias>();
+        servicios.AddScoped<IRepositorioDeTarifas, RepositorioDeTarifas>();
+        servicios.AddScoped<IRepositorioDeLineasDeTarifa, RepositorioDeLineasDeTarifa>();
 
         // SIN `IConsultaDeLoBloqueado`, y hay que leer por qué en vez de darlo por un olvido. Los
         // otros tres módulos aportan su trozo al listado del art. 32 porque tienen entidades

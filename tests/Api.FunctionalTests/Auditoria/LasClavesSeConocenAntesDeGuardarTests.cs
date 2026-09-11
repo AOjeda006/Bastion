@@ -56,8 +56,18 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         "Ejercicio.Version",
         "Empresa.Version",
         "Impuesto.Version",
+
+        // Las dos del ítem 1.9, y las dos llevan testigo a propósito: la línea de tarifa NO es un
+        // hijo del agregado como lo son el contacto o la cuenta bancaria. Tiene su propia ruta,
+        // su propio `PUT` y su propio ETag, porque una tabla de precios se mantiene línea a línea
+        // —dos personas cambiando el precio de dos artículos distintos de la misma tarifa no se
+        // están pisando— y un testigo único en la tarifa haría que la segunda se llevara un 412
+        // por tocar otra fila. Es la decisión contraria a la de los tres hijos del tercero, y lo
+        // que la invierte es que allí el agregado entero es una ficha que se edita de una vez.
+        "LineaTarifa.Version",
         "Rol.Version",
         "Serie.Version",
+        "Tarifa.Version",
         "Tercero.Version",
         "TipoCambio.Version",
         "Ubicacion.Version",

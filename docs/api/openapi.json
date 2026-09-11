@@ -876,6 +876,1190 @@
         ]
       }
     },
+    "/api/v1/catalogo/tarifas": {
+      "get": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Devuelve una página de tramos de tarifa.",
+        "operationId": "Tarifas_Listar",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTarifaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Abre un tramo de tarifa.",
+        "description": "El `409` puede venir de dos sitios y el `type` los separa: la divisa está retirada\n(`tarifa-divisa-retirada`) o la vigencia se pisa con la de otro tramo del mismo código\n(`tarifa-vigencias-solapadas`). El segundo lo contesta el caso de uso preguntando antes,\npero quien de verdad lo impide es una restricción de exclusión de la base: es la única que\ncubre dos peticiones a la vez.",
+        "operationId": "Tarifas_Crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTarifaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTarifaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTarifaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/tarifas/{id}": {
+      "get": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Devuelve un tramo de tarifa.",
+        "operationId": "Tarifas_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tramo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Cambia el nombre de un tramo de tarifa.",
+        "description": "Ni el código, ni la divisa, ni la vigencia: no están en el cuerpo ni en\n`Tarifa.Modificar`. Subir precios es cerrar este tramo y abrir el siguiente.",
+        "operationId": "Tarifas_Modificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tramo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTarifaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTarifaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarTarifaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/tarifas/{id}/cierre": {
+      "put": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Cierra un tramo de tarifa el día indicado.",
+        "description": "Es `PUT` sobre un subrecurso y no un `PATCH` de la tarifa: cerrar es la operación\ncon la que una tarifa da paso a la siguiente, y tiene su propio cuerpo de un solo campo.\nExige `If-Match` como cualquier otra escritura sobre algo que ya existe.",
+        "operationId": "Tarifas_Cerrar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del tramo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CerrarTarifaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CerrarTarifaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CerrarTarifaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/tarifas/{tarifaId}/lineas": {
+      "get": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Devuelve una página de líneas de un tramo de tarifa.",
+        "operationId": "Tarifas_ListarLineas",
+        "parameters": [
+          {
+            "name": "tarifaId",
+            "in": "path",
+            "description": "Tramo cuyas líneas se piden.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeLineaTarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeLineaTarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeLineaTarifaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Añade una línea a un tramo de tarifa.",
+        "description": "El `400` tiene cuatro `type` distintos y cada uno se arregla de otra manera: la\nlínea trae los dos destinos o ninguno (`tarifa-linea-articulo-o-categoria`), trae precio\ny descuento o ninguno de los dos (`tarifa-linea-precio-o-descuento`), o es el primer\ntramo de su destino y no empieza en cero (`tarifa-linea-primer-tramo-sin-cero`). El\n`409` es el tramo repetido (`tarifa-linea-tramo-duplicado`).",
+        "operationId": "Tarifas_CrearLinea",
+        "parameters": [
+          {
+            "name": "tarifaId",
+            "in": "path",
+            "description": "Tramo al que se le añade la línea.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearLineaTarifaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearLineaTarifaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearLineaTarifaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/tarifas/lineas/{id}": {
+      "get": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Devuelve una línea de tarifa.",
+        "operationId": "Tarifas_ObtenerLinea",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la línea.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Cambia el precio o el descuento de una línea.",
+        "description": "Ni el destino ni la cantidad desde la que se aplica: no están en el cuerpo. Que la cantidad\nno se pueda mover es lo que hace imposible abrir un hueco en una tabla de precios ya escrita.",
+        "operationId": "Tarifas_ModificarLinea",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la línea.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarLineaTarifaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarLineaTarifaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarLineaTarifaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaTarifaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/tarifas/{codigo}/precio": {
+      "get": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Dice qué precio le pone esta tarifa a un artículo para una cantidad y una fecha.",
+        "description": "    Es el extremo caliente, y sus tres fallos son tres type distintos porque son tres\n      arreglos distintos: el código no existe (tarifa-no-encontrada, y hay que corregir\n      el código), existe y ninguno de sus tramos cubre esa fecha (tarifa-no-vigente, y hay\n      que abrir el tramo que falta) o la tarifa rige pero no dice nada de ese artículo\n      (tarifa-sin-linea-aplicable, y hay que poner la línea). Ninguno de los tres es un\n      cero: un precio cero que nadie ha escrito entra en un documento, suma cero al total y el\n      descuadre aparece semanas después sin autor.\n    La respuesta lleva la divisa de la tarifa —que puede no ser la de la empresa, y se\nacepta a propósito— y el origen del precio: si ha ganado una línea del artículo o de\nuna categoría, cuál, y a cuántos saltos del artículo estaba. Eso último es lo que permite\nafirmar desde fuera que la precedencia elige el antepasado más cercano y no el más profundo.",
+        "operationId": "Tarifas_Precio",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "description": "Código de la tarifa.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "articulo",
+            "in": "query",
+            "description": "Artículo al que se le quiere poner precio.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cantidad",
+            "in": "query",
+            "description": "Cantidad por la que se pregunta.",
+            "schema": {
+              "maximum": 79228162514264337593543950335,
+              "minimum": 0,
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          },
+          {
+            "name": "fecha",
+            "in": "query",
+            "description": "Día para el que se resuelve. Si no se dice, hoy.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecioResueltoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecioResueltoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecioResueltoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/identidad/roles": {
       "get": {
         "tags": [
@@ -10976,6 +12160,20 @@
         },
         "description": "Lo que hace falta para cerrar un tramo vigente."
       },
+      "CerrarTarifaDto": {
+        "required": [
+          "ultimoDia"
+        ],
+        "type": "object",
+        "properties": {
+          "ultimoDia": {
+            "type": "string",
+            "description": "Último día en que rige, incluido.",
+            "format": "date"
+          }
+        },
+        "description": "Lo que hace falta para cerrar un tramo de tarifa."
+      },
       "ConcederPertenenciaDto": {
         "required": [
           "empresaId"
@@ -11526,6 +12724,63 @@
         },
         "description": "Lo que hace falta para abrir un tramo de un tipo impositivo."
       },
+      "CrearLineaTarifaDto": {
+        "type": "object",
+        "properties": {
+          "articuloId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Artículo al que se aplica. Exactamente uno de los dos destinos.",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Categoría a la que se aplica, y con ella todo lo que cuelgue. Exactamente uno.",
+            "format": "uuid"
+          },
+          "cantidadDesde": {
+            "maximum": 79228162514264337593543950335,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad a partir de la cual se aplica, incluida.",
+            "format": "double"
+          },
+          "precio": {
+            "maximum": 79228162514264337593543950335,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Precio por unidad en la divisa de la tarifa. Uno de los dos, no los dos, y no ninguno.",
+            "format": "double"
+          },
+          "descuentoPorcentaje": {
+            "maximum": 100,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Descuento en tanto por ciento. Uno de los dos, no los dos, y no ninguno.",
+            "format": "double"
+          }
+        },
+        "description": "Lo que hace falta para añadir una línea a un tramo de tarifa."
+      },
       "CrearRolDto": {
         "required": [
           "codigo",
@@ -11587,6 +12842,48 @@
           }
         },
         "description": "Lo que hace falta para crear una serie."
+      },
+      "CrearTarifaDto": {
+        "required": [
+          "codigo",
+          "nombre",
+          "divisaId",
+          "vigenteDesde"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "description": "Código de la tarifa. Se normaliza a mayúsculas y se repite entre tramos."
+          },
+          "nombre": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se muestra."
+          },
+          "divisaId": {
+            "type": "string",
+            "description": "Divisa en la que se expresan los precios de esta tarifa.",
+            "format": "uuid"
+          },
+          "vigenteDesde": {
+            "type": "string",
+            "description": "Primer día en que rige, incluido.",
+            "format": "date"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Último día en que rige, incluido; nulo para dejarla abierta.",
+            "format": "date"
+          }
+        },
+        "description": "Lo que hace falta para dar de alta un tramo de tarifa."
       },
       "CrearTerceroDto": {
         "required": [
@@ -12275,6 +13572,82 @@
         },
         "description": "El límite de crédito de un tercero, tal como sale de la API."
       },
+      "LineaTarifaDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "tarifaId",
+          "articuloId",
+          "categoriaId",
+          "cantidadDesde",
+          "precio",
+          "descuentoPorcentaje"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la línea.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "tarifaId": {
+            "type": "string",
+            "description": "Tramo de tarifa del que cuelga.",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Artículo al que se aplica, o nulo si la línea es de categoría.",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Categoría a la que se aplica, o nulo si la línea es de artículo.",
+            "format": "uuid"
+          },
+          "cantidadDesde": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad a partir de la cual se aplica, <b>incluida</b>. El tramo llega hasta donde empieza el\nsiguiente, sin incluirlo: pedir exactamente 100 con tramos en 0 y en 100 aplica el de 100.",
+            "format": "double"
+          },
+          "precio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Precio por unidad en la divisa de la tarifa, o nulo si es un descuento.",
+            "format": "double"
+          },
+          "descuentoPorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Descuento en tanto por ciento, o nulo si es un precio.",
+            "format": "double"
+          }
+        },
+        "description": "Una línea de tarifa, tal como sale de la API."
+      },
       "MembresiaDto": {
         "required": [
           "empresaId",
@@ -12501,6 +13874,36 @@
         },
         "description": "Lo que se puede cambiar de un tramo ya abierto."
       },
+      "ModificarLineaTarifaDto": {
+        "type": "object",
+        "properties": {
+          "precio": {
+            "maximum": 79228162514264337593543950335,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Precio por unidad en la divisa de la tarifa. Uno de los dos, no los dos, y no ninguno.",
+            "format": "double"
+          },
+          "descuentoPorcentaje": {
+            "maximum": 100,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Descuento en tanto por ciento. Uno de los dos, no los dos, y no ninguno.",
+            "format": "double"
+          }
+        },
+        "description": "Lo que se puede cambiar de una línea de tarifa: el precio o el descuento."
+      },
       "ModificarRolDto": {
         "required": [
           "nombre"
@@ -12537,6 +13940,21 @@
           }
         },
         "description": "Lo que se puede cambiar de una serie: su formato."
+      },
+      "ModificarTarifaDto": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "description": "Nombre con el que se muestra."
+          }
+        },
+        "description": "Lo que se puede cambiar de un tramo de tarifa."
       },
       "ModificarTerceroDto": {
         "required": [
@@ -13082,6 +14500,52 @@
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
+      "PaginaDeLineaTarifaDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaTarifaDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
       "PaginaDeRolDto": {
         "required": [
           "elementos",
@@ -13141,6 +14605,52 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SerieDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeTarifaDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TarifaDto"
             },
             "description": "Los de esta página, en el orden pedido."
           },
@@ -13403,6 +14913,107 @@
           }
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PrecioResueltoDto": {
+        "required": [
+          "tarifaId",
+          "codigo",
+          "divisaId",
+          "articuloId",
+          "cantidad",
+          "fecha",
+          "precio",
+          "descuentoPorcentaje",
+          "origen",
+          "origenId",
+          "nivelDeLaCategoria",
+          "cantidadDesde"
+        ],
+        "type": "object",
+        "properties": {
+          "tarifaId": {
+            "type": "string",
+            "description": "Tramo de tarifa que ha resuelto el precio.",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código de la tarifa, el que se pidió."
+          },
+          "divisaId": {
+            "type": "string",
+            "description": "Divisa en la que está expresado el precio.",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "Artículo por el que se preguntó.",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad por la que se preguntó.",
+            "format": "double"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Día para el que se ha resuelto.",
+            "format": "date"
+          },
+          "precio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Precio por unidad, o nulo si la línea que gana es de descuento.",
+            "format": "double"
+          },
+          "descuentoPorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Descuento en tanto por ciento, o nulo si la línea es de precio.",
+            "format": "double"
+          },
+          "origen": {
+            "type": "string",
+            "description": "string OrigenDelPrecio.Articulo o string OrigenDelPrecio.Categoria."
+          },
+          "origenId": {
+            "type": "string",
+            "description": "Identificador del artículo o de la categoría de la línea que gana.",
+            "format": "uuid"
+          },
+          "nivelDeLaCategoria": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos saltos hacia arriba hay desde la categoría del artículo hasta la de la línea que gana:\n`0` es su propia categoría, `1` la madre, y así. Nulo cuando gana una línea de\nartículo. <b>Es el número que distingue una precedencia correcta de una que ordena por\nprofundidad</b>: una categoría más honda que la del artículo no es antepasada suya y no compite.",
+            "format": "int32"
+          },
+          "cantidadDesde": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad desde la que rige el tramo que ha ganado, incluida.",
+            "format": "double"
+          }
+        },
+        "description": "El precio que una tarifa le pone a un artículo para una cantidad y una fecha, con el porqué."
       },
       "ProblemDetails": {
         "type": "object",
@@ -13718,6 +15329,57 @@
           }
         },
         "description": "Una sesión abierta: el token de acceso y con qué se está operando."
+      },
+      "TarifaDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "codigo",
+          "nombre",
+          "divisaId",
+          "vigenteDesde",
+          "vigenteHasta"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del tramo.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código, en mayúsculas. Se repite entre tramos de la misma tarifa."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre con el que se muestra."
+          },
+          "divisaId": {
+            "type": "string",
+            "description": "Divisa en la que se expresan sus precios (maestro de Organización).",
+            "format": "uuid"
+          },
+          "vigenteDesde": {
+            "type": "string",
+            "description": "Primer día en que rige, incluido.",
+            "format": "date"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Último día en que rige, incluido; nulo mientras siga vigente.",
+            "format": "date"
+          }
+        },
+        "description": "Un tramo de tarifa, tal como sale de la API."
       },
       "TerceroDto": {
         "required": [
@@ -14049,6 +15711,9 @@
     },
     {
       "name": "Categorias"
+    },
+    {
+      "name": "Tarifas"
     },
     {
       "name": "Roles"

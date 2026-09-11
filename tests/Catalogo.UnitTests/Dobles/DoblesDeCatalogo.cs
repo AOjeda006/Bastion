@@ -8,6 +8,7 @@ using Bastion.Catalogo.Application;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
 using Bastion.Organizacion.Contracts.Comun;
+using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Impuestos;
 using Bastion.Organizacion.Contracts.Unidades;
@@ -134,6 +135,9 @@ internal sealed class CategoriasEnMemoria : IRepositorioDeCategorias
 
     internal int Llamadas { get; private set; }
 
+    /// <summary>Cuántas veces se ha pedido la ascendencia entera de una categoría.</summary>
+    internal int LlamadasDeAscendencia { get; private set; }
+
     public IReadOnlySet<string> CamposOrdenables { get; } =
         new HashSet<string>(StringComparer.Ordinal) { "codigo", "nombre" };
 
@@ -182,6 +186,31 @@ internal sealed class CategoriasEnMemoria : IRepositorioDeCategorias
         return Task.FromResult(_eslabones.GetValueOrDefault(id));
     }
 
+    /// <summary>La ascendencia, en UNA llamada, y contándolas.</summary>
+    /// <remarks>
+    /// <b>El contador es la prueba del número de viajes.</b> Una precedencia resuelta con una
+    /// consulta por nivel llamaría a <see cref="EslabonAsync"/> tantas veces como hondo esté el
+    /// artículo; ésta se llama <b>una vez</b>, y la misma vez con un árbol de dos niveles que con
+    /// uno de once. Sin los dos contadores, esa afirmación no se puede poner roja sin Docker.
+    /// </remarks>
+    public Task<IReadOnlyList<Guid>> AscendenciaAsync(Guid categoriaId, CancellationToken cancelacion)
+    {
+        LlamadasDeAscendencia++;
+
+        List<Guid> cadena = [];
+        Guid? actual = categoriaId;
+
+        while (actual is { } id
+            && _eslabones.TryGetValue(id, out EslabonDeCategoria? eslabon)
+            && !cadena.Contains(id))
+        {
+            cadena.Add(id);
+            actual = eslabon.PadreId;
+        }
+
+        return Task.FromResult<IReadOnlyList<Guid>>(cadena);
+    }
+
     public Task<bool> ExisteElCodigoAsync(Guid empresaId, string codigo, CancellationToken cancelacion) =>
         Task.FromResult(CodigosOcupados.Contains(codigo));
 
@@ -223,4 +252,148 @@ internal sealed class VersionesQueDanIgual : IVersionesDeCatalogo
 internal sealed class RelojParado(DateTimeOffset momento) : TimeProvider
 {
     public override DateTimeOffset GetUtcNow() => momento;
+}
+
+/// <summary>El puerto de divisas, fijado en un estado, que apunta por cuál se preguntó.</summary>
+/// <remarks>
+/// Guarda el identificador por lo mismo que el de unidades: sin eso, un alta de tarifa que
+/// <b>no llamara</b> al puerto pasaría el caso de «se ofrece» sin haber preguntado nada, y el
+/// consumidor que este ítem construye para <c>IConsultaDeDivisas</c> sería otra vez decorativo.
+/// </remarks>
+internal sealed class DivisasEn(EstadoDeMaestro estado) : IConsultaDeDivisas
+{
+    internal List<Guid> Preguntadas { get; } = [];
+
+    public Task<EstadoDeMaestro> EstadoDeAsync(Guid divisaId, CancellationToken cancelacion)
+    {
+        Preguntadas.Add(divisaId);
+
+        return Task.FromResult(estado);
+    }
+}
+
+/// <summary>Un almacén de tramos de tarifa en memoria.</summary>
+internal sealed class TarifasEnMemoria : IRepositorioDeTarifas
+{
+    internal List<Tarifa> Guardadas { get; } = [];
+
+    /// <summary>Si la siguiente comprobación de solape tiene que decir que sí.</summary>
+    internal bool DiceQueHaySolape { get; set; }
+
+    public IReadOnlySet<string> CamposOrdenables { get; } =
+        new HashSet<string>(StringComparer.Ordinal) { "codigo", "nombre", "vigenteDesde" };
+
+    public Task<Tarifa?> ObtenerAsync(Guid id, CancellationToken cancelacion) =>
+        Task.FromResult(Guardadas.Find(una => una.Id == id));
+
+    public Task<Tarifa?> VigenteAsync(
+        Guid empresaId,
+        string codigo,
+        DateOnly dia,
+        CancellationToken cancelacion) =>
+        Task.FromResult(Guardadas.Find(una =>
+            una.EmpresaId == empresaId && una.Codigo == codigo && una.RigeEl(dia)));
+
+    public Task<bool> ExisteElCodigoAsync(
+        Guid empresaId,
+        string codigo,
+        CancellationToken cancelacion) =>
+        Task.FromResult(Guardadas.Exists(una => una.EmpresaId == empresaId && una.Codigo == codigo));
+
+    public Task<bool> HaySolapeAsync(
+        Guid empresaId,
+        string codigo,
+        DateOnly desde,
+        DateOnly? hasta,
+        Guid? excepto,
+        CancellationToken cancelacion) =>
+        Task.FromResult(DiceQueHaySolape);
+
+    public Task<PaginaDe<Tarifa>> ListarAsync(
+        Paginacion paginacion,
+        string? codigo,
+        CancellationToken cancelacion) =>
+        throw new NotSupportedException("El listado se prueba contra PostgreSQL, no aquí.");
+
+    public void Agregar(Tarifa tarifa) => Guardadas.Add(tarifa);
+}
+
+/// <summary>Un almacén de líneas de tarifa en memoria, que cuenta los viajes.</summary>
+/// <remarks>
+/// <see cref="LlamadasDeCandidatas"/> es la otra mitad de la afirmación sobre el número de viajes:
+/// las candidatas se piden <b>una vez</b> por resolución, con toda la ascendencia dentro, y no una
+/// vez por nivel.
+/// </remarks>
+internal sealed class LineasDeTarifaEnMemoria : IRepositorioDeLineasDeTarifa
+{
+    internal List<LineaTarifa> Guardadas { get; } = [];
+
+    internal int LlamadasDeCandidatas { get; private set; }
+
+    public IReadOnlySet<string> CamposOrdenables { get; } =
+        new HashSet<string>(StringComparer.Ordinal) { "cantidadDesde" };
+
+    public Task<LineaTarifa?> ObtenerAsync(Guid id, CancellationToken cancelacion) =>
+        Task.FromResult(Guardadas.Find(una => una.Id == id));
+
+    public Task<IReadOnlyList<LineaCandidata>> CandidatasAsync(
+        Guid tarifaId,
+        Guid articuloId,
+        IReadOnlyList<Guid> ascendencia,
+        CancellationToken cancelacion)
+    {
+        LlamadasDeCandidatas++;
+
+        Dictionary<Guid, int> nivelDe = [];
+
+        for (int nivel = 0; nivel < ascendencia.Count; nivel++)
+        {
+            nivelDe.TryAdd(ascendencia[nivel], nivel);
+        }
+
+        IReadOnlyList<LineaCandidata> candidatas =
+        [
+            .. Guardadas
+                .Where(linea => linea.TarifaId == tarifaId
+                    && (linea.ArticuloId == articuloId
+                        || (linea.CategoriaId is { } suya && nivelDe.ContainsKey(suya))))
+                .Select(linea => new LineaCandidata(
+                    linea.Id,
+                    linea.ArticuloId,
+                    linea.CategoriaId,
+                    linea.CategoriaId is { } suya ? nivelDe[suya] : null,
+                    linea.CantidadDesde,
+                    linea.PrecioODescuento.Precio,
+                    linea.PrecioODescuento.DescuentoPorcentaje)),
+        ];
+
+        return Task.FromResult(candidatas);
+    }
+
+    public Task<TramosDelDestino> TramosDelDestinoAsync(
+        Guid tarifaId,
+        Guid? articuloId,
+        Guid? categoriaId,
+        decimal cantidadDesde,
+        CancellationToken cancelacion)
+    {
+        List<LineaTarifa> delDestino =
+        [
+            .. Guardadas.Where(linea => linea.TarifaId == tarifaId
+                && linea.ArticuloId == articuloId
+                && linea.CategoriaId == categoriaId),
+        ];
+
+        return Task.FromResult(new TramosDelDestino(
+            delDestino.Count > 0,
+            delDestino.Exists(linea => linea.CantidadDesde == cantidadDesde)));
+    }
+
+    public Task<PaginaDe<LineaTarifa>> ListarAsync(
+        Paginacion paginacion,
+        Guid tarifaId,
+        CancellationToken cancelacion) =>
+        throw new NotSupportedException("El listado se prueba contra PostgreSQL, no aquí.");
+
+    public void Agregar(LineaTarifa linea) => Guardadas.Add(linea);
 }

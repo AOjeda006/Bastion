@@ -326,8 +326,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(110, "acciones en total");
-        cambian.Count.ShouldBe(72, "acciones que cambian estado");
+        todas.Count.ShouldBe(120, "acciones en total");
+        cambian.Count.ShouldBe(77, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -402,15 +402,45 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // habría entrado una escritura sin candado y con motivo escrito a posteriori; si hubiera
         // subido If-Match sin subir Idempotency-Key, las dos altas se habrían colado exigiendo una
         // versión que un recurso que aún no existe no puede citar.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(40, "operaciones que exigen If-Match");
+        //
+        // Ciento veinte desde el ítem 1.9, y aquí no entra un módulo sino UN recurso con lo que le
+        // cuelga: tarifas y sus líneas, diez acciones. El reparto es +10 al total, +5 a las que
+        // cambian estado, +3 a If-Match, +2 a Idempotency-Key y CERO al cajón de las exentas.
+        //
+        // Las cinco lecturas son el listado de tramos, el tramo por id, el listado de líneas de un
+        // tramo, la línea por id y —la quinta— la resolución de precio,
+        // `GET /tarifas/{codigo}/precio`. Esa última es la que este reparto vigila de verdad:
+        // resolver un precio es el camino caliente del módulo, se invoca una vez por línea de
+        // documento, y NO cambia nada. El día que alguien la convirtiera en un `POST` porque «así
+        // caben más parámetros», o le hiciera guardar la resolución, subirían dos números en vez de
+        // uno y este rojo lo diría antes de que ninguna factura dependiera de ello.
+        //
+        // Las tres de If-Match son el nombre del tramo, el CIERRE del tramo y el precio de una
+        // línea. Cerrar va aparte de modificar por lo mismo que en impuestos —cerrar un tramo no es
+        // editarlo—, y las tres citan versión porque las tres reinterpretan precios que ya se
+        // aplicaron: dos personas moviendo la misma tabla de precios a la vez es exactamente lo que
+        // el 412 existe para parar.
+        //
+        // Las dos de Idempotency-Key son el alta del tramo y el alta de una línea. Que colgar una
+        // línea SÍ lleve clave, cuando colgar un contacto en el 1.6 no la llevaba, no es una
+        // incoherencia: allí lo que se modificaba era el agregado —el tercero, que ya tenía versión
+        // que citar— y aquí la línea es una entidad con su propia identidad, su propio ETag y su
+        // propio `PUT`. Un alta que no existía no puede citar la versión de nada, así que el
+        // reintento de un móvil que perdió la cobertura solo lo para la clave.
+        //
+        // Y el cajón de las exentas quieto: en tarifas no hay ninguna escritura que no sea un alta
+        // o una modificación. Tampoco hay ningún `DELETE` —una tarifa no se borra: se CIERRA, y el
+        // tramo cerrado sigue diciendo a qué precio se vendió mientras regía—, que es la
+        // afirmación que sostiene que reimprimir un albarán antiguo siga dando el mismo importe.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(43, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(15, "rutas que admiten Idempotency-Key");
+            .ShouldBe(17, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (40 + 15 + s_exentas.Count).ShouldBe(cambian.Count);
+        (43 + 17 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

@@ -4,8 +4,8 @@ using Bastion.Organizacion.Contracts.Comun;
 namespace Bastion.Catalogo.Application.Catalogo;
 
 /// <summary>
-/// Traduce los tres valores de <see cref="EstadoDeMaestro"/> a los tres desenlaces que el alta de
-/// un artículo puede tener con un maestro ajeno.
+/// Traduce los tres valores de <see cref="EstadoDeMaestro"/> a los tres desenlaces que un alta de
+/// este módulo puede tener con un maestro ajeno.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -66,6 +66,12 @@ internal static class ElMaestroSeOfreceParaLoNuevo
     /// <summary>Código del error de un tramo de impuesto que no rige en esa fecha.</summary>
     public const string CodigoDeImpuestoNoVigente = "articulo-impuesto-no-vigente";
 
+    /// <summary>Código del error de una divisa que no existe.</summary>
+    public const string CodigoDeDivisaNoEncontrada = "tarifa-divisa-no-encontrada";
+
+    /// <summary>Código del error de una divisa retirada.</summary>
+    public const string CodigoDeDivisaRetirada = "tarifa-divisa-retirada";
+
     /// <summary>El desenlace de haber preguntado por la unidad base.</summary>
     /// <param name="estado">Lo que contestó <c>IConsultaDeUnidadesDeMedida</c>.</param>
     /// <param name="unidadId">El identificador por el que se preguntó.</param>
@@ -123,4 +129,36 @@ internal static class ElMaestroSeOfreceParaLoNuevo
                 estado,
                 "El puerto de impuestos ha contestado un estado que este caso de uso no sabe traducir."),
         };
+
+    /// <summary>El desenlace de haber preguntado por la divisa de una tarifa.</summary>
+    /// <remarks>
+    /// <b>La tercera casilla de la retirada, y la tercera vez que las dos mitades son dos.</b>
+    /// <c>IConsultaDeDivisas</c> se declaró en el ítem 1.2 diciendo, con estas palabras, que su
+    /// consumidor sería «la tarifa del §7.3»: aquí es donde deja de estar esperando. Una divisa
+    /// retirada —las pesetas— no funda una tarifa nueva, y la tarifa que ya está expresada en ella
+    /// <b>sigue resolviendo sus precios</b>: eso segundo consiste, como siempre, en que no se hace
+    /// nada — la divisa de una tarifa no se puede cambiar, así que no hay ningún camino de
+    /// modificación que la vuelva a preguntar y la congele.
+    /// </remarks>
+    /// <param name="estado">Lo que contestó <c>IConsultaDeDivisas</c>.</param>
+    /// <param name="divisaId">El identificador por el que se preguntó.</param>
+    internal static Resultado LaDivisa(EstadoDeMaestro estado, Guid divisaId) => estado switch
+    {
+        EstadoDeMaestro.SeOfreceParaLoNuevo => Resultado.Correcto(),
+
+        EstadoDeMaestro.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
+            CodigoDeDivisaRetirada,
+            $"La divisa {divisaId} está retirada: las tarifas que ya están expresadas en ella " +
+            "siguen resolviendo sus precios, pero no se abre una tarifa nueva con ella. Elija una " +
+            "que siga en uso.")),
+
+        EstadoDeMaestro.NoExiste => Resultado.Fallo(ErrorDeOperacion.Validacion(
+            CodigoDeDivisaNoEncontrada,
+            $"No hay ninguna divisa con el identificador {divisaId}.")),
+
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(estado),
+            estado,
+            "El puerto de divisas ha contestado un estado que este caso de uso no sabe traducir."),
+    };
 }

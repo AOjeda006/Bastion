@@ -101,13 +101,25 @@ public sealed class LasFechasDicenDeQueTipoSonTests : IDisposable
         cuantas.Instantes.ShouldBeGreaterThan(10, "hay instantes de sobra en el modelo");
 
         // El recuento es EXACTO a propósito, no un «al menos»: una fecha de negocio nueva tiene
-        // que pasar por aquí y que alguien la nombre. Las cinco de hoy son las dos del ejercicio,
-        // las dos de la vigencia de un impuesto y la del tipo de cambio — las tres últimas, del
-        // 0.15. Ninguna tiene hora ni zona: el 1 de septiembre de 2012 el IVA subió en Madrid y
-        // en Canarias el mismo día.
+        // que pasar por aquí y que alguien la nombre. Las cinco primeras son las dos del
+        // ejercicio, las dos de la vigencia de un impuesto y la del tipo de cambio — las tres
+        // últimas, del 0.15. Ninguna tiene hora ni zona: el 1 de septiembre de 2012 el IVA subió
+        // en Madrid y en Canarias el mismo día.
+        //
+        // Las dos del ítem 1.9 son la vigencia de la tarifa, y son de la misma clase por el mismo
+        // motivo: una tarifa entra en vigor el día 1, no a las 00:00 de una zona. Con
+        // `DateTimeOffset`, un tramo que empezara el 1 de enero a medianoche en Madrid empezaría
+        // el 31 de diciembre a las 23:00 en Canarias, y el mismo artículo tendría dos precios
+        // durante una hora según desde dónde se facturase.
+        //
+        // Y hay una consecuencia que no es de tipado y sí de esta decisión: la restricción de
+        // exclusión que impide el solape construye un `daterange` sobre estas dos columnas. Un
+        // `tstzrange` sobre instantes habría dejado pasar dos tramos que se pisan un día entero
+        // en un huso y no en otro.
         cuantas.Fechas.ShouldBe(
-            5,
-            "las dos del ejercicio, las dos de la vigencia del impuesto y la del tipo de cambio");
+            7,
+            "las dos del ejercicio, las dos de la vigencia del impuesto, la del tipo de cambio y " +
+            "las dos de la vigencia de la tarifa");
     }
 
     private static bool EsDelTipo<T>(IReadOnlyProperty propiedad) =>

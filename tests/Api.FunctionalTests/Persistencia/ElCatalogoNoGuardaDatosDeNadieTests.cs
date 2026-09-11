@@ -10,7 +10,8 @@ namespace Bastion.Api.FunctionalTests.Persistencia;
 
 /// <summary>
 /// La respuesta a la pregunta del artículo 32 para Catálogo, comprobada en vez de supuesta: no hay
-/// aquí un dato de nadie, y por eso ni el artículo ni la categoría se bloquean.
+/// aquí un dato de nadie, y por eso no se bloquea ninguna de sus cuatro entidades —el artículo, la
+/// categoría, la tarifa y su línea—.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -137,9 +138,25 @@ public sealed class ElCatalogoNoGuardaDatosDeNadieTests : IDisposable
         List<string> deCatalogo = [.. EntidadesDeCatalogo().Select(tipo => tipo.ShortName())];
         deCatalogo.Sort(StringComparer.Ordinal);
 
+        // LA RESPUESTA DEL ART. 32 PARA LAS DOS DEL ÍTEM 1.9, hecha y no supuesta.
+        //
+        // `Tarifa` no lleva datos de nadie: un código, un nombre —`PVP`, `MAYORISTA`—, una divisa
+        // y dos fechas. `LineaTarifa` tampoco: dos identificadores del propio catálogo, una
+        // cantidad y un precio o un descuento. Ni una ni otra tienen titular: una tarifa es una
+        // política de precios de la empresa, no el acuerdo con un cliente concreto.
+        //
+        // Y esa última frase es justo la que puede caducar, así que conviene dejar dicho por
+        // dónde. `Tercero.TarifaAsignada` —qué tarifa se le aplica a cada cliente— es del ítem
+        // 1.10, y ese cruce SÍ dice algo de alguien: que a este cliente se le vende a mayorista.
+        // Pero vivirá del lado de Terceros, colgando de una ficha que ya es bloqueable y que ya
+        // tiene su respuesta escrita. Lo que este caso vigila es que no venga por el otro lado: el
+        // día que alguien le cuelgue a `LineaTarifa` un `TerceroId` para hacer un precio pactado,
+        // esto sigue verde —un `Guid` llamado así no delata nada— pero
+        // `Ninguna_entidad_de_catalogo_es_bloqueable` no, porque entonces Catálogo guardaría a qué
+        // precio compra una persona física identificable, y eso es un dato suyo.
         deCatalogo.ShouldBe(
-            ["Articulo", "Categoria"],
-            "las entidades propias de Catálogo son esas dos. Si aparece una más, hay que " +
+            ["Articulo", "Categoria", "LineaTarifa", "Tarifa"],
+            "las entidades propias de Catálogo son esas cuatro. Si aparece una más, hay que " +
             "contestarle la pregunta del art. 32 también a ella; si falta alguna, el filtro por " +
             "esquema ha dejado de encontrarlas y las dos reglas de arriba están mirando al vacío");
 

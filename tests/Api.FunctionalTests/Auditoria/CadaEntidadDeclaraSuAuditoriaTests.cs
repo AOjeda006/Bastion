@@ -49,6 +49,14 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         "Empresa.Bloqueo: 3",
         "Empresa.DomicilioFiscal: 6",
 
+        // El del ítem 1.9, y el número es la mitad del caso: DOS propiedades escalares —el precio
+        // y el descuento— en un tipo complejo, no una. Un objeto de valor que guardara «el
+        // importe» y «qué clase de importe es» tendría una sola columna y un discriminador, y el
+        // día que el discriminador dijera una cosa y el signo otra no habría nada que lo parara.
+        // Con dos columnas nulables por separado, la exclusividad es un CHECK de la base que
+        // rechaza los dos puestos Y ninguno puesto.
+        "LineaTarifa.PrecioODescuento: 2",
+
         // Los cinco de Terceros, que hasta el ítem 1.6 no estaban aquí porque este barrido
         // no miraba el modelo de Terceros. `LimiteCredito` y `RegimenFiscal` son del 1.6.
         "Tercero.Bloqueo: 3",

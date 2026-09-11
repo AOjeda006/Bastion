@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Bastion.Catalogo.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bastion.Catalogo.Infrastructure.Migrations
 {
     [DbContext(typeof(CatalogoDbContext))]
-    partial class CatalogoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260911064712_TarifasYSusLineas")]
+    partial class TarifasYSusLineas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

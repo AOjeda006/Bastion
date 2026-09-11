@@ -53,6 +53,58 @@ public static class PermisosDeCatalogo
     /// </remarks>
     public const string CategoriaModificar = "catalogo.categoria.modificar";
 
+    /// <summary>Consultar tarifas y resolver el precio de un artículo.</summary>
+    /// <remarks>
+    /// <b>Un permiso para las dos cosas, y hay que decir por qué.</b> Resolver un precio devuelve
+    /// menos que leer la tarifa entera —un número, no la tabla—, así que un permiso propio parecería
+    /// más fino. Sería falso: quien puede resolver puede preguntar artículo por artículo y
+    /// reconstruir la tabla en una tarde, así que separarlos daría una sensación de control que el
+    /// mecanismo no sostiene. Un permiso que no protege lo que parece proteger es peor que no
+    /// tenerlo, porque alguien lo concede creyendo que sí.
+    /// </remarks>
+    public const string TarifaVer = "catalogo.tarifa.ver";
+
+    /// <summary>Dar de alta tramos de tarifa.</summary>
+    public const string TarifaCrear = "catalogo.tarifa.crear";
+
+    /// <summary>Cambiar el nombre de un tramo de tarifa.</summary>
+    /// <remarks>
+    /// <b>Es el más flojo de los cuatro de tarifas, y por eso está solo.</b> El agregado no deja
+    /// cambiar ni el código, ni la divisa, ni la vigencia, así que lo único que abre este permiso
+    /// es corregir un nombre: no mueve un solo número. Quien mantiene el rotulado del catálogo no
+    /// tiene por qué poder decidir precios, y hasta el ítem 1.9 esta constante cubría también
+    /// cerrar tramos y mantener líneas, que sí los deciden.
+    /// </remarks>
+    public const string TarifaModificar = "catalogo.tarifa.modificar";
+
+    /// <summary>Cerrar un tramo de tarifa, que es lo que hace entrar al siguiente.</summary>
+    /// <remarks>
+    /// <b>Aparte de <see cref="TarifaModificar"/>, como <c>ImpuestoCerrar</c> lo está del suyo.</b>
+    /// Cerrar no edita nada de lo que hay escrito: cambia hasta cuándo rige, y por tanto qué
+    /// precios se aplican a partir de mañana sin tocar un solo precio. Es la operación con la que
+    /// una lista entera deja de valer, y quien corrige nombres no tiene por qué poder ejecutarla.
+    /// </remarks>
+    public const string TarifaCerrar = "catalogo.tarifa.cerrar";
+
+    /// <summary>Poner una línea de precio en un tramo de tarifa.</summary>
+    /// <remarks>
+    /// <b>Es el permiso que decide precios</b>, y el que de verdad mueve dinero en este módulo:
+    /// una línea nueva pone el precio de un artículo o de una rama entera del árbol. Separado de
+    /// <see cref="TarifaCrear"/> por lo mismo que en todas partes —abrir una lista vacía no es
+    /// llenarla— y separado de <see cref="LineaTarifaModificar"/> porque hay perfiles que
+    /// mantienen la tabla que ya existe sin poder añadirle destinos ni tramos.
+    /// </remarks>
+    public const string LineaTarifaAgregar = "catalogo.linea-tarifa.agregar";
+
+    /// <summary>Cambiar el precio o el descuento de una línea de tarifa.</summary>
+    /// <remarks>
+    /// Lo único que se puede cambiar de una línea es su precio o su descuento: ni el destino ni la
+    /// cantidad desde la que se aplica están en el cuerpo, y no los protege este permiso, los
+    /// protege que el agregado no tiene por dónde cambiarlos. Que la cantidad sea inmutable es,
+    /// además, lo que hace imposible abrir un hueco en una tabla de precios ya escrita.
+    /// </remarks>
+    public const string LineaTarifaModificar = "catalogo.linea-tarifa.modificar";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -69,5 +121,11 @@ public static class PermisosDeCatalogo
         CategoriaVer,
         CategoriaCrear,
         CategoriaModificar,
+        TarifaVer,
+        TarifaCrear,
+        TarifaModificar,
+        TarifaCerrar,
+        LineaTarifaAgregar,
+        LineaTarifaModificar,
     ];
 }

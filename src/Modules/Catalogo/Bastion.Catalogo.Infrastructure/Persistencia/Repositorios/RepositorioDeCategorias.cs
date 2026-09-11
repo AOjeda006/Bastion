@@ -58,6 +58,61 @@ internal sealed class RepositorioDeCategorias(CatalogoDbContext contexto) : IRep
             .AsNoTracking()
             .FirstOrDefaultAsync(cancelacion);
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// <b>UNA consulta y el árbol entero de la empresa, plano.</b> Dos columnas, sin rastrear, y el
+    /// ascenso recorrido en memoria. El número de viajes a la base <b>no crece con la
+    /// profundidad</b>, que es la afirmación entera de este camino.
+    /// </para>
+    /// <para>
+    /// <b>Trae más filas de las que hacen falta, y ese es el intercambio, dicho en voz alta.</b> Se
+    /// leen todas las categorías de la empresa para usar once como mucho. A cambio: una consulta en
+    /// vez de once, el filtro de inquilinato puesto por el contexto —que un <c>WITH RECURSIVE</c>
+    /// escrito a mano no tendría (0.6)— y ninguna excepción nueva que declarar en la lista de
+    /// saltos al filtro. El árbol de clasificación de una pyme son cientos de filas de dos columnas
+    /// con un tope de once niveles escrito en el dominio; no es una tabla de movimientos, y por eso
+    /// el intercambio sale a cuenta aquí y no saldría en otro sitio.
+    /// </para>
+    /// <para>
+    /// El recorrido va <b>acotado</b> y además no vuelve a pisar lo ya visto: sobre datos que ya
+    /// tuvieran un ciclo —una restauración a medias, un <c>UPDATE</c> a mano— un ascenso sin cota
+    /// no da error, gira. Aquí giraría en el proceso y no en el servidor de base de datos, que es
+    /// la única ventaja que tiene girar, y ni eso pasa.
+    /// </para>
+    /// </remarks>
+    public async Task<IReadOnlyList<Guid>> AscendenciaAsync(
+        Guid categoriaId,
+        CancellationToken cancelacion)
+    {
+        Dictionary<Guid, Guid?> arbol = await contexto.Categorias
+            .AsNoTracking()
+            .Select(categoria => new { categoria.Id, categoria.PadreId })
+            .ToDictionaryAsync(fila => fila.Id, fila => fila.PadreId, cancelacion)
+            .ConfigureAwait(false);
+
+        List<Guid> cadena = [];
+        Guid? actual = categoriaId;
+
+        // `ProfundidadMaxima + 1` vueltas: la cota es la misma que la del ascenso de
+        // `ElArbolSigueSiendoUnArbol`, leída de donde está escrita con su motivo y no repetida.
+        for (int nivel = 0; nivel <= Categoria.ProfundidadMaxima; nivel++)
+        {
+            // Una categoría que no está en el mapa no existe EN ESTA EMPRESA: el filtro de
+            // inquilinato lo puso el contexto al traer el árbol, así que una prestada de otra
+            // empresa corta el ascenso sin una condición aquí que alguien pueda olvidar.
+            if (actual is not { } id || !arbol.TryGetValue(id, out Guid? padreId) || cadena.Contains(id))
+            {
+                break;
+            }
+
+            cadena.Add(id);
+            actual = padreId;
+        }
+
+        return cadena;
+    }
+
     public Task<bool> ExisteElCodigoAsync(
         Guid empresaId,
         string codigo,

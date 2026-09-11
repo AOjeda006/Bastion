@@ -147,10 +147,29 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
         // Y es un `Guid`, no un nombre, lo que aquí importa por una razón distinta de la
         // habitual: un identificador opaco no filtra por sí mismo ni siquiera CÓMO se llama la
         // rama, así que la URL no cuenta nada del catálogo a quien solo vea el registro.
+        //
+        // `codigo` entró en el ítem 1.9 y este rojo volvió a salir solo, igual que el anterior.
+        // Acota el listado de tarifas a los tramos de UNA tarifa, por igualdad exacta. Lo que
+        // viaja es el código de una lista de precios de la propia empresa —`PVP`, `MAYORISTA`—:
+        // no identifica a nadie ni acota por nadie, y lo que queda escrito en el registro de
+        // acceso es «alguien listó los tramos de la tarifa PVP».
+        //
+        // A diferencia de `categoria`, aquí SÍ viaja un texto que la empresa ha escrito, y por eso
+        // conviene decir qué texto es: el de una tarifa, no el de un tercero. `Tercero.Tarifa`
+        // —qué tarifa tiene asignada cada cliente— es del ítem 1.10, y ese cruce no se puede
+        // consultar por aquí: este listado va contra `tarifas`, no contra `terceros`, así que
+        // ningún `?codigo=` de esta ruta dice a qué precios compra nadie. El día que exista un
+        // listado de terceros acotado por tarifa, la pregunta se hace otra vez y en este sitio,
+        // porque será OTRO parámetro en OTRO listado y volverá a poner esto rojo.
+        //
+        // El extremo de resolución de precio —`GET /tarifas/{codigo}/precio?articulo=&cantidad=`—
+        // no aparece en esta lista y no es un olvido: no devuelve una página, así que no es un
+        // listado. Su `?articulo=` es un `Guid` de catálogo y su `?cantidad=` un número, y ninguno
+        // de los dos dice de quién es la compra: quién pregunta el precio no está en la URL.
         parametros.ShouldBe(
             new SortedSet<string>(StringComparer.Ordinal)
             {
-                "categoria", "page", "q", "retiradas", "size", "sort",
+                "categoria", "codigo", "page", "q", "retiradas", "size", "sort",
             },
             customMessage: "los parámetros de consulta de los listados no son los del contrato: " +
             string.Join(", ", parametros));

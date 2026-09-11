@@ -84,4 +84,53 @@ public static class RespuestasDeListado
         return controlador.Ok(
             await ejecutar(pedido.Valor, cancelacion).ConfigureAwait(false));
     }
+
+    /// <summary>
+    /// Lo mismo, para un listado que puede fallar antes de llegar a haber página.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Existe desde el ítem 1.9, y por los listados que cuelgan de otro recurso</b>: las líneas
+    /// de una tarifa. Pedir las líneas de un identificador inventado no es una página vacía, es un
+    /// <c>404</c>, y la diferencia importa porque una página vacía con un <c>200</c> es
+    /// indistinguible de una tarifa recién abierta que todavía no tiene líneas. Quien lo comprueba
+    /// es el caso de uso —es él quien sabe qué es el padre—, así que devuelve
+    /// <see cref="Resultado{T}"/> y no una página a secas.
+    /// </para>
+    /// <para>
+    /// Se separa por nombre y no por sobrecarga a propósito: dos sobrecargas que solo se distinguen
+    /// por lo que devuelve la lambda se resuelven bien hasta el día en que alguien cambia el tipo de
+    /// retorno del caso de uso y el compilador, en vez de avisar, elige la otra.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="TDto">Lo que se publica de cada elemento.</typeparam>
+    /// <param name="controlador">El controlador que atiende, para componer la respuesta.</param>
+    /// <param name="consulta">Los parámetros tal como han llegado en la URL.</param>
+    /// <param name="ordenables">Quien dice por qué campos deja ordenar este listado.</param>
+    /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios propios.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public static async Task<IActionResult> ResponderResultadoAsync<TDto>(
+        ControllerBase controlador,
+        ConsultaPaginada consulta,
+        IOrdenaPor ordenables,
+        Func<Paginacion, CancellationToken, Task<Resultado<PaginaDe<TDto>>>> ejecutar,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(controlador);
+        ArgumentNullException.ThrowIfNull(consulta);
+        ArgumentNullException.ThrowIfNull(ordenables);
+        ArgumentNullException.ThrowIfNull(ejecutar);
+
+        Resultado<Paginacion> pedido = consulta.APaginacion(ordenables.CamposOrdenables);
+
+        if (!pedido.EsCorrecto)
+        {
+            return pedido.Error!.AResultadoDeAccion();
+        }
+
+        Resultado<PaginaDe<TDto>> pagina =
+            await ejecutar(pedido.Valor, cancelacion).ConfigureAwait(false);
+
+        return pagina.EsCorrecto ? controlador.Ok(pagina.Valor) : pagina.Error!.AResultadoDeAccion();
+    }
 }

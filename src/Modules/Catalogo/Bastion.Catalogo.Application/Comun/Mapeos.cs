@@ -44,4 +44,41 @@ internal static class Mapeos
             categoria.Nombre,
             categoria.PadreId);
     }
+
+    internal static TarifaDto ADto(this Tarifa tarifa)
+    {
+        ArgumentNullException.ThrowIfNull(tarifa);
+
+        return new TarifaDto(
+            tarifa.Id,
+            tarifa.EmpresaId,
+            tarifa.Codigo,
+            tarifa.Nombre,
+            tarifa.DivisaId,
+            tarifa.VigenteDesde,
+            tarifa.VigenteHasta);
+    }
+
+    /// <summary>La línea, con el precio y el descuento <b>desplegados</b> en dos campos nulables.</summary>
+    /// <remarks>
+    /// El objeto de valor no sale tal cual y no es descuido: hacia fuera son dos columnas de una
+    /// tabla que alguien rellena, y el contrato de la API es el par. La exclusividad —uno de los
+    /// dos, nunca los dos ni ninguno— la sostiene <c>PrecioODescuento</c> hacia dentro y el CHECK
+    /// hacia abajo; en el DTO no se puede sostener, porque un DTO es lo que llega antes de haber
+    /// sido comprobado.
+    /// </remarks>
+    internal static LineaTarifaDto ADto(this LineaTarifa linea)
+    {
+        ArgumentNullException.ThrowIfNull(linea);
+
+        return new LineaTarifaDto(
+            linea.Id,
+            linea.EmpresaId,
+            linea.TarifaId,
+            linea.ArticuloId,
+            linea.CategoriaId,
+            linea.CantidadDesde,
+            linea.PrecioODescuento.Precio,
+            linea.PrecioODescuento.DescuentoPorcentaje);
+    }
 }

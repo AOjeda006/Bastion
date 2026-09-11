@@ -53,6 +53,12 @@ public sealed class CatalogoDbContext(
     /// <summary>El árbol con el que la empresa clasifica su catálogo.</summary>
     public DbSet<Categoria> Categorias => Set<Categoria>();
 
+    /// <summary>Las listas de precios de la empresa, cada fila un tramo de vigencia.</summary>
+    public DbSet<Tarifa> Tarifas => Set<Tarifa>();
+
+    /// <summary>Lo que cada tarifa dice de un artículo o de una categoría, por tramos de cantidad.</summary>
+    public DbSet<LineaTarifa> LineasDeTarifa => Set<LineaTarifa>();
+
     /// <summary>
     /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive el
     /// historial de migraciones y qué convención de nombres se aplica.
@@ -97,8 +103,21 @@ public sealed class CatalogoDbContext(
         modelBuilder.Entity<Categoria>().HasQueryFilter(
             "Inquilinato", categoria => EmpresaDelFiltro == null || categoria.EmpresaId == EmpresaDelFiltro);
 
+        // Las tarifas son de la empresa que las acuerda, con más motivo que el catálogo: los precios a
+        // los que vende una ferretería no son los de la imprenta de al lado, y aquí no hay nada que
+        // compartir como sí lo hay en las unidades o los impuestos.
+        modelBuilder.Entity<Tarifa>().HasQueryFilter(
+            "Inquilinato", tarifa => EmpresaDelFiltro == null || tarifa.EmpresaId == EmpresaDelFiltro);
+
+        // Y la línea filtra por su PROPIA columna, no por la de su tarifa. Es el precedente de
+        // `Ubicacion` respecto de su almacén: el filtro se evalúa sobre las columnas de la fila, así
+        // que sin `empresa_id` propio bastaría una consulta que empezara por las líneas —un listado,
+        // un informe, la resolución de un precio— para que salieran las de otra empresa.
+        modelBuilder.Entity<LineaTarifa>().HasQueryFilter(
+            "Inquilinato", linea => EmpresaDelFiltro == null || linea.EmpresaId == EmpresaDelFiltro);
+
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
-            "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
+    "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);
 
         modelBuilder.Entity<EventoDeLaBandeja>().HasQueryFilter(
             "Inquilinato", evento => EmpresaDelFiltro == null || evento.EmpresaId == EmpresaDelFiltro);

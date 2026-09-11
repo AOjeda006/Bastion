@@ -37,6 +37,19 @@ public static class CasosDeUsoDeCatalogo
         servicios.AddScoped<IListarCategorias, ListarCategorias>();
         servicios.AddScoped<IModificarCategoria, ModificarCategoria>();
 
+        servicios.AddScoped<ICrearTarifa, CrearTarifa>();
+        servicios.AddScoped<IObtenerTarifa, ObtenerTarifa>();
+        servicios.AddScoped<IListarTarifas, ListarTarifas>();
+        servicios.AddScoped<IModificarTarifa, ModificarTarifa>();
+        servicios.AddScoped<ICerrarTarifa, CerrarTarifa>();
+
+        servicios.AddScoped<ICrearLineaTarifa, CrearLineaTarifa>();
+        servicios.AddScoped<IObtenerLineaTarifa, ObtenerLineaTarifa>();
+        servicios.AddScoped<IListarLineasDeTarifa, ListarLineasDeTarifa>();
+        servicios.AddScoped<IModificarLineaTarifa, ModificarLineaTarifa>();
+
+        servicios.AddScoped<IResolverPrecio, ResolverPrecio>();
+
         // Mismo criterio que en los otros tres módulos: el reloj como servicio, y `TryAdd` para
         // que un test que ya haya puesto un reloj falso conserve el suyo.
         servicios.TryAddSingleton(TimeProvider.System);

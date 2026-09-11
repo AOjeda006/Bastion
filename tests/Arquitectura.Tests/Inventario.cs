@@ -464,12 +464,38 @@ internal static class Inventario
                 "bandeja. Se llama EventoId y no Id porque un evento no es una EntidadBase, y ese " +
                 "nombre es justo el que engaña a una heurística de sufijos."),
 
+            ["LineaTarifa.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "una línea lleva la empresa aunque su tarifa ya la lleve, como la ubicación " +
+                "respecto de su almacén: el filtro de la R8 se escribe por entidad y se evalúa " +
+                "sobre las columnas de la fila, así que sin esta columna bastaría una consulta " +
+                "que empezara por las líneas para que salieran las de otra empresa. La comprueba " +
+                "CrearLineaTarifa contra el mismo puerto que todos los demás."),
+
             ["Membresia.EmpresaId"] = new(
                 "Empresa",
                 Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
                 "el nombre SÍ casa, y aun así se declara: lo que la lista aporta aquí no es " +
                 "descubrirlo, es decir POR DÓNDE se valida. Sin el puerto escrito, la regla sabría " +
                 "que hay un cruce y no podría exigir que alguien lo compruebe."),
+
+            ["Tarifa.DivisaId"] = new(
+                "Divisa",
+                Raiz + ".Organizacion.Contracts.Divisas.IConsultaDeDivisas",
+                "el cruce del ítem 1.9, y el que estrena el puerto que el 1.2 declaró «para la " +
+                "tarifa del §7.3» y se quedó sin consumidor dos fases. No hay clave ajena y no " +
+                "puede haberla: la divisa vive en el esquema de Organización y la tarifa en el " +
+                "de Catálogo (regla 4 del §5), así que lo único que impide una tarifa en una " +
+                "divisa inventada es que CrearTarifa lo pregunte. Y pregunta por el ESTADO, no " +
+                "por la existencia: una divisa retirada sigue resolviendo las tarifas abiertas " +
+                "cuando se usaba y no se ofrece para una nueva (ADR-0023)."),
+
+            ["Tarifa.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del del artículo y del de la categoría: una lista de precios es de la " +
+                "empresa que la fija. Lo pregunta CrearTarifa antes de construir el agregado."),
 
             ["Tercero.EmpresaId"] = new(
                 "Empresa",
