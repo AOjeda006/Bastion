@@ -100,6 +100,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "ContratoDeOrganizacionTests.Una_serie_colgada_del_ejercicio_de_otra_empresa_es_400_del_campo_ejercicioId",
         "ContratoDeOrganizacionTests.Varios_campos_malos_se_devuelven_todos_de_una_vez",
 
+        "ContratoDeTarifasTests.Dos_tramos_del_mismo_codigo_que_se_pisan_los_rechaza_la_BASE",
+        "ContratoDeTarifasTests.El_dia_en_que_un_tramo_ACABA_todavia_cuenta_para_el_solape",
+        "ContratoDeTarifasTests.Gana_el_antepasado_MAS_CERCANO_y_la_mas_honda_de_otra_rama_no_compite",
+        "ContratoDeTarifasTests.La_extension_btree_gist_la_puso_la_MIGRACION_en_la_imagen_del_compose",
+        "ContratoDeTarifasTests.La_linea_del_articulo_gana_y_el_tramo_se_elige_DESPUES_con_la_frontera_arriba",
+        "ContratoDeTarifasTests.Sin_linea_aplicable_hay_error_con_nombre_y_NUNCA_un_precio_cero",
+        "ContratoDeTarifasTests.Una_tarifa_que_no_existe_y_una_que_no_cubre_el_dia_son_DOS_type_distintos",
+
         "ContratoDeTercerosTests.Crear_un_tercero_devuelve_201_con_Location_que_lleva_al_recurso",
         "ContratoDeTercerosTests.El_cursor_del_tramo_anterior_trae_el_siguiente_y_no_repite",
         "ContratoDeTercerosTests.El_domicilio_fiscal_va_y_vuelve_en_los_seis_campos_de_R17",
