@@ -3524,8 +3524,17 @@ líneas de ese destino, cuál tramo. Al revés —coger la mayor `CantidadDesde`
 una línea de categoría con un tramo alto le ganaría a la línea del propio artículo, que es justo lo
 que la precedencia existe para impedir. Y el ascenso **no se corta en el primer antepasado que tenga
 alguna línea**: se recorren los niveles de menor a mayor y gana el primero con un tramo **aplicable**,
-porque una categoría cercana cuya tabla empiece por encima de la cantidad pedida no pone precio y
-cortar ahí dejaría sin resolver un artículo que la categoría madre sí cubre.
+porque la precedencia es sobre el par **(destino, tramo)** y no sobre el destino a secas.
+
+> **Corregido el 2026-09-13, en el ítem 1.10.** Aquí decía que el ascenso sigue «porque una categoría
+> cercana cuya tabla empiece por encima de la cantidad pedida no pone precio y cortar ahí dejaría sin
+> resolver un artículo que la categoría madre sí cubre». **Ese estado no existe**, y lo impide el
+> cierre por delante de dos párrafos más arriba, que es de esta misma decisión: el motivo se
+> contradecía con la regla a la que servía. Lo que se corrige es **el hecho**, no la decisión —el
+> ascenso sigue haciendo exactamente lo mismo y no se mueve ni una prueba—, y por eso se corrige en
+> el sitio y no se sustituye (ADR-0033: si alguien pudo escribir código distinto por creerlo es una
+> decisión; si lo único que pudo hacer es creerlo, es un hecho). El motivo bueno, la conducta querida
+> el día que el cero deje de ser obligatorio y qué la sostiene, en *Decisiones tomadas → ítem 1.10*.
 
 **8. `Tarifa` y `LineaTarifa` viven DENTRO de Catálogo, y por eso sus claves ajenas son legítimas.**
 La alternativa era un módulo propio de precios, y se descarta porque lo que una tarifa clasifica son
@@ -3546,6 +3555,51 @@ listado de tarifas es el maestro —código, nombre, vigencia y estado—, y los
 por eso el modelo de vista del frontal **no lleva divisa**, y es seguro precisamente porque no hay
 ningún importe que pudiera aparecer sin su moneda al lado (mismo criterio que la unidad y el impuesto
 en `articulos`, ADR-0022).
+
+### Tomadas por el agente de desarrollo — ítem 1.10 (2026-09-13)
+
+**0. LA PRECEDENCIA CUANDO EL ANTEPASADO MÁS CERCANO NO CUBRE LA CANTIDAD** —viene del ítem 1.9, y
+lo que faltaba no era código sino la decisión—. La regla se dice en voz alta en su **forma corta**
+—«gana el artículo, y si no el antepasado más cercano»— y lo que el código hace es la **forma
+larga**: gana el antepasado más cercano **que cubra la cantidad pedida**. Hoy las dos dan siempre lo
+mismo, así que la diferencia no se ve; pero son reglas distintas y hay que decir cuál se quiere.
+
+**Se quiere la larga: la precedencia es sobre el par (destino, tramo), no sobre el destino.** Una
+tabla que empieza en 100 **no ha dicho que 5 no se venda**: ha dicho que no habla de 5. Lo más
+específico que existe para 5 es entonces lo que diga de 5 el antepasado más cercano que hable de 5, y
+cortar en el primer antepasado que tenga *alguna* línea devolvería `tarifa-sin-linea-aplicable`
+teniendo la madre un precio escrito para esa cantidad. Que **nadie** cubra la cantidad sigue siendo
+error con nombre y nunca cero: eso no cambia, y es lo que afirma
+`La_cantidad_por_debajo_del_primer_tramo_no_encuentra_nada`.
+
+**Y esto no choca con «el hueco es peor que el solape» del 1.9, que habla de otra cosa.** Aquella
+decisión es sobre el hueco que deja a una cantidad **sin ninguna respuesta**, que sale por el mismo
+`type` que «esta tarifa no cubre este artículo» y por eso se arregla en el sitio equivocado. Aquí hay
+respuesta, escrita por una persona, un nivel más arriba.
+
+**Lo que sostiene la forma corta es una comprobación que vive en otro fichero.** El primer tramo de
+cada destino tiene que empezar en cero (`tarifa-linea-primer-tramo-sin-cero`, en `CrearLineaTarifa`),
+`CantidadDesde` no se modifica, no se borran líneas y la cantidad pedida no puede ser negativa. Con
+eso, **un destino que tenga alguna línea las cubre todas** y el ascenso nunca pasa de nivel: la rama
+del bucle que sube al siguiente **no se alcanza por la API**.
+
+**Relajar el cero obligatorio no pone roja ni una prueba, y cambia de quién viene el precio.** Por eso
+la nota va **donde se impone el cero** y no solo donde se usa: quien lo relaje no va a leer los dos
+ficheros. Y por eso la rama **no se borra** —es el único sitio donde la conducta querida está dicha
+en código ejecutable—, sino que se marca:
+
+```
+[Trait("Alcance", "NoAlcanzablePorLaApi")]
+  Una_categoria_cercana_sin_tramo_aplicable_deja_pasar_a_la_de_arriba
+  La_cantidad_por_debajo_del_primer_tramo_no_encuentra_nada
+```
+
+**La marca es el cuarto diagnóstico de la lectura de cobertura**, y es distinta de los otros tres: no
+dice que falte un caso ni que sobre, dice que ese caso **prueba qué se quiere que pase** si una
+validación de escritura se relajara, y no un camino que alguien pueda recorrer hoy. Sin la marca se
+lee como cobertura de un camino vivo; sin el motivo escrito al lado, la conducta se vuelve a discutir
+desde cero la próxima vez. El filtro de los carriles es por `Category`, así que `Alcance` es una
+dimensión ortogonal y no cambia qué corre en ningún sitio.
 
 ## Estado actual
 

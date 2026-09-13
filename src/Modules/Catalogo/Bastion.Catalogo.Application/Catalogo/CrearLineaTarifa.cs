@@ -116,6 +116,19 @@ internal sealed class CrearLineaTarifa(
                 ErroresDeTarifa.TramoDuplicado(peticion.CantidadDesde));
         }
 
+        // ESTA COMPROBACIÓN SOSTIENE EL SIGNIFICADO DE UNA REGLA QUE VIVE EN OTRO FICHERO.
+        // Obligar a que el primer tramo de cada destino empiece en cero es lo que hace que un
+        // destino con líneas las cubra TODAS, y eso es lo que hace que «gana el antepasado más
+        // cercano» —la forma en que la precedencia se dice en voz alta— signifique lo mismo que
+        // «gana el antepasado más cercano QUE CUBRA LA CANTIDAD», que es lo que de verdad hace
+        // `ElAntepasadoMasCercanoGana.Elegir`.
+        //
+        // Quien relaje esto no va a leer los dos ficheros, así que queda dicho aquí: sin el cero
+        // obligatorio, una categoría cercana puede dejar de cubrir una cantidad y el precio pasa a
+        // salir de un nivel MÁS ARRIBA. Sigue compilando, sigue siendo la conducta querida —está
+        // razonada en `Elegir`— y no se pone roja ni una prueba, porque lo que cambia no es un
+        // resultado sino de quién viene. Si alguna vez hay motivo para relajarlo, el precio de
+        // hacerlo es ése, y hay que quererlo a sabiendas.
         if (!tramos.TieneAlguno && peticion.CantidadDesde != 0m)
         {
             return Resultado.Fallo<LineaTarifaDto>(

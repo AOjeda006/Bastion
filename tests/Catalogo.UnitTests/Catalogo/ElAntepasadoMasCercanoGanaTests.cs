@@ -23,6 +23,13 @@ namespace Bastion.Catalogo.UnitTests.Catalogo;
 /// Los casos de abajo lo ejercen por los dos lados: el que no es antepasado no está en la lista, y
 /// entre los que sí están gana el mínimo.
 /// </para>
+/// <para>
+/// <b>Dos casos llevan <c>[Trait("Alcance", "NoAlcanzablePorLaApi")]</c>.</b> Montan a mano un
+/// estado que las validaciones de escritura impiden construir, así que no prueban una petición que
+/// alguien pueda hacer: prueban <b>qué se quiere que pase</b> si la validación que lo impide se
+/// relajara. La marca es para que se lean como lo que son y no como cobertura de un camino vivo, y
+/// el motivo va en cada una — sin el motivo escrito, la conducta se vuelve a discutir desde cero.
+/// </para>
 /// </remarks>
 public sealed class ElAntepasadoMasCercanoGanaTests
 {
@@ -99,7 +106,29 @@ public sealed class ElAntepasadoMasCercanoGanaTests
         ElAntepasadoMasCercanoGana.Elegir([], cantidad: 1m).ShouldBeNull();
     }
 
+    /// <summary>
+    /// NO ALCANZABLE POR LA API, y es la única que dice cuál es la conducta querida si dejara de
+    /// serlo.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// El estado que monta —un destino cuya tabla empieza por encima de la cantidad pedida— no se
+    /// puede construir por la puerta de la API: el primer tramo de cada destino tiene que empezar
+    /// en cero (<c>tarifa-linea-primer-tramo-sin-cero</c>), <c>CantidadDesde</c> no se modifica, no
+    /// se borran líneas y la cantidad no puede ser negativa. Con eso, un destino que tenga alguna
+    /// línea las cubre todas y el ascenso nunca pasa de nivel.
+    /// </para>
+    /// <para>
+    /// Se queda porque <b>la precedencia es sobre el par (destino, tramo)</b>: una tabla que
+    /// empieza en 100 no ha dicho que 5 no se venda, ha dicho que no habla de 5, y lo más
+    /// específico que hay para 5 es lo que diga de 5 el antepasado más cercano que hable. Borrarla
+    /// dejaría la decisión sin ningún sitio donde esté dicha, y el día que alguien relaje el cero
+    /// obligatorio la conducta se decidiría otra vez a ojo. El motivo va escrito aquí y en
+    /// <c>CrearLineaTarifa</c>, que es donde se impone el cero.
+    /// </para>
+    /// </remarks>
     [Fact]
+    [Trait("Alcance", "NoAlcanzablePorLaApi")]
     public void Una_categoria_cercana_sin_tramo_aplicable_deja_pasar_a_la_de_arriba()
     {
         // La cercana empieza en 100 y se piden 5: no pone precio. Quedarse con el nivel mínimo y
@@ -154,7 +183,12 @@ public sealed class ElAntepasadoMasCercanoGanaTests
                 "piden muchas unidades");
     }
 
+    /// <summary>
+    /// NO ALCANZABLE POR LA API, por lo mismo que la de arriba, y aun así la regla tiene que
+    /// decirlo: lo que no tiene tramo no tiene precio, y no tiene cero.
+    /// </summary>
     [Fact]
+    [Trait("Alcance", "NoAlcanzablePorLaApi")]
     public void La_cantidad_por_debajo_del_primer_tramo_no_encuentra_nada()
     {
         // No puede pasar por la puerta de la API —el primer tramo de cada destino empieza en cero

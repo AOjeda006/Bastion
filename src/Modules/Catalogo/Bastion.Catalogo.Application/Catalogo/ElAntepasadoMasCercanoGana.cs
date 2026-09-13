@@ -35,8 +35,9 @@ public sealed record LineaCandidata(
 /// mismo artículo, dos precios, según el plan de ejecución del día.
 /// </para>
 /// <para>
-/// <b>El orden es: artículo, y después el antepasado MÁS CERCANO.</b> Las dos palabras importan y
-/// no son la misma que «más profunda», que es la trampa de este ítem. Si el artículo cuelga de una
+/// <b>El orden es: artículo, y después el antepasado MÁS CERCANO que cubra la cantidad.</b> Las
+/// dos primeras palabras importan y no son la misma que «más profunda», que es la trampa de este
+/// ítem; la coletilla importa por otra razón, y está escrita en <see cref="Elegir"/>. Si el artículo cuelga de una
 /// categoría a profundidad 5, y hay líneas en una categoría a profundidad 3 y en otra a
 /// profundidad 7, gana la de 3 — y la de 7 <b>no compite siquiera</b>, porque no es antepasada
 /// suya, sino algo que cuelga por otro lado del árbol. Una implementación que ordenara por
@@ -99,12 +100,25 @@ internal static class ElAntepasadoMasCercanoGana
             return deArticulo;
         }
 
-        // Y entre las de categoría, el antepasado más cercano. Se recorren los niveles de menor a
-        // mayor y se devuelve el PRIMERO que tenga un tramo aplicable, en vez de quedarse con el
-        // nivel mínimo y mirar solo ése: una categoría cercana cuya tabla empiece por encima de la
-        // cantidad pedida no pone precio, y cortar ahí dejaría sin resolver un artículo que la
-        // categoría madre sí cubre. Esto es lo que hace que el ascenso llegue hasta la raíz de
-        // verdad, y no solo hasta el primer antepasado que tenga alguna línea.
+        // Y entre las de categoría, el antepasado más cercano QUE CUBRA LA CANTIDAD: se recorren
+        // los niveles de menor a mayor y gana el primero con un tramo aplicable, no el nivel mínimo
+        // a secas.
+        //
+        // Hoy las dos lecturas dan siempre lo mismo y esta rama NO SE ALCANZA por la API. El primer
+        // tramo de cada destino tiene que empezar en cero —`tarifa-linea-primer-tramo-sin-cero`, en
+        // `CrearLineaTarifa`—, `CantidadDesde` no se modifica, no se borran líneas y la cantidad
+        // pedida no puede ser negativa: un destino que tenga alguna línea las cubre TODAS, así que
+        // nunca se pasa al nivel siguiente. La justificación que esto tenía escrita —«una categoría
+        // cercana cuya tabla empiece por encima de la cantidad pedida»— describía un estado que otra
+        // regla impide, y por eso se ha reescrito.
+        //
+        // La rama se queda, y a propósito, porque la conducta querida es la de la forma larga: la
+        // precedencia es sobre el par (destino, tramo) y no sobre el destino a secas. Una tabla que
+        // empieza en 100 no ha dicho que 5 no se venda, ha dicho que no habla de 5; y lo más
+        // específico que existe para 5 es entonces lo que diga de 5 el antepasado más cercano que
+        // hable. Si el cero obligatorio se relajara, ésta es la conducta que se quiere y no la
+        // contraria: cortar en el primer antepasado con líneas devolvería «sin línea aplicable»
+        // teniendo la madre un precio escrito para esa cantidad.
         foreach (int nivel in candidatas
             .Where(linea => linea.CategoriaId is not null && linea.Nivel is not null)
             .Select(linea => linea.Nivel!.Value)
