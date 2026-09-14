@@ -83,9 +83,6 @@ public static class ModuloDeCatalogo
         //
         // Sin cargador de semillas: Catálogo no tiene maestros de instalación. Qué artículos vende
         // una empresa lo decide ella, al revés que las unidades de medida.
-        //
-        // Y sin `IConsulta...` propia todavía: el primer consumidor será Terceros en el ítem 1.10,
-        // por `Tercero.TarifaAsignada`. La puerta se declarará entonces en `Catalogo.Contracts`.
         servicios.AgregarCasosDeUsoDeCatalogo();
 
         return servicios;
