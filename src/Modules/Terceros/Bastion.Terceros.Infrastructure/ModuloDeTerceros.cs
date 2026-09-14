@@ -71,10 +71,14 @@ public static class ModuloDeTerceros
         // porque quien lo implementa es esta capa; quien lo consume —Catálogo, al colgar un
         // proveedor de un artículo— no sabe que este ensamblado existe.
         //
-        // Y esta línea es la mitad invisible del cruce: sin ella todo compila, el artefacto de
-        // OpenAPI sale igual y la primera petición que intente añadir un proveedor revienta
-        // resolviendo la dependencia. Por eso lo que la comprueba no es una inspección del
-        // contenedor sino una llamada por la API que atraviesa el cruce de verdad.
+        // Y esta línea es la mitad invisible del cruce: sin ella todo compila y el artefacto de
+        // OpenAPI sale igual. Lo que pasa después depende del entorno, y está medido (mutaciones 7
+        // y 7b del ítem 1.10). En Development el contenedor se valida al construirse y el host NO
+        // ARRANCA. En Production esa validación viene apagada: el host arranca y contestan 500
+        // TODAS las acciones de `ArticulosController` —crear un artículo incluido, no solo añadir
+        // un proveedor—, porque el controlador recibe por constructor los casos de uso que
+        // necesitan este puerto. Por eso lo que la comprueba no es una inspección del contenedor
+        // sino llamadas por la API que atraviesan el cruce de verdad.
         servicios.AddScoped<IConsultaDeTerceros, ConsultaDeTerceros>();
 
         // Sin cargador de semillas: Terceros no tiene maestros de instalación que sembrar. Un

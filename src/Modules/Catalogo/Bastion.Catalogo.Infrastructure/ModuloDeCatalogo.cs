@@ -64,8 +64,11 @@ public static class ModuloDeCatalogo
 
         // LO QUE ESTE MÓDULO EXPONE A LOS DEMÁS, bajo el tipo de su `Contracts`, y la otra mitad
         // del primer cruce mutuo: Terceros pregunta por aquí en qué estado está la tarifa que
-        // quiere asignarle a un cliente. Misma advertencia que del otro lado — sin esta línea todo
-        // compila y la petición falla al resolverla.
+        // quiere asignarle a un cliente. Misma advertencia que del otro lado: sin esta línea todo
+        // compila, y el fallo no se queda en la asignación. `LoQueCuelgaDelTerceroController`
+        // recibe `IAsignarTarifa` por constructor junto a los contactos, las cuentas, las
+        // condiciones y el límite, y con el contenedor sin validar —como en Production— las TRECE
+        // acciones del controlador contestan 500 (medido en el ítem 1.10, canario 7c).
         servicios.AddScoped<IConsultaDeTarifas, ConsultaDeTarifas>();
 
         // SIN `IConsultaDeLoBloqueado`, y hay que leer por qué en vez de darlo por un olvido. Los
