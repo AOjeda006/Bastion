@@ -30,11 +30,19 @@ guardado?
 
 ### 1. La unidad de aislamiento es la **fila**
 
-Un fichero con filas malas **importa las buenas** y devuelve un informe. Cada fila se procesa en su
-propia unidad de trabajo; el fallo de una no arrastra a las demás ni a la operación.
+Un fichero con filas malas **importa las buenas** y devuelve un informe. Cada fila se **decide** por
+separado; el fallo de una no arrastra a las demás ni a la operación. Las altas aceptadas se
+**escriben** juntas, en la transacción del recibo.
 
-El informe dice, por cada fila rechazada, **el número de línea, el motivo con nombre y el valor que
-lo provocó**. No es cosmética: es lo único que permite corregir el fichero y reimportar solo esas.
+El informe dice, por cada fila rechazada, **el número de línea, la columna y el motivo con nombre**.
+No es cosmética: es lo único que permite corregir el fichero y reimportar solo esas.
+
+> **Corregido por el [ADR-0034](adr-0034-la-importacion-escribe-el-fichero-entero-y-el-recibo-caduca.md)
+> (ítem 1.11).** Este párrafo decía «cada fila se procesa en su propia unidad de trabajo» y que el
+> informe llevaba «el valor que lo provocó». Lo primero rompe la invariante del recibo —un proceso
+> que cae a mitad dejaría filas confirmadas sin recibo, y el reintento con la misma clave diría que
+> «ya existen»—, y lo segundo contradice la última consecuencia de este mismo ADR: el valor de una
+> fila rechazada puede ser un NIF, y el informe se guarda.
 Un «no» sin diagnóstico sobre tres mil filas es, en la práctica, un producto que no sirve para
 migrar datos — y migrar datos es para lo que existe la importación.
 
@@ -74,7 +82,8 @@ descarta con un número: multiplicaría por tres mil las filas de
 `auditoria.claves_de_idempotencia` por cada importación — una tabla que **ya crece sin política de
 retención y está anotada como riesgo abierto** precisamente porque borrar de ella reabre la ventana
 que cierra. Empeorar en tres órdenes de magnitud un problema abierto para ganar un grano más fino
-del que nadie ha pedido no sale a cuenta.
+del que nadie ha pedido no sale a cuenta. *(Desde el ADR-0034 la tabla tiene plazo —24 horas— y
+purga. El descarte sigue en pie: tres mil recibos por importación son tres mil aunque caduquen.)*
 
 **No ser idempotente (reimportar y actualizar lo que exista).** Convierte cada reintento de red en
 una segunda pasada sobre datos maestros. R10 existe para esto.

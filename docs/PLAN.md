@@ -3830,6 +3830,124 @@ pantalla.
 su import), la conversión de divisas, las facturas y las existencias. La resolución de precio por
 cliente, como decisión escrita en la 7 y sin código.
 
+### Tomadas por el agente de desarrollo — ítem 1.11 (2026-09-14)
+
+> **Escritas antes del *endpoint*, como pidió el usuario**, y con su ADR: el
+> [ADR-0034](adr/adr-0034-la-importacion-escribe-el-fichero-entero-y-el-recibo-caduca.md), que
+> **corrige** dos frases del ADR-0026 §1 —«cada fila en su propia unidad de trabajo» y «el valor que
+> lo provocó»— y deja el resto en pie. La corrección va también en el párrafo del ADR-0026.
+
+**0. LO QUE EL ÍTEM EMPEZÓ ARREGLANDO, ANTES DE LA IMPORTACIÓN.** Tres cabos del 1.10, cada uno en su
+commit. La lista de rastros prohibidos de los sondeos es **una** (`RastrosProhibidos.Todos`) y ningún
+rastro puede estar hecho solo de cifras hexadecimales, porque «5432» cabía en un `traceId` y tumbó
+la batería base. La marca `Alcance=NoAlcanzablePorLaApi` tiene **lector** y cada marca, su motivo
+comprobado contra el OpenAPI y contra el caso que la sostiene. La clave ajena entre esquemas la vigila
+una **pregunta a `pg_constraint`** que exige el conjunto vacío, con un canario escrito a mano. Y el
+DTO de proveedores dice por qué su lectura de una fila no pregunta al art. 32.
+
+**Y la convención del recuento del frontal, fijada y que no se vuelve a cambiar:** `licencias.py`
+cuenta **sin la raíz** (`bastion-web` no es una dependencia de sí mismo). El 1.9 dio 548 sin raíz y el
+1.10, 549 con ella; la cifra buena de las dos es 548.
+
+**1. SE IMPORTAN TERCEROS, Y SOLO TERCEROS.** Traen las dos cosas que el mecanismo tiene que
+aguantar: el **NIF validado** y el **art. 32** —una fila contra una ficha bloqueada contesta lo mismo
+que contra una activa—. Los artículos traen **otra**: resolver por código la unidad, el impuesto y la
+categoría, y los puertos de estado del 1.2 y del 1.9 solo reciben identificadores. Es un contrato
+nuevo entre módulos, y queda abierto para la fase 2 con ese motivo.
+
+**2. LA FILA DECIDE, EL FICHERO ESCRIBE.** Cada fila se valida y se decide por separado; las altas
+aceptadas se confirman en **un** `SaveChanges`, en la transacción del filtro y con el recibo, **sin
+puntos de guardado**. Todo lo que puede rechazar una fila se comprueba **leyendo** antes de escribir:
+formato, contrato, NIF, régimen, límite, repetición en el fichero y existencia en la base (una sola
+consulta, dentro de `ViendoLoBloqueado`).
+**Si el proceso cae a mitad, no hay nada importado:** ni filas ni recibo, y el reintento con la misma
+clave es la primera vez. Lo comprueba un disparador que revienta en mitad del `INSERT`.
+**La R12 se rompe a sabiendas, y está escrito por qué** (ADR-0034 §1): no se modifica ningún agregado,
+se crean N independientes, y ningún invariante los cruza. Una transacción por fila cumpliría la letra
+de la R12 y rompería la invariante de R10: el reintento diría que ya existen las filas que él mismo
+dejó a medias.
+
+**3. LOS DOS TOPES, ANTES DEL *ENDPOINT*.**
+- **Tamaño: 2 MiB** (2 097 152 bytes), declarado con `[TopeDelCuerpo]` en la acción e impuesto por el
+  **lector acotado del borde**, que es quien vuelca: el filtro de idempotencia y el formateador de
+  `text/csv`. `Content-Length` mayor → `413` sin leer un byte; sin `Content-Length`, se leen tope + 1
+  bytes y se corta. **El caso de uso no lo comprueba**: cuando le llega el fichero, la memoria ya se
+  ha gastado.
+- **Filas: 5 000, contando las vacías**, con `413` y otro código. Una fila típica son 150 bytes: en
+  2 MiB caben más de diez mil, así que para un fichero normal manda el de filas.
+- **El informe**, agrupado por **(columna, motivo) con su lista de líneas**, y sin ningún valor de la
+  entrada. Crece a unos seis bytes por par (fila, motivo): el peor caso, 5 000 × 18 × 6 ≈ **530 KiB**
+  en la columna `cuerpo`; lo normal, un kilobyte. Fila por fila con sus motivos pasaría de 4 MiB.
+- **nginx tenía un tope menor y nadie lo había mirado:** `client_max_body_size` vale 1 MiB por omisión,
+  y un fichero de 1,5 MiB no habría llegado a la API. Se sube a 3 MiB en `/api/`, por encima del de la
+  API para que el `413` con nombre lo dé ella.
+
+**4. EL PLAZO DE LA TABLA DE IDEMPOTENCIA: 24 HORAS, EN LA FILA, CON PURGA CADA HORA.** La nota que
+el 0.9 dejó abierta —«se decidirá con datos»— se cierra sin ellos, y se dice: el dato que faltaba
+(cuánto tarda un cliente real en reintentar) sigue sin estar en el código, pero la tabla guarda **la
+ficha de un tercero** en cada `201` de `POST /terceros/terceros`, y un dato personal sin plazo no se
+puede quedar esperando a una medición. Veinticuatro horas cubren el reintento de red y el de un
+cliente que pasó la tarde sin conexión.
+- Cada fila lleva **`caduca_en`**, calculado al reclamar: el plazo es parte del modelo
+  (`proteccion-datos.md`), y cambiarlo no altera lo que ya se prometió.
+- **La purga vive en Auditoría**, dueña de la tabla, corre al arrancar y cada hora, y abre un ámbito
+  sin inquilino con motivo propio en la lista cerrada. Un recibo dura **al menos 24 horas y como mucho
+  25** con la API en marcha.
+- **Vencido, se borra.** Y una clave caducada es una clave nueva: reintentar pasadas 24 horas vuelve
+  a hacer el trabajo. En el alta de un tercero, eso da `ya existe`; en un alta sin clave natural, un
+  segundo recurso. Queda dicho en el contrato.
+
+**5. EL DIALECTO, ESCRITO ENTERO** (detalle en el ADR-0034 §5).
+- Separador **`;`**, sin detector. Si la cabecera casaría separada por `,` o por tabulador, el error se
+  llama `importacion-separador-no-admitido` —es un diagnóstico, no se lee con otro separador—. **Un
+  fichero de una sola columna** no casa con nada: `importacion-cabecera-no-valida`.
+- **Cabecera fija** de dieciocho columnas, en su orden.
+- **UTF-8** con BOM o sin él; si no es UTF-8 válido, **Windows-1252**. UTF-16, UTF-32 o un `NUL`:
+  `importacion-codificacion-no-admitida`. **El detector falla** con un Windows-1252 cuyos bytes forman
+  UTF-8 válido por casualidad (`Ã±`, `Â¿`): lo lee como UTF-8. En texto español real no ocurre, y
+  ASCII es igual en las dos.
+- CRLF o LF; CR suelto, `importacion-fin-de-linea-no-admitido`. Comillas RFC 4180 con saltos de
+  línea dentro; sin cerrar, `importacion-comillas-sin-cerrar`.
+- Importes con **coma decimal** y punto de miles solo en grupos de tres; `1.5`, `1e3` o `1.234,56 €`
+  son `formato-no-valido`, no un número adivinado.
+- Sí y no: `sí`, `si`, `no`, `VERDADERO`, `FALSO`; vacío es no.
+
+**6. LO QUE YA EXISTE NO SE TOCA, Y LOS PERMISOS VAN TIPO POR VERBO.** La importación **solo da
+altas**. La identificación que ya existe —activa o bloqueada, sin distinguir— es `ya-existe`, y la que
+se repite dentro del fichero, `repetida-en-el-fichero`. **Nunca actualiza**: el permiso de crear no es
+el de modificar, y una fila de CSV no trae la versión de la ficha. La acción exige
+`terceros.tercero.crear`; si **alguna** fila trae límite de crédito hace falta además
+`terceros.limite-credito.fijar`, y sin él se rechaza **el fichero** con un `403` con nombre.
+
+**7. LA LÍNEA DE LOS CAMPOS QUE EMPIEZAN POR `=`, `+`, `-` O `@`.** El informe no lleva ningún campo
+que haya escrito el usuario —columnas y motivos los escribe Bastion—, así que descargado o pegado en
+una hoja no puede ejecutar nada. Este ítem **no** ofrece la descarga ni exporta terceros. El día que
+exista una exportación que saque datos del usuario, cada campo que empiece por uno de esos cuatro
+caracteres, o por tabulador o retorno, sale con un apóstrofo delante.
+
+**8. EL SONDEO, CON LOS CUATRO CRITERIOS Y LA PREMISA CONTRA UN EXCEL DE VERDAD.**
+- **Se contesta o se cierra, y nunca 5xx.** **No se filtra el interior**, con `RastrosProhibidos.Todos`.
+  **No se filtra el dato del usuario:** un canario en cada campo que no puede aparecer ni en la
+  respuesta ni en el recibo guardado ni en el registro. **Y se sigue atendiendo:** detrás de cada
+  entrada mala va una buena, que tiene que entrar.
+- **La premisa del dialecto se comprueba contra dos ficheros exportados por Excel** con
+  automatización COM desde este equipo (Excel 16, configuración regional es-ES): «CSV (delimitado por
+  comas)» y «CSV UTF-8». Van al repositorio tal como salen. **Los NIF no están en ellos**: llevan
+  marcadores que el test sustituye por `Escenario.NifInventado`, así que un NIF real no puede colarse
+  en un fichero de prueba sin que se note.
+
+**9. EL REPARTO DE SEMILLAS.** Empresas **230-259** y terceros **33 000 001-33 000 999**, sin pisar los
+bloques que ya había (el último, 200-215 y 32 000 xxx del 1.10).
+
+**10. EL FRONTAL: 418/450 Y LA REGLA DE LOS 430.** La pantalla va en una ruta diferida; lo que sube
+el arranque son sus textos en los dos diccionarios. Si pasa de **430 KiB**, se saca del arranque el
+idioma no activo antes de seguir.
+
+**11. FUERA DEL ÍTEM, y no «de paso»:** `CodigoBarras`, la conversión de divisas, las facturas, las
+existencias, el precio por cliente, la importación de artículos (decisión 1), la exportación, y
+traducir a `409` la carrera de unicidad del alta (hoy es un `500` limpio, igual en el alta suelta y en
+la importación).
+
 ## Estado actual
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
