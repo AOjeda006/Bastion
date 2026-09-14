@@ -111,24 +111,30 @@ public sealed class EsquemaDeIdentidadTests(PostgresConTodosLosModulos postgres)
     {
         (await TipoDeColumnaAsync("membresias", "empresa_id")).ShouldBe("uuid");
 
+        // Solo las que salen de la membresía, y es a propósito. Hasta el ítem 1.11 esta consulta no
+        // filtraba nada y era, sin decirlo, la única guardia que veía una clave ajena entre
+        // esquemas escrita con SQL a mano en CUALQUIER módulo (mutación 8 del 1.10). Esa regla
+        // tiene ahora nombre y sitio —`NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests`—, y este caso
+        // vuelve a decir solo lo que dice su nombre.
         IReadOnlyList<(string Esquema, string Tabla)> cruzadas = await ConsultarAsync(
             $"""
-            SELECT origen.table_schema, destino.table_schema
-            FROM information_schema.referential_constraints AS referencia
-            JOIN information_schema.table_constraints AS origen
-              ON origen.constraint_name = referencia.constraint_name
-             AND origen.constraint_schema = referencia.constraint_schema
-            JOIN information_schema.table_constraints AS destino
-              ON destino.constraint_name = referencia.unique_constraint_name
-             AND destino.constraint_schema = referencia.unique_constraint_schema
-            WHERE origen.table_schema <> destino.table_schema
+            SELECT restriccion.conname, destino.nspname
+            FROM pg_catalog.pg_constraint AS restriccion
+            JOIN pg_catalog.pg_class AS tabla_de_origen ON tabla_de_origen.oid = restriccion.conrelid
+            JOIN pg_catalog.pg_namespace AS origen ON origen.oid = tabla_de_origen.relnamespace
+            JOIN pg_catalog.pg_class AS tabla_de_destino ON tabla_de_destino.oid = restriccion.confrelid
+            JOIN pg_catalog.pg_namespace AS destino ON destino.oid = tabla_de_destino.relnamespace
+            WHERE restriccion.contype = 'f'
+              AND origen.nspname = '{IdentidadDbContext.Esquema}'
+              AND tabla_de_origen.relname = 'membresias'
+              AND destino.nspname <> '{IdentidadDbContext.Esquema}'
             """);
 
         // El motor dejaría poner la clave ajena a `organizacion.empresas`, y sería más cómoda: se
         // acabaron las filas huérfanas. Lo que se lleva por delante es la frontera —los dos
         // módulos pasarían a migrarse y desplegarse juntos para siempre—, así que el identificador
         // se guarda suelto y quien tiene que decir si existe es el otro módulo, por sus Contracts.
-        cruzadas.ShouldBeEmpty("no puede haber claves ajenas entre esquemas (§4, regla 4)");
+        cruzadas.ShouldBeEmpty("la membresía no puede apuntar con una clave ajena fuera de Identidad");
     }
 
     [Fact]

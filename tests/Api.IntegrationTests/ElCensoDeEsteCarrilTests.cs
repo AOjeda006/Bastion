@@ -302,6 +302,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LoQueCuelgaNaceComoAltaTests.Lo_que_se_cuelga_de_una_ficha_ya_guardada_sale_como_ALTA",
         "LosPermisosQueNombraElFrontalTests.Todo_permiso_que_el_frontal_teclea_lo_sirve_la_api",
 
+        // Del ítem 1.11: la regla que la mutación 8 del 1.10 encontró activa sin que nadie la
+        // hubiera escrito. Le pregunta a la base por TODA clave ajena entre esquemas.
+        "NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests.La_base_que_se_pregunta_tiene_claves_ajenas_en_mas_de_un_esquema",
+        "NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests.La_pregunta_ve_una_clave_ajena_escrita_a_mano_entre_dos_esquemas",
+        "NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests.Ninguna_clave_ajena_de_la_base_cruza_de_esquema",
+
         "NadieEscribeEnLaEmpresaDeOtroTests.Con_la_empresa_de_uno_no_estorba",
         "NadieEscribeEnLaEmpresaDeOtroTests.Un_alta_con_la_empresa_de_otro_no_llega_a_la_base",
         "NadieEscribeEnLaEmpresaDeOtroTests.Y_una_modificacion_que_cambia_la_empresa_de_una_fila_tampoco",
