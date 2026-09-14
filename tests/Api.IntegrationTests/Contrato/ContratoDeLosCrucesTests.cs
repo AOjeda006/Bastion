@@ -43,8 +43,8 @@ namespace Bastion.Api.IntegrationTests.Contrato;
 /// respuesta nombra exactamente un estado del puerto.
 /// </para>
 /// <para>
-/// <b>Las semillas son el bloque 200-214</b>: 200-205 en <c>ElPuertoDeTercerosContraLaBaseTests</c>
-/// y 206-214 aquí. Los terceros van del 32 000 001 al 32 000 009 allí y del 32 000 010 en adelante
+/// <b>Las semillas son el bloque 200-215</b>: 200-205 en <c>ElPuertoDeTercerosContraLaBaseTests</c>
+/// y 206-215 aquí. Los terceros van del 32 000 001 al 32 000 009 allí y del 32 000 010 en adelante
 /// aquí. El NIF de una empresa es único en toda la instalación, y el de un tercero dentro de su
 /// empresa; <c>ContratoDeTarifasTests</c> tiene el 190-193 y <c>ContratoDeCatalogoTests</c> el
 /// 170-183, y un choque de semillas no sale por el que llega segundo sino por el otro.
@@ -393,6 +393,58 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
             HttpStatusCode.OK, $"en su propia empresa la tarifa sí rige. {await Escenario.Detalle(enSuEmpresa)}");
     }
 
+    /// <summary>
+    /// Un límite de crédito en dólares y una tarifa en euros conviven en la misma ficha, en los dos
+    /// órdenes: nadie compara las dos divisas.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es la decisión de la divisa del ítem 1.10 probada por el efecto</b>, y no por la ausencia de
+    /// una comprobación. Las dos representaciones viven en el mismo agregado —el límite con el código
+    /// ISO dentro de su <c>Importe</c>, la tarifa con un <c>Guid</c> al maestro de Organización— y
+    /// ninguna escritura de una mira la otra. Si alguien añade la comparación al asignar la tarifa, cae
+    /// la primera mitad; si la añade al fijar el límite, la segunda.
+    /// </para>
+    /// <para>
+    /// <b>La empresa y la tarifa van en euros y el límite en dólares</b>, así que la comparación que
+    /// sobraría no la salva ni la divisa base: el límite no coincide con ninguna de las dos. Y el dólar
+    /// del límite no pasa por el maestro de divisas —se valida contra el catálogo ISO—, de modo que
+    /// ningún otro fichero lo puede haber retirado.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Un_limite_en_dolares_y_una_tarifa_en_euros_conviven_porque_nadie_compara_divisas()
+    {
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(215);
+        TerceroDto tercero = await TerceroAsync(cliente, 32_000_022, esCliente: true, esProveedor: false);
+        TarifaDto enEuros = await TarifaAsync(cliente, "EUROS", s_desde, null);
+
+        using (HttpResponseMessage limite = await FijarLimiteAsync(cliente, tercero.Id, 5_000m, "USD"))
+        {
+            limite.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(limite));
+        }
+
+        using (HttpResponseMessage asignar = await AsignarTarifaAsync(cliente, tercero.Id, enEuros.Id))
+        {
+            asignar.StatusCode.ShouldBe(
+                HttpStatusCode.OK,
+                "asignar una tarifa en euros a un tercero con el límite en dólares se ha rechazado: " +
+                "alguien compara las dos divisas, y la decisión del 1.10 es que no se comparan. " +
+                await Escenario.Detalle(asignar));
+        }
+
+        using (HttpResponseMessage otroLimite = await FijarLimiteAsync(cliente, tercero.Id, 7_500m, "USD"))
+        {
+            otroLimite.StatusCode.ShouldBe(
+                HttpStatusCode.OK,
+                "fijar un límite en dólares a un tercero con una tarifa en euros se ha rechazado: la " +
+                "comparación está del otro lado. " + await Escenario.Detalle(otroLimite));
+        }
+
+        (await LimiteAsync(cliente, tercero.Id)).ShouldBe(new LimiteCreditoDto(tercero.Id, 7_500m, "USD"));
+        (await TarifaAsignadaAsync(cliente, tercero.Id)).ShouldBe(new TarifaAsignadaDto(tercero.Id, enEuros.Id));
+    }
+
     private async Task<HttpClient> EnUnaEmpresaNuevaAsync(int semilla)
     {
         (HttpClient cliente, EmpresaDto _) = await _api.EnUnaEmpresaNuevaAsync(Escenario.NifInventado(semilla));
@@ -604,6 +656,31 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
         lectura.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(lectura));
 
         return (await lectura.Content.ReadFromJsonAsync<TarifaAsignadaDto>())!;
+    }
+
+    /// <summary>Fija el límite de crédito citando la versión de la FICHA.</summary>
+    private static async Task<HttpResponseMessage> FijarLimiteAsync(
+        HttpClient cliente,
+        Guid terceroId,
+        decimal cantidad,
+        string divisa)
+    {
+        string etiqueta = await cliente.EtiquetaDeAsync($"{Terceros}/{terceroId}");
+
+        return await cliente.EnviarConVersionAsync(
+            HttpMethod.Put,
+            $"{Terceros}/{terceroId}/limite-credito",
+            etiqueta,
+            JsonContent.Create(new LimiteCreditoDeAltaDto { Cantidad = cantidad, Divisa = divisa }));
+    }
+
+    private static async Task<LimiteCreditoDto> LimiteAsync(HttpClient cliente, Guid terceroId)
+    {
+        using HttpResponseMessage lectura = await cliente.GetAsync($"{Terceros}/{terceroId}/limite-credito");
+
+        lectura.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(lectura));
+
+        return (await lectura.Content.ReadFromJsonAsync<LimiteCreditoDto>())!;
     }
 
     private static async Task<string?> TypeDe(HttpResponseMessage respuesta)
