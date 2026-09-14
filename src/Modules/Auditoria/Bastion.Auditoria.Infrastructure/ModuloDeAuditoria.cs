@@ -1,7 +1,9 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
+using Bastion.Auditoria.Infrastructure.Recibos;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bastion.Auditoria.Infrastructure;
 
@@ -25,13 +27,18 @@ namespace Bastion.Auditoria.Infrastructure;
 /// </remarks>
 public static class ModuloDeAuditoria
 {
-    /// <summary>Registra el contexto del módulo.</summary>
+    /// <summary>Registra el contexto del módulo y la purga de los recibos de idempotencia.</summary>
     /// <param name="servicios">Colección de servicios del <i>composition root</i>.</param>
     /// <param name="cadenaDeConexion">Cadena de conexión a PostgreSQL.</param>
+    /// <param name="purga">
+    /// Si se pone en marcha el trabajo de fondo que purga cada hora. La purga en sí se registra
+    /// siempre; lo que depende de esto es que alguien la llame solo.
+    /// </param>
     /// <returns>La misma colección, para encadenar.</returns>
     public static IServiceCollection AgregarModuloDeAuditoria(
         this IServiceCollection servicios,
-        string cadenaDeConexion)
+        string cadenaDeConexion,
+        bool purga)
     {
         ArgumentNullException.ThrowIfNull(servicios);
 
@@ -49,6 +56,18 @@ public static class ModuloDeAuditoria
         servicios.AddDbContext<ContextoDeLaBandeja>(opciones => opciones
             .UseNpgsql(cadenaDeConexion)
             .UseSnakeCaseNamingConvention());
+
+        // Desde el 1.11, la tabla de recibos tiene plazo (ADR-0034 §4), y quien lo cumple es su
+        // dueño. La purga se registra siempre, para que se pueda llamar con un instante elegido; el
+        // trabajo que la llama cada hora, solo si hay base a la que conectarse, por lo mismo que el
+        // publicador de la bandeja: sin base sería un error por vuelta.
+        servicios.AddScoped<PurgaDeRecibosCaducados>();
+
+        if (purga)
+        {
+            servicios.TryAddSingleton(TimeProvider.System);
+            servicios.AddHostedService<PurgadorDeRecibos>();
+        }
 
         return servicios;
     }

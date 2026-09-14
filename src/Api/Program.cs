@@ -182,7 +182,9 @@ builder.Services.AgregarBandejaDeSalida(publica: cadenaDeConexion.Length > 0);
 // está protegido. El almacén de cada módulo se registra en la línea de ese módulo, con su clave.
 builder.Services.AgregarIdempotencia();
 
-builder.Services.AgregarModuloDeAuditoria(cadenaDeConexion);
+// Y la purga de los recibos de idempotencia caducados (ADR-0034 §4), con la misma condición que el
+// publicador de la bandeja: el trabajo de fondo solo corre si hay base de datos.
+builder.Services.AgregarModuloDeAuditoria(cadenaDeConexion, purga: cadenaDeConexion.Length > 0);
 builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion, retencion);
 builder.Services.AgregarModuloDeIdentidad(cadenaDeConexion, opcionesDeJwt);
 builder.Services.AgregarModuloDeTerceros(cadenaDeConexion);

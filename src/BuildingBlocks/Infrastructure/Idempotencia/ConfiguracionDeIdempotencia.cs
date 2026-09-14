@@ -78,6 +78,11 @@ public static class ConfiguracionDeIdempotencia
 
             registro.Property(fila => fila.CreadaEn).IsRequired();
 
+            // Con índice: la purga borra por esta columna cada hora, y sin él cada vuelta recorrería
+            // la tabla entera para encontrar lo que ha vencido.
+            registro.Property(fila => fila.CaducaEn).IsRequired();
+            registro.HasIndex(fila => fila.CaducaEn);
+
             // Anulables porque la fila nace antes que la respuesta; ver la invariante escrita en
             // `RegistroDeIdempotencia`. Ninguna fila confirmada las tiene a nulo.
             registro.Property(fila => fila.CodigoDeEstado);

@@ -176,6 +176,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElPuertoDeTercerosContraLaBaseTests.Un_bloqueado_NoExiste_desde_fuera_y_desbloquearlo_lo_devuelve_Disponible",
         "ElPuertoDeTercerosContraLaBaseTests.Uno_inventado_y_uno_de_otra_empresa_NoExisten_y_el_ajeno_si_en_la_suya",
 
+        // Del ítem 1.11 (ADR-0034 §4): el plazo del recibo, a cada lado del borde, y quién lo cumple.
+        "ElReciboCaducaYSeBorraTests.Con_base_de_datos_el_host_arranca_el_trabajo_que_purga_cada_hora",
+        "ElReciboCaducaYSeBorraTests.El_recibo_nace_con_su_caducidad_a_las_24_horas_de_reclamarse",
+        "ElReciboCaducaYSeBorraTests.La_purga_deja_lo_que_no_ha_vencido_y_se_lleva_lo_vencido_de_todas_las_empresas",
+        "ElReciboCaducaYSeBorraTests.Purgado_el_recibo_el_mismo_reintento_vuelve_a_hacer_el_trabajo",
+
         "ElSelectorDeEmpresaTests.Cambiar_a_una_empresa_bloqueada_se_rechaza_como_si_no_se_perteneciera",
         "ElSelectorDeEmpresaTests.El_selector_trae_los_nombres_aunque_no_se_tenga_permiso_para_ver_empresas",
         "ElSelectorDeEmpresaTests.La_sesion_no_se_abre_en_una_empresa_bloqueada_aunque_sea_la_primera_pertenencia",

@@ -66,4 +66,13 @@ public enum TipoDeError
 
     /// <summary>Los datos son válidos y el estado es coherente, pero una regla lo impide.</summary>
     ReglaDeNegocio,
+
+    /// <summary>La entrada es mayor de lo que la operación admite, y no se ha llegado a leer entera.</summary>
+    /// <remarks>
+    /// <b>No es <see cref="Validacion"/></b>, y la diferencia es para el cliente: un <c>400</c> le
+    /// dice que corrija un campo, y aquí no hay campo que corregir, porque nadie ha mirado lo que
+    /// traía. Lo que puede hacer es partir la entrada en trozos y mandar cada uno aparte. El protocolo
+    /// ya tiene esa respuesta: <c>413</c>.
+    /// </remarks>
+    DemasiadoGrande,
 }

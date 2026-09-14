@@ -108,6 +108,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElResumenDeContrasenasTests.El_resumen_de_relleno_cuesta_lo_mismo_que_uno_de_verdad_y_no_lo_abre_nadie",
         "ElResumenDeContrasenasTests.El_resumen_lleva_dentro_los_parametros_que_declara_el_ADR_0008",
 
+        // Del ítem 1.11: el tope del cuerpo, medido en bytes pedidos a la corriente y no en la
+        // respuesta, que es la misma para un tope de verdad y para uno comprobado tras el volcado.
+        "ElTopeSeImponeAntesDelVolcadoTests.Con_un_Content_Length_mayor_que_el_tope_se_contesta_sin_leer_un_byte",
+        "ElTopeSeImponeAntesDelVolcadoTests.El_filtro_de_idempotencia_lee_con_el_tope_aunque_corra_sin_el_filtro_del_tope_delante",
+        "ElTopeSeImponeAntesDelVolcadoTests.Sin_Content_Length_se_leen_como_mucho_tope_mas_uno_bytes",
+        "ElTopeSeImponeAntesDelVolcadoTests.Un_cuerpo_del_tamano_del_tope_entra_entero_y_no_se_vuelve_a_pedir_a_la_red",
+
         "LaBandejaSeMideYNoSeSondeaTests.El_medidor_publica_la_edad_del_mas_viejo_en_segundos",
         "LaBandejaSeMideYNoSeSondeaTests.La_bandeja_no_esta_en_ninguna_sonda",
         "LaBandejaSeMideYNoSeSondeaTests.Y_cuenta_lo_publicado_y_lo_aparcado_por_separado",

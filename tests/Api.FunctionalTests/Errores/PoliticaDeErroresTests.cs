@@ -32,6 +32,7 @@ public sealed class PoliticaDeErroresTests(ApiConRutasQueFallan api) : IClassFix
     [InlineData(RutasQueFallan.NoAutenticado, HttpStatusCode.Unauthorized, "/errors/sesion-caducada")]
     [InlineData(RutasQueFallan.VersionObsoleta, HttpStatusCode.PreconditionFailed, "/errors/version-obsoleta")]
     [InlineData(RutasQueFallan.FaltaLaVersion, (HttpStatusCode)428, "/errors/falta-if-match")]
+    [InlineData(RutasQueFallan.DemasiadoGrande, HttpStatusCode.RequestEntityTooLarge, "/errors/cuerpo-demasiado-grande")]
     public async Task CadaClaseDeError_SeTraduceASuCodigoDeEstadoYASuTypeEstable(
         string ruta, HttpStatusCode estadoEsperado, string tipoEsperado)
     {

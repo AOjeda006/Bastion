@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.BuildingBlocks.Infrastructure.CuerpoDeLaPeticion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -44,6 +45,7 @@ internal sealed class RutasQueFallan : IStartupFilter
     internal const string NoAutenticado = "/pruebas/errores/no-autenticado";
     internal const string VersionObsoleta = "/pruebas/errores/version-obsoleta";
     internal const string FaltaLaVersion = "/pruebas/errores/falta-la-version";
+    internal const string DemasiadoGrande = "/pruebas/errores/demasiado-grande";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => aplicacion =>
     {
@@ -102,6 +104,10 @@ internal sealed class RutasQueFallan : IStartupFilter
             VersionObsoleta => Responder(
                 contexto, ErroresDeConcurrencia.Obsoleta(new VersionDeRecurso(756))),
             FaltaLaVersion => Responder(contexto, ErroresDeConcurrencia.FaltaLaCabecera()),
+
+            // Por su fábrica de verdad también: es la que usa el lector acotado del cuerpo, y el
+            // único `413` que la API emite hoy aparte del de las filas de una importación.
+            DemasiadoGrande => Responder(contexto, ErroresDelCuerpo.DemasiadoGrande(2 * 1024 * 1024)),
 
             _ => Task.CompletedTask,
         };

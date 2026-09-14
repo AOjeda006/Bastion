@@ -3,6 +3,7 @@ using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Idempotencia;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.BuildingBlocks.Infrastructure.CuerpoDeLaPeticion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -121,18 +122,35 @@ public sealed partial class FiltroDeIdempotencia(
             : null;
     }
 
-    private static async Task<string> HuellaDelCuerpoAsync(HttpRequest peticion, CancellationToken cancelacion)
+    private static async Task<Resultado<string>> HuellaDelCuerpoAsync(
+        ResourceExecutingContext context, CancellationToken cancelacion)
     {
+        // Una acción que declara tope se lee con el lector acotado, y no por el camino de abajo: ese
+        // camino copia el cuerpo ENTERO a memoria, y el tope comprobado después ya no protegería de
+        // nada (ADR-0034 §3). No se confía en que el filtro del tope haya corrido antes; si lo ha
+        // hecho, el lector devuelve lo que ya leyó.
+        if (context.ActionDescriptor.EndpointMetadata.OfType<TopeDelCuerpoAttribute>().FirstOrDefault() is { } tope)
+        {
+            Resultado<ReadOnlyMemory<byte>> acotado = await LectorAcotadoDelCuerpo
+                .LeerAsync(context.HttpContext, tope.Bytes, cancelacion)
+                .ConfigureAwait(false);
+
+            return acotado.EsCorrecto
+                ? Resultado.Correcto(ClaveDeIdempotencia.HuellaDe(acotado.Valor.Span))
+                : Resultado.Fallo<string>(acotado.Error!);
+        }
+
         // El cuerpo se lee ENTERO y se rebobina: detrás viene el enlace del modelo, que lo
         // necesita intacto. Sin `EnableBuffering` la corriente solo se puede leer una vez y la
         // acción recibiría un cuerpo vacío.
+        HttpRequest peticion = context.HttpContext.Request;
         peticion.EnableBuffering();
 
         using var copia = new MemoryStream();
         await peticion.Body.CopyToAsync(copia, cancelacion).ConfigureAwait(false);
         peticion.Body.Position = 0;
 
-        return ClaveDeIdempotencia.HuellaDe(copia.GetBuffer().AsSpan(0, (int)copia.Length));
+        return Resultado.Correcto(ClaveDeIdempotencia.HuellaDe(copia.GetBuffer().AsSpan(0, (int)copia.Length)));
     }
 
     private async Task AplicarAsync(
@@ -140,7 +158,14 @@ public sealed partial class FiltroDeIdempotencia(
     {
         CancellationToken cancelacion = context.HttpContext.RequestAborted;
         IAlmacenDeIdempotencia almacen = AlmacenDe(context.HttpContext.Request.Path.Value ?? string.Empty);
-        string huella = await HuellaDelCuerpoAsync(context.HttpContext.Request, cancelacion).ConfigureAwait(false);
+        Resultado<string> huella = await HuellaDelCuerpoAsync(context, cancelacion).ConfigureAwait(false);
+
+        // Antes de abrir la transacción: un cuerpo que no se ha podido leer no reclama nada.
+        if (!huella.EsCorrecto)
+        {
+            context.Result = huella.Error!.AResultadoDeAccion();
+            return;
+        }
 
         await almacen.AbrirTransaccionAsync(cancelacion).ConfigureAwait(false);
 
@@ -149,12 +174,12 @@ public sealed partial class FiltroDeIdempotencia(
         try
         {
             bool mia = await almacen
-                .ReclamarAsync(clave, huella, reloj.GetUtcNow(), cancelacion)
+                .ReclamarAsync(clave, huella.Valor, reloj.GetUtcNow(), cancelacion)
                 .ConfigureAwait(false);
 
             if (!mia)
             {
-                context.Result = await YaAtendidaAsync(almacen, clave, huella, cancelacion)
+                context.Result = await YaAtendidaAsync(almacen, clave, huella.Valor, cancelacion)
                     .ConfigureAwait(false);
                 return;
             }

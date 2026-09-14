@@ -130,4 +130,16 @@ public enum MotivoSinInquilino
     /// distintos que conviene poder separar el día que uno de los dos salga mal.
     /// </remarks>
     CargaDeMaestros,
+
+    /// <summary>
+    /// La purga de los recibos de idempotencia vencidos (ADR-0034 §4). <b>No hay petición</b>, y el
+    /// plazo es de la instalación: vence igual para todas las empresas, así que una purga por empresa
+    /// sería recorrer la lista de empresas para hacer lo mismo en cada una.
+    /// </summary>
+    /// <remarks>
+    /// Motivo propio por lo mismo que <see cref="PublicacionDeEventos"/>: el ámbito queda anotado en
+    /// el registro, y «se ha borrado lo caducado» tiene que poder separarse de cualquier otro camino
+    /// sin empresa el día que alguien pregunte por qué desapareció una fila.
+    /// </remarks>
+    CaducidadDeRecibos,
 }

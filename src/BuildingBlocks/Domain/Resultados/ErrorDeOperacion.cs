@@ -103,6 +103,10 @@ public sealed record ErrorDeOperacion
     public static ErrorDeOperacion ReglaDeNegocio(string codigo, string mensaje) =>
         Crear(codigo, mensaje, TipoDeError.ReglaDeNegocio, s_sinCampos);
 
+    /// <summary>La entrada supera lo que la operación admite.</summary>
+    public static ErrorDeOperacion DemasiadoGrande(string codigo, string mensaje) =>
+        Crear(codigo, mensaje, TipoDeError.DemasiadoGrande, s_sinCampos);
+
     private static ErrorDeOperacion Crear(
         string codigo,
         string mensaje,

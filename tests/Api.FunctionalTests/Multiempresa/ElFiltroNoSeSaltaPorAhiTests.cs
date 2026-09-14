@@ -127,6 +127,17 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "TODO lo que se LEE de esa tabla pasa por EF Core con su filtro puesto, y que la sentencia "
             + "siga nombrando empresa_id en las columnas y en el objetivo del conflicto lo comprueba "
             + "LaClaveDeIdempotenciaEsLaTuplaEnteraTests",
+
+        // Del ítem 1.11 (ADR-0034 §4): la segunda escritura masiva del sistema, y la primera que borra.
+        ["src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Recibos/PurgaDeRecibosCaducados.cs usa .ExecuteDelete"] =
+            "borra los recibos de idempotencia vencidos, de todas las empresas, dentro de un ambito "
+            + "SinInquilino con su motivo propio (CaducidadDeRecibos). Lo que ExecuteDelete salta -el "
+            + "rastreador y la unidad de trabajo- no tiene aqui nada que ver: la tabla NO SE AUDITA, "
+            + "porque es el recibo de una peticion y no un cambio de datos, y NO LLEVA VERSION, asi que "
+            + "no hay concurrencia que comprobar. La alternativa, cargar las filas y borrarlas una a una, "
+            + "traeria a memoria las respuestas guardadas -la ficha de un tercero, entre ellas- solo para "
+            + "quitarlas de en medio. Que el plazo se cumple de verdad lo comprueba "
+            + "ElReciboCaducaYSeBorraTests, con un instante elegido a cada lado del borde",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del
@@ -156,6 +167,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // porque la apertura cubre los dos ficheros; si se partiera en dos, aquí se vería.
         ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Semillas/" +
          "CargadorDeSemillasDeOrganizacion.cs"] = 1,
+
+        // El tercero sin petición detrás, del 1.11: la purga de los recibos de idempotencia vencidos
+        // (ADR-0034 §4). El plazo es de la instalación y vence igual para todas las empresas, así que
+        // no hay una empresa por la que filtrar; y sin el ámbito, fuera de una petición, el filtro
+        // lanzaría en la primera vuelta. La apertura es UNA y envuelve solo el borrado.
+        ["src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Recibos/PurgaDeRecibosCaducados.cs"] = 1,
     };
 
     // Lo mismo para el ámbito que ve lo bloqueado. Es una lista aparte y no una más en la de

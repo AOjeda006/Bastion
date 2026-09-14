@@ -51,8 +51,8 @@ public abstract class AlmacenDeIdempotencia(DbContext contexto) : IAlmacenDeIdem
     /// </summary>
     public const string SqlDeLaReclamacion =
         "INSERT INTO " + ConfiguracionDeIdempotencia.Esquema + "." + ConfiguracionDeIdempotencia.Tabla +
-        " (empresa_id, usuario_id, metodo, ruta, clave, huella, creada_en)" +
-        " VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})" +
+        " (empresa_id, usuario_id, metodo, ruta, clave, huella, creada_en, caduca_en)" +
+        " VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7})" +
         " ON CONFLICT (empresa_id, usuario_id, metodo, ruta, clave) DO NOTHING";
 
     private IDbContextTransaction? _transaccion;
@@ -122,9 +122,17 @@ public abstract class AlmacenDeIdempotencia(DbContext contexto) : IAlmacenDeIdem
     {
         ArgumentNullException.ThrowIfNull(clave);
 
+        // La fila se construye ANTES de escribirla, y la sentencia toma de ella sus valores: así la
+        // caducidad sale de un solo sitio, la fábrica, y no hay un segundo cálculo del plazo aquí
+        // que pueda dejar de coincidir con el suyo.
+        var reclamada = RegistroDeIdempotencia.Reclamada(clave, huella, ahora);
+
         int filas = await contexto.Database.ExecuteSqlRawAsync(
             SqlDeLaReclamacion,
-            [clave.EmpresaId, clave.UsuarioId, clave.Metodo, clave.Ruta, clave.Clave, huella, ahora],
+            [
+                reclamada.EmpresaId, reclamada.UsuarioId, reclamada.Metodo, reclamada.Ruta,
+                reclamada.Clave, reclamada.Huella, reclamada.CreadaEn, reclamada.CaducaEn,
+            ],
             cancelacion).ConfigureAwait(false);
 
         if (filas == 0)
@@ -136,7 +144,7 @@ public abstract class AlmacenDeIdempotencia(DbContext contexto) : IAlmacenDeIdem
         // poder completarla luego con la respuesta sin volver a leerla. El `UPDATE` que salga de
         // ahí cae en esta misma transacción, así que la fila conserva el `xmin` del `INSERT`: el
         // mismo número que llevan las filas de negocio de este trabajo.
-        _reclamada = RegistroDeIdempotencia.Reclamada(clave, huella, ahora);
+        _reclamada = reclamada;
         contexto.Attach(_reclamada);
 
         return true;

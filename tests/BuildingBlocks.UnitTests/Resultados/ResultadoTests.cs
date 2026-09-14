@@ -92,6 +92,7 @@ public sealed class ErrorDeOperacionTests
     [InlineData(TipoDeError.NoEncontrado)]
     [InlineData(TipoDeError.Conflicto)]
     [InlineData(TipoDeError.ReglaDeNegocio)]
+    [InlineData(TipoDeError.DemasiadoGrande)]
     public void CadaTipoDeError_TieneUnaFabricaPropia(TipoDeError tipo)
     {
         ErrorDeOperacion error = tipo switch
@@ -100,6 +101,7 @@ public sealed class ErrorDeOperacionTests
             TipoDeError.PermisoDenegado => ErrorDeOperacion.PermisoDenegado("codigo", "Mensaje."),
             TipoDeError.NoEncontrado => ErrorDeOperacion.NoEncontrado("codigo", "Mensaje."),
             TipoDeError.Conflicto => ErrorDeOperacion.Conflicto("codigo", "Mensaje."),
+            TipoDeError.DemasiadoGrande => ErrorDeOperacion.DemasiadoGrande("codigo", "Mensaje."),
             _ => ErrorDeOperacion.ReglaDeNegocio("codigo", "Mensaje."),
         };
 

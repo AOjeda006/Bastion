@@ -129,6 +129,8 @@ export const es = {
       'credenciales-no-validas': 'El correo o la contraseña no son correctos.',
       'cuenta-bancaria-duplicada': 'Esta ficha ya tiene esa cuenta bancaria.',
       'cuenta-bancaria-no-encontrada': 'Esta ficha no tiene esa cuenta bancaria.',
+      'cuerpo-demasiado-grande':
+        'Lo que intentas enviar es demasiado grande. Pártelo en varios envíos más pequeños.',
       'datos-no-validos': 'Algunos campos no son válidos. Revisa los que aparecen marcados.',
       'divisa-duplicada': 'Ya hay una divisa con ese código.',
       'divisa-no-encontrada': 'Esa divisa ya no existe.',

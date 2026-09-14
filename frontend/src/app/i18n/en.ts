@@ -100,6 +100,8 @@ export const en: Diccionario = {
       'credenciales-no-validas': 'The email address or the password is not correct.',
       'cuenta-bancaria-duplicada': 'This record already has that bank account.',
       'cuenta-bancaria-no-encontrada': 'This record has no such bank account.',
+      'cuerpo-demasiado-grande':
+        'What you are trying to send is too large. Split it into smaller sends.',
       'datos-no-validos': 'Some fields are not valid. Check the ones marked below.',
       'divisa-duplicada': 'There is already a currency with that code.',
       'divisa-no-encontrada': 'That currency no longer exists.',

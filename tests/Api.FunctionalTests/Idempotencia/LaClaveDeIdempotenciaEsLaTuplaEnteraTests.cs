@@ -34,8 +34,9 @@ namespace Bastion.Api.FunctionalTests.Idempotencia;
 public sealed class LaClaveDeIdempotenciaEsLaTuplaEnteraTests : IDisposable
 {
     // Las columnas que la sentencia rellena y que NO son parte de la identidad: la huella del
-    // cuerpo y el instante. Las de la respuesta no están porque la fila nace sin respuesta.
-    private static readonly string[] s_fueraDeLaClave = ["huella", "creada_en"];
+    // cuerpo, el instante y, desde el 1.11, cuándo caduca. Las de la respuesta no están porque la
+    // fila nace sin respuesta.
+    private static readonly string[] s_fueraDeLaClave = ["huella", "creada_en", "caduca_en"];
 
     private readonly ApiSinDependencias _api = new();
 

@@ -40,6 +40,22 @@ namespace Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 /// </remarks>
 public sealed class RegistroDeIdempotencia : IDeInquilino
 {
+    /// <summary>Cuánto se conserva un recibo desde que se reclama la clave (ADR-0034 §4).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Veinticuatro horas</b>, porque el recibo existe para contestar a un reintento: el de red
+    /// llega en segundos, y el de un cliente que se quedó sin conexión, en horas. Y porque lo que se
+    /// guarda puede ser la ficha de una persona —la respuesta de un alta de tercero la lleva entera—,
+    /// y un dato personal sin plazo no se guarda (<c>proteccion-datos.md</c>).
+    /// </para>
+    /// <para>
+    /// <b>Se aplica al reclamar y se escribe en la fila</b> (<see cref="CaducaEn"/>), en vez de
+    /// calcularlo al purgar desde <see cref="CreadaEn"/>. Si el plazo cambia algún día, las filas que
+    /// ya existen conservan el que se les prometió.
+    /// </para>
+    /// </remarks>
+    public static readonly TimeSpan PlazoDeConservacion = TimeSpan.FromHours(24);
+
     // Constructor para EF Core. Las propiedades se rellenan por reflexión al materializar.
     private RegistroDeIdempotencia()
     {
@@ -70,6 +86,7 @@ public sealed class RegistroDeIdempotencia : IDeInquilino
             Clave = clave.Clave,
             Huella = huella,
             CreadaEn = ahora,
+            CaducaEn = ahora + PlazoDeConservacion,
         };
     }
 
@@ -93,6 +110,14 @@ public sealed class RegistroDeIdempotencia : IDeInquilino
 
     /// <summary>Cuándo se reclamó la clave.</summary>
     public DateTimeOffset CreadaEn { get; private set; }
+
+    /// <summary>Desde cuándo la purga puede borrar este recibo.</summary>
+    /// <remarks>
+    /// <b>Caducado no es invisible:</b> hasta que pasa la purga, que corre cada hora, el recibo se
+    /// sigue devolviendo. Un recibo dura al menos <see cref="PlazoDeConservacion"/> y como mucho una
+    /// hora más. Borrado, la clave es nueva y el reintento vuelve a hacer el trabajo.
+    /// </remarks>
+    public DateTimeOffset CaducaEn { get; private set; }
 
     /// <summary>Código de estado de la respuesta que se dio.</summary>
     public int? CodigoDeEstado { get; private set; }

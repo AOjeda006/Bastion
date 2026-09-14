@@ -89,6 +89,7 @@ public static class PoliticaDeErrores
         TipoDeError.VersionObsoleta => StatusCodes.Status412PreconditionFailed,
         TipoDeError.FaltaLaVersion => StatusCodes.Status428PreconditionRequired,
         TipoDeError.ReglaDeNegocio => StatusCodes.Status422UnprocessableEntity,
+        TipoDeError.DemasiadoGrande => StatusCodes.Status413PayloadTooLarge,
         _ => throw new NotSupportedException($"No hay código de estado definido para {tipo}."),
     };
 
@@ -103,6 +104,7 @@ public static class PoliticaDeErrores
         TipoDeError.VersionObsoleta => "La versión ya no es la actual",
         TipoDeError.FaltaLaVersion => "Falta la precondición de versión",
         TipoDeError.ReglaDeNegocio => "Regla de negocio incumplida",
+        TipoDeError.DemasiadoGrande => "Contenido demasiado grande",
         _ => throw new NotSupportedException($"No hay título definido para {tipo}."),
     };
 

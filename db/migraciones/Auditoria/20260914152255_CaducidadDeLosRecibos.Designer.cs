@@ -3,6 +3,7 @@ using System;
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bastion.Auditoria.Infrastructure.Migrations
 {
     [DbContext(typeof(AuditoriaDbContext))]
-    partial class AuditoriaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914152255_CaducidadDeLosRecibos")]
+    partial class CaducidadDeLosRecibos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
