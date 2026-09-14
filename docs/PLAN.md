@@ -3637,6 +3637,199 @@ lee como cobertura de un camino vivo; sin el motivo escrito al lado, la conducta
 desde cero la próxima vez. El filtro de los carriles es por `Category`, así que `Alcance` es una
 dimensión ortogonal y no cambia qué corre en ningún sitio.
 
+**1. LOS DOS CRUCES, CADA UNO POR EL `Contracts` DE SU DUEÑO, Y DICHOS EN CUATRO LISTAS.**
+`ArticuloProveedor.TerceroId` es `Catalogo.Application → Bastion.Terceros.Contracts`, por
+`IConsultaDeTerceros`; `Tercero.TarifaAsignadaId` es `Terceros.Application → Bastion.Catalogo.Contracts`,
+por `IConsultaDeTarifas`. Los dos se resuelven en proceso —ni un `JOIN` entre esquemas ni una
+llamada HTTP— y ninguno tiene clave ajena. Cada uno está escrito en las cuatro listas de
+`tests/Arquitectura.Tests/Inventario.cs` que lo pueden ver: `AristasDeProyecto` (la referencia),
+`CrucesDeclarados` (el cruce), `PuertasPublicas` (el puerto, diciendo que lee) e
+`IdentificadoresDeclarados` (la propiedad, con su puerto). La segunda de las cuatro es la que
+`TarifaAsignadaId` **necesitaba** y la heurística por nombre no le daba: se llama así y no
+`TarifaId`, así que el barrido la sacó como **huérfana** y no como cruce —la infradetección del
+ADR-0024 por tercera vez—.
+
+**El censo compara en los dos sentidos, y eso son las mutaciones 1 y 2.**
+`El_unico_cruce_entre_modulos_va_por_contratos` compara la lista **entera** de lo que el barrido
+encuentra con la declarada: un cruce que existe y no está escrito sale rojo, y uno escrito sin
+código detrás, también. Una comparación de inclusión en un solo sentido habría dejado verde una de
+las dos.
+
+**Ningún `Contracts` ve a otro, y no por acuerdo.** El barrido anterior recorre **todos** los
+ensamblados con tipos, `Contracts` incluidos, así que un `Terceros.Contracts → Bastion.Catalogo.Contracts`
+sería un cruce no declarado; `Las_referencias_de_proyecto_son_las_declaradas` lo ve además como una
+arista de proyecto de más. Y las dos a la vez ni siquiera compilan: se probó y MSBuild contestó
+«dependencia circular» desde `_GenerateRestoreProjectPathWalk`. Por eso por los dos puertos
+**solo cruzan `Guid`, `DateOnly` y enumerados propios**.
+
+**Un commit para los dos cruces, y dentro de él cada uno con su puerto, su primer consumidor y su
+línea del censo** (`e8dd07b`). Ninguna de las tres piezas de ninguno de los dos cruces existe en un
+commit sin las otras dos.
+
+**2. LOS PUERTOS PREGUNTAN POR EL ESTADO, NO POR LA EXISTENCIA — Y ESTOS SON LOS ESTADOS DE CADA
+LADO.** Un «¿existe?» deja pasar lo que existe y no se puede usar: en un tercero, al que no hace el
+papel o al bloqueado; en una tarifa, a la que ya no rige.
+
+| Sentido | Puerto | Estado | Qué contesta quien pregunta | Caso que lo afirma contra PostgreSQL |
+|---|---|---|---|---|
+| Catálogo → Terceros | `IConsultaDeTerceros.EstadoDeAsync(id, rol)` | `Disponible` | 201 al alta del proveedor | `ElPuertoDeTercerosContraLaBaseTests.El_papel_por_el_que_se_pregunta_decide_entre_Disponible_y_NoHaceEseRol` |
+| | | `NoHaceEseRol` | 400 `articulo-proveedor-tercero-no-valido` | el mismo caso |
+| | | `NoExiste` | el **mismo** 400, cuerpo idéntico | `Uno_inventado_y_uno_de_otra_empresa_NoExisten_y_el_ajeno_si_en_la_suya` y `Un_bloqueado_NoExiste_desde_fuera_y_desbloquearlo_lo_devuelve_Disponible` |
+| Terceros → Catálogo | `IConsultaDeTarifas.EstadoDeAsync(id, fecha)` | `RigeEnEsaFecha` | 200 al asignar | `ContratoDeLosCrucesTests.Una_tarifa_que_rige_hoy_se_asigna_se_lee_y_con_nulo_se_quita` |
+| | | `SoloResuelveLoViejo` | 409 `tercero-tarifa-no-vigente` | `Una_tarifa_que_ya_no_rige_y_una_que_aun_no_son_409_y_la_ficha_sigue_con_la_suya` |
+| | | `NoExiste` | 400 `tercero-tarifa-no-encontrada` | `Una_tarifa_inventada_y_una_de_otra_empresa_son_400_y_la_ajena_vale_en_la_suya` |
+
+**Seis casillas, las seis con dueño, y dos de ellas son las que devuelven error en cada sentido.**
+En `NoExiste` de terceros caben tres situaciones —no hay ficha, es de otra empresa (R8), está
+bloqueada (R16)— y caben a propósito: desde fuera de Terceros tienen que ser lo mismo. En
+`SoloResuelveLoViejo` caben dos —la vigencia acabó, o todavía no empieza—, y el caso prueba **los
+dos extremos** porque un adaptador que mirase un solo lado de la fecha pasaría con uno: es la
+mutación 6, que solo cae por el de la tarifa acabada. La fecha con la que se pregunta es **hoy en
+UTC**, del `TimeProvider` inyectado: lo que se guarda es la lista que se le propone al cliente a
+partir de ahora, y el documento que la use volverá a preguntar con **su** fecha.
+
+**Los dos noes de la tarifa se distinguen y los del tercero no, y la asimetría es el art. 32.** Al
+otro lado de una tarifa hay una lista de precios de la propia empresa; al otro lado de un tercero,
+la ficha de una persona. Quien teclea mal un identificador de tarifa y quien apunta a una caducada
+tienen dos arreglos distintos; distinguir un tercero inventado de uno bloqueado convertiría el
+formulario del proveedor en el censo de las bajas.
+
+**3. `Bloqueado` NO ES UN VALOR, Y LLEGÓ A SERLO.** `EstadoDelTercero` se diseñó con cuatro, y la
+matriz de la decisión 4 lo encontró antes de que existiera un solo caso contra la base: la casilla
+`IConsultaDeTerceros → Bloqueado` no tenía dueño, y al escribirle uno el puerto contestó `NoExiste`.
+El filtro de repositorio del art. 32 esconde la ficha antes de que el `switch` la vea; era un valor
+que ningún productor produce, el defecto que abrió el 1.7. Hacerlo alcanzable exigía abrir en el
+adaptador un ámbito de `IAccesoALoBloqueado` con un **cuarto motivo** en la lista cerrada, para
+producir una diferencia que el único consumidor **tiene que** volver a juntar. La lista admite un
+motivo cuando un camino necesita **ver** lo bloqueado, y este no lo necesita. Se quitó el valor, y
+con él dos cosas que solo existían por él: la rama muerta del `switch` y un `!EstaBloqueado`
+redundante con el filtro en `CualesSePuedenTratarAsync`. Lo que queda no depende de un orden de
+comprobaciones que alguien pueda invertir: del bloqueado no sale qué papeles hace porque la fila no
+llega. Y no se puede esquivar desde ese fichero sin que lo diga el carril rápido:
+`ElFiltroNoSeSaltaPorAhiTests` cayó en las mutaciones 4 y 5 **antes** que PostgreSQL.
+
+**4. LA MATRIZ DE PUERTO × ESTADO NO VEÍA LOS PUERTOS NUEVOS, Y AHORA LOS DESCUBRE POR LA FORMA
+GENERAL.** `LaMatrizDePuertoYEstadoTests` (Organización, ítem 1.7) descubre en un ensamblado y por
+un tipo de retorno, `Task<EstadoDeMaestro>`; los dos puertos de este ítem devuelven otros
+enumerados desde otros `Contracts`, así que entraron con aquella matriz en verde y sus casillas sin
+mirar. `LaMatrizDeLosPuertosDeEstadoTests` mira **toda interfaz de un `Bastion.*.Contracts` con un
+método que devuelva `Task` de un enumerado**, exige una marca `[CubreEstadoDelPuerto]` por casilla
+en un caso con el rasgo `Integracion`, y **delega** la familia de `EstadoDeMaestro` en su matriz
+—con el fichero nombrado y comprobado en disco— para que cada familia tenga exactamente una. Corre
+en el carril rápido, porque comparar conjuntos no necesita contenedor, y ancla los dos puertos del
+cruce: un descubrimiento que solo encontrara los de Organización saldría verde por no tener nada
+que comparar.
+
+**5. LA RESPUESTA DEL ART. 32 AL CRUCE NUEVO: el listado esconde, el alta contesta igual, y lo que
+colgaba se queda.** La pregunta —qué enseña la lista de proveedores de un artículo cuando uno de
+ellos se bloquea— se contesta con cuatro casos contra PostgreSQL y no con una frase:
+
+- **El listado lo esconde, y desbloquearlo devuelve la MISMA fila**, con el mismo identificador:
+  `El_listado_esconde_al_proveedor_bloqueado_y_desbloquearlo_devuelve_la_MISMA_fila`. El filtro no
+  cabe en un `WHERE` —el bloqueo está en otro esquema—, así que el caso de uso pregunta **una vez
+  por el conjunto** con `CualesSePuedenTratarAsync`, que devuelve **los que sí**: un fallo que
+  contestara de menos enseña de menos, que es el lado por el que tiene que caerse un filtro de
+  protección de datos. Reservar no es borrar: la fila no se toca.
+- **Al alta, bloqueado, inventado, de otra empresa y solo cliente contestan el MISMO 400**, con el
+  cuerpo del `ProblemDetails` comparado entero —solo el `traceId` sustituido— y sin dejar fila:
+  `Inventado_ajeno_bloqueado_y_solo_cliente_contestan_el_MISMO_400_y_no_dejan_fila`.
+- **Volver a añadir a un bloqueado que YA suministraba es ese mismo 400, y no un 409**:
+  `Volver_a_anadir_a_un_bloqueado_que_ya_suministraba_es_el_MISMO_400_y_no_un_409`. Y al
+  desbloquearlo, vuelve a ser 409.
+- **El puerto contesta `NoExiste` al bloqueado y `Disponible` al desbloquearlo**, contra la base y
+  sin la API delante: `Un_bloqueado_NoExiste_desde_fuera_y_desbloquearlo_lo_devuelve_Disponible`.
+
+**El tercer punto cambió el código, y el argumento que había era malo.** `AgregarProveedorAlArticulo`
+miraba primero el duplicado y después el estado, con este razonamiento: «un 409 solo se da sobre
+algo que ya se aceptó una vez, así que no cuenta nada nuevo». Sí cuenta algo nuevo: **lo que el
+listado acaba de callar**. Si el listado esconde el suministro de un bloqueado y el alta contesta
+«ya está», la diferencia entre las dos respuestas dice exactamente quién está bloqueado. Ahora se
+pregunta el estado primero y el 409 queda para quien el listado sí enseña; es la mutación 3 la que
+lo sostiene desde el carril rápido, con
+`El_estado_se_pregunta_antes_que_el_duplicado_y_lo_escondido_no_es_un_409`.
+
+**Lo que NO se filtra, y por qué.** La lectura de un suministro por su identificador
+(`GET …/proveedores/{id}`) no pregunta por el estado: a ese identificador solo se llega desde el
+listado —que ya filtró— o desde la respuesta de haberlo creado, lo único que publica del tercero es
+su `Guid`, que quien pregunta ya tenía, y un 404 sobre una fila que existe impediría quitarla.
+Tampoco lo hace la modificación de la referencia: el bloqueo de un tercero no puede congelar las
+filas que ya apuntaban a él. Catálogo no implementa `IBloqueable` en `ArticuloProveedor` porque no
+guarda datos de nadie: guarda un hecho entre dos.
+
+**6. LA DIVISA: dos representaciones en el mismo agregado, no se comparan, no se unifican ahora, y
+no se convierte nada.** El `Tercero` lleva **dos** divisas desde este ítem, y de maneras distintas:
+`LimiteCredito` es un `Importe`, con el **código ISO 4217** dentro; `TarifaAsignadaId` apunta a una
+`Tarifa` cuya `DivisaId` es un **`Guid`** al maestro `Divisa` de Organización.
+
+- **(a) No se comparan**, y no es un olvido. Un límite en dólares y una tarifa en euros no son una
+  contradicción: el límite es cuánto se le fía, la tarifa es cómo se le pone precio, y en este
+  agregado **no nace ningún importe** que tuviera que estar en las dos. Lo que decide en qué divisa
+  se emite un documento es el documento (fase 5). Hasta este ítem la no comparación estaba
+  garantizada por una ausencia —Terceros no tenía puerto con el que preguntar una divisa—; desde
+  `AsignarTarifa` la tiene a un paso, así que queda escrita como decisión en su comentario y
+  **probada por el efecto**:
+  `Un_limite_en_dolares_y_una_tarifa_en_euros_conviven_porque_nadie_compara_divisas`, en los dos
+  órdenes —asignar la tarifa con el límite puesto, y cambiar el límite con la tarifa asignada—,
+  con el límite en **USD** y la tarifa en **EUR**, que es la combinación inversa al ejemplo del
+  comentario de `AsignarTarifa` y la misma afirmación vista desde el otro lado. Visto rojo antes de
+  darlo por bueno, con un canario en cada orden (en *Verificado — ítem 1.10*).
+  Es la misma decisión que la 6 del 1.9 («la divisa cruzada se acepta») con otro sujeto, y el mismo
+  argumento estructural: el puerto de tarifas **devuelve un estado y nada más**.
+- **(b) No se unifican ahora, y la buena es el código ISO.** Los motivos, por orden de peso: la
+  **semántica de una divisa sale de su código** —hasta el maestro lo reconoce: `Divisa.Decimales`
+  es `CatalogoDeDivisas.UnidadMinima(Codigo)`—; `Importe` y la regla del redondeo (R6) **solo
+  conocen códigos**; los formatos fiscales que vienen (fase 5) hablan ISO 4217; y el código es una
+  **clave natural, inmutable y la misma en toda instalación**, así que un `Guid` delante solo añade
+  una indirección que hay que resolver para saber de qué moneda se habla. Lo que el maestro aporta
+  —que una divisa esté dada de alta y no retirada en esta empresa— se puede preguntar **por
+  código**. Lo que se movería, entonces, es el `Guid`: `Tarifa.DivisaId`, `PrecioResueltoDto.DivisaId`
+  y los dos de `TipoCambio`. **No ahora**: hoy ningún importe cruza de una representación a la otra,
+  y migrar tres agregados de dos módulos sin ese cruce es trabajo sin defecto que arregle. **El
+  disparador**, escrito para que no se olvide: antes de que la primera línea de un documento
+  convierta un precio resuelto en un `Importe`, que es el primer sitio donde las dos formas
+  tendrían que encontrarse.
+- **(c) Ninguna conversión.** Convertir es de `TipoCambio`, necesita una fecha y un cambio, y no es
+  de la fase 1.
+
+**7. EL PRECIO POR CLIENTE: decidido y no hecho.** Con `Tercero.TarifaAsignada` existe ya la
+tarifa por cliente del §15, y la tentación es un «resuelve el precio de este artículo para este
+cliente». **No se hace aquí, ni en Catálogo ni en Terceros.** En Catálogo exigiría un tercer puerto
+hacia Terceros para leer la asignación, y la mutua pasaría a ser un flujo de datos de ida y vuelta
+dentro de una sola petición; en Terceros, llamar al resolutor de Catálogo desde el módulo que no
+sabe de precios. Y las dos esconderían dos decisiones que son de la venta: **con qué fecha** se
+resuelve —la del documento, no la de hoy: la tarifa que regía al asignarla puede no regir el día
+del pedido, y entonces es `SoloResuelveLoViejo`— y **qué pasa si el cliente no tiene tarifa**. El
+sitio es **4 · Ventas**: el documento lee la tarifa asignada por `Terceros.Contracts` y le pide el
+precio a Catálogo con **su** fecha, por la resolución por código del 1.9. Por eso `TarifaAsignadaId`
+es anulable y su lectura no pregunta por el estado.
+
+**8. EL LISTADO DE PROVEEDORES VA SIN PAGINAR, Y EL DELETE BORRA.** Sin paginar a propósito: el
+filtro del art. 32 se aplica **después** de leer, así que paginar daría páginas de tamaño variable
+y un total que miente —y restando de un total que miente se cuenta cuántos hay bloqueados—; lo que
+acota el tamaño es el modelo, los proveedores de **un** artículo. Y `DELETE …/proveedores/{id}` es el
+único del módulo y **borra la fila**: lo que desaparece no es la ficha de nadie sino un hecho entre
+dos que ha dejado de ser verdad, y el rastro de quién lo quitó está en la traza (ADR-0012).
+
+**9. EL REPARTO DE SEMILLAS, ESCRITO DONDE SE LEE.** El NIF de una empresa es único en toda la
+instalación y el de un tercero dentro de su empresa, y un choque no sale por el fichero que llega
+segundo sino por el otro (lo aprendido en el 1.9). Este ítem toma el bloque de empresas **200-215**
+—200-205 en `ElPuertoDeTercerosContraLaBaseTests`, 206-215 en `ContratoDeLosCrucesTests`— y el de
+terceros **32 000 001-32 000 022** —001-009 allí, 010-022 aquí—, sin pisar ninguno de los que ya
+había (102-106, 110-124, 131-145, 170-183, 190-193; terceros 30 000 xxx y 31 000 xxx). El reparto
+está en el comentario de clase de `ContratoDeLosCrucesTests`, que es donde lo va a leer el
+siguiente que necesite un bloque. Todos los NIF salen de `Escenario.NifInventado`: ninguno es real.
+
+**10. EL DISPARADOR DE LOS 430 KiB, ESCRITO Y NO DE MEMORIA.** El margen de arranque del frontal
+quedó en 34 KiB en el 1.9 (416/450). **Regla de este ítem:** si el fragmento de arranque pasa de
+**430 KiB**, se saca del arranque el diccionario del idioma no activo **antes** de seguir con el
+ítem. Medido en `3a7ba3e`: **418/450 KiB** —+2 por los cinco `type` de error nuevos en las dos
+lenguas, y ninguna pantalla—, así que **no ha saltado**. La regla se queda para el 1.11, que sí trae
+pantalla.
+
+**11. FUERA DEL ÍTEM, y no «de paso»:** la importación CSV (**1.11**), `CodigoBarras` (fase 2, con
+su import), la conversión de divisas, las facturas y las existencias. La resolución de precio por
+cliente, como decisión escrita en la 7 y sin código.
+
 ## Estado actual
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
@@ -5059,6 +5252,446 @@ porque el descubrimiento por nombre es exactamente lo que un identificador mal n
 ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en uno.
 
 El carril de arquitectura pasa de **18 a 23** casos.
+
+### Verificado en local, con la salida real — ítem 1.10
+
+**Toda cifra de «antes y después» nombra sus dos commits.** El «antes» es `d9e4a46` (main al abrir
+la rama); el «después», `3a7ba3e` —el último commit de código de la rama; lo que viene detrás solo
+toca `docs/PLAN.md`—. Batería completa de `AGENTS.md` **con Docker arrancado**, y cada cifra con la
+orden que la mide.
+
+**El SDK cambió a mitad del ítem, y la batería entera es posterior al cambio.** Una actualización
+de Visual Studio dejó la máquina en el SDK **10.0.401** (runtime 10.0.12) con la rama abierta. No
+hizo falta tocar nada: `global.json` fija `10.0.100` con `rollForward: latestFeature`, que admite esa
+banda. Lo que sí hizo falta es no mezclar: ninguna cifra de esta sección sale de antes del cambio, y
+la propia batería lo imprime en su primera línea —`HEAD 3a7ba3e · SDK 10.0.401 · docker 29.7.2`—.
+
+```
+dotnet build Bastion.sln                                   → 0 errores, 0 advertencias
+dotnet format Bastion.sln --verify-no-changes              → sin cambios (salida vacía)
+bash scripts/generar-openapi.sh --comprobar                → al día: 127 operaciones
+python -c "…len(json.load(open('docs/api/openapi.json'))['paths'])"  → 73 rutas
+bash scripts/generar-errores.sh --comprobar                → al día: 80 tipos, de 86 sitios de llamada
+bash scripts/comprobar-migraciones.sh                      → modelo y migraciones coinciden en los 5
+                                                             módulos con persistencia
+                                                             (Catálogo: 3, Terceros: 3)
+
+en `d9e4a46`: 120 operaciones en 70 rutas · 75 tipos de 81 sitios · Catálogo 2, Terceros 2
+  → +7 operaciones, +3 rutas, +5 tipos, +5 sitios, y una migración a cada lado del cruce
+```
+
+Los cinco `type` nuevos son los de los dos cruces y nada más: `articulo-proveedor-duplicado`,
+`articulo-proveedor-no-encontrado` y `articulo-proveedor-tercero-no-valido` en Catálogo;
+`tercero-tarifa-no-encontrada` y `tercero-tarifa-no-vigente` en Terceros.
+
+Los dos carriles, con el recuento que es **quien decide el desenlace** —las mismas órdenes que la
+CI, con la lista de ensamblados esperados escrita entera—:
+
+```
+dotnet test Bastion.sln --filter 'Category!=Integracion' --logger trx \
+  --results-directory artifacts/test-results/dominio
+bash scripts/ci/recuento-de-tests.sh artifacts/test-results/dominio 'Dominio y arquitectura' 300 \
+  'Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,…'
+
+Dominio y arquitectura: 748 casos (748 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — BuildingBlocks.UnitTests 132, Organizacion.UnitTests 183, Identidad.UnitTests 58,
+    Terceros.UnitTests 85, Catalogo.UnitTests 78, Organizacion.IntegrationTests 22,
+    Api.FunctionalTests 145, Arquitectura.Tests 34, Api.IntegrationTests 11
+    (723 en `d9e4a46`, en 9 ensamblados: +25 casos, y cada uno con su clase —
+     Terceros.UnitTests 77 → 85, los 8 de `LaTarifaAsignadaTests`;
+     Catalogo.UnitTests 66 → 78, los 12 de `ProveedoresDelArticuloTests`;
+     Api.IntegrationTests 6 → 11, los 5 de `LaMatrizDeLosPuertosDeEstadoTests`)
+
+dotnet test Bastion.sln --filter 'Category=Integracion' --logger trx \
+  --results-directory artifacts/test-results/integracion
+bash scripts/ci/recuento-de-tests.sh artifacts/test-results/integracion 'Integración (Testcontainers)' 100 \
+  'Bastion.Api.IntegrationTests.dll,Bastion.Organizacion.IntegrationTests.dll'
+
+Integración (Testcontainers): 367 casos (367 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 293, y 0 en los otros siete
+    (355 en `d9e4a46`: +12 casos, los 8 de `ContratoDeLosCrucesTests` y los 4 de
+     `ElPuertoDeTercerosContraLaBaseTests`)
+
+Frontal: 14 ficheros de prueba, 95 casos, 0 avisos de `act()`
+  (los mismos 14 y 95 que en `d9e4a46`: el ítem no trae pantalla)
+```
+
+El reparto por clase no sale de la consola sino de los `.trx` del propio recuento, agrupando los
+`UnitTest` por ensamblado y `className`. `Arquitectura.Tests` se queda en 34 aunque
+`Inventario.cs` cambia: las listas declaradas crecen y los casos que las comparan son los mismos.
+
+**El canal de `act()` sigue a cero, y se sigue midiendo en la salida de la suite**, no contando
+llamadas en el código: `grep -c "not wrapped in act"` sobre la salida de
+`npm --prefix frontend run test` → **0**.
+
+```
+npm --prefix frontend run api          → `shared/api/esquema.ts` sin cambios (git status limpio)
+npm --prefix frontend run typecheck    → limpio
+npm --prefix frontend run lint         → limpio
+npm --prefix frontend run format:check → All matched files use Prettier code style!
+bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
+
+Frontal · arranque 418/450 KiB en 3 ficheros · total servido 577/900 KiB
+  (416/450 y 575/900 en `d9e4a46`: +2 KiB de arranque y +2 de total)
+```
+
+**El disparador de los 430 KiB no ha saltado, y lo que sumó está en el diff.** El frontal del ítem
+son tres ficheros —`app/i18n/es.ts` (+18 líneas), `app/i18n/en.ts` (+12) y `shared/api/esquema.ts`,
+que es generado y solo tipos—: los textos de los cinco `type` nuevos en las dos lenguas, y ninguna
+pantalla. Es el mismo reparto que el 1.9 atribuyó módulo a módulo: lo que cuesta arranque no son las
+pantallas, son sus textos.
+
+**Licencias, por conjuntos y con el comando.** Doce `packages.lock.json` cambian en el rango, y por
+eso mirar el diff no sirve: las dos referencias nuevas entre módulos y la de
+`Terceros.UnitTests → Terceros.Application` meten entradas `Project` y hacen aparecer en ficheros de
+bloqueo paquetes **que ya se resolvían en otros** —`Microsoft.Extensions.DependencyInjection.Abstractions`
+10.0.9 entra en el de `Terceros.UnitTests`, por ejemplo—. Lo que se compara es el conjunto:
+
+```
+python licencias.py d9e4a46 3a7ba3e      (pares `nombre/versión` de los `resolved` de TODOS los
+                                          packages.lock.json, y las entradas del package-lock.json)
+
+d9e4a46 → 39 packages.lock.json · 125 pares nombre/versión distintos · 30 entradas de tipo Project
+          · package-lock.json del frontal: 549 entradas
+3a7ba3e → 39 packages.lock.json · 125 pares nombre/versión distintos · 30 entradas de tipo Project
+          · package-lock.json del frontal: 549 entradas
+d9e4a46 → 3a7ba3e: pares añadidos [] · retirados [] · Project añadidos [] · retirados []
+
+git diff --name-only d9e4a46 3a7ba3e -- Directory.Packages.props frontend/package.json \
+  frontend/package-lock.json                                               → vacío
+git diff d9e4a46 3a7ba3e -- '*.csproj' | awk '/^diff --git/{f=$4} /^[+-].*(PackageReference|ProjectReference)/{print f" -> "$0}'
+  Bastion.Catalogo.Application.csproj  -> + ProjectReference …/Bastion.Terceros.Contracts.csproj
+  Bastion.Terceros.Application.csproj  -> + ProjectReference …/Bastion.Catalogo.Contracts.csproj
+  Bastion.Terceros.UnitTests.csproj    -> + ProjectReference …/Bastion.Terceros.Application.csproj
+```
+
+Cero pares añadidos y cero retirados en los dos ecosistemas, cero `PackageReference` en el diff: las
+tres líneas son **referencias de proyecto**, dos de ellas los cruces del ítem. Ninguna licencia nueva
+que revisar.
+
+**El humo, porque el ítem toca esquema.** El job «Humo» de la CI, paso a paso y **en local**, en un
+proyecto de compose aparte —`docker compose -p bastion-humo-110`— con un fichero de entorno de
+valores aleatorios generado para la pasada y borrado al terminar: ni el `deploy/.env` de desarrollo
+ni sus volúmenes se tocan. El paso 09 **no está en la CI**; se añadió para esta pasada, y pregunta a
+la base del compose por lo que el ítem migra:
+
+```
+HEAD 3a7ba3e · docker 29.7.2 · proyecto bastion-humo-110
+01 config               compose válido
+02 construir            exit 0 (168 s)
+03-05 levantar          api, postgres y web (healthy) · jaeger y otel-collector running
+                        · migraciones Exited (0)
+06 migrador             código 0 · EsquemaMigrado por los cinco contextos: Auditoría,
+                        Organización, Identidad, Terceros y Catálogo
+07 semillas en imagen   impuestos.json unidades-de-medida.json
+08 maestros en base     impuestos=12 unidades=15 iva_general_vigente=21.00
+09 lo del ítem en base  catalogo.articulos_proveedor: 1 tabla · terceros.terceros.tarifa_asignada_id: uuid
+                        · migraciones del ítem: catalogo 1, terceros 1 · claves ajenas entre esquemas: 0
+10-11 salud             /health/live → Healthy · /health/ready → base-de-datos Healthy
+12 sin credenciales     401
+13-14 sesión y lectura  POST /api/v1/identidad/sesiones → 200 · GET empresas con testigo → 200, total=1
+15-17 frontal           carga · por el proxy sin credenciales → 401 · mapas dentro de la imagen: ninguno
+18 trazas               Jaeger conoce bastion-api (intento 2)
+FALLOS: 0
+19 desmontar            down -v --remove-orphans: volumen bastion-humo-110_postgres-datos Removed
+```
+
+Y después, `docker compose ls -a` sin ningún proyecto y `docker volume ls` sin ningún volumen
+`bastion-humo-110`.
+
+**Lo que la batería destapó del arnés, y no del proyecto.** La primera pasada se paró a mitad para
+corregir un comentario (`3a7ba3e`), y la segunda salió con **`dotnet build` en rojo: 52 errores
+MSB3021**, todos «el proceso no tiene acceso al archivo porque está siendo utilizado por otro proceso»
+sobre `tests/Api.IntegrationTests/bin`. No era el código: **parar la tarea de fondo no había parado
+sus hijos**. El guion de la primera pasada seguía vivo con su `dotnet test` de integración, y al
+matar a mano el `dotnet format` de la segunda, su guion **siguió al paso siguiente** en vez de
+morir. Se localizó listando procesos con su línea de órdenes, se mataron los dos árboles con
+`taskkill /T` empezando por el `bash` de cada guion, se comprobó que no quedaba ninguno y se relanzó
+la batería **entera** desde limpio. Queda anotado porque un rojo leído en ese estado se atribuye al
+código con toda naturalidad, y porque dos carriles contra el mismo `bin/` y el mismo
+`artifacts/test-results` no solo rompen el build: contaminan el recuento.
+
+**Y un rojo del frontal que era contención, reproducido en la base y comparado por nombre.** Una
+pasada de `npm --prefix frontend run test` anterior a la batería salió con **2 ficheros rojos y 3
+avisos de `act()`**: `ElSelectorDeEmpresa` y `ElTestigoDeAcceso`, los dos con `Test timed out in
+5000ms`. Sola, **dos veces seguidas**: 95 de 95 y 0 avisos. Para no quedarse en «ha pasado a la
+segunda», la suite entera en **cuatro copias en paralelo** (`npx vitest run` ×4), primero sobre el
+árbol del ítem y después sobre `e48c409` —sacado con `git archive` a un directorio aparte, con el
+mismo `node_modules`—, cuyo frontal es **idéntico** al de `d9e4a46`
+(`git diff --name-only d9e4a46 e48c409 -- frontend` → 0 ficheros):
+
+```
+árbol del ítem   exit 1 ×4 · casos rojos por copia 1 · 1 · 3 · 6   · avisos de act() 0 · 2 · 5 · 1
+e48c409 (base)   exit 1 ×4 · casos rojos por copia 1 · 24 · 12 · 11 · avisos de act() 0 · 5 · 6 · 6
+```
+
+Todos los rojos, en los dos lados, por plazo agotado pasados los 5 s. Y la comparación **por
+nombre**, no por recuento: los seis casos distintos que se pusieron rojos en el árbol del ítem
+—`El testigo de acceso > no llega nunca a localStorage ni a sessionStorage`, `El listado de
+almacenes > mientras llega, dice que está cargando`, `Las rutas protegidas > sin sesión, cualquier
+ruta protegida lleva a la pantalla de acceso`, `El cambio de ruta > anuncia, retitula y mueve el foco
+al navegar`, `El selector de empresa > al cambiar de empresa, la lista pasa a ser la de la otra` y
+`El cambio de idioma > arranca en el idioma que se le diga, y el documento lo declara`— están **los
+seis** entre los 24 de la segunda copia de la base. No es del ítem: es la suite del frontal bajo
+contención, que ya estaba así. Y deja una consecuencia para el canal: **un aviso de `act()` solo es
+un hallazgo en una pasada sin competencia**, porque bajo contención la base también los da.
+
+**La divisa, probada por el efecto y con dos canarios.** El caso
+`Un_limite_en_dolares_y_una_tarifa_en_euros_conviven_porque_nadie_compara_divisas` afirma una
+**ausencia** —nadie compara—, y una afirmación de ausencia que no ha visto nunca la presencia no
+prueba nada. Así que se le puso delante lo que dice que no hay, una vez en cada orden, y se retiró.
+Los dos canarios rechazan con un error que **ya existía** —`ErroresDeTercero.NoEncontrado`— para no
+mover el catálogo de `type`; lo que cuenta es que el caso pide un 200 y ve otra cosa:
+
+```
+canario a — en `AsignarTarifa`, rechazar si hay límite y no está en EUR:
+  Con error ContratoDeLosCrucesTests.Un_limite_en_dolares_y_una_tarifa_en_euros_conviven_porque_nadie_compara_divisas
+  should be HttpStatusCode.OK but was HttpStatusCode.NotFound
+  Additional Info: asignar una tarifa en euros a un tercero con el límite en dólares se ha
+  rechazado: alguien compara las dos divisas, y la decisión del 1.10 es que no se comparan.
+  {"type":"/errors/tercero-no-encontrado",…,"status":404,…,"instance":"/api/v1/terceros/terceros/…/tarifa-asignada"}
+
+canario b — en `FijarLimiteCredito`, rechazar un límite que no esté en EUR si hay tarifa asignada:
+  Con error ContratoDeLosCrucesTests.Un_limite_en_dolares_y_una_tarifa_en_euros_conviven_porque_nadie_compara_divisas
+  should be HttpStatusCode.OK but was HttpStatusCode.NotFound
+  Additional Info: fijar un límite en dólares a un tercero con una tarifa en euros se ha
+  rechazado: la comparación está del otro lado.
+  {"type":"/errors/tercero-no-encontrado",…,"status":404,…,"instance":"/api/v1/terceros/terceros/…/limite-credito"}
+
+restaurado: build exit 0 · grep CANARIO: limpio · git status --porcelain:
+   M tests/Api.IntegrationTests/Contrato/ContratoDeLosCrucesTests.cs
+   M tests/Api.IntegrationTests/ElCensoDeEsteCarrilTests.cs
+```
+
+El `git status` **no** sale vacío, y lo que queda es exactamente lo que tenía que quedar: los
+canarios se pusieron **antes** de commitear el caso, y esos dos ficheros son el caso y su línea del
+censo —los dos únicos de `6781389`—. Ningún fichero de `src/` en la lista: los dos canarios se
+fueron.
+
+### Las ocho mutaciones del 1.10, cada una aplicada, ejecutada y revertida
+
+Todas sobre **árbol limpio y commiteado**, línea base `710532d`, con el guion
+`mutaciones.py` del directorio de trabajo de la sesión: copia de respaldo, cambio, `git diff`
+guardado, `dotnet build`, los carriles que la mutación puede alcanzar con `--logger trx`, y los
+casos rojos leídos **del `.trx`** y no de la consola. Revertidas **restaurando la copia y tocando su
+fecha** —la lección del 1.9: con la fecha vieja MSBuild no recompila y la mutación anterior se
+queda dentro del `.dll`—, **recompilando** (`exit 0` las nueve veces), y después de cada una
+`git status --porcelain` **vacío** y `grep -rn MUTACION src tests frontend/src db` **sin
+resultados**, las dos cosas comprobadas por el guion, que se para si alguna falla. Carriles de
+referencia sin mutar en `710532d`: rápido **748**, integración **366** —el 367 de la batería es
+el caso de la divisa, que llegó después en `6781389`—.
+
+| # | Mutación | Dónde | Carril rápido | Integración | Qué se pone rojo |
+|---|---|---|---|---|---|
+| 1 | Quitada de `CrucesDeclarados` la línea `Catalogo.Application -> Bastion.Terceros.Contracts` | `Inventario.cs` | **2** rojos | — | `LosIdentificadoresAjenosTests.Cada_modulo_de_la_lista_tiene_su_cruce_y_su_puerto` («`ArticuloProveedor.TerceroId`: Catalogo guarda un identificador de Terceros y no tiene ningún cruce declarado») **y** `LasFronterasEntreModulosTests.El_unico_cruce_entre_modulos_va_por_contratos` |
+| 2 | Añadida una línea `Terceros.Application -> Bastion.Identidad.Contracts` **sin código detrás** | `Inventario.cs` | **1** | — | `El_unico_cruce_entre_modulos_va_por_contratos` |
+| 3 | El alta acepta `NoExiste`: `!= Disponible` → `== NoHaceEseRol` | `ProveedoresDelArticulo.cs` | **2** | **2** | `ProveedoresDelArticuloTests.Los_estados_que_no_autorizan_contestan_lo_MISMO` y `El_estado_se_pregunta_antes_que_el_duplicado_y_lo_escondido_no_es_un_409`; contra la base, `Inventado_ajeno_bloqueado_y_solo_cliente_…` (el inventado da **201**) y `Volver_a_anadir_a_un_bloqueado_…` (da **409**) |
+| 4 | El puerto de terceros esquiva el filtro de **empresa** (R8): `.IgnoreQueryFilters(["Inquilinato"])` | `ConsultaDeTerceros.cs` | **1** | **2** | `ElFiltroNoSeSaltaPorAhiTests.Ninguna_llamada_de_las_que_rodean_el_filtro_aparece_en_el_codigo`; contra la base, `Inventado_ajeno_…` («el de otra empresa no contesta 400», **201**) y `ElPuertoDeTercerosContraLaBaseTests.Uno_inventado_y_uno_de_otra_empresa_NoExisten_…` (`Disponible` en vez de `NoExiste`) |
+| 5 | El puerto de terceros esquiva el filtro del **art. 32** en sus dos consultas: `.IgnoreQueryFilters(["Bloqueo"])` | `ConsultaDeTerceros.cs` | **1** | **5** | enteras abajo |
+| 6 | El puerto de tarifas deja de cerrar la vigencia por arriba: una tarifa acabada **rige** | `ConsultaDeTarifas.cs` | 0 | **1** | `Una_tarifa_que_ya_no_rige_y_una_que_aun_no_son_409_…` — «la que ya no rige se ha asignado», **200**; la futura sigue siendo 409 y por eso el caso prueba **los dos extremos** |
+| 7 | Sin registrar el adaptador de `IConsultaDeTerceros` | `ModuloDeTerceros.cs` | **101** | **206** | el host **no arranca**: enteras abajo, con la variante **7b** |
+| 8 | Una clave ajena `catalogo.articulos_proveedor(tercero_id) → terceros.terceros(id)`, puesta por `migrationBuilder.Sql` en la migración | `20260913071145_ProveedoresDelArticulo.cs` | 0 | **1** | `EsquemaDeIdentidadTests.La_membresia_guarda_el_identificador_de_empresa_y_NO_una_clave_ajena` — «`[(catalogo, terceros)]` … no puede haber claves ajenas entre esquemas» |
+
+**La 2, la 5 y la 7, enteras.**
+
+**Mutación 2 — un cruce declarado que ningún código hace.** Es la mitad del censo que una
+comparación de inclusión se dejaría: la 1 prueba que un cruce sin declarar sale rojo; esta, que una
+declaración sin cruce detrás también.
+
+```diff
++            ["Terceros.Application -> Bastion.Identidad.Contracts"] =
++                "MUTACION 2: un cruce declarado que ningún código hace.",
+```
+
+```
+carril rápido: exit 1, 748 casos, 747 correctos, 1 con error
+
+[Failed] LasFronterasEntreModulosTests.El_unico_cruce_entre_modulos_va_por_contratos
+  Shouldly.ShouldAssertException : ordenados
+      should be
+  ["Catalogo.Application -> Bastion.Organizacion.Contracts", "Catalogo.Application -> Bastion.Terceros.Contracts",
+   "Identidad.Application -> Bastion.Organizacion.Contracts", "Terceros.Application -> Bastion.Catalogo.Contracts",
+   "Terceros.Application -> Bastion.Identidad.Contracts", "Terceros.Application -> Bastion.Organizacion.Contracts"]
+      but was (case sensitive comparison)
+  ["Catalogo.Application -> Bastion.Organizacion.Contracts", "Catalogo.Application -> Bastion.Terceros.Contracts",
+   "Identidad.Application -> Bastion.Organizacion.Contracts", "Terceros.Application -> Bastion.Catalogo.Contracts",
+   "Terceros.Application -> Bastion.Organizacion.Contracts"]
+
+  Additional Info:
+      los cruces entre módulos no son los declarados:
+  1. Catalogo.Application -> Bastion.Organizacion.Contracts
+  2. Catalogo.Application -> Bastion.Terceros.Contracts
+  3. Identidad.Application -> Bastion.Organizacion.Contracts
+  4. Terceros.Application -> Bastion.Catalogo.Contracts
+  (…)
+--- restaurada: compila exit 0; git status --porcelain: vacío; grep MUTACION: limpio
+```
+
+Un caso rojo y solo uno, y **no** es `Cada_modulo_de_la_lista_tiene_su_cruce_y_su_puerto`: esa regla
+va del identificador al cruce, y una declaración huérfana no tiene identificador. La comparación
+entera es la única que la ve, y por eso no puede degradarse a un `ShouldContain`.
+
+**Mutación 5 — el puerto de terceros esquiva el filtro del art. 32 en sus dos consultas.** Es la
+que convierte el cruce en una fuga de datos reservados: el alta dejaría colgar un suministro de un
+bloqueado y el listado lo enseñaría. Cae **dos veces por caminos independientes**: primero el carril
+rápido, que no deja escribir la llamada; y aunque alguien sortease esa regla, cinco casos contra
+PostgreSQL.
+
+```diff
+         bool? haceElRol = await contexto.Terceros
++            .IgnoreQueryFilters(["Bloqueo"]) // MUTACION 5
+             .Where(tercero => tercero.Id == terceroId)
+ …
+         List<Guid> tratables = await contexto.Terceros
++            .IgnoreQueryFilters(["Bloqueo"]) // MUTACION 5
+             .Where(tercero => preguntados.Contains(tercero.Id))
+```
+
+```
+carril rápido: exit 1, 748 casos, 747 correctos, 1 con error
+[Failed] ElFiltroNoSeSaltaPorAhiTests.Ninguna_llamada_de_las_que_rodean_el_filtro_aparece_en_el_codigo
+  hallazgos should be empty but had 1 item and was
+  ["src/Modules/Terceros/Bastion.Terceros.Infrastructure/Persistencia/Repositorios/ConsultaDeTerceros.cs usa .IgnoreQueryFilters("]
+
+carril de integración: exit 1, 366 casos, 361 correctos, 5 con error
+[Failed] ContratoDeLosCrucesTests.Inventado_ajeno_bloqueado_y_solo_cliente_contestan_el_MISMO_400_y_no_dejan_fila
+  alta.StatusCode should be HttpStatusCode.BadRequest but was HttpStatusCode.Created
+  Additional Info: el bloqueado no contesta 400. {"id":"01a09ead-…","terceroId":"01a09ead-…","referenciaDelProveedor":null}
+
+[Failed] ContratoDeLosCrucesTests.Volver_a_anadir_a_un_bloqueado_que_ya_suministraba_es_el_MISMO_400_y_no_un_409
+  delBloqueado.StatusCode should be HttpStatusCode.BadRequest but was HttpStatusCode.Conflict
+  Additional Info: volver a añadir a un bloqueado que ya suministraba el artículo no contesta como uno
+  inventado. Si es un 409, el alta dice «ya está» de un suministro que el listado esconde, y eso es
+  decir que está bloqueado. {"type":"/errors/articulo-proveedor-duplicado",…,"status":409,…}
+
+[Failed] ElPuertoDeTercerosContraLaBaseTests.De_un_conjunto_se_tratan_los_de_aqui_no_bloqueados_hagan_el_papel_que_hagan
+  tratables.OrderBy(id => id) should be [01a09ead-7ef8-…, 01a09ead-7efe-…]
+  but was [01a09ead-7ef8-…, 01a09ead-7efe-…, 01a09ead-7f0c-…]
+  Additional Info: el conjunto no deja pasar justo a los dos que se pueden tratar. Si sobra el
+  bloqueado, el listado de proveedores de un artículo enseña a quien tiene sus datos reservados; (…)
+
+[Failed] ContratoDeLosCrucesTests.El_listado_esconde_al_proveedor_bloqueado_y_desbloquearlo_devuelve_la_MISMA_fila
+  await IdsDelListadoAsync(cliente, articulo.Id) should be [01a09ead-49d1-…]
+  but was [01a09ead-49bb-…, 01a09ead-49d1-…]
+  Additional Info: el listado de proveedores de un artículo enseña a un tercero bloqueado. Es la
+  manera de leer, desde Catálogo, quién tiene sus datos reservados (art. 32 LOPDGDD)
+
+[Failed] ElPuertoDeTercerosContraLaBaseTests.Un_bloqueado_NoExiste_desde_fuera_y_desbloquearlo_lo_devuelve_Disponible
+  (await new ConsultaDeTerceros(contexto).EstadoDeAsync(tercero.Id, RolDeTercero.Proveedor, …))
+  should be EstadoDelTercero.NoExiste but was EstadoDelTercero.Disponible
+  Additional Info: desde fuera de Terceros se ve que la ficha bloqueada existe. (…)
+--- restaurada: compila exit 0; git status --porcelain: vacío; grep MUTACION: limpio
+```
+
+Los cinco rojos son **las cuatro respuestas del art. 32** de la decisión 5 más el conjunto del
+puerto, cada uno con su mensaje: el alta del bloqueado, el re-alta que no puede ser 409, el listado
+que no puede enseñarlo y el puerto que no puede contestar `Disponible`. Ninguno es un efecto
+colateral de otro: cada uno ejerce un camino distinto.
+
+**Mutación 7 — sin registrar el adaptador de `IConsultaDeTerceros`, y la 7b.** El criterio pide que
+esto se ponga rojo **por el efecto, en una petición de verdad**, y la primera lectura honesta es que
+la 7 **no** lo hace así:
+
+```diff
+-        servicios.AddScoped<IConsultaDeTerceros, ConsultaDeTerceros>();
++        // MUTACION 7: servicios.AddScoped<IConsultaDeTerceros, ConsultaDeTerceros>();
+```
+
+```
+carril rápido:      exit 1, 748 casos, 647 correctos, 101 con error
+carril integración: exit 1, 366 casos, 160 correctos, 206 con error (18 s)
+
+[Failed] ContratoDeLosCrucesTests.Un_proveedor_de_aqui_se_anade_con_201_y_el_listado_lo_trae
+  System.AggregateException : Some services are not able to be constructed
+  (Error while validating the service descriptor 'ServiceType: Bastion.Catalogo.Application.Catalogo.IListarProveedoresDelArticulo
+   Lifetime: Scoped ImplementationType: Bastion.Catalogo.Application.Catalogo.ListarProveedoresDelArticulo':
+   Unable to resolve service for type 'Bastion.Terceros.Contracts.Terceros.IConsultaDeTerceros' while attempting
+   to activate 'Bastion.Catalogo.Application.Catalogo.ListarProveedoresDelArticulo'.)
+  (Error while validating the service descriptor '… IAgregarProveedorAlArticulo …': Unable to resolve service
+   for type 'Bastion.Terceros.Contracts.Terceros.IConsultaDeTerceros' …)
+  … 303 de los 307 rojos con esta misma excepción; los otros 4 son su consecuencia:
+  [Failed] LaTrazaEsDeSoloAnadidoTests.Un_DELETE_sobre_una_fila_de_traza_lo_rechaza_el_motor
+    id should not be null but was  ·  la tabla de traza está vacía: no hay contra qué probar el solo añadido
+  (y Un_UPDATE_… del mismo fichero, LaTrazaNoGuardaSecretosTests.Ningun_valor_… «sin trazas no hay nada
+   que comprobar» y UnCambioEnUnMaestroDejaSuRastroTests.Lo_que_se_escribe_sin_empresa_… «la semilla de
+   arranque escribe sin empresa: tiene que haber trazas así»)
+--- restaurada: compila exit 0; git status --porcelain: vacío; grep MUTACION: limpio
+```
+
+**Sí falló la validación del contenedor al arrancar, y eso es lo que se ve.** `WebApplicationFactory`
+arranca el host en **Development**, y en ese entorno ASP.NET Core construye el contenedor con
+`ValidateOnBuild`: el host no llega a arrancar y **ninguna petición sale**. Son 307 rojos —101 en el
+carril rápido y 206 en el de integración, este en 18 s—: **303** por la misma excepción y **4** por
+su consecuencia, casos de la traza que necesitan lo que la semilla de arranque escribe y se
+encuentran la tabla vacía, porque sin host no hay arranque. Es un rojo fuerte, pero es exactamente la «inspección del contenedor» que el criterio
+descarta como prueba, hecha por el marco en vez de por un test. Y en **Production** `ValidateOnBuild`
+viene apagado por omisión, así que ese rojo no existe allí.
+
+**La 7b quita esa red para ver qué queda**: la misma mutación y, en `ApiDeVerdad`, el contenedor
+construido como en Production.
+
+```diff
+         builder.UseSetting("ConnectionStrings:Bastion", postgres.CadenaDeConexion);
++        builder.UseDefaultServiceProvider(opciones => opciones.ValidateOnBuild = false); // MUTACION 7b
+```
+
+```
+carril integración: exit 1, 366 casos, 347 correctos, 19 con error (211 s)
+
+[Failed] ContratoDeLosCrucesTests.Un_proveedor_de_aqui_se_anade_con_201_y_el_listado_lo_trae
+  alta.StatusCode should be HttpStatusCode.Created but was HttpStatusCode.InternalServerError
+  Additional Info:
+    {"type":"/errors/error-interno","title":"Error interno del servidor","status":500,
+     "instance":"/api/v1/catalogo/articulos",…}
+    · registro del servidor: [ManejadorDeExcepcionesNoControladas] Excepción no controlada al atender
+      "POST" "/api/v1/catalogo/articulos". — InvalidOperationException: Unable to resolve service for
+      type 'Bastion.Terceros.Contracts.Terceros.IConsultaDeTerceros' while attempting to activate
+      'Bastion.Catalogo.Application.Catalogo.ListarProveedoresDelArticulo'.
+
+[Failed] LaPuertaDeCadaAccionTests.Ninguna_accion_contesta_con_un_fallo_del_servidor_al_sondeo
+  reventadas should be empty but had 9 items and was
+  ["ArticulosController.Listar → 500", "ArticulosController.Obtener → 500", "ArticulosController.Crear → 500",
+   "ArticulosController.Modificar → 500", "ArticulosController.ListarProveedores → 500",
+   "ArticulosController.ObtenerProveedor → 500", "ArticulosController.AgregarProveedor → 500",
+   "ArticulosController.ModificarProveedor → 500", "ArticulosController.QuitarProveedor → 500"]
+
+y además: ContratoDeLosCrucesTests ×4 (los cuatro del proveedor; los tres de la tarifa, VERDES),
+ContratoDeCatalogoTests ×10 y ContratoDeTarifasTests ×4 — todos por un 500 al crear el artículo
+--- restaurada: compila exit 0; git status --porcelain: vacío; grep MUTACION: limpio
+```
+
+**Esto sí es el efecto, en peticiones de verdad**, y dice dos cosas que la 7 escondía:
+
+- **Los casos del cruce se bastan sin la validación del marco.** Caen los cuatro del proveedor y
+  **no** caen los tres de la tarifa, cuyo adaptador sigue registrado: el rojo es de este cruce y no
+  de «algo no arranca». `ElPuertoDeTercerosContraLaBaseTests` sigue verde, y debe: construye el
+  adaptador con `new` y prueba el SQL, no la composición.
+- **El radio del fallo es el controlador entero, no el cruce.** `ArticulosController` recibe por
+  constructor los nueve casos de uso, y activar el controlador exige resolverlos todos: sin el
+  adaptador de Terceros, en Production **no se puede ni crear un artículo**. El comentario del
+  registro decía «la primera petición que intente añadir un proveedor revienta», y era falso por
+  los dos lados; está corregido en `92afe10`. Del otro lado, **medido con un canario (7c)** y no
+  supuesto: sin `IConsultaDeTarifas` y con el contenedor sin validar, caen las **trece** acciones de
+  `LoQueCuelgaDelTerceroController` —contactos, cuentas, condiciones y límite incluidos—.
+
+**Y lo que destapó la 8, que salió roja por un caso que no se llama como lo que guarda.** La clave
+ajena entre esquemas puesta con `migrationBuilder.Sql` cayó en **un solo caso**:
+`EsquemaDeIdentidadTests.La_membresia_guarda_el_identificador_de_empresa_y_NO_una_clave_ajena`. Y
+cayó ahí **por cómo está redactada su consulta**: es la única de las tres a `information_schema` que
+no filtra por esquema de origen. Las otras dos —`EsquemaDelModuloTests.No_hay_ninguna_clave_foranea_que_salga_del_esquema_del_modulo`,
+con origen `organizacion`, y `EsquemaDeTercerosTests.La_empresa_se_guarda_como_identificador_y_NO_como_clave_ajena`,
+con origen `terceros`— no miran una clave que sale de `catalogo`; **Catálogo no tiene fichero de
+esquema**; y `NingunaClaveForaneaCruzaDeEsquemaTests`, la del carril rápido, recorre el **modelo** de
+EF Core, que no ve una sentencia SQL escrita a mano en una migración: el carril rápido salió **748 de
+748 en verde** con la mutación puesta. Ella misma lo avisa en su comentario —no sustituye a las de
+integración, porque solo esas miran lo que hay de verdad en la base—.
+
+O sea: la regla 4 del §5, contra la base de verdad, **la sostiene hoy un caso que habla de
+membresías**, y quien le añadiera `origen.table_schema = 'identidad'` para que hiciera lo que su
+nombre dice la dejaría sin guardia, con todo en verde. **Hallazgo anotado y no arreglado en este
+ítem**: no es de los cruces sino del arnés, y lo que pide —una comprobación contra PostgreSQL sin
+filtro de esquema, con un nombre que diga lo que guarda y su línea en el censo del carril— es un
+cambio que necesita su propia mutación.
 
 ### Verificado en local, con la salida real — ítem 1.9
 
