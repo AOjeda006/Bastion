@@ -16,6 +16,11 @@ namespace Bastion.Catalogo.Contracts.Catalogo;
 /// no aparece en el listado. El filtro no lo pone la pantalla: lo pone el caso de uso, preguntando
 /// a Terceros, porque lo que la pantalla no pinta sigue estando en el JSON.
 /// </para>
+/// <para>
+/// <b>La lectura de una fila, <c>ObtenerProveedorDelArticulo</c>, no pregunta, y es correcto solo
+/// porque este DTO no publica ningún dato de una persona:</b> el día que lleve el nombre del
+/// proveedor, esa lectura publicará a quien el listado esconde.
+/// </para>
 /// </remarks>
 /// <param name="Id">Identificador de la fila.</param>
 /// <param name="EmpresaId">Empresa a la que pertenece (R8).</param>
