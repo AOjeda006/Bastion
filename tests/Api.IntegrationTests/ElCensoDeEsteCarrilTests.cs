@@ -238,6 +238,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaInversaYElResolutorTests.Una_conversion_retirada_sigue_resolviendo_y_lo_dice",
         "LaInversaYElResolutorTests.Una_conversion_retirada_sigue_restringiendo_a_su_inversa",
 
+        // Del ítem 1.11, y corren en el carril rápido: son la regla sobre la lista de rastros que
+        // usan los sondeos de este carril, y no abren conexión.
+        "LaListaDeRastrosProhibidosTests.La_regla_de_la_lista_puede_dispararse",
+        "LaListaDeRastrosProhibidosTests.Ningun_rastro_prohibido_cabe_en_un_identificador_aleatorio",
+
         "LaMatrizDeLosPuertosDeEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta",
         "LaMatrizDeLosPuertosDeEstadoTests.Cada_cubrimiento_nombra_un_puerto_de_aqui_y_un_valor_de_SU_enumerado",
         "LaMatrizDeLosPuertosDeEstadoTests.Cada_cubrimiento_vive_en_un_caso_que_corre_contra_la_base",

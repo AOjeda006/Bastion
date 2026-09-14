@@ -20,8 +20,9 @@ namespace Bastion.Api.IntegrationTests.Errores;
 /// </para>
 /// <para>
 /// La segunda: que la respuesta no traiga nada de dentro. <b>La lista de rastros prohibidos está
-/// aquí, en el test, y no en mi cabeza</b>: escrita, se puede ampliar cuando aparezca uno nuevo;
-/// recordada, se comprueba distinto cada vez que alguien mira.
+/// en el test, y no en mi cabeza</b> —en <see cref="RastrosProhibidos"/>, una para todos los
+/// sondeos del carril—: escrita, se puede ampliar cuando aparezca uno nuevo; recordada, se
+/// comprueba distinto cada vez que alguien mira.
 /// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]
@@ -30,36 +31,6 @@ public sealed class EntradaHostilTests(PostgresConTodosLosModulos postgres) : ID
 {
     private const string Empresas = "/api/v1/organizacion/empresas";
     private const string Sesiones = "/api/v1/identidad/sesiones";
-
-    // Lo que NO puede salir por la puerta, pase lo que pase dentro. Cada línea es algo que le
-    // ahorra trabajo a quien esté sondeando: la versión del motor, la forma de la consulta, la
-    // ruta del despliegue, el nombre de la máquina o el tipo que ha estallado.
-    private static readonly string[] s_rastrosProhibidos =
-    [
-        "Npgsql",
-        "PostgresException",
-        "DbUpdateException",
-        "Microsoft.EntityFrameworkCore",
-        "System.InvalidOperationException",
-        "StackTrace",
-        "   at ",
-        "SELECT ",
-        "INSERT INTO",
-        "UPDATE ",
-        "DELETE FROM",
-        "relation \"",
-        "column \"",
-        "constraint \"",
-        "bastion_pruebas",
-        "Host=",
-        "Password=",
-        "Username=",
-        "5432",
-        "C:\\",
-        "/home/runner",
-        "/usr/share",
-        ".cs:line",
-    ];
 
     private readonly ApiDeVerdad _api = new(postgres);
 
@@ -203,7 +174,7 @@ public sealed class EntradaHostilTests(PostgresConTodosLosModulos postgres) : ID
     {
         string cuerpo = await respuesta.Content.ReadAsStringAsync();
 
-        foreach (string rastro in s_rastrosProhibidos)
+        foreach (string rastro in RastrosProhibidos.Todos)
         {
             cuerpo.ShouldNotContain(rastro, Case.Insensitive, $"la respuesta trae «{rastro}»: {cuerpo}");
         }
