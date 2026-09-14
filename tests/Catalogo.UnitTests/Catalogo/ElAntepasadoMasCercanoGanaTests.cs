@@ -30,6 +30,11 @@ namespace Bastion.Catalogo.UnitTests.Catalogo;
 /// relajara. La marca es para que se lean como lo que son y no como cobertura de un camino vivo, y
 /// el motivo va en cada una — sin el motivo escrito, la conducta se vuelve a discutir desde cero.
 /// </para>
+/// <para>
+/// <b>Desde el ítem 1.11 la marca tiene lector</b>: <c>LasMarcasDeAlcanceTests</c>, en el carril de
+/// arquitectura, compara las marcas con su lista declarada y comprueba que las cuatro condiciones
+/// del motivo siguen en pie. Quitar o poner una marca, o relajar lo que la sostiene, sale rojo allí.
+/// </para>
 /// </remarks>
 public sealed class ElAntepasadoMasCercanoGanaTests
 {

@@ -75,6 +75,13 @@ public sealed class LasReglasDeEsteCarrilTests
         // una lista de NOMBRES, así que se pone verde en cuanto alguien añade el valor, y las filas
         // las trae quien implementa el puerto. Sin ella, el arreglo del ítem 1.6 se podía dar por
         // hecho añadiendo dos líneas a un `enum`.
+        // Del ítem 1.11: el rasgo `Alcance` tiene lector. Las marcas que hay son las declaradas, y
+        // cada una sigue sostenida por las condiciones de su motivo; si una deja de cumplirse, la
+        // marca diría «no alcanzable» de un camino vivo.
+        "LasMarcasDeAlcanceTests.Cada_marca_sigue_sostenida_por_las_condiciones_de_su_motivo",
+        "LasMarcasDeAlcanceTests.La_lectura_de_marcas_puede_dispararse",
+        "LasMarcasDeAlcanceTests.Las_marcas_de_alcance_son_las_declaradas",
+
         "LoBloqueadoSeVeEnteroTests.El_barrido_ve_los_agregados_que_se_bloquean",
         "LoBloqueadoSeVeEnteroTests.Ningun_valor_de_la_lista_nombra_algo_que_ya_no_se_bloquea",
         "LoBloqueadoSeVeEnteroTests.Todo_agregado_bloqueable_esta_en_la_lista_del_articulo_32",
