@@ -90,6 +90,17 @@ export const es = {
       'articulo-impuesto-no-vigente':
         'Ese tramo de impuesto ya no rige. Elige uno que esté vigente.',
       'articulo-no-encontrado': 'Ese artículo ya no existe. Vuelve al listado y actualiza.',
+      'articulo-proveedor-duplicado': 'Ese proveedor ya está en la lista de este artículo.',
+      'articulo-proveedor-no-encontrado':
+        'Ese proveedor ya no está en la lista de este artículo. Actualiza la pantalla.',
+      // El texto que NO distingue, y por eso está escrito así de largo. Detrás hay tres
+      // situaciones —la ficha no existe, está reservada por el artículo 32, o no está marcada
+      // como proveedora— y la API contesta lo mismo en las tres a propósito: separarlas
+      // convertiría este formulario en una manera de averiguar quién está dado de baja. Así que
+      // aquí tampoco se separan, y lo que se le ofrece a quien lo lee es lo que puede hacer.
+      'articulo-proveedor-tercero-no-valido':
+        'Ese tercero no se puede poner como proveedor de este artículo. Comprueba en el maestro ' +
+        'de terceros que la ficha existe y que está marcada como proveedora.',
       'articulo-tipo-no-valido': 'El tipo de un artículo solo puede ser «Bien» o «Servicio».',
       'articulo-unidad-no-encontrada':
         'Esa unidad de medida no existe. Elige una del maestro de unidades.',
@@ -194,6 +205,13 @@ export const es = {
         'tarifa no se pueden solapar.',
       'tercero-duplicado': 'Esta empresa ya tiene un tercero con ese identificador fiscal.',
       'tercero-no-encontrado': 'Ese tercero ya no existe. Vuelve al listado y actualiza.',
+      'tercero-tarifa-no-encontrada': 'Esa tarifa no existe. Elige una del maestro de tarifas.',
+      // La retirada del ADR-0023 otra vez, con sujeto nuevo: la tarifa caducada NO desaparece
+      // —sigue diciendo a qué precio se vendió lo ya emitido—, lo que no se puede es empezar a
+      // aplicarla hoy. Un «esa tarifa no existe» mandaría a buscar un fallo que no hay.
+      'tercero-tarifa-no-vigente':
+        'Esa tarifa ya no está vigente: sigue valiendo para lo que se emitió mientras regía, ' +
+        'pero no se puede asignar hoy. Elige una que esté vigente.',
       'tipo-cambio-duplicado': 'Ya hay un tipo de cambio para esa divisa en esa fecha.',
       'tipo-cambio-no-encontrado': 'Ese tipo de cambio ya no existe.',
       'ubicacion-duplicada': 'Ya hay una ubicación con ese código en ese almacén.',

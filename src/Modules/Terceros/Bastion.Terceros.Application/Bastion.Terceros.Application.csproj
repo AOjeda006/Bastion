@@ -19,6 +19,16 @@
       petición HTTP, y desde luego no un JOIN contra `organizacion.empresas`.
     -->
     <ProjectReference Include="../../Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+
+    <!--
+      Contracts de Catálogo, y SOLO Contracts. Es la otra mitad de la pareja MUTUA del ítem 1.10:
+      `Tercero.TarifaAsignadaId` es un `Guid` del esquema `catalogo`, sin clave ajena, y lo que
+      impide que ahí acabe una tarifa inventada, de otra empresa o cuya vigencia ya terminó es
+      `IConsultaDeTarifas`, resuelta en proceso. La flecha de ida está en
+      `Bastion.Catalogo.Application`, y el motivo de que las dos juntas no sean un ciclo está
+      escrito allí: los dos `Contracts` no se ven entre sí.
+    -->
+    <ProjectReference Include="../../Catalogo/Bastion.Catalogo.Contracts/Bastion.Catalogo.Contracts.csproj" />
   </ItemGroup>
 
   <!--
@@ -28,6 +38,17 @@
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup Label="Pruebas">
+    <!--
+      Lo que el ítem 1.10 pone en esta capa —`LaTarifaSeOfreceParaLoNuevo` y el caso de uso que la
+      usa— es `internal`, como todo lo que no es contrato. Y es traducir tres valores de un
+      enumerado a tres desenlaces: nada de eso abre una conexión, así que su testigo no puede
+      vivir solo detrás de Testcontainers. Es la misma decisión que `Bastion.Catalogo.Application`
+      tomó en el 1.8, con el mismo motivo.
+    -->
+    <InternalsVisibleTo Include="Bastion.Terceros.UnitTests" />
   </ItemGroup>
 
 </Project>

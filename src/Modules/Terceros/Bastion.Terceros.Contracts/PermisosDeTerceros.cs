@@ -90,6 +90,15 @@ public static class PermisosDeTerceros
     /// </remarks>
     public const string LimiteCreditoFijar = "terceros.limite-credito.fijar";
 
+    /// <summary>Asignar —o quitar— la tarifa que se le aplica a un tercero.</summary>
+    /// <remarks>
+    /// <b>Aparte de <c>tercero.modificar</c>, y es el mismo reparto que en Catálogo.</b> Elegir la
+    /// lista de precios de un cliente decide lo que se le va a cobrar; corregirle el domicilio no.
+    /// Quien mantiene el maestro de terceros todos los días no tiene por qué llevar esta facultad,
+    /// y con un permiso compartido no habría manera de expresarlo.
+    /// </remarks>
+    public const string TarifaAsignar = "terceros.tarifa-asignada.fijar";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -112,5 +121,6 @@ public static class PermisosDeTerceros
         CuentaBancariaQuitar,
         CondicionPagoFijar,
         LimiteCreditoFijar,
+        TarifaAsignar,
     ];
 }

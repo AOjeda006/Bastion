@@ -12,6 +12,7 @@ using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Impuestos;
 using Bastion.Organizacion.Contracts.Unidades;
+using Bastion.Terceros.Contracts.Terceros;
 
 namespace Bastion.Catalogo.UnitTests.Dobles;
 
@@ -396,4 +397,101 @@ internal sealed class LineasDeTarifaEnMemoria : IRepositorioDeLineasDeTarifa
         throw new NotSupportedException("El listado se prueba contra PostgreSQL, no aquí.");
 
     public void Agregar(LineaTarifa linea) => Guardadas.Add(linea);
+}
+
+/// <summary>
+/// El puerto de terceros, fijado en un estado, que apunta con qué y por qué papel se preguntó.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Apunta el papel además del identificador, y esa es la mitad que se olvida.</b> Un caso de uso
+/// que preguntara por <c>Cliente</c> donde tiene que preguntar por <c>Proveedor</c> devolvería
+/// exactamente las mismas respuestas en un doble que contestara siempre lo mismo, y dejaría colgar
+/// un suministro de alguien a quien solo se le vende. Sin este registro, ese fallo sale verde.
+/// </para>
+/// <para>
+/// <b>Y el conjunto se contesta con una regla, no con una constante.</b>
+/// <c>CualesSePuedenTratarAsync</c> devuelve los que no están en <c>NoExiste</c> —que en el
+/// adaptador de verdad son los que no están bloqueados ni son de otra empresa, y no lo mismo que
+/// <c>Disponible</c>: uno que no haga el papel SÍ se puede tratar—. Un doble que devolviera todos o ninguno no podría ejercer el filtro del art. 32
+/// sobre una lista mezclada, que es justo el caso que importa.
+/// </para>
+/// </remarks>
+internal sealed class TercerosEn(EstadoDelTercero estado) : IConsultaDeTerceros
+{
+    private readonly Dictionary<Guid, EstadoDelTercero> _porFicha = [];
+
+    internal List<(Guid Tercero, RolDeTercero Rol)> Preguntados { get; } = [];
+
+    internal List<IReadOnlyCollection<Guid>> ConjuntosPreguntados { get; } = [];
+
+    /// <summary>Fija el estado de UNA ficha, para poder mezclar en una misma lista.</summary>
+    internal TercerosEn Con(Guid terceroId, EstadoDelTercero suyo)
+    {
+        _porFicha[terceroId] = suyo;
+
+        return this;
+    }
+
+    public Task<EstadoDelTercero> EstadoDeAsync(
+        Guid terceroId,
+        RolDeTercero rol,
+        CancellationToken cancelacion)
+    {
+        Preguntados.Add((terceroId, rol));
+
+        return Task.FromResult(_porFicha.GetValueOrDefault(terceroId, estado));
+    }
+
+    public Task<IReadOnlySet<Guid>> CualesSePuedenTratarAsync(
+        IReadOnlyCollection<Guid> terceroIds,
+        CancellationToken cancelacion)
+    {
+        ConjuntosPreguntados.Add(terceroIds);
+
+        return Task.FromResult<IReadOnlySet<Guid>>(
+            terceroIds.Distinct()
+                .Where(uno =>
+                    _porFicha.GetValueOrDefault(uno, estado) is not EstadoDelTercero.NoExiste)
+                .ToHashSet());
+    }
+}
+
+/// <summary>Los suministros de un artículo, en memoria.</summary>
+internal sealed class ProveedoresEnMemoria : IRepositorioDeProveedoresDeArticulo
+{
+    internal List<ArticuloProveedor> Guardados { get; } = [];
+
+    internal List<ArticuloProveedor> Eliminados { get; } = [];
+
+    internal ProveedoresEnMemoria Con(ArticuloProveedor suministro)
+    {
+        Guardados.Add(suministro);
+
+        return this;
+    }
+
+    public Task<ArticuloProveedor?> ObtenerAsync(Guid id, CancellationToken cancelacion) =>
+        Task.FromResult(Guardados.Find(uno => uno.Id == id));
+
+    public Task<IReadOnlyList<ArticuloProveedor>> DeArticuloAsync(
+        Guid articuloId,
+        CancellationToken cancelacion) =>
+        Task.FromResult<IReadOnlyList<ArticuloProveedor>>(
+            [.. Guardados.Where(uno => uno.ArticuloId == articuloId)]);
+
+    public Task<bool> YaLoSuministraAsync(
+        Guid articuloId,
+        Guid terceroId,
+        CancellationToken cancelacion) =>
+        Task.FromResult(
+            Guardados.Exists(uno => uno.ArticuloId == articuloId && uno.TerceroId == terceroId));
+
+    public void Agregar(ArticuloProveedor suministro) => Guardados.Add(suministro);
+
+    public void Eliminar(ArticuloProveedor suministro)
+    {
+        Eliminados.Add(suministro);
+        Guardados.Remove(suministro);
+    }
 }

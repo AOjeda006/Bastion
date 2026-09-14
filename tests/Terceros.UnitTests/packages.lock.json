@@ -130,11 +130,39 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "bastion.buildingblocks.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
       "bastion.buildingblocks.contracts": {
         "type": "Project"
       },
       "bastion.buildingblocks.domain": {
         "type": "Project"
+      },
+      "bastion.catalogo.contracts": {
+        "type": "Project"
+      },
+      "bastion.organizacion.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.terceros.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Catalogo.Contracts": "[1.0.0, )",
+          "Bastion.Organizacion.Contracts": "[1.0.0, )",
+          "Bastion.Terceros.Contracts": "[1.0.0, )",
+          "Bastion.Terceros.Domain": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.9, )"
+        }
       },
       "bastion.terceros.contracts": {
         "type": "Project",
@@ -148,6 +176,12 @@
         "dependencies": {
           "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
         }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.9, )",
+        "resolved": "10.0.9",
+        "contentHash": "g41l/30G3K4B/d/L8kjux0+30e27c8D0FVQ/PFCpbekgfDpj9mnDhieP67EqXWvl1EWNeZh2rpR4F5B/jcDOHA=="
       }
     }
   }

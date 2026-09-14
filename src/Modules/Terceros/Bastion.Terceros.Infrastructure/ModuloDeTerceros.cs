@@ -5,6 +5,7 @@ using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Terceros.Application;
 using Bastion.Terceros.Application.Terceros;
+using Bastion.Terceros.Contracts.Terceros;
 using Bastion.Terceros.Infrastructure.Persistencia;
 using Bastion.Terceros.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
@@ -66,12 +67,18 @@ public static class ModuloDeTerceros
         // registran bajo el mismo tipo y el listado los resuelve todos como `IEnumerable`.
         servicios.AddScoped<IConsultaDeLoBloqueado, ConsultaDeLoBloqueadoDeTerceros>();
 
+        // LO QUE ESTE MÓDULO EXPONE A LOS DEMÁS, bajo el tipo de su `Contracts`. Se registra aquí
+        // porque quien lo implementa es esta capa; quien lo consume —Catálogo, al colgar un
+        // proveedor de un artículo— no sabe que este ensamblado existe.
+        //
+        // Y esta línea es la mitad invisible del cruce: sin ella todo compila, el artefacto de
+        // OpenAPI sale igual y la primera petición que intente añadir un proveedor revienta
+        // resolviendo la dependencia. Por eso lo que la comprueba no es una inspección del
+        // contenedor sino una llamada por la API que atraviesa el cruce de verdad.
+        servicios.AddScoped<IConsultaDeTerceros, ConsultaDeTerceros>();
+
         // Sin cargador de semillas: Terceros no tiene maestros de instalación que sembrar. Un
         // tercero lo da de alta una empresa; no viene con el producto.
-        //
-        // Y sin `IConsulta...` propia: de momento ningún otro módulo pregunta nada sobre terceros.
-        // Cuando Facturación lo necesite, la puerta se declarará en `Terceros.Contracts` y se
-        // registrará aquí.
         servicios.AgregarCasosDeUsoDeTerceros();
 
         return servicios;

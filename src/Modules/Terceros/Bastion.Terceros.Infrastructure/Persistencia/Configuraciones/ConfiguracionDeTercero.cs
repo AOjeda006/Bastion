@@ -143,6 +143,14 @@ internal sealed class ConfiguracionDeTercero : IEntityTypeConfiguration<Tercero>
                 .SeAudita();
         });
 
+        // LA TARIFA ASIGNADA, Y LA CLAVE AJENA QUE NO ESTÁ. Apunta a `catalogo.tarifas`, o sea a
+        // otro esquema, así que no hay clave ajena: la regla 4 del §5 no la deja, y ponerla ataría
+        // los dos módulos por debajo —el orden de las migraciones pasaría a importar y ninguno se
+        // podría desplegar sin el otro—. Lo que ocupa su sitio es `IConsultaDeTarifas`, preguntado
+        // antes de guardar (ADR-0024); y el estado que contesta no es «existe», es si su vigencia
+        // cubre el día de hoy.
+        tercero.Property(fila => fila.TarifaAsignadaId).SeAudita();
+
         ConfiguracionDeEntidadBase.Mapear(tercero);
 
         tercero.ComplexProperty(fila => fila.Bloqueo, ConfiguracionDeBloqueo.Mapear);

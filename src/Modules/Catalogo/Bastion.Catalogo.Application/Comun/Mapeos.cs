@@ -45,6 +45,24 @@ internal static class Mapeos
             categoria.PadreId);
     }
 
+    /// <summary>El suministro, con el identificador del tercero y nada más de él.</summary>
+    /// <remarks>
+    /// Ni razón social ni identificador fiscal, y no es una omisión: la ficha es de Terceros.
+    /// Rellenarla aquí exigiría un puerto que la devolviera, y eso convertiría a este módulo en un
+    /// lector de datos personales sin permiso ni traza.
+    /// </remarks>
+    internal static ArticuloProveedorDto ADto(this ArticuloProveedor suministro)
+    {
+        ArgumentNullException.ThrowIfNull(suministro);
+
+        return new ArticuloProveedorDto(
+            suministro.Id,
+            suministro.EmpresaId,
+            suministro.ArticuloId,
+            suministro.TerceroId,
+            suministro.ReferenciaDelProveedor);
+    }
+
     internal static TarifaDto ADto(this Tarifa tarifa)
     {
         ArgumentNullException.ThrowIfNull(tarifa);

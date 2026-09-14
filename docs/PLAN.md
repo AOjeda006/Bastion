@@ -870,8 +870,8 @@ Todo lo de abajo está razonado en
 
 `TodaEscrituraDiceComoSeProtegeTests` recorre la **tabla de enrutado del host** (desde el 1.3; hasta
 entonces eran dos `typeof` escritos a mano, y por eso el primer controlador de Terceros habría
-quedado fuera sin ponerse nada rojo). Hoy: **110 acciones**, de ellas **72** cambian estado — **40**
-exigen `If-Match`, **15** admiten `Idempotency-Key` y **17** están exentas con su motivo escrito.
+quedado fuera sin ponerse nada rojo). Hoy: **127 acciones**, de ellas **81** cambian estado — **46**
+exigen `If-Match`, **18** admiten `Idempotency-Key` y **17** están exentas con su motivo escrito.
 Los números están fijados en el propio test: un barrido cuya enumeración devuelva nada saldría verde
 por la peor de las razones.
 
@@ -890,9 +890,28 @@ por la peor de las razones.
 > las ocho de Catálogo —cuatro por recurso: listado, lectura por identificador, alta y
 > modificación—. Una tabla que se copia mal dos veces seguidas es una tabla en la que ya no se
 > puede confiar.
+>
+> **Tercera vez, y esta se ve contando la tabla.** En el 1.9 los números del test subieron a
+> 120/77/**43·17·17** con las tarifas y aquí no se movió nada: las tablas seguían diciendo
+> 110/72/40·15·17. Pero hay algo peor que el retraso, y estaba desde el 1.8: la tabla del `If-Match`
+> se titulaba «las cuarenta» y **listaba treinta y dos filas**. Las ocho que faltaban eran justo las
+> retiradas del 1.7 —`POST` y `DELETE` de `{id}/retirada` en divisas, cotizaciones, unidades y
+> conversiones—, así que el «se rehacen enteras» de aquella anotación rehízo el titular y no el
+> cuerpo. Una tabla cuyo propio encabezado no cuadra con sus filas no necesita ningún test para
+> delatarse: basta sumarla.
+>
+> **Por eso desde el 1.10 no se copian a mano.** Las tres de aquí abajo salen de recorrer los
+> `*Controller.cs` buscando `[Http…]`, `[FromHeader(Name = "If-Match")]` y `[AdmiteIdempotencia]`, y
+> ese barrido devuelve hoy **127 · 81 · 46 · 18**, los mismos cuatro números que fija
+> `El_barrido_encuentra_el_inventario_entero` **leyendo la tabla de enrutado del host**, que es otra
+> fuente. Dos fuentes que no se derivan una de otra dando el mismo número es lo más cerca que se
+> puede estar de una tabla comprobada sin escribir un test que compare prosa. El delta del 1.10,
+> separado de lo que arrastraban: **+7 acciones, +4 escrituras, +3 `If-Match`, +1
+> `Idempotency-Key`, cero exentas** —cinco de Catálogo y dos de Terceros, porque el cruce es mutuo—;
+> y el del 1.9, que nunca se anotó: **+10, +5, +3, +2, cero**.
 
-**Los quince recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de agregado
-con `GET /{id}`, que es la misma lista de las quince altas de más abajo:
+**Los dieciocho recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de
+agregado con `GET /{id}`, que es la misma lista de las dieciocho altas de más abajo:
 
 | Recurso | Ruta del `GET` que emite el `ETag` |
 |---|---|
@@ -911,44 +930,58 @@ con `GET /{id}`, que es la misma lista de las quince altas de más abajo:
 | Tercero | `GET /api/v1/terceros/terceros/{id}` |
 | Artículo *(1.8)* | `GET /api/v1/catalogo/articulos/{id}` |
 | Categoría *(1.8)* | `GET /api/v1/catalogo/categorias/{id}` |
+| Tarifa *(1.9)* | `GET /api/v1/catalogo/tarifas/{id}` |
+| Línea de tarifa *(1.9)* | `GET /api/v1/catalogo/tarifas/lineas/{id}` |
+| Suministro *(1.10)* | `GET /api/v1/catalogo/articulos/proveedores/{id}` |
 
 Los listados **no** lo emiten: un `ETag` sobre una página sería el de la página, no el de cada
 elemento, y un cliente que lo devolviera en un `If-Match` estaría citando una versión que no es la
 del recurso que escribe.
 
-**Las cuarenta operaciones que exigen `If-Match`:**
+**Las cuarenta y seis operaciones que exigen `If-Match`** (las filas suman 46; si dejan de sumarlo,
+la tabla está mal aunque el titular cuadre con el test):
 
-| Recurso | Operaciones |
-|---|---|
-| Almacén | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
-| Conversión de unidades | `PUT /{id}` |
-| Divisa | `PUT /{id}` |
-| Ejercicio | `PUT /{id}`, `DELETE /{id}`, `POST /{id}/cierre`, `DELETE /{id}/cierre` |
-| Empresa | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
-| Impuesto | `PUT /{id}`, `POST /{id}/cierre` |
-| Serie | `PUT /{id}`, `DELETE /{id}` |
-| Tipo de cambio | `PUT /{id}` |
-| Ubicación | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
-| Unidad de medida | `PUT /{id}` |
-| Rol | `PUT /{id}` |
-| Usuario | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
-| Tercero | `PUT /{id}`, `DELETE /{id}` (bloqueo) |
-| Artículo *(1.8)* | `PUT /{id}` |
-| Categoría *(1.8)* | `PUT /{id}` |
-| Tercero — lo que cuelga *(1.6)* | `POST /{terceroId}/contactos`, `DELETE /{terceroId}/contactos/{contactoId}`, `POST /{terceroId}/cuentas-bancarias`, `DELETE /{terceroId}/cuentas-bancarias/{cuentaId}`, `POST /{terceroId}/cuentas-bancarias/{cuentaId}/preferente`, `PUT /{terceroId}/condiciones-pago/{rol}`, `PUT /{terceroId}/limite-credito` |
+| Recurso | Operaciones | |
+|---|---|---|
+| Almacén | `PUT /{id}`, `DELETE /{id}` (bloqueo) | 2 |
+| Conversión de unidades | `PUT /{id}`, `POST /{id}/retirada`, `DELETE /{id}/retirada` *(1.7)* | 3 |
+| Divisa | `PUT /{id}`, `POST /{id}/retirada`, `DELETE /{id}/retirada` *(1.7)* | 3 |
+| Ejercicio | `PUT /{id}`, `DELETE /{id}`, `POST /{id}/cierre`, `DELETE /{id}/cierre` | 4 |
+| Empresa | `PUT /{id}`, `DELETE /{id}` (bloqueo) | 2 |
+| Impuesto | `PUT /{id}`, `POST /{id}/cierre` | 2 |
+| Serie | `PUT /{id}`, `DELETE /{id}` | 2 |
+| Tipo de cambio | `PUT /{id}`, `POST /{id}/retirada`, `DELETE /{id}/retirada` *(1.7)* | 3 |
+| Ubicación | `PUT /{id}`, `DELETE /{id}` (bloqueo) | 2 |
+| Unidad de medida | `PUT /{id}`, `POST /{id}/retirada`, `DELETE /{id}/retirada` *(1.7)* | 3 |
+| Rol | `PUT /{id}` | 1 |
+| Usuario | `PUT /{id}`, `DELETE /{id}` (bloqueo) | 2 |
+| Tercero | `PUT /{id}`, `DELETE /{id}` (bloqueo) | 2 |
+| Artículo *(1.8)* | `PUT /{id}` | 1 |
+| Categoría *(1.8)* | `PUT /{id}` | 1 |
+| Tarifa *(1.9)* | `PUT /{id}`, `PUT /{id}/cierre` | 2 |
+| Línea de tarifa *(1.9)* | `PUT /lineas/{id}` | 1 |
+| Artículo — sus proveedores *(1.10)* | `PUT /proveedores/{id}`, `DELETE /proveedores/{id}` | 2 |
+| Tercero — lo que cuelga *(1.6, 1.10)* | `POST /{terceroId}/contactos`, `DELETE /{terceroId}/contactos/{contactoId}`, `POST /{terceroId}/cuentas-bancarias`, `DELETE /{terceroId}/cuentas-bancarias/{cuentaId}`, `POST /{terceroId}/cuentas-bancarias/{cuentaId}/preferente`, `PUT /{terceroId}/condiciones-pago/{rol}`, `PUT /{terceroId}/limite-credito`, `PUT /{terceroId}/tarifa-asignada` *(1.10)* | 8 |
 
 Las subrutas —el bloqueo, el cierre— citan la versión **del recurso**, no una suya: no son otro
 recurso, son otra puerta al mismo. Es lo que hace que bloquear un almacén y modificarlo compitan por
 la misma versión, que es lo que se quiere.
 
-Y las **siete del 1.6** son la misma idea llevada a lo que cuelga: un contacto y una cuenta no tienen
-`ETag` propio ni testigo de concurrencia propio, así que **citan el de la ficha**. Colgar un contacto
-mientras otro cambia la razón social es un choque de verdad —los dos escriben el mismo agregado— y se
-quiere que la segunda escritura se lleve el `412`. Ninguna de las siete admite `Idempotency-Key`, y no
-por descuido: no son altas de un recurso nuevo con vida propia, son modificaciones de un agregado que
-ya existe, y para eso el mecanismo que protege es el otro.
+Y las **siete del 1.6, ocho desde el 1.10**, son la misma idea llevada a lo que cuelga: un contacto y
+una cuenta no tienen `ETag` propio ni testigo de concurrencia propio, así que **citan el de la
+ficha**. Colgar un contacto mientras otro cambia la razón social es un choque de verdad —los dos
+escriben el mismo agregado— y se quiere que la segunda escritura se lleve el `412`. Ninguna de las
+ocho admite `Idempotency-Key`, y no por descuido: no son altas de un recurso nuevo con vida propia,
+son modificaciones de un agregado que ya existe, y para eso el mecanismo que protege es el otro.
 
-**Las quince rutas que admiten `Idempotency-Key`** — las quince altas, y solo ellas:
+La octava, `PUT /{terceroId}/tarifa-asignada`, es la que enseña dónde está la frontera de esa frase.
+Fijar la tarifa de un cliente **parece** un alta —hay un identificador nuevo donde no había ninguno—
+y no lo es: lo que cambia es una columna del tercero, que ya tiene versión que citar. Colgarle un
+proveedor a un artículo, en cambio, **sí** crea una fila con su identidad, su `GET /{id}`, su `PUT` y
+su `DELETE`, y por eso está en la tabla de abajo y no en esta. La pregunta que separa las dos no es
+si el verbo suena a alta, es si lo que se escribe ya tenía `ETag`.
+
+**Las dieciocho rutas que admiten `Idempotency-Key`** — las dieciocho altas, y solo ellas:
 
 | Ruta | Módulo | Almacén que la atiende |
 |---|---|---|
@@ -967,6 +1000,9 @@ ya existe, y para eso el mecanismo que protege es el otro.
 | `POST /api/v1/terceros/terceros` | `terceros` | `AlmacenDeIdempotenciaDeTerceros` |
 | `POST /api/v1/catalogo/articulos` | `catalogo` | `AlmacenDeIdempotenciaDeCatalogo` |
 | `POST /api/v1/catalogo/categorias` | `catalogo` | ídem |
+| `POST /api/v1/catalogo/tarifas` *(1.9)* | `catalogo` | ídem |
+| `POST /api/v1/catalogo/tarifas/{tarifaId}/lineas` *(1.9)* | `catalogo` | ídem |
+| `POST /api/v1/catalogo/articulos/{articuloId}/proveedores` *(1.10)* | `catalogo` | ídem |
 
 **Y las diecisiete exentas, con el motivo resumido** (el entero está en el test):
 

@@ -65,6 +65,18 @@ internal static class Mapeos
         tercero.LimiteCredito?.Cantidad,
         tercero.LimiteCredito?.Divisa);
 
+    /// <summary>La tarifa asignada, tal cual está guardada.</summary>
+    /// <remarks>
+    /// Sale el identificador y nada más: el nombre y el código de la tarifa son de Catálogo, y
+    /// traerlos aquí convertiría este mapeo en un lector del catálogo ajeno.
+    /// </remarks>
+    internal static TarifaAsignadaDto ATarifaAsignadaDto(this Tercero tercero)
+    {
+        ArgumentNullException.ThrowIfNull(tercero);
+
+        return new TarifaAsignadaDto(tercero.Id, tercero.TarifaAsignadaId);
+    }
+
     internal static TerceroDto ADto(this Tercero tercero) => new(
         tercero.Id,
         tercero.EmpresaId,

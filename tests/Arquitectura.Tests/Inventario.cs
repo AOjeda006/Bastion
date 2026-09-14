@@ -241,10 +241,22 @@ internal static class Inventario
         "Catalogo.Application -> Catalogo.Contracts",
         "Catalogo.Application -> Catalogo.Domain",
 
-        // Catalogo.Contracts NO tiene ninguna arista, y es lo que le toca hoy: publica dos
-        // DTO y seis permisos, y ninguna de las dos cosas necesita el bloque común. El día
-        // que publique un cursor de tramos o un evento de integración, la arista aparecerá
-        // aquí y habrá que escribirla.
+        // El CUARTO cruce, y la mitad de ida del primero MUTUO. Un artículo guarda quién se lo
+        // suministra —`ArticuloProveedor.TerceroId`— y ese Guid vive en el esquema `terceros`,
+        // sin clave ajena (regla 4). Quien dice si ese tercero existe en esta empresa, si está
+        // bloqueado y si hace de proveedor es Terceros, por `IConsultaDeTerceros`.
+        "Catalogo.Application -> Terceros.Contracts",
+
+        // Catalogo.Contracts SIGUE sin ninguna arista, y desde el 1.10 eso ya no es una
+        // casualidad de un proyecto pequeño: aquí vive `IConsultaDeTarifas`, la mitad de vuelta
+        // del primer cruce mutuo, y NO referencia `Terceros.Contracts` —que es donde vive la
+        // otra mitad—. Las dos juntas serían un ciclo entre proyectos, y el compilador no lo
+        // contaría como lo que es: se comprobó poniéndolas a la vez y lo que salió fue
+        // «dependencia circular en el grafo de dependencias de destino» hablando de
+        // `_GenerateRestoreProjectPathWalk`. Por eso por los dos puertos cruzan Guid, DateOnly
+        // y enumerados propios, y ni un tipo compartido. El día que este proyecto necesite el
+        // bloque común, la arista aparecerá aquí y habrá que escribirla; lo que no puede
+        // aparecer nunca es la arista al Contracts del otro módulo de la pareja.
         "Catalogo.Domain -> BuildingBlocks.Domain",
         "Catalogo.Endpoints -> BuildingBlocks.Infrastructure",
         "Catalogo.Endpoints -> Catalogo.Application",
@@ -291,6 +303,13 @@ internal static class Inventario
         // y no está bloqueada es Organización, a través de `IConsultaDeEmpresas`.
         "Terceros.Application -> Organizacion.Contracts",
 
+        // La mitad de VUELTA del primer cruce mutuo. `Tercero.TarifaAsignadaId` es un Guid del
+        // esquema `catalogo`, sin clave ajena, y quien dice si esa tarifa existe en esta empresa
+        // y si su vigencia cubre el día de la asignación es Catálogo, por `IConsultaDeTarifas`.
+        // Las dos flechas existen a la vez y no son un ciclo porque lo que se referencia es el
+        // `Contracts` del otro, y los dos `Contracts` no se ven entre sí.
+        "Terceros.Application -> Catalogo.Contracts",
+
         "Terceros.Application -> Terceros.Contracts",
         "Terceros.Application -> Terceros.Domain",
         "Terceros.Contracts -> BuildingBlocks.Contracts",
@@ -325,11 +344,32 @@ internal static class Inventario
                 "para lo nuevo de lo que únicamente resuelve lo viejo, y ese alguien es " +
                 "este módulo.",
 
+            ["Catalogo.Application -> Bastion.Terceros.Contracts"] =
+                "el cuarto, y la mitad de IDA del primero MUTUO del proyecto. Los tres " +
+                "anteriores apuntaban todos a Organización: un módulo dueño publicaba una " +
+                "lectura y los demás preguntaban, sin que nadie le preguntara a él. Aquí " +
+                "Catálogo mira a Terceros para colgarle un proveedor a un artículo y Terceros " +
+                "mira a Catálogo para asignarle una tarifa a un cliente, y las dos flechas " +
+                "existen a la vez. No son un ciclo porque lo referenciado es el Contracts del " +
+                "otro y los dos Contracts no se ven entre sí: por los puertos cruzan Guid, " +
+                "DateOnly y enumerados propios. Y este puerto no pregunta «¿existe?» sino «¿en " +
+                "qué estado está, para este papel?»: un tercero tiene dos ejes —qué papeles " +
+                "hace y si está bloqueado por el art. 32— y los dos deciden.",
+
             ["Identidad.Application -> Bastion.Organizacion.Contracts"] =
                 "el único, y va por donde tiene que ir. Al abrir sesión o al cambiar de empresa, " +
                 "Identidad pregunta a Organización si esa empresa existe y no está bloqueada " +
                 "antes de meterla en el testigo. Lectura, por el contrato del dueño, resuelta en " +
                 "proceso: ni un JOIN entre esquemas ni una llamada HTTP.",
+
+            ["Terceros.Application -> Bastion.Catalogo.Contracts"] =
+                "el quinto, y la mitad de VUELTA del primero mutuo. Un tercero puede tener " +
+                "asignada la tarifa con la que se le factura, y ese Guid es del esquema de " +
+                "Catálogo: sin clave ajena, porque entre esquemas no se cruza (regla 4). Lo que " +
+                "impide que ahí acabe una tarifa inventada, de otra empresa o caducada es " +
+                "IConsultaDeTarifas, y también pregunta por el ESTADO: una tarifa cuya vigencia " +
+                "terminó sigue resolviendo los precios de lo ya emitido y no se asigna hoy. Es " +
+                "la retirada del ADR-0023 con un sujeto nuevo.",
 
             ["Terceros.Application -> Bastion.Organizacion.Contracts"] =
                 "el segundo, y por la misma puerta. Un tercero pertenece a la empresa que lo " +
@@ -353,6 +393,12 @@ internal static class Inventario
     internal static readonly IReadOnlyDictionary<string, string> PuertasPublicas =
         new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
+            ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDeTarifas"] =
+                "LECTURA: en qué estado está una tarifa para una fecha, para quien guarde su " +
+                "identificador — la tarifa asignada del tercero (§7.2). Es la PRIMERA puerta " +
+                "que no publica Organización, y la mitad de vuelta del primer cruce mutuo. No " +
+                "escribe.",
+
             ["Bastion.Organizacion.Contracts.Divisas.IConsultaDeDivisas"] =
                 "LECTURA: en qué estado está una divisa, para quien guarde su identificador — la " +
                 "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe.",
@@ -369,6 +415,13 @@ internal static class Inventario
             ["Bastion.Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida"] =
                 "LECTURA: en qué estado está una unidad de medida, para quien guarde su " +
                 "identificador — la unidad base del artículo (§7.3). No escribe.",
+
+            ["Bastion.Terceros.Contracts.Terceros.IConsultaDeTerceros"] =
+                "LECTURA: en qué estado está un tercero para un papel —se puede tratar en esta " +
+                "empresa, hace ese papel— y cuáles de un conjunto se pueden tratar hoy, para " +
+                "quien guarde su identificador: el proveedor de un artículo (§7.3). Lo bloqueado " +
+                "y lo de otra empresa contestan que no existe. No escribe, y no publica ni un " +
+                "dato de la ficha.",
         };
 
     /// <summary>
@@ -428,6 +481,26 @@ internal static class Inventario
                 "el caso que el ADR-0024 anunció por su nombre antes de que existiera: «se " +
                 "llamará UnidadBaseId y tampoco casará». No casa, en efecto, y por eso está " +
                 "escrito. Se valida por el estado, igual que el impuesto."),
+
+            ["ArticuloProveedor.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del de la línea de tarifa: el suministro lleva la empresa aunque su " +
+                "artículo ya la lleve, porque el filtro de la R8 se escribe por entidad y se " +
+                "evalúa sobre las columnas de la fila. Y aquí importa el doble, porque lo que " +
+                "saldría de otra empresa es con quién trabaja la competencia. Sale del claim en " +
+                "AgregarProveedorAlArticulo, que es donde se comprueba la empresa activa."),
+
+            ["ArticuloProveedor.TerceroId"] = new(
+                "Tercero",
+                Raiz + ".Terceros.Contracts.Terceros.IConsultaDeTerceros",
+                "el cruce del ítem 1.10, y el primero de Catálogo que NO va a Organización. Sin " +
+                "clave ajena y sin poder tenerla: el tercero vive en el esquema `terceros` " +
+                "(regla 4 del §5). Lo que impide que ahí acabe un identificador inventado, el de " +
+                "otra empresa o el de alguien con los datos reservados por el art. 32 es que " +
+                "AgregarProveedorAlArticulo lo pregunte. Y pregunta por el ESTADO y por el " +
+                "PAPEL: un tercero que no es proveedor no lo es por estar en esta tabla, y de " +
+                "uno bloqueado no sale nada más que que está bloqueado."),
 
             ["Categoria.EmpresaId"] = new(
                 "Empresa",
@@ -504,6 +577,18 @@ internal static class Inventario
                 "hace falta escribir es POR DÓNDE se comprueba. Lo valida CrearTercero contra el " +
                 "puerto antes de construir el agregado, porque un tercero colgado de una empresa " +
                 "que no existe o que está bloqueada es una ficha que nadie va a volver a ver."),
+
+            ["Tercero.TarifaAsignadaId"] = new(
+                "Tarifa",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeTarifas",
+                "la mitad de vuelta del cruce mutuo del ítem 1.10, y el segundo caso —tras " +
+                "TokenDeRefresco.EmpresaActivaId y Articulo.UnidadBaseId— en que la heurística " +
+                "por nombre NO lo ve: se llama TarifaAsignadaId y no TarifaId, así que el " +
+                "barrido lo sacó como HUÉRFANO y no como cruce. Esa es la infradetección que el " +
+                "ADR-0024 documenta, y es la regla de los huérfanos —no la de los cruces— la " +
+                "que obligó a escribir esta línea. Sin clave ajena: la tarifa vive en el esquema " +
+                "`catalogo`. Se valida por el ESTADO y con la FECHA: una tarifa caducada sigue " +
+                "resolviendo lo ya emitido y no se asigna hoy."),
 
             ["TokenDeRefresco.EmpresaActivaId"] = new(
                 "Empresa",

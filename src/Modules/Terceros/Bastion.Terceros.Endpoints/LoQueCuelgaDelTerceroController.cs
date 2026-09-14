@@ -60,7 +60,9 @@ public sealed class LoQueCuelgaDelTerceroController(
     IListarCondicionesPago listarCondiciones,
     IFijarCondicionPago fijarCondicion,
     IObtenerLimiteCredito obtenerLimite,
-    IFijarLimiteCredito fijarLimite) : ControladorDeTerceros
+    IFijarLimiteCredito fijarLimite,
+    IObtenerTarifaAsignada obtenerTarifa,
+    IAsignarTarifa asignarTarifa) : ControladorDeTerceros
 {
     /// <summary>Devuelve los contactos de un tercero.</summary>
     /// <param name="terceroId">Identificador del tercero.</param>
@@ -294,4 +296,50 @@ public sealed class LoQueCuelgaDelTerceroController(
         ResponderExigiendoVersionAsync(
             ifMatch,
             version => fijarLimite.EjecutarAsync(terceroId, version, peticion, cancelacion));
+
+    /// <summary>Devuelve la tarifa asignada al tercero.</summary>
+    /// <remarks>
+    /// Devuelve el identificador y no la ficha de la tarifa: es de Catálogo, y se pide en
+    /// <c>/api/v1/catalogo/tarifas/{id}</c>. Y la devuelve aunque su vigencia haya terminado —lo
+    /// que se guardó fue una decisión, y sigue siendo verdad—; lo que no se deja es asignar una
+    /// caducada.
+    /// </remarks>
+    /// <param name="terceroId">Identificador del tercero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("tarifa-asignada")]
+    [ExigePermiso(PermisosDeTerceros.TerceroVer)]
+    [ProducesResponseType(typeof(TarifaAsignadaDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ObtenerTarifaAsignada(
+        Guid terceroId,
+        CancellationToken cancelacion) =>
+        Responder(await obtenerTarifa.EjecutarAsync(terceroId, cancelacion).ConfigureAwait(false));
+
+    /// <summary>Asigna —o quita— la tarifa del tercero.</summary>
+    /// <remarks>
+    /// <b>El <c>409</c> y el <c>400</c> dicen cosas distintas y hay que separarlas:</b> la tarifa
+    /// no existe (<c>tercero-tarifa-no-encontrada</c>, 400) o existe y su vigencia no cubre hoy
+    /// (<c>tercero-tarifa-no-vigente</c>, 409). El frontal escribe el texto humano a partir del
+    /// <c>type</c> (ADR-0030).
+    /// </remarks>
+    /// <param name="terceroId">Identificador del tercero.</param>
+    /// <param name="ifMatch">Versión de la FICHA sobre la que se escribe.</param>
+    /// <param name="peticion">La tarifa, o el campo vacío para quitarla.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPut("tarifa-asignada")]
+    [ExigePermiso(PermisosDeTerceros.TarifaAsignar)]
+    [ProducesResponseType(typeof(TarifaAsignadaDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> AsignarTarifa(
+        Guid terceroId,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        [FromBody] AsignarTarifaDto peticion,
+        CancellationToken cancelacion) =>
+        ResponderExigiendoVersionAsync(
+            ifMatch,
+            version => asignarTarifa.EjecutarAsync(terceroId, version, peticion, cancelacion));
 }

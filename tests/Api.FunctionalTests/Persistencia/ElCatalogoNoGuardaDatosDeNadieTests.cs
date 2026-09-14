@@ -10,8 +10,8 @@ namespace Bastion.Api.FunctionalTests.Persistencia;
 
 /// <summary>
 /// La respuesta a la pregunta del artículo 32 para Catálogo, comprobada en vez de supuesta: no hay
-/// aquí un dato de nadie, y por eso no se bloquea ninguna de sus cuatro entidades —el artículo, la
-/// categoría, la tarifa y su línea—.
+/// aquí un dato de nadie, y por eso no se bloquea ninguna de sus cinco entidades —el artículo, la
+/// categoría, la tarifa, su línea y el suministro—.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -26,6 +26,27 @@ namespace Bastion.Api.FunctionalTests.Persistencia;
 /// la ficha de hoy, no del concepto: cuélgale un responsable de compras, el contacto del
 /// fabricante o el comercial que lo trae, y deja de serlo. Ese día esto se pone rojo y hay que
 /// volver a contestar la pregunta — que es el único momento en el que la respuesta importa.
+/// </para>
+/// <para>
+/// <b>Desde el ítem 1.10 la respuesta tiene DOS mitades, y la segunda es nueva.</b>
+/// <c>ArticuloProveedor</c> no guarda un dato de nadie —guarda un <c>Guid</c>—, así que la primera
+/// mitad no cambia: Catálogo sigue sin ser bloqueable. Pero ese <c>Guid</c> apunta a una ficha que
+/// puede ser la de una persona física —un autónomo es un tercero como cualquier otro—, y entonces
+/// la fila «este artículo lo suministra X» <b>es</b> un dato de X. Lo que el art. 32 obliga a
+/// reservar no es, por tanto, lo que este módulo guarda: es lo que este módulo <b>enseña</b>. Por
+/// eso el listado de proveedores de un artículo filtra por el bloqueo del tercero al que apunta
+/// cada fila, preguntándoselo a Terceros; el razonamiento entero está en
+/// <c>ListarProveedoresDelArticulo</c>.
+/// </para>
+/// <para>
+/// <b>Y por eso NO se marca <c>IBloqueable</c> aquí, que es la parte que hay que argumentar.</b>
+/// Bloquear es reservar la ficha del interesado, y de cada tercero hay exactamente una: la suya, en
+/// Terceros, que ya es bloqueable y ya tiene su respuesta escrita. Marcar también el suministro
+/// significaría que un tercero se puede reservar en dos sitios, con dos listas de quién está
+/// reservado y dos maneras de que se separen; y arrastraría un valor nuevo en
+/// <c>TipoDeRecursoBloqueado</c> y un <c>IConsultaDeLoBloqueado</c> en Catálogo, con lo que el
+/// listado nominativo del ADR-0027 enseñaría filas de suministro como si fueran fichas de
+/// personas. Reservar el dato y reservar al interesado no son lo mismo, y solo lo segundo se marca.
 /// </para>
 /// <para>
 /// <b>Y si la respuesta cambiara, no bastaría con marcar la clase.</b> Poner <c>IBloqueable</c> en
@@ -67,6 +88,15 @@ public sealed class ElCatalogoNoGuardaDatosDeNadieTests : IDisposable
     /// estos trozos casa con lo que Catálogo tiene hoy —<c>Codigo</c>, <c>Descripcion</c>,
     /// <c>Nombre</c> de la categoría—, y <c>Nombre</c> a secas se queda fuera a propósito: el
     /// nombre de una rama de clasificación no es el de nadie.
+    /// <para>
+    /// <b>Y <c>proveedor</c> tampoco entra, a conciencia.</b> Desde el 1.10 hay
+    /// <c>ArticuloProveedor.ReferenciaDelProveedor</c>, que es el código con el que un proveedor
+    /// llama a una mercancía: un dato del producto, no del proveedor. Meter el trozo pondría rojo
+    /// un campo que no guarda nada de nadie, y una regla que salta donde no debe se acaba
+    /// desactivando entera. Lo que este detector no puede ver —que alguien escriba el nombre de
+    /// una persona en ese texto libre de cincuenta caracteres— no lo puede ver ninguna regla de
+    /// nombres, y no se finge que sí.
+    /// </para>
     /// </remarks>
     private static readonly string[] s_nombresQueDelatan =
     [
@@ -145,18 +175,28 @@ public sealed class ElCatalogoNoGuardaDatosDeNadieTests : IDisposable
         // cantidad y un precio o un descuento. Ni una ni otra tienen titular: una tarifa es una
         // política de precios de la empresa, no el acuerdo con un cliente concreto.
         //
-        // Y esa última frase es justo la que puede caducar, así que conviene dejar dicho por
-        // dónde. `Tercero.TarifaAsignada` —qué tarifa se le aplica a cada cliente— es del ítem
-        // 1.10, y ese cruce SÍ dice algo de alguien: que a este cliente se le vende a mayorista.
-        // Pero vivirá del lado de Terceros, colgando de una ficha que ya es bloqueable y que ya
-        // tiene su respuesta escrita. Lo que este caso vigila es que no venga por el otro lado: el
-        // día que alguien le cuelgue a `LineaTarifa` un `TerceroId` para hacer un precio pactado,
-        // esto sigue verde —un `Guid` llamado así no delata nada— pero
-        // `Ninguna_entidad_de_catalogo_es_bloqueable` no, porque entonces Catálogo guardaría a qué
-        // precio compra una persona física identificable, y eso es un dato suyo.
+        // LA RESPUESTA PARA LA DEL ÍTEM 1.10, que es la que este caso estaba esperando.
+        //
+        // `ArticuloProveedor` no guarda un nombre, ni un identificador fiscal, ni un domicilio:
+        // guarda un `Guid` y una referencia de producto. Por eso sigue sin ser bloqueable y por
+        // eso `Ninguna_propiedad_de_catalogo_guarda_un_dato_de_una_persona` sigue verde. Lo que
+        // cambia es lo que el módulo ENSEÑA: la fila dice que este artículo se lo suministra ese
+        // tercero, y si el tercero es una persona física eso es un dato suyo. Así que la mitad que
+        // aparece en el 1.10 no está en el modelo, está en la LECTURA —el listado filtra por el
+        // bloqueo del tercero, preguntándoselo a Terceros—, y el argumento de por qué no se marca
+        // `IBloqueable` está arriba, en las notas de la clase.
+        //
+        // Y DE PASO, LA CORRECCIÓN DE LO QUE ESTE MISMO COMENTARIO PREDIJO. Decía que el día que
+        // Catálogo guardara un `TerceroId`, esto seguiría verde «pero
+        // `Ninguna_entidad_de_catalogo_es_bloqueable` no». Ha llegado el día y ese caso ha seguido
+        // VERDE, porque solo mira marcas: no puede ver un `Guid` que apunta a una persona, y nadie
+        // marcó nada. Lo que se puso rojo fue esta comparación, la de la lista cerrada, que es
+        // justo para lo que está —obligar a contestarle la pregunta a cada entidad nueva—. La
+        // predicción señalaba al carril equivocado; el mecanismo funcionó, y el que lo hizo
+        // funcionar fue este.
         deCatalogo.ShouldBe(
-            ["Articulo", "Categoria", "LineaTarifa", "Tarifa"],
-            "las entidades propias de Catálogo son esas cuatro. Si aparece una más, hay que " +
+            ["Articulo", "ArticuloProveedor", "Categoria", "LineaTarifa", "Tarifa"],
+            "las entidades propias de Catálogo son esas cinco. Si aparece una más, hay que " +
             "contestarle la pregunta del art. 32 también a ella; si falta alguna, el filtro por " +
             "esquema ha dejado de encontrarlas y las dos reglas de arriba están mirando al vacío");
 

@@ -21,6 +21,9 @@
       "bastion.buildingblocks.domain": {
         "type": "Project"
       },
+      "bastion.catalogo.contracts": {
+        "type": "Project"
+      },
       "bastion.organizacion.contracts": {
         "type": "Project",
         "dependencies": {

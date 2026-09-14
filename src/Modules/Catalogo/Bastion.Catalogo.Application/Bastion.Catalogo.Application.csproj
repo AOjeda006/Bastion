@@ -22,6 +22,22 @@
       `organizacion.unidades_de_medida`.
     -->
     <ProjectReference Include="../../Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+
+    <!--
+      Contracts de Terceros, y SOLO Contracts. Es el CUARTO cruce del sistema y el primero de una
+      pareja MUTUA: Catálogo mira aquí para colgarle un proveedor a un artículo, y Terceros mira a
+      `Bastion.Catalogo.Contracts` para asignarle una tarifa a un cliente. Las dos flechas existen
+      a la vez y no forman un ciclo, porque lo que cada `Application` referencia es el `Contracts`
+      del otro y los dos `Contracts` NO se referencian entre sí: por los puertos cruzan `Guid`,
+      `DateOnly` y enumerados propios, sin un solo tipo compartido. Si alguien los atara, el
+      mensaje del compilador hablaría de una referencia circular entre proyectos y no de esto.
+
+      `ArticuloProveedor.TerceroId` es un `Guid` sin clave ajena —vive en el esquema `terceros` y
+      entre esquemas no se cruza (regla 4)—, y lo que impide que ahí acabe un identificador
+      inventado, el de otra empresa o el de alguien con los datos reservados por el art. 32 es
+      `IConsultaDeTerceros`, resuelta en proceso.
+    -->
+    <ProjectReference Include="../../Terceros/Bastion.Terceros.Contracts/Bastion.Terceros.Contracts.csproj" />
   </ItemGroup>
 
   <!--

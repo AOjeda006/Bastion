@@ -27,7 +27,6 @@ namespace Bastion.Terceros.Infrastructure.Migrations
             modelBuilder.Entity("Bastion.BuildingBlocks.Infrastructure.Auditoria.RegistroDeAuditoria", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -100,7 +99,6 @@ namespace Bastion.Terceros.Infrastructure.Migrations
             modelBuilder.Entity("Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida.EventoDeLaBandeja", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -269,7 +267,6 @@ namespace Bastion.Terceros.Infrastructure.Migrations
             modelBuilder.Entity("Bastion.Terceros.Domain.Terceros.CondicionPago", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -329,7 +326,6 @@ namespace Bastion.Terceros.Infrastructure.Migrations
             modelBuilder.Entity("Bastion.Terceros.Domain.Terceros.Contacto", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -387,7 +383,6 @@ namespace Bastion.Terceros.Infrastructure.Migrations
             modelBuilder.Entity("Bastion.Terceros.Domain.Terceros.CuentaBancaria", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -450,7 +445,6 @@ namespace Bastion.Terceros.Infrastructure.Migrations
             modelBuilder.Entity("Bastion.Terceros.Domain.Terceros.Tercero", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -488,6 +482,11 @@ namespace Bastion.Terceros.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("razon_social")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
+                    b.Property<Guid?>("TarifaAsignadaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tarifa_asignada_id")
                         .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<uint>("Version")

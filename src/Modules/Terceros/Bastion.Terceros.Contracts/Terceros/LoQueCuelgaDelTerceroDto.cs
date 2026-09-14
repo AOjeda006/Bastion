@@ -203,3 +203,37 @@ public sealed record LimiteCreditoDeAltaDto
     [StringLength(3, MinimumLength = 3, ErrorMessage = "La divisa son tres letras (ISO 4217).")]
     public string? Divisa { get; init; }
 }
+
+/// <summary>La tarifa que tiene asignada un tercero, tal como sale de la API.</summary>
+/// <remarks>
+/// <para>
+/// <b>Sale el identificador y no el código ni el nombre</b>, y la ausencia es la frontera: la
+/// tarifa vive en Catálogo y este módulo solo sabe a cuál apunta. Rellenar aquí su nombre exigiría
+/// un puerto que devolviera la ficha de una tarifa, y eso convertiría a Terceros en un lector del
+/// catálogo ajeno; quien quiera enseñar el nombre lo pide a <c>/catalogo/tarifas/{id}</c>, que es
+/// de quien es.
+/// </para>
+/// <para>
+/// <b>Y sale aunque su vigencia haya terminado.</b> Lo que se guardó fue una decisión de la
+/// empresa —«a este cliente, esta tarifa»— y no deja de ser verdad porque el tramo caduque: si
+/// desapareciera de la lectura, la pantalla enseñaría «sin tarifa» y quien la mirara volvería a
+/// asignar una creyendo que nunca hubo ninguna. Lo que sí se impide es <b>asignar</b> una caducada,
+/// que es donde la retirada del ADR-0023 significa algo.
+/// </para>
+/// </remarks>
+/// <param name="TerceroId">La ficha de la que cuelga.</param>
+/// <param name="TarifaId">La tarifa de Catálogo, o nula si no tiene ninguna asignada.</param>
+public sealed record TarifaAsignadaDto(Guid TerceroId, Guid? TarifaId);
+
+/// <summary>Lo que hace falta para asignar —o quitar— la tarifa de un tercero.</summary>
+/// <remarks>
+/// <b>Un solo campo anulable y no dos verbos.</b> Nulo quita la asignación, que es la misma
+/// operación vista del revés: «a este cliente le toca esta lista de precios» y «a este cliente no
+/// le toca ninguna» son dos valores del mismo hecho, no dos hechos. Es la misma forma que el
+/// límite de crédito, y por el mismo motivo.
+/// </remarks>
+public sealed record AsignarTarifaDto
+{
+    /// <summary>La tarifa de Catálogo. Nula quita la que hubiera.</summary>
+    public Guid? TarifaId { get; init; }
+}

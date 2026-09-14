@@ -326,8 +326,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(120, "acciones en total");
-        cambian.Count.ShouldBe(77, "acciones que cambian estado");
+        todas.Count.ShouldBe(127, "acciones en total");
+        cambian.Count.ShouldBe(81, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -432,15 +432,52 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // o una modificación. Tampoco hay ningún `DELETE` —una tarifa no se borra: se CIERRA, y el
         // tramo cerrado sigue diciendo a qué precio se vendió mientras regía—, que es la
         // afirmación que sostiene que reimprimir un albarán antiguo siga dando el mismo importe.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(43, "operaciones que exigen If-Match");
+        //
+        // Ciento veintisiete desde el ítem 1.10, y es la primera vez que el recuento sube por DOS
+        // módulos a la vez, porque lo que entra es un cruce MUTUO: Catálogo aprende a colgarle
+        // proveedores a un artículo y Terceros a asignarle una tarifa a una ficha, y cada uno
+        // pregunta por el Contracts del otro. El reparto es +7 al total, +4 a las que cambian
+        // estado, +3 a If-Match, +1 a Idempotency-Key y CERO al cajón de las exentas.
+        //
+        // Cinco son de Catálogo —dos lecturas, el alta con clave, la modificación de la referencia
+        // y el `DELETE` del suministro, las dos últimas con If-Match— y dos de Terceros —la lectura
+        // de la tarifa asignada y el `PUT` que la fija, con If-Match—. Que los dos módulos se
+        // muevan en el mismo ítem es lo que dice que el cruce es de ida y vuelta: si solo hubiera
+        // subido uno, lo declarado en `CrucesDeclarados` tendría una mitad sin código que la
+        // ejerciera, y eso lo pone rojo el censo de fronteras, no este recuento.
+        //
+        // EL `DELETE` ES LA NOVEDAD QUE HAY QUE ARGUMENTAR, porque el reparto del 1.8 decía «no hay
+        // ningún `DELETE`» de Catálogo como afirmación de fondo. Sigue sin haberlo de lo que aquel
+        // párrafo protegía: no existe `DELETE /articulos/{id}` ni `DELETE /categorias/{id}`, y un
+        // artículo se sigue sin poder borrar. Lo que se borra aquí es un suministro, que no es la
+        // ficha de nadie sino un hecho entre dos que ha dejado de ser verdad —igual que el `DELETE`
+        // de un contacto del 1.6 no borra al tercero—. Y lleva If-Match por eso mismo: quien lo
+        // quita está diciendo que vio esa fila, no que quiere que desaparezca la que haya.
+        //
+        // LAS TRES LECTURAS SUBEN SOLO EL TOTAL, y una de ellas afirma algo que ninguna otra regla
+        // mira: el listado de proveedores de un artículo FILTRA por el bloqueo del tercero (art. 32
+        // de la LOPDGDD, R16) preguntándoselo a Terceros, y filtrar no es escribir. El día que a
+        // alguien le pareciera caro preguntar y guardara aquí una copia de quién está bloqueado,
+        // subirían dos números en vez de uno, y este rojo lo diría antes de que Catálogo tuviera su
+        // propia lista de las bajas.
+        //
+        // Y EL ÚNICO +1 DE IDEMPOTENCY-KEY SEPARA LAS DOS ESCRITURAS QUE SE PARECEN. Colgar un
+        // proveedor es un alta —una fila con su identidad, su ETag y su `PUT`, como la línea de
+        // tarifa del 1.9— y un alta no puede citar la versión de lo que todavía no existe: solo la
+        // clave para el reintento del móvil que perdió la cobertura. Fijar la tarifa asignada
+        // PARECE lo mismo y no lo es: lo que se modifica es el tercero, que ya tiene versión que
+        // citar, como los contactos del 1.6. Si este número hubiera subido dos, la segunda se
+        // habría colado sin If-Match y dos personas cambiándole la tarifa al mismo cliente se
+        // pisarían sin enterarse.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(46, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(17, "rutas que admiten Idempotency-Key");
+            .ShouldBe(18, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (43 + 17 + s_exentas.Count).ShouldBe(cambian.Count);
+        (46 + 18 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

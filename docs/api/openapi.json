@@ -445,6 +445,520 @@
         ]
       }
     },
+    "/api/v1/catalogo/articulos/{articuloId}/proveedores": {
+      "get": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Devuelve quiénes suministran un artículo.",
+        "description": "Sin paginar, y a propósito. Lo que sale de aquí va filtrado por el bloqueo del\n  tercero al que apunta cada fila (art. 32 de la LOPDGDD, R16), y ese filtro no cabe en el\n  WHERE: el bloqueo está en otro esquema. Paginar y filtrar después daría páginas de\n  tamaño variable y un total que miente —y restando de un total que miente se cuenta cuántos\n  hay bloqueados—. Lo que acota el tamaño es el modelo: son los proveedores de UN artículo.\nY de cada proveedor sale su identificador y nada más de él. La ficha es de Terceros y\n  se pide allí, que es quien sabe además si puede enseñarla.",
+        "operationId": "Articulos_ListarProveedores",
+        "parameters": [
+          {
+            "name": "articuloId",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticuloProveedorDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticuloProveedorDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticuloProveedorDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Declara que un tercero suministra este artículo.",
+        "description": "<b>El `400` de `articulo-proveedor-tercero-no-valido` es UNO para cuatro casos</b>\n        —el tercero no existe, es de otra empresa, está bloqueado, o no es proveedor— y no lleva\n        parámetros. Distinguirlos convertiría este formulario en el censo de las bajas del artículo\n        32: cualquiera con este permiso podría recorrer identificadores y separar los que no existen\n        de los que existen y están reservados. El `409` —`articulo-proveedor-duplicado`—\n        solo sale para un tercero que se puede tratar, porque el estado se pregunta antes: un\n        bloqueado que ya suministraba el artículo contesta el mismo `400`, y así el alta no\n        cuenta lo que el listado calla.",
+        "operationId": "Articulos_AgregarProveedor",
+        "parameters": [
+          {
+            "name": "articuloId",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarProveedorDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarProveedorDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarProveedorDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/articulos/proveedores/{id}": {
+      "get": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Devuelve un suministro concreto.",
+        "operationId": "Articulos_ObtenerProveedor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del suministro.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Cambia la referencia con la que el proveedor llama a este artículo.",
+        "description": "Ni el artículo ni el tercero están entre lo que se puede cambiar, y no lo impide el permiso:\nno están en el cuerpo ni en el agregado. Cambiar cualquiera de los dos sería otro suministro.",
+        "operationId": "Articulos_ModificarProveedor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del suministro.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarProveedorDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarProveedorDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificarProveedorDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticuloProveedorDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Quita un proveedor de este artículo.",
+        "description": "<b>El único `DELETE` del módulo, y borra de verdad.</b> Lo que desaparece no es la\n        ficha de nadie: es un hecho entre dos que ha dejado de ser verdad. El rastro de que existió,\n        y de quién lo quitó, está en la traza (ADR-0012).",
+        "operationId": "Articulos_QuitarProveedor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del suministro.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/catalogo/categorias": {
       "get": {
         "tags": [
@@ -11184,6 +11698,245 @@
         ]
       }
     },
+    "/api/v1/terceros/terceros/{terceroId}/tarifa-asignada": {
+      "get": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Devuelve la tarifa asignada al tercero.",
+        "description": "Devuelve el identificador y no la ficha de la tarifa: es de Catálogo, y se pide en\n`/api/v1/catalogo/tarifas/{id}`. Y la devuelve aunque su vigencia haya terminado —lo\nque se guardó fue una decisión, y sigue siendo verdad—; lo que no se deja es asignar una\ncaducada.",
+        "operationId": "LoQueCuelgaDelTercero_ObtenerTarifaAsignada",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Asigna —o quita— la tarifa del tercero.",
+        "description": "<b>El `409` y el `400` dicen cosas distintas y hay que separarlas:</b> la tarifa\n        no existe (`tercero-tarifa-no-encontrada`, 400) o existe y su vigencia no cubre hoy\n        (`tercero-tarifa-no-vigente`, 409). El frontal escribe el texto humano a partir del\n        `type` (ADR-0030).",
+        "operationId": "LoQueCuelgaDelTercero_AsignarTarifa",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarTarifaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarTarifaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarTarifaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/terceros/terceros": {
       "get": {
         "tags": [
@@ -11799,6 +12552,29 @@
   },
   "components": {
     "schemas": {
+      "AgregarProveedorDto": {
+        "required": [
+          "terceroId"
+        ],
+        "type": "object",
+        "properties": {
+          "terceroId": {
+            "type": "string",
+            "description": "El tercero que lo suministra. Tiene que existir, estar activo y ser proveedor.",
+            "format": "uuid"
+          },
+          "referenciaDelProveedor": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Con qué código llama él a este artículo, si tiene uno propio."
+          }
+        },
+        "description": "Lo que hace falta para declarar que un tercero suministra un artículo."
+      },
       "AlmacenDto": {
         "required": [
           "id",
@@ -11902,6 +12678,46 @@
         },
         "description": "Un artículo, tal como sale de la API."
       },
+      "ArticuloProveedorDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "articuloId",
+          "terceroId",
+          "referenciaDelProveedor"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la fila.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "Artículo que se suministra.",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "description": "Quien lo suministra, del módulo de Terceros.",
+            "format": "uuid"
+          },
+          "referenciaDelProveedor": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Su código para este artículo, o nulo."
+          }
+        },
+        "description": "Quién suministra un artículo, tal como sale de la API."
+      },
       "AsignarRolDto": {
         "required": [
           "empresaId",
@@ -11921,6 +12737,20 @@
           }
         },
         "description": "Qué rol se asigna o se retira, y en qué empresa."
+      },
+      "AsignarTarifaDto": {
+        "type": "object",
+        "properties": {
+          "tarifaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La tarifa de Catálogo. Nula quita la que hubiera.",
+            "format": "uuid"
+          }
+        },
+        "description": "Lo que hace falta para asignar —o quitar— la tarifa de un tercero."
       },
       "BloqueadoDto": {
         "required": [
@@ -13904,6 +14734,21 @@
         },
         "description": "Lo que se puede cambiar de una línea de tarifa: el precio o el descuento."
       },
+      "ModificarProveedorDto": {
+        "type": "object",
+        "properties": {
+          "referenciaDelProveedor": {
+            "maxLength": 50,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El código nuevo, o vacío para dejar de tener uno."
+          }
+        },
+        "description": "Lo que se puede cambiar de un suministro ya declarado."
+      },
       "ModificarRolDto": {
         "required": [
           "nombre"
@@ -15329,6 +16174,29 @@
           }
         },
         "description": "Una sesión abierta: el token de acceso y con qué se está operando."
+      },
+      "TarifaAsignadaDto": {
+        "required": [
+          "terceroId",
+          "tarifaId"
+        ],
+        "type": "object",
+        "properties": {
+          "terceroId": {
+            "type": "string",
+            "description": "La ficha de la que cuelga.",
+            "format": "uuid"
+          },
+          "tarifaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La tarifa de Catálogo, o nula si no tiene ninguna asignada.",
+            "format": "uuid"
+          }
+        },
+        "description": "La tarifa que tiene asignada un tercero, tal como sale de la API."
       },
       "TarifaDto": {
         "required": [

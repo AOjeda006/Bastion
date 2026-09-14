@@ -438,7 +438,8 @@
           "Bastion.BuildingBlocks.Application": "[1.0.0, )",
           "Bastion.Catalogo.Contracts": "[1.0.0, )",
           "Bastion.Catalogo.Domain": "[1.0.0, )",
-          "Bastion.Organizacion.Contracts": "[1.0.0, )"
+          "Bastion.Organizacion.Contracts": "[1.0.0, )",
+          "Bastion.Terceros.Contracts": "[1.0.0, )"
         }
       },
       "bastion.catalogo.contracts": {
@@ -555,6 +556,7 @@
         "type": "Project",
         "dependencies": {
           "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Catalogo.Contracts": "[1.0.0, )",
           "Bastion.Organizacion.Contracts": "[1.0.0, )",
           "Bastion.Terceros.Contracts": "[1.0.0, )",
           "Bastion.Terceros.Domain": "[1.0.0, )"

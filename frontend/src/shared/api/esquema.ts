@@ -51,6 +51,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalogo/articulos/{articuloId}/proveedores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve quiénes suministran un artículo.
+         * @description Sin paginar, y a propósito. Lo que sale de aquí va filtrado por el bloqueo del
+         *       tercero al que apunta cada fila (art. 32 de la LOPDGDD, R16), y ese filtro no cabe en el
+         *       WHERE: el bloqueo está en otro esquema. Paginar y filtrar después daría páginas de
+         *       tamaño variable y un total que miente —y restando de un total que miente se cuenta cuántos
+         *       hay bloqueados—. Lo que acota el tamaño es el modelo: son los proveedores de UN artículo.
+         *     Y de cada proveedor sale su identificador y nada más de él. La ficha es de Terceros y
+         *       se pide allí, que es quien sabe además si puede enseñarla.
+         */
+        get: operations["Articulos_ListarProveedores"];
+        put?: never;
+        /**
+         * Declara que un tercero suministra este artículo.
+         * @description <b>El `400` de `articulo-proveedor-tercero-no-valido` es UNO para cuatro casos</b>
+         *             —el tercero no existe, es de otra empresa, está bloqueado, o no es proveedor— y no lleva
+         *             parámetros. Distinguirlos convertiría este formulario en el censo de las bajas del artículo
+         *             32: cualquiera con este permiso podría recorrer identificadores y separar los que no existen
+         *             de los que existen y están reservados. El `409` —`articulo-proveedor-duplicado`—
+         *             solo sale para un tercero que se puede tratar, porque el estado se pregunta antes: un
+         *             bloqueado que ya suministraba el artículo contesta el mismo `400`, y así el alta no
+         *             cuenta lo que el listado calla.
+         */
+        post: operations["Articulos_AgregarProveedor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/articulos/proveedores/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve un suministro concreto. */
+        get: operations["Articulos_ObtenerProveedor"];
+        /**
+         * Cambia la referencia con la que el proveedor llama a este artículo.
+         * @description Ni el artículo ni el tercero están entre lo que se puede cambiar, y no lo impide el permiso:
+         *     no están en el cuerpo ni en el agregado. Cambiar cualquiera de los dos sería otro suministro.
+         */
+        put: operations["Articulos_ModificarProveedor"];
+        post?: never;
+        /**
+         * Quita un proveedor de este artículo.
+         * @description <b>El único `DELETE` del módulo, y borra de verdad.</b> Lo que desaparece no es la
+         *             ficha de nadie: es un hecho entre dos que ha dejado de ser verdad. El rastro de que existió,
+         *             y de quién lo quitó, está en la traza (ADR-0012).
+         */
+        delete: operations["Articulos_QuitarProveedor"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogo/categorias": {
         parameters: {
             query?: never;
@@ -1435,6 +1500,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/terceros/terceros/{terceroId}/tarifa-asignada": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve la tarifa asignada al tercero.
+         * @description Devuelve el identificador y no la ficha de la tarifa: es de Catálogo, y se pide en
+         *     `/api/v1/catalogo/tarifas/{id}`. Y la devuelve aunque su vigencia haya terminado —lo
+         *     que se guardó fue una decisión, y sigue siendo verdad—; lo que no se deja es asignar una
+         *     caducada.
+         */
+        get: operations["LoQueCuelgaDelTercero_ObtenerTarifaAsignada"];
+        /**
+         * Asigna —o quita— la tarifa del tercero.
+         * @description <b>El `409` y el `400` dicen cosas distintas y hay que separarlas:</b> la tarifa
+         *             no existe (`tercero-tarifa-no-encontrada`, 400) o existe y su vigencia no cubre hoy
+         *             (`tercero-tarifa-no-vigente`, 409). El frontal escribe el texto humano a partir del
+         *             `type` (ADR-0030).
+         */
+        put: operations["LoQueCuelgaDelTercero_AsignarTarifa"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/terceros/terceros": {
         parameters: {
             query?: never;
@@ -1551,6 +1646,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Lo que hace falta para declarar que un tercero suministra un artículo. */
+        AgregarProveedorDto: {
+            /**
+             * Format: uuid
+             * @description El tercero que lo suministra. Tiene que existir, estar activo y ser proveedor.
+             */
+            terceroId: string;
+            /** @description Con qué código llama él a este artículo, si tiene uno propio. */
+            referenciaDelProveedor?: null | string;
+        };
         /** @description Un almacén, tal como sale de la API. */
         AlmacenDto: {
             /**
@@ -1605,6 +1710,31 @@ export interface components {
              */
             categoriaId: null | string;
         };
+        /** @description Quién suministra un artículo, tal como sale de la API. */
+        ArticuloProveedorDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la fila.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Empresa a la que pertenece (R8).
+             */
+            empresaId: string;
+            /**
+             * Format: uuid
+             * @description Artículo que se suministra.
+             */
+            articuloId: string;
+            /**
+             * Format: uuid
+             * @description Quien lo suministra, del módulo de Terceros.
+             */
+            terceroId: string;
+            /** @description Su código para este artículo, o nulo. */
+            referenciaDelProveedor: null | string;
+        };
         /** @description Qué rol se asigna o se retira, y en qué empresa. */
         AsignarRolDto: {
             /**
@@ -1617,6 +1747,14 @@ export interface components {
              * @description Rol que se asigna.
              */
             rolId: string;
+        };
+        /** @description Lo que hace falta para asignar —o quitar— la tarifa de un tercero. */
+        AsignarTarifaDto: {
+            /**
+             * Format: uuid
+             * @description La tarifa de Catálogo. Nula quita la que hubiera.
+             */
+            tarifaId?: null | string;
         };
         /** @description Un recurso bloqueado, tal como sale del único camino que enseña lo bloqueado (ADR-0027). */
         BloqueadoDto: {
@@ -2501,6 +2639,11 @@ export interface components {
              */
             descuentoPorcentaje?: null | number | string;
         };
+        /** @description Lo que se puede cambiar de un suministro ya declarado. */
+        ModificarProveedorDto: {
+            /** @description El código nuevo, o vacío para dejar de tener uno. */
+            referenciaDelProveedor?: null | string;
+        };
         /** @description Lo que se puede cambiar de un rol: el nombre y la lista ENTERA de permisos. */
         ModificarRolDto: {
             /** @description Nombre para la interfaz. */
@@ -3134,6 +3277,19 @@ export interface components {
             /** @description Permisos que tiene en la empresa activa, para la interfaz. */
             permisos: string[];
         };
+        /** @description La tarifa que tiene asignada un tercero, tal como sale de la API. */
+        TarifaAsignadaDto: {
+            /**
+             * Format: uuid
+             * @description La ficha de la que cuelga.
+             */
+            terceroId: string;
+            /**
+             * Format: uuid
+             * @description La tarifa de Catálogo, o nula si no tiene ninguna asignada.
+             */
+            tarifaId: null | string;
+        };
         /** @description Un tramo de tarifa, tal como sale de la API. */
         TarifaDto: {
             /**
@@ -3515,6 +3671,275 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_ListarProveedores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del artículo. */
+                articuloId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ArticuloProveedorDto"][];
+                    "application/json": components["schemas"]["ArticuloProveedorDto"][];
+                    "text/json": components["schemas"]["ArticuloProveedorDto"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_AgregarProveedor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del artículo. */
+                articuloId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgregarProveedorDto"];
+                "text/json": components["schemas"]["AgregarProveedorDto"];
+                "application/*+json": components["schemas"]["AgregarProveedorDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ArticuloProveedorDto"];
+                    "application/json": components["schemas"]["ArticuloProveedorDto"];
+                    "text/json": components["schemas"]["ArticuloProveedorDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_ObtenerProveedor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del suministro. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ArticuloProveedorDto"];
+                    "application/json": components["schemas"]["ArticuloProveedorDto"];
+                    "text/json": components["schemas"]["ArticuloProveedorDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_ModificarProveedor: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del suministro. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModificarProveedorDto"];
+                "text/json": components["schemas"]["ModificarProveedorDto"];
+                "application/*+json": components["schemas"]["ModificarProveedorDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ArticuloProveedorDto"];
+                    "application/json": components["schemas"]["ArticuloProveedorDto"];
+                    "text/json": components["schemas"]["ArticuloProveedorDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_QuitarProveedor: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del suministro. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9014,6 +9439,130 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_ObtenerTarifaAsignada: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TarifaAsignadaDto"];
+                    "application/json": components["schemas"]["TarifaAsignadaDto"];
+                    "text/json": components["schemas"]["TarifaAsignadaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_AsignarTarifa: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AsignarTarifaDto"];
+                "text/json": components["schemas"]["AsignarTarifaDto"];
+                "application/*+json": components["schemas"]["AsignarTarifaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TarifaAsignadaDto"];
+                    "application/json": components["schemas"]["TarifaAsignadaDto"];
+                    "text/json": components["schemas"]["TarifaAsignadaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

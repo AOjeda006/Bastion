@@ -59,6 +59,9 @@ public sealed class CatalogoDbContext(
     /// <summary>Lo que cada tarifa dice de un artículo o de una categoría, por tramos de cantidad.</summary>
     public DbSet<LineaTarifa> LineasDeTarifa => Set<LineaTarifa>();
 
+    /// <summary>Quién suministra cada artículo, y con qué referencia lo llama él.</summary>
+    public DbSet<ArticuloProveedor> ProveedoresDeArticulo => Set<ArticuloProveedor>();
+
     /// <summary>
     /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive el
     /// historial de migraciones y qué convención de nombres se aplica.
@@ -115,6 +118,11 @@ public sealed class CatalogoDbContext(
         // un informe, la resolución de un precio— para que salieran las de otra empresa.
         modelBuilder.Entity<LineaTarifa>().HasQueryFilter(
             "Inquilinato", linea => EmpresaDelFiltro == null || linea.EmpresaId == EmpresaDelFiltro);
+
+        // Y el suministro, por la suya, que aquí importa el doble: lo que se escaparía de otra
+        // empresa es con quién trabaja la competencia.
+        modelBuilder.Entity<ArticuloProveedor>().HasQueryFilter(
+            "Inquilinato", fila => EmpresaDelFiltro == null || fila.EmpresaId == EmpresaDelFiltro);
 
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
     "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);

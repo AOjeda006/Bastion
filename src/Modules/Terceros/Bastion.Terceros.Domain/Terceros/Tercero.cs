@@ -149,6 +149,41 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
     /// </remarks>
     public Importe? LimiteCredito { get; private set; }
 
+    /// <summary>
+    /// Qué tarifa se le aplica, o nula si se le aplica la que decida cada venta.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el cruce mutuo del ítem 1.10, y va en el sentido Terceros → Catálogo.</b> Un
+    /// <c>Guid</c> del otro módulo, sin clave ajena, porque ninguna consulta cruza esquemas (§5,
+    /// regla 4). Lo único que impide que aquí acabe un identificador inventado es
+    /// <c>IConsultaDeTarifas</c>, que la capa de aplicación pregunta antes de guardarlo (ADR-0024).
+    /// </para>
+    /// <para>
+    /// <b>Y el puerto no contesta «¿existe?», sino en qué estado está.</b> Una tarifa tiene
+    /// vigencia, y una cuya vigencia terminó es exactamente el <c>SoloResuelveLoViejo</c> del
+    /// ADR-0023 con un sujeto nuevo: sigue poniéndole precio a los pedidos de cuando regía y no se
+    /// le puede asignar a un cliente hoy. Que la asignación se guardara igual dejaría una ficha
+    /// apuntando a una política que ya no rige, y el error saldría en la primera venta.
+    /// </para>
+    /// <para>
+    /// <b>Convive con <see cref="LimiteCredito"/>, y las dos llevan divisa de maneras distintas: no
+    /// se comparan.</b> El límite lleva un código ISO dentro de su <see cref="Importe"/>; la tarifa
+    /// apunta con un <c>Guid</c> al maestro de Organización. Un límite en euros y una tarifa en
+    /// dólares <b>no son una contradicción</b>: el límite es cuánto se le fía, la tarifa es cómo se
+    /// le pone precio, y ningún importe nace aquí. El razonamiento entero —y cuál de las dos
+    /// representaciones es la buena— está en <c>docs/PLAN.md</c>, <i>Decisiones tomadas → ítem
+    /// 1.10</i>. Convertir de una a otra es del <c>TipoCambio</c>, y no es de la fase 1.
+    /// </para>
+    /// <para>
+    /// <b>Anulable a propósito.</b> Sin tarifa asignada no hay avería: la resolución de precio del
+    /// ítem 1.9 se pide por código de tarifa, y quién elige ese código para un cliente es una
+    /// decisión de la venta, que es de otra fase. Obligar aquí a tener una llenaría las fichas de
+    /// una tarifa «general» que no decide nada.
+    /// </para>
+    /// </remarks>
+    public Guid? TarifaAsignadaId { get; private set; }
+
     /// <summary>Las personas con las que se habla en su casa.</summary>
     public IReadOnlyList<Contacto> Contactos => _contactos;
 
@@ -396,6 +431,27 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
         }
 
         LimiteCredito = limite;
+    }
+
+    /// <summary>Asigna —o retira, con <c>null</c>— la tarifa de este tercero.</summary>
+    /// <remarks>
+    /// El estado de la tarifa <b>ya viene preguntado</b>: el dominio no sale a buscar nada, y
+    /// mucho menos a otro módulo. Lo que sí es suyo es negarse mientras esté bloqueado, que es lo
+    /// que hace <c>ExigirQueSePuedaTratar</c> — asignarle una tarifa a un tercero con los datos
+    /// reservados es tratarlos (art. 32 de la LOPDGDD).
+    /// </remarks>
+    /// <param name="tarifaId">La tarifa, ya comprobada por su puerto, o <c>null</c> para quitarla.</param>
+    public void AsignarTarifa(Guid? tarifaId)
+    {
+        ExigirQueSePuedaTratar();
+
+        if (tarifaId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Una tarifa asignada es alguna tarifa, o ninguna.", nameof(tarifaId));
+        }
+
+        TarifaAsignadaId = tarifaId;
     }
 
     /// <inheritdoc/>

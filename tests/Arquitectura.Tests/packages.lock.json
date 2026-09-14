@@ -678,6 +678,7 @@
           "Bastion.Catalogo.Contracts": "[1.0.0, )",
           "Bastion.Catalogo.Domain": "[1.0.0, )",
           "Bastion.Organizacion.Contracts": "[1.0.0, )",
+          "Bastion.Terceros.Contracts": "[1.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.9, )"
         }
       },
@@ -798,6 +799,7 @@
         "type": "Project",
         "dependencies": {
           "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Catalogo.Contracts": "[1.0.0, )",
           "Bastion.Organizacion.Contracts": "[1.0.0, )",
           "Bastion.Terceros.Contracts": "[1.0.0, )",
           "Bastion.Terceros.Domain": "[1.0.0, )",

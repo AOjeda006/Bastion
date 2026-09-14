@@ -11,10 +11,13 @@ namespace Bastion.Catalogo.Contracts;
 /// el que se factura.
 /// </para>
 /// <para>
-/// <b>Sin permiso de borrado, y no por olvido:</b> este módulo no publica ningún <c>DELETE</c> de
-/// artículo ni de categoría. Un permiso que no protege ninguna acción es una casilla que alguien
-/// concede en un perfil creyendo que hace algo, y el catálogo de permisos se compara entero contra
-/// lo que las acciones exigen — así que declararlo pondría rojo el arranque.
+/// <b>Sin permiso de borrado de artículo ni de categoría, y no por olvido:</b> de esos dos el
+/// módulo no publica ningún <c>DELETE</c>. Un permiso que no protege ninguna acción es una casilla
+/// que alguien concede en un perfil creyendo que hace algo, y el catálogo de permisos se compara
+/// entero contra lo que las acciones exigen — así que declararlo pondría rojo el arranque. El
+/// <c>DELETE</c> que sí hay desde el ítem 1.10 es el de un <b>suministro</b>, y por eso
+/// <see cref="ArticuloProveedorQuitar"/> existe: lo que se borra ahí no es una ficha, es un hecho
+/// entre dos —«este tercero suministra esto»— que deja de ser verdad.
 /// </para>
 /// <para>
 /// Son constantes y no un tipo, por lo mismo que en los otros dos módulos: <c>Contracts</c> no
@@ -105,6 +108,33 @@ public static class PermisosDeCatalogo
     /// </remarks>
     public const string LineaTarifaModificar = "catalogo.linea-tarifa.modificar";
 
+    /// <summary>Declarar que un tercero suministra un artículo.</summary>
+    /// <remarks>
+    /// <b>Aparte de <see cref="ArticuloModificar"/>, y el motivo es de qué habla cada uno.</b>
+    /// Corregir la descripción de un artículo es mantenimiento del catálogo; decidir a quién se le
+    /// compra es una decisión de aprovisionamiento, y de la fase 3 en adelante será quien aparezca
+    /// en los pedidos de compra. Son dos facultades y hay perfiles que llevan la primera y no la
+    /// segunda.
+    /// </remarks>
+    public const string ArticuloProveedorAgregar = "catalogo.articulo-proveedor.agregar";
+
+    /// <summary>Cambiar la referencia con la que un proveedor llama a un artículo.</summary>
+    /// <remarks>
+    /// Lo único que se puede cambiar de un suministro: ni el artículo ni el tercero están en el
+    /// cuerpo, y no los protege este permiso — los protege que el agregado no tiene por dónde
+    /// cambiarlos. Separado de <see cref="ArticuloProveedorAgregar"/> porque corregir un código
+    /// ajeno mal tecleado no es elegir proveedor.
+    /// </remarks>
+    public const string ArticuloProveedorModificar = "catalogo.articulo-proveedor.modificar";
+
+    /// <summary>Quitar un proveedor de un artículo.</summary>
+    /// <remarks>
+    /// <b>El único borrado del módulo.</b> Aparte de agregar porque dejar de comprarle a alguien no
+    /// es la misma decisión que empezar a hacerlo: en muchos sitios la segunda la toma quien
+    /// negocia y la primera quien administra.
+    /// </remarks>
+    public const string ArticuloProveedorQuitar = "catalogo.articulo-proveedor.quitar";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -127,5 +157,8 @@ public static class PermisosDeCatalogo
         TarifaCerrar,
         LineaTarifaAgregar,
         LineaTarifaModificar,
+        ArticuloProveedorAgregar,
+        ArticuloProveedorModificar,
+        ArticuloProveedorQuitar,
     ];
 }

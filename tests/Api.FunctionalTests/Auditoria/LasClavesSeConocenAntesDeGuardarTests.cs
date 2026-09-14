@@ -50,6 +50,13 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     [
         "Almacen.Version",
         "Articulo.Version",
+
+        // La del ítem 1.10, y lleva testigo por lo mismo que la línea de tarifa: el suministro
+        // NO es un hijo del artículo. Tiene su propia ruta —`/articulos/proveedores/{id}`—, su
+        // propio `PUT`, su propio `DELETE` y su propio ETag, porque dos personas que corrigen la
+        // referencia de dos proveedores distintos del mismo artículo no se están pisando. Con un
+        // testigo único en el artículo, la segunda se llevaría un 412 por tocar otra fila.
+        "ArticuloProveedor.Version",
         "Categoria.Version",
         "ConversionUM.Version",
         "Divisa.Version",

@@ -68,6 +68,13 @@ export const en: Diccionario = {
       'articulo-impuesto-no-vigente':
         'That tax period no longer applies. Pick one that is currently in force.',
       'articulo-no-encontrado': 'That item no longer exists. Go back to the list and refresh.',
+      'articulo-proveedor-duplicado': 'That supplier is already on this item’s list.',
+      'articulo-proveedor-no-encontrado':
+        'That supplier is no longer on this item’s list. Refresh the screen.',
+      // Same wording decision as in Spanish: three situations, one answer, on purpose.
+      'articulo-proveedor-tercero-no-valido':
+        'That business partner cannot be added as a supplier of this item. Check in the ' +
+        'business partners master that the record exists and is marked as a supplier.',
       'articulo-tipo-no-valido': 'An item can only be of type “Bien” or “Servicio”.',
       'articulo-unidad-no-encontrada':
         'That unit of measure does not exist. Pick one from the unit list.',
@@ -162,6 +169,11 @@ export const en: Diccionario = {
       'tercero-duplicado': 'This company already has a business partner with that tax identifier.',
       'tercero-no-encontrado':
         'That business partner no longer exists. Go back to the list and refresh.',
+      'tercero-tarifa-no-encontrada':
+        'That price list does not exist. Choose one from the price lists master.',
+      'tercero-tarifa-no-vigente':
+        'That price list is no longer in force: it still applies to whatever was issued while ' +
+        'it ran, but it cannot be assigned today. Choose one that is in force.',
       'tipo-cambio-duplicado': 'There is already an exchange rate for that currency on that date.',
       'tipo-cambio-no-encontrado': 'That exchange rate no longer exists.',
       'ubicacion-duplicada': 'There is already a location with that code in that warehouse.',

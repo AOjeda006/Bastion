@@ -138,4 +138,12 @@ public abstract class ControladorDeCatalogo : ControllerBase
         string? ifMatch,
         Func<VersionDeRecurso, Task<Resultado<T>>> operacion) =>
         RespuestasConVersion.ExigiendoVersionAsync(this, ifMatch, operacion);
+
+    /// <summary>Lo mismo, para una escritura que no devuelve nada.</summary>
+    /// <param name="ifMatch">Valor de la cabecera <c>If-Match</c>.</param>
+    /// <param name="operacion">La escritura, que recibe la versión ya leída.</param>
+    protected Task<IActionResult> ResponderSinContenidoExigiendoVersionAsync(
+        string? ifMatch,
+        Func<VersionDeRecurso, Task<Resultado>> operacion) =>
+        RespuestasConVersion.ExigiendoVersionSinContenidoAsync(this, ifMatch, operacion);
 }

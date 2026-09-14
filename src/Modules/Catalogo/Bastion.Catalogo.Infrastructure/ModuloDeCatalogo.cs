@@ -4,6 +4,7 @@ using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Catalogo.Application;
 using Bastion.Catalogo.Application.Catalogo;
+using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
@@ -59,6 +60,13 @@ public static class ModuloDeCatalogo
         servicios.AddScoped<IRepositorioDeCategorias, RepositorioDeCategorias>();
         servicios.AddScoped<IRepositorioDeTarifas, RepositorioDeTarifas>();
         servicios.AddScoped<IRepositorioDeLineasDeTarifa, RepositorioDeLineasDeTarifa>();
+        servicios.AddScoped<IRepositorioDeProveedoresDeArticulo, RepositorioDeProveedoresDeArticulo>();
+
+        // LO QUE ESTE MÓDULO EXPONE A LOS DEMÁS, bajo el tipo de su `Contracts`, y la otra mitad
+        // del primer cruce mutuo: Terceros pregunta por aquí en qué estado está la tarifa que
+        // quiere asignarle a un cliente. Misma advertencia que del otro lado — sin esta línea todo
+        // compila y la petición falla al resolverla.
+        servicios.AddScoped<IConsultaDeTarifas, ConsultaDeTarifas>();
 
         // SIN `IConsultaDeLoBloqueado`, y hay que leer por qué en vez de darlo por un olvido. Los
         // otros tres módulos aportan su trozo al listado del art. 32 porque tienen entidades

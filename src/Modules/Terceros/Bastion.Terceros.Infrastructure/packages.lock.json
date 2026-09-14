@@ -321,6 +321,9 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
         }
       },
+      "bastion.catalogo.contracts": {
+        "type": "Project"
+      },
       "bastion.organizacion.contracts": {
         "type": "Project",
         "dependencies": {
@@ -332,6 +335,7 @@
         "type": "Project",
         "dependencies": {
           "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Catalogo.Contracts": "[1.0.0, )",
           "Bastion.Organizacion.Contracts": "[1.0.0, )",
           "Bastion.Terceros.Contracts": "[1.0.0, )",
           "Bastion.Terceros.Domain": "[1.0.0, )",

@@ -16,6 +16,21 @@
     <ProjectReference Include="../../src/BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Terceros/Bastion.Terceros.Domain/Bastion.Terceros.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Terceros/Bastion.Terceros.Contracts/Bastion.Terceros.Contracts.csproj" />
+
+    <!--
+      REFERENCIA A `Application` DESDE EL ÍTEM 1.10, por el mismo motivo por el que Catálogo la
+      tiene desde el 1.8: lo que hay que probar del cruce mutuo vive en la capa de aplicación y no
+      puede vivir en otra. `EstadoDeLaTarifa` es un contrato de CATÁLOGO, y el `Domain` de este
+      módulo no lo ve a propósito —el agregado recibe un `Guid?` ya comprobado—; así que la
+      traducción de los tres estados a sus desenlaces no es un invariante de `Tercero`.
+
+      Y es aritmética de ramas, que es lo que el ítem 1.7 enseñó a no dejar solo detrás de
+      Testcontainers: con Docker parado, un `switch` con una rama mal puesta saldría verde.
+
+      Arrastra `Catalogo.Contracts` por transitividad, y eso NO es un cruce nuevo: es el mismo que
+      `Bastion.Terceros.Application` ya declara, visto desde el proyecto que lo prueba.
+    -->
+    <ProjectReference Include="../../src/Modules/Terceros/Bastion.Terceros.Application/Bastion.Terceros.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Marco de pruebas">

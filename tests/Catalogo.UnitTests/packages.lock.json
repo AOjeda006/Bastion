@@ -150,6 +150,7 @@
           "Bastion.Catalogo.Contracts": "[1.0.0, )",
           "Bastion.Catalogo.Domain": "[1.0.0, )",
           "Bastion.Organizacion.Contracts": "[1.0.0, )",
+          "Bastion.Terceros.Contracts": "[1.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.9, )"
         }
       },
@@ -163,6 +164,13 @@
         }
       },
       "bastion.organizacion.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.terceros.contracts": {
         "type": "Project",
         "dependencies": {
           "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",

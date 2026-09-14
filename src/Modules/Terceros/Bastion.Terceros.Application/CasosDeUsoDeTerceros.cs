@@ -51,6 +51,8 @@ public static class CasosDeUsoDeTerceros
 
         servicios.AddScoped<IObtenerLimiteCredito, ObtenerLimiteCredito>();
         servicios.AddScoped<IFijarLimiteCredito, FijarLimiteCredito>();
+        servicios.AddScoped<IObtenerTarifaAsignada, ObtenerTarifaAsignada>();
+        servicios.AddScoped<IAsignarTarifa, AsignarTarifa>();
 
         // Mismo criterio que en Organización: el reloj como servicio, y `TryAdd` para que un test
         // que ya haya puesto un reloj falso conserve el suyo.
