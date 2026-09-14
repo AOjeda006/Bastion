@@ -237,6 +237,29 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
             opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
+    /// <summary>
+    /// Un contexto de Terceros como el que tiene la API dentro de una petición de esa empresa: con
+    /// su filtro de empresa y con el acceso a lo bloqueado CERRADO.
+    /// </summary>
+    /// <remarks>
+    /// <b>Entra en el ítem 1.10 para ejercer el puerto <c>IConsultaDeTerceros</c> contra la base</b>,
+    /// que es donde se decide qué estado contesta. Por la API no se puede: el alta de un proveedor
+    /// contesta lo mismo a los estados que no autorizan, a propósito, así que desde fuera un puerto
+    /// que confundiera dos de ellos no se distinguiría de uno que no. Y el acceso va cerrado por lo
+    /// mismo que en los demás: el puerto se resuelve dentro de una petición ordinaria, sin ningún
+    /// ámbito del art. 32 abierto, y lo que hay que ver es lo que contesta ASÍ.
+    /// </remarks>
+    /// <param name="empresaId">Como qué empresa se abre. Obligatorio, por lo mismo que en
+    /// <see cref="AbrirOrganizacion"/>.</param>
+    public TercerosDbContext AbrirTerceros(Guid empresaId)
+    {
+        DbContextOptionsBuilder<TercerosDbContext> opciones = new();
+        TercerosDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new TercerosDbContext(
+            opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
+    }
+
     /// <summary>Un contexto de Terceros solo para aplicar migraciones.</summary>
     /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
     public TercerosDbContext AbrirTercerosParaMigrar()

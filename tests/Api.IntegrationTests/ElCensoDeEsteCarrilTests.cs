@@ -74,6 +74,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "ContratoDeLoQueCuelgaTests.Una_divisa_sin_importe_es_400_porque_retirar_el_limite_es_vaciar_LOS_DOS",
         "ContratoDeLoQueCuelgaTests.Una_segunda_cuenta_preferente_baja_a_la_primera_y_solo_queda_UNA",
 
+        "ContratoDeLosCrucesTests.El_listado_esconde_al_proveedor_bloqueado_y_desbloquearlo_devuelve_la_MISMA_fila",
+        "ContratoDeLosCrucesTests.Inventado_ajeno_bloqueado_y_solo_cliente_contestan_el_MISMO_400_y_no_dejan_fila",
+        "ContratoDeLosCrucesTests.Un_proveedor_de_aqui_se_anade_con_201_y_el_listado_lo_trae",
+        "ContratoDeLosCrucesTests.Una_tarifa_inventada_y_una_de_otra_empresa_son_400_y_la_ajena_vale_en_la_suya",
+        "ContratoDeLosCrucesTests.Una_tarifa_que_rige_hoy_se_asigna_se_lee_y_con_nulo_se_quita",
+        "ContratoDeLosCrucesTests.Una_tarifa_que_ya_no_rige_y_una_que_aun_no_son_409_y_la_ficha_sigue_con_la_suya",
+        "ContratoDeLosCrucesTests.Volver_a_anadir_a_un_bloqueado_que_ya_suministraba_es_el_MISMO_400_y_no_un_409",
+
         "ContratoDeOrganizacionTests.Borrar_una_empresa_la_bloquea_pero_no_la_borra",
         "ContratoDeOrganizacionTests.Con_la_empresa_activa_bloqueada_no_se_puede_crear_nada_y_es_409",
         "ContratoDeOrganizacionTests.Crear_una_empresa_devuelve_201_con_Location_que_lleva_al_recurso",
@@ -162,6 +170,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElFiltroDeEmpresaTests.Una_escritura_por_identificador_contra_una_fila_de_otra_empresa_es_404",
         "ElFiltroDeEmpresaTests.Una_fila_de_otra_empresa_no_se_distingue_de_una_que_no_existe",
 
+        "ElPuertoDeTercerosContraLaBaseTests.De_un_conjunto_se_tratan_los_de_aqui_no_bloqueados_hagan_el_papel_que_hagan",
+        "ElPuertoDeTercerosContraLaBaseTests.El_papel_por_el_que_se_pregunta_decide_entre_Disponible_y_NoHaceEseRol",
+        "ElPuertoDeTercerosContraLaBaseTests.Un_bloqueado_NoExiste_desde_fuera_y_desbloquearlo_lo_devuelve_Disponible",
+        "ElPuertoDeTercerosContraLaBaseTests.Uno_inventado_y_uno_de_otra_empresa_NoExisten_y_el_ajeno_si_en_la_suya",
+
         "ElSelectorDeEmpresaTests.Cambiar_a_una_empresa_bloqueada_se_rechaza_como_si_no_se_perteneciera",
         "ElSelectorDeEmpresaTests.El_selector_trae_los_nombres_aunque_no_se_tenga_permiso_para_ver_empresas",
         "ElSelectorDeEmpresaTests.La_sesion_no_se_abre_en_una_empresa_bloqueada_aunque_sea_la_primera_pertenencia",
@@ -223,6 +236,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaInversaYElResolutorTests.La_modificacion_vuelve_a_comprobar_la_inversa",
         "LaInversaYElResolutorTests.Una_conversion_retirada_sigue_resolviendo_y_lo_dice",
         "LaInversaYElResolutorTests.Una_conversion_retirada_sigue_restringiendo_a_su_inversa",
+
+        "LaMatrizDeLosPuertosDeEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta",
+        "LaMatrizDeLosPuertosDeEstadoTests.Cada_cubrimiento_nombra_un_puerto_de_aqui_y_un_valor_de_SU_enumerado",
+        "LaMatrizDeLosPuertosDeEstadoTests.Cada_cubrimiento_vive_en_un_caso_que_corre_contra_la_base",
+        "LaMatrizDeLosPuertosDeEstadoTests.Cada_familia_delegada_tiene_su_matriz_en_el_otro_carril",
+        "LaMatrizDeLosPuertosDeEstadoTests.La_matriz_no_esta_vacia_y_ve_los_dos_sentidos_del_cruce",
 
         "LaMismaClaveDevuelveElMismoRecursoTests.De_dos_peticiones_simultaneas_con_la_misma_clave_solo_una_hace_el_trabajo",
         "LaMismaClaveDevuelveElMismoRecursoTests.El_recibo_y_el_almacen_llevan_el_mismo_xmin",
