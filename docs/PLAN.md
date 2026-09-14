@@ -3853,6 +3853,132 @@ en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su p
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
 
+**Ítem 1.10 cerrado — los dos cruces mutuos, y los estados que hay al otro lado de cada puerto:**
+run **34833598837** sobre `958c339`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3` de la API, no de la memoria): Backend `103942313057` ✓ (22 pasos, 0 omitidos),
+Frontal `103942312704` ✓ (17 pasos, 0 omitidos) y Humo `103943421447` ✓ (24 pasos, 1 omitido). Los carriles tal como el run los publica,
+contra las líneas base de `d9e4a46`:
+
+```
+Dominio y arquitectura: 748 casos (748 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — BuildingBlocks.UnitTests 132, Organizacion.UnitTests 183, Identidad.UnitTests 58,
+    Terceros.UnitTests 85, Catalogo.UnitTests 78, Organizacion.IntegrationTests 22,
+    Api.FunctionalTests 145, Arquitectura.Tests 34, Api.IntegrationTests 11
+    (723 en `d9e4a46`, en 9 ensamblados: +25 — los 8 de `LaTarifaAsignadaTests`, los 12 de
+     `ProveedoresDelArticuloTests` y los 5 de `LaMatrizDeLosPuertosDeEstadoTests`)
+
+Integración (Testcontainers): 367 casos (367 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 293, y 0 en los otros siete
+    (355 en `d9e4a46`: +12 — los 8 de `ContratoDeLosCrucesTests` y los 4 de
+     `ElPuertoDeTercerosContraLaBaseTests`)
+
+Frontal · arranque 418/450 KiB en 3 ficheros · total servido 577/900 KiB  (416 y 575 en `d9e4a46`)
+OpenAPI: 127 operaciones, 73 rutas /api/v1/  (120 en 70: +7 operaciones, +3 rutas)
+Catálogo de errores: 80 tipos, de 86 sitios de llamada  (75 de 81: +5 tipos, +5 sitios)
+Humo: esquema aplicado por los cinco contextos · 12 tramos de impuesto y 15 unidades, IVA general
+      vigente del 21.00 % · sesión con un testigo de 4236 caracteres · 1 empresa servida
+```
+
+**El cero de los `act()` no lo publica el run, y se dice de dónde sale.** El job Frontal no anota ni
+el recuento de casos ni los avisos de `act()`, y su registro no se lee sin credenciales. La cifra
+—**14 ficheros, 95 casos, 0 avisos**, las mismas que en `d9e4a46`— es de la batería local sobre
+`3a7ba3e`, cuyo árbol solo difiere de `958c339` en la documentación
+(`git diff --name-only 3a7ba3e 958c339` → `docs/PLAN.md`). Sigue siendo canal: se mide en la salida
+de la suite con `grep -c "not wrapped in act"`, y **en una pasada sin competencia**, porque bajo
+contención la base también da avisos (*Verificado — ítem 1.10*).
+
+**Lo que hay que leer primero de este ítem.** Un puerto que pregunta «¿existe?» deja pasar lo que
+existe y **no se puede usar**, así que los dos preguntan por el **estado**, y cada estado tiene su
+caso contra PostgreSQL. **Catálogo → Terceros**, `IConsultaDeTerceros.EstadoDeAsync(id, rol)`:
+`Disponible` → 201; `NoHaceEseRol` → 400 `articulo-proveedor-tercero-no-valido`; `NoExiste` → **el
+mismo 400, cuerpo idéntico**, y en `NoExiste` caben a propósito tres cosas —no hay ficha, es de otra
+empresa (R8), está bloqueada (R16)— porque desde fuera de Terceros tienen que ser lo mismo.
+**Terceros → Catálogo**, `IConsultaDeTarifas.EstadoDeAsync(id, fecha)` con la fecha de hoy en UTC:
+`RigeEnEsaFecha` → 200; `SoloResuelveLoViejo` → 409 `tercero-tarifa-no-vigente`, probado por **los dos
+extremos** —acabada y todavía no empezada—; `NoExiste` → 400 `tercero-tarifa-no-encontrada`. Los dos
+noes de la tarifa se distinguen y los del tercero no, y la asimetría es el art. 32: al otro lado de
+una tarifa hay una lista de precios de la empresa; al otro lado de un tercero, una persona.
+
+**`Bloqueado` fue un valor del enumerado y dejó de serlo.** La matriz nueva
+—`LaMatrizDeLosPuertosDeEstadoTests`, que descubre **todo** puerto de un `Contracts` que devuelva
+un enumerado, porque la del 1.7 solo veía `EstadoDeMaestro` y los dos puertos del ítem entraron con
+ella en verde— pidió un caso para `IConsultaDeTerceros → Bloqueado`, y al escribirlo el puerto
+contestó `NoExiste`: el filtro del art. 32 esconde la fila antes de que el `switch` la vea. Era un
+valor que ningún productor produce, y se quitó con la rama muerta que lo acompañaba.
+
+**La respuesta del art. 32 al cruce nuevo, con cuatro casos y no con una frase:** el listado de
+proveedores de un artículo **esconde** al bloqueado y desbloquearlo devuelve **la misma fila**; al
+alta, bloqueado, inventado, de otra empresa y solo cliente contestan **el mismo 400** sin dejar
+fila; volver a añadir a un bloqueado que **ya** suministraba es ese 400 **y no un 409** —el 409 diría
+«ya está» de algo que el listado calla, que es decir quién está bloqueado, y ese argumento cambió el
+orden de las comprobaciones en el caso de uso—; y el puerto contesta `NoExiste` al bloqueado contra la
+base, sin la API delante.
+
+**La divisa: dos representaciones conviviendo en el mismo agregado.** El `Tercero` lleva desde este
+ítem el **código ISO 4217** dentro del `Importe` de su `LimiteCredito` y un **`Guid`** al maestro
+`Divisa` a través de la `Tarifa` asignada. **No se comparan** —un límite es cuánto se le fía y una
+tarifa cómo se le pone precio; ningún importe nace aquí en las dos—, y está **probado por el efecto**
+con un límite en USD y una tarifa en EUR en los dos órdenes, visto rojo antes con un canario en cada
+lado. **No se unifican ahora, y la buena es el código ISO**: la semántica sale del código —hasta
+`Divisa.Decimales` lo lee de ahí—, `Importe` y el redondeo (R6) solo conocen códigos, los formatos
+fiscales hablan ISO 4217 y el código es una clave natural e inmutable. Lo que se movería es el
+`Guid`, y el disparador está escrito: antes de que la primera línea de un documento convierta un
+precio resuelto en un `Importe`. **Ninguna conversión**: es de `TipoCambio` y no es de la fase 1.
+
+**Las once decisiones** están en *Decisiones tomadas → ítem 1.10*, detrás de la 0. **Las ocho
+mutaciones** están en *Las ocho mutaciones del 1.10*, con la **2**, la **5** y la **7** enteras. La 7
+es la que merece leerse: quitar el registro de `IConsultaDeTerceros` pone rojos 307 casos, pero por
+la validación del contenedor al arrancar en Development, que es justo la inspección que el criterio
+descarta; la **7b** apaga esa validación como en Production y enseña el efecto en peticiones de
+verdad —500 al crear un artículo, porque el radio del fallo es el controlador entero y no el
+cruce—. Y la 8 dejó un **hallazgo abierto**: la clave ajena entre esquemas escrita con
+`migrationBuilder.Sql` solo la ve `EsquemaDeIdentidadTests`, por ser la única consulta sin filtro
+de esquema.
+
+**Ninguna dependencia nueva, y la frase sale de comparar conjuntos.** Doce `packages.lock.json` se
+mueven y ningún par `nombre/versión` cambia:
+
+```
+python licencias.py d9e4a46 3a7ba3e
+  d9e4a46 → 39 packages.lock.json · 125 pares nombre/versión distintos · 30 entradas de tipo Project
+            · package-lock.json del frontal: 549 entradas
+  3a7ba3e → 39 packages.lock.json · 125 pares nombre/versión distintos · 30 entradas de tipo Project
+            · package-lock.json del frontal: 549 entradas
+  d9e4a46 → 3a7ba3e: pares añadidos [] · retirados [] · Project añadidos [] · retirados []
+
+git diff --name-only d9e4a46 958c339 -- Directory.Packages.props frontend/package.json \
+  frontend/package-lock.json                                                → vacío
+```
+
+Las tres líneas nuevas de los `.csproj` son `ProjectReference` —las dos de los cruces y la de
+`Terceros.UnitTests → Terceros.Application`—, así que **ninguna licencia nueva que revisar**.
+
+**Semillas, identificadores y secretos.** El ítem toma el bloque de empresas **200-215** y el de
+terceros **32 000 001-32 000 022**, sin pisar ninguno anterior, y el reparto está escrito en el
+comentario de clase de `ContratoDeLosCrucesTests`, que es donde lo lee el siguiente. Todos los NIF
+salen de `Escenario.NifInventado`. Y el barrido, sobre las líneas añadidas del rango entero,
+ficheros generados incluidos:
+
+```
+git diff d9e4a46..958c339 | grep '^+' | grep -cE '\b[A-HJ-NP-SUVW][0-9]{7}[0-9A-J]\b|\b[0-9]{8}[A-Z]\b|\b[XYZ][0-9]{7}[A-Z]\b|\bES[0-9]{2} ?[0-9]{4}|IBAN|-----BEGIN|[Pp]assword\s*=|secret\s*=|api[_-]?key|eyJ[A-Za-z0-9]{20}'
+  → 0
+```
+
+NIF, NIE y CIF con su forma, IBAN español, claves privadas, contraseñas en asignación y testigos
+JWT: **ninguna coincidencia**. El humo local usó un fichero de entorno de valores aleatorios fuera
+del repositorio, borrado al terminar.
+
+**Commits, firmas y trailers.** `git rev-list --count d9e4a46..958c339` → **7**, los siete firmados
+(`%G?` = `G`), con autor y *committer* el usuario y **solo** sus credenciales:
+`git log --format='%(trailers:only)' d9e4a46..958c339` no imprime **ni una línea** sobre el rango
+entero. Sin PR; la rama `feature/1.10-cruces` se llevó a `main` por fast-forward y se borró en
+`958c33982410f8be1f195a651b047fe9e7b17358` —solo existía en local: nunca se empujó—.
+
+**Fuera del ítem, y no «de paso»:** la importación CSV (**1.11**), `CodigoBarras` (fase 2, con su
+import), la conversión de divisas, las facturas y las existencias. El precio por cliente, **solo
+como decisión escrita** —la 7—: el sitio es Ventas, que leerá la tarifa asignada por
+`Terceros.Contracts` y resolverá con la fecha **del documento**.
+
 **Ítem 1.9 cerrado — las tarifas, y la trampa que «más específica» no nombra:**
 run **34599130092** sobre `eadb7b9`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3` de la API, no de la memoria): Backend `103261880142` ✓ (22 pasos, 0 omitidos),
@@ -8749,10 +8875,21 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   quien la caza es una afirmación sobre el puerto y no sobre el precio. Carril nuevo,
   `ContratoDeTarifasTests`, porque la restricción de exclusión es DDL y `btree_gist` se comprueba
   **por el efecto y contra el compose**.
-- [ ] **1.10 · Los dos cruces mutuos** — criterio de aceptación: `ArticuloProveedor` (Catálogo →
+- [x] **1.10 · Los dos cruces mutuos** — criterio de aceptación: `ArticuloProveedor` (Catálogo →
   `Terceros.Contracts`) y `Tercero.TarifaAsignada` (Terceros → `Catalogo.Contracts`), cada uno por
   el `Contracts` de su dueño, resuelto en proceso y **declarado**. Es ítem propio porque la
   dependencia es **mutua** y eso se ve, no se reparte.
+  Cerrado con el run **34833598837** sobre `958c339`. Los dos puertos preguntan por el **estado** y no por
+  la existencia, con sus seis casillas probadas contra PostgreSQL —las de error de cada sentido
+  incluidas—, y `Bloqueado` fuera del enumerado porque ningún productor lo producía: lo encontró la
+  matriz nueva, que descubre todo puerto de estado y no solo los de `EstadoDeMaestro`. El art. 32,
+  contestado con cuatro casos: el listado de proveedores esconde al bloqueado, el alta contesta lo
+  mismo que a uno inventado y volver a añadirlo **no es un 409**. La divisa, en dos representaciones
+  dentro del `Tercero`: no se comparan —probado por el efecto, con un canario en cada orden—, no se
+  unifican ahora —la buena es el código ISO, con el disparador escrito— y no se convierte nada. Once
+  decisiones en *Decisiones tomadas → ítem 1.10*; ocho mutaciones en *Estado actual*, con la 2, la 5
+  y la 7 enteras: la 7b enseña que sin un registro el radio del fallo es el controlador entero, y la
+  8 deja abierto que la clave ajena entre esquemas escrita a mano solo la ve un caso de Identidad.
 - [ ] **1.11 · Importación CSV** — criterio de aceptación: **unidad de aislamiento = la fila**, de
   modo que un fichero con filas malas importa las buenas; **idempotencia por fichero** —una
   importación es UNA operación, y el reenvío con la misma `Idempotency-Key` devuelve el resultado
