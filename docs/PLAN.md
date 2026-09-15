@@ -902,16 +902,18 @@ por la peor de las razones.
 >
 > **Por eso desde el 1.10 no se copian a mano.** Las tres de aquí abajo salen de recorrer los
 > `*Controller.cs` buscando `[Http…]`, `[FromHeader(Name = "If-Match")]` y `[AdmiteIdempotencia]`, y
-> ese barrido devuelve hoy **127 · 81 · 46 · 18**, los mismos cuatro números que fija
+> ese barrido devuelve hoy **128 · 82 · 46 · 19**, los mismos cuatro números que fija
 > `El_barrido_encuentra_el_inventario_entero` **leyendo la tabla de enrutado del host**, que es otra
 > fuente. Dos fuentes que no se derivan una de otra dando el mismo número es lo más cerca que se
 > puede estar de una tabla comprobada sin escribir un test que compare prosa. El delta del 1.10,
 > separado de lo que arrastraban: **+7 acciones, +4 escrituras, +3 `If-Match`, +1
 > `Idempotency-Key`, cero exentas** —cinco de Catálogo y dos de Terceros, porque el cruce es mutuo—;
-> y el del 1.9, que nunca se anotó: **+10, +5, +3, +2, cero**.
+> y el del 1.9, que nunca se anotó: **+10, +5, +3, +2, cero**. El del 1.11: **+1, +1, cero, +1,
+> cero** —la importación de terceros, que es un alta sin recurso propio—.
 
 **Los dieciocho recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de
-agregado con `GET /{id}`, que es la misma lista de las dieciocho altas de más abajo:
+agregado con `GET /{id}`, que es la misma lista de las altas de más abajo **menos la importación**
+del 1.11, que da de alta terceros pero no es un recurso ni devuelve uno:
 
 | Recurso | Ruta del `GET` que emite el `ETag` |
 |---|---|
@@ -981,7 +983,8 @@ proveedor a un artículo, en cambio, **sí** crea una fila con su identidad, su 
 su `DELETE`, y por eso está en la tabla de abajo y no en esta. La pregunta que separa las dos no es
 si el verbo suena a alta, es si lo que se escribe ya tenía `ETag`.
 
-**Las dieciocho rutas que admiten `Idempotency-Key`** — las dieciocho altas, y solo ellas:
+**Las diecinueve rutas que admiten `Idempotency-Key`** — las dieciocho altas de un recurso y la
+importación del 1.11, y solo ellas:
 
 | Ruta | Módulo | Almacén que la atiende |
 |---|---|---|
@@ -1003,6 +1006,7 @@ si el verbo suena a alta, es si lo que se escribe ya tenía `ETag`.
 | `POST /api/v1/catalogo/tarifas` *(1.9)* | `catalogo` | ídem |
 | `POST /api/v1/catalogo/tarifas/{tarifaId}/lineas` *(1.9)* | `catalogo` | ídem |
 | `POST /api/v1/catalogo/articulos/{articuloId}/proveedores` *(1.10)* | `catalogo` | ídem |
+| `POST /api/v1/terceros/terceros/importacion` *(1.11)* | `terceros` | `AlmacenDeIdempotenciaDeTerceros` |
 
 **Y las diecisiete exentas, con el motivo resumido** (el entero está en el test):
 
@@ -3880,7 +3884,14 @@ dejó a medias.
   en la columna `cuerpo`; lo normal, un kilobyte. Fila por fila con sus motivos pasaría de 4 MiB.
 - **nginx tenía un tope menor y nadie lo había mirado:** `client_max_body_size` vale 1 MiB por omisión,
   y un fichero de 1,5 MiB no habría llegado a la API. Se sube a 3 MiB en `/api/`, por encima del de la
-  API para que el `413` con nombre lo dé ella.
+  API para que el `413` con nombre lo dé ella. **Lo comprueba un paso del humo por el puerto del
+  frontal:** 2 MiB + 1 byte vuelve con el `413` de la API y su `type`; 3 MiB + 1 byte lo corta nginx,
+  sin `type`. Por encima de 3 MiB la pantalla enseña el texto genérico y ofrece reintentar, que no
+  sirve de nada: queda anotado abajo como abierto.
+- **El tope se mide sin el cliente de la fábrica de pruebas.** El `RedirectHandler` que mete
+  `WebApplicationFactory.CreateClient` copia el cuerpo entero antes de mandarlo, y la primera versión del
+  caso sin `Content-Length` contó 64 MiB entregados con el lector acotado funcionando. Con
+  `Server.CreateHandler()` a secas se cuenta lo que pide el servidor.
 
 **4. EL PLAZO DE LA TABLA DE IDEMPOTENCIA: 24 HORAS, EN LA FILA, CON PURGA CADA HORA.** La nota que
 el 0.9 dejó abierta —«se decidirá con datos»— se cierra sin ellos, y se dice: el dato que faltaba
@@ -3915,9 +3926,16 @@ cliente que pasó la tarde sin conexión.
 **6. LO QUE YA EXISTE NO SE TOCA, Y LOS PERMISOS VAN TIPO POR VERBO.** La importación **solo da
 altas**. La identificación que ya existe —activa o bloqueada, sin distinguir— es `ya-existe`, y la que
 se repite dentro del fichero, `repetida-en-el-fichero`. **Nunca actualiza**: el permiso de crear no es
-el de modificar, y una fila de CSV no trae la versión de la ficha. La acción exige
-`terceros.tercero.crear`; si **alguna** fila trae límite de crédito hace falta además
-`terceros.limite-credito.fijar`, y sin él se rechaza **el fichero** con un `403` con nombre.
+el de modificar, y una fila de CSV no trae la versión de la ficha.
+**Corregido al escribir el *endpoint*:** la acción exige un permiso **propio**,
+`terceros.tercero.importar`, y no `terceros.tercero.crear`. La regla `CadaAccionDeclaraSuPermiso` no
+deja que dos acciones de escritura compartan permiso, y la diferencia es real: importar es dar de alta
+cinco mil de golpe. **El caso de uso exige además `crear`** —importar es dar de alta, y quien no puede
+dar de alta uno no puede darlos de alta en bloque— con `403 importacion-sin-permiso-de-alta`; y si
+**alguna** fila trae límite de crédito, `terceros.limite-credito.fijar`, con
+`403 importacion-sin-permiso-de-limite`. Los dos `403` rechazan **el fichero**, antes de decidir ninguna
+fila: rechazar esas filas mezclaría un permiso con un dato malo, e importarlas sin el límite las dejaría
+a medias. El ADR-0034 lleva la misma corrección.
 
 **7. LA LÍNEA DE LOS CAMPOS QUE EMPIEZAN POR `=`, `+`, `-` O `@`.** El informe no lleva ningún campo
 que haya escrito el usuario —columnas y motivos los escribe Bastion—, así que descargado o pegado en
@@ -3926,7 +3944,10 @@ exista una exportación que saque datos del usuario, cada campo que empiece por 
 caracteres, o por tabulador o retorno, sale con un apóstrofo delante.
 
 **8. EL SONDEO, CON LOS CUATRO CRITERIOS Y LA PREMISA CONTRA UN EXCEL DE VERDAD.**
-- **Se contesta o se cierra, y nunca 5xx.** **No se filtra el interior**, con `RastrosProhibidos.Todos`.
+- **Se contesta o se cierra, y nunca 5xx.** El test es **más estricto que eso**, y a propósito: cada uno
+  de los 29 ficheros hostiles lleva su estado y su `type` esperados, no «cualquier cosa menos 5xx». Un
+  `400 datos-no-validos` en vez de `importacion-cabecera-no-valida` también es «contestar», y es
+  exactamente lo que devolvía el fichero vacío (abajo). **No se filtra el interior**, con `RastrosProhibidos.Todos`.
   **No se filtra el dato del usuario:** un canario en cada campo que no puede aparecer ni en la
   respuesta ni en el recibo guardado ni en el registro. **Y se sigue atendiendo:** detrás de cada
   entrada mala va una buena, que tiene que entrar.
@@ -3935,6 +3956,29 @@ caracteres, o por tabulador o retorno, sale con un apóstrofo delante.
   comas)» y «CSV UTF-8». Van al repositorio tal como salen. **Los NIF no están en ellos**: llevan
   marcadores que el test sustituye por `Escenario.NifInventado`, así que un NIF real no puede colarse
   en un fichero de prueba sin que se note.
+- **Lo que el sondeo encontró:** un fichero de **cero bytes** no llegaba al lector del dialecto. La base
+  de `InputFormatter` contesta «sin valor» a un cuerpo vacío sin llamar a `ReadRequestBodyAsync`, y el
+  enlace lo convertía en `400 datos-no-validos` con el «field is required» del marco, en inglés. El
+  formateador sobrescribe `ReadAsync`, y un fichero vacío es `importacion-cabecera-no-valida`.
+- **Y lo que encontró el test del formateador, que no estaba previsto:** `LectorAcotadoDelCuerpo.Leido`
+  **nunca devolvía nulo**. `Get<CuerpoLeido>()?.Bytes` es un `byte[]` nulo, y convertido a
+  `ReadOnlyMemory<byte>?` sale **con valor**, vacío. La guarda del formateador —«si la acción no
+  declaró tope, lanza»— no podía saltar, y una acción sin `[TopeDelCuerpo]` habría recibido un fichero
+  vacío en silencio. No lo recorría nada porque la única acción con CSV declara su tope. Se corrige con
+  un `if`, y `ElFormateadorDeCsvNoLeeLaRedTests` fija las dos promesas: sin tope lanza sin tocar la
+  corriente, y cero bytes es un fichero vacío y no «sin valor».
+- **Y lo que encontró la batería entera: la puerta iba detrás del tipo de contenido.**
+  `LaPuertaDeCadaAccionTests` contó `TercerosController.Importar → 415` con un permiso que no era el
+  suyo. `[Consumes("text/csv")]` es también metadato del enrutador: el `415` sale al **elegir la ruta**,
+  antes de `UseAuthorization`, y a esa respuesta solo le alcanza la política por omisión —estar
+  autenticado—. Cualquiera que hubiera entrado sabía, sin permiso, que la acción existe y qué tipo
+  espera. Se sustituye por **`[TipoDelCuerpo]`**, hermano de `[TopeDelCuerpo]`: un filtro de recurso
+  —la autorización ya ha decidido cuando corre— que va **el primero**, antes que el tope, porque
+  rechazar por el tipo no necesita leer; y que da el tipo al explorador de la API, así que el OpenAPI no
+  cambia. Lo fijan dos casos nuevos: `Un_cuerpo_que_no_es_un_CSV_es_415_antes_de_leer_nada` (64 MiB de
+  JSON sin `Content-Length`: con el orden cambiado a mano sale **`413`**, no `415`) y el fichero hostil
+  «un CSV sin decir su tipo». Y el tipo que publica el contrato, cambiado a mano, pone rojo
+  `generar-openapi.sh --comprobar` con su diff.
 
 **9. EL REPARTO DE SEMILLAS.** Empresas **230-259** y terceros **33 000 001-33 000 999**, sin pisar los
 bloques que ya había (el último, 200-215 y 32 000 xxx del 1.10).
@@ -3942,6 +3986,19 @@ bloques que ya había (el último, 200-215 y 32 000 xxx del 1.10).
 **10. EL FRONTAL: 418/450 Y LA REGLA DE LOS 430.** La pantalla va en una ruta diferida; lo que sube
 el arranque son sus textos en los dos diccionarios. Si pasa de **430 KiB**, se saca del arranque el
 idioma no activo antes de seguir.
+**Medido con la pantalla hecha: 426/450 de arranque y 592/900 servidos** (antes, 418/577 sobre
+`051449d`), con `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`. No pasa de 430, así
+que los dos idiomas siguen en el arranque; la pantalla, diferida, pesa 6,7 kB.
+- **La pantalla manda los bytes y no el texto**, con `bodySerializer`: leer el fichero en el navegador
+  lo decodificaría como UTF-8, y cada «ñ» de un CSV en Windows-1252 llegaría rota. Ni separador ni
+  cabecera se comprueban en el frontal: una segunda opinión podría no coincidir con la que decide.
+- **La clave de idempotencia es de la elección del fichero**, no del envío: reintentar repite clave;
+  elegir otro, la estrena. Reintentar solo se ofrece ante un fallo sin nombre.
+- **La cabecera de la plantilla está copiada** en `model/importacion.ts`, y no queda en promesa:
+  `LaPlantillaDelFrontalEsLaDeLaApiTests` la extrae del fuente —y la extracción señala lo que no sea
+  una cadena literal en vez de saltárselo— y la compara con `ImportacionDeTerceros.Cabecera`.
+- La ruta `/terceros/importacion` exige `terceros.tercero.importar`, no sale en la navegación y se
+  llega por un enlace del listado que solo ve quien tiene ese permiso.
 
 **11. FUERA DEL ÍTEM, y no «de paso»:** `CodigoBarras`, la conversión de divisas, las facturas, las
 existencias, el precio por cliente, la importación de artículos (decisión 1), la exportación, y
