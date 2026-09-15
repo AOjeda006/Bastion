@@ -5554,6 +5554,454 @@ ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en
 
 El carril de arquitectura pasa de **18 a 23** casos.
 
+### Verificado en local, con la salida real — ítem 1.11
+
+**Toda cifra de «antes y después» nombra sus dos commits.** El «antes» es `051449d` (main al abrir
+la rama); el «después», `5aca832`, sobre el que corrió la batería entera. Detrás solo va `b44041e`,
+que cambia **un comentario** de `ElReciboCaducaYSeBorraTests` —el que la mutación 8 desmintió, abajo—
+y se verificó por su cuenta: `dotnet build` con 0 errores, `dotnet format --verify-no-changes`
+limpio y la clase ejecutada, 4 de 4. Batería completa de `AGENTS.md` **con Docker arrancado**, las
+dos pasadas con el mismo guion, y cada una imprime en su primera línea contra qué corrió:
+`HEAD 051449d · SDK 10.0.401 · docker 29.7.2` y `HEAD 5aca832 · SDK 10.0.401 · docker 29.7.2`.
+
+```
+dotnet build Bastion.sln                                   → 0 errores, 0 advertencias
+dotnet format Bastion.sln --verify-no-changes              → sin cambios (salida vacía)
+bash scripts/generar-openapi.sh --comprobar                → al día: 128 operaciones
+python -c "…len(json.load(open('docs/api/openapi.json'))['paths'])"  → 74 rutas
+bash scripts/generar-errores.sh --comprobar                → al día: 89 tipos, de 95 sitios de llamada
+bash scripts/comprobar-migraciones.sh                      → modelo y migraciones coinciden en los 5
+                                                             módulos con persistencia
+                                                             (Auditoría: 4, Organización: 5,
+                                                              Identidad: 3, Terceros: 3, Catálogo: 3)
+
+en `051449d`: 127 operaciones en 73 rutas · 80 tipos de 86 sitios · Auditoría 3
+  → +1 operación en +1 ruta (`POST /api/v1/terceros/terceros/importacion`), +9 tipos, +9 sitios,
+    y una migración en Auditoría (`20260914152255_CaducidadDeLosRecibos`)
+```
+
+Los nueve `type` nuevos son el del tope y los de la importación, y nada más: `cuerpo-demasiado-grande`
+en el bloque común; `importacion-cabecera-no-valida`, `-codificacion-no-admitida`,
+`-comillas-sin-cerrar`, `-demasiadas-filas`, `-fin-de-linea-no-admitido` y `-separador-no-admitido`
+del dialecto; y `importacion-sin-permiso-de-alta` e `importacion-sin-permiso-de-limite`, los dos
+`403` del caso de uso.
+
+Los dos carriles, con el recuento que es **quien decide el desenlace** —las mismas órdenes que la
+CI, con la lista de ensamblados esperados escrita entera—:
+
+```
+dotnet test Bastion.sln --filter 'Category!=Integracion' --logger trx \
+  --results-directory artifacts/test-results/dominio
+bash scripts/ci/recuento-de-tests.sh artifacts/test-results/dominio 'Dominio y arquitectura' 300 \
+  'Bastion.Api.FunctionalTests.dll,Bastion.Api.IntegrationTests.dll,Bastion.Arquitectura.Tests.dll,…'
+
+Dominio y arquitectura: 845 casos (845 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — BuildingBlocks.UnitTests 215, Organizacion.UnitTests 183, Identidad.UnitTests 58,
+    Terceros.UnitTests 85, Catalogo.UnitTests 78, Organizacion.IntegrationTests 22,
+    Api.FunctionalTests 154, Arquitectura.Tests 37, Api.IntegrationTests 13
+    (748 en `051449d`, en 9 ensamblados: +97 casos, y cada uno con su clase —
+     BuildingBlocks.UnitTests 132 → 215: los 45 de `CamposCsvTests`, los 34 de `LectorCsvTests`,
+       los 3 de `RechazosDeImportacionTests` y 1 fila más en `ResultadoTests` (`DemasiadoGrande`);
+     Api.FunctionalTests 145 → 154: los 4 de `ElTopeSeImponeAntesDelVolcadoTests`, los 2 de
+       `ElFormateadorDeCsvNoLeeLaRedTests`, los 2 de `LaPlantillaDelFrontalEsLaDeLaApiTests` y 1 fila
+       más en `PoliticaDeErroresTests` (la ruta que da `413`);
+     Arquitectura.Tests 34 → 37, los 3 de `LasMarcasDeAlcanceTests`;
+     Api.IntegrationTests 11 → 13, los 2 de `LaListaDeRastrosProhibidosTests`)
+
+dotnet test Bastion.sln --filter 'Category=Integracion' --logger trx \
+  --results-directory artifacts/test-results/integracion
+bash scripts/ci/recuento-de-tests.sh artifacts/test-results/integracion 'Integración (Testcontainers)' 100 \
+  'Bastion.Api.IntegrationTests.dll,Bastion.Organizacion.IntegrationTests.dll'
+
+Integración (Testcontainers): 392 casos (392 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 318, y 0 en los otros siete
+    (367 en `051449d`, CON 1 ROJO —abajo—: +25 casos, los 9 de `LaImportacionDeTercerosTests`,
+     los 8 de `LaImportacionEsUnaOperacionTests`, el de `LaImportacionAguantaFicherosHostilesTests`,
+     los 4 de `ElReciboCaducaYSeBorraTests` y los 3 de `NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests`)
+
+Frontal: 15 ficheros de prueba, 101 casos, 0 avisos de `act()`
+  (14 y 95 en `051449d`: +1 fichero y +6 casos, los de `LaImportacionDeTerceros.test.tsx`)
+```
+
+El reparto por clase sale de los `.trx` del propio recuento, agrupando los `UnitTest` por
+ensamblado y `className`, y **cuadra entero**: las clases nuevas suman sus casos y las modificadas
+que no son `ResultadoTests` ni `PoliticaDeErroresTests` —`EntradaHostilTests`, `EsquemaDeIdentidadTests`,
+los dos censos, `LasReglasDeEsteCarrilTests`…— no añaden ni quitan ningún `[Fact]`, `[Theory]` ni
+`[InlineData]` en el diff.
+
+**La base no estaba en verde, y se dice.** La batería de `051449d` salió con **un** caso rojo de 367:
+`EntradaHostilTests.Un_tipo_de_contenido_que_no_es_JSON_es_415_y_tampoco_cuenta_nada`, con
+`cuerpo should not contain "5432"` sobre una respuesta cuyo único `5432` estaba **dentro del
+`traceId`** aleatorio (`7d91c1e17494b73e495432077f393034`). Es el rastro prohibido que cabía en un
+identificador, arreglado en `a7dc05f` (*Decisiones tomadas → ítem 1.11*, decisión 0), y en `5aca832`
+**ese mismo caso, por nombre, está en verde**. No es un rojo que el ítem tape: es uno que el ítem
+empezó arreglando.
+
+**El canal de `act()` sigue a cero**, medido en la salida de la suite y no contando llamadas:
+`grep -c "not wrapped in act"` sobre la de `npm --prefix frontend run test` → **0** en las dos
+pasadas.
+
+```
+npm --prefix frontend run api          → `shared/api/esquema.ts` sin cambios (git status limpio)
+npm --prefix frontend run typecheck    → limpio
+npm --prefix frontend run lint         → limpio
+npm --prefix frontend run format:check → All matched files use Prettier code style!
+bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
+
+Frontal · arranque 426/450 KiB en 3 ficheros · total servido 592/900 KiB
+  (418/450 y 577/900 en `051449d`: +8 KiB de arranque y +15 de total)
+    index.js   412 868 → 420 454 B   ·   index.css   13 810 → 14 421 B
+    PaginaDeImportacion-*.js  6 702 B, diferida: cuenta en el total y no en el arranque
+```
+
+**El disparador de los 430 KiB no ha saltado, por 4.** Lo que sube el arranque son los textos de la
+pantalla y de los nueve `type` en los dos diccionarios —`i18n/es.ts` +75 líneas, `i18n/en.ts` +72—;
+la pantalla va en su ruta diferida. La regla (decisión 10) sigue escrita para quien la cruce.
+
+**Licencias, por conjuntos y con el comando.** Un solo `packages.lock.json` cambia en el rango, el
+de `BuildingBlocks.UnitTests`, porque ahora referencia `BuildingBlocks.Application`:
+
+```
+python licencias.py 051449d 5aca832      (pares `nombre/versión` de los `resolved` de TODOS los
+                                          packages.lock.json, y las dependencias del package-lock.json
+                                          del frontal SIN la raíz)
+
+051449d → 39 packages.lock.json · 125 pares nombre/versión distintos · 30 entradas de tipo Project
+          · package-lock.json del frontal: 548 dependencias sin la raíz
+5aca832 → 39 packages.lock.json · 125 pares nombre/versión distintos · 30 entradas de tipo Project
+          · package-lock.json del frontal: 548 dependencias sin la raíz
+051449d → 5aca832: pares añadidos [] · retirados [] · Project añadidos [] · retirados []
+                   · frontal añadidas [] · retiradas []
+
+git diff --name-only 051449d 5aca832 -- Directory.Packages.props frontend/package.json \
+  frontend/package-lock.json                                               → vacío
+git diff 051449d 5aca832 -- '*.csproj' | awk '/^diff --git/{f=$4} /^[+-].*(PackageReference|ProjectReference)/{print f" -> "$0}'
+  Bastion.BuildingBlocks.UnitTests.csproj -> + ProjectReference …/Bastion.BuildingBlocks.Application.csproj
+```
+
+Cero pares añadidos y cero retirados en los dos ecosistemas, y la única línea del diff es una
+**referencia de proyecto**. El lector de CSV es código propio: ninguna licencia nueva que revisar.
+
+**El humo, porque el ítem toca esquema y nginx.** El job «Humo» de la CI, paso a paso y **en local**,
+en un proyecto de compose aparte —`docker compose -p bastion-humo-111`— con un fichero de entorno de
+valores aleatorios generado para la pasada y borrado al terminar: ni el `deploy/.env` de desarrollo
+ni sus volúmenes se tocan. Tres pasos **no están en la CI** y se añadieron para esta pasada: el 09,
+que pregunta a la base por lo que el ítem migra; el 16c, una importación de verdad por el frontal; y
+el 16d, que la purga arranca con la API. El 16b es el paso de la CI tal cual.
+
+```
+HEAD 5aca832 · docker 29.7.2 · proyecto bastion-humo-111
+01 config               compose válido
+02 construir            exit 0 (31 s)
+03-05 levantar          api, postgres y web (healthy) · jaeger y otel-collector running
+                        · migraciones Exited (0)
+06 migrador             código 0 · esquema aplicado por los cinco contextos: Auditoría,
+                        Organización, Identidad, Terceros y Catálogo
+07 semillas en imagen   impuestos.json unidades-de-medida.json
+08 maestros en base     impuestos=12 unidades=15 iva_general_vigente=21.00
+09 lo del ítem en base  auditoria.claves_de_idempotencia.caduca_en: NO nulable, timestamp with time zone
+                        · su índice: 1 · migración del ítem: 1 · claves ajenas entre esquemas: 0
+10-11 salud             /health/live → Healthy · /health/ready → base-de-datos Healthy
+12 sin credenciales     401
+13-14 sesión y lectura  POST /api/v1/identidad/sesiones → 200 · GET empresas con testigo → 200, total=1
+15-16 frontal           carga · por el proxy sin credenciales → 401
+16b cuerpo por nginx    importación de 2 MiB + 1 byte → 413 type=[/errors/cuerpo-demasiado-grande]
+                        · cuerpo de 3 MiB + 1 byte → 413 type=[]
+16c importación         una fila con el número `NO-ES-UN-NIF` → 200; {"leidas": 1, "importadas": 0,
+                        "rechazadas": 1, "rechazos": [{"columna": "identificacion_numero",
+                        "motivo": "no-valido", "lineas": [2]}]}
+                        · la misma clave con el mismo fichero → 200; mismos bytes: True
+                        · la misma clave con otro fichero → 409; type=/errors/idempotencia-cuerpo-distinto
+16d purga               líneas de la purga de recibos en el registro de la API: 1
+17 sin mapas            mapas dentro de la imagen: []
+18 trazas               Jaeger conoce bastion-api (intento 1)
+FALLOS: 0
+19 desmontar            down -v --remove-orphans: volumen bastion-humo-111_postgres-datos Removed
+```
+
+El 16c **afirma** la ausencia, no la deja a la vista: el guion hace `assert b'NO-ES-UN-NIF' not in b1`
+sobre los bytes de la respuesta, y lo mismo con la razón social de la fila. Y después,
+`docker compose ls -a` sin ningún proyecto, ningún volumen ni contenedor con `humo` en el nombre, y
+el fichero de entorno y el testigo de la pasada borrados.
+
+**El `415` que la batería encontró** —`[Consumes]` contestaba en el enrutador, antes de la
+autorización— está contado entero en la decisión 8, con su arreglo en `d4f3ebb` y sus dos casos.
+
+### Las ocho mutaciones del 1.11, cada una aplicada, ejecutada y revertida
+
+Todas sobre **árbol limpio y commiteado**, línea base `5aca832`, en **una sola tanda** que empezó el
+2026-09-15 a las 07:52:26 con el guion `mutaciones.py` del directorio de trabajo de la sesión: copia
+de respaldo, cambio anclado —el guion aborta si el texto que sustituye no aparece **exactamente una
+vez**—, `git diff` guardado, `dotnet build`, **los dos carriles enteros** con `--logger trx` —no solo
+el que la mutación parece alcanzar— y los casos rojos leídos **del `.trx`**, no de la consola.
+Revertidas **restaurando la copia y tocando su fecha** (`shutil.copyfile` y `os.utime`: `copy2`
+conserva la fecha vieja y deja la mutación anterior dentro del `.dll`). Después de cada una, el guion
+comprueba que el fichero es el original carácter a carácter, que
+`git status --porcelain --untracked-files=no` sale **vacío** y que
+`grep -rn MUTACION src tests frontend/src` **no encuentra nada**; y al final de la tanda, `dotnet build`
+del árbol restaurado:
+
+```
+##### final: build del árbol restaurado exit=0 porcelana=[] marcas=[]
+```
+
+Referencia sin mutar en `5aca832`: rápido **845**, integración **392**, los dos sin un solo rojo (la
+batería de arriba). Los nombres van sin el espacio de nombres.
+
+| # | Mutación | Dónde | Rápido | Integración | Qué se pone rojo |
+|---|---|---|---|---|---|
+| 1 | **Una fila mala aborta el fichero**: con un rechazo, el caso de uso devuelve el informe sin escribir ninguna | `ImportarTerceros.cs` | 0 | **3** | `LaImportacionDeTercerosTests.Las_filas_malas_no_impiden_que_entren_las_buenas_…` —`should be 3L but was 0L`, «una fila mala ha impedido que entraran las buenas»—, y `.Lo_que_ya_existe_activo_o_bloqueado_sale_en_el_mismo_grupo_…` y `.Una_fila_con_el_limite_mal_escrito_…`, las dos con `1L but was 0L`: la fila buena de su fichero tampoco entra |
+| 2 | **Una fila mala se importa a medias**: los errores del límite de crédito no rechazan la fila, que entra sin límite | `FilasDeTerceros.cs` | 0 | **1** | `LaImportacionDeTercerosTests.Una_fila_con_el_limite_mal_escrito_no_deja_el_tercero_dado_de_alta_sin_limite` —`should be 0L but was 1L`, «una fila con el límite mal escrito ha entrado a medias»— |
+| 3 | **La misma clave con otro fichero se acepta**: la comparación de huellas nunca da distinto | `FiltroDeIdempotencia.cs` | 0 | **2** | `LaImportacionEsUnaOperacionTests.La_misma_clave_con_otro_fichero_es_un_409_y_el_otro_fichero_no_entra` —`OK` en vez de `Conflict`, con `{"leidas":1,"importadas":1,"rechazadas":0,"rechazos":[]}`: el otro fichero **ha entrado**— y, del 0.9, `LaMismaClaveDevuelveElMismoRecursoTests.La_misma_clave_con_otro_cuerpo_es_409` (`Created`) |
+| 4 | **La misma clave con el mismo fichero reimporta** | `FiltroDeIdempotencia.cs` | 0 | **3** | entera abajo |
+| 5 | **Separador o cultura cambiados**: el importe se lee con la cultura invariante | `CamposCsv.cs` | **11** | **5** | entera abajo |
+| 6 | **El informe pierde el número de línea**: cada grupo sale con la lista de líneas vacía | `RechazosDeImportacion.cs` | **1** | **4** | `RechazosDeImportacionTests.Se_agrupan_por_columna_y_motivo_en_el_orden_de_la_cabecera_con_las_lineas_ordenadas`; contra la base, los tres de `LaImportacionDeTercerosTests` que comparan el informe **serializado entero** —`"lineas":[3]` esperado, `"lineas":[]` recibido— y `LaImportacionEsUnaOperacionTests.El_peor_informe_posible_tiene_techo_…`, que pide `rechazo.Lineas.Count == 5000` |
+| 7 | **El tope, comprobado después del volcado** | `LectorAcotadoDelCuerpo.cs` | **3** | **1** | entera abajo |
+| 8 | **El plazo de la tabla de idempotencia, quitado**: el recibo nace con `CaducaEn = DateTimeOffset.MaxValue` | `RegistroDeIdempotencia.cs` | 0 | **1** | `ElReciboCaducaYSeBorraTests.El_recibo_nace_con_su_caducidad_a_las_24_horas_de_reclamarse` —`recibo.CaducaEn - recibo.CreadaEn should be 1.00:00:00 but was 2912185.17:28:52.4285789`, leído **de la fila guardada**— |
+
+**Cinco de las ocho —1, 2, 3, 4 y 8— no las ve el carril rápido**, y no es un hueco sino dónde viven:
+aislamiento por fila, idempotencia y caducidad son propiedades de lo que queda en PostgreSQL, y el
+carril de integración corre en cada *run*.
+
+**La 8 cae en un solo caso, y eso desmintió un comentario.** El de la clase decía que un recibo que no
+caduca nunca «sale rojo en el segundo borde» de la purga. No sale: los casos de la purga toman el
+vencimiento **que dice la fila**, sea el que sea, y purgar en `DateTimeOffset.MaxValue` también se lo
+lleva. Lo único que ve el plazo quitado es la resta de las dos fechas guardadas, que es el caso que se
+puso rojo. El comentario está corregido en `b44041e`; la cobertura no cambia, porque ya estaba donde
+tenía que estar.
+
+**El ruido en el mensaje de la 3 no es de la mutación.** El rojo de
+`La_misma_clave_con_otro_fichero_…` trae pegado un «registro del servidor» con
+`P0001: la escritura revienta a mitad` y su `DbUpdateException`. Es del caso vecino
+`Si_la_escritura_revienta_a_mitad_no_queda_ni_una_fila_ni_el_recibo_…`, el único que crea ese
+disparador, que corre antes en la misma clase y contra el mismo servidor; las dos peticiones del
+caso mutado contestaron `200`.
+
+**La 4, la 5 y la 7, enteras.** Las salidas son las del informe de la tanda
+(`$TEMP/mutaciones/informe.txt`) y las de `python mensajes-trx.py N`, que lee los `.trx` de la
+mutación N y saca de cada caso rojo su nombre y su mensaje; recortadas donde dice «…» y sin las
+duraciones.
+
+**Mutación 4 — la misma clave con el mismo fichero vuelve a hacer el trabajo.** El criterio pide que
+el reenvío devuelva el resultado guardado **sin reimportar**, y un informe igual no lo prueba: un
+fichero que ya entró, reimportado, daría otro informe —todo `ya-existe`—, pero uno entero de filas
+malas daría **el mismo**. Por eso el caso de la importación mira **el efecto** antes que la respuesta:
+si se ha vuelto a preguntar a la base qué identificadores están ocupados.
+
+```diff
+             if (!mia)
+             {
++                // MUTACION 4: la misma clave con el mismo cuerpo vuelve a hacer el trabajo.
++                RegistroDeIdempotencia? previa = await almacen.BuscarAsync(clave, cancelacion).ConfigureAwait(false);
++
++                if (previa is not null && previa.CoincideElCuerpo(huella.Valor))
++                {
++                    await next().ConfigureAwait(false);
++                    return;
++                }
++
+                 context.Result = await YaAtendidaAsync(almacen, clave, huella.Valor, cancelacion)
+                     .ConfigureAwait(false);
+                 return;
+```
+
+```
+python mutaciones.py      (la tanda) → ===== MUTACION 4: misma clave con el mismo fichero reimporta
+build exit=0
+dominio: exit=0 casos=845 rojos=0
+integracion: exit=1 casos=392 rojos=3
+restaurado=True porcelana=[] marcas=[]
+
+python mensajes-trx.py 4
+== integracion: 392 casos, 389 correctos, 3 con error
+[Failed] LaImportacionEsUnaOperacionTests.La_misma_clave_con_el_mismo_fichero_devuelve_el_mismo_informe_sin_volver_a_mirar_la_base
+  Shouldly.ShouldAssertException : RegistroDeSucesos.Con(SucesoDeLaImportacionConOcupados)
+      should be empty but had
+  1
+      item and was
+  [Suceso { EventId = 8401, Mensaje = Importación de terceros con identificadores ocupados.
+    Empresa: 01a0a3b0-8d7c-7994-9d3a-0d905c1c1aad. Ocupados: 3. De ellos, en fichas bloqueadas: 0. }]
+  Additional Info:
+      la repetición ha vuelto a mirar qué identificadores están ocupados: se ha ejecutado otra vez
+[Failed] LaMismaClaveDevuelveElMismoRecursoTests.El_reintento_con_la_misma_clave_devuelve_los_mismos_bytes_y_no_crea_otro
+  Shouldly.ShouldAssertException : segunda.StatusCode
+      should be
+  HttpStatusCode.Created
+      but was
+  HttpStatusCode.Conflict
+  Additional Info:
+      {"type":"/errors/almacen-duplicado",…,"status":409,"detail":"La empresa ya tiene un almacén con el código IDEM-UNO.",…}
+[Failed] LaMismaClaveDevuelveElMismoRecursoTests.De_dos_peticiones_simultaneas_con_la_misma_clave_solo_una_hace_el_trabajo
+  Shouldly.ShouldAssertException : respuesta.StatusCode
+      should be
+  HttpStatusCode.Created
+      but was
+  HttpStatusCode.Conflict
+  Additional Info:
+      {"type":"/errors/almacen-duplicado",…,"status":409,"detail":"La empresa ya tiene un almacén con el código IDEM-A-LA-VEZ.",…}
+```
+
+**Rojo por el efecto, y el efecto se lee en el suceso.** El `8401` lo anota `RepositorioDeTerceros`
+**cuando la consulta de ocupados encuentra alguno**, y la repetición lo anotó con `Ocupados: 3`: los
+tres terceros que la primera petición del caso acababa de dar de alta. Es una lectura que la
+repetición no hace, y la única manera de que aparezca es que el trabajo se haya ejecutado otra vez.
+Los dos del 0.9 caen por el otro lado del mismo contrato: el almacén repetido **choca consigo mismo**
+y contesta `409` donde tenía que devolver los bytes guardados.
+
+**Mutación 5 — el importe se lee con la cultura invariante.** Es la que el dialecto existe para
+impedir: el separador decimal adivinado. Nada revienta; los números cambian.
+
+```diff
+-        string invariante = coma < 0 ? cifras : $"{cifras}.{decimales}";
+-        valor = decimal.Parse(invariante, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
++        // MUTACION 5: el importe se lee con la cultura invariante: punto decimal y coma de miles.
++        if (!decimal.TryParse(resto, NumberStyles.Number, CultureInfo.InvariantCulture, out valor))
++        {
++            return false;
++        }
+```
+
+```
+python mutaciones.py      (la tanda) → ===== MUTACION 5: separador o cultura cambiados
+build exit=0
+dominio: exit=1 casos=845 rojos=11
+integracion: exit=1 casos=392 rojos=5
+restaurado=True porcelana=[] marcas=[]
+
+python mensajes-trx.py 5
+== integracion: 392 casos, 387 correctos, 5 con error
+[Failed] LaImportacionDeTercerosTests.Los_importes_se_leen_con_la_coma_decimal_y_se_ve_en_el_limite_guardado
+  Shouldly.ShouldAssertException : await LimiteAsync(cliente, conMiles.Id)
+      should be
+  (1234, EUR)
+      but was
+  (1,2340, EUR)
+  Additional Info:
+      «1.234» es mil doscientos treinta y cuatro
+[Failed] LaImportacionDeTercerosTests.Los_dos_CSV_que_escribe_Excel_en_espanol_entran_enteros_y_con_cada_valor_en_su_sitio(fichero: "terceros-csv-delimitado-por-comas.csv", empresa: 234, primerNif: 1)
+  Shouldly.ShouldAssertException : informe
+      should be
+  InformeDeImportacionDto { Leidas = 3, Importadas = 3, Rechazadas = 0, … }
+      but was
+  InformeDeImportacionDto { Leidas = 3, Importadas = 2, Rechazadas = 1, … }
+[Failed] … el mismo caso con (fichero: "terceros-csv-utf8.csv", empresa: 235, primerNif: 4): Importadas = 3 → 2
+[Failed] LaImportacionDeTercerosTests.Las_filas_malas_no_impiden_que_entren_las_buenas_y_el_informe_dice_su_linea_de_Excel
+  … should be 3L but was 2L · Additional Info: una fila mala ha impedido que entraran las buenas
+[Failed] LaImportacionAguantaFicherosHostilesTests.Ningun_fichero_hostil_tumba_la_importacion_ni_cuenta_nada_ni_devuelve_lo_que_le_mandaron
+  informe should be { Leidas = 3, Importadas = 3, Rechazadas = 0, … } but was { Leidas = 3, Importadas = 2, Rechazadas = 1, … }
+  Additional Info: detrás de «vacío», el fichero bueno no entra entero
+
+== dominio: 845 casos, 834 correctos, 11 con error      (CamposCsvTests)
+Los_importes_a_la_espanola_se_leen_con_su_valor(campo: "1234,5", …)              valor should be 1234,5m  but was 12345m
+Los_importes_a_la_espanola_se_leen_con_su_valor(campo: "-1,5", …)                valor should be -1,5m    but was -15m
+Los_importes_a_la_espanola_se_leen_con_su_valor(campo: "99999999999999,9999", …) valor should be 99999999999999,9999m
+                                                                                   but was 999999999999999999m
+Los_importes_a_la_espanola_se_leen_con_su_valor(campo: "1.234", …)               valor should be 1234m    but was 1,234m
+Los_importes_a_la_espanola_se_leen_con_su_valor(campo: "1.234,56"), ("12.345.678,9012") y ("99.999.999.999.999")
+                                          CamposCsv.IntentarLeerImporte(campo, out decimal valor) should be True but was False
+El_valor_leido_no_depende_de_la_cultura_de_quien_ejecuta(cultura: "", "de-CH", "en-US" y "es-ES")
+                                   CamposCsv.IntentarLeerImporte("1.234,5", out decimal valor) should be True but was False
+```
+
+**Rojo por el valor importado, que es lo que se pidió.** El caso que manda es el primero: el límite
+de crédito **guardado** vale `1,2340` —uno coma dos tres cuatro, impreso en la cultura de la máquina—
+donde el fichero decía mil doscientos treinta y cuatro. No lo rechaza nada: la fila **entra**, con un
+límite mil veces menor. Los dos ficheros exportados por Excel pierden **una fila cada uno**, y es la
+del `1.234,56` —en cada fichero, la única con miles y decimales; la otra con límite dice `2500`—, que
+la cultura invariante no sabe leer. Y el carril rápido enseña las dos caras del mismo error: `1234,5` **se
+lee**, como doce mil trescientos cuarenta y cinco —la coma tomada por separador de miles—, y
+`1.234,56` **no se lee**. La primera es la peligrosa, porque no avisa; el caso la fija por el valor.
+
+**Mutación 7 — el cuerpo se vuelca entero y el tope se comprueba después.** Es el error natural al
+escribir un lector acotado, y el resultado **parece** correcto: el fichero demasiado grande sigue
+recibiendo su `413` con nombre. Lo que no se ve es que antes se ha leído entero.
+
+```diff
+         HttpRequest peticion = contexto.Request;
+ 
+-        if (peticion.ContentLength > tope)
+-        {
+-            return Resultado.Fallo<ReadOnlyMemory<byte>>(ErroresDelCuerpo.DemasiadoGrande(tope));
+-        }
+-
+-        int limite = (int)tope + 1;
+-        using var acumulado = new MemoryStream((int)Math.Min(peticion.ContentLength ?? Trozo, limite));
+-        byte[] trozo = new byte[Math.Min(Trozo, limite)];
+-
+-        while (acumulado.Length < limite)
+-        {
+-            int pedir = (int)Math.Min(trozo.Length, limite - acumulado.Length);
+-            int leidos = await peticion.Body.ReadAsync(trozo.AsMemory(0, pedir), cancelacion).ConfigureAwait(false);
+-
+-            if (leidos == 0)
+-            {
+-                break;
+-            }
+-
+-            acumulado.Write(trozo, 0, leidos);
+-        }
++        // MUTACION 7: el cuerpo se vuelca entero y el tope se comprueba después.
++        using var acumulado = new MemoryStream();
++        await peticion.Body.CopyToAsync(acumulado, Trozo, cancelacion).ConfigureAwait(false);
+ 
+         if (acumulado.Length > tope)
+```
+
+```
+python mutaciones.py      (la tanda) → ===== MUTACION 7: tope comprobado después del volcado
+build exit=0
+dominio: exit=1 casos=845 rojos=3
+integracion: exit=1 casos=392 rojos=1
+restaurado=True porcelana=[] marcas=[]
+
+python mensajes-trx.py 7
+== dominio: 845 casos, 842 correctos, 3 con error
+[Failed] ElTopeSeImponeAntesDelVolcadoTests.Con_un_Content_Length_mayor_que_el_tope_se_contesta_sin_leer_un_byte
+  Shouldly.ShouldAssertException : cuerpo.Entregados
+      should be
+  0L
+      but was
+  262144L
+  Additional Info:
+      la petición declaraba más que el tope y aun así se ha leído
+[Failed] ElTopeSeImponeAntesDelVolcadoTests.El_filtro_de_idempotencia_lee_con_el_tope_aunque_corra_sin_el_filtro_del_tope_delante
+  Shouldly.ShouldAssertException : cuerpo.Entregados
+      should be
+  1025L
+      but was
+  262144L
+  Additional Info:
+      el filtro de idempotencia ha volcado el cuerpo sin tope para calcular la huella
+[Failed] ElTopeSeImponeAntesDelVolcadoTests.Sin_Content_Length_se_leen_como_mucho_tope_mas_uno_bytes
+  Shouldly.ShouldAssertException : cuerpo.Entregados
+      should be
+  1025L
+      but was
+  262144L
+  Additional Info:
+      el lector ha pedido a la red más de lo que hacía falta para saber que el cuerpo no cabía: un tope comprobado después del volcado no es un tope
+== integracion: 392 casos, 391 correctos, 1 con error
+[Failed] LaImportacionEsUnaOperacionTests.Sin_Content_Length_el_servidor_deja_de_leer_en_cuanto_el_fichero_no_cabe
+  Shouldly.ShouldAssertException : corriente.Entregados
+      should be less than
+  3145728L
+      but was
+  67108864L
+  Additional Info:
+      el servidor ha seguido pidiendo el cuerpo después de pasarse del tope: se ha volcado antes de mirarlo
+```
+
+**Los cuatro miden lo mismo —cuántos bytes ha pedido el servidor a la corriente— y no el código de
+respuesta**, que con la mutación sigue siendo `413`. Los tres del carril rápido usan un tope de
+**1 KiB** y una corriente de **256 KiB** que cuenta lo que entrega: con el lector acotado, **0** bytes si
+el `Content-Length` ya pasa del tope y **1 025** —el tope más uno— si no lo trae; con la mutación, los
+262 144 enteros en los tres. El de integración lo mide con el tope de verdad, 2 MiB más 1 MiB de
+holgura para los búferes, contra una corriente de **64 MiB sin `Content-Length`**, y con el manejador
+desnudo del servidor de pruebas —el cliente de la fábrica lleva el de redirecciones, que copia el
+cuerpo entero antes de mandarlo—: el servidor se llevó **los 67 108 864**. Y el del filtro de
+idempotencia es el que justifica que el lector sea uno solo: ese filtro lee el cuerpo **antes** que el
+formateador para calcular la huella, y sin el lector acotado sería él el primero en volcarlo.
+
 ### Verificado en local, con la salida real — ítem 1.10
 
 **Toda cifra de «antes y después» nombra sus dos commits.** El «antes» es `d9e4a46` (main al abrir
@@ -9373,7 +9821,7 @@ cuando hace falta el porqué.
   sirve todo el JavaScript**. Es un fallo mudo —la portada las lleva, que es donde uno mira—.
   Ahora viven en `deploy/nginx-cabeceras-de-seguridad.conf` y se incluyen en cada `location` que
   las necesita.
-- **ABIERTO (2026-08-31) · `auditoria.claves_de_idempotencia` crece sin límite, y es a propósito.**
+- **CERRADA (2026-09-14, en el 1.11) · `auditoria.claves_de_idempotencia` crecía sin límite, y era a propósito.**
   El 0.9 no trae política de retención, y no por olvido. Un recibo de idempotencia es lo que impide
   que un reintento duplique un alta: **borrarlo reabre exactamente la ventana que la tabla cierra**,
   así que una limpieza mal calibrada no deja la tabla más pequeña, deja el sistema sin la garantía.
@@ -9390,6 +9838,16 @@ cuando hace falta el porqué.
   paso del despliegue. Lo que sigue faltando no es mecanismo sino el dato —cuánto tarda un
   cliente real en reintentar—, y ese no está en el código. Sin él, borrar es adivinar; y
   adivinar mal no encoge la tabla, quita la garantía.
+  **Cerrada en el 1.11** (`5f36468`, **ADR-0034 §4**), y **sin el dato** que la nota pedía, por un
+  motivo que ella no podía prever: la fila ya no es anónima. El recibo de un `201` guarda la
+  respuesta, y para `POST /api/v1/terceros/terceros` la respuesta es la ficha de un tercero —nombre,
+  NIF y domicilio de personas identificables—. Un dato personal sin plazo no puede esperar a una
+  medición de uso. **Veinticuatro horas** en la propia fila —`caduca_en`, calculado al reclamar el
+  recibo, así que un cambio de plazo no toca lo ya prometido— y **una purga cada hora** en Auditoría,
+  dueña de la tabla (`PurgadorDeRecibos`, suceso `8600`, sin datos). Lo que cuesta está en el
+  contrato: pasado el plazo, la misma clave es una clave nueva. Lo sostienen
+  `ElReciboCaducaYSeBorraTests` y la **mutación 8** del 1.11, y el humo local lo vio en la base del
+  compose: `caduca_en` no nulable, con su índice y su migración.
 - **CERRADO (2026-08-26, en el 0.13) · el *compose* no aplica las migraciones, así que la semilla no llega a
   aplicarse ahí.** Nadie ejecuta `dotnet ef database update` ni al arrancar la API ni en el
   `docker-compose.yml`: la base del entorno local no tiene tablas. Consecuencia práctica de hoy:
