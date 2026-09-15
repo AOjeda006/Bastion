@@ -49,6 +49,11 @@ Dockerfile*      text
 *.snk            binary
 *.pfx            binary
 
+# Los CSV que escribió Excel, tal cual: CRLF, BOM o Windows-1252. La premisa de la importación
+# (ADR-0034 §5) se comprueba contra lo que Excel escribe, y `text=auto` los normalizaría a LF
+# UTF-8 en el primer commit: probaría contra un fichero que ningún Excel ha escrito nunca.
+tests/**/Excel/*.csv binary
+
 # ---------- Generado: fuera de las estadísticas del repo ----------
 # `-diff` solo donde el contenido no se lee nunca. Las migraciones SÍ se revisan, y desde el
 # ítem 0.11 el documento OpenAPI también: es el contrato del que se genera el cliente del

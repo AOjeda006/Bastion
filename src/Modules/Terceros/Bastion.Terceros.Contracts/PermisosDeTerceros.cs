@@ -25,6 +25,22 @@ public static class PermisosDeTerceros
     /// <summary>Dar de alta terceros.</summary>
     public const string TerceroCrear = "terceros.tercero.crear";
 
+    /// <summary>Dar de alta terceros desde un fichero.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Aparte de <see cref="TerceroCrear"/>, y no porque escriba otra cosa.</b> Escribe lo mismo, pero
+    /// de cinco mil en cinco mil y sin que nadie mire cada ficha en un formulario: hay perfiles que dan
+    /// de alta clientes de uno en uno y no tienen por qué poder volcar la cartera de otro programa.
+    /// </para>
+    /// <para>
+    /// <b>Y no sustituye a <see cref="TerceroCrear"/>: lo exige además.</b> Autorizar una operación no
+    /// autoriza lo que esa operación escribe, así que la importación pide este permiso en la puerta y,
+    /// dentro, el de cada cosa que escribe —el alta siempre, y el límite de crédito si alguna fila lo
+    /// trae—.
+    /// </para>
+    /// </remarks>
+    public const string TerceroImportar = "terceros.tercero.importar";
+
     /// <summary>Cambiar los datos de un tercero.</summary>
     public const string TerceroModificar = "terceros.tercero.modificar";
 
@@ -111,6 +127,7 @@ public static class PermisosDeTerceros
     [
         TerceroVer,
         TerceroCrear,
+        TerceroImportar,
         TerceroModificar,
         TerceroBloquear,
         TerceroDesbloquear,

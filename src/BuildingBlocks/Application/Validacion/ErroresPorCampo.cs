@@ -29,6 +29,13 @@ public sealed class ErroresPorCampo
     /// <summary>Indica si se ha recogido algún incumplimiento.</summary>
     public bool Hay => _campos.Count > 0;
 
+    /// <summary>Los campos que tienen algún incumplimiento, sin los textos.</summary>
+    /// <remarks>
+    /// Para quien necesita saber DÓNDE falla pero no puede repetir el porqué escrito: la importación
+    /// convierte cada campo en una columna con un motivo de una lista cerrada (ADR-0034 §2).
+    /// </remarks>
+    public IReadOnlyCollection<string> CamposConError => _campos.Keys;
+
     /// <summary>Apunta que un campo incumple algo.</summary>
     /// <param name="campo">Nombre del campo TAL COMO VIAJA en el cuerpo de la petición.</param>
     /// <param name="motivo">Qué le pasa, dicho para quien rellenó el formulario.</param>

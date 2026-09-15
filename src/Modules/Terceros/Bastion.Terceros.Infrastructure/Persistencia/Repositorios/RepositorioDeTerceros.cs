@@ -88,6 +88,59 @@ internal sealed partial class RepositorioDeTerceros(
                   "La ficha que lo ocupa está bloqueada: {Bloqueada}.")]
     private static partial void Anotar(ILogger registro, Guid empresaId, bool bloqueada);
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// <b>Filtra por el número en la base y por el país en memoria.</b> Un <c>IN</c> de pares no se
+    /// traduce, y un <c>OR</c> por cada par haría una sentencia de cinco mil ramas. Con el número basta
+    /// para usar el índice de (empresa, país, número) por su primera columna y quedarse con muy pocas
+    /// filas; las de otro país con el mismo número, que son las únicas de más, se descartan aquí.
+    /// </para>
+    /// <para>
+    /// <b>El registro lleva cuántas, no cuáles</b>: igual que el alta suelta, ningún identificador
+    /// fiscal va al registro. Lo que hace falta para responder «se miraron fichas reservadas» es la
+    /// empresa, el instante y cuántas de las ocupadas estaban bloqueadas.
+    /// </para>
+    /// </remarks>
+    public async Task<IReadOnlySet<(string Pais, string Numero)>> IdentificacionesOcupadasAsync(
+        Guid empresaId,
+        IReadOnlyCollection<(string Pais, string Numero)> identificaciones,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(identificaciones);
+
+        string[] numeros = [.. identificaciones.Select(identificacion => identificacion.Numero).Distinct(StringComparer.Ordinal)];
+        HashSet<(string Pais, string Numero)> pedidas = [.. identificaciones];
+
+        var encontradas = await contexto.Terceros
+            .Where(tercero => tercero.EmpresaId == empresaId && numeros.Contains(tercero.Identificacion.Numero))
+            .Select(tercero => new
+            {
+                tercero.Identificacion.Pais,
+                tercero.Identificacion.Numero,
+                Bloqueado = tercero.Bloqueo.EstaBloqueado,
+            })
+            .ToListAsync(cancelacion)
+            .ConfigureAwait(false);
+
+        var ocupadas = encontradas.Where(fila => pedidas.Contains((fila.Pais, fila.Numero))).ToList();
+
+        if (ocupadas.Count > 0)
+        {
+            int bloqueadas = ocupadas.Count(fila => fila.Bloqueado);
+            AnotarEnLaImportacion(registro, empresaId, ocupadas.Count, bloqueadas);
+        }
+
+        return ocupadas.Select(fila => (fila.Pais, fila.Numero)).ToHashSet();
+    }
+
+    [LoggerMessage(
+        EventId = 8401,
+        Level = LogLevel.Information,
+        Message = "Importación de terceros con identificadores ocupados. Empresa: {EmpresaId}. " +
+                  "Ocupados: {Ocupados}. De ellos, en fichas bloqueadas: {Bloqueadas}.")]
+    private static partial void AnotarEnLaImportacion(ILogger registro, Guid empresaId, int ocupados, int bloqueadas);
+
     // El identificador fiscal NO está entre los ordenables ni en el filtro del `?q=`, y es la
     // decisión del ADR-0025 escrita donde se puede desobedecer: `?q=` viaja en la URL, o sea en
     // el historial del navegador, en el enlace que se copia y en el registro de acceso del

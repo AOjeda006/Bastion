@@ -5,10 +5,17 @@
     infraestructura y sin E/S). Referencia SOLO a `BuildingBlocks.Domain`, que a su vez no
     referencia nada: si algún día estos tests necesitan un doble de algo, es que al dominio
     base se le ha colado una dependencia.
+
+    Y desde el ítem 1.11, también a `BuildingBlocks.Application`, por el lector de CSV: es código
+    puro —bytes que entran, filas que salen— y su sitio de prueba es este, no uno de integración
+    que levante una base para comprobar dónde acaba un campo entre comillas. `Application` solo
+    trae `Domain` y `Contracts`, que no referencian nada, así que la promesa de arriba sigue en
+    pie: estos tests siguen sin necesitar un doble de nada.
   -->
 
   <ItemGroup Label="Sujeto de prueba">
     <ProjectReference Include="../../src/BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="../../src/BuildingBlocks/Application/Bastion.BuildingBlocks.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Marco de pruebas">

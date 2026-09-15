@@ -326,8 +326,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(127, "acciones en total");
-        cambian.Count.ShouldBe(81, "acciones que cambian estado");
+        todas.Count.ShouldBe(128, "acciones en total");
+        cambian.Count.ShouldBe(82, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -469,15 +469,31 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // citar, como los contactos del 1.6. Si este número hubiera subido dos, la segunda se
         // habría colado sin If-Match y dos personas cambiándole la tarifa al mismo cliente se
         // pisarían sin enterarse.
+        //
+        // Ciento veintiocho desde el ítem 1.11, y el reparto es el de un alta: +1 al total, +1 a las
+        // que cambian estado, +1 a Idempotency-Key, cero a If-Match y cero a las exentas. Es
+        // `POST .../terceros/importacion`, y lo que este reparto afirma es que la clave NO es opcional
+        // en espíritu aunque lo sea en la cabecera: un fichero de cinco mil filas que se reenvía
+        // porque el móvil perdió la cobertura son cinco mil `ya-existe` y un informe que ya no dice
+        // qué entró. Que If-Match no se mueva dice lo otro: la importación no toca ninguna ficha que
+        // exista (ADR-0034), así que no tiene versión que citar. Si el día que alguien la hiciera
+        // actualizar subiera este número y no aquel, sería una escritura sobre fichas ajenas sin
+        // candado.
+        //
+        // Y rompe una igualdad que estas tablas daban por hecha: hasta aquí las rutas con clave eran
+        // las altas de un recurso con su `GET /{id}` y su `ETag`, dieciocho y dieciocho. Con esta son
+        // diecinueve y dieciocho, y es correcto: la importación da de alta terceros, que ya tienen su
+        // `GET /{id}`, pero ella no es un recurso ni tiene uno que devolver. Su respuesta es un
+        // informe, no una ficha, y por eso responde `200` y no `201`.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(46, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(18, "rutas que admiten Idempotency-Key");
+            .ShouldBe(19, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (46 + 18 + s_exentas.Count).ShouldBe(cambian.Count);
+        (46 + 19 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

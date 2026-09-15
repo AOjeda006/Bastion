@@ -101,7 +101,16 @@ public static class LectorAcotadoDelCuerpo
     {
         ArgumentNullException.ThrowIfNull(contexto);
 
-        return contexto.Features.Get<CuerpoLeido>()?.Bytes;
+        // Con un `if` y no con `?.Bytes`. Un `byte[]` nulo se convierte en un `ReadOnlyMemory<byte>?`
+        // CON valor —vacío—, no en nulo, y así estuvo hasta que lo destapó
+        // `ElFormateadorDeCsvNoLeeLaRedTests`: el formateador nunca lanzaba y una acción sin tope
+        // habría recibido un fichero vacío en silencio.
+        if (contexto.Features.Get<CuerpoLeido>() is not { } leido)
+        {
+            return null;
+        }
+
+        return leido.Bytes;
     }
 
     private sealed class CuerpoLeido(byte[] bytes)

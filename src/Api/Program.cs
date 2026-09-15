@@ -10,6 +10,7 @@ using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.CuerpoDeLaPeticion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
@@ -249,8 +250,11 @@ builder.Services.AddAuthorizationBuilder()
 //
 // Los enumerados se serializan como TEXTO: un ordinal es un contrato que se rompe solo con
 // reordenar el enumerado, y el que lo reordena no ve que está rompiendo un cliente.
+//
+// Y un formateador de entrada más, el de `text/csv`, que no lee la red: entrega lo que ya leyó con
+// su tope el filtro de `[TopeDelCuerpo]`, y lanza si la acción no lo declara (ADR-0034 §3).
 builder.Services
-    .AddControllers()
+    .AddControllers(mvc => mvc.InputFormatters.Add(new FormateadorDeCsv()))
     .AddJsonOptions(json => json.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // Las URL que genera el enrutador van en minúsculas. Sin esto, el token `[controller]` toma el

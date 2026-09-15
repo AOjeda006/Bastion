@@ -168,10 +168,17 @@ distinguir— es `ya-existe`; la segunda aparición en el mismo fichero, `repeti
 **Nunca actualiza**, por dos motivos: el permiso de crear no es el de modificar, y una fila de CSV no
 trae la versión de la ficha, así que actualizar sería pisar a ciegas lo que otro cambió.
 
-**Los permisos, tipo por verbo.** La acción exige `terceros.tercero.crear`. Si alguna fila trae
-límite de crédito, hace falta **además** `terceros.limite-credito.fijar`, y sin él se rechaza el
-**fichero** —`403`, antes de mirar ninguna fila—. No se rechazan esas filas: eso mezclaría un
-permiso con un dato malo; ni se importan sin el límite: quedarían a medias.
+**Los permisos, tipo por verbo.** La acción exige su propio permiso, `terceros.tercero.importar`: dos
+escrituras no comparten permiso aunque escriban lo mismo (`CadaAccionDeclaraSuPermisoTests`), y
+volcar cinco mil fichas sin mirarlas no es la facultad de dar de alta una. Pero no la sustituye:
+dentro, el caso de uso pide `terceros.tercero.crear`, porque lo que escribe son altas, y si alguna
+fila trae límite de crédito, **además** `terceros.limite-credito.fijar`. Sin cualquiera de los dos se
+rechaza el **fichero** —`403`, antes de decidir ninguna fila—. No se rechazan esas filas: eso
+mezclaría un permiso con un dato malo; ni se importan sin el límite: quedarían a medias.
+
+> *Corregido antes de fusionar, en el mismo ítem.* La primera redacción decía que la acción exigía
+> `terceros.tercero.crear`, y el barrido de permisos lo puso rojo en cuanto la acción existió: el
+> alta suelta ya abría con ese permiso.
 
 ## Alternativas descartadas
 

@@ -90,6 +90,14 @@
     <Compile Include="../Comun/CapturaDeRegistro.cs" Link="Comun/CapturaDeRegistro.cs" />
   </ItemGroup>
 
+  <ItemGroup Label="Ficheros de Excel">
+    <!--
+      Los dos CSV de terceros que escribió Excel en español, tal cual (ver `.gitattributes` y el guion
+      que los generó, al lado). Se copian a la salida porque los casos los leen del disco.
+    -->
+    <None Include="Importacion/Excel/*.csv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization.Metadata;
+using Bastion.BuildingBlocks.Infrastructure.CuerpoDeLaPeticion;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.OpenApi;
@@ -32,6 +33,7 @@ internal static class ContratoDeLaApi
             opciones.CreateSchemaReferenceId = NombreDelEsquema;
             opciones.AddDocumentTransformer(PonerPortadaYEsquemaDeAcceso);
             opciones.AddOperationTransformer(PonerIdentificadorYQuitarLaDescripcionPrestada);
+            opciones.AddSchemaTransformer(DescribirElFicheroCsvComoBytes);
             opciones.AddDocumentTransformer(QuitarLosRetornosDeCarroDeLosEsquemas);
         });
 
@@ -72,6 +74,13 @@ internal static class ContratoDeLaApi
     {
         ArgumentNullException.ThrowIfNull(tipo);
 
+        // El fichero va en línea, sin nombre en el catálogo: no es un objeto que un cliente construya,
+        // son los bytes del cuerpo (ver `DescribirElFicheroCsvComoBytes`).
+        if (tipo.Type == typeof(FicheroCsv))
+        {
+            return null;
+        }
+
         string? nombre = OpenApiOptions.CreateDefaultSchemaReferenceId(tipo);
 
         if (nombre is null || !tipo.Type.IsGenericType)
@@ -82,6 +91,29 @@ internal static class ContratoDeLaApi
         int separador = nombre.IndexOf("Of", StringComparison.Ordinal);
 
         return separador < 0 ? nombre : nombre.Remove(separador, 2);
+    }
+
+    /// <summary>Un <see cref="FicheroCsv"/> se publica como lo que viaja: bytes, no un objeto.</summary>
+    /// <remarks>
+    /// El generador ve la clase con la que el formateador entrega el cuerpo a la acción y la describe
+    /// como un objeto JSON con una propiedad <c>contenido</c>, que no es nada que un cliente pueda
+    /// mandar: lo que se manda es el fichero tal cual, con <c>text/csv</c>. Sin esto, el cliente
+    /// generado del frontal pediría un objeto que el servidor no sabría leer.
+    /// </remarks>
+    private static Task DescribirElFicheroCsvComoBytes(
+        OpenApiSchema esquema,
+        OpenApiSchemaTransformerContext contexto,
+        CancellationToken cancelacion)
+    {
+        if (contexto.JsonTypeInfo.Type == typeof(FicheroCsv))
+        {
+            esquema.Type = JsonSchemaType.String;
+            esquema.Format = "binary";
+            esquema.Properties = null;
+            esquema.Required = null;
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>Portada del documento y el esquema de autenticación que usa toda la API.</summary>

@@ -14,10 +14,11 @@ namespace Bastion.BuildingBlocks.Infrastructure.CuerpoDeLaPeticion;
 /// escrito y sin nadie que lo impusiera, y en la revisión se leería como protegida.
 /// </para>
 /// <para>
-/// <b>Corre el primero de los filtros de recurso</b> (<see cref="Order"/> es el mínimo), así que llega
-/// antes que el de idempotencia, que es el otro que vuelca el cuerpo. Aun así el de idempotencia no
-/// confía en ese orden: si ve este atributo, lee con el mismo <see cref="LectorAcotadoDelCuerpo"/>,
-/// que no lee dos veces. El orden de los filtros decide quién lee primero, nunca si se lee con tope.
+/// <b>Corre el segundo de los filtros de recurso</b> (<see cref="Order"/> es el mínimo más uno): detrás
+/// de <see cref="TipoDelCuerpoAttribute"/>, que rechaza sin leer, y antes que el de idempotencia, que es
+/// el otro que vuelca el cuerpo. Aun así el de idempotencia no confía en ese orden: si ve este
+/// atributo, lee con el mismo <see cref="LectorAcotadoDelCuerpo"/>, que no lee dos veces. El orden de
+/// los filtros decide quién lee primero, nunca si se lee con tope.
 /// </para>
 /// </remarks>
 /// <param name="bytes">El tope, en bytes. Tiene que ser positivo.</param>
@@ -30,7 +31,7 @@ public sealed class TopeDelCuerpoAttribute(long bytes) : Attribute, IAsyncResour
         : throw new ArgumentOutOfRangeException(nameof(bytes), bytes, "El tope del cuerpo tiene que ser positivo.");
 
     /// <inheritdoc />
-    public int Order => int.MinValue;
+    public int Order => int.MinValue + 1;
 
     /// <inheritdoc />
     public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)

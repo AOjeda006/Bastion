@@ -12499,6 +12499,133 @@
         ]
       }
     },
+    "/api/v1/terceros/terceros/importacion": {
+      "post": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Da de alta los terceros de un fichero CSV, y dice qué filas no han entrado y por qué.",
+        "description": "El fichero va en el dialecto de una hoja de cálculo en español: separado por punto y coma,\n  en UTF-8 o Windows-1252, con la cabecera de dieciocho columnas en su orden, importes con coma\n  decimal y sí o no. Lo que no es de ese dialecto se rechaza con un error con nombre, sin\n  adivinarlo. Como mucho 2 MiB y 5 000 filas, contando las vacías.\nCada fila se decide por separado: las malas no impiden que entren las buenas, y el informe\n  dice de cada rechazo la línea, la columna y el motivo, nunca el valor. Solo da altas: lo\n  que ya existe, activo o bloqueado sin distinguir, es ya-existe.\nTres permisos: terceros.tercero.importar para entrar, terceros.tercero.crear\n  porque lo que escribe son altas, y terceros.limite-credito.fijar si alguna fila trae límite\n  de crédito. Sin cualquiera de los dos últimos se rechaza el fichero entero, no esas filas.\nCon Idempotency-Key, una importación es una operación: repetirla con el mismo fichero\n  devuelve el mismo informe sin volver a importar, y con otro fichero es un 409. El recibo\n  dura 24 horas; pasadas, la misma clave es una operación nueva y sus filas saldrán como\n  ya-existe. Si el proceso cae a mitad, no queda nada importado.",
+        "operationId": "Terceros_Importar",
+        "requestBody": {
+          "content": {
+            "text/csv": {
+              "schema": {
+                "type": "string",
+                "description": "Un fichero CSV recibido como cuerpo de una petición, tal como llegó.",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/InformeDeImportacionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InformeDeImportacionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InformeDeImportacionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/terceros/terceros/{id}/desbloqueo": {
       "post": {
         "tags": [
@@ -14313,6 +14440,52 @@
         },
         "description": "Un tramo de un tipo impositivo, tal como sale de la API."
       },
+      "InformeDeImportacionDto": {
+        "required": [
+          "leidas",
+          "importadas",
+          "rechazadas",
+          "rechazos"
+        ],
+        "type": "object",
+        "properties": {
+          "leidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Filas con algún dato. Las que traen todos los campos vacíos no cuentan.",
+            "format": "int32"
+          },
+          "importadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Filas que han entrado. Las demás, rechazadas, no han escrito nada.",
+            "format": "int32"
+          },
+          "rechazadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Filas con al menos un motivo. Siempre `Leidas - Importadas`.",
+            "format": "int32"
+          },
+          "rechazos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RechazoDto"
+            },
+            "description": "Cada par de columna y motivo con las líneas en las que ocurre."
+          }
+        },
+        "description": "Lo que contesta una importación que ha llegado a mirar las filas: cuántas había, cuántas han\nentrado, y dónde están las que no (ADR-0034 §2)."
+      },
       "IniciarSesionDto": {
         "required": [
           "correo",
@@ -14930,6 +15103,20 @@
           }
         },
         "description": "Lo que se puede cambiar de un usuario."
+      },
+      "MotivoDeRechazo": {
+        "enum": [
+          "numero-de-campos-distinto",
+          "comillas-mal-colocadas",
+          "obligatorio",
+          "demasiado-largo",
+          "formato-no-valido",
+          "no-valido",
+          "ni-cliente-ni-proveedor",
+          "ya-existe",
+          "repetida-en-el-fichero"
+        ],
+        "description": "Por qué se rechaza una fila, o una columna de una fila."
       },
       "PaginaDeAlmacenDto": {
         "required": [
@@ -15897,6 +16084,40 @@
             ]
           }
         }
+      },
+      "RechazoDto": {
+        "required": [
+          "columna",
+          "motivo",
+          "lineas"
+        ],
+        "type": "object",
+        "properties": {
+          "columna": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El nombre de la columna tal como va en la cabecera, o nulo si el motivo es de la fila entera."
+          },
+          "motivo": {
+            "description": "Por qué, de una lista cerrada.",
+            "$ref": "#/components/schemas/MotivoDeRechazo"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            },
+            "description": "Las líneas, en orden y sin repetir, contadas como las enseña una hoja de cálculo: la cabecera es\nla 1, y un campo entre comillas con un salto de línea dentro sigue siendo una sola."
+          }
+        },
+        "description": "Un motivo de rechazo en una columna, y las líneas del fichero en las que se da."
       },
       "RegimenFiscalDeAltaDto": {
         "type": "object",

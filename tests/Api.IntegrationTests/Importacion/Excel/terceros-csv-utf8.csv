@@ -1,0 +1,6 @@
+﻿identificacion_pais;identificacion_numero;razon_social;nombre_comercial;domicilio_calle;domicilio_numero;domicilio_codigo_postal;domicilio_poblacion;domicilio_subdivision;domicilio_pais;es_cliente;es_proveedor;territorio;recargo_de_equivalencia;criterio_de_caja;sujeto_a_retencion_irpf;limite_credito;limite_credito_divisa
+ES;{{NIF:1}};Ferretería Peña, S.L.;Peña;Calle de la Constitución;12;08001;Barcelona;Barcelona;ES;sí;no;;no;no;no;1.234,56;EUR
+ES;{{NIF:2}};"Distribuciones Norte; Sur, S.A.";"Almacén
+central";Avenida Marítima;;35001;Las Palmas de Gran Canaria;Las Palmas;ES;VERDADERO;VERDADERO;Canarias;no;sí;no;2500;EUR
+;;;;;;;;;;;;;;;;;
+ES;{{NIF:3}};"Bar ""El Rincón""";;Plaza Mayor;1;28012;Madrid;Madrid;ES;no;sí;PeninsulaYBaleares;no;no;no;;

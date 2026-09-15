@@ -51,6 +51,34 @@ public interface IRepositorioDeTerceros : IOrdenaPor
         string numero,
         CancellationToken cancelacion);
 
+    /// <summary>
+    /// De esas identificaciones, las que esa empresa ya tiene en algún tercero, <b>esté activo o esté
+    /// bloqueado</b>. Es la pregunta de <see cref="ExisteLaIdentificacionAsync"/> para un fichero entero.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Devuelve el conjunto de las ocupadas, y nada más de cada una</b>, por lo mismo que la otra
+    /// devuelve un booleano: si lo que sube por el puerto dijera cuál está bloqueada, el informe de una
+    /// importación sería el censo de bajas del art. 32, y además uno que se recorre de cinco mil en cinco
+    /// mil. Cuántas de ellas eran bloqueadas queda en el registro, desde la implementación.
+    /// </para>
+    /// <para>
+    /// <b>Una sola consulta para todas</b>, y no una por fila: cinco mil viajes a la base tardarían más de
+    /// lo que tarda en caer el tiempo de espera de la petición, y la importación no puede mirar una fila
+    /// después de haber escrito la anterior, porque no escribe hasta el final (ADR-0034 §1).
+    /// </para>
+    /// <para>
+    /// Ver lo bloqueado lo abre el caso de uso, igual que en la otra.
+    /// </para>
+    /// </remarks>
+    /// <param name="empresaId">Empresa a la que pertenecerían las fichas (R8).</param>
+    /// <param name="identificaciones">País e identificador ya normalizado de cada una.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<IReadOnlySet<(string Pais, string Numero)>> IdentificacionesOcupadasAsync(
+        Guid empresaId,
+        IReadOnlyCollection<(string Pais, string Numero)> identificaciones,
+        CancellationToken cancelacion);
+
     /// <summary>Una página de terceros, con el total.</summary>
     Task<PaginaDe<Tercero>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion);
 

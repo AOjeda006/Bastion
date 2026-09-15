@@ -44,6 +44,12 @@ public sealed class RegistroDeSucesos : ILogEventSink
     /// <c>ElConflictoQueNoRevelaTests</c>.
     /// </para>
     /// <para>
+    /// 8401 — <c>RepositorioDeTerceros</c>, importación con identificadores ocupados: cuántos, y cuántos
+    /// de ellos en fichas bloqueadas, sin decir cuáles. Lo mira <c>LaImportacionDeTercerosTests</c>, y
+    /// <c>LaImportacionEsUnaOperacionTests</c> mira que una repetición NO lo anote, que es la señal de que
+    /// no se ha vuelto a mirar la base.
+    /// </para>
+    /// <para>
     /// 8500 y 8501 — <c>ManejadorDeVersionObsoleta</c>, los dos desenlaces del choque de
     /// concurrencia: con versión actual y sin ella. Los mira
     /// <c>ContratoDeLoQueCuelgaTests</c>. Están aquí porque un 412 es de las pocas respuestas que
@@ -52,7 +58,7 @@ public sealed class RegistroDeSucesos : ILogEventSink
     /// promesa.
     /// </para>
     /// </remarks>
-    public static readonly int[] Observados = [8400, 8500, 8501];
+    public static readonly int[] Observados = [8400, 8401, 8500, 8501];
 
     private const int Recordados = 50;
 

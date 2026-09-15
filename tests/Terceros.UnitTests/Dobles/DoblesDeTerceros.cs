@@ -73,6 +73,12 @@ internal sealed class TercerosEnMemoria : IRepositorioDeTerceros
         CancellationToken cancelacion) =>
         throw new NotSupportedException("El duplicado se prueba donde hay base de datos.");
 
+    public Task<IReadOnlySet<(string Pais, string Numero)>> IdentificacionesOcupadasAsync(
+        Guid empresaId,
+        IReadOnlyCollection<(string Pais, string Numero)> identificaciones,
+        CancellationToken cancelacion) =>
+        throw new NotSupportedException("La importación se prueba donde hay base de datos.");
+
     public Task<PaginaDe<Tercero>> ListarAsync(
         Paginacion paginacion,
         CancellationToken cancelacion) =>

@@ -1616,6 +1616,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/terceros/terceros/importacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Da de alta los terceros de un fichero CSV, y dice qué filas no han entrado y por qué.
+         * @description El fichero va en el dialecto de una hoja de cálculo en español: separado por punto y coma,
+         *       en UTF-8 o Windows-1252, con la cabecera de dieciocho columnas en su orden, importes con coma
+         *       decimal y sí o no. Lo que no es de ese dialecto se rechaza con un error con nombre, sin
+         *       adivinarlo. Como mucho 2 MiB y 5 000 filas, contando las vacías.
+         *     Cada fila se decide por separado: las malas no impiden que entren las buenas, y el informe
+         *       dice de cada rechazo la línea, la columna y el motivo, nunca el valor. Solo da altas: lo
+         *       que ya existe, activo o bloqueado sin distinguir, es ya-existe.
+         *     Tres permisos: terceros.tercero.importar para entrar, terceros.tercero.crear
+         *       porque lo que escribe son altas, y terceros.limite-credito.fijar si alguna fila trae límite
+         *       de crédito. Sin cualquiera de los dos últimos se rechaza el fichero entero, no esas filas.
+         *     Con Idempotency-Key, una importación es una operación: repetirla con el mismo fichero
+         *       devuelve el mismo informe sin volver a importar, y con otro fichero es un 409. El recibo
+         *       dura 24 horas; pasadas, la misma clave es una operación nueva y sus filas saldrán como
+         *       ya-existe. Si el proceso cae a mitad, no queda nada importado.
+         */
+        post: operations["Terceros_Importar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/terceros/terceros/{id}/desbloqueo": {
         parameters: {
             query?: never;
@@ -2454,6 +2487,29 @@ export interface components {
             /** @description Cuenta contable del IVA soportado, o nula. */
             cuentaSoportado: null | string;
         };
+        /**
+         * @description Lo que contesta una importación que ha llegado a mirar las filas: cuántas había, cuántas han
+         *     entrado, y dónde están las que no (ADR-0034 §2).
+         */
+        InformeDeImportacionDto: {
+            /**
+             * Format: int32
+             * @description Filas con algún dato. Las que traen todos los campos vacíos no cuentan.
+             */
+            leidas: number | string;
+            /**
+             * Format: int32
+             * @description Filas que han entrado. Las demás, rechazadas, no han escrito nada.
+             */
+            importadas: number | string;
+            /**
+             * Format: int32
+             * @description Filas con al menos un motivo. Siempre `Leidas - Importadas`.
+             */
+            rechazadas: number | string;
+            /** @description Cada par de columna y motivo con las líneas en las que ocurre. */
+            rechazos: components["schemas"]["RechazoDto"][];
+        };
         /** @description Lo que hace falta para iniciar sesión. */
         IniciarSesionDto: {
             /** @description Correo con el que se identifica. */
@@ -2705,6 +2761,11 @@ export interface components {
             /** @description Nombre para la interfaz. */
             nombre: string;
         };
+        /**
+         * @description Por qué se rechaza una fila, o una columna de una fila.
+         * @enum {unknown}
+         */
+        MotivoDeRechazo: "numero-de-campos-distinto" | "comillas-mal-colocadas" | "obligatorio" | "demasiado-largo" | "formato-no-valido" | "no-valido" | "ni-cliente-ni-proveedor" | "ya-existe" | "repetida-en-el-fichero";
         /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
         PaginaDeAlmacenDto: {
             /** @description Los de esta página, en el orden pedido. */
@@ -3132,6 +3193,18 @@ export interface components {
             status?: null | number | string;
             detail?: null | string;
             instance?: null | string;
+        };
+        /** @description Un motivo de rechazo en una columna, y las líneas del fichero en las que se da. */
+        RechazoDto: {
+            /** @description El nombre de la columna tal como va en la cabecera, o nulo si el motivo es de la fila entera. */
+            columna: null | string;
+            /** @description Por qué, de una lista cerrada. */
+            motivo: components["schemas"]["MotivoDeRechazo"];
+            /**
+             * @description Las líneas, en orden y sin repetir, contadas como las enseña una hoja de cálculo: la cabecera es
+             *     la 1, y un campo entre comillas con un salto de línea dentro sigue siendo una sola.
+             */
+            lineas: (number | string)[];
         };
         /** @description Con qué régimen fiscal se da de alta o se modifica un tercero. */
         RegimenFiscalDeAltaDto: {
@@ -9870,6 +9943,76 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Terceros_Importar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "text/csv": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["InformeDeImportacionDto"];
+                    "application/json": components["schemas"]["InformeDeImportacionDto"];
+                    "text/json": components["schemas"]["InformeDeImportacionDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -28,6 +28,7 @@ public static class CasosDeUsoDeTerceros
         ArgumentNullException.ThrowIfNull(servicios);
 
         servicios.AddScoped<ICrearTercero, CrearTercero>();
+        servicios.AddScoped<IImportarTerceros, ImportarTerceros>();
         servicios.AddScoped<IObtenerTercero, ObtenerTercero>();
         servicios.AddScoped<IListarTerceros, ListarTerceros>();
         servicios.AddScoped<IBuscarTerceros, BuscarTerceros>();

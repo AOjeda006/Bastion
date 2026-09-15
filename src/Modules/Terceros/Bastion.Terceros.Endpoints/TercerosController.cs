@@ -1,5 +1,7 @@
+using Bastion.BuildingBlocks.Contracts.Importacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
+using Bastion.BuildingBlocks.Infrastructure.CuerpoDeLaPeticion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Terceros.Application.Terceros;
@@ -21,6 +23,7 @@ namespace Bastion.Terceros.Endpoints;
 /// </remarks>
 public sealed class TercerosController(
     ICrearTercero crear,
+    IImportarTerceros importar,
     IObtenerTercero obtener,
     IListarTerceros listar,
     IBuscarTerceros buscar,
@@ -107,6 +110,52 @@ public sealed class TercerosController(
             await crear.EjecutarAsync(peticion, cancelacion).ConfigureAwait(false),
             nameof(Obtener),
             tercero => tercero.Id);
+
+    /// <summary>Da de alta los terceros de un fichero CSV, y dice qué filas no han entrado y por qué.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El fichero</b> va en el dialecto de una hoja de cálculo en español: separado por punto y coma,
+    /// en UTF-8 o Windows-1252, con la cabecera de dieciocho columnas en su orden, importes con coma
+    /// decimal y sí o no. Lo que no es de ese dialecto se rechaza con un error con nombre, sin
+    /// adivinarlo. Como mucho 2 MiB y 5 000 filas, contando las vacías.
+    /// </para>
+    /// <para>
+    /// <b>Cada fila se decide por separado</b>: las malas no impiden que entren las buenas, y el informe
+    /// dice de cada rechazo la línea, la columna y el motivo, nunca el valor. <b>Solo da altas</b>: lo
+    /// que ya existe, activo o bloqueado sin distinguir, es <c>ya-existe</c>.
+    /// </para>
+    /// <para>
+    /// <b>Tres permisos</b>: <c>terceros.tercero.importar</c> para entrar, <c>terceros.tercero.crear</c>
+    /// porque lo que escribe son altas, y <c>terceros.limite-credito.fijar</c> si alguna fila trae límite
+    /// de crédito. Sin cualquiera de los dos últimos se rechaza el fichero entero, no esas filas.
+    /// </para>
+    /// <para>
+    /// <b>Con <c>Idempotency-Key</c></b>, una importación es una operación: repetirla con el mismo fichero
+    /// devuelve el mismo informe sin volver a importar, y con otro fichero es un <c>409</c>. El recibo
+    /// dura 24 horas; pasadas, la misma clave es una operación nueva y sus filas saldrán como
+    /// <c>ya-existe</c>. Si el proceso cae a mitad, no queda nada importado.
+    /// </para>
+    /// </remarks>
+    /// <param name="fichero">El fichero CSV.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("importacion")]
+    [TipoDelCuerpo(FormateadorDeCsv.TipoDeContenido)]
+    [AdmiteIdempotencia]
+    [TopeDelCuerpo(ImportacionDeTerceros.TopeDeBytes)]
+    [ExigePermiso(PermisosDeTerceros.TerceroImportar)]
+    [ProducesResponseType(typeof(InformeDeImportacionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
+    public async Task<IActionResult> Importar(
+        [FromBody] FicheroCsv fichero,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(fichero);
+
+        return Responder(await importar.EjecutarAsync(fichero.Contenido, cancelacion).ConfigureAwait(false));
+    }
 
     /// <summary>Cambia los datos de un tercero.</summary>
     /// <remarks>

@@ -114,6 +114,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElTopeSeImponeAntesDelVolcadoTests.El_filtro_de_idempotencia_lee_con_el_tope_aunque_corra_sin_el_filtro_del_tope_delante",
         "ElTopeSeImponeAntesDelVolcadoTests.Sin_Content_Length_se_leen_como_mucho_tope_mas_uno_bytes",
         "ElTopeSeImponeAntesDelVolcadoTests.Un_cuerpo_del_tamano_del_tope_entra_entero_y_no_se_vuelve_a_pedir_a_la_red",
+        // Y el formateador que entrega lo leído: sin tope declarado lanza, y un cuerpo vacío es un fichero.
+        "ElFormateadorDeCsvNoLeeLaRedTests.Sin_lo_leido_por_el_tope_lanza_y_no_toca_la_corriente",
+        "ElFormateadorDeCsvNoLeeLaRedTests.Un_cuerpo_de_cero_bytes_llega_como_un_fichero_vacio_y_no_como_sin_valor",
 
         "LaBandejaSeMideYNoSeSondeaTests.El_medidor_publica_la_edad_del_mas_viejo_en_segundos",
         "LaBandejaSeMideYNoSeSondeaTests.La_bandeja_no_esta_en_ninguna_sonda",
@@ -134,6 +137,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaColaSeDefiendeSolaTests.Un_evento_que_no_sale_se_aparca_al_quinto_intento_y_no_antes",
         "LaColaSeDefiendeSolaTests.Un_evento_sin_declarar_lo_dice_al_volcarlo_y_no_al_leerlo",
         "LaColaSeDefiendeSolaTests.Una_fila_lleva_empresa_o_lleva_el_motivo_por_el_que_no_la_lleva",
+
+        "LaPlantillaDelFrontalEsLaDeLaApiTests.La_cabecera_que_ensena_el_frontal_es_la_que_exige_la_api",
+        "LaPlantillaDelFrontalEsLaDeLaApiTests.La_extraccion_lee_la_lista_entera_y_no_se_salta_lo_que_no_entiende",
 
         "LasClavesSeConocenAntesDeGuardarTests.El_universo_de_modelos_es_el_declarado",
         "LasClavesSeConocenAntesDeGuardarTests.Las_entidades_del_tipo_base_y_las_que_llevan_testigo_son_las_MISMAS",

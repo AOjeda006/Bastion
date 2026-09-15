@@ -231,6 +231,31 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaFilaBloqueadaSigueEnLaBaseTests.Desbloquear_por_su_puerta_devuelve_la_MISMA_fila_y_no_una_copia",
         "LaFilaBloqueadaSigueEnLaBaseTests.Suprimir_por_la_API_deja_la_fila_entera_con_su_motivo_y_su_fecha",
 
+        // Del ítem 1.11 (ADR-0034 §5): los ficheros que no son de Excel, con los cuatro criterios del
+        // sondeo —contesta, no cuenta nada de dentro, no devuelve lo recibido y sigue atendiendo—.
+        "LaImportacionAguantaFicherosHostilesTests.Ningun_fichero_hostil_tumba_la_importacion_ni_cuenta_nada_ni_devuelve_lo_que_le_mandaron",
+
+        // Del ítem 1.11 (ADR-0034 §1, §2 y §5): los dos ficheros que escribió Excel, la fila que decide, el
+        // informe con su línea y los tres permisos.
+        "LaImportacionDeTercerosTests.Con_el_permiso_de_importar_y_sin_el_de_dar_de_alta_se_rechaza_el_fichero_entero",
+        "LaImportacionDeTercerosTests.Las_filas_malas_no_impiden_que_entren_las_buenas_y_el_informe_dice_su_linea_de_Excel",
+        "LaImportacionDeTercerosTests.Lo_que_ya_existe_activo_o_bloqueado_sale_en_el_mismo_grupo_y_la_traza_no_dice_cuales",
+        "LaImportacionDeTercerosTests.Los_dos_CSV_que_escribe_Excel_en_espanol_entran_enteros_y_con_cada_valor_en_su_sitio",
+        "LaImportacionDeTercerosTests.Los_importes_se_leen_con_la_coma_decimal_y_se_ve_en_el_limite_guardado",
+        "LaImportacionDeTercerosTests.Sin_el_permiso_de_importar_no_se_entra_aunque_se_puedan_dar_altas_de_una_en_una",
+        "LaImportacionDeTercerosTests.Sin_el_permiso_del_limite_un_fichero_con_limite_se_rechaza_entero_y_sin_limite_entra",
+        "LaImportacionDeTercerosTests.Una_fila_con_el_limite_mal_escrito_no_deja_el_tercero_dado_de_alta_sin_limite",
+
+        // Del ítem 1.11 (ADR-0034 §1, §3 y §4): la importación se repite, se cae y se rechaza ENTERA.
+        "LaImportacionEsUnaOperacionTests.El_peor_informe_posible_tiene_techo_y_es_el_que_se_guarda_en_el_recibo",
+        "LaImportacionEsUnaOperacionTests.La_misma_clave_con_el_mismo_fichero_devuelve_el_mismo_informe_sin_volver_a_mirar_la_base",
+        "LaImportacionEsUnaOperacionTests.La_misma_clave_con_otro_fichero_es_un_409_y_el_otro_fichero_no_entra",
+        "LaImportacionEsUnaOperacionTests.Si_la_escritura_revienta_a_mitad_no_queda_ni_una_fila_ni_el_recibo_y_el_reintento_es_la_primera_vez",
+        "LaImportacionEsUnaOperacionTests.Sin_Content_Length_el_servidor_deja_de_leer_en_cuanto_el_fichero_no_cabe",
+        "LaImportacionEsUnaOperacionTests.Un_cuerpo_que_no_es_un_CSV_es_415_antes_de_leer_nada",
+        "LaImportacionEsUnaOperacionTests.Un_fichero_con_una_fila_mas_que_el_tope_es_413_sin_importar_ninguna",
+        "LaImportacionEsUnaOperacionTests.Un_fichero_que_declara_mas_que_el_tope_es_413_y_no_deja_nada",
+
         // Del ítem 1.7. Las dos mitades del ADR-0023 que solo se ven contra PostgreSQL: la
         // desigualdad de la inversa la comprueba la capa de aplicación leyendo la fila contraria
         // —una lectura, no una rama— y el resolutor falla o no según lo que haya declarado en la

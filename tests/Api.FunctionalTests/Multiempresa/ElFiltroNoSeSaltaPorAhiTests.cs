@@ -240,6 +240,17 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             // La apertura es UNA. Si algún día fueran dos, este recuento se pone rojo y hay que
             // mirar qué otra cosa ha empezado a mirar lo bloqueado durante un alta.
             ["src/Modules/Terceros/Bastion.Terceros.Application/Terceros/CrearTercero.cs"] = 1,
+
+            // La OCTAVA, del ítem 1.11: la importación de terceros, que es la séptima con N filas.
+            // Mira por lo mismo -la unicidad abarca lo bloqueado, y sin verlo una fila chocaría al
+            // escribir y se llevaría el fichero entero-, y lo que cambia es la forma de lo que se
+            // trae: no un booleano, sino el CONJUNTO de identificadores ocupados
+            // (`IRepositorioDeTerceros.IdentificacionesOcupadasAsync`), sin decir de ninguno si su
+            // ficha está activa o bloqueada. Por eso el informe dice `ya-existe` de las dos, en el
+            // mismo grupo, y por eso es UNA consulta para todo el fichero: dos, una por estado,
+            // tampoco lo dirían en la respuesta, pero sí en lo que tarda. El ámbito envuelve solo
+            // esa consulta, igual que en el alta suelta.
+            ["src/Modules/Terceros/Bastion.Terceros.Application/Terceros/ImportarTerceros.cs"] = 1,
         };
 
     // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de
