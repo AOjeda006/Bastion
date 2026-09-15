@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 
 import { clavesDeTerceros } from '../api/claves.ts';
 import { consultarTerceros } from '../api/consultas.ts';
 import { PARAMETRO_DE_BUSQUEDA, leerListado } from '../model/listado.ts';
 import type { Tercero, Verificacion } from '../model/tercero.ts';
-import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
+import { PERMISOS } from '@/shared/sesion/permisos.ts';
+import { concede } from '@/shared/sesion/sesion.ts';
+import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
+import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 
 /**
  * Listado de terceros de la empresa activa, paginado y filtrado.
@@ -28,6 +31,7 @@ import { Paginador } from '@/shared/ui/Paginacion.tsx';
 export function PaginaDeTerceros(): React.JSX.Element {
   const { t } = useTranslation();
   const textoDeFallo = useTextoDeFallo();
+  const sesion = useSesionAbierta();
   const [parametros, setParametros] = useSearchParams();
   const listado = leerListado(parametros, leerPaginacion(parametros));
 
@@ -62,36 +66,45 @@ export function PaginaDeTerceros(): React.JSX.Element {
   };
 
   const buscador = (
-    <form
-      role="search"
-      className="mt-4 flex items-end gap-2"
-      onSubmit={(evento) => {
-        evento.preventDefault();
-        const escrito = new FormData(evento.currentTarget).get(PARAMETRO_DE_BUSQUEDA);
+    <div className="mt-4 flex flex-wrap items-end justify-between gap-2">
+      <form
+        role="search"
+        className="flex items-end gap-2"
+        onSubmit={(evento) => {
+          evento.preventDefault();
+          const escrito = new FormData(evento.currentTarget).get(PARAMETRO_DE_BUSQUEDA);
 
-        // `FormData` devuelve texto o fichero, y de un fichero saldría «[object Object]». Aquí no
-        // puede haberlo —el campo es un `<input type="search">`— pero eso es una promesa del JSX de
-        // arriba, no del tipo, y las promesas de ese tamaño se comprueban en vez de suponerse.
-        filtrarPor(typeof escrito === 'string' ? escrito : '');
-      }}
-    >
-      <label className="flex flex-col gap-1 text-sm">
-        {t('terceros.terceros.filtro')}
-        <input
-          type="search"
-          name={PARAMETRO_DE_BUSQUEDA}
-          defaultValue={listado.busqueda}
-          // La clave lleva el filtro dentro: al cambiarlo, el recuadro se vuelve a montar con lo
-          // que dice la URL. Sin esto, la flecha de atrás cambiaría la tabla y dejaría escrito el
-          // filtro anterior, que es peor que no tener flecha de atrás.
-          key={listado.busqueda}
-          className="rounded border border-neutral-300 px-2 py-1.5"
-        />
-      </label>
-      <button type="submit" className="rounded border border-neutral-300 px-3 py-1.5 text-sm">
-        {t('terceros.terceros.filtrar')}
-      </button>
-    </form>
+          // `FormData` devuelve texto o fichero, y de un fichero saldría «[object Object]». Aquí no
+          // puede haberlo —el campo es un `<input type="search">`— pero eso es una promesa del JSX de
+          // arriba, no del tipo, y las promesas de ese tamaño se comprueban en vez de suponerse.
+          filtrarPor(typeof escrito === 'string' ? escrito : '');
+        }}
+      >
+        <label className="flex flex-col gap-1 text-sm">
+          {t('terceros.terceros.filtro')}
+          <input
+            type="search"
+            name={PARAMETRO_DE_BUSQUEDA}
+            defaultValue={listado.busqueda}
+            // La clave lleva el filtro dentro: al cambiarlo, el recuadro se vuelve a montar con lo
+            // que dice la URL. Sin esto, la flecha de atrás cambiaría la tabla y dejaría escrito el
+            // filtro anterior, que es peor que no tener flecha de atrás.
+            key={listado.busqueda}
+            className="rounded border border-neutral-300 px-2 py-1.5"
+          />
+        </label>
+        <button type="submit" className="rounded border border-neutral-300 px-3 py-1.5 text-sm">
+          {t('terceros.terceros.filtrar')}
+        </button>
+      </form>
+      {/* Solo a quien puede importar. El servidor diría que no igual; esto evita mandar a una
+        pantalla cuyo único botón acaba en un 403. */}
+      {concede(sesion, PERMISOS.terceroImportar) && (
+        <Link to="/terceros/importacion" className="text-sm underline">
+          {t('terceros.terceros.enlaceAImportar')}
+        </Link>
+      )}
+    </div>
   );
 
   if (consulta.isPending) {

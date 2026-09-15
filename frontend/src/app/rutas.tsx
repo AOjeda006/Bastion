@@ -160,6 +160,18 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
       (await import('@/features/terceros/terceros/ui/PaginaDeTerceros.tsx')).PaginaDeTerceros,
   },
   {
+    // Fuera de la navegación: se llega desde el listado de terceros, que es donde se echa en falta.
+    // El permiso es el de importar y no el de dar de alta, que es solo lo que el servidor exige
+    // además; ocultar la ruta por el segundo enseñaría el enlace a quien no puede importar.
+    ruta: '/terceros/importacion',
+    duenio: 'terceros',
+    claveDeTitulo: 'importarTerceros',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.terceroImportar },
+    enLaNavegacion: false,
+    cargar: async () =>
+      (await import('@/features/terceros/terceros/ui/PaginaDeImportacion.tsx')).PaginaDeImportacion,
+  },
+  {
     ruta: '*',
     duenio: 'armazon',
     claveDeTitulo: 'noEncontrada',

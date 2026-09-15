@@ -52,6 +52,7 @@ export const es = {
     empresas: 'Empresas',
     tarifas: 'Tarifas',
     terceros: 'Terceros',
+    importarTerceros: 'Importar terceros',
     noEncontrada: 'Página no encontrada',
   },
 
@@ -158,6 +159,22 @@ export const es = {
         'Tu sesión no tiene ninguna empresa activa. Elige una y vuelve a intentarlo.',
       'if-match-no-valido':
         'La versión que traía el formulario no tiene forma válida. Vuelve a abrirlo.',
+      'importacion-cabecera-no-valida':
+        'La primera fila del fichero no es la cabecera de la plantilla. Cópiala tal cual, en su orden.',
+      'importacion-codificacion-no-admitida':
+        'El fichero no está guardado como CSV de Excel. Guárdalo como «CSV (delimitado por comas)» o «CSV UTF-8».',
+      'importacion-comillas-sin-cerrar':
+        'El fichero tiene unas comillas que se abren y no se cierran. Revísalo en la hoja de cálculo.',
+      'importacion-demasiadas-filas':
+        'El fichero tiene demasiadas filas. Pártelo en varios de 5000 filas como mucho.',
+      'importacion-fin-de-linea-no-admitido':
+        'El fichero separa las filas de una forma que no admitimos. Ábrelo y guárdalo otra vez como CSV.',
+      'importacion-separador-no-admitido':
+        'El fichero no separa las columnas con punto y coma. Guárdalo desde Excel con la configuración regional de España.',
+      'importacion-sin-permiso-de-alta':
+        'Importar terceros es darlos de alta, y no tienes permiso para dar de alta terceros.',
+      'importacion-sin-permiso-de-limite':
+        'Alguna fila trae límite de crédito y no tienes permiso para fijarlo. Deja vacías esas columnas.',
       'impuesto-con-tramos-solapados':
         'Los tramos de vigencia de ese impuesto se solapan. Revisa las fechas.',
       'impuesto-no-encontrado': 'Ese impuesto ya no existe.',
@@ -422,6 +439,62 @@ export const es = {
         cliente: 'Cliente',
         proveedor: 'Proveedor',
         ambos: 'Cliente y proveedor',
+      },
+
+      enlaceAImportar: 'Importar desde un CSV',
+
+      // La importación es una pantalla de este mismo recurso, y sus textos cuelgan de él: el segundo
+      // nivel del diccionario son las carpetas de la funcionalidad (`ElBarridoDeLasFronteras`).
+      importacion: {
+        explicacion:
+          'Cada fila del fichero da de alta un tercero nuevo. Las filas con algún error no entran, y ' +
+          'el informe dice en qué línea y por qué; las demás sí. Un tercero que ya existe no se ' +
+          'modifica: su fila sale rechazada.',
+        plantilla: 'La plantilla',
+        plantillaDetalle:
+          'La primera fila tiene que ser esta cabecera, tal cual y en este orden. Son obligatorios ' +
+          'el identificador, la razón social y la calle, el código postal, la población y el país ' +
+          'del domicilio; lo demás puede ir vacío.',
+        reglaFormato:
+          'Guárdalo desde Excel con la configuración regional de España, como «CSV (delimitado por ' +
+          'comas)» o «CSV UTF-8»: las columnas van separadas por punto y coma.',
+        reglaValores:
+          'Los sí o no se escriben «sí», «no», «VERDADERO» o «FALSO», y vacío es no. Los importes ' +
+          'llevan coma decimal y hasta cuatro decimales, como 1.234,50.',
+        reglaTope: 'Como mucho 2 MB y 5000 filas por fichero. Si tienes más, pártelo en varios.',
+        fichero: 'Fichero CSV',
+        importar: 'Importar',
+        importando: 'Importando el fichero…',
+        resultado: 'Resultado de la importación',
+        leidas: 'Filas leídas',
+        importadas: 'Importadas',
+        rechazadas: 'Rechazadas',
+        sinFilas: 'El fichero solo trae la cabecera: no había ninguna fila que importar.',
+        todasDentro: 'Han entrado todas las filas.',
+        rechazos: 'Por qué no han entrado',
+        columna: 'Columna',
+        motivo: 'Motivo',
+        lineas: 'Líneas',
+        filaEntera: 'La fila entera',
+        lineasDeLaHoja:
+          'Las líneas son las de la hoja de cálculo: la cabecera es la 1 y la primera fila de datos, ' +
+          'la 2. Corrige esas filas y vuelve a importar solo ellas, que las demás ya están dentro.',
+        motivos: {
+          numeroDeCamposDistinto: 'La fila no tiene tantas columnas como la cabecera.',
+          comillasMalColocadas: 'Hay unas comillas en mitad del campo.',
+          obligatorio: 'Está vacío y es obligatorio.',
+          demasiadoLargo: 'Es más largo de lo que admite la columna.',
+          formatoNoValido:
+            'No se puede leer como lo que espera la columna: un importe, un sí o un no.',
+          noValido:
+            'Se lee, pero no es un valor válido: por ejemplo, un NIF con la letra que no le toca.',
+          niClienteNiProveedor: 'Tiene que ser cliente, proveedor o las dos cosas.',
+          yaExiste: 'Ya hay un tercero con ese identificador en la empresa.',
+          repetidaEnElFichero:
+            'Una fila anterior del mismo fichero ya da de alta ese identificador.',
+          desconocido:
+            'Esta versión de la pantalla no sabe explicar este motivo. Avisa a quien administre Bastion.',
+        },
       },
     },
   },

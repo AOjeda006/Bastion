@@ -39,6 +39,7 @@ export const en: Diccionario = {
     empresas: 'Companies',
     tarifas: 'Price lists',
     terceros: 'Business partners',
+    importarTerceros: 'Import business partners',
     noEncontrada: 'Page not found',
   },
 
@@ -129,6 +130,22 @@ export const en: Diccionario = {
       'idempotencia-sin-empresa-activa':
         'Your session has no active company. Choose one and try again.',
       'if-match-no-valido': 'The version the form carried is not well formed. Open it again.',
+      'importacion-cabecera-no-valida':
+        'The first row of the file is not the template header. Copy it exactly, in its order.',
+      'importacion-codificacion-no-admitida':
+        'The file is not saved as an Excel CSV. Save it as "CSV (Comma delimited)" or "CSV UTF-8".',
+      'importacion-comillas-sin-cerrar':
+        'The file has a quote that opens and never closes. Check it in the spreadsheet.',
+      'importacion-demasiadas-filas':
+        'The file has too many rows. Split it into files of 5000 rows at most.',
+      'importacion-fin-de-linea-no-admitido':
+        'The file separates rows in a way we do not accept. Open it and save it again as CSV.',
+      'importacion-separador-no-admitido':
+        'The file does not separate columns with semicolons. Save it from Excel with Spanish (Spain) regional settings.',
+      'importacion-sin-permiso-de-alta':
+        'Importing third parties means creating them, and you are not allowed to create third parties.',
+      'importacion-sin-permiso-de-limite':
+        'Some rows carry a credit limit and you are not allowed to set it. Leave those columns empty.',
       'impuesto-con-tramos-solapados': 'The validity ranges of that tax overlap. Check the dates.',
       'impuesto-no-encontrado': 'That tax no longer exists.',
       'orden-no-admitido': 'That field cannot be used for sorting.',
@@ -364,6 +381,59 @@ export const en: Diccionario = {
         cliente: 'Customer',
         proveedor: 'Supplier',
         ambos: 'Customer and supplier',
+      },
+
+      enlaceAImportar: 'Import from a CSV',
+
+      importacion: {
+        explicacion:
+          'Each row of the file registers a new business partner. Rows with any error are left out, ' +
+          'and the report says on which line and why; the rest go in. A business partner that ' +
+          'already exists is not modified: its row is rejected.',
+        plantilla: 'The template',
+        plantillaDetalle:
+          'The first row must be this header, exactly as written and in this order. The tax ID, ' +
+          'the legal name and the street, postcode, town and country of the address are required; ' +
+          'the rest may be empty.',
+        reglaFormato:
+          'Save it from Excel with Spanish regional settings, as “CSV (Comma delimited)” or ' +
+          '“CSV UTF-8”: columns are separated by semicolons.',
+        reglaValores:
+          'Yes/no values are written “sí”, “no”, “VERDADERO” or “FALSO”, and empty means no. Amounts ' +
+          'use a decimal comma and up to four decimals, like 1.234,50.',
+        reglaTope: 'At most 2 MB and 5000 rows per file. If you have more, split it into several.',
+        fichero: 'CSV file',
+        importar: 'Import',
+        importando: 'Importing the file…',
+        resultado: 'Import result',
+        leidas: 'Rows read',
+        importadas: 'Imported',
+        rechazadas: 'Rejected',
+        sinFilas: 'The file only has the header: there were no rows to import.',
+        todasDentro: 'Every row went in.',
+        rechazos: 'Why they did not go in',
+        columna: 'Column',
+        motivo: 'Reason',
+        lineas: 'Lines',
+        filaEntera: 'The whole row',
+        lineasDeLaHoja:
+          'Lines are the spreadsheet ones: the header is 1 and the first data row is 2. Fix those ' +
+          'rows and import only them again, because the rest are already in.',
+        motivos: {
+          numeroDeCamposDistinto: 'The row does not have as many columns as the header.',
+          comillasMalColocadas: 'There are quotes in the middle of the field.',
+          obligatorio: 'It is empty and it is required.',
+          demasiadoLargo: 'It is longer than the column allows.',
+          formatoNoValido:
+            'It cannot be read as what the column expects: an amount, a yes or a no.',
+          noValido:
+            'It can be read, but it is not a valid value: for example, a tax ID with the wrong check letter.',
+          niClienteNiProveedor: 'It must be a customer, a supplier or both.',
+          yaExiste: 'There is already a business partner with that tax ID at the company.',
+          repetidaEnElFichero: 'An earlier row of the same file already registers that tax ID.',
+          desconocido:
+            'This version of the screen cannot explain this reason. Tell whoever administers Bastion.',
+        },
       },
     },
   },
