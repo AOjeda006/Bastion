@@ -4007,6 +4007,38 @@ la importación).
 
 ## Estado actual
 
+**FASE 1 CERRADA — las once casillas marcadas y el run que lo certifica:**
+run **34939033897** sobre `73d1db7`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3`): Frontal `104283218957` ✓, Backend `104283219208` ✓ y Humo `104284360891` ✓. Es el
+del **1.11**, el último de los once, y lo que certifica es el árbol entero de la fase: **1 237 casos**
+de .NET —845 en el carril rápido y 392 contra PostgreSQL— con las dos listas de ensamblados
+comparadas enteras, **128 operaciones** en 74 rutas y **89 `type`** de error, cada artefacto al día
+con el versionado, y el entorno del *compose* sirviendo datos.
+
+**Cada casilla tiene su run, y los once se han vuelto a pedir a la API al cerrar la fase**
+—`GET /repos/AOjeda006/Bastion/actions/runs/<id>`, leyendo `head_sha` y `conclusion`, no la
+memoria— con el guion `runs-fase-1.py` del directorio de trabajo de la sesión:
+
+```
+ 1.1  run 33779064545  head_sha c3e0119 casa  completed/success  feature/fase-1-desglose
+ 1.2  run 33806271861  head_sha c54f783 casa  completed/success  feature/1.2-puertos-de-lectura-y-la-cuarta-via
+ 1.3  run 33831276412  head_sha edd0048 casa  completed/success  main
+ 1.4  run 33906512809  head_sha 73c2836 casa  completed/success  main
+ 1.5  run 34046817118  head_sha 279b8c7 casa  completed/success  feature/1.5-terceros-el-agregado-y-su-identidad
+ 1.6  run 34125157573  head_sha 911ba5c casa  completed/success  feature/1.6-terceros-lo-que-cuelga
+ 1.7  run 34177571670  head_sha dd89e9f casa  completed/success  feature/1.7-la-retirada-y-las-dos-conversiones
+ 1.8  run 34424407829  head_sha f90dbed casa  completed/success  feature/1.8-catalogo-articulo-y-categoria
+ 1.9  run 34599130092  head_sha eadb7b9 casa  completed/success  main
+1.10  run 34833598837  head_sha 958c339 casa  completed/success  main
+1.11  run 34939033897  head_sha 73d1db7 casa  completed/success  main
+```
+
+Seis corrieron sobre su rama y cinco sobre `main`, y los once `head_sha` están en la historia de
+`main`: `git merge-base --is-ancestor <sha> main` sale bien para cada uno. El repaso de cada criterio
+contra algo observable, el veredicto de las nueve notas abiertas y el traspaso van en sus tres
+secciones, detrás de *Las ocho mutaciones del 1.11*. **Dónde retomar exactamente:** la **fase 2 ·
+Inventario**, por su puerta de clarificación y no por código (*Traspaso a la fase 2*).
+
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
 doce preguntas planteadas juntas y contestadas juntas, con su motivo, en *Decisiones tomadas →
 puerta de clarificación de la fase 1*; **once ítems** con criterio verificable en el *Checklist* →
@@ -4027,6 +4059,131 @@ texto que lee una persona cuando falla una validación → **el frontal**, mapea
 en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su primer uso, porque el
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
+
+**Ítem 1.11 cerrado — la importación CSV: la fila decide, el fichero escribe, y el recibo caduca:**
+run **34939033897** sobre `73d1db7`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3` de la API, no de la memoria): Backend `104283219208` ✓ (22 pasos, 0 omitidos),
+Frontal `104283218957` ✓ (17 pasos, 0 omitidos) y Humo `104284360891` ✓ (25 pasos, 1 omitido: el
+«Diagnóstico», que lleva `if: failure()`). Humo tiene un paso más que en el 1.10: «El frontal deja
+llegar a la API un cuerpo del tamaño de una importación». Los carriles tal como el run los publica,
+contra las líneas base de `051449d`:
+
+```
+Dominio y arquitectura: 845 casos (845 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — BuildingBlocks.UnitTests 215, Organizacion.UnitTests 183, Identidad.UnitTests 58,
+    Terceros.UnitTests 85, Catalogo.UnitTests 78, Organizacion.IntegrationTests 22,
+    Api.FunctionalTests 154, Arquitectura.Tests 37, Api.IntegrationTests 13
+    (748 en `051449d`, en 9 ensamblados: +97 — BuildingBlocks.UnitTests +83,
+     Api.FunctionalTests +9, Arquitectura.Tests +3 y Api.IntegrationTests +2)
+
+Integración (Testcontainers): 392 casos (392 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 318, y 0 en los otros siete
+    (367 en `051449d`: +25, todos en Api.IntegrationTests)
+
+Frontal · arranque 426/450 KiB en 3 ficheros · total servido 592/900 KiB  (418 y 577 en `051449d`)
+OpenAPI: 128 operaciones, 74 rutas /api/v1/  (127 en 73: +1 operación, +1 ruta)
+Catálogo de errores: 89 tipos, de 95 sitios de llamada  (80 de 86: +9 tipos, +9 sitios)
+Humo: esquema aplicado por los cinco contextos · 12 tramos de impuesto y 15 unidades, IVA general
+      vigente del 21.00 % · sesión con un testigo de 4273 caracteres · 1 empresa servida
+```
+
+Las líneas base son las que publicó el run del 1.10 sobre `958c339`, y valen para `051449d` porque
+entre los dos solo cambia la documentación (`git diff --name-only 958c339 051449d` → `docs/PLAN.md`).
+El reparto de cada delta **por clase** está en *Verificado — ítem 1.11*.
+
+**El cero de los `act()` no lo publica el run, y se dice de dónde sale.** La cifra —**15 ficheros,
+101 casos, 0 avisos**; 14 y 95 en `051449d`, y los seis casos nuevos son los de
+`LaImportacionDeTerceros.test.tsx`— es de la batería local sobre `5aca832`, medida con
+`grep -c "not wrapped in act"` sobre la salida de la suite. El árbol de `5aca832` solo difiere del de
+`73d1db7` en la documentación y en un comentario de test
+(`git diff --name-only 5aca832 73d1db7` → `docs/PLAN.md` y `ElReciboCaducaYSeBorraTests.cs`).
+
+**Lo que hay que leer primero de este ítem.** **La fila decide y el fichero escribe** (ADR-0034 §1):
+cada fila se valida y se decide por separado, **leyendo** —formato, contrato, NIF, régimen, límite,
+repetición en el fichero y existencia en la base, con una sola consulta dentro de
+`ViendoLoBloqueado`—, y las altas aceptadas se confirman en **un** `SaveChanges`, en la transacción del
+filtro de idempotencia y con el recibo. Si el proceso cae a mitad no queda **nada** —ni filas ni
+recibo—, y el reintento es la primera vez: lo prueba un disparador que revienta en mitad del `INSERT`.
+**La R12 se rompe a sabiendas y con el motivo escrito:** una transacción por fila cumpliría su letra y
+rompería la R10, porque el reintento vería como ya existentes las filas que él mismo dejó a medias.
+
+**Idempotencia por fichero, y comprobada por el efecto.** La misma `Idempotency-Key` con el mismo
+fichero devuelve el informe guardado **sin volver a preguntar a la base**, y un informe igual no lo
+prueba —reimportar un fichero entero de filas malas daría **el mismo**—, así que el caso mira el suceso
+`8401`, que solo deja la consulta de identificadores ocupados. Con otro fichero,
+`409 idempotencia-cuerpo-distinto`, y el otro fichero no entra.
+
+**El informe no repite un solo dato de la entrada:** va agrupado por **(columna, motivo)** con la lista
+de líneas de Excel, y columnas y motivos los escribe Bastion, así que no hay nada que filtrar al
+guardarlo en el recibo ni nada que ejecutar si se pega en una hoja. Los topes de la API, escritos
+**antes del *endpoint***: 2 MiB impuestos por el lector acotado del borde —que es quien vuelca— y
+5 000 filas; y nginx, que cortaba en 1 MiB por omisión sin que nadie lo hubiera mirado, sube a 3 MiB
+para que el `413` con nombre lo dé la API. Y **el recibo de idempotencia caduca a
+las 24 horas**, con `caduca_en` en la fila y una purga cada hora en Auditoría: cierra la nota que el
+0.9 dejó abierta, y **sin el dato** que pedía, porque la tabla guarda la ficha de un tercero en cada
+`201`.
+
+**Las once decisiones** están en *Decisiones tomadas → ítem 1.11*, detrás de la 0, con el
+**ADR-0034**. **Las ocho mutaciones** están en *Las ocho mutaciones del 1.11*, con la **4**, la **5** y
+la **7** enteras. La 5 es la que el dialecto existe para impedir: el importe leído con la cultura
+invariante no revienta nada, la fila **entra** con un límite mil veces menor. La 7 devuelve el mismo
+`413`, y la cazan cuatro casos porque miden los bytes pedidos a la corriente y no el código —con la
+mutación, el servidor se llevó los 67 108 864 de una corriente de 64 MiB—. Y la 8 cayó en un solo
+caso y **desmintió el comentario de su clase**, que afirmaba un rojo que no se da; corregido en
+`b44041e`. Lo que la batería encontró y no estaba previsto —`[Consumes]` contestando el `415` en el
+enrutador, **antes de la autorización**, y `LectorAcotadoDelCuerpo.Leido` que **nunca devolvía nulo**,
+así que la guarda del formateador no podía saltar— está en la decisión 8, con sus casos.
+
+**Ninguna dependencia nueva, y la frase sale de comparar conjuntos.** Un solo `packages.lock.json` se
+mueve —el de `BuildingBlocks.UnitTests`— y ningún par `nombre/versión` cambia:
+
+```
+python licencias.py 051449d 73d1db7
+  051449d → 39 packages.lock.json · 125 pares nombre/versión distintos · 30 entradas de tipo Project
+            · package-lock.json del frontal: 548 dependencias sin la raíz
+  73d1db7 → 39 packages.lock.json · 125 pares nombre/versión distintos · 30 entradas de tipo Project
+            · package-lock.json del frontal: 548 dependencias sin la raíz
+  051449d → 73d1db7: pares añadidos [] · retirados [] · Project añadidos [] · retirados []
+            · frontal añadidas [] · retiradas []
+
+git diff --name-only 051449d 73d1db7 -- Directory.Packages.props frontend/package.json \
+  frontend/package-lock.json                                                → vacío
+```
+
+De los tres `.csproj` que cambian, uno gana un `ProjectReference` —`BuildingBlocks.UnitTests →
+BuildingBlocks.Application`, por el lector de CSV—, otro copia a la salida los dos CSV de Excel
+(`Api.IntegrationTests`) y el tercero solo cambia un comentario (`BuildingBlocks.Contracts`), así que
+**ninguna licencia nueva que revisar**.
+
+**Semillas, identificadores y secretos.** El ítem toma el bloque de empresas **230-259** y el de
+terceros **33 000 001-33 000 999**, sin pisar ninguno anterior (decisión 9), y el reparto está escrito
+en el comentario de `Importaciones.cs`, que es donde lo lee el siguiente. **Los dos CSV que escribió
+Excel no llevan un solo NIF:** llevan marcadores `{{NIF:n}}` que el test sustituye por
+`Escenario.NifInventado`. Y el barrido, sobre las líneas añadidas del rango entero, con los CSV
+dentro:
+
+```
+git diff 051449d..73d1db7 | grep '^+' | grep -cE '\b[A-HJ-NP-SUVW][0-9]{7}[0-9A-J]\b|\b[0-9]{8}[A-Z]\b|\b[XYZ][0-9]{7}[A-Z]\b|\bES[0-9]{2} ?[0-9]{4}|IBAN|-----BEGIN|[Pp]assword\s*=|secret\s*=|api[_-]?key|eyJ[A-Za-z0-9]{20}'
+  → 2
+```
+
+**Las dos se han leído, y ninguna es un dato:** `67108864L`, en `docs/PLAN.md`, es la cuenta de bytes
+de la mutación 7 —ocho cifras y una letra tienen la forma de un DNI—, y `"Password=",` es
+`RastrosProhibidos.cs:44`, un rastro que las respuestas **no pueden** contener. Ni un NIF, NIE, CIF o
+IBAN, ni una clave privada, ni un testigo JWT. El humo local usó un fichero de entorno de valores
+aleatorios generado para la pasada y borrado al terminar, sin tocar el `deploy/.env` de desarrollo
+ni sus volúmenes.
+
+**Commits, firmas y trailers.** `git rev-list --count 051449d..73d1db7` → **12**, los doce firmados
+(`%G?` = `G`), con autor y *committer* el usuario y **solo** sus credenciales:
+`git log --format='%(trailers:only)' 051449d..73d1db7` no imprime **ni una línea** sobre el rango
+entero. Sin PR; la rama `feature/1.11-importacion-csv` se llevó a `main` por fast-forward y se borró
+en `73d1db743ef9ad1bd3cb3919bcf65f98438aa1ac` —solo existía en local: nunca se empujó—.
+
+**Fuera del ítem, y no «de paso»:** `CodigoBarras` (fase 2, con su import), la conversión de divisas,
+las facturas, las existencias, el precio por cliente, la importación de artículos (decisión 1), la
+exportación —solo como regla escrita, la decisión 7— y traducir a `409` la carrera de unicidad del
+alta.
 
 **Ítem 1.10 cerrado — los dos cruces mutuos, y los estados que hay al otro lado de cada puerto:**
 run **34833598837** sobre `958c339`, **success**, con **3 jobs contados en el propio run**
@@ -6001,6 +6158,152 @@ desnudo del servidor de pruebas —el cliente de la fábrica lleva el de redirec
 cuerpo entero antes de mandarlo—: el servidor se llevó **los 67 108 864**. Y el del filtro de
 idempotencia es el que justifica que el lector sea uno solo: ese filtro lee el cuerpo **antes** que el
 formateador para calcular la huella, y sin el lector acotado sería él el primero en volcarlo.
+
+### La fase 1, criterio por criterio, comprobado por algo observable
+
+El cierre **no se apoya en que las once casillas estén marcadas**. Cada criterio —los once que acordó
+la puerta de clarificación y el de la fase entera del §15— se ha vuelto a comprobar contra algo que
+se puede mirar hoy: un caso nombrado de los **1 237** que corren en los dos carriles de .NET, cuyas
+listas de ensamblados compara la CI **enteras** —así que en un *run* verde «existe» y «ha corrido» son
+la misma cosa—, un fichero de la suite del frontal, o la salida de un paso del *run* que cierra la
+fase. Cada nombre de la tabla se ha buscado en el árbol de `73d1db7`, uno por uno, antes de escribirlo
+aquí.
+
+| Ítem | Lo observable |
+|---|---|
+| **1.1** el presupuesto del frontal, remedido | El paso «Presupuesto de tamaño» del *job* Frontal: `presupuesto-del-frontal.sh dist 450 900` publica **las dos métricas** —arranque y total servido— con el desglose fichero a fichero, y falla si no ha mirado nada. En el *run* de cierre: `arranque 426/450 KiB en 3 ficheros · total servido 592/900 KiB`. |
+| **1.2** los puertos de Organización y la cuarta vía | `LosIdentificadoresAjenosTests.Ningun_identificador_del_dominio_se_queda_sin_clasificar`, `.Todo_identificador_de_otro_modulo_esta_declarado_con_su_puerto` y `.Cada_modulo_de_la_lista_tiene_su_cruce_y_su_puerto`: la lista declarada y el descubrimiento por reflexión, en los dos sentidos. |
+| **1.3** el contrato de listado | `NingunCriterioSensibleViajaEnLaUrlTests.Ningun_listado_recibe_un_criterio_sensible_por_la_url`, sobre el explorador de API; `ContratoDeTercerosTests.El_cursor_del_tramo_anterior_trae_el_siguiente_y_no_repite`, que ejerce el cursor opaco con la primera búsqueda por cuerpo que existe; y `TodaEscrituraDiceComoSeProtegeTests.El_universo_cubre_a_todos_los_modulos_montados`. La mitad de «copias borradas» no tiene caso, y es lo correcto: la divergencia **no compila**. |
+| **1.4** el camino de lectura de lo bloqueado | `ElAccesoReservadoDelArticulo32Tests.Un_almacen_bloqueado_desaparece_de_los_caminos_ordinarios_y_aparece_en_este`, `.El_listado_de_lo_bloqueado_no_devuelve_ninguna_llave_de_concurrencia` y `.Una_supresion_del_articulo_32_si_vence_y_la_fecha_sale_en_el_listado`; y `ElFiltroNoSeSaltaPorAhiTests.El_ambito_que_ve_lo_bloqueado_solo_se_abre_donde_esta_declarado`, que compara los sitios enteros. |
+| **1.5** Terceros: el agregado y su identidad | `ContratoDeTercerosTests.El_identificador_espanol_se_valida_de_verdad_y_nace_verificado` y `.El_listado_viene_paginado_con_su_total_y_filtra_por_nombre`; `LaBateriaGeneradaTests.Todo_identificador_generado_con_el_control_movido_se_rechaza`; `ElConflictoQueNoRevelaTests.El_alta_contra_uno_bloqueado_y_contra_uno_activo_contestan_lo_MISMO`. Las tres cláusulas del ADR-0030: el paso «Catálogo de errores» (`generar-errores.sh --comprobar`) y `ElCambioDeIdioma.test.tsx`. |
+| **1.6** Terceros: lo que cuelga | `ContratoDeLoQueCuelgaTests.Noventa_dias_de_plazo_son_400_y_el_mensaje_lleva_el_tope_y_la_norma`, `.Sesenta_dias_clavados_se_aceptan_porque_el_tope_es_el_maximo_y_no_un_veto` y `.Un_limite_sin_divisa_es_400_y_despues_NO_hay_limite_heredado_de_la_empresa`; `LaBateriaDeIbanTests.Un_control_cambiado_se_rechaza` y `.Una_longitud_de_otro_pais_se_rechaza_aunque_el_control_cuadre`. |
+| **1.7** la retirada y las dos conversiones | `LaInversaYElResolutorTests.El_par_que_habria_que_encadenar_no_se_resuelve` y `.Una_conversion_retirada_sigue_restringiendo_a_su_inversa`; `LaRetiradaNoEsUnBloqueoTests.La_coleccion_excluye_lo_retirado_por_omision_y_lo_trae_al_pedirlo`. |
+| **1.8** Catálogo: artículo y categoría | `ContratoDeCatalogoTests.Crear_un_articulo_devuelve_201_con_Location_que_lleva_al_recurso`, `.Una_unidad_RETIRADA_no_vale_para_un_alta_y_el_articulo_que_ya_la_usa_sigue_resolviendola` y `.Mover_una_categoria_debajo_de_su_propia_descendencia_es_409_con_type_categoria_ciclo`; y `ElCicloSeCompruebaEnLasDosPuertasTests`, el lado del dominio. |
+| **1.9** tarifas | `ContratoDeTarifasTests.Dos_tramos_del_mismo_codigo_que_se_pisan_los_rechaza_la_BASE`, `.Sin_linea_aplicable_hay_error_con_nombre_y_NUNCA_un_precio_cero` y `.Gana_el_antepasado_MAS_CERCANO_y_la_mas_honda_de_otra_rama_no_compite`; `PrecioODescuentoTests.Con_los_dos_puestos_no_se_construye`. |
+| **1.10** los dos cruces mutuos | `ContratoDeLosCrucesTests.Inventado_ajeno_bloqueado_y_solo_cliente_contestan_el_MISMO_400_y_no_dejan_fila` y `.Una_tarifa_que_rige_hoy_se_asigna_se_lee_y_con_nulo_se_quita`; `LaMatrizDeLosPuertosDeEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta`. |
+| **1.11** importación CSV | Las tres cláusulas, cada una con su caso: la fila como unidad, `LaImportacionDeTercerosTests.Las_filas_malas_no_impiden_que_entren_las_buenas_y_el_informe_dice_su_linea_de_Excel`, que también fija **línea y motivo**; y la idempotencia por fichero con su huella, `LaImportacionEsUnaOperacionTests.La_misma_clave_con_el_mismo_fichero_devuelve_el_mismo_informe_sin_volver_a_mirar_la_base` y `.La_misma_clave_con_otro_fichero_es_un_409_y_el_otro_fichero_no_entra`. Fuera del banco de pruebas, el paso de Humo «El frontal deja llegar a la API un cuerpo del tamaño de una importación». |
+| **§15** el criterio de la fase | **Alta de cliente/proveedor con NIF validado:** `ContratoDeTercerosTests.El_identificador_espanol_se_valida_de_verdad_y_nace_verificado`. **Y de artículo con unidad, impuesto y tarifa:** `ContratoDeCatalogoTests.Crear_un_articulo_devuelve_201_con_Location_que_lleva_al_recurso` —unidad e impuesto validados por sus puertos— y `ContratoDeTarifasTests.La_linea_del_articulo_gana_y_el_tramo_se_elige_DESPUES_con_la_frontera_arriba`. **Listados paginados y filtrados en servidor:** `ContratoDeTercerosTests.El_listado_viene_paginado_con_su_total_y_filtra_por_nombre` y `ContratoDeCatalogoTests.El_listado_de_articulos_viene_paginado_con_su_total_y_filtra_por_categoria`. **Dominio cubierto por tests:** `Terceros.UnitTests` con 85 casos y `Catalogo.UnitTests` con 78, en el carril rápido; y **ochenta y cinco mutaciones** repartidas por los once ítems —7, 8, 5, 5, 6, 14, 8, 8, 8, 8 y 8—, cada una con su resultado y su línea base en su sección de *Estado actual*. |
+
+**Lo que el ítem y este repaso encontraron y no estaba marcado:** dos cosas, las dos de fuera de los
+once criterios, y ninguna se arregla aquí. La primera, que el `SembrarAdministrador` no da los permisos
+nuevos a una instalación que ya tiene usuarios, aunque su comentario diga que sí —en el traspaso,
+como lo primero que mirar—. La segunda, que la búsqueda de la raíz del repositorio está copiada **seis**
+veces en los tests, dos de ellas en el ensamblado que ya enlaza la compartida: contada con la orden
+que va en el traspaso.
+
+### El veredicto de las notas abiertas
+
+Ninguna se queda sin veredicto. Son **nueve**: las cinco que el cierre de la fase 0 dejó abiertas y
+las cuatro que se abrieron después, y cada cabecera de *Notas / riesgos* dice ya el suyo. Cuatro se
+cierran, y cada una dice dónde; cuatro siguen abiertas **y eso es la decisión, no un descuido**; una
+es de vigilancia.
+
+| Nota | Veredicto |
+|---|---|
+| `auditoria.claves_de_idempotencia` crece sin límite (0.9) | **Cerrada en el 1.11** (`5f36468`, ADR-0034 §4). Veinticuatro horas en la fila —`caduca_en`, calculado al reclamar— y una purga cada hora que vive en Auditoría. Se cierra **sin el dato** que la nota pedía, y se dice por qué: la tabla guarda la ficha de un tercero en cada `201`, y un dato personal sin plazo no puede esperar a una medición. La vigila la **mutación 8** del 1.11. |
+| lo bloqueado sigue sin camino de lectura (0.11) | **Cerrada en el 1.4**. `GET /api/v1/organizacion/bloqueados`, con permiso y motivo propios, y desde el 1.6 recorriendo **todos** los módulos que bloquean por sus puertos: `ElAccesoReservadoDelArticulo32Tests.Un_almacen_bloqueado_desaparece_de_los_caminos_ordinarios_y_aparece_en_este`. |
+| el día que un mensaje del servidor se enseñe, la i18n vuelve a la mesa | **Cerrada en el 1.2 y construida en el 1.5** (ADR-0030): el frontal escribe el texto desde el `type`. La sostienen el paso «Catálogo de errores» de la CI (`generar-errores.sh --comprobar`) y `ElCambioDeIdioma.test.tsx`, que compara los `type` contra los dos diccionarios. |
+| los tests del frontal sueltan 109 avisos de `act()` | **Cerrada en el 1.8** (`9f8ff56`, 2026-09-10): venían del desmontaje, no del armazón. **Cero** en cada batería desde entonces, medido en la salida de la suite con `grep -c "not wrapped in act"`. Con la salvedad que dejó el 1.10 y que no la reabre: **bajo contención** también los da la base, así que un aviso solo es un hallazgo en una pasada sin competencia. |
+| el bloqueo del art. 32 no tiene proceso de destrucción | **Abierta, con la mitad cerrada.** El plazo existe desde el 1.4 (`PoliticaDeRetencion`) y el vencimiento sale en el listado; lo que no existe es quien **destruya** al vencer. El 1.11 deja construida la forma —un trabajo de fondo en su módulo, con su ventana y su suceso sin datos: `PurgadorDeRecibos`—, pero destruir una ficha no es borrar un recibo: hay que decidir qué pasa con lo que la referencia, y a un tercero ya lo referencia `ArticuloProveedor` desde el 1.10. Necesita su sitio en la hoja de ruta, y ese sitio se pregunta, no se le da de paso. |
+| el frontal no puede abrir la ficha de lo bloqueado | **Abierta, con la decisión tomada.** El precio del listado sin `GET` individual (ADR-0017): abrir la ficha es volver a exigir `If-Match` en **cinco** acciones —los cuatro desbloqueos de la fase 0 y, desde el 1.5 (`c69e03c`), el de Terceros—. Nada en la fase 1 lo ha pedido. |
+| la renovación de sesión asierta el cuerpo | **Abierta, con la decisión tomada** (ADR-0019). No ha aparecido el generador de esquemas de Zod en el que confiar. Y el otro disparador —«que las aserciones dejen de ser una»— no ha saltado, aunque ya hay **dos** `as` sobre un cuerpo de respuesta: desde el 1.5, `problema as CuerpoDeProblema` en `shared/api/errores.ts` (`b7607e0`). Ese no afirma nada que no se mire —sus dos campos son `unknown` y cada uno pasa por un `typeof` antes de usarse— y lleva su test, `ElTextoDeUnFallo.test.tsx`, como pide el ADR. |
+| el contrato describe los enteros como `integer \| string` | **Abierta, con la decisión tomada.** Estrechar el servidor para que el cliente quede cómodo sería mover el contrato para que encaje el consumidor. Hoy son **106** apariciones de `integer \| string` en el documento, y 14 de `number \| string`, contadas con la orden de la nota. |
+| en Node 25 el `localStorage` de los tests no es el de jsdom | **De vigilancia, no de arreglo.** La máquina de desarrollo sigue en Node **25.6.1** (`node --version`) y la CI en **22** (`node-version: '22'` en `ci.yml`): el remiendo de `setupTests.ts` sigue haciendo falta aquí. El disparador es subir de Node, no una fecha. |
+
+Y la que **no** es una nota sino una pregunta: **la correlación buscar/alta** (*Decisiones tomadas →
+ítem 1.6*, decisión 1) sigue sin contestar, y **la importación la hereda tal cual**: una fila contra
+una ficha bloqueada da `ya-existe`, igual que contra una activa, así que quien tenga `importar` y
+`ver` aprende lo mismo que quien tenga `crear` y `ver`. No abre un canal nuevo —es el mismo cruce—,
+pero lo ensancha a cinco mil identificadores por petición. Las tres salidas siguen escritas con su
+coste; ninguna la puede tomar el agente.
+
+### Traspaso a la fase 2
+
+**Qué hereda.** Cinco módulos con persistencia —Organización, Identidad, Auditoría, Terceros y
+Catálogo—, cada uno en su esquema y con sus migraciones al día (`comprobar-migraciones.sh`); el
+contrato en **128 operaciones sobre 74 rutas** bajo `/api/v1/`, con el cliente del frontal
+generado de él y **89 `type`** de error en el artefacto que la CI compara; `features/terceros/`
+y `features/catalogo/` en el frontal; y una CI cuyos dos carriles de .NET suman **1 237 casos**
+con las listas de ensamblados comparadas enteras. Y un mecanismo de importación que no es de Terceros
+sino del bloque común —el lector acotado del cuerpo con `[TopeDelCuerpo]` y `[TipoDelCuerpo]`, el
+formateador de `text/csv`, `CamposCsv` y `RechazosDeImportacion`—, listo para el siguiente maestro
+que se importe.
+
+**Qué import se añade a `CLAUDE.md` al empezar** (Anexo A.2.3, y solo este):
+`@../BibliotecaDocumentacion/negocio/identificacion-articulos/convenciones.md`. Con él entra
+`CodigoBarras`, que los ítems de la fase 1 que rozaban el artículo dejaron fuera con ese motivo.
+
+**Qué invariantes de la fase 1 son portantes** —romper uno no da un fallo local, da una avería muda:
+
+1. **Un puerto entre módulos pregunta por el estado, no por la existencia.** «¿Existe?» deja pasar lo
+   que existe y no se puede usar. `LaMatrizDeLosPuertosDeEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta`
+   **descubre** todo puerto de un `Contracts` que devuelva un enumerado y exige un caso por casilla:
+   un puerto nuevo de la fase 2 entra en la matriz el día que se escribe, y un valor que ningún
+   productor produce se ve, como `Bloqueado` en el 1.10.
+2. **Desde fuera de un módulo, bloqueado, inventado y de otra empresa contestan lo mismo.** Es el
+   art. 32 hecho contrato: el `NoExiste` de los puertos de Terceros cubre las tres cosas a propósito,
+   y el alta que cruza contesta el mismo `400` con el cuerpo idéntico. Un módulo nuevo que distinga
+   «no está» de «está bloqueado» en su respuesta revela lo que el bloqueo reserva.
+3. **Todo cruce está declarado y la declaración se compara entera, en los dos sentidos.**
+   `LasFronterasEntreModulosTests.El_unico_cruce_entre_modulos_va_por_contratos` y
+   `LosIdentificadoresAjenosTests`: un cruce sin declarar es rojo, y una declaración sin cruce detrás
+   también. Inventario referenciará artículos y almacenes; cada referencia, con su puerto.
+4. **La retirada no es el bloqueo** (ADR-0023): `EstadoDeMaestro` tiene tres casillas, y
+   `SoloResuelveLoViejo` significa que lo que ya lo usa lo sigue resolviendo y lo nuevo no lo puede
+   elegir. Un documento de la fase 2 que lea una unidad retirada tiene que poder leerla.
+5. **Ninguna clave ajena cruza esquemas, y se pregunta a la base.**
+   `NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests` mira `pg_constraint` sin filtro de esquema, así que
+   una clave escrita a mano en una migración —la que el modelo de EF no ve— también sale roja.
+6. **Un cuerpo que se lee entero declara su tope y su tipo con los atributos del bloque común, y
+   nunca con `[Consumes]`**, que contesta `415` en el enrutador, antes de la autorización. Lo vigila
+   `LaPuertaDeCadaAccionTests` **por el efecto**, y con un límite que conviene saber: solo ve el
+   `[Consumes]` de un tipo distinto del JSON con el que sondea.
+7. **Un recibo de idempotencia dura veinticuatro horas, y una clave caducada es una clave nueva.**
+   Toda acción con `Idempotency-Key` lo hereda sin escribir nada, y el contrato ya lo dice.
+8. **Dos representaciones de la divisa conviven en el `Tercero` y no se comparan** (1.10, decisión 6):
+   el código ISO dentro de `Importe` y el `Guid` de la tarifa asignada. La buena es el código, y el
+   disparador para mover el `Guid` está escrito —antes de que la primera línea de un documento
+   convierta un precio resuelto en un `Importe`—, y quien lo cruce lo mueve antes de escribir esa línea.
+
+**Lo que la fase 1 deja abierto, cada cosa con su motivo** —ninguna es un olvido y ninguna se hace «de
+paso» en la fase 2—:
+
+- **La importación de artículos.** Un artículo se importa resolviendo por **código** su unidad, su
+  impuesto y su categoría, y los puertos de estado solo reciben identificadores: es un contrato nuevo
+  entre módulos (*Decisiones tomadas → ítem 1.11*, decisión 1).
+- **La exportación**, con la regla del apóstrofo ya escrita para los campos que empiecen por `=`, `+`,
+  `-`, `@`, tabulador o retorno (decisión 7 del 1.11).
+- **La carrera de unicidad del alta** contesta un `500` limpio en vez de un `409`, igual en el alta
+  suelta que en la importación: dos altas simultáneas del mismo identificador pasan las dos la
+  lectura y la segunda choca con el índice.
+- **Un cuerpo de más de 3 MiB** lo corta nginx con su `413` en HTML y sin `type`: la pantalla de
+  importación enseña el texto genérico y ofrece reintentar, que no sirve de nada. El humo de la CI
+  fija que eso es lo que pasa; lo que falta es que la pantalla lo sepa.
+- **La destrucción al vencer el bloqueo del art. 32**, arriba en los veredictos.
+- **La correlación buscar/alta**, pregunta sin contestar, y ahora también buscar/importar.
+- **El arranque del frontal, a 4 KiB de la regla de los 430** (decisión 10 del 1.11): 426/450 en el
+  *run* de cierre. La primera pantalla de la fase 2 que sume textos a los dos diccionarios la cruza, y
+  lo que toca entonces ya está escrito —sacar del arranque el idioma no activo—, no subir el tope.
+- **Seis búsquedas privadas de la raíz del repositorio en los tests**, frente a la compartida
+  `tests/Comun/RaizDelRepositorio.cs`, que solo enlaza `Api.FunctionalTests` —y dos de las seis viven
+  justo ahí—. Medido con `grep -rn 'File.Exists(Path.Combine(.*"Bastion.sln"' tests --include=*.cs`,
+  que da siete líneas: las seis copias y la compartida. No rompe nada hoy; diverge el día que una
+  cambie de criterio.
+
+**Lo que la fase 2 debe mirar el primer día:** el rol de administración **no recibe los permisos
+nuevos en una instalación que ya tiene usuarios**. `SembrarAdministrador` sale en su primera línea si
+existe cualquier usuario, antes de llegar a `rol.FijarPermisos(catalogo.Todos)`, y el comentario de esa
+línea —«Se fijan SIEMPRE, también si el rol ya existía»— dice lo contrario de lo que hace. No hay
+cierre: el administrador puede darse los permisos por `PUT` del rol, que valida contra el catálogo.
+Pero, leído el código —no medido contra una base vieja—, una base creada en la fase 0 llega a la
+fase 1 con un administrador que no ve Terceros ni Catálogo, y la fase 2 añadirá los de Inventario. No
+ha mordido porque cada entorno de la CI nace de cero.
+
+**Dónde retomar exactamente:** la **fase 2 · Inventario**, y **no por código**. Igual que la fase 1,
+no tiene un Anexo A.3, así que lo primero es la **puerta de clarificación** del `CLAUDE.md` §2 —el
+desglose en ítems con criterio verificable, acordado con el usuario y escrito aquí— y, con ella, el
+import de arriba. Y el `CLAUDE.md` §5 sigue diciendo que el objetivo del encargo es completar la
+fase 1: cambiarlo es del usuario.
 
 ### Verificado en local, con la salida real — ítem 1.10
 
@@ -9340,6 +9643,10 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 > y agente en la **puerta de clarificación de la fase 1**, cuyas doce respuestas con su motivo están
 > en *Decisiones tomadas*. Este checklist es el resultado; **no se reordena ni se amplía** por
 > iniciativa propia, igual que el A.3.
+>
+> **Cerrada el 2026-09-15:** las once casillas en `[x]`, y la fase la certifica el run
+> **34939033897** sobre `73d1db7`, el del 1.11. Los once runs, el repaso criterio por criterio y el
+> traspaso a la fase 2 están en *Estado actual*.
 
 - [x] **1.1 · El presupuesto del frontal, remedido** — criterio de aceptación: dos métricas
   —**arranque** frente a **total**— en vez de una; topes **450 KiB** y **900 KiB** con el cálculo
@@ -9513,12 +9820,22 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   decisiones en *Decisiones tomadas → ítem 1.10*; ocho mutaciones en *Estado actual*, con la 2, la 5
   y la 7 enteras: la 7b enseña que sin un registro el radio del fallo es el controlador entero, y la
   8 deja abierto que la clave ajena entre esquemas escrita a mano solo la ve un caso de Identidad.
-- [ ] **1.11 · Importación CSV** — criterio de aceptación: **unidad de aislamiento = la fila**, de
+- [x] **1.11 · Importación CSV** — criterio de aceptación: **unidad de aislamiento = la fila**, de
   modo que un fichero con filas malas importa las buenas; **idempotencia por fichero** —una
   importación es UNA operación, y el reenvío con la misma `Idempotency-Key` devuelve el resultado
   guardado sin reimportar—, con el **hash del contenido** guardado al lado, de manera que la misma
   clave con **otro fichero** sea un error explícito; e informe con **línea y motivo** de cada fila
   rechazada, que es lo único que permite corregir y reimportar solo esas.
+  Cerrado con el run **34939033897** sobre `73d1db7`, que es también el que cierra la **fase 1**. La
+  fila decide y el fichero escribe: las altas aceptadas se confirman en un solo `SaveChanges`, con el
+  recibo, y si el proceso cae a mitad no queda nada. La misma clave con el mismo fichero devuelve el
+  informe guardado sin volver a preguntar a la base —visto por el suceso que deja esa consulta, no por
+  la respuesta—, y con otro fichero es un `409`. El informe va por (columna, motivo) con sus líneas de
+  Excel y sin un solo valor de la entrada; los topes —2 MiB y 5 000 filas— se escribieron antes del
+  *endpoint*; y el recibo de idempotencia caduca a las 24 horas, que cierra la nota del 0.9. Once
+  decisiones en *Decisiones tomadas → ítem 1.11*, con el ADR-0034; ocho mutaciones en *Estado
+  actual*, con la 4, la 5 y la 7 enteras, y la 8 desmintiendo un comentario de test que afirmaba un
+  rojo que no se da.
 
 
 ## Imports pendientes de `CLAUDE.md`
@@ -9576,7 +9893,7 @@ cuando hace falta el porqué.
   corte no aguantaba: no significa nada sin la regla que lo aplica, y ya tiene dueño desde el 1.2.
   Razonamiento entero en *Decisiones tomadas → ítem 1.6*, decisión **2**.
 
-- **ABIERTO (2026-09-04, recontado el 2026-09-05) · los tests del frontal sueltan 109 avisos de
+- **CERRADO (2026-09-10, en el ítem 1.8) · los tests del frontal soltaban 109 avisos de
   `act(...)`, en SIETE ficheros.** `An update to <X> inside a test was not wrapped in act(...)` sale
   **109** veces en una ejecución limpia. Medido nueve veces: 109 en ocho de ellas y **105** en una,
   o sea que la cifra es estable de sobra para servir de línea base pero **no es determinista** —y esa
@@ -9604,6 +9921,15 @@ cuando hace falta el porqué.
   el criterio del 1.4** —el ítem no toca el frontal— y queda anotado con los ficheros medidos, no
   recordados. **Lo que lo cerraría:** envolver la interacción que dispara el efecto, no envolverlo
   todo: `waitFor` sobre lo que pone un efecto y nada más, que es la regla que dejó el 0.14.
+  **Cerrado en el 1.8** (`9f8ff56`, 2026-09-10), y **no por donde decía «lo que lo cerraría»**: no
+  eran efectos sin esperar, venían del **desmontaje**. El `afterEach` de `setupTests.ts` vaciaba el
+  depósito de sesión antes de que Testing Library desmontara —los `afterEach` corren en orden inverso
+  al de registro—, y ese aviso a los oyentes repintaba los componentes suscritos a la sesión con la
+  pantalla todavía en pie. Con `cleanup()` al principio del `afterEach`, **cero** en la suite entera,
+  y cero en cada batería desde entonces.
+  **Repasada al cerrar la fase 1: cerrada, con una salvedad que no la reabre.** Bajo contención la
+  base también da avisos (*Verificado — ítem 1.10*), así que un aviso solo es un hallazgo en una
+  pasada sin competencia.
 
 - **CERRADO (2026-09-04, en el ítem 1.4) · el censo de reglas cubría un carril de cuatro.** Anotado
   al cerrar el 1.3 como candidato, y autorizado por el usuario para este ítem. `LasReglasDeEsteCarrilTests`
@@ -9642,9 +9968,10 @@ cuando hace falta el porqué.
   esperar a propósito, porque lo pone `crearI18n` antes del `render`. **La regla que deja:** una
   aserción sobre algo que pone un efecto se espera; una sobre algo que pasó antes de montar, no.
 
-- **ABIERTO (2026-09-03) · el bloqueo del art. 32 no tiene fecha de vencimiento ni proceso de
-  destrucción.** `proteccion-datos.md` entra con la fase 1 y es tajante: bloquear es «identificar y
-  reservar» **solo durante el plazo de prescripción**, y pasado ese plazo **hay que destruir**. Un
+- **ABIERTO A MEDIAS (2026-09-03; el plazo, cerrado en el ítem 1.4) · el bloqueo del art. 32 no
+  tenía fecha de vencimiento, y sigue sin proceso de destrucción.** `proteccion-datos.md` entra con
+  la fase 1 y es tajante: bloquear es «identificar y reservar» **solo durante el plazo de
+  prescripción**, y pasado ese plazo **hay que destruir**. Un
   estado de bloqueo sin vencimiento «convierte una obligación de conservación acotada en conservación
   indefinida, que es otra infracción». Hoy `Empresa`, `Almacen`, `Ubicacion` y `Usuario` llevan
   bloqueo **con su fecha de bloqueo**, que es la mitad buena; lo que no existe es ni el plazo ni el
@@ -9662,6 +9989,12 @@ cuando hace falta el porqué.
   **Emparentado** con la nota de `auditoria.claves_de_idempotencia`: las dos son políticas de
   retención sin dato con el que calibrarlas, y las dos tienen ya el mecanismo —una migración aplicada
   por el paso de despliegue del ADR-0021—.
+  **Repasada al cerrar la fase 1: la destrucción sigue abierta, y eso es la decisión.** El 1.11 deja
+  construida la forma —un trabajo de fondo en su módulo, con su ventana y su suceso sin datos:
+  `PurgadorDeRecibos`—, pero destruir una ficha no es borrar un recibo: hay que decidir qué pasa con
+  lo que la referencia, y a un tercero ya lo referencia `ArticuloProveedor` desde el 1.10. La nota
+  emparentada ya no lo es: la de `auditoria.claves_de_idempotencia` se cerró en el 1.11. Necesita su
+  sitio en la hoja de ruta, y ese sitio se pregunta, no se le da de paso.
 
 - **ABIERTO (2026-09-03) · el frontal no tiene forma de aprovechar el listado de lo bloqueado
   mientras la lectura individual no exista.** Decidido en la puerta de la fase 1: el ítem 1.4
@@ -9671,6 +10004,10 @@ cuando hace falta el porqué.
   desbloquear —el identificador basta y el desbloqueo no pide etiqueta— pero **no se puede abrir la
   ficha** de lo bloqueado para mirarla antes. Si algún día hiciera falta esa ficha, no es un cambio
   de pantalla: es volver a exigir `If-Match` en cuatro acciones y reescribir el ADR-0017.
+  **Repasada al cerrar la fase 1: sigue abierta, y eso es la decisión**, con una cifra corregida:
+  las acciones que volverían a exigir `If-Match` ya son **cinco**, porque `TercerosController.Desbloquear`
+  entró en la lista de exentas en el 1.5 (`c69e03c`) con el mismo argumento. Nada en la fase 1 ha
+  pedido abrir la ficha de lo bloqueado.
 
 - **CERRADO (2026-09-03, en el ítem 1.1) · El presupuesto de tamaño del frontal
   se queda corto — y además mide otra cosa.** Al razonarlo en la puerta de la fase 1 apareció lo que
@@ -9688,8 +10025,8 @@ cuando hace falta el porqué.
   con sus formularios y sus tablas. Hay que revisar el tope **con un número razonado** —qué tarda en
   cargar y con qué red— y no subirlo el día que salte, que es como un presupuesto deja de serlo.
 
-- **ABIERTO (2026-09-02), CON FECHA DESDE EL 2026-09-03 · El día que un mensaje del servidor se le
-  enseñe al usuario, la i18n vuelve a la mesa.** Este era el octavo tema que el usuario puso sobre
+- **CERRADO (2026-09-03, en el ítem 1.2; construido en el 1.5) · El día que un mensaje del servidor
+  se le enseñe al usuario, la i18n vuelve a la mesa.** Este era el octavo tema que el usuario puso sobre
   la mesa al abrir la fase 1, y **se cayó de la tanda de preguntas al redactarla**: no se contestó
   porque no se preguntó. **No se hereda el default**; se pregunta antes de empezar el **1.5**, que
   es el primer ítem con una validación —un NIF con la letra mal— que apetece enseñar con el texto
@@ -9699,6 +10036,11 @@ cuando hace falta el porqué.
   enseñar con el texto que manda el servidor. Ese día hay que decidir entre que la API traduzca por
   `Accept-Language` o que devuelva códigos y traduzca el frontal. **La respuesta por defecto es la
   segunda**, porque mantiene la API sin saber de presentación; pero se decide, no se hereda.
+  **Cerrado en el 1.2** (2026-09-03), preguntado y no heredado: escribe el texto **el frontal**,
+  mapeando el `type` estable del `ProblemDetails`, y la API no negocia idioma por `Accept-Language`
+  (**ADR-0030**). **Construido en el 1.5**, con el mecanismo antes que su primer uso, y sostenido por
+  el paso «Catálogo de errores» de la CI (`generar-errores.sh --comprobar`) y por
+  `ElCambioDeIdioma.test.tsx`, que compara los `type` del artefacto contra los dos diccionarios.
 
 - **CERRADO (2026-09-02) · `UnidadDeTrabajoPorModuloTests` fija sus ensamblados a mano, y le falta
   uno.** `tests/Api.FunctionalTests/Composicion/UnidadDeTrabajoPorModuloTests.cs` declara
@@ -9745,6 +10087,12 @@ cuando hace falta el porqué.
   se confíe, o que las aserciones dejen de ser una sola. Argumento entero en el **ADR-0019**.
   **Repasada al cerrar la fase 0: sigue abierta, y eso es la decisión.** No ha aparecido el
   generador en el que confiar, y las aserciones siguen siendo una sola.
+  **Repasada al cerrar la fase 1: sigue abierta, y eso es la decisión.** El generador sigue sin
+  aparecer. Y hay un segundo `as` sobre un cuerpo de respuesta desde el 1.5 —`problema as
+  CuerpoDeProblema` en `shared/api/errores.ts`, `b7607e0`—, que no dispara la revisión del ADR-0019:
+  sus dos campos son `unknown` y cada uno pasa por un `typeof` antes de usarse, así que no afirma
+  nada que no se mire, y lleva su test (`ElTextoDeUnFallo.test.tsx`). La que afirma una forma sin
+  comprobarla sigue siendo una.
 - **CERRADO (2026-09-02) · los identificadores de permiso son la única parte del contrato escrita a
   mano.** `frontend/src/shared/sesion/permisos.ts` lleva las cadenas `organizacion.almacen.ver` y
   `organizacion.empresa.ver` tecleadas. No hay de dónde generarlas: el catálogo de permisos es un
@@ -9763,8 +10111,8 @@ cuando hace falta el porqué.
   fuente, sí, pero **no puede vivir en el carril rápido**, porque la otra mitad de la
   comparación —el catálogo— solo existe con la API en pie. Vive en `Api.IntegrationTests`, que
   ya levanta el host, y compara las dos listas enteras.
-- **ABIERTO (2026-09-02) · lo bloqueado sigue sin camino de lectura, y por tanto sin camino de
-  desbloqueo desde el frontal.** Decidido en la puerta del 0.11 y sin cambios: una fila bloqueada
+- **CERRADO (2026-09-04, en el ítem 1.4) · lo bloqueado seguía sin camino de lectura, y por tanto
+  sin camino de desbloqueo desde el frontal.** Decidido en la puerta del 0.11 y sin cambios: una fila bloqueada
   contesta 404 a su propio `GET` (R16, ADR-0016), así que no aparece en ningún listado y la interfaz
   no tiene desde dónde ofrecer el desbloqueo. **La respuesta NO es un `IgnoreQueryFilters` en el
   frontal ni ensanchar el ámbito existente**: los tres sitios que abren `ViendoLoBloqueado` siguen
@@ -9784,6 +10132,12 @@ cuando hace falta el porqué.
   construye **un listado y no un `GET` individual**: el listado no emite ETag, o sea que no resucita
   la llave y las cuatro exenciones siguen en pie; reescribir la mitad caducada entra en el criterio
   del ítem.
+  **Cerrado en el 1.4** (run 33906512809 sobre `73c2836`): `GET /api/v1/organizacion/bloqueados`,
+  con permiso y motivo propios y el vencimiento de cada bloqueo en su fila, y desde el 1.6 recorriendo
+  **todos** los módulos que bloquean. Lo sostienen
+  `ElAccesoReservadoDelArticulo32Tests.Un_almacen_bloqueado_desaparece_de_los_caminos_ordinarios_y_aparece_en_este`
+  y `.El_listado_de_lo_bloqueado_no_devuelve_ninguna_llave_de_concurrencia`, que es lo que deja en pie
+  las exenciones del ADR-0017.
 - **ABIERTO (2026-09-02) · el contrato describe los enteros como `integer | string`.**
   `PaginaDeAlmacenDto.total` y sus hermanos salen del OpenAPI como `type: ["integer","string"]`, en
   la petición **y** en la respuesta. No es un fallo del generador: `JsonSerializerDefaults.Web`
@@ -9795,6 +10149,10 @@ cuando hace falta el porqué.
   el que ya consuma el contrato.
   **Repasada al cerrar la fase 0: sigue abierta, y eso es la decisión.** Estrechar el servidor
   para que el cliente quede cómodo sería mover el contrato para que encaje el consumidor.
+  **Repasada al cerrar la fase 1: sigue abierta, y eso es la decisión.** El documento lleva hoy
+  **106** `"type": ["integer", "string"]` y **14** `["number", "string"]`, contados con
+  `re.findall(r'"type":\s*\[\s*"integer",\s*"string"\s*\]', texto)` sobre `docs/api/openapi.json`
+  (y lo mismo con `number`); la traducción sigue en `shared/api/enteros.ts`, en un solo sitio.
 - **ANOTADO (2026-09-02) · en Node 25 el `localStorage` del entorno de tests no es el de jsdom.**
   Node 25 define `globalThis.localStorage` como accesor propio (experimental, tras
   `--localstorage-file`) y gana al de jsdom: lo que queda es un objeto pelado, sin `setItem` ni
@@ -9805,6 +10163,9 @@ cuando hace falta el porqué.
   a ganar, el remiendo sobra y hay que quitarlo, no dejarlo tapando al bueno.
   **Repasada al cerrar la fase 0: de vigilancia, no de arreglo.** El disparador es subir de
   versión de Node, no una fecha.
+  **Repasada al cerrar la fase 1: igual.** La máquina de desarrollo sigue en Node **25.6.1**
+  (`node --version`) y la CI en **22** (`node-version: '22'` en `ci.yml`), así que el remiendo de
+  `setupTests.ts` sigue haciendo falta aquí.
 - **ARREGLADO (2026-09-02) · el presupuesto de tamaño del frontal ya aprieta.** Estaba en 1024 kB
   con 205 kB de consumo: un margen de cinco veces no señala nada. Con el armazón terminado
   —enrutador, caché de servidor, formularios, validación y cliente generado— el navegador descarga
