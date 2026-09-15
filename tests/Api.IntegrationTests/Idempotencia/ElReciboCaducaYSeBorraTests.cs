@@ -22,8 +22,15 @@ namespace Bastion.Api.IntegrationTests.Idempotencia;
 /// <para>
 /// <b>Se comprueba con un instante elegido, no esperando un día.</b> La purga recibe el «ahora» por
 /// parámetro precisamente para esto: se la llama justo antes del vencimiento de un recibo y justo en
-/// él, y lo que se mira es qué filas quedan. Un plazo quitado —un recibo que no caduca nunca— sale
-/// rojo en el segundo borde; uno mal calculado, en el primero.
+/// él, y lo que se mira es qué filas quedan. Una purga que se adelanta sale roja en el primer borde;
+/// una que no se lleva lo vencido, en el segundo.
+/// </para>
+/// <para>
+/// <b>El plazo lo afirma un solo caso: el primero.</b> Los de la purga toman el vencimiento que dice la
+/// fila, sea el que sea, así que un recibo que no caduca nunca —nacido con <c>DateTimeOffset.MaxValue</c>—
+/// los deja en verde: purgar «en su vencimiento» también se lo lleva. Lo que ve un plazo quitado es la
+/// resta de las dos fechas guardadas, y lo comprobó la mutación 8 del 1.11, roja en ese caso y en ningún
+/// otro.
 /// </para>
 /// <para>
 /// <b>La purga de estos casos borra también los recibos de otros casos</b> que ya han terminado: todo
