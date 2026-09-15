@@ -734,6 +734,39 @@ jobs:
           echo "GET (por el frontal) /api/v1/organizacion/empresas sin credenciales -> $CODIGO"
           test "$CODIGO" = "401"
 
+      # El cuerpo más grande que admite la API es el de una importación, 2 MiB (ADR-0034), y nginx
+      # corta por omisión en 1 MiB. Por el efecto y por el puerto del frontal: un cuerpo que pasa del
+      # tope de la API por UN byte tiene que llegar a ella y volver con SU 413 con nombre; con el
+      # `nginx.conf` de antes del ítem 1.11 volvía el 413 en HTML de nginx, sin `type`. Y lo que pasa
+      # del límite de nginx lo corta nginx, que es la otra mitad de lo que dice ese fichero.
+      - name: El frontal deja llegar a la API un cuerpo del tamaño de una importación
+        run: |
+          importar() {
+            head -c "$1" /dev/zero > cuerpo.bin
+            curl --silent --output respuesta.txt --write-out '%{http_code}' \
+              --request POST http://localhost:5173/api/v1/terceros/terceros/importacion \
+              --header "Authorization: Bearer $(cat testigo.txt)" \
+              --header 'Content-Type: text/csv' \
+              --header "Idempotency-Key: $(cat /proc/sys/kernel/random/uuid)" \
+              --data-binary @cuerpo.bin
+          }
+
+          CODIGO=$(importar $((2 * 1024 * 1024 + 1)))
+          TIPO=$(jq -r '.type // empty' respuesta.txt 2>/dev/null || true)
+          echo "POST (por el frontal) importación de 2 MiB + 1 byte -> $CODIGO type=[$TIPO]"
+          if [ "$CODIGO" != "413" ] || [ "$TIPO" != "/errors/cuerpo-demasiado-grande" ]; then
+            echo "::error title=Cuerpo::Un cuerpo de 2 MiB + 1 byte no ha vuelto con el 413 con nombre de la API (HTTP ${CODIGO}, type=[${TIPO}]): o nginx lo corta antes, o la API no impone su tope."
+            exit 1
+          fi
+
+          CODIGO=$(importar $((3 * 1024 * 1024 + 1)))
+          TIPO=$(jq -r '.type // empty' respuesta.txt 2>/dev/null || true)
+          echo "POST (por el frontal) cuerpo de 3 MiB + 1 byte -> $CODIGO type=[$TIPO]"
+          if [ "$CODIGO" != "413" ] || [ -n "$TIPO" ]; then
+            echo "::error title=Cuerpo::Un cuerpo de 3 MiB + 1 byte no lo ha cortado nginx (HTTP ${CODIGO}, type=[${TIPO}])."
+            exit 1
+          fi
+
       # Un mapa de fuentes es el código fuente. Se genera, se publica como artefacto de la CI, y
       # NO se sirve: la imagen los borra y nginx contesta 404 a cualquiera que quede.
       - name: La imagen del frontal no publica los mapas de fuentes
