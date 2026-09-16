@@ -181,6 +181,10 @@ bash scripts/ci/recuento-de-tests.sh \
 bash scripts/ci/recuento-de-tests.sh \
   artifacts/test-results/integracion "Integración (Testcontainers)" 100 \
   "Bastion.Api.IntegrationTests.dll,Bastion.Organizacion.IntegrationTests.dll"
+
+# 5. Las dependencias, por CONJUNTOS y contra la base del ítem: qué paquete entra o sale, no
+#    cuántos hay. El frontal se cuenta SIN la raíz; la convención está en la cabecera del guion.
+python scripts/dependencias-por-conjuntos.py <commit-base> HEAD
 ```
 
 > **Los avisos de `act()` del frontal son un CANAL desde el 1.8, no una cifra.** Hasta ese ítem
