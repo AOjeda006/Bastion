@@ -130,6 +130,10 @@ public sealed class LasReglasDeEsteCarrilTests
         "LasVariablesDelDespliegueTests.Las_cuatro_fuentes_se_leen",
         "LasVariablesDelDespliegueTests.Las_de_la_semilla_son_las_que_lee_su_codigo",
 
+        // La línea de estado del README sale de las casillas del PLAN.
+        "ElEstadoDelReadmeEsElDelPlanTests.El_checklist_del_plan_se_lee",
+        "ElEstadoDelReadmeEsElDelPlanTests.La_linea_de_estado_del_readme_es_la_del_checklist",
+
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",
     ];

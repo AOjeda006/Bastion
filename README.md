@@ -10,9 +10,10 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 0 (Cimientos), sin empezar.** Lo que hay ahora es el andamiaje del repositorio y la
-> configuración. El detalle exacto de qué falta está en **[`docs/PLAN.md`](docs/PLAN.md)**, que es la
-> fuente de verdad del estado del trabajo.
+> **Estado: fase 1 (Maestros), cerrada: 11 de 11 ítems.** La fase 2 no ha empezado. Qué se hizo en
+> cada ítem, con el run de la CI que lo certifica, y qué queda está en **[`docs/PLAN.md`](docs/PLAN.md)**,
+> que es la fuente de verdad del estado del trabajo. Esta línea se compara con sus casillas
+> (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia y la línea no, la CI sale roja.
 
 ---
 
@@ -209,6 +210,7 @@ ni línea a línea ni al total.
 | [`CLAUDE.md`](CLAUDE.md) | Memoria del agente: qué convenciones importa, política de commits, puerta de clarificación |
 | [`AGENTS.md`](AGENTS.md) | Contrato operativo del agente y comandos del proyecto |
 | [`docs/adr/`](docs/adr/) | Decisiones de arquitectura, con su contexto y sus consecuencias |
+| [`docs/dominio/reglas-duras.md`](docs/dominio/reglas-duras.md) | Las diecisiete reglas duras, cada una con su estado: viva y dónde se hace cumplir, o aplazada y por qué |
 
 ---
 
