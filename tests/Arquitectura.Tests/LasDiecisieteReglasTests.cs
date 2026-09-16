@@ -229,6 +229,12 @@ public sealed partial class LasDiecisieteReglasTests
     /// Qué reglas se citan y en qué ficheros. La tabla no cuenta: sus identificadores son lo que
     /// se compara, no una cita.
     /// </summary>
+    /// <remarks>
+    /// Dos formas de citar. En prosa y en código, <c>R</c> mayúscula. Y en la cabecera de un ADR,
+    /// la etiqueta en minúscula de su línea <c>tags:</c>, que es donde está la única cita de la
+    /// R13. Solo ahí: fuera de esas líneas, una <c>r</c> minúscula con un número es cualquier cosa
+    /// —un nombre de variable, un atributo de un SVG— y contarla daría rojos que no son reglas.
+    /// </remarks>
     private static SortedDictionary<string, SortedSet<string>> CitasDelRepositorio()
     {
         SortedDictionary<string, SortedSet<string>> citas = new(StringComparer.Ordinal);
@@ -238,11 +244,23 @@ public sealed partial class LasDiecisieteReglasTests
 
         foreach (string fichero in ficheros.Where(fichero => fichero != Tabla))
         {
-            foreach (Match cita in Cita().Matches(File.ReadAllText(Ruta(fichero))))
+            string texto = File.ReadAllText(Ruta(fichero));
+            IEnumerable<string> encontradas = Cita().Matches(texto).Select(cita => cita.Value);
+
+            if (fichero.StartsWith("docs/adr/", StringComparison.Ordinal))
             {
-                if (!citas.TryGetValue(cita.Value, out SortedSet<string>? donde))
+                encontradas = encontradas.Concat(
+                    from linea in texto.Split('\n')
+                    where linea.StartsWith("tags:", StringComparison.Ordinal)
+                    from etiqueta in Etiqueta().Matches(linea)
+                    select etiqueta.Value.ToUpperInvariant());
+            }
+
+            foreach (string cita in encontradas)
+            {
+                if (!citas.TryGetValue(cita, out SortedSet<string>? donde))
                 {
-                    citas[cita.Value] = donde = new SortedSet<string>(StringComparer.Ordinal);
+                    citas[cita] = donde = new SortedSet<string>(StringComparer.Ordinal);
                 }
 
                 donde.Add(fichero);
@@ -310,6 +328,10 @@ public sealed partial class LasDiecisieteReglasTests
     /// </summary>
     [GeneratedRegex("""(?<![\w"])R\d+(?!\w)""")]
     private static partial Regex Cita();
+
+    /// <summary>La etiqueta de regla de la cabecera de un ADR: <c>r</c> minúscula y un número, sueltos.</summary>
+    [GeneratedRegex(@"(?<!\w)r\d+(?!\w)")]
+    private static partial Regex Etiqueta();
 
     [GeneratedRegex(@"^\|\s*R\d+\s*\|")]
     private static partial Regex FilaDeRegla();

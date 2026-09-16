@@ -47,8 +47,8 @@ sentidos**:
   que cita tiene su fichero: un sitio que se borra o se renombra deja la fila en rojo.
 - **Del repositorio hacia la tabla.** Todo identificador de regla que aparece en `src/`, `tests/`,
   `frontend/src/`, `docs/`, `db/`, `deploy/`, `scripts/`, `.github/`, `AGENTS.md`, `CLAUDE.md` o
-  `README.md` es una fila de la tabla. Un `R18` citado en un comentario es tan rojo como una fila
-  que sobra.
+  `README.md` es una fila de la tabla, y también cada etiqueta `rNN` de la línea `tags:` de un ADR
+  —la R13 solo se cita así—. Un `R18` citado en un comentario es tan rojo como una fila que sobra.
 - **El estado.** Es uno de los tres; el de «aplazada» nombra una fase de la 2 a la 11; el texto no
   está vacío; y una regla viva nombra al menos un test.
 
