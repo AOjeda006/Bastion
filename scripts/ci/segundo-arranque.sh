@@ -164,7 +164,16 @@ comparar_con_el_catalogo "Tras el primer arranque"
 # Y en ese primer arranque el migrador no tenía rol que alinear —corre antes que la API, y el rol
 # lo crea la semilla—, y lo dijo. Sin esta línea, un migrador que creara el rol por su cuenta
 # dejaría el mismo verde con la semilla sin ejercer.
-"${DC[@]}" logs --no-color migraciones | grep -q '"SinRolesDelSistema"' \
+#
+# Todo registro se vuelca a un FICHERO antes de buscar en él, y nunca `logs | grep -q`. Con el
+# `pipefail` de la cabecera, `grep -q` sale en la primera coincidencia, `compose` recibe SIGPIPE si
+# aún le quedaba algo por escribir, y la tubería entera es roja con la línea encontrada. Depende de
+# cuánto venga DETRÁS de la línea: en Linux, sobre el registro de la API tras el segundo arranque
+# —cuarenta líneas detrás—, fue rojo veinticinco veces de treinta. En Windows no se reprodujo, y por
+# eso el humo local salió verde y el primer run del 1.12 en la CI, rojo. Esta de aquí pasaba porque
+# `SinRolesDelSistema` es la última línea del migrador; la de la API, no.
+"${DC[@]}" logs --no-color migraciones > "$TRABAJO/migraciones-primer-arranque.log"
+grep -q '"SinRolesDelSistema"' "$TRABAJO/migraciones-primer-arranque.log" \
   || fallar "El migrador del primer arranque no dice que aún no hay rol del sistema (suceso SinRolesDelSistema)."
 
 # --------------------------------------------------------------------------------- estado viejo
@@ -214,9 +223,11 @@ RETIRADOS=$(grep -c '"PermisoRetiradoDelRolDelSistema"' "$TRABAJO/migraciones.lo
   || fallar "El migrador del segundo arranque dice haber retirado $RETIRADOS permisos del rol del sistema, y era uno: $PERMISO_RETIRADO."
 
 # Que la semilla NO entró es parte del estado que se afirma: si entrara, esto sería otro primer
-# arranque con más pasos.
-"${DC[@]}" logs --no-color api | grep -q 'SemillaSinVariables' \
-  || fallar "La API del segundo arranque no dice que la semilla se queda fuera: las variables no se han retirado."
+# arranque con más pasos. Si no lo dice, el aviso cuenta lo que SÍ dijo de la semilla: el registro
+# de un job solo se lee con credenciales, y la anotación es lo único que queda a la vista.
+"${DC[@]}" logs --no-color api > "$TRABAJO/api.log"
+grep -q '"SemillaSinVariables"' "$TRABAJO/api.log" \
+  || fallar "La API del segundo arranque no dice que la semilla se queda fuera (suceso SemillaSinVariables); de la semilla dice: [$(grep -oE '"Semilla[A-Za-z]*"' "$TRABAJO/api.log" | sort -u | tr '\n' ' ')]."
 
 iniciar_sesion "tras el segundo arranque"
 comparar_con_el_catalogo "Tras el segundo arranque"

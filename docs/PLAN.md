@@ -6060,6 +6060,76 @@ Un solo rojo, y es el de la lista: la fila está bien formada, su estado es uno 
 existe, así que las otras cuatro afirmaciones siguen en verde. Lo que la tabla no puede afirmar es que
 R1…R17 sean **las** del plan maestro, y eso está escrito en la propia tabla, no disimulado aquí.
 
+### Lo que la CI encontró y en local no se veía — addenda 1.12 a 1.14
+
+El primer *run* de la rama —[35101097378](https://github.com/AOjeda006/Bastion/actions/runs/35101097378)
+sobre `1f69ba5`— salió **rojo en Humo**, en el paso nuevo, y el rojo **no era del arreglo**: Frontal
+`104810441337` y Backend `104810441683` verdes, con 862 y 399 casos, y dentro del paso el migrador del
+segundo arranque dijo lo que tenía que decir —38 concedidos, 1 retirado y `RolDelSistemaAlineado`, en
+la anotación del «Diagnóstico»—. Lo que falló fue la última comprobación del guion, con el aviso «La API
+del segundo arranque no dice que la semilla se queda fuera: las variables no se han retirado».
+
+**El aviso afirmaba una causa, y la causa era otra.** Dos hipótesis, cada una con su prueba:
+
+- **Que las variables no se retirasen en la CI**, que lee `deploy/.env` por omisión y no con
+  `--env-file`, como el humo local. **Descartada:** `docker compose config api` sobre una copia del
+  *compose* con un `.env` de marcadores y las ocho vacías en el entorno da siete `""` y `ES` —el `:-ES`
+  del *compose*—, igual que con `--env-file`.
+- **Que `logs | grep -q` fuese rojo por sí mismo.** Con `pipefail` —que el guion pone en su cabecera—,
+  `grep -q` sale en la primera coincidencia, y `compose`, si aún le queda algo
+  por escribir, recibe SIGPIPE: la tubería es roja **con la línea encontrada**. **Confirmada en Linux**,
+  en un contenedor `docker:cli` (Compose v5.5.1), con un servicio que escribe la línea y N líneas
+  detrás, treinta intentos por forma:
+
+```
+N detrás   logs | grep -q    logs > fichero; grep -q fichero
+   20        0 rojos de 30     0 rojos de 30
+  100       30 rojos de 30     0 rojos de 30
+  400       30 rojos de 30     0 rojos de 30
+```
+
+Depende de cuánto venga **detrás** de la línea, y eso explica los dos lados del mismo guion: la
+comprobación del migrador en el primer arranque pasó en la CI porque `SinRolesDelSistema` es la
+**última** línea de su registro —la 60 de 60, 44 571 bytes, medido levantando solo PostgreSQL y el
+migrador—, y la de la API falló porque la API sigue escribiendo después de decirlo. **En
+Windows no se reprodujo:** el humo local de `0d4062f` corrió el mismo guion en Git Bash y salió verde.
+
+**El arreglo:** los dos registros se vuelcan a un fichero y se busca en el fichero, que es lo
+que ya hacía la comprobación del migrador del segundo arranque, con el porqué en un comentario. Y el
+aviso deja de afirmar una causa que no ha comprobado: dice qué sucesos de la semilla **sí** escribió la
+API, porque el registro de un *job* no se lee sin credenciales y la anotación es lo único a la vista.
+
+**Verificado en Linux contra la pila real**, y no solo en Windows: un proyecto de *compose* aparte
+(`bastion-humo-113`), levantado de cero para cada guion, y el guion ejecutado desde un contenedor
+`docker:cli` con `bash`, `python3` y `curl`, que es la plataforma de la CI:
+
+```
+bash humo-113.sh   (el guion de 1f69ba5 y el arreglado, cada uno sobre una pila de cero)
+docker 29.7.2 · Linux 6.18.33.2-microsoft-standard-WSL2 · Docker Compose version v5.5.1
+
+guion de 1f69ba5    exit 0   93 permisos tras el primer arranque · 55 y uno retirado, 403
+                             · 93 tras el segundo · 200 con la semilla fuera
+guion arreglado     exit 0   los mismos cuatro avisos
+
+el registro REAL de la API tras el segundo arranque: 41 líneas, 40 detrás de SemillaSinVariables
+  logs | grep -q                      rojo 25 de 30
+  logs > fichero; grep -q fichero     rojo  0 de 30
+```
+
+**El guion viejo salió verde aquí, y eso es lo que hay que leer bien:** no era un rojo seguro, era un
+rojo cinco de cada seis veces sobre este registro, y el run de la CI cayó en el rojo. Un verde suelto del
+guion viejo no dice nada; los treinta intentos sobre el mismo registro, sí.
+
+**Las otras tres búsquedas con `| grep -q` de `ci.yml` no tienen esta avería, y se ha mirado por qué:**
+«El migrador ha dejado el esquema al día», la sonda de disponibilidad y «Las trazas llegan al visor»
+no ponen `pipefail`. Solo lo ponen, a mano, los tres pasos que construyen y levantan, y esos no buscan
+nada, así que en las tres el estado de la tubería es el de `grep`. Si un paso de esos lo pusiera algún
+día, la avería volvería.
+
+**La regla que queda:** un guion que decide el desenlace de la CI se ejecuta en local **en la
+plataforma de la CI**, no solo en la de desarrollo —en Git Bash, esta tubería salía verde—; y una
+comprobación que puede fallar por azar se mide repitiéndola, no ejecutándola una vez.
+
 ### Verificado en local, con la salida real — ítem 1.11
 
 **Toda cifra de «antes y después» nombra sus dos commits.** El «antes» es `051449d` (main al abrir
