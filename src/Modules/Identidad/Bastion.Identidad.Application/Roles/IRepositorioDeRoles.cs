@@ -56,6 +56,14 @@ public interface IRepositorioDeRoles : IOrdenaPor
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<IReadOnlyList<Rol>> PorIdsAsync(IReadOnlyCollection<Guid> rolIds, CancellationToken cancelacion);
 
+    /// <summary>Los roles del sistema, con sus permisos.</summary>
+    /// <remarks>
+    /// Por la marca y no por el código: el código no se cambia, pero lo que hace del sistema a un
+    /// rol es la marca, y un rol que la tuviera con otro código se quedaría sin actualizar.
+    /// </remarks>
+    /// <param name="cancelacion">Cancelación de la operación en curso.</param>
+    Task<IReadOnlyList<Rol>> DelSistemaAsync(CancellationToken cancelacion);
+
     /// <summary>Apunta un rol nuevo. No lo graba: eso lo hace la unidad de trabajo.</summary>
     /// <param name="rol">Rol que se crea.</param>
     void Agregar(Rol rol);

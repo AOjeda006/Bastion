@@ -54,7 +54,8 @@ internal sealed class SembrarAdministrador(
     /// <remarks>
     /// Nace marcado como <b>del sistema</b>: es el único que se crea sin que nadie lo pida, y el
     /// que tiene la facultad de repartir cualquier otra. Marcarlo permite que el módulo lo trate
-    /// distinto —no se borra— sin tener que reconocerlo por su nombre, que es editable.
+    /// distinto —sus permisos los fija el despliegue y no se editan, ADR-0035— sin tener que
+    /// reconocerlo por su nombre, que es editable.
     /// </remarks>
     internal const string CodigoDelRol = "administracion";
 
@@ -79,9 +80,10 @@ internal sealed class SembrarAdministrador(
         Rol rol = await roles.ObtenerPorCodigoAsync(CodigoDelRol, cancelacion).ConfigureAwait(false)
             ?? CrearRolDeAdministracion();
 
-        // Se fijan SIEMPRE, también si el rol ya existía: el catálogo crece con cada módulo que
-        // se añade, y un rol de administración que se quedó con los permisos de la fase 0 dejaría
-        // la fase 1 sin nadie que pudiera conceder los suyos.
+        // Se fijan también si el rol ya existía, pero esto solo corre con la base sin usuarios:
+        // en una instalación en marcha no se llega hasta aquí. Quien mantiene el rol al día en
+        // cada despliegue es `ActualizarRolesDelSistema`, desde el migrador (ADR-0035); este
+        // comentario prometió lo contrario durante toda la fase 1 y nada lo desmentía.
         rol.FijarPermisos(catalogo.Todos);
 
         var usuario = Usuario.Crear(

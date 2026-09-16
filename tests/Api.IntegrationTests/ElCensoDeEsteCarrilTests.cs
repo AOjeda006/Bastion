@@ -335,6 +335,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasMigracionesSobreTablasConFilasTests.Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila",
         "LasMigracionesSobreTablasConFilasTests.Y_sobre_tablas_vacias_se_aplican_igual_que_en_la_base_de_los_tests",
 
+        // Del ítem 1.12, la mitad de dentro del arreglo: lo que dice y deja en la traza el caso de uso
+        // que llama el migrador, y la puerta que la API cierra al rol del sistema (ADR-0035).
+        "ElRolDelSistemaTests.Cambiarle_la_lista_al_rol_del_sistema_es_409_y_no_toca_nada",
+        "ElRolDelSistemaTests.Recortado_y_con_un_permiso_retirado_el_despliegue_lo_deja_con_el_catalogo_y_lo_dice",
+        "ElRolDelSistemaTests.Renombrarlo_con_la_misma_lista_en_otro_orden_vale",
+        "ElRolDelSistemaTests.Un_rol_propio_sigue_cambiando_de_permisos",
+
         "LoQueCuelgaNaceComoAltaTests.El_arnes_ve_el_modelo_y_distingue_un_alta_de_una_modificacion",
         "LoQueCuelgaNaceComoAltaTests.Lo_que_se_cuelga_de_una_ficha_ya_guardada_sale_como_ALTA",
         "LosPermisosQueNombraElFrontalTests.Todo_permiso_que_el_frontal_teclea_lo_sirve_la_api",

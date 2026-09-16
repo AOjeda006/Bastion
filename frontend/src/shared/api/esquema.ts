@@ -364,7 +364,8 @@ export interface paths {
         /**
          * Cambia el nombre y los permisos de un rol.
          * @description Permiso propio, distinto del de crear: crear un rol vacío no le da a nadie nada, mientras
-         *     que modificar uno le cambia los permisos a todos los que ya lo tienen asignado.
+         *     que modificar uno le cambia los permisos a todos los que ya lo tienen asignado. Del rol del
+         *     sistema solo se cambia el nombre: otra lista de permisos es `409` (ADR-0035).
          */
         put: operations["Roles_Modificar"];
         post?: never;
@@ -3288,7 +3289,7 @@ export interface components {
             codigo: string;
             /** @description Nombre para la interfaz. */
             nombre: string;
-            /** @description Si lo creó la semilla y no se puede suprimir. */
+            /** @description Si lo creó la semilla: sus permisos los fija cada despliegue y no se editan. */
             esDelSistema: boolean;
             /** @description Permisos que concede, ordenados. */
             permisos: string[];
@@ -5010,6 +5011,17 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

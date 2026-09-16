@@ -2860,7 +2860,7 @@
           "Roles"
         ],
         "summary": "Cambia el nombre y los permisos de un rol.",
-        "description": "Permiso propio, distinto del de crear: crear un rol vacío no le da a nadie nada, mientras\nque modificar uno le cambia los permisos a todos los que ya lo tienen asignado.",
+        "description": "Permiso propio, distinto del de crear: crear un rol vacío no le da a nadie nada, mientras\nque modificar uno le cambia los permisos a todos los que ya lo tienen asignado. Del rol del\nsistema solo se cambia el nombre: otra lista de permisos es `409` (ADR-0035).",
         "operationId": "Roles_Modificar",
         "parameters": [
           {
@@ -2944,6 +2944,26 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "text/plain": {
                 "schema": {
@@ -16276,7 +16296,7 @@
           },
           "esDelSistema": {
             "type": "boolean",
-            "description": "Si lo creó la semilla y no se puede suprimir."
+            "description": "Si lo creó la semilla: sus permisos los fija cada despliegue y no se editan."
           },
           "permisos": {
             "type": "array",

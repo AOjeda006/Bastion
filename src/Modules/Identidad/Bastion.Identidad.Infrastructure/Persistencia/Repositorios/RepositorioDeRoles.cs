@@ -88,5 +88,12 @@ internal sealed class RepositorioDeRoles(IdentidadDbContext contexto) : IReposit
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<Rol>> DelSistemaAsync(CancellationToken cancelacion) =>
+        await ConPermisos
+            .Where(rol => rol.EsDelSistema)
+            .OrderBy(rol => rol.Codigo)
+            .ToListAsync(cancelacion)
+            .ConfigureAwait(false);
+
     public void Agregar(Rol rol) => contexto.Roles.Add(rol);
 }

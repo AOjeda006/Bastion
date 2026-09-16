@@ -142,4 +142,16 @@ public enum MotivoSinInquilino
     /// sin empresa el día que alguien pregunte por qué desapareció una fila.
     /// </remarks>
     CaducidadDeRecibos,
+
+    /// <summary>
+    /// El migrador vuelve a darle al rol del sistema el catálogo de permisos que trae la versión
+    /// desplegada (ADR-0035). <b>No hay petición y no hay empresa</b>: los roles son de la
+    /// instalación, no de una sociedad.
+    /// </summary>
+    /// <remarks>
+    /// Motivo propio y no <see cref="SemillaDeArranque"/>, aunque los dos toquen el mismo rol: la
+    /// semilla entra una vez y crea; esto entra en cada despliegue y corrige. Si un día el rol
+    /// amanece con un permiso de menos, la columna de la traza tiene que decir cuál de los dos pasó.
+    /// </remarks>
+    ActualizacionDeRolesDelSistema,
 }

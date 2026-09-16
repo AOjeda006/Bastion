@@ -59,6 +59,7 @@
     { "codigo": "impuesto-con-tramos-solapados", "type": "/errors/impuesto-con-tramos-solapados", "clase": "Conflicto" },
     { "codigo": "impuesto-no-encontrado", "type": "/errors/impuesto-no-encontrado", "clase": "NoEncontrado" },
     { "codigo": "orden-no-admitido", "type": "/errors/orden-no-admitido", "clase": "Validacion" },
+    { "codigo": "permisos-de-rol-del-sistema", "type": "/errors/permisos-de-rol-del-sistema", "clase": "Conflicto" },
     { "codigo": "pertenencia-no-encontrada", "type": "/errors/pertenencia-no-encontrada", "clase": "NoEncontrado" },
     { "codigo": "rol-no-encontrado", "type": "/errors/rol-no-encontrado", "clase": "NoEncontrado" },
     { "codigo": "serie-cerrada", "type": "/errors/serie-cerrada", "clase": "Conflicto" },

@@ -149,6 +149,8 @@ export const en: Diccionario = {
       'impuesto-con-tramos-solapados': 'The validity ranges of that tax overlap. Check the dates.',
       'impuesto-no-encontrado': 'That tax no longer exists.',
       'orden-no-admitido': 'That field cannot be used for sorting.',
+      'permisos-de-rol-del-sistema':
+        'The permissions of the system role are set by every update. You can rename it; to grant fewer permissions, create a role of your own.',
       'pertenencia-no-encontrada': 'That person does not belong to the company you named.',
       'rol-no-encontrado': 'That role no longer exists. Go back to the list and refresh.',
       'serie-cerrada': 'The document series is closed and cannot be changed.',

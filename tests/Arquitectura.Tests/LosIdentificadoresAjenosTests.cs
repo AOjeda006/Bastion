@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Shouldly;
 
 namespace Bastion.Arquitectura.Tests;
@@ -280,10 +281,19 @@ public sealed class LosIdentificadoresAjenosTests
     ];
 
     /// <summary>Los tipos del dominio compilado, por nombre, con el módulo en el que viven.</summary>
+    /// <remarks>
+    /// Sin los que genera el compilador. Una lambda que no captura nada deja una clase <c>&lt;&gt;c</c>
+    /// en su ensamblado, y con una en <c>Identidad.Domain</c> —la de <c>Rol.Alinear</c>, del 1.12— la
+    /// comprobación de ambigüedad salió roja contra las tres de <c>BuildingBlocks.Domain</c>. Ningún
+    /// <c>XId</c> puede apuntar a un tipo que no tiene nombre en el código, así que no son candidatos,
+    /// y contarlos convertía en rojo cualquier lambda nueva en un dominio.
+    /// </remarks>
     private static ILookup<string, string> NombresDeTipoDelDominio() =>
         (from clave in EnsambladosDeDominio()
          from tipo in Ensamblados.Todos[clave].GetTypes()
-         where tipo.IsClass && !tipo.IsAbstract
+         where tipo.IsClass
+            && !tipo.IsAbstract
+            && !tipo.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false)
          select new { tipo.Name, Modulo = clave.Split('.')[0] })
         .ToLookup(uno => uno.Name, uno => uno.Modulo, StringComparer.Ordinal);
 

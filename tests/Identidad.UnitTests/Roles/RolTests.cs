@@ -123,6 +123,50 @@ public sealed class RolTests
         rol.Permisos.Count.ShouldBe(2);
     }
 
+    // `Alinear` deja lo mismo que `FijarPermisos` y se distingue por lo que NO toca: las filas que
+    // ya estaban siguen siendo las mismas, así que la traza del despliegue solo nombra lo que la
+    // versión trajo o se llevó (ADR-0035).
+    [Fact]
+    public void Alinear_ConcedeLoQueFaltaRetiraLoQueSobraYDiceCadaCosa()
+    {
+        var ver = Permiso.De("organizacion.almacen.ver");
+        var rol = Rol.Crear("administracion", "Administración", s_momento, esDelSistema: true);
+        rol.Conceder(s_crear);
+        rol.Conceder(ver);
+
+        CambioDePermisos cambio = rol.Alinear([s_modificar, s_crear]);
+
+        cambio.Concedidos.ShouldBe([s_modificar.Valor]);
+        cambio.Retirados.ShouldBe([ver.Valor]);
+        cambio.HayCambios.ShouldBeTrue();
+        rol.Permisos.Select(concedido => concedido.Permiso).Order(StringComparer.Ordinal)
+            .ShouldBe([s_crear.Valor, s_modificar.Valor]);
+    }
+
+    [Fact]
+    public void Alinear_NoRehaceLasFilasQueYaEstaban()
+    {
+        var rol = Rol.Crear("administracion", "Administración", s_momento, esDelSistema: true);
+        rol.Conceder(s_crear);
+        PermisoDeRol antes = rol.Permisos.Single();
+
+        rol.Alinear([s_crear, s_modificar]);
+
+        rol.Permisos.Single(concedido => concedido.Permiso == s_crear.Valor).ShouldBeSameAs(antes);
+    }
+
+    [Fact]
+    public void Alinear_SinDiferencias_NoCambiaNada()
+    {
+        var rol = Rol.Crear("administracion", "Administración", s_momento, esDelSistema: true);
+        rol.Conceder(s_crear);
+
+        CambioDePermisos cambio = rol.Alinear([s_crear, s_crear]);
+
+        cambio.HayCambios.ShouldBeFalse();
+        rol.Permisos.Count.ShouldBe(1);
+    }
+
     [Fact]
     public void Renombrar_CambiaElNombreYNoElCodigo()
     {

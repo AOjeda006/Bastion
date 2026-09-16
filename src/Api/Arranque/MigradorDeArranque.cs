@@ -1,5 +1,7 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
+using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.Catalogo.Infrastructure.Persistencia;
+using Bastion.Identidad.Application.Arranque;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Semillas;
@@ -10,7 +12,7 @@ namespace Bastion.Api.Arranque;
 
 /// <summary>
 /// El modo migrador: aplica las migraciones de cada módulo con persistencia, carga las semillas
-/// del §12 y <b>sale</b>.
+/// del §12, pone al día los permisos del rol del sistema y <b>sale</b>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -70,7 +72,8 @@ public static partial class MigradorDeArranque
     /// </summary>
     /// <param name="app">La aplicación ya construida, con los módulos registrados.</param>
     /// <returns>
-    /// <c>0</c> si el esquema quedó al día y los maestros dentro; <c>1</c> si algo falló.
+    /// <c>0</c> si el esquema quedó al día, los maestros dentro y el rol del sistema con el catálogo
+    /// entero; <c>1</c> si algo falló.
     /// </returns>
     public static async Task<int> MigrarYSalirAsync(this WebApplication app)
     {
@@ -100,6 +103,12 @@ public static partial class MigradorDeArranque
                 .GetRequiredService<CargadorDeSemillasDeOrganizacion>()
                 .CargarAsync(CancellationToken.None)
                 .ConfigureAwait(false);
+
+            // Y el rol del sistema, en CADA despliegue (ADR-0035). La semilla de la API solo
+            // entra con la base sin usuarios, así que una versión que trae permisos nuevos no se
+            // los daba a nadie. Va aquí por lo mismo que los maestros —un solo proceso, antes de
+            // que arranque ninguna réplica— y detrás de todo, porque escribe en la traza.
+            await PonerAlDiaLosRolesDelSistemaAsync(alcance, registro).ConfigureAwait(false);
         }
         catch (Exception excepcion) when (excepcion is not OperationCanceledException)
         {
@@ -167,6 +176,49 @@ public static partial class MigradorDeArranque
         EsquemaMigrado(registro, typeof(TContexto).Name, pendientes.Count, conocidas.Count);
     }
 
+    private static async Task PonerAlDiaLosRolesDelSistemaAsync(AsyncServiceScope alcance, ILogger registro)
+    {
+        int enElCatalogo = alcance.ServiceProvider.GetRequiredService<ICatalogoDePermisos>().Todos.Count;
+
+        IReadOnlyList<RolDelSistemaActualizado> roles = await alcance.ServiceProvider
+            .GetRequiredService<IActualizarRolesDelSistema>()
+            .EjecutarAsync(CancellationToken.None)
+            .ConfigureAwait(false);
+
+        if (roles.Count == 0)
+        {
+            // El primer arranque: el migrador corre antes que la API, y el rol lo crea la
+            // semilla de la API con el catálogo entero. Se dice, por lo mismo que «al día».
+            SinRolesDelSistema(registro, enElCatalogo);
+
+            return;
+        }
+
+        foreach (RolDelSistemaActualizado rol in roles)
+        {
+            if (rol.Concedidos.Count == 0 && rol.Retirados.Count == 0)
+            {
+                RolDelSistemaAlDia(registro, rol.Codigo, enElCatalogo);
+
+                continue;
+            }
+
+            // Un permiso por línea, y por el mismo motivo que una migración por línea: lo que se
+            // busca después es «¿cuándo le llegó este permiso?», y eso se filtra por evento.
+            foreach (string permiso in rol.Concedidos)
+            {
+                PermisoConcedidoAlRolDelSistema(registro, rol.Codigo, permiso);
+            }
+
+            foreach (string permiso in rol.Retirados)
+            {
+                PermisoRetiradoDelRolDelSistema(registro, rol.Codigo, permiso);
+            }
+
+            RolDelSistemaAlineado(registro, rol.Codigo, rol.Concedidos.Count, rol.Retirados.Count, enElCatalogo);
+        }
+    }
+
     [LoggerMessage(
         Level = LogLevel.Information,
         Message = "{Contexto}: el esquema ya estaba al día, con {Conocidas} migraciones conocidas.")]
@@ -179,6 +231,31 @@ public static partial class MigradorDeArranque
         Level = LogLevel.Information,
         Message = "{Contexto}: aplicadas {Cuantas} de {Conocidas} migraciones.")]
     private static partial void EsquemaMigrado(ILogger logger, string contexto, int cuantas, int conocidas);
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Todavía no hay ningún rol del sistema: lo creará la semilla de la API con los {Permisos} permisos del catálogo.")]
+    private static partial void SinRolesDelSistema(ILogger logger, int permisos);
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "{Rol}: el rol del sistema ya tenía los {Permisos} permisos del catálogo.")]
+    private static partial void RolDelSistemaAlDia(ILogger logger, string rol, int permisos);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "{Rol}: concedido {Permiso}, que declara la versión desplegada y el rol del sistema no tenía.")]
+    private static partial void PermisoConcedidoAlRolDelSistema(ILogger logger, string rol, string permiso);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "{Rol}: retirado {Permiso}, que el catálogo de la versión desplegada ya no declara.")]
+    private static partial void PermisoRetiradoDelRolDelSistema(ILogger logger, string rol, string permiso);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "{Rol}: {Concedidos} permisos concedidos y {Retirados} retirados; el rol del sistema queda con los {Permisos} del catálogo.")]
+    private static partial void RolDelSistemaAlineado(ILogger logger, string rol, int concedidos, int retirados, int permisos);
 
     [LoggerMessage(
         Level = LogLevel.Critical,

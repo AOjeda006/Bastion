@@ -35,6 +35,11 @@ public interface IListarRoles : IListado<RolDto>
 }
 
 /// <summary>Cambia el nombre y los permisos de un rol.</summary>
+/// <remarks>
+/// <b>Del rol del sistema, solo el nombre</b> (ADR-0035): sus permisos los fija cada despliegue con
+/// el catálogo entero, así que una lista distinta de la que tiene es <c>409</c>. Se compara como
+/// conjunto, y por eso el formulario que reenvía la lista tal como la leyó puede renombrarlo.
+/// </remarks>
 public interface IModificarRol
 {
     /// <summary>Ejecuta el caso de uso.</summary>
@@ -160,6 +165,13 @@ internal sealed class ModificarRol(
 
         versiones.Exigir(rol, version);
 
+        // Después de la versión y no antes: quien escribe sobre una versión vieja tiene que
+        // enterarse de eso primero, que es lo que se arregla releyendo.
+        if (rol.EsDelSistema && !LosMismos(rol, permisos.Valor))
+        {
+            return Resultado.Fallo<RolDto>(ErroresDeRol.PermisosDelSistema(rol.Codigo));
+        }
+
         rol.Renombrar(peticion.Nombre);
         rol.FijarPermisos(permisos.Valor);
 
@@ -167,6 +179,12 @@ internal sealed class ModificarRol(
 
         return Resultado.Correcto(rol.ADto());
     }
+
+    private static bool LosMismos(Rol rol, List<Permiso> pedidos) =>
+        rol.Permisos
+            .Select(concedido => concedido.Permiso)
+            .ToHashSet(StringComparer.Ordinal)
+            .SetEquals(pedidos.Select(permiso => permiso.Valor));
 }
 
 /// <inheritdoc cref="IListarPermisosDisponibles"/>
@@ -234,4 +252,11 @@ internal static class ErroresDeRol
     internal static ErrorDeOperacion CodigoYaUsado(string codigo) => ErrorDeOperacion.Conflicto(
         "codigo-de-rol-ya-usado",
         $"Ya hay un rol con el código {codigo}.");
+
+    /// <summary>Se ha pedido cambiar la lista de permisos de un rol del sistema.</summary>
+    /// <param name="codigo">Código del rol.</param>
+    internal static ErrorDeOperacion PermisosDelSistema(string codigo) => ErrorDeOperacion.Conflicto(
+        "permisos-de-rol-del-sistema",
+        $"Los permisos del rol {codigo} los fija cada despliegue con el catálogo entero: se le puede " +
+        "cambiar el nombre, no la lista. Para un rol con menos permisos, cree uno propio.");
 }

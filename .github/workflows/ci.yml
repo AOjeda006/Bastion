@@ -790,6 +790,15 @@ jobs:
           echo "::error::Jaeger no ha recibido ninguna traza de bastion-api en 60 s."
           exit 1
 
+      # El segundo arranque (ítem 1.12, ADR-0035). Todo lo de arriba ejerce UN arranque, sobre una
+      # base vacía; esto vuelve a levantar el migrador y la API sobre el MISMO volumen, con la
+      # semilla retirada y el rol del sistema dejado como lo dejó la fase 0, y exige que salga con
+      # el catálogo entero. Va aquí, al final, por dos motivos escritos en la cabecera del guion:
+      # otro job reconstruiría las imágenes, y recrear la API rompe el reenvío del frontal, cuyos
+      # pasos ya han corrido.
+      - name: El segundo arranque deja al rol del sistema con el catálogo entero
+        run: bash scripts/ci/segundo-arranque.sh
+
       # El log de un *job* solo se descarga con autenticación; las ANOTACIONES, en cambio,
       # son públicas y se leen por API. Sin esto, un fallo aquí es un `exit 1` sin
       # explicación para quien no pueda bajarse el log — que es exactamente lo que pasó la

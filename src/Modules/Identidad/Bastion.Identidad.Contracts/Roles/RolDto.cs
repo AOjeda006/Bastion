@@ -6,7 +6,7 @@ namespace Bastion.Identidad.Contracts.Roles;
 /// <param name="Id">Identificador del rol.</param>
 /// <param name="Codigo">Código estable, en minúsculas y con guiones.</param>
 /// <param name="Nombre">Nombre para la interfaz.</param>
-/// <param name="EsDelSistema">Si lo creó la semilla y no se puede suprimir.</param>
+/// <param name="EsDelSistema">Si lo creó la semilla: sus permisos los fija cada despliegue y no se editan.</param>
 /// <param name="Permisos">Permisos que concede, ordenados.</param>
 public sealed record RolDto(
     Guid Id,

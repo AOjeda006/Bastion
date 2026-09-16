@@ -173,6 +173,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // no hay una empresa por la que filtrar; y sin el ámbito, fuera de una petición, el filtro
         // lanzaría en la primera vuelta. La apertura es UNA y envuelve solo el borrado.
         ["src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Recibos/PurgaDeRecibosCaducados.cs"] = 1,
+
+        // El cuarto sin petición detrás, del 1.12: el migrador da al rol del sistema el catálogo de
+        // la versión desplegada (ADR-0035). Como en las semillas, el ámbito no está para leer —los
+        // roles no llevan filtro, son de la instalación— sino para que la traza de cada permiso
+        // concedido o retirado se pueda escribir sin empresa.
+        ["src/Modules/Identidad/Bastion.Identidad.Application/Arranque/ActualizarRolesDelSistema.cs"] = 1,
     };
 
     // Lo mismo para el ámbito que ve lo bloqueado. Es una lista aparte y no una más en la de

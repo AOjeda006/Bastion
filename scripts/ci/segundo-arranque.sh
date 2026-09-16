@@ -161,6 +161,12 @@ PYTHON
 iniciar_sesion "tras el primer arranque"
 comparar_con_el_catalogo "Tras el primer arranque"
 
+# Y en ese primer arranque el migrador no tenía rol que alinear —corre antes que la API, y el rol
+# lo crea la semilla—, y lo dijo. Sin esta línea, un migrador que creara el rol por su cuenta
+# dejaría el mismo verde con la semilla sin ejercer.
+"${DC[@]}" logs --no-color migraciones | grep -q '"SinRolesDelSistema"' \
+  || fallar "El migrador del primer arranque no dice que aún no hay rol del sistema (suceso SinRolesDelSistema)."
+
 # --------------------------------------------------------------------------------- estado viejo
 LISTA=$(printf "'%s'," $CATALOGO_DE_LA_FASE_0)
 consultar "
@@ -194,7 +200,18 @@ MIGRADOR=$("${DC[@]}" ps --all --quiet migraciones | head -1)
 [ -n "$MIGRADOR" ] || fallar "No existe el contenedor del migrador tras el segundo arranque."
 SALIDA=$(docker inspect --format '{{.State.ExitCode}}' "$MIGRADOR")
 [ "$SALIDA" = "0" ] || fallar "El migrador del segundo arranque ha salido con código $SALIDA."
-"${DC[@]}" logs --no-color migraciones | grep -E 'RolDelSistema' || true
+"${DC[@]}" logs --no-color migraciones > "$TRABAJO/migraciones.log"
+grep -E 'RolDelSistema' "$TRABAJO/migraciones.log" || true
+
+# Que el rol vuelva a estar entero tiene que ser obra del migrador y decirlo él, con un suceso por
+# permiso: un verde que llegara por otro camino —una semilla que entrara, otro proceso— no probaría
+# el arreglo. Lo retirado es uno y se cuenta; lo concedido depende del catálogo y lo afirma abajo la
+# comparación con la API.
+grep -q '"RolDelSistemaAlineado"' "$TRABAJO/migraciones.log" \
+  || fallar "El migrador del segundo arranque no dice haber alineado el rol del sistema (suceso RolDelSistemaAlineado)."
+RETIRADOS=$(grep -c '"PermisoRetiradoDelRolDelSistema"' "$TRABAJO/migraciones.log" || true)
+[ "$RETIRADOS" = "1" ] \
+  || fallar "El migrador del segundo arranque dice haber retirado $RETIRADOS permisos del rol del sistema, y era uno: $PERMISO_RETIRADO."
 
 # Que la semilla NO entró es parte del estado que se afirma: si entrara, esto sería otro primer
 # arranque con más pasos.

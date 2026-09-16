@@ -85,7 +85,8 @@ public sealed class RolesController(
     /// <summary>Cambia el nombre y los permisos de un rol.</summary>
     /// <remarks>
     /// Permiso propio, distinto del de crear: crear un rol vacío no le da a nadie nada, mientras
-    /// que modificar uno le cambia los permisos a todos los que ya lo tienen asignado.
+    /// que modificar uno le cambia los permisos a todos los que ya lo tienen asignado. Del rol del
+    /// sistema solo se cambia el nombre: otra lista de permisos es <c>409</c> (ADR-0035).
     /// </remarks>
     /// <param name="id">Identificador del rol.</param>
     /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
@@ -96,6 +97,7 @@ public sealed class RolesController(
     [ProducesResponseType(typeof(RolDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
     public Task<IActionResult> Modificar(

@@ -179,6 +179,8 @@ export const es = {
         'Los tramos de vigencia de ese impuesto se solapan. Revisa las fechas.',
       'impuesto-no-encontrado': 'Ese impuesto ya no existe.',
       'orden-no-admitido': 'No se puede ordenar por ese campo.',
+      'permisos-de-rol-del-sistema':
+        'Los permisos del rol del sistema los fija cada actualización. Puedes cambiarle el nombre; para dar menos permisos, crea un rol propio.',
       'pertenencia-no-encontrada': 'Esa persona no pertenece a la empresa indicada.',
       'rol-no-encontrado': 'Ese rol ya no existe. Vuelve al listado y actualiza.',
       'serie-cerrada': 'La serie está cerrada y no admite cambios.',

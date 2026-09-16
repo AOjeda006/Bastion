@@ -59,13 +59,21 @@ public sealed class Rol : EntidadBase
     public string Nombre { get; private set; }
 
     /// <summary>
-    /// Si lo creó la semilla de arranque y no se puede suprimir.
+    /// Si lo creó la semilla de arranque. Sus permisos no se editan: los fija cada despliegue.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Existe para que nadie pueda dejar la instalación sin ningún rol capaz de conceder
-    /// permisos: sin esta marca, borrar el rol de administración es una operación de un clic que
-    /// no se puede deshacer desde dentro, porque para deshacerla haría falta el permiso que se
-    /// acaba de perder.
+    /// permisos: recortar el rol de administración es una operación de un clic que no se puede
+    /// deshacer desde dentro, porque para deshacerla haría falta el permiso que se acaba de perder.
+    /// </para>
+    /// <para>
+    /// <b>Lo que la marca garantiza hoy, y dónde</b> (ADR-0035): el migrador le da en cada
+    /// despliegue el catálogo entero de la versión desplegada, y la modificación de roles rechaza
+    /// con <c>409</c> cualquier lista de permisos distinta de la que tiene. <b>Suprimir</b> no lo
+    /// impide la marca: no hay operación que suprima un rol, de ninguno. El día que la haya, esta
+    /// marca es lo que tiene que mirar.
+    /// </para>
     /// </remarks>
     public bool EsDelSistema { get; private set; }
 
@@ -76,7 +84,7 @@ public sealed class Rol : EntidadBase
     /// <param name="codigo">Código estable, en minúsculas y con guiones.</param>
     /// <param name="nombre">Nombre para la interfaz.</param>
     /// <param name="momento">Ahora: la fecha de creación, que no pone la base de datos.</param>
-    /// <param name="esDelSistema">Si lo crea la semilla y no se puede suprimir.</param>
+    /// <param name="esDelSistema">Si lo crea la semilla, y con ello sus permisos los fija el despliegue.</param>
     public static Rol Crear(
         string codigo, string nombre, DateTimeOffset momento, bool esDelSistema = false)
     {
@@ -157,6 +165,54 @@ public sealed class Rol : EntidadBase
         {
             Conceder(permiso);
         }
+    }
+
+    /// <summary>Deja el rol con exactamente esos permisos tocando solo las filas que cambian.</summary>
+    /// <remarks>
+    /// <para>
+    /// Hace lo mismo que <see cref="FijarPermisos"/> y existe por lo que deja en la traza: aquel
+    /// vacía la lista y la vuelve a llenar, que es lo que pide un formulario; este concede lo que
+    /// falta y retira lo que sobra, y nada más. Lo usa el despliegue sobre el rol del sistema, y
+    /// ahí lo que alguien tiene que poder leer después es <b>qué</b> trajo o se llevó esa versión.
+    /// </para>
+    /// <para>
+    /// Retira por el texto guardado y no por <see cref="Permiso"/>: lo que sobra es justo lo que
+    /// ya no está en el catálogo, y no hay por qué exigirle que siga teniendo una forma válida.
+    /// </para>
+    /// </remarks>
+    /// <param name="permisos">Los permisos que el rol debe conceder.</param>
+    /// <returns>Lo concedido y lo retirado, cada lista en orden ordinal.</returns>
+    public CambioDePermisos Alinear(IEnumerable<Permiso> permisos)
+    {
+        ArgumentNullException.ThrowIfNull(permisos);
+
+        HashSet<string> debidos = new(StringComparer.Ordinal);
+
+        foreach (Permiso permiso in permisos)
+        {
+            ArgumentNullException.ThrowIfNull(permiso);
+            debidos.Add(permiso.Valor);
+        }
+
+        List<string> retirados =
+            [.. _permisos.Select(concedido => concedido.Permiso).Where(valor => !debidos.Contains(valor))];
+        _permisos.RemoveAll(concedido => !debidos.Contains(concedido.Permiso));
+
+        List<string> concedidos = [];
+
+        foreach (string valor in debidos)
+        {
+            if (!_permisos.Exists(concedido => concedido.Permiso == valor))
+            {
+                _permisos.Add(new PermisoDeRol(Id, valor));
+                concedidos.Add(valor);
+            }
+        }
+
+        concedidos.Sort(StringComparer.Ordinal);
+        retirados.Sort(StringComparer.Ordinal);
+
+        return new CambioDePermisos(concedidos, retirados);
     }
 
     /// <summary>Recorta y pasa a minúsculas, que es como se guarda.</summary>

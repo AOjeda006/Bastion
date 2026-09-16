@@ -60,6 +60,9 @@ public static class CasosDeUsoDeIdentidad
         // no en cómo se registra.
         servicios.AddScoped<ISembrarAdministrador, SembrarAdministrador>();
 
+        // Y su pareja: la semilla entra una vez; esto, en cada despliegue, desde el migrador.
+        servicios.AddScoped<IActualizarRolesDelSistema, ActualizarRolesDelSistema>();
+
         servicios.TryAddSingleton(TimeProvider.System);
 
         return servicios;

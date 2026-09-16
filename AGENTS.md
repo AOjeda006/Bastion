@@ -192,7 +192,11 @@ bash scripts/ci/recuento-de-tests.sh \
 > tolera «porque son pocos»: el día que se toleren dos, el canal vuelve a ser una cifra.
 
 Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:
-`docker compose -f deploy/docker-compose.yml up --build`.
+`docker compose -f deploy/docker-compose.yml up --build`, y **sobre ese mismo entorno ya en pie**
+el segundo arranque, `bash scripts/ci/segundo-arranque.sh`, que recrea el migrador y la API sobre el
+mismo volumen con la semilla retirada (ADR-0035). Es el último paso del Humo: el código que solo
+corre al arrancar se prueba arrancando. Contra un proyecto de *compose* aparte, las variables
+`COMPOSE`, `ENTORNO` y `PYTHON` de su cabecera.
 
 > **Esta lista tiene que seguir siendo la de `.github/workflows/ci.yml`.** Dejó de serlo entre el
 > 0.11 y el 0.13 —le faltaban «Contrato», «Migraciones», «OpenAPI», `typecheck`, `format:check` y
