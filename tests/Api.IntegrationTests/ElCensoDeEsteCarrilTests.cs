@@ -329,6 +329,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.La_hora_del_cambio_sale_del_reloj_inyectado_y_no_del_de_la_base",
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.Un_cambio_por_la_API_mueve_una_marca_y_deja_la_otra_donde_estaba",
 
+        // Del ítem 1.12: las migraciones una a una sobre tablas con filas, el contraste sobre tablas
+        // vacías y la lista de contextos comparada con los que de verdad tienen migraciones.
+        "LasMigracionesSobreTablasConFilasTests.Recorre_todos_los_contextos_que_tienen_migraciones",
+        "LasMigracionesSobreTablasConFilasTests.Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila",
+        "LasMigracionesSobreTablasConFilasTests.Y_sobre_tablas_vacias_se_aplican_igual_que_en_la_base_de_los_tests",
+
         "LoQueCuelgaNaceComoAltaTests.El_arnes_ve_el_modelo_y_distingue_un_alta_de_una_modificacion",
         "LoQueCuelgaNaceComoAltaTests.Lo_que_se_cuelga_de_una_ficha_ya_guardada_sale_como_ALTA",
         "LosPermisosQueNombraElFrontalTests.Todo_permiso_que_el_frontal_teclea_lo_sirve_la_api",
