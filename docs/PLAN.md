@@ -4005,6 +4005,92 @@ existencias, el precio por cliente, la importación de artículos (decisión 1),
 traducir a `409` la carrera de unicidad del alta (hoy es un `500` limpio, igual en el alta suelta y en
 la importación).
 
+### Tomadas por el agente de desarrollo — addenda de la fase 1, ítems 1.12 a 1.14 (2026-09-16)
+
+> **Los tres ítems los abrió el usuario** al verificar el cierre de la fase 1 contra la API, y se
+> numeran como el 0.14–0.16: son del cierre de la fase, y la fase 2 no se abre arrastrándolos. Las
+> once casillas de la puerta de clarificación no se tocan. Rama `feature/1.12-addendum`, con el
+> arnés **antes** que el arreglo en la historia: `d7e2d91` rojo y `7c1b723` verde.
+
+**Tres premisas del enunciado, corregidas contra el repositorio antes de escribir nada:**
+
+- **Los números del catálogo.** El de la fase 0 (`fe7059d`) tenía **55** permisos y el de la fase 1
+  tiene **93**: faltan **38**, no los que suponía el enunciado. Contados con
+  `git show fe7059d:…/PermisosDeIdentidad.cs` y `…/PermisosDeOrganizacion.cs`, y los 93 con
+  `GET /api/v1/identidad/roles/permisos` contra el *compose*.
+- **El fichero de variables sí existe**, y se llama `deploy/.env.example`, no `.env.ejemplo`. Ya
+  documentaba las ocho `BASTION_SEMILLA_*`, con un valor con espacios a propósito. Lo que faltaba no
+  era el fichero, sino que algo lo comparase.
+- **Once más tres son catorce**, no trece: la fase 1 la cierran **catorce** ítems.
+
+**1. EL ROL DEL SISTEMA: LA SALIDA (c)** —actualizar siempre **y** cerrar la edición—, con el
+[ADR-0035](adr/adr-0035-el-rol-del-sistema-lleva-el-catalogo-desplegado-y-el-arranque-se-prueba-arrancando.md).
+El migrador alinea cada rol marcado como del sistema con el catálogo desplegado, en cada despliegue;
+`PUT` de un rol del sistema con otra lista es `409 permisos-de-rol-del-sistema`.
+**Por qué no (b):** avisar deja el `403` donde estaba, con una línea más en un registro. **Por qué no
+(a) sola:** deshace en silencio un recorte deliberado, y sostenerlo exigiría guardar qué catálogo vio
+cada rol. **El coste:** el rol del sistema no se recorta; quien quiera menos poderes crea un rol
+propio, y un recorte que ya existiera lo deshace el primer despliegue, permiso a permiso en el
+registro y con una fila de traza por permiso.
+**La gravedad, exacta:** regresión de privilegios **silenciosa** —ni error ni aviso, y `403` en todas
+las pantallas de la fase 1— y **recuperable a mano**, porque `ModificarRol` valida contra el catálogo y
+la fase 0 ya tenía `identidad.rol.modificar`. Y por el otro lado, un permiso retirado se quedaba
+concedido para siempre.
+
+**2. EL ESTADO QUE CONSTRUYE EL SEGUNDO ARRANQUE**, y no una versión vieja instalada:
+(i) el primer arranque de esta versión —el migrador dice `SinRolesDelSistema` y la API siembra con las
+ocho variables—, afirmado: rol = catálogo; (ii) por SQL, el rol con los **55** permisos de `fe7059d`
+más uno bien formado y de ningún catálogo, afirmado: 56, y `GET /api/v1/terceros/terceros` → `403`
+con un inicio de sesión nuevo; (iii) `up --no-deps --force-recreate migraciones api` sobre el mismo
+volumen con las ocho `BASTION_SEMILLA_*` vacías, afirmado: migrador con 0, `RolDelSistemaAlineado`,
+**un** `PermisoRetiradoDelRolDelSistema` y `SemillaSinVariables` en la API; (iv) inicio de sesión nuevo:
+rol = catálogo en los dos sentidos y la misma lectura → `200`. Rojo sobre `7f676e2` con el arnés solo
+(«le faltan 38 y le sobra 1»), verde con el arreglo.
+**Y las migraciones sobre filas**, la otra mitad de «arrancar sobre algo que ya existe»:
+`LasMigracionesSobreTablasConFilasTests` aplica las migraciones de los cinco contextos **una a una**,
+en el orden de su marca de tiempo, inventando antes de cada paso una fila en cada tabla que existe, y
+con el contraste sobre tablas vacías.
+
+**3. LO QUE ENCONTRÓ EL ARREGLO Y NO ESTABA PEDIDO.** `LosIdentificadoresAjenosTests` daba un **falso
+rojo** con la primera lambda que capturaba un `Guid` en el dominio: la clase que genera el compilador
+tiene un campo `…Id` que no es de nadie. Ahora excluye los tipos `[CompilerGenerated]`.
+
+**4. LAS DIECISIETE REGLAS: `docs/dominio/reglas-duras.md`.** Copiadas del §6 del plan maestro
+**literalmente**: sha256 `86aa53a0…a2e108`, «Revisión de 2026-08-25 (tarde)», con los enunciados
+comparados carácter a carácter con un guion. **La numeración llega a diecisiete y no salta**: R1…R17
+contiguas, con R1, R7 y R13 presentes en el plan maestro, así que se copiaron y no hay nada que
+inventar. Estado: **viva** 7 (R6, R8, R10, R11, R12, R16, R17), **aplazada** 10 (R1, R2, R3, R5, R9 y
+R13 a la fase 2; R7 y R14 a la 3; R15 a la 5; R4 a la 7), **no aplica** 0.
+`LasDiecisieteReglasTests` compara la tabla con el repositorio **en los dos sentidos**: las filas son
+R1…R17, una vez y en orden; toda regla citada en `src`, `tests`, `frontend/src`, `docs`, `db`,
+`deploy`, `scripts`, `.github` y los tres `.md` de la raíz tiene su fila —incluidas las etiquetas `rNN`
+de la cabecera de los ADR, que es de donde sale R13—; cada fila viva nombra al menos un `…Tests`, cada
+aplazada una fase entre la 2 y la 11; y todo tipo, miembro o ADR que la tabla nombra existe.
+**Lo que no comprueba, y no se disimula:** que el enunciado siga siendo el del plan maestro. El plan
+maestro no está en el repositorio, así que ninguna regla puede leerlo: la tabla dice de qué versión se
+copió y cómo se contrasta **a mano en cada puerta de fase**.
+
+**5. LAS HIGIENES.**
+- **La línea de estado del README** sale de las casillas de este checklist, y la compara
+  `ElEstadoDelReadmeEsElDelPlanTests`: la fase más alta con casillas, su nombre del encabezado, sus
+  marcadas y sus totales, y «cerrada» o «en curso».
+- **Las variables del despliegue**: `LasVariablesDelDespliegueTests` compara el ejemplo con lo que
+  interpola el *compose*, en los dos sentidos; las de la semilla, con las constantes de
+  `SemillaDeArranque`; y las que escribe la CI, contenidas en el ejemplo. El README dice que hacen falta
+  las ocho para entrar la primera vez, y el ejemplo, que retirarlas no deja atrás al rol.
+- **`EsDelSistema`**, bajo (c), solo había que anotarlo: su texto prometía «no se puede suprimir» y
+  ninguna operación suprime roles; ahora dice lo que se cumple (ADR-0035 §4).
+- **La raíz del repositorio**, en un solo sitio: las seis copias, borradas, y sus comentarios que
+  explicaban algo, movidos a `tests/Comun/RaizDelRepositorio.cs`. La guardia existe —
+  `LaRaizDelRepositorioSeBuscaEnUnSitioTests` busca en `tests/**/*.cs` el literal `"Bastion.sln"` y
+  el paso `.Parent;`— y tiene un límite escrito: una búsqueda que suba por otro camino no la ve.
+- **La convención del recuento del frontal** —**sin la raíz**— está ahora donde se mide: en la
+  cabecera de `scripts/dependencias-por-conjuntos.py`, que la batería de `AGENTS.md` nombra.
+
+**6. FUERA DEL ADDENDUM:** nada de la fase 2 —ni Inventario, ni `CodigoBarras`, ni su import—;
+ninguna decisión sobre R5 ni sobre reabrir un ejercicio, que van como preguntas a la puerta de la fase
+2 en el traspaso; `CLAUDE.md` §5; la destrucción al vencer del art. 32; y la correlación buscar/alta.
+
 ## Estado actual
 
 **FASE 1 CERRADA — las once casillas marcadas y el run que lo certifica:**
@@ -6189,7 +6275,8 @@ once criterios, y ninguna se arregla aquí. La primera, que el `SembrarAdministr
 nuevos a una instalación que ya tiene usuarios, aunque su comentario diga que sí —en el traspaso,
 como lo primero que mirar—. La segunda, que la búsqueda de la raíz del repositorio está copiada **seis**
 veces en los tests, dos de ellas en el ensamblado que ya enlaza la compartida: contada con la orden
-que va en el traspaso.
+que va en el traspaso. **Las dos se cerraron en las addenda de la fase:** el rol, en el 1.12, y las
+copias, en el 1.14.
 
 ### El veredicto de las notas abiertas
 
@@ -6264,6 +6351,16 @@ que se importe.
    el código ISO dentro de `Importe` y el `Guid` de la tarifa asignada. La buena es el código, y el
    disparador para mover el `Guid` está escrito —antes de que la primera línea de un documento
    convierta un precio resuelto en un `Importe`—, y quien lo cruce lo mueve antes de escribir esa línea.
+9. **El rol del sistema es el catálogo de la versión desplegada, y no se edita** (1.12, ADR-0035). Un
+   permiso que declare la fase 2 le llega al administrador en el primer despliegue, sin migración ni
+   semilla, y uno que se retire se le retira; `PUT` con otra lista es `409`. Un rol **propio** no lo
+   toca ningún despliegue: los permisos nuevos no le llegan solos. El Humo lo prueba arrancando dos
+   veces (`scripts/ci/segundo-arranque.sh`).
+10. **Una migración se aplica sobre tablas con filas.** `LasMigracionesSobreTablasConFilasTests`
+   recorre las de los cinco contextos una a una, inventando una fila en cada tabla antes de cada paso:
+   una columna `NOT NULL` sin valor para las filas que ya están es roja ahí, aunque migre en verde en
+   todas las bases vacías. Un contexto nuevo de la fase 2 entra en su lista o el caso que la compara
+   con las migraciones compiladas sale rojo.
 
 **Lo que la fase 1 deja abierto, cada cosa con su motivo** —ninguna es un olvido y ninguna se hace «de
 paso» en la fase 2—:
@@ -6284,26 +6381,50 @@ paso» en la fase 2—:
 - **El arranque del frontal, a 4 KiB de la regla de los 430** (decisión 10 del 1.11): 426/450 en el
   *run* de cierre. La primera pantalla de la fase 2 que sume textos a los dos diccionarios la cruza, y
   lo que toca entonces ya está escrito —sacar del arranque el idioma no activo—, no subir el tope.
-- **Seis búsquedas privadas de la raíz del repositorio en los tests**, frente a la compartida
-  `tests/Comun/RaizDelRepositorio.cs`, que solo enlaza `Api.FunctionalTests` —y dos de las seis viven
-  justo ahí—. Medido con `grep -rn 'File.Exists(Path.Combine(.*"Bastion.sln"' tests --include=*.cs`,
-  que da siete líneas: las seis copias y la compartida. No rompe nada hoy; diverge el día que una
-  cambie de criterio.
+- **Ya no: las seis búsquedas privadas de la raíz del repositorio.** Borradas en el 1.14, con sus
+  comentarios movidos a `tests/Comun/RaizDelRepositorio.cs`, y una séptima es roja
+  (`LaRaizDelRepositorioSeBuscaEnUnSitioTests`).
 
-**Lo que la fase 2 debe mirar el primer día:** el rol de administración **no recibe los permisos
-nuevos en una instalación que ya tiene usuarios**. `SembrarAdministrador` sale en su primera línea si
-existe cualquier usuario, antes de llegar a `rol.FijarPermisos(catalogo.Todos)`, y el comentario de esa
-línea —«Se fijan SIEMPRE, también si el rol ya existía»— dice lo contrario de lo que hace. No hay
-cierre: el administrador puede darse los permisos por `PUT` del rol, que valida contra el catálogo.
-Pero, leído el código —no medido contra una base vieja—, una base creada en la fase 0 llega a la
-fase 1 con un administrador que no ve Terceros ni Catálogo, y la fase 2 añadirá los de Inventario. No
-ha mordido porque cada entorno de la CI nace de cero.
+**Lo que la fase 2 tenía que mirar el primer día ya no está abierto** (ítem 1.12). El rol de
+administración no recibía los permisos nuevos en una instalación con usuarios, y ahora está medido, no
+leído: a una base con el rol de la fase 0 le faltaban **38** permisos y le sobraba el retirado, y el
+arnés lo vio en rojo antes del arreglo. Lo cierra la salida (c) del ADR-0035 —el migrador alinea el
+rol del sistema en cada despliegue y la API no edita sus permisos—, que es el invariante 9 de arriba.
+
+**Dos preguntas más para la puerta de clarificación de la fase 2** (ítem 1.14), con su coste y **sin
+contestar**: no son deuda de la fase 1, son decisiones que la primera escritura con fecha y el primer
+documento numerado vuelven reales. Lo que afirman está comprobado en el código de este cierre.
+
+- **R9/R14 — el ejercicio cerrado.** `Ejercicio` guarda `Modificar` cuando está cerrado, pero
+  `Cerrar()` y `Reabrir()` son dos asignaciones de una línea sin guarda (`Ejercicio.cs`), y nadie fuera
+  de Organización pregunta si el ejercicio está abierto —`EstadoDeEjercicio` no aparece fuera de su
+  módulo—, porque todavía no se escribe nada con fecha. El primer documento la vuelve real.
+  **Qué hay que contestar:** qué exige cerrar, quién puede reabrir y con qué rastro, y quién pregunta
+  antes de escribir con fecha. **El coste de contestarla:** un puerto nuevo en
+  `Organizacion.Contracts` que conteste por el **estado** del ejercicio de una fecha —con su cruce
+  declarado y sus casillas en `LaMatrizDeLosPuertosDeEstadoTests`—, unas condiciones de cierre que
+  dependen de qué documentos existan, y una operación de reapertura que hoy no pide nada.
+  **El de no contestarla:** el primer movimiento de stock se escribe en un ejercicio cerrado sin que
+  nada lo impida, y «cerrado» deja de significar algo fuera de la pantalla de ejercicios.
+- **R5 — la numeración sin huecos.** `Serie` ya lleva `Contador`, `RegistrarNumeroAsignado` y
+  `SePuedeSuprimir => Contador == 0`; lo que no existe es la lectura-modificación-escritura bajo
+  cerrojo que la hace sin huecos, y `RegistrarNumeroAsignado` solo se llama desde tests —uno de los
+  cuales, `ContratoDeOrganizacionTests`, ya dice que «probaría un estado que el sistema no sabe
+  producir»—. **Qué hay que contestar:** si los documentos de la fase 2 se numeran con `Serie`, y
+  dónde vive el cerrojo. **El coste de contestarla:** la fila de la serie leída con bloqueo en la
+  misma transacción que confirma el documento, lo que serializa las altas de esa serie; un caso contra
+  PostgreSQL con dos confirmaciones a la vez; y qué pasa con el número de un documento que falla
+  después de pedirlo. Una secuencia de PostgreSQL no lo resuelve por sí sola: no se deshace con la
+  transacción, y deja el hueco. **El de no contestarla:** o los documentos de la fase 2 se numeran de
+  otra manera y `Serie` se queda con un contador que nadie sube, o se numeran con ella sin cerrojo y
+  dos altas simultáneas se llevan el mismo número. La numeración bajo concurrencia sigue siendo
+  criterio de la fase 5 (`docs/dominio/reglas-duras.md`).
 
 **Dónde retomar exactamente:** la **fase 2 · Inventario**, y **no por código**. Igual que la fase 1,
 no tiene un Anexo A.3, así que lo primero es la **puerta de clarificación** del `CLAUDE.md` §2 —el
-desglose en ítems con criterio verificable, acordado con el usuario y escrito aquí— y, con ella, el
-import de arriba. Y el `CLAUDE.md` §5 sigue diciendo que el objetivo del encargo es completar la
-fase 1: cambiarlo es del usuario.
+desglose en ítems con criterio verificable, acordado con el usuario y escrito aquí—, con las dos
+preguntas de R9/R14 y R5 en su tanda, y con ella el import de arriba. Y el `CLAUDE.md` §5 sigue
+diciendo que el objetivo del encargo es completar la fase 1: cambiarlo es del usuario.
 
 ### Verificado en local, con la salida real — ítem 1.10
 
@@ -9836,6 +9957,29 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   decisiones en *Decisiones tomadas → ítem 1.11*, con el ADR-0034; ocho mutaciones en *Estado
   actual*, con la 4, la 5 y la 7 enteras, y la 8 desmintiendo un comentario de test que afirmaba un
   rojo que no se da.
+
+### Addenda de la fase 1 — los tres ítems que abre la verificación del cierre (2026-09-16)
+
+> **Estos tres NO son de la puerta de clarificación de la fase 1.** Aquellos once están cerrados y
+> no se tocan. Los abrió el usuario al verificar el cierre contra la API, y el porqué de cada uno
+> está en *Decisiones tomadas → addenda de la fase 1*. Se numeran 1.12–1.14 por el mismo motivo que
+> el 0.14–0.16: son del cierre de la fase, y la fase 2 no se abre arrastrándolos.
+
+- [ ] **1.12 · El segundo arranque** — criterio de aceptación: el arnés **primero, y visto en rojo**
+  —las migraciones aplicadas una a una sobre tablas con filas, y un segundo arranque del *compose*
+  sobre una base con datos y la semilla retirada—; el rol de administración con los permisos de la
+  versión desplegada, con **una** de las tres salidas elegida y su porqué escrito; la gravedad,
+  exacta; y en el ADR, que el código que solo corre al arrancar se prueba desde fuera, o no se prueba.
+- [ ] **1.13 · Las diecisiete reglas, con su estado** — criterio de aceptación: una tabla en `docs/`
+  con las diecisiete, una línea cada una —enunciado breve y estado: **viva** (dónde se hace cumplir),
+  **aplazada a la fase N** (con el motivo) o **no aplica** (con el porqué)—; una regla de
+  descubrimiento que la compare entera y **en los dos sentidos**; anotado de qué versión del plan
+  maestro se copió y que se contrasta a mano en cada puerta de fase; y ningún enunciado inventado.
+- [ ] **1.14 · Las higienes del cierre** — criterio de aceptación: la línea de estado del README al
+  día **y vigilada** contra este checklist; las variables del despliegue documentadas y comparadas;
+  `EsDelSistema` anotado; la búsqueda de la raíz del repositorio en **un** sitio, con las copias
+  borradas; el traspaso a la fase 2 con R9/R14 y R5 como **preguntas** de su puerta, con su coste y
+  sin contestar; y la convención del recuento del frontal escrita donde se mide.
 
 
 ## Imports pendientes de `CLAUDE.md`
