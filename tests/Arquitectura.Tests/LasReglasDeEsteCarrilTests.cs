@@ -88,8 +88,7 @@ public sealed class LasReglasDeEsteCarrilTests
         "LoBloqueadoSeVeEnteroTests.Todo_modulo_que_bloquea_contesta_por_lo_suyo",
 
         // El glosario del lenguaje ubicuo: su tabla de agregados y el dominio compilado son la
-        // misma lista. Es lo único de docs/ que este carril vigila, y lo vigila porque es la
-        // lista que dice qué cosas hay.
+        // misma lista. Lo vigila porque es la lista que dice qué cosas hay.
         "ElGlosarioDelDominioTests.Cada_agregado_del_glosario_dice_el_modulo_en_el_que_vive",
         "ElGlosarioDelDominioTests.La_tabla_de_agregados_del_glosario_se_lee_y_no_esta_vacia",
         "ElGlosarioDelDominioTests.Los_agregados_del_dominio_son_los_que_el_glosario_nombra",
@@ -108,6 +107,15 @@ public sealed class LasReglasDeEsteCarrilTests
         "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.Cada_ADR_lleva_en_su_titulo_el_numero_de_su_nombre_de_fichero",
         "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.El_barrido_encuentra_los_ADR_del_repositorio",
         "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.Ningun_numero_de_ADR_lo_llevan_dos_ficheros",
+
+        // Las diecisiete reglas duras del §6, con su estado, y el repositorio: la tabla nombra
+        // las diecisiete, lo que nombra existe, y toda regla citada tiene fila (ítem 1.13). Lo
+        // que no puede mirar —que el enunciado sea el del plan maestro— lo dice la tabla.
+        "LasDiecisieteReglasTests.Cada_estado_es_uno_de_los_tres_y_dice_donde_o_por_que",
+        "LasDiecisieteReglasTests.La_tabla_y_los_dos_barridos_encuentran_algo",
+        "LasDiecisieteReglasTests.Las_filas_son_las_diecisiete_una_vez_y_en_orden",
+        "LasDiecisieteReglasTests.Lo_que_la_tabla_nombra_existe",
+        "LasDiecisieteReglasTests.Toda_regla_que_cita_el_repositorio_tiene_su_fila",
 
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",
