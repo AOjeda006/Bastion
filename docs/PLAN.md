@@ -4093,17 +4093,20 @@ ninguna decisión sobre R5 ni sobre reabrir un ejercicio, que van como preguntas
 
 ## Estado actual
 
-**FASE 1 CERRADA — las once casillas marcadas y el run que lo certifica:**
-run **34939033897** sobre `73d1db7`, **success**, con **3 jobs contados en el propio run**
-(`total_count: 3`): Frontal `104283218957` ✓, Backend `104283219208` ✓ y Humo `104284360891` ✓. Es el
-del **1.11**, el último de los once, y lo que certifica es el árbol entero de la fase: **1 237 casos**
-de .NET —845 en el carril rápido y 392 contra PostgreSQL— con las dos listas de ensamblados
-comparadas enteras, **128 operaciones** en 74 rutas y **89 `type`** de error, cada artefacto al día
-con el versionado, y el entorno del *compose* sirviendo datos.
+**FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
+run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3`): Frontal `104818073051` ✓, Backend `104818073414` ✓ y Humo `104820147951` ✓. Es el de
+las **addenda 1.12–1.14**, las tres últimas de las catorce —once de la puerta de clarificación y tres
+que abrió la verificación de su cierre; hasta el 2026-09-16 este anuncio decía «once»—, y lo que
+certifica es el árbol entero de la fase: **1 261 casos** de .NET —862 en el carril rápido y 399
+contra PostgreSQL— con las dos listas de ensamblados comparadas enteras, **128 operaciones** en 74
+rutas y **90 `type`** de error, cada artefacto al día con el versionado, el entorno del *compose*
+sirviendo datos, y un segundo arranque sobre la misma base.
 
-**Cada casilla tiene su run, y los once se han vuelto a pedir a la API al cerrar la fase**
-—`GET /repos/AOjeda006/Bastion/actions/runs/<id>`, leyendo `head_sha` y `conclusion`, no la
-memoria— con el guion `runs-fase-1.py` del directorio de trabajo de la sesión:
+**Cada casilla tiene su run.** Los once de la puerta se volvieron a pedir a la API al cerrarla, el
+2026-09-15 —`GET /repos/AOjeda006/Bastion/actions/runs/<id>`, leyendo `head_sha` y `conclusion`, no
+la memoria— con el guion `runs-fase-1.py` del directorio de trabajo de la sesión; el de las addenda,
+de la misma API al cerrarlas, con `vigilar-ci.py`:
 
 ```
  1.1  run 33779064545  head_sha c3e0119 casa  completed/success  feature/fase-1-desglose
@@ -4117,13 +4120,20 @@ memoria— con el guion `runs-fase-1.py` del directorio de trabajo de la sesión
  1.9  run 34599130092  head_sha eadb7b9 casa  completed/success  main
 1.10  run 34833598837  head_sha 958c339 casa  completed/success  main
 1.11  run 34939033897  head_sha 73d1db7 casa  completed/success  main
+1.12  run 35103339786  head_sha f3c749e casa  completed/success  feature/1.12-addendum
+1.13  run 35103339786  head_sha f3c749e casa  completed/success  feature/1.12-addendum
+1.14  run 35103339786  head_sha f3c749e casa  completed/success  feature/1.12-addendum
 ```
 
-Seis corrieron sobre su rama y cinco sobre `main`, y los once `head_sha` están en la historia de
-`main`: `git merge-base --is-ancestor <sha> main` sale bien para cada uno. El repaso de cada criterio
+De los once de la puerta, seis corrieron sobre su rama y cinco sobre `main`, y sus once `head_sha`
+están en la historia de `main`: `git merge-base --is-ancestor <sha> main` sale bien para cada uno. El
+de las addenda corrió sobre su rama, y `f3c749e` es antepasado de este cierre, que llega a `main` por
+avance rápido. Antes hubo uno rojo sobre la misma rama, 35101097378 sobre `1f69ba5`, contado en
+*Lo que la CI encontró y en local no se veía — addenda*. El repaso de cada criterio
 contra algo observable, el veredicto de las nueve notas abiertas y el traspaso van en sus tres
 secciones, detrás de *Las ocho mutaciones del 1.11*. **Dónde retomar exactamente:** la **fase 2 ·
-Inventario**, por su puerta de clarificación y no por código (*Traspaso a la fase 2*).
+Inventario**, por su puerta de clarificación y no por código, con las dos preguntas de R9/R14 y R5
+en su tanda (*Traspaso a la fase 2*).
 
 **Puerta de clarificación de la fase 1 cerrada — el desglose existe y es una decisión escrita:**
 doce preguntas planteadas juntas y contestadas juntas, con su motivo, en *Decisiones tomadas →
@@ -4145,6 +4155,125 @@ texto que lee una persona cuando falla una validación → **el frontal**, mapea
 en el ítem **1.5** —movidos ahí en el 1.3, y con el mecanismo antes que su primer uso, porque el
 catálogo de `type` **no está vacío hoy**— y el motivo del movimiento en *Decisiones tomadas → ítem
 1.2*.
+
+**Addenda 1.12 a 1.14 cerradas — el segundo arranque, las diecisiete reglas y las higienes del cierre:**
+run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
+(`total_count: 3` de la API, no de la memoria): Backend `104818073414` ✓ (22 pasos, 0 omitidos),
+Frontal `104818073051` ✓ (17 pasos, 0 omitidos) y
+Humo `104820147951` ✓ (26 pasos, 1 omitido:
+el «Diagnóstico», que lleva `if: failure()`). Humo tiene un paso más que en el 1.11:
+«El segundo arranque deja al rol del sistema con el catálogo entero». **Es el segundo run de la rama:**
+el primero, 35101097378 sobre `1f69ba5`, salió rojo en ese paso por el propio arnés —`logs | grep -q` con
+`pipefail`, que en Linux es rojo con la línea encontrada—, y el arreglo, con su verificación en Linux
+contra la pila real, está en *Lo que la CI encontró y en local no se veía — addenda*. Los carriles tal
+como el run los publica, contra las líneas base de `7f676e2`:
+
+```
+Dominio y arquitectura: 862 casos (862 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.UnitTests 183, BuildingBlocks.UnitTests 215, Organizacion.IntegrationTests 22,
+    Api.FunctionalTests 154, Identidad.UnitTests 61, Api.IntegrationTests 13, Terceros.UnitTests 85,
+    Arquitectura.Tests 51, Catalogo.UnitTests 78
+    (845 en `7f676e2`, en 9 ensamblados: +17 — Identidad.UnitTests +3 y Arquitectura.Tests +14)
+
+Integración (Testcontainers): 399 casos (399 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 325, y 0 en los otros siete
+    (392 en `7f676e2`: +7, todos en Api.IntegrationTests)
+
+Frontal · arranque 426/450 KiB en 3 ficheros · total servido 592/900 KiB  (los mismos en `7f676e2`)
+OpenAPI: 128 operaciones, 74 rutas /api/v1/  (las mismas en `7f676e2`: el `409` nuevo es de un `PUT`
+         que ya existía)
+Catálogo de errores: 90 tipos, de 96 sitios de llamada  (89 de 95: +1 tipo, +1 sitio,
+                     `permisos-de-rol-del-sistema`)
+Humo: esquema aplicado por los cinco contextos · 12 tramos de impuesto y 15 unidades, IVA general
+      vigente del 21.00 % · sesión con un testigo de 4273 caracteres · 1 empresa servida
+Segundo arranque: 93 permisos tras el primero · el estado viejo con los 55 de la fase 0 y uno
+      retirado, GET /api/v1/terceros/terceros → 403 · 93 tras el segundo · la misma lectura con la
+      semilla fuera → 200
+```
+
+Las líneas base son las que dio el usuario sobre `7f676e2` —el `main` que abrió la rama, el cierre de la
+fase 1—, y son las que publicó el run del 1.11 sobre `73d1db7`, porque entre los dos solo cambia la
+documentación (`git diff --name-only 73d1db7 7f676e2` → `docs/PLAN.md`). El reparto de cada delta
+**por clase** está en *Verificado — addenda 1.12 a 1.14*.
+
+**El cero de los `act()` no lo publica el run, y se dice de dónde sale.** La cifra —**15 ficheros,
+101 casos, 0 avisos**, las tres iguales que en `7f676e2`: las addenda no añaden ningún caso al frontal—
+es de la batería local sobre `0d4062f`, medida con `grep -c "not wrapped in act"` sobre la salida de la
+suite. El árbol de `0d4062f` solo difiere del de `f3c749e` en la documentación y en el guion del segundo
+arranque, que la suite del frontal no ejecuta
+(`git diff --name-only 0d4062f f3c749e` → `docs/PLAN.md` y `scripts/ci/segundo-arranque.sh`).
+
+**Lo que hay que leer primero de las addenda.** **El segundo arranque, medido y no leído** (1.12): al
+rol del sistema de una base de la fase 0 le faltaban **38** permisos del catálogo de la fase 1 y le
+sobraba el retirado, y el arnés —`segundo-arranque.sh`, un paso del Humo— lo vio **rojo** en `d7e2d91`,
+antes del arreglo. La salida es la **(c)** del ADR-0035: el migrador alinea el rol del sistema con el
+catálogo desplegado en **cada** despliegue, con o sin la semilla, y la API ya no edita sus permisos. El
+estado que construye el segundo arranque está en la decisión 2, paso a paso, y no es una versión vieja
+instalada: es el primer arranque de esta, el rol devuelto por SQL a los 55 permisos de `fe7059d` más uno
+retirado, y el mismo volumen levantado otra vez con las ocho `BASTION_SEMILLA_*` vacías. Y la otra mitad
+de «arrancar sobre algo que ya existe»: las migraciones de los cinco contextos, una a una sobre tablas
+con filas.
+
+**Las diecisiete reglas, con su estado** (1.13): `docs/dominio/reglas-duras.md`, copiada del §6 del plan
+maestro y comparada con el repositorio en los dos sentidos. Lo que **no** compara —el enunciado contra el
+plan maestro, que no está en el repositorio— lo dice la tabla y se contrasta a mano en cada puerta de
+fase. **Las higienes** (1.14): la línea del README vigilada contra este checklist, las variables del
+despliegue comparadas en cuatro fuentes, `EsDelSistema` diciendo lo que se cumple, la raíz del
+repositorio en un solo sitio, el frontal contado sin la raíz, y **dos preguntas** para la puerta de la
+fase 2 —R9/R14 y R5— con su coste y sin contestar.
+
+**Las decisiones** están en *Decisiones tomadas → addenda de la fase 1*, con el **ADR-0035**. **Las ocho
+mutaciones** están en *Las ocho mutaciones de las addenda*, con la **1**, la **2** y la **4** enteras. La
+1 es la que el arnés existe para cazar: el alineado que no confirma deja el primer arranque **verde** —la
+semilla siembra el catálogo entero— y el migrador del segundo dice haber concedido 38 y retirado 1, y el
+rol sigue igual; solo lo ve preguntarle a la base después. La 2, la columna `NOT NULL` sin valor, es
+**roja con filas y verde en vacío**: en todas las bases de los tests habría pasado.
+
+**Ninguna dependencia nueva, y la frase sale de comparar conjuntos** —con el guion que ahora fija la
+convención del frontal—:
+
+```
+python scripts/dependencias-por-conjuntos.py 7f676e2 f3c749e
+
+7f676e2: 39 packages.lock.json · 125 pares nombre/versión · 30 Project · frontal 548 entradas sin la raíz
+f3c749e: 39 packages.lock.json · 125 pares nombre/versión · 30 Project · frontal 548 entradas sin la raíz
+7f676e2 → f3c749e:
+  pares añadidos    []
+  pares retirados   []
+  Project añadidos  []
+  Project retirados []
+  frontal añadidas  []
+  frontal retiradas []
+```
+
+Las **549** de la línea base son las mismas **548 más la raíz**, así que **ninguna licencia nueva que
+revisar**.
+
+**Semillas, identificadores y secretos.** Ni un NIF, NIE, CIF o IBAN en las addenda, tampoco en
+`deploy/.env.example`, que es donde apetece poner uno que parezca de verdad: sus tres líneas nuevas son
+de comentario. El barrido, sobre las líneas añadidas del rango entero:
+
+```
+git diff 7f676e2..f3c749e -U0 | grep -E '^\+' | grep -v '^+++' | grep -ciE 'password|passwd|secret|api[_-]?key|token\s*[:=]|BEGIN [A-Z ]*PRIVATE|ghp_|github_pat_|AKIA[0-9A-Z]{16}|\bES[0-9]{2}[ ]?([0-9]{4}[ ]?){5}\b|\b[0-9]{8}[A-HJ-NP-TV-Z]\b|\b[A-HJNPQRSUVW][0-9]{7}[0-9A-J]\b|\b[XYZ][0-9]{7}[A-Z]\b|BASTION_SEMILLA_[A-Z_]+=\S'
+  → 1
+```
+
+**Se ha leído, y no es un dato:** `# No imprime secretos: la contraseña viaja de fichero a fichero…`, el
+comentario de cabecera de `scripts/ci/segundo-arranque.sh`. El segundo arranque de la CI corre sobre el
+`deploy/.env` que el job Humo genera con claves aleatorias, y el humo local, con un fichero de entorno
+de valores aleatorios generado para la pasada y borrado al terminar, sin tocar el `deploy/.env` de
+desarrollo ni sus volúmenes.
+
+**Commits, firmas y trailers.** `git rev-list --count 7f676e2..f3c749e` → **11**, los once firmados
+(`%G?` = `G`), con autor y *committer* el usuario y **solo** sus credenciales:
+`git log --format='%(trailers:only)' 7f676e2..f3c749e` no imprime **ni una línea** sobre el rango
+entero, y este cierre se comprueba igual antes de empujarlo. Sin PR; la rama `feature/1.12-addendum`
+—empujada, con su run— se lleva a `main` por avance rápido con este cierre dentro, y se borra en local y
+en el remoto.
+
+**Fuera de las addenda, y no «de paso»:** nada de la fase 2 —Inventario, `CodigoBarras` y su import—;
+ninguna decisión sobre R5 ni sobre reabrir un ejercicio; `CLAUDE.md` §5; la destrucción al vencer del
+art. 32; y la correlación buscar/alta.
 
 **Ítem 1.11 cerrado — la importación CSV: la fila decide, el fichero escribe, y el recibo caduca:**
 run **34939033897** sobre `73d1db7`, **success**, con **3 jobs contados en el propio run**
@@ -6580,13 +6709,14 @@ formateador para calcular la huella, y sin el lector acotado sería él el prime
 
 ### La fase 1, criterio por criterio, comprobado por algo observable
 
-El cierre **no se apoya en que las once casillas estén marcadas**. Cada criterio —los once que acordó
-la puerta de clarificación y el de la fase entera del §15— se ha vuelto a comprobar contra algo que
-se puede mirar hoy: un caso nombrado de los **1 237** que corren en los dos carriles de .NET, cuyas
+El cierre **no se apoya en que las catorce casillas estén marcadas**. Cada criterio —los once que
+acordó la puerta de clarificación, los tres de las addenda y el de la fase entera del §15— se ha
+vuelto a comprobar contra algo que se puede mirar hoy: un caso nombrado de los **1 261** que corren
+en los dos carriles de .NET, cuyas
 listas de ensamblados compara la CI **enteras** —así que en un *run* verde «existe» y «ha corrido» son
 la misma cosa—, un fichero de la suite del frontal, o la salida de un paso del *run* que cierra la
 fase. Cada nombre de la tabla se ha buscado en el árbol de `73d1db7`, uno por uno, antes de escribirlo
-aquí.
+aquí, y otra vez en el de `f3c749e` al cerrar las addenda, que mueven ficheros de tests: siguen todos.
 
 | Ítem | Lo observable |
 |---|---|
@@ -6601,6 +6731,9 @@ aquí.
 | **1.9** tarifas | `ContratoDeTarifasTests.Dos_tramos_del_mismo_codigo_que_se_pisan_los_rechaza_la_BASE`, `.Sin_linea_aplicable_hay_error_con_nombre_y_NUNCA_un_precio_cero` y `.Gana_el_antepasado_MAS_CERCANO_y_la_mas_honda_de_otra_rama_no_compite`; `PrecioODescuentoTests.Con_los_dos_puestos_no_se_construye`. |
 | **1.10** los dos cruces mutuos | `ContratoDeLosCrucesTests.Inventado_ajeno_bloqueado_y_solo_cliente_contestan_el_MISMO_400_y_no_dejan_fila` y `.Una_tarifa_que_rige_hoy_se_asigna_se_lee_y_con_nulo_se_quita`; `LaMatrizDeLosPuertosDeEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta`. |
 | **1.11** importación CSV | Las tres cláusulas, cada una con su caso: la fila como unidad, `LaImportacionDeTercerosTests.Las_filas_malas_no_impiden_que_entren_las_buenas_y_el_informe_dice_su_linea_de_Excel`, que también fija **línea y motivo**; y la idempotencia por fichero con su huella, `LaImportacionEsUnaOperacionTests.La_misma_clave_con_el_mismo_fichero_devuelve_el_mismo_informe_sin_volver_a_mirar_la_base` y `.La_misma_clave_con_otro_fichero_es_un_409_y_el_otro_fichero_no_entra`. Fuera del banco de pruebas, el paso de Humo «El frontal deja llegar a la API un cuerpo del tamaño de una importación». |
+| **1.12** el segundo arranque | El paso «El segundo arranque deja al rol del sistema con el catálogo entero» del *job* Humo (`segundo-arranque.sh`), con sus cuatro avisos en el *run* de cierre: el catálogo entero tras el primer arranque, el estado viejo con `403`, el catálogo entero tras el segundo y la lectura con `200`. `ElRolDelSistemaTests.Recortado_y_con_un_permiso_retirado_el_despliegue_lo_deja_con_el_catalogo_y_lo_dice` y `.Cambiarle_la_lista_al_rol_del_sistema_es_409_y_no_toca_nada`; `RolTests.Alinear_ConcedeLoQueFaltaRetiraLoQueSobraYDiceCadaCosa`; y `LasMigracionesSobreTablasConFilasTests.Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila` y `.Recorre_todos_los_contextos_que_tienen_migraciones`. |
+| **1.13** las diecisiete reglas | `LasDiecisieteReglasTests.Las_filas_son_las_diecisiete_una_vez_y_en_orden`, `.Toda_regla_que_cita_el_repositorio_tiene_su_fila`, `.Cada_estado_es_uno_de_los_tres_y_dice_donde_o_por_que` y `.Lo_que_la_tabla_nombra_existe`, sobre `docs/dominio/reglas-duras.md`. La mitad de «el enunciado es el del plan maestro» **no tiene caso, y no lo finge**: el plan maestro no está en el repositorio, y se contrasta a mano en cada puerta de fase. |
+| **1.14** las higienes del cierre | `ElEstadoDelReadmeEsElDelPlanTests.La_linea_de_estado_del_readme_es_la_del_checklist`; `LasVariablesDelDespliegueTests.El_ejemplo_documenta_lo_que_interpola_el_compose_y_nada_mas`, `.Las_de_la_semilla_son_las_que_lee_su_codigo` y `.La_CI_solo_escribe_variables_que_el_ejemplo_documenta`; `LaRaizDelRepositorioSeBuscaEnUnSitioTests.Nadie_mas_busca_la_raiz_del_repositorio`; y la convención del frontal, en la cabecera de `scripts/dependencias-por-conjuntos.py`. Las dos preguntas de R9/R14 y R5 están en *Traspaso a la fase 2*: son preguntas, y no tienen caso. |
 | **§15** el criterio de la fase | **Alta de cliente/proveedor con NIF validado:** `ContratoDeTercerosTests.El_identificador_espanol_se_valida_de_verdad_y_nace_verificado`. **Y de artículo con unidad, impuesto y tarifa:** `ContratoDeCatalogoTests.Crear_un_articulo_devuelve_201_con_Location_que_lleva_al_recurso` —unidad e impuesto validados por sus puertos— y `ContratoDeTarifasTests.La_linea_del_articulo_gana_y_el_tramo_se_elige_DESPUES_con_la_frontera_arriba`. **Listados paginados y filtrados en servidor:** `ContratoDeTercerosTests.El_listado_viene_paginado_con_su_total_y_filtra_por_nombre` y `ContratoDeCatalogoTests.El_listado_de_articulos_viene_paginado_con_su_total_y_filtra_por_categoria`. **Dominio cubierto por tests:** `Terceros.UnitTests` con 85 casos y `Catalogo.UnitTests` con 78, en el carril rápido; y **ochenta y cinco mutaciones** repartidas por los once ítems —7, 8, 5, 5, 6, 14, 8, 8, 8, 8 y 8—, cada una con su resultado y su línea base en su sección de *Estado actual*. |
 
 **Lo que el ítem y este repaso encontraron y no estaba marcado:** dos cosas, las dos de fuera de los
@@ -6642,9 +6775,10 @@ coste; ninguna la puede tomar el agente.
 **Qué hereda.** Cinco módulos con persistencia —Organización, Identidad, Auditoría, Terceros y
 Catálogo—, cada uno en su esquema y con sus migraciones al día (`comprobar-migraciones.sh`); el
 contrato en **128 operaciones sobre 74 rutas** bajo `/api/v1/`, con el cliente del frontal
-generado de él y **89 `type`** de error en el artefacto que la CI compara; `features/terceros/`
-y `features/catalogo/` en el frontal; y una CI cuyos dos carriles de .NET suman **1 237 casos**
-con las listas de ensamblados comparadas enteras. Y un mecanismo de importación que no es de Terceros
+generado de él y **90 `type`** de error en el artefacto que la CI compara; `features/terceros/`
+y `features/catalogo/` en el frontal; y una CI cuyos dos carriles de .NET suman **1 261 casos**
+con las listas de ensamblados comparadas enteras, y cuyo Humo arranca dos veces sobre la misma base.
+Y un mecanismo de importación que no es de Terceros
 sino del bloque común —el lector acotado del cuerpo con `[TopeDelCuerpo]` y `[TipoDelCuerpo]`, el
 formateador de `text/csv`, `CamposCsv` y `RechazosDeImportacion`—, listo para el siguiente maestro
 que se importe.
@@ -10098,9 +10232,12 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 > en *Decisiones tomadas*. Este checklist es el resultado; **no se reordena ni se amplía** por
 > iniciativa propia, igual que el A.3.
 >
-> **Cerrada el 2026-09-15:** las once casillas en `[x]`, y la fase la certifica el run
-> **34939033897** sobre `73d1db7`, el del 1.11. Los once runs, el repaso criterio por criterio y el
-> traspaso a la fase 2 están en *Estado actual*.
+> **Cerrada con catorce ítems, y no con once** (corregido el 2026-09-16). Las once casillas de la
+> puerta de clarificación se marcaron el 2026-09-15, y las certificó el run **34939033897** sobre
+> `73d1db7`, el del 1.11; la verificación de ese cierre abrió las tres addenda 1.12–1.14, y la fase
+> la certifica ahora el run **35103339786** sobre `f3c749e`, que cierra las tres. Los runs de las
+> catorce casillas —uno por casilla, y uno solo para las tres addenda—, el repaso criterio por
+> criterio y el traspaso a la fase 2 están en *Estado actual*.
 
 - [x] **1.1 · El presupuesto del frontal, remedido** — criterio de aceptación: dos métricas
   —**arranque** frente a **total**— en vez de una; topes **450 KiB** y **900 KiB** con el cálculo
@@ -10298,21 +10435,50 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 > está en *Decisiones tomadas → addenda de la fase 1*. Se numeran 1.12–1.14 por el mismo motivo que
 > el 0.14–0.16: son del cierre de la fase, y la fase 2 no se abre arrastrándolos.
 
-- [ ] **1.12 · El segundo arranque** — criterio de aceptación: el arnés **primero, y visto en rojo**
+- [x] **1.12 · El segundo arranque** — criterio de aceptación: el arnés **primero, y visto en rojo**
   —las migraciones aplicadas una a una sobre tablas con filas, y un segundo arranque del *compose*
   sobre una base con datos y la semilla retirada—; el rol de administración con los permisos de la
   versión desplegada, con **una** de las tres salidas elegida y su porqué escrito; la gravedad,
   exacta; y en el ADR, que el código que solo corre al arrancar se prueba desde fuera, o no se prueba.
-- [ ] **1.13 · Las diecisiete reglas, con su estado** — criterio de aceptación: una tabla en `docs/`
+  Cerrado con el run **35103339786** sobre `f3c749e`, el mismo para las tres addenda y el que certifica
+  ahora la **fase 1**. El arnés entró primero y se vio rojo sobre el árbol de `7f676e2` —al rol del
+  sistema con los 55 permisos de la fase 0 «le faltan 38 y le sobra 1»—, y lo cierra la salida **(c)**
+  del ADR-0035: el migrador alinea el rol del sistema con el catálogo desplegado en cada despliegue, y
+  `PUT` con otra lista es `409 permisos-de-rol-del-sistema`. La gravedad, exacta: una regresión de
+  privilegios **silenciosa** y **recuperable a mano**, y por el otro lado un permiso retirado que se
+  quedaba concedido. El segundo arranque es un paso del Humo, sobre el mismo volumen y con la semilla
+  vacía, y las migraciones se aplican una a una sobre tablas con filas. El ADR deja escrito que el
+  código que solo corre al arrancar se prueba desde fuera, o no se prueba. Decisiones 1 a 3 en
+  *Decisiones tomadas → addenda de la fase 1*; la mutación 1 —el alineado sin confirmar, verde en el
+  primer arranque y rojo en el segundo— y la 2 —la columna obligatoria, roja con filas y verde en
+  vacío—, enteras en *Las ocho mutaciones de las addenda*. El primer run de la rama salió rojo por el
+  propio arnés, y está contado en *Lo que la CI encontró y en local no se veía — addenda*.
+- [x] **1.13 · Las diecisiete reglas, con su estado** — criterio de aceptación: una tabla en `docs/`
   con las diecisiete, una línea cada una —enunciado breve y estado: **viva** (dónde se hace cumplir),
   **aplazada a la fase N** (con el motivo) o **no aplica** (con el porqué)—; una regla de
   descubrimiento que la compare entera y **en los dos sentidos**; anotado de qué versión del plan
   maestro se copió y que se contrasta a mano en cada puerta de fase; y ningún enunciado inventado.
-- [ ] **1.14 · Las higienes del cierre** — criterio de aceptación: la línea de estado del README al
+  Cerrado con el run **35103339786** sobre `f3c749e`. `docs/dominio/reglas-duras.md` copia las diecisiete
+  del §6 del plan maestro, «Revisión de 2026-08-25 (tarde)», sin inventar un enunciado: R1, R7 y R13
+  están en el plan maestro. **Viva** 7, **aplazada** 10 y **no aplica** 0, cada viva con dónde se hace
+  cumplir y cada aplazada con su fase y su motivo. `LasDiecisieteReglasTests` la compara con el
+  repositorio en los dos sentidos —con las etiquetas `rNN` de los ADR dentro—, y lo que ninguna regla
+  puede comprobar, que el enunciado siga siendo el del plan maestro, está escrito como contraste a mano
+  en cada puerta de fase, no disimulado. Las mutaciones 3, 4 y 5 —una fila menos, una de más y un sitio
+  de cumplimiento borrado— salen rojas, con la 4 entera.
+- [x] **1.14 · Las higienes del cierre** — criterio de aceptación: la línea de estado del README al
   día **y vigilada** contra este checklist; las variables del despliegue documentadas y comparadas;
   `EsDelSistema` anotado; la búsqueda de la raíz del repositorio en **un** sitio, con las copias
   borradas; el traspaso a la fase 2 con R9/R14 y R5 como **preguntas** de su puerta, con su coste y
   sin contestar; y la convención del recuento del frontal escrita donde se mide.
+  Cerrado con el run **35103339786** sobre `f3c749e`. La línea de estado del README sale de este
+  checklist y la vigila `ElEstadoDelReadmeEsElDelPlanTests` (mutación 6); las variables del
+  despliegue están en `deploy/.env.example` —que ya existía— y `LasVariablesDelDespliegueTests` lo
+  compara con el *compose*, la semilla y la CI; `EsDelSistema` dice lo que se cumple bajo (c); la raíz
+  del repositorio se busca en `tests/Comun/RaizDelRepositorio.cs` y una copia nueva es roja
+  (mutación 7); R9/R14 y R5 van al traspaso como preguntas de la puerta de la fase 2, con su coste y
+  sin contestar; y el frontal se cuenta **sin la raíz**, escrito en la cabecera de
+  `scripts/dependencias-por-conjuntos.py` —las 549 de la línea base son 548 más la raíz—.
 
 
 ## Imports pendientes de `CLAUDE.md`
