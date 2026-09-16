@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Arquitectura.Tests;
@@ -41,7 +42,7 @@ public sealed class ElNumeroDeUnAdrEsSuyoYDeNadieMasTests
     [Fact]
     public void El_barrido_encuentra_los_ADR_del_repositorio()
     {
-        string carpeta = Path.Combine(Ensamblados.Raiz(), Carpeta);
+        string carpeta = Path.Combine(RaizDelRepositorio.Ruta(), Carpeta);
 
         Directory.Exists(carpeta).ShouldBeTrue(
             $"no hay carpeta {Carpeta}: sin ella esta regla no mira nada");
@@ -84,7 +85,7 @@ public sealed class ElNumeroDeUnAdrEsSuyoYDeNadieMasTests
             .. from fichero in Ficheros()
                let enElNombre = s_delNombre.Match(fichero).Groups["numero"].Value
                let titulo = s_delTitulo.Match(File.ReadAllText(
-                   Path.Combine(Ensamblados.Raiz(), Carpeta, fichero)))
+                   Path.Combine(RaizDelRepositorio.Ruta(), Carpeta, fichero)))
                where !titulo.Success || titulo.Groups["numero"].Value != enElNombre
                orderby fichero, StringComparer.Ordinal
                select titulo.Success
@@ -100,7 +101,7 @@ public sealed class ElNumeroDeUnAdrEsSuyoYDeNadieMasTests
 
     private static IReadOnlyList<string> Ficheros() =>
         [.. Directory
-            .EnumerateFiles(Path.Combine(Ensamblados.Raiz(), Carpeta), "*.md")
+            .EnumerateFiles(Path.Combine(RaizDelRepositorio.Ruta(), Carpeta), "*.md")
             .Select(Path.GetFileName)
             .OfType<string>()
             .Where(nombre => s_delNombre.IsMatch(nombre))

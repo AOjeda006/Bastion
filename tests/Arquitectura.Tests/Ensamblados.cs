@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Reflection;
 using NetArchTest.Rules;
-using Shouldly;
 
 namespace Bastion.Arquitectura.Tests;
 
@@ -73,28 +72,6 @@ internal static class Ensamblados
 
     /// <summary>Cuántos tipos ve NetArchTest en un ensamblado. Cero significa vacío.</summary>
     internal static int Tipos(Assembly ensamblado) => Types.InAssembly(ensamblado).GetTypes().Count();
-
-    /// <summary>
-    /// La raíz del repositorio, subiendo desde el directorio del ensamblado hasta encontrar la
-    /// solución. Si no aparece, REVIENTA: un barrido que no encuentra qué barrer no puede dar
-    /// verde, que es el modo de fallo entero de este ítem.
-    /// </summary>
-    internal static string Raiz()
-    {
-        DirectoryInfo? donde = new(AppContext.BaseDirectory);
-
-        while (donde is not null && !File.Exists(Path.Combine(donde.FullName, "Bastion.sln")))
-        {
-            donde = donde.Parent;
-        }
-
-        donde.ShouldNotBeNull(
-            "no se ha encontrado Bastion.sln subiendo desde " + AppContext.BaseDirectory +
-            ": sin la raíz del repositorio no se pueden leer las carpetas de src/Modules, y un " +
-            "barrido que no encuentra qué barrer tiene que fallar, no pasar");
-
-        return donde.FullName;
-    }
 
     private static SortedDictionary<string, Assembly> Descubrir(bool modular)
     {

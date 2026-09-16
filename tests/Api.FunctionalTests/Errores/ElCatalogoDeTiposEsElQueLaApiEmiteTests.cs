@@ -177,11 +177,7 @@ public sealed class ElCatalogoDeTiposEsElQueLaApiEmiteTests
 
     private static JsonDocument Documento()
     {
-        string? raiz = RaizDelRepositorio.Buscar();
-
-        raiz.ShouldNotBeNull(
-            "no se ha encontrado Bastion.sln, ni subiendo desde el ensamblado ni desde este fichero");
-
+        string raiz = RaizDelRepositorio.Ruta();
         string ruta = Path.Combine(raiz, RutaDelCatalogo.Replace('/', Path.DirectorySeparatorChar));
 
         File.Exists(ruta).ShouldBeTrue(

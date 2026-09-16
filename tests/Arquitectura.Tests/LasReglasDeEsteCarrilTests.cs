@@ -117,6 +117,11 @@ public sealed class LasReglasDeEsteCarrilTests
         "LasDiecisieteReglasTests.Lo_que_la_tabla_nombra_existe",
         "LasDiecisieteReglasTests.Toda_regla_que_cita_el_repositorio_tiene_su_fila",
 
+        // Las higienes del cierre de la fase 1 (ítem 1.14). La raíz del repositorio se busca en
+        // un solo sitio: hubo seis copias, y la séptima es la que esto pone en rojo.
+        "LaRaizDelRepositorioSeBuscaEnUnSitioTests.Las_dos_agujas_encuentran_la_busqueda_compartida",
+        "LaRaizDelRepositorioSeBuscaEnUnSitioTests.Nadie_mas_busca_la_raiz_del_repositorio",
+
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",
     ];

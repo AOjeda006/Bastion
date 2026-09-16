@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Bastion.BuildingBlocks.Domain.Entidades;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Arquitectura.Tests;
@@ -42,7 +43,7 @@ public sealed class ElGlosarioDelDominioTests
         // que esta comparación acabe comparando la nada: que el fichero no esté donde se busca, que
         // el trozo de tabla no se sepa leer —un encabezado renombrado, un formato distinto— y que
         // no quede ningún ensamblado de dominio en el alcance.
-        File.Exists(Path.Combine(Ensamblados.Raiz(), Glosario)).ShouldBeTrue(
+        File.Exists(Path.Combine(RaizDelRepositorio.Ruta(), Glosario)).ShouldBeTrue(
             $"no hay glosario en {Glosario}: sin él esta regla no compara nada");
 
         FilasDelGlosario().ShouldNotBeEmpty(
@@ -143,7 +144,7 @@ public sealed class ElGlosarioDelDominioTests
     /// </remarks>
     private static List<Fila> FilasDelGlosario()
     {
-        string ruta = Path.Combine(Ensamblados.Raiz(), Glosario);
+        string ruta = Path.Combine(RaizDelRepositorio.Ruta(), Glosario);
 
         if (!File.Exists(ruta))
         {

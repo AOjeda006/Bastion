@@ -1,4 +1,5 @@
 using System.Globalization;
+using Bastion.Pruebas.Comun;
 using NetArchTest.Rules;
 using Shouldly;
 
@@ -40,7 +41,7 @@ public sealed class ElInventarioDeModulosTests
     {
         IReadOnlyList<string> enDisco =
         [
-            .. Directory.EnumerateDirectories(Path.Combine(Ensamblados.Raiz(), "src", "Modules"))
+            .. Directory.EnumerateDirectories(Path.Combine(RaizDelRepositorio.Ruta(), "src", "Modules"))
                 .Select(Path.GetFileName)
                 .Select(nombre => nombre!)
                 .Order(StringComparer.Ordinal),
@@ -69,7 +70,7 @@ public sealed class ElInventarioDeModulosTests
             .Where(par => par.Value != Presencia.SinCarpeta)
             .Select(par => par.Key))
         {
-            string carpeta = Path.Combine(Ensamblados.Raiz(), "src", "Modules", modulo);
+            string carpeta = Path.Combine(RaizDelRepositorio.Ruta(), "src", "Modules", modulo);
 
             IReadOnlyList<string> capas =
             [

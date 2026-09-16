@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Arquitectura.Tests;
@@ -120,7 +121,7 @@ public sealed class LasMarcasDeAlcanceTests
     {
         Lectura lectura = LeerLosProyectosDePruebas();
         using var openApi = JsonDocument.Parse(
-            File.ReadAllText(Path.Combine(Ensamblados.Raiz(), RutaDelOpenApi)));
+            File.ReadAllText(Path.Combine(RaizDelRepositorio.Ruta(), RutaDelOpenApi)));
         Evidencia evidencia = new(lectura.Casos, openApi.RootElement);
 
         List<string> sinMotivo = [];
@@ -209,7 +210,7 @@ public sealed class LasMarcasDeAlcanceTests
 
     private static Lectura LeerLosProyectosDePruebas()
     {
-        string pruebas = Path.Combine(Ensamblados.Raiz(), "tests");
+        string pruebas = Path.Combine(RaizDelRepositorio.Ruta(), "tests");
         List<string> marcas = [];
         HashSet<string> casos = new(StringComparer.Ordinal);
         List<string> ilegibles = [];
@@ -225,7 +226,7 @@ public sealed class LasMarcasDeAlcanceTests
             }
 
             Lectura lectura = Leer(
-                Path.GetRelativePath(Ensamblados.Raiz(), fichero).Replace('\\', '/'),
+                Path.GetRelativePath(RaizDelRepositorio.Ruta(), fichero).Replace('\\', '/'),
                 File.ReadAllLines(fichero));
             marcas.AddRange(lectura.Marcas);
             casos.UnionWith(lectura.Casos);

@@ -9,6 +9,7 @@ using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Impuestos;
 using Bastion.Organizacion.Contracts.Unidades;
+using Bastion.Pruebas.Comun;
 using Npgsql;
 using Shouldly;
 
@@ -440,22 +441,11 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
 
     /// <summary>La etiqueta de la imagen de PostgreSQL que declara el compose del despliegue.</summary>
     /// <remarks>
-    /// Se lee del fichero y la raíz se busca subiendo hasta encontrar la solución: el ensamblado
-    /// no corre donde está el repositorio, y una ruta relativa escrita a mano deja de valer en
-    /// cuanto cambia el marco de destino.
+    /// Se lee del fichero en vez de copiar la etiqueta, por lo que explica el caso que la usa.
     /// </remarks>
     private static string ImagenDelCompose()
     {
-        DirectoryInfo? donde = new(AppContext.BaseDirectory);
-
-        while (donde is not null && !File.Exists(Path.Combine(donde.FullName, "Bastion.sln")))
-        {
-            donde = donde.Parent;
-        }
-
-        donde.ShouldNotBeNull("no se encuentra la raíz del repositorio desde el ensamblado");
-
-        string compose = Path.Combine(donde!.FullName, "deploy", "docker-compose.yml");
+        string compose = Path.Combine(RaizDelRepositorio.Ruta(), "deploy", "docker-compose.yml");
         File.Exists(compose).ShouldBeTrue($"no está {compose}");
 
         string[] lineas = File.ReadAllLines(compose);

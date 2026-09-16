@@ -1,8 +1,8 @@
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using Bastion.Organizacion.Domain.Impuestos;
 using Bastion.Organizacion.Domain.Unidades;
 using Bastion.Organizacion.Infrastructure.Semillas;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Api.FunctionalTests.Semillas;
@@ -53,7 +53,7 @@ public sealed class LasSemillasLleganDondeSeCarganTests
     [Fact]
     public void Las_del_repositorio_y_las_publicadas_son_las_mismas()
     {
-        string[] enElRepositorio = NombresDeJson(Path.Combine(Raiz(), EnElRepositorio));
+        string[] enElRepositorio = NombresDeJson(Path.Combine(RaizDelRepositorio.Ruta(), EnElRepositorio));
         string[] publicadas = NombresDeJson(SemillasDeOrganizacion.CarpetaPublicada);
 
         // En los dos sentidos, y con la lista del cargador de por medio. De menos: un fichero que
@@ -262,31 +262,6 @@ public sealed class LasSemillasLleganDondeSeCarganTests
             .OfType<string>()
             .Order(StringComparer.Ordinal),
     ];
-
-    // Misma cautela que en el resto de barridos: se parte del directorio del ensamblado, y el
-    // fichero del test queda de segundo intento porque en la CI las rutas de los fuentes se
-    // reescriben. Si no aparece por ninguno de los dos, REVIENTA.
-    private static string Raiz([CallerFilePath] string desde = "")
-    {
-        string? raiz = Subiendo(AppContext.BaseDirectory) ?? Subiendo(Path.GetDirectoryName(desde));
-
-        raiz.ShouldNotBeNull(
-            "no se ha encontrado Bastion.sln, ni subiendo desde el ensamblado ni desde el fichero del test");
-
-        return raiz;
-    }
-
-    private static string? Subiendo(string? partida)
-    {
-        DirectoryInfo? carpeta = string.IsNullOrEmpty(partida) ? null : new DirectoryInfo(partida);
-
-        while (carpeta is not null && !File.Exists(Path.Combine(carpeta.FullName, "Bastion.sln")))
-        {
-            carpeta = carpeta.Parent;
-        }
-
-        return carpeta?.FullName;
-    }
 
     /// <summary>Una carpeta temporal con el contenido que pida el test, y que se borra sola.</summary>
     private sealed class CarpetaDePruebas : IDisposable

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Bastion.BuildingBlocks.Domain.Identificacion;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Arquitectura.Tests;
@@ -313,7 +314,7 @@ public sealed class NingunDatoConFormaDeRealTests
 
     private static IEnumerable<string> Ficheros()
     {
-        string raizDelRepositorio = Ensamblados.Raiz();
+        string raizDelRepositorio = RaizDelRepositorio.Ruta();
 
         foreach (string raiz in s_raices)
         {
@@ -349,7 +350,7 @@ public sealed class NingunDatoConFormaDeRealTests
         || Path.GetFileName(fichero).Equals("package-lock.json", StringComparison.Ordinal);
 
     private static string Relativo(string fichero) =>
-        Path.GetRelativePath(Ensamblados.Raiz(), fichero).Replace('\\', '/');
+        Path.GetRelativePath(RaizDelRepositorio.Ruta(), fichero).Replace('\\', '/');
 
     // Ni siquiera en el mensaje de fallo: si el barrido caza un dato de verdad y lo imprime, el
     // registro de la CI acaba guardando justo lo que la regla existe para sacar del repositorio.

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Arquitectura.Tests;
@@ -300,7 +301,7 @@ public sealed partial class LasDiecisieteReglasTests
     /// <summary>Los ficheros de una carpeta, relativos a la raíz y con barras normales, sin salidas de compilación.</summary>
     private static IEnumerable<string> Ficheros(string carpeta)
     {
-        string raiz = Ensamblados.Raiz();
+        string raiz = RaizDelRepositorio.Ruta();
         string donde = Ruta(carpeta);
 
         if (!Directory.Exists(donde))
@@ -320,7 +321,7 @@ public sealed partial class LasDiecisieteReglasTests
 
     private static bool EsCSharp(string fichero) => fichero.EndsWith(".cs", StringComparison.Ordinal);
 
-    private static string Ruta(string relativa) => Path.Combine(Ensamblados.Raiz(), relativa);
+    private static string Ruta(string relativa) => Path.Combine(RaizDelRepositorio.Ruta(), relativa);
 
     /// <summary>
     /// Una cita de regla: una R mayúscula y un número, sueltos. Ni pegados a una palabra ni justo

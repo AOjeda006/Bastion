@@ -121,11 +121,7 @@ public sealed class LaPlantillaDelFrontalEsLaDeLaApiTests
 
     private static string LeerModelo()
     {
-        string? raiz = RaizDelRepositorio.Buscar();
-
-        raiz.ShouldNotBeNull(
-            "no se ha encontrado Bastion.sln, ni subiendo desde el ensamblado ni desde este fichero");
-
+        string raiz = RaizDelRepositorio.Ruta();
         string ruta = Path.Combine(raiz, RutaDelModelo.Replace('/', Path.DirectorySeparatorChar));
 
         File.Exists(ruta).ShouldBeTrue($"no existe {RutaDelModelo}: la pantalla de importación no tiene de dónde enseñar la plantilla");

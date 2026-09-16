@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Bastion.Pruebas.Comun;
 using NetArchTest.Rules;
 using Shouldly;
 
@@ -134,7 +135,7 @@ public sealed class LasFronterasEntreModulosTests
     [Fact]
     public void Las_referencias_de_proyecto_son_las_declaradas()
     {
-        string modulos = Path.Combine(Ensamblados.Raiz(), "src", "Modules");
+        string modulos = Path.Combine(RaizDelRepositorio.Ruta(), "src", "Modules");
 
         IReadOnlyList<string> proyectos =
         [

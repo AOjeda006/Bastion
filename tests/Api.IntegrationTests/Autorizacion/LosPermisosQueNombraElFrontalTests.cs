@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Autorizacion;
@@ -135,7 +136,7 @@ public sealed class LosPermisosQueNombraElFrontalTests(PostgresConTodosLosModulo
     /// </summary>
     private static IReadOnlyList<(string Fichero, string Valor)> Candidatos(HashSet<string> prefijos)
     {
-        string raiz = Raiz();
+        string raiz = RaizDelRepositorio.Ruta();
         string fuentes = Path.Combine(raiz, "frontend", "src");
 
         Directory.Exists(fuentes).ShouldBeTrue($"no existe {fuentes}: el barrido no tiene dónde mirar");
@@ -156,21 +157,5 @@ public sealed class LosPermisosQueNombraElFrontalTests(PostgresConTodosLosModulo
                orderby relativa + ":" + valor, StringComparer.Ordinal
                select (relativa, valor),
         ];
-    }
-
-    /// <summary>La raíz del repositorio, subiendo hasta encontrar la solución.</summary>
-    private static string Raiz()
-    {
-        DirectoryInfo? directorio = new(AppContext.BaseDirectory);
-
-        while (directorio is not null && !File.Exists(Path.Combine(directorio.FullName, "Bastion.sln")))
-        {
-            directorio = directorio.Parent;
-        }
-
-        directorio.ShouldNotBeNull(
-            $"no se encuentra Bastion.sln subiendo desde {AppContext.BaseDirectory}");
-
-        return directorio.FullName;
     }
 }

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Organizacion.Contracts.Comun;
+using Bastion.Pruebas.Comun;
 using Bastion.Terceros.Contracts.Terceros;
 using Shouldly;
 
@@ -162,7 +163,7 @@ public sealed class LaMatrizDeLosPuertosDeEstadoTests
     [Fact]
     public void Cada_familia_delegada_tiene_su_matriz_en_el_otro_carril()
     {
-        string raiz = RaizDelRepositorio();
+        string raiz = RaizDelRepositorio.Ruta();
 
         foreach ((Type familia, string ruta) in s_matricesEnOtroCarril)
         {
@@ -247,20 +248,6 @@ public sealed class LaMatrizDeLosPuertosDeEstadoTests
             .Select(dato => dato.ConstructorArguments
                 .Select(argumento => argumento.Value as string)
                 .ToArray());
-
-    private static string RaizDelRepositorio()
-    {
-        DirectoryInfo? donde = new(AppContext.BaseDirectory);
-
-        while (donde is not null && !File.Exists(Path.Combine(donde.FullName, "Bastion.sln")))
-        {
-            donde = donde.Parent;
-        }
-
-        donde.ShouldNotBeNull("no se encuentra la raíz del repositorio desde el ensamblado");
-
-        return donde!.FullName;
-    }
 
     private sealed record Cubrimiento(Type Puerto, object Estado, MethodInfo Metodo, string Caso);
 }
