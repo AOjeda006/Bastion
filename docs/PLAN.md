@@ -5797,6 +5797,269 @@ ella, el hueco está cerrado y comprobado: la mutación cae en un test y solo en
 
 El carril de arquitectura pasa de **18 a 23** casos.
 
+### Verificado en local, con la salida real — addenda 1.12 a 1.14
+
+**Toda cifra de «antes y después» nombra sus dos commits.** El «antes» es `7f676e2` (`main` al abrir la
+rama, el cierre de la fase 1), con las líneas base que dio el usuario; el «después», `0d4062f`, sobre el
+que corrió la batería entera de `AGENTS.md` **con Docker arrancado**, con el guion `bateria-112.sh` del
+directorio de trabajo de la sesión, y la primera línea de su salida:
+`HEAD 0d4062f · SDK 10.0.401 · docker 29.7.2`. Y de los commits de en medio, lo que se comprobó de
+cada uno: `d7e2d91` es el arnés, y **se vio rojo** sobre el árbol de `7f676e2` —«le faltan 38 y le sobra
+1», guion con 1—; `7c1b723`, el arreglo, con el mismo guion en verde; y `cb141e5` y `0e96a57`, que
+tocan a la vez código de tests y censos, en un *worktree* aparte: `dotnet build` con 0 errores y
+`Arquitectura.Tests` 44 de 44 y 49 de 49.
+
+```
+npm --prefix frontend run api + git status -- esquema.ts   → sin cambios
+bash scripts/comprobar-migraciones.sh                      → modelo y migraciones coinciden en los 5
+                                                             (Auditoría 4, Organización 5, Identidad 3,
+                                                              Terceros 3, Catálogo 3): ninguna migración nueva
+bash scripts/generar-openapi.sh --comprobar                → al día: 128 operaciones, en 74 rutas
+bash scripts/generar-errores.sh --comprobar                → al día: 90 tipos, de 96 sitios de llamada
+dotnet build Bastion.sln                                   → 0 errores, 0 advertencias
+dotnet format Bastion.sln --verify-no-changes              → sin cambios
+
+en `7f676e2`: 128 operaciones en 74 rutas · 89 tipos de 95 sitios
+  → las mismas operaciones —el `409` nuevo es de un `PUT` que ya existía— y +1 tipo en +1 sitio:
+    `permisos-de-rol-del-sistema`, con su texto en `es` y en `en`
+```
+
+Los dos carriles, con el recuento que decide el desenlace y las listas de ensamblados de la CI:
+
+```
+Dominio y arquitectura: 862 casos (862 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Identidad.UnitTests 61, Organizacion.UnitTests 183, BuildingBlocks.UnitTests 215,
+    Terceros.UnitTests 85, Catalogo.UnitTests 78, Organizacion.IntegrationTests 22,
+    Arquitectura.Tests 51, Api.FunctionalTests 154, Api.IntegrationTests 13
+    (845 en `7f676e2`: +17, y cada uno con su clase —
+     Identidad.UnitTests 58 → 61, los 3 nuevos de `RolTests` (`Alinear`);
+     Arquitectura.Tests 37 → 51, los 5 de `LasDiecisieteReglasTests`, los 5 de
+       `LasVariablesDelDespliegueTests`, los 2 de `LaRaizDelRepositorioSeBuscaEnUnSitioTests` y los 2
+       de `ElEstadoDelReadmeEsElDelPlanTests`)
+
+Integración (Testcontainers): 399 casos (399 correctos, 0 con error, 0 omitidos) en 9 ensamblados
+  — Organizacion.IntegrationTests 74, Api.IntegrationTests 325, y 0 en los otros siete
+    (392 en `7f676e2`: +7, los 3 de `LasMigracionesSobreTablasConFilasTests` y los 4 de
+     `ElRolDelSistemaTests`)
+
+Frontal: 15 ficheros de prueba, 101 casos, 0 avisos de `act()`
+  (15, 101 y 0 en `7f676e2`: ningún caso nuevo; el ítem solo toca `i18n/es.ts`, `i18n/en.ts` y el
+   `esquema.ts` generado)
+```
+
+El reparto sale de los `.trx` del propio recuento, agrupados por `className`. **El canal de `act()`
+sigue a cero**, medido en la salida de la suite: `grep -c "not wrapped in act"` → **0**.
+
+```
+npm --prefix frontend run typecheck · lint · format:check · build   → limpios
+bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
+
+Frontal · arranque 426/450 KiB en 3 ficheros · total servido 592/900 KiB
+  (426/450 y 592/900 en `7f676e2`: el mismo KiB; `index.js` 420 454 → 420 788 B, +334 B, los textos
+   del `type` nuevo en los dos diccionarios)
+```
+
+**Dependencias, por conjuntos, con el guion que fija la convención** —el frontal **sin la raíz**—:
+
+```
+python scripts/dependencias-por-conjuntos.py 7f676e2 HEAD
+
+7f676e2: 39 packages.lock.json · 125 pares nombre/versión · 30 Project · frontal 548 entradas sin la raíz
+HEAD: 39 packages.lock.json · 125 pares nombre/versión · 30 Project · frontal 548 entradas sin la raíz
+7f676e2 → HEAD:
+  pares añadidos    []
+  pares retirados   []
+  Project añadidos  []
+  Project retirados []
+  frontal añadidas  []
+  frontal retiradas []
+```
+
+Las **549** de la línea base son las mismas **548 más la raíz**: la misma cifra contada con la otra
+convención, que es lo que el 1.14 deja escrito en el guion. Ninguna licencia nueva que revisar.
+
+**El humo, porque el ítem toca el arranque.** El job «Humo» de la CI paso a paso, en local, en un
+proyecto de *compose* aparte —`docker compose -p bastion-humo-112`— con un fichero de entorno de valores
+aleatorios generado para la pasada y borrado al terminar. El paso 09 no está en la CI: pregunta a la base
+por lo que el ítem cambia. El 18b es el paso nuevo de la CI, el segundo arranque, tal cual.
+
+```
+HEAD 0d4062f · docker 29.7.2 · proyecto bastion-humo-112
+01 config               compose válido
+02 construir            exit 0 (24 s)
+03-05 levantar          api, postgres y web (healthy) · jaeger y otel-collector running
+                        · migraciones Exited (0)
+06 migrador             código 0 · esquema aplicado por los cinco contextos
+07 semillas en imagen   impuestos.json unidades-de-medida.json
+08 maestros en base     impuestos=12 unidades=15 iva_general_vigente=21.00
+09 lo del addendum      el migrador del primer arranque dice SinRolesDelSistema: 1 · permisos del rol
+                        del sistema en la base: 93 · claves ajenas entre esquemas: 0
+10-11 salud             /health/live → Healthy · /health/ready → base-de-datos Healthy
+12 sin credenciales     401
+13-14 sesión y lectura  POST /api/v1/identidad/sesiones → 200 · GET empresas con testigo → 200, total=1
+15-16 frontal           carga · por el proxy sin credenciales → 401
+16b cuerpo por nginx    2 MiB + 1 byte → 413 type=[/errors/cuerpo-demasiado-grande] · 3 MiB + 1 byte → 413 type=[]
+16c importación         una fila mala → 200 con su rechazo · misma clave y fichero → 200, mismos bytes
+                        · misma clave y otro fichero → 409 idempotencia-cuerpo-distinto
+16d purga               líneas de la purga de recibos en el registro de la API: 1
+17 sin mapas            mapas dentro de la imagen: []
+18 trazas               Jaeger conoce bastion-api (intento 1)
+18b segundo arranque    exit 0 (13 s)
+  ::notice::Tras el primer arranque, el rol del sistema «administracion» concede el catálogo entero: 93 permisos.
+  ::notice::Estado viejo construido: el rol del sistema con los 55 permisos de la fase 0 y uno retirado; GET /api/v1/terceros/terceros -> 403.
+  ::notice::Tras el segundo arranque, el rol del sistema «administracion» concede el catálogo entero: 93 permisos.
+  ::notice::Tras el segundo arranque, con la semilla fuera, GET /api/v1/terceros/terceros -> 200.
+FALLOS: 0
+19 desmontar            down -v --remove-orphans
+```
+
+Después, `docker compose ls -a` sin ningún proyecto y ningún volumen ni contenedor con `humo` en el
+nombre. Y `git status --porcelain` vacío al terminar la batería.
+
+### Las ocho mutaciones de las addenda, cada una aplicada, ejecutada y revertida
+
+Todas sobre **árbol limpio y commiteado**, línea base `a1b2294`, el 2026-09-16. Cada una con copia de
+respaldo y cambio anclado —el guion aborta si el texto que sustituye no aparece **exactamente una
+vez**—, y revertida **restaurando la copia y tocando su fecha**. Después de cada una: el fichero igual
+al original, `dotnet build` con 0 errores, `git status --porcelain` **vacío** y `grep -rn MUTACION` sobre
+`src tests frontend/src db scripts deploy .github` **sin resultados** (en `docs/PLAN.md` sí hay: son las
+actas de las tandas anteriores). Tres guiones del directorio de trabajo de la sesión:
+`mut1.sh` (1, 1a y 8, contra el *compose*), la clase del arnés para la 2, y `mutar37.py` (3 a 7, con el
+**carril rápido entero** y los rojos leídos del `.trx`).
+
+**Qué corre cada una, y por qué no siempre los dos carriles enteros.** La 1 y la 8 no las ve ningún
+carril de .NET —por eso existe el arnés—, así que corren el segundo arranque de verdad, con
+`segundo-112.sh`: construye la imagen, levanta un *compose* aparte (`bastion-humo-mut1`…) con un
+fichero de entorno aleatorio, llama a `scripts/ci/segundo-arranque.sh` y lo desmonta con sus
+volúmenes. La 2 corre la clase del arnés, **sus tres casos**, y no el carril de integración entero:
+el resto de ese carril migra siempre sobre bases vacías, que es justo el camino del caso de contraste
+de la misma clase. Las 3 a 7 tocan documentos o fuentes de tests que solo lee `Arquitectura.Tests`, y
+corren el carril rápido entero. Referencia sin mutar en `a1b2294`: rápido **862**, sin un rojo.
+
+| # | Mutación | Dónde | Qué corre | Resultado |
+|---|---|---|---|---|
+| 1 | **El refresco de permisos, deshecho**: el rol se alinea en memoria, se cuenta y **no se escribe** | `ActualizarRolesDelSistema.cs` | segundo arranque | **rojo en el segundo arranque, verde en el primero**; entera abajo |
+| 1a | **El refresco, deshecho del todo**: el rol se lista y no se alinea | `ActualizarRolesDelSistema.cs` | segundo arranque | primer arranque verde; rojo en el segundo, en `El migrador del segundo arranque no dice haber alineado el rol del sistema (suceso RolDelSistemaAlineado).` |
+| 2 | **Una migración con una columna `NOT NULL` sin valor por omisión** | `db/migraciones/Terceros/` (fichero nuevo) | la clase del arnés | **rojo con filas, verde sobre vacías**; entera abajo |
+| 3 | **Un identificador quitado de la tabla**: la fila de R13 | `docs/dominio/reglas-duras.md` | rápido: **2** de 862 | `LasDiecisieteReglasTests.Las_filas_son_las_diecisiete_una_vez_y_en_orden` —«Sobran: []. Faltan: [R13].»— y `.Toda_regla_que_cita_el_repositorio_tiene_su_fila` —«R13 en docs/adr/adr-0015-…md, tests/Arquitectura.Tests/LasDiecisieteReglasTests.cs»—: la etiqueta `r13` del ADR es la que la sigue citando |
+| 4 | **Un identificador añadido a la tabla sin nada detrás**: una fila R(18) | `docs/dominio/reglas-duras.md` | rápido: **1** de 862 | entera abajo |
+| 5 | **Una regla viva cuyo sitio de cumplimiento se borra**: `DireccionEstructuradaR17Tests.cs` | `tests/Organizacion.UnitTests/` | rápido: **1** de 843 | `LasDiecisieteReglasTests.Lo_que_la_tabla_nombra_existe` —«R17: `DireccionEstructuradaR17Tests` no está declarado en src/ ni en tests/»—. 843 porque el fichero borrado llevaba 19 casos |
+| 6 | **La línea del README desalineada**: la casilla 1.11 desmarcada en el PLAN y el README igual | `docs/PLAN.md` | rápido: **1** de 862 | `ElEstadoDelReadmeEsElDelPlanTests.La_linea_de_estado_del_readme_es_la_del_checklist` —«Dice: … cerrada: 11 de 11 ítems. … Debe empezar por: … en curso: 10 de 11 ítems.»— |
+| 7 | **Una copia de la búsqueda de la raíz, reintroducida**: una clase con su bucle de `.Parent` hasta `Bastion.sln` | `tests/Api.FunctionalTests/` (fichero nuevo) | rápido: **1** de 862 | `LaRaizDelRepositorioSeBuscaEnUnSitioTests.Nadie_mas_busca_la_raiz_del_repositorio`, con **las dos agujas**: «el nombre de la solución» y «el paso a la carpeta madre». La recogida lleva guardia, así que la mutación es real |
+| 8 | **El primer arranque sobre base vacía sigue sembrando** —el control: el árbol sin mutar— | — | segundo arranque | **verde**: el primer arranque con el rol en 93 y `SinRolesDelSistema` del migrador, y el segundo, entero |
+
+**La 1a existe porque la 1 sola dejaría una duda.** La 1 deja al migrador **decir** que ha alineado
+—38 concedidos, 1 retirado y `RolDelSistemaAlineado`— sin escribir nada, así que pasa todas las
+afirmaciones sobre el registro y la caza la comparación con el catálogo leída por la API. La 1a quita el
+alineamiento entero, y la caza antes la afirmación sobre el suceso. Entre las dos: ni un migrador que
+calla ni uno que miente dan verde. Deshacerlo **en la llamada** del migrador no era la mutación pedida:
+se lleva también el `SinRolesDelSistema` del primer arranque, y el rojo saldría en el primero.
+
+**La 1, la 2 y la 4, enteras.**
+
+**Mutación 1 — el refresco de permisos, deshecho.** Es la más peligrosa de las dos variantes, porque
+no deja rastro en el registro: el migrador cuenta lo que haría.
+
+```diff
+         if (resultado.Exists(actualizado => actualizado.Concedidos.Count > 0 || actualizado.Retirados.Count > 0))
+         {
+-            await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
++            // MUTACION 1: el refresco deshecho; se calcula y se cuenta, y no se escribe.
++            _ = unidadTrabajo;
+         }
+```
+
+```
+HEAD a1b2294 + árbol de trabajo · proyecto bastion-humo-mut1
+construida la imagen de la API
+primer arranque levantado
+::notice title=Segundo arranque::Tras el primer arranque, el rol del sistema «administracion» concede el catálogo entero: 93 permisos.
+::notice title=Segundo arranque::Estado viejo construido: el rol del sistema con los 55 permisos de la fase 0 y uno retirado; GET /api/v1/terceros/terceros -> 403.
+    (registro del migrador del segundo arranque: 38 × PermisoConcedidoAlRolDelSistema,
+     1 × PermisoRetiradoDelRolDelSistema, 1 × RolDelSistemaAlineado con "Concedidos":38,"Retirados":1,"Permisos":93;
+     y SemillaSinVariables en la API)
+::error title=Segundo arranque::Tras el segundo arranque, el rol del sistema «administracion» no es el catálogo: le faltan 38 ['catalogo.articulo-proveedor.agregar', 'catalogo.articulo-proveedor.modificar', 'catalogo.articulo-proveedor.quitar', 'catalogo.articulo.crear', 'catalogo.articulo.modificar', 'catalogo.articulo.ver', 'catalogo.categoria.crear', 'catalogo.categoria.modificar', 'catalogo.categoria.ver', 'catalogo.linea-tarifa.agregar', 'catalogo.linea-tarifa.modificar', 'catalogo.tarifa.cerrar', 'catalogo.tarifa.crear', 'catalogo.tarifa.modificar', 'catalogo.tarifa.ver', 'organizacion.bloqueado.ver', 'organizacion.conversion-um.reincorporar', 'organizacion.conversion-um.retirar', 'organizacion.divisa.reincorporar', 'organizacion.divisa.retirar', 'organizacion.tipo-cambio.reincorporar', 'organizacion.tipo-cambio.retirar', 'organizacion.unidad-medida.reincorporar', 'organizacion.unidad-medida.retirar', 'terceros.condicion-pago.fijar', 'terceros.contacto.agregar', 'terceros.contacto.quitar', 'terceros.cuenta-bancaria.agregar', 'terceros.cuenta-bancaria.preferente', 'terceros.cuenta-bancaria.quitar', 'terceros.limite-credito.fijar', 'terceros.tarifa-asignada.fijar', 'terceros.tercero.bloquear', 'terceros.tercero.crear', 'terceros.tercero.desbloquear', 'terceros.tercero.importar', 'terceros.tercero.modificar', 'terceros.tercero.ver'] y le sobran 1 ['organizacion.permiso-de-una-version-anterior.ver'].
+GUION exit 1 (14 s)
+--- restaurada: build 0 Errores · porcelain:[] · grep MUTACION exit 1 (1 = limpio)
+```
+
+El primer arranque, verde: la semilla de la API crea el rol con el catálogo entero y el migrador no
+tenía nada que alinear. El rojo es **exactamente** el que dio el arnés sobre `7f676e2` antes del
+arreglo —38 que faltan y el retirado que sobra—, que es lo que dice que la mutación deshace el arreglo y
+no otra cosa.
+
+**Mutación 2 — una columna `NOT NULL` sin valor para las filas que ya están.** Una migración escrita a
+mano en Terceros, con la marca de tiempo más nueva para que se aplique la última:
+
+```diff
++// MUTACION 2 del ítem 1.12: columna NOT NULL sin valor por omisión.
++    [DbContext(typeof(TercerosDbContext))]
++    [Migration("20260916000000_MutacionColumnaObligatoria")]
++    public partial class MutacionColumnaObligatoria : Migration
++    {
++        protected override void Up(MigrationBuilder migrationBuilder)
++        {
++            migrationBuilder.AddColumn<string>(
++                name: "mutacion_obligatoria",
++                schema: "terceros",
++                table: "terceros",
++                type: "text",
++                nullable: false);
++        }
+```
+
+```
+dotnet test tests/Api.IntegrationTests --filter "FullyQualifiedName~LasMigracionesSobreTablasConFilasTests"
+
+Failed  Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila
+   Shouldly.ShouldAssertException : recorrido.Fallos
+    should be empty but had
+1
+    item and was
+["20260916000000_MutacionColumnaObligatoria no se aplica con filas: 23502: column "mutacion_obligatoria" of relation "terceros" contains null values"]
+    una instalación con datos no pasaría de aquí: 20260916000000_MutacionColumnaObligatoria no se aplica con filas: …
+Passed  Y_sobre_tablas_vacias_se_aplican_igual_que_en_la_base_de_los_tests
+Passed  Recorre_todos_los_contextos_que_tienen_migraciones
+Con error! - Con error: 1, Superado: 2, Omitido: 0, Total: 3
+
+--- restaurada (fichero borrado): build 0 Errores · porcelain:[] · MUTACION: nada en el código
+```
+
+Rojo sobre la tabla con filas y verde sobre la vacía, **en la misma pasada y la misma clase**: si los dos
+se hubieran puesto rojos, lo roto sería el recorrido. El `23502` es el que daría el `migraciones` del
+*compose* en la primera instalación con un tercero dentro, y la API no llegaría a arrancar.
+
+**Mutación 4 — una regla que el §6 no tiene.** La fila nombra un sitio que **sí** existe, para que el
+rojo no pueda venir de la comprobación de existencia sino de la de las diecisiete. El identificador
+inventado va escrito en esta acta como R(18), salvo donde la salida lo entrecomilla: con la R y las
+cifras pegadas, el acta **citaría** una regla sin fila, y la regla que describe se pondría roja —la
+misma mutación, sin revertir—.
+
+```diff
+ | R17 | Las direcciones se guardan en campos estructurados. | viva | `Direccion` guarda los campos … |
++| R(18) | MUTACION 4: una regla que el sexto apartado no tiene. | viva | `ElFiltroNoSeSaltaPorAhiTests`. |
+```
+
+```
+carril rápido: exit 1 · 862 casos, 861 correctos, 1 con error
+  [Failed] Bastion.Arquitectura.Tests.LasDiecisieteReglasTests.Las_filas_son_las_diecisiete_una_vez_y_en_orden
+      Shouldly.ShouldAssertException : enLaTabla
+          should be
+      ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", "R16", "R17"]
+          but was (case sensitive comparison)
+      ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", "R16", "R17", "R18"]
+          difference
+      ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", "R16", "R17", *"R18"*]
+
+      Additional Info:
+          las filas de docs/dominio/reglas-duras.md no son R1 a R17, una vez cada una y en orden. Sobran: [R(18)]. Faltan: [].
+--- restaurada: original=True · build exit 0 · porcelain=[] · MUTACION=[] · sin seguir=[]
+```
+
+Un solo rojo, y es el de la lista: la fila está bien formada, su estado es uno de los tres y lo que nombra
+existe, así que las otras cuatro afirmaciones siguen en verde. Lo que la tabla no puede afirmar es que
+R1…R17 sean **las** del plan maestro, y eso está escrito en la propia tabla, no disimulado aquí.
+
 ### Verificado en local, con la salida real — ítem 1.11
 
 **Toda cifra de «antes y después» nombra sus dos commits.** El «antes» es `051449d` (main al abrir
