@@ -122,6 +122,14 @@ public sealed class LasReglasDeEsteCarrilTests
         "LaRaizDelRepositorioSeBuscaEnUnSitioTests.Las_dos_agujas_encuentran_la_busqueda_compartida",
         "LaRaizDelRepositorioSeBuscaEnUnSitioTests.Nadie_mas_busca_la_raiz_del_repositorio",
 
+        // Las variables del despliegue son una sola lista: el ejemplo, el compose, la semilla y
+        // el fichero que se fabrica la CI.
+        "LasVariablesDelDespliegueTests.Algun_valor_del_ejemplo_lleva_un_espacio_a_proposito",
+        "LasVariablesDelDespliegueTests.El_ejemplo_documenta_lo_que_interpola_el_compose_y_nada_mas",
+        "LasVariablesDelDespliegueTests.La_CI_solo_escribe_variables_que_el_ejemplo_documenta",
+        "LasVariablesDelDespliegueTests.Las_cuatro_fuentes_se_leen",
+        "LasVariablesDelDespliegueTests.Las_de_la_semilla_son_las_que_lee_su_codigo",
+
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",
     ];

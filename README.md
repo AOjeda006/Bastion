@@ -77,6 +77,11 @@ cp deploy/.env.example deploy/.env
 `deploy/.env` está en `.gitignore` y **no se commitea nunca**. Ningún secreto vive en el
 repositorio: todo entra por variables de entorno.
 
+Para entrar la primera vez hacen falta además las ocho `BASTION_SEMILLA_*`: la primera empresa y la
+primera cuenta. Qué es cada una está en el propio `deploy/.env.example`, y
+`LasVariablesDelDespliegueTests` lo compara con el *compose*, con el código que las lee y con el
+fichero que se fabrica la CI.
+
 ### 3 · Levantar el entorno completo
 
 El compose vive en `deploy/` (estructura del §12 del plan maestro), así que **todos** los comandos
