@@ -4431,7 +4431,14 @@ de mirar el criterio contra el código:
    el cuarto motivo de `MotivoParaVerLoBloqueado` que el adaptador necesita para ver lo bloqueado
    sin saltarse el filtro.
 
-**Lo siguiente es el código del 2.2.**
+**Y el código del 2.2 está escrito**, el 2026-09-18, en `cd50109` y `c2950db`: los tres puertos con
+sus adaptadores contra PostgreSQL real, el cuarto motivo de `MotivoParaVerLoBloqueado` con sus dos
+aperturas declaradas, las tres puertas públicas y las **nueve** casillas nuevas repartidas entre las
+dos matrices —seis en la de `EstadoDeMaestro`, tres en la general—. Cinco reglas se vieron en rojo
+antes de aceptarlas y la composición se vio en rojo por **mutación**, no por inversión: el detalle,
+con lo que solo se vio en verde, en la casilla del **2.2**.
+
+**Lo siguiente es el 2.3.**
 
 > La resolución que cambió la forma de una respuesta, dicha aquí porque afecta al código de la
 > fase 0: **lo que `Serie.cs` prometía es imposible**, no solo ambiguo. `Serie` vive en
@@ -10893,7 +10900,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   ficheros, 103 casos** —los 101 y dos nuevos— y **0** avisos de `act()`, contados sobre el registro
   entero de `npm --prefix frontend run test` con `grep -c 'not wrapped in act'`.
 
-- [ ] **2.2 · Los tres puertos que Inventario va a preguntar, y el bloqueo que no es el del art. 32** —
+- [x] **2.2 · Los tres puertos que Inventario va a preguntar, y el bloqueo que no es el del art. 32** —
   criterio de aceptación: `IConsultaDeArticulos` en `Catalogo.Contracts`, con **enumerado propio** de
   **tres** valores (`NoExiste = 0`, se ofrece para lo nuevo y `NoSeAlmacena` para el `Servicio`), e
   `IConsultaDeAlmacenes` e `IConsultaDeUbicaciones` en `Organizacion.Contracts`
@@ -10948,6 +10955,45 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   sí se afirma aquí, y **contra PostgreSQL real**, es que cada casilla sale del adaptador de verdad:
   un almacén bloqueado, preguntado por el puerto, contesta `SoloResuelveLoViejo`, y eso no necesita ni
   un movimiento. Su consumidor es el 2.3, igual que el de `IConsultaDeUnidadesDeMedida` fue el 1.8.
+
+  Hecho en `cd50109` (los dos de Organización) y `c2950db` (el del artículo), **dos commits que
+  quedan verdes cada uno por su lado**: el primero se comprobó con el segundo apartado, porque las
+  dos matrices reclaman las casillas de un puerto en cuanto el puerto existe. El cuarto motivo es
+  `ResolucionDeUnMaestroApuntado`, y **no reutiliza ninguno de los tres**: por este camino no se
+  escribe nada —así que no es administración del bloqueo— y la traza del art. 32 existe para
+  contestar qué **persona** miró datos reservados, no para llenarse de ruido de máquina. Las dos
+  aperturas quedan declaradas en `s_aperturasDeBloqueoPermitidas` con su argumento propio y son las
+  **primeras de esa lista que no viven en una capa de aplicación**; la regla hermana —ningún camino
+  que ve lo bloqueado emite testigo de versión— sigue verde, que era lo que podía sorprender.
+
+  **`CrucesDeclarados` no cambia, y eso se comprueba en vez de suponerse.** Los tres puertos no
+  tienen consumidor todavía —lo es el 2.3—, así que no hay referencia nueva de un `Application` al
+  `Contracts` de otro módulo y la lista sigue teniendo cinco cruces. Lo dice la comparación entera
+  de `LasFronterasEntreModulosTests`, que sigue en verde con las **tres** puertas nuevas declaradas.
+
+  **Los rojos que se vieron, con nombre, porque la diferencia entre lo visto en rojo y lo visto solo
+  en verde se olvida.** Cinco reglas se ejercieron en rojo antes de aceptarlas: (1) las puertas
+  públicas, que denunció las tres interfaces nuevas sin declarar; (2) el ámbito de R16, con
+  `ConsultaDeAlmacenes.cs x 1` y `ConsultaDeUbicaciones.cs x 1` presentes y sin declarar; (3)
+  `LaMatrizDePuertoYEstadoTests`, con las **seis** casillas de almacén y ubicación listadas una a
+  una; (4) `LaMatrizDeLosPuertosDeEstadoTests`, con las **tres** del artículo —tres y no cuatro, que
+  es la decisión 11 enmendada dicha por una regla y no por el agente—; y (5) los dos censos de
+  carril, reclamando los siete casos de Organización y los dos de la API por su nombre.
+
+  **Y la aserción que decide, vista en rojo por mutación y no por inversión.** Sustituida
+  `LaPeorDeLasDos` por `(EstadoDeMaestro)Math.Min((int)almacen, (int)ubicacion)`, las cuatro
+  combinaciones del ADR-0037 se parten en dos mitades exactas: se ponen **rojas las dos que mezclan
+  estados** —ubicación activa en almacén bloqueado, y ubicación bloqueada en almacén activo— y
+  siguen **verdes las dos simétricas**, porque el mínimo de dos valores iguales acierta por
+  casualidad. Eso corrigió sobre la marcha lo que el comentario del caso decía —que era el único
+  que lo cazaba— y es el argumento medido de por qué las cuatro están escritas: con las dos
+  simétricas por todo banco de pruebas, el descuido pasaba entero.
+
+  **Lo que solo se ha visto en verde**, dicho para que no se confunda con lo anterior: las tres
+  casillas del artículo, las dos de `NoExiste` —la del almacén ajeno y la de la ubicación que
+  cuelga de otro almacén— y el contraejemplo del ámbito —la misma consulta fuera del puerto no
+  trae la fila bloqueada, y el SQL en crudo cuenta 1—. Ninguna de ellas se ha ejercido en rojo por
+  mutación; lo que sostienen es lo que dicen, no más.
 
 - [ ] **2.3 · El libro de movimientos y el primer documento: el ajuste** — criterio de aceptación: el
   esquema `inventario` con su contexto, sus migraciones y su sitio en
