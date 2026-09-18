@@ -4370,6 +4370,158 @@ objetivo del encargo es la **fase 2**, y se añade el import del Anexo A.2.3 —
 `@../BibliotecaDocumentacion/negocio/identificacion-articulos/convenciones.md`, ese y solo ese—: las
 dos en este mismo commit.
 
+### Tomadas por el agente de desarrollo — ítem 2.3, antes de escribir su código (2026-09-18)
+
+Cuatro cosas que el criterio de aceptación del 2.3 daba por resueltas y no lo estaban. Las cuatro se
+deciden **antes** de escribir nada, y dos de ellas cambiaron de respuesta al medirlas: el sondeo está
+abajo, con la orden que lo midió.
+
+#### El sondeo, primero, porque es de donde salen dos de las cuatro
+
+Sobre `postgres:17.6-alpine`, un esquema de juguete con la misma forma que tendrá el libro —tabla
+particionada por rango sobre una `date`, partición por defecto, y los dos disparadores de
+solo-añadido copiados del esquema de auditoría—. Seis hechos, todos medidos:
+
+1. **El disparador de fila (`BEFORE UPDATE OR DELETE … FOR EACH ROW`) sobre el padre particionado sí
+   se clona** a las particiones, **incluidas las creadas después**. Se comprobó creando la partición
+   detrás del disparador y leyendo `pg_trigger`: aparece en la partición nueva.
+2. **El de sentencia (`BEFORE TRUNCATE … FOR EACH STATEMENT`) NO se clona.** `TRUNCATE` del padre
+   sale rechazado; **`TRUNCATE` de una partición por su nombre se ejecutó y se llevó la fila**. El
+   recuento bajó de 2 a 1. Este era el agujero, y es el mismo que el comentario del esquema de
+   auditoría ya advertía —«los de fila no ven un TRUNCATE»— trasladado a un padre con hijos.
+3. **Creado el disparador de `TRUNCATE` en la partición, el agujero se cierra:** el mismo `TRUNCATE`
+   de la partición pasa a salir rechazado y la fila sigue.
+4. **Una fecha sin partición cae en la de por defecto**, como dice el criterio.
+5. **Y desde ese momento el mes ya no se puede crear:** `CREATE TABLE … PARTITION OF … FOR VALUES`
+   del mes de una fila que ya está en la de por defecto falla con «*updated partition constraint for
+   default partition would be violated by some row*». Un mes que la de por defecto no ha tocado entra
+   sin problema.
+6. **`CREATE TABLE IF NOT EXISTS … PARTITION OF` es idempotente** por nombre, y un rango solapado con
+   otro nombre lo rechaza el motor.
+
+#### 1. Las particiones las crea el migrador, doce meses por delante, en cada despliegue
+
+**El problema, dicho:** una comprobación que denuncia no crea nada. Con las particiones escritas a
+mano en una migración, sus meses quedan congelados el día en que se escribió esa migración, y desde
+el mes siguiente todo cae en la de por defecto. La partición sería decorativa y la denuncia saltaría
+en producción, que es donde nadie la mira.
+
+**Quién.** El **migrador** (`MigradorDeArranque`, ADR-0021): es la máquina que ya existe, corre en
+cada despliegue como un paso con su propio resultado, y ya tiene un tercer bloque de esta misma
+naturaleza —`PonerAlDiaLosRolesDelSistemaAsync`, que el ADR-0035 puso ahí por las mismas razones—.
+Las particiones entran junto a él. El arnés que lo ejerce de verdad es el del **segundo arranque**
+(`scripts/ci/segundo-arranque.sh`), que es el único sitio donde se ve un despliegue sobre una base
+que ya tenía datos.
+
+**Cómo, y esto importa: el mecanismo es UNO y vive en la base.** Una función
+`inventario.asegurar_particiones_de_movimientos(meses_por_delante int)` que, del mes en curso al mes
++N, hace `CREATE TABLE IF NOT EXISTS … PARTITION OF` y le pone a cada partición nueva su disparador
+de `TRUNCATE`. La llaman **dos**: la migración que crea la tabla, y el migrador en cada despliegue.
+No es duplicación: es la razón de que la función esté en SQL y no en C#. Que la llame la migración es
+lo que hace que el mes de la instalación exista desde el primer instante, en la instalación de hoy y
+en una que se despliegue en 2028 —el rango se calcula con `now()`, no se escribe a mano—.
+
+**N = 12, y el motivo.** La pista tiene que durar más que el hueco más largo que quepa entre dos
+despliegues de un sistema en servicio. Doce meses significa que agotarla exige **un año natural
+entero sin desplegar**, y una instalación que pasa un ejercicio sin un despliegue tiene un problema
+mayor que sus particiones. Además trece particiones y la de por defecto es una lista que una persona
+lee de un vistazo en un `\d+`, y el año es la unidad que este dominio ya cuenta (`Ejercicio`).
+
+**El día que se acaben —y la respuesta la da el hecho 5, no una intuición—.** La fila **no se
+pierde**: cae en la partición por defecto, que para eso está. Lo que ocurre es que **desde esa fila,
+ese mes ya no se puede crear**, así que el **siguiente despliegue falla**: la función no puede crear
+el mes, el migrador sale con 1 y la API no arranca (`service_completed_successfully`). Es una parada
+ruidosa y con el mes en el mensaje, y se acepta a propósito: una partición por defecto con filas
+dentro es un invariante ya roto, y seguir en silencio lo deja crecer mes a mes hasta que el libro es
+una sola tabla gigante. Con N = 12 hace falta un año de abandono para llegar ahí.
+
+**Lo que NO se hace, y por qué.** La función **no mueve** las filas de la partición por defecto para
+poder crear el mes. Tendría que desactivar el disparador de solo-añadido de la tabla —desarmar la
+guarda para arreglarse a sí misma—, y un migrador que se cura solo esconde exactamente la avería que
+hay que ver. Si algún día hace falta, será una operación con nombre y con su ítem, no un efecto
+secundario de desplegar.
+
+#### 2. Los dos arneses se cruzan, y se resuelve sin excepción en ninguno de los dos
+
+**El cruce, dicho:** `LasMigracionesSobreTablasConFilasTests` inventa una fila en cada tabla antes de
+cada paso (invariante 10). Para `movimiento_stock` inventaría `gen_random_uuid()` y `current_date`
+—es lo que su `Inventar` da a un `uuid` y a una `date`—. Si el mes en curso no tuviera partición, esa
+fila caería en la de por defecto y **la denuncia del punto 4 encontraría la fila del propio arnés**.
+
+**La salida elegida: ninguna de las dos que se preguntaban.** Ni la denuncia distingue el caso del
+arnés, ni el arnés inventa una fecha especial. La migración que crea la tabla llama a la función del
+punto 1, así que **cuando el arnés llega a insertar, el mes en curso ya tiene partición** y la fila
+cae donde tiene que caer. El arnés no necesita saber nada de particiones y la denuncia se queda
+**absoluta**: la partición por defecto está vacía, sin excepciones.
+
+**Por qué se descarta la excepción en la denuncia.** Una regla con una salvedad para los tests es una
+regla que ya no dice lo que parece, y la salvedad sobrevive a quien la escribió: el día que una fila
+real caiga en la de por defecto, el primero que mire pensará que es del arnés. Lo que se decide es no
+crear nunca esa duda.
+
+**Lo que hay que mirar al escribirlo**, y queda anotado para no descubrirlo tarde: la clave primaria
+es compuesta `(id, fecha_de_operacion)` y las dos columnas son `NOT NULL`, así que el inventor las
+rellena las dos sin tocarlo; y los identificadores de otros módulos —almacén, ubicación, artículo—
+van **sin clave ajena**, porque ninguna cruza de esquema (invariante 5) y quien los valida son los
+tres puertos del 2.2 (ADR-0024). El inventor los rellena como `uuid` sueltos, que es justo lo que
+son.
+
+#### 3. La R12 se dobla, a sabiendas, y su fila se toca en este ítem
+
+**La decisión: los movimientos NO viven dentro del agregado `Ajuste`.** Confirmar un ajuste escribe,
+en la **misma transacción**, la cabecera del documento y sus filas del libro. Eso son dos agregados
+en una transacción y **dobla la mitad de la R12** que dice «una transacción modifica un solo
+agregado» —la segunda vez, después de la importación (ADR-0034)—. Se dice, que es lo que no era
+legítimo callar, y **la fila de la R12 en `docs/dominio/reglas-duras.md` cambia en este ítem**, como
+manda la cabecera de esa tabla.
+
+**Por qué fuera y no dentro.** Tres razones, la última mecánica:
+
+- El libro **no es la colección hija de un tipo de documento**. Lo escriben el ajuste y el recuento
+  en esta fase, y la recepción, la expedición y la transferencia en las siguientes. Una tabla con
+  cinco raíces distintas no es la tabla de ninguna de ellas.
+- La **R13** solo tiene sentido así: «todo movimiento apunta a su documento origen, **y viceversa**»
+  describe dos cosas que se apuntan, no una que contiene a la otra.
+- Y la que decide el día a día: el libro es **append-only** por disparador. Con los movimientos
+  dentro del agregado, EF Core los trae seguidos del `Ajuste` y cualquier cambio de estado posterior
+  —confirmar, anular— los lleva tracked; basta que uno quede marcado como modificado para que el
+  `SaveChanges` se estrelle contra el disparador **en tiempo de ejecución**. Fuera del agregado, el
+  `Ajuste` se carga sin ellos y no hay nada que marcar.
+
+**Por qué no se salva la R12 con la bandeja.** Escribir el documento, emitir un evento y que un
+suscriptor escriba los movimientos dejaría una ventana con un ajuste confirmado y el stock sin
+mover. La R3 dice que el stock es un libro mayor: si confirmar no mueve el libro **en el mismo
+`COMMIT`**, confirmar no significa nada. La R12 se dobla porque la alternativa rompe la R3, y de las
+dos es peor romper la R3.
+
+**Y el evento de la bandeja va por DOCUMENTO, no por movimiento.** Un evento por fila del libro
+convierte la cola en una segunda copia del libro, con su volumen y su coste de reproceso, para
+contar algo que ya está contado. Lo que le interesa a quien escucha es que un ajuste se confirmó.
+
+#### 4. «Append-only» se pone en el motor, y el criterio es intentarlo
+
+**El mecanismo: disparadores**, como en `auditoria.registros`, y por el motivo que ya está escrito
+allí — `REVOKE` no vale, porque los permisos los da y los quita el mismo dueño de la tabla, que es el
+usuario con el que se conecta la aplicación; un permiso que el interesado puede devolverse a sí mismo
+es una frase, no una guarda. Un barrido del código que busque `.Remove(` tampoco: no ve el SQL en
+crudo, que este proyecto ya escribe —el almacén de idempotencia— y escribirá más en el 2.4.
+
+**Lo que el sondeo obliga a añadir respecto del precedente de auditoría.** El de auditoría es una
+tabla sola; el libro tiene hijos. Del hecho 2 sale que el disparador de `TRUNCATE` **no se hereda**,
+así que:
+
+- el de fila va **una vez, sobre el padre**, y cubre las particiones de hoy y las de mañana;
+- el de `TRUNCATE` va **en cada partición**, y lo pone la misma función que la crea — que es la otra
+  razón de que crear una partición sea una función y no un `CREATE TABLE` suelto;
+- y **una regla comprueba que ninguna partición se quede sin él**, porque una partición sin su
+  disparador es un `TRUNCATE` con nombre y apellidos esperando a que alguien lo escriba.
+
+**El criterio, que no lo elige el agente:** un caso de integración lanza un `UPDATE` contra
+`movimiento_stock` y exige que falle. Se escriben **seis**, que son los seis caminos que el sondeo
+distinguió: `UPDATE` y `DELETE` por el padre, `UPDATE` y `DELETE` directos sobre la partición,
+`TRUNCATE` del padre y `TRUNCATE` de la partición. El último es el que se vio **abierto** antes de
+tapar el agujero, y por eso está en la lista por su nombre.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 1 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -4439,7 +4591,16 @@ dos matrices —seis en la de `EstadoDeMaestro`, tres en la general—. Cinco re
 antes de aceptarlas y la composición se vio en rojo por **mutación**, no por inversión: el detalle,
 con lo que solo se vio en verde, en la casilla del **2.2**.
 
-**Lo siguiente es el 2.3.**
+**Y el hallazgo del 2.2 queda como doctrina** en el **ADR-0038**, que es de la familia del ADR-0006 y
+del ADR-0020: la mutación se pone sobre la línea que decide, el reparto de rojos es el argumento de
+por qué se escriben todos los casos, y cuando la medición contradice al comentario manda la medición.
+
+**En curso el 2.3**, en la rama `feature/el-libro-de-movimientos-y-el-ajuste`. Lo primero han sido
+**las cuatro decisiones de arriba, tomadas antes de escribir código**, y dos de ellas cambiaron al
+medirlas contra `postgres:17.6-alpine`: el disparador de `TRUNCATE` **no se hereda** en una tabla
+particionada —un `TRUNCATE` sobre la partición por su nombre se llevó la fila—, y un mes cuya fila ya
+cayó en la partición por defecto **ya no se puede crear**, que es lo que convierte «se acabó la pista»
+en un despliegue rojo y no en una degradación silenciosa. **Lo siguiente es el código del 2.3.**
 
 > La resolución que cambió la forma de una respuesta, dicha aquí porque afecta al código de la
 > fase 0: **lo que `Serie.cs` prometía es imposible**, no solo ambiguo. `Serie` vive en
