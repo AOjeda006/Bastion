@@ -4091,7 +4091,290 @@ copió y cómo se contrasta **a mano en cada puerta de fase**.
 ninguna decisión sobre R5 ni sobre reabrir un ejercicio, que van como preguntas a la puerta de la fase
 2 en el traspaso; `CLAUDE.md` §5; la destrucción al vencer del art. 32; y la correlación buscar/alta.
 
+### Tomadas en la puerta de clarificación de la fase 2 (2026-09-18)
+
+> La fase 2 **no tiene Anexo A.3**, igual que la 1. Estas dieciséis respuestas son el acuerdo de la
+> puerta del `CLAUDE.md` §2 —trece preguntas de la tanda del agente y tres que trajo la respuesta del
+> usuario—, y de ellas sale el desglose en **catorce ítems** del *Checklist*. No se reabre nada del
+> Anexo A.4.
+
+**0. Lo que la lectura de la puerta comprobó antes de preguntar.** `sha256sum ERP-PLAN-MAESTRO.md` da
+`86aa53a0…a2e108`, que es la huella escrita en `docs/dominio/reglas-duras.md`: la tabla de las
+diecisiete se copió de ese mismo texto y no hay enunciado que releer. Los dos cruces que la fase 2
+necesita **no tienen puerto**: `Catalogo.Contracts` solo publica `IConsultaDeTarifas`, y
+`Organizacion.Contracts` publica `AlmacenDto` y `UbicacionDto` sin ninguna `IConsultaDe…`. Y hay una
+asimetría que decide la undécima: **Almacén y Ubicación tienen bloqueo** (R16) y **Artículo no tiene
+ni bloqueo ni retirada**.
+
+**1. La máquina de estados de documento: un contrato común y tres enumerados propios** (R1). Lo que R1
+quiere que no se pueda hacer es `documento.Estado = X`, y eso lo impide un tipo base en
+`BuildingBlocks.Domain` —la transición como único camino, con sus precondiciones y su evento— para los
+tres documentos de esta fase y para los de las fases 3 a 7. Los **estados** no se comparten: el ajuste
+es `Borrador → Confirmado → Anulado`, el recuento tiene `EnCurso` porque contar lleva tiempo, y la
+transferencia es `Enviada → Recibida` porque el stock en tránsito existe mientras vuela. Se descartó
+una máquina compartida con tabla de transiciones por tipo: obligaría a todo documento a arrastrar
+estados que no puede alcanzar, y degradaría la comprobación de «esta transición no existe» a «no está
+permitida para este tipo», que se configura mal en silencio. **El tipo base no sabe qué es un
+movimiento y no va a saberlo**: la guarda es un test de fronteras, no la buena intención. El orden de
+los tres es **ajuste, transferencia, recuento**, porque el recuento genera ajustes y llega cuando el
+ajuste ya está.
+
+**2. Un documento confirmado se corrige con otro documento: la anulación crea su inverso** (R2). Es la
+lectura literal de R2 y la única que deja el libro explicándose solo. Tres cosas van con ella: el valor
+`Anulado` se documenta **en el enumerado** como «anulado por un inverso» y no como «borrado»; el
+inverso es un documento confirmado de pleno derecho —lleva su número y genera sus movimientos—, no una
+marca; y el enlace original↔inverso es una **segunda doble flecha**, distinta de la de R13 —esta une
+documento con documento— y necesita su propia comprobación. Se descartó la corrección a mano —dar de
+alta otro ajuste con el signo contrario—: nada enlazaría los dos, y a los dos años el inventario es
+ilegible.
+
+**3. La numeración: con `Serie`, con el cerrojo en su fila, y con un ADR que enmienda el «único
+camino»** (R5).
+
+*La contradicción de la fase 0, resuelta primero, porque cambia la forma del resto.* Dos textos decían
+cosas incompatibles y nadie lo había visto porque hasta hoy nadie confirma nada: el **ADR-0013, punto
+1**, llama a la bandeja de salida «el único camino por el que un módulo escribe en otro (§4, regla 5)»
+y descarta con nombre «un contexto aparte alistado en la transacción del módulo»; y **`Serie.cs`** dice
+que «la asignación del número —bloquear esta fila dentro de la transacción de confirmación, incrementar
+y componer— es del módulo de Facturación», con `RegistrarNumeroAsignado` añadiendo «lo llama
+Facturación».
+
+*Quién tiene razón, y en qué.* El ADR-0013 se sostiene, y el precedente no es una analogía: son **dos**
+mecanismos que ya escriben en una tabla de otro esquema **desde el contexto del módulo que confirma**,
+en su transacción y sin contexto alistado. La bandeja
+—`ConfiguracionDeLaBandeja.Mapear(modelo, migra:)`, que los cinco contextos aplican con
+`ToTable(tabla, esquema)` y `ExcludeFromMigrations` para quien no la migra— y el **almacén de
+idempotencia**, que además usa **SQL crudo** contra `auditoria` desde el contexto de cada módulo, con
+su excepción al barrido del 0.6 escrita y estrecha **por su argumento**. La numeración es de esa clase:
+**un mecanismo del bloque común**, no una escritura de un módulo dentro de otro. El dueño del dato
+sigue siendo Organización.
+
+*Lo que NO se sostiene, y hay que decirlo entero.* La frase de `Serie.cs` no es ambigua: es
+**imposible**, y lo seguirá siendo en la fase 5. `Serie` vive en `Organizacion.Domain`, y ningún módulo
+ve el interior de otro: `Ningun_modulo_ve_el_interior_de_otro` lo pone rojo al **usarlo** y
+`Las_referencias_de_proyecto_son_las_declaradas` lo pone rojo antes, al **autorizarlo**. Facturación no
+podrá llamar nunca a `RegistrarNumeroAsignado`, así que la invariante no puede viajar en ese método.
+Viaja de otra forma, y más fuerte: **en la propia sentencia**, que incrementa sobre lo que hay
+(`contador = contador + 1 … RETURNING contador`) y por construcción no puede saltar — donde el método
+era la última defensa contra un llamante equivocado, aquí no hay número que el llamante pueda
+equivocar. `RegistrarNumeroAsignado` se borra en el 2.4 porque nadie puede llamarlo: hoy solo lo llaman
+sus propios tests y `ContratoDeOrganizacionTests`, que ya dice de él que «probaría un estado que el
+sistema no sabe producir».
+
+*La tercera salida, descartada.* Un puerto de escritura en `Organizacion.Contracts` sería el primero
+del proyecto que escribe: `Las_puertas_publicas_de_los_contratos_son_las_declaradas` obliga a decir de
+cada puerta si **lee o escribe**, y las seis que hay dicen «no escribe». Contradiría la regla 5 de
+frente, y encima no funcionaría: el contexto de Organización tiene su propia conexión, así que el
+cerrojo no llegaría vivo al `COMMIT` del que confirma salvo alistando ese contexto, que es justo lo que
+el ADR-0013 descartó.
+
+**3.a. Los documentos de inventario se numeran con `Serie`**, con tres valores nuevos en
+`TipoDeDocumento`. El coste —que la numeración legal comparta mecanismo con documentos internos— es
+exactamente el motivo: un mecanismo que se estrena en la fase 5 se estrena sobre facturas, y lo que
+todavía no usa nadie es lo que peor falla, el día de más prisa. Con la condición que lo hace valer:
+**la propiedad sin huecos se afirma en un test que no sabe qué tipo de documento está numerando**. Así
+la fase 5 estrena un llamante, que es barato, y no un mecanismo.
+
+**3.b. El cerrojo va en la fila de la serie, dentro de la transacción que confirma.** Se descarta el
+*advisory lock* por el criterio de la casa: no está en la fila, así que una escritura que no pase por
+el caso de uso se lo salta sin que nada lo note, y una regla que solo rige si todo el mundo pasa por la
+puerta correcta no es una regla. El número se asigna **al confirmar** y no se enseña antes: con eso el
+`ROLLBACK` deshace el incremento y no hay hueco, y lo único que rompería la propiedad es un número
+reservado antes para pintarlo en una pantalla. **Dos** casos contra PostgreSQL real, no uno: dos
+confirmaciones simultáneas de la misma serie dan números consecutivos y ninguno repetido; y una
+confirmación que aborta **después** de tomar el número deja el contador donde estaba, y la siguiente
+toma ese mismo número — el segundo es el que distingue esta solución de una secuencia, y el que nadie
+escribe. Y el mecanismo **exige** la transacción abierta y revienta si no la hay, como hace
+`AbrirTransaccionAsync` del almacén de idempotencia: sin esa guarda, quien la olvide no ve nada raro y
+se lleva el mismo número dos veces.
+
+**4. El ejercicio empieza a regir, y lo decide la fecha del MOVIMIENTO** (R9). **Qué exige cerrar:**
+que no quede ningún documento de inventario en borrador con fecha dentro del ejercicio. Es una
+condición que crecerá fase a fase, y eso es correcto: la alternativa —no exigir nada todavía— deja
+«cerrado» sin significado por dentro. **Quién reabre:** permiso propio, motivo obligatorio y evento
+auditado; reabrir deshace la promesa de que lo cerrado no cambia, y quien cierra por rutina no puede
+reabrir por rutina. **Quién pregunta:** `IConsultaDeEjercicios` en `Organizacion.Contracts`, que
+contesta por el **estado del ejercicio de una fecha** y no por su existencia, con sus casillas en
+`LaMatrizDeLosPuertosDeEstadoTests`. Una fecha que no cae en ningún ejercicio contesta un valor propio,
+**`SinEjercicio`**, y **rechaza** la escritura: «no hay ejercicio» no es «está abierto», y un defecto
+que los confunda es de los caros; `SinEjercicio` es producible sin esfuerzo, así que no repite la
+casilla vacía del 1.10. **Y el ejercicio cuelga de la fecha del movimiento**, porque lo que un periodo
+cerrado protege es lo que está registrado dentro, y lo registrado es el movimiento: con R14 delante, en
+la fase 3 la fecha del documento y la de la operación divergen, y si el ejercicio colgara de la del
+documento, una recepción de enero con albarán de diciembre entraría en un ejercicio cerrado. Para que
+la fase 2 no elija a ciegas, **todos los movimientos de un documento llevan una sola fecha de
+operación, la del documento**: hoy las dos respuestas coinciden, la divergencia llega en la fase 3 con
+la regla ya escrita, y ningún documento queda partido por un cierre.
+
+**5. La doble flecha se calcula y se comprueba** (R13). La ida es la columna `tipo + id` del documento
+en cada fila del libro. La vuelta **no se guarda**: se consulta por esa pareja, con índice. Y encima va
+la comprobación en los dos sentidos —todo movimiento con documento existente, todo documento confirmado
+con al menos un movimiento—, con la coletilla del ADR-0020: **la comprobación afirma que ha mirado
+algo**. Una regla que recorre cero movimientos y sale verde es la avería que este proyecto ya ha cazado
+dos veces. Se descartó guardar el enlace en la línea del documento: serían dos escrituras que pueden
+divergir, y R2 prohíbe editar el documento confirmado, así que el enlace tendría que escribirse en la
+confirmación o no poder escribirse nunca.
+
+**6. Las existencias son una proyección: instantánea mensual más el tramo, y el libro es la
+definición** (R3). El saldo se **define** como la suma del libro; la instantánea es una optimización
+que tiene que poder **borrarse y recalcularse sin que cambie un número**, y hay un caso que lo borra y
+lo comprueba. Es literalmente lo que R3 describe —«instantánea periódica + saldo incremental»—, no
+degrada con el tamaño —riesgo que el §16 nombra— y el stock a fecha pasada sigue saliendo del libro. Y
+hay un argumento que cierra la puerta a calcular siempre al leer, sin ninguna proyección: **el criterio
+de aceptación de la fase se quedaría vacío**. El §15 pide que «el saldo proyectado coincida siempre con
+la suma del libro»; sin proyección no hay sujeto, y la afirmación es trivialmente cierta — que es lo
+que el ADR-0020 prohíbe por su nombre. La fase no puede cerrar con un criterio que se cumple porque no
+hay nada que lo cumpla. **Lo que demuestra la igualdad** son el **cuadre periódico** —que recorre,
+compara y afirma que comparó un conjunto no vacío— y el **test de propiedad** que el §15 pide con todas
+las letras: una secuencia generada de entradas, salidas, ajustes y transferencias, con la igualdad
+afirmada al final. Afirmarla en cada escritura encarecería todas para cazar lo que el test de propiedad
+ya caza.
+
+**7. La fila del libro lleva las dos cantidades** (R3, y el ADR-0023 detrás). Cantidad con signo **en
+unidad base** —la que suma— y cantidad y unidad **tal como se introdujeron** —las que explican—, con
+una regla que afirma que la primera es la segunda por el factor. R3 quiere contestar «¿por qué hay 7 y
+no 9?», y esa respuesta es «porque alguien sacó una caja», no «porque alguien sacó 12». `ConversionUm`
+**ni se invierte ni se encadena**: si el factor no existe en el sentido que hace falta, el alta se
+rechaza con su error, no se apaña.
+
+**8. El coste es el PMP vigente, congelado en la fila — y el disparador del invariante 8 no se cruza en
+esta fase.** El §7.4 ya dice que el PMP se recalcula en cada entrada y se guarda **en el movimiento**;
+lo que faltaba era el coste de una **salida**, y es el PMP vigente en ese instante, congelado: sin él,
+valorar el pasado exige reproducir toda la historia, y el §15 pide consulta de stock a fecha pasada.
+Los dos casos que nadie quiere contestar, contestados: **el stock negativo se rechaza en la fase 2**
+—el *backorder* por empresa es de la 4— y **un ajuste positivo sin coste toma el PMP vigente**, con su
+caso dorado escrito. Y la pregunta que va pegada, contestada explícitamente: el coste es un `Importe`
+—R6, dinero con divisa—, y su código ISO sale de **`Empresa.DivisaBase`, que ya es una cadena**, no un
+`Guid`. El invariante 8 arma su disparador «antes de que la primera línea de un documento convierta un
+precio resuelto en un `Importe`», y un precio resuelto es lo que devuelve `ResolverPrecio` en un
+`PrecioResueltoDto`, que **sí** lleva `DivisaId` como `Guid`. Ninguna línea de un documento de esta
+fase lo hace: un ajuste, un recuento y una transferencia no consultan tarifa. **El disparador sigue
+armado y no se cruza aquí**; se cruzará en la fase 3, cuando la recepción de una compra convierta un
+precio en una línea, y quien lo cruce moverá el `Guid` antes de escribirla. Lo que Inventario sí
+necesita de Organización es el código de la divisa base de la empresa, y eso **no es un sexto puerto**:
+es un método más en `IConsultaDeEmpresas`, que ya existe y ya lee.
+
+**9. La marca de trazabilidad vive en `Articulo`, y no se cambia si ya hay movimientos.** Es una
+propiedad del artículo, no del almacén; una tabla paralela en Inventario serían dos sitios para dar de
+alta la misma cosa, y un artículo podría acabar con lotes sin estar marcado. Sí, toca un agregado de
+una fase cerrada, con su migración, su DTO y su pantalla: ese es el precio correcto. Y cambiarla con
+movimientos detrás reinterpreta el libro hacia atrás, así que se rechaza con su error — lo que obliga a
+un **puerto de Inventario hacia Catálogo**, en sentido contrario a los otros: `Inventario.Contracts`
+publica la pregunta y Catálogo la consume. Es el **segundo cruce mutuo** del proyecto y se hace como el
+primero (`IConsultaDeTerceros` ↔ `IConsultaDeTarifas`): los dos `Contracts` no se ven entre sí, y por
+los puertos cruzan `Guid` y primitivos. Se consideró la alternativa —marca inmutable desde el alta, sin
+puerto—, que es más simple y cuyo coste es que una equivocación al dar de alta no se arregle sin crear
+otro artículo. Se elige el puerto, a la vista del cruce y no sin verlo.
+
+**10. Las reservas entran con su agregado y sin llamante hasta la fase 4**, y `Disponible` está en la
+proyección **desde la primera migración**: es una columna del §7.4, y añadirla después es tocar la
+proyección entera. Eso evita aplazar la reserva a la fase 4, que habría contradicho el §15 y exigido
+reabrir el Anexo A.4 — la única opción que necesitaba permiso del usuario es justo la que no se toma.
+El ítem dice con todas las letras **cuál de las dos situaciones es**: no es la de
+`ContratoDeOrganizacionTests` —«probaría un estado que el sistema no sabe producir»—, sino la
+contraria: el estado se sabe producir y lo que falta es el llamante.
+
+**11. Son cinco puertos, y el bloqueo de una estantería no es el del artículo 32.** Los cinco:
+artículo, almacén, ubicación, ejercicios (decisión 4) y movimientos (decisión 9). Los cinco declarados
+y los cinco en la matriz. **Un almacén bloqueado contesta `SoloResuelveLoViejo`**, no `NoExiste`: un
+movimiento de hace tres años tiene que poder resolver su almacén (invariante 4 del traspaso). La regla
+que lo justifica, y que va al ADR: **lo que el bloqueo reserva es la privacidad de una persona, no la
+existencia de una estantería**; un tercero bloqueado sigue contestando `NoExiste`. Con la precisión sin
+la cual esto se rompería: **el invariante 2 habla de la RESPUESTA, no del puerto**. Que el puerto
+distinga no autoriza a que el `400` del alta distinga, y eso ya está escrito en `EstadoDelTercero`
+—«estos valores son para que la regla decida, no para que la respuesta HTTP los cuente»—: se cita, no
+se reinventa. Para el artículo, **enumerado propio en `Catalogo.Contracts`** con cuatro valores y
+`NoExiste = 0` por el mismo motivo defensivo, y un `Servicio` contestando el suyo, `NoSeAlmacena`. No
+es un cuarto valor de `EstadoDeMaestro`: le daría a los cuatro puertos de Organización un valor que
+ninguno puede producir jamás —la casilla vacía que el 1.10 acaba de quitar—, y el propio
+`EstadoDeMaestro` lo excluye por escrito, porque sus tres valores son **dos preguntas** colapsadas y
+«¿se almacena?» es una tercera pregunta, no una tercera respuesta.
+
+**12. El artículo 32: la fase 2 produce un hecho que estrecha lo que viene, y no se inventa un
+destructor.** Lo que esta fase deja escrito es que **el libro es indestructible** — R2 prohíbe borrar
+movimientos, y R13 hace que borrar el artículo al que apunta uno rompa la ida de la flecha. No es que
+«elegimos entre borrar y anonimizar»: **borrar dejó de estar disponible el día que un movimiento apuntó
+a esa fila**, y se escribe como un hecho que esta fase produce, no como una nota que hereda. La
+destrucción de los maestros con datos personales al vencer el plazo sigue sin fase, y cuando llegue
+será **anonimización**, no borrado.
+
+**13. `CodigoBarras` vive en Catálogo, y el analizador de GS1-128 no entra todavía.** El §5 le da los
+códigos de barras a Catálogo, así que ahí no hay nada que elegir. Lo que se decide es el alcance: esta
+fase trae el **GTIN de la ficha del artículo** —varios por artículo (base, caja, palé), en columna de
+texto, normalizado a 14 dígitos al entrar y con el dígito de control validado en la frontera—, y **no**
+el analizador de códigos compuestos, que hace falta cuando una pantalla recibe la lectura de un lector,
+no cuando hay lotes en el modelo: aquí el lote se teclea o se elige. El disparador queda escrito con
+nombre —**la primera pantalla que reciba la lectura de un código compuesto**— para que nadie lo meta
+«de paso», y cuando llegue será con sus casos dorados: `130200` es el 28 de febrero y `160200` el 29.
+
+**14. El presupuesto del frontal: sale del arranque el idioma no activo, y es el primer ítem.** Quedan
+24 KiB de los 450 y esta fase trae un módulo entero de pantallas; la palanca está nombrada desde el 1.9
+y sin usar. **Se acepta el coste: el cambio de idioma deja de ser instantáneo.** A cambio no se toca la
+comprobación de tipos del diccionario, que es lo que sacrificaría repartirlo en espacios de nombres por
+módulo. Va primero para medirlo contra 426 conocido en vez de perseguirlo. Tres cosas al hacerlo: se
+**mide en la unidad del tope** —bytes de los ficheros de arranque emitidos (ADR-0028), no el tamaño del
+fuente, que no se parece—, antes y después y con el paso de la CI; se reescribe la nota de `crearI18n`
+que promete «los diccionarios se importan, no se descargan: al primer renderizado ya están», porque
+deja de ser cierta y es el sostén escrito de `useSuspense: false`, y lo que la sustituya tiene que
+decir qué pasa en el primer renderizado del idioma que sí se descarga —**el parpadeo se comprueba, no
+se supone**—; y se corrige la otra frase caducada del mismo fichero, «el diccionario entero pesa unos
+pocos kilobytes», que es el sostén del espacio de nombres único y hoy son 49,5 kB de fuente.
+
+**15. La partición de `movimiento_stock`: rango mensual sobre la fecha de operación, decidida ahora.**
+Las convenciones de SQL que importa `CLAUDE.md` lo dicen, y dicen cuándo: «particiona por rango
+(ejercicio, mes) las tablas *append-only* que crecen sin fin… la clave de partición se decide **antes**
+de tener datos». **Mes y no ejercicio**, porque un ejercicio puede ser partido (art. 26 de la LIS) y
+empezar a mitad de mes: no alinea con ningún límite natural, y una partición cuyo borde no coincide con
+el corte de la instantánea son dos calendarios en la misma tabla. Con el mes, **el corte de la
+instantánea y el borde de la partición son el mismo** (decisión 6). Tres consecuencias, dichas: la
+clave primaria de una tabla particionada **tiene que incluir la clave de partición**, así que la del
+libro es `(id, fecha_de_operacion)`; EF Core no crea tablas particionadas, de modo que la migración
+lleva su `Sql()` y el caso que lo comprueba le pregunta a `pg_partitioned_table`, no a la intención; y
+un mes sin partición no puede reventar el `INSERT` en producción — cae en la partición por defecto y
+una comprobación lo denuncia.
+
+**16. El libro no se audita, y lo dice con su motivo.** `Auditable` obliga a clasificar cada entidad, y
+el barrido fuerza **una** respuesta, no la buena. Aquí la buena es `NoSeAudita`: por R2 el libro **no
+cambia nunca**, así que auditar sus cambios duplicaría la tabla más grande del sistema para registrar
+cero cambios. El libro es su propia traza —cada fila dice quién, cuándo, qué y contra qué documento—, y
+lo que sí se audita es el **documento**, que es donde hay decisiones de una persona. El motivo se
+escribe en la llamada, como el de la bandeja.
+
+**Lo que decidió el agente y solo queda anotado.** Trivial o reversible, y todo sale de las
+convenciones o del plan maestro: esquema `inventario` con un `DbContext` y un historial de migraciones
+propios, y el contexto en la lista de `LasMigracionesSobreTablasConFilasTests` (invariante 10);
+`movimiento_stock` **append-only**, sin `UPDATE` ni `DELETE`, y el borrado lógico prohibido en él; **el
+libro no es bloqueable** —R16 no aplica a un movimiento, que no implementa `IBloqueable`—; GTIN, SSCC y
+GLN en columna de texto, GTIN normalizado a 14 y dígito de control validado al entrar; el código de
+unidad de la Rec. 20 se guarda, no el símbolo, y nada de `PCE`, `KTM` ni `NPR`; `empresa_id` en cada
+tabla desde la primera migración (R8), con su inquilinato declarado; ninguna clave ajena cruza de
+esquema (invariante 5); los cuerpos que se leen enteros con `[TopeDelCuerpo]` y `[TipoDelCuerpo]`,
+nunca con `[Consumes]` (invariante 6); y el siguiente ADR es el **0036**.
+
+**Los dos ADR que salen de aquí:** el de la **numeración**, que enmienda el «único camino» del ADR-0013
+con una segunda excepción y **su criterio** —para que no aparezca una tercera sin discutirla— y corrige
+de paso lo que `Serie.cs` prometía; y el del **artículo 32 que no alcanza a una estantería**. Es el
+movimiento que ya hizo el ADR-0029 con una regla que «no era la que parecía».
+
+**Las dos que eran del usuario, contestadas las dos que sí.** `CLAUDE.md` §5 pasa a decir que el
+objetivo del encargo es la **fase 2**, y se añade el import del Anexo A.2.3 —
+`@../BibliotecaDocumentacion/negocio/identificacion-articulos/convenciones.md`, ese y solo ese—: las
+dos en este mismo commit.
+
 ## Estado actual
+
+**FASE 2 ABIERTA — la puerta de clarificación, pasada el 2026-09-18.** Las trece preguntas de la
+tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en *Decisiones
+tomadas*; el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. No hay ni una
+línea de código de la fase 2: este commit es documentación, y con él entran el import del Anexo
+A.2.3 y el objetivo nuevo del `CLAUDE.md` §5. **Lo siguiente es el 2.1.**
+
+> La resolución que cambió la forma de una respuesta, dicha aquí porque afecta al código de la
+> fase 0: **lo que `Serie.cs` prometía es imposible**, no solo ambiguo. `Serie` vive en
+> `Organizacion.Domain`, ningún módulo ve el interior de otro, y por tanto ni Inventario ni
+> Facturación podrán llamar nunca a `RegistrarNumeroAsignado`. El mecanismo de numeración viaja
+> —al bloque común, como la bandeja y el almacén de idempotencia— y la invariante viaja con él,
+> pero **en la sentencia** y no en ese método, que se borra en el 2.4. Entera, en la decisión 3.
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
@@ -6892,6 +7175,11 @@ no tiene un Anexo A.3, así que lo primero es la **puerta de clarificación** de
 desglose en ítems con criterio verificable, acordado con el usuario y escrito aquí—, con las dos
 preguntas de R9/R14 y R5 en su tanda, y con ella el import de arriba. Y el `CLAUDE.md` §5 sigue
 diciendo que el objetivo del encargo es completar la fase 1: cambiarlo es del usuario.
+
+> **Hecho el 2026-09-18.** La puerta está pasada: las dos preguntas que este traspaso dejó sin
+> contestar son las decisiones **3** (R5) y **4** (R9/R14) de *Decisiones tomadas → puerta de la fase
+> 2*, el import está en `CLAUDE.md`, el §5 lo cambió el usuario, y el desglose son los catorce ítems
+> del *Checklist*. Este párrafo se queda como lo que era: el estado en el que la fase 1 entregó.
 
 ### Verificado en local, con la salida real — ítem 1.10
 
@@ -10480,6 +10768,161 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   sin contestar; y el frontal se cuenta **sin la raíz**, escrito en la cabecera de
   `scripts/dependencias-por-conjuntos.py` —las 549 de la línea base son 548 más la raíz—.
 
+### Fase 2 · Inventario (2026-09-18)
+
+> **La fase 2 tampoco tiene Anexo A.3.** El §15 da el criterio de la fase entera —«el saldo proyectado
+> **siempre** coincide con la suma del libro (test de propiedad); un recuento genera ajustes
+> trazables; la valoración PMP pasa los casos dorados; consulta de stock a fecha pasada»— y el
+> desglose en **catorce ítems** lo acordaron usuario y agente en la **puerta de clarificación de la
+> fase 2**, cuyas dieciséis respuestas con su motivo están en *Decisiones tomadas*. Este checklist es
+> el resultado; **no se reordena ni se amplía** por iniciativa propia, igual que el A.3.
+>
+> **Seis reglas se vuelven vivas en esta fase** —R1 y R13 en el 2.3, R5 en el 2.4, R2 en el 2.5, R9 en
+> el 2.6 y R3 en el 2.7—, y cada una cambia su fila de `docs/dominio/reglas-duras.md` **en el ítem que
+> la hace viva**, no antes: es lo que dice la cabecera de esa tabla y lo que impide que envejezca.
+>
+> **Las líneas base, sobre `36fc437`**, para que el primer ítem mida contra ellas: carril rápido
+> **862** en 9 ensamblados · integración **399** en 9 · OpenAPI **128** operaciones en **74** rutas ·
+> catálogo de `type` **90** de 96 sitios · frontal 15 ficheros / 101 casos / **0** avisos de `act()` ·
+> arranque **426/450 KiB** en 3 ficheros, total servido **592/900** · licencias **125** pares
+> `resolved`, **30** `Project`, **548** entradas del frontal sin la raíz.
+
+- [ ] **2.1 · El arranque del frontal se queda con un idioma** — criterio de aceptación: el
+  diccionario del idioma **no activo** sale del arranque por importación dinámica, y el paso de la CI
+  publica la cifra de antes y la de después **en la unidad del tope** —bytes de los ficheros que
+  `index.html` referencia (ADR-0028), no el tamaño del fuente, que no se parece—; los 101 casos del
+  frontal siguen en verde y los avisos de `act()` siguen siendo **0**; y el cambio de idioma, ahora
+  asíncrono, **no parpadea**, comprobado y no supuesto. Las dos frases caducadas de `crearI18n` se
+  reescriben: la que promete «los diccionarios se importan, no se descargan: al primer renderizado ya
+  están», que es el sostén escrito de `useSuspense: false` y deja de ser cierta, y la de «unos pocos
+  kilobytes», que es el del espacio de nombres único y hoy son 49,5 kB de fuente. Motivo del orden: se
+  mide contra **426 conocido** en vez de perseguirlo con media fase de pantallas encima.
+
+- [ ] **2.2 · Los tres puertos que Inventario va a preguntar, y el bloqueo que no es el del art. 32** —
+  criterio de aceptación: `IConsultaDeArticulos` en `Catalogo.Contracts`, con **enumerado propio** de
+  cuatro valores (`NoExiste = 0`, se ofrece para lo nuevo, solo resuelve lo viejo, y `NoSeAlmacena`
+  para el `Servicio`), e `IConsultaDeAlmacenes` e `IConsultaDeUbicaciones` en `Organizacion.Contracts`
+  contestando `EstadoDeMaestro`, donde **lo bloqueado contesta `SoloResuelveLoViejo`** y no
+  `NoExiste`. Las tres puertas en `PuertasPublicas` diciendo que **leen**, los cruces en
+  `CrucesDeclarados`, y **cada casilla cubierta** en `LaMatrizDeLosPuertosDeEstadoTests`. El ADR deja
+  escrita la regla —lo que el bloqueo reserva es la privacidad de una persona, no la existencia de una
+  estantería— y la precisión que la sostiene: el invariante 2 habla de la **respuesta**, no del
+  puerto, y el `400` del alta sigue sin distinguir. Comprobable por el efecto: un alta contra un
+  almacén bloqueado se rechaza, y un movimiento viejo contra ese mismo almacén **se sigue leyendo**.
+  Su consumidor es el 2.3, igual que el de `IConsultaDeUnidadesDeMedida` fue el 1.8.
+
+- [ ] **2.3 · El libro de movimientos y el primer documento: el ajuste** — criterio de aceptación: el
+  esquema `inventario` con su contexto, sus migraciones y su sitio en
+  `LasMigracionesSobreTablasConFilasTests`; `movimiento_stock` **append-only** y **particionada por
+  rango mensual** sobre la fecha de operación, comprobado preguntándole a `pg_partitioned_table` y no
+  a la intención, con la clave primaria incluyendo la clave de partición y un mes sin partición
+  cayendo en la de por defecto **con una comprobación que lo denuncia**; cada fila con cantidad con
+  signo en **unidad base** y la cantidad y unidad **tal como se introdujeron** —y la regla que afirma
+  que la primera es la segunda por el factor—, coste unitario como `Importe`, fecha de operación,
+  almacén, ubicación, artículo y **documento origen (tipo + id)**; el `Ajuste` con su máquina de
+  estados sobre el tipo base del bloque común, de modo que `documento.Estado = X` **no compila**, cada
+  transición emite su evento, y un test de fronteras impide que el tipo base sepa qué es un
+  movimiento; y la **doble flecha** comprobada en los dos sentidos —todo movimiento con documento
+  existente, todo ajuste confirmado con al menos un movimiento—, **afirmando que ha mirado algo**
+  (ADR-0020). El libro **no se audita** y lo dice con su motivo, y **no es bloqueable**. Hace vivas
+  **R1** y **R13**, y cambia sus dos filas.
+
+- [ ] **2.4 · La numeración con cerrojo, y el ADR que enmienda el «único camino»** — criterio de
+  aceptación: el ajuste recibe su número **al confirmar**, dentro de la transacción de confirmación, y
+  **no se enseña antes**; el mecanismo vive en el bloque común —como la bandeja y como el almacén de
+  idempotencia— y toma el cerrojo **sobre la fila de la serie**, y **revienta si no hay transacción
+  abierta**; `TipoDeDocumento` gana sus tres valores y `Serie.RegistrarNumeroAsignado` se borra,
+  porque ningún módulo puede verlo. **Dos** casos contra PostgreSQL real: dos confirmaciones
+  simultáneas de la misma serie dan números **consecutivos y ninguno repetido**, y una confirmación
+  que **aborta después de tomar el número** deja el contador donde estaba y la siguiente toma ese
+  mismo número —el que distingue esto de una secuencia, y el que nadie escribe—. La propiedad sin
+  huecos se afirma en un test que **no sabe qué tipo de documento numera**, para que la fase 5 estrene
+  un llamante y no un mecanismo. El ADR lleva las dos enmiendas: la segunda excepción al ADR-0013 con
+  **su criterio**, y la corrección de lo que `Serie.cs` prometía. Hace viva **R5** y cambia su fila.
+
+- [ ] **2.5 · La anulación con contra-documento** — criterio de aceptación: un ajuste confirmado no se
+  edita ni se borra; se **anula**, y la anulación crea un **ajuste inverso** que es un documento
+  confirmado de pleno derecho —con su número del 2.4 y sus movimientos del 2.3—, no una marca; el
+  original queda `Anulado`, y el enumerado dice **en su propio texto** que eso significa «anulado por
+  un inverso» y no «borrado»; el enlace original↔inverso es una **segunda doble flecha** —esta une
+  documento con documento— con su comprobación propia en los dos sentidos; y anular dos veces el mismo
+  documento no crea dos inversos. Hace viva **R2** y cambia su fila.
+
+- [ ] **2.6 · El ejercicio rige: qué exige cerrar, quién reabre y quién pregunta** — criterio de
+  aceptación: cerrar **exige** que no quede ningún documento de inventario en borrador con fecha
+  dentro del ejercicio, y lo dice con su error cuando queda alguno; reabrir tiene **permiso propio**,
+  motivo obligatorio y **evento auditado**; `IConsultaDeEjercicios` contesta por el **estado del
+  ejercicio de una fecha**, con `SinEjercicio` como valor propio que **rechaza la escritura** —«no hay
+  ejercicio» no es «está abierto»—, sus casillas en la matriz y `SinEjercicio` producido por un caso,
+  no dejado vacío; y un ajuste no se confirma con fecha en ejercicio cerrado ni fuera de todo
+  ejercicio. **El ejercicio lo decide la fecha del movimiento**, y todos los movimientos de un
+  documento llevan **una sola** fecha de operación, la del documento: ningún documento queda a caballo
+  de un cierre, y hay un caso que lo intenta. Hace viva **R9** y cambia su fila.
+
+- [ ] **2.7 · Las existencias, proyección de un libro que es la verdad** — criterio de aceptación: el
+  saldo se **define** como la suma del libro, y la instantánea mensual —el mismo límite que la
+  partición del 2.3— es una optimización que se puede **borrar y recalcular sin que cambie un
+  número**, con un caso que la borra, la recalcula y compara; el **cuadre** recorre y compara y
+  **afirma que comparó un conjunto no vacío**; y el **test de propiedad** que pide el §15 genera una
+  secuencia de entradas, salidas, ajustes y anulaciones y afirma la igualdad al final. La proyección
+  lleva `Disponible = Físico − Reservado` desde esta migración, con `Reservado` a cero hasta el 2.13.
+  Hace viva **R3** y cambia su fila.
+
+- [ ] **2.8 · La valoración PMP** — criterio de aceptación: el PMP se recalcula en cada entrada y se
+  guarda **en el movimiento**, no solo en la proyección; una salida congela el PMP vigente en su fila,
+  de modo que valorar el pasado **no exige reproducir la historia**; el **stock negativo se rechaza**
+  con su error —el *backorder* es de la fase 4—; un ajuste positivo **sin coste** toma el PMP vigente;
+  y los **casos dorados** pasan con sus cifras escritas, incluida la entrada que cambia el medio y la
+  salida posterior que ya no lo mueve. El coste es un `Importe` en la divisa base de la empresa, y el
+  ítem deja escrito por qué el disparador del invariante 8 **no se cruza aquí**.
+
+- [ ] **2.9 · Lotes y números de serie, y la marca que los gobierna** — criterio de aceptación:
+  `Articulo` gana su trazabilidad (`Ninguna` / `PorLote` / `PorNumeroSerie`) con su migración, su DTO,
+  su contrato y su pantalla; la clave del stock trazable es **(artículo, lote)** o **(artículo,
+  serie)**, nunca el lote suelto; un movimiento de un artículo con lote **exige** su lote, uno sin
+  trazabilidad lo **rechaza**, y un número de serie no puede estar en dos sitios a la vez; y la marca
+  **no se puede cambiar** si el artículo ya tiene movimientos, comprobado por un puerto de
+  **Inventario hacia Catálogo** —`Inventario.Contracts` publica y Catálogo consume—, declarado como
+  **segundo cruce mutuo** del proyecto, con los dos `Contracts` sin verse entre sí y solo `Guid` y
+  primitivos cruzando.
+
+- [ ] **2.10 · El GTIN del artículo** — criterio de aceptación: **varios GTIN por artículo** con su
+  nivel (base, caja, palé), en **columna de texto**, normalizados a **14 dígitos** al entrar y
+  comparados sobre esa forma, con el **dígito de control validado en la frontera** —no al consultar— y
+  sus casos dorados, incluidos los ceros a la izquierda de un GTIN-12, que se conservan; el GTIN **no
+  es clave primaria** de nada; y un GTIN repetido dentro de la empresa contesta `409` con su `type`.
+  El **analizador de GS1-128 no entra**, y su disparador queda escrito con nombre: la primera pantalla
+  que reciba la lectura de un código compuesto.
+
+- [ ] **2.11 · La transferencia y el stock en tránsito** — criterio de aceptación: `Enviada →
+  Recibida`, con **dos movimientos por línea** —salida del origen al enviar, entrada en el destino al
+  recibir—, el stock **en tránsito** contado mientras vuela y visible en la proyección, y una
+  transferencia entre almacenes de **distinta empresa** que no existe. Su documento se numera (2.4),
+  se anula con su inverso (2.5) y respeta el ejercicio (2.6); y una transferencia enviada y no
+  recibida deja el origen descontado y el destino sin sumar, con el tránsito cuadrando la diferencia.
+
+- [ ] **2.12 · El recuento** — criterio de aceptación: cabecera con estado y líneas con **cantidad
+  contada frente a teórica**; al confirmar **genera sus ajustes** —documentos del 2.3, con su número y
+  su doble flecha, que es lo que el §15 llama «ajustes trazables»—, y una línea que cuenta **lo mismo
+  que la teórica no genera nada**; el teórico que se congela es el del instante en que se **confirma**
+  y no el del instante en que se contó, con la diferencia dicha en la pantalla; y un recuento sobre un
+  almacén con movimientos entre medias sigue cuadrando, con un caso que mueve stock mientras el
+  recuento está `EnCurso`.
+
+- [ ] **2.13 · Las reservas, y el disponible** — criterio de aceptación: `Reserva` con
+  `Activa`/`Consumida`/`Liberada` y su caducidad; `Disponible = Físico − Reservado` respondiendo de
+  verdad en la proyección; **ninguna reserva por encima de lo disponible**; y una reserva caducada
+  libera lo que apartaba. Su llamante es el pedido de venta de la **fase 4**, así que aquí lo ejercen
+  los tests, y el ítem dice **cuál de las dos situaciones es**: no la de `ContratoDeOrganizacionTests`
+  —«probaría un estado que el sistema no sabe producir»—, sino la contraria, el estado se sabe
+  producir y lo que falta es el llamante.
+
+- [ ] **2.14 · El stock a fecha pasada** — criterio de aceptación: la consulta contesta el saldo de
+  cualquier día pasado desde la instantánea más el tramo, **coincide con la suma del libro hasta esa
+  fecha** sobre una historia que incluye ajustes, anulaciones y transferencias, y la pantalla lo
+  enseña con su fecha; una fecha anterior al primer movimiento contesta **cero y no un error**; y una
+  fecha futura se rechaza. Es el último criterio del §15 que quedaba por cubrir, y con él la fase se
+  repasa criterio por criterio antes de cerrarla.
 
 ## Imports pendientes de `CLAUDE.md`
 
@@ -10487,6 +10930,11 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 **no están puestos a propósito**: cada import cuesta contexto en **cada** turno, así que se añaden
 al empezar su fase y se quedan (Anexo A.2.3).
 
+> **El de la fase 2 ya está puesto** (2026-09-18, al pasar la puerta de clarificación de la
+> fase): `negocio/identificacion-articulos/convenciones.md`, ese y solo ese. Con él entra
+> `CodigoBarras`, que los ítems de la fase 1 que rozaban el artículo dejaron fuera con ese
+> motivo escrito.
+>
 > **Los dos de la fase 1 ya están puestos** (2026-09-03, al abrir la puerta de clarificación de
 > la fase): `herramientas/proteccion-datos.md` y `patrones/soft-delete.md`. El segundo no era
 > opcional: la **retirada** del ADR-0023 es un final de vida que **no** es el bloqueo de la R16,
@@ -10494,7 +10942,6 @@ al empezar su fase y se quedan (Anexo A.2.3).
 
 | Al empezar la fase | Añadir a `CLAUDE.md` |
 |---|---|
-| **2 · Inventario** | `@../BibliotecaDocumentacion/negocio/identificacion-articulos/convenciones.md` |
 | **5 · Facturación** | `@../BibliotecaDocumentacion/negocio/facturacion-espana/convenciones.md`<br>`@../BibliotecaDocumentacion/negocio/verifactu/convenciones.md`<br>`@../BibliotecaDocumentacion/negocio/iva-espana/convenciones.md` |
 | **6 · Tesorería** | `@../BibliotecaDocumentacion/negocio/pagos-y-cobros/convenciones.md` |
 | **7 · Contabilidad** | `@../BibliotecaDocumentacion/negocio/contabilidad/convenciones.md` |

@@ -10,7 +10,8 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 1 (Maestros), cerrada: 14 de 14 ítems.** La fase 2 no ha empezado. Qué se hizo en
+> **Estado: fase 2 (Inventario), en curso: 0 de 14 ítems.** La fase 1 se cerró con catorce ítems y la
+> puerta de clarificación de la fase 2 está pasada: el desglose existe y el código, todavía no. Qué se hizo en
 > cada ítem, con el run de la CI que lo certifica, y qué queda está en **[`docs/PLAN.md`](docs/PLAN.md)**,
 > que es la fuente de verdad del estado del trabajo. Esta línea se compara con sus casillas
 > (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia y la línea no, la CI sale roja.

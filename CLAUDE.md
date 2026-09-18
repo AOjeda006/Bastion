@@ -41,6 +41,9 @@ Sigue estas convenciones como **fuente de verdad** de estilo y buenas prácticas
 @../BibliotecaDocumentacion/herramientas/proteccion-datos.md
 @../BibliotecaDocumentacion/patrones/soft-delete.md
 
+<!-- Fase 2 · Inventario (Anexo A.2.3). Ese y solo ese; con él entra `CodigoBarras`. -->
+@../BibliotecaDocumentacion/negocio/identificacion-articulos/convenciones.md
+
 > Si necesitas el **porqué** de una convención, consulta su `referencia.md` hermano. Para código,
 > guíate por los `convenciones.md`.
 
@@ -122,11 +125,10 @@ vive **en disco**, no en el chat:
 - **Stack:** C# 14 sobre **.NET 10 (LTS)** · ASP.NET Core · **EF Core 10** + Npgsql ·
   **PostgreSQL 17+** (un esquema por módulo, `snake_case`) · **React 19 + TypeScript + Vite** ·
   Docker Compose · GitHub Actions · Serilog + OpenTelemetry · xUnit + Testcontainers + NetArchTest.
-- **Objetivo de este encargo:** completar la **fase 1 (Maestros)** — Terceros y Catálogo completos,
-  tarifas, importación CSV y búsquedas. La **fase 0 está cerrada** (run 33739991499 sobre `fe7059d`).
-  El checklist con sus criterios de aceptación está en `docs/PLAN.md`; no lo amplíes ni lo reordenes
-  por tu cuenta. Ojo: la fase 1 **no tiene Anexo A.3** — sus once ítems los acordó la *puerta de
-  clarificación de la fase 1*, y su motivo está en `docs/PLAN.md` → *Decisiones tomadas*.
+- **Objetivo de este encargo:** completar la **fase 2 (Inventario)**. La **fase 1 está cerrada con
+  catorce ítems** (run 35103339786 sobre `f3c749e`; el cierre, `36fc437`). El desglose en ítems y sus
+  criterios de aceptación los acordó la *puerta de clarificación de la fase 2*, y su motivo está en
+  `docs/PLAN.md` → *Decisiones tomadas*.
 - **Restricciones / no-objetivos:**
   - **No toques `../BibliotecaDocumentacion`.** Es de solo lectura. Los aprendizajes se dejan como
     ADR en `docs/adr/`; la biblioteca se enriquece **al terminar el proyecto**, no a mitad.
