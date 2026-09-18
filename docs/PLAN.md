@@ -10788,9 +10788,16 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 > `resolved`, **30** `Project`, **548** entradas del frontal sin la raíz.
 
 - [ ] **2.1 · El arranque del frontal se queda con un idioma** — criterio de aceptación: el
-  diccionario del idioma **no activo** sale del arranque por importación dinámica, y el paso de la CI
-  publica la cifra de antes y la de después **en la unidad del tope** —bytes de los ficheros que
-  `index.html` referencia (ADR-0028), no el tamaño del fuente, que no se parece—; los 101 casos del
+  diccionario del idioma **no activo** sale del arranque por importación dinámica, y se publican la
+  cifra de antes y la de después **en la unidad del tope** —lo que el navegador descarga para pintar
+  la primera pantalla (ADR-0028 §1), no el tamaño del fuente, que no se parece—. Desde este ítem esa
+  unidad y **lo que `index.html` referencia** dejan de ser la misma cosa: eran lo mismo mientras todo
+  el arranque colgaba del `<script type="module">`, y la importación dinámica las separa, porque el
+  fragmento del idioma **activo** se descarga antes del primer pintado y ya no aparece en el
+  `index.html`. Así que se publican **las dos cifras**, antes y después, **con el mandato exacto que
+  las produce**, y el ítem dice cuál se compara con los 450. El ahorro real es **un** diccionario y
+  no dos —el no activo deja de descargarse; el activo sale del fragmento de entrada y se sigue
+  descargando—, así que publicar solo la del proxy lo enseñaría del doble. Los 101 casos del
   frontal siguen en verde y los avisos de `act()` siguen siendo **0**; y el cambio de idioma, ahora
   asíncrono, **no parpadea**, comprobado y no supuesto. Las dos frases caducadas de `crearI18n` se
   reescriben: la que promete «los diccionarios se importan, no se descargan: al primer renderizado ya
@@ -10832,12 +10839,28 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **no se enseña antes**; el mecanismo vive en el bloque común —como la bandeja y como el almacén de
   idempotencia— y toma el cerrojo **sobre la fila de la serie**, y **revienta si no hay transacción
   abierta**; `TipoDeDocumento` gana sus tres valores y `Serie.RegistrarNumeroAsignado` se borra,
-  porque ningún módulo puede verlo. **Dos** casos contra PostgreSQL real: dos confirmaciones
-  simultáneas de la misma serie dan números **consecutivos y ninguno repetido**, y una confirmación
-  que **aborta después de tomar el número** deja el contador donde estaba y la siguiente toma ese
-  mismo número —el que distingue esto de una secuencia, y el que nadie escribe—. La propiedad sin
-  huecos se afirma en un test que **no sabe qué tipo de documento numera**, para que la fase 5 estrene
-  un llamante y no un mecanismo. El ADR lleva las dos enmiendas: la segunda excepción al ADR-0013 con
+  porque ningún módulo puede verlo. **Con el método se van sus dos guardas y la sentencia solo
+  sustituye una**, así que el `WHERE` lleva `estado = 'Activa'` —`EstadoDeSerie.Cerrada` dice de sí
+  mismo «no asigna más números»— **y `empresa_id`**, esto último porque el SQL crudo deja atrás el
+  filtro global de inquilinato y `Serie` es `IDeInquilino`. El sitio nuevo entra en la lista cerrada
+  de `ElFiltroNoSeSaltaPorAhiTests` **con su argumento propio, que no es el heredado**: la bandeja y
+  el almacén de idempotencia escriben en tablas de `auditoria` diseñadas para eso, y esta escribe en
+  una tabla de negocio multiempresa que además se edita por la API. Y **«ninguna fila devuelta» es
+  un fallo, no un cero**: un `UPDATE … RETURNING` que no casa no lanza nada por su cuenta, así que un
+  caso confirma contra una serie **cerrada** y exige el error, y otro contra una serie **de otra
+  empresa**. El estado lo produce el dominio —`Serie.Cerrar()`, que hoy solo llaman los tests
+  unitarios: es el caso de `SoloResuelveLoViejo`, que se conservó diciendo que hoy nadie puede estar
+  ahí, y no el de `Bloqueado` del 1.10, donde el valor sobraba—, igual que hace
+  `ContratoDeOrganizacionTests`; ese fichero, además, sube hoy el contador **llamando a
+  `RegistrarNumeroAsignado`**, y al borrarse el método pasa a subirlo por el mecanismo nuevo. **Dos**
+  casos de concurrencia contra PostgreSQL real: dos confirmaciones simultáneas de la misma serie dan
+  números **consecutivos y ninguno repetido**, y una confirmación que **aborta después de tomar el
+  número** deja el contador donde estaba y la siguiente toma ese mismo número —el que distingue esto
+  de una secuencia, y el que nadie escribe—. La carrera **suprimir-contra-confirmar no lleva caso
+  nuevo**, y queda escrito aquí para que nadie la vuelva a mirar: ya la cubre R11, porque
+  `EliminarSerie` exige la versión y cualquier `UPDATE` mueve el `xmin`. La propiedad sin huecos se
+  afirma en un test que **no sabe qué tipo de documento numera**, para que la fase 5 estrene un
+  llamante y no un mecanismo. El ADR lleva las dos enmiendas: la segunda excepción al ADR-0013 con
   **su criterio**, y la corrección de lo que `Serie.cs` prometía. Hace viva **R5** y cambia su fila.
 
 - [ ] **2.5 · La anulación con contra-documento** — criterio de aceptación: un ajuste confirmado no se
