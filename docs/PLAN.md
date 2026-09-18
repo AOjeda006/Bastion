@@ -4394,7 +4394,27 @@ está vacía, si un miembro no resuelve en exactamente un fichero, o si no resue
 destapó un defecto propio: con `set -e`, un `grep` sin coincidencias dentro de una asignación mataba
 el guion antes de que hablara, y el paso salía rojo **sin una línea de diagnóstico**.
 
-**Lo siguiente es el 2.2.**
+**Del 2.2 están decididas las dos cosas que van antes del código**, el 2026-09-18, por salir las dos
+de mirar el criterio contra el código:
+
+1. **El criterio se parte entre el 2.2 y el 2.3.** La comprobación por el efecto que pedía —«un alta
+   contra un almacén bloqueado se rechaza, y un movimiento viejo contra ese mismo almacén se sigue
+   leyendo»— necesita un documento que dar de alta y un libro que leer, y los dos los construye el
+   2.3: se muda entera a su criterio. El 2.2 se queda afirmando lo que puede afirmar solo, que es
+   cada casilla saliendo del adaptador contra PostgreSQL real. Anotado también que sus casillas caen
+   en **dos matrices** y no en una —el artículo trae enumerado propio; almacén y ubicación van a la
+   que `LaMatrizDeLosPuertosDeEstadoTests` delega—, porque escribirlas en la equivocada las dejaría
+   sin dueño y en verde.
+2. **Cómo se componen almacén y ubicación**, que el criterio no traía: `BloquearAlmacen` escribe su
+   fila y ninguna más, así que una **ubicación activa dentro de un almacén bloqueado** es una fila
+   que existe hoy. La ubicación **hereda el estado de su almacén** y el suyo propio solo puede
+   **empeorarlo**, con las cuatro combinaciones cubiertas. En el **[ADR-0037](adr/adr-0037-una-estanteria-bloqueada-sigue-existiendo-y-la-ubicacion-hereda-el-estado-de-su-almacen.md)**, con la regla
+   que lo gobierna —lo que el bloqueo reserva es la privacidad de una persona, no la existencia de
+   una estantería—, la precisión de que el invariante 2 habla de la **respuesta** y no del puerto, y
+   el cuarto motivo de `MotivoParaVerLoBloqueado` que el adaptador necesita para ver lo bloqueado
+   sin saltarse el filtro.
+
+**Lo siguiente es el código del 2.2.**
 
 > La resolución que cambió la forma de una respuesta, dicha aquí porque afecta al código de la
 > fase 0: **lo que `Serie.cs` prometía es imposible**, no solo ambiguo. `Serie` vive en
@@ -10867,7 +10887,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   contestan `EstadoDeMaestro` caen en la que esa **delega** —`LaMatrizDePuertoYEstadoTests`, en
   `Organizacion.IntegrationTests`—, con su marca propia. Dejar las seis casillas de almacén y
   ubicación donde no las mira ninguna de las dos sería un verde por infradetección, que es el defecto
-  del ADR-0024 y el que hizo nacer la matriz de arriba. El ADR deja escrita la regla —lo que el
+  del ADR-0024 y el que hizo nacer la matriz de arriba. El **[ADR-0037](adr/adr-0037-una-estanteria-bloqueada-sigue-existiendo-y-la-ubicacion-hereda-el-estado-de-su-almacen.md)** deja escrita la regla —lo que el
   bloqueo reserva es la privacidad de una persona, no la existencia de una estantería— y la precisión
   que la sostiene: el invariante 2 habla de la **respuesta**, no del puerto, y el `400` del alta sigue
   sin distinguir. Y decide **cómo se componen almacén y ubicación**, que el criterio no traía y el
@@ -10902,8 +10922,8 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   cobra la comprobación **por el efecto** que el 2.2 no tenía con qué hacerse: un ajuste contra un
   almacén **bloqueado** se rechaza —el puerto contesta `SoloResuelveLoViejo` y el alta solo admite
   `SeOfreceParaLoNuevo`—, y un movimiento **ya escrito** contra ese mismo almacén **se sigue
-  leyendo**, resolviendo su almacén por el mismo puerto. Son las dos mitades de la regla del ADR del
-  2.2 —lo que el bloqueo reserva es la privacidad de una persona, no la existencia de una
+  leyendo**, resolviendo su almacén por el mismo puerto. Son las dos mitades de la regla del ADR-0037
+  —el del 2.2— —lo que el bloqueo reserva es la privacidad de una persona, no la existencia de una
   estantería—, y este es el primer ítem en el que hay un libro que las enseñe. Hace vivas
   **R1** y **R13**, y cambia sus dos filas.
 
