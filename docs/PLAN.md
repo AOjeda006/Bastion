@@ -4431,7 +4431,8 @@ de mirar el criterio contra el código:
    el cuarto motivo de `MotivoParaVerLoBloqueado` que el adaptador necesita para ver lo bloqueado
    sin saltarse el filtro.
 
-**Y el código del 2.2 está escrito**, el 2026-09-18, en `cd50109` y `c2950db`: los tres puertos con
+**Y el 2.2 está hecho**, el 2026-09-18, en `cd50109` y `c2950db`, con el run **35385999936** sobre
+`c02e006` en verde y sus tres jobs: los tres puertos con
 sus adaptadores contra PostgreSQL real, el cuarto motivo de `MotivoParaVerLoBloqueado` con sus dos
 aperturas declaradas, las tres puertas públicas y las **nueve** casillas nuevas repartidas entre las
 dos matrices —seis en la de `EstadoDeMaestro`, tres en la general—. Cinco reglas se vieron en rojo
@@ -10956,8 +10957,9 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   un almacén bloqueado, preguntado por el puerto, contesta `SoloResuelveLoViejo`, y eso no necesita ni
   un movimiento. Su consumidor es el 2.3, igual que el de `IConsultaDeUnidadesDeMedida` fue el 1.8.
 
-  Hecho en `cd50109` (los dos de Organización) y `c2950db` (el del artículo), **dos commits que
-  quedan verdes cada uno por su lado**: el primero se comprobó con el segundo apartado, porque las
+  Hecho en `cd50109` (los dos de Organización) y `c2950db` (el del artículo), certificado por el run
+  **35385999936** sobre `c02e006`, **success** con sus tres jobs —*Backend*, *Frontal* y *Humo*— y sin
+  un paso fuera de verde. **Dos commits que quedan verdes cada uno por su lado**: el primero se comprobó con el segundo apartado, porque las
   dos matrices reclaman las casillas de un puerto en cuanto el puerto existe. El cuarto motivo es
   `ResolucionDeUnMaestroApuntado`, y **no reutiliza ninguno de los tres**: por este camino no se
   escribe nada —así que no es administración del bloqueo— y la traza del art. 32 existe para
