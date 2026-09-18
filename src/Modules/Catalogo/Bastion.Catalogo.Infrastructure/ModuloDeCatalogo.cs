@@ -71,6 +71,12 @@ public static class ModuloDeCatalogo
         // acciones del controlador contestan 500 (medido en el ítem 1.10, canario 7c).
         servicios.AddScoped<IConsultaDeTarifas, ConsultaDeTarifas>();
 
+        // El del ítem 2.2, que hoy no tiene consumidor: lo estrena Inventario en el 2.3, igual
+        // que Catálogo estrenó en el 1.8 los tres del 1.2. Se adelanta por el mismo motivo: un
+        // identificador de otro módulo obliga a que exista el puerto que lo valida (ADR-0024), y
+        // un puerto que no existe no se puede exigir.
+        servicios.AddScoped<IConsultaDeArticulos, ConsultaDeArticulos>();
+
         // SIN `IConsultaDeLoBloqueado`, y hay que leer por qué en vez de darlo por un olvido. Los
         // otros tres módulos aportan su trozo al listado del art. 32 porque tienen entidades
         // bloqueables: empresa, usuario y tercero guardan datos de personas. Catálogo no guarda

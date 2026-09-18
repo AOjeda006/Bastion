@@ -171,6 +171,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElFiltroDeEmpresaTests.Una_escritura_por_identificador_contra_una_fila_de_otra_empresa_es_404",
         "ElFiltroDeEmpresaTests.Una_fila_de_otra_empresa_no_se_distingue_de_una_que_no_existe",
 
+        // Del ítem 2.2: las tres casillas de `AptitudParaMoverExistencias`, que son tres y no
+        // cuatro. Si algún día el artículo recibe su final de vida, la casilla que entre
+        // necesita su línea aquí y su caso allá.
+        "ElPuertoDelArticuloContraLaBaseTests.El_bien_se_ofrece_y_el_servicio_no_se_almacena",
+        "ElPuertoDelArticuloContraLaBaseTests.Uno_inventado_y_uno_de_otra_empresa_NoExisten_y_el_ajeno_si_en_la_suya",
+
         "ElPuertoDeTercerosContraLaBaseTests.De_un_conjunto_se_tratan_los_de_aqui_no_bloqueados_hagan_el_papel_que_hagan",
         "ElPuertoDeTercerosContraLaBaseTests.El_papel_por_el_que_se_pregunta_decide_entre_Disponible_y_NoHaceEseRol",
         "ElPuertoDeTercerosContraLaBaseTests.Un_bloqueado_NoExiste_desde_fuera_y_desbloquearlo_lo_devuelve_Disponible",

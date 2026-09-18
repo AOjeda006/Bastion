@@ -36,4 +36,15 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
+  <ItemGroup Label="Pruebas">
+    <!--
+      Al proyecto que ve todos los módulos, desde el ítem 2.2. Los repositorios son internos
+      —son un detalle de esta capa— y `ConsultaDeArticulos` hay que poder instanciarlo desde un
+      test: lo que decide cada respuesta del puerto es una consulta, así que una casilla afirmada
+      con un doble afirma lo que diga el doble. Es la misma apertura que ya tienen Organización y
+      Terceros, y por el mismo motivo.
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

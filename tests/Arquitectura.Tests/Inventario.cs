@@ -393,6 +393,13 @@ internal static class Inventario
     internal static readonly IReadOnlyDictionary<string, string> PuertasPublicas =
         new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
+            ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDeArticulos"] =
+                "LECTURA: si se pueden mover existencias contra un artículo, para quien guarde su " +
+                "identificador — cada movimiento del libro de la fase 2 (§7.4). Contesta con " +
+                "enumerado PROPIO y de tres valores, no con `EstadoDeMaestro`: «¿se almacena?» es " +
+                "una tercera pregunta y no una tercera respuesta, y un `Servicio` contesta " +
+                "`NoSeAlmacena`. No escribe, y no publica ni el código ni la descripción.",
+
             ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDeTarifas"] =
                 "LECTURA: en qué estado está una tarifa para una fecha, para quien guarde su " +
                 "identificador — la tarifa asignada del tercero (§7.2). Es la PRIMERA puerta " +

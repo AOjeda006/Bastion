@@ -271,6 +271,27 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
             opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
+    /// <summary>
+    /// Un contexto de Catálogo como el que tiene la API dentro de una petición de esa empresa.
+    /// </summary>
+    /// <remarks>
+    /// <b>Entra en el ítem 2.2 para ejercer <c>IConsultaDeArticulos</c> contra la base.</b> Por la
+    /// API no se puede: hoy ese puerto no tiene consumidor —lo estrena el 2.3—, así que no hay
+    /// petición cuya respuesta dependa de él. Y el acceso a lo bloqueado va cerrado como en los
+    /// demás, que aquí además dice algo: el artículo no es bloqueable, así que este puerto no abre
+    /// ningún ámbito —y si algún día lo abriera, <c>AccesoCerrado</c> lanza y el caso lo cuenta—.
+    /// </remarks>
+    /// <param name="empresaId">Como qué empresa se abre. Obligatorio, por lo mismo que en
+    /// <see cref="AbrirOrganizacion"/>.</param>
+    public CatalogoDbContext AbrirCatalogo(Guid empresaId)
+    {
+        DbContextOptionsBuilder<CatalogoDbContext> opciones = new();
+        CatalogoDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new CatalogoDbContext(
+            opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
+    }
+
     /// <summary>Un contexto de Catálogo solo para aplicar migraciones.</summary>
     /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
     public CatalogoDbContext AbrirCatalogoParaMigrar()
