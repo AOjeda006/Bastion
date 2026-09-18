@@ -4283,12 +4283,21 @@ existencia de una estantería**; un tercero bloqueado sigue contestando `NoExist
 la cual esto se rompería: **el invariante 2 habla de la RESPUESTA, no del puerto**. Que el puerto
 distinga no autoriza a que el `400` del alta distinga, y eso ya está escrito en `EstadoDelTercero`
 —«estos valores son para que la regla decida, no para que la respuesta HTTP los cuente»—: se cita, no
-se reinventa. Para el artículo, **enumerado propio en `Catalogo.Contracts`** con cuatro valores y
-`NoExiste = 0` por el mismo motivo defensivo, y un `Servicio` contestando el suyo, `NoSeAlmacena`. No
+se reinventa. Para el artículo, **enumerado propio en `Catalogo.Contracts`** con ~~cuatro valores~~
+**tres** y `NoExiste = 0` por el mismo motivo defensivo, y un `Servicio` contestando el suyo,
+`NoSeAlmacena`. No
 es un cuarto valor de `EstadoDeMaestro`: le daría a los cuatro puertos de Organización un valor que
 ninguno puede producir jamás —la casilla vacía que el 1.10 acaba de quitar—, y el propio
 `EstadoDeMaestro` lo excluye por escrito, porque sus tres valores son **dos preguntas** colapsadas y
 «¿se almacena?» es una tercera pregunta, no una tercera respuesta.
+
+> **Enmendada en el ítem 2.2 (2026-09-18): son TRES valores, no cuatro** —y esto no es una desviación
+> de esta decisión, es esta decisión **terminando su propia frase**. Dos renglones más arriba rechaza
+> el cuarto valor de `EstadoDeMaestro` por dar «un valor que ninguno puede producir jamás —la casilla
+> vacía que el 1.10 acaba de quitar—», y acto seguido pide cuatro para el enumerado nuevo con uno de
+> ellos sin productor: `Articulo` no es `IBloqueable` **y tampoco se retira**, y lo dice él mismo en
+> su cabecera desde la fase 1. Aplicado a sí mismo, su criterio da tres. El detalle, el disparador
+> del cuarto y el nombre del enumerado, en la casilla del **2.2**.
 
 **12. El artículo 32: la fase 2 produce un hecho que estrecha lo que viene, y no se inventa un
 destructor.** Lo que esta fase deja escrito es que **el libro es indestructible** — R2 prohíbe borrar
@@ -4393,6 +4402,14 @@ está vacía, si un miembro no resuelve en exactamente un fichero, o si no resue
 409 sobre 450 ahora dice que el diccionario declarado `es` resuelve en cero ficheros. Y una mutación
 destapó un defecto propio: con `set -e`, un `grep` sin coincidencias dentro de una asignación mataba
 el guion antes de que hablara, y el paso salía rojo **sin una línea de diagnóstico**.
+
+**Y la medida del *runner* coincide con la local, comprobado en el run y no de palabra.** El run
+**35367412759** sobre `d5ddf36`, **success** con sus tres jobs, imprime en el paso *Presupuesto de
+tamaño* exactamente `Frontal · arranque 409/450 KiB en 4 ficheros · total servido 593/900 KiB`, con
+las **cuatro líneas de detalle idénticas byte a byte** a las de aquí, hashes de fichero incluidos
+(`index-3A3UVIHi.js`, `es-D417jeH4.js`); y `en-CyLiJcAU.js` y `es-D417jeH4.js` salen como fragmentos
+**separados** también allí, que es la partición del 2.1 sostenida en la máquina que no es la del
+desarrollo. La comparación queda cerrada.
 
 **Del 2.2 están decididas las dos cosas que van antes del código**, el 2026-09-18, por salir las dos
 de mirar el criterio contra el código:
@@ -10878,8 +10895,8 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 
 - [ ] **2.2 · Los tres puertos que Inventario va a preguntar, y el bloqueo que no es el del art. 32** —
   criterio de aceptación: `IConsultaDeArticulos` en `Catalogo.Contracts`, con **enumerado propio** de
-  cuatro valores (`NoExiste = 0`, se ofrece para lo nuevo, solo resuelve lo viejo, y `NoSeAlmacena`
-  para el `Servicio`), e `IConsultaDeAlmacenes` e `IConsultaDeUbicaciones` en `Organizacion.Contracts`
+  **tres** valores (`NoExiste = 0`, se ofrece para lo nuevo y `NoSeAlmacena` para el `Servicio`), e
+  `IConsultaDeAlmacenes` e `IConsultaDeUbicaciones` en `Organizacion.Contracts`
   contestando `EstadoDeMaestro`, donde **lo bloqueado contesta `SoloResuelveLoViejo`** y no
   `NoExiste`. Las tres puertas en `PuertasPublicas` diciendo que **leen**, los cruces en
   `CrucesDeclarados`, y **cada casilla cubierta**, que para estos tres son **dos matrices y no una**:
@@ -10895,6 +10912,33 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   ninguna más—, así que una **ubicación activa dentro de un almacén bloqueado** existe en la base y
   alguien tiene que decir qué contesta el puerto. La ubicación **hereda el estado de su almacén** y el
   suyo propio solo puede **empeorarlo**, con las **cuatro** combinaciones cubiertas, una por caso.
+
+  **Son tres valores y no los cuatro que pedía la decisión 11, y eso no es una desviación: es esa
+  decisión terminando su propia frase.** Rechaza el cuarto valor de `EstadoDeMaestro` por dar «un
+  valor que ninguno puede producir jamás —la casilla vacía que el 1.10 acaba de quitar—», y en el
+  renglón siguiente pide cuatro para el enumerado nuevo con uno de ellos, `SoloResuelveLoViejo`, sin
+  productor en ninguna parte: **`Articulo` no es `IBloqueable` y tampoco se retira**, y lo dice su
+  propia cabecera desde la fase 1. Aplicado a sí mismo, el criterio de la decisión 11 da tres. La
+  decisión **queda enmendada arriba, en su sitio**, para que nadie tenga que adivinar cuál de las dos
+  cifras está caduca.
+
+  **El precedente que vale es el del 1.10, no el del 1.2.** En el 1.2, `IConsultaDeUnidadesDeMedida`
+  sí llevó un valor sin productor, pero el hueco tenía fecha —cinco ítems— y el consumidor llegaba en
+  el 1.8. Aquí no hay fecha. Lo que hay es exactamente el 1.10: la matriz encontró `Bloqueado`
+  inalcanzable y la conclusión fue que **«lo que sobraba era el valor»**. Mismo test, misma
+  conclusión, once ítems antes.
+
+  **Y el disparador del cuarto valor se escribe con nombre, no como «alguna fase futura».**
+  `Articulo.cs` no dice que el artículo no vaya a tener final de vida: dice **cuándo tendrá motivo**,
+  «cuando tenga existencias que sostener. Hoy no tiene ninguna». Las existencias llegan en el **2.7**,
+  así que el disparador es **el primer ítem posterior al 2.7 que le dé una baja**, y hoy **ninguno de
+  los catorce se la da**. Que eso deje una pregunta sin dueño dentro de esta misma fase está anotado
+  en *Notas / riesgos* como pregunta del cierre, y no lo contesta el agente.
+
+  Por eso el enumerado **se nombra por la pregunta que contesta** —«¿puedo mover existencias contra
+  esto?»— y no como un `EstadoDeMaestro` recortado: el día que entre el cuarto valor tiene que
+  leerse como lo que será, una **incorporación al ciclo de vida** del artículo, y no como la
+  redefinición de un estado que se quedó corto.
 
   **Este ítem afirma solo lo que puede afirmar él.** La comprobación por el efecto que el criterio
   traía —«un alta contra un almacén bloqueado se rechaza, y un movimiento viejo contra ese mismo
@@ -11069,6 +11113,20 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-09-18, ítem 2.2) · ¿recibe el artículo su final de vida en esta fase, una vez el 2.7
+  le dé existencias?** Es **pregunta del cierre de la fase 2**, y se deja escrita aquí para que lo
+  sea. `IConsultaDeArticulos` sale con **tres** valores porque el cuarto —`SoloResuelveLoViejo`— no
+  tiene productor: el artículo no se bloquea y no se retira. Y su cabecera no dice que no vaya a
+  tenerlo nunca; dice **cuándo tendrá motivo**: «qué le pasa cuando deja de venderse es una pregunta
+  de la fase 2, **cuando tenga existencias que sostener**. Hoy no tiene ninguna». Las existencias
+  llegan en el **2.7**, o sea que la condición se cumple **dentro de esta fase** —y, repasados los
+  catorce ítems, **ninguno le da una baja**: al artículo solo lo tocan el 2.9 (trazabilidad) y el 2.10
+  (GTIN). Así que la fase se cierra con el motivo ya existiendo y el mecanismo sin dueño, que es
+  justo el hueco que hay que mirar de frente y no heredar en silencio. **Quien la conteste no es el
+  agente y no se amplía el checklist por cuenta propia**: si la respuesta es que sí, es un
+  **addendum**, la forma que el proyecto ya usó dos veces —las tres addenda de la fase 0 y las tres
+  de la fase 1—. Si es que no, el disparador queda escrito y con nombre en `IConsultaDeArticulos`.
 
 - **TRASLADADA A *DECISIONES* (2026-09-07, ítem 1.6) · el conflicto no revela, pero DOS respuestas
   juntas sí.** El hecho sigue siendo el que se anotó en el 1.5 y no ha cambiado: la búsqueda no
