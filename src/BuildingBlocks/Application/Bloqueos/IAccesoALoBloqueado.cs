@@ -128,4 +128,41 @@ public enum MotivoParaVerLoBloqueado
     /// </para>
     /// </remarks>
     ComprobacionDeUnicidadDeIdentificador,
+
+    /// <summary>
+    /// Resolver el estado de un maestro al que otro módulo <b>ya apunta</b>: el almacén y la
+    /// ubicación de un movimiento de existencias. Mira lo bloqueado porque un almacén bloqueado
+    /// tiene que poder contestar <c>SoloResuelveLoViejo</c>, y la fila no llega al puerto si el
+    /// filtro la esconde.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Entra en el ítem 2.2 porque es cuando aparece el primer camino que lo necesita</b>, que es
+    /// la regla de esta lista desde que se escribió. Y estaba previsto: el ADR-0016 §2 dejó escrito
+    /// que «cuando la fase 3 necesite leer el almacén de un movimiento histórico, abrirá un ámbito
+    /// declarado, que es el mecanismo previsto». Lo necesita la fase 2, una antes, y el mecanismo es
+    /// el previsto. La regla entera, en el ADR-0037.
+    /// </para>
+    /// <para>
+    /// <b>No reutiliza ninguno de los tres anteriores</b>, y no por ceremonia. El del desbloqueo
+    /// abre para <b>escribir</b> lo que lee, y por aquí no se escribe nada. El del artículo 32 es la
+    /// vía nominativa y trazada de jueces y Administraciones: usándola para que Inventario resuelva
+    /// una estantería, la traza que existe para contestar quién ha mirado datos reservados se
+    /// llenaría de ruido de máquina. Y el de la unicidad es de otro camino y de otra pregunta.
+    /// </para>
+    /// <para>
+    /// <b>Lo que se ve por aquí no sale por la respuesta, y no lo garantiza este enumerado: lo
+    /// garantiza la forma del puerto.</b> <c>EstadoDeAsync</c> devuelve un estado, no una ficha, así
+    /// que quien pregunta no llega a saber nada del almacén bloqueado salvo que existe y que no
+    /// admite operaciones nuevas —que es lo que el albarán impreso de hace tres años ya cuenta—. Es
+    /// el mismo argumento con el que entró <see cref="ComprobacionDeUnicidadDeIdentificador"/>.
+    /// </para>
+    /// <para>
+    /// <b>Y por qué aquí sí y en Terceros no.</b> Un tercero bloqueado sigue contestando que no
+    /// existe, y ese camino no abre ningún ámbito: de una persona, que exista ya es un dato suyo. De
+    /// un almacén no se revela nada de nadie. Lo que el bloqueo reserva es la privacidad de una
+    /// persona, no la existencia de una estantería.
+    /// </para>
+    /// </remarks>
+    ResolucionDeUnMaestroApuntado,
 }

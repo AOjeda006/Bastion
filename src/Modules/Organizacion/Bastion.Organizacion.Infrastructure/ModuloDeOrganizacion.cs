@@ -14,9 +14,11 @@ using Bastion.Organizacion.Application.Impuestos;
 using Bastion.Organizacion.Application.Series;
 using Bastion.Organizacion.Application.Ubicaciones;
 using Bastion.Organizacion.Application.Unidades;
+using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Impuestos;
+using Bastion.Organizacion.Contracts.Ubicaciones;
 using Bastion.Organizacion.Contracts.Unidades;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
@@ -125,6 +127,14 @@ public static class ModuloDeOrganizacion
         servicios.AddScoped<IConsultaDeImpuestos, ConsultaDeImpuestos>();
         servicios.AddScoped<IConsultaDeUnidadesDeMedida, ConsultaDeUnidadesDeMedida>();
         servicios.AddScoped<IConsultaDeDivisas, ConsultaDeDivisas>();
+
+        // Los dos del ítem 2.2, y tampoco tienen consumidor hasta el 2.3. A diferencia de los
+        // tres de arriba, estos DOS reciben `IAccesoALoBloqueado`: un almacén bloqueado tiene que
+        // poder contestar `SoloResuelveLoViejo`, y su fila no llega al puerto si el filtro de R16
+        // la esconde. El motivo con el que abren el ámbito es de la lista cerrada y está declarado
+        // en `s_aperturasDeBloqueoPermitidas` (ADR-0037).
+        servicios.AddScoped<IConsultaDeAlmacenes, ConsultaDeAlmacenes>();
+        servicios.AddScoped<IConsultaDeUbicaciones, ConsultaDeUbicaciones>();
 
         // Los eventos que emite este módulo, con el nombre que llevan en la cola. Se declaran
         // AQUÍ y no en los bloques comunes: un catálogo central obligaría a tocar código común

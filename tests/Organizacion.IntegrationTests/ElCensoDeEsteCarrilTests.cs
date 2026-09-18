@@ -110,6 +110,18 @@ public sealed class ElCensoDeEsteCarrilTests
         "MaestrosDelSeptimoApartadoTests.La_restriccion_que_impide_el_solape_existe_y_es_de_exclusion",
         "MaestrosDelSeptimoApartadoTests.Las_fechas_de_los_maestros_son_de_calendario",
         "MaestrosDelSeptimoApartadoTests.Los_seis_maestros_estan_en_el_esquema_del_modulo",
+
+        // Del ítem 2.2: los dos puertos que contestan por un maestro BLOQUEADO. Los cuatro
+        // del medio son las cuatro combinaciones del ADR-0037 §4, y van una por caso a
+        // propósito: son cuatro reglas distintas, y borrar cualquiera de ellas deja sin
+        // guardar una esquina de la composición sin que la suite se entere.
+        "UnaEstanteriaBloqueadaSigueExistiendoTests.El_almacen_activo_se_ofrece_y_el_inventado_y_el_ajeno_no_existen",
+        "UnaEstanteriaBloqueadaSigueExistiendoTests.El_almacen_bloqueado_solo_resuelve_lo_viejo_y_sin_el_ambito_no_se_ve",
+        "UnaEstanteriaBloqueadaSigueExistiendoTests.La_ubicacion_de_otro_almacen_no_existe_aqui_y_si_en_el_suyo",
+        "UnaEstanteriaBloqueadaSigueExistiendoTests.Ubicacion_activa_en_almacen_activo_se_ofrece_para_lo_nuevo",
+        "UnaEstanteriaBloqueadaSigueExistiendoTests.Ubicacion_activa_en_almacen_bloqueado_solo_resuelve_lo_viejo",
+        "UnaEstanteriaBloqueadaSigueExistiendoTests.Ubicacion_bloqueada_en_almacen_activo_solo_resuelve_lo_viejo",
+        "UnaEstanteriaBloqueadaSigueExistiendoTests.Ubicacion_bloqueada_en_almacen_bloqueado_solo_resuelve_lo_viejo",
     ];
 
     [Fact]

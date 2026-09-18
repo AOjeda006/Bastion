@@ -399,6 +399,14 @@ internal static class Inventario
                 "que no publica Organización, y la mitad de vuelta del primer cruce mutuo. No " +
                 "escribe.",
 
+            ["Bastion.Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes"] =
+                "LECTURA: en qué estado está un almacén, para quien guarde su identificador — cada " +
+                "movimiento de existencias apunta al suyo para siempre (§7.4). Es el PRIMER puerto " +
+                "que contesta `SoloResuelveLoViejo` de algo BLOQUEADO, al revés que el de terceros: " +
+                "lo que el bloqueo reserva es la privacidad de una persona, no la existencia de " +
+                "una estantería (ADR-0037). Para verlo abre el ámbito declarado del art. 32 con su " +
+                "motivo propio. No escribe.",
+
             ["Bastion.Organizacion.Contracts.Divisas.IConsultaDeDivisas"] =
                 "LECTURA: en qué estado está una divisa, para quien guarde su identificador — la " +
                 "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe.",
@@ -411,6 +419,14 @@ internal static class Inventario
                 "LECTURA: en qué estado está un tramo de impuesto para una fecha de devengo, " +
                 "para quien guarde su identificador — el impuesto por defecto del artículo " +
                 "(§7.3). No escribe.",
+
+            ["Bastion.Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones"] =
+                "LECTURA: en qué estado está una ubicación DENTRO DE UN ALMACÉN, para quien guarde " +
+                "los dos identificadores. Recibe los dos porque que la ubicación cuelgue de ese " +
+                "almacén es una condición que quien pregunta no puede comprobar: las dos tablas " +
+                "están en `organizacion` y ninguna consulta cruza esquemas (regla 4). La ubicación " +
+                "hereda el estado de su almacén y el suyo propio solo puede empeorarlo (ADR-0037). " +
+                "No escribe.",
 
             ["Bastion.Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida"] =
                 "LECTURA: en qué estado está una unidad de medida, para quien guarde su " +

@@ -257,6 +257,37 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             // tampoco lo dirían en la respuesta, pero sí en lo que tarda. El ámbito envuelve solo
             // esa consulta, igual que en el alta suelta.
             ["src/Modules/Terceros/Bastion.Terceros.Application/Terceros/ImportarTerceros.cs"] = 1,
+
+            // Las dos del ítem 2.2, y las PRIMERAS que no están en una capa de aplicación: son
+            // adaptadores de puerto, en `Infrastructure`. No heredan el argumento de ninguna de las
+            // ocho anteriores y tienen el suyo, que es de una clase distinta.
+            //
+            //   - Por qué miran: porque la respuesta correcta de un almacén BLOQUEADO es
+            //     `SoloResuelveLoViejo`, y sin ver la fila el puerto contestaría `NoExiste`. No es
+            //     una diferencia de matiz: un movimiento de hace tres años apunta a su almacén para
+            //     siempre, y `NoExiste` rompería la doble flecha del libro el día que alguien dé de
+            //     baja una nave. La regla entera, en el ADR-0037; el ADR-0016 §2 ya dejó escrito
+            //     que este camino abriría un ámbito declarado cuando llegara.
+            //   - Por qué con motivo PROPIO (`ResolucionDeUnMaestroApuntado`) y no con el de la
+            //     administración del bloqueo: por aquí no se escribe nada. Ni con el del art. 32:
+            //     esa traza existe para contestar qué PERSONA ha mirado datos reservados, y se
+            //     llenaría de ruido de máquina.
+            //   - Qué se trae de dentro: un ESTADO, y nada más. Igual que el alta de terceros se
+            //     trae un booleano, estos se traen un valor de `EstadoDeMaestro`. Quien pregunta no
+            //     llega a saber del almacén bloqueado nada que no cuente ya el albarán impreso.
+            //   - Y por qué un almacén sí y un tercero no: lo que el bloqueo reserva es la
+            //     privacidad de una persona, no la existencia de una estantería. `CrearTercero` no
+            //     distingue lo bloqueado en su respuesta a propósito; estos sí, y por eso son dos
+            //     entradas distintas de esta lista y no una regla común.
+            //
+            // La apertura es UNA en cada uno. En el de ubicaciones cubre las DOS tablas de la misma
+            // consulta: si llegaran a ser dos aperturas, este recuento se pone rojo y habría que
+            // mirar si la unión se ha partido en dos lecturas —que es justo lo que no puede pasar,
+            // porque entre las dos cabe un bloqueo—.
+            ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/" +
+             "Repositorios/ConsultaDeAlmacenes.cs"] = 1,
+            ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/" +
+             "Repositorios/ConsultaDeUbicaciones.cs"] = 1,
         };
 
     // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de
