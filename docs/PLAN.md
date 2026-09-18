@@ -10997,6 +10997,16 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   trae la fila bloqueada, y el SQL en crudo cuenta 1—. Ninguna de ellas se ha ejercido en rojo por
   mutación; lo que sostienen es lo que dicen, no más.
 
+  **Y el hallazgo se queda como doctrina, no como anécdota de este ítem.** Lo que el `Math.Min`
+  enseñó —que la mutación hay que ponerla sobre la línea que decide y no sobre la que es cómoda de
+  romper, que el reparto de rojos es el argumento de por qué están escritos todos los casos, y que
+  cuando la medición contradice al comentario manda la medición— sale del cierre del 2.2 y entra en
+  **`docs/adr/adr-0038-la-mutacion-va-sobre-la-asercion-que-decide-y-la-medicion-corrige-al-comentario.md`**,
+  de la familia del ADR-0006 y del ADR-0020. Allí está escrito además por qué **este** ADR no puede
+  cumplir el ADR-0033: su ejemplo describe una línea que el repositorio no debe contener nunca, así
+  que ningún test puede mantenerlo cierto; lo que sí se comprueba son los cuatro casos y el censo que
+  los declara. El siguiente ADR es el **0039**.
+
 - [ ] **2.3 · El libro de movimientos y el primer documento: el ajuste** — criterio de aceptación: el
   esquema `inventario` con su contexto, sus migraciones y su sitio en
   `LasMigracionesSobreTablasConFilasTests`; `movimiento_stock` **append-only** y **particionada por
