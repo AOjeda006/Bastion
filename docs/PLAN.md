@@ -4373,13 +4373,26 @@ cambiar. Arranque medido: **426 → 391 KiB** por lo que `index.html` referencia
 lo que el navegador trae para pintar (castellano; 408 en inglés). Las dos cifras están en la casilla
 del ítem, con el mandato que las produce.
 
-> **Las dos cifras dejan de ser la misma, y la CI solo mira una.** El paso «Presupuesto de tamaño»
-> compara con los 450 lo que `index.html` referencia, y el fragmento del idioma activo ya no está
-> ahí aunque el navegador lo pida antes de pintar. Hoy la diferencia es de 18 kB y el tope tiene
-> 59 de margen sobre la cifra honesta, así que no tapa nada; pero el ADR-0028 dice que se mide «lo
-> que el navegador descarga», y desde este ítem su guion mide un **límite inferior**. Cerrar esa
-> distancia —enseñándole al guion qué fragmento se paga siempre— es una enmienda al ADR-0028 y **no
-> se ha hecho aquí**: no estaba en el ítem y es decisión del usuario.
+**Y cerrada la distancia entre las dos cifras**, el 2026-09-18, entre el 2.1 y el 2.2 y en su propio
+commit — no es un decimoquinto ítem: el checklist está cerrado. El presupuesto pasa a contar lo que
+`index.html` referencia **más una lista declarada** de fragmentos que el arranque espera sin estar
+ahí, hoy los diccionarios de idioma. **ADR-0036**, que enmienda la definición de arranque del
+ADR-0028 y lo deja marcado; lo demás de aquel ADR sigue entero.
+
+> **La cifra publicada sube de 391 a 409 KiB y el frontal no ha engordado ni un byte.** Lo que ha
+> cambiado es la medida, no el paquete. Quien bisecte un problema de presupuesto y aterrice aquí
+> está leyendo la corrección de un número que estaba 18 kB corto desde el 2.1, no una regresión. El
+> tope se queda en **450**: quedan 41 KiB de margen real, y moverlo en el mismo commit que cambia lo
+> que se mide sería cambiar dos cosas a la vez.
+
+La lista es cerrada y se compara **en los dos sentidos** contra `IDIOMAS` de `idioma.ts`; entre
+alternativas excluyentes se cuenta **la mayor**, porque un usuario paga un diccionario y el tope
+promete el peor caso; y la parte nueva hereda entera la disciplina del ADR-0020 —falla si la lista
+está vacía, si un miembro no resuelve en exactamente un fichero, o si no resuelve ninguno—. Con eso,
+**deshacer la partición del 2.1 pasa a ser un rojo**: la misma mutación que antes salía verde con
+409 sobre 450 ahora dice que el diccionario declarado `es` resuelve en cero ficheros. Y una mutación
+destapó un defecto propio: con `set -e`, un `grep` sin coincidencias dentro de una asignación mataba
+el guion antes de que hablara, y el paso salía rojo **sin una línea de diagnóstico**.
 
 **Lo siguiente es el 2.2.**
 

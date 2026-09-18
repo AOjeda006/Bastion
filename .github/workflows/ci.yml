@@ -106,10 +106,13 @@ jobs:
       # KiB y el `du` de antes BAJÓ de 554 a 546 kB, o sea que la métrica vieja se ponía MÁS verde
       # ante un empeoramiento real—.
       #
-      #   arranque (450 KiB) — lo que `index.html` referencia, que es lo que se paga antes de
-      #                        pintar nada. Hoy 391 KiB: ~2 s en una 4G de 1,6 Mbps efectivos.
+      #   arranque (450 KiB) — lo que se paga antes de pintar nada: lo que `index.html` referencia
+      #                        MÁS los fragmentos declarados que el arranque espera sin estar ahí.
+      #                        Hoy 409 KiB. La parte declarada entró con el ADR-0036, que enmienda
+      #                        la definición del ADR-0028: desde que el diccionario del idioma se
+      #                        carga aparte (2.1), el `index.html` se había quedado 18 kB corto.
       #   total    (900 KiB) — todo lo servido menos los mapas. Vigila el crecimiento global sin
-      #                        castigar el troceo. Hoy 532 KiB.
+      #                        castigar el troceo. Hoy 593 KiB.
       #
       # El día que suban, suben con su motivo escrito y no porque nadie los estuviera mirando.
       # Argumento entero en `docs/adr/adr-0028-el-presupuesto-mide-el-arranque-no-la-suma-de-los-fragmentos.md`.

@@ -8,7 +8,11 @@ revisado: 2026-09-03
 
 # ADR-0028: El presupuesto del frontal mide el arranque, no la suma de los fragmentos
 
-- **Estado:** aceptado
+- **Estado:** aceptado, con la **definición de arranque enmendada** por el
+  [ADR-0036](adr-0036-el-presupuesto-cuenta-lo-que-se-paga-aunque-no-este-en-el-indice.md)
+  (2026-09-18). Desde el ítem 2.1 hay fragmentos que el arranque espera y que el `index.html` no
+  nombra, así que el arranque dejó de ser «lo que `index.html` referencia» y pasó a ser eso **más**
+  una lista declarada. Todo lo demás de este ADR sigue vigente tal cual.
 - **Fecha:** 2026-09-03
 - **Relacionado:** continúa la corrección del 0.1 (medir el `sourcemap`) y la del 0.10 (bajar el tope
   a lo medido más un margen corto). Aplica la doctrina del **ADR-0020**: una comprobación tiene que
@@ -55,6 +59,10 @@ es como un presupuesto deja de serlo.
 - **Arranque** — lo que el navegador pide **antes de poder pintar nada**: los ficheros referenciados
   por `index.html` (el módulo de entrada, la hoja de estilo y cualquier `modulepreload`), más el
   propio `index.html`. **Tope: 450 KiB.**
+  > **Enmendado por el ADR-0036 (2026-09-18).** La primera frase sigue siendo la definición; la
+  > segunda dejó de describirla el día que un fragmento pasó a esperarse sin estar en el
+  > `index.html`. Hoy el arranque es eso **más** los fragmentos declarados que se pagan siempre
+  > antes del primer pintado.
 - **Total servido** — todo lo que la imagen sirve, sin los `.map`. Vigila el crecimiento global sin
   castigar el troceo. **Tope: 900 KiB.**
 

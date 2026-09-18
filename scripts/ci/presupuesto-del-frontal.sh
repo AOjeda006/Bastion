@@ -16,12 +16,31 @@
 # propio fragmento MEJORA el arranque y SUBE el número que la CI vigila.
 #
 #   arranque  = lo que `index.html` referencia (módulo de entrada, hoja de estilo, modulepreload)
-#               más el propio `index.html`. Es lo que se paga antes de pintar nada.
+#               más el propio `index.html`, MÁS los fragmentos declarados que se pagan siempre
+#               antes del primer pintado sin estar en el `index.html`. Es lo que se paga antes de
+#               pintar nada.
 #   total     = todo lo servido menos los `.map`. Vigila el crecimiento global sin castigar el
 #               troceo: un paquete de 300 KiB que entre por descuido se nota aquí.
 #
+# LA PARTE DECLARADA, Y POR QUÉ NO SE ADIVINA
+# -------------------------------------------
+# Hasta el ítem 2.1 «lo que `index.html` referencia» y «lo que se paga antes de pintar» eran la
+# misma cosa, y esta cabecera lo decía así. Dejaron de serlo el día que el diccionario del idioma
+# pasó a importación dinámica: el navegador lo pide ANTES de pintar —el arranque lo espera— y Vite
+# no lo anuncia en el `index.html`, porque un `import()` que se resuelve en tiempo de ejecución no
+# tiene sitio ahí. La medida se quedó 18 kB por debajo de lo que el usuario paga, y un tope que mide
+# de menos es un tope que no avisa.
+#
+# Qué fragmentos son esos NO se puede deducir del artefacto: en `dist` un fragmento diferido de una
+# ruta y uno que el arranque espera se parecen exactamente. Así que se DECLARAN aquí, en una lista
+# cerrada, y la lista se compara en los dos sentidos contra la fuente que manda: lo declarado que no
+# esté en `dist` es rojo, y lo que esté en `dist` cumpliendo la convención sin que nadie lo haya
+# declarado, también. Sin las dos direcciones, el guardián envejece apuntando a un fichero que se
+# renombró y sigue verde.
+#
 # Argumento entero, con las cifras del día que se decidió, en
-# `docs/adr/adr-0028-el-presupuesto-mide-el-arranque-no-la-suma-de-los-fragmentos.md`.
+# `docs/adr/adr-0036-el-presupuesto-cuenta-lo-que-se-paga-aunque-no-este-en-el-indice.md`, que
+# enmienda la definición de arranque del **ADR-0028** —lo demás de aquel ADR sigue en pie—.
 #
 # POR QUÉ BYTES Y NO `du`
 # -----------------------
@@ -37,6 +56,12 @@
 # midiera la nada y siguiera verde para siempre. Es la vacuidad del ADR-0020 con otra cara, así que
 # el paso FALLA si el conjunto de arranque está vacío, si no lleva ningún `.js`, o si el arranque
 # sale mayor que el total.
+#
+# La parte declarada hereda esa disciplina entera, y hace falta: una enmienda que se midiera a sí
+# misma midiendo la nada sería peor que no haberla escrito, porque el número volvería a ser el de
+# antes con una explicación nueva encima. Así que el paso FALLA también si la lista declarada está
+# vacía, si alguno de sus miembros no resuelve en EXACTAMENTE un fichero de `dist`, o si al terminar
+# no se ha resuelto ni uno.
 #
 # Uso: presupuesto-del-frontal.sh <dist> [tope-arranque-KiB] [tope-total-KiB]
 
@@ -110,6 +135,126 @@ while IFS= read -r referencia; do
   case "$relativa" in *.js | *.mjs) javascript_en_arranque=1 ;; esac
 done < <(grep -oE '[[:space:]](src|href)="[^"]*"' "$INDICE" |
   sed -E 's/^[[:space:]]*(src|href)="//; s/"$//')
+
+# --- Y lo que se paga igual sin estar en el índice: la lista declarada ---------------------------
+#
+# UN GRUPO POR CONJUNTO DE ALTERNATIVAS MUTUAMENTE EXCLUYENTES, y se cuenta LA MAYOR. Un usuario
+# paga UN diccionario y no dos: el tope es una promesa sobre el PEOR CASO que alguien puede llegar a
+# pagar, no sobre el caso medio ni sobre la suma. Se dice aquí y no se deja implícito porque el día
+# que entre un tercer idioma más gordo que los dos de hoy, lo que significa el número cambiaría en
+# silencio; así, sube solo.
+#
+# Hoy hay un grupo y son los diccionarios de idioma (ítem 2.1). La convención del nombre la pone
+# Vite: el fragmento se llama como el módulo que lo origina, o sea `assets/<idioma>-<hash>.js`.
+#
+# Y ESTE GUARDIÁN ES, ADEMÁS, LO QUE DEFIENDE LA PARTICIÓN DEL 2.1, que hasta hoy solo defendía un
+# comentario. Si el diccionario vuelve al fragmento de entrada no habrá fragmento que encontrar y el
+# paso se pone ROJO, en vez de tragarse 18 kB por debajo del tope y salir verde con 409 sobre 450.
+# No es una hipótesis: el linter empuja hacia ahí. `consistent-type-imports` está como `error` con
+# `fixStyle: inline-type-imports`, así que el día que alguien necesite importar un VALOR de `es.ts`
+# en un módulo donde también se usa el tipo, la regla exige la forma mezclada, el arreglo automático
+# la escribe y los 18 kB vuelven sin que nadie lo haya decidido.
+IDIOMAS_DECLARADOS=("es" "en")
+
+# La otra fuente. La lista declarada de arriba no se compara contra sí misma: se compara contra
+# quien manda de verdad sobre cuántos idiomas hay, que es el código del frontal.
+FUENTE_DE_IDIOMAS="$(dirname "$DIST")/src/app/i18n/idioma.ts"
+
+if [ "${#IDIOMAS_DECLARADOS[@]}" -eq 0 ]; then
+  fallar "la lista declarada de fragmentos de arranque está vacía: esta comprobación se estaría midiendo a sí misma midiendo la nada, y el número volvería a ser el de antes con una explicación nueva encima."
+fi
+
+if [ ! -f "$FUENTE_DE_IDIOMAS" ]; then
+  fallar "no existe '$FUENTE_DE_IDIOMAS', que es la fuente contra la que se compara la lista declarada. Sin ella la comparación tendría un solo lado, que es no comparar."
+fi
+
+# El `|| true` no es descuido, y lo destapó una mutación de este mismo ítem: con `set -e`, una
+# asignación cuyo comando devuelve 1 —y `grep` sin coincidencias devuelve 1— MATA el guion ahí
+# mismo, antes de llegar al `if` de abajo. El resultado era un paso rojo sin una sola línea de
+# diagnóstico, que es peor que el fallo: el rojo hay que leerlo.
+linea_de_idiomas=$(grep -E 'export const IDIOMAS[[:space:]]*=' "$FUENTE_DE_IDIOMAS" | head -1 || true)
+
+if [ -z "$linea_de_idiomas" ]; then
+  fallar "no se ha encontrado 'export const IDIOMAS' en '$FUENTE_DE_IDIOMAS': el patrón ha dejado de casar y la comparación saldría verde contra una lista vacía."
+fi
+
+idiomas_del_codigo=()
+while IFS= read -r idioma; do
+  [ -n "$idioma" ] || continue
+  idiomas_del_codigo+=("$idioma")
+done < <(printf '%s' "$linea_de_idiomas" | grep -oE "'[a-zA-Z-]+'" | tr -d "'")
+
+if [ "${#idiomas_del_codigo[@]}" -eq 0 ]; then
+  fallar "'export const IDIOMAS' está en '$FUENTE_DE_IDIOMAS' pero no se le ha sacado ni un idioma: el patrón casa con la línea y no con su contenido."
+fi
+
+declarados_en_orden=$(printf '%s
+' "${IDIOMAS_DECLARADOS[@]}" | sort)
+del_codigo_en_orden=$(printf '%s
+' "${idiomas_del_codigo[@]}" | sort)
+
+if [ "$declarados_en_orden" != "$del_codigo_en_orden" ]; then
+  fallar "la lista declarada de diccionarios de arranque y la de IDIOMAS en '$FUENTE_DE_IDIOMAS' no coinciden. Declarados: $(echo "$declarados_en_orden" | tr '
+' ' '). En el código: $(echo "$del_codigo_en_orden" | tr '
+' ' '). Un idioma nuevo cuyo diccionario nadie declara se descarga antes de pintar y no lo cuenta nadie."
+fi
+
+# Resueltos contra `dist`, uno a uno, y se cuenta el mayor.
+mayor_del_grupo=0
+fichero_del_grupo=""
+detalle_del_grupo=""
+resueltos=0
+
+for idioma in "${IDIOMAS_DECLARADOS[@]}"; do
+  coincidencias=()
+  while IFS= read -r encontrado; do
+    [ -n "$encontrado" ] || continue
+    coincidencias+=("$encontrado")
+  done < <(find "$DIST" -type f -name "${idioma}-*.js" ! -name '*.map' | sort)
+
+  if [ "${#coincidencias[@]}" -ne 1 ]; then
+    fallar "el diccionario declarado '$idioma' resuelve en ${#coincidencias[@]} ficheros dentro de '$DIST' y tiene que resolver en UNO. Si son cero, o el idioma ya no existe o su diccionario ha vuelto al fragmento de entrada —que es lo que el ítem 2.1 sacó de ahí, y son unos 18 kB que el navegador se sigue descargando antes de pintar—. Si son varios, el nombre ha dejado de identificar al fragmento."
+  fi
+
+  resueltos=$((resueltos + 1))
+  camino="${coincidencias[0]}"
+  relativa="${camino#"$DIST"/}"
+  bytes=$(wc -c < "$camino")
+
+  # Si el índice YA lo referencia —un `modulepreload` que Vite emitiera algún día—, ya está contado
+  # arriba, y contarlo otra vez inflaría el arranque con un fichero que se descarga una sola vez.
+  ya_contado=0
+  for contado in "${ficheros_arranque[@]}"; do
+    if [ "$contado" = "$relativa" ]; then
+      ya_contado=1
+    fi
+  done
+
+  if [ -n "$detalle_del_grupo" ]; then
+    detalle_del_grupo="$detalle_del_grupo, "
+  fi
+  detalle_del_grupo="$detalle_del_grupo$idioma $bytes B"
+
+  if [ "$ya_contado" -eq 1 ]; then
+    detalle_del_grupo="$detalle_del_grupo (ya en el índice)"
+    continue
+  fi
+
+  if [ "$bytes" -gt "$mayor_del_grupo" ]; then
+    mayor_del_grupo=$bytes
+    fichero_del_grupo="$relativa"
+  fi
+done
+
+if [ "$resueltos" -eq 0 ]; then
+  fallar "la lista declarada no ha resuelto ni un fichero en '$DIST': la parte nueva de esta medida estaría midiendo la nada."
+fi
+
+if [ -n "$fichero_del_grupo" ]; then
+  bytes_arranque=$((bytes_arranque + mayor_del_grupo))
+  ficheros_arranque+=("$fichero_del_grupo  <- el mayor del grupo de diccionarios: $detalle_del_grupo")
+  tamanos_arranque+=("$mayor_del_grupo")
+fi
 
 # --- Total: todo lo servido menos los mapas -----------------------------------------------------
 
