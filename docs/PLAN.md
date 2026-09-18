@@ -10862,12 +10862,28 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   para el `Servicio`), e `IConsultaDeAlmacenes` e `IConsultaDeUbicaciones` en `Organizacion.Contracts`
   contestando `EstadoDeMaestro`, donde **lo bloqueado contesta `SoloResuelveLoViejo`** y no
   `NoExiste`. Las tres puertas en `PuertasPublicas` diciendo que **leen**, los cruces en
-  `CrucesDeclarados`, y **cada casilla cubierta** en `LaMatrizDeLosPuertosDeEstadoTests`. El ADR deja
-  escrita la regla —lo que el bloqueo reserva es la privacidad de una persona, no la existencia de una
-  estantería— y la precisión que la sostiene: el invariante 2 habla de la **respuesta**, no del
-  puerto, y el `400` del alta sigue sin distinguir. Comprobable por el efecto: un alta contra un
-  almacén bloqueado se rechaza, y un movimiento viejo contra ese mismo almacén **se sigue leyendo**.
-  Su consumidor es el 2.3, igual que el de `IConsultaDeUnidadesDeMedida` fue el 1.8.
+  `CrucesDeclarados`, y **cada casilla cubierta**, que para estos tres son **dos matrices y no una**:
+  el enumerado propio del artículo lo descubre `LaMatrizDeLosPuertosDeEstadoTests`, y los dos que
+  contestan `EstadoDeMaestro` caen en la que esa **delega** —`LaMatrizDePuertoYEstadoTests`, en
+  `Organizacion.IntegrationTests`—, con su marca propia. Dejar las seis casillas de almacén y
+  ubicación donde no las mira ninguna de las dos sería un verde por infradetección, que es el defecto
+  del ADR-0024 y el que hizo nacer la matriz de arriba. El ADR deja escrita la regla —lo que el
+  bloqueo reserva es la privacidad de una persona, no la existencia de una estantería— y la precisión
+  que la sostiene: el invariante 2 habla de la **respuesta**, no del puerto, y el `400` del alta sigue
+  sin distinguir. Y decide **cómo se componen almacén y ubicación**, que el criterio no traía y el
+  código sí: bloquear un almacén **no toca sus ubicaciones** —`BloquearAlmacen` escribe su fila y
+  ninguna más—, así que una **ubicación activa dentro de un almacén bloqueado** existe en la base y
+  alguien tiene que decir qué contesta el puerto. La ubicación **hereda el estado de su almacén** y el
+  suyo propio solo puede **empeorarlo**, con las **cuatro** combinaciones cubiertas, una por caso.
+
+  **Este ítem afirma solo lo que puede afirmar él.** La comprobación por el efecto que el criterio
+  traía —«un alta contra un almacén bloqueado se rechaza, y un movimiento viejo contra ese mismo
+  almacén se sigue leyendo»— **se muda entera al 2.3**: sus dos mitades piden un documento que dar de
+  alta y un movimiento viejo que leer, y las dos las construye el 2.3. Aquí se quedaría como una
+  afirmación sin sujeto, o forzaría a traerse media `movimiento_stock` al ítem de los puertos. Lo que
+  sí se afirma aquí, y **contra PostgreSQL real**, es que cada casilla sale del adaptador de verdad:
+  un almacén bloqueado, preguntado por el puerto, contesta `SoloResuelveLoViejo`, y eso no necesita ni
+  un movimiento. Su consumidor es el 2.3, igual que el de `IConsultaDeUnidadesDeMedida` fue el 1.8.
 
 - [ ] **2.3 · El libro de movimientos y el primer documento: el ajuste** — criterio de aceptación: el
   esquema `inventario` con su contexto, sus migraciones y su sitio en
@@ -10882,7 +10898,13 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   transición emite su evento, y un test de fronteras impide que el tipo base sepa qué es un
   movimiento; y la **doble flecha** comprobada en los dos sentidos —todo movimiento con documento
   existente, todo ajuste confirmado con al menos un movimiento—, **afirmando que ha mirado algo**
-  (ADR-0020). El libro **no se audita** y lo dice con su motivo, y **no es bloqueable**. Hace vivas
+  (ADR-0020). El libro **no se audita** y lo dice con su motivo, y **no es bloqueable**. Y aquí se
+  cobra la comprobación **por el efecto** que el 2.2 no tenía con qué hacerse: un ajuste contra un
+  almacén **bloqueado** se rechaza —el puerto contesta `SoloResuelveLoViejo` y el alta solo admite
+  `SeOfreceParaLoNuevo`—, y un movimiento **ya escrito** contra ese mismo almacén **se sigue
+  leyendo**, resolviendo su almacén por el mismo puerto. Son las dos mitades de la regla del ADR del
+  2.2 —lo que el bloqueo reserva es la privacidad de una persona, no la existencia de una
+  estantería—, y este es el primer ítem en el que hay un libro que las enseñe. Hace vivas
   **R1** y **R13**, y cambia sus dos filas.
 
 - [ ] **2.4 · La numeración con cerrojo, y el ADR que enmienda el «único camino»** — criterio de
