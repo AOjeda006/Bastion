@@ -5,7 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 
 import { Proveedores } from '@/app/Proveedores.tsx';
 import { crearRutas } from '@/app/enrutador.tsx';
-import { crearI18n } from '@/app/i18n/index.ts';
+import { crearI18nDePrueba } from './i18n.ts';
 import type { Idioma } from '@/app/i18n/idioma.ts';
 import { QueryClient } from '@tanstack/react-query';
 
@@ -33,7 +33,7 @@ import { QueryClient } from '@tanstack/react-query';
 export interface AplicacionMontada extends RenderResult {
   readonly enrutador: ReturnType<typeof createMemoryRouter>;
   readonly cache: QueryClient;
-  readonly i18n: ReturnType<typeof crearI18n>;
+  readonly i18n: ReturnType<typeof crearI18nDePrueba>;
 }
 
 export function montarAplicacion(rutaInicial = '/', idioma: Idioma = 'es'): AplicacionMontada {
@@ -41,10 +41,9 @@ export function montarAplicacion(rutaInicial = '/', idioma: Idioma = 'es'): Apli
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
-  // Instancia de i18n NUEVA en cada montaje, y con el idioma dicho a mano. Si se tomara el idioma
-  // detectado, los tests dependerían del `navigator.language` de la máquina que los corre, y el
-  // mismo test pasaría aquí y fallaría en la CI.
-  const i18n = crearI18n(idioma);
+  // Instancia de i18n NUEVA en cada montaje, y con el idioma dicho a mano. El porqué de las dos
+  // cosas —y de que sea la versión síncrona y no la del arranque— está en `pruebas/i18n.ts`.
+  const i18n = crearI18nDePrueba(idioma);
 
   const enrutador = createMemoryRouter(crearRutas(), { initialEntries: [rutaInicial] });
 
@@ -61,7 +60,7 @@ export function montarAplicacion(rutaInicial = '/', idioma: Idioma = 'es'): Apli
 export interface PantallaMontada extends RenderResult {
   readonly enrutador: ReturnType<typeof createMemoryRouter>;
   readonly cache: QueryClient;
-  readonly i18n: ReturnType<typeof crearI18n>;
+  readonly i18n: ReturnType<typeof crearI18nDePrueba>;
 }
 
 /**
@@ -99,7 +98,7 @@ export function montarPantalla(
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const i18n = crearI18n(idioma);
+  const i18n = crearI18nDePrueba(idioma);
 
   // La ruta es el camino de la entrada inicial: así el test escribe una sola vez a dónde entra, con
   // sus parámetros, y no puede montar una ruta distinta de la que dice estar visitando.

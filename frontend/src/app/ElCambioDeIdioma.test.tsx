@@ -110,6 +110,11 @@ describe('El cambio de idioma', () => {
     await usuario.selectOptions(await screen.findByRole('combobox', { name: 'Idioma' }), 'en');
 
     expect(window.localStorage.getItem('bastion.idioma')).toBe('en');
+
+    // Y se espera al cambio, que desde el ítem 2.1 es asíncrono: acabar el test con la descarga en
+    // vuelo dejaría el repintado fuera de `act()` y un aviso que no sería de nadie. El rótulo del
+    // propio selector sirve de testigo, porque también se traduce.
+    expect(await screen.findByRole('combobox', { name: 'Language' })).toBeInTheDocument();
   });
 
   it('los dos diccionarios traen EXACTAMENTE las mismas claves, y no están vacíos', () => {

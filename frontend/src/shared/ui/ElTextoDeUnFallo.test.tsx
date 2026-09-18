@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
 
-import { crearI18n } from '@/app/i18n/index.ts';
+import { crearI18nDePrueba } from '@/pruebas/i18n.ts';
 import type { Idioma } from '@/app/i18n/idioma.ts';
 import { FalloDeApi, fallo } from '@/shared/api/errores.ts';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
@@ -21,7 +21,7 @@ import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
  * anotada, y lo que un ítem nuevo no puede hacer es aumentarlos.
  */
 function conIdioma(idioma: Idioma) {
-  const i18n = crearI18n(idioma);
+  const i18n = crearI18nDePrueba(idioma);
 
   return function Envoltorio({ children }: { children: ReactNode }) {
     return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;

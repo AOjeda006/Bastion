@@ -4363,11 +4363,25 @@ dos en este mismo commit.
 
 ## Estado actual
 
-**FASE 2 ABIERTA — la puerta de clarificación, pasada el 2026-09-18.** Las trece preguntas de la
-tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en *Decisiones
-tomadas*; el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. No hay ni una
-línea de código de la fase 2: este commit es documentación, y con él entran el import del Anexo
-A.2.3 y el objetivo nuevo del `CLAUDE.md` §5. **Lo siguiente es el 2.1.**
+**FASE 2 EN CURSO — 1 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
+*Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
+
+**Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
+importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
+cambiar. Arranque medido: **426 → 391 KiB** por lo que `index.html` referencia y **426 → 409** por
+lo que el navegador trae para pintar (castellano; 408 en inglés). Las dos cifras están en la casilla
+del ítem, con el mandato que las produce.
+
+> **Las dos cifras dejan de ser la misma, y la CI solo mira una.** El paso «Presupuesto de tamaño»
+> compara con los 450 lo que `index.html` referencia, y el fragmento del idioma activo ya no está
+> ahí aunque el navegador lo pida antes de pintar. Hoy la diferencia es de 18 kB y el tope tiene
+> 59 de margen sobre la cifra honesta, así que no tapa nada; pero el ADR-0028 dice que se mide «lo
+> que el navegador descarga», y desde este ítem su guion mide un **límite inferior**. Cerrar esa
+> distancia —enseñándole al guion qué fragmento se paga siempre— es una enmienda al ADR-0028 y **no
+> se ha hecho aquí**: no estaba en el ítem y es decisión del usuario.
+
+**Lo siguiente es el 2.2.**
 
 > La resolución que cambió la forma de una respuesta, dicha aquí porque afecta al código de la
 > fase 0: **lo que `Serie.cs` prometía es imposible**, no solo ambiguo. `Serie` vive en
@@ -10787,7 +10801,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 > arranque **426/450 KiB** en 3 ficheros, total servido **592/900** · licencias **125** pares
 > `resolved`, **30** `Project`, **548** entradas del frontal sin la raíz.
 
-- [ ] **2.1 · El arranque del frontal se queda con un idioma** — criterio de aceptación: el
+- [x] **2.1 · El arranque del frontal se queda con un idioma** — criterio de aceptación: el
   diccionario del idioma **no activo** sale del arranque por importación dinámica, y se publican la
   cifra de antes y la de después **en la unidad del tope** —lo que el navegador descarga para pintar
   la primera pantalla (ADR-0028 §1), no el tamaño del fuente, que no se parece—. Desde este ítem esa
@@ -10804,6 +10818,30 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   están», que es el sostén escrito de `useSuspense: false` y deja de ser cierta, y la de «unos pocos
   kilobytes», que es el del espacio de nombres único y hoy son 49,5 kB de fuente. Motivo del orden: se
   mide contra **426 conocido** en vez de perseguirlo con media fase de pantallas encima.
+  Hecho con los **dos** diccionarios en importación dinámica —`app/i18n/diccionarios.ts`—, y no solo
+  el no activo: cuál es el activo no se sabe al construir. Sale simétrico —cuesta lo mismo entrar en
+  castellano que en inglés— y un tercer idioma no le costaría nada a nadie. El arranque **espera** al
+  diccionario elegido (`crearI18nDelArranque`, en `main.tsx` antes de montar) y el cambio **descarga
+  antes de cambiar** (`cambiarIdioma`): por eso el `useSuspense: false` sigue siendo cierto y no hay
+  parpadeo — la espera nunca cae dentro de un renderizado.
+  **Las dos cifras, con el mandato que las produce**
+  (`npm --prefix frontend run build` y `cd frontend && bash ../scripts/ci/presupuesto-del-frontal.sh
+  dist 450 900`): lo que `index.html` referencia —el proxy, que es lo que la CI compara con los 450—
+  baja de **426 a 391 KiB**; lo que el navegador descarga para pintar la primera pantalla baja de
+  **426 a 409 KiB** en castellano y **408** en inglés, porque el fragmento del idioma activo
+  (`es-*.js` 18 472 B, `en-*.js` 18 016 B) se sigue descargando y ya no aparece en el `index.html`.
+  El ahorro real es **17 KiB**, un diccionario; el proxy enseña 35, que es el doble. El total servido
+  sube de 592 a **593 KiB**: partir cuesta unos bytes de pegamento.
+  **La trampa, medida en vez de supuesta.** Devolviendo el valor al import mezclado y usándolo desde
+  `index.ts`, `assets/es-*.js` **deja de existir**, el fragmento de entrada pasa de 384,8 a 403,3 kB
+  y el arranque vuelve a **409/450**: la importación dinámica escrita y sin efecto. Queda anotado en
+  `diccionarios.ts`, que es donde alguien volvería a escribirlo. Con el valor importado pero **sin
+  usar**, el sacudido de árbol lo quita y la partición sobrevive — o sea que la trampa muerde por el
+  uso, no por la forma del import.
+  El arnés de tests se queda **síncrono** a propósito (`pruebas/i18n.ts`): montar esperando abriría
+  un turno fuera de `act()` en cada montaje y el arnés dejaría de tener **cero** avisos. **16
+  ficheros, 103 casos** —los 101 y dos nuevos— y **0** avisos de `act()`, contados sobre el registro
+  entero de `npm --prefix frontend run test` con `grep -c 'not wrapped in act'`.
 
 - [ ] **2.2 · Los tres puertos que Inventario va a preguntar, y el bloqueo que no es el del art. 32** —
   criterio de aceptación: `IConsultaDeArticulos` en `Catalogo.Contracts`, con **enumerado propio** de

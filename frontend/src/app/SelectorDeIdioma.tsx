@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { cambiarIdioma } from './i18n/index.ts';
 import { IDIOMAS, recordarIdioma, type Idioma } from './i18n/idioma.ts';
 
 /** Cómo se llama cada idioma **en ese idioma**: quien busca «English» no sabe buscar «Inglés». */
@@ -33,8 +34,13 @@ export function SelectorDeIdioma(): React.JSX.Element {
         onChange={(evento) => {
           const elegido = evento.target.value as Idioma;
 
-          void i18n.changeLanguage(elegido);
+          // La elección se recuerda YA, antes de la descarga y no después: es del usuario en el
+          // momento en que la expresa, y un diccionario que no llegue no tiene por qué borrarla.
           recordarIdioma(elegido);
+
+          // Y el cambio es asíncrono desde el ítem 2.1: `cambiarIdioma` trae el diccionario y solo
+          // entonces cambia. Mientras llega, esta pantalla sigue entera en el idioma anterior.
+          void cambiarIdioma(i18n, elegido);
         }}
         className="rounded border border-neutral-300 px-2 py-1 text-sm"
       >
