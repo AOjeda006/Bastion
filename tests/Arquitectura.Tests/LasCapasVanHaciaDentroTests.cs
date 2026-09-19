@@ -77,13 +77,18 @@ public sealed class LasCapasVanHaciaDentroTests
         "Identidad.Domain",
         "Identidad.Infrastructure",
 
-        // Tres de Inventario, y la que falta es la regla de arriba funcionando:
-        // `Inventario.Infrastructure` no se comprueba porque lo único que tendría prohibido mirar
-        // es `Inventario.Endpoints`, que hoy está vacío —el borde del módulo llega con el 2.4 y
-        // el 2.5—, y una regla contra un ensamblado vacío sale verde sin mirar nada.
+        // CUATRO de Inventario desde el ítem 2.4, y el cuarto es la regla de arriba funcionando al
+        // revés: hasta el 2.3 `Inventario.Infrastructure` no se comprobaba, porque lo único que
+        // tendría prohibido mirar es `Inventario.Endpoints` y ese ensamblado compilaba vacío —una
+        // regla contra un ensamblado vacío sale verde sin mirar nada—. El 2.4 le pone dentro la
+        // confirmación del ajuste, y con eso la prohibición pasa a tener algo que prohibir.
+        //
+        // `Inventario.Endpoints` sigue sin aparecer aquí, y eso sí es permanente: es la capa de
+        // más afuera y no tiene ninguna por encima a la que no pueda mirar.
         "Inventario.Application",
         "Inventario.Contracts",
         "Inventario.Domain",
+        "Inventario.Infrastructure",
 
         "Organizacion.Application",
         "Organizacion.Contracts",

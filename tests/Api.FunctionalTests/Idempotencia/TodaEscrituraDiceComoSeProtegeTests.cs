@@ -230,6 +230,26 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
     }
 
     [Fact]
+    public void La_clave_obligatoria_es_la_excepcion_y_esta_declarada_entera()
+    {
+        List<string> obligatoriasDeVerdad =
+            [.. Todas().Where(accion => accion.ExigeIdempotencia).Select(accion => accion.Nombre)];
+
+        List<string> sinMotivo =
+            [.. obligatoriasDeVerdad.Where(nombre => !s_obligatorias.ContainsKey(nombre))];
+
+        sinMotivo.ShouldBeEmpty(
+            "estas acciones EXIGEN la clave y no dicen por qué: " + string.Join(", ", sinMotivo));
+
+        List<string> sobran =
+            [.. s_obligatorias.Keys.Where(nombre => !obligatoriasDeVerdad.Contains(nombre))];
+
+        sobran.ShouldBeEmpty(
+            "estas acciones están declaradas como obligatorias y ya no lo son (o ya no existen): " +
+            string.Join(", ", sobran));
+    }
+
+    [Fact]
     public void La_lista_de_exentas_no_nombra_acciones_que_ya_no_lo_estan()
     {
         HashSet<string> exentasDeVerdad =
@@ -245,6 +265,26 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "estas acciones están exentas y ya no lo necesitan (o ya no existen): " +
             string.Join(", ", sobran));
     }
+
+    // Las que la EXIGEN, con el motivo de cada una. Es la lista de las excepciones a la doctrina
+    // del 0.9 —«la clave es una garantía que el cliente PIDE, no un peaje que se le cobra»— y se
+    // compara entera en los dos sentidos, igual que la de arriba: una obligatoriedad que sobra es
+    // un peaje que se sigue cobrando sin que nadie recuerde por qué, y una que falta es una
+    // excepción colada sin argumento.
+    //
+    // El criterio NO es «esto es importante» —todo lo es—: es que sin la cabecera la acción no
+    // pueda cumplir lo que promete, porque el filtro se aparta sin abrir transacción y la
+    // atomicidad se va con ella.
+    private static readonly Dictionary<string, string> s_obligatorias = new(StringComparer.Ordinal)
+    {
+        ["AjustesController.Confirmar"] =
+            "toma un número de serie, y el número y el documento tienen que quedar escritos en la " +
+            "MISMA transacción. Sin cabecera no hay transacción: el UPDATE del contador se " +
+            "confirmaría por su cuenta y un fallo posterior dejaría el número gastado sin " +
+            "documento que lo llevara —un hueco, que es lo que la R5 prohibe—. La alternativa, " +
+            "que el caso de uso abriera la suya cuando no la hay, deja dos dueños y dos semánticas " +
+            "de fallo en el mismo endpoint según venga o no una cabecera",
+    };
 
     // La clave que identifica una petición repetible lleva dentro la empresa y el usuario. Una
     // acción anónima no tiene ni lo uno ni lo otro, así que marcarla sería pedir una identidad que
@@ -326,8 +366,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(128, "acciones en total");
-        cambian.Count.ShouldBe(82, "acciones que cambian estado");
+        todas.Count.ShouldBe(129, "acciones en total");
+        cambian.Count.ShouldBe(83, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -485,15 +525,41 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // diecinueve y dieciocho, y es correcto: la importación da de alta terceros, que ya tienen su
         // `GET /{id}`, pero ella no es un recurso ni tiene uno que devolver. Su respuesta es un
         // informe, no una ficha, y por eso responde `200` y no `201`.
+        //
+        // Ciento veintinueve desde el ítem 2.4, y es el primer número que mueve el módulo
+        // Inventario: +1 al total, +1 a las que cambian estado, +1 a Idempotency-Key, cero a
+        // If-Match y cero a las exentas. Es `POST .../inventario/ajustes/{id}/confirmacion`, y es
+        // la ÚNICA acción que el módulo publica —ni alta, ni listado, ni ficha—: la superficie
+        // del ajuste va con sus pantallas, y lo que este ítem necesitaba de la API era el sitio
+        // donde el número entra en un recibo, que no existe sin una acción de MVC.
+        //
+        // QUE NO SUBA IF-MATCH ES LA AFIRMACIÓN, y no es que se le haya olvidado: confirmar dos
+        // veces no lo para una versión, lo para la máquina de estados —el segundo intento se
+        // encuentra un ajuste que ya no está en borrador—. Si este número hubiera subido,
+        // además, habría chocado con `Ninguna_accion_pide_los_dos_mecanismos_a_la_vez`: un
+        // documento en borrador NO tiene `GET` por el que sacar su `ETag`, porque el borde no
+        // publica ninguno, así que la precondición no tendría llave —el mismo argumento del
+        // ADR-0017 que mandó tres desbloqueos al cajón de las exentas en el 0.10—.
+        //
+        // Y aquí el reparto se queda CORTO por primera vez, que es lo que obliga al recuento nuevo
+        // de abajo: esta clave no es opcional, es OBLIGATORIA, y el reparto de cinco números no
+        // sabe distinguirlo. Para él la veinte es una más.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(46, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(19, "rutas que admiten Idempotency-Key");
+            .ShouldBe(20, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
+
+        // Y de esas veinte, UNA la exige. Es un recuento aparte y no un reparto del anterior
+        // porque las obligatorias son un SUBCONJUNTO de las que admiten, no un cuarto cajón: la
+        // partición de abajo seguiría siendo exacta aunque las veinte fueran obligatorias, que es
+        // justo lo que este número impide que pase sin que nadie lo vea.
+        cambian.Count(accion => accion.ExigeIdempotencia)
+            .ShouldBe(1, "rutas que EXIGEN Idempotency-Key");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (46 + 19 + s_exentas.Count).ShouldBe(cambian.Count);
+        (46 + 20 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>
@@ -582,6 +648,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
                     .SelectMany(limite => limite.HttpMethods).Any(EsDeEscritura) ?? false,
                 metodo.GetParameters().Any(EsLaCabeceraIfMatch),
                 metodo.GetCustomAttribute<AdmiteIdempotenciaAttribute>() is not null,
+                metodo.GetCustomAttribute<AdmiteIdempotenciaAttribute>() is { Obligatoria: true },
                 metodo.GetCustomAttribute<AllowAnonymousAttribute>() is not null
                     || controlador.GetCustomAttribute<AllowAnonymousAttribute>() is not null);
         }
@@ -653,5 +720,6 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         bool CambiaEstado,
         bool ExigeVersion,
         bool AdmiteIdempotencia,
+        bool ExigeIdempotencia,
         bool EsAnonima);
 }

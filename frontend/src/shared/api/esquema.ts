@@ -628,6 +628,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/ajustes/{id}/confirmacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirma un ajuste en borrador: le da su número y mueve el libro.
+         * @description Es un POST sobre un sub-recurso y no un PUT sobre el ajuste, porque lo que se pide no
+         *       es dejar el documento como dice el cuerpo: es que ocurra algo —se toma un correlativo, se
+         *       escriben los movimientos— y eso no tiene cuerpo que mandar. La confirmación es un hecho que
+         *       se crea, no un campo que se fija.
+         *     La Idempotency-Key es OBLIGATORIA aquí, que es la única acción de toda la API
+         *       que la exige. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el
+         *       número y el documento se va con ella: el UPDATE del contador se confirmaría por su
+         *       cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es
+         *       exactamente lo que la R5 prohíbe. Sin cabecera son 428.
+         *     Y no exige If-Match, ni le haría falta: lo que protege de confirmar dos veces
+         *       no es una versión, es la máquina de estados —el segundo intento se encuentra un ajuste que
+         *       ya no está en borrador y sale 409—, y lo que protege del reintento del mismo cliente
+         *       es la clave de arriba, que le devuelve la respuesta de la primera vez con su número dentro.
+         */
+        post: operations["Ajustes_Confirmar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/almacenes": {
         parameters: {
             query?: never;
@@ -1689,6 +1721,43 @@ export interface components {
             terceroId: string;
             /** @description Con qué código llama él a este artículo, si tiene uno propio. */
             referenciaDelProveedor?: null | string;
+        };
+        /** @description Un ajuste, como se enseña. */
+        AjusteDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Serie que lo numera (R5).
+             */
+            serieId: string;
+            /**
+             * Format: int64
+             * @description El correlativo, o `null` si todavía es un borrador.
+             */
+            numero: null | number | string;
+            /**
+             * Format: uuid
+             * @description Almacén contra el que se ajusta.
+             */
+            almacenId: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa.
+             */
+            fechaDeOperacion: string;
+            /** @description Por qué se ajusta. */
+            motivo: string;
+            /** @description En qué punto de su vida está. */
+            estado: string;
+            /**
+             * Format: int32
+             * @description Cuántas líneas tiene.
+             */
+            lineas: number | string;
         };
         /** @description Un almacén, tal como sale de la API. */
         AlmacenDto: {
@@ -5772,6 +5841,75 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ajustes_Confirmar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del ajuste que se confirma. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["AjusteDto"];
+                    "application/json": components["schemas"]["AjusteDto"];
+                    "text/json": components["schemas"]["AjusteDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

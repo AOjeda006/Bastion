@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -66,14 +67,21 @@ public static class ModuloDeInventario
         servicios.DeclararEvento<AjusteConfirmado>(AjusteConfirmado.Nombre);
         servicios.DeclararEvento<AjusteAnulado>(AjusteAnulado.Nombre);
 
-        // SIN almacén de idempotencia (R10), y la ausencia sigue teniendo fecha: ese almacén lo
-        // resuelve el filtro del borde por el segmento de la ruta, y este módulo todavía no tiene
-        // borde. Entra con los endpoints, no antes.
+        // El almacén de claves de idempotencia (R10), con la clave del módulo: el filtro del borde
+        // resuelve el suyo por el segmento de la ruta, para que la clave y el trabajo caigan en la
+        // transacción del MISMO contexto.
         //
-        // EL NUMERADOR, en cambio, entra hoy: no lo pide el borde, lo pide el caso de uso que
-        // confirma. Va bajo el tipo del MÓDULO por lo mismo que la unidad de trabajo: su sentencia
-        // corre en la transacción de ESTE contexto, y con el tipo común la última inscripción
-        // ganaría y el número saldría de una transacción que no es la del documento.
+        // Entra en el ítem 2.4 y ni un día antes, cuando el módulo estrena borde. Y aquí hace más
+        // que guardar respuestas: la única acción que publica el borde EXIGE la cabecera, así que
+        // esta inscripción es también la que pone la transacción dentro de la cual el contador y
+        // el documento se escriben a la vez.
+        servicios.AgregarAlmacenDeIdempotencia<AlmacenDeIdempotenciaDeInventario>(
+            InventarioDbContext.Esquema);
+
+        // EL NUMERADOR no lo pide el borde, lo pide el caso de uso que confirma. Va bajo el tipo
+        // del MÓDULO por lo mismo que la unidad de trabajo: su sentencia corre en la transacción
+        // de ESTE contexto, y con el tipo común la última inscripción ganaría y el número
+        // saldría de una transacción que no es la del documento.
         servicios.AddScoped<INumeradorDeSeriesDeInventario, NumeradorDeSeriesDeInventario>();
 
         // Sin `IConsultaDeLoBloqueado` y sin cargador de semillas, por el mismo motivo que Catálogo:

@@ -4363,6 +4363,133 @@
         ]
       }
     },
+    "/api/v1/inventario/ajustes/{id}/confirmacion": {
+      "post": {
+        "tags": [
+          "Ajustes"
+        ],
+        "summary": "Confirma un ajuste en borrador: le da su número y mueve el libro.",
+        "description": "Es un POST sobre un sub-recurso y no un PUT sobre el ajuste, porque lo que se pide no\n  es dejar el documento como dice el cuerpo: es que ocurra algo —se toma un correlativo, se\n  escriben los movimientos— y eso no tiene cuerpo que mandar. La confirmación es un hecho que\n  se crea, no un campo que se fija.\nLa Idempotency-Key es OBLIGATORIA aquí, que es la única acción de toda la API\n  que la exige. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el\n  número y el documento se va con ella: el UPDATE del contador se confirmaría por su\n  cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es\n  exactamente lo que la R5 prohíbe. Sin cabecera son 428.\nY no exige If-Match, ni le haría falta: lo que protege de confirmar dos veces\n  no es una versión, es la máquina de estados —el segundo intento se encuentra un ajuste que\n  ya no está en borrador y sale 409—, y lo que protege del reintento del mismo cliente\n  es la clave de arriba, que le devuelve la respuesta de la primera vez con su número dentro.",
+        "operationId": "Ajustes_Confirmar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del ajuste que se confirma.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AjusteDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AjusteDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AjusteDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/organizacion/almacenes": {
       "get": {
         "tags": [
@@ -12722,6 +12849,69 @@
         },
         "description": "Lo que hace falta para declarar que un tercero suministra un artículo."
       },
+      "AjusteDto": {
+        "required": [
+          "id",
+          "serieId",
+          "numero",
+          "almacenId",
+          "fechaDeOperacion",
+          "motivo",
+          "estado",
+          "lineas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "serieId": {
+            "type": "string",
+            "description": "Serie que lo numera (R5).",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "El correlativo, o `null` si todavía es un borrador.",
+            "format": "int64"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "Almacén contra el que se ajusta.",
+            "format": "uuid"
+          },
+          "fechaDeOperacion": {
+            "type": "string",
+            "description": "Día al que se imputa.",
+            "format": "date"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se ajusta."
+          },
+          "estado": {
+            "type": "string",
+            "description": "En qué punto de su vida está."
+          },
+          "lineas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántas líneas tiene.",
+            "format": "int32"
+          }
+        },
+        "description": "Un ajuste, como se enseña."
+      },
       "AlmacenDto": {
         "required": [
           "id",
@@ -16832,6 +17022,9 @@
     },
     {
       "name": "Usuarios"
+    },
+    {
+      "name": "Ajustes"
     },
     {
       "name": "Almacenes"

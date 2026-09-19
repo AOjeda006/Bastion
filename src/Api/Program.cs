@@ -20,6 +20,7 @@ using Bastion.Catalogo.Infrastructure;
 using Bastion.Identidad.Contracts;
 using Bastion.Identidad.Infrastructure;
 using Bastion.Identidad.Infrastructure.Seguridad;
+using Bastion.Inventario.Contracts;
 using Bastion.Inventario.Infrastructure;
 using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Infrastructure;
@@ -236,6 +237,7 @@ builder.Services.AgregarAutorizacionPorPermisos(
         .. PermisosDeIdentidad.Todos,
         .. PermisosDeTerceros.Todos,
         .. PermisosDeCatalogo.Todos,
+        .. PermisosDeInventario.Todos,
     ]);
 
 // DENEGAR POR DEFECTO. La política de respaldo se aplica a todo endpoint que no traiga metadatos

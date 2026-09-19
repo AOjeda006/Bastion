@@ -125,14 +125,16 @@ internal static class Inventario
         "Identidad.Endpoints",
         "Identidad.Infrastructure",
 
-        // Inventario entra con CUATRO capas y no con cinco, y aquí se ve por qué la lista
-        // existe: el 2.3 trae el libro, el documento que lo escribe, sus casos de uso y sus dos
-        // eventos, pero NINGÚN endpoint. `Inventario.Endpoints` compila vacío —su borde llega con
-        // el 2.4 y el 2.5—, así que declararlo aquí daría por mirada una frontera que hoy no
-        // protege nada.
+        // Inventario completa sus CINCO capas en el ítem 2.4, y hasta entonces esta lista dijo
+        // que eran cuatro: el 2.3 trajo el libro, el documento, sus casos de uso y sus dos
+        // eventos, pero `Inventario.Endpoints` compilaba vacío, y declararlo habría dado por
+        // mirada una frontera que no protegía nada. Desde el 2.4 lleva un tipo —la confirmación
+        // del ajuste, que es la única acción del borde— y las reglas del carril pasan a
+        // aplicársele de verdad.
         "Inventario.Application",
         "Inventario.Contracts",
         "Inventario.Domain",
+        "Inventario.Endpoints",
         "Inventario.Infrastructure",
 
         "Organizacion.Application",

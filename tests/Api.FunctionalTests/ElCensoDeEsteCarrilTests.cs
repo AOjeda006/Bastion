@@ -228,6 +228,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "TodaEscrituraDiceComoSeProtegeTests.Cada_accion_que_admite_idempotencia_tiene_almacen_en_su_modulo",
         "TodaEscrituraDiceComoSeProtegeTests.El_barrido_encuentra_el_inventario_entero",
         "TodaEscrituraDiceComoSeProtegeTests.El_universo_cubre_a_todos_los_modulos_montados",
+        "TodaEscrituraDiceComoSeProtegeTests.La_clave_obligatoria_es_la_excepcion_y_esta_declarada_entera",
         "TodaEscrituraDiceComoSeProtegeTests.La_lista_de_exentas_no_nombra_acciones_que_ya_no_lo_estan",
         "TodaEscrituraDiceComoSeProtegeTests.Ninguna_accion_pide_los_dos_mecanismos_a_la_vez",
         "TodaEscrituraDiceComoSeProtegeTests.Ninguna_accion_que_admite_idempotencia_es_anonima",
