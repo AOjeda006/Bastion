@@ -4546,10 +4546,139 @@ Los tres motivos viven **en el código**, junto a la lista que los declara, y no
 ponga esa regla en rojo los tiene delante antes de añadir un nombre a la lista, que es donde hacen
 falta.
 
+### Tomadas por el agente de desarrollo — ítem 2.4, antes de escribir su código (2026-09-19)
+
+Seis cosas que el criterio del 2.4 daba por resueltas y no lo estaban. La primera **cambia el
+diseño del ítem** y por eso va antes que ninguna línea de código; la segunda es la mitad que la
+primera deja sin apoyo, y se reescribe en el mismo commit.
+
+#### 1. El contador sale de la fila de `series` a su propia tabla, y eso enmienda el ADR-0007
+
+**El defecto, que no es hipotético y está en el código de hoy.** `ConfiguracionDeSerie` llama a
+`LlevaTestigoDeConcurrencia()` —el testigo es `xmin`, la columna de sistema que PostgreSQL **mueve
+en cada escritura de la fila**— y `ModificarSerie` exige `If-Match` con `versiones.Exigir`. Con el
+contador en la fila de `series`, **cada documento confirmado invalida el `ETag` de todo el que tenga
+esa serie abierta**: guardar el formato contesta `412` sin que nadie la haya editado. Una serie se
+edita una vez al año y se confirman documentos todo el día, así que sobre una serie en uso esa
+pantalla no se podría guardar. No lo ve ningún caso de los que hay ni de los que el ítem traía:
+ninguno abre el editor de una serie y confirma un documento en medio.
+
+**La decisión.** `contador` deja de ser una columna de `series` y pasa a
+`organizacion.contadores_de_serie`, con `serie_id` de **clave primaria** y clave ajena a `series` —
+una fila por serie, creada **con** la serie. Numerar deja de tocar la fila de `series`: su `xmin` se
+queda quieto, el `ETag` de la ficha sobrevive a la jornada, y el cerrojo se toma igual **sobre una
+fila**, que es lo que el mecanismo necesitaba. Cuesta una enmienda a una de las cinco decisiones
+casi irreversibles, así que se escribe y no se pasa de largo: va en **su propio ADR**, el 0039, y no
+dentro del de la numeración.
+
+**Lo que NO cambia, y es la mitad que hace barata la enmienda.** El contador **sigue siendo una
+columna de una fila y no una secuencia**, que es lo que el ADR-0007 §5 decidía de verdad: `nextval`
+no se revierte al deshacer y la numeración saldría con huecos. Lo que se mueve es **en qué fila**
+vive, no de qué clase de cosa es. Y `Serie.Contador` sigue existiendo como propiedad —lee de su fila
+hija, que se carga **siempre** con ella—, así que `SerieDto.Contador`, `ADto()`, el orden por
+`contador` del listado y `SePuedeSuprimir` no cambian de forma: **el contrato de la API no se
+mueve**. Es lo mismo que ya hace `Divisa.Decimales`, que sale del catálogo del código y no de una
+columna sin que quien lee el DTO tenga que enterarse.
+
+**Lo que sí cambia, dicho entero.** Cuatro cosas:
+
+- **Nada en C# puede mover el contador.** `ContadorDeSerie` no tiene ni un `set` accesible ni un
+  método que suba el valor: lo único que lo incrementa es la sentencia del mecanismo. Donde
+  `RegistrarNumeroAsignado` era la última defensa contra un llamante equivocado, ahora **no hay
+  llamante que pueda equivocarse**. Es la misma invariante, más fuerte y en otro sitio.
+- **La fila hija lleva su propio testigo de concurrencia**, y es el que el incremento mueve. De eso
+  depende el punto 2.
+- **`empresa_id` no se copia a la fila hija.** Su inquilinato es el de su serie, y la sentencia
+  cruda lo comprueba **sobre `series`**, que es exactamente la fila que el filtro global habría
+  protegido. Una columna copiada sería un segundo sitio donde guardar el mismo dato.
+- **La fila hija no se audita**, y el motivo no es de gusto: el incremento es **SQL crudo**, así que
+  no pasa por el interceptor de auditoría. Un `SeAudita()` ahí sería una promesa que el mecanismo no
+  puede cumplir. Lo que queda del número en la traza es el **documento** que lo lleva.
+
+**La alternativa, y por qué no.** Aceptarlo y documentar que numerar invalida el `ETag` era
+legítimo, y se descarta por lo que deja en pie: una pantalla que no se puede guardar sobre una serie
+en uso, con un `412` que dice «alguien la ha modificado» cuando nadie la ha modificado. Si se
+hubiera elegido, habría que haberlo escrito en la ficha de la serie **y en el texto del 412**, no
+dejarlo implícito — costaba lo mismo y dejaba el defecto dentro.
+
+#### 2. La carrera suprimir-contra-confirmar cambia de guardián, así que sí lleva caso
+
+Hasta hoy el criterio del 2.4 decía que esa carrera **no llevaba caso nuevo** porque ya la cubría la
+R11: `EliminarSerie` exige la versión y **cualquier `UPDATE` mueve el `xmin`** de la serie. Ese
+argumento se apoya justo en lo que el punto 1 quita. Con el contador fuera, numerar ya no toca
+`series`: una serie leída antes conserva su versión buena, pasa `versiones.Exigir`, y
+`SePuedeSuprimir => Contador == 0` se calcularía sobre un contador que otro acaba de subir.
+
+**Lo que lo sujeta ahora**: la fila del contador lleva su propio testigo y se borra **con** la serie,
+en el mismo `SaveChanges` —la clave ajena es `RESTRICT`, como las cuatro del ADR-0007 §8, y quien
+borra la hija es el ORM con la fila cargada, no la base en cascada—. Quien numeró en medio movió ese
+`xmin`, así que el `DELETE` de la hija no casa y la operación falla. **La respuesta al cliente sigue
+siendo la misma `412`**, y eso importa: el comportamiento no cambia, cambia quién lo produce.
+
+Y por eso **sí lleva caso**, al revés de lo que el criterio decía: que el `DELETE` de una entidad
+dependiente arrastrada por su principal lleve **su** testigo dentro es un hecho del ORM, no una
+intención nuestra, y este proyecto no da por bueno un hecho del ORM sin verlo. El caso numera entre
+la lectura y el borrado, contra PostgreSQL de verdad. Arreglar una mitad y dejar la otra apoyada en
+lo que se acaba de quitar sería peor que no tocar ninguna.
+
+#### 3. De qué serie se numera: la elige quien abre el documento, y no se comprueba hasta numerar
+
+`Ajuste` nace con `SerieId` y **sin número**, y el número se lo pone la confirmación. Al abrirlo
+**no se valida la serie**, y no es un olvido: una comprobación en el alta se queda vieja entre el
+borrador y la confirmación —una serie se puede cerrar mientras el borrador espera—, así que sería
+una comodidad, no una garantía. La única guarda es el `WHERE` de la sentencia **en el instante de
+numerar**, que es lo que convierte «ninguna fila devuelta» en el fallo que el criterio pide: cubre a
+la vez la serie que no existe, la **cerrada** y la de **otra empresa**.
+
+Lo que este ítem **no** comprueba, y queda dicho: que la fecha de operación del documento caiga
+dentro del ejercicio de la serie. Nadie sabe hoy a qué ejercicio pertenece una fecha —`Ejercicio` no
+tiene puerto hasta el **2.6**—, y esa es la cláusula de la R5 que queda sin poder romperse.
+
+#### 4. El número es el correlativo, y el 2.4 no lo compone
+
+El mecanismo devuelve un `long`. `Serie.Formato` sigue siendo texto libre **sin gramática**, y
+estrenarla aquí sería fijar un formato fiscal sin una factura delante: el `NumSerieFactura` de
+Veri*factu admite sesenta caracteres para serie y número **juntos**, y esa es una decisión de la
+fase 5. Lo que el 2.4 sí trae es la mitad difícil —el contador bajo concurrencia—, que es la que no
+se puede añadir después.
+
+Queda escrito lo que la fase 5 tendrá que respetar cuando componga: el texto compuesto se **congela
+en el documento**, porque `ModificarSerie` puede cambiar el formato y un número compuesto al leer
+cambiaría para documentos ya emitidos.
+
+#### 5. Confirmar exige `Idempotency-Key`, y sin ella son `428`
+
+La atomicidad entre el número y el documento la da la transacción, y en este sistema la transacción
+tiene **un solo dueño**: el filtro de idempotencia (ADR-0014). Sin cabecera el filtro se aparta en su
+primera línea y no abre ninguna, así que sin cabecera el endpoint **no puede cumplir lo que
+promete**: el `UPDATE` del contador se confirmaría solo y un fallo posterior dejaría el número
+gastado — un hueco, que es exactamente lo que la R5 prohíbe.
+
+Así que la confirmación la declara **obligatoria** (`[AdmiteIdempotencia(Obligatoria = true)]`) y sin
+ella contesta `428`, que es lo que le corresponde: la petición está bien formada y lo que falta es
+una precondición, igual que en el `428` de `If-Match`. Es una excepción a la doctrina escrita del
+0.9 —«la clave es una garantía que el cliente **pide**, no un peaje que se le cobra»— y se acota
+donde vale: confirmar **gasta un número** y mueve el libro, y ninguna de las dos cosas se deshace.
+La alternativa, que el caso de uso abriera su propia transacción cuando no la hay, se descarta por
+dejar **dos dueños** y, peor, dos semánticas de fallo en el mismo endpoint según venga o no una
+cabecera: el dueño de hoy apaga los puntos de guardado a propósito y el otro no.
+
+Y encima de eso sigue la guarda del mecanismo —revienta si `Database.CurrentTransaction` es nulo—,
+que ya no es la primera línea de defensa sino la que queda para quien cablee mal un llamante nuevo.
+
+#### 6. El ajuste estrena **una** puerta HTTP, y solo una
+
+El módulo Inventario tiene su proyecto `Endpoints` **vacío** desde el 2.3: el ajuste se abre y se
+confirma desde los tests, no desde la API. El recibo de idempotencia no existe sin una acción de
+MVC, así que el 2.4 abre `POST /api/v1/inventario/ajustes/{id}/confirmacion` con su permiso, y
+**ninguna más**: ni alta, ni listado, ni ficha. No es tacañería, es el criterio de siempre —lo que
+no pide el ítem no entra—: la superficie del ajuste va con sus pantallas, y lo que este ítem
+necesita de la API es el sitio donde el número entra en un recibo.
+
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 1 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 3 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -11412,33 +11541,41 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **cinco referencias `Project`**, que son los cinco proyectos de Inventario.
 
 - [ ] **2.4 · La numeración con cerrojo, y el ADR que enmienda el «único camino»** — criterio de
-  aceptación: el ajuste recibe su número **al confirmar**, dentro de la transacción de confirmación, y
-  **no se enseña antes**; el mecanismo vive en el bloque común —como la bandeja y como el almacén de
-  idempotencia— y toma el cerrojo **sobre la fila de la serie**, y **revienta si no hay transacción
-  abierta**; `TipoDeDocumento` gana sus tres valores y `Serie.RegistrarNumeroAsignado` se borra,
-  porque ningún módulo puede verlo. **Con el método se van sus dos guardas y la sentencia solo
-  sustituye una**, así que el `WHERE` lleva `estado = 'Activa'` —`EstadoDeSerie.Cerrada` dice de sí
-  mismo «no asigna más números»— **y `empresa_id`**, esto último porque el SQL crudo deja atrás el
-  filtro global de inquilinato y `Serie` es `IDeInquilino`. El sitio nuevo entra en la lista cerrada
-  de `ElFiltroNoSeSaltaPorAhiTests` **con su argumento propio, que no es el heredado**: la bandeja y
-  el almacén de idempotencia escriben en tablas de `auditoria` diseñadas para eso, y esta escribe en
-  una tabla de negocio multiempresa que además se edita por la API. Y **«ninguna fila devuelta» es
-  un fallo, no un cero**: un `UPDATE … RETURNING` que no casa no lanza nada por su cuenta, así que un
-  caso confirma contra una serie **cerrada** y exige el error, y otro contra una serie **de otra
-  empresa**. El estado lo produce el dominio —`Serie.Cerrar()`, que hoy solo llaman los tests
-  unitarios: es el caso de `SoloResuelveLoViejo`, que se conservó diciendo que hoy nadie puede estar
-  ahí, y no el de `Bloqueado` del 1.10, donde el valor sobraba—, igual que hace
-  `ContratoDeOrganizacionTests`; ese fichero, además, sube hoy el contador **llamando a
-  `RegistrarNumeroAsignado`**, y al borrarse el método pasa a subirlo por el mecanismo nuevo. **Dos**
-  casos de concurrencia contra PostgreSQL real: dos confirmaciones simultáneas de la misma serie dan
-  números **consecutivos y ninguno repetido**, y una confirmación que **aborta después de tomar el
-  número** deja el contador donde estaba y la siguiente toma ese mismo número —el que distingue esto
-  de una secuencia, y el que nadie escribe—. La carrera **suprimir-contra-confirmar no lleva caso
-  nuevo**, y queda escrito aquí para que nadie la vuelva a mirar: ya la cubre R11, porque
-  `EliminarSerie` exige la versión y cualquier `UPDATE` mueve el `xmin`. La propiedad sin huecos se
-  afirma en un test que **no sabe qué tipo de documento numera**, para que la fase 5 estrene un
-  llamante y no un mecanismo. El ADR lleva las dos enmiendas: la segunda excepción al ADR-0013 con
-  **su criterio**, y la corrección de lo que `Serie.cs` prometía. Hace viva **R5** y cambia su fila.
+  aceptación: el ajuste recibe su número **al confirmar**, dentro de la transacción de confirmación,
+  y **no se enseña antes**; el mecanismo vive en el bloque común —como la bandeja y como el almacén
+  de idempotencia— y toma el cerrojo **sobre la fila del contador** —que desde la decisión 1 del
+  ítem ya no es la de la serie, para que numerar no mueva su `xmin` ni tire su `ETag`—, y **revienta
+  si no hay transacción abierta**; `TipoDeDocumento` gana sus tres valores y
+  `Serie.RegistrarNumeroAsignado` se borra, porque ningún módulo puede verlo. **Con el método se van
+  sus dos guardas y la sentencia solo sustituye una**, así que el `WHERE` lleva `estado = 'Activa'`
+  —`EstadoDeSerie.Cerrada` dice de sí mismo «no asigna más números»— **y `empresa_id`**, los dos
+  sobre la fila de `series` que la sentencia lee para condicionar el incremento, el segundo porque
+  el SQL crudo deja atrás el filtro global de inquilinato y `Serie` es `IDeInquilino`. El sitio
+  nuevo entra en la lista cerrada de `ElFiltroNoSeSaltaPorAhiTests` **con su argumento propio, que
+  no es el heredado**: la bandeja y el almacén de idempotencia escriben en tablas de `auditoria`
+  diseñadas para eso, y esta escribe en una tabla de un esquema de **negocio**, parte de un agregado
+  multiempresa que además se edita por la API. Y **«ninguna fila devuelta» es un fallo, no un
+  cero**: un `UPDATE … RETURNING` que no casa no lanza nada por su cuenta, así que un caso confirma
+  contra una serie **cerrada** y exige el error, y otro contra una serie **de otra empresa**. El
+  estado lo produce el dominio —`Serie.Cerrar()`, que hoy solo llaman los tests unitarios: es el
+  caso de `SoloResuelveLoViejo`, que se conservó diciendo que hoy nadie puede estar ahí, y no el de
+  `Bloqueado` del 1.10, donde el valor sobraba—, igual que hace `ContratoDeOrganizacionTests`; ese
+  fichero, además, sube hoy el contador **llamando a `RegistrarNumeroAsignado`**, y al borrarse el
+  método pasa a subirlo por el mecanismo nuevo. **Dos** casos de concurrencia contra PostgreSQL
+  real: dos confirmaciones simultáneas de la misma serie dan números **consecutivos y ninguno
+  repetido**, y una confirmación que **aborta después de tomar el número** deja el contador donde
+  estaba y la siguiente toma ese mismo número —el que distingue esto de una secuencia, y el que
+  nadie escribe—. La carrera **suprimir-contra-confirmar sí lleva caso**, y lleva también el porqué
+  del cambio: hasta la decisión 1 de este ítem la cubría la R11 sin ayuda —`EliminarSerie` exige la
+  versión y cualquier `UPDATE` movía el `xmin` de la serie—, y al salir el contador de esa fila ese
+  argumento se queda sin base, porque numerar ya no la toca. Lo que la sujeta ahora es que la fila
+  del contador lleva **su propio testigo** y se borra **con** la serie en el mismo `SaveChanges`: la
+  respuesta sigue siendo `412` y cambia quién la produce. Que el `DELETE` de la hija arrastrada
+  lleve su testigo dentro es un hecho del ORM, no una intención, así que se ve numerando entre la
+  lectura y el borrado, contra PostgreSQL de verdad. La propiedad sin huecos se afirma en un test
+  que **no sabe qué tipo de documento numera**, para que la fase 5 estrene un llamante y no un
+  mecanismo. El ADR lleva las dos enmiendas: la segunda excepción al ADR-0013 con **su criterio**, y
+  la corrección de lo que `Serie.cs` prometía. Hace viva **R5** y cambia su fila.
 
 - [ ] **2.5 · La anulación con contra-documento** — criterio de aceptación: un ajuste confirmado no se
   edita ni se borra; se **anula**, y la anulación crea un **ajuste inverso** que es un documento
