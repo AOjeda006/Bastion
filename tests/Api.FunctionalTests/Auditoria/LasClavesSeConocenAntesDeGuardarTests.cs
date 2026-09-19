@@ -48,6 +48,13 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     // que haya. Por eso se compara la lista completa y no se pregunta si cada una está permitida.
     private static readonly string[] s_generadasPorElServidor =
     [
+        // La del ítem 2.3, y es el primer DOCUMENTO de la lista: todas las de arriba y las de
+        // abajo son maestros. Lleva testigo porque es un agregado que CAMBIA de estado, y la
+        // transición lee y luego escribe: sin él, dos confirmaciones simultáneas del mismo ajuste
+        // leerían las dos `Borrador` y escribirían las dos su tanda de movimientos — el stock
+        // movido dos veces, sin error y sin rastro. No cuesta una columna: el testigo es `xmin`.
+        "Ajuste.Version",
+
         "Almacen.Version",
         "Articulo.Version",
 
@@ -88,11 +95,22 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     // en el cuerpo—. Un testigo por hijo dejaría pasar el caso que de verdad hay que detectar:
     // dos ediciones simultáneas de la MISMA ficha, una que cambia la razón social y otra que
     // cuelga un contacto. El motivo largo está en `ConfiguracionDeContacto`.
+    //
+    // Las dos del ítem 2.3 amplían la lista con un motivo distinto del de los tres hijos del
+    // tercero, y por eso llevan el suyo. `LineaDeAjuste` sí es de esa familia: cuelga del ajuste,
+    // no tiene ruta propia y lo que gobierna su edición es el testigo del documento.
+    // `MovimientoStock` no: no lleva testigo porque NO SE MODIFICA NUNCA, ni por una ruta ni por
+    // ninguna otra vía —la tabla rechaza `UPDATE` en el motor—, y un testigo de concurrencia
+    // sobre una fila que nadie puede escribir dos veces no protege de nada. Es el caso que este
+    // mismo fichero anunciaba: «podría haber una entidad de solo-inserción con marcas de tiempo
+    // y sin testigo».
     private static readonly string[] s_delTipoBaseSinTestigo =
     [
         "CondicionPago",
         "Contacto",
         "CuentaBancaria",
+        "LineaDeAjuste",
+        "MovimientoStock",
     ];
 
     private readonly ApiSinDependencias _api = new();

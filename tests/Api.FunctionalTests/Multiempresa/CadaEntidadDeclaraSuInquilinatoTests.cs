@@ -73,6 +73,15 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
         ["CondicionPago"] =
             "parte del agregado del tercero, que sí filtra; no tiene DbSet ni consulta propia",
 
+        // La del ítem 2.3, y de la familia de los tres hijos del tercero: es parte del agregado
+        // del ajuste, se carga y se guarda con él y no tiene DbSet ni consulta propia. Quien
+        // filtra es el DOCUMENTO del que cuelga. Que siga sin consultarse suelta lo vigila
+        // `ElFiltroNoSeSaltaPorAhiTests`, que prohíbe su `Set<>` por nombre.
+        ["LineaDeAjuste"] =
+            "es parte del agregado del ajuste, que sí filtra; no tiene DbSet ni consulta propia. " +
+            "No lleva empresa_id porque no hay ninguna consulta que pueda empezar por ella: se " +
+            "llega siempre desde el documento, que sí la lleva",
+
         ["TokenDeRefresco"] =
             "una emisión de refresco es de una sesión, no de una empresa: se busca por su resumen " +
             "antes de que haya empresa activa. La empresa con la que se estaba operando va DENTRO " +

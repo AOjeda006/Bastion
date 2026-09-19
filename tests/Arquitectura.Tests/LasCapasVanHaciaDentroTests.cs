@@ -76,6 +76,15 @@ public sealed class LasCapasVanHaciaDentroTests
         "Identidad.Contracts",
         "Identidad.Domain",
         "Identidad.Infrastructure",
+
+        // Tres de Inventario, y la que falta es la regla de arriba funcionando:
+        // `Inventario.Infrastructure` no se comprueba porque lo único que tendría prohibido mirar
+        // es `Inventario.Endpoints`, que hoy está vacío —el borde del módulo llega con el 2.4 y
+        // el 2.5—, y una regla contra un ensamblado vacío sale verde sin mirar nada.
+        "Inventario.Application",
+        "Inventario.Contracts",
+        "Inventario.Domain",
+
         "Organizacion.Application",
         "Organizacion.Contracts",
         "Organizacion.Domain",

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dominio del módulo Inventario (§4): el libro de movimientos de stock y los documentos que lo
+    escriben. Su única referencia permitida es el dominio base, de donde salen `Importe`,
+    `EntidadBase` y el tipo base de documento. Ni EF Core, ni ASP.NET Core, ni nada de
+    infraestructura (§4, regla de frontera 2). Lo comprueba el test de arquitectura.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

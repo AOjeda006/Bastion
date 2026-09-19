@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lo ÚNICO público del módulo Inventario (§4, regla de frontera 1): DTOs, permisos y eventos de
+    integración. Es lo que otro módulo puede referenciar.
+
+    NO referencia `Bastion.Inventario.Domain`, por lo mismo que en los demás módulos: si lo
+    hiciera, cualquiera que usara este proyecto vería el dominio ajeno por la puerta de atrás.
+
+    SÍ los dos bloques comunes, que son núcleo compartido y no el interior de un módulo: Domain
+    por la forma de un evento de integración (ADR-0013) y Contracts por `Paginacion`, `PaginaDe` y
+    `TramoDe` (ADR-0029).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Contracts/Bastion.BuildingBlocks.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

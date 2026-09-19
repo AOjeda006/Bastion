@@ -55,7 +55,16 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         // día que el discriminador dijera una cosa y el signo otra no habría nada que lo parara.
         // Con dos columnas nulables por separado, la exclusividad es un CHECK de la base que
         // rechaza los dos puestos Y ninguno puesto.
+        // Los dos del ítem 2.3: el coste unitario de una línea de ajuste y el de la fila del
+        // libro que esa línea escribe. Son `Importe` —cantidad y divisa (R6)—, y son DOS entradas
+        // y no una porque el valor se copia a la fila del libro en vez de leerse del documento:
+        // el libro tiene que explicarse solo, y el coste de hace dos años no puede cambiar porque
+        // alguien corrija una cabecera hoy.
+        "LineaDeAjuste.CosteUnitario: 2",
+
         "LineaTarifa.PrecioODescuento: 2",
+
+        "MovimientoStock.CosteUnitario: 2",
 
         // Los cinco de Terceros, que hasta el ítem 1.6 no estaban aquí porque este barrido
         // no miraba el modelo de Terceros. `LimiteCredito` y `RegimenFiscal` son del 1.6.

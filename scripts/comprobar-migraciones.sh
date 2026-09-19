@@ -86,7 +86,7 @@ comprobar() {
   fi
 }
 
-for modulo in Auditoria Organizacion Identidad Terceros Catalogo; do
+for modulo in Auditoria Organizacion Identidad Terceros Catalogo Inventario; do
   comprobar "$modulo"
 done
 

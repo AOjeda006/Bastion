@@ -3,6 +3,7 @@ using System.Reflection;
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
+using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Terceros.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +65,8 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             Opciones<TercerosDbContext>(cadena, TercerosDbContext.Configurar), new InquilinoFijo(null), new AccesoCerrado())),
         new(typeof(CatalogoDbContext), cadena => new CatalogoDbContext(
             Opciones<CatalogoDbContext>(cadena, CatalogoDbContext.Configurar), new InquilinoFijo(null), new AccesoCerrado())),
+        new(typeof(InventarioDbContext), cadena => new InventarioDbContext(
+            Opciones<InventarioDbContext>(cadena, InventarioDbContext.Configurar), new InquilinoFijo(null), new AccesoCerrado())),
     ];
 
     /// <summary>
@@ -82,6 +85,8 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_lineas_tarifa_descuento_en_rango"] = Relleno.Ninguno,
         ["ck_lineas_tarifa_precio_no_negativo"] = Relleno.Ninguno,
         ["ck_lineas_tarifa_precio_o_descuento"] = new(["precio"], []),
+        ["ck_movimiento_stock_cantidad_no_nula"] = Relleno.Ninguno,
+        ["ck_movimiento_stock_cantidad_por_factor"] = Relleno.Ninguno,
         ["ck_registros_empresa_o_motivo"] = new(["empresa_id"], []),
         ["ck_tarifas_vigencia_no_invertida"] = Relleno.Ninguno,
         ["ck_terceros_limite_credito_completo"] = Relleno.Ninguno,
@@ -161,33 +166,11 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             {
                 IReadOnlyList<Tabla> tablas = await LeerTablasAsync(conexion, historiales);
 
-                if (conFilas)
+                if (conFilas
+                    && !await InventarUnaFilaEnCadaTablaAsync(
+                        conexion, tablas, inventadas, restricciones, fallos, $"antes de {id}"))
                 {
-                    foreach (Tabla tabla in PadresPrimero(tablas))
-                    {
-                        restricciones.UnionWith(tabla.Restricciones);
-
-                        List<string> desconocidas = [.. tabla.Restricciones.Where(nombre => !s_restricciones.ContainsKey(nombre))];
-
-                        if (desconocidas.Count > 0)
-                        {
-                            fallos.Add(
-                                $"antes de {id}, {tabla.Nombre} tiene restricciones CHECK sin relleno nombrado: " +
-                                string.Join(", ", desconocidas));
-                            return new(fallos, restricciones, aplicadas, escritas.Count);
-                        }
-
-                        try
-                        {
-                            await using NpgsqlCommand fila = new(inventadas.Insercion(tabla, s_restricciones), conexion);
-                            await fila.ExecuteNonQueryAsync();
-                        }
-                        catch (PostgresException error)
-                        {
-                            fallos.Add($"antes de {id}, no se pudo inventar una fila en {tabla.Nombre}: {error.Message}");
-                            return new(fallos, restricciones, aplicadas, escritas.Count);
-                        }
-                    }
+                    return new(fallos, restricciones, aplicadas, escritas.Count);
                 }
 
                 antes = await ContarAsync(conexion, tablas);
@@ -235,7 +218,76 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             }
         }
 
+        // LA RONDA DE DESPUÉS, y tapa un agujero que solo se ve cuando se pregunta a quién no le
+        // toca nunca: a las tablas de la ÚLTIMA migración escrita no les viene ningún paso detrás,
+        // así que el recorrido de arriba no les inventa una fila jamás. Sus CHECK no se miran, sus
+        // columnas no se rellenan y su nombre no entra en `restricciones` — de modo que una
+        // restricción nombrada aquí para ellas saldría «declarada y sin dueño» hasta que otro
+        // módulo migrara detrás, que es un rojo que llega tarde y en un ítem que no es el suyo.
+        //
+        // No prueba ninguna migración —no hay ninguna después—, y no es para eso: es lo que hace
+        // que el censo de tablas y la lista de CHECK se comparen contra la base COMPLETA, que es la
+        // forma que tiene una instalación de verdad.
+        if (conFilas)
+        {
+            await using NpgsqlConnection conexion = await AbrirAsync(cadena);
+            IReadOnlyList<Tabla> tablas = await LeerTablasAsync(conexion, historiales);
+
+            if (!await InventarUnaFilaEnCadaTablaAsync(
+                    conexion, tablas, inventadas, restricciones, fallos, "con todo migrado"))
+            {
+                return new(fallos, restricciones, aplicadas, escritas.Count);
+            }
+
+            Dictionary<string, long> llenas = await ContarAsync(conexion, tablas);
+            List<string> vacias = [.. llenas.Where(tabla => tabla.Value == 0).Select(tabla => tabla.Key)];
+
+            if (vacias.Count > 0)
+            {
+                fallos.Add($"con todo migrado seguían vacías: {string.Join(", ", vacias)}");
+            }
+        }
+
         return new(fallos, restricciones, aplicadas, escritas.Count);
+    }
+
+    /// <summary>Una fila inventada en cada tabla del censo, padres primero.</summary>
+    /// <returns><c>false</c> si algo falló; el motivo queda en <paramref name="fallos"/>.</returns>
+    private static async Task<bool> InventarUnaFilaEnCadaTablaAsync(
+        NpgsqlConnection conexion,
+        IReadOnlyList<Tabla> tablas,
+        FilasInventadas inventadas,
+        HashSet<string> restricciones,
+        List<string> fallos,
+        string momento)
+    {
+        foreach (Tabla tabla in PadresPrimero(tablas))
+        {
+            restricciones.UnionWith(tabla.Restricciones);
+
+            List<string> desconocidas = [.. tabla.Restricciones.Where(nombre => !s_restricciones.ContainsKey(nombre))];
+
+            if (desconocidas.Count > 0)
+            {
+                fallos.Add(
+                    $"{momento}, {tabla.Nombre} tiene restricciones CHECK sin relleno nombrado: " +
+                    string.Join(", ", desconocidas));
+                return false;
+            }
+
+            try
+            {
+                await using NpgsqlCommand fila = new(inventadas.Insercion(tabla, s_restricciones), conexion);
+                await fila.ExecuteNonQueryAsync();
+            }
+            catch (PostgresException error)
+            {
+                fallos.Add($"{momento}, no se pudo inventar una fila en {tabla.Nombre}: {error.Message}");
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // Por la marca de tiempo del identificador, que es global: las cinco historias entrelazadas son
@@ -287,6 +339,35 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         return conexion;
     }
 
+    /// <summary>El censo de tablas de la base, con sus columnas, sus claves y sus CHECK.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Una partición no es una tabla, y eso hay que decírselo al censo.</b>
+    /// <c>information_schema.tables</c> da <c>BASE TABLE</c> tanto al padre particionado como a
+    /// cada una de sus particiones, así que sin el <c>NOT rel.relispartition</c> el recorrido ve
+    /// las catorce particiones de <c>inventario.movimiento_stock</c> como catorce tablas
+    /// independientes e intenta inventar una fila EN CADA UNA, por su nombre. Medido: la fila
+    /// inventada lleva <c>current_date</c> en la clave de partición, así que entra en el padre y en
+    /// la partición del mes en curso, y las otras doce la rechazan con
+    /// <c>23514 violates partition constraint</c>.
+    /// </para>
+    /// <para>
+    /// <b>Lo que cambia es el censo, no la denuncia.</b> La comprobación de abajo —que después de
+    /// inventar filas no quede ni una tabla vacía— sigue siendo absoluta y sin salvedades: no lleva
+    /// una lista de tablas perdonadas, que es justo lo que la habría convertido en un sitio donde
+    /// esconder una tabla de verdad. Una partición no se salta la comprobación: es que no es un
+    /// sitio donde se escriba, se escribe en el padre y el motor decide dónde cae. Contar y llenar
+    /// el padre cubre a todas sus particiones, y por eso la exclusión no abre ningún hueco.
+    /// </para>
+    /// <para>
+    /// Y no vale mirar solo el nombre: <c>rel.relname</c> se ata también al esquema por
+    /// <c>pg_namespace</c>, porque dos esquemas pueden tener una tabla con el mismo nombre y el
+    /// censo quedaría cruzado.
+    /// </para>
+    /// </remarks>
+    /// <param name="conexion">Conexión abierta a la base del recorrido.</param>
+    /// <param name="historiales">Las tablas de historial de migraciones, que no cuentan.</param>
+    /// <returns>Las tablas del censo, ordenadas por nombre.</returns>
     private static async Task<IReadOnlyList<Tabla>> LeerTablasAsync(NpgsqlConnection conexion, HashSet<string> historiales)
     {
         Dictionary<string, Tabla> tablas = new(StringComparer.Ordinal);
@@ -299,7 +380,12 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             FROM information_schema.columns AS c
             JOIN information_schema.tables AS t
               ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+            JOIN pg_catalog.pg_class AS rel
+              ON rel.relname = c.table_name
+            JOIN pg_catalog.pg_namespace AS esquema
+              ON esquema.oid = rel.relnamespace AND esquema.nspname = c.table_schema
             WHERE t.table_type = 'BASE TABLE'
+              AND NOT rel.relispartition
               AND c.table_schema NOT IN ('pg_catalog', 'information_schema')
             ORDER BY c.table_schema, c.table_name, c.ordinal_position
             """,

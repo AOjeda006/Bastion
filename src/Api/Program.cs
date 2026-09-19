@@ -20,6 +20,7 @@ using Bastion.Catalogo.Infrastructure;
 using Bastion.Identidad.Contracts;
 using Bastion.Identidad.Infrastructure;
 using Bastion.Identidad.Infrastructure.Seguridad;
+using Bastion.Inventario.Infrastructure;
 using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Infrastructure;
 using Bastion.Terceros.Contracts;
@@ -190,6 +191,7 @@ builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion, retencion);
 builder.Services.AgregarModuloDeIdentidad(cadenaDeConexion, opcionesDeJwt);
 builder.Services.AgregarModuloDeTerceros(cadenaDeConexion);
 builder.Services.AgregarModuloDeCatalogo(cadenaDeConexion);
+builder.Services.AgregarModuloDeInventario(cadenaDeConexion);
 
 // --------------------------------------------------------------------- autenticación
 // Quién es quien llama, leído del token de acceso y de ningún otro sitio. Las cuatro

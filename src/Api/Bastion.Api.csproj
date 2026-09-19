@@ -36,6 +36,8 @@
     <ProjectReference Include="../Modules/Terceros/Bastion.Terceros.Infrastructure/Bastion.Terceros.Infrastructure.csproj" />
     <ProjectReference Include="../Modules/Catalogo/Bastion.Catalogo.Endpoints/Bastion.Catalogo.Endpoints.csproj" />
     <ProjectReference Include="../Modules/Catalogo/Bastion.Catalogo.Infrastructure/Bastion.Catalogo.Infrastructure.csproj" />
+    <ProjectReference Include="../Modules/Inventario/Bastion.Inventario.Endpoints/Bastion.Inventario.Endpoints.csproj" />
+    <ProjectReference Include="../Modules/Inventario/Bastion.Inventario.Infrastructure/Bastion.Inventario.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Observabilidad y datos">

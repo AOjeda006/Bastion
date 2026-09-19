@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Casos de uso del módulo Inventario: un tipo por operación, sus puertos y sus DTOs internos.
+    Nada de bus en memoria: un caso de uso es una interfaz con su implementación registrada en el
+    contenedor (§3 del plan maestro).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Inventario.Domain/Bastion.Inventario.Domain.csproj" />
+    <ProjectReference Include="../Bastion.Inventario.Contracts/Bastion.Inventario.Contracts.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Application/Bastion.BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+
+  <!--
+    Los DOS cruces del módulo, y los dos van por el `Contracts` del dueño (§4, frontera 1). Aquí
+    viven los puertos del ítem 2.2 con los que el alta de un ajuste comprueba el almacén, la
+    ubicación y el artículo, más los de empresas y unidades que ya estaban. Sin estas dos líneas,
+    cuatro columnas `uuid` de la base aceptarían cualquier valor y el fallo aparecería al valorar
+    el inventario, fases después (ADR-0024).
+
+    Lo que NO hay, y no es casualidad: ninguna referencia al `Domain` de esos módulos, ninguna
+    clave ajena que cruce de esquema y ningún cruce en sentido contrario.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+    <ProjectReference Include="../../Catalogo/Bastion.Catalogo.Contracts/Bastion.Catalogo.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
+    Solo las ABSTRACCIONES del contenedor, para publicar `AgregarCasosDeUsoDeInventario`. Las
+    implementaciones de los casos de uso son `internal` a propósito —fuera del módulo solo se ve
+    la interfaz—, y eso obliga a que quien las registre viva en este mismo ensamblado.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

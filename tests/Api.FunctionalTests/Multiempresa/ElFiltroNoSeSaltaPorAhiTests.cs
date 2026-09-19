@@ -92,6 +92,11 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
 
         ["Set<CondicionPago>"] =
             "CondicionPago no filtra: lo hace el tercero del que cuelga",
+
+        // La del ítem 2.3, y el mismo argumento con otro dueño: una línea de ajuste no filtra
+        // -lo hace el documento del que cuelga- y solo es segura mientras se lea con él.
+        ["Set<LineaDeAjuste>"] =
+            "LineaDeAjuste no filtra: lo hace el ajuste del que cuelga, y se carga siempre con él",
     };
 
     // Los sitios donde una de esas llamadas SÍ está, con su motivo. La lista nació con una sola
@@ -298,6 +303,7 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         "src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Persistencia/AuditoriaDbContext.cs",
         "src/Modules/Catalogo/Bastion.Catalogo.Infrastructure/Persistencia/CatalogoDbContext.cs",
         "src/Modules/Identidad/Bastion.Identidad.Infrastructure/Persistencia/IdentidadDbContext.cs",
+        "src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/InventarioDbContext.cs",
         "src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/OrganizacionDbContext.cs",
         "src/Modules/Terceros/Bastion.Terceros.Infrastructure/Persistencia/TercerosDbContext.cs",
 

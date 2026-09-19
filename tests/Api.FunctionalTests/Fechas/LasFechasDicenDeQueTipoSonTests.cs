@@ -116,10 +116,16 @@ public sealed class LasFechasDicenDeQueTipoSonTests : IDisposable
         // exclusión que impide el solape construye un `daterange` sobre estas dos columnas. Un
         // `tstzrange` sobre instantes habría dejado pasar dos tramos que se pisan un día entero
         // en un huso y no en otro.
+        // Las dos del ítem 2.3 son la MISMA fecha escrita dos veces: la de operación del ajuste
+        // y la de la fila del libro que ese ajuste escribe. Es de negocio por lo mismo que las
+        // demás —el día en que se movió la mercancía, sin hora y sin zona— y además decide en qué
+        // partición mensual cae la fila, que es la única de esta lista con esa segunda función.
+        // Con un instante, un ajuste de las 23:30 del 31 de diciembre en Madrid caería en la
+        // partición de enero vista desde Canarias.
         cuantas.Fechas.ShouldBe(
-            7,
-            "las dos del ejercicio, las dos de la vigencia del impuesto, la del tipo de cambio y " +
-            "las dos de la vigencia de la tarifa");
+            9,
+            "las dos del ejercicio, las dos de la vigencia del impuesto, la del tipo de cambio, " +
+            "las dos de la vigencia de la tarifa y las dos de operación del ítem 2.3");
     }
 
     private static bool EsDelTipo<T>(IReadOnlyProperty propiedad) =>

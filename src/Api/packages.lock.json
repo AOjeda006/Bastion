@@ -512,6 +512,48 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
         }
       },
+      "bastion.inventario.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Catalogo.Contracts": "[1.0.0, )",
+          "Bastion.Inventario.Contracts": "[1.0.0, )",
+          "Bastion.Inventario.Domain": "[1.0.0, )",
+          "Bastion.Organizacion.Contracts": "[1.0.0, )"
+        }
+      },
+      "bastion.inventario.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.inventario.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.inventario.endpoints": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Inventario.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.inventario.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Inventario.Application": "[1.0.0, )",
+          "EFCore.NamingConventions": "[10.0.1, )",
+          "Microsoft.EntityFrameworkCore": "[10.0.9, )",
+          "Microsoft.EntityFrameworkCore.Design": "[10.0.9, )",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.9, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
+        }
+      },
       "bastion.organizacion.application": {
         "type": "Project",
         "dependencies": {

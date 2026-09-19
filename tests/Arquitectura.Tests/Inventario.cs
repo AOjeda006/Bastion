@@ -68,13 +68,13 @@ internal static class Inventario
             ["Organizacion"] = Presencia.Montado,
             ["Terceros"] = Presencia.Montado,
             ["Catalogo"] = Presencia.Montado,
+            ["Inventario"] = Presencia.Montado,
 
             ["Compras"] = Presencia.Andamio,
             ["Contabilidad"] = Presencia.Andamio,
             ["Crm"] = Presencia.Andamio,
             ["Facturacion"] = Presencia.Andamio,
             ["Informes"] = Presencia.Andamio,
-            ["Inventario"] = Presencia.Andamio,
             ["Produccion"] = Presencia.Andamio,
             ["Rrhh"] = Presencia.Andamio,
             ["Tesoreria"] = Presencia.Andamio,
@@ -124,6 +124,16 @@ internal static class Inventario
         "Identidad.Domain",
         "Identidad.Endpoints",
         "Identidad.Infrastructure",
+
+        // Inventario entra con CUATRO capas y no con cinco, y aquí se ve por qué la lista
+        // existe: el 2.3 trae el libro, el documento que lo escribe, sus casos de uso y sus dos
+        // eventos, pero NINGÚN endpoint. `Inventario.Endpoints` compila vacío —su borde llega con
+        // el 2.4 y el 2.5—, así que declararlo aquí daría por mirada una frontera que hoy no
+        // protege nada.
+        "Inventario.Application",
+        "Inventario.Contracts",
+        "Inventario.Domain",
+        "Inventario.Infrastructure",
 
         "Organizacion.Application",
         "Organizacion.Contracts",
@@ -284,6 +294,28 @@ internal static class Inventario
         "Identidad.Infrastructure -> BuildingBlocks.Infrastructure",
         "Identidad.Infrastructure -> Identidad.Application",
 
+        // Las doce de Inventario: diez hacia dentro de su módulo o hacia el bloque común, y DOS
+        // que cruzan. Las dos que cruzan salen del `Application` y entran por el `Contracts` del
+        // dueño, que es la única puerta (§4, frontera 1); ninguna toca un `Domain` ajeno.
+        //
+        // Y son exactamente las que el libro necesita para no tener claves ajenas. `almacen_id`,
+        // `ubicacion_id`, `articulo_id` y `unidad_introducida_id` son `uuid` sueltos en el esquema
+        // `inventario` —entre esquemas no se cruza—, así que lo único que impide que ahí acabe un
+        // identificador inventado es que el alta lo pregunte por un puerto. Eso es la R7 leída al
+        // derecho: el cruce no es lo que debilita la frontera, es lo que la sostiene.
+        "Inventario.Application -> BuildingBlocks.Application",
+        "Inventario.Application -> Catalogo.Contracts",
+        "Inventario.Application -> Inventario.Contracts",
+        "Inventario.Application -> Inventario.Domain",
+        "Inventario.Application -> Organizacion.Contracts",
+        "Inventario.Contracts -> BuildingBlocks.Contracts",
+        "Inventario.Contracts -> BuildingBlocks.Domain",
+        "Inventario.Domain -> BuildingBlocks.Domain",
+        "Inventario.Endpoints -> BuildingBlocks.Infrastructure",
+        "Inventario.Endpoints -> Inventario.Application",
+        "Inventario.Infrastructure -> BuildingBlocks.Infrastructure",
+        "Inventario.Infrastructure -> Inventario.Application",
+
         "Organizacion.Application -> BuildingBlocks.Application",
         "Organizacion.Application -> Organizacion.Contracts",
         "Organizacion.Application -> Organizacion.Domain",
@@ -361,6 +393,25 @@ internal static class Inventario
                 "Identidad pregunta a Organización si esa empresa existe y no está bloqueada " +
                 "antes de meterla en el testigo. Lectura, por el contrato del dueño, resuelta en " +
                 "proceso: ni un JOIN entre esquemas ni una llamada HTTP.",
+
+            ["Inventario.Application -> Bastion.Catalogo.Contracts"] =
+                "el séptimo, y el primero que NO es de un maestro hacia otro maestro: aquí " +
+                "pregunta un MOVIMIENTO. Cada línea del libro guarda el artículo que se mueve, y " +
+                "el alta de un ajuste pregunta a Catálogo si contra ese artículo se pueden mover " +
+                "existencias. La pregunta no es «¿existe?»: un Servicio existe y contesta " +
+                "NoSeAlmacena, y un artículo retirado resuelve lo viejo y no se ofrece para lo " +
+                "nuevo. Estrena el puerto que el 2.2 declaró sin consumidor, igual que el 1.8 " +
+                "estrenó los del 1.2.",
+
+            ["Inventario.Application -> Bastion.Organizacion.Contracts"] =
+                "el sexto, y el más cargado después del de Catálogo: un ajuste cuelga de una " +
+                "empresa y se hace en un almacén, y cada línea nombra una ubicación dentro de " +
+                "ese almacén y la unidad en la que se escribió la cantidad. Los cuatro se " +
+                "preguntan antes de construir el agregado. Y es aquí donde el ADR-0037 se cobra " +
+                "POR EL EFECTO: un almacén bloqueado contesta SoloResuelveLoViejo, el alta lo " +
+                "rechaza, y los movimientos YA escritos contra él se siguen leyendo por este " +
+                "mismo puerto. Lo que el bloqueo reserva es la privacidad de una persona, no la " +
+                "existencia de una estantería.",
 
             ["Terceros.Application -> Bastion.Catalogo.Contracts"] =
                 "el quinto, y la mitad de VUELTA del primero mutuo. Un tercero puede tener " +
@@ -483,6 +534,20 @@ internal static class Inventario
     internal static readonly IReadOnlyDictionary<string, Identificador> IdentificadoresDeclarados =
         new SortedDictionary<string, Identificador>(StringComparer.Ordinal)
         {
+            ["Ajuste.AlmacenId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "el nombre casa, y lo que hay que escribir es POR DÓNDE se comprueba. Lo pregunta " +
+                "AbrirAjuste, y pregunta por el ESTADO: un almacén bloqueado por el art. 32 " +
+                "contesta que solo resuelve lo viejo, así que no admite un ajuste nuevo y sus " +
+                "movimientos de ayer se siguen leyendo (ADR-0037)."),
+
+            ["Ajuste.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "de la misma familia que el del artículo y el del tercero: un ajuste es de la " +
+                "empresa que lo firma. Sale del claim en AbrirAjuste, nunca de la petición."),
+
             ["Articulo.EmpresaId"] = new(
                 "Empresa",
                 Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
@@ -560,6 +625,30 @@ internal static class Inventario
                 "bandeja. Se llama EventoId y no Id porque un evento no es una EntidadBase, y ese " +
                 "nombre es justo el que engaña a una heurística de sufijos."),
 
+            ["LineaDeAjuste.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "el nombre casa; lo que se declara es el puerto. Y este no contesta «¿existe?» " +
+                "sino si contra ese artículo se pueden mover existencias: un Servicio existe y " +
+                "no se almacena, y ponerle un movimiento sería inventarle un stock que nadie " +
+                "puede contar."),
+
+            ["LineaDeAjuste.UbicacionId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "la ubicación va en la LÍNEA y el almacén en la CABECERA, así que un ajuste " +
+                "mueve varias estanterías del mismo almacén de una vez. El puerto resuelve las " +
+                "dos cosas a la vez —que la ubicación cuelgue de ese almacén, y el peor de los " +
+                "dos estados—, que es justo lo que decidió el ADR-0037."),
+
+            ["LineaDeAjuste.UnidadIntroducidaId"] = new(
+                "UnidadMedida",
+                Raiz + ".Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida",
+                "el papel va en el nombre —«aquella en la que lo escribió la persona»— y por eso " +
+                "no casa con el del tipo. Hermano del UnidadBaseId del artículo, y por el mismo " +
+                "puerto: se valida por el ESTADO, porque una unidad retirada sigue explicando las " +
+                "líneas viejas y no se ofrece para una nueva (ADR-0023)."),
+
             ["LineaTarifa.EmpresaId"] = new(
                 "Empresa",
                 Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
@@ -575,6 +664,54 @@ internal static class Inventario
                 "el nombre SÍ casa, y aun así se declara: lo que la lista aporta aquí no es " +
                 "descubrirlo, es decir POR DÓNDE se valida. Sin el puerto escrito, la regla sabría " +
                 "que hay un cruce y no podría exigir que alguien lo compruebe."),
+
+            ["MovimientoStock.AlmacenId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "la fila del libro REPITE el almacén de su documento, y no es redundancia: el " +
+                "libro tiene que explicarse solo —un saldo se calcula sumando sus filas, sin " +
+                "visitar el documento de cada una— y la fila de hace dos años no puede cambiar " +
+                "porque alguien corrija una cabecera hoy. Quien pregunta es el alta del ajuste, " +
+                "una vez y no una por línea."),
+
+            ["MovimientoStock.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "gemelo del de la línea del ajuste, y por el mismo puerto. Es el único cruce del " +
+                "libro que no va a Organización."),
+
+            ["MovimientoStock.DocumentoOrigenId"] = new(
+                "",
+                "",
+                "NO APUNTA A UN TIPO, y por eso va vacío en las dos casillas: cuál es el tipo lo " +
+                "dice la columna de al lado, DocumentoOrigenTipo, así que hoy es un Ajuste y " +
+                "mañana será un recuento o una recepción. Declararlo apuntando a «Ajuste» sería " +
+                "mentira el día que haya un segundo documento, y ese día nadie vendría a " +
+                "corregirlo. Que la flecha se sostenga no lo comprueba un puerto: lo comprueba la " +
+                "R13 en los dos sentidos —ningún movimiento sin documento, ningún ajuste " +
+                "confirmado sin movimientos—, y el documento vive en ESTE módulo, así que no hay " +
+                "frontera que cruzar."),
+
+            ["MovimientoStock.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del de la cabecera del ajuste, repetido en la fila por lo mismo que el " +
+                "almacén y por algo más: el filtro de la R8 se evalúa sobre las columnas de la " +
+                "fila, y sin esta columna una consulta que empezara por el libro sumaría las " +
+                "existencias de dos empresas de la misma instalación en un mismo saldo."),
+
+            ["MovimientoStock.UbicacionId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "gemelo del de la línea del ajuste, y por el mismo puerto."),
+
+            ["MovimientoStock.UnidadIntroducidaId"] = new(
+                "UnidadMedida",
+                Raiz + ".Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida",
+                "gemelo del de la línea del ajuste. La fila guarda ADEMÁS el factor con el que se " +
+                "pasó a la unidad base, precisamente para no tener que volver a preguntar: una " +
+                "conversión se puede corregir mañana y la cantidad de ayer no puede cambiar de " +
+                "valor por eso."),
 
             ["Tarifa.DivisaId"] = new(
                 "Divisa",
