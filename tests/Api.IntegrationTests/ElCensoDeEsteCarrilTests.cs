@@ -203,6 +203,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElLibroNoSePuedeLimpiarTests.Vaciar_LA_PARTICION_lo_rechaza_el_motor_y_este_es_el_que_se_vio_abierto",
         "ElLibroNoSePuedeLimpiarTests.Vaciar_la_tabla_padre_lo_rechaza_el_motor",
 
+        // Del ítem 2.4: el número dentro del recibo, y el 428 de la única acción de toda la API
+        // que EXIGE la clave. Los dos miran la misma frontera desde los dos lados.
+        "ElNumeroEntraEnElReciboTests.El_reintento_con_la_misma_clave_devuelve_el_numero_y_no_gasta_otro",
+        "ElNumeroEntraEnElReciboTests.Sin_la_cabecera_la_confirmacion_es_428_y_no_toca_nada",
+
         // Del ítem 2.2: las tres casillas de `AptitudParaMoverExistencias`, que son tres y no
         // cuatro. Si algún día el artículo recibe su final de vida, la casilla que entre
         // necesita su línea aquí y su caso allá.
