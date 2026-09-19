@@ -130,6 +130,14 @@ public sealed class LasReglasDeEsteCarrilTests
         "LasVariablesDelDespliegueTests.Las_cuatro_fuentes_se_leen",
         "LasVariablesDelDespliegueTests.Las_de_la_semilla_son_las_que_lee_su_codigo",
 
+        // Del ítem 2.3: la promesa que `DocumentoBase` escribe en su propio `remarks` —que
+        // no sabe qué es un movimiento— con un caso detrás. El bloque común lo ven los
+        // dieciséis módulos: lo que aprenda el tipo base lo heredan la factura y el asiento
+        // contable sin pedirlo.
+        "ElTipoBaseDeDocumentoNoSabeQueEsUnMovimientoTests.El_bloque_comun_no_nombra_el_libro_de_existencias",
+        "ElTipoBaseDeDocumentoNoSabeQueEsUnMovimientoTests.El_tipo_base_no_nombra_ningun_tipo_de_modulo_y_el_documento_concreto_si",
+        "ElTipoBaseDeDocumentoNoSabeQueEsUnMovimientoTests.La_prohibicion_del_libro_puede_dispararse",
+
         // La línea de estado del README sale de las casillas del PLAN.
         "ElEstadoDelReadmeEsElDelPlanTests.El_checklist_del_plan_se_lee",
         "ElEstadoDelReadmeEsElDelPlanTests.La_linea_de_estado_del_readme_es_la_del_checklist",
