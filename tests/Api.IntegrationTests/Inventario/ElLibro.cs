@@ -83,7 +83,7 @@ internal static class ElLibro
         // debajo del libro. Que el número salga del cerrojo se comprueba donde se decide, en
         // `ElCerrojoDeLaNumeracionTests` y en la confirmación por la API.
         var serieId = Guid.CreateVersion7();
-        const long primerNumeroDeEsaSerie = 1;
+        const long PrimerNumeroDeEsaSerie = 1;
 
         DateTimeOffset momento = DateTimeOffset.UtcNow;
 
@@ -111,7 +111,7 @@ internal static class ElLibro
             ajuste.Id, empresaId, almacenId, fechaDeOperacion, ajuste.Lineas.Count);
 
         IReadOnlyList<MovimientoStock> movimientos =
-            ajuste.Confirmar(primerNumeroDeEsaSerie, evento, momento);
+            ajuste.Confirmar(PrimerNumeroDeEsaSerie, evento, momento);
 
         await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
 

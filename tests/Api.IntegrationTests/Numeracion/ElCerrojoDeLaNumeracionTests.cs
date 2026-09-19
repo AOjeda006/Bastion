@@ -335,7 +335,7 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
     {
         DateTimeOffset ahora = TimeProvider.System.GetUtcNow();
 
-        Empresa empresa = Empresa.Crear(
+        var empresa = Empresa.Crear(
             Nif.De(nif),
             "Numeración " + nif,
             Direccion.De("Calle del Contador", "1", "28001", "Madrid", "Madrid", "ES"),
@@ -343,10 +343,10 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
             RegimenDeIva.General,
             ahora);
 
-        Ejercicio ejercicio = Ejercicio.Crear(
+        var ejercicio = Ejercicio.Crear(
             empresa.Id, 2026, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31), ahora);
 
-        Serie serie = Serie.Crear(
+        var serie = Serie.Crear(
             empresa.Id, ejercicio.Id, tipo, "SER", "{serie}-{numero:0000}", ahora);
 
         await using OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresa.Id);

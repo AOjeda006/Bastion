@@ -49,137 +49,137 @@ internal static class LosMaestrosPorLaApi
 
     private static readonly DateOnly s_desde = new(2000, 1, 1);
 
-internal static async Task<AlmacenDto> CrearAlmacenAsync(HttpClient cliente, string codigo)
-{
-    using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
-        Almacenes,
-        new CrearAlmacenDto
-        {
-            Codigo = codigo,
-            Nombre = $"Almacén {codigo}",
-            Tipo = "Fisico",
-            Direccion = Escenario.Domicilio(),
-        });
+    internal static async Task<AlmacenDto> CrearAlmacenAsync(HttpClient cliente, string codigo)
+    {
+        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
+            Almacenes,
+            new CrearAlmacenDto
+            {
+                Codigo = codigo,
+                Nombre = $"Almacén {codigo}",
+                Tipo = "Fisico",
+                Direccion = Escenario.Domicilio(),
+            });
 
-    alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
 
-    return (await alta.Content.ReadFromJsonAsync<AlmacenDto>())!;
-}
+        return (await alta.Content.ReadFromJsonAsync<AlmacenDto>())!;
+    }
 
-/// <summary>Un ejercicio y una serie activa que numere ajustes, por la API.</summary>
-/// <remarks>
-/// El ejercicio hace falta porque una serie numera <b>por serie y ejercicio</b>, que es la
-/// primera de las tres cláusulas de la R5, y <c>Serie</c> lo exige desde que existe.
-/// </remarks>
-/// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
-/// <param name="codigo">Código de la serie, propio de este caso.</param>
-/// <returns>La serie recién creada.</returns>
-internal static async Task<SerieDto> CrearSerieAsync(HttpClient cliente, string codigo)
-{
-    // El año de la fecha de operación del ajuste, que es «hoy». Hoy por hoy nada comprueba que
-    // el documento caiga dentro del ejercicio de su serie —ni el dominio ni el `WHERE` que
-    // numera—, pero un ejercicio de otro año dejaría escrito aquí lo contrario de lo que se
-    // quiere el día que esa comprobación exista.
-    int anioDelCaso = DateTime.UtcNow.Year;
+    /// <summary>Un ejercicio y una serie activa que numere ajustes, por la API.</summary>
+    /// <remarks>
+    /// El ejercicio hace falta porque una serie numera <b>por serie y ejercicio</b>, que es la
+    /// primera de las tres cláusulas de la R5, y <c>Serie</c> lo exige desde que existe.
+    /// </remarks>
+    /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
+    /// <param name="codigo">Código de la serie, propio de este caso.</param>
+    /// <returns>La serie recién creada.</returns>
+    internal static async Task<SerieDto> CrearSerieAsync(HttpClient cliente, string codigo)
+    {
+        // El año de la fecha de operación del ajuste, que es «hoy». Hoy por hoy nada comprueba que
+        // el documento caiga dentro del ejercicio de su serie —ni el dominio ni el `WHERE` que
+        // numera—, pero un ejercicio de otro año dejaría escrito aquí lo contrario de lo que se
+        // quiere el día que esa comprobación exista.
+        int anioDelCaso = DateTime.UtcNow.Year;
 
-    using HttpResponseMessage ejercicio = await cliente.PostAsJsonAsync(
-        Ejercicios,
-        new CrearEjercicioDto
-        {
-            Anio = anioDelCaso,
-            FechaDeInicio = new DateOnly(anioDelCaso, 1, 1),
-            FechaDeFin = new DateOnly(anioDelCaso, 12, 31),
-        });
+        using HttpResponseMessage ejercicio = await cliente.PostAsJsonAsync(
+            Ejercicios,
+            new CrearEjercicioDto
+            {
+                Anio = anioDelCaso,
+                FechaDeInicio = new DateOnly(anioDelCaso, 1, 1),
+                FechaDeFin = new DateOnly(anioDelCaso, 12, 31),
+            });
 
-    ejercicio.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(ejercicio));
+        ejercicio.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(ejercicio));
 
-    using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
-        Series,
-        new CrearSerieDto
-        {
-            EjercicioId = (await ejercicio.Content.ReadFromJsonAsync<EjercicioDto>())!.Id,
-            TipoDeDocumento = nameof(TipoDeDocumento.AjusteDeInventario),
-            Codigo = codigo,
-            Formato = "{serie}-{numero:0000}",
-        });
+        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
+            Series,
+            new CrearSerieDto
+            {
+                EjercicioId = (await ejercicio.Content.ReadFromJsonAsync<EjercicioDto>())!.Id,
+                TipoDeDocumento = nameof(TipoDeDocumento.AjusteDeInventario),
+                Codigo = codigo,
+                Formato = "{serie}-{numero:0000}",
+            });
 
-    alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
 
-    return (await alta.Content.ReadFromJsonAsync<SerieDto>())!;
-}
+        return (await alta.Content.ReadFromJsonAsync<SerieDto>())!;
+    }
 
-internal static async Task<UbicacionDto> CrearUbicacionAsync(
-    HttpClient cliente, Guid almacenId, string codigo)
-{
-    using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
-        Ubicaciones,
-        new CrearUbicacionDto
-        {
-            AlmacenId = almacenId,
-            Codigo = codigo,
-            Pasillo = "A",
-            Estante = "1",
-            Hueco = "1",
-            Descripcion = "Hueco del caso del ADR-0037",
-        });
+    internal static async Task<UbicacionDto> CrearUbicacionAsync(
+        HttpClient cliente, Guid almacenId, string codigo)
+    {
+        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
+            Ubicaciones,
+            new CrearUbicacionDto
+            {
+                AlmacenId = almacenId,
+                Codigo = codigo,
+                Pasillo = "A",
+                Estante = "1",
+                Hueco = "1",
+                Descripcion = "Hueco del caso del ADR-0037",
+            });
 
-    alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
 
-    return (await alta.Content.ReadFromJsonAsync<UbicacionDto>())!;
-}
+        return (await alta.Content.ReadFromJsonAsync<UbicacionDto>())!;
+    }
 
-/// <summary>Un artículo con su unidad y su tramo de impuesto, propios de este caso.</summary>
-/// <remarks>
-/// La unidad y el tramo llevan el número del caso porque son maestros de instalación: los ve
-/// toda la base, y dos casos con el mismo código chocarían contra el índice único.
-/// </remarks>
-internal static async Task<(Guid ArticuloId, Guid UnidadId)> CrearArticuloAsync(
-    HttpClient cliente, int semilla)
-{
-    string sufijo = semilla.ToString(CultureInfo.InvariantCulture);
+    /// <summary>Un artículo con su unidad y su tramo de impuesto, propios de este caso.</summary>
+    /// <remarks>
+    /// La unidad y el tramo llevan el número del caso porque son maestros de instalación: los ve
+    /// toda la base, y dos casos con el mismo código chocarían contra el índice único.
+    /// </remarks>
+    internal static async Task<(Guid ArticuloId, Guid UnidadId)> CrearArticuloAsync(
+        HttpClient cliente, int semilla)
+    {
+        string sufijo = semilla.ToString(CultureInfo.InvariantCulture);
 
-    using HttpResponseMessage unidad = await cliente.PostAsJsonAsync(
-        Unidades,
-        new CrearUnidadMedidaDto
-        {
-            Codigo = "W" + sufijo,
-            Nombre = "Unidad " + sufijo,
-            Decimales = 0,
-        });
+        using HttpResponseMessage unidad = await cliente.PostAsJsonAsync(
+            Unidades,
+            new CrearUnidadMedidaDto
+            {
+                Codigo = "W" + sufijo,
+                Nombre = "Unidad " + sufijo,
+                Decimales = 0,
+            });
 
-    unidad.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(unidad));
+        unidad.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(unidad));
 
-    using HttpResponseMessage impuesto = await cliente.PostAsJsonAsync(
-        Impuestos,
-        new CrearImpuestoDto
-        {
-            Codigo = "ART" + sufijo,
-            Nombre = "Tramo ART" + sufijo,
-            Tipo = "Iva",
-            Porcentaje = 21m,
-            VigenteDesde = s_desde,
-            VigenteHasta = null,
-        });
+        using HttpResponseMessage impuesto = await cliente.PostAsJsonAsync(
+            Impuestos,
+            new CrearImpuestoDto
+            {
+                Codigo = "ART" + sufijo,
+                Nombre = "Tramo ART" + sufijo,
+                Tipo = "Iva",
+                Porcentaje = 21m,
+                VigenteDesde = s_desde,
+                VigenteHasta = null,
+            });
 
-    impuesto.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(impuesto));
+        impuesto.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(impuesto));
 
-    Guid unidadId = (await unidad.Content.ReadFromJsonAsync<UnidadMedidaDto>())!.Id;
+        Guid unidadId = (await unidad.Content.ReadFromJsonAsync<UnidadMedidaDto>())!.Id;
 
-    using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
-        Articulos,
-        new CrearArticuloDto
-        {
-            Codigo = "APT-" + sufijo,
-            Descripcion = "Artículo " + sufijo,
-            Tipo = "Bien",
-            UnidadBaseId = unidadId,
-            ImpuestoPorDefectoId =
-                (await impuesto.Content.ReadFromJsonAsync<ImpuestoDto>())!.Id,
-            CategoriaId = null,
-        });
+        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
+            Articulos,
+            new CrearArticuloDto
+            {
+                Codigo = "APT-" + sufijo,
+                Descripcion = "Artículo " + sufijo,
+                Tipo = "Bien",
+                UnidadBaseId = unidadId,
+                ImpuestoPorDefectoId =
+                    (await impuesto.Content.ReadFromJsonAsync<ImpuestoDto>())!.Id,
+                CategoriaId = null,
+            });
 
-    alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
 
-    return ((await alta.Content.ReadFromJsonAsync<ArticuloDto>())!.Id, unidadId);
-}
+        return ((await alta.Content.ReadFromJsonAsync<ArticuloDto>())!.Id, unidadId);
+    }
 }

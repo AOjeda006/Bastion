@@ -106,8 +106,7 @@ export const es = {
       'ajuste-serie-cerrada':
         'Esa serie está cerrada: sigue resolviendo los documentos que ya numeró, pero no entrega ' +
         'ni un número más. Elige otra serie.',
-      'ajuste-serie-no-encontrada':
-        'Esa serie no existe. Elige una del maestro de series.',
+      'ajuste-serie-no-encontrada': 'Esa serie no existe. Elige una del maestro de series.',
       'ajuste-sin-lineas':
         'Un ajuste necesita al menos una línea: un documento que no mueve nada no ajusta nada.',
       'ajuste-ubicacion-bloqueada':
