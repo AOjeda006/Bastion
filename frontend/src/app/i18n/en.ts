@@ -62,6 +62,35 @@ export const en: Diccionario = {
 
     // Ver `es.ts`: las claves son las del artefacto `docs/api/errores.json`, sin camelizar.
     tipos: {
+      // Ver `es.ts`: las doce del ajuste, y las cuatro de un maestro bloqueado o retirado con sus
+      // dos mitades.
+      'ajuste-almacen-bloqueado':
+        'That warehouse is blocked: its earlier movements are still read and valued, but it does ' +
+        'not accept a new adjustment. Pick another warehouse or ask for it to be unblocked.',
+      'ajuste-almacen-no-encontrado':
+        'That warehouse does not exist. Pick one from the warehouse list.',
+      'ajuste-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
+      'ajuste-articulo-no-se-almacena':
+        'That item is a service: it has no stock to adjust. Remove that line or change the item.',
+      'ajuste-no-encontrado': 'That adjustment no longer exists. Go back to the list and refresh.',
+      'ajuste-no-esta-confirmado':
+        'That adjustment is not confirmed, so there is nothing to reverse: a draft has not moved ' +
+        'the ledger. Refresh the screen to see what state it is in.',
+      'ajuste-no-esta-en-borrador':
+        'That adjustment is no longer a draft: a confirmed one is not confirmed twice, because ' +
+        'its ledger rows are already written and the ledger is never rewritten. Refresh the screen.',
+      'ajuste-sin-lineas':
+        'An adjustment needs at least one line: a document that moves nothing adjusts nothing.',
+      'ajuste-ubicacion-bloqueada':
+        'That location is blocked: whatever is already assigned to it is still read, but nothing ' +
+        'new moves into that slot. Pick another location.',
+      'ajuste-ubicacion-no-encontrada':
+        'That location does not exist in that warehouse. Pick one of its own.',
+      'ajuste-unidad-no-encontrada':
+        'That unit of measure does not exist. Pick one from the unit list.',
+      'ajuste-unidad-retirada':
+        'That unit has been withdrawn: movements already written in it are still read, but a new ' +
+        'one is not written with it. Pick another unit.',
       'almacen-duplicado': 'There is already a warehouse with that code at this company.',
       'almacen-no-encontrado': 'That warehouse no longer exists. Go back to the list and refresh.',
       'articulo-duplicado': 'There is already an item with that code at this company.',

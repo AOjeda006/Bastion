@@ -1,6 +1,18 @@
 {
   "base": "/errors/",
   "tipos": [
+    { "codigo": "ajuste-almacen-bloqueado", "type": "/errors/ajuste-almacen-bloqueado", "clase": "Conflicto" },
+    { "codigo": "ajuste-almacen-no-encontrado", "type": "/errors/ajuste-almacen-no-encontrado", "clase": "Validacion" },
+    { "codigo": "ajuste-articulo-no-encontrado", "type": "/errors/ajuste-articulo-no-encontrado", "clase": "Validacion" },
+    { "codigo": "ajuste-articulo-no-se-almacena", "type": "/errors/ajuste-articulo-no-se-almacena", "clase": "Conflicto" },
+    { "codigo": "ajuste-no-encontrado", "type": "/errors/ajuste-no-encontrado", "clase": "NoEncontrado" },
+    { "codigo": "ajuste-no-esta-confirmado", "type": "/errors/ajuste-no-esta-confirmado", "clase": "Conflicto" },
+    { "codigo": "ajuste-no-esta-en-borrador", "type": "/errors/ajuste-no-esta-en-borrador", "clase": "Conflicto" },
+    { "codigo": "ajuste-sin-lineas", "type": "/errors/ajuste-sin-lineas", "clase": "Validacion" },
+    { "codigo": "ajuste-ubicacion-bloqueada", "type": "/errors/ajuste-ubicacion-bloqueada", "clase": "Conflicto" },
+    { "codigo": "ajuste-ubicacion-no-encontrada", "type": "/errors/ajuste-ubicacion-no-encontrada", "clase": "Validacion" },
+    { "codigo": "ajuste-unidad-no-encontrada", "type": "/errors/ajuste-unidad-no-encontrada", "clase": "Validacion" },
+    { "codigo": "ajuste-unidad-retirada", "type": "/errors/ajuste-unidad-retirada", "clase": "Conflicto" },
     { "codigo": "almacen-duplicado", "type": "/errors/almacen-duplicado", "clase": "Conflicto" },
     { "codigo": "almacen-no-encontrado", "type": "/errors/almacen-no-encontrado", "clase": "NoEncontrado" },
     { "codigo": "articulo-duplicado", "type": "/errors/articulo-duplicado", "clase": "Conflicto" },

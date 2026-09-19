@@ -83,6 +83,38 @@ export const es = {
     // equivocar. El barrido de `ElCambioDeIdioma` compara este objeto contra el artefacto en los
     // dos sentidos, así que un `type` nuevo sin texto es rojo el día que se escribe (ADR-0030).
     tipos: {
+      // Las doce del ajuste (ítem 2.3). Las cuatro de un maestro bloqueado o retirado dicen las
+      // DOS mitades del ADR-0037 y del ADR-0023 —lo que ya está escrito se sigue leyendo, lo
+      // nuevo no entra—, porque un texto que solo dijera «no se puede» manda a quien lo lee a
+      // buscar una ficha que sí existe.
+      'ajuste-almacen-bloqueado':
+        'Ese almacén está bloqueado: sus movimientos anteriores se siguen leyendo y valorando, ' +
+        'pero no admite un ajuste nuevo. Elige otro almacén o pide que lo desbloqueen.',
+      'ajuste-almacen-no-encontrado': 'Ese almacén no existe. Elige uno del maestro de almacenes.',
+      'ajuste-articulo-no-encontrado':
+        'Ese artículo no existe. Elige uno del maestro de artículos.',
+      'ajuste-articulo-no-se-almacena':
+        'Ese artículo es un servicio: no tiene existencias que ajustar. Quita esa línea o cambia ' +
+        'el artículo.',
+      'ajuste-no-encontrado': 'Ese ajuste ya no existe. Vuelve al listado y actualiza.',
+      'ajuste-no-esta-confirmado':
+        'Ese ajuste no está confirmado, así que no hay nada que anular: un borrador no ha movido ' +
+        'el libro. Actualiza la pantalla para ver en qué estado está.',
+      'ajuste-no-esta-en-borrador':
+        'Ese ajuste ya no está en borrador: uno confirmado no se vuelve a confirmar, porque sus ' +
+        'filas del libro ya están escritas y el libro no se reescribe. Actualiza la pantalla.',
+      'ajuste-sin-lineas':
+        'Un ajuste necesita al menos una línea: un documento que no mueve nada no ajusta nada.',
+      'ajuste-ubicacion-bloqueada':
+        'Esa ubicación está bloqueada: lo que ya hay apuntado a ella se sigue leyendo, pero no se ' +
+        'mueve nada nuevo a ese hueco. Elige otra ubicación.',
+      'ajuste-ubicacion-no-encontrada':
+        'Esa ubicación no existe en ese almacén. Elige una de las suyas.',
+      'ajuste-unidad-no-encontrada':
+        'Esa unidad de medida no existe. Elige una del maestro de unidades.',
+      'ajuste-unidad-retirada':
+        'Esa unidad está retirada: los movimientos que ya se escribieron en ella se siguen ' +
+        'leyendo, pero no se escribe uno nuevo con ella. Elige otra unidad.',
       'almacen-duplicado': 'Ya hay un almacén con ese código en esta empresa.',
       'almacen-no-encontrado': 'Ese almacén ya no existe. Vuelve al listado y actualiza.',
       'articulo-duplicado': 'Ya hay un artículo con ese código en esta empresa.',
