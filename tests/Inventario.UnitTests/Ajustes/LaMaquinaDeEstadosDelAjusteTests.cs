@@ -31,6 +31,14 @@ namespace Bastion.Inventario.UnitTests.Ajustes;
 /// </remarks>
 public sealed class LaMaquinaDeEstadosDelAjusteTests
 {
+    /// <summary>Un correlativo cualquiera, de los que entrega el mecanismo de numeración.</summary>
+    /// <remarks>
+    /// <b>No es el 1 a propósito.</b> Una serie que ya ha numerado entrega el que le toque, y un
+    /// caso escrito con el 1 saldría verde igual contra un <c>Confirmar</c> que ignorara el
+    /// parámetro y contara las confirmaciones por su cuenta.
+    /// </remarks>
+    private const long NumeroQueDioLaSerie = 47;
+
     private static readonly DateTimeOffset s_momento =
         new(2026, 3, 14, 9, 0, 0, TimeSpan.Zero);
 
@@ -47,6 +55,11 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
 
         ajuste.Estado.ShouldBe(EstadoDeAjuste.Borrador);
         ajuste.Lineas.ShouldBeEmpty();
+
+        ajuste.Numero.ShouldBeNull(
+            "un borrador no ha gastado ningún correlativo: si naciera con uno, tirarlo dejaría " +
+            "el hueco que la R5 prohibe");
+
         ajuste.EventosPendientes.ShouldBeEmpty(
             "abrir un borrador no es un hecho que nadie de fuera necesite saber: lo que se cuenta " +
             "es la confirmación, que es la que mueve el libro");
@@ -67,9 +80,14 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         ConLinea(ajuste, cantidad: 4m, factor: 2m);
         ConLinea(ajuste, cantidad: -1m, factor: 1m);
 
-        IReadOnlyList<MovimientoStock> movimientos = ajuste.Confirmar(Confirmado(ajuste), s_momento);
+        IReadOnlyList<MovimientoStock> movimientos = ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento);
 
         ajuste.Estado.ShouldBe(EstadoDeAjuste.Confirmado);
+
+        ajuste.Numero.ShouldBe(
+            NumeroQueDioLaSerie,
+            "el documento se queda el número que le dieron, tal cual: componerlo, desplazarlo o " +
+            "recontarlo aquí rompería la correspondencia con el contador de la serie");
 
         movimientos.Count.ShouldBe(
             2, "el libro recibe una fila por línea del documento: ni una menos, ni agrupadas");
@@ -109,7 +127,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         Ajuste ajuste = UnAjuste();
 
         InvalidOperationException fallo = Should.Throw<InvalidOperationException>(
-            () => ajuste.Confirmar(Confirmado(ajuste), s_momento));
+            () => ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento));
 
         fallo.Message.ShouldContain("R13");
 
@@ -125,16 +143,67 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
     {
         Ajuste ajuste = UnAjuste();
         ConLinea(ajuste, cantidad: 1m, factor: 1m);
-        ajuste.Confirmar(Confirmado(ajuste), s_momento);
+        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento);
 
         InvalidOperationException fallo = Should.Throw<InvalidOperationException>(
-            () => ajuste.Confirmar(Confirmado(ajuste), s_momento));
+            () => ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento));
 
         // El mensaje dice de DÓNDE sale la transición, no solo que no se pueda: es lo que
         // necesita quien la intentó desde donde no tocaba.
         fallo.Message.ShouldContain(nameof(EstadoDeAjuste.Borrador));
 
         ajuste.Estado.ShouldBe(EstadoDeAjuste.Confirmado);
+    }
+
+    /// <summary>El segundo intento no repinta el número del primero.</summary>
+    /// <remarks>
+    /// <b>Es el caso del de arriba visto por el otro lado, y no sobra.</b> Aquel afirma que el
+    /// estado no se mueve; este, que el número tampoco —y es el que se pondría rojo si la
+    /// asignación se colocara <i>antes</i> de <c>Transitar</c>, donde parece igual de válida—. Un
+    /// documento que se quedara el número del reintento apuntaría a un correlativo que otro
+    /// documento se llevó de verdad, con los dos enseñando el mismo.
+    /// </remarks>
+    [Fact]
+    public void El_segundo_intento_de_confirmar_no_repinta_el_numero()
+    {
+        Ajuste ajuste = UnAjuste();
+        ConLinea(ajuste, cantidad: 1m, factor: 1m);
+        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento);
+
+        Should.Throw<InvalidOperationException>(
+            () => ajuste.Confirmar(NumeroQueDioLaSerie + 1, Confirmado(ajuste), s_momento));
+
+        ajuste.Numero.ShouldBe(NumeroQueDioLaSerie);
+    }
+
+    /// <summary>Un número que no sale del mecanismo no se acepta.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El cero es el que importa</b>, y no porque alguien vaya a escribirlo: es el valor por
+    /// omisión de un <c>long</c>. Un llamante que olvidara el parámetro —una sobrecarga nueva, un
+    /// mapeo automático, un campo sin rellenar— confirmaría con cero, y el documento diría
+    /// llevar un correlativo que ninguna serie entregó. Los correlativos empiezan en uno porque el
+    /// contador nace a cero y la sentencia incrementa antes de leer.
+    /// </para>
+    /// <para>
+    /// Y el estado se comprueba después: de los dos modos de fallar, el que deja el documento
+    /// confirmado con un número inválido es el que no se puede deshacer.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData(0L)]
+    [InlineData(-1L)]
+    public void Un_numero_que_no_sale_del_mecanismo_no_se_acepta(long numero)
+    {
+        Ajuste ajuste = UnAjuste();
+        ConLinea(ajuste, cantidad: 1m, factor: 1m);
+
+        Should.Throw<ArgumentOutOfRangeException>(
+            () => ajuste.Confirmar(numero, Confirmado(ajuste), s_momento))
+            .ParamName.ShouldBe("numero");
+
+        ajuste.Estado.ShouldBe(EstadoDeAjuste.Borrador);
+        ajuste.Numero.ShouldBeNull();
     }
 
     /// <summary>Un confirmado no admite líneas nuevas: sus filas del libro ya están escritas.</summary>
@@ -149,7 +218,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
     {
         Ajuste ajuste = UnAjuste();
         ConLinea(ajuste, cantidad: 1m, factor: 1m);
-        ajuste.Confirmar(Confirmado(ajuste), s_momento);
+        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento);
 
         Should.Throw<InvalidOperationException>(() => ConLinea(ajuste, cantidad: 2m, factor: 1m));
 
@@ -174,7 +243,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
 
         Ajuste confirmado = UnAjuste();
         ConLinea(confirmado, cantidad: 1m, factor: 1m);
-        confirmado.Confirmar(Confirmado(confirmado), s_momento);
+        confirmado.Confirmar(NumeroQueDioLaSerie, Confirmado(confirmado), s_momento);
 
         confirmado.Anular(Anulado(confirmado));
 
@@ -195,7 +264,8 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         Ajuste ajuste = UnAjuste();
         ConLinea(ajuste, cantidad: 1m, factor: 1m);
 
-        Should.Throw<ArgumentNullException>(() => ajuste.Confirmar(null!, s_momento));
+        Should.Throw<ArgumentNullException>(
+            () => ajuste.Confirmar(NumeroQueDioLaSerie, null!, s_momento));
 
         ajuste.Estado.ShouldBe(EstadoDeAjuste.Borrador);
     }
@@ -263,6 +333,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
     }
 
     private static Ajuste UnAjuste() => Ajuste.Abrir(
+        Guid.CreateVersion7(),
         Guid.CreateVersion7(),
         Guid.CreateVersion7(),
         new DateOnly(2026, 3, 14),

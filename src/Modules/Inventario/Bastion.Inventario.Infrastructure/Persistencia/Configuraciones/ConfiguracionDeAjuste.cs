@@ -33,6 +33,15 @@ internal sealed class ConfiguracionDeAjuste : IEntityTypeConfiguration<Ajuste>
         ajuste.Property(documento => documento.EmpresaId).IsRequired().SeAudita();
         ajuste.Property(documento => documento.AlmacenId).IsRequired().SeAudita();
 
+        // SIN CLAVE AJENA a `organizacion.series`, como los otros cuatro identificadores de este
+        // documento: ninguna clave ajena cruza de esquema (§5, regla 4). Lo que comprueba que la
+        // serie sirve es el `WHERE` de la sentencia que numera, en el instante de numerar.
+        ajuste.Property(documento => documento.SerieId).IsRequired().SeAudita();
+
+        // NULO MIENTRAS SEA BORRADOR, y por eso no es `IsRequired()`. Se audita porque es el dato
+        // que hace falta para reconstruir por qué un correlativo es el que es.
+        ajuste.Property(documento => documento.Numero).SeAudita();
+
         // `date`, no `timestamptz`: es una fecha de NEGOCIO (R14), y además es la que acabará
         // decidiendo en qué partición del libro caen las filas de este documento.
         ajuste.Property(documento => documento.FechaDeOperacion).IsRequired().SeAudita();
@@ -62,5 +71,25 @@ internal sealed class ConfiguracionDeAjuste : IEntityTypeConfiguration<Ajuste>
         ajuste.Navigation(documento => documento.Lineas).AutoInclude();
 
         ajuste.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeOperacion });
+
+        // LA ÚNICA MITAD DE LA R5 QUE PUEDE VIVIR EN ESTA TABLA: «correlativa» prohibe que dos
+        // documentos de la misma serie lleven el mismo número, y eso sí se comprueba con las
+        // columnas que hay aquí. «Sin huecos» no: un hueco es una fila que NO existe, y ningún
+        // índice habla de filas que no existen —de eso responde el mecanismo de numeración—.
+        //
+        // NO ES UNA COMPROBACIÓN DUPLICADA de lo que ya garantiza el cerrojo: es la que queda en
+        // pie cuando el cerrojo no interviene. La sentencia protege contra dos confirmaciones
+        // simultáneas; este índice protege contra cualquier camino que en el futuro escriba
+        // `numero` sin pasar por ella —una carga, una corrección a mano, un documento nuevo que
+        // copie mal el patrón—, y contra esos el cerrojo no dice nada.
+        //
+        // FILTRADO POR `numero IS NOT NULL` en vez de fiarlo a que PostgreSQL considere distintos
+        // los nulos: ese comportamiento es el que trae por defecto, se puede cambiar en la
+        // definición del índice, y dejar la corrección de los borradores colgando de un ajuste por
+        // omisión es lo que no se lee al revisar. Además deja fuera del índice a los borradores,
+        // que son justo las filas que más cambian.
+        ajuste.HasIndex(documento => new { documento.SerieId, documento.Numero })
+            .IsUnique()
+            .HasFilter("numero IS NOT NULL");
     }
 }

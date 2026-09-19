@@ -36,12 +36,27 @@ public interface IConfirmarAjuste
 /// <b>Y el evento va por documento, no por movimiento.</b> Uno por fila convertiría la bandeja en
 /// una segunda copia de la tabla que más crece del sistema.
 /// </para>
+/// <para>
+/// <b>El número se toma aquí y no antes</b>, y «aquí» quiere decir dentro de la transacción que
+/// abre el filtro de idempotencia, la misma en la que caen la cabecera y las filas del libro. Si se
+/// tomara al abrir, cada borrador tirado dejaría un hueco; si se tomara fuera de la transacción,
+/// quedaría gastado cuando el <c>COMMIT</c> no llegara. Las dos cosas son lo que la R5 llama
+/// «sin huecos», y el mecanismo <b>revienta</b> si no hay transacción abierta en vez de fiarse.
+/// </para>
+/// <para>
+/// <b>Y se toma antes de transitar, que es el único orden que deja el número dentro del recibo de
+/// idempotencia.</b> Lo que se guarda como recibo es el cuerpo de la respuesta, y el cuerpo sale
+/// del DTO del ajuste: numerar después de componerlo devolvería un <c>Numero</c> nulo al primer
+/// llamante y otro distinto al reintento con la misma clave.
+/// </para>
 /// </remarks>
 /// <param name="ajustes">Dónde viven el documento y el libro.</param>
+/// <param name="numerador">Quién entrega el correlativo, en esta misma transacción (R5).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class ConfirmarAjuste(
     IRepositorioDeAjustes ajustes,
+    INumeradorDeSeriesDeInventario numerador,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IConfirmarAjuste
 {
@@ -67,6 +82,20 @@ internal sealed class ConfirmarAjuste(
                 ErroresDeAjuste.NoEstaEnBorrador(ajusteId, ajuste.Estado.ToString()));
         }
 
+        // EL NÚMERO, ANTES DE TOCAR EL DOCUMENTO. El orden no es estético: la sentencia toma el
+        // cerrojo sobre la fila del contador y lo suelta el `COMMIT`, así que cuanto más tarde se
+        // pida, más corto es el tramo en el que otra confirmación de la misma serie espera —pero
+        // tiene que caer dentro de la transacción, y deshacerla es lo único que devuelve el
+        // número—. Y si la serie no numera, aquí no se ha cambiado nada todavía.
+        Resultado<long> numero = await numerador
+            .TomarNumeroAsync(ajuste.SerieId, cancelacion)
+            .ConfigureAwait(false);
+
+        if (!numero.EsCorrecto)
+        {
+            return Resultado.Fallo<AjusteDto>(numero.Error!);
+        }
+
         var evento = new AjusteConfirmado(
             ajuste.Id,
             ajuste.EmpresaId,
@@ -74,7 +103,8 @@ internal sealed class ConfirmarAjuste(
             ajuste.FechaDeOperacion,
             ajuste.Lineas.Count);
 
-        IReadOnlyList<MovimientoStock> movimientos = ajuste.Confirmar(evento, reloj.GetUtcNow());
+        IReadOnlyList<MovimientoStock> movimientos =
+            ajuste.Confirmar(numero.Valor, evento, reloj.GetUtcNow());
 
         ajustes.AgregarMovimientos(movimientos);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

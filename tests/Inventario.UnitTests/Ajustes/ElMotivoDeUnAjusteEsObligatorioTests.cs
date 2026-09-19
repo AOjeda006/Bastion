@@ -3,7 +3,7 @@ using Shouldly;
 
 namespace Bastion.Inventario.UnitTests.Ajustes;
 
-/// <summary>Lo que un ajuste exige para abrirse: empresa, almacén y un motivo escrito.</summary>
+/// <summary>Lo que un ajuste exige para abrirse: empresa, serie, almacén y un motivo escrito.</summary>
 /// <remarks>
 /// <para>
 /// <b>El motivo es la única de las tres que no puede comprobar nadie más.</b> La empresa y el
@@ -24,17 +24,29 @@ public sealed class ElMotivoDeUnAjusteEsObligatorioTests
     private static readonly DateTimeOffset s_momento =
         new(2026, 3, 14, 9, 0, 0, TimeSpan.Zero);
 
-    /// <summary>Un ajuste sin empresa o sin almacén no existe.</summary>
+    /// <summary>Un ajuste sin empresa, sin serie o sin almacén no existe.</summary>
     /// <remarks>
-    /// Los dos en el mismo caso y comprobando el <c>ParamName</c>, que es lo que los distingue:
+    /// <para>
+    /// Los tres en el mismo caso y comprobando el <c>ParamName</c>, que es lo que los distingue:
     /// una guarda que mirase dos veces la empresa dejaría el almacén vacío pasar, y el mensaje
     /// diría «empresa» sobre un ajuste que sí la tenía.
+    /// </para>
+    /// <para>
+    /// <b>La serie se para aquí y NO se comprueba que exista</b>, que son dos cosas distintas. El
+    /// vacío es lo único que esta fábrica puede juzgar sola, y pararlo evita el borrador que nadie
+    /// podría confirmar nunca. Si la serie existe, es de esta empresa y sigue activa se vuelve a
+    /// mirar —entero— en el instante de numerar, porque es el único instante en el que la
+    /// respuesta no se queda vieja.
+    /// </para>
     /// </remarks>
     [Fact]
-    public void Sin_empresa_o_sin_almacen_no_hay_ajuste()
+    public void Sin_empresa_sin_serie_o_sin_almacen_no_hay_ajuste()
     {
         Should.Throw<ArgumentException>(() => Abrir(empresaId: Guid.Empty))
             .ParamName.ShouldBe("empresaId");
+
+        Should.Throw<ArgumentException>(() => Abrir(serieId: Guid.Empty))
+            .ParamName.ShouldBe("serieId");
 
         Should.Throw<ArgumentException>(() => Abrir(almacenId: Guid.Empty))
             .ParamName.ShouldBe("almacenId");
@@ -94,9 +106,11 @@ public sealed class ElMotivoDeUnAjusteEsObligatorioTests
 
     private static Ajuste Abrir(
         Guid? empresaId = null,
+        Guid? serieId = null,
         Guid? almacenId = null,
         string motivo = "Recuento de marzo") => Ajuste.Abrir(
             empresaId ?? Guid.CreateVersion7(),
+            serieId ?? Guid.CreateVersion7(),
             almacenId ?? Guid.CreateVersion7(),
             new DateOnly(2026, 3, 14),
             motivo,

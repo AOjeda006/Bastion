@@ -188,10 +188,16 @@ public sealed class LaParticionPorDefectoSeDenunciaTests(PostgresConTodosLosModu
         DateOnly fecha)
     {
         var almacenId = Guid.CreateVersion7();
+        var serieId = Guid.CreateVersion7();
         DateTimeOffset momento = DateTimeOffset.UtcNow;
 
         var ajuste = Ajuste.Abrir(
-            empresaId, almacenId, fecha, "Ajuste de un mes que no tiene partición", momento);
+            empresaId,
+            serieId,
+            almacenId,
+            fecha,
+            "Ajuste de un mes que no tiene partición",
+            momento);
 
         ajuste.AnadirLinea(
             Guid.CreateVersion7(),
@@ -204,7 +210,10 @@ public sealed class LaParticionPorDefectoSeDenunciaTests(PostgresConTodosLosModu
 
         var evento = new AjusteConfirmado(ajuste.Id, empresaId, almacenId, fecha, ajuste.Lineas.Count);
 
-        return (ajuste, ajuste.Confirmar(evento, momento));
+        // La serie es nueva en cada llamada, así que el primer número nunca choca con el índice
+        // único de `(serie_id, numero)`. Lo que este caso persigue está en la partición, no en el
+        // correlativo.
+        return (ajuste, ajuste.Confirmar(numero: 1, evento, momento));
     }
 
     private static async Task<IReadOnlyList<string>> LeerAsync(

@@ -30,6 +30,8 @@ internal static class LosMaestrosDelAjuste
     internal const string CodigoDeUnidadRetirada = "ajuste-unidad-retirada";
     internal const string CodigoDeArticuloNoEncontrado = "ajuste-articulo-no-encontrado";
     internal const string CodigoDeArticuloNoSeAlmacena = "ajuste-articulo-no-se-almacena";
+    internal const string CodigoDeSerieNoEncontrada = "ajuste-serie-no-encontrada";
+    internal const string CodigoDeSerieCerrada = "ajuste-serie-cerrada";
 
     internal static Resultado ElAlmacen(EstadoDeMaestro estado, Guid almacenId) => estado switch
     {
@@ -50,6 +52,34 @@ internal static class LosMaestrosDelAjuste
             nameof(estado),
             estado,
             "El puerto de almacenes ha contestado un estado que este caso de uso no sabe traducir."),
+    };
+
+    /// <summary>La serie que numerará el documento, preguntada al darlo de alta.</summary>
+    /// <remarks>
+    /// <b>Esta respuesta NO es la que garantiza la R5, y por eso tiene su propio código.</b> Una
+    /// serie activa hoy puede estar cerrada cuando el borrador se confirme, así que lo que esta
+    /// pregunta consigue es que el borrador no nazca apuntando a nada y que quien se equivoca de
+    /// serie lo sepa antes de rellenar las líneas. La garantía —existe, es de esta empresa, sigue
+    /// activa— se vuelve a cobrar entera en el <c>WHERE</c> de la sentencia que toma el número,
+    /// dentro de la transacción y con la fila bloqueada, y contesta <c>serie-no-numera</c>.
+    /// </remarks>
+    /// <param name="estado">Lo que contestó el puerto de series.</param>
+    /// <param name="serieId">Por cuál se preguntó.</param>
+    /// <returns>Correcto si esa serie se ofrece para numerar algo nuevo.</returns>
+    internal static Resultado LaSerie(EstadoDeMaestro estado, Guid serieId) => estado switch
+    {
+        EstadoDeMaestro.SeOfreceParaLoNuevo => Resultado.Correcto(),
+        EstadoDeMaestro.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
+            CodigoDeSerieCerrada,
+            $"La serie {serieId} está cerrada: sigue resolviendo los documentos que ya numeró, " +
+            "pero no entrega ni un número más.")),
+        EstadoDeMaestro.NoExiste => Resultado.Fallo(ErrorDeOperacion.Validacion(
+            CodigoDeSerieNoEncontrada,
+            $"No hay ninguna serie con el identificador {serieId}.")),
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(estado),
+            estado,
+            "El puerto de series ha contestado un estado que este caso de uso no sabe traducir."),
     };
 
     internal static Resultado LaUbicacion(EstadoDeMaestro estado, Guid ubicacionId) => estado switch

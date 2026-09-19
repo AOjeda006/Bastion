@@ -8,6 +8,7 @@ using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Empresas;
+using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Bastion.Organizacion.Contracts.Unidades;
 
@@ -53,6 +54,7 @@ public interface IAbrirAjuste
 /// <param name="ajustes">Dónde se apunta el documento.</param>
 /// <param name="empresas">Puerto de empresas.</param>
 /// <param name="almacenes">Puerto de almacenes (ítem 2.2).</param>
+/// <param name="series">Puerto de series (ítem 2.4).</param>
 /// <param name="ubicaciones">Puerto de ubicaciones (ítem 2.2).</param>
 /// <param name="articulos">Puerto de artículos (ítem 2.2).</param>
 /// <param name="unidades">Puerto de unidades de medida.</param>
@@ -63,6 +65,7 @@ internal sealed class AbrirAjuste(
     IRepositorioDeAjustes ajustes,
     IConsultaDeEmpresas empresas,
     IConsultaDeAlmacenes almacenes,
+    IConsultaDeSeries series,
     IConsultaDeUbicaciones ubicaciones,
     IConsultaDeArticulos articulos,
     IConsultaDeUnidadesDeMedida unidades,
@@ -99,6 +102,17 @@ internal sealed class AbrirAjuste(
             return Resultado.Fallo<AjusteDto>(elAlmacen.Error!);
         }
 
+        EstadoDeMaestro estadoDeLaSerie = await series
+            .EstadoDeAsync(peticion.SerieId, cancelacion)
+            .ConfigureAwait(false);
+
+        Resultado laSerie = LosMaestrosDelAjuste.LaSerie(estadoDeLaSerie, peticion.SerieId);
+
+        if (!laSerie.EsCorrecto)
+        {
+            return Resultado.Fallo<AjusteDto>(laSerie.Error!);
+        }
+
         Resultado lasLineas = await ComprobarLasLineasAsync(peticion, cancelacion).ConfigureAwait(false);
 
         if (!lasLineas.EsCorrecto)
@@ -110,6 +124,7 @@ internal sealed class AbrirAjuste(
 
         var ajuste = Ajuste.Abrir(
             empresaId,
+            peticion.SerieId,
             peticion.AlmacenId,
             peticion.FechaDeOperacion,
             peticion.Motivo,

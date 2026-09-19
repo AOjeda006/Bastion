@@ -34,6 +34,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     private Ajuste(
         Guid id,
         Guid empresaId,
+        Guid serieId,
         Guid almacenId,
         DateOnly fechaDeOperacion,
         string motivo,
@@ -42,6 +43,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     {
         Id = id;
         EmpresaId = empresaId;
+        SerieId = serieId;
         AlmacenId = almacenId;
         FechaDeOperacion = fechaDeOperacion;
         Motivo = motivo;
@@ -57,6 +59,29 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
 
     /// <inheritdoc/>
     public Guid EmpresaId { get; private set; }
+
+    /// <summary>La serie que numerará este documento. Se elige al abrirlo y no se cambia.</summary>
+    /// <remarks>
+    /// <b>No se comprueba aquí, y no es un olvido.</b> Una serie se puede cerrar mientras el
+    /// borrador espera, así que una validación en el alta se quedaría vieja: sería una comodidad,
+    /// no una garantía. La única guarda es la que corre <b>en el instante de numerar</b>.
+    /// </remarks>
+    public Guid SerieId { get; private set; }
+
+    /// <summary>El correlativo que la serie le dio, o <c>null</c> mientras sea un borrador.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Nulo significa «todavía no», y por eso no es cero.</b> Un cero sería un número, y un
+    /// documento con el número cero no se distingue de uno sin numerar en ninguna consulta ni en
+    /// ningún listado. El borrador no ha gastado ninguno: si se tira, no deja hueco.
+    /// </para>
+    /// <para>
+    /// <b>Es el correlativo pelado, no el número compuesto.</b> Componerlo con el código de la
+    /// serie y su formato es de quien tenga una factura delante; aquí vive lo único que la R5
+    /// exige que sea correlativo y sin huecos.
+    /// </para>
+    /// </remarks>
+    public long? Numero { get; private set; }
 
     /// <summary>Almacén contra el que se ajusta.</summary>
     public Guid AlmacenId { get; private set; }
@@ -75,14 +100,22 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     public IReadOnlyList<LineaDeAjuste> Lineas => _lineas;
 
     /// <summary>Abre un ajuste en borrador.</summary>
+    /// <remarks>
+    /// <b>La serie se elige aquí y el número no sale hasta confirmar.</b> Son dos instantes
+    /// distintos a propósito: elegir serie es una decisión de quien escribe el documento, y gastar
+    /// un correlativo es un hecho que la R5 obliga a que no deje huecos. Si el número saliera al
+    /// abrir, cada borrador tirado sería un hueco.
+    /// </remarks>
     /// <param name="empresaId">Empresa a la que pertenece (R8).</param>
+    /// <param name="serieId">Serie que lo numerará al confirmarse (R5).</param>
     /// <param name="almacenId">Almacén contra el que se ajusta.</param>
     /// <param name="fechaDeOperacion">Día al que se imputa.</param>
     /// <param name="motivo">Por qué se ajusta.</param>
     /// <param name="momento">Ahora.</param>
-    /// <returns>El ajuste en borrador, sin líneas.</returns>
+    /// <returns>El ajuste en borrador, sin líneas ni número.</returns>
     public static Ajuste Abrir(
         Guid empresaId,
+        Guid serieId,
         Guid almacenId,
         DateOnly fechaDeOperacion,
         string motivo,
@@ -91,6 +124,14 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         if (empresaId == Guid.Empty)
         {
             throw new ArgumentException("Un ajuste sin empresa no existe (R8).", nameof(empresaId));
+        }
+
+        if (serieId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Un ajuste sin serie no se podría numerar al confirmarlo, y un documento " +
+                "confirmado sin número es lo que la R5 no permite.",
+                nameof(serieId));
         }
 
         if (almacenId == Guid.Empty)
@@ -115,7 +156,8 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 nameof(motivo));
         }
 
-        return new Ajuste(Guid.CreateVersion7(), empresaId, almacenId, fechaDeOperacion, limpio, momento);
+        return new Ajuste(
+            Guid.CreateVersion7(), empresaId, serieId, almacenId, fechaDeOperacion, limpio, momento);
     }
 
     /// <summary>Añade una línea. Solo en borrador.</summary>
@@ -174,11 +216,20 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// confirmado tiene al menos un movimiento» se sostiene aquí, antes de que la fila exista, y
     /// no con una comprobación posterior que encontraría el daño ya hecho.
     /// </para>
+    /// <para>
+    /// <b>El número entra por parámetro y no se toma aquí</b>, aunque este sea el instante en que
+    /// se gasta. Tomarlo exige una sentencia con cerrojo contra la base, y el dominio no habla con
+    /// la base; quien la llama es el caso de uso, dentro de la transacción que ya tiene abierta. Lo
+    /// que sí se sostiene aquí es que <b>no hay forma de confirmar sin número</b>: no existe una
+    /// sobrecarga sin él, y volver a llamar con otro no pasa de la transición de estado.
+    /// </para>
     /// </remarks>
+    /// <param name="numero">El correlativo que la serie acaba de dar, en esta misma transacción.</param>
     /// <param name="evento">Lo que se cuenta de la confirmación.</param>
     /// <param name="momento">Ahora.</param>
     /// <returns>Una fila del libro por línea del documento.</returns>
-    public IReadOnlyList<MovimientoStock> Confirmar(EventoDeIntegracion evento, DateTimeOffset momento)
+    public IReadOnlyList<MovimientoStock> Confirmar(
+        long numero, EventoDeIntegracion evento, DateTimeOffset momento)
     {
         if (_lineas.Count == 0)
         {
@@ -187,7 +238,21 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 "confirmado que no mueve nada rompe la vuelta de la R13.");
         }
 
+        if (numero <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(numero),
+                numero,
+                "Los correlativos de una serie empiezan en uno. Un cero o un negativo aquí " +
+                "significa que el número no salió del mecanismo de numeración.");
+        }
+
         Transitar(EstadoDeAjuste.Borrador, EstadoDeAjuste.Confirmado, evento);
+
+        // DESPUÉS DE TRANSITAR, y ese orden es el que hace que confirmar dos veces no repinte el
+        // número: la transición revienta contra un ajuste que ya no está en borrador, así que la
+        // asignación no llega a ejecutarse.
+        Numero = numero;
 
         return
         [

@@ -558,6 +558,19 @@ internal static class Inventario
                 "de la misma familia que el del artículo y el del tercero: un ajuste es de la " +
                 "empresa que lo firma. Sale del claim en AbrirAjuste, nunca de la petición."),
 
+            ["Ajuste.SerieId"] = new(
+                "Serie",
+                Raiz + ".Organizacion.Contracts.Series.IConsultaDeSeries",
+                "el nombre casa, y lo que hay que escribir es POR DÓNDE se comprueba. Lo pregunta " +
+                "AbrirAjuste, y pregunta por el ESTADO: una serie cerrada resuelve los documentos " +
+                "que ya numeró y no admite uno nuevo. Con una diferencia que no tiene ningún otro " +
+                "identificador de esta lista: aquí el puerto NO es lo que sostiene la invariante. " +
+                "La R5 la sostiene el `WHERE` de la sentencia que toma el número al confirmar, " +
+                "que vuelve a exigir las tres cosas —existe, es de esta empresa, sigue activa— " +
+                "dentro de la transacción del documento. El puerto está porque una serie se puede " +
+                "cerrar mientras el borrador espera, y sin él el alta dejaría nacer un borrador " +
+                "apuntando a nada."),
+
             ["Articulo.EmpresaId"] = new(
                 "Empresa",
                 Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",

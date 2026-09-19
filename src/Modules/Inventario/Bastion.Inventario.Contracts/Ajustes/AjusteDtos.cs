@@ -6,11 +6,13 @@ namespace Bastion.Inventario.Contracts.Ajustes;
 /// y no de la petición (R8). Si el campo existiera, alguien podría ajustar las existencias de otra
 /// sociedad de la misma instalación escribiendo su identificador.
 /// </remarks>
+/// <param name="SerieId">Serie que lo numerará al confirmarlo (R5).</param>
 /// <param name="AlmacenId">Almacén contra el que se ajusta.</param>
 /// <param name="FechaDeOperacion">Día al que se imputa (R14: es un día, no un instante).</param>
 /// <param name="Motivo">Por qué se ajusta.</param>
 /// <param name="Lineas">Qué se mueve.</param>
 public sealed record AbrirAjusteDto(
+    Guid SerieId,
     Guid AlmacenId,
     DateOnly FechaDeOperacion,
     string Motivo,
@@ -49,7 +51,14 @@ public sealed record LineaDeAjusteDto(
     string Divisa);
 
 /// <summary>Un ajuste, como se enseña.</summary>
+/// <remarks>
+/// <b><c>Numero</c> es nulo mientras sea un borrador</b>, y el tipo lo dice: quien pinte este DTO
+/// tiene que decidir qué enseñar en ese hueco, en vez de encontrarse un cero que parece un número.
+/// Se rellena al confirmar y no vuelve a cambiar.
+/// </remarks>
 /// <param name="Id">Identificador.</param>
+/// <param name="SerieId">Serie que lo numera (R5).</param>
+/// <param name="Numero">El correlativo, o <c>null</c> si todavía es un borrador.</param>
 /// <param name="AlmacenId">Almacén contra el que se ajusta.</param>
 /// <param name="FechaDeOperacion">Día al que se imputa.</param>
 /// <param name="Motivo">Por qué se ajusta.</param>
@@ -57,6 +66,8 @@ public sealed record LineaDeAjusteDto(
 /// <param name="Lineas">Cuántas líneas tiene.</param>
 public sealed record AjusteDto(
     Guid Id,
+    Guid SerieId,
+    long? Numero,
     Guid AlmacenId,
     DateOnly FechaDeOperacion,
     string Motivo,

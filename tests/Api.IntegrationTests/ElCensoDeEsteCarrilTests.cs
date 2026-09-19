@@ -361,6 +361,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaRetiradaNoEsUnBloqueoTests.La_coleccion_excluye_lo_retirado_por_omision_y_lo_trae_al_pedirlo",
         "LaRetiradaNoEsUnBloqueoTests.Reincorporar_la_vuelve_a_ofrecer_y_no_crea_una_fila_nueva",
 
+        // Del ítem 2.4: las dos puertas que mira la serie de un ajuste, y el número que
+        // aparece en el documento al confirmarlo.
+        "LaSerieDelAjusteTests.Cerrar_la_serie_despues_del_borrador_lo_deja_sin_poder_confirmarse",
+        "LaSerieDelAjusteTests.Confirmar_pone_el_numero_en_el_documento_y_lo_sube_en_la_serie",
+        "LaSerieDelAjusteTests.Una_serie_cerrada_no_deja_abrir_el_borrador",
+        "LaSerieDelAjusteTests.Una_serie_que_no_existe_no_deja_abrir_el_borrador",
+
         "LaTrazaEsDeSoloAnadidoTests.Un_DELETE_sobre_una_fila_de_traza_lo_rechaza_el_motor",
         "LaTrazaEsDeSoloAnadidoTests.Un_INSERT_sin_empresa_y_sin_motivo_lo_rechaza_la_tabla",
         "LaTrazaEsDeSoloAnadidoTests.Un_TRUNCATE_de_la_tabla_lo_rechaza_el_motor",

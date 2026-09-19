@@ -15,13 +15,17 @@ using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 using Bastion.Organizacion.Contracts.Almacenes;
+using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Impuestos;
+using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Bastion.Organizacion.Contracts.Unidades;
+using Bastion.Organizacion.Domain.Series;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 
@@ -67,13 +71,6 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosModulos postgres)
     : IDisposable
 {
-    private const string Almacenes = "/api/v1/organizacion/almacenes";
-    private const string Ubicaciones = "/api/v1/organizacion/ubicaciones";
-    private const string Unidades = "/api/v1/organizacion/unidades-de-medida";
-    private const string Impuestos = "/api/v1/organizacion/impuestos";
-    private const string Articulos = "/api/v1/catalogo/articulos";
-
-    private static readonly DateOnly s_desde = new(2000, 1, 1);
 
     private readonly ApiDeVerdad _api = new(postgres);
     private readonly List<HttpClient> _clientes = [];
@@ -114,11 +111,18 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
     {
         (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(249);
 
-        AlmacenDto almacen = await CrearAlmacenAsync(cliente, "ADR37-A");
-        UbicacionDto ubicacion = await CrearUbicacionAsync(cliente, almacen.Id, "ADR37-A-01");
-        (Guid articuloId, Guid unidadId) = await CrearArticuloAsync(cliente, 349);
+        AlmacenDto almacen = await LosMaestrosPorLaApi.CrearAlmacenAsync(cliente, "ADR37-A");
+        UbicacionDto ubicacion = await LosMaestrosPorLaApi.CrearUbicacionAsync(cliente, almacen.Id, "ADR37-A-01");
+        (Guid articuloId, Guid unidadId) = await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, 349);
+
+        // LA SERIE ES DE VERDAD, y desde el ítem 2.4 no queda otra: confirmar toma un número con
+        // una sentencia que exige que la serie exista, sea de esta empresa y siga activa. Una
+        // serie inventada haría fallar la confirmación de abajo por un motivo que no es el de
+        // este caso, y el rojo diría «serie-no-numera» donde se habla de almacenes.
+        SerieDto serie = await LosMaestrosPorLaApi.CrearSerieAsync(cliente, "ADR37");
 
         AbrirAjusteDto peticion = new(
+            serie.Id,
             almacen.Id,
             DateOnly.FromDateTime(DateTime.UtcNow),
             "Regularización de un recuento",
@@ -137,8 +141,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
 
             ajusteId = alta.Valor.Id;
 
-            Resultado<AjusteDto> confirmacion =
-                await antes.Confirmacion.EjecutarAsync(ajusteId, CancellationToken.None);
+            Resultado<AjusteDto> confirmacion = await antes.ConfirmarAsync(ajusteId);
 
             confirmacion.EsCorrecto.ShouldBeTrue(
                 "sin confirmar no hay ninguna fila del libro que leer después. Contestó " +
@@ -155,7 +158,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
                 "daría igual una propiedad que nadie rellena");
         }
 
-        using (HttpResponseMessage bloqueo = await cliente.SuprimirAsync($"{Almacenes}/{almacen.Id}"))
+        using (HttpResponseMessage bloqueo = await cliente.SuprimirAsync($"{LosMaestrosPorLaApi.Almacenes}/{almacen.Id}"))
         {
             bloqueo.IsSuccessStatusCode.ShouldBeTrue(await Escenario.Detalle(bloqueo));
         }
@@ -230,9 +233,9 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
     {
         (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(251);
 
-        AlmacenDto almacen = await CrearAlmacenAsync(cliente, "ADR37-B");
+        AlmacenDto almacen = await LosMaestrosPorLaApi.CrearAlmacenAsync(cliente, "ADR37-B");
 
-        using (HttpResponseMessage bloqueo = await cliente.SuprimirAsync($"{Almacenes}/{almacen.Id}"))
+        using (HttpResponseMessage bloqueo = await cliente.SuprimirAsync($"{LosMaestrosPorLaApi.Almacenes}/{almacen.Id}"))
         {
             bloqueo.IsSuccessStatusCode.ShouldBeTrue(await Escenario.Detalle(bloqueo));
         }
@@ -261,7 +264,11 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
             "el identificador que se envió no es válido, y eso es un 400 y no un 409");
     }
 
+    // La serie va inventada, y aquí sí vale: esta petición solo se usa en casos que el alta
+    // rechaza por el almacén, y el alta no mira la serie —lo hace la confirmación, que estos
+    // casos no llegan a pedir—.
     private static AbrirAjusteDto UnaPeticionContra(Guid almacenId) => new(
+        Guid.CreateVersion7(),
         almacenId,
         DateOnly.FromDateTime(DateTime.UtcNow),
         "Ajuste que no debería llegar a mirar sus líneas",
@@ -271,12 +278,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
     /// <summary>
     /// El módulo de Inventario cableado a mano, con los adaptadores de verdad y contra la base.
     /// </summary>
-    /// <remarks>
-    /// Se cablea aquí y no se pide al contenedor del host porque el host todavía no tiene ningún
-    /// borde de Inventario —los endpoints son del 2.4 y del 2.5—, así que no hay petición que
-    /// resolver. Que el cableado de verdad registre estas mismas piezas se comprueba en otro
-    /// sitio: <c>AgregarCasosDeUsoDeInventario</c> tiene su propio caso en el carril rápido.
-    /// </remarks>
+    /// <remarks>El motivo de cablearlo a mano está en <see cref="ElModuloDeInventario"/>.</remarks>
     /// <param name="empresaId">Empresa en la que opera todo lo de dentro (R8).</param>
     private ElModuloDeInventario Abrir(Guid empresaId) => new(postgres, empresaId);
 
@@ -288,208 +290,5 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
         _clientes.Add(cliente);
 
         return (cliente, empresa);
-    }
-
-    private static async Task<AlmacenDto> CrearAlmacenAsync(HttpClient cliente, string codigo)
-    {
-        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
-            Almacenes,
-            new CrearAlmacenDto
-            {
-                Codigo = codigo,
-                Nombre = $"Almacén {codigo}",
-                Tipo = "Fisico",
-                Direccion = Escenario.Domicilio(),
-            });
-
-        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
-
-        return (await alta.Content.ReadFromJsonAsync<AlmacenDto>())!;
-    }
-
-    private static async Task<UbicacionDto> CrearUbicacionAsync(
-        HttpClient cliente, Guid almacenId, string codigo)
-    {
-        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
-            Ubicaciones,
-            new CrearUbicacionDto
-            {
-                AlmacenId = almacenId,
-                Codigo = codigo,
-                Pasillo = "A",
-                Estante = "1",
-                Hueco = "1",
-                Descripcion = "Hueco del caso del ADR-0037",
-            });
-
-        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
-
-        return (await alta.Content.ReadFromJsonAsync<UbicacionDto>())!;
-    }
-
-    /// <summary>Un artículo con su unidad y su tramo de impuesto, propios de este caso.</summary>
-    /// <remarks>
-    /// La unidad y el tramo llevan el número del caso porque son maestros de instalación: los ve
-    /// toda la base, y dos casos con el mismo código chocarían contra el índice único.
-    /// </remarks>
-    private static async Task<(Guid ArticuloId, Guid UnidadId)> CrearArticuloAsync(
-        HttpClient cliente, int semilla)
-    {
-        string sufijo = semilla.ToString(CultureInfo.InvariantCulture);
-
-        using HttpResponseMessage unidad = await cliente.PostAsJsonAsync(
-            Unidades,
-            new CrearUnidadMedidaDto
-            {
-                Codigo = "W" + sufijo,
-                Nombre = "Unidad " + sufijo,
-                Decimales = 0,
-            });
-
-        unidad.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(unidad));
-
-        using HttpResponseMessage impuesto = await cliente.PostAsJsonAsync(
-            Impuestos,
-            new CrearImpuestoDto
-            {
-                Codigo = "ART" + sufijo,
-                Nombre = "Tramo ART" + sufijo,
-                Tipo = "Iva",
-                Porcentaje = 21m,
-                VigenteDesde = s_desde,
-                VigenteHasta = null,
-            });
-
-        impuesto.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(impuesto));
-
-        Guid unidadId = (await unidad.Content.ReadFromJsonAsync<UnidadMedidaDto>())!.Id;
-
-        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
-            Articulos,
-            new CrearArticuloDto
-            {
-                Codigo = "APT-" + sufijo,
-                Descripcion = "Artículo " + sufijo,
-                Tipo = "Bien",
-                UnidadBaseId = unidadId,
-                ImpuestoPorDefectoId =
-                    (await impuesto.Content.ReadFromJsonAsync<ImpuestoDto>())!.Id,
-                CategoriaId = null,
-            });
-
-        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
-
-        return ((await alta.Content.ReadFromJsonAsync<ArticuloDto>())!.Id, unidadId);
-    }
-
-    /// <summary>
-    /// Los tres casos de uso del ajuste con sus adaptadores REALES y los contextos que necesitan.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>Los contextos se abren a mano y no con <c>postgres.Abrir…</c></b>: el doble de aquellos
-    /// lleva <c>AccesoCerrado</c>, que lanza en cuanto alguien abre un ámbito del art. 32, y los
-    /// puertos de almacén y de ubicación abren uno. Es el mismo motivo por el que
-    /// <c>UnaEstanteriaBloqueadaSigueExistiendoTests</c> abre el suyo.
-    /// </para>
-    /// <para>
-    /// <b>El acceso es uno solo y compartido por los dos puertos</b>, como en el contenedor de la
-    /// API: el ámbito es <c>AsyncLocal</c> y se abre y se cierra dentro de cada llamada, así que
-    /// compartirlo no deja ninguna puerta abierta entre una y la siguiente.
-    /// </para>
-    /// </remarks>
-    private sealed class ElModuloDeInventario : IAsyncDisposable
-    {
-        private readonly OrganizacionDbContext _organizacion;
-        private readonly CatalogoDbContext _catalogo;
-        private readonly InventarioDbContext _inventario;
-
-        internal ElModuloDeInventario(PostgresConTodosLosModulos postgres, Guid empresaId)
-        {
-            AccesoALoBloqueado acceso =
-                new(NullLogger<AccesoALoBloqueado>.Instance, new NadieEnConcreto());
-
-            DbContextOptionsBuilder<OrganizacionDbContext> deOrganizacion = new();
-            OrganizacionDbContext.Configurar(deOrganizacion, postgres.CadenaDeConexion);
-            _organizacion = new OrganizacionDbContext(
-                deOrganizacion.Options, new InquilinoFijo(empresaId), acceso);
-
-            DbContextOptionsBuilder<CatalogoDbContext> deCatalogo = new();
-            CatalogoDbContext.Configurar(deCatalogo, postgres.CadenaDeConexion);
-            _catalogo = new CatalogoDbContext(
-                deCatalogo.Options, new InquilinoFijo(empresaId), acceso);
-
-            _inventario = postgres.AbrirInventario(empresaId);
-
-            RepositorioDeAjustes ajustes = new(_inventario);
-            UnidadDeTrabajoDeInventario unidadDeTrabajo = new(_inventario);
-            ConsultaDeAlmacenes almacenes = new(_organizacion, acceso);
-
-            Alta = new AbrirAjuste(
-                new ElUsuarioDeLaEmpresa(empresaId),
-                ajustes,
-                new ConsultaDeEmpresas(_organizacion),
-                almacenes,
-                new ConsultaDeUbicaciones(_organizacion, acceso),
-                new ConsultaDeArticulos(_catalogo),
-                new ConsultaDeUnidadesDeMedida(_organizacion),
-                unidadDeTrabajo,
-                TimeProvider.System);
-
-            Confirmacion = new ConfirmarAjuste(ajustes, unidadDeTrabajo, TimeProvider.System);
-
-            Lectura = new MovimientosDelDocumento(ajustes, almacenes);
-        }
-
-        internal AbrirAjuste Alta { get; }
-
-        internal ConfirmarAjuste Confirmacion { get; }
-
-        internal MovimientosDelDocumento Lectura { get; }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _inventario.DisposeAsync();
-            await _catalogo.DisposeAsync();
-            await _organizacion.DisposeAsync();
-        }
-    }
-
-    /// <summary>De dónde saca el alta la empresa (R8): del usuario, nunca de la petición.</summary>
-    /// <remarks>
-    /// No concede ningún permiso —quien decide si la operación se permite es la autorización de la
-    /// API, y esta clase no la sustituye—: lo único que aporta es la empresa, que es justo lo que
-    /// la R8 dice que no puede viajar en el cuerpo.
-    /// </remarks>
-    /// <param name="empresaId">La empresa activa.</param>
-    private sealed class ElUsuarioDeLaEmpresa(Guid empresaId) : IUsuarioActual
-    {
-        public bool EstaAutenticado => true;
-
-        public Guid UsuarioId => throw new NotSupportedException(
-            "El alta de un ajuste no firma la fila: de eso se encarga el interceptor de auditoría.");
-
-        public Guid EmpresaId => empresaId;
-
-        public bool Tiene(Permiso permiso) => false;
-    }
-
-    /// <summary>
-    /// Quien queda anotado al abrir un ámbito del art. 32 cuando no hay nadie identificado.
-    /// </summary>
-    /// <remarks>
-    /// El <c>AccesoALoBloqueado</c> de verdad anota en el registro quién pidió la apertura; aquí
-    /// no hay petición HTTP, así que no hay nadie. Lanzar en vez de inventarse un identificador es
-    /// lo que hace imposible una traza con un usuario falso.
-    /// </remarks>
-    private sealed class NadieEnConcreto : IUsuarioActual
-    {
-        public bool EstaAutenticado => false;
-
-        public Guid UsuarioId => throw new NotSupportedException("No hay nadie autenticado.");
-
-        public Guid EmpresaId => throw new NotSupportedException("No hay nadie autenticado.");
-
-        public bool Tiene(Permiso permiso) => false;
     }
 }

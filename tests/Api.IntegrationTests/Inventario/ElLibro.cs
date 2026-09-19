@@ -75,10 +75,25 @@ internal static class ElLibro
     {
         var empresaId = Guid.CreateVersion7();
         var almacenId = Guid.CreateVersion7();
+
+        // UNA SERIE NUEVA POR DOCUMENTO, y así el número puede ser siempre el primero sin que dos
+        // llamadas choquen contra el índice único de `(serie_id, numero)`. La serie es inventada
+        // por lo mismo que el almacén —ninguna clave ajena cruza de esquema—, y el número NO sale
+        // aquí del mecanismo de numeración a propósito: lo que estos casos miran es el motor
+        // debajo del libro. Que el número salga del cerrojo se comprueba donde se decide, en
+        // `ElCerrojoDeLaNumeracionTests` y en la confirmación por la API.
+        var serieId = Guid.CreateVersion7();
+        const long primerNumeroDeEsaSerie = 1;
+
         DateTimeOffset momento = DateTimeOffset.UtcNow;
 
         var ajuste = Ajuste.Abrir(
-            empresaId, almacenId, fechaDeOperacion, "Recuento de prueba del carril", momento);
+            empresaId,
+            serieId,
+            almacenId,
+            fechaDeOperacion,
+            "Recuento de prueba del carril",
+            momento);
 
         for (int numero = 1; numero <= lineas; numero++)
         {
@@ -95,7 +110,8 @@ internal static class ElLibro
         var evento = new AjusteConfirmado(
             ajuste.Id, empresaId, almacenId, fechaDeOperacion, ajuste.Lineas.Count);
 
-        IReadOnlyList<MovimientoStock> movimientos = ajuste.Confirmar(evento, momento);
+        IReadOnlyList<MovimientoStock> movimientos =
+            ajuste.Confirmar(primerNumeroDeEsaSerie, evento, momento);
 
         await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
 

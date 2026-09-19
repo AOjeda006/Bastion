@@ -9,6 +9,8 @@ internal static class Mapeos
 {
     internal static AjusteDto ADto(this Ajuste ajuste) => new(
         ajuste.Id,
+        ajuste.SerieId,
+        ajuste.Numero,
         ajuste.AlmacenId,
         ajuste.FechaDeOperacion,
         ajuste.Motivo,
