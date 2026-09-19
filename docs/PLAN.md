@@ -4882,6 +4882,13 @@ mientras el de integración devuelve dos documentos con el mismo número—, as�
 verdad. El reparto entero, con las dos listas por nombre y con el caso cuyo nombre promete más de lo
 que hace, en la casilla del **2.4**.
 
+**El 2.4 lo cierra el run 35469264368** sobre `9a6aca6`, **success al primer intento** y con sus
+tres jobs —*Backend*, *Frontal* y *Humo*— sin un solo paso fuera de verde; las 896 y las 452 del
+*runner* son las mismas de arriba. El humo local fue contra un proyecto de compose aparte, con
+volumen y puertos propios, y su segundo arranque enseñó lo que ningún carril enseña: el permiso que
+el ítem estrena, `inventario.ajuste.confirmar`, entra en una instalación ya en marcha **por el
+migrador** y no por la semilla.
+
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3`): Frontal `104818073051` ✓, Backend `104818073414` ✓ y Humo `104820147951` ✓. Es el de
@@ -11653,8 +11660,10 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   mecanismo. El ADR lleva las dos enmiendas: la segunda excepción al ADR-0013 con **su criterio**, y
   la corrección de lo que `Serie.cs` prometía. Hace viva **R5** y cambia su fila.
 
-  **Hecho el 2026-09-19**, en doce commits sobre `item-2.4-numeracion-con-cerrojo`. El orden
-  importa y por eso se deja escrito: primero la decisión de diseño (`45a9132`) y su ADR
+  **Hecho el 2026-09-19**, en dieciséis commits sobre `item-2.4-numeracion-con-cerrojo`: doce de
+  trabajo y cuatro de cierre —la casilla marcada, lo que encontraron los dos formateadores, una nota
+  que fechaba mal el tipo de documento de una serie, y este run—. El orden de los doce importa y por
+  eso se deja escrito: primero la decisión de diseño (`45a9132`) y su ADR
   (`bb58c19`), porque el contador tenía que salir de la fila del `ETag` **antes** de que nada lo
   subiera; luego los tres tipos de documento (`4074b99`), la mudanza con el mecanismo (`ac9f1e0`) y
   sus dos tandas de casos —los que no necesitan PostgreSQL (`4c9ff04`) y los que sí (`8776bca`)—;
@@ -11747,6 +11756,20 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   contenedor— pero no son la prueba: si mañana alguien cambia la sentencia por una equivalente
   escrita de otra forma, esos tres se pondrán rojos sin que nada esté roto, y los de integración
   seguirán verdes. Eso es lo correcto en este orden, y no al revés.
+
+  **El 2.4 lo cierra el run 35469264368** sobre `9a6aca6`, **success al primer intento** y con **3
+  jobs contados en el propio run** (`total_count: 3`): Backend `105967122621` ✓, Frontal
+  `105967122637` ✓ y Humo `105967945227` ✓, **sin un solo paso fuera de verde**. Las cifras del
+  *runner* son las de esta máquina y por eso se publican juntas: **896** en el carril rápido y
+  **452** en el de integración, **129** operaciones en el documento versionado y **106** tipos de
+  error de 112 sitios de llamada.
+
+  **El humo lo obligaba el ítem**, que trajo dos migraciones y una tabla. En local se corrió contra
+  un **proyecto de compose aparte** —volumen y puertos propios, para no tocar la base del día a
+  día—, y su segundo arranque dejó un dato que ningún carril enseña: entre los **39** permisos que
+  el migrador concedió al alinear el rol del sistema está `inventario.ajuste.confirmar`, el que
+  estrena este ítem. La acción nueva llega a una instalación **ya en marcha** por el migrador y no
+  por la semilla, que es exactamente lo que el ADR-0035 puso ahí a comprobar.
 
   El siguiente ADR es el **0041**.
 
