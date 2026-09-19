@@ -30,7 +30,13 @@ internal sealed class RepositorioDeSeries(OrganizacionDbContext contexto) : IRep
         Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
         {
             ["codigo"] = (Expression<Func<Serie, string>>)(serie => serie.Codigo),
-            ["contador"] = (Expression<Func<Serie, long>>)(serie => serie.Contador),
+
+            // POR LA NAVEGACIÓN y no por `Serie.Contador`, que desde el ADR-0039 no es una
+            // columna de esta tabla sino una propiedad que lee la fila hija: el traductor de
+            // consultas no sabe traducirla, y lo que sale es una excepción al ordenar, no un
+            // orden raro. El nombre público del criterio no se mueve: `?orden=contador` sigue
+            // siendo lo que el cliente escribe.
+            ["contador"] = (Expression<Func<Serie, long>>)(serie => serie.Numeracion!.UltimoNumero),
         },
         PorOmision = "codigo",
         Desempate = ordenada => ordenada.ThenBy(serie => serie.Id),

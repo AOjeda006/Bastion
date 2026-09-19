@@ -65,6 +65,15 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         // testigo único en el artículo, la segunda se llevaría un 412 por tocar otra fila.
         "ArticuloProveedor.Version",
         "Categoria.Version",
+
+        // La del ítem 2.4, y la primera que NO es un recurso de la API: la fila del contador
+        // de una serie. Lleva testigo por una razón que no tiene ninguna de las demás -ninguna
+        // ruta pide su `ETag`, porque no hay ruta-: es lo que sostiene la carrera
+        // suprimir-contra-confirmar. Al salir el contador de `series` (ADR-0039), numerar dejó
+        // de mover el `xmin` de la serie, que era lo que hacía fallar el borrado de quien la
+        // había leído antes. Ahora quien numera mueve ESTE testigo, y el `DELETE` que el ORM
+        // arrastra al borrar la serie lo lleva dentro.
+        "ContadorDeSerie.Version",
         "ConversionUM.Version",
         "Divisa.Version",
         "Ejercicio.Version",
@@ -111,6 +120,21 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         "CuentaBancaria",
         "LineaDeAjuste",
         "MovimientoStock",
+    ];
+
+    // Llevan testigo y NO heredan del tipo base, a propósito y con su motivo. Es la divergencia
+    // contraria a la de `s_delTipoBaseSinTestigo`, y hasta el ítem 2.4 no existía ninguna.
+    //
+    // `ContadorDeSerie` no hereda porque no puede sostener lo que el tipo base promete:
+    // `ModificadoEn` la pone el interceptor de marcas de tiempo al guardar, y a esta fila no la
+    // guarda nadie por el rastreador -la escribe la sentencia de numeración en crudo, que es la
+    // única forma de tomar el cerrojo-. Heredar dejaría dos columnas congeladas en el instante
+    // de crearse mientras el número sube todos los días: una marca que MIENTE es peor que no
+    // tenerla, porque se lee igual. Lo que sí lleva es el testigo, porque ese lo mueve
+    // PostgreSQL solo y sin pasar por nadie.
+    private static readonly string[] s_conTestigoFueraDelTipoBase =
+    [
+        "ContadorDeSerie",
     ];
 
     private readonly ApiSinDependencias _api = new();
@@ -187,7 +211,14 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         delTipoBase.Sort(StringComparer.Ordinal);
         conTestigo.Sort(StringComparer.Ordinal);
 
-        List<string> esperadas = [.. conTestigo, .. s_delTipoBaseSinTestigo];
+        // Las que llevan testigo SIN heredar del tipo base se descuentan, porque no tienen por
+        // qué aparecer en `delTipoBase`; y se descuentan de una lista declarada, no con un
+        // filtro que las adivine, para que la siguiente que aparezca siga poniendo esto rojo.
+        List<string> esperadas =
+        [
+            .. conTestigo.Where(nombre => !s_conTestigoFueraDelTipoBase.Contains(nombre, StringComparer.Ordinal)),
+            .. s_delTipoBaseSinTestigo,
+        ];
         esperadas.Sort(StringComparer.Ordinal);
 
         // La divergencia que este caso anunciaba llevó hasta el ítem 1.6 en ponerse: los tres

@@ -82,6 +82,18 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
             "No lleva empresa_id porque no hay ninguna consulta que pueda empezar por ella: se " +
             "llega siempre desde el documento, que sí la lleva",
 
+        // La del ítem 2.4, y de la misma familia: es la fila del contador de una serie, y quien
+        // filtra es la SERIE de la que cuelga. No tiene `DbSet` ni consulta propia, y la sentencia
+        // que la escribe -la única que la escribe- comprueba la empresa sobre la fila de `series`
+        // que lee para condicionar el incremento, que es exactamente la fila que el filtro habría
+        // protegido. Copiar aquí `empresa_id` daría un segundo sitio donde guardar el mismo dato,
+        // con su posibilidad de divergir, para no ganar nada (ADR-0039).
+        ["ContadorDeSerie"] =
+            "es la fila del contador de su serie, que sí filtra; no tiene DbSet ni consulta " +
+            "propia. No lleva empresa_id porque ninguna consulta puede empezar por ella: se llega " +
+            "siempre desde la serie, que sí la lleva, y la sentencia de numeración comprueba la " +
+            "empresa sobre esa misma fila de series",
+
         ["TokenDeRefresco"] =
             "una emisión de refresco es de una sesión, no de una empresa: se busca por su resumen " +
             "antes de que haya empresa activa. La empresa con la que se estaba operando va DENTRO " +

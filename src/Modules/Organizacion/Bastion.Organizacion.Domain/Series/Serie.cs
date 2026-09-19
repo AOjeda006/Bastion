@@ -7,15 +7,28 @@ namespace Bastion.Organizacion.Domain.Series;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>El contador es una columna de esta fila, no una secuencia de PostgreSQL.</b> Es una
-/// decisión de esquema, y de las que no tienen segunda oportunidad: <c>nextval</c> NO se
-/// revierte al deshacer la transacción, así que una confirmación que falla dejaría un hueco
-/// permanente en la numeración. R5 dice «correlativa y sin huecos», y eso descarta la secuencia.
+/// <b>El contador es una columna de una fila, no una secuencia de PostgreSQL.</b> Es una decisión
+/// de esquema, y de las que no tienen segunda oportunidad: <c>nextval</c> NO se revierte al deshacer
+/// la transacción, así que una confirmación que falla dejaría un hueco permanente en la
+/// numeración. R5 dice «correlativa y sin huecos», y eso descarta la secuencia.
 /// </para>
 /// <para>
-/// La asignación del número —bloquear esta fila dentro de la transacción de confirmación,
-/// incrementar y componer— es del módulo de Facturación (fase 5). Aquí vive el dato, no el
-/// procedimiento; lo único que el dominio impide desde hoy es que el contador salte.
+/// <b>Pero no es una columna de ESTA fila</b>, y eso lo enmendó el ADR-0039: vive en
+/// <see cref="ContadorDeSerie"/>, su propia tabla con <c>serie_id</c> de clave. El motivo es el
+/// testigo de concurrencia de aquí —<c>xmin</c>, que PostgreSQL mueve en cada escritura de la
+/// fila—: con el contador dentro, cada documento confirmado tiraba el <c>ETag</c> de esta ficha.
+/// <see cref="Contador"/> sigue leéndose igual desde fuera, porque la fila hija se carga
+/// <b>siempre</b> con la serie.
+/// </para>
+/// <para>
+/// <b>Y el procedimiento tampoco está aquí, ni puede estarlo.</b> Esta clase decía que asignar el
+/// número —bloquear la fila dentro de la transacción de confirmación, incrementar y componer— era
+/// del módulo de Facturación, y eso no era ambiguo: era <b>imposible</b>. <c>Serie</c> vive en
+/// <c>Organizacion.Domain</c> y ningún módulo ve el interior de otro, así que ni Inventario ni
+/// Facturación podrían llamar nunca a un método de aquí. El mecanismo vive en el bloque común,
+/// como la bandeja y como el almacén de idempotencia, y la invariante de R5 viaja <b>en su
+/// sentencia</b>: incrementa sobre lo que hay, así que no hay número que un llamante pueda
+/// equivocar.
 /// </para>
 /// </remarks>
 public sealed class Serie : EntidadBase, IDeInquilino
@@ -42,8 +55,11 @@ public sealed class Serie : EntidadBase, IDeInquilino
         TipoDeDocumento = tipoDeDocumento;
         Codigo = codigo;
         Formato = formato;
-        Contador = 0;
         Estado = EstadoDeSerie.Activa;
+
+        // La fila del contador nace CON la serie y en cero. Que exista siempre es lo que
+        // permite que «ninguna fila devuelta» sea un fallo sin ambigüedad al numerar.
+        Numeracion = ContadorDeSerie.ParaSerieNueva(id);
     }
 
     private Serie()
@@ -70,8 +86,27 @@ public sealed class Serie : EntidadBase, IDeInquilino
     /// <summary>Plantilla con la que se compone el número completo.</summary>
     public string Formato { get; private set; }
 
+    /// <summary>
+    /// La fila donde vive el contador (ADR-0039). Se carga <b>siempre</b> con la serie.
+    /// </summary>
+    /// <remarks>
+    /// Pública porque el listado ordena por <c>contador</c> y esa expresión la traduce el ORM,
+    /// que necesita la navegación; no porque nadie tenga que tocarla. No hay por dónde: la fila
+    /// hija no expone ninguna forma de cambiar su valor.
+    /// </remarks>
+    public ContadorDeSerie? Numeracion { get; private set; }
+
     /// <summary>Último número asignado. Cero mientras no haya numerado nada.</summary>
-    public long Contador { get; private set; }
+    /// <remarks>
+    /// <b>Lanza si la fila hija no viene cargada, en vez de contestar cero</b>, y la diferencia
+    /// no es de estilo: un cero silencioso aquí es <see cref="SePuedeSuprimir"/> diciendo que sí
+    /// sobre una serie que ya ha numerado, con un <c>DELETE</c> detrás. De los dos modos de
+    /// fallar —«borra lo que no debía» y «no contesta»— solo el segundo se puede depurar.
+    /// </remarks>
+    public long Contador => (Numeracion ?? throw new InvalidOperationException(
+        $"La serie {Codigo} se ha cargado sin su fila de contador. Esa fila existe siempre y " +
+        "se carga con la serie: si falta, lo que hay delante es una consulta que la ha dejado " +
+        "fuera, no una serie sin numerar.")).UltimoNumero;
 
     /// <summary>Activa o cerrada.</summary>
     public EstadoDeSerie Estado { get; private set; }
@@ -124,26 +159,6 @@ public sealed class Serie : EntidadBase, IDeInquilino
     {
         ExigirQueEsteActiva();
         Formato = FormatoValido(formato);
-    }
-
-    /// <summary>
-    /// Anota que la serie ha entregado un número. Lo llama Facturación, dentro de la misma
-    /// transacción en la que confirma el documento.
-    /// </summary>
-    public void RegistrarNumeroAsignado(long numero)
-    {
-        ExigirQueEsteActiva();
-
-        // Última defensa antes de un libro registro inválido: aunque quien llame se equivoque,
-        // el dominio no deja pasar un salto. Un hueco en la numeración no se arregla después.
-        if (numero != Contador + 1)
-        {
-            throw new InvalidOperationException(
-                $"La serie {Codigo} va por el {Contador} y se le pide anotar el {numero}: " +
-                "R5 exige numeración correlativa y sin huecos.");
-        }
-
-        Contador = numero;
     }
 
     /// <summary>Cierra la serie: deja de numerar, y conserva el contador donde está.</summary>

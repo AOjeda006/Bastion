@@ -3,8 +3,10 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Numeracion;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Contracts.Sesiones;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Comun;
@@ -417,14 +419,17 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         using HttpClient suyo = cliente;
         SerieDto serie = await CrearSerie(cliente, "FAC");
 
-        // Numerar todavía no tiene puerta HTTP —es de la fase de facturación—, así que se hace
-        // por el dominio, que es quien manda: subir el contador a mano en la base saltándose
-        // `RegistrarNumeroAsignado` probaría un estado que el sistema no sabe producir.
+        // Numerar NO se hace a mano: desde el ítem 2.4 no hay forma de subir un contador desde
+        // C# -`Serie.RegistrarNumeroAsignado` se borró-, así que se numera con el mecanismo de
+        // verdad, con su sentencia y su transacción. Subir la columna con un UPDATE a mano
+        // probaría un estado que el sistema no sabe producir.
         await using (OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresa.Id))
         {
-            Serie guardada = await contexto.Series.SingleAsync(fila => fila.Id == serie.Id);
-            guardada.RegistrarNumeroAsignado(1);
-            await contexto.SaveChangesAsync();
+            Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
+                contexto, empresa.Id, serie.Id);
+
+            numero.EsCorrecto.ShouldBeTrue();
+            numero.Valor.ShouldBe(1);
         }
 
         HttpResponseMessage borrado = await cliente.SuprimirAsync($"{Series}/{serie.Id}");

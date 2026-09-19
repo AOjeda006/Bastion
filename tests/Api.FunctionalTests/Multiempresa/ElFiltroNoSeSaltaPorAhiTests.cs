@@ -97,6 +97,15 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // -lo hace el documento del que cuelga- y solo es segura mientras se lea con él.
         ["Set<LineaDeAjuste>"] =
             "LineaDeAjuste no filtra: lo hace el ajuste del que cuelga, y se carga siempre con él",
+
+        // La del ítem 2.4, y el mismo argumento con un dueño más: la fila del contador no filtra
+        // -lo hace la serie de la que cuelga- y además NO LLEVA `empresa_id`, así que una consulta
+        // que empezara por ella no tendría por dónde filtrar aunque quisiera. Que no exista ninguna
+        // es lo que sostiene el punto 8 del ADR-0039.
+        ["Set<ContadorDeSerie>"] =
+            "ContadorDeSerie no filtra -lo hace la serie de la que cuelga, y se carga siempre con " +
+            "ella- y no lleva empresa_id: una consulta suelta serviria los contadores de todas " +
+            "las empresas y no habria columna por la que filtrarla",
     };
 
     // Los sitios donde una de esas llamadas SÍ está, con su motivo. La lista nació con una sola
@@ -155,6 +164,42 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "traeria a memoria las respuestas guardadas -la ficha de un tercero, entre ellas- solo para "
             + "quitarlas de en medio. Que el plazo se cumple de verdad lo comprueba "
             + "ElReciboCaducaYSeBorraTests, con un instante elegido a cada lado del borde",
+
+        // LAS DOS DEL ÍTEM 2.4, y son las primeras que ESCRIBEN EN UNA TABLA DE NEGOCIO. Ninguno
+        // de los argumentos de arriba sirve aquí, y por eso llevan el suyo:
+        //
+        //   - La bandeja y el almacén de idempotencia se acogen a «esta sentencia NO LEE NINGUNA
+        //     TABLA». Esta sí: lee `organizacion.series` para condicionar el incremento, y `Serie`
+        //     es `IDeInquilino`. Así que el argumento no puede ser que no haya filas que proteger.
+        //     Es otro: la sentencia COMPRUEBA LA EMPRESA ELLA MISMA, con el valor que sale de
+        //     `IInquilinoActual` -el mismo del que lo toma el filtro global, nunca de la petición-,
+        //     sobre la misma fila de `series` que el filtro habría protegido. No es una imitación
+        //     del filtro: es la misma comparación, escrita a mano porque aquí no hay traductor.
+        //     Que siga escrita lo comprueba `LaSentenciaDeNumeracionMiraLaEmpresaTests`, que lee la
+        //     cadena; que funcione, el caso que confirma contra la serie de otra empresa.
+        //   - Por qué no hay forma de evitarlo: el número se toma con `UPDATE ... SET n = n + 1`
+        //     condicionado, que es lo que toma el cerrojo de la fila en el motor. Leer, sumar y
+        //     guardar por el ORM deja la ventana por la que dos confirmaciones se llevan el mismo
+        //     número, que es exactamente lo que R5 prohibe y lo que el mecanismo viene a impedir.
+        //   - Por qué son DOS entradas: el incremento y la lectura del número que acaba de
+        //     escribir son dos sentencias, porque una escritura con `RETURNING` no cabe en las
+        //     consultas crudas de EF Core -las compone dentro de un `SELECT ... FROM (...)`, y
+        //     PostgreSQL no admite ahí una sentencia que escribe-. La que decide es la primera; la
+        //     segunda solo lee una fila que la primera dejó bloqueada hasta el `COMMIT`.
+        //
+        // La excepción es estrecha por su criterio, y el criterio está en el ADR de la numeración:
+        // vale para escribir en el esquema de otro módulo cuando el efecto tiene que caer en la
+        // MISMA transacción que el documento y la bandeja -que es asíncrona por definición- no
+        // puede darlo. Quien quiera SQL crudo para cualquier otra cosa no puede acogerse a esto.
+        ["src/BuildingBlocks/Infrastructure/Numeracion/NumeradorDeSerie.cs usa .ExecuteSql"] =
+            "sube el contador de la serie con un incremento condicionado, que es lo que toma el "
+            + "cerrojo de la fila. Comprueba la empresa ella misma, con el valor de IInquilinoActual "
+            + "y sobre la fila de series que el filtro habria protegido",
+
+        ["src/BuildingBlocks/Infrastructure/Numeracion/NumeradorDeSerie.cs usa .SqlQuery"] =
+            "lee el numero que el incremento de al lado acaba de escribir, sobre una fila que ese "
+            + "incremento mantiene bloqueada hasta el COMMIT y en la misma transaccion. Va aparte "
+            + "porque una escritura con RETURNING no cabe en una consulta cruda de EF Core",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

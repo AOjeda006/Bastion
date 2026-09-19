@@ -1,8 +1,29 @@
+using System.Reflection;
 using Bastion.Organizacion.Domain.Series;
 using Shouldly;
 
 namespace Bastion.Organizacion.UnitTests.Series;
 
+/// <summary>
+/// Lo que una serie garantiza por sí sola, que desde el ítem 2.4 <b>ya no incluye numerar</b>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Este fichero tenía cuatro casos alrededor de <c>Serie.RegistrarNumeroAsignado</c>: que el
+/// contador avanzara de uno en uno, que una serie cerrada no admitiera más números, que subirlo
+/// impidiera suprimir la serie y que el contador fuera una columna y no una secuencia. El método
+/// <b>se borró</b> —ningún módulo podía llamarlo, porque <c>Serie</c> vive en
+/// <c>Organizacion.Domain</c>— y con él se fueron sus dos guardas, que ahora viajan en el
+/// <c>WHERE</c> de la sentencia que numera.
+/// </para>
+/// <para>
+/// <b>Los casos no se han perdido, han cambiado de sitio</b>, y decir dónde es parte del cambio: el
+/// avance de uno en uno y la serie cerrada se comprueban contra PostgreSQL de verdad, porque la
+/// invariante ya es del motor; y suprimir una serie que ha numerado sigue siendo un <c>409</c> en
+/// <c>ContratoDeOrganizacionTests</c>. Aquí se queda lo que el dominio sí sostiene solo, más lo que
+/// el cambio estrena: que <b>no hay por dónde</b> subir el contador desde C#.
+/// </para>
+/// </remarks>
 public sealed class SerieTests
 {
     private static readonly Guid s_empresa = Guid.Parse("2f6d5f4e-0000-4000-8000-000000000001");
@@ -13,14 +34,20 @@ public sealed class SerieTests
         s_empresa, s_ejercicio, TipoDeDocumento.FacturaEmitida, codigo, "{serie}/{anio}/{numero:0000}", s_momento);
 
     [Fact]
-    public void Una_serie_nace_activa_con_el_contador_a_cero()
+    public void Una_serie_nace_activa_y_con_su_fila_de_contador_a_cero()
     {
         Serie serie = Nueva();
 
         serie.Estado.ShouldBe(EstadoDeSerie.Activa);
-        serie.Contador.ShouldBe(0);
         serie.EmpresaId.ShouldBe(s_empresa);
         serie.EjercicioId.ShouldBe(s_ejercicio);
+
+        // LA FILA EXISTE DESDE EL PRIMER INSTANTE, y no aparece con la primera numeración. De eso
+        // depende que «ninguna fila devuelta» sea un fallo sin ambigüedad cuando se numere: si la
+        // fila se creara al numerar por primera vez, la sentencia no podría distinguir «esta serie
+        // está cerrada o es de otra empresa» de «todavía no tiene contador».
+        serie.Numeracion.ShouldNotBeNull();
+        serie.Contador.ShouldBe(0);
     }
 
     [Fact]
@@ -69,66 +96,59 @@ public sealed class SerieTests
     }
 
     [Fact]
-    public void Una_serie_que_ya_ha_numerado_no_se_puede_suprimir_nunca_mas()
+    public void Cerrar_una_serie_conserva_su_fila_de_contador()
     {
-        // Borrarla dejaría documentos legales apuntando a una serie inexistente y haría
-        // indemostrable la correlatividad que exige R5.
+        // Cerrar NO es lo que impide numerar —eso lo hace el `WHERE` de la sentencia, que exige
+        // el estado activo—: lo que se comprueba aquí es que cerrar no se lleva por delante el
+        // contador. Una serie cerrada tiene que seguir diciendo por cuánto iba, porque es lo que
+        // demuestra la correlatividad de los documentos que ya emitió.
         Serie serie = Nueva();
-        serie.RegistrarNumeroAsignado(1);
-
-        serie.SePuedeSuprimir.ShouldBeFalse();
-    }
-
-    [Fact]
-    public void Cerrar_una_serie_impide_que_siga_numerando_pero_conserva_el_contador()
-    {
-        Serie serie = Nueva();
-        for (long numero = 1; numero <= 7; numero++)
-        {
-            serie.RegistrarNumeroAsignado(numero);
-        }
 
         serie.Cerrar();
 
         serie.Estado.ShouldBe(EstadoDeSerie.Cerrada);
-        serie.Contador.ShouldBe(7);
-    }
-
-    [Fact]
-    public void Una_serie_cerrada_no_acepta_mas_numeros()
-    {
-        Serie serie = Nueva();
-        serie.Cerrar();
-
-        Should.Throw<InvalidOperationException>(() => serie.RegistrarNumeroAsignado(1));
-    }
-
-    [Fact]
-    public void El_contador_solo_avanza_de_uno_en_uno_porque_R5_prohibe_los_huecos()
-    {
-        Serie serie = Nueva();
-        serie.RegistrarNumeroAsignado(1);
-        serie.RegistrarNumeroAsignado(2);
-
-        // Saltarse el 3 sería exactamente el hueco que R5 prohíbe. El dominio lo impide aunque
-        // quien llame se equivoque; es la última defensa antes de un libro registro inválido.
-        Should.Throw<InvalidOperationException>(() => serie.RegistrarNumeroAsignado(4));
-        serie.Contador.ShouldBe(2);
-    }
-
-    [Fact]
-    public void El_contador_es_una_columna_de_la_serie_y_no_una_secuencia_de_PostgreSQL()
-    {
-        // Decisión de esquema, y de las que no tienen segunda oportunidad: `nextval` NO se
-        // revierte al deshacer la transacción, así que una confirmación fallida dejaría un
-        // hueco permanente en la numeración. R5 dice «sin huecos», y eso descarta la secuencia.
-        // El número se asigna con la fila bloqueada dentro de la transacción de confirmación,
-        // y eso lo hace Facturación (fase 5). Aquí solo vive el contador.
-        Serie serie = Nueva();
-
+        serie.Numeracion.ShouldNotBeNull();
         serie.Contador.ShouldBe(0);
-        serie.RegistrarNumeroAsignado(1);
-        serie.Contador.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Una_serie_cargada_sin_su_fila_de_contador_lanza_en_vez_de_contestar_cero()
+    {
+        // La fila hija se carga SIEMPRE con la serie —la configuración lo declara—, así que esta
+        // situación no la produce ninguna consulta de hoy. El caso existe por lo que pasaría si
+        // mañana alguien escribiera una que la dejara fuera: un cero silencioso aquí es
+        // `SePuedeSuprimir` diciendo que sí sobre una serie que ya ha numerado, con un `DELETE`
+        // detrás. De los dos modos de fallar —«borra lo que no debía» y «no contesta»— solo el
+        // segundo se puede depurar, y este caso es el que elige cuál toca.
+        var sinContador = (Serie)Activator.CreateInstance(typeof(Serie), nonPublic: true)!;
+
+        sinContador.Numeracion.ShouldBeNull();
+        Should.Throw<InvalidOperationException>(() => sinContador.Contador);
+        Should.Throw<InvalidOperationException>(() => sinContador.SePuedeSuprimir);
+    }
+
+    [Fact]
+    public void Nada_de_lo_que_se_ve_desde_fuera_de_ContadorDeSerie_sube_el_numero()
+    {
+        // ESTA AUSENCIA ES LA INVARIANTE, y sustituye —con ventaja— a lo que comprobaba
+        // `RegistrarNumeroAsignado`. Aquel método era la última defensa contra un llamante que
+        // pasara el número equivocado; aquí no hay número que un llamante pueda pasar, porque no
+        // hay por dónde entrar: lo único que escribe esa columna es la sentencia del mecanismo,
+        // que incrementa sobre lo que hay.
+        //
+        // La lista es CERRADA y se compara entera, no «que no haya setters»: un método nuevo que
+        // subiera el contador tendría cualquier nombre, y una regla que buscara nombres no lo
+        // vería. Si esto se pone rojo, la pregunta no es cómo ampliar la lista: es si la
+        // invariante de R5 sigue viviendo en un solo sitio.
+        List<string> visibles = [.. typeof(ContadorDeSerie)
+            .GetMethods(BindingFlags.Public | BindingFlags.NonPublic
+                | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(metodo => metodo.IsPublic || metodo.IsAssembly || metodo.IsFamilyOrAssembly)
+            .Select(metodo => metodo.Name)];
+
+        visibles.Sort(StringComparer.Ordinal);
+
+        visibles.ShouldBe(["ParaSerieNueva", "get_SerieId", "get_UltimoNumero"]);
     }
 
     [Fact]

@@ -21,6 +21,10 @@ internal sealed class ConfiguracionDeSerie : IEntityTypeConfiguration<Serie>
         serie.SeAudita();
         serie.HasKey(fila => fila.Id);
 
+        // EL TESTIGO ES `xmin`, y de ahí sale la decisión de abajo: `xmin` lo mueve PostgreSQL en
+        // CADA escritura de esta fila, y este testigo es el `ETag` que publica el GET y el que el
+        // PUT exige en `If-Match`. Cualquier cosa que se escriba aquí a diario tira el `ETag` de
+        // quien tenga la ficha abierta. Por eso el contador ya no está en esta tabla (ADR-0039).
         serie.LlevaTestigoDeConcurrencia();
 
         ConfiguracionDeEntidadBase.Mapear(serie);
@@ -46,17 +50,25 @@ internal sealed class ConfiguracionDeSerie : IEntityTypeConfiguration<Serie>
         // El formato es una plantilla, no un identificador: no tiene tope legal, así que `text`.
         serie.Property(fila => fila.Formato).IsRequired().SeAudita();
 
-        // EL CONTADOR ES UNA COLUMNA, y esto es una decisión de esquema sin segunda oportunidad.
-        // Una secuencia de PostgreSQL sería lo cómodo, pero `nextval` NO se revierte al deshacer
-        // la transacción: una confirmación que falla dejaría un hueco permanente, y R5 dice
-        // «correlativa y sin huecos». El número lo asigna Facturación (fase 5) bloqueando esta
-        // fila dentro de la transacción de confirmación.
-        // Se audita, y la consecuencia hay que mirarla de frente: en la fase 5 esta columna se
-        // mueve una vez por documento emitido, asi que la traza dejara de crecer con los cambios
-        // de maestro y pasara a crecer con el volumen de facturacion. Aun asi va dentro, porque
-        // un contador de serie retrocedido es exactamente lo que R5 prohibe y lo primero que una
-        // inspeccion mira. Cuando llegue la fase 5 se revisa AQUI, con el numero delante.
-        serie.Property(fila => fila.Contador).IsRequired().SeAudita();
+        // LA FILA DEL CONTADOR, que ya no es una columna de aquí (ADR-0039).
+        //
+        // REQUERIDA Y DE CARGA AUTOMÁTICA, y las dos mitades son la misma decisión: `Serie.Contador`
+        // lee de esta navegación, y una serie que llegara sin ella contestaría... nada, porque la
+        // propiedad lanza. Que NUNCA llegue sin ella lo garantiza el `AutoInclude`, que no se puede
+        // olvidar en una consulta porque no hay que escribirlo en ninguna.
+        //
+        // EN CASCADA DEL LADO DEL CLIENTE, no de la base. La clave ajena queda `RESTRICT`, como las
+        // cuatro del ADR-0007 §8 —en un ERP una cascada en el motor es la forma más rápida de
+        // perder un histórico—, y quien borra la hija es el ORM con la fila delante: así ese
+        // `DELETE` lleva DENTRO el testigo que se leyó, que es lo único que separa suprimir una
+        // serie de suprimirla justo cuando otro le está sacando el primer número.
+        serie.HasOne(fila => fila.Numeracion)
+            .WithOne()
+            .HasForeignKey<ContadorDeSerie>(fila => fila.SerieId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.ClientCascade);
+
+        serie.Navigation(fila => fila.Numeracion).AutoInclude();
 
         serie.HasIndex(fila => new { fila.EmpresaId, fila.EjercicioId, fila.Codigo }).IsUnique();
 

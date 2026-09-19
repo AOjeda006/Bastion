@@ -1,6 +1,7 @@
 using Bastion.Api.FunctionalTests.Persistencia;
 using Bastion.Api.FunctionalTests.Salud;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -139,9 +140,22 @@ public sealed class CadaEntidadDeclaraSuAuditoriaTests : IDisposable
         // deja de describir el sistema. Si una entidad pasa a `NoSeAudita`, las marcas de sus
         // propiedades quedan mintiendo —dicen «esto va a la traza» sobre algo que no va— y la
         // siguiente persona las lee como si fueran verdad.
+        //
+        // EL TESTIGO DE CONCURRENCIA QUEDA FUERA, y la excepción es de una clase distinta de las
+        // que esta regla persigue. Esa marca no la escribe la configuración de la entidad: la pone
+        // `LlevaTestigoDeConcurrencia()` de una vez, para todas, y dice lo mismo en todas —que
+        // `xmin` no es un dato del negocio—. No es una clasificación que alguien dejó olvidada al
+        // sacar su entidad de la traza; es parte del paquete que pone el testigo, y quitarla
+        // obligaría a partir esa extensión en dos según quién la llame.
+        //
+        // Hasta el ítem 2.4 no hacía falta decirlo: todas las entidades con testigo se auditaban.
+        // `ContadorDeSerie` es la primera que lleva testigo y NO se audita —su columna la escribe
+        // la sentencia de numeración en crudo, que no pasa por el interceptor—, y eso es
+        // exactamente lo que destapó la diferencia entre las dos clases de marca.
         List<string> huerfanas = [.. Entidades()
             .Where(tipo => !SeAudita(tipo))
             .SelectMany(tipo => tipo.PropiedadesConCamino()
+                .Where(par => !par.Propiedad.EsElTestigo())
                 .Where(par => par.Propiedad.Auditoria().Que != ClasificacionDeAuditoria.SinClasificar)
                 .Select(par => $"{tipo.ShortName()}.{par.Camino}"))];
 

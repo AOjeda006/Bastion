@@ -66,10 +66,16 @@ public static class ModuloDeInventario
         servicios.DeclararEvento<AjusteConfirmado>(AjusteConfirmado.Nombre);
         servicios.DeclararEvento<AjusteAnulado>(AjusteAnulado.Nombre);
 
-        // SIN almacén de idempotencia (R10), y la ausencia tiene fecha: ese almacén lo resuelve el
-        // filtro del borde por el segmento de la ruta, y este módulo todavía no tiene borde. Entra
-        // con los endpoints, no antes: registrado hoy sería un servicio que nadie puede pedir.
+        // SIN almacén de idempotencia (R10), y la ausencia sigue teniendo fecha: ese almacén lo
+        // resuelve el filtro del borde por el segmento de la ruta, y este módulo todavía no tiene
+        // borde. Entra con los endpoints, no antes.
         //
+        // EL NUMERADOR, en cambio, entra hoy: no lo pide el borde, lo pide el caso de uso que
+        // confirma. Va bajo el tipo del MÓDULO por lo mismo que la unidad de trabajo: su sentencia
+        // corre en la transacción de ESTE contexto, y con el tipo común la última inscripción
+        // ganaría y el número saldría de una transacción que no es la del documento.
+        servicios.AddScoped<INumeradorDeSeriesDeInventario, NumeradorDeSeriesDeInventario>();
+
         // Sin `IConsultaDeLoBloqueado` y sin cargador de semillas, por el mismo motivo que Catálogo:
         // el libro no guarda datos de ninguna persona -no es bloqueable, y su configuración lo dice
         // con su porqué-, y qué existencias tiene una empresa no es un maestro de la instalación.

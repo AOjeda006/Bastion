@@ -51,7 +51,7 @@ código, y no después.
 ### 1. El contador se muda a `organizacion.contadores_de_serie`
 
 Una tabla con `serie_id` de **clave primaria** y clave ajena a `organizacion.series`, y una sola
-columna de datos, `contador`. Una fila por serie, **creada con la serie** y borrada con ella.
+columna de datos, `ultimo_numero`. Una fila por serie, **creada con la serie** y borrada con ella.
 
 Con eso, numerar toca la fila de `contadores_de_serie` y no la de `series`:
 
@@ -102,7 +102,7 @@ debía» a «no contesta», que es el único de los dos que se puede depurar.
 
 `ContadorDeSerie` no tiene ningún `set` accesible ni ningún método que suba el valor. Lo único que
 lo incrementa es la sentencia del mecanismo de numeración, que **incrementa sobre lo que hay**
-(`contador = contador + 1 … RETURNING contador`).
+(`ultimo_numero = ultimo_numero + 1`), condicionada por su `WHERE`.
 
 Donde `RegistrarNumeroAsignado` era la última defensa contra un llamante que pasara el número
 equivocado —comprobaba `numero == Contador + 1` y lanzaba—, **aquí no hay número que un llamante
