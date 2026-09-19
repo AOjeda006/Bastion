@@ -4712,7 +4712,7 @@ necesita de la API es el sitio donde el número entra en un recibo.
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 3 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 4 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -4839,6 +4839,48 @@ los dos diccionarios del frontal tienen que tener. No lo destapó ningún carril
 generador en modo `--comprobar`, que está en el apartado 1 de la batería de `AGENTS.md` y no se
 había ejecutado. **El 2.3 lo cierra el run 35437128065** sobre `1e4864d`, **success** con sus
 tres jobs y sin un paso fuera de verde.
+
+**Hecho el 2.4**, el 2026-09-19, en la rama `item-2.4-numeracion-con-cerrojo`. Lo primero fue, otra
+vez, **la decisión que va antes del código**: el contador no cabía en la fila de la serie, porque
+esa fila lleva el `xmin` que la API publica como `ETag` y numerar lo movía — cada documento
+confirmado tiraba el `ETag` de todo el que tuviera esa serie abierta. Se muda a
+`organizacion.contadores_de_serie` y queda en el **ADR-0039**, que enmienda el punto 5 del ADR-0007;
+la parte que ese punto decidía de verdad —una columna de una fila y jamás una secuencia del motor—
+no se toca ni una coma.
+
+**El mecanismo vive en el bloque común y cada módulo deriva el suyo sobre su contexto**, porque el
+número tiene que caer en la **misma** transacción que el documento. El número lo toma un incremento
+condicionado que coge el cerrojo de la fila en el motor; el `WHERE` lleva las tres cláusulas que
+deciden —la serie existe, es de esta empresa, sigue activa— y **ninguna es el tipo de documento**,
+que es cosa del alta. «Ninguna fila devuelta» es un fallo, y los tres motivos dan el **mismo** error,
+para que confirmar no sea un oráculo de qué series existen en otras sociedades.
+
+**Y de ahí sale la única acción de toda la API que exige `Idempotency-Key`.** El dueño de la
+transacción es el filtro de idempotencia y nadie más, y sin cabecera ese filtro se aparta **antes**
+de trabajar: una confirmación sin clave sería una confirmación sin transacción, o sea el camino por
+el que un número se gasta sin documento. `POST /api/v1/inventario/ajustes/{id}/confirmacion` se
+declara `Obligatoria` y contesta `428`. Invierte la doctrina del 0.9 para esa ruta y **solo** para
+esa, y la excepción no se deja en una frase: `TodaEscrituraDiceComoSeProtegeTests` compara la lista
+en los dos sentidos y afirma por separado que es exactamente una.
+
+**El ADR-0040** lleva las dos enmiendas que el ítem debía: la **segunda excepción al ADR-0013** —un
+módulo escribe en el esquema de otro fuera de la bandeja— **con su criterio de cuatro cláusulas**,
+para que la tercera se discuta en vez de decidirse por parecido; y la corrección de lo que `Serie.cs`
+prometía desde el 0.4, que no era impreciso sino **imposible**. **R5 pasa a viva** y su fila lo dice
+cláusula por cláusula, porque las tres no se cumplen por el mismo sitio.
+
+**Las cifras, con la orden que las mide.** Carril rápido
+—`dotnet test Bastion.sln --filter "Category!=Integracion"`— **896 casos en 10 ensamblados**, desde
+885. Carril de integración —`--filter "Category=Integracion"`, con Docker— **452**, desde 426, y los
+casos caen en dos ensamblados: **84** en `Organizacion.IntegrationTests` y **368** en
+`Api.IntegrationTests`. Son de esta máquina; la de la CI va en la casilla del ítem con su run.
+
+**La tanda de mutación del ADR-0038 dejó un hallazgo que no se sabía antes de medirlo:** el carril
+rápido es **completamente ciego** a la mutación que quita el incremento condicionado —sale `exit 0`
+mientras el de integración devuelve dos documentos con el mismo número—, así que la cláusula
+«correlativa» la sostiene **un solo caso** y ninguno que se pueda escribir sin dos transacciones de
+verdad. El reparto entero, con las dos listas por nombre y con el caso cuyo nombre promete más de lo
+que hace, en la casilla del **2.4**.
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
@@ -11574,7 +11616,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   añadido ni uno retirado, y el frontal con sus 548 entradas idénticas; lo único que crece son
   **cinco referencias `Project`**, que son los cinco proyectos de Inventario.
 
-- [ ] **2.4 · La numeración con cerrojo, y el ADR que enmienda el «único camino»** — criterio de
+- [x] **2.4 · La numeración con cerrojo, y el ADR que enmienda el «único camino»** — criterio de
   aceptación: el ajuste recibe su número **al confirmar**, dentro de la transacción de confirmación,
   y **no se enseña antes**; el mecanismo vive en el bloque común —como la bandeja y como el almacén
   de idempotencia— y toma el cerrojo **sobre la fila del contador** —que desde la decisión 1 del
@@ -11610,6 +11652,103 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   que **no sabe qué tipo de documento numera**, para que la fase 5 estrene un llamante y no un
   mecanismo. El ADR lleva las dos enmiendas: la segunda excepción al ADR-0013 con **su criterio**, y
   la corrección de lo que `Serie.cs` prometía. Hace viva **R5** y cambia su fila.
+
+  **Hecho el 2026-09-19**, en doce commits sobre `item-2.4-numeracion-con-cerrojo`. El orden
+  importa y por eso se deja escrito: primero la decisión de diseño (`45a9132`) y su ADR
+  (`bb58c19`), porque el contador tenía que salir de la fila del `ETag` **antes** de que nada lo
+  subiera; luego los tres tipos de documento (`4074b99`), la mudanza con el mecanismo (`ac9f1e0`) y
+  sus dos tandas de casos —los que no necesitan PostgreSQL (`4c9ff04`) y los que sí (`8776bca`)—;
+  después el puerto de series (`c22ae1e`) y el ajuste que dice por qué serie va y recibe su número
+  al confirmarlo (`4d4d2ac`); y al final el borde: la clave que se puede exigir (`2269006`), la
+  acción que la exige (`dd38b91`), el número dentro del recibo (`4f11747`) y el ADR-0040 con la fila
+  de R5 (`58a638b`).
+
+  **Dos commits se fundieron a sabiendas y no se finge lo contrario.** El cambio de firma de
+  `Ajuste.Confirmar` rompe a todos sus llamantes, así que los llamantes tenían que moverse en el
+  mismo commit; partirlo habría dejado un punto de retorno que no compila, que es exactamente lo que
+  un commit pequeño existe para evitar.
+
+  **Y una guarda que escribí se cayó por una medición, no por una opinión.** La migración del
+  ajuste llevaba un `RAISE EXCEPTION` que se negaba a añadir la columna obligatoria sobre una tabla
+  con filas. `LasMigracionesSobreTablasConFilasTests` construye exactamente ese estado —cada tabla
+  con una fila inventada antes de cada paso— y además prohíbe perder filas, así que ni la guarda ni
+  un borrado eran viables: lo que el arnés decía es que mi frase «la guarda no bloquea nada real»
+  era falsa. La columna entra con `Guid.Empty`, y el porqué de que ese cero sea el menos malo de los
+  valores está en el `remarks` de la migración, con el nombre del arnés que me corrigió.
+
+  ### La tanda de mutación del ADR-0038
+
+  **Tres mutaciones, las tres sobre la línea que decide** —el incremento y el `WHERE` que lo
+  condiciona—, ninguna sobre una guarda de entrada. Cada una se puso sola, se corrieron los **dos**
+  carriles enteros, se anotaron los rojos por nombre y se revirtió con el árbol limpio antes de la
+  siguiente. La orden que lo midió:
+
+  ```bash
+  dotnet test Bastion.sln --filter "Category!=Integracion" --nologo
+  dotnet test Bastion.sln --filter "Category=Integracion"  --nologo
+  ```
+
+  | Mutación | Qué equivocación imita | Rojos |
+  |---|---|---|
+  | **A** · el `WHERE` pierde `s.estado = 'Activa'` | creer que el estado ya lo comprobó el puerto del alta | 2 rápidos + 2 de integración |
+  | **B** · el `WHERE` pierde `s.empresa_id`, y la llamada su parámetro | creer que el filtro global de inquilinato alcanza al SQL crudo | 3 rápidos + 1 de integración |
+  | **C** · el incremento deja de serlo: se lee el contador y se escribe el valor leído más uno | no haber pensado en dos confirmaciones a la vez | **0 rápidos** + 1 de integración |
+
+  **Lo que la tanda enseña, y no se sabía antes de medirlo:** el carril rápido caza las dos
+  mutaciones del `WHERE` —y las caza barato, porque tres de esos rojos son afirmaciones sobre el
+  **texto** de la sentencia— y es **completamente ciego** a la tercera. La mutación C sale con
+  `exit 0` en el carril rápido y con un `[1L, 1L]` en el de integración: dos documentos con el
+  mismo número, que es literalmente lo que la R5 prohíbe. La propiedad «correlativa» no la sostiene
+  ninguna afirmación que se pueda escribir sin dos transacciones de verdad contra PostgreSQL, así
+  que el único caso que la sujeta es
+  `ElCerrojoDeLaNumeracionTests.Dos_numeraciones_simultaneas_se_llevan_numeros_distintos_y_consecutivos`.
+  Si alguien lo borra por lento, el mecanismo se queda sin nadie que mire su razón de ser.
+
+  **Vistos en rojo** —lo que cada uno sostiene, lo sostiene porque se le ha visto fallar—:
+
+  - `ElCerrojoDeLaNumeracionTests.Dos_numeraciones_simultaneas_se_llevan_numeros_distintos_y_consecutivos` (C)
+  - `ElCerrojoDeLaNumeracionTests.Una_serie_cerrada_no_numera` (A)
+  - `ElCerrojoDeLaNumeracionTests.Una_serie_de_otra_empresa_no_numera` (B)
+  - `LaSerieDelAjusteTests.Cerrar_la_serie_despues_del_borrador_lo_deja_sin_poder_confirmarse` (A)
+  - `LaSentenciaDeNumeracionMiraLaEmpresaTests.El_incremento_condiciona_por_la_empresa_de_la_serie_contra_un_parametro` (B)
+  - `LaSentenciaDeNumeracionMiraLaEmpresaTests.El_valor_que_compara_sale_del_inquilino_y_no_de_ningun_otro_sitio` (B)
+  - `LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla_que_le_toca` (A y B)
+  - `LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.El_estado_que_condiciona_el_incremento_es_el_del_enumerado_y_se_guarda_como_texto` (A)
+
+  **Vistos solo en verde** —sostienen lo que dicen y nada más; la lista no es una confesión, es el
+  alcance real de lo medido—:
+
+  - `ElCerrojoDeLaNumeracionTests.Borrar_una_serie_a_mano_sin_su_contador_sigue_siendo_imposible`
+  - `ElCerrojoDeLaNumeracionTests.Deshacer_la_transaccion_devuelve_el_numero_y_el_siguiente_lo_reutiliza`
+  - `ElCerrojoDeLaNumeracionTests.El_recorrido_de_arriba_no_se_deja_ningun_tipo_de_documento`
+  - `ElCerrojoDeLaNumeracionTests.Suprimir_pierde_contra_una_numeracion_que_se_cuela_entre_la_lectura_y_el_borrado`
+  - `ElCerrojoDeLaNumeracionTests.Una_serie_numera_sin_huecos_sea_cual_sea_el_documento_que_numera`
+  - `ElCerrojoDeLaNumeracionTests.Una_serie_que_no_existe_da_el_MISMO_error_que_una_ajena`
+  - `ElNumeradorExigeUnaTransaccionAbiertaTests.Numerar_sin_transaccion_abierta_revienta_en_vez_de_numerar`
+  - `ElNumeradorExigeUnaTransaccionAbiertaTests.El_contexto_de_este_caso_no_llega_a_ninguna_base`
+  - `LaSentenciaDeNumeracionMiraLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa`
+  - `LaSentenciaDeNumeracionMiraLaEmpresaTests.La_lectura_del_numero_no_repite_la_condicion_y_eso_es_a_proposito`
+  - `LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Las_cuatro_cadenas_escritas_a_mano_son_las_del_modelo`
+  - `LaSerieDelAjusteTests`, sus otros tres casos
+  - `ElNumeroEntraEnElReciboTests`, sus dos casos
+
+  **Un hallazgo del reparto, y se anota porque no es el que yo esperaba.**
+  `ElCerrojoDeLaNumeracionTests.Una_serie_que_no_existe_da_el_MISMO_error_que_una_ajena` **no se
+  puso rojo con la mutación B**, que es la que hace numerar una serie ajena. Su nombre promete una
+  comparación que el caso no hace por sí solo: dentro solo hay una serie inventada. Lo que sostiene
+  el «mismo error» es que los dos casos afirman la **misma constante**
+  —`ErroresDeNumeracion.CodigoDeSerieNoNumera`—, así que un código distinto para la ajena pondría
+  rojo al otro, a `Una_serie_de_otra_empresa_no_numera`. La pareja está sujeta; lo que no está es
+  donde el nombre hace pensar que está, y eso es exactamente lo que el ADR-0038 manda escribir
+  cuando la medición no confirma la suposición.
+
+  **Y lo que la tanda no mide, dicho:** tres de los ocho rojos son afirmaciones sobre el texto del
+  SQL, no sobre lo que la base hace con él. Sirven —saltan en el carril rápido, antes de arrancar un
+  contenedor— pero no son la prueba: si mañana alguien cambia la sentencia por una equivalente
+  escrita de otra forma, esos tres se pondrán rojos sin que nada esté roto, y los de integración
+  seguirán verdes. Eso es lo correcto en este orden, y no al revés.
+
+  El siguiente ADR es el **0041**.
 
 - [ ] **2.5 · La anulación con contra-documento** — criterio de aceptación: un ajuste confirmado no se
   edita ni se borra; se **anula**, y la anulación crea un **ajuste inverso** que es un documento

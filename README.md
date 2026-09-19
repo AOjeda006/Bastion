@@ -10,7 +10,7 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 2 (Inventario), en curso: 3 de 14 ítems.** La fase 1 se cerró con catorce ítems y la
+> **Estado: fase 2 (Inventario), en curso: 4 de 14 ítems.** La fase 1 se cerró con catorce ítems y la
 > fase 2 lleva tres: el frontal arranca con un solo diccionario; los tres puertos que el libro de
 > movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado contesta
 > que sigue resolviendo lo viejo, no que no existe—; y el libro ya existe, particionado por mes y
