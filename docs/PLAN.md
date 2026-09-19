@@ -4669,6 +4669,14 @@ arrancaba. Los dos carriles estaban verdes: los tests de integración llaman a e
 directo y no por este camino. `docker compose up --build` y `scripts/ci/segundo-arranque.sh`
 quedan los dos en verde sobre el arreglo.
 
+**Y un cuarto que solo podía salir de la CI**, corregido en `1e4864d`: el run **35436671071**
+sobre `6f09509` salió **failure** en el paso del catálogo de `type`, porque el ítem estrenó doce
+códigos de error y `docs/api/errores.json` se había quedado atrás — y con él, los doce textos que
+los dos diccionarios del frontal tienen que tener. No lo destapó ningún carril: lo destapa el
+generador en modo `--comprobar`, que está en el apartado 1 de la batería de `AGENTS.md` y no se
+había ejecutado. **El 2.3 lo cierra el run 35437128065** sobre `1e4864d`, **success** con sus
+tres jobs y sin un paso fuera de verde.
+
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3`): Frontal `104818073051` ✓, Backend `104818073414` ✓ y Humo `104820147951` ✓. Es el de
@@ -11253,7 +11261,8 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **Hecho el 2026-09-19**, en diez commits firmados —`d2fee2c` (el ADR-0038), `4371e2e` (las cuatro
   decisiones), `e9b8a8e` (el libro y el ajuste), `2126788` (los dos censos), `96fbbf8` (el
   migrador), `41406ba` (el libro contra PostgreSQL), `b486c61` (la frontera), `3899769` (el carril
-  rápido), `a1f858d` (la tabla de reglas) y `710fb51` (lo que encontró el humo)—. Carril rápido
+  rápido), `a1f858d` (la tabla de reglas), `710fb51` (lo que encontró el humo) y `1e4864d` (lo
+  que encontró la CI)—. Carril rápido
   **885 casos en 10 ensamblados**, desde 862 en 9; carril de integración **426 en 10**, desde 399
   en 9.
 
@@ -11374,6 +11383,33 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   contra-documento, ítem 2.5), **R5** (el ajuste se confirma **sin número**, ítem 2.4) y **R9** (ya
   se registra dentro de un periodo y confirmar no pregunta si está cerrado, ítem 2.6): las cuatro
   conservan su estado y les cambia el porqué.
+
+  **Y dos runs, que es lo que hay que contar y no uno.** El primero, el **35436671071** sobre
+  `6f09509`, salió **failure**: el paso *Catálogo de errores — el artefacto de `type` no se ha
+  quedado atrás*. El ítem estrenó **doce** códigos —los cuatro de la máquina de estados y del
+  documento vacío, y los ocho que traducen lo que contestan los tres puertos del 2.2— y
+  `docs/api/errores.json` seguía con los noventa de antes; el paso que comprueba el artefacto de
+  resultados cayó **de rebote**, porque sin tests de integración no hay `.trx` que bajar.
+
+  **No fue un descuido del ítem: fue un paso de la batería que no se ejecutó.** `AGENTS.md` lo
+  tiene en su **apartado 1** —«los tres que más rojos han causado en la CI»—, y aquí se habían
+  corrido los dos carriles, el formato, el humo y el segundo arranque, pero no los generadores en
+  modo comprobación. La lección se queda escrita donde se lee antes de cerrar un ítem, y no aquí:
+  un carril verde dice «nada falla», un generador en `--comprobar` dice «lo commiteado sigue siendo
+  verdad», y son preguntas distintas. El catálogo tiene además **consumidor aguas abajo**: cada
+  `type` nuevo necesita su texto en **todos** los diccionarios del frontal, o el barrido de idiomas
+  cae — así que el arreglo son las tres cosas a la vez, en `1e4864d`.
+
+  El segundo, el **35437128065** sobre `1e4864d`, **success** con sus tres jobs —*Backend*,
+  *Frontal* y *Humo*— y **sin un paso fuera de verde** (el único no-`success` es *Diagnóstico*, que
+  es `if: failure()`). Ahí queda certificado en el *runner*, y no solo en esta máquina, el paso *El
+  segundo arranque deja al rol del sistema con el catálogo entero*, que es donde el migrador vuelve
+  a crear la partición borrada **con su disparador de `TRUNCATE`**.
+
+  **Y lo que el ítem no trajo, dicho también:** cero paquetes de terceros nuevos. La comparación por
+  conjuntos entre `0f9a60e` y el cierre da **125 pares nombre/versión en los dos lados**, sin uno
+  añadido ni uno retirado, y el frontal con sus 548 entradas idénticas; lo único que crece son
+  **cinco referencias `Project`**, que son los cinco proyectos de Inventario.
 
 - [ ] **2.4 · La numeración con cerrojo, y el ADR que enmienda el «único camino»** — criterio de
   aceptación: el ajuste recibe su número **al confirmar**, dentro de la transacción de confirmación, y
