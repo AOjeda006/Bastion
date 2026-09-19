@@ -118,6 +118,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElFormateadorDeCsvNoLeeLaRedTests.Sin_lo_leido_por_el_tope_lanza_y_no_toca_la_corriente",
         "ElFormateadorDeCsvNoLeeLaRedTests.Un_cuerpo_de_cero_bytes_llega_como_un_fichero_vacio_y_no_como_sin_valor",
 
+        // Del ítem 2.4: la guarda que no se nota sola, con su canario al lado.
+        "ElNumeradorExigeUnaTransaccionAbiertaTests.El_contexto_de_este_caso_no_llega_a_ninguna_base",
+        "ElNumeradorExigeUnaTransaccionAbiertaTests.Numerar_sin_transaccion_abierta_revienta_en_vez_de_numerar",
+
         "LaBandejaSeMideYNoSeSondeaTests.El_medidor_publica_la_edad_del_mas_viejo_en_segundos",
         "LaBandejaSeMideYNoSeSondeaTests.La_bandeja_no_esta_en_ninguna_sonda",
         "LaBandejaSeMideYNoSeSondeaTests.Y_cuenta_lo_publicado_y_lo_aparcado_por_separado",
@@ -140,6 +144,17 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "LaPlantillaDelFrontalEsLaDeLaApiTests.La_cabecera_que_ensena_el_frontal_es_la_que_exige_la_api",
         "LaPlantillaDelFrontalEsLaDeLaApiTests.La_extraccion_lee_la_lista_entera_y_no_se_salta_lo_que_no_entiende",
+
+        // Del ítem 2.4, y por lo mismo que las de la clave de idempotencia: SQL crudo cuyas
+        // cadenas nadie compila, atado al modelo y al inquilino desde el carril rápido.
+        "LaSentenciaDeNumeracionMiraLaEmpresaTests.El_incremento_condiciona_por_la_empresa_de_la_serie_contra_un_parametro",
+        "LaSentenciaDeNumeracionMiraLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa",
+        "LaSentenciaDeNumeracionMiraLaEmpresaTests.El_valor_que_compara_sale_del_inquilino_y_no_de_ningun_otro_sitio",
+        "LaSentenciaDeNumeracionMiraLaEmpresaTests.La_lectura_del_numero_no_repite_la_condicion_y_eso_es_a_proposito",
+
+        "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla_que_le_toca",
+        "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.El_estado_que_condiciona_el_incremento_es_el_del_enumerado_y_se_guarda_como_texto",
+        "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Las_cuatro_cadenas_escritas_a_mano_son_las_del_modelo",
 
         "LasClavesSeConocenAntesDeGuardarTests.El_universo_de_modelos_es_el_declarado",
         "LasClavesSeConocenAntesDeGuardarTests.Las_entidades_del_tipo_base_y_las_que_llevan_testigo_son_las_MISMAS",
