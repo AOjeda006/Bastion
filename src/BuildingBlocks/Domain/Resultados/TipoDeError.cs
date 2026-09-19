@@ -54,15 +54,24 @@ public enum TipoDeError
     VersionObsoleta,
 
     /// <summary>
-    /// La operación exige decir sobre qué versión se escribe, y la petición no lo dice.
+    /// La operación exige que la petición traiga algo antes de intentarla, y no lo trae.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// <c>428</c> y no <c>400</c>: la petición está bien formada, lo que falta es una
-    /// precondición. La diferencia importa porque el cliente puede arreglarlo solo —leer el
-    /// recurso, quedarse con su <c>ETag</c> y repetir—, y un <c>400</c> le diría que revise el
-    /// cuerpo, que está impecable.
+    /// precondición. La diferencia importa porque el cliente puede arreglarlo solo, y un
+    /// <c>400</c> le diría que revise el cuerpo, que está impecable.
+    /// </para>
+    /// <para>
+    /// <b>Son dos precondiciones y no una, desde el ítem 2.4.</b> La primera es el
+    /// <c>If-Match</c>, y se arregla leyendo el recurso, quedándose con su <c>ETag</c> y
+    /// repitiendo. La segunda es la <c>Idempotency-Key</c> en las poquísimas operaciones que la
+    /// <b>exigen</b> —la que gasta un número de serie—, y se arregla generando una clave y
+    /// repitiendo. Por eso el valor ya no se llama <c>FaltaLaVersion</c>: lo que la clase dice es
+    /// que falta una precondición, y <i>cuál</i> lo dice el código del error.
+    /// </para>
     /// </remarks>
-    FaltaLaVersion,
+    FaltaLaPrecondicion,
 
     /// <summary>Los datos son válidos y el estado es coherente, pero una regla lo impide.</summary>
     ReglaDeNegocio,

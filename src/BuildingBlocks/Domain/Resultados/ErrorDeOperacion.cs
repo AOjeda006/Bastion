@@ -95,9 +95,9 @@ public sealed record ErrorDeOperacion
     public static ErrorDeOperacion VersionObsoleta(string codigo, string mensaje) =>
         Crear(codigo, mensaje, TipoDeError.VersionObsoleta, s_sinCampos);
 
-    /// <summary>La operación exige decir sobre qué versión se escribe y no se ha dicho.</summary>
-    public static ErrorDeOperacion FaltaLaVersion(string codigo, string mensaje) =>
-        Crear(codigo, mensaje, TipoDeError.FaltaLaVersion, s_sinCampos);
+    /// <summary>La operación exige algo en la petición —una versión, una clave— y no viene.</summary>
+    public static ErrorDeOperacion FaltaLaPrecondicion(string codigo, string mensaje) =>
+        Crear(codigo, mensaje, TipoDeError.FaltaLaPrecondicion, s_sinCampos);
 
     /// <summary>Una regla de negocio impide la operación.</summary>
     public static ErrorDeOperacion ReglaDeNegocio(string codigo, string mensaje) =>

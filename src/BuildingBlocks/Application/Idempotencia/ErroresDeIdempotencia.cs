@@ -14,8 +14,16 @@ namespace Bastion.BuildingBlocks.Application.Idempotencia;
 /// Son dos mecanismos distintos que el ítem 0.9 junta en un criterio, no una cosa con dos nombres.
 /// </para>
 /// <para>
-/// <b>Los tres son del cliente</b> —dice algo que no cuadra con lo que ya dijo, o pide un servicio
-/// donde no se presta—, así que ninguno es <c>5xx</c> y todos llevan en el mensaje qué hacer.
+/// <b>Los cuatro son del cliente</b> —dice algo que no cuadra con lo que ya dijo, pide un servicio
+/// donde no se presta, o no lo pide donde es obligatorio—, así que ninguno es <c>5xx</c> y todos
+/// llevan en el mensaje qué hacer.
+/// </para>
+/// <para>
+/// <b>El último mira al revés que los otros tres</b>, y entró en el ítem 2.4: tres se quejan de una
+/// cabecera que sobra o que no vale, y <see cref="Obligatoria"/> se queja de que falte. Es la
+/// excepción a la doctrina del 0.9 —«la clave es una garantía que el cliente <i>pide</i>, no un
+/// peaje que se le cobra»— y está acotada donde vale: las operaciones que gastan algo que no se
+/// puede devolver.
 /// </para>
 /// </remarks>
 public static class ErroresDeIdempotencia
@@ -31,6 +39,9 @@ public static class ErroresDeIdempotencia
 
     /// <summary>Código estable del <c>400</c> cuando no hay con qué formar la identidad.</summary>
     public const string CodigoDeSinEmpresaActiva = "idempotencia-sin-empresa-activa";
+
+    /// <summary>Código estable del <c>428</c> en una ruta que exige la cabecera.</summary>
+    public const string CodigoDeObligatoria = "idempotencia-obligatoria";
 
     /// <summary>La misma clave, otro cuerpo.</summary>
     /// <remarks>
@@ -74,4 +85,28 @@ public static class ErroresDeIdempotencia
         CodigoDeSinEmpresaActiva,
         "No se puede aplicar la Idempotency-Key sin una empresa activa en la sesión. Entre en una " +
         "empresa y repita la petición.");
+
+    /// <summary>La ruta exige la cabecera y la petición no la trae.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b><c>428</c> y no <c>400</c></b>, por lo mismo que el <c>428</c> del <c>If-Match</c>: la
+    /// petición está bien formada y lo que falta es una precondición. El cliente lo arregla solo
+    /// —genera una clave y repite— y un <c>400</c> le mandaría a revisar un cuerpo impecable.
+    /// </para>
+    /// <para>
+    /// <b>Lo que hay detrás no es celo, es que sin la cabecera el endpoint no puede cumplir lo que
+    /// promete.</b> La transacción de estas operaciones tiene un solo dueño —el filtro de
+    /// idempotencia, ADR-0014— y sin clave el filtro se aparta en su primera línea sin abrir
+    /// ninguna. Una confirmación que numera se quedaría con el contador subido por su cuenta y el
+    /// documento sin guardar: un hueco en la serie, que es lo que la R5 prohibe.
+    /// </para>
+    /// </remarks>
+    /// <param name="metodo">Método de la petición, para que el mensaje diga cuál era.</param>
+    /// <param name="ruta">Ruta de la petición.</param>
+    public static ErrorDeOperacion Obligatoria(string metodo, string ruta) =>
+        ErrorDeOperacion.FaltaLaPrecondicion(
+            CodigoDeObligatoria,
+            $"La operación {metodo} {ruta} exige la cabecera Idempotency-Key. Genere una clave —lo " +
+            "habitual es un UUID— antes del primer intento y mande la misma en cada reintento: es " +
+            "lo que hace que repetir la petición no repita su efecto.");
 }

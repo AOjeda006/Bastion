@@ -79,6 +79,10 @@ export const en: Diccionario = {
       'ajuste-no-esta-en-borrador':
         'That adjustment is no longer a draft: a confirmed one is not confirmed twice, because ' +
         'its ledger rows are already written and the ledger is never rewritten. Refresh the screen.',
+      'ajuste-serie-cerrada':
+        'That series is closed: it still resolves the documents it already numbered, but it hands ' +
+        'out no further numbers. Choose another series.',
+      'ajuste-serie-no-encontrada': 'That series does not exist. Pick one from the series list.',
       'ajuste-sin-lineas':
         'An adjustment needs at least one line: a document that moves nothing adjusts nothing.',
       'ajuste-ubicacion-bloqueada':
@@ -156,6 +160,9 @@ export const en: Diccionario = {
       'idempotencia-cuerpo-distinto':
         'An operation was retried with the same send key but different content. Start again.',
       'idempotencia-no-admitida': 'This operation cannot be retried safely. Please try again.',
+      'idempotencia-obligatoria':
+        'This operation only runs with a retry key, because stopping halfway would leave a gap in ' +
+        'the numbering. Please try again.',
       'idempotencia-sin-empresa-activa':
         'Your session has no active company. Choose one and try again.',
       'if-match-no-valido': 'The version the form carried is not well formed. Open it again.',
@@ -185,6 +192,9 @@ export const en: Diccionario = {
       'serie-cerrada': 'The document series is closed and cannot be changed.',
       'serie-duplicada': 'There is already a series with that code in that financial year.',
       'serie-no-encontrada': 'That series no longer exists. Go back to the list and refresh.',
+      'serie-no-numera':
+        'That series no longer hands out numbers: it was closed or deleted while your draft was ' +
+        'open. Open the adjustment with another series.',
       'serie-ya-numerada': 'The series has already numbered documents, so that cannot be changed.',
       'sesion-no-renovable': 'Your session could not be renewed. Sign in again.',
       'tarifa-divisa-no-encontrada':

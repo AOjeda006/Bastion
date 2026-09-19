@@ -22,7 +22,7 @@ public static class ErroresDeConcurrencia
     public const string CodigoDeCabeceraNoValida = "if-match-no-valido";
 
     /// <summary>La petición no dice sobre qué versión escribe.</summary>
-    public static ErrorDeOperacion FaltaLaCabecera() => ErrorDeOperacion.FaltaLaVersion(
+    public static ErrorDeOperacion FaltaLaCabecera() => ErrorDeOperacion.FaltaLaPrecondicion(
         CodigoDeFaltaLaCabecera,
         "Esta operación exige la cabecera If-Match con la versión del recurso. Léalo primero y " +
         "devuelva el ETag que trae su respuesta.");

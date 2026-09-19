@@ -25,6 +25,23 @@ namespace Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 /// de sesión no se marcan porque su respuesta lleva credenciales dentro, y esta tabla guarda
 /// respuestas.
 /// </para>
+/// <para>
+/// <b>Y desde el ítem 2.4 tiene un segundo grado: <see cref="Obligatoria"/>.</b> Admitirla es lo
+/// normal; exigirla es la excepción, y hay que justificarla en la propia acción. El criterio no es
+/// «esto es importante» —todo lo es—, sino que <b>sin la cabecera la acción no puede cumplir lo
+/// que promete</b>: el filtro se aparta sin abrir transacción, y una operación cuya atomicidad
+/// depende de esa transacción se quedaría a medias sin que nadie lo note.
+/// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method)]
-public sealed class AdmiteIdempotenciaAttribute : Attribute;
+public sealed class AdmiteIdempotenciaAttribute : Attribute
+{
+    /// <summary>Si la acción <b>exige</b> la cabecera, y sin ella contesta <c>428</c>.</summary>
+    /// <remarks>
+    /// Por omisión es <c>false</c>, que es la doctrina del ítem 0.9: la clave es una garantía que el
+    /// cliente <i>pide</i>, no un peaje que se le cobra. Ponerla a <c>true</c> invierte eso para una
+    /// acción concreta y se acota donde vale: operaciones que gastan algo que no se puede devolver
+    /// —un número de serie—, donde quedarse a medias no es un reintento perdido sino un hueco.
+    /// </remarks>
+    public bool Obligatoria { get; init; }
+}

@@ -66,9 +66,15 @@ public sealed partial class FiltroDeIdempotencia(
 
         HttpRequest peticion = context.HttpContext.Request;
         StringValues cabecera = peticion.Headers[Cabecera];
+        AdmiteIdempotenciaAttribute? declaracion = DeclaracionDe(context);
+
+        string metodo = peticion.Method;
+        string ruta = peticion.Path.Value ?? string.Empty;
 
         // Sin cabecera no hay nada que hacer: la operación sigue su camino de siempre. La clave es
-        // una garantía que el cliente PIDE, no un peaje que se le cobra.
+        // una garantía que el cliente PIDE, no un peaje que se le cobra —salvo donde la acción se
+        // declara `Obligatoria`, que es el caso de abajo: ahí sin cabecera no hay transacción, y
+        // sin transacción la acción no puede cumplir lo que promete—.
         //
         // «Sin cabecera» es que NO VENGA, y se pregunta por el número de valores y no por si el
         // texto está en blanco. Una cabecera presente y vacía es un cliente que cree que se está
@@ -76,14 +82,17 @@ public sealed partial class FiltroDeIdempotencia(
         // protección y dejar que lo descubra el día que reintente y duplique.
         if (cabecera.Count == 0)
         {
+            if (declaracion is { Obligatoria: true })
+            {
+                context.Result = ErroresDeIdempotencia.Obligatoria(metodo, ruta).AResultadoDeAccion();
+                return;
+            }
+
             await next().ConfigureAwait(false);
             return;
         }
 
-        string metodo = peticion.Method;
-        string ruta = peticion.Path.Value ?? string.Empty;
-
-        if (!Admite(context))
+        if (declaracion is null)
         {
             context.Result = ErroresDeIdempotencia.NoAdmitida(metodo, ruta).AResultadoDeAccion();
             return;
@@ -107,8 +116,8 @@ public sealed partial class FiltroDeIdempotencia(
         await AplicarAsync(context, next, clave.Valor).ConfigureAwait(false);
     }
 
-    private static bool Admite(ResourceExecutingContext context) =>
-        context.ActionDescriptor.EndpointMetadata.OfType<AdmiteIdempotenciaAttribute>().Any();
+    private static AdmiteIdempotenciaAttribute? DeclaracionDe(ResourceExecutingContext context) =>
+        context.ActionDescriptor.EndpointMetadata.OfType<AdmiteIdempotenciaAttribute>().FirstOrDefault();
 
     // El módulo sale del tercer segmento de la ruta: /api/v1/<modulo>/<recurso>. Es la misma
     // convención que fija el Anexo A.1 y la que ya usa la ruta base de cada controlador, así que

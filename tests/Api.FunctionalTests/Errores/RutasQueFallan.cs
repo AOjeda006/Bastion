@@ -44,7 +44,7 @@ internal sealed class RutasQueFallan : IStartupFilter
     internal const string Validacion = "/pruebas/errores/validacion";
     internal const string NoAutenticado = "/pruebas/errores/no-autenticado";
     internal const string VersionObsoleta = "/pruebas/errores/version-obsoleta";
-    internal const string FaltaLaVersion = "/pruebas/errores/falta-la-version";
+    internal const string FaltaLaPrecondicion = "/pruebas/errores/falta-la-precondicion";
     internal const string DemasiadoGrande = "/pruebas/errores/demasiado-grande";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => aplicacion =>
@@ -103,7 +103,7 @@ internal sealed class RutasQueFallan : IStartupFilter
             // publican los 412 y los 428 reales, y cambiarlo rompe aquí.
             VersionObsoleta => Responder(
                 contexto, ErroresDeConcurrencia.Obsoleta(new VersionDeRecurso(756))),
-            FaltaLaVersion => Responder(contexto, ErroresDeConcurrencia.FaltaLaCabecera()),
+            FaltaLaPrecondicion => Responder(contexto, ErroresDeConcurrencia.FaltaLaCabecera()),
 
             // Por su fábrica de verdad también: es la que usa el lector acotado del cuerpo, y el
             // único `413` que la API emite hoy aparte del de las filas de una importación.

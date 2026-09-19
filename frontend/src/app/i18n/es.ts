@@ -103,6 +103,11 @@ export const es = {
       'ajuste-no-esta-en-borrador':
         'Ese ajuste ya no está en borrador: uno confirmado no se vuelve a confirmar, porque sus ' +
         'filas del libro ya están escritas y el libro no se reescribe. Actualiza la pantalla.',
+      'ajuste-serie-cerrada':
+        'Esa serie está cerrada: sigue resolviendo los documentos que ya numeró, pero no entrega ' +
+        'ni un número más. Elige otra serie.',
+      'ajuste-serie-no-encontrada':
+        'Esa serie no existe. Elige una del maestro de series.',
       'ajuste-sin-lineas':
         'Un ajuste necesita al menos una línea: un documento que no mueve nada no ajusta nada.',
       'ajuste-ubicacion-bloqueada':
@@ -187,6 +192,9 @@ export const es = {
       'idempotencia-cuerpo-distinto':
         'Se ha repetido una operación con los mismos datos de envío pero distinto contenido. Vuelve a empezar.',
       'idempotencia-no-admitida': 'Esta operación no admite repetición segura. Inténtalo otra vez.',
+      'idempotencia-obligatoria':
+        'Esta operación solo se hace con una clave de repetición, porque a medias dejaría un ' +
+        'hueco en la numeración. Vuelve a intentarlo.',
       'idempotencia-sin-empresa-activa':
         'Tu sesión no tiene ninguna empresa activa. Elige una y vuelve a intentarlo.',
       'if-match-no-valido':
@@ -218,6 +226,9 @@ export const es = {
       'serie-cerrada': 'La serie está cerrada y no admite cambios.',
       'serie-duplicada': 'Ya hay una serie con ese código en ese ejercicio.',
       'serie-no-encontrada': 'Esa serie ya no existe. Vuelve al listado y actualiza.',
+      'serie-no-numera':
+        'Esa serie ya no entrega números: la han cerrado o la han borrado mientras tenías el ' +
+        'borrador abierto. Abre el ajuste con otra serie.',
       'serie-ya-numerada': 'La serie ya ha numerado documentos, así que eso no se puede cambiar.',
       'sesion-no-renovable': 'Tu sesión no se ha podido renovar. Vuelve a entrar.',
       // Las doce de la tarifa. La de la divisa retirada dice las DOS mitades del ADR-0023, igual
