@@ -8,6 +8,7 @@ using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
+using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Terceros.Infrastructure.Persistencia;
@@ -303,6 +304,38 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
             opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
+    /// <summary>
+    /// Un contexto de Inventario como el que tiene la API dentro de una petición de esa empresa.
+    /// </summary>
+    /// <remarks>
+    /// <b>Entra en el ítem 2.3, y es la única puerta que hay al libro</b>: el módulo todavía no
+    /// tiene borde —sus endpoints son del 2.4 y del 2.5—, así que no existe ninguna petición que
+    /// escriba un movimiento. Lo que sí existe es el dominio que los produce, y las filas de estos
+    /// tests salen de él y no de un <c>INSERT</c> escrito a mano: una fila montada a mano probaría
+    /// una que el sistema no produce.
+    /// </remarks>
+    /// <param name="empresaId">Como qué empresa se abre. Obligatorio, por lo mismo que en
+    /// <see cref="AbrirOrganizacion"/>.</param>
+    public InventarioDbContext AbrirInventario(Guid empresaId)
+    {
+        DbContextOptionsBuilder<InventarioDbContext> opciones = new();
+        InventarioDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new InventarioDbContext(
+            opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
+    }
+
+    /// <summary>Un contexto de Inventario solo para aplicar migraciones.</summary>
+    /// <remarks>Migrar es DDL: no consulta ninguna entidad, así que el filtro no se evalúa.</remarks>
+    public InventarioDbContext AbrirInventarioParaMigrar()
+    {
+        DbContextOptionsBuilder<InventarioDbContext> opciones = new();
+        InventarioDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new InventarioDbContext(
+            opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
+    }
+
     // El contexto de la bandeja no tiene `Configurar` a propósito: vive en los bloques comunes,
     // que traen EF Core pero NO el proveedor de PostgreSQL, así que quien elige proveedor es el
     // módulo Auditoría en su cableado. Aquí se repite esa elección, que es la misma y es de una
@@ -395,6 +428,17 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         await using (CatalogoDbContext catalogo = AbrirCatalogoParaMigrar())
         {
             await catalogo.Database.MigrateAsync();
+        }
+
+        // Inventario el último, y tampoco depende de nadie por lo mismo: el almacén, la ubicación,
+        // el artículo y la unidad de sus filas viven en otros esquemas y no son claves ajenas (§5).
+        // Lo que SÍ deja esta migración y ninguna otra es la tabla particionada con sus
+        // disparadores y las trece particiones del mes en curso y los doce siguientes, creadas por
+        // `inventario.asegurar_particiones_de_movimientos()` — la misma función que el migrador
+        // vuelve a llamar en cada despliegue.
+        await using (InventarioDbContext inventario = AbrirInventarioParaMigrar())
+        {
+            await inventario.Database.MigrateAsync();
         }
     }
 

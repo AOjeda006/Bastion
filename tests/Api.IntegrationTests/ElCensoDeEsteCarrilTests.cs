@@ -171,6 +171,25 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElFiltroDeEmpresaTests.Una_escritura_por_identificador_contra_una_fila_de_otra_empresa_es_404",
         "ElFiltroDeEmpresaTests.Una_fila_de_otra_empresa_no_se_distingue_de_una_que_no_existe",
 
+        // Del ítem 2.3, el libro de movimientos. Son los únicos casos del carril que le
+        // hablan a una tabla particionada por su nombre, y los únicos que escriben con el
+        // dominio de un módulo sin borde: Inventario no tiene endpoints hasta el 2.4.
+        "ElLibroEstaParticionadoTests.El_conjunto_de_particiones_es_el_mes_en_curso_los_doce_siguientes_y_la_de_por_defecto",
+        "ElLibroEstaParticionadoTests.La_clave_primaria_del_libro_incluye_la_clave_de_particion",
+        "ElLibroEstaParticionadoTests.La_tabla_del_libro_esta_particionada_por_RANGO_sobre_la_fecha_de_operacion",
+        "ElLibroEstaParticionadoTests.Las_filas_de_un_ajuste_caen_en_la_particion_de_su_mes_y_ninguna_en_la_de_por_defecto",
+
+        // Los SEIS caminos del solo-añadido, y son seis porque la tabla está particionada:
+        // UPDATE y DELETE por el padre, los dos iguales entrando por la partición, y los dos
+        // TRUNCATE. Borrar cualquiera de las seis líneas deja una puerta abierta en el motor
+        // sin que nada más lo note.
+        "ElLibroNoSePuedeLimpiarTests.Borrar_una_fila_entrando_por_la_particion_lo_rechaza_el_motor",
+        "ElLibroNoSePuedeLimpiarTests.Borrar_una_fila_por_la_tabla_padre_lo_rechaza_el_motor",
+        "ElLibroNoSePuedeLimpiarTests.Modificar_una_fila_entrando_por_la_particion_lo_rechaza_el_motor",
+        "ElLibroNoSePuedeLimpiarTests.Modificar_una_fila_por_la_tabla_padre_lo_rechaza_el_motor",
+        "ElLibroNoSePuedeLimpiarTests.Vaciar_LA_PARTICION_lo_rechaza_el_motor_y_este_es_el_que_se_vio_abierto",
+        "ElLibroNoSePuedeLimpiarTests.Vaciar_la_tabla_padre_lo_rechaza_el_motor",
+
         // Del ítem 2.2: las tres casillas de `AptitudParaMoverExistencias`, que son tres y no
         // cuatro. Si algún día el artículo recibe su final de vida, la casilla que entre
         // necesita su línea aquí y su caso allá.
@@ -230,6 +249,19 @@ public sealed class ElCensoDeEsteCarrilTests
         "EsquemaDeTercerosTests.Las_reglas_que_no_se_pueden_esquivar_estan_EN_LA_BASE",
         "EsquemaDeTercerosTests.Lo_que_cuelga_se_borra_CON_la_ficha_y_no_se_queda_huerfano",
         "EsquemaDeTercerosTests.Lo_que_toda_fila_tiene_que_llevar_es_NOT_NULL_y_sin_DEFAULT",
+
+        // Del ítem 2.3: la regla que ata las tres cantidades de una fila del libro, y los dos
+        // CHECK que la sostienen en el motor para los caminos que todavía no existen.
+        "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Cada_fila_de_un_ajuste_cumple_la_regla_del_factor_medida_en_la_base",
+        "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Una_cantidad_base_que_no_es_la_introducida_por_el_factor_la_rechaza_el_motor",
+        "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Una_fila_que_no_mueve_nada_la_rechaza_el_motor",
+
+        // Del ítem 2.3: la R13 en los DOS sentidos, cada uno con su barrido y con su arnés.
+        // Ninguna clave ajena puede expresar esta flecha —el origen es un par «tipo +
+        // identificador»—, así que borrar una de estas dos líneas deja la mitad que quitara
+        // sin nadie que la vigile.
+        "LaDobleFlechaDelLibroTests.Ningun_ajuste_confirmado_se_queda_sin_una_sola_fila_del_libro",
+        "LaDobleFlechaDelLibroTests.Ninguna_fila_del_libro_apunta_a_un_documento_que_no_existe",
 
         "LaEdadDelMasViejoSeMideTests.El_publicador_publica_la_edad_del_pendiente_mas_viejo",
         "LaEdadDelMasViejoSeMideTests.Y_con_la_cola_vacia_la_edad_vuelve_a_cero",
@@ -294,6 +326,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaMismaClaveDevuelveElMismoRecursoTests.La_misma_clave_desde_otra_empresa_hace_su_propio_trabajo",
         "LaMismaClaveDevuelveElMismoRecursoTests.Un_alta_rechazada_deja_la_clave_libre_para_el_reintento",
         "LaMismaClaveDevuelveElMismoRecursoTests.Una_clave_que_no_identifica_nada_es_400",
+
+        // Del ítem 2.3: la partición por defecto NO es una red de la que colgarse. Este caso
+        // vive entero dentro de una transacción que se deshace, y el motivo está escrito en
+        // mayúsculas en su propio fichero: una fila confirmada ahí no se puede borrar y
+        // envenena el carril entero y el segundo arranque.
+        "LaParticionPorDefectoSeDenunciaTests.Una_fila_de_un_mes_sin_particion_cae_en_la_de_por_defecto_y_denuncia_la_averia",
 
         "LaPuertaDeCadaAccionTests.Con_su_permiso_y_solo_con_el_suyo_ninguna_accion_responde_401_ni_403",
         "LaPuertaDeCadaAccionTests.Con_un_permiso_que_no_es_el_suyo_toda_accion_protegida_responde_403",
@@ -382,6 +420,12 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "SinLaTablaElPublicadorSeParaTests.Contra_una_base_sin_migrar_se_para_y_lo_dice_una_sola_vez",
         "SinLaTablaElPublicadorSeParaTests.Y_con_el_esquema_puesto_pero_sin_la_tabla_hace_lo_mismo",
+
+        // Del ítem 2.3, y es el ADR-0037 cobrado POR EL EFECTO: lo que el 2.2 comprobó por lo
+        // que el puerto contesta, aquí se comprueba por lo que eso provoca en el alta de un
+        // ajuste y en la lectura de un movimiento ya escrito.
+        "UnAlmacenBloqueadoNoAdmiteAjustesTests.Bloquear_el_almacen_cierra_el_alta_y_deja_en_pie_lo_ya_escrito",
+        "UnAlmacenBloqueadoNoAdmiteAjustesTests.Un_almacen_bloqueado_y_uno_inventado_no_contestan_lo_mismo",
 
         "UnCambioEnUnMaestroDejaSuRastroTests.El_alta_de_un_almacen_deja_una_fila_con_quien_donde_y_que",
         "UnCambioEnUnMaestroDejaSuRastroTests.La_direccion_de_un_almacen_viaja_DENTRO_de_la_traza_de_su_dueno",

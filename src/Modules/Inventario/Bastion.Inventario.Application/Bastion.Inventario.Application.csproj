@@ -36,4 +36,17 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup Label="Pruebas">
+    <!--
+      El ADR-0037 se cobra POR EL EFECTO, y el efecto son dos casos de uso de este ensamblado: el
+      alta, que rechaza un ajuste contra un almacen bloqueado, y la lectura, que sigue devolviendo
+      los movimientos ya escritos contra ese MISMO almacen. Las dos mitades necesitan los
+      adaptadores de verdad contra una base de verdad —un doble contestaria lo que se le programe,
+      que es justo lo que no se quiere saber—, y las dos implementaciones son `internal` a
+      proposito. Ese carril es `Bastion.Api.IntegrationTests`, el unico que levanta todos los
+      modulos sobre PostgreSQL.
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
+  </ItemGroup>
+
 </Project>
