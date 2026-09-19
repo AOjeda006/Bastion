@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests unitarios del módulo Inventario: el agregado `Ajuste` con su máquina de estados y la
+    fila del libro con su aritmética.
+
+    SOLO `Domain` Y `Contracts`, como Organización y Terceros y a diferencia de Catálogo. Lo que
+    se prueba aquí son invariantes de agregado y una regla de redondeo: no hace falta ningún
+    puerto, así que tampoco hay dobles. El `Contracts` entra por una sola cosa —`AjusteConfirmado`
+    y `AjusteAnulado`, que son los eventos que la transición exige— y esa dependencia dice algo:
+    el dominio no construye sus propios eventos (quien lo hace es la capa de aplicación), así que
+    un test del dominio tiene que traerlos de donde viven.
+
+    POR QUÉ NO BASTA CON LAS DE INTEGRACIÓN. El carril completo ejerce el camino feliz —abrir,
+    confirmar, leer— contra una base de verdad, y no puede ejercer lo demás: las fronteras del
+    redondeo, las transiciones imposibles y las validaciones de apertura no llegan a tocar
+    PostgreSQL. Eso es el ítem 1.7 dicho de otra manera: lo que solo se ejerce detrás de
+    Testcontainers se queda sin ejercer el día que Docker no arranca. Estas corren siempre, en el
+    carril rápido y en milisegundos.
+
+    Sin infraestructura y sin E/S (§13).
+  -->
+
+  <ItemGroup Label="Sujeto de prueba">
+    <ProjectReference Include="../../src/BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Inventario/Bastion.Inventario.Domain/Bastion.Inventario.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Inventario/Bastion.Inventario.Contracts/Bastion.Inventario.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Marco de pruebas">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
