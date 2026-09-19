@@ -4522,6 +4522,31 @@ distinguió: `UPDATE` y `DELETE` por el padre, `UPDATE` y `DELETE` directos sobr
 `TRUNCATE` del padre y `TRUNCATE` de la partición. El último es el que se vio **abierto** antes de
 tapar el agujero, y por eso está en la lista por su nombre.
 
+#### 5. Y una quinta, tomada al escribir el código: quién lleva testigo de concurrencia
+
+El `Ajuste` **sí**, y es el **primer documento** de `s_generadasPorElServidor`: todas las demás
+entradas de esa lista son maestros. El motivo no es simetría con ellos, es que un documento
+**cambia de estado** y la transición **lee y luego escribe**. Sin testigo, dos confirmaciones
+simultáneas del mismo ajuste leen las dos `Borrador`, pasan las dos la guarda y escriben las dos su
+tanda de movimientos: el stock movido dos veces, sin error y sin rastro. Y no cuesta una columna —el
+testigo es `xmin`—, así que la decisión no tiene contrapeso que discutir.
+
+Sus dos hijas **no**, y por motivos **distintos**, que es lo que obliga a escribirlos por separado en
+`s_delTipoBaseSinTestigo`:
+
+- `LineaDeAjuste` es de la familia de los tres hijos del tercero: cuelga del ajuste, no tiene ruta
+  propia y lo que gobierna su edición es el testigo del **documento**.
+- `MovimientoStock` **no** es de esa familia. No lleva testigo porque **no se modifica nunca**, ni
+  por una ruta ni por ninguna otra vía —la tabla rechaza el `UPDATE` en el motor—, y un testigo de
+  concurrencia sobre una fila que nadie puede escribir dos veces no protege de nada. Es exactamente
+  el caso que `LasClavesSeConocenAntesDeGuardarTests` anunciaba en su cabecera desde la fase 0:
+  «podría haber una entidad de solo-inserción con marcas de tiempo y sin testigo».
+
+Los tres motivos viven **en el código**, junto a la lista que los declara, y no solo aquí: quien
+ponga esa regla en rojo los tiene delante antes de añadir un nombre a la lista, que es donde hacen
+falta.
+
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 1 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -4595,12 +4620,13 @@ con lo que solo se vio en verde, en la casilla del **2.2**.
 del ADR-0020: la mutación se pone sobre la línea que decide, el reparto de rojos es el argumento de
 por qué se escriben todos los casos, y cuando la medición contradice al comentario manda la medición.
 
-**En curso el 2.3**, en la rama `feature/el-libro-de-movimientos-y-el-ajuste`. Lo primero han sido
-**las cuatro decisiones de arriba, tomadas antes de escribir código**, y dos de ellas cambiaron al
+**Hecho el 2.3**, el 2026-09-19, en la rama `feature/el-libro-de-movimientos-y-el-ajuste`. Lo
+primero fueron **las cuatro decisiones de arriba, tomadas antes de escribir código**, y dos de
+ellas cambiaron al
 medirlas contra `postgres:17.6-alpine`: el disparador de `TRUNCATE` **no se hereda** en una tabla
 particionada —un `TRUNCATE` sobre la partición por su nombre se llevó la fila—, y un mes cuya fila ya
 cayó en la partición por defecto **ya no se puede crear**, que es lo que convierte «se acabó la pista»
-en un despliegue rojo y no en una degradación silenciosa. **Lo siguiente es el código del 2.3.**
+en un despliegue rojo y no en una degradación silenciosa.
 
 > La resolución que cambió la forma de una respuesta, dicha aquí porque afecta al código de la
 > fase 0: **lo que `Serie.cs` prometía es imposible**, no solo ambiguo. `Serie` vive en
@@ -4608,6 +4634,40 @@ en un despliegue rojo y no en una degradación silenciosa. **Lo siguiente es el 
 > Facturación podrán llamar nunca a `RegistrarNumeroAsignado`. El mecanismo de numeración viaja
 > —al bloque común, como la bandeja y el almacén de idempotencia— y la invariante viaja con él,
 > pero **en la sentencia** y no en ese método, que se borra en el 2.4. Entera, en la decisión 3.
+
+**Y con eso hecho el libro.** Diez commits, todos firmados, del `d2fee2c` al `710fb51`. Hay esquema
+`inventario` con su contexto y su **sexta** entrada en `s_contextos`; `movimiento_stock`
+particionada por rango mensual sobre la fecha de operación —comprobado preguntándole a
+`pg_partitioned_table`, no a la intención— con la clave primaria `(id, fecha_de_operacion)`; el
+`Ajuste` con su máquina de estados sobre `DocumentoBase`, de modo que `documento.Estado = X` **no
+compila**; la doble flecha de la R13 en sus dos sentidos; el libro **no auditado** y **no
+bloqueable**, cada cosa con su motivo escrito donde se lee; y los **seis** caminos del solo-añadido
+cerrados en el motor. **R1** y **R13** pasan a vivas y **cuatro motivos más** de la tabla se
+corrigen sin tocar su estado, porque este ítem los dejó factualmente falsos.
+
+**Las cifras, con la orden que las mide.** Carril rápido
+—`dotnet test Bastion.sln --filter "Category!=Integracion"`— **885 casos en 10 ensamblados**, desde
+862 en 9: el ensamblado nuevo es `Bastion.Inventario.UnitTests` y aporta **20**. Carril de
+integración —`--filter "Category=Integracion"`, con Docker— **426 en 10**, desde 399 en 9. Los
+**27** nuevos caen todos en `Api.IntegrationTests`: **18** son su carpeta `Inventario` y los
+**nueve** restantes los ganaron, sin que nadie los tocara, las reglas que recorren los esquemas,
+los contextos y las tablas de la base en cuanto apareció `inventario`. Las dos cifras son de esta
+máquina; la de la CI va en la casilla del ítem, con el número de su run.
+
+**Dos rojos que no salieron de una mutación, sino del propio ítem, y se cuentan porque eran
+verdaderos.** El commit `e9b8a8e` dejó el carril de integración con dos fallos reales: `inventario`
+no estaba declarado en `EsquemaDeIdentidadTests` —su tabla de historial de migraciones sin censar— y
+la `CHECK` `ck_lineas_ajuste_cantidad_y_factor` no tenía su relleno en
+`LasMigracionesSobreTablasConFilasTests`. Los dos censos existían **desde antes** y los dos cazaron
+lo que tenían que cazar sin que nadie los tocara; el arreglo fue el primer commit de la serie, para
+que ningún commit posterior arrastrara un árbol rojo.
+
+**Y un tercero que solo podía salir del humo**, corregido en `710fb51`: el migrador llamaba a
+`inventario.asegurar_particiones_de_movimientos()` con un punto y coma final, y `SqlQueryRaw`
+**compone** la sentencia en vez de ejecutarla, así que PostgreSQL contestaba `42601` y la API no
+arrancaba. Los dos carriles estaban verdes: los tests de integración llaman a esa función por SQL
+directo y no por este camino. `docker compose up --build` y `scripts/ci/segundo-arranque.sh`
+quedan los dos en verde sobre el arreglo.
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
@@ -11168,7 +11228,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   que ningún test puede mantenerlo cierto; lo que sí se comprueba son los cuatro casos y el censo que
   los declara. El siguiente ADR es el **0039**.
 
-- [ ] **2.3 · El libro de movimientos y el primer documento: el ajuste** — criterio de aceptación: el
+- [x] **2.3 · El libro de movimientos y el primer documento: el ajuste** — criterio de aceptación: el
   esquema `inventario` con su contexto, sus migraciones y su sitio en
   `LasMigracionesSobreTablasConFilasTests`; `movimiento_stock` **append-only** y **particionada por
   rango mensual** sobre la fecha de operación, comprobado preguntándole a `pg_partitioned_table` y no
@@ -11189,6 +11249,131 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   —el del 2.2— —lo que el bloqueo reserva es la privacidad de una persona, no la existencia de una
   estantería—, y este es el primer ítem en el que hay un libro que las enseñe. Hace vivas
   **R1** y **R13**, y cambia sus dos filas.
+
+  **Hecho el 2026-09-19**, en diez commits firmados —`d2fee2c` (el ADR-0038), `4371e2e` (las cuatro
+  decisiones), `e9b8a8e` (el libro y el ajuste), `2126788` (los dos censos), `96fbbf8` (el
+  migrador), `41406ba` (el libro contra PostgreSQL), `b486c61` (la frontera), `3899769` (el carril
+  rápido), `a1f858d` (la tabla de reglas) y `710fb51` (lo que encontró el humo)—. Carril rápido
+  **885 casos en 10 ensamblados**, desde 862 en 9; carril de integración **426 en 10**, desde 399
+  en 9.
+
+  **Dónde vive cada comprobación, que no es una sola lista.** Lo que se puede decidir sin una base
+  de datos —el redondeo, la máquina de estados, el motivo— está en `Bastion.Inventario.UnitTests`,
+  el ensamblado nuevo, con sus **20** casos. Lo que solo PostgreSQL contesta —que la tabla está
+  particionada de verdad, que los seis caminos del solo-añadido están cerrados, que la doble flecha
+  cierra— está en `Api.IntegrationTests.Inventario`, **18** casos. Y hay una comprobación que **no
+  está en ninguno de los dos a propósito**: «toda partición lleva su disparador de `TRUNCATE`» vive
+  solo en `scripts/ci/segundo-arranque.sh`, porque contra una base recién migrada es trivial de
+  cumplir —allí las particiones las acaba de crear la misma migración que pone el disparador—. Lo
+  que hay que ver es una partición que haya creado **el migrador** en un arranque posterior, y eso
+  pide el segundo arranque: el guion borra la última partición de la pista —la del mes en curso
+  más doce, tras comprobar que estaba—, levanta otra vez, y exige que la que el migrador ha
+  vuelto a crear traiga su disparador, y que no quede ninguna partición sin él.
+
+  **Nada de recuentos globales.** Toda afirmación del carril de integración se acota a su documento
+  (`documento_origen_id`) o a la `empresa_id` que el caso acaba de inventar, desde el primer caso;
+  lo único que se afirma del conjunto entero es la descripción del **conjunto de particiones**, que
+  es precisamente lo que no se puede acotar. Y todo lo que podría destruir datos corre dentro de una
+  transacción que se deshace, con el motivo escrito **encima** del caso y no debajo: una fila
+  confirmada en la partición por defecto no se borra —`DELETE` y `TRUNCATE` están cerrados a
+  propósito— y deja el siguiente `asegurar_particiones` de ese mes en **fallo duro**, envenenando el
+  carril y el segundo arranque.
+
+  **Y la línea que decide, puesta en rojo por mutación (ADR-0038).** Ocho mutaciones sobre las
+  cuatro líneas que deciden algo —la que compone el saldo (`MovimientoStock.EnUnidadBase`), la que
+  decide cuántas filas escribe el documento y a qué documento apuntan (`Ajuste.Confirmar`), la que
+  mueve el estado y cuenta el hecho (`DocumentoBase`) y la que **enruta a la partición**
+  (`asegurar_particiones`)—, ninguna sobre una guarda. El reparto de rojos, por nombre:
+
+  | # | La mutación | Carril rápido | Carril del libro |
+  |---|---|---|---|
+  | M1 | fuera `MidpointRounding.AwayFromZero` | **4** rojos, los cuatro de `LaCantidadBaseSeRedondeaAlejandoseDelCeroTests`: `El_punto_medio_exacto_se_aleja_del_cero_y_no_va_al_par`, `El_punto_medio_negativo_se_aleja_del_cero_hacia_abajo`, `La_base_es_la_introducida_POR_el_factor_y_no_al_reves`, `Una_cantidad_que_se_redondea_a_cero_no_se_escribe_y_la_contigua_si` | **18/18 verde** |
+  | M2 | `*` por `/` en la misma línea | **3**: `La_base_es_la_introducida_POR_el_factor_y_no_al_reves` —el único que comparte con M1—, `El_signo_viaja_a_la_base_y_la_fila_guarda_lo_que_se_introdujo` y `LaMaquinaDeEstadosDelAjusteTests.Confirmar_mueve_el_estado_devuelve_una_fila_por_linea_y_cuenta_el_hecho`, que no es un caso de redondeo: mira la cantidad base de la fila que compone | **11** de 18 |
+  | M3 | `.Take(1)` sobre las líneas del ajuste | **1**: `Confirmar_mueve_el_estado_devuelve_una_fila_por_linea_y_cuenta_el_hecho` | **9** de 18 |
+  | M4 | el documento origen, un `Guid` inventado | **1**: el mismo | **12** de 18, **las dos flechas incluidas** |
+  | M5 | fuera el `Registrar(evento)` de la transición | **2**: `Confirmar_mueve_el_estado_…` y `Anular_sale_de_confirmado_y_no_de_borrador` | **18/18 verde** |
+  | M6 | `private set` a `set` en `DocumentoBase.Estado` | **1**: `El_estado_no_se_asigna_se_transita`, y solo ese | no procede |
+  | M7 | la ventana de particiones, desplazada un mes | no procede | **8** de 18 |
+  | M8 | la partición, creada **sin** su disparador de `TRUNCATE` | no procede | **1** de 18 |
+
+  **Cuatro cosas que el reparto enseña y que no se sabían antes de medirlo.**
+
+  1. **M1 y M5 dejan el carril del libro entero en verde.** Dieciocho casos contra PostgreSQL real y
+     ni el modo de redondeo ni el evento que falta se ven. El `CHECK` del motor usa `round`, que
+     también se aleja del cero, así que sostiene la misma igualdad — pero la sostiene sobre dos
+     columnas **ya escritas**, y el fixture no pasa nunca por un punto medio. Este es el argumento
+     medido del ensamblado nuevo, y es el ítem 1.7 otra vez: los tests de integración no bastan.
+  2. **El desvío de partición es silencioso por diseño, y eso cambia dónde se puede comprobar.** Los
+     ocho rojos de M7 fallan todos con `42P01: relation "inventario.movimiento_stock_2026_09" does
+     not exist`, es decir, son los casos que **nombran** la partición. Los barridos que entran por
+     la tabla padre siguen verdes, y tienen que seguirlo: la fila cae en la de por defecto —que para
+     eso está, perderla sería peor— y el padre la sigue leyendo. Un barrido sobre el padre **no
+     puede** detectar un error de enrutado, nunca; lo detecta quien describe el conjunto de
+     particiones o quien entra por el nombre.
+  3. **M8 lo ve un caso entre dieciocho**, y es
+     `ElLibroNoSePuedeLimpiarTests.Vaciar_LA_PARTICION_lo_rechaza_el_motor_y_este_es_el_que_se_vio_abierto`,
+     el que lleva en el nombre haberse visto abierto. Los otros cinco caminos del solo-añadido no lo
+     rozan. Eso es exactamente lo que el sondeo había medido —el disparador de sentencia no se
+     clona— convertido en un rojo, y la razón de que el segundo arranque tenga su propia
+     comprobación.
+  4. **M3 y M4 parten la doble flecha en sus dos mitades, y por eso son dos casos.** Con `.Take(1)`
+     el ajuste sigue teniendo **una** fila, así que la vuelta
+     —`Ningun_ajuste_confirmado_se_queda_sin_una_sola_fila_del_libro`— **se queda verde** y solo cae
+     la ida; con el documento origen inventado caen **las dos**. «Al menos una fila» y «la fila
+     apunta a este documento» son dos afirmaciones distintas, y ninguna de las dos cubre a la otra.
+
+  **Lo visto en rojo, por nombre.** Del carril rápido, **8 de los 20** casos del ensamblado nuevo:
+  los cinco de `LaCantidadBaseSeRedondeaAlejandoseDelCeroTests` que aparecen arriba —los cuatro de
+  M1 más `El_signo_viaja_a_la_base_y_la_fila_guarda_lo_que_se_introdujo`— y tres de
+  `LaMaquinaDeEstadosDelAjusteTests`: `Confirmar_mueve_el_estado_devuelve_una_fila_por_linea_y_cuenta_el_hecho`,
+  `Anular_sale_de_confirmado_y_no_de_borrador` y `El_estado_no_se_asigna_se_transita`. Del carril
+  del libro, **13 de los 18**: los seis de `ElLibroNoSePuedeLimpiarTests`, los dos de
+  `ElLibroEstaParticionadoTests` que miran filas o el conjunto, el de la regla del factor medida en
+  la base, **los dos** de `LaDobleFlechaDelLibroTests`, el de la denuncia de la partición por
+  defecto y `UnAlmacenBloqueadoNoAdmiteAjustesTests.Bloquear_el_almacen_cierra_el_alta_y_deja_en_pie_lo_ya_escrito`.
+  Y **dos rojos que no vinieron de una mutación sino del ítem**: los dos censos de la base
+  —`EsquemaDeIdentidadTests` y `LasMigracionesSobreTablasConFilasTests`— cazaron el esquema
+  `inventario` sin declarar y la `CHECK` sin relleno, los dos existiendo desde antes y sin que nadie
+  los tocara.
+
+  **Y el humo encontró lo que ninguno de los dos carriles podía encontrar.** El migrador no
+  arrancaba: `42601: syntax error at or near ";"`, salida 1, y la API detrás sin levantar.
+  `Database.SqlQueryRaw` **no ejecuta** el texto que recibe —lo compone dentro de un
+  `SELECT s."Value" FROM (…) AS s LIMIT 2`—, así que el punto y coma que cerraba la llamada a
+  `inventario.asegurar_particiones_de_movimientos()` caía dentro del paréntesis. Los 426 casos del
+  carril de integración estaban verdes y no podían verlo: **todos llaman a esa función por SQL
+  directo**, ninguno por este camino, y el migrador solo corre al arrancar. Es el ADR-0035 otra vez
+  —«el código que solo corre al arrancar se prueba arrancando»— y la razón de que el humo sea un
+  paso y no una cortesía. Arreglado en `710fb51`, con el motivo escrito junto a la llamada; el
+  segundo arranque vuelve verde y dice lo que tenía que decir: *el migrador ha vuelto a crear
+  `movimiento_stock_2027_09` con su disparador de `TRUNCATE`; las 14 particiones del libro lo
+  llevan*.
+
+  **Lo visto solo en verde**, dicho aparte para que no se confunda con lo anterior. Del ensamblado
+  nuevo, **12 de 20**: los **cuatro** de `ElMotivoDeUnAjusteEsObligatorioTests` —ninguna mutación
+  toca el motivo—, cinco de la máquina de estados
+  (`Un_ajuste_nace_en_borrador_y_sin_lineas`, `Un_ajuste_sin_lineas_no_se_confirma`,
+  `Un_ajuste_ya_confirmado_no_se_vuelve_a_confirmar`, `Un_ajuste_confirmado_no_admite_lineas_nuevas`
+  y `Sin_evento_no_hay_transicion`) y tres de la cantidad base
+  (`Una_fila_que_no_mueve_nada_no_se_escribe`, `Un_factor_que_no_es_positivo_no_se_admite` y
+  `Toda_fila_dice_de_que_documento_sale`). Del carril del libro, **5 de 18**: las dos descripciones
+  estructurales de `ElLibroEstaParticionadoTests` —el rango sobre la fecha de operación y la clave
+  primaria que incluye la clave de partición—, los dos rechazos que hace el motor en
+  `LaCantidadBaseEsLaIntroducidaPorElFactorTests` y
+  `UnAlmacenBloqueadoNoAdmiteAjustesTests.Un_almacen_bloqueado_y_uno_inventado_no_contestan_lo_mismo`.
+  Y los tres de `ElTipoBaseDeDocumentoNoSabeQueEsUnMovimientoTests`, de los cuales el segundo
+  —`La_prohibicion_del_libro_puede_dispararse`— es el arnés del arnés y no una tercera afirmación
+  sobre el dominio. Ninguno de estos se ha ejercido en rojo por mutación: lo que sostienen es lo que
+  dicen, no más.
+
+  **Y la fila de R3 no cambia de estado, pero sí de motivo.** Sigue *aplazada a la fase 2* hasta el
+  2.7, porque «el stock **es** un libro y no un contador» solo se puede poner en rojo habiendo un
+  contador que discrepe, y el saldo proyectado llega en el 2.7 con su test de propiedad. Lo que este
+  ítem deja viejo es su motivo anterior —«hoy no hay ninguna tabla de stock»—, que era falso desde
+  `e9b8a8e`. Un motivo falso es peor que uno viejo, porque parece medido. Igual con **R2** (falta el
+  contra-documento, ítem 2.5), **R5** (el ajuste se confirma **sin número**, ítem 2.4) y **R9** (ya
+  se registra dentro de un periodo y confirmar no pregunta si está cerrado, ítem 2.6): las cuatro
+  conservan su estado y les cambia el porqué.
 
 - [ ] **2.4 · La numeración con cerrojo, y el ADR que enmienda el «único camino»** — criterio de
   aceptación: el ajuste recibe su número **al confirmar**, dentro de la transacción de confirmación, y
@@ -11332,6 +11517,21 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-09-19, ítem 2.3) · el factor a unidad base llega del cliente y nadie lo resuelve.**
+  `AbrirAjuste` toma `linea.FactorAUnidadBase` **del DTO** y se lo pasa al dominio tal cual. El
+  dominio lo valida —positivo, y la cantidad base es la introducida por él—, pero eso comprueba la
+  *aritmética*, no la *conversión*: nada mira que ese factor sea el que `ConversionUM` declara entre
+  la unidad introducida y la unidad base **del artículo**, así que un cliente que mande `1` mueve el
+  inventario en unidades equivocadas y todas las reglas del ítem salen verdes. `ConversionUM` existe
+  desde el 1.8 y tiene ficha, tabla y testigo, pero **no tiene puerto**: `IConsultaDeUnidadesDeMedida`
+  contesta por la unidad, no por la conversión entre dos. Quedan además sin decidir las dos
+  preguntas que el ADR-0023 deja abiertas para cuando lo haya: qué pasa si la conversión **no
+  existe** —¿se rechaza la línea, o se admite con factor 1?— y qué pasa con una conversión
+  **retirada** después de que haya filas escritas con ella, que es el mismo dilema del ADR-0037 y
+  con la misma respuesta probable, porque la fila guarda su factor y se explica sola. No se decide
+  aquí ni se amplía el checklist por cuenta propia: el ítem que tiene el sitio natural es el **2.9**
+  o un addendum, y quien lo conteste no es el agente.
 
 - **ABIERTA (2026-09-18, ítem 2.2) · ¿recibe el artículo su final de vida en esta fase, una vez el 2.7
   le dé existencias?** Es **pregunta del cierre de la fase 2**, y se deja escrita aquí para que lo
