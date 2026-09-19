@@ -256,8 +256,18 @@ public static partial class MigradorDeArranque
 
         // El alias `Value` no es decorativo y tampoco es nuestro: `SqlQueryRaw<T>` de un escalar
         // exige que la columna se llame así. Sin él, EF Core no sabe a qué proyectar el `int`.
+        //
+        // Y NO LLEVA punto y coma final, que no es estilo: `SqlQueryRaw` no ejecuta este texto,
+        // lo COMPONE dentro de un `SELECT s."Value" FROM (...) AS s LIMIT 2`. Con el `;`
+        // dentro del paréntesis, PostgreSQL contesta `42601: syntax error at or near ";"`, el
+        // migrador sale con 1 y la API no arranca. No lo ve ningún test de integración porque
+        // todos llaman a la función por SQL directo; lo vio el humo, que es donde corre el
+        // arranque de verdad.
         int creadas = await contexto.Database
-            .SqlQueryRaw<int>("""SELECT inventario.asegurar_particiones_de_movimientos() AS "Value";""")
+            .SqlQueryRaw<int>(
+                """
+                SELECT inventario.asegurar_particiones_de_movimientos() AS "Value"
+                """)
             .SingleAsync()
             .ConfigureAwait(false);
 
