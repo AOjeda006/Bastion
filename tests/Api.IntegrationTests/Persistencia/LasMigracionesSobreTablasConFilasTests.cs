@@ -80,6 +80,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_bandeja_empresa_o_motivo"] = new(["empresa_id"], []),
         ["ck_categorias_padre_distinto_de_si_misma"] = Relleno.Ninguno,
         ["ck_condiciones_pago_plazo_legal"] = new([], [("dias_de_plazo", "30")]),
+        ["ck_lineas_ajuste_cantidad_y_factor"] = Relleno.Ninguno,
         ["ck_lineas_tarifa_articulo_o_categoria"] = new(["articulo_id"], []),
         ["ck_lineas_tarifa_cantidad_desde_no_negativa"] = Relleno.Ninguno,
         ["ck_lineas_tarifa_descuento_en_rango"] = Relleno.Ninguno,
