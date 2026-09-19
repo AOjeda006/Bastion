@@ -197,6 +197,33 @@ CODIGO=$(pedir "$LECTURA_DE_LA_FASE_1" "$TRABAJO/lectura.json")
   || fallar "Con el rol de la fase 0, GET $LECTURA_DE_LA_FASE_1 tenía que ser 403 y es $CODIGO: el estado viejo no es viejo."
 echo "::notice title=Segundo arranque::Estado viejo construido: el rol del sistema con los $((ESPERADOS - 1)) permisos de la fase 0 y uno retirado; GET $LECTURA_DE_LA_FASE_1 -> 403."
 
+# ------------------------------------------------ estado viejo del libro: una partición de menos
+#
+# POR QUÉ AQUÍ Y NO EN UN TEST DE INTEGRACIÓN. La regla que se comprueba abajo —«toda partición del
+# libro lleva su disparador de TRUNCATE»— es trivial de cumplir sobre una base recién migrada: allí
+# las particiones las acaba de crear la migración, con el mismo SQL que se está probando. El sitio
+# donde la regla puede romperse de verdad es el otro: una partición creada por el MIGRADOR, meses
+# después de la instalación, por el camino que nadie ejerce hasta que el calendario avanza. Los
+# disparadores `FOR EACH STATEMENT` no se heredan del padre —está medido—, así que una partición
+# que naciera sin el suyo aceptaría un `TRUNCATE` de su mes y se llevaría las filas sin decir nada.
+#
+# QUÉ ESTADO SE CONSTRUYE, y es el mismo truco que con el rol del sistema: no se espera a que pase
+# un mes, se deja la base como la habría dejado el paso del tiempo. Se borra la ÚLTIMA partición de
+# la pista —la del mes +12, que está vacía— y se comprueba que se ha ido. Lo que el segundo
+# arranque tiene que hacer es volver a crearla, y crearla ENTERA.
+PARTICION_NUEVA="movimiento_stock_$(consultar "SELECT to_char(date_trunc('month', current_date) + interval '12 months', 'YYYY_MM')")"
+
+ANTES=$(consultar "SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'inventario' AND c.relname = '$PARTICION_NUEVA'")
+[ "$ANTES" = "1" ] \
+  || fallar "La partición $PARTICION_NUEVA no existe antes de borrarla ($ANTES): el primer arranque no dejó la pista de doce meses, y borrar lo que no está no construye ningún estado."
+
+consultar "DROP TABLE inventario.$PARTICION_NUEVA" > /dev/null
+
+DESPUES=$(consultar "SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'inventario' AND c.relname = '$PARTICION_NUEVA'")
+[ "$DESPUES" = "0" ] \
+  || fallar "La partición $PARTICION_NUEVA sigue ahí después de borrarla: el estado viejo del libro no se ha construido."
+echo "::notice title=Segundo arranque::Estado viejo del libro construido: borrada la partición $PARTICION_NUEVA, que el migrador tiene que volver a crear."
+
 # ------------------------------------------------------------------------------ segundo arranque
 # Las ocho variables de la semilla, vacías: pisan las del fichero de entorno, y el compose las
 # interpola con `:-`. Es la instalación en marcha que las retiró, como recomienda el ejemplo.
@@ -228,6 +255,33 @@ RETIRADOS=$(grep -c '"PermisoRetiradoDelRolDelSistema"' "$TRABAJO/migraciones.lo
 "${DC[@]}" logs --no-color api > "$TRABAJO/api.log"
 grep -q '"SemillaSinVariables"' "$TRABAJO/api.log" \
   || fallar "La API del segundo arranque no dice que la semilla se queda fuera (suceso SemillaSinVariables); de la semilla dice: [$(grep -oE '"Semilla[A-Za-z]*"' "$TRABAJO/api.log" | sort -u | tr '\n' ' ')]."
+
+# --------------------------------------------- la partición que creó el migrador, con su guarda
+#
+# Tres afirmaciones y ninguna global. La primera: la partición borrada ha vuelto, y la ha traído
+# este arranque. La segunda: la ha traído CON su disparador de TRUNCATE, que es lo único que hace
+# que «el libro no se puede vaciar» sea verdad también en los meses que todavía no existían cuando
+# se instaló. Y la tercera es la del ADR-0020: que el conjunto de particiones no esté vacío, porque
+# «ninguna partición sin disparador» sale verde sola cuando no hay ninguna partición.
+grep -q '"ParticionesDelLibroAlDia"' "$TRABAJO/migraciones.log" \
+  || fallar "El migrador del segundo arranque no dice haber dejado al día la pista de particiones del libro (suceso ParticionesDelLibroAlDia)."
+
+VUELTA=$(consultar "SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'inventario' AND c.relname = '$PARTICION_NUEVA'")
+[ "$VUELTA" = "1" ] \
+  || fallar "El migrador del segundo arranque no ha vuelto a crear la partición $PARTICION_NUEVA: la pista del libro se queda corta en cuanto pase un mes."
+
+CON_GUARDA=$(consultar "SELECT count(*) FROM pg_catalog.pg_trigger t JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'inventario' AND c.relname = '$PARTICION_NUEVA' AND t.tgname = 'movimientos_sin_vaciar'")
+[ "$CON_GUARDA" = "1" ] \
+  || fallar "La partición $PARTICION_NUEVA la ha creado el migrador SIN el disparador movimientos_sin_vaciar: un TRUNCATE de ese mes se llevaría sus filas sin decir nada."
+
+PARTICIONES=$(consultar "SELECT count(*) FROM pg_catalog.pg_inherits i JOIN pg_catalog.pg_class p ON p.oid = i.inhparent JOIN pg_catalog.pg_namespace n ON n.oid = p.relnamespace WHERE n.nspname = 'inventario' AND p.relname = 'movimiento_stock'")
+[ "${PARTICIONES:-0}" -gt 0 ] \
+  || fallar "inventario.movimiento_stock no tiene ni una partición: la comprobación de abajo saldría verde por no tener nada que mirar (ADR-0020)."
+
+SIN_GUARDA=$(consultar "SELECT coalesce(string_agg(c.relname, ' '), '') FROM pg_catalog.pg_inherits i JOIN pg_catalog.pg_class p ON p.oid = i.inhparent JOIN pg_catalog.pg_namespace n ON n.oid = p.relnamespace JOIN pg_catalog.pg_class c ON c.oid = i.inhrelid WHERE n.nspname = 'inventario' AND p.relname = 'movimiento_stock' AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.tgrelid = c.oid AND t.tgname = 'movimientos_sin_vaciar')")
+[ -z "${SIN_GUARDA// /}" ] \
+  || fallar "Estas particiones del libro no llevan el disparador movimientos_sin_vaciar: ${SIN_GUARDA}."
+echo "::notice title=Segundo arranque::El migrador ha vuelto a crear $PARTICION_NUEVA con su disparador de TRUNCATE; las $PARTICIONES particiones del libro lo llevan."
 
 iniciar_sesion "tras el segundo arranque"
 comparar_con_el_catalogo "Tras el segundo arranque"

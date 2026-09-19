@@ -133,6 +133,18 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "siga nombrando empresa_id en las columnas y en el objetivo del conflicto lo comprueba "
             + "LaClaveDeIdempotenciaEsLaTuplaEnteraTests",
 
+        // Del ítem 2.3: el migrador deja la pista de particiones del libro doce meses por delante.
+        ["src/Api/Arranque/MigradorDeArranque.cs usa .SqlQuery"] =
+            "llama a `inventario.asegurar_particiones_de_movimientos()`, que es DDL: crea las "
+            + "particiones mensuales que faltan y les pone su disparador de TRUNCATE. No hay forma "
+            + "de pedir eso sin SQL crudo -EF Core no sabe generar `CREATE TABLE ... PARTITION OF`-, "
+            + "y la función tiene que ser UNA y vivir en la base porque la llaman dos: la migración "
+            + "que crea la tabla y este migrador en cada despliegue. La excepción es estrecha por lo "
+            + "que la hace inútil para cualquier otro caso: esa sentencia NO LEE NINGUNA FILA de "
+            + "ninguna tabla -devuelve cuántas particiones ha creado-, así que no hay ninguna fila "
+            + "que un filtro de empresa hubiera protegido. Y corre donde no hay inquilino que "
+            + "filtrar: el migrador es un contenedor de un solo uso, sin petición y sin claim",
+
         // Del ítem 1.11 (ADR-0034 §4): la segunda escritura masiva del sistema, y la primera que borra.
         ["src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Recibos/PurgaDeRecibosCaducados.cs usa .ExecuteDelete"] =
             "borra los recibos de idempotencia vencidos, de todas las empresas, dentro de un ambito "

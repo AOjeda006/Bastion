@@ -575,16 +575,25 @@ jobs:
           # escribir. Durante dos módulos, quitar del migrador el contexto de Terceros o el de
           # Catálogo habría dejado el humo en verde y el contenedor sin su esquema.
           FALTAN=
-          for CONTEXTO in AuditoriaDbContext OrganizacionDbContext IdentidadDbContext TercerosDbContext CatalogoDbContext; do
+          for CONTEXTO in AuditoriaDbContext OrganizacionDbContext IdentidadDbContext TercerosDbContext CatalogoDbContext InventarioDbContext; do
             echo "$REGISTRO" | grep -q "\"Contexto\":\"${CONTEXTO}\".*EsquemaMigrado" \
               || echo "$REGISTRO" | grep -q "EsquemaMigrado.*\"Contexto\":\"${CONTEXTO}\"" \
               || FALTAN="${FALTAN} ${CONTEXTO}"
           done
           if [ -n "$FALTAN" ]; then
-            echo "::error title=Migrador::Sobre una base recién creada los CINCO contextos con persistencia tienen que migrarse, y estos no lo dicen:${FALTAN}."
+            echo "::error title=Migrador::Sobre una base recién creada los SEIS contextos con persistencia tienen que migrarse, y estos no lo dicen:${FALTAN}."
             exit 1
           fi
-          echo "::notice title=Migrador::Esquema aplicado por los cinco contextos: Auditoría, Organización, Identidad, Terceros y Catálogo."
+          echo "::notice title=Migrador::Esquema aplicado por los seis contextos: Auditoría, Organización, Identidad, Terceros, Catálogo e Inventario."
+
+          # Y LA PISTA DE PARTICIONES DEL LIBRO, que no la deja una migración sino el migrador en
+          # cada arranque (ítem 2.3). Sobre una base recién creada la migración ya crea los trece
+          # meses, así que aquí el migrador crea CERO y lo dice: lo que este paso afirma es que el
+          # bloque se ejecutó, no cuántas hizo. Que cree una de verdad se ve en el segundo
+          # arranque, que es el único sitio donde hay una base que ya tenía datos.
+          echo "$REGISTRO" | grep -q '"ParticionesDelLibroAlDia"' \
+            || { echo "::error title=Migrador::El migrador no dice haber dejado al día la pista de particiones del libro (suceso ParticionesDelLibroAlDia)."; exit 1; }
+          echo "::notice title=Migrador::El libro de movimientos tiene su pista de particiones al día."
 
       # LA MITAD DE F3 QUE NO SE VE COMPILANDO. `db/semillas` salió del `.dockerignore`, y eso
       # solo mete los ficheros en el CONTEXTO de construcción: `Dockerfile.api` se lleva a la

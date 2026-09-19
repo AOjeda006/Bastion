@@ -3,6 +3,7 @@ using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Identidad.Application.Arranque;
 using Bastion.Identidad.Infrastructure.Persistencia;
+using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Semillas;
 using Bastion.Terceros.Infrastructure.Persistencia;
@@ -93,6 +94,7 @@ public static partial class MigradorDeArranque
             await MigrarAsync<IdentidadDbContext>(alcance, registro).ConfigureAwait(false);
             await MigrarAsync<TercerosDbContext>(alcance, registro).ConfigureAwait(false);
             await MigrarAsync<CatalogoDbContext>(alcance, registro).ConfigureAwait(false);
+            await MigrarAsync<InventarioDbContext>(alcance, registro).ConfigureAwait(false);
 
             // Y DESPUÉS las semillas, en el mismo proceso y con el mismo código de salida. Van
             // aquí y no en el arranque de la API por lo mismo que el DDL: con dos réplicas, dos
@@ -109,6 +111,13 @@ public static partial class MigradorDeArranque
             // los daba a nadie. Va aquí por lo mismo que los maestros —un solo proceso, antes de
             // que arranque ninguna réplica— y detrás de todo, porque escribe en la traza.
             await PonerAlDiaLosRolesDelSistemaAsync(alcance, registro).ConfigureAwait(false);
+
+            // Y LA PISTA DE PARTICIONES DEL LIBRO, en CADA despliegue y por el mismo argumento
+            // que el rol del sistema: lo que una migración escribe se queda congelado el día en
+            // que se escribió esa migración. Los meses de `inventario.movimiento_stock` no pueden
+            // ser eso — desde el mes siguiente al de la instalación, todas las filas caerían en la
+            // partición por defecto y la partición sería decorativa.
+            await AsegurarLasParticionesDelLibroAsync(alcance, registro).ConfigureAwait(false);
         }
         catch (Exception excepcion) when (excepcion is not OperationCanceledException)
         {
@@ -219,6 +228,42 @@ public static partial class MigradorDeArranque
         }
     }
 
+    /// <summary>Deja creadas las particiones mensuales del libro, doce meses por delante.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El mecanismo es UNO y vive en la base</b>, y esto es quien lo llama por segunda vez: la
+    /// primera es la migración que crea la tabla, para que el mes de la instalación exista desde
+    /// el primer instante. Escrito en C# no lo podría llamar la migración; escrito dos veces
+    /// serían dos verdades que se separan el día que alguien toque una.
+    /// </para>
+    /// <para>
+    /// <b>Se dice cuántas ha creado, también cuando son cero.</b> Cero es lo normal a partir del
+    /// segundo despliegue del mes, y un migrador que callara no distinguiría «ya estaban» de «no
+    /// he mirado» — que es el mismo argumento por el que <c>EsquemaAlDia</c> existe.
+    /// </para>
+    /// <para>
+    /// <b>Y si el día llega en que no puede crear un mes, esto revienta</b>, el migrador sale con
+    /// 1 y la API no arranca: la función lanza con el mes en el mensaje cuando la partición por
+    /// defecto ya tiene filas de ese mes. Es una parada ruidosa a propósito, porque una partición
+    /// por defecto con filas dentro es un invariante ya roto y seguir en silencio lo deja crecer.
+    /// </para>
+    /// </remarks>
+    private static async Task AsegurarLasParticionesDelLibroAsync(
+        AsyncServiceScope alcance,
+        ILogger registro)
+    {
+        InventarioDbContext contexto = alcance.ServiceProvider.GetRequiredService<InventarioDbContext>();
+
+        // El alias `Value` no es decorativo y tampoco es nuestro: `SqlQueryRaw<T>` de un escalar
+        // exige que la columna se llame así. Sin él, EF Core no sabe a qué proyectar el `int`.
+        int creadas = await contexto.Database
+            .SqlQueryRaw<int>("""SELECT inventario.asegurar_particiones_de_movimientos() AS "Value";""")
+            .SingleAsync()
+            .ConfigureAwait(false);
+
+        ParticionesDelLibroAlDia(registro, creadas);
+    }
+
     [LoggerMessage(
         Level = LogLevel.Information,
         Message = "{Contexto}: el esquema ya estaba al día, con {Conocidas} migraciones conocidas.")]
@@ -256,6 +301,11 @@ public static partial class MigradorDeArranque
         Level = LogLevel.Warning,
         Message = "{Rol}: {Concedidos} permisos concedidos y {Retirados} retirados; el rol del sistema queda con los {Permisos} del catálogo.")]
     private static partial void RolDelSistemaAlineado(ILogger logger, string rol, int concedidos, int retirados, int permisos);
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "El libro de movimientos tiene su pista de particiones al día; se han creado {Creadas} en este arranque.")]
+    private static partial void ParticionesDelLibroAlDia(ILogger logger, int creadas);
 
     [LoggerMessage(
         Level = LogLevel.Critical,
