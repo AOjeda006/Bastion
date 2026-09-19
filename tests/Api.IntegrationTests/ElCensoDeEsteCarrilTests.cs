@@ -143,6 +143,19 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
+        // Del ítem 2.4: el cerrojo de la numeración, que solo el motor puede demostrar. El
+        // recorrido por tipo de documento cuenta como UN caso aquí -un `[Theory]` es un nombre,
+        // por muchas filas que traiga- y su afirmación de no-vacío va al lado.
+        "ElCerrojoDeLaNumeracionTests.Borrar_una_serie_a_mano_sin_su_contador_sigue_siendo_imposible",
+        "ElCerrojoDeLaNumeracionTests.Deshacer_la_transaccion_devuelve_el_numero_y_el_siguiente_lo_reutiliza",
+        "ElCerrojoDeLaNumeracionTests.Dos_numeraciones_simultaneas_se_llevan_numeros_distintos_y_consecutivos",
+        "ElCerrojoDeLaNumeracionTests.El_recorrido_de_arriba_no_se_deja_ningun_tipo_de_documento",
+        "ElCerrojoDeLaNumeracionTests.Suprimir_pierde_contra_una_numeracion_que_se_cuela_entre_la_lectura_y_el_borrado",
+        "ElCerrojoDeLaNumeracionTests.Una_serie_cerrada_no_numera",
+        "ElCerrojoDeLaNumeracionTests.Una_serie_de_otra_empresa_no_numera",
+        "ElCerrojoDeLaNumeracionTests.Una_serie_numera_sin_huecos_sea_cual_sea_el_documento_que_numera",
+        "ElCerrojoDeLaNumeracionTests.Una_serie_que_no_existe_da_el_MISMO_error_que_una_ajena",
+
         // Del ítem 1.6, y son el SEGUNDO caso de este ensamblado que corre también en el carril
         // rápido: traducen consultas a SQL, y traducir no abre conexión. Están aquí porque desde el
         // 1.6 el listado del art. 32 lo componen tres módulos, y este es el único proyecto de

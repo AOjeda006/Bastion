@@ -126,9 +126,9 @@ Y se **comprueba**, en vez de darse por hecho: que un `DELETE` de una entidad de
 por su principal lleve su testigo dentro es un hecho del ORM, no una intención nuestra. El caso
 numera entre la lectura y el borrado, contra PostgreSQL de verdad.
 
-### 6. La clave ajena es `RESTRICT`, y quien borra la hija es el ORM
+### 6. La clave ajena es `NO ACTION` **aplazada al `COMMIT`**, y quien borra la hija es el ORM
 
-`ON DELETE RESTRICT`, como las cuatro claves ajenas del ADR-0007 §8, y por el mismo motivo que allí
+Sin cascada en la base, como las cuatro claves ajenas del ADR-0007 §8 y por el mismo motivo que allí
 —en un ERP, un borrado en cascada es la forma más rápida de perder un histórico—. La cascada es
 **del lado del cliente**: el ORM marca la fila hija cargada como borrada y la borra **antes** que su
 principal, en la misma transacción y con su testigo puesto.
@@ -136,6 +136,38 @@ principal, en la misma transacción y con su testigo puesto.
 Con cascada en la base pasarían dos cosas que no interesan: un `DELETE` a mano sobre `series` se
 llevaría el contador sin que nadie lo comprobara, y el borrado de la hija no llevaría testigo, que
 es justo lo que el punto 5 necesita.
+
+**Por qué `NO ACTION` aplazada y no `RESTRICT`: lo decidió una medición.** La primera versión de
+esta tabla salió con `RESTRICT`, que es la letra del ADR-0007 §8, y con ella **el punto 5 no
+funcionaba**. El caso que numera entre la lectura y el borrado no daba el choque de versión que este
+ADR prometía: daba un `23503`. La cadena es esta, y no se ve leyendo el modelo:
+
+1. El `DELETE` de la hija no casa con ninguna fila —su testigo se movió—, así que la fila **se
+   queda**.
+2. El `DELETE` de la serie viaja en el **mismo lote**, y PostgreSQL comprueba `RESTRICT` **en el
+   acto**: revienta ahí mismo con un error de integridad.
+3. EF Core nunca llega a comparar cuántas filas tocó la primera sentencia, así que lo que sube es
+   `DbUpdateException` y no `DbUpdateConcurrencyException`. El borde traduce el segundo a un `412`
+   (`ManejadorDeVersionObsoleta`) y del primero no sabe nada: **la carrera contestaba un `500`**.
+
+`RESTRICT` **no se puede aplazar** —esa es la diferencia entera entre `RESTRICT` y `NO ACTION` en
+PostgreSQL, y no una cuestión de estilo—, así que la clave ajena se declara `NO ACTION` y la
+migración la marca `DEFERRABLE INITIALLY DEFERRED`. Con eso el lote entero pasa, EF Core compara las
+filas tocadas, sube el choque de versión, y la transacción se deshace sin llegar al `COMMIT`.
+
+**Qué se afloja exactamente, dicho sin adornos.** Nada de lo que el ADR-0007 §8 prohíbe: sigue sin
+haber cascada, y un contador huérfano sigue siendo imposible. Lo único que se mueve es **cuándo** se
+comprueba —al confirmar la transacción en vez de al ejecutar la sentencia—, así que una transacción
+puede pasar por un estado intermedio inconsistente **por dentro** y no puede terminar en uno. Que
+siga siendo imposible no se confía: lo ejerce
+`ElCerrojoDeLaNumeracionTests.Borrar_una_serie_a_mano_sin_su_contador_sigue_siendo_imposible`, que
+borra la serie a mano y ve reventar el `COMMIT`.
+
+**Y queda dicho lo que este ADR destapa y no arregla:** que ninguna clave ajena del sistema borre en
+cascada **no lo comprueba nadie**. El ADR-0007 §8 lo dice y la única defensa es la revisión. Hoy hay
+cuatro relaciones en `Cascade` en Identidad —de un usuario a lo que cuelga de él—, así que la regla
+que faltaría no es «ninguna» sino «ninguna fuera de una lista con su motivo», y decidir esa lista es
+mirar decisiones de otro módulo: no cabe en el ítem 2.4 y no se hace de paso.
 
 ### 7. La fila hija **no se audita**, y el motivo no es de gusto
 

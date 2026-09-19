@@ -57,11 +57,17 @@ internal sealed class ConfiguracionDeSerie : IEntityTypeConfiguration<Serie>
         // propiedad lanza. Que NUNCA llegue sin ella lo garantiza el `AutoInclude`, que no se puede
         // olvidar en una consulta porque no hay que escribirlo en ninguna.
         //
-        // EN CASCADA DEL LADO DEL CLIENTE, no de la base. La clave ajena queda `RESTRICT`, como las
-        // cuatro del ADR-0007 §8 —en un ERP una cascada en el motor es la forma más rápida de
-        // perder un histórico—, y quien borra la hija es el ORM con la fila delante: así ese
-        // `DELETE` lleva DENTRO el testigo que se leyó, que es lo único que separa suprimir una
-        // serie de suprimirla justo cuando otro le está sacando el primer número.
+        // EN CASCADA DEL LADO DEL CLIENTE, no de la base: quien borra la hija es el ORM con la
+        // fila delante, así que ese `DELETE` lleva DENTRO el testigo que se leyó —lo único que
+        // separa suprimir una serie de suprimirla justo cuando otro le está sacando su primer
+        // número—. Sin cascada en el motor, como manda el ADR-0007 §8: en un ERP es la forma más
+        // rápida de perder un histórico.
+        //
+        // La clave ajena de la base NO es `RESTRICT` como las cuatro de aquel apartado, y la
+        // diferencia está medida y escrita en la migración: es `NO ACTION` APLAZADA al `COMMIT`,
+        // porque `RESTRICT` se comprueba en el acto y ganaba siempre al testigo, convirtiendo esa
+        // carrera en un error de integridad que el borde no sabe traducir. Prohibir el huérfano
+        // sigue prohibido; lo que cambia es cuándo se mira.
         serie.HasOne(fila => fila.Numeracion)
             .WithOne()
             .HasForeignKey<ContadorDeSerie>(fila => fila.SerieId)

@@ -4621,6 +4621,20 @@ intención nuestra, y este proyecto no da por bueno un hecho del ORM sin verlo. 
 la lectura y el borrado, contra PostgreSQL de verdad. Arreglar una mitad y dejar la otra apoyada en
 lo que se acaba de quitar sería peor que no tocar ninguna.
 
+> **Y el caso desmintió la mitad de este párrafo, que es exactamente para lo que se escribió.** Con
+> la clave ajena en `RESTRICT` —la letra del ADR-0007 §8— la respuesta **no era un `412`**: el
+> `DELETE` de la hija no casaba, la fila se quedaba, y el `DELETE` de la serie, que viaja en el mismo
+> lote, reventaba **antes** con un `23503` porque PostgreSQL comprueba `RESTRICT` en el acto. EF Core
+> no llegaba a contar las filas tocadas, así que subía `DbUpdateException` y no
+> `DbUpdateConcurrencyException`: el borde traduce el segundo a `412` y del primero no sabe nada, o
+> sea que **la carrera contestaba un `500`**. `RESTRICT` no se puede aplazar —es la diferencia entera
+> con `NO ACTION`—, así que la clave ajena pasa a `NO ACTION DEFERRABLE INITIALLY DEFERRED` y el
+> testigo del ORM vuelve a hablar primero. La prohibición no se afloja —sigue sin haber cascada y un
+> huérfano sigue siendo imposible—; se mueve **cuándo** se comprueba, y eso lleva su propio caso:
+> `Borrar_una_serie_a_mano_sin_su_contador_sigue_siendo_imposible`. El razonamiento entero, en el
+> punto 6 del ADR-0039. **La predicción escrita arriba se queda tal cual, sin retocar**: el valor de
+> este párrafo está en que se ve lo que se dio por hecho y lo que la base contestó.
+
 #### 3. De qué serie se numera: la elige quien abre el documento, y no se comprueba hasta numerar
 
 `Ajuste` nace con `SerieId` y **sin número**, y el número se lo pone la confirmación. Al abrirlo

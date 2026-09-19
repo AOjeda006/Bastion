@@ -197,7 +197,15 @@ public sealed class EsquemaDelModuloTests(PostgresDeVerdad postgres)
         // `nextval` no se revierte al deshacer la transacción: una confirmación fallida dejaría
         // un hueco PERMANENTE en la numeración, y R5 dice «correlativa y sin huecos». Que no
         // exista ninguna secuencia en el esquema es la comprobación, no que el modelo lo diga.
-        (await TipoDeColumnaAsync("series", "contador")).ShouldBe("bigint");
+        //
+        // DESDE EL ADR-0039 LA COLUMNA NO ESTÁ EN `series`, y eso NO afloja nada de lo que este
+        // caso decía: lo que el ADR-0007 §5 decidió es que el contador fuera una COLUMNA DE UNA
+        // FILA y no una secuencia, y sigue siéndolo. Lo único que cambió es en qué fila vive
+        // -fuera de la que lleva el `ETag`-, así que lo que se mira es la tabla nueva. Se afirma
+        // además que en `series` YA NO ESTÁ: dejarla a medias -en las dos tablas- sería el peor
+        // de los estados posibles, dos contadores para una serie y nadie sabiendo cuál manda.
+        (await TipoDeColumnaAsync("contadores_de_serie", "ultimo_numero")).ShouldBe("bigint");
+        (await TipoDeColumnaAsync("series", "contador")).ShouldBeNull();
 
         IReadOnlyList<(string Esquema, string Tabla)> secuencias = await ConsultarAsync(
             $"""
