@@ -11705,6 +11705,26 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTA (2026-09-19, ítem 2.4) · nadie comprueba de qué documentos es una serie.** `Serie`
+  lleva su `TipoDeDocumento` desde el 2.4 —y los tres valores de inventario se añadieron para
+  esto—, pero **ningún camino lo mira**. `AbrirAjuste` pregunta a `IConsultaDeSeries` por el
+  **estado**, y el estado no sabe de tipos; el `WHERE` de `NumeradorDeSerie`, que es la garantía
+  de verdad, exige tres cosas —`s.id = c.serie_id`, `s.empresa_id = {1}`, `s.estado = 'Activa'`—
+  y ninguna es el tipo. O sea que **una serie de facturas numera un ajuste de inventario** y todo
+  sale verde, con el agravante de que el número que consume es un correlativo de la serie de
+  facturas: el hueco no se queda en el ajuste, se lo lleva la factura siguiente y ahí sí es la R5.
+  No se arregla aquí porque **no es una línea, es una decisión de frontera**: `TipoDeDocumento`
+  vive en `Organizacion.Domain.Series` y no en `Contracts`, así que hoy `Inventario` **no puede
+  nombrarlo**, y las tres salidas cuestan cosas distintas —publicar el enumerado en `Contracts`
+  (que expone el vocabulario fiscal entero a quien no lo necesita), que el puerto crezca un
+  «¿sirve esta serie para *esto*?» con un valor que `Contracts` sí publique, o meter
+  `s.tipo_de_documento = {2}` en el `WHERE` y que el parámetro lo ponga el numerador de cada
+  módulo—. La tercera es la única que lo pone donde está la garantía, y probablemente van dos
+  de las tres. **No se decide aquí ni se amplía el checklist por cuenta propia**: el sitio
+  natural es el **2.5**, que es cuando haya un segundo documento numerado y el error deje de ser
+  hipotético, o un addendum. El disparador queda escrito en `IConsultaDeSeries`, que dice de sí
+  mismo que no contesta esto.
+
 - **ABIERTA (2026-09-19, ítem 2.3) · el factor a unidad base llega del cliente y nadie lo resuelve.**
   `AbrirAjuste` toma `linea.FactorAUnidadBase` **del DTO** y se lo pasa al dominio tal cual. El
   dominio lo valida —positivo, y la cantidad base es la introducida por él—, pero eso comprueba la

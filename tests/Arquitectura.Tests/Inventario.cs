@@ -478,6 +478,16 @@ internal static class Inventario
                 "para quien guarde su identificador — el impuesto por defecto del artículo " +
                 "(§7.3). No escribe.",
 
+            ["Bastion.Organizacion.Contracts.Series.IConsultaDeSeries"] =
+                "LECTURA: en qué estado está una serie de numeración, para quien guarde su " +
+                "identificador — el ajuste de inventario, que desde el ítem 2.4 dice por qué serie " +
+                "se numerará (R5, §7.4). Una serie CERRADA contesta `SoloResuelveLoViejo`: sigue " +
+                "resolviendo los documentos que ya numeró y no entrega ni un número más. Es el " +
+                "único puerto cuya respuesta NO es la garantía que sostiene al consumidor: quien " +
+                "confirma vuelve a comprobar la serie entera dentro de la sentencia que toma el " +
+                "número, en su transacción y con la fila bloqueada. No escribe, y no publica ni " +
+                "el contador ni el formato.",
+
             ["Bastion.Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones"] =
                 "LECTURA: en qué estado está una ubicación DENTRO DE UN ALMACÉN, para quien guarde " +
                 "los dos identificadores. Recibe los dos porque que la ubicación cuelgue de ese " +

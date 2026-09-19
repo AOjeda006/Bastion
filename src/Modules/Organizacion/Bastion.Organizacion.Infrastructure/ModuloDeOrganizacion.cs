@@ -18,6 +18,7 @@ using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Impuestos;
+using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Bastion.Organizacion.Contracts.Unidades;
 using Bastion.Organizacion.Infrastructure.Persistencia;
@@ -135,6 +136,12 @@ public static class ModuloDeOrganizacion
         // en `s_aperturasDeBloqueoPermitidas` (ADR-0037).
         servicios.AddScoped<IConsultaDeAlmacenes, ConsultaDeAlmacenes>();
         servicios.AddScoped<IConsultaDeUbicaciones, ConsultaDeUbicaciones>();
+
+        // El del ítem 2.4, y el primero de los seis que NO recibe `IAccesoALoBloqueado`: en una
+        // serie no hay un solo dato de persona, así que el filtro del art. 32 no la esconde nunca
+        // y no hay ningún ámbito que abrir. Lo estrena el alta de un ajuste, que desde el 2.4
+        // guarda una `SerieId`.
+        servicios.AddScoped<IConsultaDeSeries, ConsultaDeSeries>();
 
         // Los eventos que emite este módulo, con el nombre que llevan en la cola. Se declaran
         // AQUÍ y no en los bloques comunes: un catálogo central obligaría a tocar código común

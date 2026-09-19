@@ -45,6 +45,11 @@ public sealed class ElCensoDeEsteCarrilTests
     [
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
+        // Del ítem 2.4: el puerto de series, que estrena el consumidor del ajuste.
+        "ElPuertoDeSeriesTests.La_serie_activa_se_ofrece_y_la_que_no_esta_no_existe",
+        "ElPuertoDeSeriesTests.Una_serie_cerrada_sigue_resolviendo_lo_viejo_y_no_se_ofrece",
+        "ElPuertoDeSeriesTests.Una_serie_de_otra_empresa_contesta_lo_mismo_que_una_que_no_existe",
+
         // Del ítem 1.7, y son la SEGUNDA excepción declarada de este carril: aritmética y una
         // rama, sin base. Su motivo está en `LaAritmeticaDeLaInversaTests` — un caso frontera al
         // que solo se llega levantando un contenedor es un caso frontera que nadie ejerce
