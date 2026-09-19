@@ -11865,8 +11865,9 @@ cuando hace falta el porqué.
 ## Notas / riesgos
 
 - **ABIERTA (2026-09-19, ítem 2.4) · nadie comprueba de qué documentos es una serie.** `Serie`
-  lleva su `TipoDeDocumento` desde el 2.4 —y los tres valores de inventario se añadieron para
-  esto—, pero **ningún camino lo mira**. `AbrirAjuste` pregunta a `IConsultaDeSeries` por el
+  lleva su `TipoDeDocumento` **desde el ítem 0.4** —y el 2.4 le añadió los tres valores de
+  inventario, que era lo único que faltaba para poder declarar una serie de ajustes—, pero
+  **ningún camino lo mira**. `AbrirAjuste` pregunta a `IConsultaDeSeries` por el
   **estado**, y el estado no sabe de tipos; el `WHERE` de `NumeradorDeSerie`, que es la garantía
   de verdad, exige tres cosas —`s.id = c.serie_id`, `s.empresa_id = {1}`, `s.estado = 'Activa'`—
   y ninguna es el tipo. O sea que **una serie de facturas numera un ajuste de inventario** y todo
