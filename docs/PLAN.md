@@ -902,14 +902,22 @@ por la peor de las razones.
 >
 > **Por eso desde el 1.10 no se copian a mano.** Las tres de aquí abajo salen de recorrer los
 > `*Controller.cs` buscando `[Http…]`, `[FromHeader(Name = "If-Match")]` y `[AdmiteIdempotencia]`, y
-> ese barrido devuelve hoy **128 · 82 · 46 · 19**, los mismos cuatro números que fija
+> ese barrido devuelve hoy **129 · 83 · 46 · 20**, los mismos cuatro números que fija
 > `El_barrido_encuentra_el_inventario_entero` **leyendo la tabla de enrutado del host**, que es otra
 > fuente. Dos fuentes que no se derivan una de otra dando el mismo número es lo más cerca que se
 > puede estar de una tabla comprobada sin escribir un test que compare prosa. El delta del 1.10,
 > separado de lo que arrastraban: **+7 acciones, +4 escrituras, +3 `If-Match`, +1
 > `Idempotency-Key`, cero exentas** —cinco de Catálogo y dos de Terceros, porque el cruce es mutuo—;
 > y el del 1.9, que nunca se anotó: **+10, +5, +3, +2, cero**. El del 1.11: **+1, +1, cero, +1,
-> cero** —la importación de terceros, que es un alta sin recurso propio—.
+> cero** —la importación de terceros, que es un alta sin recurso propio—. El del **2.4**: **+1,
+> +1, cero, +1, cero** —la confirmación del ajuste, primera y única acción del borde de
+> Inventario—.
+>
+> **Y desde el 2.4 los números son CINCO**, porque los cuatro de arriba se quedaron cortos: la
+> confirmación **exige** la clave, y el reparto no sabe distinguir admitirla de exigirla. El quinto
+> es **1**, lo fija `La_clave_obligatoria_es_la_excepcion_y_esta_declarada_entera` comparando la
+> lista entera en los dos sentidos, y no es un cajón aparte sino un **subconjunto** del cuarto: sin
+> él, las veinte podrían volverse obligatorias sin que ninguno de los otros cuatro se moviera.
 
 **Los dieciocho recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de
 agregado con `GET /{id}`, que es la misma lista de las altas de más abajo **menos la importación**
@@ -983,8 +991,9 @@ proveedor a un artículo, en cambio, **sí** crea una fila con su identidad, su 
 su `DELETE`, y por eso está en la tabla de abajo y no en esta. La pregunta que separa las dos no es
 si el verbo suena a alta, es si lo que se escribe ya tenía `ETag`.
 
-**Las diecinueve rutas que admiten `Idempotency-Key`** — las dieciocho altas de un recurso y la
-importación del 1.11, y solo ellas:
+**Las veinte rutas que admiten `Idempotency-Key`** — las dieciocho altas de un recurso, la
+importación del 1.11 y la confirmación del 2.4, y solo ellas. La última columna dice quién la
+atiende, y la marca **(exigida)** dice cuál de ellas no admite que falte:
 
 | Ruta | Módulo | Almacén que la atiende |
 |---|---|---|
@@ -1007,6 +1016,17 @@ importación del 1.11, y solo ellas:
 | `POST /api/v1/catalogo/tarifas/{tarifaId}/lineas` *(1.9)* | `catalogo` | ídem |
 | `POST /api/v1/catalogo/articulos/{articuloId}/proveedores` *(1.10)* | `catalogo` | ídem |
 | `POST /api/v1/terceros/terceros/importacion` *(1.11)* | `terceros` | `AlmacenDeIdempotenciaDeTerceros` |
+| `POST /api/v1/inventario/ajustes/{id}/confirmacion` **(exigida, 2.4)** | `inventario` | `AlmacenDeIdempotenciaDeInventario` |
+
+> **La última es la excepción a la doctrina de este ítem**, escrita aquí para que no se lea como
+> una más: «la clave es una garantía que el cliente **pide**, no un peaje que se le cobra» vale
+> para las diecinueve de arriba y no para esta. Sin cabecera, el filtro se aparta en su primera
+> línea y no abre transacción; sin transacción, el `UPDATE` del contador se confirma solo y un
+> fallo posterior deja el número gastado sin documento que lo lleve —un hueco, que es lo que la R5
+> prohibe—. El criterio de la excepción **no es** «esto es importante»: es que sin la cabecera la
+> acción no pueda cumplir lo que promete. Sin cabecera son **428**, la misma clase de error que el
+> `If-Match` que falta, porque es lo mismo que pasa: la petición está impecable y lo que falta es
+> una precondición.
 
 **Y las diecisiete exentas, con el motivo resumido** (el entero está en el test):
 
