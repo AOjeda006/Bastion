@@ -5411,6 +5411,108 @@ que quedó.
 > desenlaces se listan todos —`success`, `failure` y `cancelled`— y los commits se cuentan con la
 > orden publicada al lado**, no de memoria.
 
+### 2.6 EN CURSO — lo primero: una fecha cae en un solo ejercicio (2026-09-23)
+
+**El hueco.** La frase que sostiene la R9 es «el ejercicio lo decide la fecha del movimiento», y
+hasta hoy dos ejercicios de la misma empresa podían solaparse. Lo único que había era un índice
+único `(empresa_id, anio)` —«un año, un ejercicio, por empresa»—, y eso mira la **etiqueta**:
+
+| | Lo que pasaba antes |
+|---|---|
+| `2026` = 1 ene 2026 → 31 dic 2026 | entra |
+| `2027` = 1 jul 2026 → 30 jun 2027 | **entra también**: el año es distinto, así que el único no dice nada |
+| Consecuencia | cualquier día del segundo semestre de 2026 caía en **dos** ejercicios |
+
+Y no es un caso inventado: el ejercicio partido de julio a junio lo admite la ley. Por eso el hueco
+existía y por eso no se veía.
+
+**Lo que se ha puesto.** La restricción de verdad, en la base, con el mismo operador y el mismo
+reparto que `tarifas_sin_tramos_solapados`:
+
+```sql
+ALTER TABLE organizacion.ejercicios
+    ADD CONSTRAINT ejercicios_sin_intervalos_solapados
+    EXCLUDE USING gist (
+        empresa_id WITH =,
+        daterange(fecha_de_inicio, fecha_de_fin, '[]') WITH &&
+    );
+```
+
+- **`'[]'`, cerrado por los dos lados**, porque `Ejercicio.Comprende` incluye el último día. Con el
+  `'[)'` por omisión, dos ejercicios que compartieran el 31 de diciembre convivirían y la base y el
+  dominio dirían cosas distintas de ese día.
+- **`empresa_id WITH =` va DENTRO** (R8). Fuera, el ejercicio de una empresa impediría el de otra.
+- **`date` y no `timestamptz`** (R14): un ejercicio no tiene huso.
+- Y delante, **`HaySolapeAsync`** en el repositorio, que preguntan `CrearEjercicio` y
+  `ModificarEjercicio`. No sustituye a la restricción —dos peticiones a la vez preguntan las dos
+  antes de que ninguna escriba—: se adelanta para contestar un **409 `ejercicio-solapado`** en vez
+  de dejar salir la violación convertida en 500. Lleva `excepto` para que un ejercicio no se
+  encuentre solapado **consigo mismo** al guardarlo sin moverlo.
+
+**Cuatro mutaciones, sobre las líneas que deciden**, con la orden que las mide:
+
+```
+dotnet test tests/Api.IntegrationTests --filter "FullyQualifiedName~ContratoDeOrganizacionTests"
+```
+
+La base de comparación es **29 de 29 en verde**, y después de la tanda vuelve a serlo con el árbol
+limpio.
+
+| # | Mutación | Resultado | Quién la caza |
+|---|----------|-----------|---------------|
+| 1 | El rango pasa a `'[)'` | **Rojo**, 1 de 29 | `El_dia_en_que_un_ejercicio_ACABA_todavia_cuenta_para_el_solape` |
+| 2 | Fuera `empresa_id WITH =` | **Rojo**, **9** de 29 | `El_solape_lo_impide_la_BASE…`, `Mover_un_ejercicio_encima_de_otro…`, `Un_ejercicio_se_cierra_y_se_reabre…`, `Las_fechas_de_un_ejercicio_van_y_vuelven…`, `El_dia_en_que_un_ejercicio_ACABA…`, `Suprimir_una_serie_que_no_ha_numerado…`, `Suprimir_una_serie_que_ya_ha_numerado…`, `Una_serie_colgada_del_ejercicio_de_otra_empresa…` y `Un_tipo_de_documento_inventado…` |
+| 3 | `CrearEjercicio` deja de preguntar | **Rojo**, 1 de 29 | `Dos_ejercicios_de_la_misma_empresa_no_pueden_pisarse_aunque_se_llamen_distinto` |
+| 4 | Fuera el `excepto` del repositorio | **Rojo**, 1 de 29 | `Mover_un_ejercicio_encima_de_otro_es_409_y_dejarlo_donde_esta_no_lo_es` |
+
+**La 2 se lee por su radio, y el radio es el argumento.** Nueve rojos no son nueve fallos: son nueve
+casos que crean un ejercicio en una empresa recién hecha y se encuentran con que el de la empresa
+anterior se lo impide. Eso es exactamente lo que R8 existe para que no pase, y se ve mejor en el
+daño colateral que en el caso que lo afirma a propósito.
+
+**Y la 3 dice cuál de las dos mitades protege qué.** Sin la pregunta del caso de uso, el alta
+duplicada **sigue sin entrar** —la base la para—, pero contesta **500**, no 409; se leyó el mensaje
+del fallo, no se supuso. O sea: la restricción protege **el dato** y la pregunta protege **la
+respuesta**, y hacen falta las dos. Por eso el caso afirma el `type` y no solo que falló.
+
+**Si alguna base tuviera ya un solape, esto falla cerrado**, igual que el índice del 2.5: el
+`ALTER TABLE` comprueba las filas existentes, aborta con `23P01`, la migración se deshace entera, el
+historial no anota nada y el migrador sale con error — y la API no arranca, porque el *compose* la
+hace depender de él con `service_completed_successfully`. **Se comprobó que hoy no lo hay** en vez
+de suponerlo:
+
+```
+docker exec bastion-postgres-1 psql -U bastion -d bastion_dev -tAc \
+  "SELECT count(*) FROM organizacion.ejercicios a JOIN organizacion.ejercicios b
+     ON a.empresa_id = b.empresa_id AND a.id < b.id
+    AND daterange(a.fecha_de_inicio, a.fecha_de_fin, '[]')
+     && daterange(b.fecha_de_inicio, b.fecha_de_fin, '[]');"
+```
+
+**0 pares solapados, sobre 0 filas** — la tabla está vacía en `bastion_dev`, que además va por la
+migración del 0.7 y ni siquiera tiene aplicada la del contador. Quien se encuentre el rojo en otra
+base no fuerza la restricción: busca los pares con esa misma consulta y decide qué intervalo se
+recorta, que es una decisión contable —depende de dónde estén los asientos— y no de esquema.
+
+**Y una cosa que este barrido NO comprueba, dicha para que nadie la dé por hecha.**
+`LasMigracionesSobreTablasConFilasTests` aplica cada migración sobre datos inventados, pero inventa
+**una** fila por tabla, y una fila no se solapa consigo misma: lo que ejerce aquí es que la
+restricción se **cree** sobre una tabla que no está vacía, no que **rechace** lo que tiene que
+rechazar. Quien comprueba eso es `El_solape_lo_impide_la_BASE_y_no_solo_la_comprobacion_previa`, que
+planta el par contra PostgreSQL de verdad. Es la misma lección del 2.5, aplicada antes de que la
+escriba otro.
+
+**Cifras de los carriles, con su orden:** `dotnet test Bastion.sln --filter "Category!=Integracion"`
+da **908** (31 + 61 + 215 + 181 + 85 + 78 + 22 + 13 + 168 + 54); con `Category=Integracion`, **463**
+—eran 459, y los cuatro nuevos son de integración—; el frontal, **103** en 16 ficheros. **108** tipos
+de error de **114** sitios, y **130** operaciones en el documento versionado.
+
+**Lo que queda del 2.6**, por orden: el puerto de documentos que implementa cada módulo y que
+recorren cerrar, modificar y eliminar; el cerrojo `FOR SHARE`/`FOR UPDATE`; cerrar sin borradores
+dentro; reabrir con motivo y evento; `IConsultaDeEjercicios` con `SinEjercicio`; el ajuste que no se
+confirma fuera de ejercicio; y la R9 viva con su fila reescrita.
+
+
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3`): Frontal `104818073051` ✓, Backend `104818073414` ✓ y Humo `104820147951` ✓. Es el de
