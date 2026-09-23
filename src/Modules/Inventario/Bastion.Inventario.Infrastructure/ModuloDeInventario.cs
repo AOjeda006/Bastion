@@ -8,6 +8,7 @@ using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
+using Bastion.Organizacion.Contracts.Ejercicios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -60,6 +61,16 @@ public static class ModuloDeInventario
         // se guardan en la misma transacción, así que dos repositorios con dos unidades de trabajo
         // sugerirían que pueden guardarse por separado.
         servicios.AddScoped<IRepositorioDeAjustes, RepositorioDeAjustes>();
+
+        // INVENTARIO TIENE DOCUMENTOS, y aquí es donde lo dice. Organización no sabe qué módulos
+        // los tienen: pregunta a los que se hayan inscrito, y un módulo que no se inscriba
+        // sencillamente NO EXISTE para el cierre —por eso el caso de uso afirma antes que la
+        // colección no está vacía (ADR-0020), y por eso hay un barrido que compara los inscritos
+        // con los declarados en los dos sentidos.
+        //
+        // Va con `AddScoped` y NO con `TryAdd`: la colección es de VARIOS, uno por módulo, y un
+        // `TryAdd` dejaría fuera a todos menos al primero sin decir nada.
+        servicios.AddScoped<IDocumentosDeUnPeriodo, LosDocumentosDeInventarioEnUnPeriodo>();
 
         // LOS DOS EVENTOS DEL DOCUMENTO, con su nombre escrito a mano: el catálogo no lo saca del
         // tipo a propósito, porque renombrar la clase rompería las filas que ya están en la cola.

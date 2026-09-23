@@ -12,6 +12,22 @@
   </ItemGroup>
 
   <!--
+    EL ÚNICO CRUCE QUE SALE DE UNA INFRAESTRUCTURA, y sale de aquí porque la flecha va al revés.
+    Los otros dos cruces del módulo los hace `Application`: Inventario pregunta y el otro módulo
+    contesta. `IDocumentosDeUnPeriodo` es lo contrario —la declara Organización y la implementa
+    quien tenga documentos—, y contestarla es leer `inventario.ajustes`: eso son tablas, y las
+    tablas se tocan desde aquí. Ponerlo en `Application` habría obligado a inventar un puerto
+    más para preguntarle lo mismo a esta capa.
+
+    La referencia se escribe AQUÍ aunque el compilador ya la diera por buena a través de
+    `Application`: el permiso se vigila en el `.csproj` y el uso en el IL, y un uso cuyo permiso
+    esté en otro proyecto deja la autorización escrita donde no se ejerce.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
     Las migraciones de este módulo viven en `db/migraciones/Inventario` (§14): fuera del proyecto,
     para que todas las del sistema se lean juntas y en orden. Fuera del proyecto quiere decir que
     el glob por defecto del SDK NO las compila, y una migración que no está en el ensamblado no

@@ -296,9 +296,11 @@ internal static class Inventario
         "Identidad.Infrastructure -> BuildingBlocks.Infrastructure",
         "Identidad.Infrastructure -> Identidad.Application",
 
-        // Las doce de Inventario: diez hacia dentro de su módulo o hacia el bloque común, y DOS
-        // que cruzan. Las dos que cruzan salen del `Application` y entran por el `Contracts` del
-        // dueño, que es la única puerta (§4, frontera 1); ninguna toca un `Domain` ajeno.
+        // Las TRECE de Inventario: diez hacia dentro de su módulo o hacia el bloque común, y TRES
+        // que cruzan. Todas entran por el `Contracts` del dueño, que es la única puerta (§4,
+        // frontera 1), y ninguna toca un `Domain` ajeno. Dos salen del `Application` —Inventario
+        // pregunta— y la tercera del `Infrastructure` —Inventario CONTESTA—; está justificada
+        // donde se escribe.
         //
         // Y son exactamente las que el libro necesita para no tener claves ajenas. `almacen_id`,
         // `ubicacion_id`, `articulo_id` y `unidad_introducida_id` son `uuid` sueltos en el esquema
@@ -317,6 +319,14 @@ internal static class Inventario
         "Inventario.Endpoints -> Inventario.Application",
         "Inventario.Infrastructure -> BuildingBlocks.Infrastructure",
         "Inventario.Infrastructure -> Inventario.Application",
+
+        // La TRECE, y la única de todo el grafo que cruza desde una `Infrastructure`. No es una
+        // excepción a la frontera 1 —entra por el `Contracts` del dueño, como las demás—: es que
+        // la flecha va al revés. `IDocumentosDeUnPeriodo` la declara Organización y la implementa
+        // cada módulo que tenga documentos, y contestarla es leer la tabla de ajustes, que solo
+        // se toca desde esta capa. Está escrita aquí y no heredada de `Application` a propósito:
+        // el permiso vive donde se ejerce.
+        "Inventario.Infrastructure -> Organizacion.Contracts",
 
         "Organizacion.Application -> BuildingBlocks.Application",
         "Organizacion.Application -> Organizacion.Contracts",
@@ -415,6 +425,20 @@ internal static class Inventario
                 "mismo puerto. Lo que el bloqueo reserva es la privacidad de una persona, no la " +
                 "existencia de una estantería.",
 
+            ["Inventario.Infrastructure -> Bastion.Organizacion.Contracts"] =
+                "el OCTAVO, y el primero en el que Inventario no pregunta sino que CONTESTA. Los " +
+                "siete anteriores salen todos de un `Application`: un módulo necesita un dato " +
+                "ajeno y se lo pide al dueño por su puerto de lectura. Éste va al revés. " +
+                "`IDocumentosDeUnPeriodo` vive en el `Contracts` de Organización porque es " +
+                "Organización quien la NECESITA —cerrar, mover o borrar un ejercicio tiene que " +
+                "saber si queda algo dentro de ese intervalo—, y la implementa cada módulo que " +
+                "tenga documentos. Sin esta flecha, la única forma de contestar esa pregunta " +
+                "sería un JOIN entre esquemas (regla 4) o una lista de tablas en Organización " +
+                "que hay que acordarse de ampliar. La frontera no se debilita: lo referenciado " +
+                "sigue siendo un `Contracts`, y por él cruzan Guid, DateOnly y bool. Sale del " +
+                "`Infrastructure` y no del `Application` porque contestarla es leer la tabla de " +
+                "ajustes.",
+
             ["Terceros.Application -> Bastion.Catalogo.Contracts"] =
                 "el quinto, y la mitad de VUELTA del primero mutuo. Un tercero puede tener " +
                 "asignada la tarifa con la que se le factura, y ese Guid es del esquema de " +
@@ -470,6 +494,16 @@ internal static class Inventario
             ["Bastion.Organizacion.Contracts.Divisas.IConsultaDeDivisas"] =
                 "LECTURA: en qué estado está una divisa, para quien guarde su identificador — la " +
                 "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe.",
+
+            ["Bastion.Organizacion.Contracts.Ejercicios.IDocumentosDeUnPeriodo"] =
+                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras diez las implementa el módulo " +
+                "que las publica y las llaman los demás; ésta la publica Organización y la " +
+                "implementa cada módulo con documentos. Contesta si en un intervalo de fechas " +
+                "queda algún borrador —la pregunta del cierre— o algún documento en el estado " +
+                "que sea —la de mover y borrar un ejercicio—, para que ninguna de las tres " +
+                "operaciones pase por encima de lo que ya está escrito (R9). No escribe, y no " +
+                "publica ni un dato de los documentos: solo `bool`, y `Modulo` para poder decir " +
+                "quién se ha negado.",
 
             ["Bastion.Organizacion.Contracts.Empresas.IConsultaDeEmpresas"] =
                 "LECTURA: Identidad le pregunta a Organización si una empresa existe y no está " +

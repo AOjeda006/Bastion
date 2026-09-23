@@ -193,6 +193,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LosLimitesSeLeenEnCulturaInvarianteTests.Todo_limite_escrito_como_texto_se_lee_en_cultura_invariante",
         "LosLimitesSeLeenEnCulturaInvarianteTests.Todos_los_atributos_encontrados_se_pueden_sondear",
 
+        "LosModulosConDocumentosSeInscribenTests.Cada_inscripcion_dice_el_modulo_en_el_que_vive",
+        "LosModulosConDocumentosSeInscribenTests.Todo_modulo_con_documentos_esta_inscrito_y_ninguna_inscripcion_sobra",
+
         "NingunMaestroRetirableSeBorraTests.Cada_recurso_retirable_publica_las_dos_puertas_y_el_GET_por_identificador",
         "NingunMaestroRetirableSeBorraTests.Los_dos_universos_no_estan_vacios_y_tienen_el_mismo_tamano",
         "NingunMaestroRetirableSeBorraTests.Ningun_recurso_retirable_publica_el_borrado_de_una_fila",

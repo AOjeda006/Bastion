@@ -947,6 +947,7 @@
         "dependencies": {
           "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
           "Bastion.Inventario.Application": "[1.0.0, )",
+          "Bastion.Organizacion.Contracts": "[1.0.0, )",
           "EFCore.NamingConventions": "[10.0.1, )",
           "Microsoft.EntityFrameworkCore": "[10.0.9, )",
           "Microsoft.EntityFrameworkCore.Design": "[10.0.9, )",
