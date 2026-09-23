@@ -5165,6 +5165,41 @@ rama aprueba el trabajo, el de `main` aprueba **lo que quedó en la rama princip
 del run de `main` es el mismo `8b03c60` —se leyó del run, no se supuso—, porque el avance fue
 *fast-forward* de `2589183` a `8b03c60`.
 
+**Y una corrección, en su propio commit (2026-09-23).** El `remarks` de la migración decía que
+`LasMigracionesSobreTablasConFilasTests` ejercía la creación del índice «sobre una tabla con filas».
+**No lo hace**: su inventor deja la autorreferencia en nulo a propósito —«la fila no tiene todavía a
+quién apuntar»—, así que un índice filtrado por `anula_a_id IS NOT NULL` nace ahí con **cero**
+entradas. La garantía real es otra y es más fuerte: **falla cerrado**.
+
+Medido contra **PostgreSQL 17.6**, la misma imagen del *compose*, sobre un contenedor propio y
+desechable —el postgres de desarrollo no publica puerto al anfitrión, así que `dotnet ef` no lo
+alcanza—, con las tres migraciones anteriores aplicadas y **dos inversos del mismo original**
+plantados:
+
+| Lo que se mira después del intento | Lo medido |
+|---|---|
+| El `CREATE UNIQUE INDEX` | aborta con `23505: could not create unique index "ix_ajustes_anula_a_id"` |
+| El índice que queda | el **viejo, NO único**: `CREATE INDEX ... USING btree (anula_a_id)` — el `DROP INDEX` se deshizo con la transacción |
+| `inventario.__historial_de_migraciones` | **0** filas para la migración nueva |
+| Las filas de `inventario.ajustes` | **3**, intactas |
+| `dotnet ef database update` | sale con **1** |
+
+Lo que lo hace posible es que la migración **no lleva `suppressTransaction`**, y eso se comprobó en
+el fichero y por el efecto: el `DROP` volvió atrás. En el despliegue, el migrador saliendo con error
+significa que la API **no arranca**, porque el *compose* la hace depender de él con
+`service_completed_successfully` — el comentario que hay al lado de esa línea ya explica por qué no
+vale `service_started` ni `service_healthy`.
+
+**Y qué hace quien se lo encuentre:** no forzar el índice. Buscar el duplicado con
+`SELECT anula_a_id, count(*) FROM inventario.ajustes WHERE anula_a_id IS NOT NULL GROUP BY anula_a_id
+HAVING count(*) > 1` y decidir qué inverso sobra, que es una decisión de negocio y no de esquema. Un
+despliegue parado con los datos intactos es el desenlace bueno; el malo sería entrar con dos inversos
+y descubrirlo al cuadrar el almacén.
+
+> Esta corrección **no cambia una línea de SQL** y la migración no está desplegada en ninguna base:
+> es el `remarks` el que decía algo que no era cierto, y un motivo falso es peor que no tener
+> ninguno, porque el siguiente que lea el fichero dejará de buscar.
+
 > **El registro de un run no persigue al suyo.** Este párrafo entra en un commit que tendrá su
 > propio run, y anotarlo pediría otro commit, y así sin fin. Se corta aquí, como en el 2.5: lo que
 > queda certificado es el árbol que los dos runs de arriba miraron, que es el del trabajo.

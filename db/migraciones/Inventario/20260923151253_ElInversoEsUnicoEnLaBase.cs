@@ -35,15 +35,35 @@ namespace Bastion.Inventario.Infrastructure.Migrations
     /// exactamente tantas entradas como anulaciones hay.
     /// </para>
     /// <para>
-    /// <b>Ninguna fila existente lo incumple, y se comprobó en vez de suponerlo.</b> Un recuento
-    /// agrupado por <c>anula_a_id</c> sobre <c>bastion_dev</c> no encontró duplicados por una
-    /// razón más fuerte que la suerte: la columna nace en la migración anterior, sin desplegar
-    /// todavía en ninguna base —el historial de <c>bastion_dev</c> va por el esquema inicial— y la
-    /// tabla está vacía. Aunque tuviera filas, el único camino que rellena esa columna es la
-    /// anulación, que pasa por el testigo de concurrencia del original. Que la creación del índice
-    /// aguante sobre una tabla CON filas no se deja al despliegue: lo ejerce
-    /// <c>LasMigracionesSobreTablasConFilasTests</c>, que aplica cada migración una a una sobre
-    /// datos inventados.
+    /// <b>Ninguna fila existente lo incumple</b>: la columna nace en la migración anterior, que no
+    /// está desplegada en ninguna base —el historial de <c>bastion_dev</c> va por el esquema
+    /// inicial— y la tabla está vacía. Y el único camino que rellena esa columna es la anulación,
+    /// que pasa por el testigo de concurrencia del original.
+    /// </para>
+    /// <para>
+    /// <b>Y si alguna base tuviera el duplicado, esto FALLA CERRADO</b>, que es lo que de verdad lo
+    /// sostiene. Aquí hubo escrito que lo ejercía <c>LasMigracionesSobreTablasConFilasTests</c>
+    /// «sobre una tabla con filas», y es falso: su inventor de filas deja la autorreferencia en
+    /// nulo a propósito —lo dice su propio comentario—, así que este índice, que va filtrado por
+    /// <c>anula_a_id IS NOT NULL</c>, nace ahí con <b>cero</b> entradas y no se ejerce nada.
+    /// </para>
+    /// <para>
+    /// <b>Lo medido, contra PostgreSQL 17.6</b>, sobre una base a la que se le aplicaron las tres
+    /// migraciones anteriores y se le plantaron dos inversos del mismo original: el
+    /// <c>CREATE UNIQUE INDEX</c> aborta con <c>23505: could not create unique index
+    /// "ix_ajustes_anula_a_id"</c>, la migración entera se deshace —el <c>DROP INDEX</c> incluido,
+    /// así que el índice viejo NO único queda intacto—, el historial de migraciones no anota nada,
+    /// las filas siguen ahí y <c>dotnet ef</c> sale con <b>1</b>. Esta migración no lleva
+    /// <c>suppressTransaction</c>, que es lo que lo hace posible. En el despliegue eso significa que
+    /// el contenedor del migrador sale con error y la API <b>no arranca</b>: el <c>compose</c> la
+    /// hace depender de él con <c>service_completed_successfully</c>.
+    /// </para>
+    /// <para>
+    /// <b>Quien se lo encuentre no fuerza el índice</b>: busca el duplicado con
+    /// <c>SELECT anula_a_id, count(*) FROM inventario.ajustes WHERE anula_a_id IS NOT NULL GROUP BY
+    /// anula_a_id HAVING count(*) &gt; 1</c> y decide qué inverso sobra, que es una decisión de
+    /// negocio y no de esquema. Un despliegue parado con los datos intactos es el desenlace bueno:
+    /// el malo sería entrar con dos inversos y descubrirlo al cuadrar el almacén.
     /// </para>
     /// <para>
     /// <b>La vuelta atrás devuelve el índice no único</b>, no lo borra: la mitad que recorre la
