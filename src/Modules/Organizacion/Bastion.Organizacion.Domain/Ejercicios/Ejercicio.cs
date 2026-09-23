@@ -134,6 +134,54 @@ public sealed class Ejercicio : EntidadBase, IDeInquilino
     /// <summary>Indica si una fecha cae dentro del ejercicio, extremos incluidos.</summary>
     public bool Comprende(DateOnly fecha) => fecha >= FechaDeInicio && fecha <= FechaDeFin;
 
+    /// <summary>
+    /// Los trozos del intervalo <b>actual</b> que un intervalo nuevo dejaría fuera.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Vive aquí y no en el caso de uso porque es aritmética de fechas, no una decisión.</b>
+    /// Y porque así se puede comprobar entera sin una base de datos: los casos que importan son
+    /// los extremos —encoger por un lado, por los dos, mover el intervalo entero fuera— y son
+    /// justo los que nadie escribe si hay que levantar un contenedor para cada uno.
+    /// </para>
+    /// <para>
+    /// <b>Cero, uno o dos trozos.</b> Cero cuando el intervalo nuevo cubre al actual —no deja
+    /// nada fuera, aunque absorba días que antes no eran suyos—; dos cuando encoge por los dos
+    /// lados; uno en los demás. Si el intervalo nuevo no toca al actual, el trozo es el actual
+    /// entero, que es lo que tiene que ser: mover un ejercicio a otro año deja fuera todo lo que
+    /// había dentro.
+    /// </para>
+    /// <para>
+    /// <b>Cerrados por los dos lados</b>, como <see cref="Comprende"/> y como el
+    /// <c>daterange(…, '[]')</c> de la restricción de exclusión: los tres tienen que decir lo
+    /// mismo del primer y del último día.
+    /// </para>
+    /// </remarks>
+    /// <param name="inicio">Primer día del intervalo nuevo.</param>
+    /// <param name="fin">Último día del intervalo nuevo.</param>
+    /// <returns>Los trozos que quedarían fuera, en orden.</returns>
+    public IReadOnlyList<(DateOnly Desde, DateOnly Hasta)> LoQueDejariaFuera(
+        DateOnly inicio, DateOnly fin)
+    {
+        List<(DateOnly Desde, DateOnly Hasta)> fuera = [];
+
+        if (inicio > FechaDeInicio)
+        {
+            fuera.Add((FechaDeInicio, Antes(FechaDeFin, inicio.AddDays(-1))));
+        }
+
+        if (fin < FechaDeFin)
+        {
+            fuera.Add((Despues(FechaDeInicio, fin.AddDays(1)), FechaDeFin));
+        }
+
+        return fuera;
+    }
+
+    private static DateOnly Antes(DateOnly una, DateOnly otra) => una < otra ? una : otra;
+
+    private static DateOnly Despues(DateOnly una, DateOnly otra) => una > otra ? una : otra;
+
     private static void ExigirEmpresa(Guid empresaId)
     {
         if (empresaId == Guid.Empty)

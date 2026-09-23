@@ -148,7 +148,9 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
+        "ElCierreLePreguntaALosModulosTests.Encoger_el_ejercicio_por_encima_de_un_documento_es_409_y_por_el_otro_lado_no",
         "ElCierreLePreguntaALosModulosTests.Un_borrador_de_inventario_dentro_del_ejercicio_impide_cerrarlo_y_el_error_lo_nombra",
+        "ElCierreLePreguntaALosModulosTests.Un_ejercicio_sin_series_pero_con_un_documento_dentro_tampoco_se_borra",
 
         // Del ítem 2.4: el cerrojo de la numeración, que solo el motor puede demostrar. El
         // recorrido por tipo de documento cuenta como UN caso aquí -un `[Theory]` es un nombre,

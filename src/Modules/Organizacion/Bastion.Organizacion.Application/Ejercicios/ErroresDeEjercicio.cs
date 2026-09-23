@@ -57,6 +57,34 @@ internal static class ErroresDeEjercicio
             string.Join(", ", modulos) + ". Cerrar congela el periodo, y un borrador todavía " +
             "puede cambiar de importe: confírmelos o bórrelos antes de cerrar (R9).");
 
+    /// <summary>El intervalo nuevo dejaría fuera documentos que hoy caen dentro.</summary>
+    /// <remarks>
+    /// <b>Es el agujero silencioso que este ítem tapa.</b> Hasta ahora, encoger un ejercicio
+    /// abierto con movimientos dentro estaba permitido, y los que quedaban fuera pasaban a
+    /// <c>SinEjercicio</c> sin que nadie los tocara: ni cambiaban de fecha, ni de importe, ni
+    /// dejaban rastro de que habían cambiado de periodo. Se enteraba quien cuadrara el año, meses
+    /// después.
+    /// </remarks>
+    internal static ErrorDeOperacion DejariaDocumentosFuera(IEnumerable<string> modulos) =>
+        ErrorDeOperacion.Conflicto(
+            "ejercicio-dejaria-documentos-fuera",
+            "Las fechas nuevas dejarían fuera del ejercicio documentos que hoy caen dentro, en: " +
+            string.Join(", ", modulos) + ". Esos documentos se quedarían sin ejercicio sin que " +
+            "nadie los tocara. Mueva primero los documentos o deje el intervalo donde está (R9).");
+
+    /// <summary>Se pidió borrar un ejercicio con documentos dentro.</summary>
+    /// <remarks>
+    /// No lo impide ninguna clave ajena, y no puede impedirlo: los documentos viven en otros
+    /// esquemas y entre esquemas no se cruza (regla 4). Lo único que hay entre borrar el
+    /// ejercicio y dejar huérfanos los movimientos de medio año es esta pregunta.
+    /// </remarks>
+    internal static ErrorDeOperacion ConDocumentos(IEnumerable<string> modulos) =>
+        ErrorDeOperacion.Conflicto(
+            "ejercicio-con-documentos",
+            "El ejercicio tiene documentos con fecha dentro, en: " + string.Join(", ", modulos) +
+            ". Borrarlo dejaría esos documentos sin ejercicio al que pertenecer, y a qué ejercicio " +
+            "pertenece una operación tiene que tener una sola respuesta (R9).");
+
     internal static ErrorDeOperacion Cerrado(Guid id) => ErrorDeOperacion.Conflicto(
         "ejercicio-cerrado",
         $"El ejercicio {id} está cerrado. Reábralo antes de cambiar sus fechas: moverlas movería " +

@@ -145,8 +145,12 @@ export const en: Diccionario = {
       'ejercicio-cerrado': 'The financial year is closed and cannot be changed.',
       'ejercicio-con-borradores':
         'There are still draft documents dated inside the financial year. Confirm or delete them before closing.',
+      'ejercicio-con-documentos':
+        'The financial year has documents dated inside it. Deleting it would leave them with no financial year to belong to.',
       'ejercicio-con-series':
         'A financial year with document series cannot be deleted. Delete the series first.',
+      'ejercicio-dejaria-documentos-fuera':
+        'Those dates would leave documents that fall inside today outside the financial year. Move the documents first, or leave the range where it is.',
       'ejercicio-duplicado':
         'There is already a financial year with that year number at this company.',
       'ejercicio-no-encontrado':

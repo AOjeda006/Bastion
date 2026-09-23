@@ -7,6 +7,7 @@ using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Organizacion.Contracts.Almacenes;
+using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
@@ -40,7 +41,8 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// saltaría enteros.
 /// </para>
 /// <para>
-/// <b>Semillas: la empresa va por la 330 y los maestros de instalación por la 364.</b> El resto
+/// <b>Semillas: las empresas van de la 330 a la 332 y los maestros de instalación de la 364 a
+/// la 366.</b> El resto
 /// del reparto de este carril está en los ficheros de <c>Inventario</c> —del 301 al 328 las
 /// empresas, del 349 al 363 los maestros—. Un número de empresa acaba en un NIF único y uno de
 /// maestro en el código único de otra tabla, así que son dos cuentas y no una.
@@ -54,6 +56,21 @@ public sealed class ElCierreLePreguntaALosModulosTests(PostgresConTodosLosModulo
 {
     private readonly ApiDeVerdad _api = new(postgres);
     private readonly List<HttpClient> _clientes = [];
+
+    /// <summary>El año del ejercicio que monta <c>CrearSerieAsync</c>: el en curso.</summary>
+    private static int ElAnio => DateTime.UtcNow.Year;
+
+    /// <summary>
+    /// El día del ajuste: el 15 de junio, y <b>no «hoy»</b>.
+    /// </summary>
+    /// <remarks>
+    /// Los casos de abajo encogen el ejercicio por delante y por detrás de esta fecha, así que
+    /// tienen que poder sumarle y restarle días sin salirse del año. Con «hoy», el 31 de diciembre
+    /// el intervalo recortado acabaría antes de empezar y el caso saldría rojo una vez al año, en
+    /// la máquina de quien tocara ese día. Un día fijo de dentro del ejercicio no tiene ese
+    /// problema y no pierde nada: lo que se comprueba es la aritmética de los extremos.
+    /// </remarks>
+    private static DateOnly ElDiaDelDocumento => new(ElAnio, 6, 15);
 
     /// <inheritdoc/>
     public void Dispose()
@@ -120,6 +137,140 @@ public sealed class ElCierreLePreguntaALosModulosTests(PostgresConTodosLosModulo
                 "movimientos no se cierra nunca», que es otra cosa y además falsa");
     }
 
+    /// <summary>
+    /// Encoger el ejercicio por encima de un documento es <b>409</b>; encogerlo por el lado en el
+    /// que no hay nada, <b>no</b>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el agujero silencioso del que venía este ítem.</b> Hasta ahora, mover las fechas de un
+    /// ejercicio abierto con movimientos dentro estaba permitido, y los que se quedaban fuera
+    /// pasaban a no pertenecer a ningún ejercicio sin que nadie los tocara: ni cambiaban de fecha,
+    /// ni de importe, ni dejaban rastro. Se enteraba quien cuadrara el año.
+    /// </para>
+    /// <para>
+    /// <b>La segunda mitad es la que distingue la regla de un «un ejercicio con documentos no se
+    /// mueve».</b> El mismo ejercicio, encogido por el otro lado —donde no hay nada—, se mueve sin
+    /// problema. Sin ella, preguntar por el intervalo ENTERO en vez de por los trozos que quedan
+    /// fuera pasaría igual, y eso dejaría inmóvil cualquier ejercicio con un solo movimiento
+    /// dentro, que es todos.
+    /// </para>
+    /// <para>
+    /// Y el ajuste va <b>confirmado</b>, no en borrador: aquí no se pregunta por lo que está a
+    /// medias sino por lo que ya está contado, que es precisamente lo que peor se lleva con un
+    /// cambio de periodo.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Encoger_el_ejercicio_por_encima_de_un_documento_es_409_y_por_el_otro_lado_no()
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(331);
+
+        (AbrirAjusteDto peticion, SerieDto serie) = await UnAjusteCompletoAsync(cliente, "MOV-A", 365);
+
+        await using ElModuloDeInventario modulo = new(postgres, empresa.Id);
+
+        Resultado<AjusteDto> borrador = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
+        borrador.EsCorrecto.ShouldBeTrue($"«{borrador.Error?.Codigo}»");
+
+        Resultado<AjusteDto> confirmado = await modulo.ConfirmarAsync(borrador.Valor.Id);
+        confirmado.EsCorrecto.ShouldBeTrue($"«{confirmado.Error?.Codigo}»");
+
+        string recurso = $"{LosMaestrosPorLaApi.Ejercicios}/{serie.EjercicioId}";
+
+        // El documento es del 15 de junio: empezar el 1 de julio lo deja fuera.
+        using HttpResponseMessage encogido = await cliente.EnviarConVersionAsync(
+            HttpMethod.Put,
+            recurso,
+            await cliente.EtiquetaDeAsync(recurso),
+            JsonContent.Create(new ModificarEjercicioDto
+            {
+                FechaDeInicio = new DateOnly(ElAnio, 7, 1),
+                FechaDeFin = new DateOnly(ElAnio, 12, 31),
+            }));
+
+        encogido.StatusCode.ShouldBe(
+            HttpStatusCode.Conflict,
+            "el intervalo nuevo deja fuera al ajuste del 15 de junio, que pasaría a no pertenecer " +
+            "a ningún ejercicio sin que nadie lo tocara");
+
+        JsonElement problema = await LeerProblema(encogido);
+
+        problema.GetProperty("type").GetString().ShouldBe("/errors/ejercicio-dejaria-documentos-fuera");
+
+        problema.GetProperty("detail").GetString()!.ShouldContain(
+            "Inventario",
+            Case.Sensitive,
+            "el error tiene que decir QUÉ módulo se queda con documentos fuera");
+
+        // Y AHORA POR EL OTRO LADO: se queda fuera de julio a diciembre, donde no hay nada.
+        using HttpResponseMessage permitido = await cliente.EnviarConVersionAsync(
+            HttpMethod.Put,
+            recurso,
+            await cliente.EtiquetaDeAsync(recurso),
+            JsonContent.Create(new ModificarEjercicioDto
+            {
+                FechaDeInicio = new DateOnly(ElAnio, 1, 1),
+                FechaDeFin = new DateOnly(ElAnio, 6, 30),
+            }));
+
+        permitido.StatusCode.ShouldBe(
+            HttpStatusCode.OK,
+            "por este lado no se queda ningún documento fuera. Si esto saliera 409, la " +
+            "comprobación estaría preguntando por el intervalo entero en vez de por los trozos " +
+            "que quedan fuera, y entonces un ejercicio con un solo movimiento dentro ya no se " +
+            "podría mover nunca");
+    }
+
+    /// <summary>
+    /// Un ejercicio sin series pero <b>con documentos dentro</b> tampoco se borra.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Y por eso la clave ajena de las series no basta.</b> Borrar un ejercicio ya se negaba
+    /// cuando tenía series colgando, porque hay una clave ajena que lo impide. Este caso quita esa
+    /// red: la serie se suprime por su puerta —puede, porque todavía no ha numerado— y lo que
+    /// queda es un ejercicio sin series y con un ajuste con fecha dentro. Ninguna clave ajena
+    /// puede pararlo: el ajuste vive en otro esquema y entre esquemas no se cruza (regla 4). Lo
+    /// único que hay entre el borrado y medio año de movimientos huérfanos es la pregunta al
+    /// puerto.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Un_ejercicio_sin_series_pero_con_un_documento_dentro_tampoco_se_borra()
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(332);
+
+        (AbrirAjusteDto peticion, SerieDto serie) = await UnAjusteCompletoAsync(cliente, "BOR-A", 366);
+
+        await using ElModuloDeInventario modulo = new(postgres, empresa.Id);
+
+        Resultado<AjusteDto> borrador = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
+        borrador.EsCorrecto.ShouldBeTrue($"«{borrador.Error?.Codigo}»");
+
+        // La serie se va por su puerta: no ha numerado, así que se puede suprimir. Con esto cae la
+        // red que hasta ahora impedía el borrado por otro motivo.
+        (await cliente.SuprimirAsync($"{LosMaestrosPorLaApi.Series}/{serie.Id}")).StatusCode
+            .ShouldBe(
+                HttpStatusCode.NoContent,
+                "sin esto, el 409 de abajo sería el de las series y este caso no diría nada nuevo");
+
+        string recurso = $"{LosMaestrosPorLaApi.Ejercicios}/{serie.EjercicioId}";
+
+        using HttpResponseMessage borrado = await cliente.SuprimirAsync(recurso);
+
+        borrado.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+
+        JsonElement problema = await LeerProblema(borrado);
+
+        problema.GetProperty("type").GetString().ShouldBe("/errors/ejercicio-con-documentos");
+
+        problema.GetProperty("detail").GetString()!.ShouldContain("Inventario", Case.Sensitive);
+
+        // Y el ejercicio sigue ahí, leído por su puerta y no por lo que dijo el 409.
+        (await cliente.GetAsync(recurso)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
     /// <summary>Todos los maestros de un ajuste que sí se puede abrir, y su petición.</summary>
     /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
     /// <param name="codigo">Prefijo para los códigos de este caso.</param>
@@ -141,7 +292,7 @@ public sealed class ElCierreLePreguntaALosModulosTests(PostgresConTodosLosModulo
         AbrirAjusteDto peticion = new(
             serie.Id,
             almacen.Id,
-            DateOnly.FromDateTime(DateTime.UtcNow),
+            ElDiaDelDocumento,
             "Regularización de un recuento",
             [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m, "EUR")]);
 

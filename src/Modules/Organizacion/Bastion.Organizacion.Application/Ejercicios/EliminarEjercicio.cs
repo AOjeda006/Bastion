@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Domain.Ejercicios;
 
 namespace Bastion.Organizacion.Application.Ejercicios;
@@ -26,7 +27,8 @@ public interface IEliminarEjercicio
 internal sealed class EliminarEjercicio(
     IRepositorioDeEjercicios ejercicios,
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
-    IVersionesDeOrganizacion versiones) : IEliminarEjercicio
+    IVersionesDeOrganizacion versiones,
+    IEnumerable<IDocumentosDeUnPeriodo> documentos) : IEliminarEjercicio
 {
     public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
     {
@@ -48,6 +50,24 @@ internal sealed class EliminarEjercicio(
                 "ejercicio-con-series",
                 "El ejercicio tiene series de numeración. Elimínelas antes, si es que ninguna ha " +
                 "numerado todavía."));
+        }
+
+        // Y LA TERCERA LLAMADA AL MISMO PUERTO, esta vez por el intervalo ENTERO. Las series las
+        // para una clave ajena; los documentos no puede pararlos ninguna, porque viven en otros
+        // esquemas y entre esquemas no se cruza (regla 4). Sin esta pregunta, borrar el ejercicio
+        // dejaría los movimientos de medio año sin ejercicio al que pertenecer y sin que nadie
+        // los tocara.
+        IReadOnlyList<string> conDocumentos = await LosModulosConDocumentos
+            .QuienTieneDocumentosAsync(
+                LosModulosConDocumentos.Inscritos(documentos, "borrar este ejercicio"),
+                ejercicio.EmpresaId,
+                [(ejercicio.FechaDeInicio, ejercicio.FechaDeFin)],
+                cancelacion)
+            .ConfigureAwait(false);
+
+        if (conDocumentos.Count > 0)
+        {
+            return Resultado.Fallo(ErroresDeEjercicio.ConDocumentos(conDocumentos));
         }
 
         ejercicios.Eliminar(ejercicio);

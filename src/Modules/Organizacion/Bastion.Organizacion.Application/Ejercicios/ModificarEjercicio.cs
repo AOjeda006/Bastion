@@ -26,7 +26,8 @@ public interface IModificarEjercicio
 internal sealed class ModificarEjercicio(
     IRepositorioDeEjercicios ejercicios,
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
-    IVersionesDeOrganizacion versiones) : IModificarEjercicio
+    IVersionesDeOrganizacion versiones,
+    IEnumerable<IDocumentosDeUnPeriodo> documentos) : IModificarEjercicio
 {
     public async Task<Resultado<EjercicioDto>> EjecutarAsync(
         Guid id,
@@ -67,6 +68,31 @@ internal sealed class ModificarEjercicio(
                 .ConfigureAwait(false))
         {
             return Resultado.Fallo<EjercicioDto>(ErroresDeEjercicio.Solapado());
+        }
+
+        // Y LA MISMA PREGUNTA QUE EL CIERRE, sobre lo que el intervalo nuevo dejaría fuera. No
+        // sobre el intervalo entero: preguntar por todo dejaría sin poder moverse cualquier
+        // ejercicio con un solo movimiento dentro, que es todos. Aquí se pregunta por documentos
+        // en CUALQUIER estado, no solo borradores: un confirmado que se queda fuera es peor,
+        // porque ya está contado en un periodo del que va a dejar de formar parte.
+        IReadOnlyList<(DateOnly Desde, DateOnly Hasta)> fuera =
+            ejercicio.LoQueDejariaFuera(peticion.FechaDeInicio, peticion.FechaDeFin);
+
+        if (fuera.Count > 0)
+        {
+            IReadOnlyList<string> conDocumentos = await LosModulosConDocumentos
+                .QuienTieneDocumentosAsync(
+                    LosModulosConDocumentos.Inscritos(documentos, "mover este ejercicio"),
+                    ejercicio.EmpresaId,
+                    fuera,
+                    cancelacion)
+                .ConfigureAwait(false);
+
+            if (conDocumentos.Count > 0)
+            {
+                return Resultado.Fallo<EjercicioDto>(
+                    ErroresDeEjercicio.DejariaDocumentosFuera(conDocumentos));
+            }
         }
 
         ejercicio.Modificar(peticion.FechaDeInicio, peticion.FechaDeFin);

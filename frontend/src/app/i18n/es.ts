@@ -177,8 +177,12 @@ export const es = {
       'ejercicio-cerrado': 'El ejercicio está cerrado y no admite cambios.',
       'ejercicio-con-borradores':
         'Quedan documentos en borrador con fecha dentro del ejercicio. Confírmalos o bórralos antes de cerrar.',
+      'ejercicio-con-documentos':
+        'El ejercicio tiene documentos con fecha dentro. Borrarlo los dejaría sin ejercicio al que pertenecer.',
       'ejercicio-con-series':
         'No se puede eliminar un ejercicio que tiene series. Elimina antes las series.',
+      'ejercicio-dejaria-documentos-fuera':
+        'Esas fechas dejarían fuera del ejercicio documentos que hoy caen dentro. Mueve antes los documentos o deja el intervalo donde está.',
       'ejercicio-duplicado': 'Ya hay un ejercicio con ese año en esta empresa.',
       'ejercicio-no-encontrado': 'Ese ejercicio ya no existe. Vuelve al listado y actualiza.',
       'ejercicio-solapado':

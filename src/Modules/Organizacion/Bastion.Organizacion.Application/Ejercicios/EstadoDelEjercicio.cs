@@ -72,41 +72,17 @@ internal sealed class CerrarEjercicio(
             return Resultado.Fallo(ErroresDeEjercicio.YaCerrado(id));
         }
 
-        IReadOnlyList<IDocumentosDeUnPeriodo> inscritos = [.. documentos];
-
-        if (inscritos.Count == 0)
-        {
-            throw new InvalidOperationException(
-                "No hay ningún módulo inscrito como `IDocumentosDeUnPeriodo`, así que cerrar este " +
-                "ejercicio no comprobaría si queda algún borrador dentro y contestaría que el " +
-                "periodo está limpio sin haber preguntado a nadie. Es un fallo de composición del " +
-                "host, no de la petición.");
-        }
-
-        // Se pregunta a TODOS y no se para en el primero que diga que sí: el error nombra a todos
-        // los módulos que tienen borradores dentro, y parar antes obligaría a cerrar otras tantas
-        // veces para ir descubriéndolos de uno en uno.
-        List<string> conBorradores = [];
-
-        foreach (IDocumentosDeUnPeriodo modulo in inscritos)
-        {
-            bool hay = await modulo
-                .HayBorradoresEnAsync(
-                    ejercicio.EmpresaId, ejercicio.FechaDeInicio, ejercicio.FechaDeFin, cancelacion)
-                .ConfigureAwait(false);
-
-            if (hay)
-            {
-                conBorradores.Add(modulo.Modulo);
-            }
-        }
+        IReadOnlyList<string> conBorradores = await LosModulosConDocumentos
+            .QuienTieneBorradoresAsync(
+                LosModulosConDocumentos.Inscritos(documentos, "cerrar este ejercicio"),
+                ejercicio.EmpresaId,
+                ejercicio.FechaDeInicio,
+                ejercicio.FechaDeFin,
+                cancelacion)
+            .ConfigureAwait(false);
 
         if (conBorradores.Count > 0)
         {
-            // Ordinal, para que el mensaje no dependa del orden en que el contenedor devuelva las
-            // inscripciones ni de la cultura del proceso que lo escribe.
-            conBorradores.Sort(StringComparer.Ordinal);
-
             return Resultado.Fallo(ErroresDeEjercicio.ConBorradores(conBorradores));
         }
 

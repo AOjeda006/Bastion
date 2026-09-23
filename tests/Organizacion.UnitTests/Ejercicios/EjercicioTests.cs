@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bastion.Organizacion.Domain.Ejercicios;
 using Shouldly;
 
@@ -5,6 +6,8 @@ namespace Bastion.Organizacion.UnitTests.Ejercicios;
 
 public sealed class EjercicioTests
 {
+    private static readonly CultureInfo s_invariante = CultureInfo.InvariantCulture;
+
     private static readonly Guid s_empresa = Guid.Parse("2f6d5f4e-0000-4000-8000-000000000001");
     private static readonly DateTimeOffset s_momento = new(2026, 8, 26, 12, 0, 0, TimeSpan.Zero);
 
@@ -123,6 +126,46 @@ public sealed class EjercicioTests
 
         Should.Throw<InvalidOperationException>(ejercicio.Reabrir);
         ejercicio.Estado.ShouldBe(EstadoDeEjercicio.Abierto);
+    }
+
+    /// <summary>
+    /// Los seis casos de <c>LoQueDejariaFuera</c>, con el día exacto de cada frontera.
+    /// </summary>
+    /// <remarks>
+    /// <b>Aquí y no en integración a propósito.</b> Lo que decide si un documento se queda fuera
+    /// es un <c>AddDays(-1)</c> y un <c>AddDays(+1)</c>, y equivocarse en un día no se ve en un
+    /// caso de API: se ve poniendo el documento justo en la frontera, que es un caso por cada
+    /// lado. Levantar un contenedor para cada uno es la forma de que estos casos no se escriban.
+    /// </remarks>
+    /// <param name="inicio">Primer día del intervalo nuevo.</param>
+    /// <param name="fin">Último día del intervalo nuevo.</param>
+    /// <param name="esperado">Los trozos que tienen que quedar fuera, como <c>díadía→díadía</c>.</param>
+    [Theory]
+    // El mismo intervalo: no deja nada fuera.
+    [InlineData("2026-01-01", "2026-12-31", "")]
+    // Más ancho por los dos lados: absorbe días, pero no expulsa ninguno.
+    [InlineData("2025-06-01", "2027-06-30", "")]
+    // Encoge por delante: se queda fuera enero, y el último día de fuera es la víspera.
+    [InlineData("2026-02-01", "2026-12-31", "2026-01-01>2026-01-31")]
+    // Encoge por detrás: se queda fuera diciembre, desde el día siguiente al nuevo fin.
+    [InlineData("2026-01-01", "2026-11-30", "2026-12-01>2026-12-31")]
+    // Encoge por los DOS lados: dos trozos, uno por delante y otro por detrás.
+    [InlineData("2026-02-01", "2026-11-30", "2026-01-01>2026-01-31|2026-12-01>2026-12-31")]
+    // Se va entero a otro año: deja fuera el intervalo actual COMPLETO, y en un solo trozo.
+    [InlineData("2027-01-01", "2027-12-31", "2026-01-01>2026-12-31")]
+    public void Lo_que_un_intervalo_nuevo_dejaria_fuera_se_cuenta_por_dias_y_no_por_meses(
+        string inicio, string fin, string esperado)
+    {
+        Ejercicio ejercicio = Nuevo();
+
+        IReadOnlyList<(DateOnly Desde, DateOnly Hasta)> fuera =
+            ejercicio.LoQueDejariaFuera(DateOnly.Parse(inicio, s_invariante), DateOnly.Parse(fin, s_invariante));
+
+        string.Join(
+            "|",
+            fuera.Select(tramo => tramo.Desde.ToString("yyyy-MM-dd", s_invariante) + ">" +
+                tramo.Hasta.ToString("yyyy-MM-dd", s_invariante)))
+            .ShouldBe(esperado);
     }
 
     [Fact]
