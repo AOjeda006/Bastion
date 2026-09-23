@@ -5669,9 +5669,82 @@ scripts/generar-errores.sh --comprobar` dice **113** tipos de **119** sitios, y 
 versionado sigue en **130** operaciones sobre 76 rutas: esta pieza no estrena ninguna ruta, solo dos
 motivos nuevos para negarse por las que ya había.
 
-**Lo que queda del 2.6**, por orden: el cerrojo `FOR SHARE`/`FOR UPDATE`; reabrir con motivo y
-evento por `POST /{id}/reapertura`; `IConsultaDeEjercicios` con `SinEjercicio`; el ajuste que no se
-confirma fuera de ejercicio; y la R9 viva con su fila reescrita.
+**Reabrir deja un estado que no distingue lo que hay que distinguir.** Un ejercicio que nunca se
+cerró y uno que se cerró y se reabrió ponen los dos «Abierto»: la fila dice cómo está **ahora**, y
+que estuvo cerrado y volvió a abrirse no se le puede preguntar. Quien revise las cuentas dentro de
+dos años necesita saber que ocurrió, cuándo y por qué, así que reabrir emite
+`organizacion.ejercicio-reabierto` con el motivo dentro. Es el **segundo** evento de integración del
+proyecto, y por él `Ejercicio` pasa a heredar de `RaizAgregado`: heredarla significa exactamente una
+cosa —«de esta raíz salen eventos»— y hasta este ítem no salía ninguno, porque cerrar es el curso
+normal de las cosas y no hace falta contarlo.
+
+**El motivo es obligatorio y se comprueba en el caso de uso**, no en el borde: un `[Required]` sobre
+una cadena da `"   "` por buena, y lo que hace falta es que quede escrito algo legible. Es el mismo
+trato que el motivo de una anulación y el mismo argumento: lo que el borde necesita para un cuerpo
+mal escrito es un **400 con su código**, no un 500 (ADR-0004).
+
+**Y el motivo es lo que mueve la ruta.** Hasta el 2.6 la reapertura era `DELETE
+/ejercicios/{id}/cierre` —el cierre es un sub-recurso, así que reabrir era borrarlo—, y esa forma
+era buena mientras no llevara cuerpo. Con un cuerpo deja de serlo: un `DELETE` con cuerpo no es
+fiable, hay intermediarios y clientes que lo descartan por el camino, y el motivo llegaría vacío sin
+que nadie hubiera hecho nada mal. Pasa a **`POST /ejercicios/{id}/reapertura`**, que sigue exigiendo
+`If-Match` —lo que se modifica es el ejercicio, y su versión es la que hay que traer—. Dos
+comentarios de la suite ponían la ruta vieja como **ejemplo** de sub-recurso legítimo; se cambian
+por uno que sigue vivo, porque un ejemplo que ya no existe se lee como una regla que ya no rige.
+
+**Seis mutaciones, con la orden que las mide:**
+
+```
+dotnet test tests/Api.IntegrationTests --no-build \
+  --filter "FullyQualifiedName~LaReaperturaSeAuditaTests|FullyQualifiedName~ContratoDeOrganizacionTests"
+dotnet test tests/Api.FunctionalTests --no-build \
+  --filter "FullyQualifiedName~CadaEventoEstaDeclaradoTests"
+```
+
+Las bases son **32 de 32** y **3 de 3** en verde, y después de la tanda vuelven a serlo con el árbol
+limpio.
+
+| # | Mutación | Resultado | Quién la caza |
+|---|----------|-----------|---------------|
+| 12 | El motivo vacío deja de rechazarse (solo se mira el largo) | **Rojo**, 1 de 32 | `Reabrir_sin_motivo_es_400_y_deja_el_ejercicio_cerrado`, primera mitad: «should be BadRequest but was NoContent» |
+| 13 | La comprobación, justo **después** de `Reabrir()` | **VERDE, 32 de 32** | nadie — y está bien que nadie: ver abajo |
+| 13b | La comprobación, **después de guardar** | **Rojo**, 1 de 32 | el mismo caso, **segunda** mitad: «should be "Cerrado" but was "Abierto"» |
+| 14 | El evento deja de registrarse en el agregado | **Rojo**, 1 de 32 | `Reabrir_con_motivo_lo_abre_y_deja_el_evento_con_el_motivo_dentro`: «no ha dejado su evento en la bandeja» |
+| 15 | El evento viaja con el motivo a `string.Empty` | **Rojo**, 1 de 32 | el mismo: «should be "Subsanación: faltaba la factura de diciembre" but was ""» |
+| 16 | El evento no se declara en `ModuloDeOrganizacion` | **Rojo**, 1 de 3 | `Ningun_evento_de_integracion_se_queda_sin_declarar`, nombrándolo entero |
+| 17 | El nombre de la cola, `"Organizacion.EjercicioReabierto"` | **Rojo**, 1 de 3 | `Todos_los_nombres_tienen_la_forma_acordada` |
+
+**La 13 salió verde y eso corrigió un comentario, no el código.** El caso decía que sin su segunda
+mitad una validación puesta después de `Reabrir()` dejaría el ejercicio abierto. La medición dice
+que no: `Reabrir()` solo toca la entidad rastreada y el camino de fallo **no llega a
+`ConfirmarAsync`**, así que nada sale a la base. Quien hace inofensivo ese desorden es la unidad de
+trabajo. Lo que sí rompe es la 13b —la comprobación después de guardar—, y ahí la segunda mitad la
+caza sola. Se reescribió el comentario con lo que la mutación midió: esa línea no afirma **dónde**
+está escrita la guarda, afirma que **una negativa no deja nada escrito**. Cuando la medición
+contradice al comentario, manda la medición.
+
+**Y las dos últimas no las caza el caso nuevo: las caza un barrido que ya existía.** Un evento sin
+declarar no falla al escribirlo, falla cuando el interceptor lo vuelca —en tiempo de ejecución,
+dentro de un caso de uso que no tenía nada que ver—, y un nombre con la forma equivocada no falla
+nunca: se queda escrito en cada fila de la cola y en cada huella de consumidor. Los dos sentidos de
+`CadaEventoEstaDeclaradoTests` son los que lo dicen el mismo día.
+
+**Un rojo que no era del ítem: el NIF.** Las dos empresas nuevas chocaron dos veces contra empresas
+que ya existían, porque este carril **comparte la base** entre todos sus ficheros y una semilla
+repetida no falla en el caso que la repite: falla en el de **otro fichero** que la pedía primero. El
+primer intento —dos NIF escritos a mano— además traía la letra de control mal calculada. Se arregla
+por donde el carril ya lo tenía resuelto: `Escenario.NifInventado(380)` y `(381)`, con las semillas
+elegidas barriendo las que ya usa `tests/`.
+
+**Cifras de los carriles, con su orden:** `dotnet test Bastion.sln --filter "Category!=Integracion"`
+da **917**, sin cambio —el caso nuevo es de integración—; con `Category=Integracion`, **469** (84 +
+385) —eran 467—; el frontal, **103** en 16 ficheros. `bash scripts/generar-errores.sh --comprobar`
+dice **114** tipos de **120** sitios, y `bash scripts/generar-openapi.sh --comprobar`, **130**
+operaciones: la reapertura no suma una, se **mueve** —sobre **77** rutas, una más, porque `…/cierre`
+se queda solo con su `POST`—.
+
+**Lo que queda del 2.6**, por orden: el cerrojo `FOR SHARE`/`FOR UPDATE`; `IConsultaDeEjercicios` con
+`SinEjercicio`; el ajuste que no se confirma fuera de ejercicio; y la R9 viva con su fila reescrita.
 
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
