@@ -87,10 +87,11 @@ public sealed class AjustesController(IConfirmarAjuste confirmar, IAnularAjuste 
     /// <para>
     /// <b>Y no exige <c>If-Match</c></b>, por lo mismo que la confirmación: de anular dos veces
     /// seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya
-    /// no está confirmado y sale <c>409</c>—, y de anular dos veces <b>a la vez</b> protege el
-    /// testigo de concurrencia de la fila (R11), que devuelve <c>412</c> con la versión de ahora
-    /// dentro y deja sin efecto la transacción entera de quien pierde: ni inverso, ni número
-    /// gastado.
+    /// no está confirmado y sale <c>409</c>—, y de anular dos veces <b>a la vez</b> protegen dos
+    /// cosas que dicen lo mismo: el índice único de <c>anula_a_id</c>, que es el que llega primero,
+    /// y detrás el testigo de concurrencia de la fila (R11). Los dos salen por <c>412</c> —el
+    /// segundo con la versión de ahora dentro— y dejan sin efecto la transacción entera de quien
+    /// pierde: ni inverso, ni número gastado.
     /// </para>
     /// </remarks>
     /// <param name="id">Identificador del ajuste que se anula.</param>

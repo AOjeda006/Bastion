@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
@@ -87,6 +88,20 @@ public static class ModuloDeInventario
         // Sin `IConsultaDeLoBloqueado` y sin cargador de semillas, por el mismo motivo que Catálogo:
         // el libro no guarda datos de ninguna persona -no es bloqueable, y su configuración lo dice
         // con su porqué-, y qué existencias tiene una empresa no es un maestro de la instalación.
+        // EL ÍNDICE ÚNICO DEL INVERSO CONTESTA POR EL TESTIGO cuando gana la carrera, y esto es
+        // lo que impide que esa victoria se pague con un 500. Se declara AQUÍ, en el módulo que
+        // es dueño del índice, y no en la política de errores: la política fija el orden de los
+        // manejadores y el mecanismo; que `ix_ajustes_anula_a_id` sea una carrera perdida y no un
+        // defecto es una afirmación sobre este agregado y de nadie más.
+        servicios.Configure<IndicesQueDelatanUnaCarreraPerdida>(indices => indices.Declarar(
+            "ix_ajustes_anula_a_id",
+            "anular escribe DOS filas —inserta el inverso y cambia el estado del original— y el " +
+            "ORM decide cuál va antes. Cuando va antes el INSERT, quien pierde la carrera choca " +
+            "contra este índice en vez de contra el testigo del original, y las dos cosas " +
+            "significan exactamente lo mismo: otra anulación legítima llegó primero. No hay " +
+            "ningún otro desenlace posible, porque un `anula_a_id` repetido solo se escribe " +
+            "anulando dos veces el mismo documento"));
+
         servicios.AgregarCasosDeUsoDeInventario();
 
         return servicios;

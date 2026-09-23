@@ -14,6 +14,7 @@ using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Inventario;
@@ -222,29 +223,40 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
 
     /// <summary>
     /// Dos anulaciones que leen el mismo documento confirmado: una escribe y la otra se estrella
-    /// contra el testigo de concurrencia.
+    /// contra el índice único del inverso.
     /// </summary>
     /// <remarks>
     /// <para>
     /// <b>Dos transacciones de verdad, y por eso no valen dos llamadas seguidas.</b> Las dos leen
     /// <c>Confirmado</c> y las dos se creen con derecho a crear el inverso: la guarda de estado
     /// del caso de uso las deja pasar a las dos, porque cuando cada una mira, el documento
-    /// todavía lo está. Lo que las separa es la R11 sobre la fila del ajuste —el testigo es
-    /// <c>xmin</c>, puesto desde el 2.3—, así que la segunda escribe contra una versión que ya no
-    /// está.
+    /// todavía lo está. Lo que las separa son, en este orden, el índice único de
+    /// <c>anula_a_id</c> y la R11 sobre la fila del ajuste —el testigo es <c>xmin</c>, puesto desde
+    /// el 2.3—: la segunda escribe un inverso que ya no cabe, y si cupiera escribiría contra una
+    /// versión que ya no está.
     /// </para>
     /// <para>
-    /// <b>Lo que se lleva el perdedor.</b> Un <c>DbUpdateConcurrencyException</c>, que el borde
-    /// traduce a <c>412</c> con la versión de ahora dentro para todas las acciones a la vez
-    /// (<c>ManejadorDeVersionObsoleta</c>) — no un <c>409</c> y no un <c>500</c>—, y NINGÚN
-    /// inverso: su transacción entera se deshace, y con ella el número que había tomado, que la
-    /// serie reutiliza. Eso último se afirma por el contador, que es lo único que lo demuestra:
-    /// queda en dos y no en tres.
+    /// <b>Lo que se lleva el perdedor, MEDIDO y no supuesto.</b> Aquí hubo escrito que era un
+    /// <c>DbUpdateConcurrencyException</c>; al poner el índice único se midió y no lo es. Anular
+    /// escribe DOS filas —inserta el inverso y cambia el estado del original— y cuál de las dos
+    /// llega antes a la base lo decide el ORM: llega antes el <c>INSERT</c>, así que el perdedor
+    /// choca contra <c>ix_ajustes_anula_a_id</c> y se lleva un <c>DbUpdateException</c> con el
+    /// <c>23505</c> de PostgreSQL dentro. El testigo del original habría dicho lo mismo un
+    /// instante después; no le da tiempo.
     /// </para>
     /// <para>
-    /// <b>Y queda un inverso y no dos</b>, sin que nadie cuente inversos y sin índice único —que
-    /// está descartado a propósito, porque saltaría antes que el testigo y convertiría el
-    /// <c>412</c> del perdedor en un <c>500</c>—.
+    /// <b>Y el borde contesta lo mismo por los dos caminos</b>, que es lo que impide que esta
+    /// diferencia se note desde fuera: <c>ManejadorDeCarreraPerdidaEnLaBase</c> traduce ESE
+    /// índice, por su nombre, al mismo <c>412</c> con el mismo <c>version-obsoleta</c> que da
+    /// <c>ManejadorDeVersionObsoleta</c> —no un <c>409</c> y no un <c>500</c>—. Eso se afirma en
+    /// el carril rápido, en <c>PoliticaDeErroresTests</c>, porque aquí no hay borde: este caso
+    /// llama al caso de uso y lo que ve es la excepción. Ninguno de los dos prueba la cadena
+    /// entera solo; los dos juntos, sí.
+    /// </para>
+    /// <para>
+    /// <b>Y NINGÚN inverso</b>: la transacción entera del perdedor se deshace, y con ella el
+    /// número que había tomado, que la serie reutiliza. Eso se afirma por el contador, que es lo
+    /// único que lo demuestra: queda en dos y no en tres.
     /// </para>
     /// </remarks>
     [Fact]
@@ -265,15 +277,25 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
 
         gana.EsCorrecto.ShouldBeTrue($"«{gana.Error?.Codigo}»");
 
-        await Should.ThrowAsync<DbUpdateConcurrencyException>(
+        DbUpdateException choque = await Should.ThrowAsync<DbUpdateException>(
             () => perdedora.AnularSinAbrirTransaccionAsync(caso.AjusteId, "La segunda"));
+
+        // POR EL NOMBRE DEL ÍNDICE, y no solo por el tipo. Un `DbUpdateException` lo lanza
+        // cualquier escritura que la base rechace —una clave ajena, una columna obligatoria—, y
+        // afirmar solo el tipo daría por buena una carrera que hubiera fallado por otra cosa. El
+        // nombre es además el que el borde traduce: si una migración lo cambia, esto se pone rojo
+        // antes de que la traducción deje de aplicarse en silencio y la carrera vuelva a ser 500.
+        PostgresException motor = choque.InnerException.ShouldBeOfType<PostgresException>();
+
+        motor.SqlState.ShouldBe("23505");
+        motor.ConstraintName.ShouldBe("ix_ajustes_anula_a_id");
 
         await laQueEspera.RollbackAsync();
 
         (await InversosDeAsync(caso)).ShouldBe(
             1,
-            "la perdedora no dejó inverso: su transacción entera se deshizo, y no hay ningún " +
-            "índice único que haya tenido que salvarlo");
+            "la perdedora no dejó inverso: su transacción entera se deshizo. El índice impidió la " +
+            "fila, y el rollback se llevó todo lo demás que hubiera escrito");
 
         (await ContadorAsync(caso.Cliente, caso.Serie.Id)).ShouldBe(
             2,

@@ -54,12 +54,16 @@ public interface IAnularAjuste
 /// motivo.
 /// </para>
 /// <para>
-/// <b>Y lo que separa dos anulaciones simultáneas no está aquí</b>, sino en el testigo de
-/// concurrencia de la fila del ajuste (R11). Las dos leen <c>Confirmado</c>, las dos construyen su
-/// inverso y las dos se creen con derecho; la segunda en llegar escribe contra una versión que ya
-/// no está y se lleva un <c>412</c> —lo traduce <c>ManejadorDeVersionObsoleta</c>— y <b>ningún</b>
-/// inverso, porque su transacción entera se deshace y con ella el número que había tomado. Queda
-/// uno y no dos, y no porque nadie cuente inversos.
+/// <b>Y lo que separa dos anulaciones simultáneas no está aquí.</b> Las dos leen
+/// <c>Confirmado</c>, las dos construyen su inverso y las dos se creen con derecho; la segunda en
+/// llegar se estrella, y <b>medido</b>, contra el índice único de <c>anula_a_id</c>: anular escribe
+/// dos filas —el <c>INSERT</c> del inverso y el <c>UPDATE</c> del original—, el <c>INSERT</c> llega
+/// antes, y el testigo de concurrencia de la fila del ajuste (R11) habría dicho lo mismo un
+/// instante después. El perdedor se lleva un <c>412</c> por los dos caminos —el testigo lo traduce
+/// <c>ManejadorDeVersionObsoleta</c>, y el índice, por su nombre,
+/// <c>ManejadorDeCarreraPerdidaEnLaBase</c>— y <b>ningún</b> inverso, porque su transacción entera
+/// se deshace y con ella el número que había tomado. Queda uno y no dos: lo impide el motor, y lo
+/// impediría la R11 si el motor no estuviera.
 /// </para>
 /// </remarks>
 /// <param name="ajustes">Dónde viven el documento y el libro.</param>

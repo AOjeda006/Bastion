@@ -4,6 +4,7 @@ using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Inventario;
@@ -22,11 +23,20 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// apuntan. Ninguna de las dos cabe en una restricción de columna.
 /// </para>
 /// <para>
-/// <b>Y el índice único, que es lo primero que se piensa para la segunda, está descartado a
-/// propósito</b>: dos anulaciones simultáneas insertan su inverso antes de tocar el original, así
-/// que un único sobre <c>anula_a_id</c> saltaría PRIMERO y la perdedora saldría por una violación
-/// de unicidad —un <c>500</c>— en vez de por el testigo de concurrencia, que es un <c>412</c> con
-/// la versión dentro. La carrera la separa la R11; el recuento lo afirma esta regla.
+/// <b>La segunda mitad SÍ la sostiene ahora el motor, y este fichero sigue haciendo falta.</b>
+/// <c>ix_ajustes_anula_a_id</c> es único, así que dos inversos del mismo original no entran. Aquí
+/// hubo un párrafo diciendo lo contrario —que el único estaba descartado porque convertiría el
+/// <c>412</c> del perdedor en un <c>500</c>— y era una conclusión mal sacada de una medición
+/// buena: cambiaba una garantía por un código de estado pudiendo tener las dos. La respuesta la
+/// arregla <c>ManejadorDeCarreraPerdidaEnLaBase</c>, que traduce ESE índice por su nombre.
+/// </para>
+/// <para>
+/// <b>Y el barrido se queda, de respaldo y no de adorno.</b> Lo que el índice no puede ver sigue
+/// siendo suyo —un inverso cuyo original NO está anulado, y un anulado sin nadie que le apunte—,
+/// y además es lo único que quedaría en pie si alguien tirara el índice. Por eso su mitad del
+/// «exactamente uno» se arma <b>tirando el índice dentro de la transacción que luego se deshace</b>:
+/// así se afirman las dos cosas por separado —que el índice lo impide, y que si no estuviera el
+/// barrido lo vería— en vez de dejar una de las dos sin ejercer.
 /// </para>
 /// <para>
 /// <b>Cada mitad va con su barrido y con su arnés</b>, que es lo que pide el ADR-0020. Un barrido
@@ -133,26 +143,44 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
         await using InventarioDbContext contexto = postgres.AbrirInventario(original.EmpresaId);
 
         // PRIMERA AVERÍA: un segundo inverso del mismo original. Es lo que quedaría si dos
-        // anulaciones simultáneas llegaran las dos hasta el final, y no hay índice único que lo
-        // impida — está descartado a propósito, porque convertiría el 412 del perdedor en un 500.
+        // anulaciones simultáneas llegaran las dos hasta el final, y va en DOS pasos porque desde
+        // el índice único hay dos cosas distintas que afirmar.
+        string segundoInverso = Consulta(
+            """
+            INSERT INTO inventario.ajustes
+                (id, empresa_id, almacen_id, fecha_de_operacion, motivo, creado_en,
+                 modificado_en, estado, anula_a_id)
+            VALUES ('{1}', '{0}', '{2}', current_date, 'Segundo inverso del mismo',
+                    now(), now(), 'Confirmado', '{3}')
+            """,
+            original.EmpresaId,
+            Guid.CreateVersion7(),
+            original.AlmacenId,
+            original.AjusteId);
+
+        // PASO 1: la base no lo deja entrar, y se afirma POR EL NOMBRE DEL ÍNDICE. Sin el nombre,
+        // cualquier otro rechazo —una columna que no existe, una clave ajena— daría el caso por
+        // bueno sin haber ejercido la unicidad. Y el nombre es además el que traduce el borde: si
+        // alguien lo cambia en una migración, este caso se pone rojo antes de que la traducción
+        // deje de aplicarse en silencio.
+        PostgresException rechazo = await ElLibro.ElMotorRechazaAsync(postgres, segundoInverso);
+
+        rechazo.SqlState.ShouldBe(
+            InversoDuplicado,
+            "un segundo inverso del mismo original tiene que chocar contra la unicidad");
+        rechazo.ConstraintName.ShouldBe("ix_ajustes_anula_a_id");
+
+        // PASO 2: y si el índice no estuviera, el barrido lo vería. Se TIRA el índice dentro de la
+        // transacción —en PostgreSQL el DDL es transaccional, así que el rollback lo devuelve— y
+        // se mete el defecto que ya no cabe de otra forma. Sin este paso, la rama «más de uno» del
+        // barrido no se ejercería nunca más y podría romperse sin que nadie se enterara.
         await using (IDbContextTransaction dosInversos =
             await contexto.Database.BeginTransactionAsync())
         {
             await EjecutarAsync(
-                contexto,
-                dosInversos,
-                Consulta(
-                    """
-                    INSERT INTO inventario.ajustes
-                        (id, empresa_id, almacen_id, fecha_de_operacion, motivo, creado_en,
-                         modificado_en, estado, anula_a_id)
-                    VALUES ('{1}', '{0}', '{2}', current_date, 'Segundo inverso del mismo',
-                            now(), now(), 'Confirmado', '{3}')
-                    """,
-                    original.EmpresaId,
-                    Guid.CreateVersion7(),
-                    original.AlmacenId,
-                    original.AjusteId));
+                contexto, dosInversos, "DROP INDEX inventario.ix_ajustes_anula_a_id");
+
+            await EjecutarAsync(contexto, dosInversos, segundoInverso);
 
             IReadOnlyList<string> mal = await LeerAsync(
                 contexto, dosInversos, AnuladosSinUnSoloInverso(original.EmpresaId));
@@ -164,6 +192,15 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
 
             await dosInversos.RollbackAsync();
         }
+
+        // Y el índice ha vuelto: el rollback deshace también el DROP. Se comprueba, porque un
+        // carril que se dejara el índice tirado envenenaría a todos los casos de detrás con un
+        // verde que no significa nada.
+        (await ElLibro.EscalarAsync<long>(
+            postgres,
+            "SELECT count(*) FROM pg_indexes WHERE schemaname = 'inventario' " +
+            "AND indexname = 'ix_ajustes_anula_a_id'"))
+            .ShouldBe(1, "el DROP iba dentro de una transacción que se deshace");
 
         // SEGUNDA AVERÍA: un anulado sin nadie que le apunte, que es la media R2 —un documento
         // sin efecto y su efecto sin compensar—. El dominio no llega aquí: `Anular` exige el
@@ -228,6 +265,14 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
     /// </remarks>
     /// <param name="empresaId">La empresa del caso, que es su universo entero.</param>
     /// <returns>La consulta.</returns>
+    /// <summary>El SQLSTATE de una violación de unicidad, <c>23505</c>.</summary>
+    /// <remarks>
+    /// Escrito y no calculado, como el <c>23001</c> del libro: el catálogo de códigos de
+    /// PostgreSQL es contrato suyo. Es el mismo que <c>ManejadorDeCarreraPerdidaEnLaBase</c>
+    /// reconoce para traducir la carrera perdida a <c>412</c>.
+    /// </remarks>
+    private const string InversoDuplicado = "23505";
+
     private static string InversosSinAnulado(Guid empresaId) => Consulta(
         """
         SELECT inverso.id::text

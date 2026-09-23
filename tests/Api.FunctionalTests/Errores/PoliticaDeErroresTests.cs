@@ -46,6 +46,63 @@ public sealed class PoliticaDeErroresTests(ApiConRutasQueFallan api) : IClassFix
         cuerpo.RootElement.GetProperty("status").GetInt32().ShouldBe((int)estadoEsperado);
     }
 
+    /// <summary>
+    /// La carrera que impidió un índice DECLARADO sale con el mismo <c>412</c> y el mismo
+    /// <c>type</c> que da el testigo de concurrencia.
+    /// </summary>
+    /// <remarks>
+    /// <b>Es la mitad de arriba de una cadena que ningún carril prueba entero.</b> Que el perdedor
+    /// de dos anulaciones simultáneas choque contra <c>ix_ajustes_anula_a_id</c> lo comprueba
+    /// <c>LaAnulacionConContraDocumentoTests.Dos_anulaciones_simultaneas_dejan_un_solo_inverso</c>,
+    /// contra PostgreSQL de verdad y sin borde por medio; que esa excepción salga como <c>412</c>
+    /// se comprueba aquí, con el borde de verdad y sin base. Los dos afirman el mismo nombre de
+    /// índice escrito a mano, que es la costura por la que se sujetan.
+    /// </remarks>
+    [Fact]
+    public async Task Una_carrera_que_impidio_un_indice_declarado_sale_412_y_no_500()
+    {
+        using HttpResponseMessage respuesta = await api.CreateClient()
+            .GetAsync(new Uri(RutasQueFallan.CarreraPerdida, UriKind.Relative));
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.PreconditionFailed);
+        respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+
+        string cuerpo = await respuesta.Content.ReadAsStringAsync();
+
+        using var problema = JsonDocument.Parse(cuerpo);
+        problema.RootElement.GetProperty("type").GetString().ShouldBe("/errors/version-obsoleta");
+
+        // Y sin un solo rastro del interior, que aquí no es gratis: el mensaje del motor lleva el
+        // nombre del índice y el de la tabla, y el de EF Core lleva la frase de `SaveChanges`.
+        cuerpo.ShouldNotContain(RutasQueFallan.IndiceDeclarado);
+        foreach (string rastro in s_rastrosDelInterior)
+        {
+            cuerpo.ShouldNotContain(rastro);
+        }
+    }
+
+    /// <summary>
+    /// El MISMO <c>23505</c> sobre un índice que nadie declaró sigue siendo un <c>500</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Sin este caso, el de arriba no dice lo que parece.</b> Un manejador que tradujera todo
+    /// <c>23505</c> lo pondría igual de verde, y con él dos altas con el mismo NIF contestarían
+    /// <c>412</c>: el cliente releería, volvería a mandar lo mismo y no saldría de ahí jamás. Lo
+    /// que se afirma aquí es que la traducción es una lista de decisiones y no una regla general.
+    /// </remarks>
+    [Fact]
+    public async Task Una_violacion_de_unicidad_sin_declarar_sigue_siendo_500()
+    {
+        using HttpResponseMessage respuesta = await api.CreateClient()
+            .GetAsync(new Uri(RutasQueFallan.UnicidadSinDeclarar, UriKind.Relative));
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+
+        (await respuesta.Content.ReadAsStringAsync())
+            .ShouldNotContain(RutasQueFallan.IndiceSinDeclarar);
+    }
+
     // La teoría de arriba enumera las clases A MANO, y una lista a mano se queda corta: añadir una
     // clase de error nueva y no añadir su fila la dejaría sin comprobar, y el síntoma sería un
     // `NotSupportedException` desde dentro del manejador de errores —o sea, un 500 justo cuando ya

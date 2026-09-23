@@ -40,6 +40,11 @@ public static class PoliticaDeErrores
         // inscripción y el general atrapa cualquier excepción. Registrado después, no llegaría a
         // ejecutarse nunca y todo 412 saldría como 500.
         servicios.AddExceptionHandler<ManejadorDeVersionObsoleta>();
+        // Y ENTRE MEDIAS la carrera que impidió la base: también es un 412, pero llega como una
+        // violación de unicidad y no como un choque de testigo, así que el manejador de arriba no
+        // la reconoce. Va después de él porque el testigo es el camino normal y además lleva la
+        // versión dentro; y antes del general por lo mismo que el testigo.
+        servicios.AddExceptionHandler<ManejadorDeCarreraPerdidaEnLaBase>();
         servicios.AddExceptionHandler<ManejadorDeExcepcionesNoControladas>();
 
         // Y el 400 automático de `[ApiController]`, que MVC compone por su cuenta y por fuera de

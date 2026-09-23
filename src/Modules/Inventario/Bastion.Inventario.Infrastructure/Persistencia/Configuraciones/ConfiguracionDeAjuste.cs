@@ -87,16 +87,36 @@ internal sealed class ConfiguracionDeAjuste : IEntityTypeConfiguration<Ajuste>
             .HasForeignKey(documento => documento.AnulaAId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Y NO HAY ÍNDICE ÚNICO SOBRE `anula_a_id`, que es lo primero que se piensa para impedir
-        // dos inversos del mismo original. Se midió y hace daño: dos anulaciones simultáneas
-        // INSERTAN su inverso antes de tocar el original, así que el único chocaría PRIMERO y la
-        // perdedora saldría por una violación de unicidad —un `DbUpdateException`, o sea un `500`—
-        // en vez de por el testigo de concurrencia del original, que es un `412` con la versión
-        // dentro. Lo que separa a las dos anulaciones es la R11 sobre la fila del ajuste; que no
-        // haya dos inversos lo comprueba el barrido de `LaDobleFlechaDeLaAnulacionTests`, que es
-        // además el único que puede ver el caso que de verdad importa: un inverso cuyo original
-        // NO está anulado.
-        ajuste.HasIndex(documento => documento.AnulaAId);
+        // ÍNDICE ÚNICO SOBRE `anula_a_id`: dos inversos del mismo original no entran en la base.
+        //
+        // AQUÍ HABÍA UN ÍNDICE NO ÚNICO, y el argumento para dejarlo así era que el único chocaría
+        // PRIMERO en la carrera —dos anulaciones simultáneas INSERTAN su inverso antes de tocar el
+        // original— y la perdedora saldría por una violación de unicidad, un `500`, en vez de por
+        // el testigo de concurrencia, que es un `412`. La medición era cierta; la conclusión, no.
+        // Cambiaba una GARANTÍA por un CÓDIGO DE ESTADO, y las dos se pueden tener: la respuesta
+        // se arregla traduciendo, y `ManejadorDeCarreraPerdidaEnLaBase` traduce ESTE índice, por
+        // su nombre, al mismo `412` que da el testigo. Que el nombre siga existiendo y siga
+        // siendo ÚNICO lo compara `CadaIndiceTraducidoSeJustificaTests`, en los dos sentidos.
+        //
+        // Y el contraargumento estaba cuatro líneas más abajo, en esta misma tabla: el único de
+        // `(serie_id, numero)` se justifica diciendo que NO duplica al cerrojo, sino que es «la que
+        // queda en pie cuando el cerrojo no interviene —una carga, una corrección a mano, un
+        // documento nuevo que copie mal el patrón—». Eso vale palabra por palabra para el inverso:
+        // que no haya dos depende hoy de que TODO camino que cree uno toque también la fila del
+        // original, y el 2.12 y la fase 5 traen caminos que aún no existen. El barrido de
+        // `LaDobleFlechaDeLaAnulacionTests` vigila la base de los tests; este índice vigila la de
+        // producción.
+        //
+        // LO QUE EL ÍNDICE SIGUE SIN PODER VER, y por eso el barrido no sobra: un inverso cuyo
+        // original NO está anulado. Eso es una condición sobre el ESTADO de otra fila, y no cabe
+        // en ninguna restricción de columna.
+        //
+        // FILTRADO por el mismo motivo que el de `numero`, y aquí pesa más: la inmensa mayoría de
+        // los ajustes no anulan a nadie, así que sin filtro el índice indexaría una tabla entera de
+        // nulos para vigilar a la minoría que apunta.
+        ajuste.HasIndex(documento => documento.AnulaAId)
+            .IsUnique()
+            .HasFilter("anula_a_id IS NOT NULL");
 
         ajuste.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeOperacion });
 

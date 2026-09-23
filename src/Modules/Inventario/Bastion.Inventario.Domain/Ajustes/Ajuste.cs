@@ -109,10 +109,12 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// <para>
     /// <b>Lo que el motor sostiene y lo que no.</b> Lleva clave ajena —es la misma tabla y el
     /// mismo esquema, así que no cruza ninguna frontera— y con ella el motor garantiza que apunta
-    /// a una fila que existe. Lo que el motor <b>no</b> puede decir es que esa fila esté
-    /// <c>Anulado</c>, ni que no haya dos inversos apuntando al mismo original, ni que un anulado
-    /// se quede sin nadie que le apunte. Eso lo sostiene
-    /// <c>LaDobleFlechaDeLaAnulacionTests</c>, con su barrido en los dos sentidos.
+    /// a una fila que existe; y lleva índice <b>único</b> filtrado, con el que además garantiza que
+    /// no hay dos inversos apuntando al mismo original. Lo que el motor <b>no</b> puede decir es
+    /// que esa fila esté <c>Anulado</c>, ni que un anulado se quede sin nadie que le apunte: las
+    /// dos son condiciones sobre el estado de otra fila y no caben en ninguna restricción de
+    /// columna. Eso lo sostiene <c>LaDobleFlechaDeLaAnulacionTests</c>, con su barrido en los dos
+    /// sentidos.
     /// </para>
     /// </remarks>
     public Guid? AnulaAId { get; private set; }

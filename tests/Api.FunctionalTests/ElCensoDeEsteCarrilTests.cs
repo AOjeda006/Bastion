@@ -67,6 +67,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "CadaEventoEstaDeclaradoTests.Ninguna_declaracion_nombra_un_evento_que_ya_no_existe",
         "CadaEventoEstaDeclaradoTests.Todos_los_nombres_tienen_la_forma_acordada",
 
+        "CadaIndiceTraducidoSeJustificaTests.Ningun_indice_se_traduce_sin_estar_en_esta_lista",
+        "CadaIndiceTraducidoSeJustificaTests.Todo_indice_declarado_existe_en_el_modelo_y_es_unico",
+
         "ElCaptadorDeRegistroCapturaTests.Lo_que_la_API_escribe_llega_al_sumidero_con_su_identificador_de_suceso",
         "ElCaptadorDeRegistroCapturaTests.Un_evento_sin_identificador_de_suceso_no_se_lee_como_si_tuviera_uno",
 
@@ -214,6 +217,8 @@ public sealed class ElCensoDeEsteCarrilTests
         "PoliticaDeErroresTests.UnErrorDeNegocio_LlevaLosCamposDelRfc9457",
         "PoliticaDeErroresTests.UnaExcepcionNoControlada_RespondeQuinientosSinNadaDelInterior",
         "PoliticaDeErroresTests.UnaPeticionMalFormada_RespondeCuatrocientosSinNadaDelInterior",
+        "PoliticaDeErroresTests.Una_carrera_que_impidio_un_indice_declarado_sale_412_y_no_500",
+        "PoliticaDeErroresTests.Una_violacion_de_unicidad_sin_declarar_sigue_siendo_500",
         "PoliticaDeErroresTests.UnaRutaQueNoExiste_LeResponde401AlAnonimoYTambienEnProblemDetails",
 
         "SinEmpresaNoSeConsultaTests.Con_claim_devuelve_la_empresa_del_claim_y_no_otra",

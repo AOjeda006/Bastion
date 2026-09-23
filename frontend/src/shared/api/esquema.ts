@@ -684,10 +684,11 @@ export interface paths {
          *       vez en vez de anular dos veces.
          *     Y no exige If-Match, por lo mismo que la confirmación: de anular dos veces
          *       seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya
-         *       no está confirmado y sale 409—, y de anular dos veces a la vez protege el
-         *       testigo de concurrencia de la fila (R11), que devuelve 412 con la versión de ahora
-         *       dentro y deja sin efecto la transacción entera de quien pierde: ni inverso, ni número
-         *       gastado.
+         *       no está confirmado y sale 409—, y de anular dos veces a la vez protegen dos
+         *       cosas que dicen lo mismo: el índice único de anula_a_id, que es el que llega primero,
+         *       y detrás el testigo de concurrencia de la fila (R11). Los dos salen por 412 —el
+         *       segundo con la versión de ahora dentro— y dejan sin efecto la transacción entera de quien
+         *       pierde: ni inverso, ni número gastado.
          */
         post: operations["Ajustes_Anular"];
         delete?: never;

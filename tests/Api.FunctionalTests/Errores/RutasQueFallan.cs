@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Bastion.Api.FunctionalTests.Errores;
 
@@ -46,6 +48,19 @@ internal sealed class RutasQueFallan : IStartupFilter
     internal const string VersionObsoleta = "/pruebas/errores/version-obsoleta";
     internal const string FaltaLaPrecondicion = "/pruebas/errores/falta-la-precondicion";
     internal const string DemasiadoGrande = "/pruebas/errores/demasiado-grande";
+    internal const string CarreraPerdida = "/pruebas/errores/carrera-perdida";
+    internal const string UnicidadSinDeclarar = "/pruebas/errores/unicidad-sin-declarar";
+
+    /// <summary>El índice que Inventario declara como carrera perdida, con su nombre real.</summary>
+    /// <remarks>
+    /// <b>Escrito aquí a mano y a propósito.</b> Si se leyera de la declaración, este arnés y lo
+    /// que prueba dirían siempre lo mismo y el caso no podría fallar nunca. Escribiéndolo, un
+    /// renombrado del índice que no llegue a la declaración pone el carril rojo aquí.
+    /// </remarks>
+    internal const string IndiceDeclarado = "ix_ajustes_anula_a_id";
+
+    /// <summary>Un índice único cualquiera de los que NO se traducen.</summary>
+    internal const string IndiceSinDeclarar = "ix_terceros_nif_por_empresa";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => aplicacion =>
     {
@@ -109,10 +124,32 @@ internal sealed class RutasQueFallan : IStartupFilter
             // único `413` que la API emite hoy aparte del de las filas de una importación.
             DemasiadoGrande => Responder(contexto, ErroresDelCuerpo.DemasiadoGrande(2 * 1024 * 1024)),
 
+            // LAS DOS DE UNICIDAD, con la forma EXACTA con la que llegan de la base: un
+            // `DbUpdateException` de EF Core envolviendo el `PostgresException` del motor. Se
+            // construye a mano porque montar la carrera de verdad exigiría PostgreSQL, y lo que
+            // este carril prueba no es la carrera —de eso responde el de integración— sino que el
+            // borde traduce ESA excepción y no otra.
+            CarreraPerdida => throw ChoqueDeUnicidad(IndiceDeclarado),
+
+            // Y el contraste, que es lo que convierte la traducción en una decisión y no en una
+            // regla general: el MISMO 23505 sobre un índice que nadie declaró sigue siendo un 500.
+            UnicidadSinDeclarar => throw ChoqueDeUnicidad(IndiceSinDeclarar),
+
             _ => Task.CompletedTask,
         };
     }
 
     private static Task Responder(HttpContext contexto, ErrorDeOperacion error) =>
         error.ARespuesta().ExecuteAsync(contexto);
+
+    // El `23505` tal como lo levanta Npgsql, con el nombre del índice dentro: es lo único por lo
+    // que el borde puede distinguir una carrera perdida de un defecto.
+    private static DbUpdateException ChoqueDeUnicidad(string indice) => new(
+        $"An error occurred while saving the entity changes: {RastroInterno}",
+        new PostgresException(
+            $"duplicate key value violates unique constraint \"{indice}\"",
+            "ERROR",
+            "ERROR",
+            "23505",
+            constraintName: indice));
 }

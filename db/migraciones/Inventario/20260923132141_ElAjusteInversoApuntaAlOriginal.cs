@@ -32,14 +32,15 @@ namespace Bastion.Inventario.Infrastructure.Migrations
     /// que lo compensa.
     /// </para>
     /// <para>
-    /// <b>El índice NO es único, y esa es una decisión medida, no un olvido.</b> Un único sobre
-    /// <c>anula_a_id</c> parece la forma evidente de impedir dos inversos del mismo original, pero
-    /// cambia a peor lo que ve quien pierde una carrera: dos anulaciones simultáneas INSERTAN su
-    /// inverso antes de tocar el original, así que el único saltaría PRIMERO y la perdedora saldría
-    /// por una violación de unicidad —un <c>DbUpdateException</c>, o sea un <c>500</c>— en vez de
-    /// por el testigo de concurrencia del original, que es un <c>412</c> con la versión dentro. Lo
-    /// que separa a las dos anulaciones es la R11 sobre la fila del ajuste. El índice se queda
-    /// porque la mitad que recorre la flecha al revés —del original a su inverso— lo necesita.
+    /// <b>El índice nace NO único, y eso lo corrige <c>ElInversoEsUnicoEnLaBase</c>.</b> Aquí
+    /// hubo escrito que era una decisión medida: que un único sobre <c>anula_a_id</c> saltaría
+    /// antes que el testigo de concurrencia y convertiría el <c>412</c> de quien pierde la carrera
+    /// en un <c>500</c>. La medición era buena —el <c>INSERT</c> del inverso llega antes que el
+    /// <c>UPDATE</c> del original— y la conclusión no: renunciaba a la garantía para conservar un
+    /// código de estado, pudiendo tener las dos. La migración siguiente pone el único y el borde
+    /// traduce el índice por su nombre. Se deja escrito aquí porque la fila del historial de
+    /// migraciones ya no se puede cambiar, y porque el razonamiento equivocado es lo único que
+    /// explica por qué hicieron falta dos migraciones para un índice.
     /// </para>
     /// <para>
     /// <b>Lo que el motor no puede decir.</b> Que la fila apuntada esté <c>Anulado</c>, que no haya
