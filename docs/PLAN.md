@@ -4710,6 +4710,109 @@ no pide el ítem no entra—: la superficie del ajuste va con sus pantallas, y l
 necesita de la API es el sitio donde el número entra en un recibo.
 
 
+### Tomadas por el agente de desarrollo — ítem 2.5, antes de escribir su código (2026-09-23)
+
+Seis cosas. La primera **corrige el criterio del ítem** y por eso va antes que las otras cinco: sin
+ella, las demás se decidirían sobre un criterio que se puede cumplir entero con el stock moviéndose
+al revés.
+
+#### 1. Al criterio le faltaba la afirmación que importa, y entra aquí
+
+**Lo que había escrito era estructural, las cinco cosas**: hay un inverso, está confirmado, lleva
+número, la flecha va en los dos sentidos y anular dos veces no crea dos. Ninguna mira las
+cantidades. Un error de signo —negar la cantidad base y no la introducida, copiarlas sin negar,
+negarlas dos veces— deja **los cinco en verde** y mueve el stock al revés de lo que el documento
+dice, que es exactamente el daño que la anulación existe para no hacer.
+
+**La afirmación que falta:** sumar el libro del par original+inverso **agrupando por artículo,
+almacén y ubicación** y exigir cero en cada grupo. Agrupado y no en total, porque un total de cero
+lo dan también dos errores que se compensan entre artículos distintos. Y con la afirmación de que
+el conjunto sumado **no está vacío**, que es el ADR-0020: sobre cero grupos, «todos suman cero»
+sale verde por no haber mirado.
+
+**Y ahí va la mutación del ítem** (ADR-0038): quitar la negación de una de las dos cantidades. Es
+la equivocación verosímil —la que se escribe sola al copiar las líneas del original— y está sobre
+la línea que decide. No vale una guarda de entrada.
+
+#### 2. El inverso lleva **fecha propia**, la de hoy, y no la del original
+
+**Las dos opciones eran reales.** Heredar la fecha es lo que sale de la implementación ingenua —el
+inverso se construye a partir del original— y tiene a favor que el par queda en el mismo periodo,
+así que ningún saldo anterior cambia nunca.
+
+**Se elige la de hoy, y el motivo es contable:** no se asienta en un periodo cerrado. Con la fecha
+heredada, anular un documento de un ejercicio ya cerrado sería escribir dentro de él, y el **2.6**
+va a escribir la R9 —«un ajuste no se confirma con fecha en ejercicio cerrado»—. Entonces las dos
+frases chocarían y una tendría que ceder. Se decide **aquí** para que el 2.6 no se encuentre la
+contradicción ya hecha, que es lo que pedía su propio criterio.
+
+**La consecuencia, escrita porque es la parte que no se ve sola:** el periodo del original
+**conserva** su movimiento y otro periodo lo revierte. El saldo a una fecha anterior a la anulación
+sigue enseñando lo que el original movió, y está bien que lo enseñe: así fue. Quien contesta por eso
+es el **2.14**, el stock a fecha pasada. Y el par acaba con filas en **dos particiones** del libro,
+que es correcto y no un descuadre.
+
+#### 3. El inverso va a **la misma serie** del original
+
+**No estrena tipo de documento.** Un ajuste inverso es un ajuste: mismo agregado, misma tabla, y
+sus filas del libro llevan el mismo `TipoDeDocumentoOrigen.Ajuste`. Como el tipo es el mismo, la
+serie también: la del original, que ya está elegida y es la que numera ajustes de esa empresa.
+
+**Lo que se gana es lo que no hay que inventar.** Si el inverso estrenara tipo haría falta una serie
+nueva por empresa, y una instalación recién migrada no la tendría: **la primera anulación fallaría**
+por un maestro que nadie ha podido dar de alta. Habría que decidir quién lo crea y por qué camino
+—semilla, migrador o pantalla—, y eso es un ítem, no una línea.
+
+**La consecuencia, estrecha y aceptada:** si la serie del original está cerrada, la anulación **no
+numera** y falla con el **mismo** error que una confirmación contra una serie cerrada. No se abre
+una excepción «porque es una anulación»: la R5 no tiene excepciones por motivo, y una serie cerrada
+que siguiera numerando por detrás es justo el agujero que el 2.4 cerró.
+
+#### 4. El coste del inverso **se copia** del original, no se recalcula
+
+El inverso compensa **lo que el original escribió**, no lo que costaría hoy. Recalcular dejaría el
+par sumando cero en cantidad y **distinto de cero en valor**: anular movería el valor del almacén
+sin mover una sola unidad. El **2.8** —la valoración PMP— lo va a dar por supuesto, y aquí cuesta
+una línea decirlo.
+
+#### 5. «Anular dos veces» se comprueba con **dos transacciones de verdad**
+
+Dos llamadas seguidas no prueban nada: la segunda encuentra el documento ya `Anulado` y la guarda
+de estado la rechaza sin que nada concurrente haya ocurrido. Lo que hay que ejercer son **dos
+anulaciones simultáneas**, cada una en su transacción: las dos leen `Confirmado` y las dos se creen
+con derecho a crear el inverso.
+
+**Lo que las separa es la R11 sobre la fila del ajuste**, no una guarda de entrada. El `Ajuste`
+lleva `LlevaTestigoDeConcurrencia()` desde el 2.3 —el testigo es `xmin`—, así que la segunda en
+llegar escribe contra una versión que ya no está.
+
+**Lo que se lleva el perdedor, dicho:** un `DbUpdateConcurrencyException` que
+`ManejadorDeVersionObsoleta` traduce a **`412`** con la versión de ahora dentro —no un `409`, y no
+un `500`—, y **ningún inverso**: su transacción entera se deshace, y con ella el número que hubiera
+tomado, que la serie reutiliza. Queda **un** inverso y no dos, y no porque alguien contara inversos
+sino porque la segunda transacción no llegó a existir.
+
+#### 6. La anulación estrena su puerta HTTP, y **exige** la clave: son dos, no una
+
+**No es superficie de más, es la única forma de que el inverso tenga número.** El inverso es un
+documento confirmado de pleno derecho, así que toma un correlativo por el mecanismo del 2.4; ese
+mecanismo **revienta** si no hay transacción abierta, y el único dueño de transacción del sistema es
+el filtro de idempotencia (ADR-0014). Sin acción de MVC no hay filtro, sin filtro no hay
+transacción, y sin transacción no hay número: un caso de uso de anulación sin puerta sería un camino
+que **ningún llamante de producción puede recorrer**.
+
+`POST /api/v1/inventario/ajustes/{id}/anulacion`, con permiso propio `inventario.ajuste.anular`
+—anular no es confirmar: hay perfiles que cierran regularizaciones y no las deshacen— y
+`AdmiteIdempotencia(Obligatoria = true)` por el **mismo** motivo que la confirmación.
+
+**Y con esto la excepción del 0.9 pasa de una acción a dos**, que es justo el momento en que una
+excepción se convierte en una costumbre si nadie escribe el criterio. El criterio es el que ya está
+en `s_obligatorias` y no se amplía: **sin la cabecera, la acción no puede cumplir lo que promete**,
+porque el filtro se aparta sin abrir transacción y la atomicidad se va con ella. La lista se compara
+entera en los dos sentidos, así que la segunda entrada entra con su motivo escrito o el carril se
+pone rojo.
+
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 4 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -11775,11 +11878,16 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 
 - [ ] **2.5 · La anulación con contra-documento** — criterio de aceptación: un ajuste confirmado no se
   edita ni se borra; se **anula**, y la anulación crea un **ajuste inverso** que es un documento
-  confirmado de pleno derecho —con su número del 2.4 y sus movimientos del 2.3—, no una marca; el
-  original queda `Anulado`, y el enumerado dice **en su propio texto** que eso significa «anulado por
-  un inverso» y no «borrado»; el enlace original↔inverso es una **segunda doble flecha** —esta une
-  documento con documento— con su comprobación propia en los dos sentidos; y anular dos veces el mismo
-  documento no crea dos inversos. Hace viva **R2** y cambia su fila.
+  confirmado de pleno derecho —con su número del 2.4 y sus movimientos del 2.3—, no una marca; **el
+  par suma cero**, afirmado sumando el libro del original y del inverso **por artículo, almacén y
+  ubicación** y exigiendo cero en cada grupo, **con la afirmación de que el conjunto sumado no está
+  vacío** (ADR-0020) —sin ella un error de signo deja verdes todos los criterios estructurales y
+  mueve el stock al revés de lo que el documento dice—; el original queda `Anulado`, y el enumerado
+  dice **en su propio texto** que eso significa «anulado por un inverso» y no «borrado»; el enlace
+  original↔inverso es una **segunda doble flecha** —esta une documento con documento— con su
+  comprobación propia en los dos sentidos **y afirmando en los dos que ha mirado algo**; y anular dos
+  veces el mismo documento no crea dos inversos, comprobado con **dos transacciones de verdad** y no
+  con dos llamadas seguidas. Hace viva **R2** y cambia su fila.
 
 - [ ] **2.6 · El ejercicio rige: qué exige cerrar, quién reabre y quién pregunta** — criterio de
   aceptación: cerrar **exige** que no quede ningún documento de inventario en borrador con fecha
