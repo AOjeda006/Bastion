@@ -272,7 +272,24 @@ public sealed class ElCensoDeEsteCarrilTests
         // CHECK que la sostienen en el motor para los caminos que todavía no existen.
         "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Cada_fila_de_un_ajuste_cumple_la_regla_del_factor_medida_en_la_base",
         "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Una_cantidad_base_que_no_es_la_introducida_por_el_factor_la_rechaza_el_motor",
+        // Del ítem 2.5: la anulación con contra-documento, por la API. El primero de los cinco
+        // es el que decide —el par suma cero, agrupado por artículo, almacén y ubicación—; los
+        // otros cuatro dicen que el inverso es un documento entero, que anular dos veces seguidas
+        // no crea dos, que anular dos veces A LA VEZ tampoco, y que sin la clave no se anula.
+        "LaAnulacionConContraDocumentoTests.Anular_dos_veces_seguidas_no_crea_dos_inversos",
+        "LaAnulacionConContraDocumentoTests.Dos_anulaciones_simultaneas_dejan_un_solo_inverso",
+        "LaAnulacionConContraDocumentoTests.El_inverso_es_un_documento_confirmado_con_su_numero_y_su_flecha",
+        "LaAnulacionConContraDocumentoTests.El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion",
+        "LaAnulacionConContraDocumentoTests.Sin_la_cabecera_la_anulacion_es_428_y_no_toca_nada",
+
         "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Una_fila_que_no_mueve_nada_la_rechaza_el_motor",
+
+        // Del ítem 2.5: la R2 en los DOS sentidos. La clave ajena garantiza que `anula_a_id`
+        // señala una fila que existe y nada más: que esa fila esté anulada y que no haya DOS
+        // inversos del mismo original son condiciones sobre el estado y sobre el número de filas
+        // que apuntan, y no caben en ninguna restricción de columna.
+        "LaDobleFlechaDeLaAnulacionTests.Ningun_anulado_se_queda_sin_exactamente_un_inverso",
+        "LaDobleFlechaDeLaAnulacionTests.Ningun_inverso_compensa_a_un_documento_que_no_esta_anulado",
 
         // Del ítem 2.3: la R13 en los DOS sentidos, cada uno con su barrido y con su arnés.
         // Ninguna clave ajena puede expresar esta flecha —el origen es un par «tipo +

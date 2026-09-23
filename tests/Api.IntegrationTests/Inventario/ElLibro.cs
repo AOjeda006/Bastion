@@ -125,6 +125,59 @@ internal static class ElLibro
             empresaId, ajuste.Id, almacenId, fechaDeOperacion, movimientos);
     }
 
+    /// <summary>Anula un ajuste ya confirmado: crea el inverso, lo confirma y guarda las dos cosas.</summary>
+    /// <remarks>
+    /// <b>Por el camino de producción, igual que la confirmación</b>: el agregado decide, el
+    /// repositorio apunta y la unidad de trabajo confirma. El número del inverso se pone a mano
+    /// —el segundo de la misma serie inventada— por lo mismo que el del original: lo que estos
+    /// casos miran es el motor debajo del libro, y que el correlativo salga del cerrojo se
+    /// comprueba donde se decide, en la anulación por la API.
+    /// </remarks>
+    /// <param name="postgres">El contenedor con las migraciones puestas.</param>
+    /// <param name="original">Lo que dejó escrito el documento que se anula.</param>
+    /// <param name="fechaDelInverso">Día al que se imputa el inverso, que no es la del original.</param>
+    /// <returns>Lo que dejó escrito el inverso.</returns>
+    internal static async Task<UnAjusteConfirmado> AnularUnAjusteAsync(
+        PostgresConTodosLosModulos postgres,
+        UnAjusteConfirmado original,
+        DateOnly fechaDelInverso)
+    {
+        ArgumentNullException.ThrowIfNull(original);
+
+        const long SegundoNumeroDeEsaSerie = 2;
+
+        DateTimeOffset momento = DateTimeOffset.UtcNow;
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(original.EmpresaId);
+
+        RepositorioDeAjustes repositorio = new(contexto);
+
+        Ajuste confirmado = await repositorio.ObtenerAsync(original.AjusteId, CancellationToken.None)
+            ?? throw new InvalidOperationException("El ajuste que se iba a anular no está.");
+
+        Ajuste inverso = confirmado.CrearInverso(fechaDelInverso, "Anulación del carril", momento);
+
+        var evento = new AjusteConfirmado(
+            inverso.Id,
+            inverso.EmpresaId,
+            inverso.AlmacenId,
+            inverso.FechaDeOperacion,
+            inverso.Lineas.Count);
+
+        IReadOnlyList<MovimientoStock> movimientos =
+            inverso.Confirmar(SegundoNumeroDeEsaSerie, evento, momento);
+
+        confirmado.Anular(inverso, new AjusteAnulado(confirmado.Id, confirmado.EmpresaId));
+
+        repositorio.Agregar(inverso);
+        repositorio.AgregarMovimientos(movimientos);
+
+        await new UnidadDeTrabajoDeInventario(contexto).ConfirmarAsync(CancellationToken.None);
+
+        return new UnAjusteConfirmado(
+            original.EmpresaId, inverso.Id, inverso.AlmacenId, fechaDelInverso, movimientos);
+    }
+
     /// <summary>Un escalar de la base, sin EF Core por medio.</summary>
     /// <typeparam name="T">Qué se espera leer.</typeparam>
     /// <param name="postgres">El contenedor.</param>

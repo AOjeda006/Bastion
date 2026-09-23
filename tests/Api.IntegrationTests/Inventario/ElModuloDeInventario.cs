@@ -19,7 +19,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
-/// Los tres casos de uso del ajuste con sus adaptadores REALES y los contextos que necesitan.
+/// Los cuatro casos de uso del ajuste con sus adaptadores REALES y los contextos que necesitan.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -87,12 +87,20 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             unidadDeTrabajo,
             TimeProvider.System);
 
+        Anulacion = new AnularAjuste(
+            ajustes,
+            new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
+            unidadDeTrabajo,
+            TimeProvider.System);
+
         Lectura = new MovimientosDelDocumento(ajustes, almacenes);
     }
 
     internal AbrirAjuste Alta { get; }
 
     internal ConfirmarAjuste Confirmacion { get; }
+
+    internal AnularAjuste Anulacion { get; }
 
     internal MovimientosDelDocumento Lectura { get; }
 
@@ -125,6 +133,63 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
 
         return confirmacion;
     }
+
+    /// <summary>Anula con una transacción abierta, como llegaría de verdad.</summary>
+    /// <remarks>
+    /// Mismo motivo que en la confirmación, y aquí pesa el doble: el inverso toma su propio
+    /// correlativo, y el mecanismo de numeración <b>revienta</b> sin transacción abierta.
+    /// </remarks>
+    /// <param name="ajusteId">El documento que anular.</param>
+    /// <param name="motivo">Por qué se anula.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal async Task<Resultado<AnulacionDto>> AnularAsync(Guid ajusteId, string motivo)
+    {
+        await using IDbContextTransaction transaccion =
+            await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<AnulacionDto> anulacion = await AnularSinAbrirTransaccionAsync(ajusteId, motivo);
+
+        if (anulacion.EsCorrecto)
+        {
+            await transaccion.CommitAsync();
+        }
+        else
+        {
+            await transaccion.RollbackAsync();
+        }
+
+        return anulacion;
+    }
+
+    /// <summary>
+    /// Abre la transacción de este módulo y lee el documento <b>dentro</b>, sin tocarlo, dejando
+    /// la transacción abierta para que otra se le solape.
+    /// </summary>
+    /// <remarks>
+    /// <b>Es lo que convierte «dos llamadas seguidas» en «dos anulaciones simultáneas».</b> Dos
+    /// llamadas seguidas no prueban nada: la segunda se encuentra el documento ya anulado y la
+    /// guarda de estado la rechaza sin que nada concurrente haya ocurrido. Lo que hay que ejercer
+    /// es que las dos <b>lean</b> el mismo <c>Confirmado</c> antes de que ninguna escriba, y eso
+    /// exige poder parar una a medias. Quien las separa es el testigo de concurrencia de la fila.
+    /// </remarks>
+    /// <param name="ajusteId">El documento que se va a anular.</param>
+    /// <returns>La transacción, todavía abierta, para deshacerla al terminar.</returns>
+    internal async Task<IDbContextTransaction> LeerElAjusteYQuedarseDentroAsync(Guid ajusteId)
+    {
+        IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
+
+        _ = await _inventario.Ajustes.SingleAsync(fila => fila.Id == ajusteId);
+
+        return transaccion;
+    }
+
+    /// <summary>La anulación sin abrir nada: la transacción ya está puesta por quien llama.</summary>
+    /// <param name="ajusteId">El documento que anular.</param>
+    /// <param name="motivo">Por qué se anula.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal Task<Resultado<AnulacionDto>> AnularSinAbrirTransaccionAsync(
+        Guid ajusteId, string motivo) =>
+        Anulacion.EjecutarAsync(ajusteId, new AnularAjusteDto(motivo), CancellationToken.None);
 
     public async ValueTask DisposeAsync()
     {
