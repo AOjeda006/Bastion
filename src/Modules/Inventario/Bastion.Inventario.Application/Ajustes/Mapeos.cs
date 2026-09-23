@@ -15,7 +15,8 @@ internal static class Mapeos
         ajuste.FechaDeOperacion,
         ajuste.Motivo,
         ajuste.Estado.ToString(),
-        ajuste.Lineas.Count);
+        ajuste.Lineas.Count,
+        ajuste.AnulaAId);
 
     /// <summary>Una fila del libro, con el estado de su almacén resuelto por el puerto.</summary>
     /// <param name="movimiento">La fila.</param>

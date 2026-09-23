@@ -64,6 +64,7 @@ public sealed record LineaDeAjusteDto(
 /// <param name="Motivo">Por qué se ajusta.</param>
 /// <param name="Estado">En qué punto de su vida está.</param>
 /// <param name="Lineas">Cuántas líneas tiene.</param>
+/// <param name="AnulaAId">El ajuste que este compensa, o <c>null</c> si no es un inverso.</param>
 public sealed record AjusteDto(
     Guid Id,
     Guid SerieId,
@@ -72,7 +73,36 @@ public sealed record AjusteDto(
     DateOnly FechaDeOperacion,
     string Motivo,
     string Estado,
-    int Lineas);
+    int Lineas,
+    Guid? AnulaAId);
+
+/// <summary>Lo que hace falta para anular un ajuste confirmado.</summary>
+/// <remarks>
+/// <para>
+/// <b>Solo el motivo, y es todo lo que hay que decidir.</b> Las líneas del inverso salen del
+/// original —cambiadas de signo— y no se piden: dejarlas escribir sería admitir una anulación
+/// parcial, que no es una anulación sino otro ajuste, y ese ya se puede dar de alta.
+/// </para>
+/// <para>
+/// <b>Y no lleva fecha</b>, aunque el inverso tenga la suya. Es la de hoy, la pone el servidor, y
+/// no se acepta de fuera: una anulación con fecha elegida sería la forma de asentar en un periodo
+/// cerrado sin que la R9 del 2.6 tuviera nada que decir, porque el documento que llegara a la
+/// comprobación ya vendría con la fecha buena escrita.
+/// </para>
+/// </remarks>
+/// <param name="Motivo">Por qué se anula, escrito por quien lo hace.</param>
+public sealed record AnularAjusteDto(string Motivo);
+
+/// <summary>El par que deja una anulación: el documento anulado y el que lo compensa.</summary>
+/// <remarks>
+/// <b>Se devuelven los dos y no solo el inverso</b>, porque lo que el llamante tiene que poder ver
+/// es la flecha entera: el original con su estado ya en <c>Anulado</c> y el inverso con su número
+/// y su <c>AnulaAId</c> apuntando al primero. Con uno solo habría que volver a preguntar por el
+/// otro, y entre las dos peticiones cabe justo la duda que la respuesta existe para quitar.
+/// </remarks>
+/// <param name="Original">El ajuste que queda anulado.</param>
+/// <param name="Inverso">El contra-documento, ya confirmado y numerado.</param>
+public sealed record AnulacionDto(AjusteDto Original, AjusteDto Inverso);
 
 /// <summary>Una fila del libro, como se enseña.</summary>
 /// <remarks>

@@ -284,6 +284,15 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "documento que lo llevara —un hueco, que es lo que la R5 prohibe—. La alternativa, " +
             "que el caso de uso abriera la suya cuando no la hay, deja dos dueños y dos semánticas " +
             "de fallo en el mismo endpoint según venga o no una cabecera",
+
+        ["AjustesController.Anular"] =
+            "el MISMO motivo que la confirmación, y no uno parecido: el documento que anula es un " +
+            "ajuste confirmado de pleno derecho, así que toma su propio número de la misma serie " +
+            "y tiene que quedar escrito con él en la MISMA transacción. Sin cabecera no hay " +
+            "transacción y el mecanismo de numeración revienta antes de dar nada, que es su forma " +
+            "de no dejar un hueco (R5). Que sean dos y no una es la primera vez que esta lista " +
+            "crece, y por eso conviene decir qué NO la hace crecer: no entra por ser importante " +
+            "—todo lo es—, entra porque sin la cabecera la acción no puede cumplir lo que promete",
     };
 
     // La clave que identifica una petición repetible lleva dentro la empresa y el usuario. Una
@@ -366,8 +375,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(129, "acciones en total");
-        cambian.Count.ShouldBe(83, "acciones que cambian estado");
+        todas.Count.ShouldBe(130, "acciones en total");
+        cambian.Count.ShouldBe(84, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -544,22 +553,42 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // Y aquí el reparto se queda CORTO por primera vez, que es lo que obliga al recuento nuevo
         // de abajo: esta clave no es opcional, es OBLIGATORIA, y el reparto de cinco números no
         // sabe distinguirlo. Para él la veinte es una más.
+        // Ciento treinta desde el ítem 2.5, y el reparto vuelve a ser el mismo: +1 al total, +1 a
+        // las que cambian estado, +1 a Idempotency-Key, cero a If-Match y cero a las exentas. Es
+        // `POST .../inventario/ajustes/{id}/anulacion`, y no es superficie de más: el documento
+        // que anula es otro ajuste confirmado, así que necesita número, el número necesita
+        // transacción, y la transacción no existe sin una acción de MVC que dispare el filtro.
+        //
+        // QUE NO SUBA IF-MATCH VUELVE A SER LA AFIRMACIÓN, y por dos motivos que no son el mismo.
+        // De anular dos veces SEGUIDAS protege la máquina de estados: el segundo intento se
+        // encuentra un ajuste que ya no está confirmado. De anular dos veces A LA VEZ protege el
+        // testigo de concurrencia de la fila (R11), que es un mecanismo del motor y no una
+        // precondición del protocolo: el perdedor se lleva un 412 con la versión de ahora dentro
+        // y su transacción entera se deshace, sin inverso y sin número gastado. Un `If-Match`
+        // aquí habría pedido un `ETag` que el borde no publica, porque el ajuste sigue sin `GET`.
+        //
+        // Y el único número que sube de verdad de categoría es el de abajo: las obligatorias
+        // pasan de una a DOS. Es el momento en que una excepción se convierte en costumbre si
+        // nadie escribe el criterio, y el criterio no se ha ampliado para que quepa la segunda.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(46, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(20, "rutas que admiten Idempotency-Key");
+            .ShouldBe(21, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
-        // Y de esas veinte, UNA la exige. Es un recuento aparte y no un reparto del anterior
+        // Y de esas veintiuna, DOS la exigen. Es un recuento aparte y no un reparto del anterior
         // porque las obligatorias son un SUBCONJUNTO de las que admiten, no un cuarto cajón: la
-        // partición de abajo seguiría siendo exacta aunque las veinte fueran obligatorias, que es
-        // justo lo que este número impide que pase sin que nadie lo vea.
+        // partición de abajo seguiría siendo exacta aunque las veintiuna fueran obligatorias, que
+        // es justo lo que este número impide que pase sin que nadie lo vea. Las dos son del mismo
+        // módulo y por el mismo argumento —número dentro de la transacción del documento—, y las
+        // dos están nombradas con su motivo en `s_obligatorias`, que se compara entera en los dos
+        // sentidos: este número solo dice cuántas, no cuáles.
         cambian.Count(accion => accion.ExigeIdempotencia)
-            .ShouldBe(1, "rutas que EXIGEN Idempotency-Key");
+            .ShouldBe(2, "rutas que EXIGEN Idempotency-Key");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (46 + 20 + s_exentas.Count).ShouldBe(cambian.Count);
+        (46 + 21 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

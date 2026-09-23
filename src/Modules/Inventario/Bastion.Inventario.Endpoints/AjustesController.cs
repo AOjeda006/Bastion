@@ -12,14 +12,23 @@ namespace Bastion.Inventario.Endpoints;
 /// <summary>Ajustes de inventario, bajo <c>/api/v1/inventario/ajustes</c>.</summary>
 /// <remarks>
 /// <para>
-/// <b>Una sola acción, y es a propósito.</b> El módulo abre su borde HTTP en el ítem 2.4 con la
-/// confirmación y con nada más: ni alta, ni listado, ni ficha. La superficie del ajuste va con sus
-/// pantallas, y lo que este ítem necesita de la API es el sitio donde el número entra en un recibo
-/// de idempotencia — que no existe sin una acción de MVC.
+/// <b>Dos acciones, y ninguna de las dos es superficie de más.</b> El módulo abrió su borde HTTP
+/// en el ítem 2.4 con la confirmación y con nada más —ni alta, ni listado, ni ficha—, y el 2.5
+/// añade la anulación por el mismo motivo por el que existía la primera: el documento que anula
+/// es un ajuste confirmado de pleno derecho, así que necesita número, el número necesita
+/// transacción, y el único dueño de transacción del sistema es el filtro de idempotencia
+/// (ADR-0014), que no corre sin una acción de MVC. Un caso de uso de anulación sin puerta sería
+/// un camino que ningún llamante de producción puede recorrer.
+/// </para>
+/// <para>
+/// <b>La superficie de lectura sigue sin estar</b>, y eso no cambia aquí: el alta, el listado y la
+/// ficha van con sus pantallas.
 /// </para>
 /// </remarks>
 /// <param name="confirmar">El caso de uso que confirma y numera.</param>
-public sealed class AjustesController(IConfirmarAjuste confirmar) : ControladorDeInventario
+/// <param name="anular">El caso de uso que opone el contra-documento.</param>
+public sealed class AjustesController(IConfirmarAjuste confirmar, IAnularAjuste anular)
+    : ControladorDeInventario
 {
     /// <summary>Confirma un ajuste en borrador: le da su número y mueve el libro.</summary>
     /// <remarks>
@@ -55,4 +64,50 @@ public sealed class AjustesController(IConfirmarAjuste confirmar) : ControladorD
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
     public async Task<IActionResult> Confirmar(Guid id, CancellationToken cancelacion) =>
         Responder(await confirmar.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+
+    /// <summary>
+    /// Anula un ajuste confirmado: crea el inverso que lo compensa, lo numera y lo confirma.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Un POST sobre un sub-recurso, no un DELETE</b>, y la diferencia es la regla entera: un
+    /// <c>DELETE</c> promete que el recurso deja de estar, y aquí no deja de estar nada. El
+    /// original se queda, sus filas del libro se quedan —es de solo añadido (R3)— y lo que se
+    /// crea es un documento nuevo. La anulación es un hecho que se añade, no una fila que se
+    /// quita, y el verbo tiene que decirlo.
+    /// </para>
+    /// <para>
+    /// <b>La <c>Idempotency-Key</c> es OBLIGATORIA</b>, y con esta son <b>dos</b> las acciones de
+    /// toda la API que la exigen. El criterio no se amplía para que quepa: es el mismo de la
+    /// confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el inverso no
+    /// podría tomar su número sin dejar un hueco en la serie, que es lo que la R5 prohíbe—. Sin
+    /// cabecera son <c>428</c>, y el reintento con la misma clave devuelve el par de la primera
+    /// vez en vez de anular dos veces.
+    /// </para>
+    /// <para>
+    /// <b>Y no exige <c>If-Match</c></b>, por lo mismo que la confirmación: de anular dos veces
+    /// seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya
+    /// no está confirmado y sale <c>409</c>—, y de anular dos veces <b>a la vez</b> protege el
+    /// testigo de concurrencia de la fila (R11), que devuelve <c>412</c> con la versión de ahora
+    /// dentro y deja sin efecto la transacción entera de quien pierde: ni inverso, ni número
+    /// gastado.
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Identificador del ajuste que se anula.</param>
+    /// <param name="peticion">Por qué se anula.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("{id:guid}/anulacion")]
+    [AdmiteIdempotencia(Obligatoria = true)]
+    [ExigePermiso(PermisosDeInventario.AjusteAnular)]
+    [ProducesResponseType(typeof(AnulacionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public async Task<IActionResult> Anular(
+        Guid id,
+        [FromBody] AnularAjusteDto peticion,
+        CancellationToken cancelacion) =>
+        Responder(await anular.EjecutarAsync(id, peticion, cancelacion).ConfigureAwait(false));
 }

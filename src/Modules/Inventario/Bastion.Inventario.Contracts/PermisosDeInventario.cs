@@ -11,9 +11,9 @@ namespace Bastion.Inventario.Contracts;
 /// ítem 2.5 no borra un ajuste confirmado, le opone un contra-documento.
 /// </para>
 /// <para>
-/// <b>Hay UNA constante porque hay UNA acción, y eso no es una lista a medias.</b> El catálogo se
-/// compara entero contra lo que las acciones exigen, así que un permiso declarado sin acción que
-/// lo pida <b>tumba el arranque</b>. Declarar aquí el alta, el listado o la ficha del ajuste
+/// <b>Hay DOS constantes porque hay DOS acciones, y eso no es una lista a medias.</b> El catálogo
+/// se compara entero contra lo que las acciones exigen, así que un permiso declarado sin acción
+/// que lo pida <b>tumba el arranque</b>. Declarar aquí el alta, el listado o la ficha del ajuste
 /// —que llegan con sus pantallas— sería repartir casillas que un administrador concede creyendo
 /// que abren algo.
 /// </para>
@@ -35,6 +35,15 @@ public static class PermisosDeInventario
     /// </remarks>
     public const string AjusteConfirmar = "inventario.ajuste.confirmar";
 
+    /// <summary>Anular un ajuste de inventario oponiéndole un contra-documento.</summary>
+    /// <remarks>
+    /// <b>Anular no es confirmar, y por eso no comparte permiso.</b> Hay perfiles que cierran
+    /// regularizaciones a diario y no deshacen ninguna: quien anula gasta otro correlativo de la
+    /// serie (R5), escribe otra tanda de filas en el libro (R13) y deja sin efecto un documento
+    /// que alguien dio por bueno. Con un solo permiso, conceder lo primero regalaría lo segundo.
+    /// </remarks>
+    public const string AjusteAnular = "inventario.ajuste.anular";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -46,5 +55,6 @@ public static class PermisosDeInventario
     public static IReadOnlyList<string> Todos { get; } =
     [
         AjusteConfirmar,
+        AjusteAnular,
     ];
 }

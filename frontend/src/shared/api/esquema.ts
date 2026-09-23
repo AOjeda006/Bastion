@@ -660,6 +660,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/ajustes/{id}/anulacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anula un ajuste confirmado: crea el inverso que lo compensa, lo numera y lo confirma.
+         * @description Un POST sobre un sub-recurso, no un DELETE, y la diferencia es la regla entera: un
+         *       DELETE promete que el recurso deja de estar, y aquí no deja de estar nada. El
+         *       original se queda, sus filas del libro se quedan —es de solo añadido (R3)— y lo que se
+         *       crea es un documento nuevo. La anulación es un hecho que se añade, no una fila que se
+         *       quita, y el verbo tiene que decirlo.
+         *     La Idempotency-Key es OBLIGATORIA, y con esta son dos las acciones de
+         *       toda la API que la exigen. El criterio no se amplía para que quepa: es el mismo de la
+         *       confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el inverso no
+         *       podría tomar su número sin dejar un hueco en la serie, que es lo que la R5 prohíbe—. Sin
+         *       cabecera son 428, y el reintento con la misma clave devuelve el par de la primera
+         *       vez en vez de anular dos veces.
+         *     Y no exige If-Match, por lo mismo que la confirmación: de anular dos veces
+         *       seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya
+         *       no está confirmado y sale 409—, y de anular dos veces a la vez protege el
+         *       testigo de concurrencia de la fila (R11), que devuelve 412 con la versión de ahora
+         *       dentro y deja sin efecto la transacción entera de quien pierde: ni inverso, ni número
+         *       gastado.
+         */
+        post: operations["Ajustes_Anular"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/almacenes": {
         parameters: {
             query?: never;
@@ -1758,6 +1794,11 @@ export interface components {
              * @description Cuántas líneas tiene.
              */
             lineas: number | string;
+            /**
+             * Format: uuid
+             * @description El ajuste que este compensa, o `null` si no es un inverso.
+             */
+            anulaAId: null | string;
         };
         /** @description Un almacén, tal como sale de la API. */
         AlmacenDto: {
@@ -1778,6 +1819,18 @@ export interface components {
             direccion: null | components["schemas"]["DireccionDto"];
             /** @description Tipo de almacén, como texto. */
             tipo: string;
+        };
+        /** @description El par que deja una anulación: el documento anulado y el que lo compensa. */
+        AnulacionDto: {
+            /** @description El ajuste que queda anulado. */
+            original: components["schemas"]["AjusteDto"];
+            /** @description El contra-documento, ya confirmado y numerado. */
+            inverso: components["schemas"]["AjusteDto"];
+        };
+        /** @description Lo que hace falta para anular un ajuste confirmado. */
+        AnularAjusteDto: {
+            /** @description Por qué se anula, escrito por quien lo hace. */
+            motivo: string;
         };
         /** @description Un artículo, tal como sale de la API. */
         ArticuloDto: {
@@ -5899,6 +5952,92 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ajustes_Anular: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del ajuste que se anula. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnularAjusteDto"];
+                "text/json": components["schemas"]["AnularAjusteDto"];
+                "application/*+json": components["schemas"]["AnularAjusteDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["AnulacionDto"];
+                    "application/json": components["schemas"]["AnulacionDto"];
+                    "text/json": components["schemas"]["AnulacionDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
                 headers: {
                     [name: string]: unknown;
                 };

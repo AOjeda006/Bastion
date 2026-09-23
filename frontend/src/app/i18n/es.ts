@@ -96,6 +96,9 @@ export const es = {
       'ajuste-articulo-no-se-almacena':
         'Ese artículo es un servicio: no tiene existencias que ajustar. Quita esa línea o cambia ' +
         'el artículo.',
+      'ajuste-motivo-no-valido':
+        'Escribe por qué anulas el ajuste, en 300 caracteres o menos. Es lo único que quedará ' +
+        'para entender la corrección dentro de dos años.',
       'ajuste-no-encontrado': 'Ese ajuste ya no existe. Vuelve al listado y actualiza.',
       'ajuste-no-esta-confirmado':
         'Ese ajuste no está confirmado, así que no hay nada que anular: un borrador no ha movido ' +

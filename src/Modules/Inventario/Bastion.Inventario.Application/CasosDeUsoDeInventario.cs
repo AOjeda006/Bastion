@@ -19,6 +19,7 @@ public static class CasosDeUsoDeInventario
 
         servicios.AddScoped<IAbrirAjuste, AbrirAjuste>();
         servicios.AddScoped<IConfirmarAjuste, ConfirmarAjuste>();
+        servicios.AddScoped<IAnularAjuste, AnularAjuste>();
         servicios.AddScoped<IMovimientosDelDocumento, MovimientosDelDocumento>();
 
         return servicios;

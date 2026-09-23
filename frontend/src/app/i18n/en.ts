@@ -72,6 +72,9 @@ export const en: Diccionario = {
       'ajuste-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
       'ajuste-articulo-no-se-almacena':
         'That item is a service: it has no stock to adjust. Remove that line or change the item.',
+      'ajuste-motivo-no-valido':
+        'Write why you are reversing the adjustment, in 300 characters or fewer. It is the only ' +
+        'thing left to explain the correction two years from now.',
       'ajuste-no-encontrado': 'That adjustment no longer exists. Go back to the list and refresh.',
       'ajuste-no-esta-confirmado':
         'That adjustment is not confirmed, so there is nothing to reverse: a draft has not moved ' +

@@ -9,6 +9,7 @@ internal static class ErroresDeAjuste
     internal const string CodigoSinLineas = "ajuste-sin-lineas";
     internal const string CodigoNoEstaEnBorrador = "ajuste-no-esta-en-borrador";
     internal const string CodigoNoEstaConfirmado = "ajuste-no-esta-confirmado";
+    internal const string CodigoMotivoNoValido = "ajuste-motivo-no-valido";
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,
@@ -33,6 +34,20 @@ internal static class ErroresDeAjuste
             $"El ajuste {ajusteId} está en estado «{estado}»: solo se confirma un borrador, y un " +
             "ajuste confirmado no se vuelve a confirmar porque sus filas del libro ya están " +
             "escritas y el libro es de solo añadido (R2, R3).");
+
+    /// <summary>El motivo de la anulación, que es lo único que trae su petición.</summary>
+    /// <remarks>
+    /// <b>Se comprueba en el caso de uso aunque el dominio también lo compruebe.</b> Ahí es una
+    /// invariante y se lanza; aquí es un cuerpo mal escrito, y lo que el borde debe devolver por
+    /// eso es un 400 con su código, no un 500 (ADR-0004). No se dice qué tenía de malo más allá
+    /// del largo: el valor recibido es del llamante y no se le devuelve dentro de un error.
+    /// </remarks>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion MotivoNoValido() => ErrorDeOperacion.Validacion(
+        CodigoMotivoNoValido,
+        "El motivo de la anulación no puede estar vacío ni pasar de " +
+        $"{Domain.Ajustes.Ajuste.LargoDelMotivo} caracteres: es lo único que queda para entender " +
+        "la corrección dentro de dos años.");
 
     internal static ErrorDeOperacion NoEstaConfirmado(Guid ajusteId, string estado) =>
         ErrorDeOperacion.Conflicto(
