@@ -5148,6 +5148,27 @@ lo declarado, y su unicidad en el modelo:
 Y antes de la tanda se comprobó lo de siempre: quitar el **registro** del manejador en
 `PoliticaDeErrores` pone rojo el caso del `412`, o sea que el caso nuevo mira lo que dice mirar.
 
+**Lo cierra el run 35885063155** sobre `8b03c60`, **success al primer intento** y con **3 jobs
+contados en el propio run** (`total_count: 3`): Frontal `107263102479` ✓, Backend `107263102680` ✓ y
+Humo `107264679320` ✓. De sus **65** pasos, **64 en verde y 1 omitido**, y el omitido se nombra
+porque un `skipped` no es un paso en verde: es *Diagnóstico*, con su `if: failure()`, así que no
+haberse ejecutado **es** la señal de que nada falló. Las cifras del *runner* se leyeron de sus
+anotaciones: **908** en el carril rápido y **459** en el de integración, los dos con **10 ficheros
+`.trx`**; **130** operaciones y **76** rutas `/api/v1/` en el documento versionado; **107** tipos de
+error de **113** sitios; y `Frontal · arranque 411/450 KiB en 4 ficheros · total servido 598/900
+KiB` carácter por carácter.
+
+**Y el run de `main`: 35885959443** sobre `8b03c60`, **success al primer intento**, con sus tres
+jobs —Backend `107266033477`, Frontal `107266033807` y Humo `107267918179`— y los mismos **65**
+pasos, **64 en verde y 1 omitido**. Va aparte porque no dice lo mismo que el de la rama: el de la
+rama aprueba el trabajo, el de `main` aprueba **lo que quedó en la rama principal**. El `head_sha`
+del run de `main` es el mismo `8b03c60` —se leyó del run, no se supuso—, porque el avance fue
+*fast-forward* de `2589183` a `8b03c60`.
+
+> **El registro de un run no persigue al suyo.** Este párrafo entra en un commit que tendrá su
+> propio run, y anotarlo pediría otro commit, y así sin fin. Se corta aquí, como en el 2.5: lo que
+> queda certificado es el árbol que los dos runs de arriba miraron, que es el del trabajo.
+
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
 (`total_count: 3`): Frontal `104818073051` ✓, Backend `104818073414` ✓ y Humo `104820147951` ✓. Es el de
