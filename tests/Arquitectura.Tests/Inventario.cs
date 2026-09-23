@@ -495,8 +495,21 @@ internal static class Inventario
                 "LECTURA: en qué estado está una divisa, para quien guarde su identificador — la " +
                 "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe.",
 
+            ["Bastion.Organizacion.Contracts.Ejercicios.IConsultaDeEjercicios"] =
+                "LECTURA, y la puerta con la forma más rara de las doce: la declara Organización, " +
+                "la implementa CADA MÓDULO CON DOCUMENTOS y la llama ESE MISMO MÓDULO. No es una " +
+                "salida —Organización no la implementa— ni una entrada —Organización tampoco la " +
+                "llama—: es una condición que Organización dicta y que cada módulo se aplica a sí " +
+                "mismo. La forma sale de lo que la respuesta tiene que traer consigo. Contesta si " +
+                "una fecha se puede escribir —`Abierto`, `Cerrado` o `SinEjercicio`, que es un " +
+                "valor propio y no un hueco (R9)— y lo contesta con la fila del ejercicio " +
+                "BLOQUEADA en compartido hasta el `COMMIT` de quien pregunta. Un cerrojo que no " +
+                "dura hasta ese `COMMIT` no serializa nada, y una implementación en Organización " +
+                "correría en otra conexión: por eso no puede contestarla el dueño de la tabla. No " +
+                "escribe, y no publica ni las fechas ni el año del ejercicio.",
+
             ["Bastion.Organizacion.Contracts.Ejercicios.IDocumentosDeUnPeriodo"] =
-                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras diez las implementa el módulo " +
+                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras once las implementa el módulo " +
                 "que las publica y las llaman los demás; ésta la publica Organización y la " +
                 "implementa cada módulo con documentos. Contesta si en un intervalo de fechas " +
                 "queda algún borrador —la pregunta del cierre— o algún documento en el estado " +

@@ -366,6 +366,13 @@ public sealed class LaAritmeticaDeLaInversaTests
     {
         public int Confirmaciones { get; private set; }
 
+        public Task<T> EnTransaccionAsync<T>(
+            Func<CancellationToken, Task<T>> trabajo, CancellationToken cancelacion) =>
+            throw new NotSupportedException(
+                "Este doble no abre transacciones: ninguno de sus casos cierra un ejercicio, " +
+                "que es lo único que hoy pide una. Un doble que la ignorara dejaría verde un " +
+                "caso de uso que la necesita de verdad.");
+
         public Task<int> ConfirmarAsync(CancellationToken cancelacion)
         {
             Confirmaciones++;

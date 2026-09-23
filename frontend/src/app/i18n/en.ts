@@ -72,6 +72,9 @@ export const en: Diccionario = {
       'ajuste-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
       'ajuste-articulo-no-se-almacena':
         'That item is a service: it has no stock to adjust. Remove that line or change the item.',
+      'ajuste-en-ejercicio-cerrado':
+        'That adjustment is dated inside a closed financial year: the period is already final ' +
+        'and takes no new documents. Change the date or ask for the year to be reopened.',
       'ajuste-motivo-no-valido':
         'Write why you are reversing the adjustment, in 300 characters or fewer. It is the only ' +
         'thing left to explain the correction two years from now.',
@@ -86,6 +89,9 @@ export const en: Diccionario = {
         'That series is closed: it still resolves the documents it already numbered, but it hands ' +
         'out no further numbers. Choose another series.',
       'ajuste-serie-no-encontrada': 'That series does not exist. Pick one from the series list.',
+      'ajuste-sin-ejercicio':
+        'That adjustment is dated outside every financial year: with no period to book it to, ' +
+        'the document would not reach any return. Open the missing year or fix the date.',
       'ajuste-sin-lineas':
         'An adjustment needs at least one line: a document that moves nothing adjusts nothing.',
       'ajuste-ubicacion-bloqueada':

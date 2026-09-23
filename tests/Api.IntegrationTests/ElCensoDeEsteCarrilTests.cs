@@ -165,6 +165,16 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElCerrojoDeLaNumeracionTests.Una_serie_numera_sin_huecos_sea_cual_sea_el_documento_que_numera",
         "ElCerrojoDeLaNumeracionTests.Una_serie_que_no_existe_da_el_MISMO_error_que_una_ajena",
 
+        // Del ítem 2.6: R9 sobre el documento. Los cuatro primeros bajan al motor porque el
+        // cerrojo compartido de la confirmación no existe fuera de él; los dos últimos, porque
+        // una carrera entre dos transacciones de verdad no se imita con dobles.
+        "ElEjercicioRigeElAjusteTests.Anular_un_ajuste_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto",
+        "ElEjercicioRigeElAjusteTests.Cerrado_el_ejercicio_el_borrador_ya_no_se_confirma_y_no_queda_nada_a_medias",
+        "ElEjercicioRigeElAjusteTests.Con_el_ejercicio_abierto_la_confirmacion_pasa_y_el_documento_queda_numerado",
+        "ElEjercicioRigeElAjusteTests.El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro",
+        "ElEjercicioRigeElAjusteTests.La_confirmacion_espera_al_cierre_que_ya_estaba_dentro_y_luego_lo_obedece",
+        "ElEjercicioRigeElAjusteTests.Una_fecha_fuera_de_todo_ejercicio_no_se_confirma_y_lo_dice_con_otro_codigo",
+
         // Del ítem 1.6, y son el SEGUNDO caso de este ensamblado que corre también en el carril
         // rápido: traducen consultas a SQL, y traducir no abre conexión. Están aquí porque desde el
         // 1.6 el listado del art. 32 lo componen tres módulos, y este es el único proyecto de

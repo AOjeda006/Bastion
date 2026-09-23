@@ -192,6 +192,13 @@ public sealed class LaCargaDeSemillasTests(PostgresDeVerdad postgres) : IAsyncLi
     {
         public Task<int> ConfirmarAsync(CancellationToken cancelacion) =>
             contexto.SaveChangesAsync(cancelacion);
+
+        public Task<T> EnTransaccionAsync<T>(
+            Func<CancellationToken, Task<T>> trabajo, CancellationToken cancelacion) =>
+            throw new NotSupportedException(
+                "Este doble no abre transacciones: ninguno de sus casos cierra un ejercicio, " +
+                "que es lo único que hoy pide una. Un doble que la ignorara dejaría verde un " +
+                "caso de uso que la necesita de verdad.");
     }
 
     /// <summary>

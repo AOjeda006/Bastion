@@ -10,6 +10,8 @@ internal static class ErroresDeAjuste
     internal const string CodigoNoEstaEnBorrador = "ajuste-no-esta-en-borrador";
     internal const string CodigoNoEstaConfirmado = "ajuste-no-esta-confirmado";
     internal const string CodigoMotivoNoValido = "ajuste-motivo-no-valido";
+    internal const string CodigoSinEjercicio = "ajuste-sin-ejercicio";
+    internal const string CodigoEnEjercicioCerrado = "ajuste-en-ejercicio-cerrado";
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,
@@ -48,6 +50,31 @@ internal static class ErroresDeAjuste
         "El motivo de la anulación no puede estar vacío ni pasar de " +
         $"{Domain.Ajustes.Ajuste.LargoDelMotivo} caracteres: es lo único que queda para entender " +
         "la corrección dentro de dos años.");
+
+    /// <summary>La fecha del documento no cae en ningún ejercicio de la empresa (R9).</summary>
+    /// <remarks>
+    /// <b>Es un desenlace distinto del ejercicio cerrado, y por eso lleva su propio código.</b> Se
+    /// arreglan de maneras distintas: éste, abriendo el ejercicio que falta —o corrigiendo la
+    /// fecha, si estaba mal escrita—; el otro, reabriendo o poniendo el documento donde le toca.
+    /// Un solo código obligaría a leer la prosa para saber cuál de las dos cosas hacer, y la prosa
+    /// es lo único del error que no es contrato.
+    /// </remarks>
+    /// <param name="fecha">La fecha de operación que no cae en ningún ejercicio.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion SinEjercicio(DateOnly fecha) => ErrorDeOperacion.Conflicto(
+        CodigoSinEjercicio,
+        $"La fecha de operación {fecha:yyyy-MM-dd} no cae dentro de ningún ejercicio de esta " +
+        "empresa, así que el documento no podría imputarse a ninguna autoliquidación. Abra el " +
+        "ejercicio que falta o corrija la fecha (R9).");
+
+    /// <summary>La fecha del documento cae en un ejercicio ya cerrado (R9).</summary>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion EnEjercicioCerrado(DateOnly fecha) =>
+        ErrorDeOperacion.Conflicto(
+            CodigoEnEjercicioCerrado,
+            $"El ejercicio al que cae la fecha de operación {fecha:yyyy-MM-dd} está cerrado: ese " +
+            "periodo ya es definitivo y no admite documentos nuevos. Reabra el ejercicio, con su " +
+            "motivo, o lleve el documento a una fecha del ejercicio abierto (R9).");
 
     internal static ErrorDeOperacion NoEstaConfirmado(Guid ajusteId, string estado) =>
         ErrorDeOperacion.Conflicto(

@@ -96,6 +96,9 @@ export const es = {
       'ajuste-articulo-no-se-almacena':
         'Ese artículo es un servicio: no tiene existencias que ajustar. Quita esa línea o cambia ' +
         'el artículo.',
+      'ajuste-en-ejercicio-cerrado':
+        'La fecha de ese ajuste cae en un ejercicio cerrado: ese periodo ya es definitivo y no ' +
+        'admite documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
       'ajuste-motivo-no-valido':
         'Escribe por qué anulas el ajuste, en 300 caracteres o menos. Es lo único que quedará ' +
         'para entender la corrección dentro de dos años.',
@@ -110,6 +113,10 @@ export const es = {
         'Esa serie está cerrada: sigue resolviendo los documentos que ya numeró, pero no entrega ' +
         'ni un número más. Elige otra serie.',
       'ajuste-serie-no-encontrada': 'Esa serie no existe. Elige una del maestro de series.',
+      'ajuste-sin-ejercicio':
+        'La fecha de ese ajuste no cae en ningún ejercicio: sin periodo al que imputarlo, el ' +
+        'documento no entraría en ninguna declaración. Abre el ejercicio que falta o corrige la ' +
+        'fecha.',
       'ajuste-sin-lineas':
         'Un ajuste necesita al menos una línea: un documento que no mueve nada no ajusta nada.',
       'ajuste-ubicacion-bloqueada':

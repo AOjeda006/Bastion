@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Organizacion.Contracts.Ejercicios;
 
 namespace Bastion.Inventario.Application.Ajustes;
 
@@ -52,11 +53,13 @@ public interface IConfirmarAjuste
 /// </remarks>
 /// <param name="ajustes">Dónde viven el documento y el libro.</param>
 /// <param name="numerador">Quién entrega el correlativo, en esta misma transacción (R5).</param>
+/// <param name="ejercicios">Si la fecha del documento se puede escribir, con la fila bloqueada.</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class ConfirmarAjuste(
     IRepositorioDeAjustes ajustes,
     INumeradorDeSeriesDeInventario numerador,
+    IConsultaDeEjercicios ejercicios,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IConfirmarAjuste
 {
@@ -80,6 +83,28 @@ internal sealed class ConfirmarAjuste(
         {
             return Resultado.Fallo<AjusteDto>(
                 ErroresDeAjuste.NoEstaEnBorrador(ajusteId, ajuste.Estado.ToString()));
+        }
+
+        // EL EJERCICIO, ANTES QUE EL NÚMERO. El orden es el que importa: esta lectura toma un
+        // cerrojo COMPARTIDO sobre la fila del ejercicio y no lo suelta hasta el `COMMIT`, así que
+        // un cierre que llegue a partir de aquí espera a que este documento acabe —y uno que ya
+        // hubiera terminado deja esta lectura contestando «Cerrado»—. Preguntar después de
+        // numerar gastaría un número para nada cada vez que el periodo no admita el documento.
+        //
+        // Y ES LA GUARDA, no la cortesía. Lo que el cierre le pregunta a cada módulo —si le quedan
+        // borradores dentro— avisa a quien cierra de que va a dejar papeles colgando; esto es lo
+        // que impide que un documento se haga definitivo en un periodo que ya lo era. Sin la
+        // cortesía alguien se lleva un susto; sin esto, el libro deja de cuadrar con lo presentado.
+        EstadoDelEjercicioParaEscribir ejercicio = await ejercicios
+            .ParaEscribirEnAsync(ajuste.FechaDeOperacion, cancelacion)
+            .ConfigureAwait(false);
+
+        if (ejercicio is not EstadoDelEjercicioParaEscribir.Abierto)
+        {
+            return Resultado.Fallo<AjusteDto>(
+                ejercicio is EstadoDelEjercicioParaEscribir.SinEjercicio
+                    ? ErroresDeAjuste.SinEjercicio(ajuste.FechaDeOperacion)
+                    : ErroresDeAjuste.EnEjercicioCerrado(ajuste.FechaDeOperacion));
         }
 
         // EL NÚMERO, ANTES DE TOCAR EL DOCUMENTO. El orden no es estético: la sentencia toma el

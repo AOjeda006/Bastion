@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Organizacion.Contracts.Ejercicios;
 
 namespace Bastion.Inventario.Application.Ajustes;
 
@@ -66,13 +67,30 @@ public interface IAnularAjuste
 /// impediría la R11 si el motor no estuviera.
 /// </para>
 /// </remarks>
+/// <para>
+/// <b>El ejercicio que esto pregunta es el de HOY, no el del original</b>, y por eso anular un
+/// documento de un periodo cerrado sigue funcionando: el inverso nace con la fecha de hoy, así que
+/// la única fila que hace falta que admita escrituras es la del ejercicio abierto. El cerrado ni
+/// se lee ni se toca. Preguntar por el del original sería la lectura equivocada con el nombre
+/// correcto: dejaría sin anular precisamente los documentos por los que existe la R2 —los viejos,
+/// los que ya nadie puede corregir de otra manera—.
+/// </para>
+/// <para>
+/// <b>Pero preguntar hay que preguntar</b>, porque el inverso <b>se confirma</b> aquí dentro y la
+/// R9 no admite un documento confirmado sin periodo al que imputarse. El caso que lo hace visible
+/// no es el ejercicio cerrado: es el <b>hueco</b>. Si hoy cae fuera de todo ejercicio —nadie abrió
+/// el del año en curso—, sin esta lectura la anulación escribiría un inverso que ninguna
+/// autoliquidación recogería, y lo haría sin ruido.
+/// </para>
 /// <param name="ajustes">Dónde viven el documento y el libro.</param>
 /// <param name="numerador">Quién entrega el correlativo, en esta misma transacción (R5).</param>
+/// <param name="ejercicios">Si <b>hoy</b> admite escrituras, con la fila bloqueada (R9).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «hoy».</param>
 internal sealed class AnularAjuste(
     IRepositorioDeAjustes ajustes,
     INumeradorDeSeriesDeInventario numerador,
+    IConsultaDeEjercicios ejercicios,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IAnularAjuste
 {
@@ -113,6 +131,22 @@ internal sealed class AnularAjuste(
 
         DateTimeOffset ahora = reloj.GetUtcNow();
         var hoy = DateOnly.FromDateTime(ahora.UtcDateTime);
+
+        // LA MISMA PREGUNTA QUE AL CONFIRMAR, Y SOBRE LA MISMA FECHA QUE SE VA A ESCRIBIR: `hoy`,
+        // la del inverso. Va antes del número por lo mismo que allí —un periodo que no admite el
+        // documento no debe gastar correlativo— y antes de `CrearInverso` porque no hace falta
+        // construir lo que no se va a escribir.
+        EstadoDelEjercicioParaEscribir ejercicio = await ejercicios
+            .ParaEscribirEnAsync(hoy, cancelacion)
+            .ConfigureAwait(false);
+
+        if (ejercicio is not EstadoDelEjercicioParaEscribir.Abierto)
+        {
+            return Resultado.Fallo<AnulacionDto>(
+                ejercicio is EstadoDelEjercicioParaEscribir.SinEjercicio
+                    ? ErroresDeAjuste.SinEjercicio(hoy)
+                    : ErroresDeAjuste.EnEjercicioCerrado(hoy));
+        }
 
         Ajuste inverso = original.CrearInverso(hoy, motivo, ahora);
 

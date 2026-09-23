@@ -159,6 +159,15 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.El_estado_que_condiciona_el_incremento_es_el_del_enumerado_y_se_guarda_como_texto",
         "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Las_cuatro_cadenas_escritas_a_mano_son_las_del_modelo",
 
+        // Del ítem 2.6, y aquí por lo mismo que las de arriba: dos sentencias crudas cuyas
+        // cadenas nadie compila, atadas al modelo desde el carril rápido.
+        "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla",
+        "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.El_compartido_es_el_de_confirmar_y_el_exclusivo_el_de_cerrar",
+        "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.El_estado_que_las_dos_traducen_se_guarda_como_texto",
+        "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Las_cadenas_del_cerrojo_de_Organizacion_son_las_del_modelo",
+        "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Las_cadenas_del_puerto_de_Inventario_son_las_del_modelo",
+        "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Ninguna_de_las_dos_lleva_punto_y_coma_final",
+
         "LasClavesSeConocenAntesDeGuardarTests.El_universo_de_modelos_es_el_declarado",
         "LasClavesSeConocenAntesDeGuardarTests.Las_entidades_del_tipo_base_y_las_que_llevan_testigo_son_las_MISMAS",
         "LasClavesSeConocenAntesDeGuardarTests.Lo_unico_que_genera_el_servidor_son_los_testigos_de_concurrencia",

@@ -1007,6 +1007,13 @@ export interface paths {
          *         Desde el 2.6 puede contestar 409, y por dos motivos distintos: porque queda algún
          *           borrador con fecha dentro —y entonces el error nombra a los módulos— o porque el ejercicio
          *           ya estaba cerrado. Hasta este ítem cerrar era idempotente y no tenía precondiciones.
+         *         La transacción del cierre la abre la unidad de trabajo, no el filtro de idempotencia.
+         *           Cerrar toma un cerrojo exclusivo sobre la fila del ejercicio y un cerrojo solo dura hasta el
+         *           final de su transacción, así que hace falta una; pero esta acción exige If-Match y
+         *           Ninguna_accion_pide_los_dos_mecanismos_a_la_vez lo prohíbe con dos motivos escritos
+         *           —y el duro es que la transacción de la idempotencia va sin puntos de guardado, así que un
+         *           choque de concurrencia la deja abortada y el 412 acaba saliendo como 500—. Así que la abre
+         *           IUnidadTrabajoDeOrganizacion, que es de quien es el trabajo.
          */
         post: operations["Ejercicios_Cerrar"];
         delete?: never;

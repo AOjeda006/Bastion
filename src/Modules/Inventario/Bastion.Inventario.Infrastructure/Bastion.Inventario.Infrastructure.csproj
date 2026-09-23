@@ -60,6 +60,16 @@
       de verdad.
     -->
     <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
+    <!--
+      Y al carril rapido, desde el item 2.6: las dos sentencias del cerrojo del ejercicio nombran
+      el esquema, la tabla y sus columnas COMO CADENAS -no hay forma de pedir `FOR SHARE` ni
+      `FOR UPDATE` por el modelo-, y una cadena no se entera de un renombrado. Compararlas contra
+      el modelo de EF Core no necesita base de datos, asi que el test vive en el carril que no la
+      levanta, al lado del de la numeracion, que hace lo mismo por el mismo motivo. Abrirle el
+      ensamblado es preferible a repetir las cadenas alli: dos copias se separan el dia que una
+      cambie, y el test seguiria verde preguntando por la que ya no existe.
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.FunctionalTests" />
   </ItemGroup>
 
 </Project>

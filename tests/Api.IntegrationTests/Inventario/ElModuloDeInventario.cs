@@ -81,15 +81,24 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             unidadDeTrabajo,
             TimeProvider.System);
 
+        // El puerto del ejercicio va sobre EL CONTEXTO DE INVENTARIO, igual que en produccion y
+        // por el mismo motivo: la respuesta trae un cerrojo compartido sobre la fila, y un cerrojo
+        // sobre otra conexion no serializa nada. Con `_organizacion` aqui, el arnes probaria un
+        // mecanismo que no es el que se despliega.
+        LosEjerciciosDesdeInventario ejercicios =
+            new(_inventario, new InquilinoFijo(empresaId));
+
         Confirmacion = new ConfirmarAjuste(
             ajustes,
             new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
+            ejercicios,
             unidadDeTrabajo,
             TimeProvider.System);
 
         Anulacion = new AnularAjuste(
             ajustes,
             new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
+            ejercicios,
             unidadDeTrabajo,
             TimeProvider.System);
 
@@ -133,6 +142,61 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
 
         return confirmacion;
     }
+
+    /// <summary>
+    /// Confirma <b>dentro</b> de una transacción y la deja abierta, con el cerrojo compartido
+    /// sobre la fila del ejercicio todavía puesto.
+    /// </summary>
+    /// <remarks>
+    /// <b>Es lo que convierte «cerrar después de confirmar» en «cerrar MIENTRAS se confirma».</b>
+    /// Dos llamadas seguidas no prueban nada del cerrojo: la segunda se encuentra el trabajo de la
+    /// primera ya hecho y publicado. Lo que hay que ejercer es el solape —una confirmación que ha
+    /// leído el ejercicio y todavía no ha llegado a su <c>COMMIT</c>—, y eso exige poder parar una
+    /// a medias. Quien llama decide cuándo suelta.
+    /// </remarks>
+    /// <param name="ajusteId">El documento que confirmar.</param>
+    /// <returns>Lo que contestó el caso de uso, y la transacción todavía abierta.</returns>
+    internal async Task<(Resultado<AjusteDto> Confirmacion, IDbContextTransaction Transaccion)>
+        ConfirmarYQuedarseDentroAsync(Guid ajusteId)
+    {
+        IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<AjusteDto> confirmacion =
+            await Confirmacion.EjecutarAsync(ajusteId, CancellationToken.None);
+
+        return (confirmacion, transaccion);
+    }
+
+    /// <summary>Confirma dentro de la transacción que ya abrió quien llama.</summary>
+    /// <param name="ajusteId">El documento que confirmar.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal Task<Resultado<AjusteDto>> ConfirmarSinAbrirTransaccionAsync(Guid ajusteId) =>
+        Confirmacion.EjecutarAsync(ajusteId, CancellationToken.None);
+
+    /// <summary>Abre la transacción de este módulo sin hacer nada más.</summary>
+    /// <remarks>
+    /// Para los casos que necesitan poner un <c>lock_timeout</c> en la conexión antes de que el
+    /// caso de uso pida el cerrojo: sin plazo, el que pierde la carrera se queda esperando para
+    /// siempre y el caso no termina nunca en vez de fallar.
+    /// </remarks>
+    /// <returns>La transacción, abierta.</returns>
+    internal Task<IDbContextTransaction> AbrirTransaccionAsync() =>
+        _inventario.Database.BeginTransactionAsync();
+
+    /// <summary>
+    /// Pone un plazo corto al cerrojo en la conexión de este módulo, dentro de su transacción.
+    /// </summary>
+    /// <remarks>
+    /// <b>La sentencia va entera en una constante y no se compone</b>: un <c>SET</c> no admite
+    /// parámetros, así que cualquier plazo variable acabaría concatenado dentro del SQL y el
+    /// analizador de EF Core lo para —con razón—. El plazo es el mismo para todos los casos que lo
+    /// necesitan, así que no hace falta que varíe.
+    /// </remarks>
+    internal Task PonerPlazoCortoDeCerrojoAsync() =>
+        _inventario.Database.ExecuteSqlRawAsync(PlazoCorto);
+
+    /// <summary>Lo que espera quien llega segundo antes de rendirse con un 55P03.</summary>
+    internal const string PlazoCorto = "SET LOCAL lock_timeout = '300ms'";
 
     /// <summary>Anula con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>

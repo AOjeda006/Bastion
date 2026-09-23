@@ -94,6 +94,11 @@ public static class ModuloDeOrganizacion
 
         servicios.AddScoped<IRepositorioDeEmpresas, RepositorioDeEmpresas>();
         servicios.AddScoped<IRepositorioDeEjercicios, RepositorioDeEjercicios>();
+        // El cerrojo del ejercicio va aparte del repositorio a proposito: es la unica excepcion
+        // al SQL crudo de este modulo y se lee de una vez en su fichero, no escondida entre los
+        // metodos normales de un repositorio.
+        servicios.AddScoped<ICerrojoDeEjercicios, CerrojoDeEjercicios>();
+
         servicios.AddScoped<IRepositorioDeSeries, RepositorioDeSeries>();
         servicios.AddScoped<IRepositorioDeAlmacenes, RepositorioDeAlmacenes>();
         servicios.AddScoped<IRepositorioDeImpuestos, RepositorioDeImpuestos>();

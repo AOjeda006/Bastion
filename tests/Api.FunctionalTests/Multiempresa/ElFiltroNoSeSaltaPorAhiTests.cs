@@ -200,6 +200,51 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             "lee el numero que el incremento de al lado acaba de escribir, sobre una fila que ese "
             + "incremento mantiene bloqueada hasta el COMMIT y en la misma transaccion. Va aparte "
             + "porque una escritura con RETURNING no cabe en una consulta cruda de EF Core",
+
+        // LAS DOS DEL ITEM 2.6, y son las primeras que NO ESCRIBEN NADA: las dos son SELECT. Lo
+        // que las trae aqui no es lo que escriben, es la clausula de bloqueo que llevan pegada.
+        //
+        //   - Por que no hay forma de evitarlo: `FOR SHARE` y `FOR UPDATE` no tienen traduccion en
+        //     EF Core, ni la tiene ninguna clausula de bloqueo. Las dos alternativas sin SQL crudo
+        //     son peores. Leer por el ORM y confiar en el testigo de concurrencia (R11) NO SIRVE
+        //     aqui, y este es el argumento entero: la R11 separa dos escrituras sobre la misma
+        //     fila, y aqui las dos operaciones que hay que separar no escriben la misma fila
+        //     -cerrar escribe la del ejercicio; confirmar escribe un documento y ni toca el
+        //     ejercicio-, asi que no hay version que chocar. Y un UPDATE tonto sobre la propia fila
+        //     tomaria el cerrojo, si, escribiendo -y auditando- un cambio que nadie ha pedido.
+        //   - Por que son DOS entradas y no una: son los dos lados del mismo cerrojo y viven en
+        //     modulos distintos, porque el cerrojo tiene que durar hasta el COMMIT DEL QUE ESCRIBE.
+        //     Contestar el puerto del ejercicio desde `OrganizacionDbContext` seria otra conexion y
+        //     otra transaccion: el cerrojo se soltaria al acabar esa lectura y no al confirmar el
+        //     documento, que es justo lo contrario de lo que hace falta.
+        //   - Y el reparto compartido/exclusivo es el que hace que esto sirva de algo: muchas
+        //     confirmaciones a la vez sobre el mismo ejercicio son la operacion normal y no se
+        //     estorban; un cierre no convive con ninguna.
+        //
+        // El criterio por el que la excepcion sigue siendo estrecha es el mismo del ADR de la
+        // numeracion, con una linea mas: vale cuando el efecto tiene que caer en la MISMA
+        // transaccion que el documento, y ademas vale para PEDIRLE AL MOTOR UN CERROJO que el ORM
+        // no sabe pedir. Ninguna de las dos sentencias devuelve datos de negocio -devuelven un
+        // estado de dos valores-, y las dos comparan la empresa ellas mismas.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Repositorios/" +
+         "LosEjerciciosDesdeInventario.cs usa .SqlQuery"] =
+            "toma un cerrojo COMPARTIDO sobre la fila del ejercicio que comprende la fecha del "
+            + "documento y trae su estado en la misma lectura, sobre la transaccion de Inventario, "
+            + "que es la que confirma. Lee `organizacion.ejercicios`, que es `IDeInquilino`, asi "
+            + "que el argumento no puede ser que no haya filas que proteger: es que la sentencia "
+            + "COMPRUEBA LA EMPRESA ELLA MISMA, con el valor de IInquilinoActual -el mismo del que "
+            + "lo toma el filtro global, nunca de la peticion- sobre la misma fila que el filtro "
+            + "habria protegido. Que las cuatro cadenas del esquema sigan siendo las del mapeo de "
+            + "verdad lo comprueba LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests",
+
+        ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/" +
+         "CerrojoDeEjercicios.cs usa .SqlQuery"] =
+            "el otro lado: toma el cerrojo EXCLUSIVO con el que cerrar espera a las confirmaciones "
+            + "que ya estaban dentro, y trae el estado con el que se decide el 409, de esa misma "
+            + "lectura. Esta sobre el esquema del propio modulo, pero el filtro global tampoco "
+            + "alcanza al SQL crudo y el identificador viene de la ruta, asi que compara la "
+            + "empresa ella misma con el valor de IInquilinoActual. Vive en un fichero propio, como "
+            + "CerrojoDeLaBandeja, para que la excepcion se lea de una vez",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

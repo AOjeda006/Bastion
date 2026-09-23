@@ -65,26 +65,65 @@ public interface IReabrirEjercicio
 /// </remarks>
 internal sealed class CerrarEjercicio(
     IRepositorioDeEjercicios ejercicios,
+    ICerrojoDeEjercicios cerrojo,
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
     IVersionesDeOrganizacion versiones,
     IEnumerable<IDocumentosDeUnPeriodo> documentos) : ICerrarEjercicio
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
+    /// <inheritdoc />
+    /// <remarks>
+    /// <b>Todo el caso de uso va dentro de UNA transacción, y la abre la unidad de trabajo.</b> No
+    /// es una envoltura de cortesía: el cerrojo exclusivo que se toma en la primera línea solo dura
+    /// hasta el final de su transacción, así que sin ella se soltaría al acabar esa misma lectura y
+    /// una confirmación podría colarse entre la comprobación del estado y el guardado. Quien abre
+    /// la transacción en las demás escrituras es el filtro de idempotencia, y aquí no puede: esta
+    /// acción exige <c>If-Match</c>, y pedir los dos mecanismos a la vez está prohibido con su
+    /// motivo escrito.
+    /// </remarks>
+    public Task<Resultado> EjecutarAsync(
+        Guid id, VersionDeRecurso version, CancellationToken cancelacion) =>
+        unidadTrabajo.EnTransaccionAsync(
+            dentro => CerrarDentroDeLaTransaccionAsync(id, version, dentro), cancelacion);
+
+    private async Task<Resultado> CerrarDentroDeLaTransaccionAsync(
+        Guid id, VersionDeRecurso version, CancellationToken cancelacion)
     {
+        // EL CERROJO, LO PRIMERO DE TODO, Y CON EL ESTADO DENTRO. A partir de esta línea la fila
+        // está pinchada hasta el `COMMIT`: ninguna confirmación que llegue después pasa de su
+        // propia lectura, y ninguna que ya estuviera dentro deja de contarse —el exclusivo espera
+        // a que los compartidos suelten, que es lo que significa «se serializa»—.
+        //
+        // Va ANTES de leer el ejercicio por el ORM, y no después, porque el orden contrario deja
+        // dos versiones de la misma fila en la misma operación: la de la lectura sin cerrojo y la
+        // del cerrojo. Con el cerrojo puesto primero, todo lo que se lea a partir de aquí ya no se
+        // puede mover, así que no hay dos.
+        EstadoDeEjercicio? bloqueado = await cerrojo
+            .TomarEnExclusivaAsync(id, cancelacion)
+            .ConfigureAwait(false);
+
+        if (bloqueado is null)
+        {
+            return Resultado.Fallo(ErroresDeEjercicio.NoEncontrado(id));
+        }
+
+        // Desde el ítem 2.6 cerrar lo cerrado es un 409 y no un 200 mudo: ver `Ejercicio.Cerrar`.
+        // Y el estado que se compara es EL DE LA LECTURA CON CERROJO, no el de la entidad: son lo
+        // mismo solo porque el cerrojo ya está puesto, y esa es justamente la razón de leerlo así.
+        if (bloqueado is EstadoDeEjercicio.Cerrado)
+        {
+            return Resultado.Fallo(ErroresDeEjercicio.YaCerrado(id));
+        }
+
         Ejercicio? ejercicio = await ejercicios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
+        // Que la fila exista no basta para que este usuario la vea: el SQL crudo compara la
+        // empresa a mano, pero no sabe del filtro de bloqueo (R16), que sí se aplica aquí.
         if (ejercicio is null)
         {
             return Resultado.Fallo(ErroresDeEjercicio.NoEncontrado(id));
         }
 
         versiones.Exigir(ejercicio, version);
-
-        // Desde el ítem 2.6 cerrar lo cerrado es un 409 y no un 200 mudo: ver `Ejercicio.Cerrar`.
-        if (ejercicio.Estado == EstadoDeEjercicio.Cerrado)
-        {
-            return Resultado.Fallo(ErroresDeEjercicio.YaCerrado(id));
-        }
 
         IReadOnlyList<string> conBorradores = await LosModulosConDocumentos
             .QuienTieneBorradoresAsync(

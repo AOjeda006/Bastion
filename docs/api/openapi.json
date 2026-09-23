@@ -7094,7 +7094,7 @@
           "Ejercicios"
         ],
         "summary": "Cierra el ejercicio (R9).",
-        "description": "    Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que\ncualquiera congele el año. Con su permiso detrás, se abre.\n    Desde el 2.6 puede contestar 409, y por dos motivos distintos: porque queda algún\n      borrador con fecha dentro —y entonces el error nombra a los módulos— o porque el ejercicio\n      ya estaba cerrado. Hasta este ítem cerrar era idempotente y no tenía precondiciones.",
+        "description": "    Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que\ncualquiera congele el año. Con su permiso detrás, se abre.\n    Desde el 2.6 puede contestar 409, y por dos motivos distintos: porque queda algún\n      borrador con fecha dentro —y entonces el error nombra a los módulos— o porque el ejercicio\n      ya estaba cerrado. Hasta este ítem cerrar era idempotente y no tenía precondiciones.\n    La transacción del cierre la abre la unidad de trabajo, no el filtro de idempotencia.\n      Cerrar toma un cerrojo exclusivo sobre la fila del ejercicio y un cerrojo solo dura hasta el\n      final de su transacción, así que hace falta una; pero esta acción exige If-Match y\n      Ninguna_accion_pide_los_dos_mecanismos_a_la_vez lo prohíbe con dos motivos escritos\n      —y el duro es que la transacción de la idempotencia va sin puntos de guardado, así que un\n      choque de concurrencia la deja abortada y el 412 acaba saliendo como 500—. Así que la abre\n      IUnidadTrabajoDeOrganizacion, que es de quien es el trabajo.",
         "operationId": "Ejercicios_Cerrar",
         "parameters": [
           {

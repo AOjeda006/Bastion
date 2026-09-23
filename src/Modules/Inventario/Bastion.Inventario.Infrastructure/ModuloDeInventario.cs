@@ -72,6 +72,13 @@ public static class ModuloDeInventario
         // `TryAdd` dejaría fuera a todos menos al primero sin decir nada.
         servicios.AddScoped<IDocumentosDeUnPeriodo, LosDocumentosDeInventarioEnUnPeriodo>();
 
+        // Y EL PUERTO DEL EJERCICIO, contestado desde AQUI y no desde Organizacion. No es una
+        // rareza del cableado: la respuesta trae un cerrojo compartido sobre la fila del
+        // ejercicio, y un cerrojo solo sirve si vive en la MISMA transaccion que el documento que
+        // se esta confirmando. Contestarlo desde `OrganizacionDbContext` seria otra conexion, y el
+        // cerrojo se soltaria antes de que el documento llegara a escribirse.
+        servicios.AddScoped<IConsultaDeEjercicios, LosEjerciciosDesdeInventario>();
+
         // LOS DOS EVENTOS DEL DOCUMENTO, con su nombre escrito a mano: el catálogo no lo saca del
         // tipo a propósito, porque renombrar la clase rompería las filas que ya están en la cola.
         // Uno POR DOCUMENTO y no por movimiento: uno por fila convertiría la bandeja en una segunda

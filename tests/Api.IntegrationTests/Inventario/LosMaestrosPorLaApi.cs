@@ -76,10 +76,15 @@ internal static class LosMaestrosPorLaApi
     /// <returns>La serie recién creada.</returns>
     internal static async Task<SerieDto> CrearSerieAsync(HttpClient cliente, string codigo)
     {
-        // El año de la fecha de operación del ajuste, que es «hoy». Hoy por hoy nada comprueba que
-        // el documento caiga dentro del ejercicio de su serie —ni el dominio ni el `WHERE` que
-        // numera—, pero un ejercicio de otro año dejaría escrito aquí lo contrario de lo que se
-        // quiere el día que esa comprobación exista.
+        // EL EJERCICIO DEL AÑO EN CURSO, que es el de «hoy», que es la fecha de operación con la
+        // que estos casos abren sus ajustes. Desde el ítem 2.6 esto NO es una comodidad: confirmar
+        // exige que la fecha del documento caiga en un ejercicio ABIERTO de la empresa (R9), así
+        // que un ejercicio de otro año dejaría todos estos casos contestando
+        // `ajuste-sin-ejercicio`.
+        //
+        // Lo que sigue SIN comprobarse es que el ejercicio de la fecha sea el mismo del que cuelga
+        // la SERIE: el `WHERE` que numera mira que la serie exista, sea de esta empresa y siga
+        // abierta, y no mira su ejercicio. Aquí coinciden porque se abren juntos.
         int anioDelCaso = DateTime.UtcNow.Year;
 
         using HttpResponseMessage ejercicio = await cliente.PostAsJsonAsync(
@@ -93,11 +98,30 @@ internal static class LosMaestrosPorLaApi
 
         ejercicio.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(ejercicio));
 
+        EjercicioDto abierto = (await ejercicio.Content.ReadFromJsonAsync<EjercicioDto>())!;
+
+        return await CrearSerieEnAsync(cliente, abierto.Id, codigo);
+    }
+
+    /// <summary>Una serie activa colgada del ejercicio que se le pase.</summary>
+    /// <remarks>
+    /// <b>Existe desde el ítem 2.6</b>, cuando aparecieron casos que necesitan un ejercicio que no
+    /// es el del año en curso —uno viejo y cerrado, para anular contra él—. Abrir el ejercicio y
+    /// colgarle la serie son dos pasos distintos desde que hay quien quiere quedarse con el
+    /// primero.
+    /// </remarks>
+    /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
+    /// <param name="ejercicioId">El ejercicio del que cuelga la serie (primera cláusula de R5).</param>
+    /// <param name="codigo">Código de la serie, propio de este caso.</param>
+    /// <returns>La serie recién creada.</returns>
+    internal static async Task<SerieDto> CrearSerieEnAsync(
+        HttpClient cliente, Guid ejercicioId, string codigo)
+    {
         using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
             Series,
             new CrearSerieDto
             {
-                EjercicioId = (await ejercicio.Content.ReadFromJsonAsync<EjercicioDto>())!.Id,
+                EjercicioId = ejercicioId,
                 TipoDeDocumento = nameof(TipoDeDocumento.AjusteDeInventario),
                 Codigo = codigo,
                 Formato = "{serie}-{numero:0000}",

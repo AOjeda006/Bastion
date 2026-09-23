@@ -128,6 +128,15 @@ public sealed class EjerciciosController(
     /// borrador con fecha dentro —y entonces el error nombra a los módulos— o porque el ejercicio
     /// ya estaba cerrado. Hasta este ítem cerrar era idempotente y no tenía precondiciones.
     /// </para>
+    /// <para>
+    /// <b>La transacción del cierre la abre la unidad de trabajo, no el filtro de idempotencia.</b>
+    /// Cerrar toma un cerrojo exclusivo sobre la fila del ejercicio y un cerrojo solo dura hasta el
+    /// final de su transacción, así que hace falta una; pero esta acción exige <c>If-Match</c> y
+    /// <c>Ninguna_accion_pide_los_dos_mecanismos_a_la_vez</c> lo prohíbe con dos motivos escritos
+    /// —y el duro es que la transacción de la idempotencia va sin puntos de guardado, así que un
+    /// choque de concurrencia la deja abortada y el 412 acaba saliendo como 500—. Así que la abre
+    /// <c>IUnidadTrabajoDeOrganizacion</c>, que es de quien es el trabajo.
+    /// </para>
     /// </remarks>
     /// <param name="id">Identificador del ejercicio.</param>
     /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
