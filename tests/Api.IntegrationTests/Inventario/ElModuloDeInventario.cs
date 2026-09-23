@@ -170,7 +170,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     /// llamadas seguidas no prueban nada: la segunda se encuentra el documento ya anulado y la
     /// guarda de estado la rechaza sin que nada concurrente haya ocurrido. Lo que hay que ejercer
     /// es que las dos <b>lean</b> el mismo <c>Confirmado</c> antes de que ninguna escriba, y eso
-    /// exige poder parar una a medias. Quien las separa es el testigo de concurrencia de la fila.
+    /// exige poder parar una a medias. Quien las separa es el índice único del inverso, y detrás
+    /// el testigo de concurrencia de la fila.
     /// </remarks>
     /// <param name="ajusteId">El documento que se va a anular.</param>
     /// <returns>La transacción, todavía abierta, para deshacerla al terminar.</returns>
