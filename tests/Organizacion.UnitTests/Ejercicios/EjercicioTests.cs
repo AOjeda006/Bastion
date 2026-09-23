@@ -89,14 +89,17 @@ public sealed class EjercicioTests
     }
 
     [Fact]
-    public void Cerrar_dos_veces_no_es_un_error_de_programa()
+    public void Cerrar_dos_veces_SI_es_un_error_y_dejo_de_ser_idempotente_en_el_2_6()
     {
-        // Cerrar lo ya cerrado no cambia nada: la operación es idempotente por diseño, que es
-        // más barato que obligar a comprobar el estado antes de cada llamada.
+        // Hasta el ítem 2.6 cerrar lo cerrado no cambiaba nada y se dejaba pasar: cerrar era
+        // asignar un estado, y ahorrarse la comprobación salía barato. Dejó de salir barato
+        // cuando cerrar pasó a tener precondiciones —ningún borrador con fecha dentro— y
+        // consecuencias —reabrir lleva permiso propio, motivo y evento auditado—. Un segundo
+        // cierre que contesta «hecho» esconde el caso que importa: que otro se adelantó.
         Ejercicio ejercicio = Nuevo();
         ejercicio.Cerrar();
 
-        Should.NotThrow(ejercicio.Cerrar);
+        Should.Throw<InvalidOperationException>(ejercicio.Cerrar);
         ejercicio.Estado.ShouldBe(EstadoDeEjercicio.Cerrado);
     }
 
@@ -108,6 +111,17 @@ public sealed class EjercicioTests
 
         ejercicio.Reabrir();
 
+        ejercicio.Estado.ShouldBe(EstadoDeEjercicio.Abierto);
+    }
+
+    [Fact]
+    public void Reabrir_lo_que_ya_estaba_abierto_tampoco_pasa_en_silencio()
+    {
+        // Y aquí pesa más que en cerrar: una reapertura deja evento auditado con su motivo, y
+        // una que no reabre nada dejaría en la traza un hecho que no ocurrió.
+        Ejercicio ejercicio = Nuevo();
+
+        Should.Throw<InvalidOperationException>(ejercicio.Reabrir);
         ejercicio.Estado.ShouldBe(EstadoDeEjercicio.Abierto);
     }
 

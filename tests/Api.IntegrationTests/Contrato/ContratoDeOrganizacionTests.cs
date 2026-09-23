@@ -568,6 +568,48 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         reabierto.Estado.ShouldBe("Abierto");
     }
 
+    /// <summary>
+    /// Cerrar lo ya cerrado y reabrir lo ya abierto son <b>409</b>, no un 204 mudo.
+    /// </summary>
+    /// <remarks>
+    /// Las dos operaciones dejaron de ser idempotentes en el ítem 2.6, y el caso que eso destapa
+    /// es el que importa: que otro se adelantó. Con un 204, quien pide el cierre se lleva la misma
+    /// respuesta tanto si lo cerró él como si se lo encontró cerrado por alguien que además pudo
+    /// reabrirlo y volver a cerrarlo por en medio. Los dos <c>type</c> son distintos a propósito:
+    /// se arreglan distinto.
+    /// </remarks>
+    [Fact]
+    public async Task Cerrar_lo_ya_cerrado_y_reabrir_lo_ya_abierto_son_409_y_no_un_204_mudo()
+    {
+        (HttpClient cliente, _) = await _api.EnUnaEmpresaNuevaAsync("00000099F");
+        using HttpClient suyo = cliente;
+        EjercicioDto ejercicio = await CrearEjercicio(cliente, 2031);
+
+        string recurso = $"{Ejercicios}/{ejercicio.Id}";
+
+        // Reabrir uno que nunca se cerró: el estado no cambia, así que no hay nada que auditar.
+        using HttpResponseMessage reapertura = await cliente.AccionarAsync(
+            recurso, $"{recurso}/cierre", HttpMethod.Delete);
+
+        reapertura.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+
+        (await LeerProblema(reapertura)).GetProperty("type").GetString()
+            .ShouldBe("/errors/ejercicio-ya-abierto");
+
+        (await cliente.AccionarAsync(recurso, $"{recurso}/cierre", HttpMethod.Post)).StatusCode
+            .ShouldBe(
+                HttpStatusCode.NoContent,
+                "el primer cierre sí cierra, o el 409 de abajo no diría nada del segundo");
+
+        using HttpResponseMessage segundo = await cliente.AccionarAsync(
+            recurso, $"{recurso}/cierre", HttpMethod.Post);
+
+        segundo.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+
+        (await LeerProblema(segundo)).GetProperty("type").GetString()
+            .ShouldBe("/errors/ejercicio-ya-cerrado");
+    }
+
     [Fact]
     public async Task Suprimir_una_serie_que_no_ha_numerado_es_204()
     {

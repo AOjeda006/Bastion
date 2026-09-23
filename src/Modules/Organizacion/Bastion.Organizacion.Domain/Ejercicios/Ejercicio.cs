@@ -89,11 +89,47 @@ public sealed class Ejercicio : EntidadBase, IDeInquilino
         FechaDeFin = fin;
     }
 
-    /// <summary>Cierra el ejercicio. Idempotente.</summary>
-    public void Cerrar() => Estado = EstadoDeEjercicio.Cerrado;
+    /// <summary>Cierra el ejercicio. Solo si está abierto.</summary>
+    /// <remarks>
+    /// <b>Dejó de ser idempotente en el ítem 2.6, y el cambio tiene motivo.</b> Mientras cerrar
+    /// solo asignaba un estado, repetirlo era inofensivo y ahorrarse la comprobación salía barato.
+    /// Ahora cerrar es una operación con precondiciones —no puede quedar ningún borrador con fecha
+    /// dentro— y con consecuencias: reabrir lleva permiso propio, motivo obligatorio y evento
+    /// auditado. Un segundo cierre que contesta «hecho» sin hacer nada le dice a quien lo pide que
+    /// su petición hizo algo, y esconde justo el caso que importa: dos personas cerrando a la vez,
+    /// o un cierre contra un ejercicio que otro reabrió y volvió a cerrar por en medio.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Si el ejercicio ya estaba cerrado.</exception>
+    public void Cerrar()
+    {
+        if (Estado == EstadoDeEjercicio.Cerrado)
+        {
+            throw new InvalidOperationException(
+                "El ejercicio ya estaba cerrado. Cerrar dos veces no es lo mismo que cerrar una: " +
+                "quien lo pide tiene que enterarse de que otro se le adelantó (R9).");
+        }
 
-    /// <summary>Reabre el ejercicio. Idempotente.</summary>
-    public void Reabrir() => Estado = EstadoDeEjercicio.Abierto;
+        Estado = EstadoDeEjercicio.Cerrado;
+    }
+
+    /// <summary>Reabre el ejercicio. Solo si está cerrado.</summary>
+    /// <remarks>
+    /// Por lo mismo que <see cref="Cerrar"/>, y con más motivo: reabrir vuelve a admitir apuntes en
+    /// un periodo que ya se dio por definitivo, así que es un hecho que se audita. Reabrir lo ya
+    /// abierto no es un hecho, y contestar que sí dejaría en la traza una reapertura que no ocurrió.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Si el ejercicio ya estaba abierto.</exception>
+    public void Reabrir()
+    {
+        if (Estado == EstadoDeEjercicio.Abierto)
+        {
+            throw new InvalidOperationException(
+                "El ejercicio ya estaba abierto. Una reapertura que no reabre nada no se audita " +
+                "como si lo hubiera hecho (R9).");
+        }
+
+        Estado = EstadoDeEjercicio.Abierto;
+    }
 
     /// <summary>Indica si una fecha cae dentro del ejercicio, extremos incluidos.</summary>
     public bool Comprende(DateOnly fecha) => fecha >= FechaDeInicio && fecha <= FechaDeFin;

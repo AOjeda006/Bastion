@@ -84,6 +84,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ContratoDeLosCrucesTests.Volver_a_anadir_a_un_bloqueado_que_ya_suministraba_es_el_MISMO_400_y_no_un_409",
 
         "ContratoDeOrganizacionTests.Borrar_una_empresa_la_bloquea_pero_no_la_borra",
+        "ContratoDeOrganizacionTests.Cerrar_lo_ya_cerrado_y_reabrir_lo_ya_abierto_son_409_y_no_un_204_mudo",
         "ContratoDeOrganizacionTests.Con_la_empresa_activa_bloqueada_no_se_puede_crear_nada_y_es_409",
         "ContratoDeOrganizacionTests.Crear_una_empresa_devuelve_201_con_Location_que_lleva_al_recurso",
         "ContratoDeOrganizacionTests.Dos_ejercicios_de_la_misma_empresa_no_pueden_pisarse_aunque_se_llamen_distinto",
@@ -146,6 +147,8 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElAltaDeUnaEmpresaSePublicaTests.El_alta_que_hace_la_semilla_se_publica_igual_y_dice_por_que_no_tiene_empresa",
 
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
+
+        "ElCierreLePreguntaALosModulosTests.Un_borrador_de_inventario_dentro_del_ejercicio_impide_cerrarlo_y_el_error_lo_nombra",
 
         // Del ítem 2.4: el cerrojo de la numeración, que solo el motor puede demostrar. El
         // recorrido por tipo de documento cuenta como UN caso aquí -un `[Theory]` es un nombre,

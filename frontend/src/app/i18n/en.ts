@@ -143,6 +143,8 @@ export const en: Diccionario = {
       'divisa-duplicada': 'There is already a currency with that code.',
       'divisa-no-encontrada': 'That currency no longer exists.',
       'ejercicio-cerrado': 'The financial year is closed and cannot be changed.',
+      'ejercicio-con-borradores':
+        'There are still draft documents dated inside the financial year. Confirm or delete them before closing.',
       'ejercicio-con-series':
         'A financial year with document series cannot be deleted. Delete the series first.',
       'ejercicio-duplicado':
@@ -151,6 +153,9 @@ export const en: Diccionario = {
         'That financial year no longer exists. Go back to the list and refresh.',
       'ejercicio-solapado':
         'Those dates overlap another financial year at this company. A date must fall in exactly one financial year.',
+      'ejercicio-ya-abierto': 'That financial year was already open, so it has not been reopened.',
+      'ejercicio-ya-cerrado':
+        'That financial year was already closed, so you are not the one who closed it. Read it again before deciding.',
       'empresa-activa-no-operativa':
         'The company you are working with is no longer available. Sign in again.',
       'empresa-ajena': 'That company is not yours, so you cannot work on it.',

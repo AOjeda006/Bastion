@@ -175,12 +175,17 @@ export const es = {
       'divisa-duplicada': 'Ya hay una divisa con ese código.',
       'divisa-no-encontrada': 'Esa divisa ya no existe.',
       'ejercicio-cerrado': 'El ejercicio está cerrado y no admite cambios.',
+      'ejercicio-con-borradores':
+        'Quedan documentos en borrador con fecha dentro del ejercicio. Confírmalos o bórralos antes de cerrar.',
       'ejercicio-con-series':
         'No se puede eliminar un ejercicio que tiene series. Elimina antes las series.',
       'ejercicio-duplicado': 'Ya hay un ejercicio con ese año en esta empresa.',
       'ejercicio-no-encontrado': 'Ese ejercicio ya no existe. Vuelve al listado y actualiza.',
       'ejercicio-solapado':
         'Esas fechas se pisan con las de otro ejercicio de la empresa. Una fecha tiene que caer en un solo ejercicio.',
+      'ejercicio-ya-abierto': 'Ese ejercicio ya estaba abierto, así que no se ha reabierto.',
+      'ejercicio-ya-cerrado':
+        'Ese ejercicio ya estaba cerrado, así que no lo has cerrado tú. Vuelve a leerlo antes de decidir.',
       'empresa-activa-no-operativa':
         'La empresa con la que estás operando ya no está disponible. Vuelve a entrar.',
       'empresa-ajena': 'Esa empresa no es la tuya, así que no puedes operar sobre ella.',
