@@ -5013,13 +5013,14 @@ toma su correlativo del cerrojo del 2.4, y el mecanismo **revienta** sin transac
 afirmar que la lista tenía **exactamente una** a afirmar que tiene **dos**, con su motivo escrito al
 lado, que es lo que impide que la tercera entre por parecido.
 
-**El índice de `anula_a_id` NO es único, y eso es una decisión medida.** Un único parecía gratis y
-habría cambiado la respuesta de la carrera: dos anulaciones simultáneas **insertan** su inverso
-antes de tocar el original, así que saltaría primero el ínico y el perdedor se llevaría un
-`DbUpdateException` —un 500— en vez del `412` del testigo de concurrencia. Quien sostiene «un solo
-inverso» es la R11 sobre la fila del ajuste, y el barrido que lo vigila en la base es
-`LaDobleFlechaDeLaAnulacionTests`, no una restricción de columna. El porqué está en la
-configuración de EF, en el `remarks` de la migración y en la fila de la R2.
+**El índice de `anula_a_id` NO es único, y eso es una decisión medida.** ~~Un único parecía
+gratis y habría cambiado la respuesta de la carrera: dos anulaciones simultáneas **insertan** su
+inverso antes de tocar el original, así que saltaría primero el único y el perdedor se llevaría un
+`DbUpdateException` —un 500— en vez del `412` del testigo de concurrencia.~~ **Revertido el
+2026-09-23, en su propio commit**, y el porqué está abajo, en *El índice vuelve, y la traducción con
+él*. La medición era cierta; lo que estaba mal era la conclusión: cambiaba una **garantía** por un
+**código de estado** pudiendo tener las dos. Se deja tachado y no borrado porque el razonamiento es
+lo único que explica por qué hicieron falta dos migraciones para un índice.
 
 **«Anular dos veces» se ejerce con dos transacciones de verdad.** Dos llamadas seguidas no prueban
 nada de concurrencia: la segunda se encuentra el documento ya anulado y la guarda de estado la
@@ -5075,9 +5076,77 @@ coinciden, así que el segundo run corre sobre el mismo árbol —y eso **se com
 `head_sha` del run**, que es lo único que lo distingue de suponerlo.
 
 El siguiente ADR es el **0041**: este ítem no abrió ninguno. Nada de lo que decidió enmienda un ADR
-anterior ni inventa una regla nueva —el índice no único y la segunda clave obligatoria son
-aplicaciones de lo que ya estaba escrito—, y su sitio es el `remarks` que las explica donde se
-leen, no un documento aparte.
+anterior ni inventa una regla nueva —la segunda clave obligatoria es una aplicación de lo que ya
+estaba escrito—, y su sitio es el `remarks` que la explica donde se lee, no un documento aparte.
+
+### El índice vuelve, y la traducción con él (2026-09-23)
+
+**En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
+del 2.6 ni cabía ya dentro del 2.5: es la corrección de una decisión que el 2.5 tomó mal.
+
+**Lo que estaba mal no era la medición.** Anular escribe **dos** filas —el `INSERT` del inverso y el
+`UPDATE` del original— y el orden lo decide el ORM: llega antes el `INSERT`. Con un índice único
+sobre `anula_a_id`, quien pierde la carrera choca contra él y no contra el testigo de concurrencia,
+y eso se midió y es verdad. Lo que estaba mal era lo que se hizo con esa medición: **quitar el
+índice** para conservar el código de estado. Eso deja «un solo inverso» dependiendo de que **todos
+los caminos futuros** —el 2.12, la fase 5— toquen también la fila del original, y el barrido que lo
+vigila mira la base **de los tests**, no la de producción.
+
+**Y va contra el patrón de la casa, que estaba cuatro líneas más abajo.** Este repositorio tiene
+**veintinueve** índices únicos —contados, no estimados: `.HasIndex(...)` con `.IsUnique()` en los
+seis `*ModelSnapshot.cs`, que son el modelo ya construido; 1 en Auditoría, 6 en Catálogo, 5 en
+Identidad, 3 en Inventario, 10 en Organización y 4 en Terceros, y ninguna llamada a `IsUnique()`
+fuera de un índice— y hasta este commit **ningún** manejador de `23505`; en todos se acepta lo que
+le pase a la carrera a cambio de que la base no deje entrar el dato malo. El de `(serie_id, numero)`, en esta
+misma tabla, se justifica diciendo que no duplica al cerrojo sino que es «la que queda en pie cuando
+el cerrojo no interviene». Eso vale palabra por palabra para el inverso.
+
+**No había que elegir.** El índice vuelve —único y filtrado por `anula_a_id IS NOT NULL`, migración
+`ElInversoEsUnicoEnLaBase`— y la respuesta se arregla **traduciendo**:
+`ManejadorDeCarreraPerdidaEnLaBase` reconoce el `23505`, busca el `ConstraintName` en una lista
+declarada y, si está, contesta el **mismo** `412` con el **mismo** `type` `/errors/version-obsoleta`
+que da `ManejadorDeVersionObsoleta`. Si no está, devuelve `false` y el manejador general da su `500`
+de siempre.
+
+- **Dónde vive cada mitad.** El manejador y la lista, en `BuildingBlocks`, porque
+  `PoliticaDeErrores` es el único sitio donde se fija el **orden** de los manejadores y el orden es
+  lo que decide cuál contesta: va entre el del testigo y el general. El **nombre del índice y su
+  motivo**, en `ModuloDeInventario`, porque que `ix_ajustes_anula_a_id` sea una carrera perdida y no
+  un defecto es una afirmación sobre este agregado y de nadie más. Se entrega por `IOptions`, así
+  que el orden de registro de los módulos no decide nada.
+- **Sin `versionActual`, y dicho.** Un `23505` aborta la transacción de PostgreSQL, así que desde el
+  manejador no se puede leer nada; y la versión que el cliente necesitaría es la de **otra** fila.
+  Se usa `ErroresDeConcurrencia.ObsoletaYSinRecurso()`, que es la forma que el contrato ya publica
+  para «no hay versión que dar». El estado y el `type` son idénticos por los dos caminos.
+- **Las dos listas, comparadas en los dos sentidos.** `CadaIndiceTraducidoSeJustificaTests` exige
+  que todo índice declarado **exista en el modelo y siga siendo único** —si alguien le quita la
+  unicidad, la traducción se quedaría en pie traduciendo algo que ya no puede ocurrir— y que la
+  lista declarada sea **exactamente** la escrita a mano en el propio barrido, para que añadir una
+  traducción cueste dos ficheros. Afirma antes que el conjunto no está vacío (ADR-0020).
+- **El borde, con su contraste.** `PoliticaDeErroresTests` añade dos casos por el *pipeline* de
+  verdad: el `23505` del índice **declarado** sale `412` sin un solo rastro del interior, y el mismo
+  `23505` sobre un índice **sin declarar** sigue siendo `500`. Sin el segundo, el primero no diría
+  lo que parece: un manejador que tradujera *todo* `23505` los pondría verdes a los dos, y entonces
+  dos altas con el mismo NIF contestarían «vuelve a leer y reintenta» para siempre.
+- **Y el barrido de la doble flecha sigue ejerciéndose.** Su primera avería —un segundo inverso del
+  mismo original— ya no cabe en la base, así que ahora va en dos pasos: primero se comprueba que el
+  motor la rechaza **por el nombre del índice**, y después se **tira el índice dentro de una
+  transacción que se deshace** —el DDL es transaccional en PostgreSQL— y se planta el defecto, para
+  que la rama «más de uno» del barrido se siga ejerciendo. Se afirma además que el índice volvió:
+  un carril que se dejara el índice tirado envenenaría con un verde vacío a todos los casos de
+  detrás.
+
+**Tres mutaciones, sobre la línea que decide**, que aquí es la comparación del nombre del índice con
+lo declarado, y su unicidad en el modelo:
+
+| # | Mutación | Resultado | Quién la caza |
+|---|----------|-----------|---------------|
+| 1 | El índice deja de ser único (`.IsUnique()` fuera de `ConfiguracionDeAjuste`) | **Rojo**, 1 de 21 | `CadaIndiceTraducidoSeJustificaTests.Todo_indice_declarado_existe_en_el_modelo_y_es_unico` |
+| 2 | La declaración nombra `ix_ajustes_anula_a_id_renombrado` | **Rojo**, 3 de 21 | los **dos** del barrido y, además, `PoliticaDeErroresTests.Una_carrera_que_impidio_un_indice_declarado_sale_412_y_no_500` — que es la costura: el arnés escribe el nombre real **a mano** |
+| 3 | Se declara un índice de más sin tocar la lista permitida | **Rojo**, 2 de 21 | `Ningun_indice_se_traduce_sin_estar_en_esta_lista` y el de arriba |
+
+Y antes de la tanda se comprobó lo de siempre: quitar el **registro** del manejador en
+`PoliticaDeErrores` pone rojo el caso del `412`, o sea que el caso nuevo mira lo que dice mirar.
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
@@ -11987,10 +12056,11 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   `LineaDeAjuste` guarda solo `CantidadIntroducida`, y la cantidad en unidad base la deriva
   `MovimientoStock` multiplicando por el factor. Negar las dos devolvería el producto a positivo.
 
-  **El índice de `anula_a_id` no es único a propósito.** Dos anulaciones simultáneas insertan su
-  inverso **antes** de tocar el original, así que un único saltaría primero y convertiría el `412`
-  del testigo de concurrencia en un `DbUpdateException` —un 500—. Quien sostiene «un solo inverso»
-  es la R11 sobre la fila del ajuste; quien lo vigila en la base es un barrido.
+  **El índice de `anula_a_id` ES único**, desde el commit que revirtió esa decisión del 2.5. Dos
+  anulaciones simultáneas insertan su inverso **antes** de tocar el original, así que el único salta
+  primero y el perdedor choca contra él en vez de contra el testigo de concurrencia; el `412` es el
+  mismo porque `ManejadorDeCarreraPerdidaEnLaBase` traduce ese índice **por su nombre**. «Un solo
+  inverso» lo sostiene el motor, y detrás la R11 sobre la fila del ajuste.
 
   ### La tanda de mutación del ADR-0038
 
@@ -12075,6 +12145,10 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   porque no dice lo mismo que el de la rama: el de la rama aprueba el trabajo, el de `main` aprueba
   **lo que quedó en la rama principal**, y entre los dos hay un avance. Los dos `head_sha`
   coinciden porque fue *fast-forward*, y eso se lee del run, no se supone.
+
+  **Y una decisión de este ítem se revirtió después de cerrarlo, en su propio commit:** el índice de
+  `anula_a_id` **vuelve a ser único** y el borde traduce su `23505` al mismo `412`. El detalle, con
+  sus tres mutaciones, en *Estado actual* → *El índice vuelve, y la traducción con él*.
 
 - [ ] **2.6 · El ejercicio rige: qué exige cerrar, quién reabre y quién pregunta** — criterio de
   aceptación: cerrar **exige** que no quede ningún documento de inventario en borrador con fecha
