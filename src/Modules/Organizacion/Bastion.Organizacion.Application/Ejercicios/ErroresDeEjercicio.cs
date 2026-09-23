@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Organizacion.Domain.Ejercicios;
 
 namespace Bastion.Organizacion.Application.Ejercicios;
 
@@ -84,6 +85,18 @@ internal static class ErroresDeEjercicio
             "El ejercicio tiene documentos con fecha dentro, en: " + string.Join(", ", modulos) +
             ". Borrarlo dejaría esos documentos sin ejercicio al que pertenecer, y a qué ejercicio " +
             "pertenece una operación tiene que tener una sola respuesta (R9).");
+
+    /// <summary>La reapertura vino sin motivo, o con uno más largo de la cuenta.</summary>
+    /// <remarks>
+    /// Se comprueba en el caso de uso y no solo en el borde: un <c>[Required]</c> en el DTO para
+    /// una cadena no distingue «vacía» de «tres espacios», y lo que hace falta aquí es que quede
+    /// escrito algo que se pueda leer.
+    /// </remarks>
+    internal static ErrorDeOperacion MotivoNoValido() => ErrorDeOperacion.Validacion(
+        "ejercicio-motivo-no-valido",
+        "El motivo de la reapertura no puede estar vacío ni pasar de " +
+        $"{Ejercicio.LargoDelMotivo} caracteres: es lo único que queda para entender, dentro de " +
+        "dos años, por qué se volvió a abrir un periodo que estaba cerrado.");
 
     internal static ErrorDeOperacion Cerrado(Guid id) => ErrorDeOperacion.Conflicto(
         "ejercicio-cerrado",

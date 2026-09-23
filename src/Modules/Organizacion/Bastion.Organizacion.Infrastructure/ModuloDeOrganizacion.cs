@@ -16,6 +16,7 @@ using Bastion.Organizacion.Application.Ubicaciones;
 using Bastion.Organizacion.Application.Unidades;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Divisas;
+using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Impuestos;
 using Bastion.Organizacion.Contracts.Series;
@@ -147,6 +148,7 @@ public static class ModuloDeOrganizacion
         // AQUÍ y no en los bloques comunes: un catálogo central obligaría a tocar código común
         // para publicar un evento nuevo, que es justo la frontera del §4.
         servicios.DeclararEvento<EmpresaCreada>(EmpresaCreada.Nombre);
+        servicios.DeclararEvento<EjercicioReabierto>(EjercicioReabierto.Nombre);
 
         servicios.AgregarCasosDeUsoDeOrganizacion();
 

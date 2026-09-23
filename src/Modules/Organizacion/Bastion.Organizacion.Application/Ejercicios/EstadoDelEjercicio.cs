@@ -26,18 +26,32 @@ public interface ICerrarEjercicio
 /// Reabre un ejercicio cerrado (R9).
 /// </summary>
 /// <remarks>
+/// <para>
 /// <b>El permiso más restrictivo de los cuatro de este recurso</b>, y separado del de cerrar a
 /// propósito: reabrir vuelve a admitir apuntes en un periodo que ya se dio por cerrado y del que,
 /// probablemente, ya se presentaron modelos. Que sea posible es necesario —una subsanación existe—;
 /// que lo pueda hacer cualquiera que sepa cerrar, no.
+/// </para>
+/// <para>
+/// <b>Y las otras dos cosas que lo separan de cerrar: el motivo y el evento.</b> Cerrar deja el
+/// estado y basta con él. Reabrir deja un estado que <b>no distingue</b> un ejercicio que nunca se
+/// cerró de uno que se cerró y se reabrió: los dos ponen «abierto». Lo que hace falta para
+/// contarlo dentro de dos años no está en la fila, así que se emite
+/// <see cref="EjercicioReabierto"/> con el motivo dentro.
+/// </para>
 /// </remarks>
 public interface IReabrirEjercicio
 {
     /// <summary>Ejecuta el caso de uso.</summary>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="peticion">El motivo por el que se reabre.</param>
     /// <param name="version">La versión que el cliente dice tener (<c>If-Match</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion);
+    Task<Resultado> EjecutarAsync(
+        Guid id,
+        ReabrirEjercicioDto peticion,
+        VersionDeRecurso version,
+        CancellationToken cancelacion);
 }
 
 /// <inheritdoc cref="ICerrarEjercicio"/>
@@ -99,8 +113,25 @@ internal sealed class ReabrirEjercicio(
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
     IVersionesDeOrganizacion versiones) : IReabrirEjercicio
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
+    public async Task<Resultado> EjecutarAsync(
+        Guid id,
+        ReabrirEjercicioDto peticion,
+        VersionDeRecurso version,
+        CancellationToken cancelacion)
     {
+        ArgumentNullException.ThrowIfNull(peticion);
+
+        // EL MOTIVO SE MIRA AQUÍ, y antes de leer nada. Un `[Required]` sobre una cadena da por
+        // buena «   », y lo que hace falta es que quede escrito algo legible. Es el mismo trato
+        // que el motivo de una anulación, y por el mismo argumento: lo que el borde necesita para
+        // un cuerpo mal escrito es un 400 con su código, no un 500 (ADR-0004).
+        string motivo = (peticion.Motivo ?? string.Empty).Trim();
+
+        if (motivo.Length is 0 or > Ejercicio.LargoDelMotivo)
+        {
+            return Resultado.Fallo(ErroresDeEjercicio.MotivoNoValido());
+        }
+
         Ejercicio? ejercicio = await ejercicios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
         if (ejercicio is null)
@@ -117,6 +148,13 @@ internal sealed class ReabrirEjercicio(
         }
 
         ejercicio.Reabrir();
+
+        // El evento se registra en el agregado y no se publica aquí: así no puede existir sin su
+        // escritura. Si el `ConfirmarAsync` de abajo fallara, no habría reapertura y tampoco
+        // quedaría dicho que la hubo.
+        ejercicio.Registrar(new EjercicioReabierto(
+            ejercicio.Id, ejercicio.EmpresaId, ejercicio.Anio, motivo));
+
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto();

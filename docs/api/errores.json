@@ -53,6 +53,7 @@
     { "codigo": "ejercicio-con-series", "type": "/errors/ejercicio-con-series", "clase": "Conflicto" },
     { "codigo": "ejercicio-dejaria-documentos-fuera", "type": "/errors/ejercicio-dejaria-documentos-fuera", "clase": "Conflicto" },
     { "codigo": "ejercicio-duplicado", "type": "/errors/ejercicio-duplicado", "clase": "Conflicto" },
+    { "codigo": "ejercicio-motivo-no-valido", "type": "/errors/ejercicio-motivo-no-valido", "clase": "Validacion" },
     { "codigo": "ejercicio-no-encontrado", "type": "/errors/ejercicio-no-encontrado", "clase": "NoEncontrado" },
     { "codigo": "ejercicio-solapado", "type": "/errors/ejercicio-solapado", "clase": "Conflicto" },
     { "codigo": "ejercicio-ya-abierto", "type": "/errors/ejercicio-ya-abierto", "clase": "Conflicto" },

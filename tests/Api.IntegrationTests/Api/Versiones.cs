@@ -88,14 +88,25 @@ public static class Versiones
     /// <param name="recurso">Ruta del recurso, de donde sale la versión.</param>
     /// <param name="puerta">Ruta de la acción, a donde va la petición.</param>
     /// <param name="metodo">Método con el que se acciona.</param>
+    /// <param name="cuerpo">
+    /// Lo que lleva la petición, si lleva algo. Casi ninguna acción lleva cuerpo —accionar es
+    /// decir «haz esto», no describir un recurso—, pero la reapertura de un ejercicio sí: exige un
+    /// motivo, y ese es justo el argumento por el que tiene ruta propia y no es el borrado del
+    /// sub-recurso del cierre.
+    /// </param>
     public static async Task<HttpResponseMessage> AccionarAsync(
-        this HttpClient cliente, string recurso, string puerta, HttpMethod metodo)
+        this HttpClient cliente,
+        string recurso,
+        string puerta,
+        HttpMethod metodo,
+        HttpContent? cuerpo = null)
     {
         ArgumentNullException.ThrowIfNull(cliente);
 
         string etiqueta = await cliente.EtiquetaDeAsync(recurso).ConfigureAwait(false);
 
-        return await cliente.EnviarConVersionAsync(metodo, puerta, etiqueta).ConfigureAwait(false);
+        return await cliente.EnviarConVersionAsync(metodo, puerta, etiqueta, cuerpo)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Manda una petición con el <c>If-Match</c> que se le diga, sin leer nada antes.</summary>

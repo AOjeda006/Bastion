@@ -545,8 +545,8 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         using HttpClient suyo = cliente;
         EjercicioDto ejercicio = await CrearEjercicio(cliente, 2026);
 
-        // El cierre es POST y la reapertura DELETE sobre el MISMO recurso `…/cierre`: el estado es
-        // algo que se crea y se quita, no dos verbos inventados colgando del ejercicio.
+        // El cierre es POST sobre `…/cierre`, que es el sub-recurso: el estado es algo que se
+        // crea, no un verbo inventado colgando del ejercicio.
         (await cliente.AccionarAsync(
             $"{Ejercicios}/{ejercicio.Id}",
             $"{Ejercicios}/{ejercicio.Id}/cierre",
@@ -557,10 +557,14 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         cerrado.ShouldNotBeNull();
         cerrado.Estado.ShouldBe("Cerrado");
 
+        // Y la reapertura NO es borrar ese sub-recurso, que es como estaba hasta el 2.6: tiene
+        // ruta propia porque lleva cuerpo —el motivo—, y un `DELETE` con cuerpo no es fiable.
         (await cliente.AccionarAsync(
             $"{Ejercicios}/{ejercicio.Id}",
-            $"{Ejercicios}/{ejercicio.Id}/cierre",
-            HttpMethod.Delete)).StatusCode
+            $"{Ejercicios}/{ejercicio.Id}/reapertura",
+            HttpMethod.Post,
+            JsonContent.Create(new ReabrirEjercicioDto("Subsanación de un asiento mal fechado"))))
+            .StatusCode
             .ShouldBe(HttpStatusCode.NoContent);
 
         EjercicioDto? reabierto = await cliente.GetFromJsonAsync<EjercicioDto>($"{Ejercicios}/{ejercicio.Id}");
@@ -588,8 +592,13 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         string recurso = $"{Ejercicios}/{ejercicio.Id}";
 
         // Reabrir uno que nunca se cerró: el estado no cambia, así que no hay nada que auditar.
+        // Va con un motivo válido a propósito: lo que se comprueba aquí es el estado, y con el
+        // motivo vacío el 400 llegaría antes y este caso no diría nada del 409.
         using HttpResponseMessage reapertura = await cliente.AccionarAsync(
-            recurso, $"{recurso}/cierre", HttpMethod.Delete);
+            recurso,
+            $"{recurso}/reapertura",
+            HttpMethod.Post,
+            JsonContent.Create(new ReabrirEjercicioDto("Da igual: nunca estuvo cerrado")));
 
         reapertura.StatusCode.ShouldBe(HttpStatusCode.Conflict);
 

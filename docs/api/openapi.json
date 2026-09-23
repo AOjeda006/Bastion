@@ -7094,7 +7094,7 @@
           "Ejercicios"
         ],
         "summary": "Cierra el ejercicio (R9).",
-        "description": "Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que\ncualquiera congele el año. Con su permiso detrás, se abre.",
+        "description": "    Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que\ncualquiera congele el año. Con su permiso detrás, se abre.\n    Desde el 2.6 puede contestar 409, y por dos motivos distintos: porque queda algún\n      borrador con fecha dentro —y entonces el error nombra a los módulos— o porque el ejercicio\n      ya estaba cerrado. Hasta este ítem cerrar era idempotente y no tenía precondiciones.",
         "operationId": "Ejercicios_Cerrar",
         "parameters": [
           {
@@ -7121,6 +7121,26 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "text/plain": {
                 "schema": {
@@ -7183,13 +7203,15 @@
         "security": [
           { }
         ]
-      },
-      "delete": {
+      }
+    },
+    "/api/v1/organizacion/ejercicios/{id}/reapertura": {
+      "post": {
         "tags": [
           "Ejercicios"
         ],
-        "summary": "Reabre un ejercicio cerrado (R9).",
-        "description": "El cierre es el sub-recurso, así que reabrir es borrarlo. Lleva permiso propio y distinto\ndel de cerrar: reabrir vuelve a admitir apuntes en un periodo del que probablemente ya se\npresentaron modelos.",
+        "summary": "Reabre un ejercicio cerrado, diciendo por qué (R9).",
+        "description": "    Tiene ruta propia y no es el borrado del sub-recurso del cierre, que es la forma que\n      tenía hasta el 2.6. La razón es el cuerpo: desde este ítem la reapertura exige un motivo, y\n      un DELETE con cuerpo no es fiable —hay intermediarios y clientes que lo descartan por\n      el camino, y el motivo llegaría vacío sin que nadie hubiera hecho nada mal—. Un\n      POST a un recurso que nombra el hecho lo lleva sin discusión.\n    Lleva permiso propio y distinto del de cerrar: reabrir vuelve a admitir apuntes en un\nperiodo del que probablemente ya se presentaron modelos.\n    Sigue exigiendo If-Match, como las otras tres escrituras del recurso: que la\npetición traiga cuerpo no la convierte en una operación sobre un recurso nuevo. Lo que se\nmodifica es el ejercicio, y su versión es la que hay que traer.",
         "operationId": "Ejercicios_Reabrir",
         "parameters": [
           {
@@ -7210,12 +7232,72 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReabrirEjercicioDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReabrirEjercicioDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReabrirEjercicioDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "No Content"
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "text/plain": {
                 "schema": {
@@ -16503,6 +16585,19 @@
             ]
           }
         }
+      },
+      "ReabrirEjercicioDto": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se reabre, escrito por quien lo hace."
+          }
+        },
+        "description": "Lo que hace falta para reabrir un ejercicio cerrado: decir por qué."
       },
       "RechazoDto": {
         "required": [

@@ -435,8 +435,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // El `DELETE` de las ocho no contradice el «ningún DELETE, nunca» del ADR: lo prohibido es
         // `DELETE /{recurso}/{id}`, que borraría la fila, y de ese sigue sin haber ni uno para los
         // cuatro —lo vigila `NingunMaestroRetirableSeBorraTests`—. Estos ocho borran la retirada,
-        // que es un sub-recurso, como `DELETE /ejercicios/{id}/cierre` convive con el borrado del
-        // ejercicio sin ser lo mismo.
+        // que es un sub-recurso: convive con el borrado del recurso sin ser lo mismo.
         //
         // Ciento diez desde el ítem 1.8, y otra vez entra un MÓDULO entero, como en el 1.5:
         // Catálogo publica ocho acciones —artículos y categorías, con las mismas cuatro cada uno—.

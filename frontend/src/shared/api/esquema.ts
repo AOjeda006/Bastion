@@ -1004,15 +1004,41 @@ export interface paths {
          * Cierra el ejercicio (R9).
          * @description Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que
          *     cualquiera congele el año. Con su permiso detrás, se abre.
+         *         Desde el 2.6 puede contestar 409, y por dos motivos distintos: porque queda algún
+         *           borrador con fecha dentro —y entonces el error nombra a los módulos— o porque el ejercicio
+         *           ya estaba cerrado. Hasta este ítem cerrar era idempotente y no tenía precondiciones.
          */
         post: operations["Ejercicios_Cerrar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/ejercicios/{id}/reapertura": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         /**
-         * Reabre un ejercicio cerrado (R9).
-         * @description El cierre es el sub-recurso, así que reabrir es borrarlo. Lleva permiso propio y distinto
-         *     del de cerrar: reabrir vuelve a admitir apuntes en un periodo del que probablemente ya se
-         *     presentaron modelos.
+         * Reabre un ejercicio cerrado, diciendo por qué (R9).
+         * @description Tiene ruta propia y no es el borrado del sub-recurso del cierre, que es la forma que
+         *           tenía hasta el 2.6. La razón es el cuerpo: desde este ítem la reapertura exige un motivo, y
+         *           un DELETE con cuerpo no es fiable —hay intermediarios y clientes que lo descartan por
+         *           el camino, y el motivo llegaría vacío sin que nadie hubiera hecho nada mal—. Un
+         *           POST a un recurso que nombra el hecho lo lleva sin discusión.
+         *         Lleva permiso propio y distinto del de cerrar: reabrir vuelve a admitir apuntes en un
+         *     periodo del que probablemente ya se presentaron modelos.
+         *         Sigue exigiendo If-Match, como las otras tres escrituras del recurso: que la
+         *     petición traiga cuerpo no la convierte en una operación sobre un recurso nuevo. Lo que se
+         *     modifica es el ejercicio, y su versión es la que hay que traer.
          */
-        delete: operations["Ejercicios_Reabrir"];
+        post: operations["Ejercicios_Reabrir"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3329,6 +3355,11 @@ export interface components {
             status?: null | number | string;
             detail?: null | string;
             instance?: null | string;
+        };
+        /** @description Lo que hace falta para reabrir un ejercicio cerrado: decir por qué. */
+        ReabrirEjercicioDto: {
+            /** @description Por qué se reabre, escrito por quien lo hace. */
+            motivo: string;
         };
         /** @description Un motivo de rechazo en una columna, y las líneas del fichero en las que se da. */
         RechazoDto: {
@@ -7344,6 +7375,17 @@ export interface operations {
                     "text/json": components["schemas"]["ProblemDetails"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Precondition Failed */
             412: {
                 headers: {
@@ -7380,7 +7422,13 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReabrirEjercicioDto"];
+                "text/json": components["schemas"]["ReabrirEjercicioDto"];
+                "application/*+json": components["schemas"]["ReabrirEjercicioDto"];
+            };
+        };
         responses: {
             /** @description No Content */
             204: {
@@ -7389,8 +7437,30 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

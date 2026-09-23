@@ -1,4 +1,4 @@
-using Bastion.BuildingBlocks.Domain.Entidades;
+using Bastion.BuildingBlocks.Domain.Eventos;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 
 namespace Bastion.Organizacion.Domain.Ejercicios;
@@ -19,7 +19,11 @@ namespace Bastion.Organizacion.Domain.Ejercicios;
 /// tablas y todas las consultas.
 /// </para>
 /// </remarks>
-public sealed class Ejercicio : EntidadBase, IDeInquilino
+// HEREDA DE `RaizAgregado` DESDE EL 2.6, y solo por la reapertura. Heredarla significa
+// exactamente una cosa —«de esta raíz salen eventos»— y hasta este ítem no salía ninguno: cerrar
+// un ejercicio es el curso normal de las cosas. Reabrirlo no lo es, y el estado de la fila solo
+// dice cómo está AHORA: que estuvo cerrado y volvió a abrirse no se puede preguntar a la fila.
+public sealed class Ejercicio : RaizAgregado, IDeInquilino
 {
     /// <summary>Duración máxima de un ejercicio: doce meses (art. 26 de la LIS).</summary>
     public const int MesesMaximos = 12;
@@ -57,6 +61,13 @@ public sealed class Ejercicio : EntidadBase, IDeInquilino
 
     /// <summary>Abierto o cerrado (R9).</summary>
     public EstadoDeEjercicio Estado { get; private set; }
+
+    /// <summary>Longitud máxima del motivo de una reapertura.</summary>
+    /// <remarks>
+    /// La misma que el motivo de una anulación, y por el mismo motivo: lo que cabe en un renglón
+    /// de un listado y basta para entender la decisión dentro de dos años.
+    /// </remarks>
+    public const int LargoDelMotivo = 300;
 
     /// <summary>Crea un ejercicio abierto.</summary>
     /// <remarks>

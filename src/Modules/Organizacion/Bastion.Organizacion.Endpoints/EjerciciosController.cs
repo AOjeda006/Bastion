@@ -119,8 +119,15 @@ public sealed class EjerciciosController(
 
     /// <summary>Cierra el ejercicio (R9).</summary>
     /// <remarks>
+    /// <para>
     /// Sin puerta HTTP en el 0.4 porque cerrar un ejercicio sin autorización es dejar que
     /// cualquiera congele el año. Con su permiso detrás, se abre.
+    /// </para>
+    /// <para>
+    /// <b>Desde el 2.6 puede contestar 409</b>, y por dos motivos distintos: porque queda algún
+    /// borrador con fecha dentro —y entonces el error nombra a los módulos— o porque el ejercicio
+    /// ya estaba cerrado. Hasta este ítem cerrar era idempotente y no tenía precondiciones.
+    /// </para>
     /// </remarks>
     /// <param name="id">Identificador del ejercicio.</param>
     /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
@@ -129,6 +136,7 @@ public sealed class EjerciciosController(
     [ExigePermiso(PermisosDeOrganizacion.EjercicioCerrar)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
     public Task<IActionResult> Cerrar(
@@ -139,26 +147,43 @@ public sealed class EjerciciosController(
             ifMatch,
             version => cerrar.EjecutarAsync(id, version, cancelacion));
 
-    /// <summary>Reabre un ejercicio cerrado (R9).</summary>
+    /// <summary>Reabre un ejercicio cerrado, diciendo por qué (R9).</summary>
     /// <remarks>
-    /// El cierre es el sub-recurso, así que reabrir es borrarlo. Lleva permiso propio y distinto
-    /// del de cerrar: reabrir vuelve a admitir apuntes en un periodo del que probablemente ya se
-    /// presentaron modelos.
+    /// <para>
+    /// <b>Tiene ruta propia y no es el borrado del sub-recurso del cierre</b>, que es la forma que
+    /// tenía hasta el 2.6. La razón es el cuerpo: desde este ítem la reapertura exige un motivo, y
+    /// un <c>DELETE</c> con cuerpo no es fiable —hay intermediarios y clientes que lo descartan por
+    /// el camino, y el motivo llegaría vacío sin que nadie hubiera hecho nada mal—. Un
+    /// <c>POST</c> a un recurso que nombra el hecho lo lleva sin discusión.
+    /// </para>
+    /// <para>
+    /// Lleva permiso propio y distinto del de cerrar: reabrir vuelve a admitir apuntes en un
+    /// periodo del que probablemente ya se presentaron modelos.
+    /// </para>
+    /// <para>
+    /// Sigue exigiendo <c>If-Match</c>, como las otras tres escrituras del recurso: que la
+    /// petición traiga cuerpo no la convierte en una operación sobre un recurso nuevo. Lo que se
+    /// modifica es el ejercicio, y su versión es la que hay que traer.
+    /// </para>
     /// </remarks>
     /// <param name="id">Identificador del ejercicio.</param>
+    /// <param name="peticion">El motivo por el que se reabre.</param>
     /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    [HttpDelete("{id:guid}/cierre")]
+    [HttpPost("{id:guid}/reapertura")]
     [ExigePermiso(PermisosDeOrganizacion.EjercicioReabrir)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
     public Task<IActionResult> Reabrir(
         Guid id,
+        [FromBody] ReabrirEjercicioDto peticion,
         [FromHeader(Name = "If-Match")] string? ifMatch,
         CancellationToken cancelacion) =>
         ResponderSinContenidoExigiendoVersionAsync(
             ifMatch,
-            version => reabrir.EjecutarAsync(id, version, cancelacion));
+            version => reabrir.EjecutarAsync(id, peticion, version, cancelacion));
 }

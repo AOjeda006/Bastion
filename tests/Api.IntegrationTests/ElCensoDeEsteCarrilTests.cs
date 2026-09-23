@@ -342,6 +342,10 @@ public sealed class ElCensoDeEsteCarrilTests
         // desigualdad de la inversa la comprueba la capa de aplicación leyendo la fila contraria
         // —una lectura, no una rama— y el resolutor falla o no según lo que haya declarado en la
         // tabla.
+        // Del ítem 2.6: reabrir un ejercicio exige un motivo y deja su evento.
+        "LaReaperturaSeAuditaTests.Reabrir_con_motivo_lo_abre_y_deja_el_evento_con_el_motivo_dentro",
+        "LaReaperturaSeAuditaTests.Reabrir_sin_motivo_es_400_y_deja_el_ejercicio_cerrado",
+
         "LaInversaYElResolutorTests.El_par_que_habria_que_encadenar_no_se_resuelve",
         "LaInversaYElResolutorTests.El_par_que_se_separa_exactamente_el_margen_entra_y_el_de_al_lado_no",
         "LaInversaYElResolutorTests.El_redondeo_de_la_inversa_entra_solo_si_la_escala_lo_explica",

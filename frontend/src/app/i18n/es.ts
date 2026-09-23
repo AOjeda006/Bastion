@@ -184,6 +184,8 @@ export const es = {
       'ejercicio-dejaria-documentos-fuera':
         'Esas fechas dejarían fuera del ejercicio documentos que hoy caen dentro. Mueve antes los documentos o deja el intervalo donde está.',
       'ejercicio-duplicado': 'Ya hay un ejercicio con ese año en esta empresa.',
+      'ejercicio-motivo-no-valido':
+        'Escribe por qué reabres el ejercicio: es lo único que quedará para entenderlo.',
       'ejercicio-no-encontrado': 'Ese ejercicio ya no existe. Vuelve al listado y actualiza.',
       'ejercicio-solapado':
         'Esas fechas se pisan con las de otro ejercicio de la empresa. Una fecha tiene que caer en un solo ejercicio.',

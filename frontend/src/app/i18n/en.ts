@@ -153,6 +153,8 @@ export const en: Diccionario = {
         'Those dates would leave documents that fall inside today outside the financial year. Move the documents first, or leave the range where it is.',
       'ejercicio-duplicado':
         'There is already a financial year with that year number at this company.',
+      'ejercicio-motivo-no-valido':
+        'Say why you are reopening the financial year: it is all that will be left to explain it.',
       'ejercicio-no-encontrado':
         'That financial year no longer exists. Go back to the list and refresh.',
       'ejercicio-solapado':

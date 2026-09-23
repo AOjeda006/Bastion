@@ -85,8 +85,8 @@ public sealed class NingunMaestroRetirableSeBorraTests : IDisposable
         ];
 
         // Se excluye la puerta de la retirada y NADA más: `DELETE .../{id}/retirada` borra la
-        // retirada, que es un sub-recurso, igual que `DELETE /ejercicios/{id}/cierre` reabre sin
-        // borrar el ejercicio. Lo prohibido es el que se lleva la fila.
+        // retirada, que es un sub-recurso —igual que `DELETE .../usuarios/{id}/roles/…` quita un
+        // rol sin llevarse al usuario—. Lo prohibido es el que se lleva la fila.
         borrados.ShouldBeEmpty(
             "estos recursos son maestros retirables y publican un borrado: " +
             string.Join(", ", borrados) + ". El ADR-0023 no admite ninguno para ninguno de " +
