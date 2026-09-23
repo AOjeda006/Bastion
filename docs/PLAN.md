@@ -5600,10 +5600,78 @@ operaciones en el documento versionado, que no cambian porque esta pieza no estr
 **success**. Ningún cancelado esta vez: entre aquel empujón y el siguiente no hubo otro push a la
 misma rama, que es lo que dispara el `cancel-in-progress` del `ci-${{ github.ref }}`.
 
-**Lo que queda del 2.6**, por orden: `Modificar` y `Eliminar` preguntando por el mismo puerto; el
-cerrojo `FOR SHARE`/`FOR UPDATE`; reabrir con motivo y evento por `POST /{id}/reapertura`;
-`IConsultaDeEjercicios` con `SinEjercicio`; el ajuste que no se confirma fuera de ejercicio; y la R9
-viva con su fila reescrita.
+**Mover y borrar hacen la misma pregunta que cerrar, y por el mismo puerto.** Cerrar era el caso
+ruidoso, pero no era el peligroso. Un ejercicio abierto **se movía** con movimientos dentro, y los
+que el intervalo nuevo dejaba fuera pasaban a no pertenecer a ningún ejercicio sin que nadie los
+tocara: ni cambiaban de fecha, ni de importe, ni dejaban rastro. Se enteraba quien cuadrara el año.
+Borrar era peor todavía: había una clave ajena que lo impedía **mientras hubiera series colgando**,
+pero esa red se quita suprimiendo la serie —se puede, si no ha numerado— y entonces entre el borrado
+y medio año de movimientos huérfanos no quedaba nada, porque el ajuste vive en otro esquema y entre
+esquemas no se cruza (R4). Ahora los tres —cerrar, mover y borrar— recorren `IDocumentosDeUnPeriodo`
+y son los **tres llamantes** del mismo puerto.
+
+**Lo que se pregunta al mover no es el intervalo: son los trozos que quedan fuera.** Es la única
+decisión de diseño de esta pieza y se equivoca en la dirección cómoda. Preguntar «¿hay documentos en
+el ejercicio?» y negarse si los hay sale más corto, pasa el caso del 409 y deja **inmóvil cualquier
+ejercicio con un solo movimiento dentro** —que es todos—. Así que `Ejercicio.LoQueDejariaFuera`
+devuelve **cero, uno o dos** intervalos cerrados: lo que el intervalo nuevo expulsa por delante y lo
+que expulsa por detrás. Encoger por los dos lados a la vez deja dos trozos, y los dos cuentan.
+
+**La guarda del conjunto vacío se mudó a un sitio, no a tres.** Con tres casos de uso recorriendo la
+misma colección, la comprobación de ADR-0020 copiada tres veces son tres sitios donde se puede
+borrar una y que las otras dos sigan verdes. `LosModulosConDocumentos` la tiene una vez, con el
+`operacion` que hace que el mensaje diga qué se estaba intentando. Y **lanza** en vez de devolver un
+error de operación: quien manda la petición no puede hacer nada distinto, es el host mal compuesto, y
+eso tiene que reventar y salir en el registro, no volverse un 409 que alguien intente arreglar
+cambiando las fechas.
+
+**Tres mutaciones más, con la orden que las mide:**
+
+```
+dotnet test tests/Api.IntegrationTests --no-build   --filter "FullyQualifiedName~ElCierreLePreguntaALosModulosTests"
+dotnet test tests/Organizacion.UnitTests --no-build
+```
+
+Las bases de comparación son **3 de 3** y **188 de 188** en verde, y después de la tanda vuelven a
+serlo con el árbol limpio.
+
+| # | Mutación | Resultado | Quién la caza |
+|---|----------|-----------|---------------|
+| 9 | `ModificarEjercicio` deja de preguntar por lo que quedaría fuera | **Rojo**, 1 de 3 | `Encoger_el_ejercicio_por_encima_de_un_documento_es_409_y_por_el_otro_lado_no` |
+| 10 | `LoQueDejariaFuera` usa `inicio` en vez de `inicio.AddDays(-1)` | **Rojo**, 1 de 188 | `Lo_que_un_intervalo_nuevo_dejaria_fuera_se_cuenta_por_dias_y_no_por_meses` |
+| 11 | `EliminarEjercicio` deja de preguntar | **Rojo**, 1 de 3 | `Un_ejercicio_sin_series_pero_con_un_documento_dentro_tampoco_se_borra` |
+
+**La 9 y la 11 las cazan las SEGUNDAS mitades, igual que la 7.** El caso de mover encoge el
+ejercicio por encima del documento —409— y después lo encoge **por el otro lado**, donde no hay
+nada, y exige un **200**. Esa segunda mitad es la que distingue la regla de un «un ejercicio con
+documentos no se mueve»: una implementación que preguntara por el intervalo entero pasaría la
+primera mitad y suspendería la segunda. Y el caso de borrar **suprime la serie primero**, para que
+el 409 que vuelve sea `ejercicio-con-documentos` y no el viejo `ejercicio-con-series`; sin esa
+línea, el caso saldría verde con el puerto desconectado y no diría nada nuevo. Sin la pregunta, el
+borrado contesta **204** y deja el ajuste huérfano.
+
+**La 10 se mide en el carril RÁPIDO, y es deliberado.** Un desfase de un día solo se ve cuando el
+documento cae **exactamente en el extremo**, y un caso de API no lo pone ahí: pone una fecha de en
+medio y pasa igual con el error dentro. El `[Theory]` de seis casos sí lo pone —mismo intervalo, más
+ancho por los dos lados, encogido por delante, por detrás, por los dos y movido de año— y por eso lo
+caza sin levantar Docker.
+
+**Y la fecha del documento en los cruces dejó de ser «hoy».** Los casos nuevos suman y restan días
+alrededor de ella, así que con `DateOnly.FromDateTime(DateTime.UtcNow)` el 31 de diciembre el
+intervalo recortado acabaría antes de empezar y el caso saldría rojo **una vez al año**, en la
+máquina de quien tocara ese día. Es un 15 de junio fijo, con el motivo escrito al lado: lo que se
+comprueba es la aritmética de los extremos, no qué día es hoy.
+
+**Cifras de los carriles, con su orden:** `dotnet test Bastion.sln --filter "Category!=Integracion"`
+da **917** (31 + 61 + 215 + 188 + 85 + 78 + 22 + 13 + 170 + 54) —eran 911, y los seis nuevos son el
+`[Theory]`—; con `Category=Integracion`, **467** (84 + 383) —eran 465—. `bash
+scripts/generar-errores.sh --comprobar` dice **113** tipos de **119** sitios, y el documento
+versionado sigue en **130** operaciones sobre 76 rutas: esta pieza no estrena ninguna ruta, solo dos
+motivos nuevos para negarse por las que ya había.
+
+**Lo que queda del 2.6**, por orden: el cerrojo `FOR SHARE`/`FOR UPDATE`; reabrir con motivo y
+evento por `POST /{id}/reapertura`; `IConsultaDeEjercicios` con `SinEjercicio`; el ajuste que no se
+confirma fuera de ejercicio; y la R9 viva con su fila reescrita.
 
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
