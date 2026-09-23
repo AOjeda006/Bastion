@@ -5056,6 +5056,14 @@ nullable, su índice `ix_ajustes_anula_a_id` **sin** `UNIQUE` y la clave ajena
 catálogo del motor y no del fichero de migración. El segundo arranque (ADR-0035) salió en verde con
 el rol del sistema en **95** permisos, entre ellos el que estrena el ítem.
 
+**El 2.5 lo cierra el run 35873219346** sobre `ce3ed0e`, **success al primer intento** y con **3
+jobs contados en el propio run** (`total_count: 3`): Frontal `107222394041` ✓, Backend
+`107222394606` ✓ y Humo `107223943765` ✓ —**65 pasos entre los tres y ninguno fuera de verde**—.
+Las cifras del *runner* se leyeron de sus anotaciones y son las de aquí, no «las mismas» de palabra:
+**904** en el carril rápido y **459** en el de integración, los dos con **10 ficheros `.trx`** en su
+artefacto; **130** operaciones en el documento versionado, **107** tipos de error de **113** sitios,
+y `Frontal · arranque 411/450 KiB en 4 ficheros · total servido 598/900 KiB` carácter por carácter.
+
 El siguiente ADR es el **0041**: este ítem no abrió ninguno. Nada de lo que decidió enmienda un ADR
 anterior ni inventa una regla nueva —el índice no único y la segunda clave obligatoria son
 aplicaciones de lo que ya estaba escrito—, y su sitio es el `remarks` que las explica donde se
@@ -12045,6 +12053,12 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   el defecto que vigilan dentro de una transacción que se deshace y exigen que el barrido lo
   encuentre, y después exigen el barrido limpio (ADR-0020). Un barrido que deje de mirar no se
   queda en verde: se pone rojo en el arnés.
+
+  **El 2.5 lo cierra el run 35873219346** sobre `ce3ed0e`, **success al primer intento**, con sus
+  tres jobs —Frontal `107222394041`, Backend `107222394606` y Humo `107223943765`— y **65 pasos sin
+  uno solo fuera de verde**. Las cifras del *runner*, leídas de las anotaciones del run y no dadas
+  por buenas: **904** y **459** casos con **10 `.trx`** en cada artefacto, **130** operaciones,
+  **107** tipos de error de **113** sitios y el presupuesto idéntico al de esta máquina.
 
 - [ ] **2.6 · El ejercicio rige: qué exige cerrar, quién reabre y quién pregunta** — criterio de
   aceptación: cerrar **exige** que no quede ningún documento de inventario en borrador con fecha
