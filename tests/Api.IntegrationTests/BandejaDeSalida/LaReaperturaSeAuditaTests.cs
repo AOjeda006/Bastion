@@ -25,10 +25,18 @@ namespace Bastion.Api.IntegrationTests.BandejaDeSalida;
 /// </para>
 /// <para>
 /// <b>El motivo se comprueba en los dos sentidos.</b> Sin motivo, 400 con su código <b>y el
-/// ejercicio sigue cerrado</b>: sin esa segunda mitad, una validación puesta DESPUÉS de
-/// <c>Reabrir()</c> pasaría el 400 dejando el ejercicio abierto y sin nada en la cola, que es el
-/// peor de los desenlaces posibles. Con motivo, 204, abierto, y el evento en la bandeja con el
-/// motivo dentro.
+/// ejercicio sigue cerrado</b>. Con motivo, 204, abierto, y el evento en la bandeja con el motivo
+/// dentro.
+/// </para>
+/// <para>
+/// <b>Y la segunda mitad guarda algo más estrecho de lo que parece, medido.</b> Mover la
+/// comprobación justo <i>después</i> de <c>Reabrir()</c> no rompe nada y este caso sigue verde,
+/// porque <c>Reabrir()</c> solo toca la entidad rastreada y el camino de fallo no llega a
+/// <c>ConfirmarAsync</c>: la unidad de trabajo es la que hace inofensivo ese desorden. Lo que sí
+/// rompe es ponerla <b>después de guardar</b>, y entonces el 400 llega igual y el ejercicio se
+/// queda abierto —la primera mitad no lo nota y esta lo caza con «should be "Cerrado" but was
+/// "Abierto"»—. Lo que esta línea afirma, entonces, no es dónde está escrita la guarda: es que
+/// una negativa no deja nada escrito.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor compartido, con las migraciones aplicadas.</param>
