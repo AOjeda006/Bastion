@@ -554,6 +554,18 @@ internal static class Inventario
                 "contesta que solo resuelve lo viejo, así que no admite un ajuste nuevo y sus " +
                 "movimientos de ayer se siguen leyendo (ADR-0037)."),
 
+            ["Ajuste.AnulaAId"] = new(
+                "Ajuste",
+                "",
+                "el primero de la lista que apunta a un documento del PROPIO módulo, y por eso " +
+                "el puerto va vacío: no hay frontera que cruzar y sí hay clave ajena de verdad " +
+                "—misma tabla, mismo esquema—, así que el motor garantiza que la fila apuntada " +
+                "existe. No casa por nombre porque lo que nombra es el papel: «a quién anulo». " +
+                "Lo que la clave ajena NO dice —que esa fila esté anulada, que no haya dos " +
+                "inversos del mismo original, que ningún anulado se quede sin quien le apunte— " +
+                "lo sostiene LaDobleFlechaDeLaAnulacionTests, porque son afirmaciones sobre " +
+                "parejas de filas y sobre un estado."),
+
             ["Ajuste.EmpresaId"] = new(
                 "Empresa",
                 Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",

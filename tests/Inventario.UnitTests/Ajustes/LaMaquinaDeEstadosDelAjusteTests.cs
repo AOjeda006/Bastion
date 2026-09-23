@@ -227,10 +227,20 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
 
     /// <summary>Anular sale de confirmado, no de borrador.</summary>
     /// <remarks>
+    /// <para>
     /// <b>Y las dos mitades en el mismo caso</b>, porque por separado ninguna afirma lo que dice:
     /// un <c>Anular</c> que lanzara siempre pasaría la primera, y uno que no comprobara nada
     /// pasaría la segunda. Lo que hay que ver es que la puerta está donde está — un borrador no se
     /// anula, se tira.
+    /// </para>
+    /// <para>
+    /// <b>La puerta del borrador la guarda ahora <c>CrearInverso</c></b>, y eso es más fuerte que
+    /// antes, no menos: desde el 2.5 la anulación exige un inverso que apunte a este documento, y
+    /// el único sitio donde se pone ese enlace se niega a construirlo sobre un borrador. Así que
+    /// un borrador no tiene con qué anularse, y la primera mitad se afirma donde de verdad se
+    /// decide. El resto de las guardas de la anulación tiene su clase:
+    /// <see cref="ElInversoQueAnulaTests"/>.
+    /// </para>
     /// </remarks>
     [Fact]
     public void Anular_sale_de_confirmado_y_no_de_borrador()
@@ -238,14 +248,19 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         Ajuste borrador = UnAjuste();
         ConLinea(borrador, cantidad: 1m, factor: 1m);
 
-        Should.Throw<InvalidOperationException>(() => borrador.Anular(Anulado(borrador)));
+        Should.Throw<InvalidOperationException>(
+            () => borrador.CrearInverso(new DateOnly(2026, 4, 1), "Me equivoqué", s_momento));
         borrador.Estado.ShouldBe(EstadoDeAjuste.Borrador);
 
         Ajuste confirmado = UnAjuste();
         ConLinea(confirmado, cantidad: 1m, factor: 1m);
         confirmado.Confirmar(NumeroQueDioLaSerie, Confirmado(confirmado), s_momento);
 
-        confirmado.Anular(Anulado(confirmado));
+        Ajuste inverso = confirmado.CrearInverso(
+            new DateOnly(2026, 4, 1), "Me equivoqué", s_momento);
+        inverso.Confirmar(NumeroQueDioLaSerie + 1, Confirmado(inverso), s_momento);
+
+        confirmado.Anular(inverso, Anulado(confirmado));
 
         confirmado.Estado.ShouldBe(EstadoDeAjuste.Anulado);
         confirmado.EventosPendientes.Count.ShouldBe(

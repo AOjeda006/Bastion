@@ -70,6 +70,34 @@ internal sealed class ConfiguracionDeAjuste : IEntityTypeConfiguration<Ajuste>
 
         ajuste.Navigation(documento => documento.Lineas).AutoInclude();
 
+        // EL ENLACE DEL PAR, y es UNA columna en el inverso, no una en cada mitad. Dos columnas
+        // —«a quién anulo» aquí y «quién me anula» en el original— son dos sitios donde guardar el
+        // mismo hecho, y acaban discrepando; con esta sola, la flecha se recorre igual en los dos
+        // sentidos: hacia el original por el identificador, y desde el original buscando quién le
+        // apunta.
+        ajuste.Property(documento => documento.AnulaAId).SeAudita();
+
+        // CLAVE AJENA SÍ, y es la única de este documento: apunta a la MISMA tabla y al mismo
+        // esquema, así que no cruza ninguna frontera (§5, regla 4) — lo que impedía las otras
+        // cuatro era el esquema ajeno, no un desprecio por la integridad referencial. `Restrict` y
+        // no `Cascade`: borrar el original no puede llevarse por delante al documento que lo
+        // compensa (ADR-0007 §8).
+        ajuste.HasOne<Ajuste>()
+            .WithMany()
+            .HasForeignKey(documento => documento.AnulaAId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Y NO HAY ÍNDICE ÚNICO SOBRE `anula_a_id`, que es lo primero que se piensa para impedir
+        // dos inversos del mismo original. Se midió y hace daño: dos anulaciones simultáneas
+        // INSERTAN su inverso antes de tocar el original, así que el único chocaría PRIMERO y la
+        // perdedora saldría por una violación de unicidad —un `DbUpdateException`, o sea un `500`—
+        // en vez de por el testigo de concurrencia del original, que es un `412` con la versión
+        // dentro. Lo que separa a las dos anulaciones es la R11 sobre la fila del ajuste; que no
+        // haya dos inversos lo comprueba el barrido de `LaDobleFlechaDeLaAnulacionTests`, que es
+        // además el único que puede ver el caso que de verdad importa: un inverso cuyo original
+        // NO está anulado.
+        ajuste.HasIndex(documento => documento.AnulaAId);
+
         ajuste.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeOperacion });
 
         // LA ÚNICA MITAD DE LA R5 QUE PUEDE VIVIR EN ESTA TABLA: «correlativa» prohibe que dos

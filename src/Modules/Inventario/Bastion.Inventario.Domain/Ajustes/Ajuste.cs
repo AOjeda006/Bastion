@@ -96,6 +96,27 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// <summary>Por qué se ajusta, escrito por quien lo hace.</summary>
     public string Motivo { get; private set; } = string.Empty;
 
+    /// <summary>El ajuste que este documento compensa, o <c>null</c> si no es un inverso.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Un solo enlace y no dos, a propósito.</b> La tentación es guardar además en el original
+    /// un <c>AnuladoPorId</c> que apunte a su inverso, y entonces el par queda escrito en dos
+    /// sitios que pueden contradecirse — el mismo motivo por el que una línea lleva la cantidad
+    /// <b>con signo</b> y no una cantidad más un «entrada o salida». Con esta columna y el estado
+    /// del original la flecha se recorre igual en los dos sentidos: de aquí al original por el
+    /// identificador, y del original a aquí buscando quién le apunta.
+    /// </para>
+    /// <para>
+    /// <b>Lo que el motor sostiene y lo que no.</b> Lleva clave ajena —es la misma tabla y el
+    /// mismo esquema, así que no cruza ninguna frontera— y con ella el motor garantiza que apunta
+    /// a una fila que existe. Lo que el motor <b>no</b> puede decir es que esa fila esté
+    /// <c>Anulado</c>, ni que no haya dos inversos apuntando al mismo original, ni que un anulado
+    /// se quede sin nadie que le apunte. Eso lo sostiene
+    /// <c>LaDobleFlechaDeLaAnulacionTests</c>, con su barrido en los dos sentidos.
+    /// </para>
+    /// </remarks>
+    public Guid? AnulaAId { get; private set; }
+
     /// <summary>Las líneas del documento.</summary>
     public IReadOnlyList<LineaDeAjuste> Lineas => _lineas;
 
@@ -272,13 +293,101 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         ];
     }
 
-    /// <summary>Marca el ajuste como anulado por un inverso (R2).</summary>
+    /// <summary>
+    /// Construye el ajuste <b>inverso</b> que compensará a este: mismo almacén y misma serie, las
+    /// mismas líneas con la cantidad cambiada de signo, y todavía en borrador.
+    /// </summary>
     /// <remarks>
-    /// Aquí solo se mueve el estado del original. <b>Quien crea el documento inverso es el 2.5</b>,
-    /// y por eso este método no lo construye: adelantarlo dejaría media regla escrita —un ajuste
-    /// anulado sin nada que lo compense—, que es peor que no tenerla, porque parece que está.
+    /// <para>
+    /// <b>Hay UNA negación y no dos, y eso no es economía: es la forma de que no puedan
+    /// discrepar.</b> La línea guarda la cantidad tal como se escribió y nada más; la cantidad en
+    /// unidad base no se guarda aquí, la calcula <c>MovimientoStock</c> al registrar la fila del
+    /// libro. Así que negar aquí la introducida niega la base por construcción, y no hay un
+    /// segundo sitio donde olvidarse.
+    /// </para>
+    /// <para>
+    /// <b>El coste se copia, no se recalcula.</b> El inverso compensa lo que el original escribió,
+    /// no lo que costaría hoy: recalcularlo dejaría el par sumando cero en cantidad y distinto de
+    /// cero en valor, y entonces anular movería el valor del almacén sin mover una sola unidad.
+    /// </para>
+    /// <para>
+    /// <b>La fecha entra por parámetro y no se hereda</b>, que es lo que decidió el ítem 2.5. Un
+    /// inverso con la fecha del original se asentaría en su mismo periodo, y anular un documento
+    /// de un ejercicio cerrado sería escribir dentro de él — justo lo que la R9 del 2.6 prohibe.
+    /// Con fecha propia, el periodo del original conserva su movimiento y otro lo revierte.
+    /// </para>
+    /// <para>
+    /// <b>Esto solo no anula nada</b>, y el borrador que devuelve todavía no compensa a nadie: lo
+    /// hará cuando se confirme y se llame a <see cref="Anular"/>. Un inverso confirmado cuyo
+    /// original siguiera <c>Confirmado</c> es exactamente lo que el barrido de la doble flecha
+    /// busca, así que la costura entre los dos pasos no queda sin vigilar.
+    /// </para>
     /// </remarks>
+    /// <param name="fechaDeOperacion">Día al que se imputa el inverso. No es la del original.</param>
+    /// <param name="motivo">Por qué se anula, escrito por quien lo hace.</param>
+    /// <param name="momento">Ahora.</param>
+    /// <returns>El inverso en borrador, con sus líneas y sin número.</returns>
+    public Ajuste CrearInverso(DateOnly fechaDeOperacion, string motivo, DateTimeOffset momento)
+    {
+        if (Estado != EstadoDeAjuste.Confirmado)
+        {
+            throw new InvalidOperationException(
+                $"Un ajuste en estado «{Estado}» no se anula: un borrador se tira y un anulado ya " +
+                "tiene su inverso (R2).");
+        }
+
+        Ajuste inverso = Abrir(EmpresaId, SerieId, AlmacenId, fechaDeOperacion, motivo, momento);
+        inverso.AnulaAId = Id;
+
+        foreach (LineaDeAjuste linea in _lineas)
+        {
+            inverso.AnadirLinea(
+                linea.UbicacionId,
+                linea.ArticuloId,
+                -linea.CantidadIntroducida,
+                linea.UnidadIntroducidaId,
+                linea.FactorAUnidadBase,
+                linea.CosteUnitario,
+                momento);
+        }
+
+        return inverso;
+    }
+
+    /// <summary>Da por anulado el ajuste, contra el inverso que ya lo compensa (R2).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El inverso entra por parámetro y tiene que estar confirmado</b>, y ese orden es la
+    /// regla: primero existe el documento que compensa y después el original se da por anulado. Al
+    /// revés —mover el estado y crear luego el inverso— habría un instante con un ajuste anulado y
+    /// su efecto en el libro sin compensar, que es la media regla que el 2.3 se negó a escribir.
+    /// </para>
+    /// <para>
+    /// <b>Y se comprueba que el inverso es el de ESTE ajuste.</b> Sin esa guarda, anular admitiría
+    /// el inverso de otro documento y el par quedaría cruzado: el barrido lo vería después, pero
+    /// el daño —dos anulados y un solo inverso— ya estaría escrito en un libro de solo añadido.
+    /// </para>
+    /// </remarks>
+    /// <param name="inverso">El documento que lo compensa, ya confirmado.</param>
     /// <param name="evento">Lo que se cuenta de la anulación.</param>
-    public void Anular(EventoDeIntegracion evento) =>
+    public void Anular(Ajuste inverso, EventoDeIntegracion evento)
+    {
+        ArgumentNullException.ThrowIfNull(inverso);
+
+        if (inverso.AnulaAId != Id)
+        {
+            throw new InvalidOperationException(
+                "El inverso con el que se anula no compensa a este ajuste: lo que llega apunta a " +
+                $"«{inverso.AnulaAId}» y esto es «{Id}» (R2).");
+        }
+
+        if (inverso.Estado != EstadoDeAjuste.Confirmado)
+        {
+            throw new InvalidOperationException(
+                $"El inverso está en estado «{inverso.Estado}»: un ajuste no se da por anulado " +
+                "contra un documento que todavía no ha movido el libro (R2, R3).");
+        }
+
         Transitar(EstadoDeAjuste.Confirmado, EstadoDeAjuste.Anulado, evento);
+    }
 }

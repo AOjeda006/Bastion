@@ -7,7 +7,10 @@ namespace Bastion.Inventario.Domain.Movimientos;
 /// <remarks>
 /// <para>
 /// <b>Es una lista cerrada y hoy tiene un solo valor</b>, que es el único documento que existe.
-/// El recuento entra en el 2.4 y la transferencia en el 2.5; cada uno añade su valor y su caso.
+/// La transferencia entra en el 2.11 y el recuento en el 2.12; cada uno añade su valor y su caso.
+/// El 2.5 NO añade ninguno, y esa ausencia es la decisión: un ajuste inverso es un ajuste, así
+/// que sus filas salen con este mismo valor — que es lo que permite sumar el par entero de una
+/// vez, en vez de tener que unir dos clases de fila para comprobar que se compensan.
 /// Un valor que ningún productor produce es el defecto del ítem 1.10 y lo pone rojo
 /// <c>LaMatrizDeLosPuertosDeEstadoTests</c>, así que la lista no se adelanta a los ítems.
 /// </para>
