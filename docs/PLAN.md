@@ -4815,7 +4815,7 @@ pone rojo.
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 4 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 5 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -4991,6 +4991,75 @@ tres jobs —*Backend*, *Frontal* y *Humo*— sin un solo paso fuera de verde; l
 volumen y puertos propios, y su segundo arranque enseñó lo que ningún carril enseña: el permiso que
 el ítem estrena, `inventario.ajuste.confirmar`, entra en una instalación ya en marcha **por el
 migrador** y no por la semilla.
+
+**Hecho el 2.5**, el 2026-09-23, en la rama `item-2.5-anulacion-con-contra-documento`. Lo
+primero no fue código: fue que **al criterio escrito le faltaba la afirmación que importa**. Sus
+cinco cláusulas eran estructurales —que haya inverso, que esté confirmado, que lleve su número,
+que la flecha vaya en los dos sentidos— y las cuatro salen en verde con un error de signo dentro,
+con el almacén movido al revés de lo que el documento dice. La que decide se escribió antes que
+nada (`3057029`): **sumar el libro del par original+inverso por artículo, almacén y ubicación y
+exigir cero**, con la disciplina del ADR-0020 encima, porque sobre cero filas la suma también da
+cero.
+
+**Y la negación es una, no dos.** La línea guarda solo `CantidadIntroducida`; la cantidad en unidad
+base la deriva `MovimientoStock` con el factor. Así que el inverso se construye negando **un** valor
+y el otro sale negado solo —si se negaran los dos, el producto volvería a ser positivo—. Está
+escrito en el agregado porque es justo donde se equivocaría quien lo lea deprisa.
+
+**La anulación estrena puerta propia y es la segunda acción de toda la API que exige
+`Idempotency-Key`.** No por simetría con la confirmación: por la misma razón física: el inverso
+toma su correlativo del cerrojo del 2.4, y el mecanismo **revienta** sin transacción abierta, cuyo
+único dueño es el filtro de idempotencia (ADR-0014). `TodaEscrituraDiceComoSeProtegeTests` pasó de
+afirmar que la lista tenía **exactamente una** a afirmar que tiene **dos**, con su motivo escrito al
+lado, que es lo que impide que la tercera entre por parecido.
+
+**El índice de `anula_a_id` NO es único, y eso es una decisión medida.** Un único parecía gratis y
+habría cambiado la respuesta de la carrera: dos anulaciones simultáneas **insertan** su inverso
+antes de tocar el original, así que saltaría primero el ínico y el perdedor se llevaría un
+`DbUpdateException` —un 500— en vez del `412` del testigo de concurrencia. Quien sostiene «un solo
+inverso» es la R11 sobre la fila del ajuste, y el barrido que lo vigila en la base es
+`LaDobleFlechaDeLaAnulacionTests`, no una restricción de columna. El porqué está en la
+configuración de EF, en el `remarks` de la migración y en la fila de la R2.
+
+**«Anular dos veces» se ejerce con dos transacciones de verdad.** Dos llamadas seguidas no prueban
+nada de concurrencia: la segunda se encuentra el documento ya anulado y la guarda de estado la
+rechaza con un `409` sin que nada simultáneo haya ocurrido —ese caso también está, y dice lo que
+dice—. El de verdad para al perdedor a medias: lee el mismo `Confirmado` y se queda **dentro** de
+su transacción mientras el ganador termina. Y el efecto se afirma dos veces: queda **un** inverso, y
+el contador de la serie vuelve a **2** porque el número del perdedor se devolvió.
+
+**R2 pasa a viva y su fila lo dice cláusula por cláusula**, con lo que **no** se hace cumplir dicho
+en su sitio: la tabla de documentos no es de solo añadido, así que un cambio escrito a mano contra
+`inventario.ajustes` no lo para nadie. La regla cierra el camino del programa, no el del
+administrador, y escribirlo es más útil que dejar la fila diciendo «viva» a secas.
+
+**Las cifras, con la orden que las mide.** Carril rápido
+—`dotnet test Bastion.sln --filter "Category!=Integracion"`— **904 casos en 10 ensamblados**, desde
+896. Carril de integración —`--filter "Category=Integracion"`, con Docker— **459**, desde 452:
+**84** en `Organizacion.IntegrationTests` y **375** en `Api.IntegrationTests`. El documento
+versionado, **130** operaciones desde 129; el catálogo de error, **107** tipos de **113** sitios.
+Frontal: **103** casos, sin un solo aviso de `act()`, y presupuesto **411/450 KiB** de arranque y
+**598/900** servido. Son de esta máquina; las del *runner* van en la casilla del ítem con su run.
+
+**La tanda de mutación del ADR-0038 confirmó el diagnóstico que abrió el ítem, y midió lo que no se
+sabía:** con la negación quitada, el carril de integración devuelve **un solo rojo** y es el caso
+que se escribió por esto; los cuatro estructurales de la misma clase y las dos mitades de la doble
+flecha **siguen verdes**, con el almacén movido al doble. Lo que no se sabía es que el carril
+rápido **no** es ciego aquí, al revés que en el 2.4: lo caza en 500 ms y sin Docker. El reparto
+entero, con las dos listas por nombre, en la casilla del **2.5**.
+
+**El humo lo obligaba el ítem**, que trae una migración. Contra un **proyecto de compose aparte**
+—volumen y puertos propios, para no tocar la base del día a día, que estaba en pie—, y lo que
+enseña no lo enseña ningún carril: sobre una base arrancada de verdad, `anula_a_id` queda `uuid`
+nullable, su índice `ix_ajustes_anula_a_id` **sin** `UNIQUE` y la clave ajena
+`fk_ajustes_ajustes_anula_a_id` con `ON DELETE RESTRICT`. Lo diseñado y lo desplegado, leídos del
+catálogo del motor y no del fichero de migración. El segundo arranque (ADR-0035) salió en verde con
+el rol del sistema en **95** permisos, entre ellos el que estrena el ítem.
+
+El siguiente ADR es el **0041**: este ítem no abrió ninguno. Nada de lo que decidió enmienda un ADR
+anterior ni inventa una regla nueva —el índice no único y la segunda clave obligatoria son
+aplicaciones de lo que ya estaba escrito—, y su sitio es el `remarks` que las explica donde se
+leen, no un documento aparte.
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
@@ -11876,7 +11945,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 
   El siguiente ADR es el **0041**.
 
-- [ ] **2.5 · La anulación con contra-documento** — criterio de aceptación: un ajuste confirmado no se
+- [x] **2.5 · La anulación con contra-documento** — criterio de aceptación: un ajuste confirmado no se
   edita ni se borra; se **anula**, y la anulación crea un **ajuste inverso** que es un documento
   confirmado de pleno derecho —con su número del 2.4 y sus movimientos del 2.3—, no una marca; **el
   par suma cero**, afirmado sumando el libro del original y del inverso **por artículo, almacén y
@@ -11888,6 +11957,94 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   comprobación propia en los dos sentidos **y afirmando en los dos que ha mirado algo**; y anular dos
   veces el mismo documento no crea dos inversos, comprobado con **dos transacciones de verdad** y no
   con dos llamadas seguidas. Hace viva **R2** y cambia su fila.
+
+  **Hecho el 2026-09-23**, en la rama `item-2.5-anulacion-con-contra-documento`. El orden de los
+  commits importa y por eso se deja escrito: primero **el criterio**, porque le faltaba la
+  afirmación que decide y escribirla después del código es escribirla para que pase (`3057029`);
+  luego el inverso en el dominio, con su migración y sus ocho casos (`eb55b17`); después el borde
+  —caso de uso, permiso propio, acción que exige la clave y el par en la respuesta— (`2cb1d6a`); y
+  por último los siete casos contra PostgreSQL y la fila de la R2 (`a61b76c`).
+
+  **La cantidad se niega UNA vez, no dos**, y conviene saberlo antes de leer el agregado:
+  `LineaDeAjuste` guarda solo `CantidadIntroducida`, y la cantidad en unidad base la deriva
+  `MovimientoStock` multiplicando por el factor. Negar las dos devolvería el producto a positivo.
+
+  **El índice de `anula_a_id` no es único a propósito.** Dos anulaciones simultáneas insertan su
+  inverso **antes** de tocar el original, así que un único saltaría primero y convertiría el `412`
+  del testigo de concurrencia en un `DbUpdateException` —un 500—. Quien sostiene «un solo inverso»
+  es la R11 sobre la fila del ajuste; quien lo vigila en la base es un barrido.
+
+  ### La tanda de mutación del ADR-0038
+
+  **Una mutación, sobre la línea que decide y no sobre una guarda de entrada**: en
+  `Ajuste.CrearInverso`, el `-` de `-linea.CantidadIntroducida`. Es la equivocación verosímil de
+  este ítem —copiar las líneas y olvidarse del signo— y la única que deja el documento entero bien
+  formado. Se puso sola, se corrieron los **dos** carriles enteros, se anotaron los rojos por nombre
+  y se revirtió con `git checkout --` y **recompilando**, con el árbol limpio comprobado. La orden
+  que lo midió:
+
+  ```bash
+  dotnet test Bastion.sln --filter "Category!=Integracion" --nologo
+  dotnet test Bastion.sln --filter "Category=Integracion"  --nologo
+  ```
+
+  | Mutación | Qué equivocación imita | Rojos |
+  |---|---|---|
+  | **A** · `CrearInverso` copia la cantidad **sin** negarla | copiar las líneas del original y olvidar el signo | 2 rápidos + **1** de integración |
+
+  **Lo que la tanda confirma, que es lo que abrió el ítem:** en el carril de integración la
+  mutación deja **un solo rojo**, y es el caso que se escribió por esto. Los otros cuatro de
+  `LaAnulacionConContraDocumentoTests` —que el inverso sea un documento confirmado con su número y
+  su flecha, que anular dos veces seguidas no cree dos, que dos simultáneas tampoco, que sin la
+  clave sea `428`— y **las dos mitades de la doble flecha** siguen verdes, con el almacén movido al
+  doble: el ajuste había añadido 36 unidades y el «inverso» añade otras 36. El mensaje del rojo lo
+  enseña tal cual —`artículo → lo que ha quedado movido`: `72.000000` y `-5.000000`—. Sin esa
+  afirmación el ítem habría cerrado en verde con el stock al revés.
+
+  **Y lo que no se sabía antes de medirlo:** aquí el carril rápido **no** es ciego, al revés que en
+  el 2.4. Caza la mutación en medio segundo y sin arrancar un contenedor, porque los movimientos
+  salen del agregado y se pueden sumar sin base de datos. El caso de integración no sobra por eso:
+  el rápido suma **lo que el agregado devuelve** y el otro **lo que quedó escrito en el libro**, que
+  son dos afirmaciones distintas —entre una y otra están el mapeo, la partición y la transacción—.
+
+  **Vistos en rojo** —lo que cada uno sostiene, lo sostiene porque se le ha visto fallar—:
+
+  - `LaAnulacionConContraDocumentoTests.El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion` (A)
+  - `ElInversoQueAnulaTests.El_par_suma_cero_en_unidad_base` (A)
+  - `ElInversoQueAnulaTests.El_inverso_copia_las_lineas_con_la_cantidad_negada` (A)
+
+  **Y tres más, rojos por su cuenta durante el ítem**, que se anotan porque son guardas del
+  proyecto haciendo su trabajo y no hallazgos de la tanda:
+  `LosIdentificadoresAjenosTests.Ningun_identificador_del_dominio_se_queda_sin_clasificar` en cuanto
+  nació `Ajuste.AnulaAId` (ADR-0024: el primer identificador que apunta a un documento del **propio**
+  módulo); los **dos** casos de `TodaEscrituraDiceComoSeProtegeTests` en cuanto apareció la acción
+  nueva; y `LasDiecisieteReglasTests.Lo_que_la_tabla_nombra_existe` al reescribir la fila de la R2,
+  porque lee **todo** testigo entre comillas con inicial mayúscula como un tipo que tiene que
+  existir, y ahí había tres verbos.
+
+  **Vistos solo en verde** —sostienen lo que dicen y nada más; la lista no es una confesión, es el
+  alcance real de lo medido—:
+
+  - `LaAnulacionConContraDocumentoTests.El_inverso_es_un_documento_confirmado_con_su_numero_y_su_flecha`
+  - `LaAnulacionConContraDocumentoTests.Anular_dos_veces_seguidas_no_crea_dos_inversos`
+  - `LaAnulacionConContraDocumentoTests.Dos_anulaciones_simultaneas_dejan_un_solo_inverso`
+  - `LaAnulacionConContraDocumentoTests.Sin_la_cabecera_la_anulacion_es_428_y_no_toca_nada`
+  - `LaDobleFlechaDeLaAnulacionTests.Ningun_inverso_compensa_a_un_documento_que_no_esta_anulado`
+  - `LaDobleFlechaDeLaAnulacionTests.Ningun_anulado_se_queda_sin_exactamente_un_inverso`
+  - `ElInversoQueAnulaTests.El_inverso_hereda_la_serie_y_el_almacen_y_estrena_la_fecha`
+  - `ElInversoQueAnulaTests.Crear_el_inverso_no_anula_el_original`
+  - `ElInversoQueAnulaTests.Un_ajuste_anulado_no_da_un_segundo_inverso`
+  - `ElInversoQueAnulaTests.Anular_rechaza_el_inverso_de_otro_ajuste`
+  - `ElInversoQueAnulaTests.Anular_rechaza_un_inverso_en_borrador`
+  - `ElInversoQueAnulaTests.Sin_inverso_no_hay_anulacion`
+  - `LaMaquinaDeEstadosDelAjusteTests.Anular_sale_de_confirmado_y_no_de_borrador`
+
+  **Los dos de la doble flecha están en esa lista y aun así se les ha visto fallar**, y la
+  distinción importa: no se ponen rojos con **esta** mutación —la flecha queda intacta, lo único
+  torcido es el signo— pero cada uno lleva su arnés dentro, así que en **cada** ejecución plantan
+  el defecto que vigilan dentro de una transacción que se deshace y exigen que el barrido lo
+  encuentre, y después exigen el barrido limpio (ADR-0020). Un barrido que deje de mirar no se
+  queda en verde: se pone rojo en el arnés.
 
 - [ ] **2.6 · El ejercicio rige: qué exige cerrar, quién reabre y quién pregunta** — criterio de
   aceptación: cerrar **exige** que no quede ningún documento de inventario en borrador con fecha
