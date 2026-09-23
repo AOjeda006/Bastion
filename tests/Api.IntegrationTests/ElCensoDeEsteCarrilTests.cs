@@ -169,6 +169,7 @@ public sealed class ElCensoDeEsteCarrilTests
         // cerrojo compartido de la confirmación no existe fuera de él; los dos últimos, porque
         // una carrera entre dos transacciones de verdad no se imita con dobles.
         "ElEjercicioRigeElAjusteTests.Anular_un_ajuste_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto",
+        "ElEjercicioRigeElAjusteTests.Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso",
         "ElEjercicioRigeElAjusteTests.Cerrado_el_ejercicio_el_borrador_ya_no_se_confirma_y_no_queda_nada_a_medias",
         "ElEjercicioRigeElAjusteTests.Con_el_ejercicio_abierto_la_confirmacion_pasa_y_el_documento_queda_numerado",
         "ElEjercicioRigeElAjusteTests.El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro",

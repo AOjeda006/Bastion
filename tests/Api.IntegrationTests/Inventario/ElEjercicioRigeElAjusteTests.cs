@@ -244,6 +244,56 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
     }
 
     [Fact]
+    public async Task Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso()
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(396);
+
+        // EL HUECO, QUE ES EL CASO QUE HACE VISIBLE ESTA GUARDA. El de arriba no la ejerce: allí
+        // el inverso cae en el ejercicio abierto y la pregunta se contesta que sí. Aquí el
+        // documento vive en un año viejo CON su ejercicio abierto -se confirma sin problema-, y
+        // del año en curso no hay ninguno, que es lo que pasa cada 1 de enero hasta que alguien
+        // abre el año. Anular tendría que escribir el inverso con fecha de HOY, y hoy no cae en
+        // ningún periodo.
+        var haceNueveAnios = new DateOnly(Hoy.Year - 9, 6, 15);
+
+        (AbrirAjusteDto peticion, _, _) =
+            await UnAjusteCompletoConSuEjercicioAsync(cliente, "EJE-G", 397, haceNueveAnios);
+
+        await using ElModuloDeInventario modulo = new(postgres, empresa.Id);
+
+        Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
+        alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");
+
+        Resultado<AjusteDto> confirmacion = await modulo.ConfirmarAsync(alta.Valor.Id);
+        confirmacion.EsCorrecto.ShouldBeTrue(
+            $"el ejercicio del documento SÍ está abierto. Contestó «{confirmacion.Error?.Codigo}»");
+
+        Resultado<AnulacionDto> anulacion =
+            await modulo.AnularAsync(alta.Valor.Id, "Duplicado detectado en la revisión");
+
+        anulacion.EsCorrecto.ShouldBeFalse(
+            "el inverso es un documento como cualquier otro y la R9 le vale igual: escribirlo " +
+            "fuera de todo ejercicio dejaría un movimiento que ninguna autoliquidación recoge");
+
+        anulacion.Error!.Codigo.ShouldBe(
+            "ajuste-sin-ejercicio",
+            "y lo dice de HOY, que es la fecha que el inverso iba a llevar, no de la del original");
+
+        // Y NO QUEDA NADA A MEDIAS: ni el inverso escrito, ni el original marcado. La guarda va
+        // ANTES de `CrearInverso`, así que no hay documento que deshacer.
+        await using InventarioDbContext inventario = postgres.AbrirInventario(empresa.Id);
+
+        (await inventario.Ajustes.CountAsync())
+            .ShouldBe(1, "el inverso no llegó a nacer");
+
+        Ajuste original = await inventario.Ajustes.SingleAsync(fila => fila.Id == alta.Valor.Id);
+
+        original.Estado.ShouldBe(
+            EstadoDeAjuste.Confirmado,
+            "anular es todo o nada: si el inverso no se escribe, el original no se marca");
+    }
+
+    [Fact]
     public async Task El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro()
     {
         (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(388);
