@@ -4812,6 +4812,153 @@ porque el filtro se aparta sin abrir transacción y la atomicidad se va con ella
 entera en los dos sentidos, así que la segunda entrada entra con su motivo escrito o el carril se
 pone rojo.
 
+### Tomadas por el agente de desarrollo — ítem 2.6, antes de escribir su código (2026-09-23)
+
+El ítem 2.6 es **«el ejercicio rige»**: qué exige cerrar, quién reabre, quién pregunta, y —lo
+primero de todo— que **una fecha caiga en un solo ejercicio**. Lo que sigue son las cuatro
+decisiones que la puerta de clarificación resolvió con el usuario, más lo que el encargo ya traía
+decidido y lo que se midió antes de escribir. Está aquí, y no en el chat, porque tiene que
+sobrevivir a un `/compact`.
+
+#### Lo que el encargo ya traía decidido (no se reabre)
+
+- **El puerto de los documentos vive en Organización**, lo implementa cada módulo que tenga
+  documentos, y el cierre **recorre los registrados afirmando que el conjunto no está vacío**. Sin
+  esa afirmación, un módulo que se olvidara de registrarse haría que cerrar pasara sin preguntar a
+  nadie, que es el peor desenlace posible: el de un permiso que nunca dice que no. Es el patrón que
+  van a copiar cinco módulos, y `Modificar` usa el mismo puerto.
+- **Confirmar contra cerrar se serializa con cerrojo de fila**, y **no** con R11: confirmar no
+  escribe la fila del ejercicio, así que el testigo de concurrencia del ejercicio no se entera.
+  **`FOR SHARE` al confirmar** —la guarda— y **`FOR UPDATE` al cerrar** —que además hace de cortesía
+  con los borradores—, con **la comprobación del estado y el cerrojo en la misma lectura**: si el
+  estado se lee antes y se bloquea después, entre las dos hay sitio para el cierre.
+- **Anular un ajuste de un ejercicio cerrado sigue funcionando**: el inverso cae en el ejercicio
+  abierto por su fecha propia y el cerrado no se toca. Es el caso de uso que justificó la fecha
+  propia del inverso en el 2.5, así que el 2.6 no puede romperlo.
+- **Una sola fecha por documento**, con un caso que intente dejar uno a caballo de un cierre.
+- **R9 pasa a viva**, y su fila se reescribe cláusula por cláusula con el vocabulario de R2, R3 y R5.
+
+#### Decisión 1 — el motivo de reabrir viaja en el cuerpo, y el endpoint cambia
+
+Reabrir es hoy `DELETE /api/v1/organizacion/ejercicios/{id}/cierre`, y el `remarks` del controlador
+defiende esa forma por escrito: «el cierre es el sub-recurso, así que reabrir es borrarlo». Es
+elegante y **se cambia igualmente**, a `POST /api/v1/organizacion/ejercicios/{id}/reapertura` con
+cuerpo:
+
+```
+POST /api/v1/organizacion/ejercicios/{id}/reapertura
+If-Match: "7"
+
+{ "motivo": "Subsanación del modelo 303 del 4T" }
+```
+
+**Por qué no un cuerpo en el `DELETE`.** RFC 9110 lo permite y no le da semántica, y ese «no le da
+semántica» es el problema: es la forma que proxies, CDNs y varios clientes HTTP descartan **en
+silencio**. El día que el cuerpo llegue vacío, un campo obligatorio se habrá vuelto opcional sin que
+nadie lo decida, y el rastro que quedará en la auditoría será un motivo en blanco justo en la
+operación más delicada del módulo.
+
+**Por qué no en la query.** `?motivo=…` viaja seguro, pero el motivo es **prosa que alguien escribe
+para una auditoría**, y acabaría en el log de acceso del proxy, en el historial del navegador y en
+el `Referer`. Un dato que existe para ser auditado no se deja por el camino en sitios que nadie
+audita.
+
+**Lo que cuesta:** reescribir ese `remarks` —el argumento del sub-recurso deja de aplicar y hay que
+decir por qué—, y regenerar `docs/api/openapi.json` y `frontend/src/shared/api/esquema.ts`.
+
+#### Decisión 2 — cerrar y reabrir dejan de ser idempotentes: 409
+
+Hoy son idempotentes **por diseño y con su comentario**:
+
+```csharp
+/// <summary>Cierra el ejercicio. Idempotente.</summary>
+public void Cerrar() => Estado = EstadoDeEjercicio.Cerrado;
+```
+
+Se cambia: cerrar un ejercicio ya cerrado y reabrir uno ya abierto contestan **409** con su error.
+Tres razones, y la tercera es la que decide:
+
+1. **Es el precedente de la casa.** Anular dos veces seguidas un ajuste es 409, no 204. Dos verbos
+   de transición de estado en el mismo producto no pueden contestar distinto a la misma situación.
+2. **Un evento auditado con motivo obligatorio sobre un no-op sería una mentira.** Reabrir lo ya
+   abierto emitiría `organizacion.ejercicio-reabierto` con un motivo escrito para una reapertura que
+   no ocurrió, y eso envenena justo el registro que existe para que alguien lo lea dentro de un año.
+3. **Es lo que convierte la comparación del estado en la línea que decide.** Si cerrar es
+   idempotente, comparar el estado dentro de la lectura con cerrojo no cambia ningún desenlace, y
+   una línea que no cambia ningún desenlace no se puede mutar: la mutación saldría verde y el arnés
+   no diría nada. Con el 409, esa comparación **es** el desenlace, y es la que se muta.
+
+#### Decisión 3 — `EliminarEjercicio` es el tercer llamante del puerto
+
+Hoy eliminar solo pregunta `TieneSeriesAsync`. Borrar un ejercicio cuyo intervalo contiene ajustes
+los deja **exactamente** en la tierra de nadie que este ítem cierra en `Modificar`: pasan a
+`SinEjercicio` sin que nadie los toque, y encima sin dejar rastro de qué intervalo los cubría. Es el
+mismo puerto, la misma pregunta y el mismo caso de prueba, con su propio error. Cerrar la ventana y
+dejar la puerta abierta no es media solución: es ninguna, porque el camino que queda es el que se
+usará.
+
+#### Decisión 4 — el único `(empresa_id, anio)` se queda, al lado del EXCLUDE
+
+Ya existe `HasIndex(fila => new { fila.EmpresaId, fila.Anio }).IsUnique()`, con su comentario «un
+año, un ejercicio, por empresa». **No se toca.** Los dos dicen cosas distintas y las dos hacen
+falta:
+
+| Restricción | Qué afirma | Qué deja pasar hoy sin ella |
+|---|---|---|
+| Único `(empresa_id, anio)` | la **etiqueta** no se repite | dos ejercicios llamados «2026» |
+| `EXCLUDE USING gist` (nuevo) | **una fecha cae en un solo ejercicio** | `2026` = ene–dic y `2027` = jul 2026–jun 2027, conviviendo y solapándose seis meses |
+
+Que el único no bastaba se ve en la segunda fila: los años son distintos, así que el índice no dice
+nada, y sin embargo cualquier fecha del segundo semestre de 2026 cae en **dos** ejercicios.
+
+**El coste, escrito para que no sorprenda:** una empresa que pase de año natural a partido no podrá
+tener «2026 natural» y «2026 transición» a la vez, aunque no se solapen, porque comparten etiqueta.
+Es un supuesto real —el art. 26 LIS admite periodos cortos— y **no** se resuelve hoy: se anota, y si
+aparece se decide entonces si `Anio` deja de ser único o pasa a derivarse del intervalo. Lo que no
+se hace es quitar una restricción hoy por un caso que todavía no existe.
+
+**Y una observación que este ítem no toca:** `Anio` lo elige quien crea el ejercicio y puede mentir
+—nada impide `Anio = 2030` con fechas de 2026—. Queda fuera del 2.6 a propósito; derivarlo cambiaría
+la firma de `Crear`, el DTO y el contrato publicado, y eso es un ítem, no un «de paso».
+
+#### Lo medido antes de escribir: el cerrojo y el ETag, contra PostgreSQL 17.6
+
+La recomendación del encargo venía medida en 16 y había que comprobarla en **17.6**, que es la
+imagen del `compose`. Se midió en un contenedor propio y desechable, **con el `UPDATE` de
+contraste**: sin él, un «no cambia» no diría nada, porque podría ser que la consulta no mirara lo
+que cree que mira.
+
+```sql
+SELECT xmin::text, xmax::text, ctid::text FROM ejercicios WHERE id = 1;
+```
+
+| Lo que se ejecuta | `xmin` | `xmax` | `ctid` |
+|---|---|---|---|
+| de partida | 741 | 0 | (0,1) |
+| `BEGIN; SELECT … FOR SHARE; COMMIT;` | **741**, no cambia | 742 | (0,1) |
+| `BEGIN; SELECT … FOR UPDATE; COMMIT;` | **741**, no cambia | 743 | (0,1) |
+| **el contraste:** `UPDATE ejercicios SET estado = 'Cerrado'` | **744** | 0 | **(0,2)** |
+
+**El testigo de concurrencia de este sistema es `xmin`**, así que la conclusión es directa: un
+cerrojo de fila escribe en `xmax` y **no invalida el ETag del ejercicio**; un `UPDATE` sí, y además
+mueve la fila de tupla. La recomendación aguanta en 17.6.
+
+Y que el cerrojo **serializa de verdad**, que es lo otro que hay que comprobar antes de fiarse:
+
+| Dos transacciones, la primera con `pg_sleep(3)` | Lo que esperó la segunda |
+|---|---|
+| `FOR UPDATE` contra `FOR UPDATE` | **2 128 ms** |
+| `FOR SHARE` contra `FOR SHARE` | **189 ms** — no se estorban, que es lo que hace de confirmar una guarda barata |
+| `FOR UPDATE` contra un `FOR SHARE` abierto | **2 149 ms** — cerrar espera a que la confirmación en vuelo termine |
+
+Las tres filas juntas son el argumento: dos confirmaciones simultáneas no se pisan, y un cierre
+espera a las confirmaciones que ya estaban dentro. Eso es exactamente el reparto guarda/cortesía que
+el encargo pedía dejar escrito.
+
+**Es SQL crudo sobre otro esquema**, así que entra en la lista cerrada con su argumento escrito, y
+se prueba con **dos transacciones de verdad**, no con un doble en memoria: un cerrojo que no bloquea
+es un cerrojo que ningún test de una sola conexión distingue del correcto.
+
 
 ## Estado actual
 
