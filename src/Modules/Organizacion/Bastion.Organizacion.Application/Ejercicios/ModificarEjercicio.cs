@@ -58,6 +58,17 @@ internal sealed class ModificarEjercicio(
             return Resultado.Fallo<EjercicioDto>(errores.AError());
         }
 
+        // Mover un ejercicio puede meterlo encima de otro, así que pregunta lo mismo que el alta.
+        // `excepto: id` es lo que hace que guardar sin mover las fechas no se encuentre solapado
+        // consigo mismo, que es el 409 más absurdo que se puede dar.
+        if (await ejercicios
+                .HaySolapeAsync(
+                    ejercicio.EmpresaId, peticion.FechaDeInicio, peticion.FechaDeFin, id, cancelacion)
+                .ConfigureAwait(false))
+        {
+            return Resultado.Fallo<EjercicioDto>(ErroresDeEjercicio.Solapado());
+        }
+
         ejercicio.Modificar(peticion.FechaDeInicio, peticion.FechaDeFin);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 

@@ -18,6 +18,29 @@ internal sealed class RepositorioDeEjercicios(OrganizacionDbContext contexto) : 
         contexto.Ejercicios.AnyAsync(
             ejercicio => ejercicio.EmpresaId == empresaId && ejercicio.Anio == anio, cancelacion);
 
+    public Task<bool> HaySolapeAsync(
+        Guid empresaId,
+        DateOnly inicio,
+        DateOnly fin,
+        Guid? excepto,
+        CancellationToken cancelacion) =>
+        contexto.Ejercicios.AnyAsync(
+            ejercicio => ejercicio.EmpresaId == empresaId
+                && (excepto == null || ejercicio.Id != excepto)
+
+                // Dos intervalos CERRADOS se pisan cuando cada uno empieza antes de que acabe el
+                // otro. Las dos comparaciones son `<=` porque los dos extremos están INCLUIDOS: con
+                // `<`, dos ejercicios que compartieran un solo día pasarían por aquí y los pararía
+                // la base con un 500 en vez de con el 409 que esto existe para poder dar. Es el
+                // mismo `'[]'` que lleva el `daterange` de la restricción, y tienen que decir lo
+                // mismo o la comprobación de aquí sobraría y estorbaría.
+                //
+                // Aquí no hay extremo nulo, a diferencia de un tramo de tarifa: un ejercicio
+                // siempre tiene fin, y por eso no aparece ningún `DateOnly.MaxValue`.
+                && ejercicio.FechaDeInicio <= fin
+                && inicio <= ejercicio.FechaDeFin,
+            cancelacion);
+
     public Task<bool> ExisteAsync(Guid id, CancellationToken cancelacion) =>
         contexto.Ejercicios.AnyAsync(ejercicio => ejercicio.Id == id, cancelacion);
 

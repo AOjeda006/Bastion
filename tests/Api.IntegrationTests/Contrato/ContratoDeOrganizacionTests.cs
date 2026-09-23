@@ -16,6 +16,7 @@ using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Domain.Series;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Contrato;
@@ -369,6 +370,174 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
             .ShouldBe("/errors/empresa-activa-no-operativa");
     }
 
+    /// <summary>
+    /// Dos ejercicios de la misma empresa no pueden pisarse, <b>aunque se llamen distinto</b>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Los años son distintos a propósito</b>, y es lo que da sentido al caso: el único
+    /// <c>(empresa_id, anio)</c> que ya existía mira la etiqueta, y para él «2026» y «2027» son
+    /// dos ejercicios que no se parecen en nada. Con solo ese índice, este alta entraba. Y
+    /// entonces cualquier día del segundo semestre de 2026 caía en <b>dos</b> ejercicios, y «el
+    /// ejercicio de esta operación» dejaba de tener una sola respuesta.
+    /// </para>
+    /// <para>
+    /// Es el ejercicio partido de verdad —julio a junio, que la ley admite—, no un caso
+    /// inventado: por eso el hueco existía y por eso no se veía.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Dos_ejercicios_de_la_misma_empresa_no_pueden_pisarse_aunque_se_llamen_distinto()
+    {
+        (HttpClient cliente, _) = await _api.EnUnaEmpresaNuevaAsync("00000094W");
+        using HttpClient suyo = cliente;
+
+        await CrearEjercicio(cliente, 2026);
+
+        using HttpResponseMessage respuesta = await cliente.PostAsJsonAsync(
+            Ejercicios,
+            new CrearEjercicioDto
+            {
+                Anio = 2027,
+                FechaDeInicio = new DateOnly(2026, 7, 1),
+                FechaDeFin = new DateOnly(2027, 6, 30),
+            });
+
+        respuesta.StatusCode.ShouldBe(
+            HttpStatusCode.Conflict,
+            "han entrado dos ejercicios que comparten seis meses. El `type` tiene que decir que " +
+            "es un solape y no un duplicado: se arreglan distinto —uno cambiando el año, el otro " +
+            "moviendo las fechas—");
+
+        (await LeerProblema(respuesta)).GetProperty("type").GetString()
+            .ShouldBe("/errors/ejercicio-solapado");
+    }
+
+    /// <summary>
+    /// Mover un ejercicio encima de otro es 409; <b>dejarlo donde está, no</b>.
+    /// </summary>
+    /// <remarks>
+    /// La segunda mitad es la que prueba el <c>excepto</c> de <c>HaySolapeAsync</c>. Sin él, un
+    /// ejercicio se encontraría solapado <b>consigo mismo</b> y guardar sin mover las fechas sería
+    /// imposible: el 409 más absurdo que se puede dar, y uno que la primera mitad sola no
+    /// distingue de un acierto.
+    /// </remarks>
+    [Fact]
+    public async Task Mover_un_ejercicio_encima_de_otro_es_409_y_dejarlo_donde_esta_no_lo_es()
+    {
+        (HttpClient cliente, _) = await _api.EnUnaEmpresaNuevaAsync("00000095A");
+        using HttpClient suyo = cliente;
+
+        await CrearEjercicio(cliente, 2026);
+        EjercicioDto siguiente = await CrearEjercicio(cliente, 2027);
+
+        string recurso = $"{Ejercicios}/{siguiente.Id}";
+
+        using HttpResponseMessage encima = await cliente.EnviarConVersionAsync(
+            HttpMethod.Put,
+            recurso,
+            await cliente.EtiquetaDeAsync(recurso),
+            JsonContent.Create(new ModificarEjercicioDto
+            {
+                FechaDeInicio = new DateOnly(2026, 7, 1),
+                FechaDeFin = new DateOnly(2027, 6, 30),
+            }));
+
+        encima.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await LeerProblema(encima)).GetProperty("type").GetString()
+            .ShouldBe("/errors/ejercicio-solapado");
+
+        // Y ahora las MISMAS fechas que ya tiene. Si esto saliera 409, la comprobación estaría
+        // contando al propio ejercicio entre los que le estorban.
+        using HttpResponseMessage quieto = await cliente.EnviarConVersionAsync(
+            HttpMethod.Put,
+            recurso,
+            await cliente.EtiquetaDeAsync(recurso),
+            JsonContent.Create(new ModificarEjercicioDto
+            {
+                FechaDeInicio = siguiente.FechaDeInicio,
+                FechaDeFin = siguiente.FechaDeFin,
+            }));
+
+        quieto.StatusCode.ShouldBe(
+            HttpStatusCode.OK,
+            "guardar un ejercicio sin moverlo se ha encontrado solapado consigo mismo");
+    }
+
+    /// <summary>
+    /// El solape lo impide <b>la base</b>, y no solo la comprobación previa del caso de uso.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Se escribe con SQL desnudo a propósito. Por el caso de uso, quien contesta es
+    /// <c>HaySolapeAsync</c>, y esa comprobación no cubre <b>dos peticiones a la vez</b>: las dos
+    /// preguntan antes de que ninguna escriba, las dos se van satisfechas y el solape entra. Lo
+    /// que este caso afirma es que por debajo hay una restricción que no depende de que nadie se
+    /// acuerde de preguntar, y que es de <b>exclusión</b>: un índice único no sabe decir que lo
+    /// que no se repite es un RANGO.
+    /// </para>
+    /// <para>
+    /// La segunda mitad —la otra empresa— es la que se cae si alguien quita <c>empresa_id WITH =</c>
+    /// de la restricción: el ejercicio de una ferretería impediría a la imprenta de al lado abrir
+    /// el suyo, con un rechazo que habla de una fila que no puede ni ver (R8).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task El_solape_lo_impide_la_BASE_y_no_solo_la_comprobacion_previa()
+    {
+        (HttpClient cliente, EmpresaDto propia) = await _api.EnUnaEmpresaNuevaAsync("00000096G");
+        using HttpClient suyo = cliente;
+        (HttpClient otro, EmpresaDto ajena) = await _api.EnUnaEmpresaNuevaAsync("00000097M");
+        otro.Dispose();
+
+        await InsertarEjercicioAsync(propia.Id, 2026, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31));
+
+        PostgresException choque = await Should.ThrowAsync<PostgresException>(
+            () => InsertarEjercicioAsync(
+                propia.Id, 2027, new DateOnly(2026, 7, 1), new DateOnly(2027, 6, 30)));
+
+        choque.SqlState.ShouldBe(
+            PostgresErrorCodes.ExclusionViolation,
+            "la base ha dejado entrar dos ejercicios de la misma empresa que se pisan. El " +
+            "síntoma no sería un error: sería un cierre que congela medio año de otro ejercicio");
+
+        choque.ConstraintName.ShouldBe("ejercicios_sin_intervalos_solapados");
+
+        // La otra empresa NO estorba, con el intervalo IDÉNTICO al primero.
+        await InsertarEjercicioAsync(ajena.Id, 2026, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31));
+    }
+
+    /// <summary>El día en que un ejercicio <b>acaba</b> todavía cuenta para el solape.</summary>
+    /// <remarks>
+    /// La convención <c>'[]'</c> —cerrada por los dos lados— escrita como un caso. Con el
+    /// <c>'[)'</c> por omisión, estos dos ejercicios convivirían y el 31 de diciembre pertenecería
+    /// a los dos; y como <c>Ejercicio.Comprende</c> sí incluye el último día, la base y el dominio
+    /// dirían cosas distintas de ese día. El solape que se cuela es peor que el que se rechaza,
+    /// porque nadie lo ve hasta que hay que cerrar.
+    /// </remarks>
+    [Fact]
+    public async Task El_dia_en_que_un_ejercicio_ACABA_todavia_cuenta_para_el_solape()
+    {
+        (HttpClient cliente, EmpresaDto propia) = await _api.EnUnaEmpresaNuevaAsync("00000098Y");
+        using HttpClient suyo = cliente;
+        DateOnly frontera = new(2026, 12, 31);
+
+        await InsertarEjercicioAsync(propia.Id, 2026, new DateOnly(2026, 1, 1), frontera);
+
+        PostgresException choque = await Should.ThrowAsync<PostgresException>(
+            () => InsertarEjercicioAsync(propia.Id, 2027, frontera, new DateOnly(2027, 12, 30)));
+
+        choque.SqlState.ShouldBe(
+            PostgresErrorCodes.ExclusionViolation,
+            "el último día de un ejercicio y el primero del siguiente son el mismo y han entrado " +
+            "los dos. El rango de la restricción no está cerrado por arriba");
+
+        // Y el día SIGUIENTE sí entra: sin esta mitad, una restricción que rechazara todo pasaría
+        // la aserción de arriba y nadie podría encadenar dos ejercicios consecutivos.
+        await InsertarEjercicioAsync(
+            propia.Id, 2027, frontera.AddDays(1), new DateOnly(2027, 12, 31));
+    }
+
     [Fact]
     public async Task Un_ejercicio_se_cierra_y_se_reabre_por_sus_puertas()
     {
@@ -601,6 +770,34 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         Direccion = Escenario.Domicilio(),
         Tipo = "Fisico",
     };
+
+    /// <summary>Mete un ejercicio SIN pasar por el caso de uso, para llegar a la restricción.</summary>
+    /// <remarks>
+    /// La empresa tiene que existir de verdad: <c>ejercicios.empresa_id</c> lleva clave ajena
+    /// dentro del esquema, así que un identificador inventado moriría en la clave ajena y el caso
+    /// diría que la restricción funciona cuando lo que habría funcionado es otra cosa.
+    /// </remarks>
+    private async Task InsertarEjercicioAsync(Guid empresaId, int anio, DateOnly inicio, DateOnly fin)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand insercion = new(
+            """
+            INSERT INTO organizacion.ejercicios
+                (id, empresa_id, anio, fecha_de_inicio, fecha_de_fin, estado, creado_en, modificado_en)
+            VALUES (@id, @empresa, @anio, @inicio, @fin, 'Abierto', now(), now());
+            """,
+            conexion);
+
+        insercion.Parameters.AddWithValue("id", Guid.NewGuid());
+        insercion.Parameters.AddWithValue("empresa", empresaId);
+        insercion.Parameters.AddWithValue("anio", anio);
+        insercion.Parameters.AddWithValue("inicio", inicio);
+        insercion.Parameters.AddWithValue("fin", fin);
+
+        await insercion.ExecuteNonQueryAsync();
+    }
 
     private static async Task<JsonElement> LeerProblema(HttpResponseMessage respuesta)
     {

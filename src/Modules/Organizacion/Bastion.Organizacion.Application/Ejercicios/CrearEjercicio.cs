@@ -60,6 +60,16 @@ internal sealed class CrearEjercicio(
                 $"La empresa ya tiene abierto el ejercicio {peticion.Anio}."));
         }
 
+        // Y la etiqueta libre no basta: el año es un nombre y esto mira las fechas. Sin esta
+        // pregunta, «2026 = enero a diciembre» y «2027 = julio de 2026 a junio de 2027» conviven
+        // sin error y cualquier fecha del segundo semestre de 2026 cae en DOS ejercicios.
+        if (await ejercicios
+                .HaySolapeAsync(empresaId, peticion.FechaDeInicio, peticion.FechaDeFin, null, cancelacion)
+                .ConfigureAwait(false))
+        {
+            return Resultado.Fallo<EjercicioDto>(ErroresDeEjercicio.Solapado());
+        }
+
         var ejercicio = Ejercicio.Crear(
             empresaId, peticion.Anio, peticion.FechaDeInicio, peticion.FechaDeFin,
             reloj.GetUtcNow());

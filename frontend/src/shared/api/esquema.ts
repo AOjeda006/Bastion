@@ -952,7 +952,14 @@ export interface paths {
         /** Devuelve una página de ejercicios. */
         get: operations["Ejercicios_Listar"];
         put?: never;
-        /** Abre un ejercicio. */
+        /**
+         * Abre un ejercicio.
+         * @description El `409` viene de dos sitios y el `type` los separa, porque se arreglan distinto:
+         *     la empresa ya tiene un ejercicio con ese año (`ejercicio-duplicado`, se cambia el año)
+         *     o el intervalo se pisa con el de otro (`ejercicio-solapado`, se mueven las fechas).
+         *     El segundo lo contesta el caso de uso preguntando antes, pero quien de verdad lo impide es
+         *     una restricción de exclusión de la base: es la única que cubre dos peticiones a la vez.
+         */
         post: operations["Ejercicios_Crear"];
         delete?: never;
         options?: never;
@@ -969,7 +976,12 @@ export interface paths {
         };
         /** Devuelve un ejercicio. */
         get: operations["Ejercicios_Obtener"];
-        /** Cambia las fechas de un ejercicio abierto. */
+        /**
+         * Cambia las fechas de un ejercicio abierto.
+         * @description Mover un ejercicio puede ponerlo encima de otro, así que el `409` también puede ser
+         *     `ejercicio-solapado` además de `ejercicio-cerrado`. Dejar las fechas como están
+         *     <b>no</b> es un solape: un ejercicio no se estorba a sí mismo.
+         */
         put: operations["Ejercicios_Modificar"];
         post?: never;
         /** Borra un ejercicio que todavía no tiene series. */

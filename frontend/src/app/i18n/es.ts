@@ -177,8 +177,10 @@ export const es = {
       'ejercicio-cerrado': 'El ejercicio está cerrado y no admite cambios.',
       'ejercicio-con-series':
         'No se puede eliminar un ejercicio que tiene series. Elimina antes las series.',
-      'ejercicio-duplicado': 'Ya hay un ejercicio con esas fechas en esta empresa.',
+      'ejercicio-duplicado': 'Ya hay un ejercicio con ese año en esta empresa.',
       'ejercicio-no-encontrado': 'Ese ejercicio ya no existe. Vuelve al listado y actualiza.',
+      'ejercicio-solapado':
+        'Esas fechas se pisan con las de otro ejercicio de la empresa. Una fecha tiene que caer en un solo ejercicio.',
       'empresa-activa-no-operativa':
         'La empresa con la que estás operando ya no está disponible. Vuelve a entrar.',
       'empresa-ajena': 'Esa empresa no es la tuya, así que no puedes operar sobre ella.',

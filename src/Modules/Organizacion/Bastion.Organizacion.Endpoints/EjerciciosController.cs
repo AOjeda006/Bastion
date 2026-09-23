@@ -48,6 +48,13 @@ public sealed class EjerciciosController(
         ResponderConVersion(await obtener.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
 
     /// <summary>Abre un ejercicio.</summary>
+    /// <remarks>
+    /// El <c>409</c> viene de dos sitios y el <c>type</c> los separa, porque se arreglan distinto:
+    /// la empresa ya tiene un ejercicio con ese año (<c>ejercicio-duplicado</c>, se cambia el año)
+    /// o el intervalo se pisa con el de otro (<c>ejercicio-solapado</c>, se mueven las fechas).
+    /// El segundo lo contesta el caso de uso preguntando antes, pero quien de verdad lo impide es
+    /// una restricción de exclusión de la base: es la única que cubre dos peticiones a la vez.
+    /// </remarks>
     /// <param name="peticion">Datos del ejercicio.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpPost]
@@ -65,6 +72,11 @@ public sealed class EjerciciosController(
             ejercicio => ejercicio.Id);
 
     /// <summary>Cambia las fechas de un ejercicio abierto.</summary>
+    /// <remarks>
+    /// Mover un ejercicio puede ponerlo encima de otro, así que el <c>409</c> también puede ser
+    /// <c>ejercicio-solapado</c> además de <c>ejercicio-cerrado</c>. Dejar las fechas como están
+    /// <b>no</b> es un solape: un ejercicio no se estorba a sí mismo.
+    /// </remarks>
     /// <param name="id">Identificador del ejercicio.</param>
     /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
     /// <param name="peticion">Las fechas nuevas.</param>

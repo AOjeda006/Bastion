@@ -51,6 +51,7 @@
     { "codigo": "ejercicio-con-series", "type": "/errors/ejercicio-con-series", "clase": "Conflicto" },
     { "codigo": "ejercicio-duplicado", "type": "/errors/ejercicio-duplicado", "clase": "Conflicto" },
     { "codigo": "ejercicio-no-encontrado", "type": "/errors/ejercicio-no-encontrado", "clase": "NoEncontrado" },
+    { "codigo": "ejercicio-solapado", "type": "/errors/ejercicio-solapado", "clase": "Conflicto" },
     { "codigo": "empresa-activa-no-operativa", "type": "/errors/empresa-activa-no-operativa", "clase": "Conflicto" },
     { "codigo": "empresa-ajena", "type": "/errors/empresa-ajena", "clase": "PermisoDenegado" },
     { "codigo": "empresa-destino-no-operativa", "type": "/errors/empresa-destino-no-operativa", "clase": "ReglaDeNegocio" },

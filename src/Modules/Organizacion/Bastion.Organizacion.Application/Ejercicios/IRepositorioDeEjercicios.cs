@@ -12,7 +12,39 @@ public interface IRepositorioDeEjercicios : IOrdenaPor
     Task<Ejercicio?> ObtenerAsync(Guid id, CancellationToken cancelacion);
 
     /// <summary>Indica si esa empresa ya tiene un ejercicio con ese año.</summary>
+    /// <remarks>
+    /// Pregunta por la <b>etiqueta</b>, no por las fechas, y por eso no basta: dos ejercicios de
+    /// años distintos —2026 de enero a diciembre y 2027 de julio de 2026 a junio de 2027— pasan
+    /// por aquí sin rozarse y se solapan seis meses. Quien mira las fechas es
+    /// <see cref="HaySolapeAsync"/>.
+    /// </remarks>
     Task<bool> ExisteElAnioAsync(Guid empresaId, int anio, CancellationToken cancelacion);
+
+    /// <summary>
+    /// Indica si esa empresa ya tiene un ejercicio cuyo intervalo se pisa con el que se le pasa.
+    /// </summary>
+    /// <remarks>
+    /// <b>No sustituye a la restricción de la base</b> —un <c>EXCLUDE USING gist</c> sobre la
+    /// empresa y el rango de fechas—, que es la única que puede impedirlo cuando dos peticiones
+    /// llegan a la vez y la única que cubre los caminos de escritura que no pasan por aquí. Esto
+    /// se adelanta para poder contestar un 409 con el motivo escrito en vez de dejar salir una
+    /// violación de integridad convertida en 500. Es el mismo reparto que en los tramos de tarifa
+    /// y en los de impuesto del 0.15, y se escribe igual para que se lea igual.
+    /// </remarks>
+    /// <param name="empresaId">Empresa a la que pertenece (R8).</param>
+    /// <param name="inicio">Primer día del intervalo que se quiere ocupar.</param>
+    /// <param name="fin">Último día del intervalo, incluido.</param>
+    /// <param name="excepto">
+    /// Ejercicio que no cuenta, para poder comprobar uno contra los demás. Sin él, modificar un
+    /// ejercicio sin moverlo se encontraría solapado consigo mismo.
+    /// </param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<bool> HaySolapeAsync(
+        Guid empresaId,
+        DateOnly inicio,
+        DateOnly fin,
+        Guid? excepto,
+        CancellationToken cancelacion);
 
     /// <summary>Indica si existe el ejercicio, sin traérselo entero.</summary>
     Task<bool> ExisteAsync(Guid id, CancellationToken cancelacion);
