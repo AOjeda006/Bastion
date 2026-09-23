@@ -5507,10 +5507,103 @@ da **908** (31 + 61 + 215 + 181 + 85 + 78 + 22 + 13 + 168 + 54); con `Category=I
 —eran 459, y los cuatro nuevos son de integración—; el frontal, **103** en 16 ficheros. **108** tipos
 de error de **114** sitios, y **130** operaciones en el documento versionado.
 
-**Lo que queda del 2.6**, por orden: el puerto de documentos que implementa cada módulo y que
-recorren cerrar, modificar y eliminar; el cerrojo `FOR SHARE`/`FOR UPDATE`; cerrar sin borradores
-dentro; reabrir con motivo y evento; `IConsultaDeEjercicios` con `SinEjercicio`; el ajuste que no se
-confirma fuera de ejercicio; y la R9 viva con su fila reescrita.
+### 2.6 EN CURSO — el puerto de documentos, y cerrar deja de ser mudo (2026-09-23)
+
+**El puerto va al revés que los otros siete, y eso es lo que había que decidir.** Cerrar un
+ejercicio tiene que saber si queda algo dentro del intervalo, y esa pregunta se contesta en
+`inventario.ajustes`, en `ventas.facturas` y en las tablas de cuatro módulos que todavía no existen.
+Las dos salidas obvias están cerradas: un `JOIN` entre esquemas lo prohíbe el §4, y una lista de
+tablas escrita en Organización es una lista que hay que acordarse de ampliar —el día que alguien
+monte un módulo con documentos y no la toque, cerrar diría que no queda nada dentro—. Así que
+`IDocumentosDeUnPeriodo` vive en `Organizacion.Contracts` porque es **Organización quien la
+necesita**, y la implementa **cada módulo que tenga documentos**.
+
+| | Los otros siete puertos | Éste |
+|---|---|---|
+| Quién la declara | el módulo dueño del dato | el módulo que **pregunta** |
+| Quién la implementa | el módulo dueño del dato | cada módulo **con documentos** |
+| De qué capa sale el cruce | `Application` | `Infrastructure`, porque contestar es leer una tabla |
+
+Es el **octavo** cruce del proyecto y el primero que sale de una `Infrastructure`. La frontera no se
+debilita: lo referenciado sigue siendo un `Contracts` y por él cruzan `Guid`, `DateOnly` y `bool`.
+La referencia de proyecto se escribe en el `.csproj` de `Inventario.Infrastructure` aunque el
+compilador ya la diera por buena a través de `Application`, porque el permiso se vigila en el
+`.csproj` y el uso en el IL: una autorización escrita donde no se ejerce no la revisa nadie.
+
+**El carril lo dijo solo, y con tres rojos por su nombre.** Añadir el puerto sin declararlo puso
+rojas `Las_puertas_publicas_de_los_contratos_son_las_declaradas`,
+`Las_referencias_de_proyecto_son_las_declaradas` y `El_unico_cruce_entre_modulos_va_por_contratos`,
+que es exactamente para lo que están: una puerta nueva no aparece sin que alguien escriba si lee o
+si escribe.
+
+**El modo de fallo de un puerto así es el silencio**, y por eso lleva dos guardas. Una en el caso de
+uso: si la colección inyectada viene **vacía**, cerrar **revienta** en vez de pasar —el bucle no
+recorrería nada, no habría borradores que encontrar y el cierre contestaría que el periodo está
+limpio habiendo preguntado a nadie (ADR-0020)—. Otra en el carril rápido:
+`LosModulosConDocumentosSeInscribenTests` compara los módulos que **heredan de `DocumentoBase<>`**
+con los **inscritos en el contenedor**, en los dos sentidos y afirmando que ninguna lista está
+vacía. Ningún lado se teclea: uno sale del IL y el otro del contenedor montado.
+
+**Y esa afirmación se cobró una pieza el primer día, que es lo que se pedía de ella.** La primera
+versión del barrido salió **roja por su propio arnés**, no por el código que vigila:
+`AppDomain.CurrentDomain.GetAssemblies()` solo ve lo **cargado**, el host no se había levantado
+todavía y `Bastion.Inventario.Domain` no estaba en el dominio, así que el descubrimiento contestó
+«aquí no hay documentos». Sin la línea de conjunto no vacío, los dos lados habrían sido el conjunto
+vacío, habrían sido **iguales**, y el barrido habría salido verde sin mirar un solo módulo. La
+primera pregunta de una regla nueva no es si el dominio la cumple: es si la regla mira lo que dice
+mirar. Ahora levantar el host es parte de la regla y está escrito por qué.
+
+**Cerrar y reabrir dejan de ser idempotentes.** Mientras cerrar era asignar un estado, repetirlo era
+inofensivo y ahorrarse la comprobación salía barato. Dejó de salir barato en este ítem: cerrar pasa
+a tener **precondiciones** —ningún borrador con fecha dentro— y **consecuencias** —reabrir lleva
+permiso propio, motivo obligatorio y evento auditado—. Un segundo cierre que contesta «hecho»
+esconde el caso que importa: que otro se adelantó, o que el ejercicio se reabrió y se volvió a
+cerrar por en medio. Dos `type` distintos, `ejercicio-ya-cerrado` y `ejercicio-ya-abierto`, porque
+se arreglan distinto. Cambia `Cerrar_dos_veces_no_es_un_error_de_programa`, que pasa a llamarse
+`Cerrar_dos_veces_SI_es_un_error_y_dejo_de_ser_idempotente_en_el_2_6` con el motivo escrito.
+
+**Dos mutaciones más, sobre las líneas que deciden en esta pieza**, con la orden que las mide:
+
+```
+dotnet test tests/Api.IntegrationTests --no-build \
+  --filter "FullyQualifiedName~ElCierreLePreguntaALosModulosTests|FullyQualifiedName~ContratoDeOrganizacionTests"
+```
+
+La base de comparación es **31 de 31 en verde** —29 de antes, más los dos nuevos—, y después de la
+tanda vuelve a serlo con el árbol limpio.
+
+| # | Mutación | Resultado | Quién la caza |
+|---|----------|-----------|---------------|
+| 5 | Fuera la inscripción de Inventario en `ModuloDeInventario` | **Rojo**, 2 de 2 del barrido | `Todo_modulo_con_documentos_esta_inscrito_y_ninguna_inscripcion_sobra` y `Cada_inscripcion_dice_el_modulo_en_el_que_vive` |
+| 6 | `Modulo` pasa a devolver `"Ventas"` | **Rojo**, 2 de 2 | los mismos: «dice ser de «Ventas» y vive en «Inventario»» |
+| 7 | El puerto deja de filtrar por `Borrador` | **Rojo**, 1 de 31 | `Un_borrador_de_inventario_dentro_del_ejercicio_impide_cerrarlo_y_el_error_lo_nombra` |
+| 8 | `CerrarEjercicio` deja de mirar el estado | **Rojo**, 1 de 31 | `Cerrar_lo_ya_cerrado_y_reabrir_lo_ya_abierto_son_409_y_no_un_204_mudo` |
+
+**La 7 la caza la SEGUNDA mitad del caso, no la primera.** El caso abre un borrador, comprueba que
+el cierre se niega, y después **confirma ese mismo ajuste** y comprueba que entonces sí cierra. Sin
+esa segunda mitad, un `HayBorradoresEnAsync` que devolviera siempre cierto pasaría la primera tan
+tranquilo, y lo que el carril estaría afirmando sería «un ejercicio con movimientos no se cierra
+nunca» — que es otra cosa, y además falsa.
+
+**Y la 8 repite la lección de la 3**, con otro sujeto: sin la comprobación del caso de uso, el
+segundo cierre **sigue sin entrar** —la guarda del dominio lanza—, pero contesta **500** en vez de
+409; se leyó el mensaje, no se supuso (`should be HttpStatusCode.Conflict but was
+HttpStatusCode.InternalServerError`). El dominio protege **el estado**; el caso de uso protege **la
+respuesta**. Hacen falta los dos, y por eso el caso afirma el `type` y no solo que falló.
+
+**Cifras de los carriles, con su orden:** `dotnet test Bastion.sln --filter "Category!=Integracion"`
+da **911** (31 + 61 + 215 + 182 + 85 + 78 + 22 + 13 + 170 + 54); con `Category=Integracion`, **465**
+—eran 463—; el frontal, **103** en 16 ficheros. **111** tipos de error de **117** sitios, y **130**
+operaciones en el documento versionado, que no cambian porque esta pieza no estrena ninguna ruta.
+
+**El run de la primera pieza:** `35906227207` sobre `24cb0d6`, rama `item-2.6-el-ejercicio-rige`,
+**success**. Ningún cancelado esta vez: entre aquel empujón y el siguiente no hubo otro push a la
+misma rama, que es lo que dispara el `cancel-in-progress` del `ci-${{ github.ref }}`.
+
+**Lo que queda del 2.6**, por orden: `Modificar` y `Eliminar` preguntando por el mismo puerto; el
+cerrojo `FOR SHARE`/`FOR UPDATE`; reabrir con motivo y evento por `POST /{id}/reapertura`;
+`IConsultaDeEjercicios` con `SinEjercicio`; el ajuste que no se confirma fuera de ejercicio; y la R9
+viva con su fila reescrita.
 
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
