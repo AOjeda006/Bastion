@@ -5058,11 +5058,21 @@ el rol del sistema en **95** permisos, entre ellos el que estrena el ítem.
 
 **El 2.5 lo cierra el run 35873219346** sobre `ce3ed0e`, **success al primer intento** y con **3
 jobs contados en el propio run** (`total_count: 3`): Frontal `107222394041` ✓, Backend
-`107222394606` ✓ y Humo `107223943765` ✓ —**65 pasos entre los tres y ninguno fuera de verde**—.
+`107222394606` ✓ y Humo `107223943765` ✓. De sus **65** pasos, **64 en verde y 1 omitido**, y el
+omitido se nombra porque un `skipped` no es un paso en verde: es *Diagnóstico*, que lleva
+`if: failure()`, así que no haberse ejecutado **es** la señal de que nada falló. Contarlo como verde
+sería contar como aprobado un examen al que nadie se presentó.
 Las cifras del *runner* se leyeron de sus anotaciones y son las de aquí, no «las mismas» de palabra:
 **904** en el carril rápido y **459** en el de integración, los dos con **10 ficheros `.trx`** en su
 artefacto; **130** operaciones en el documento versionado, **107** tipos de error de **113** sitios,
 y `Frontal · arranque 411/450 KiB en 4 ficheros · total servido 598/900 KiB` carácter por carácter.
+
+**Y el run de `main`, que es el que cierra de verdad:** **35874205169** sobre `2589183`, **success
+al primer intento**. El de la rama dice que el trabajo estaba bien; el de `main` dice que **lo que
+quedó en la rama principal** está bien, y no son la misma afirmación: entre uno y otro hay un
+avance que puede no ser el que se cree. Aquí el avance fue *fast-forward* y los dos `head_sha`
+coinciden, así que el segundo run corre sobre el mismo árbol —y eso **se comprueba leyendo el
+`head_sha` del run**, que es lo único que lo distingue de suponerlo.
 
 El siguiente ADR es el **0041**: este ítem no abrió ninguno. Nada de lo que decidió enmienda un ADR
 anterior ni inventa una regla nueva —el índice no único y la segunda clave obligatoria son
@@ -12055,10 +12065,16 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   queda en verde: se pone rojo en el arnés.
 
   **El 2.5 lo cierra el run 35873219346** sobre `ce3ed0e`, **success al primer intento**, con sus
-  tres jobs —Frontal `107222394041`, Backend `107222394606` y Humo `107223943765`— y **65 pasos sin
-  uno solo fuera de verde**. Las cifras del *runner*, leídas de las anotaciones del run y no dadas
-  por buenas: **904** y **459** casos con **10 `.trx`** en cada artefacto, **130** operaciones,
-  **107** tipos de error de **113** sitios y el presupuesto idéntico al de esta máquina.
+  tres jobs —Frontal `107222394041`, Backend `107222394606` y Humo `107223943765`— y **65 pasos:
+  64 en verde y 1 omitido**, que es *Diagnóstico* con su `if: failure()`. Las cifras del *runner*,
+  leídas de las anotaciones del run y no dadas por buenas: **904** y **459** casos con **10 `.trx`**
+  en cada artefacto, **130** operaciones, **107** tipos de error de **113** sitios y el presupuesto
+  idéntico al de esta máquina.
+
+  **Y el run de `main`: 35874205169** sobre `2589183`, **success al primer intento**. Va aparte
+  porque no dice lo mismo que el de la rama: el de la rama aprueba el trabajo, el de `main` aprueba
+  **lo que quedó en la rama principal**, y entre los dos hay un avance. Los dos `head_sha`
+  coinciden porque fue *fast-forward*, y eso se lee del run, no se supone.
 
 - [ ] **2.6 · El ejercicio rige: qué exige cerrar, quién reabre y quién pregunta** — criterio de
   aceptación: cerrar **exige** que no quede ningún documento de inventario en borrador con fecha
