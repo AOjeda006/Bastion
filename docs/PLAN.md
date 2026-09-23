@@ -5200,9 +5200,69 @@ y descubrirlo al cuadrar el almacén.
 > es el `remarks` el que decía algo que no era cierto, y un motivo falso es peor que no tener
 > ninguno, porque el siguiente que lea el fichero dejará de buscar.
 
+#### Lo que este registro se había dejado fuera (2026-09-23)
+
+Tres cosas, y las tres son de la clase que hace que un registro parezca completo sin serlo.
+
+**Los commits de la tanda son seis, y aquí se contaron cinco.** El que faltaba es `bfef8cf`, que
+entró antes que `fdff648` y no después, así que un recuento que empiece por el del índice se lo
+salta entero. Se cuentan con su orden y con la orden que los mide:
+
+```
+git log --format='%h %G? %s' ce3ed0e..736e110
+```
+
+| # | Commit | Firma | Qué dejó |
+|---|--------|-------|----------|
+| 1 | `bfef8cf` | `G` | un *skipped* no es un paso en verde, y el run de `main` iba aparte |
+| 2 | `fdff648` | `G` | el índice único y el manejador que traduce su `23505` al `412` |
+| 3 | `d9420f1` | `G` | el porqué en el PLAN, con las tres mutaciones |
+| 4 | `8b03c60` | `G` | quién separa las dos anulaciones, en orden |
+| 5 | `7ea1592` | `G` | los dos runs del commit del índice |
+| 6 | `736e110` | `G` | el índice no lo sostiene un barrido que no lo ejerce, sino que falla cerrado |
+
+Los seis salen `G` y con una sola credencial, la del usuario.
+
+**Y un run salió cancelado: el 35884824211**, sobre `d9420f1`, en la rama
+`item-2.5-el-inverso-unico-en-la-base`. Se nombra porque **un run cancelado no es un run que no
+ocurrió**: es un run que dejó de mirar a media frase, y contarlo como «no pasó nada» es el falso
+verde de manual. Sus cifras, leídas y no supuestas:
+
+| | |
+|---|---|
+| Jobs | Frontal `107262186901` **success**, Backend `107262187535` **cancelled**, Humo `107263098724` **cancelled** |
+| Pasos | **39**: 27 verdes y **9 sin ejecutar** |
+| Los 9 | no son el *Diagnóstico* de siempre: son los pasos que el job no alcanzó —los tests de integración, las tres comprobaciones de artefacto al día, el OpenAPI publicado y su descarga— |
+
+**Y por qué se canceló, leído del workflow y no deducido del nombre:** lleva
+`concurrency: group: ci-${{ github.ref }}` con `cancel-in-progress: true`, y `8b03c60` se empujó a
+la misma rama **dos minutos** después de `d9420f1` (`17:52:58` → `17:54:51`). Lo mató el siguiente
+push, no un fallo. Que la certificación de esa rama la dé `35885063155` sobre `8b03c60` es correcto
+justo porque `8b03c60` **contiene** a `d9420f1`; si el cancelado hubiera sido el de la punta, no
+habría nada que certificara nada.
+
+**Y la punta de `main` en verde: el 35887033768**, sobre `7ea1592`, **success al primer intento**,
+3 jobs —Backend `107269699283`, Frontal `107269699580`, Humo `107272069893`— y **65** pasos, **64 en
+verde y 1 omitido**, el *Diagnóstico* con su `if: failure()`. Aquí arriba se anotó `35885959443`,
+que es el de `main` sobre `8b03c60`; el de `7ea1592` es este, y es el que de verdad mira el árbol
+que quedó.
+
+**Y los dos del commit de la corrección**, `736e110`, para no repetir el mismo descuido:
+
+| Run | Sobre | Rama | Desenlace | Jobs | Pasos |
+|---|---|---|---|---|---|
+| **35896853714** | `736e110` | `correccion-del-remarks-de-la-migracion` | **success**, 1.er intento | Backend `107302818449` ✓, Frontal `107302818840` ✓, Humo `107305052469` ✓ | **65**: 64 verdes, 1 omitido (*Diagnóstico*) |
+| **35897888680** | `736e110` | `main` | **success**, 1.er intento | Frontal `107306276516` ✓, Backend `107306277183` ✓, Humo `107309019379` ✓ | **65**: 64 verdes, 1 omitido (*Diagnóstico*) |
+
 > **El registro de un run no persigue al suyo.** Este párrafo entra en un commit que tendrá su
 > propio run, y anotarlo pediría otro commit, y así sin fin. Se corta aquí, como en el 2.5: lo que
-> queda certificado es el árbol que los dos runs de arriba miraron, que es el del trabajo.
+> queda certificado es el árbol que los runs de arriba miraron, que es el del trabajo.
+>
+> **Pero cortar la cadena no es dejar de contar.** Lo que falló las dos veces no fue el corte: fue
+> que el recuento empezó por donde empezaba el trabajo y no por donde empezaba la tanda, y que un
+> `cancelled` se leyó como un run que no contaba. Las dos se arreglan con la misma regla: **los
+> desenlaces se listan todos —`success`, `failure` y `cancelled`— y los commits se cuentan con la
+> orden publicada al lado**, no de memoria.
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
 run **35103339786** sobre `f3c749e`, **success**, con **3 jobs contados en el propio run**
