@@ -92,9 +92,17 @@ consultar() {
 
 # Un inicio de sesión NUEVO cada vez: los permisos viajan en el testigo, así que uno emitido antes
 # de cambiar el rol diría lo que el rol era, no lo que es.
+#
+# `MSYS2_ENV_CONV_EXCL` es para la ejecución en local desde Git Bash, y en Linux no significa nada.
+# Allí una variable con cara de ruta POSIX se REESCRIBE al pasar a un programa nativo de Windows:
+# una contraseña que empieza por `/` —la base64 de la CI lo hace una vez de cada 64— le llega a
+# python como `C:/Program Files/Git/…`, y el inicio de sesión es un 401 que no tiene nada que ver
+# con lo que se prueba. Medido en el humo local del 2.6: con la contraseña forzada a empezar por
+# `/`, 401 sin esta línea y verde con ella.
 iniciar_sesion() {
   CORREO=$(leer_variable BASTION_SEMILLA_ADMIN_CORREO) \
   CONTRASENA=$(leer_variable BASTION_SEMILLA_ADMIN_CONTRASENA) \
+  MSYS2_ENV_CONV_EXCL="CONTRASENA${MSYS2_ENV_CONV_EXCL:+;$MSYS2_ENV_CONV_EXCL}" \
     "$PY" -c 'import json, os, sys; json.dump({"correo": os.environ["CORREO"], "contrasena": os.environ["CONTRASENA"]}, sys.stdout)' \
     > "$TRABAJO/credenciales.json"
 
