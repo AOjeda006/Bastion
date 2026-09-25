@@ -10,11 +10,14 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 2 (Inventario), en curso: 5 de 14 ítems.** La fase 1 se cerró con catorce ítems y la
-> fase 2 lleva tres: el frontal arranca con un solo diccionario; los tres puertos que el libro de
+> **Estado: fase 2 (Inventario), en curso: 6 de 14 ítems.** La fase 1 se cerró con catorce ítems y la
+> fase 2 lleva seis: el frontal arranca con un solo diccionario; los tres puertos que el libro de
 > movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado contesta
-> que sigue resolviendo lo viejo, no que no existe—; y el libro ya existe, particionado por mes y
-> de solo añadido en el motor, con el ajuste como primer documento. Qué se hizo en
+> que sigue resolviendo lo viejo, no que no existe—; el libro ya existe, particionado por mes y
+> de solo añadido en el motor, con el ajuste como primer documento; el ajuste se numera al
+> confirmarlo, sin huecos ni repetidos; un ajuste confirmado no se borra, se anula con un inverso
+> que suma cero; y el ejercicio rige lo que se escribe —un documento no se confirma con fecha en un
+> ejercicio cerrado ni fuera de todos—. Qué se hizo en
 > cada ítem, con el run de la CI que lo certifica, y qué queda está en **[`docs/PLAN.md`](docs/PLAN.md)**,
 > que es la fuente de verdad del estado del trabajo. Esta línea se compara con sus casillas
 > (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia y la línea no, la CI sale roja.

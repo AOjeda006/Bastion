@@ -4959,10 +4959,27 @@ el encargo pedía dejar escrito.
 se prueba con **dos transacciones de verdad**, no con un doble en memoria: un cerrojo que no bloquea
 es un cerrojo que ningún test de una sola conexión distingue del correcto.
 
+#### Decisión 5 — la transacción del cierre la abre la unidad de trabajo (preguntada, 2026-09-23)
+
+**Preguntada al usuario**, porque las tres salidas eran viables y cambiaban cosas distintas. El
+`FOR UPDATE` al cerrar solo sirve dentro de una transacción que abarque la lectura y el guardado, y la
+única que había la abre el filtro de idempotencia, que cerrar no puede usar: exige `If-Match`, y pedir
+los dos mecanismos a la vez está prohibido con su motivo escrito.
+
+| Opción | Lo que costaba |
+|---|---|
+| **La abre la unidad de trabajo** — la elegida | un segundo dueño de transacción: hasta hoy solo la abría el filtro |
+| Fuera el cerrojo del cierre | la protección del cierre pasaba a depender de que cerrar escriba siempre la fila, con la R11 detrás |
+| La clave, obligatoria al cerrar | resolver antes el ETag viejo en la respuesta repetida y los puntos de guardado que `AlmacenDeIdempotencia` no tiene: una pieza propia |
+
+**Respuesta: «Lo abre la unidad de trabajo».** Es `IUnidadTrabajoDeOrganizacion.EnTransaccionAsync`,
+que **no abre otra si ya hay una**: anidar lanza en EF Core, y confirmar dentro soltaría cerrojos que
+la de fuera todavía necesita. Queda escrito en el ADR-0041 §6.
+
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 5 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 6 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -5226,6 +5243,102 @@ El siguiente ADR es el **0041**: este ítem no abrió ninguno. Nada de lo que de
 anterior ni inventa una regla nueva —la segunda clave obligatoria es una aplicación de lo que ya
 estaba escrito—, y su sitio es el `remarks` que la explica donde se lee, no un documento aparte.
 
+**Hecho el 2.6**, el 2026-09-25, en la rama `item-2.6-el-ejercicio-rige`. **La R9 pasa a viva**, y
+lo que la pone viva no es cerrar ni reabrir —eso ya eran dos estados en una fila— sino que **el
+periodo rija lo que se escribe dentro**: confirmar un ajuste pregunta por el ejercicio de su fecha de
+operación, y no se confirma si está cerrado ni si no hay ninguno. Se hizo en tres piezas, cada una
+con su sección más abajo —*2.6, primera pieza*, *segunda* y *tercera*—; aquí va lo que hay que saber
+sin leerlas.
+
+**La guarda es confirmar; la cortesía, la pregunta por los borradores al cerrar.** La guarda es la
+que sostiene la regla: un borrador que nace **después** del cierre no lo ve ningún barrido y aun así
+no se confirma, y el caso lo monta en ese orden a propósito. La cortesía sirve para que un cierre no
+deje borradores colgando sin avisar, y nada más. Está escrito así a los dos lados del puerto y en el
+ADR-0041 §1.
+
+**El cerrojo se midió antes de escribirlo y se escribió como se midió**: `FOR SHARE` al confirmar,
+`FOR UPDATE` al cerrar, y el estado **en la misma lectura** que pide el cerrojo. La R11 no sirve, y
+ese es el argumento entero: separa dos escrituras sobre la misma fila, y confirmar no escribe la del
+ejercicio. Lo ejercen dos casos con **dos transacciones de verdad**, uno por sentido.
+
+**La transacción del cierre la abre la unidad de trabajo**, por decisión del usuario (*Decisión 5*).
+Y **la duodécima puerta pública** es `IConsultaDeEjercicios`, con la forma más rara de las doce: la
+declara Organización, la implementa cada módulo con documentos y la llama ese mismo módulo, porque el
+cerrojo tiene que durar hasta el `COMMIT` de quien escribe el documento.
+
+**Dos entradas nuevas en la lista cerrada del SQL crudo**, por su ruta, y son las primeras que no
+escriben nada:
+`src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Repositorios/LosEjerciciosDesdeInventario.cs`
+y
+`src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/CerrojoDeEjercicios.cs`.
+La lista pasa de siete a **nueve** entradas —`grep -cE 'usa \.(SqlQuery|ExecuteSql|ExecuteDelete)"\]|usa Set<'
+tests/Api.FunctionalTests/Multiempresa/ElFiltroNoSeSaltaPorAhiTests.cs`—. **Y ninguna de las dos
+cumplía la cláusula 2 del criterio del ADR-0040** —«una sentencia que no lee nada para decidir»—, así
+que traen el **ADR-0041**, que la reescribe: se puede leer para decidir si la misma lectura trae el
+cerrojo que impide que lo leído se quede viejo hasta el `COMMIT`. El ADR-0040 queda marcado como
+enmendado en esa cláusula y en su consecuencia sobre la serie del ejercicio, que el 2.6 no cierra.
+
+**La tanda de mutación encontró dos lagunas, y las dos se cerraron con un caso que se pone rojo.**
+Diez mutaciones, de la 18 a la 27, sobre las líneas que deciden. Cuatro salieron verdes y cada una
+quería decir una cosa distinta: la 19 es equivalente; la 23 —anular pregunta y no hace nada con la
+respuesta— era un hueco, y su caso salió de ahí (`ce97edb`); la 25 no era un hueco sino un comentario
+que prometía de más, y se corrigió el comentario (`bed1c83`); y la 27 —el cerrojo de Organización sin
+la comparación de empresa— era **una fuga entre inquilinos que ningún caso de ningún carril veía**. La
+26, la misma comparación en Inventario, se ponía roja **por accidente**, dieciocho veces y ninguna por
+diseño. Las dos tienen ya su defensa por sentencia y la 27, además, la suya de extremo a extremo
+(`c7921ee`). La tabla entera, en la *tercera pieza*.
+
+**Las cifras, con la orden que las mide.** Carril rápido —`dotnet test Bastion.sln --filter
+"Category!=Integracion"`— **928 casos en 10 ensamblados**, desde 904 al cerrar el 2.5. Carril de
+integración —`--filter "Category=Integracion"`, con Docker— **477**, desde 459: **84** en
+`Organizacion.IntegrationTests` y **393** en `Api.IntegrationTests`. Las dos cifras son también las
+del **recuento de la CI** sobre los `.trx` —el paso 4 de la batería, que es quien decide el
+desenlace—, con las dos listas de ensamblados literales del *workflow*. El documento versionado sigue
+en **130** operaciones; el catálogo de error, **116** tipos de **122** sitios, desde 107/113. Frontal:
+**103** casos en 16 ficheros, sin un solo aviso de `act()`, y presupuesto **412/450 KiB** de arranque
+y **600/900** servido, desde 411/598. Dependencias: ningún conjunto cambia contra `main` (`python
+scripts/dependencias-por-conjuntos.py main HEAD`, con `PYTHONIOENCODING=utf-8` en esta consola).
+
+**El humo local**, contra un proyecto de compose aparte, `bastion-humo-26`, con su volumen, sus
+puertos y un fichero de entorno de valores aleatorios que se borra al salir. Sobre `d6aa236` salió
+**FALLOS: 0**. El migrador sale con código 0 y dice `EsquemaMigrado` para los seis contextos.
+**Lo que el ítem cambia en el esquema se lee del catálogo del motor**, no de la migración:
+`ejercicios_sin_intervalos_solapados` existe con `contype` **`x`** y la definición `EXCLUDE USING
+gist (empresa_id WITH =, daterange(fecha_de_inicio, fecha_de_fin, '[]'::text) WITH &&)`, con
+`btree_gist` instalada y `UnaFechaCaeEnUnSoloEjercicio` una vez en
+`organizacion.__historial_de_migraciones`. Salud en verde, `401` sin credenciales, y **el segundo
+arranque entero**: el rol del sistema con el catálogo completo, **95** permisos, antes y después; el
+estado viejo con `403`; la partición del libro borrada y vuelta a crear con su disparador en las
+**14**; y `200` con la semilla fuera. La restricción sigue en pie después del segundo arranque. Y el
+desmontaje deja `docker compose ls -a` con el proyecto `bastion` y nada más.
+
+**Hicieron falta cuatro vueltas, y ninguna culpa fue del producto.** La primera destapó tres
+errores del arnés: `contype` necesita `::text`, el historial de Organización es
+`organizacion.__historial_de_migraciones` y el guion del segundo arranque necesita `API` con el
+puerto del proyecto aparte. La segunda dio un **401** en el primer inicio de sesión del segundo
+arranque, que el 2.5 no había dado con el mismo guion. Lo único que cambiaba era la contraseña
+aleatoria. **Git Bash reescribe una variable de entorno con cara de ruta** al pasarla a un programa
+nativo —`X=/abc python` recibe `C:/Program Files/Git/abc`—, y el guion le pasa la contraseña a
+python justo así. La base64 empieza por `/` una vez de cada 64. En la tercera vuelta se forzó la
+contraseña a empezar por `/`: sin excluir la variable, **exit 1** con el 401, antes de tocar nada;
+con `MSYS2_ENV_CONV_EXCL=CONTRASENA`, **verde**. La exclusión pasó al guion, junto a la llamada
+(`d6aa236`), y la cuarta vuelta, con la misma contraseña y sin excluir nada desde fuera, es la de
+arriba. En la CI esto no pasa nunca, porque Linux no reescribe nada; por eso ningún run lo había
+visto.
+
+**Los commits, contados con la orden que los cuenta**: `git rev-list --count main..HEAD` da **22**
+con éste, y `git log --reverse --format='%h %G? %s' main..HEAD` los lista, todos `G`. El primero,
+`1027b65`, no es del 2.6: es el epílogo del 2.5 —el run de `main` y el cancelado—, escrito al abrir
+esta rama.
+
+**Los runs de la rama hasta aquí**, leídos de la API y no de la memoria —`GET
+/repos/AOjeda006/Bastion/actions/runs?branch=item-2.6-el-ejercicio-rige`, `total_count: 4`—:
+`35906227207` sobre `24cb0d6`, `35909668036` sobre `3777f28`, `35912223662` sobre `4c41849` y
+`35921732582` sobre `c92a2fd`, los cuatro **success** y **ninguno cancelado**. El que cierra el ítem,
+y el de `main`, van en la casilla.
+
+El siguiente ADR es el **0042**.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
@@ -5411,7 +5524,7 @@ que quedó.
 > desenlaces se listan todos —`success`, `failure` y `cancelled`— y los commits se cuentan con la
 > orden publicada al lado**, no de memoria.
 
-### 2.6 EN CURSO — lo primero: una fecha cae en un solo ejercicio (2026-09-23)
+### 2.6, primera pieza — una fecha cae en un solo ejercicio (2026-09-23)
 
 **El hueco.** La frase que sostiene la R9 es «el ejercicio lo decide la fecha del movimiento», y
 hasta hoy dos ejercicios de la misma empresa podían solaparse. Lo único que había era un índice
@@ -5507,7 +5620,7 @@ da **908** (31 + 61 + 215 + 181 + 85 + 78 + 22 + 13 + 168 + 54); con `Category=I
 —eran 459, y los cuatro nuevos son de integración—; el frontal, **103** en 16 ficheros. **108** tipos
 de error de **114** sitios, y **130** operaciones en el documento versionado.
 
-### 2.6 EN CURSO — el puerto de documentos, y cerrar deja de ser mudo (2026-09-23)
+### 2.6, segunda pieza — el puerto de documentos, y cerrar deja de ser mudo (2026-09-23)
 
 **El puerto va al revés que los otros siete, y eso es lo que había que decidir.** Cerrar un
 ejercicio tiene que saber si queda algo dentro del intervalo, y esa pregunta se contesta en
@@ -5743,8 +5856,107 @@ dice **114** tipos de **120** sitios, y `bash scripts/generar-openapi.sh --compr
 operaciones: la reapertura no suma una, se **mueve** —sobre **77** rutas, una más, porque `…/cierre`
 se queda solo con su `POST`—.
 
-**Lo que queda del 2.6**, por orden: el cerrojo `FOR SHARE`/`FOR UPDATE`; `IConsultaDeEjercicios` con
-`SinEjercicio`; el ajuste que no se confirma fuera de ejercicio; y la R9 viva con su fila reescrita.
+### 2.6, tercera pieza — el periodo rige lo que se escribe (2026-09-24 y 2026-09-25)
+
+**Lo que se puso.** `IConsultaDeEjercicios.ParaEscribirEnAsync(fecha)` contesta
+`EstadoDelEjercicioParaEscribir`: `Abierto`, `Cerrado` o **`SinEjercicio`**. `SinEjercicio` es un
+valor propio, ni un `null` ni un «cerrado», porque se arregla de otra manera: abriendo el ejercicio
+que falta, no reabriendo uno. Tiene sus tres celdas en `LaMatrizDeLosPuertosDeEstadoTests`, cada
+una con su caso marcado con `[CubreEstadoDelPuerto]`. `ConfirmarAjuste` pregunta **antes de pedir
+el número**, y el caso lo afirma leyendo la serie: con el ejercicio cerrado, el contador se queda en
+**0**, porque un periodo que no admite el documento no debe gastar un correlativo que luego sería un
+hueco. Son dos códigos, `ajuste-en-ejercicio-cerrado` y `ajuste-sin-ejercicio`, los dos 409. Y
+`AnularAjuste` pregunta por **hoy**, que es la fecha del inverso, no por la del original: un ajuste
+de un ejercicio cerrado **se sigue anulando**, y el inverso queda en el abierto. Cerrar toma el
+`FOR UPDATE` lo primero, por `ICerrojoDeEjercicios` y dentro de `EnTransaccionAsync` (*Decisión 5*).
+
+**Una fecha por documento, y un caso que intenta dejar uno a caballo del cierre.** Un ajuste lleva
+`FechaDeOperacion` y nada más, así que cae entero en un ejercicio o en ninguno. El caso
+`Cerrado_el_ejercicio_el_borrador_ya_no_se_confirma_y_no_queda_nada_a_medias` lo intenta por el
+único hueco que hay: cierra el ejercicio **primero**, abre después el borrador —nace, porque la
+serie no se cierra con su ejercicio— y lo confirma. Leído de la base, no de la respuesta, queda un
+borrador entero, sin número y sin una fila en el libro. Y ese orden es a propósito: es el borrador
+que ninguna cortesía ve, porque cuando se preguntó todavía no existía.
+
+**Diez mutaciones, de la 18 a la 27**, cada una con `mutar.sh`. El guion no arranca con el árbol
+sucio, lleva un canario que falla si la mutación no llegó a aplicarse, y corre los **dos carriles
+enteros**:
+
+```
+dotnet build Bastion.sln -c Debug
+dotnet test Bastion.sln --no-build --filter "Category=Integracion"
+dotnet test Bastion.sln --no-build --filter "Category!=Integracion"
+git checkout -- <fichero>   # y vuelve a compilar, y comprueba el árbol limpio
+```
+
+La base de comparación es el árbol sin mutar, verde en los dos carriles. Se ha commiteado antes de
+cada tanda.
+
+| # | Mutación | Resultado | Quién la caza |
+|---|----------|-----------|---------------|
+| 18 | El cierre deja de comparar el estado de la lectura con cerrojo | **Rojo**, 1 | `Cerrar_lo_ya_cerrado_y_reabrir_lo_ya_abierto_son_409_y_no_un_204_mudo` |
+| 19 | Compara el estado de la **entidad** en vez del de la lectura con cerrojo | **VERDE** | nadie — es equivalente: ver abajo |
+| 20 | Fuera el `FOR UPDATE` | **Rojo**, 2 + 1 rápido | `El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro`, `La_confirmacion_espera_al_cierre_que_ya_estaba_dentro_y_luego_lo_obedece` y `El_compartido_es_el_de_confirmar_y_el_exclusivo_el_de_cerrar` |
+| 21 | Fuera el `FOR SHARE` | **Rojo**, 2 + 1 rápido | los mismos tres |
+| 22 | Los dos códigos de la guarda, intercambiados | **Rojo**, 2 | `Cerrado_el_ejercicio_el_borrador_ya_no_se_confirma_y_no_queda_nada_a_medias` y `Una_fecha_fuera_de_todo_ejercicio_no_se_confirma_y_lo_dice_con_otro_codigo` |
+| 23 | Anular pregunta y no hace nada con la respuesta | **VERDE**; con el caso nuevo, **rojo**, 1 | `Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso` (`ce97edb`) |
+| 24 | Anular pregunta por la fecha del **original** | **Rojo**, 2 | `Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso` y `Anular_un_ajuste_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto` |
+| 25 | El cerrojo, **después** de la lectura por el ORM | **VERDE** | nadie — y la protección sigue: ver abajo |
+| 26 | El SQL de Inventario, sin la comparación de empresa | **Rojo**, 18, y **ninguno por diseño**; con las defensas, esos 18 más 1 rápido | por diseño, `El_puerto_de_Inventario_compara_la_empresa_contra_el_segundo_parametro` |
+| 27 | El SQL del cerrojo de Organización, sin la comparación de empresa | **VERDE en los dos carriles**; con las defensas, **rojo**, 2 | `El_cerrojo_de_Organizacion_compara_la_empresa_contra_el_segundo_parametro` y `Cerrar_el_ejercicio_cerrado_de_otra_empresa_es_el_mismo_404_que_uno_inventado` |
+
+**Los cuatro verdes, cada uno con su lectura:**
+
+- **La 19 es equivalente.** Cuando la lectura por el ORM ocurre, el cerrojo ya está tomado dentro de
+  la misma transacción, y nadie puede confirmar un cambio en esa fila hasta el `COMMIT`. Los dos
+  estados son el mismo valor, y ningún caso puede distinguirlos porque no hay nada que distinguir. Se
+  queda la lectura con cerrojo porque es la que dice **de dónde** sale el dato.
+- **La 23 era un hueco.** Sin un caso en el que hoy caiga fuera de todo ejercicio, una anulación que
+  pregunta y tira la respuesta pasaba igual: la de los casos que había siempre caía en el abierto.
+  El caso se escribió por la mutación (`ce97edb`), y la mutación lo vio rojo.
+- **La 25 no era un hueco, era un comentario que prometía de más.** Con el cerrojo detrás, la
+  lectura por el ORM puede quedarse vieja, pero el guardado lleva el `xmin` como testigo de
+  concurrencia y encuentra **cero filas**. La R11 hace de red, y el cierre no pasa. Lo que el orden
+  compra es **el error correcto**, `ejercicio-ya-cerrado` en vez de un conflicto de concurrencia; la
+  seguridad no depende de él. El comentario decía lo segundo y se corrigió (`bed1c83`).
+- **La 27 era una fuga entre inquilinos.** El identificador llega de la ruta, el cerrojo encontraba
+  la fila de **otra empresa**, la bloqueaba en exclusiva y el caso de uso contestaba
+  `ejercicio-ya-cerrado` antes de que la lectura por el ORM —la que lleva el filtro— dijera que no
+  existe. Ningún caso de ningún carril lo veía: la cláusula 4 del ADR-0040 pedía ese caso y no
+  estaba.
+
+**Y la 26 se ponía roja por accidente.** Los dieciocho rojos dicen «cae en 2 ejercicios de la misma
+empresa», y el mismo caso solo, con una sola empresa en la base, sale verde. Caen en la guarda de
+«más de una fila» porque el carril comparte la base con cientos de empresas que tienen ejercicio del
+año en curso. Un rojo que depende de cuántos vecinos haya no es una defensa. Por su nombre:
+
+- `ElCierreLePreguntaALosModulosTests`: `Encoger_el_ejercicio_por_encima_de_un_documento_es_409_y_por_el_otro_lado_no` y `Un_borrador_de_inventario_dentro_del_ejercicio_impide_cerrarlo_y_el_error_lo_nombra`.
+- `ElEjercicioRigeElAjusteTests`: `Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso`, `Anular_un_ajuste_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto`, `Cerrado_el_ejercicio_el_borrador_ya_no_se_confirma_y_no_queda_nada_a_medias`, `Con_el_ejercicio_abierto_la_confirmacion_pasa_y_el_documento_queda_numerado`, `El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro` y `Una_fecha_fuera_de_todo_ejercicio_no_se_confirma_y_lo_dice_con_otro_codigo`.
+- `ElNumeroEntraEnElReciboTests`: `El_reintento_con_la_misma_clave_devuelve_el_numero_y_no_gasta_otro` y `Sin_la_cabecera_la_confirmacion_es_428_y_no_toca_nada`.
+- `LaAnulacionConContraDocumentoTests`: `Anular_dos_veces_seguidas_no_crea_dos_inversos`, `Dos_anulaciones_simultaneas_dejan_un_solo_inverso`, `El_inverso_es_un_documento_confirmado_con_su_numero_y_su_flecha`, `El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion` y `Sin_la_cabecera_la_anulacion_es_428_y_no_toca_nada`.
+- `LaSerieDelAjusteTests`: `Cerrar_la_serie_despues_del_borrador_lo_deja_sin_poder_confirmarse` y `Confirmar_pone_el_numero_en_el_documento_y_lo_sube_en_la_serie`.
+- `UnAlmacenBloqueadoNoAdmiteAjustesTests`: `Bloquear_el_almacen_cierra_el_alta_y_deja_en_pie_lo_ya_escrito`.
+
+**Las defensas (`c7921ee`), dos, como en la numeración.** En el carril rápido,
+`LaSentenciaDelEjercicioMiraLaEmpresaTests` lleva **una por sentencia**, y no una sobre las dos
+juntas. `LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests` extrae las columnas de las dos cadenas
+**concatenadas**, y `e.empresa_id` sale igual aunque una de las dos la haya perdido, porque la otra
+la sigue nombrando: es la trampa de barrer la unión de dos conjuntos. Además, cada sentencia compara
+contra el parámetro `{1}` y no contra un literal. Ninguno de los dos puertos acepta una empresa de
+quien llama, y el valor sale de `IInquilinoActual`, leído del fuente. De extremo a extremo,
+`Cerrar_el_ejercicio_cerrado_de_otra_empresa_es_el_mismo_404_que_uno_inventado` **cierra el ejercicio
+de A a propósito**. Con uno abierto, la fuga no se ve: el cerrojo diría «Abierto» y la lectura por el
+ORM daría el 404 de todas formas. Con uno cerrado, la fuga contesta **409** donde tiene que contestar
+**404**, y el caso exige además el mismo `type` que un identificador inventado.
+
+**Cifras de la pieza, con su orden:** `dotnet test Bastion.sln --filter "Category!=Integracion"`
+da **928** (31 + 61 + 215 + 188 + 85 + 78 + 22 + 13 + 181 + 54), desde 917; con
+`Category=Integracion`, **477** (84 + 393), desde 469. `bash scripts/generar-errores.sh
+--comprobar` dice **116** tipos de **122** sitios, y `bash scripts/generar-openapi.sh --comprobar`,
+**130** operaciones, las mismas: la pieza no estrena ninguna ruta, solo dos motivos nuevos para
+negarse por la de confirmar. Las semillas de los casos nuevos van **del 384 al 399**, barridas antes
+de usarlas —ningún otro fichero de `tests/` las usa—, y el `remarks` del fichero las lista enteras
+desde `6ddc758`.
 
 
 **FASE 1 CERRADA — las catorce casillas marcadas y el run que lo certifica:**
@@ -12749,7 +12961,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   `anula_a_id` **vuelve a ser único** y el borde traduce su `23505` al mismo `412`. El detalle, con
   sus tres mutaciones, en *Estado actual* → *El índice vuelve, y la traducción con él*.
 
-- [ ] **2.6 · El ejercicio rige: qué exige cerrar, quién reabre y quién pregunta** — criterio de
+- [x] **2.6 · El ejercicio rige: qué exige cerrar, quién reabre y quién pregunta** — criterio de
   aceptación: cerrar **exige** que no quede ningún documento de inventario en borrador con fecha
   dentro del ejercicio, y lo dice con su error cuando queda alguno; reabrir tiene **permiso propio**,
   motivo obligatorio y **evento auditado**; `IConsultaDeEjercicios` contesta por el **estado del
@@ -12759,6 +12971,77 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   ejercicio. **El ejercicio lo decide la fecha del movimiento**, y todos los movimientos de un
   documento llevan **una sola** fecha de operación, la del documento: ningún documento queda a caballo
   de un cierre, y hay un caso que lo intenta. Hace viva **R9** y cambia su fila.
+
+  **Hecho el 2026-09-25**, en la rama `item-2.6-el-ejercicio-rige`. El orden de los commits importa y
+  por eso se deja escrito. Primero, que **una fecha caiga en un solo ejercicio** y lo impida la base
+  (`e187231`), porque sin eso «el ejercicio de una fecha» no es una pregunta con una respuesta. Luego
+  **cerrar**: el puerto de los módulos con documentos, cerrar con borradores dentro, y mover y borrar
+  por el mismo puerto (`f3fc839`, `89bc943`, `6806b36`). Después **reabrir**, con su motivo y su evento
+  (`8ed990d`, `b35b4bf`). Y al final **el periodo rige lo que se escribe**: el cerrojo y la guarda
+  (`71c8d70`), el caso que tapa el hueco de anular (`ce97edb`), el comentario que prometía de más
+  (`bed1c83`), la fila de la R9 (`555b63c`), las defensas de la empresa (`c7921ee`), el ADR-0041
+  (`63e4864`, `7c19bcc`) y las semillas del fichero (`6ddc758`). Y uno que no es del dominio: el
+  guion del segundo arranque, que en local fallaba una vez de cada 64 (`d6aa236`, en el humo de
+  *Hecho el 2.6*). Entre medias, los commits del PLAN
+  (`2e1bc76`, `24cb0d6`, `3777f28`, `4c41849`, `c92a2fd`); y `1027b65`, el primero de la rama, que es
+  el epílogo del 2.5.
+
+  **La guarda es confirmar; la cortesía, los borradores al cerrar.** La guarda sostiene la R9; la
+  cortesía avisa. Anular también es guarda, y pregunta por **hoy**.
+
+  **Vistos en rojo** —entre paréntesis, la mutación que lo puso rojo—:
+
+  - `ContratoDeOrganizacionTests.El_dia_en_que_un_ejercicio_ACABA_todavia_cuenta_para_el_solape` (1, 2)
+  - `ContratoDeOrganizacionTests.El_solape_lo_impide_la_BASE_y_no_solo_la_comprobacion_previa` (2)
+  - `ContratoDeOrganizacionTests.Mover_un_ejercicio_encima_de_otro_es_409_y_dejarlo_donde_esta_no_lo_es` (2, 4)
+  - `ContratoDeOrganizacionTests.Dos_ejercicios_de_la_misma_empresa_no_pueden_pisarse_aunque_se_llamen_distinto` (3)
+  - `ContratoDeOrganizacionTests.Cerrar_lo_ya_cerrado_y_reabrir_lo_ya_abierto_son_409_y_no_un_204_mudo` (8, 18)
+  - `LosModulosConDocumentosSeInscribenTests.Todo_modulo_con_documentos_esta_inscrito_y_ninguna_inscripcion_sobra` (5, 6)
+  - `LosModulosConDocumentosSeInscribenTests.Cada_inscripcion_dice_el_modulo_en_el_que_vive` (5, 6)
+  - `ElCierreLePreguntaALosModulosTests.Un_borrador_de_inventario_dentro_del_ejercicio_impide_cerrarlo_y_el_error_lo_nombra` (7)
+  - `ElCierreLePreguntaALosModulosTests.Encoger_el_ejercicio_por_encima_de_un_documento_es_409_y_por_el_otro_lado_no` (9)
+  - `ElCierreLePreguntaALosModulosTests.Un_ejercicio_sin_series_pero_con_un_documento_dentro_tampoco_se_borra` (11)
+  - `EjercicioTests.Lo_que_un_intervalo_nuevo_dejaria_fuera_se_cuenta_por_dias_y_no_por_meses` (10)
+  - `LaReaperturaSeAuditaTests.Reabrir_sin_motivo_es_400_y_deja_el_ejercicio_cerrado` (12, 13b)
+  - `LaReaperturaSeAuditaTests.Reabrir_con_motivo_lo_abre_y_deja_el_evento_con_el_motivo_dentro` (14, 15)
+  - `ElEjercicioRigeElAjusteTests.El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro` (20, 21)
+  - `ElEjercicioRigeElAjusteTests.La_confirmacion_espera_al_cierre_que_ya_estaba_dentro_y_luego_lo_obedece` (20, 21)
+  - `LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.El_compartido_es_el_de_confirmar_y_el_exclusivo_el_de_cerrar` (20, 21)
+  - `ElEjercicioRigeElAjusteTests.Cerrado_el_ejercicio_el_borrador_ya_no_se_confirma_y_no_queda_nada_a_medias` (22)
+  - `ElEjercicioRigeElAjusteTests.Una_fecha_fuera_de_todo_ejercicio_no_se_confirma_y_lo_dice_con_otro_codigo` (22)
+  - `ElEjercicioRigeElAjusteTests.Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso` (23, 24)
+  - `ElEjercicioRigeElAjusteTests.Anular_un_ajuste_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto` (24)
+  - `LaSentenciaDelEjercicioMiraLaEmpresaTests.El_puerto_de_Inventario_compara_la_empresa_contra_el_segundo_parametro` (26)
+  - `LaSentenciaDelEjercicioMiraLaEmpresaTests.El_cerrojo_de_Organizacion_compara_la_empresa_contra_el_segundo_parametro` (27)
+  - `ElEjercicioRigeElAjusteTests.Cerrar_el_ejercicio_cerrado_de_otra_empresa_es_el_mismo_404_que_uno_inventado` (27)
+
+  **Y rojos por su cuenta durante el ítem**, que son guardas del proyecto haciendo su trabajo y no
+  hallazgos de la tanda: `Las_puertas_publicas_de_los_contratos_son_las_declaradas`,
+  `Las_referencias_de_proyecto_son_las_declaradas` y `El_unico_cruce_entre_modulos_va_por_contratos`,
+  en cuanto el puerto nació sin declarar; los dos sentidos de `CadaEventoEstaDeclaradoTests` (16,
+  17); `LasDiecisieteReglasTests.Lo_que_la_tabla_nombra_existe` y
+  `.Cada_estado_es_uno_de_los_tres_y_dice_donde_o_por_que`, al reescribir la fila de la R9; y
+  `ElEstadoDelReadmeEsElDelPlanTests.La_linea_de_estado_del_readme_es_la_del_checklist`, al marcar
+  esta casilla con el README todavía en «5 de 14». La prosa de esa línea decía además «lleva tres»
+  desde el 2.3, y eso la guarda no lo mira: solo compara el principio.
+
+  **Vistos solo en verde** —sostienen lo que dicen y nada más—:
+
+  - `EjercicioTests.Cerrar_dos_veces_SI_es_un_error_y_dejo_de_ser_idempotente_en_el_2_6`
+  - `EjercicioTests.Reabrir_lo_que_ya_estaba_abierto_tampoco_pasa_en_silencio`
+  - `ElEjercicioRigeElAjusteTests.Con_el_ejercicio_abierto_la_confirmacion_pasa_y_el_documento_queda_numerado` —rojo en la 26, pero por accidente, y eso no cuenta—
+  - `LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Las_cadenas_del_puerto_de_Inventario_son_las_del_modelo`
+  - `LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Las_cadenas_del_cerrojo_de_Organizacion_son_las_del_modelo`
+  - `LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla`
+  - `LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.El_estado_que_las_dos_traducen_se_guarda_como_texto`
+  - `LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Ninguna_de_las_dos_lleva_punto_y_coma_final`
+  - `LaSentenciaDelEjercicioMiraLaEmpresaTests.Ninguno_de_los_dos_puertos_deja_que_quien_llama_elija_la_empresa`
+  - `LaSentenciaDelEjercicioMiraLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio` (dos filas)
+
+  Son **33** métodos nuevos o renombrados en el ítem: **23** vistos en rojo y **10** solo en verde.
+
+  **El run que cierra el 2.6 y el de `main`** se escriben en el commit siguiente, leídos de la API: el
+  de la rama sale de empujar **este** commit, y no puede ir dentro de él.
 
 - [ ] **2.7 · Las existencias, proyección de un libro que es la verdad** — criterio de aceptación: el
   saldo se **define** como la suma del libro, y la instantánea mensual —el mismo límite que la
@@ -12855,6 +13138,33 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTA (2026-09-25, ítem 2.6) · el inverso numera en la serie del ejercicio del original, y lleva
+  la fecha de otro.** El ADR-0040 dejaba para el 2.6 «que un documento vaya a la serie **de su
+  ejercicio**», y el 2.6 hizo viva la R9 **sin** cerrarlo, porque al llegar ahí resultó no tener una
+  respuesta única. `CrearInverso` hereda la serie del original y estrena la fecha de hoy —lo afirma
+  `ElInversoQueAnulaTests.El_inverso_hereda_la_serie_y_el_almacen_y_estrena_la_fecha`—. La serie
+  cuelga del ejercicio del original, y **no se cierra con él**. Así que anular hoy un ajuste de un
+  ejercicio cerrado deja un inverso **fechado en el abierto y numerado en la serie del cerrado**. La
+  guarda de la R9 lo deja pasar con razón, porque pregunta por la fecha y la fecha está en el abierto.
+  Y el `WHERE` de `NumeradorDeSerie` —empresa, identificador, `Activa`— no mira el ejercicio. **No es
+  solo el inverso**: un borrador cualquiera con fecha de este año, abierto sobre una serie del año
+  pasado que sigue activa, se numera igual. El inverso es el caso en que nadie elige la serie. Para
+  un ajuste de inventario es desorden en el correlativo. Para una factura —fase 3— es la R5 con otra
+  cara, porque la serie mezclaría años. Las salidas, y lo que cuesta cada una:
+  - **El inverso numera en la serie del ejercicio de hoy.** Hay que encontrar esa serie —del mismo
+    tipo, en el ejercicio abierto—, y puede no existir: anular fallaría por un motivo que no tiene
+    nada que ver con el documento.
+  - **El inverso se queda en la serie del original**, y la regla «serie de su ejercicio» se escribe
+    con esa excepción dicha: el inverso pertenece a su original, no a su fecha.
+  - **Las series se cierran con su ejercicio.** Entonces el inverso de un documento viejo no tendría
+    dónde numerar, y la R2 promete que anular se puede siempre.
+
+  La comprobación, sea cual sea, va donde está la garantía: en el `WHERE` del numerador, con el
+  ejercicio de la fecha a su lado, como `s.tipo_de_documento` en la nota del 2.4. Es una decisión y
+  no una línea. **No se toma aquí ni se amplía el checklist por cuenta propia**: el sitio natural es
+  la primera serie que numere documentos fiscales (fase 3) o un addendum, y quien la conteste no es
+  el agente.
+
 - **ABIERTA (2026-09-19, ítem 2.4) · nadie comprueba de qué documentos es una serie.** `Serie`
   lleva su `TipoDeDocumento` **desde el ítem 0.4** —y el 2.4 le añadió los tres valores de
   inventario, que era lo único que faltaba para poder declarar una serie de ajustes—, pero
@@ -12890,6 +13200,13 @@ cuando hace falta el porqué.
   con la misma respuesta probable, porque la fila guarda su factor y se explica sola. No se decide
   aquí ni se amplía el checklist por cuenta propia: el ítem que tiene el sitio natural es el **2.9**
   o un addendum, y quien lo conteste no es el agente.
+
+  **Añadido el 2026-09-25 (ítem 2.6), para quien la conteste:** `CrearInverso` **copia el factor del
+  original** —lo afirma `ElInversoQueAnulaTests.El_inverso_copia_las_lineas_con_la_cantidad_negada`,
+  línea a línea— y **así tiene que seguir**. Si algún día el factor se valida contra `ConversionUM` al
+  confirmar, **el inverso no se vuelve a validar**: una conversión retirada después impediría anular
+  un documento viejo, que es justo el documento para el que existe la anulación (R2). El inverso
+  deshace lo que el original hizo, con los números con los que lo hizo.
 
 - **ABIERTA (2026-09-18, ítem 2.2) · ¿recibe el artículo su final de vida en esta fase, una vez el 2.7
   le dé existencias?** Es **pregunta del cierre de la fase 2**, y se deja escrita aquí para que lo
