@@ -97,6 +97,14 @@ internal sealed class CerrarEjercicio(
         // dos versiones de la misma fila en la misma operación: la de la lectura sin cerrojo y la
         // del cerrojo. Con el cerrojo puesto primero, todo lo que se lea a partir de aquí ya no se
         // puede mover, así que no hay dos.
+        //
+        // Y LO QUE ESE ORDEN COMPRA, MEDIDO: invertirlo no pone roja ni una prueba, y el motivo
+        // es que la R11 lo recoge por detrás. Con la entidad leída antes del cerrojo, un cierre
+        // que se colara en medio dejaría aquí un testigo de concurrencia viejo, y el `UPDATE`
+        // final no encontraría ninguna fila que casara: sale como choque de concurrencia. Así
+        // que el orden no compra la seguridad -esa ya estaba-, compra EL ERROR CORRECTO: un
+        // `ejercicio-ya-cerrado` que dice lo que pasa, en vez de un 412 sobre una versión que
+        // el cliente tenía bien cuando la pidió.
         EstadoDeEjercicio? bloqueado = await cerrojo
             .TomarEnExclusivaAsync(id, cancelacion)
             .ConfigureAwait(false);
