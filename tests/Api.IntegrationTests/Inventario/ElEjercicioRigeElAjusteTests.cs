@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Cruces;
 using Bastion.Api.IntegrationTests.Persistencia;
@@ -294,6 +295,45 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
     }
 
     [Fact]
+    public async Task Cerrar_el_ejercicio_cerrado_de_otra_empresa_es_el_mismo_404_que_uno_inventado()
+    {
+        // EL CERROJO DEL CIERRE ES SQL CRUDO, y el filtro global de empresa no lo alcanza: la
+        // sentencia compara la empresa ella misma. Este es el caso que se pone rojo si esa
+        // comparación desaparece, y no por casualidad. Sin ella, la lectura con cerrojo encontraría
+        // la fila de A por su identificador, vería «Cerrado» y el caso de uso contestaría
+        // `ejercicio-ya-cerrado` ANTES de llegar a la lectura por el ORM, que es la que sí lleva
+        // el filtro. B se enteraría de que ese ejercicio existe y de que está cerrado, y además se
+        // habría llevado un `FOR UPDATE` sobre una fila de otra sociedad.
+        //
+        // Por eso el ejercicio de A va CERRADO: con uno abierto la fuga no se ve —el cerrojo lo
+        // encontraría, diría «Abierto», y la lectura por el ORM, con su filtro, daría el 404 de
+        // todas formas—.
+        (HttpClient enA, EmpresaDto _) = await EnUnaEmpresaNuevaAsync(398);
+
+        EjercicioDto deA = await CrearEjercicioAsync(enA, Hoy.Year);
+        await CerrarPorLaApiAsync(enA, deA.Id);
+
+        (HttpClient enB, EmpresaDto _) = await EnUnaEmpresaNuevaAsync(399);
+
+        // El If-Match va a mano y con un valor cualquiera, por lo mismo que en
+        // `ElFiltroDeEmpresaTests`: B no puede leer la fila para sacar el suyo.
+        using HttpResponseMessage ajeno = await enB.EnviarConVersionAsync(
+            HttpMethod.Post, $"{LosMaestrosPorLaApi.Ejercicios}/{deA.Id}/cierre", "\"1\"");
+
+        using HttpResponseMessage inventado = await enB.EnviarConVersionAsync(
+            HttpMethod.Post,
+            $"{LosMaestrosPorLaApi.Ejercicios}/{Guid.CreateVersion7()}/cierre",
+            "\"1\"");
+
+        ajeno.StatusCode.ShouldBe(HttpStatusCode.NotFound, await Escenario.Detalle(ajeno));
+        inventado.StatusCode.ShouldBe(HttpStatusCode.NotFound, await Escenario.Detalle(inventado));
+
+        // Y LA MISMA RESPUESTA, no solo el mismo código: un `type` distinto volvería a separarlas.
+        (await TipoDelProblemaAsync(ajeno)).ShouldBe(await TipoDelProblemaAsync(inventado));
+        (await TipoDelProblemaAsync(ajeno)).ShouldBe("/errors/ejercicio-no-encontrado");
+    }
+
+    [Fact]
     public async Task El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro()
     {
         (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(388);
@@ -442,6 +482,13 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
     /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
     /// <param name="ejercicioId">El ejercicio que cerrar.</param>
     /// <returns>Lo que contestó la API.</returns>
+    private static async Task<string?> TipoDelProblemaAsync(HttpResponseMessage respuesta)
+    {
+        using var problema = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
+
+        return problema.RootElement.GetProperty("type").GetString();
+    }
+
     private static Task<HttpResponseMessage> CerrarAsync(HttpClient cliente, Guid ejercicioId) =>
         cliente.AccionarAsync(
             $"{LosMaestrosPorLaApi.Ejercicios}/{ejercicioId}",

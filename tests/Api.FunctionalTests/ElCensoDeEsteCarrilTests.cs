@@ -161,6 +161,11 @@ public sealed class ElCensoDeEsteCarrilTests
 
         // Del ítem 2.6, y aquí por lo mismo que las de arriba: dos sentencias crudas cuyas
         // cadenas nadie compila, atadas al modelo desde el carril rápido.
+        "LaSentenciaDelEjercicioMiraLaEmpresaTests.El_cerrojo_de_Organizacion_compara_la_empresa_contra_el_segundo_parametro",
+        "LaSentenciaDelEjercicioMiraLaEmpresaTests.El_puerto_de_Inventario_compara_la_empresa_contra_el_segundo_parametro",
+        "LaSentenciaDelEjercicioMiraLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio",
+        "LaSentenciaDelEjercicioMiraLaEmpresaTests.Ninguno_de_los_dos_puertos_deja_que_quien_llama_elija_la_empresa",
+
         "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla",
         "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.El_compartido_es_el_de_confirmar_y_el_exclusivo_el_de_cerrar",
         "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.El_estado_que_las_dos_traducen_se_guarda_como_texto",

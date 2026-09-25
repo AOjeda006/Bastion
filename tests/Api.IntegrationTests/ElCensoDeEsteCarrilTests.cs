@@ -171,6 +171,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElEjercicioRigeElAjusteTests.Anular_un_ajuste_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto",
         "ElEjercicioRigeElAjusteTests.Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso",
         "ElEjercicioRigeElAjusteTests.Cerrado_el_ejercicio_el_borrador_ya_no_se_confirma_y_no_queda_nada_a_medias",
+        "ElEjercicioRigeElAjusteTests.Cerrar_el_ejercicio_cerrado_de_otra_empresa_es_el_mismo_404_que_uno_inventado",
         "ElEjercicioRigeElAjusteTests.Con_el_ejercicio_abierto_la_confirmacion_pasa_y_el_documento_queda_numerado",
         "ElEjercicioRigeElAjusteTests.El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro",
         "ElEjercicioRigeElAjusteTests.La_confirmacion_espera_al_cierre_que_ya_estaba_dentro_y_luego_lo_obedece",
