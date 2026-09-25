@@ -71,8 +71,15 @@ la operación normal, y los cerrojos compartidos conviven entre sí; un cierre n
 —el exclusivo espera a que suelten los compartidos que ya estaban dentro, y los que lleguen después
 esperan al cierre y luego lo obedecen—. Por eso se descartó también la alternativa sin SQL crudo de
 tomar el cerrojo con un `UPDATE` tonto sobre la propia fila: escribiría —y auditaría— un cambio que
-nadie ha pedido, y además es exclusivo, así que pondría en fila a todas las confirmaciones de la
-empresa.
+nadie ha pedido, es exclusivo, así que pondría en fila a todas las confirmaciones de la empresa, y
+**movería el ETag del ejercicio** en cada confirmación, con lo que cerrar con `If-Match` fallaría por
+una versión que nadie cambió a propósito.
+
+**El cerrojo, en cambio, no toca el testigo.** El testigo de concurrencia de este sistema es `xmin`,
+y un `FOR SHARE` o un `FOR UPDATE` escriben en `xmax`: la versión que el cliente trae para cerrar
+sigue valiendo aunque se haya confirmado un documento por en medio. Se midió contra PostgreSQL 17.6
+antes de escribir el código, con el `UPDATE` de contraste al lado —que sí cambia `xmin` y mueve la
+tupla—, y la tabla está en las decisiones del ítem en `docs/PLAN.md`.
 
 Los dos sentidos se ejercen con **dos transacciones de verdad** contra PostgreSQL
 (`El_cierre_espera_a_la_confirmacion_que_ya_estaba_dentro`,
