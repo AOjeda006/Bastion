@@ -221,11 +221,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         //     confirmaciones a la vez sobre el mismo ejercicio son la operacion normal y no se
         //     estorban; un cierre no convive con ninguna.
         //
-        // El criterio por el que la excepcion sigue siendo estrecha es el mismo del ADR de la
-        // numeracion, con una linea mas: vale cuando el efecto tiene que caer en la MISMA
-        // transaccion que el documento, y ademas vale para PEDIRLE AL MOTOR UN CERROJO que el ORM
-        // no sabe pedir. Ninguna de las dos sentencias devuelve datos de negocio -devuelven un
-        // estado de dos valores-, y las dos comparan la empresa ellas mismas.
+        // El criterio por el que la excepcion sigue siendo estrecha es el del ADR de la numeracion
+        // (ADR-0040), con su clausula 2 enmendada por el ADR-0041: una sentencia puede leer para
+        // decidir si la misma lectura trae el cerrojo que impide que lo leido se quede viejo hasta
+        // el COMMIT. Ninguna de las dos devuelve datos de negocio -devuelven un estado de dos
+        // valores-, y las dos comparan la empresa ellas mismas, cada una con su caso en
+        // LaSentenciaDelEjercicioMiraLaEmpresaTests.
         ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Repositorios/" +
          "LosEjerciciosDesdeInventario.cs usa .SqlQuery"] =
             "toma un cerrojo COMPARTIDO sobre la fila del ejercicio que comprende la fecha del "

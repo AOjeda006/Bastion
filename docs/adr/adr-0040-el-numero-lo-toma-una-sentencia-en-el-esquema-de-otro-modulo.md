@@ -8,7 +8,7 @@ revisado: 2026-09-19
 
 # ADR-0040: El número lo toma una sentencia en el esquema de otro módulo, y esa es la segunda excepción al «único camino»
 
-- **Estado:** aceptado
+- **Estado:** aceptado, con la **cláusula 2 del criterio enmendada** por el [ADR-0041](adr-0041-el-cerrojo-del-ejercicio-lo-pide-una-lectura-cruda.md)
 - **Fecha:** 2026-09-19
 - **Enmienda el [ADR-0013](adr-0013-el-evento-va-en-la-misma-transaccion-y-el-efecto-ocurre-una-vez.md)**
   en sus dos frases cerradas: «la bandeja de salida es el único camino por el que un módulo escribe
@@ -72,6 +72,11 @@ fuera de la bandeja **solo si se cumplen las cuatro**:
 2. **Es una sola fila y una sola columna, con una sentencia que no lee nada para decidir.** El
    incremento opera **sobre lo que hay** (`ultimo_numero = ultimo_numero + 1`); no hay un valor que
    el llamante pueda traer ni una lectura previa que se pueda quedar vieja.
+
+   > **Enmendado por el ADR-0041 (2026-09-25).** El motivo sigue en pie; la frase solo admitía
+   > una forma de cumplirlo. Hoy la cláusula admite también una lectura que decide **si trae en
+   > la misma sentencia el cerrojo** que impide que se quede vieja hasta el `COMMIT`: es lo que
+   > hacen las dos sentencias del ejercicio del ítem 2.6, que no se pueden escribir sin leer.
 3. **El módulo dueño no expone —ni puede exponer— un método que haga eso.** No es que no se haya
    escrito: `Serie` vive en `Organizacion.Domain` y ningún módulo ve el interior de otro, así que
    ningún método de allí es llamable desde aquí. El punto 6 lo desarrolla.
@@ -226,6 +231,11 @@ acordarse de ampliar nada, y uno que hoy no se pudiera numerar saldría rojo hoy
   el documento guarda.
 - **Lo que este ADR no trae, dicho:** que un documento vaya a la serie **de su ejercicio** no lo
   comprueba nadie todavía; es del ítem 2.6, con el periodo (R9).
+
+  > **Enmendado por el ADR-0041 (2026-09-25).** El ítem 2.6 hizo viva la R9 y **no** cerró esto:
+  > el inverso de una anulación hereda la serie del original y estrena la fecha de hoy, así que
+  > «la serie de su ejercicio» no tiene todavía una respuesta única. Queda en las preguntas
+  > abiertas de `docs/PLAN.md`.
 
 ## Procedencia
 
