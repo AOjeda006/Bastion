@@ -13040,8 +13040,21 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 
   Son **33** métodos nuevos o renombrados en el ítem: **23** vistos en rojo y **10** solo en verde.
 
-  **El run que cierra el 2.6 y el de `main`** se escriben en el commit siguiente, leídos de la API: el
-  de la rama sale de empujar **este** commit, y no puede ir dentro de él.
+  **El 2.6 lo cierra el run 36138366421** sobre `6fb7f19`, **success al primer intento**, con sus
+  tres jobs —Backend `108081838062`, Frontal `108081838309` y Humo `108084015023`— y **65 pasos: 64
+  en verde y 1 omitido**, que es *Diagnóstico* con su `if: failure()`. Las cifras del *runner*,
+  leídas de las anotaciones del run y no dadas por buenas: **928** y **477** casos con **10 `.trx`**
+  en cada artefacto, **130** operaciones sobre **77** rutas, **116** tipos de error de **122**
+  sitios, modelo y migraciones coincidiendo en todos los módulos y el presupuesto del frontal
+  idéntico al de esta máquina, **412/450** y **600/900** KiB. El segundo arranque del Humo dice lo
+  mismo que el humo local: **95** permisos antes y después, `403` con el estado viejo, las **14**
+  particiones con su disparador y `200` con la semilla fuera. Es el **quinto** run de la rama
+  (`total_count: 5`), y **ninguno cancelado**. Cada job lleva además un aviso de la plataforma que
+  no es del proyecto: `ubuntu-latest` pasa a Ubuntu 26 a partir del 2026-10-19.
+
+  **El run de `main`** sale de empujar el commit que escribe éste, y por eso va al abrir el 2.7,
+  como fue el del 2.5. Con ese commit, `git rev-list --count main..HEAD` pasa de **22** a **23**
+  antes del avance, y es el último del ítem.
 
 - [ ] **2.7 · Las existencias, proyección de un libro que es la verdad** — criterio de aceptación: el
   saldo se **define** como la suma del libro, y la instantánea mensual —el mismo límite que la
