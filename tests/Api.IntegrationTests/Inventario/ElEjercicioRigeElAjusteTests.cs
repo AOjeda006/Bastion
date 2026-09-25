@@ -52,9 +52,10 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// sea la máquina.
 /// </para>
 /// <para>
-/// <b>Semillas: las empresas van del 384 al 389 y los maestros de instalación del 390 al 395.</b>
-/// Este carril comparte la base entre todos sus ficheros, así que una semilla repetida no falla
-/// aquí: falla en el fichero de otro que la pedía primero.
+/// <b>Semillas: el fichero entero es del 384 al 399.</b> Las empresas, del 384 al 389 y la 396, la
+/// 398 y la 399; los maestros de instalación, del 390 al 395 y la 397. Este carril comparte la base
+/// entre todos sus ficheros, así que una semilla repetida no falla aquí: falla en el fichero de
+/// otro que la pedía primero.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
