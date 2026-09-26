@@ -24,10 +24,12 @@ namespace Bastion.Organizacion.Contracts.Series;
 /// a nada, y que quien se equivoca de serie lo sepa al darlo de alta y no después de rellenarlo.
 /// </para>
 /// <para>
-/// <b>Y no contesta de qué documentos es la serie.</b> Que una serie de facturas no numere un
-/// ajuste de inventario es una comprobación que hoy no existe en ningún sitio —tampoco en la
-/// sentencia—, y darla aquí a medias haría creer que sí. Está anotada como pendiente en
-/// <c>docs/PLAN.md</c>.
+/// <b>Y no contesta de qué documentos es la serie ni de qué ejercicio cuelga.</b> Las dos cosas las
+/// comprueba desde el ADR-0043 la sentencia que numera, que es donde está la garantía: una serie de
+/// facturas no le da número a un ajuste (<c>serie-de-otro-documento</c>) y una serie del año pasado
+/// no se lo da a un documento de este (<c>fecha-fuera-del-ejercicio-de-la-serie</c>). Quien abre un
+/// borrador contra la serie equivocada se entera al confirmarlo, y no antes; preguntarlo también
+/// aquí sería la cortesía, no la regla, y hoy no se hace.
 /// </para>
 /// </remarks>
 public interface IConsultaDeSeries

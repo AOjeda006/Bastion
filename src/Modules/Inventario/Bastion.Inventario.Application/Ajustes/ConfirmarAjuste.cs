@@ -112,8 +112,13 @@ internal sealed class ConfirmarAjuste(
         // pida, más corto es el tramo en el que otra confirmación de la misma serie espera —pero
         // tiene que caer dentro de la transacción, y deshacerla es lo único que devuelve el
         // número—. Y si la serie no numera, aquí no se ha cambiado nada todavía.
+        //
+        // CON LA FECHA DEL PROPIO AJUSTE, que es la que tiene que caer en el ejercicio de la serie:
+        // la R9 acaba de mirar que esa fecha tiene un ejercicio abierto, y la sentencia mira que
+        // ese ejercicio sea el de la serie. Son dos preguntas distintas y ninguna implica la otra.
         Resultado<long> numero = await numerador
-            .TomarNumeroAsync(ajuste.SerieId, cancelacion)
+            .TomarNumeroAsync(
+                ajuste.SerieId, TipoDeDocumentoOrigen.Ajuste, ajuste.FechaDeOperacion, cancelacion)
             .ConfigureAwait(false);
 
         if (!numero.EsCorrecto)

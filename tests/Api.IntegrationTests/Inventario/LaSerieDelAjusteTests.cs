@@ -7,6 +7,7 @@ using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Contracts.Almacenes;
+using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
@@ -37,7 +38,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// dejara fuera del DTO— pasaría cualquier afirmación hecha sobre lo que devuelve el numerador.
 /// </para>
 /// <para>
-/// <b>Semillas: las empresas van por el 309 y los maestros de instalación por el 350.</b> El resto
+/// <b>Semillas: las empresas van por el 309 y los maestros de instalación por el 350, y los dos
+/// casos del ADR-0043 usan la 333 y la 334, con los maestros 367 y 368</b> —el 313 y el 314 eran
+/// de <c>ElNumeroEntraEnElReciboTests</c>, y chocaron en la primera pasada—. El resto
 /// del reparto de este carril está en <c>ElCerrojoDeLaNumeracionTests</c> —que gasta del 301 al
 /// 308— y en <c>UnAlmacenBloqueadoNoAdmiteAjustesTests</c>. Un número de empresa acaba en un NIF
 /// único y uno de maestro en el código único de otra tabla, así que son dos cuentas y no una.
@@ -194,6 +197,76 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
             "llegó— no queda gastado: es lo que una secuencia de PostgreSQL no sabría hacer");
     }
 
+    [Fact]
+    public async Task Un_ajuste_abierto_sobre_una_serie_de_facturas_no_se_confirma()
+    {
+        // LA NOTA DEL ÍTEM 2.4, DE EXTREMO A EXTREMO. El alta solo pregunta por el estado de la
+        // serie, así que el borrador nace; lo que lo para es el `WHERE`, al confirmar. Antes del
+        // ADR-0043 se confirmaba, y el número que consumía era un correlativo de la serie de
+        // facturas: el hueco se lo llevaba la factura siguiente.
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(333);
+
+        (AbrirAjusteDto peticion, SerieDto serie) =
+            await UnAjusteCompletoAsync(cliente, "SER-E", 367, TipoDeDocumento.FacturaEmitida);
+
+        await using ElModuloDeInventario modulo = new(postgres, empresa.Id);
+
+        Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
+
+        alta.EsCorrecto.ShouldBeTrue(
+            $"el alta no mira el tipo de la serie, y si rechazara aquí el caso no diría nada del " +
+            $"`WHERE`. Contestó «{alta.Error?.Codigo}»");
+
+        Resultado<AjusteDto> confirmacion = await modulo.ConfirmarAsync(alta.Valor.Id);
+
+        confirmacion.EsCorrecto.ShouldBeFalse("una serie de facturas no le da número a un ajuste");
+        confirmacion.Error!.Codigo.ShouldBe(ErroresDeNumeracion.CodigoDeSerieDeOtroDocumento);
+
+        await ElBorradorSigueSinNumeroAsync(empresa.Id, alta.Valor.Id);
+
+        SerieDto? despues = await cliente.GetFromJsonAsync<SerieDto>(
+            $"{LosMaestrosPorLaApi.Series}/{serie.Id}");
+
+        despues!.Contador.ShouldBe(0, "la serie de facturas no ha gastado ningún número");
+    }
+
+    [Fact]
+    public async Task Un_ajuste_de_este_anio_sobre_la_serie_del_anio_pasado_no_se_confirma()
+    {
+        // LA NOTA DEL ÍTEM 2.6, DE EXTREMO A EXTREMO. Los dos ejercicios están abiertos, así que la
+        // R9 contesta que sí —la fecha de hoy cae en el de este año— y el borrador llega al
+        // número. Lo que lo para es que la serie cuelga del año pasado. Antes del ADR-0043 se
+        // confirmaba, y el correlativo del año pasado seguía corriendo con documentos de este.
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(334);
+
+        (AbrirAjusteDto deEsteAnio, _) = await UnAjusteCompletoAsync(cliente, "SER-F", 368);
+
+        int anioPasado = DateTime.UtcNow.Year - 1;
+        EjercicioDto elAnioPasado = await LosMaestrosPorLaApi.CrearEjercicioAsync(cliente, anioPasado);
+        SerieDto delAnioPasado =
+            await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, elAnioPasado.Id, "SER-F-V");
+
+        AbrirAjusteDto peticion = deEsteAnio with { SerieId = delAnioPasado.Id };
+
+        await using ElModuloDeInventario modulo = new(postgres, empresa.Id);
+
+        Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
+        alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");
+
+        Resultado<AjusteDto> confirmacion = await modulo.ConfirmarAsync(alta.Valor.Id);
+
+        confirmacion.EsCorrecto.ShouldBeFalse(
+            "la serie del año pasado no numera un documento de este, aunque los dos años estén abiertos");
+        confirmacion.Error!.Codigo.ShouldBe(ErroresDeNumeracion.CodigoDeFechaFueraDelEjercicioDeLaSerie);
+
+        await ElBorradorSigueSinNumeroAsync(empresa.Id, alta.Valor.Id);
+
+        SerieDto? despues = await cliente.GetFromJsonAsync<SerieDto>(
+            $"{LosMaestrosPorLaApi.Series}/{delAnioPasado.Id}");
+
+        despues!.Contador.ShouldBe(0);
+    }
+
     /// <summary>Una petición mínima: las líneas no se llegan a mirar si la serie no pasa.</summary>
     /// <remarks>
     /// El alta comprueba la serie <b>antes</b> que las líneas, así que para los dos casos de
@@ -214,9 +287,13 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
     /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
     /// <param name="codigo">Prefijo para los códigos de este caso.</param>
     /// <param name="semillaDeInstalacion">Número para la unidad y el tramo de impuesto.</param>
+    /// <param name="tipo">Qué documentos numera la serie. Por omisión, ajustes.</param>
     /// <returns>La petición lista para el alta, y la serie que la numerará.</returns>
     private static async Task<(AbrirAjusteDto Peticion, SerieDto Serie)> UnAjusteCompletoAsync(
-        HttpClient cliente, string codigo, int semillaDeInstalacion)
+        HttpClient cliente,
+        string codigo,
+        int semillaDeInstalacion,
+        TipoDeDocumento tipo = TipoDeDocumento.AjusteDeInventario)
     {
         AlmacenDto almacen = await LosMaestrosPorLaApi.CrearAlmacenAsync(cliente, codigo);
 
@@ -226,7 +303,7 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
         (Guid articuloId, Guid unidadId) =
             await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, semillaDeInstalacion);
 
-        SerieDto serie = await LosMaestrosPorLaApi.CrearSerieAsync(cliente, codigo);
+        SerieDto serie = await LosMaestrosPorLaApi.CrearSerieAsync(cliente, codigo, tipo);
 
         AbrirAjusteDto peticion = new(
             serie.Id,
@@ -254,6 +331,22 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
         serie.Cerrar();
 
         await contexto.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// El documento, leído de la base: en borrador y sin número, o sea confirmable el día que se
+    /// corrija la serie. Un ajuste confirmado sin número es justo lo que la R5 no permite.
+    /// </summary>
+    /// <param name="empresaId">La empresa del caso (R8).</param>
+    /// <param name="ajusteId">El ajuste que no se pudo confirmar.</param>
+    private async Task ElBorradorSigueSinNumeroAsync(Guid empresaId, Guid ajusteId)
+    {
+        await using InventarioDbContext inventario = postgres.AbrirInventario(empresaId);
+
+        Ajuste comoQuedo = await inventario.Ajustes.SingleAsync(fila => fila.Id == ajusteId);
+
+        comoQuedo.Estado.ShouldBe(EstadoDeAjuste.Borrador);
+        comoQuedo.Numero.ShouldBeNull();
     }
 
     private async Task<(HttpClient Cliente, EmpresaDto Empresa)> EnUnaEmpresaNuevaAsync(int semilla)

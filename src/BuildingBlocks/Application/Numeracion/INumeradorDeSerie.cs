@@ -19,8 +19,15 @@ namespace Bastion.BuildingBlocks.Application.Numeracion;
 /// la transacción de la petición, y un puerto compartido entregaría el de otro módulo —o sea, un
 /// número tomado en una transacción distinta de la del documento que lo lleva—.
 /// </para>
+/// <para>
+/// <b>Y lo hereda con sus propios documentos</b>, que es para lo que existe el parámetro de tipo:
+/// cada módulo nombra los suyos con su enumerado, y es su numerador quien los traduce al tipo de
+/// serie que Organización guarda. El bloque común no ve el vocabulario fiscal ni tiene por qué.
+/// </para>
 /// </remarks>
-public interface INumeradorDeSerie
+/// <typeparam name="TDocumento">Las clases de documento que numera el módulo.</typeparam>
+public interface INumeradorDeSerie<in TDocumento>
+    where TDocumento : struct, Enum
 {
     /// <summary>
     /// Sube el contador de la serie y devuelve el número que le ha tocado a este documento.
@@ -35,12 +42,34 @@ public interface INumeradorDeSerie
     /// <b>Exige una transacción ya abierta</b> y <b>lanza</b> si no la hay: el número y el documento
     /// que lo lleva se confirman juntos o no se confirma ninguno. Ver la implementación.
     /// </para>
+    /// <para>
+    /// <b>La serie tiene que ser de este documento y de este ejercicio</b>, y las dos cosas las
+    /// comprueba la sentencia, no quien llama (R5). El documento dice de qué tipo tiene que ser la
+    /// serie; la fecha, en qué ejercicio tiene que colgar.
+    /// </para>
+    /// <para>
+    /// <b>Qué fecha se pasa lo decide quien llama, y esa es la puerta de las excepciones.</b> Un
+    /// documento normal pasa la suya. El inverso de un ajuste pasa <b>la de su original</b>, porque
+    /// numera en la serie del original aunque lleve la fecha de hoy: si tuviera que numerar en la
+    /// del ejercicio de hoy, anular dependería de que existiera esa serie, y la R2 promete que
+    /// anular se puede siempre. Eso vale para los ajustes y no es regla para todos: una factura
+    /// rectificativa exige serie propia, y quien la numere elegirá esa serie y pasará su fecha.
+    /// </para>
     /// </remarks>
     /// <param name="serieId">La serie de la que se numera, elegida al abrir el documento.</param>
+    /// <param name="documento">Qué clase de documento pide el número.</param>
+    /// <param name="fechaQueDecideElEjercicio">
+    /// La fecha que tiene que caer dentro del ejercicio de la serie: la del documento, salvo la
+    /// excepción que quien llama escriba y justifique.
+    /// </param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     /// <returns>
-    /// El número, o el fallo de una serie que no numera —que no existe, que está cerrada o que no
-    /// es de esta empresa—.
+    /// El número; o el fallo de una serie que no numera —que no existe, que está cerrada o que no
+    /// es de esta empresa—, de una serie de otro documento, o de una fecha fuera de su ejercicio.
     /// </returns>
-    Task<Resultado<long>> TomarNumeroAsync(Guid serieId, CancellationToken cancelacion);
+    Task<Resultado<long>> TomarNumeroAsync(
+        Guid serieId,
+        TDocumento documento,
+        DateOnly fechaQueDecideElEjercicio,
+        CancellationToken cancelacion);
 }

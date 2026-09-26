@@ -73,8 +73,10 @@ internal static class LosMaestrosPorLaApi
     /// </remarks>
     /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
     /// <param name="codigo">Código de la serie, propio de este caso.</param>
+    /// <param name="tipo">Qué documentos numera. Por omisión, ajustes.</param>
     /// <returns>La serie recién creada.</returns>
-    internal static async Task<SerieDto> CrearSerieAsync(HttpClient cliente, string codigo)
+    internal static async Task<SerieDto> CrearSerieAsync(
+        HttpClient cliente, string codigo, TipoDeDocumento tipo = TipoDeDocumento.AjusteDeInventario)
     {
         // EL EJERCICIO DEL AÑO EN CURSO, que es el de «hoy», que es la fecha de operación con la
         // que estos casos abren sus ajustes. Desde el ítem 2.6 esto NO es una comodidad: confirmar
@@ -82,25 +84,31 @@ internal static class LosMaestrosPorLaApi
         // que un ejercicio de otro año dejaría todos estos casos contestando
         // `ajuste-sin-ejercicio`.
         //
-        // Lo que sigue SIN comprobarse es que el ejercicio de la fecha sea el mismo del que cuelga
-        // la SERIE: el `WHERE` que numera mira que la serie exista, sea de esta empresa y siga
-        // abierta, y no mira su ejercicio. Aquí coinciden porque se abren juntos.
-        int anioDelCaso = DateTime.UtcNow.Year;
+        // Y desde el ADR-0043 el ejercicio de la fecha tiene que ser, además, el mismo del que
+        // cuelga la SERIE: el `WHERE` que numera lo mira. Aquí coinciden porque se abren juntos.
+        EjercicioDto abierto = await CrearEjercicioAsync(cliente, DateTime.UtcNow.Year);
 
+        return await CrearSerieEnAsync(cliente, abierto.Id, codigo, tipo);
+    }
+
+    /// <summary>El ejercicio de un año natural entero, abierto, por la API.</summary>
+    /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
+    /// <param name="anio">El año.</param>
+    /// <returns>El ejercicio recién creado.</returns>
+    internal static async Task<EjercicioDto> CrearEjercicioAsync(HttpClient cliente, int anio)
+    {
         using HttpResponseMessage ejercicio = await cliente.PostAsJsonAsync(
             Ejercicios,
             new CrearEjercicioDto
             {
-                Anio = anioDelCaso,
-                FechaDeInicio = new DateOnly(anioDelCaso, 1, 1),
-                FechaDeFin = new DateOnly(anioDelCaso, 12, 31),
+                Anio = anio,
+                FechaDeInicio = new DateOnly(anio, 1, 1),
+                FechaDeFin = new DateOnly(anio, 12, 31),
             });
 
         ejercicio.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(ejercicio));
 
-        EjercicioDto abierto = (await ejercicio.Content.ReadFromJsonAsync<EjercicioDto>())!;
-
-        return await CrearSerieEnAsync(cliente, abierto.Id, codigo);
+        return (await ejercicio.Content.ReadFromJsonAsync<EjercicioDto>())!;
     }
 
     /// <summary>Una serie activa colgada del ejercicio que se le pase.</summary>
@@ -113,16 +121,22 @@ internal static class LosMaestrosPorLaApi
     /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
     /// <param name="ejercicioId">El ejercicio del que cuelga la serie (primera cláusula de R5).</param>
     /// <param name="codigo">Código de la serie, propio de este caso.</param>
+    /// <param name="tipo">
+    /// Qué documentos numera. Por omisión, ajustes; otro tipo es el caso que la sentencia rechaza.
+    /// </param>
     /// <returns>La serie recién creada.</returns>
     internal static async Task<SerieDto> CrearSerieEnAsync(
-        HttpClient cliente, Guid ejercicioId, string codigo)
+        HttpClient cliente,
+        Guid ejercicioId,
+        string codigo,
+        TipoDeDocumento tipo = TipoDeDocumento.AjusteDeInventario)
     {
         using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
             Series,
             new CrearSerieDto
             {
                 EjercicioId = ejercicioId,
-                TipoDeDocumento = nameof(TipoDeDocumento.AjusteDeInventario),
+                TipoDeDocumento = tipo.ToString(),
                 Codigo = codigo,
                 Formato = "{serie}-{numero:0000}",
             });

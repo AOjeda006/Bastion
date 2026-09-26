@@ -209,6 +209,9 @@ export const es = {
       'empresa-ya-registrada': 'Ya hay una empresa con ese NIF.',
       'falta-if-match':
         'Para guardar hay que decir sobre qué versión se escribe. Vuelve a abrir el formulario.',
+      'fecha-fuera-del-ejercicio-de-la-serie':
+        'Esa serie es de otro ejercicio: no numera documentos con esta fecha. Abre el ajuste con ' +
+        'una serie del ejercicio de su fecha.',
       'idempotencia-clave-no-valida':
         'La aplicación ha enviado una clave de repetición que no vale. Inténtalo otra vez.',
       'idempotencia-cuerpo-distinto':
@@ -246,6 +249,9 @@ export const es = {
       'pertenencia-no-encontrada': 'Esa persona no pertenece a la empresa indicada.',
       'rol-no-encontrado': 'Ese rol ya no existe. Vuelve al listado y actualiza.',
       'serie-cerrada': 'La serie está cerrada y no admite cambios.',
+      'serie-de-otro-documento':
+        'Esa serie numera otra clase de documentos. Abre el ajuste con una serie de ajustes de ' +
+        'inventario.',
       'serie-duplicada': 'Ya hay una serie con ese código en ese ejercicio.',
       'serie-no-encontrada': 'Esa serie ya no existe. Vuelve al listado y actualiza.',
       'serie-no-numera':

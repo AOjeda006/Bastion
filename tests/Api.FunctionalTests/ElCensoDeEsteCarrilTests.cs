@@ -157,7 +157,8 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla_que_le_toca",
         "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.El_estado_que_condiciona_el_incremento_es_el_del_enumerado_y_se_guarda_como_texto",
-        "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Las_cuatro_cadenas_escritas_a_mano_son_las_del_modelo",
+        "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.El_tipo_que_condiciona_el_incremento_se_guarda_como_el_nombre_del_enumerado",
+        "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Las_cinco_cadenas_escritas_a_mano_son_las_del_modelo",
 
         // Del ítem 2.6, y aquí por lo mismo que las de arriba: dos sentencias crudas cuyas
         // cadenas nadie compila, atadas al modelo desde el carril rápido.
@@ -202,6 +203,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasSemillasLleganDondeSeCarganTests.Un_fichero_que_nadie_carga_tambien_se_dice",
         "LasSemillasLleganDondeSeCarganTests.Un_fichero_vacio_no_pasa_por_cargado",
         "LasSemillasLleganDondeSeCarganTests.Una_clave_con_una_errata_no_se_ignora",
+
+        // Del addendum del ADR-0043: el nombre del tipo de serie que Inventario escribe a mano,
+        // contra el enumerado de Organización, que es el único sitio desde el que se ven los dos.
+        "LosDocumentosDeInventarioNumeranEnSusSeriesTests.Cada_documento_del_modulo_numera_en_un_tipo_de_serie_que_existe",
+        "LosDocumentosDeInventarioNumeranEnSusSeriesTests.Un_ajuste_numera_en_las_series_de_ajustes_de_inventario",
+        "LosDocumentosDeInventarioNumeranEnSusSeriesTests.Un_documento_que_el_mapa_no_nombra_no_numera_en_ninguna_serie_por_defecto",
 
         "LosLimitesSeLeenEnCulturaInvarianteTests.Ningun_atributo_de_validacion_revienta_al_validar_en_la_cultura_de_la_aplicacion",
         "LosLimitesSeLeenEnCulturaInvarianteTests.Todo_limite_escrito_como_texto_se_lee_en_cultura_invariante",

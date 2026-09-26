@@ -34,4 +34,46 @@ public static class ErroresDeNumeracion
         CodigoDeSerieNoNumera,
         $"La serie {serieId} no puede entregar números: o no existe, o está cerrada, o no es de " +
         "esta empresa. Elija una serie activa y vuelva a confirmar.");
+
+    /// <summary>Código estable del <c>409</c> de una serie que numera otra clase de documento.</summary>
+    public const string CodigoDeSerieDeOtroDocumento = "serie-de-otro-documento";
+
+    /// <summary>
+    /// La serie es de esta empresa y está activa, pero numera otra clase de documento: una serie de
+    /// facturas no le da número a un ajuste de inventario.
+    /// </summary>
+    /// <remarks>
+    /// <b>Este sí se distingue de <see cref="SerieNoNumera"/>, y no abre el oráculo</b> que aquel
+    /// cierra: solo se contesta cuando la serie ya ha resultado ser <b>de esta empresa</b>. Una
+    /// serie ajena de otro tipo sigue contestando «no numera», igual que una que no existe.
+    /// </remarks>
+    /// <param name="serieId">La serie que se pidió.</param>
+    public static ErrorDeOperacion SerieDeOtroDocumento(Guid serieId) => ErrorDeOperacion.Conflicto(
+        CodigoDeSerieDeOtroDocumento,
+        $"La serie {serieId} numera otra clase de documento. Elija una serie de este tipo de " +
+        "documento y vuelva a confirmar.");
+
+    /// <summary>
+    /// Código estable del <c>409</c> de una fecha que no cae en el ejercicio del que cuelga la
+    /// serie.
+    /// </summary>
+    public const string CodigoDeFechaFueraDelEjercicioDeLaSerie = "fecha-fuera-del-ejercicio-de-la-serie";
+
+    /// <summary>
+    /// La serie es de esta empresa, está activa y es de este documento, pero cuelga de un ejercicio
+    /// que no comprende la fecha: la numeración es por serie <b>y ejercicio</b> (R5), y un número
+    /// de la serie del año pasado en un documento de este año mezclaría los dos.
+    /// </summary>
+    /// <remarks>
+    /// <b>No es el error del periodo</b> (R9), que dice si la fecha tiene un ejercicio abierto. Aquí
+    /// la fecha puede tener el suyo, abierto y en regla, y aun así no ser el de la serie. Se arregla
+    /// de otra manera —eligiendo la serie del ejercicio de la fecha—, y por eso lleva otro código.
+    /// </remarks>
+    /// <param name="serieId">La serie que se pidió.</param>
+    /// <param name="fecha">La fecha que tenía que caer dentro de su ejercicio.</param>
+    public static ErrorDeOperacion FechaFueraDelEjercicioDeLaSerie(Guid serieId, DateOnly fecha) =>
+        ErrorDeOperacion.Conflicto(
+            CodigoDeFechaFueraDelEjercicioDeLaSerie,
+            $"La serie {serieId} cuelga de un ejercicio que no comprende el {fecha:yyyy-MM-dd}. " +
+            "Elija una serie del ejercicio de esa fecha y vuelva a confirmar.");
 }

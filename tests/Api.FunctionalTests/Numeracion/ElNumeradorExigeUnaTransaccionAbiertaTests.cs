@@ -42,7 +42,11 @@ public sealed class ElNumeradorExigeUnaTransaccionAbiertaTests
         contexto.Database.CurrentTransaction.ShouldBeNull();
 
         InvalidOperationException roto = await Should.ThrowAsync<InvalidOperationException>(
-            () => numerador.TomarNumeroAsync(Guid.CreateVersion7(), CancellationToken.None));
+            () => numerador.TomarNumeroAsync(
+                Guid.CreateVersion7(),
+                DocumentoDeEsteCaso.Cualquiera,
+                new DateOnly(2026, 6, 15),
+                CancellationToken.None));
 
         // El mensaje se afirma porque es la mitad útil de esta guarda: quien la encuentre en un
         // registro tiene que salir de ahí sabiendo QUÉ le falta a su acción, no solo que algo
@@ -84,8 +88,17 @@ public sealed class ElNumeradorExigeUnaTransaccionAbiertaTests
     }
 
     /// <summary>El numerador de verdad sobre el contexto de aquí. No cambia ni una línea de él.</summary>
+    private enum DocumentoDeEsteCaso
+    {
+        Cualquiera = 1,
+    }
+
     private sealed class NumeradorDeEsteCaso(DbContext contexto, IInquilinoActual inquilino)
-        : NumeradorDeSerie(contexto, inquilino);
+        : NumeradorDeSerie<DocumentoDeEsteCaso>(contexto, inquilino)
+    {
+        protected override string TipoDeSerieQueNumera(DocumentoDeEsteCaso documento) =>
+            documento.ToString();
+    }
 
     private sealed class InquilinoConEmpresa : IInquilinoActual
     {

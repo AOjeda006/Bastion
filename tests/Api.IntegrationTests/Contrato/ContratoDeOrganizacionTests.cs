@@ -645,8 +645,10 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
         // probaría un estado que el sistema no sabe producir.
         await using (OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresa.Id))
         {
+            // Con el tipo y una fecha del ejercicio con que `CrearSerie` la monta: la sentencia los
+            // mira desde el ADR-0043, y con otros no numeraría.
             Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
-                contexto, empresa.Id, serie.Id);
+                contexto, empresa.Id, serie.Id, TipoDeDocumento.FacturaEmitida, new DateOnly(2026, 6, 15));
 
             numero.EsCorrecto.ShouldBeTrue();
             numero.Valor.ShouldBe(1);

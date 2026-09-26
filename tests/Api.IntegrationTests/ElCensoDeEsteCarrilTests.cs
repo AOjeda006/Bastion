@@ -159,9 +159,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElCerrojoDeLaNumeracionTests.Deshacer_la_transaccion_devuelve_el_numero_y_el_siguiente_lo_reutiliza",
         "ElCerrojoDeLaNumeracionTests.Dos_numeraciones_simultaneas_se_llevan_numeros_distintos_y_consecutivos",
         "ElCerrojoDeLaNumeracionTests.El_recorrido_de_arriba_no_se_deja_ningun_tipo_de_documento",
+        "ElCerrojoDeLaNumeracionTests.Los_dos_extremos_del_ejercicio_de_la_serie_numeran",
         "ElCerrojoDeLaNumeracionTests.Suprimir_pierde_contra_una_numeracion_que_se_cuela_entre_la_lectura_y_el_borrado",
+        "ElCerrojoDeLaNumeracionTests.Una_fecha_fuera_del_ejercicio_de_la_serie_no_numera_y_lo_dice_con_su_codigo",
+        "ElCerrojoDeLaNumeracionTests.Una_serie_ajena_de_otro_documento_da_el_MISMO_error_que_una_que_no_existe",
         "ElCerrojoDeLaNumeracionTests.Una_serie_cerrada_no_numera",
         "ElCerrojoDeLaNumeracionTests.Una_serie_de_otra_empresa_no_numera",
+        "ElCerrojoDeLaNumeracionTests.Una_serie_de_otro_documento_no_numera_y_lo_dice_con_su_codigo",
         "ElCerrojoDeLaNumeracionTests.Una_serie_numera_sin_huecos_sea_cual_sea_el_documento_que_numera",
         "ElCerrojoDeLaNumeracionTests.Una_serie_que_no_existe_da_el_MISMO_error_que_una_ajena",
 
@@ -416,6 +420,8 @@ public sealed class ElCensoDeEsteCarrilTests
         // aparece en el documento al confirmarlo.
         "LaSerieDelAjusteTests.Cerrar_la_serie_despues_del_borrador_lo_deja_sin_poder_confirmarse",
         "LaSerieDelAjusteTests.Confirmar_pone_el_numero_en_el_documento_y_lo_sube_en_la_serie",
+        "LaSerieDelAjusteTests.Un_ajuste_abierto_sobre_una_serie_de_facturas_no_se_confirma",
+        "LaSerieDelAjusteTests.Un_ajuste_de_este_anio_sobre_la_serie_del_anio_pasado_no_se_confirma",
         "LaSerieDelAjusteTests.Una_serie_cerrada_no_deja_abrir_el_borrador",
         "LaSerieDelAjusteTests.Una_serie_que_no_existe_no_deja_abrir_el_borrador",
 

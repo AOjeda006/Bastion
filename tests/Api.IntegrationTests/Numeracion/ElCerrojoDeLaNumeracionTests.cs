@@ -51,6 +51,11 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
     // hay, no contesta por mucho que se acorte.
     private static readonly TimeSpan s_esperaParaVerElBloqueo = TimeSpan.FromMilliseconds(750);
 
+    // Una fecha del ejercicio que `UnaSerieNuevaAsync` abre, el 2026 entero. Desde el ADR-0043 la
+    // sentencia exige que la fecha caiga en el ejercicio de la serie, así que todo caso que quiere
+    // un número pasa ésta; los que quieren que no lo haya pasan otra a propósito.
+    private static readonly DateOnly s_dentroDelEjercicio = new(2026, 6, 15);
+
     [Fact]
     public async Task Dos_numeraciones_simultaneas_se_llevan_numeros_distintos_y_consecutivos()
     {
@@ -62,13 +67,14 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
         await using IDbContextTransaction unaTransaccion = await primero.Database.BeginTransactionAsync();
         await using IDbContextTransaction laOtra = await segundo.Database.BeginTransactionAsync();
 
-        Resultado<long> uno = await Numerador(primero, empresa).TomarNumeroAsync(serie, CancellationToken.None);
+        Resultado<long> uno = await Numerador(primero, empresa).TomarNumeroAsync(
+            serie, TipoDeDocumento.FacturaEmitida, s_dentroDelEjercicio, CancellationToken.None);
         uno.EsCorrecto.ShouldBeTrue();
 
         // La segunda arranca SIN esperar: la llamada se queda pendiente dentro del motor, porque la
         // fila del contador está bloqueada hasta que la primera transacción confirme.
-        Task<Resultado<long>> pendiente = Numerador(segundo, empresa)
-            .TomarNumeroAsync(serie, CancellationToken.None);
+        Task<Resultado<long>> pendiente = Numerador(segundo, empresa).TomarNumeroAsync(
+            serie, TipoDeDocumento.FacturaEmitida, s_dentroDelEjercicio, CancellationToken.None);
 
         Task ganadora = await Task.WhenAny(pendiente, Task.Delay(s_esperaParaVerElBloqueo));
 
@@ -99,8 +105,8 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
         {
             await using IDbContextTransaction transaccion = await contexto.Database.BeginTransactionAsync();
 
-            Resultado<long> tomado = await Numerador(contexto, empresa)
-                .TomarNumeroAsync(serie, CancellationToken.None);
+            Resultado<long> tomado = await Numerador(contexto, empresa).TomarNumeroAsync(
+                serie, TipoDeDocumento.AlbaranDeVenta, s_dentroDelEjercicio, CancellationToken.None);
 
             tomado.EsCorrecto.ShouldBeTrue();
             tomado.Valor.ShouldBe(1);
@@ -114,7 +120,8 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
 
         await using (OrganizacionDbContext otro = postgres.AbrirOrganizacion(empresa))
         {
-            Resultado<long> siguiente = await NumeradorDePruebas.NumerarAsync(otro, empresa, serie);
+            Resultado<long> siguiente = await NumeradorDePruebas.NumerarAsync(
+                otro, empresa, serie, TipoDeDocumento.AlbaranDeVenta, s_dentroDelEjercicio);
 
             siguiente.EsCorrecto.ShouldBeTrue();
             siguiente.Valor.ShouldBe(1, "el número que se deshizo tiene que volver a salir: si " +
@@ -136,7 +143,8 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
 
         await using OrganizacionDbContext otro = postgres.AbrirOrganizacion(empresa);
 
-        Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(otro, empresa, serie);
+        Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
+            otro, empresa, serie, TipoDeDocumento.FacturaEmitida, s_dentroDelEjercicio);
 
         // EL ESTADO VIAJA EN EL `WHERE`, no en una guarda de C#, y esta es la única manera de
         // comprobarlo: la guarda que se fue con `Serie.RegistrarNumeroAsignado` la sostenía el
@@ -157,7 +165,8 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
         // El identificador de la serie de otra sociedad, con el inquilino de la mía. Es el caso
         // que el SQL crudo deja sin filtro global: la única defensa es la comparación que la
         // propia sentencia lleva escrita.
-        Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(contexto, propia, serie);
+        Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
+            contexto, propia, serie, TipoDeDocumento.FacturaEmitida, s_dentroDelEjercicio);
 
         numero.EsCorrecto.ShouldBeFalse();
         numero.Error!.Codigo.ShouldBe(ErroresDeNumeracion.CodigoDeSerieNoNumera);
@@ -175,7 +184,7 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
         await using OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresa);
 
         Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
-            contexto, empresa, Guid.CreateVersion7());
+            contexto, empresa, Guid.CreateVersion7(), TipoDeDocumento.FacturaEmitida, s_dentroDelEjercicio);
 
         // MISMO CÓDIGO A PROPÓSITO, y el caso existe para que siga siéndolo. Si «no existe» y «es
         // de otra empresa» contestaran distinto, confirmar un documento sería un oráculo: probando
@@ -208,7 +217,8 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
         // La confirmación de otro, que entra y sale entera.
         await using (OrganizacionDbContext queNumera = postgres.AbrirOrganizacion(empresa))
         {
-            (await NumeradorDePruebas.NumerarAsync(queNumera, empresa, serie))
+            (await NumeradorDePruebas.NumerarAsync(
+                    queNumera, empresa, serie, TipoDeDocumento.PedidoDeVenta, s_dentroDelEjercicio))
                 .EsCorrecto.ShouldBeTrue();
         }
 
@@ -244,13 +254,99 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
         // lo que quedaría si alguien escribiera esa sentencia -en una migración, en un arreglo de
         // madrugada- y la clave ajena fuera la única defensa.
         await contexto.Database.ExecuteSqlRawAsync(
-            "DELETE FROM " + NumeradorDeSerie.Esquema + "." + NumeradorDeSerie.TablaDeSeries +
+            "DELETE FROM " + NumeradorDeSerie<TipoDeDocumento>.Esquema + "." + NumeradorDeSerie<TipoDeDocumento>.TablaDeSeries +
             " WHERE id = {0}", serie);
 
         await Should.ThrowAsync<PostgresException>(() => transaccion.CommitAsync());
 
         // Y la serie sigue entera: lo que se deshace es la transacción, no media tabla.
         (await ContadorDeAsync(empresa, serie)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Una_serie_de_otro_documento_no_numera_y_lo_dice_con_su_codigo()
+    {
+        // LA CLÁUSULA DEL TIPO, que es la nota del ítem 2.4 cerrada: una serie de facturas numeraba
+        // un ajuste de inventario y todo salía verde, y el hueco no se lo llevaba el ajuste sino la
+        // factura siguiente. La serie es de esta empresa, está activa y la fecha cae en su
+        // ejercicio: lo único que falla es el tipo, así que el código solo puede venir de ahí.
+        (Guid empresa, Guid serie) = await UnaSerieNuevaAsync(Escenario.NifInventado(340), TipoDeDocumento.FacturaEmitida);
+
+        await using OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresa);
+
+        Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
+            contexto, empresa, serie, TipoDeDocumento.AjusteDeInventario, s_dentroDelEjercicio);
+
+        numero.EsCorrecto.ShouldBeFalse("una serie de facturas no le da número a un ajuste");
+        numero.Error!.Codigo.ShouldBe(ErroresDeNumeracion.CodigoDeSerieDeOtroDocumento);
+        (await ContadorDeAsync(empresa, serie)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Una_fecha_fuera_del_ejercicio_de_la_serie_no_numera_y_lo_dice_con_su_codigo()
+    {
+        // LA CLÁUSULA DEL EJERCICIO, que es la nota del ítem 2.6 cerrada: una serie del año pasado
+        // que siguiera activa numeraba documentos de este año. Por los dos lados, el día antes del
+        // primero y el día después del último, porque una comparación mal orientada deja pasar
+        // uno de los dos y no el otro.
+        (Guid empresa, Guid serie) = await UnaSerieNuevaAsync(Escenario.NifInventado(341), TipoDeDocumento.AjusteDeInventario);
+
+        await using OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresa);
+
+        foreach (DateOnly fuera in new[] { new DateOnly(2025, 12, 31), new DateOnly(2027, 1, 1) })
+        {
+            Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
+                contexto, empresa, serie, TipoDeDocumento.AjusteDeInventario, fuera);
+
+            numero.EsCorrecto.ShouldBeFalse($"el {fuera:yyyy-MM-dd} no es del ejercicio 2026");
+            numero.Error!.Codigo.ShouldBe(ErroresDeNumeracion.CodigoDeFechaFueraDelEjercicioDeLaSerie);
+        }
+
+        (await ContadorDeAsync(empresa, serie)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Los_dos_extremos_del_ejercicio_de_la_serie_numeran()
+    {
+        // La otra mitad del caso de arriba: el primer día y el último SON del ejercicio, como en su
+        // intervalo. Un `<` donde va un `<=` dejaría sin serie el 31 de diciembre de cada año, y el
+        // caso de arriba seguiría verde.
+        (Guid empresa, Guid serie) = await UnaSerieNuevaAsync(Escenario.NifInventado(342), TipoDeDocumento.AjusteDeInventario);
+
+        await using OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresa);
+
+        List<long> numeros = [];
+
+        foreach (DateOnly extremo in new[] { new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31) })
+        {
+            Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
+                contexto, empresa, serie, TipoDeDocumento.AjusteDeInventario, extremo);
+
+            numero.EsCorrecto.ShouldBeTrue($"el {extremo:yyyy-MM-dd} es del ejercicio 2026: «{numero.Error?.Codigo}»");
+            numeros.Add(numero.Valor);
+        }
+
+        numeros.ShouldBe([1L, 2L]);
+    }
+
+    [Fact]
+    public async Task Una_serie_ajena_de_otro_documento_da_el_MISMO_error_que_una_que_no_existe()
+    {
+        // LOS DOS CÓDIGOS NUEVOS NO ABREN EL ORÁCULO que `serie-no-numera` cierra. La serie ajena
+        // falla el tipo y la fecha a la vez: si el motivo se buscara sin mirar la empresa, este
+        // caso contestaría «de otro documento», y probando identificadores se sabría cuáles son
+        // series de otra sociedad y de qué documentos.
+        (Guid ajena, Guid serie) = await UnaSerieNuevaAsync(Escenario.NifInventado(343), TipoDeDocumento.FacturaEmitida);
+        (Guid propia, _) = await UnaSerieNuevaAsync(Escenario.NifInventado(344), TipoDeDocumento.AjusteDeInventario);
+
+        await using OrganizacionDbContext contexto = postgres.AbrirOrganizacion(propia);
+
+        Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
+            contexto, propia, serie, TipoDeDocumento.AjusteDeInventario, new DateOnly(2027, 1, 1));
+
+        numero.EsCorrecto.ShouldBeFalse();
+        numero.Error!.Codigo.ShouldBe(ErroresDeNumeracion.CodigoDeSerieNoNumera);
+        (await ContadorDeAsync(ajena, serie)).ShouldBe(0);
     }
 
     /// <summary>
@@ -278,11 +374,12 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
     [MemberData(nameof(LosTiposDeDocumento))]
     public async Task Una_serie_numera_sin_huecos_sea_cual_sea_el_documento_que_numera(TipoDeDocumento tipo)
     {
-        // EL MECANISMO NO SABE QUÉ NUMERA, y este caso lo afirma en vez de darlo por hecho. La
-        // sentencia condiciona por estado y empresa, no por tipo, así que una factura y un ajuste
-        // de inventario pasan por exactamente el mismo cerrojo. Si algún día alguien metiera una
-        // condición por tipo -por ejemplo, para que los documentos internos numeren «más
-        // barato»-, el tipo que se quedara fuera saldría rojo aquí y no en producción.
+        // EL MECANISMO NO TRATA A NINGÚN TIPO DE OTRA MANERA, y este caso lo afirma en vez de darlo
+        // por hecho. Desde el ADR-0043 la sentencia mira el tipo, pero solo para exigir que la
+        // serie sea DEL que pide el número: una factura y un ajuste de inventario, cada uno en su
+        // serie, pasan por exactamente el mismo cerrojo. Si algún día alguien metiera una
+        // condición que dejara fuera algún tipo -por ejemplo, para que los documentos internos
+        // numeren «más barato»-, ese tipo saldría rojo aquí y no en producción.
         (Guid empresa, Guid serie) = await UnaSerieNuevaAsync(Escenario.NifInventado(320 + (int)tipo), tipo);
 
         List<long> numeros = [];
@@ -291,7 +388,8 @@ public sealed class ElCerrojoDeLaNumeracionTests(PostgresConTodosLosModulos post
         {
             for (int vuelta = 0; vuelta < 4; vuelta++)
             {
-                Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(contexto, empresa, serie);
+                Resultado<long> numero = await NumeradorDePruebas.NumerarAsync(
+                    contexto, empresa, serie, tipo, s_dentroDelEjercicio);
 
                 numero.EsCorrecto.ShouldBeTrue($"{tipo} no ha numerado en la vuelta {vuelta}");
                 numeros.Add(numero.Valor);

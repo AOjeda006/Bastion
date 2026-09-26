@@ -42,10 +42,11 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// </para>
 /// <para>
 /// <b>Semillas: las empresas van de la 330 a la 332 y los maestros de instalación de la 364 a
-/// la 366.</b> El resto
-/// del reparto de este carril está en los ficheros de <c>Inventario</c> —del 301 al 328 las
-/// empresas, del 349 al 363 los maestros—. Un número de empresa acaba en un NIF único y uno de
-/// maestro en el código único de otra tabla, así que son dos cuentas y no una.
+/// la 366.</b> El resto del reparto de este carril está en los ficheros de <c>Inventario</c>
+/// —del 301 al 328 las empresas, del 349 al 363 los maestros, y la 333, la 334, el 367 y el 368
+/// de <c>LaSerieDelAjusteTests</c>— y en <c>ElCerrojoDeLaNumeracionTests</c>, del 340 al 344.
+/// Un número de empresa acaba en un NIF único y uno de maestro en el código único de otra tabla,
+/// así que son dos cuentas y no una.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

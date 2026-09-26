@@ -61,14 +61,27 @@ public sealed class LaSentenciaDeNumeracionMiraLaEmpresaTests : IDisposable
         // Contra un PARÁMETRO, no contra un literal: un valor incrustado en la cadena sería una
         // empresa fija, que es peor que ninguna comprobación porque parece una.
         Match condicion = Regex.Match(
-            NumeradorDeSerie.SqlDelIncremento,
+            NumeradorDeSerie<TipoDeDocumento>.SqlDelIncremento,
             @"\bAND s\." + Regex.Escape(empresa) + @" = \{(\d+)\}",
             RegexOptions.None,
             TimeSpan.FromSeconds(1));
 
         condicion.Success.ShouldBeTrue(
             "el incremento ya no compara la empresa de la serie contra un parámetro: " +
-            NumeradorDeSerie.SqlDelIncremento);
+            NumeradorDeSerie<TipoDeDocumento>.SqlDelIncremento);
+
+        // Y LA LECTURA DEL MOTIVO, CONTRA EL MISMO PARÁMETRO. Esa no decide el número, pero decide
+        // qué se contesta: sin la empresa, una serie ajena diría de qué documentos es, y los dos
+        // códigos nuevos del ADR-0043 serían el oráculo que `serie-no-numera` cierra.
+        Match delMotivo = Regex.Match(
+            NumeradorDeSerie<TipoDeDocumento>.SqlDelMotivo,
+            @"\bAND s\." + Regex.Escape(empresa) + @" = \{" + condicion.Groups[1].Value + @"\}",
+            RegexOptions.None,
+            TimeSpan.FromSeconds(1));
+
+        delMotivo.Success.ShouldBeTrue(
+            "la lectura del motivo no compara la empresa contra el mismo parámetro que el " +
+            "incremento: " + NumeradorDeSerie<TipoDeDocumento>.SqlDelMotivo);
     }
 
     [Fact]
@@ -76,12 +89,15 @@ public sealed class LaSentenciaDeNumeracionMiraLaEmpresaTests : IDisposable
     {
         // La ausencia de parámetro es la mitad estructural de la regla: mientras no se pueda pasar
         // una empresa, no hay forma de que la comparación se haga contra el dato de la petición.
-        MethodInfo tomar = typeof(INumeradorDeSerie)
-            .GetMethod(nameof(INumeradorDeSerie.TomarNumeroAsync))!;
+        // Desde el ADR-0043 el puerto pide también el documento y la fecha, que son la R5 y no la
+        // R8. La lista sigue siendo cerrada: un parámetro nuevo obliga a pasar por aquí y a decir
+        // si es la empresa con otro nombre.
+        MethodInfo tomar = typeof(INumeradorDeSerie<>)
+            .GetMethod(nameof(INumeradorDeSerie<TipoDeDocumento>.TomarNumeroAsync))!;
 
         List<string> parametros = [.. tomar.GetParameters().Select(parametro => parametro.Name!)];
 
-        parametros.ShouldBe(["serieId", "cancelacion"]);
+        parametros.ShouldBe(["serieId", "documento", "fechaQueDecideElEjercicio", "cancelacion"]);
     }
 
     [Fact]
@@ -97,10 +113,11 @@ public sealed class LaSentenciaDeNumeracionMiraLaEmpresaTests : IDisposable
         // El barrido se afirma primero: un fichero movido dejaría todo lo de abajo buscando en una
         // cadena vacía, y `ShouldContain` sobre nada no se queja de nada.
         fuente.ShouldNotBeNullOrWhiteSpace();
-        fuente.ShouldContain(nameof(NumeradorDeSerie.SqlDelIncremento));
+        fuente.ShouldContain(nameof(NumeradorDeSerie<TipoDeDocumento>.SqlDelIncremento));
 
         fuente.ShouldContain("inquilino.EmpresaDelFiltro");
-        fuente.ShouldContain("[serieId, empresaId]");
+        fuente.ShouldContain("[serieId, empresaId, tipoDeSerie, fechaQueDecideElEjercicio]");
+        fuente.ShouldContain("SqlQueryRaw<string>(SqlDelMotivo, serieId, empresaId,");
     }
 
     [Fact]
@@ -112,7 +129,7 @@ public sealed class LaSentenciaDeNumeracionMiraLaEmpresaTests : IDisposable
         // BLOQUEADA hasta el COMMIT, en la misma transacción, así que nadie ha podido moverla en
         // medio. Repetir aquí la condición obligaría a unir otra vez con `series` para leer un
         // número que ya está decidido.
-        NumeradorDeSerie.SqlDelNumeroTomado.ShouldNotContain(NumeradorDeSerie.TablaDeSeries);
-        NumeradorDeSerie.SqlDelIncremento.ShouldContain(NumeradorDeSerie.TablaDeSeries);
+        NumeradorDeSerie<TipoDeDocumento>.SqlDelNumeroTomado.ShouldNotContain(NumeradorDeSerie<TipoDeDocumento>.TablaDeSeries);
+        NumeradorDeSerie<TipoDeDocumento>.SqlDelIncremento.ShouldContain(NumeradorDeSerie<TipoDeDocumento>.TablaDeSeries);
     }
 }

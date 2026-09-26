@@ -150,8 +150,19 @@ internal sealed class AnularAjuste(
 
         Ajuste inverso = original.CrearInverso(hoy, motivo, ahora);
 
+        // LA EXCEPCIÓN DE LA NUMERACIÓN, ESCRITA: el inverso lleva la fecha de hoy pero numera en la
+        // serie de su original, y por eso la fecha que se le pasa al numerador es LA DEL ORIGINAL,
+        // que es la que cae en el ejercicio de esa serie. Pasarle `hoy` obligaría a numerar en una
+        // serie del ejercicio de hoy, y anular fallaría cada vez que esa serie no existiera —o
+        // sea, siempre que el original fuera de otro año—, cuando la R2 promete que anular se puede
+        // siempre. El inverso pertenece a su original, no a su fecha.
+        //
+        // Vale para los ajustes y NO es regla para todos. Una factura rectificativa exige serie
+        // propia (Reglamento de facturación, RD 1619/2012, art. 6; se contrasta con la biblioteca
+        // al abrir la fase 5), y quien la numere elegirá esa serie y le pasará su propia fecha.
         Resultado<long> numero = await numerador
-            .TomarNumeroAsync(inverso.SerieId, cancelacion)
+            .TomarNumeroAsync(
+                inverso.SerieId, TipoDeDocumentoOrigen.Ajuste, original.FechaDeOperacion, cancelacion)
             .ConfigureAwait(false);
 
         if (!numero.EsCorrecto)

@@ -238,6 +238,14 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
         anulacion.Valor.Inverso.FechaDeOperacion.ShouldBe(Hoy);
         anulacion.Valor.Original.FechaDeOperacion.ShouldBe(elAnioPasado);
 
+        // Y NUMERA EN LA SERIE DEL ORIGINAL, que cuelga del ejercicio cerrado: es la excepción del
+        // ADR-0043, escrita en `AnularAjuste`. La sentencia exige que la fecha caiga en el
+        // ejercicio de la serie, y la que se le pasa es la del ORIGINAL, no la de hoy: con la de
+        // hoy, esta anulación contestaría `fecha-fuera-del-ejercicio-de-la-serie`, y la R2 promete
+        // que anular se puede siempre.
+        anulacion.Valor.Inverso.SerieId.ShouldBe(anulacion.Valor.Original.SerieId);
+        anulacion.Valor.Inverso.Numero.ShouldBe(2, "el original se llevó el 1 de esa misma serie");
+
         // Y EL CERRADO NO SE TOCA: el original sigue con su fecha y sus movimientos donde estaban.
         // Anular no borra ni revierte, añade (R3), así que el saldo a una fecha anterior a la
         // anulación sigue enseñando lo que el original movió, porque así fue.

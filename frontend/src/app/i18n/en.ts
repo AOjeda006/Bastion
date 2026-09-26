@@ -178,6 +178,9 @@ export const en: Diccionario = {
       'empresa-ya-registrada': 'There is already a company with that tax number.',
       'falta-if-match':
         'Saving requires saying which version you are writing over. Open the form again.',
+      'fecha-fuera-del-ejercicio-de-la-serie':
+        'That series belongs to another financial year: it does not number documents with this ' +
+        'date. Open the adjustment with a series from the year of its date.',
       'idempotencia-clave-no-valida':
         'The application sent a retry key that is not valid. Please try again.',
       'idempotencia-cuerpo-distinto':
@@ -213,6 +216,9 @@ export const en: Diccionario = {
       'pertenencia-no-encontrada': 'That person does not belong to the company you named.',
       'rol-no-encontrado': 'That role no longer exists. Go back to the list and refresh.',
       'serie-cerrada': 'The document series is closed and cannot be changed.',
+      'serie-de-otro-documento':
+        'That series numbers another kind of document. Open the adjustment with an inventory ' +
+        'adjustment series.',
       'serie-duplicada': 'There is already a series with that code in that financial year.',
       'serie-no-encontrada': 'That series no longer exists. Go back to the list and refresh.',
       'serie-no-numera':
