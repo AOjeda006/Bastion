@@ -4976,6 +4976,78 @@ los dos mecanismos a la vez está prohibido con su motivo escrito.
 que **no abre otra si ya hay una**: anidar lanza en EF Core, y confirmar dentro soltaría cerrojos que
 la de fuera todavía necesita. Queda escrito en el ADR-0041 §6.
 
+### Traídas por el encargo del 2026-09-26 — entre el cierre del 2.6 y la apertura del 2.7
+
+El encargo trae **cuatro puntos, en este orden**, cada uno en su rama, con commits firmados y
+empujando la rama y `main`. El modo `commit+push` lo confirmó el usuario al empezar. Nada de esto es
+un decimoquinto ítem: el checklist de la fase sigue cerrado en catorce, y cada punto dice a qué
+ítem pertenece. Está aquí para que sobreviva a un `/compact`.
+
+#### 1. Mover y borrar toman el cerrojo del ejercicio (epílogo del 2.6)
+
+`ModificarEjercicio` y `EliminarEjercicio` preguntaban al puerto sin cerrojo, así que competían con
+confirmar. Arreglo: toman `TomarEnExclusivaAsync` **antes de preguntar al puerto**. Cuatro casos con
+dos transacciones de verdad —mover y borrar, cada uno en los dos órdenes—. La mutación que quita el
+cerrojo de mover tiene que poner rojo su caso. La fila de la R9 dice lo que ahora es cierto, en
+commits aparte, con el run de la rama y el de `main`.
+
+**El matiz del agente, dicho al usuario antes de escribir.** Mover ve los borradores que ya existen,
+así que la carrera solo la ejerce un documento **invisible** al puerto cuando mover pregunta: el
+inverso de una anulación, que nace confirmado dentro de su propia transacción. Y los órdenes «mover
+o borrar primero» ya son verdes sin el cerrojo, porque el `UPDATE` y el `DELETE` toman solos el de
+la fila. Se dice cuáles se vieron rojos y cuáles no.
+
+Y de paso, una corrección que pidió el usuario: la nota abierta del inverso decía «fase 3» para las
+facturas, y el §15 del plan maestro las pone en la **fase 5**.
+
+#### 2. El `WHERE` del numerador (addendum; decidido por el usuario)
+
+Las dos notas abiertas sobre `NumeradorDeSerie` se cierran juntas: la del 2.4, que nadie mira el tipo,
+y la del 2.6, que nadie mira el ejercicio.
+
+- **Tipo:** `s.tipo_de_documento = {n}` en el `WHERE`, con el parámetro que pone el numerador de
+  cada módulo.
+- **Ejercicio, para un documento normal:** la fecha del documento cae dentro del ejercicio de la
+  serie, o no se numera, con su error propio.
+- **Ejercicio, para el inverso:** se queda en la serie del original, y la excepción se escribe,
+  porque la R2 promete que anular se puede siempre.
+- **El disparador de la fase 5, escrito:** una rectificativa exige serie propia (Reglamento de
+  facturación, art. 6; contrastar con la biblioteca cuando toque). El mecanismo deja que cada
+  llamante diga cómo numera su inverso. Lo de hoy vale para ajustes y no es regla para todos.
+- Casos en rojo para cada cláusula, la mutación sobre el `WHERE` y la fila de la R5 al día.
+
+#### 3. El *runner*, fijado
+
+`runs-on: ubuntu-24.04` fijado ahora, en un commit. La subida a la 26 irá en otro, cuando se decida,
+y no de rebote el 19 de octubre, que es cuando `ubuntu-latest` cambia solo.
+
+#### 4. El 2.7 se abre con cuatro decisiones antes de escribir
+
+- **(a)** La instantánea se queda vieja con los movimientos de fecha atrasada y con las
+  reaperturas: hay que decidir cómo se invalida cuando entra un movimiento en su mes o antes. El
+  test de propiedad genera movimientos atrasados y reaperturas.
+- **(b)** Qué es el saldo con movimientos futuros: el libro entero, o fecha ≤ hoy. El 2.14
+  necesitará lo segundo, y va escrito en la definición.
+- **(c)** La clave del saldo lleva el lote desde ya, nullable, con `UNIQUE NULLS NOT DISTINCT`. Lo
+  midió el usuario en PostgreSQL 16: con un `UNIQUE` normal conviven dos filas «sin lote», y el
+  `ON CONFLICT DO UPDATE` inserta una tercera en vez de sumar.
+- **(d)** Fila de saldo viva, o instantánea más la suma del resto. Si viva, en la misma
+  transacción que confirma y con incremento atómico (`ON CONFLICT … SET fisico = saldo.fisico +
+  excluded.fisico`); nunca leer y escribir desde la aplicación; y un caso con dos confirmaciones
+  simultáneas del mismo artículo.
+
+Además, `Disponible` como columna generada (`GENERATED ALWAYS AS (fisico - reservado) STORED`), con un
+caso que escribe por SQL un `reservado` distinto de cero. Lo demás, como está en la casilla del 2.7.
+
+**El método, para los cuatro:**
+
+- la mutación sobre la línea que decide —en el 2.7, la que suma el libro o invalida la
+  instantánea—;
+- las dos listas por nombre;
+- los commits contados sin que falte ninguno;
+- el run de la rama y el de `main`;
+- rama propia por unidad, y commits pequeños y firmados.
+
 
 ## Estado actual
 
