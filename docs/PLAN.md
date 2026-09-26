@@ -5409,7 +5409,53 @@ esta rama.
 `35921732582` sobre `c92a2fd`, los cuatro **success** y **ninguno cancelado**. El que cierra el ítem,
 y el de `main`, van en la casilla.
 
-El siguiente ADR es el **0042**.
+**Y después del cierre, el primer punto del encargo del 2026-09-26**, en la rama
+`item-2.6-mover-y-borrar-toman-el-cerrojo`: **mover y borrar el ejercicio toman el cerrojo exclusivo
+antes de preguntar al puerto**, como cerrar (`1d8bbe4`). No es un decimoquinto ítem; es el epílogo
+del 2.6, y el porqué está en el **ADR-0042**: la escritura de mover y la de borrar también esperan a
+la confirmación en vuelo, pero esperan **después** de haber preguntado, y la R11 no las recoge porque
+un `FOR SHARE` no mueve el `xmin`.
+
+**Las dos listas, por su nombre, medidas contra el código sin el arreglo** (`245c8b6`):
+
+- **Vistos en rojo:** `Mover_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso`
+  (contestaba `200`) y `Borrar_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso`
+  (`204`). En los dos, el inverso de la anulación se quedaba sin ejercicio. Con el arreglo, `409`.
+- **Solo vistos en verde:** `La_anulacion_espera_al_movimiento_que_ya_estaba_dentro_y_luego_lo_obedece`
+  y `La_anulacion_espera_al_borrado_que_ya_estaba_dentro_y_luego_lo_obedece`. En ese orden, el UPDATE o
+  el DELETE ya tienen la fila cuando la anulación pide el compartido, así que espera con cerrojo o sin
+  él. No prueban el arreglo; impiden que eso deje de ser verdad.
+
+**Tres mutaciones, de la 28 a la 30**, cada una con los dos carriles enteros, revertida y con el árbol
+comprobado limpio después:
+
+| # | Mutación | Carril de integración | Carril rápido |
+|---|---|---|---|
+| 28 | mover sin cerrojo | rojo `Mover_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso` | rojo `Lo_que_la_tabla_nombra_existe`, **ya rojo en la base** |
+| 29 | borrar sin cerrojo | rojo `Borrar_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso` | el mismo, y por lo mismo |
+| 30 | mover con el cerrojo **después** de preguntar | rojo `Mover_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso` | el mismo, y por lo mismo |
+
+**El rojo del carril rápido no era de las mutaciones, y se dice porque manchó tres commits.** La fila
+nueva de la R9 (`2496b1d`) citaba el UPDATE y el DELETE entre comillas invertidas, y
+`LasDiecisieteReglasTests.Lo_que_la_tabla_nombra_existe` lee como tipo todo lo que va así con
+mayúscula. La última pasada verde del carril rápido era anterior a ese commit. Lo destapó la tanda,
+con el **mismo caso nombrado en las tres** y ninguno más. Se arregló en su propio commit (`aea1236`).
+Reescribir los tres commits sin empujar para que ninguno quedara rojo **no lo permitió la política de
+permisos**, así que `2496b1d`, `3de9240` y `7d4a91f` llevan ese rojo dentro. Quien bisecte y aterrice
+ahí está viendo esto, no una regresión.
+
+**Las cifras, con la orden que las mide.** Carril rápido —`dotnet test Bastion.sln --no-build --filter
+"Category!=Integracion"` sobre `aea1236`— **928 en 10 ensamblados**, igual que al cerrar el 2.6,
+porque los cuatro casos nuevos son de integración. Carril de integración —`--filter
+"Category=Integracion"`— **481**, desde 477: **84** en `Organizacion.IntegrationTests` y **397** en
+`Api.IntegrationTests`. Ni un código de error nuevo, así que el catálogo y el frontal no cambian.
+
+**Los commits, contados**: `git rev-list --count main..HEAD` da **8** con éste, todos `G` en `git log
+--format='%h %G? %s' main..HEAD`. El primero, `a31fe55`, es el epílogo del cierre del 2.6: el run de
+`main` y la corrección de «fase 3» a **fase 5**. El run de esta rama y el de `main` se anotan al abrir
+la rama del punto 2, igual que se hizo con los del 2.6.
+
+El siguiente ADR es el **0043**.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
