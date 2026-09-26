@@ -5471,6 +5471,100 @@ carril rápido y 481 en el de integración, 0 con error, y el humo verde: 65 pas
 *Diagnóstico* omitido, que solo corre si algo falla. `main` avanzó por *fast-forward* de `8ad3727` a
 `814c83d`.
 
+**El segundo punto del encargo, el addendum del `WHERE` del numerador**, se hizo en la rama
+`addendum-el-numerador-mira-tipo-y-ejercicio`. Cierra las dos notas abiertas, la del 2.4 y la del
+2.6, con lo que decidió el usuario. El porqué está en el **ADR-0043** (`55c8d80`), y el código en
+`d4272ab`:
+
+- el incremento une la serie con su ejercicio;
+- casa solo si la serie es **del tipo del documento** y su ejercicio **comprende la fecha** que le
+  pasan, con los dos extremos dentro;
+- si no casa, una lectura escalar elige entre dos códigos nuevos, `serie-de-otro-documento` y
+  `fecha-fuera-del-ejercicio-de-la-serie`, y el de siempre;
+- esa lectura filtra por empresa y estado igual que el incremento;
+- el puerto pasa a ser genérico sobre los documentos del propio módulo;
+- confirmar pasa la fecha del documento; el inverso pasa la del original, que es la excepción
+  escrita.
+
+La fila de la R5 y la frase de la R9 que remitía a la pregunta abierta, en `97d152c`.
+
+**Las dos listas, por su nombre.** Cada caso nuevo se vio rojo contra la mutación de la línea que
+decide (las mutaciones, abajo), no contra `main`.
+
+- **Vistos en rojo:**
+  - `Una_serie_de_otro_documento_no_numera_y_lo_dice_con_su_codigo` (31);
+  - `Una_fecha_fuera_del_ejercicio_de_la_serie_no_numera_y_lo_dice_con_su_codigo` (32);
+  - `Los_dos_extremos_del_ejercicio_de_la_serie_numeran` (33);
+  - `Una_serie_ajena_de_otro_documento_da_el_MISMO_error_que_una_que_no_existe` (35);
+  - de extremo a extremo, `Un_ajuste_abierto_sobre_una_serie_de_facturas_no_se_confirma` (31 y 36)
+    y `Un_ajuste_de_este_anio_sobre_la_serie_del_anio_pasado_no_se_confirma` (32 y 36);
+  - en el carril rápido, `Un_ajuste_numera_en_las_series_de_ajustes_de_inventario` (36).
+
+  Y dos que ya existían: `Anular_un_ajuste_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto`,
+  que ahora afirma la serie y el número del inverso (34), y
+  `El_incremento_condiciona_por_la_empresa_de_la_serie_contra_un_parametro`, que ahora mira también
+  la lectura del motivo (35).
+- **Solo vistos en verde**, todos del carril rápido:
+  - `Cada_documento_del_modulo_numera_en_un_tipo_de_serie_que_existe`, porque la 36 pone un tipo
+    que existe;
+  - `Un_documento_que_el_mapa_no_nombra_no_numera_en_ninguna_serie_por_defecto`;
+  - `El_tipo_que_condiciona_el_incremento_se_guarda_como_el_nombre_del_enumerado`;
+  - `Las_cinco_cadenas_escritas_a_mano_son_las_del_modelo`, que era el de las cuatro y suma la
+    tabla de ejercicios.
+
+**Seis mutaciones, de la 31 a la 36.** Cada una pasó por los dos carriles enteros y se revirtió, y
+el árbol quedó limpio después (`grep -c "arbol limpio" tanda43.log` da **6**):
+
+| # | Mutación | Carril de integración | Carril rápido |
+|---|---|---|---|
+| 31 | el incremento sin la cláusula del tipo | rojo `Un_ajuste_abierto_sobre_una_serie_de_facturas_no_se_confirma` y `Una_serie_de_otro_documento_no_numera_y_lo_dice_con_su_codigo` | verde |
+| 32 | el incremento sin la cláusula del ejercicio | rojo `Un_ajuste_de_este_anio_sobre_la_serie_del_anio_pasado_no_se_confirma` y `Una_fecha_fuera_del_ejercicio_de_la_serie_no_numera_y_lo_dice_con_su_codigo` | verde |
+| 33 | los extremos del ejercicio, fuera (`>` y `<`) | rojo `Los_dos_extremos_del_ejercicio_de_la_serie_numeran` | verde |
+| 34 | el inverso numera con su fecha y no con la del original | rojo `Anular_un_ajuste_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto`, y los dos del cerrojo del punto 1 con el inverso dentro (`Mover_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso`, `Borrar_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso`), porque su original es del año pasado y su serie cuelga de ese ejercicio (`UnOriginalDelAnioPasadoYEsteAnioVacioAsync`) | verde |
+| 35 | la lectura del motivo sin la empresa | rojo `Una_serie_ajena_de_otro_documento_da_el_MISMO_error_que_una_que_no_existe` | rojo `El_incremento_condiciona_por_la_empresa_de_la_serie_contra_un_parametro` |
+| 36 | Inventario numera los ajustes en `FacturaEmitida` | rojos **21**: los casos que llegan a numerar un ajuste, al confirmarlo o al anularlo | rojo `Un_ajuste_numera_en_las_series_de_ajustes_de_inventario` |
+
+**El carril rápido no ve de la 31 a la 34, y se dice.** Las cláusulas del tipo y del ejercicio las
+vigila el carril de integración. La tabla de verdad sí extrae las columnas de las tres sentencias.
+Pero una columna que se quita del incremento sigue nombrada en la lectura del motivo, así que la
+lista cerrada no cambia. Lo que se hizo por sentencia, en el carril rápido, es la empresa (35).
+
+**La primera pasada del carril de integración salió con 11 rojos, y ninguno era de las cláusulas.**
+
+- **9 por un `42703`.** La lectura del motivo devolvía una fila con dos columnas, y el contexto la
+  leía con su convención `snake_case`: buscaba `cae_en_su_ejercicio` y no el alias. Pasó a un
+  escalar con el código; está en el ADR-0043 §2.
+- **2 por semillas repetidas**, los dos de `ElNumeroEntraEnElReciboTests`, con
+  `empresa-ya-registrada`. Los dos casos nuevos de `LaSerieDelAjusteTests` habían cogido la 313 y
+  la 314, que eran de ese fichero. Pasaron a la 333 y la 334, con los maestros 367 y 368, y el
+  reparto está en las dos cabeceras que lo resumen. Nada comprueba que las semillas no se pisen, y
+  `ElCerrojoDeLaNumeracionTests` las calcula (`320 + (int)tipo`), así que buscar solo por literal no
+  basta.
+
+**Las cifras, con la orden que las mide**, sobre el árbol de `97d152c`:
+
+- Carril rápido, `dotnet test Bastion.sln --no-build --filter "Category!=Integracion"`: **932 en 10
+  ensamblados**. Son los 928 de antes más los cuatro nuevos de `Api.FunctionalTests` (de 181 a 185).
+- Carril de integración, `--filter "Category=Integracion"`: **487**, de ellos **84** en
+  `Organizacion.IntegrationTests` y **403** en `Api.IntegrationTests`. Son los 481 de antes más los
+  seis nuevos.
+
+El catálogo de errores tiene **118 tipos** (`scripts/generar-errores.sh --comprobar`), y los dos
+nuevos llevan su texto en `es.ts` y `en.ts`. El frontal pasa 103 de 103 con `CI=true npm test`, y
+el tipado, el *lint* y el formato salen a 0. El OpenAPI no cambia: 130 operaciones.
+
+**Los commits, contados**: `git rev-list --count main..HEAD` da **5** con éste, todos `G`:
+
+- `b7dc46b`, los runs del primer punto;
+- `55c8d80`, el ADR;
+- `d4272ab`, el código;
+- `97d152c`, las filas;
+- éste, el PLAN.
+
+El run de esta rama y el de `main` se anotan al abrir la rama del punto 3.
+
+El siguiente ADR es el **0044**.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
@@ -13290,8 +13384,18 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
-- **ABIERTA (2026-09-25, ítem 2.6) · el inverso numera en la serie del ejercicio del original, y lleva
-  la fecha de otro.** El ADR-0040 dejaba para el 2.6 «que un documento vaya a la serie **de su
+- **CERRADA (2026-09-26, addendum del ADR-0043) · el inverso numera en la serie del ejercicio del
+  original, y lleva la fecha de otro.** **La cerró el usuario** en el encargo del 2026-09-26 con la
+  segunda salida: el inverso se queda en la serie del original, y la excepción está escrita. El
+  `WHERE` del numerador exige ahora que la serie cuelgue del ejercicio que comprende la fecha que le
+  pasa quien llama. Confirmar pasa la fecha del documento. El inverso pasa la del original, y la R9
+  le sigue preguntando por la de hoy. Por eso ya **no** se numera un borrador de este año en una
+  serie del año pasado. Lo afirma `LaSerieDelAjusteTests.Un_ajuste_de_este_anio_sobre_la_serie_del_anio_pasado_no_se_confirma`.
+  La excepción vale para los ajustes: una rectificativa exige serie propia, y el disparador está
+  escrito para la fase 5. **ADR-0043**, y el detalle en *Estado actual*. Lo que sigue es la nota tal
+  como se abrió.
+
+  El ADR-0040 dejaba para el 2.6 «que un documento vaya a la serie **de su
   ejercicio**», y el 2.6 hizo viva la R9 **sin** cerrarlo, porque al llegar ahí resultó no tener una
   respuesta única. `CrearInverso` hereda la serie del original y estrena la fecha de hoy —lo afirma
   `ElInversoQueAnulaTests.El_inverso_hereda_la_serie_y_el_almacen_y_estrena_la_fecha`—. La serie
@@ -13317,7 +13421,17 @@ cuando hace falta el porqué.
   la primera serie que numere documentos fiscales (fase 5) o un addendum, y quien la conteste no es
   el agente.
 
-- **ABIERTA (2026-09-19, ítem 2.4) · nadie comprueba de qué documentos es una serie.** `Serie`
+- **CERRADA (2026-09-26, addendum del ADR-0043) · nadie comprueba de qué documentos es una
+  serie.** **La cerró el usuario** con la tercera salida: `s.tipo_de_documento = {2}` en el `WHERE`,
+  con el parámetro que pone el numerador de cada módulo. El puerto pasa a ser genérico sobre los
+  documentos del propio módulo, así que `TipoDeDocumento` sigue sin salir de Organización.
+  Inventario escribe su nombre, y un caso del carril rápido lo compara con el enumerado. Una serie de
+  facturas ya no numera un ajuste: lo afirma
+  `LaSerieDelAjusteTests.Un_ajuste_abierto_sobre_una_serie_de_facturas_no_se_confirma`, con el
+  contador de la serie a cero. **Abrir el borrador sigue sin mirarlo**, y es a propósito: la guarda
+  está en confirmar, como en la R9. **ADR-0043**. Lo que sigue es la nota tal como se abrió.
+
+  `Serie`
   lleva su `TipoDeDocumento` **desde el ítem 0.4** —y el 2.4 le añadió los tres valores de
   inventario, que era lo único que faltaba para poder declarar una serie de ajustes—, pero
   **ningún camino lo mira**. `AbrirAjuste` pregunta a `IConsultaDeSeries` por el
