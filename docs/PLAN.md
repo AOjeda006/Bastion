@@ -5565,6 +5565,20 @@ El run de esta rama y el de `main` se anotan al abrir la rama del punto 3.
 
 El siguiente ADR es el **0044**.
 
+**Los runs del segundo punto**, anotados al abrir la rama del tercero
+(`ci-el-runner-fijado-en-ubuntu-24.04`) y leídos de la API. `GET
+/repos/AOjeda006/Bastion/actions/runs?head_sha=d920ef4…` (con el sha entero) da `total_count: 2`:
+
+- `36259707702`, de la rama `addendum-el-numerador-mira-tipo-y-ejercicio`;
+- `36260142302`, de `main`.
+
+Los dos son **success** en su primer intento. `?branch=addendum-el-numerador-mira-tipo-y-ejercicio`
+da `total_count: 1`, así que no hubo otro run ni ninguno cancelado. En los dos, 932 casos en el
+carril rápido y 487 en el de integración, 0 con error, el catálogo con 118 tipos y el humo verde: 65
+pasos, 64 verdes y *Diagnóstico* omitido. `main` avanzó por *fast-forward* de `814c83d` a `d920ef4`.
+Los tres jobs de la rama corrieron con `labels: ['ubuntu-latest']`, según `GET
+…/actions/runs/36259707702/jobs`. Es la referencia para el punto 3.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
