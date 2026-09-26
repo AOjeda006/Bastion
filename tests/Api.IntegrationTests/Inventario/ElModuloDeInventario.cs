@@ -15,6 +15,7 @@ using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
+using Npgsql;
 
 namespace Bastion.Api.IntegrationTests.Inventario;
 
@@ -197,6 +198,16 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
 
     /// <summary>Lo que espera quien llega segundo antes de rendirse con un 55P03.</summary>
     internal const string PlazoCorto = "SET LOCAL lock_timeout = '300ms'";
+
+    /// <summary>El proceso de PostgreSQL que atiende la conexión de este módulo.</summary>
+    /// <remarks>
+    /// Para los casos en que quien llega segundo <b>no</b> puede llevar plazo, porque lo que se
+    /// afirma es lo que decide después de esperar: con esto se pregunta al motor si ya está
+    /// esperando a esta transacción, y solo entonces se la suelta. Soltarla antes convertiría la
+    /// carrera en dos operaciones seguidas, y dos operaciones seguidas salen bien sin cerrojo.
+    /// </remarks>
+    internal int ProcesoDeLaBase =>
+        ((NpgsqlConnection)_inventario.Database.GetDbConnection()).ProcessID;
 
     /// <summary>Anula con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Cruces;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
@@ -43,19 +44,25 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// ejercicio abierto, lo cierra por debajo y confirma. No queda medio dentro: no queda nada.
 /// </para>
 /// <para>
-/// <b>Los dos casos del cerrojo usan dos transacciones DE VERDAD, y un plazo.</b> Lo que hay que
-/// ejercer no es «cerrar después de confirmar» sino el <b>solape</b>: una operación que ya leyó el
-/// ejercicio y todavía no ha llegado a su <c>COMMIT</c>. Quien llega segundo se queda esperando, y
-/// esperar para siempre es un caso que no termina en vez de un caso que falla; así que el segundo
-/// lleva <c>SET LOCAL lock_timeout</c> y el desenlace que se afirma es el <c>55P03</c> de
-/// PostgreSQL. Es determinista: o consigue el cerrojo o da ese error, sin depender de lo rápida que
-/// sea la máquina.
+/// <b>Los seis casos del cerrojo usan dos transacciones DE VERDAD.</b> Lo que hay que ejercer no es
+/// «cerrar después de confirmar» sino el <b>solape</b>: una operación que ya leyó el ejercicio y
+/// todavía no ha llegado a su <c>COMMIT</c>. Quien llega segundo se queda esperando, y esperar para
+/// siempre es un caso que no termina en vez de un caso que falla; así que, cuando lo que se afirma
+/// es la espera, el segundo lleva <c>SET LOCAL lock_timeout</c> y el desenlace es el <c>55P03</c>
+/// de PostgreSQL. Es determinista: o consigue el cerrojo o da ese error, sin depender de lo rápida
+/// que sea la máquina.
 /// </para>
 /// <para>
-/// <b>Semillas: el fichero entero es del 384 al 399.</b> Las empresas, del 384 al 389 y la 396, la
-/// 398 y la 399; los maestros de instalación, del 390 al 395 y la 397. Este carril comparte la base
-/// entre todos sus ficheros, así que una semilla repetida no falla aquí: falla en el fichero de
-/// otro que la pedía primero.
+/// <b>Los dos de «el documento primero» no pueden llevar plazo</b>, porque lo que afirman no es
+/// que mover o borrar esperen —esperan también sin el cerrojo, en su <c>UPDATE</c> o su
+/// <c>DELETE</c>— sino <b>lo que deciden después de esperar</b>. Así que el segundo corre entero y
+/// el caso suelta al primero solo cuando el motor dice que el segundo ya le está esperando.
+/// </para>
+/// <para>
+/// <b>Semillas: el fichero entero es del 384 al 407.</b> Las empresas, del 384 al 389, la 396, la
+/// 398, la 399 y del 400 al 403; los maestros de instalación, del 390 al 395, la 397 y del 404 al
+/// 407. Este carril comparte la base entre todos sus ficheros, así que una semilla repetida no
+/// falla aquí: falla en el fichero de otro que la pedía primero.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -417,6 +424,200 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
         }
     }
 
+    [Fact]
+    public async Task Mover_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso()
+    {
+        (HttpClient cliente, Guid empresaId, Guid originalId, EjercicioDto esteAnio) =
+            await UnOriginalDelAnioPasadoYEsteAnioVacioAsync(400, "EJE-H", 404);
+
+        string recurso = $"{LosMaestrosPorLaApi.Ejercicios}/{esteAnio.Id}";
+        string etiqueta = await cliente.EtiquetaDeAsync(recurso);
+
+        await using ElModuloDeInventario modulo = new(postgres, empresaId);
+
+        // TRANSACCIÓN 1: la anulación escribe el inverso con fecha de hoy —dentro del ejercicio
+        // que se va a mover— y NO suelta. ES EL ORDEN QUE DISTINGUE, y por eso el documento es un
+        // inverso y no un borrador: nace confirmado dentro de una transacción que todavía no ha
+        // terminado, así que el puerto no lo ve. Un borrador de antes sí lo vería, y un caso
+        // montado con uno saldría verde también sin el cerrojo.
+        await using IDbContextTransaction anulando = await modulo.AbrirTransaccionAsync();
+
+        Resultado<AnulacionDto> anulacion =
+            await modulo.AnularSinAbrirTransaccionAsync(originalId, MotivoDeLaAnulacion);
+
+        anulacion.EsCorrecto.ShouldBeTrue($"«{anulacion.Error?.Codigo}»");
+
+        // TRANSACCIÓN 2: mover por la API, empezando mañana, que deja fuera el día del inverso.
+        Task<HttpResponseMessage> moviendo = cliente.EnviarConVersionAsync(
+            HttpMethod.Put, recurso, etiqueta, JsonContent.Create(DesdeManana()));
+
+        await EsperarAQueLaFreneAsync(modulo.ProcesoDeLaBase, moviendo);
+
+        await anulando.CommitAsync();
+
+        using HttpResponseMessage movido = await moviendo.WaitAsync(TimeSpan.FromSeconds(30));
+
+        // SIN EL CERROJO ESTO ES UN 200, y el inverso se queda fuera de todo ejercicio: mover
+        // pregunta al puerto, no ve nada y su `UPDATE` se queda esperando al `FOR SHARE` de la
+        // anulación. Cuando ésta suelta, el `UPDATE` pasa, porque un `FOR SHARE` no cambia el
+        // `xmin` y la R11 no tiene nada que chocar. Con el cerrojo, mover espera ANTES de
+        // preguntar, y pregunta con el inverso ya a la vista.
+        movido.StatusCode.ShouldBe(HttpStatusCode.Conflict, await Escenario.Detalle(movido));
+
+        (await TipoDelProblemaAsync(movido)).ShouldBe(
+            "/errors/ejercicio-dejaria-documentos-fuera",
+            "el inverso de hoy es un documento como otro cualquiera, y mover el ejercicio lo " +
+            "dejaría sin periodo al que pertenecer");
+    }
+
+    [Fact]
+    public async Task Borrar_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso()
+    {
+        (HttpClient cliente, Guid empresaId, Guid originalId, EjercicioDto esteAnio) =
+            await UnOriginalDelAnioPasadoYEsteAnioVacioAsync(401, "EJE-I", 405);
+
+        string recurso = $"{LosMaestrosPorLaApi.Ejercicios}/{esteAnio.Id}";
+        string etiqueta = await cliente.EtiquetaDeAsync(recurso);
+
+        await using ElModuloDeInventario modulo = new(postgres, empresaId);
+
+        // TRANSACCIÓN 1: la misma anulación en vuelo que en el caso de mover, por lo mismo.
+        await using IDbContextTransaction anulando = await modulo.AbrirTransaccionAsync();
+
+        Resultado<AnulacionDto> anulacion =
+            await modulo.AnularSinAbrirTransaccionAsync(originalId, MotivoDeLaAnulacion);
+
+        anulacion.EsCorrecto.ShouldBeTrue($"«{anulacion.Error?.Codigo}»");
+
+        // TRANSACCIÓN 2: borrar por la API. El ejercicio de este año no tiene series —el inverso
+        // numera en la del original—, así que la clave ajena no lo para: lo único que hay entre
+        // el borrado y un inverso sin ejercicio es la pregunta al puerto.
+        Task<HttpResponseMessage> borrando =
+            cliente.EnviarConVersionAsync(HttpMethod.Delete, recurso, etiqueta);
+
+        await EsperarAQueLaFreneAsync(modulo.ProcesoDeLaBase, borrando);
+
+        await anulando.CommitAsync();
+
+        using HttpResponseMessage borrado = await borrando.WaitAsync(TimeSpan.FromSeconds(30));
+
+        // SIN EL CERROJO ESTO ES UN 204, por el mismo camino que mover: el `DELETE` espera al
+        // `FOR SHARE`, el `xmin` no ha cambiado y la fila se va.
+        borrado.StatusCode.ShouldBe(HttpStatusCode.Conflict, await Escenario.Detalle(borrado));
+
+        (await TipoDelProblemaAsync(borrado)).ShouldBe(
+            "/errors/ejercicio-con-documentos",
+            "el ejercicio tiene dentro el inverso de hoy, y borrarlo lo dejaría huérfano");
+    }
+
+    [Fact]
+    public async Task La_anulacion_espera_al_movimiento_que_ya_estaba_dentro_y_luego_lo_obedece()
+    {
+        (HttpClient cliente, Guid empresaId, Guid originalId, EjercicioDto esteAnio) =
+            await UnOriginalDelAnioPasadoYEsteAnioVacioAsync(402, "EJE-J", 406);
+
+        VersionDeRecurso version = await LaVersionDeAsync(cliente, esteAnio.Id);
+
+        await using ElEjercicioAMano ejercicio = new(postgres, empresaId);
+        await using ElModuloDeInventario modulo = new(postgres, empresaId);
+
+        // TRANSACCIÓN 1: mover de verdad —el caso de uso entero, hasta su guardado— y NO soltar.
+        //
+        // ESTE ORDEN NO NECESITABA EL CERROJO NUEVO, y se dice para que nadie cuente este caso
+        // como prueba del arreglo: el `UPDATE` de la fila toma él solo un cerrojo que el
+        // `FOR SHARE` de la anulación respeta. Está para que siga siendo así, y para afirmar la
+        // otra mitad: que la anulación, al soltarse, obedece lo que el movimiento dejó escrito.
+        await using (IDbContextTransaction moviendo = await ejercicio.AbrirTransaccionAsync())
+        {
+            Resultado<EjercicioDto> movido = await ejercicio.Mover.EjecutarAsync(
+                esteAnio.Id, version, DesdeManana(), CancellationToken.None);
+
+            movido.EsCorrecto.ShouldBeTrue($"«{movido.Error?.Codigo}»");
+
+            // TRANSACCIÓN 2: la anulación pide el compartido sobre el ejercicio de hoy, que es la
+            // fila que el movimiento tiene cogida. Con plazo, para que el caso falle en vez de
+            // colgarse.
+            await using (IDbContextTransaction anulando = await modulo.AbrirTransaccionAsync())
+            {
+                await modulo.PonerPlazoCortoDeCerrojoAsync();
+
+                PostgresException choque = await ElChoqueDeCerrojoAsync(
+                    () => modulo.AnularSinAbrirTransaccionAsync(originalId, MotivoDeLaAnulacion));
+
+                choque.SqlState.ShouldBe(
+                    PostgresErrorCodes.LockNotAvailable,
+                    "la anulación no decide sobre un ejercicio que otro está moviendo");
+
+                await anulando.RollbackAsync();
+            }
+
+            await moviendo.CommitAsync();
+        }
+
+        // Y SOLTADO, LA ANULACIÓN LO OBEDECE: hoy ya no cae en ningún ejercicio. Con un módulo
+        // nuevo, porque el de arriba se quedó con la transacción abortada por el choque.
+        await using ElModuloDeInventario despues = new(postgres, empresaId);
+
+        Resultado<AnulacionDto> anulacion =
+            await despues.AnularAsync(originalId, MotivoDeLaAnulacion);
+
+        anulacion.EsCorrecto.ShouldBeFalse(
+            "el ejercicio empieza mañana, así que el inverso de hoy no tiene dónde caer");
+
+        anulacion.Error!.Codigo.ShouldBe("ajuste-sin-ejercicio");
+    }
+
+    [Fact]
+    public async Task La_anulacion_espera_al_borrado_que_ya_estaba_dentro_y_luego_lo_obedece()
+    {
+        (HttpClient cliente, Guid empresaId, Guid originalId, EjercicioDto esteAnio) =
+            await UnOriginalDelAnioPasadoYEsteAnioVacioAsync(403, "EJE-K", 407);
+
+        VersionDeRecurso version = await LaVersionDeAsync(cliente, esteAnio.Id);
+
+        await using ElEjercicioAMano ejercicio = new(postgres, empresaId);
+        await using ElModuloDeInventario modulo = new(postgres, empresaId);
+
+        // TRANSACCIÓN 1: borrar de verdad y NO soltar. Mismo aviso que al mover: el `DELETE`
+        // toma él solo el cerrojo de la fila, así que este orden no depende del arreglo.
+        await using (IDbContextTransaction borrando = await ejercicio.AbrirTransaccionAsync())
+        {
+            Resultado borrado =
+                await ejercicio.Borrar.EjecutarAsync(esteAnio.Id, version, CancellationToken.None);
+
+            borrado.EsCorrecto.ShouldBeTrue($"«{borrado.Error?.Codigo}»");
+
+            await using (IDbContextTransaction anulando = await modulo.AbrirTransaccionAsync())
+            {
+                await modulo.PonerPlazoCortoDeCerrojoAsync();
+
+                PostgresException choque = await ElChoqueDeCerrojoAsync(
+                    () => modulo.AnularSinAbrirTransaccionAsync(originalId, MotivoDeLaAnulacion));
+
+                choque.SqlState.ShouldBe(
+                    PostgresErrorCodes.LockNotAvailable,
+                    "la anulación no decide sobre un ejercicio que otro está borrando");
+
+                await anulando.RollbackAsync();
+            }
+
+            await borrando.CommitAsync();
+        }
+
+        await using ElModuloDeInventario despues = new(postgres, empresaId);
+
+        Resultado<AnulacionDto> anulacion =
+            await despues.AnularAsync(originalId, MotivoDeLaAnulacion);
+
+        anulacion.EsCorrecto.ShouldBeFalse(
+            "el ejercicio de hoy ya no existe, así que el inverso no tiene dónde caer");
+
+        anulacion.Error!.Codigo.ShouldBe("ajuste-sin-ejercicio");
+    }
+
+    /// <summary>Por qué anulan los casos de mover y borrar. No decide nada.</summary>
+    private const string MotivoDeLaAnulacion = "Duplicado detectado en la revisión";
+
     /// <summary>La fecha de hoy, en el mismo calendario que usa el caso de uso.</summary>
     private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -588,6 +789,111 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
             [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m, "EUR")]);
 
         return (peticion, serie, ejercicio);
+    }
+
+    /// <summary>
+    /// El escenario de los cuatro casos de mover y borrar: un ajuste confirmado el año pasado, y
+    /// el ejercicio de este año vacío y sin series.
+    /// </summary>
+    /// <remarks>
+    /// <b>El original vive en el año pasado a propósito.</b> Su inverso lleva la fecha de hoy y cae
+    /// en el ejercicio de este año, que es el que se mueve o se borra; y como el original no está
+    /// dentro, lo único que el puerto puede encontrar ahí es el inverso. Con el original dentro, el
+    /// puerto lo vería desde el principio y el caso no distinguiría nada.
+    /// </remarks>
+    /// <param name="semilla">La empresa del caso.</param>
+    /// <param name="codigo">Prefijo para los códigos de este caso.</param>
+    /// <param name="semillaDeInstalacion">Número para la unidad y el tramo de impuesto.</param>
+    /// <returns>El cliente, la empresa, el ajuste confirmado y el ejercicio de este año.</returns>
+    private async Task<(HttpClient Cliente, Guid EmpresaId, Guid OriginalId, EjercicioDto EsteAnio)>
+        UnOriginalDelAnioPasadoYEsteAnioVacioAsync(int semilla, string codigo, int semillaDeInstalacion)
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(semilla);
+
+        (AbrirAjusteDto peticion, _, _) = await UnAjusteCompletoConSuEjercicioAsync(
+            cliente, codigo, semillaDeInstalacion, new DateOnly(Hoy.Year - 1, 6, 15));
+
+        await using ElModuloDeInventario modulo = new(postgres, empresa.Id);
+
+        Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
+        alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");
+
+        Resultado<AjusteDto> confirmacion = await modulo.ConfirmarAsync(alta.Valor.Id);
+        confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»");
+
+        EjercicioDto esteAnio = await CrearEjercicioAsync(cliente, Hoy.Year);
+
+        return (cliente, empresa.Id, alta.Valor.Id, esteAnio);
+    }
+
+    /// <summary>Las fechas nuevas de los casos que mueven: empieza mañana, y hoy se queda fuera.</summary>
+    private static ModificarEjercicioDto DesdeManana()
+    {
+        DateOnly manana = Hoy.AddDays(1);
+
+        return new ModificarEjercicioDto
+        {
+            FechaDeInicio = manana,
+            FechaDeFin = manana.AddMonths(Ejercicio.MesesMaximos).AddDays(-1),
+        };
+    }
+
+    /// <summary>La versión del ejercicio que la API publica, para los casos de uso a mano.</summary>
+    /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
+    /// <param name="ejercicioId">El ejercicio.</param>
+    /// <returns>La versión, sacada del <c>ETag</c>.</returns>
+    private static async Task<VersionDeRecurso> LaVersionDeAsync(HttpClient cliente, Guid ejercicioId)
+    {
+        Resultado<VersionDeRecurso> version = VersionDeRecurso.DeLaCabecera(
+            await cliente.EtiquetaDeAsync($"{LosMaestrosPorLaApi.Ejercicios}/{ejercicioId}"));
+
+        version.EsCorrecto.ShouldBeTrue($"«{version.Error?.Codigo}»");
+
+        return version.Valor;
+    }
+
+    /// <summary>
+    /// Espera a que la operación en vuelo se quede parada detrás del proceso dado, o falla.
+    /// </summary>
+    /// <remarks>
+    /// <b>Es lo que hace que el caso ejerza la carrera y no dos operaciones seguidas.</b> Si la
+    /// anulación soltara antes de que la otra operación llegara a esperarla, ésta preguntaría con
+    /// el inverso ya a la vista y saldría bien con cerrojo o sin él. Así que no se suelta por
+    /// tiempo sino cuando el motor dice que hay alguien esperando, que es lo que contesta
+    /// <c>pg_blocking_pids</c>. Y si la operación termina sin haber esperado, eso ya es el fallo:
+    /// ha decidido sin pedir la fila del ejercicio.
+    /// </remarks>
+    /// <param name="procesoQueFrena">El proceso de PostgreSQL de la anulación en vuelo.</param>
+    /// <param name="enVuelo">La operación que tiene que quedarse esperando.</param>
+    private async Task EsperarAQueLaFreneAsync(int procesoQueFrena, Task enVuelo)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand quienEspera = new(
+            "SELECT count(*) FROM pg_stat_activity WHERE @frena = ANY(pg_blocking_pids(pid))",
+            conexion);
+
+        quienEspera.Parameters.AddWithValue("frena", procesoQueFrena);
+
+        DateTimeOffset limite = DateTimeOffset.UtcNow.AddSeconds(30);
+
+        while (DateTimeOffset.UtcNow < limite)
+        {
+            enVuelo.IsCompleted.ShouldBeFalse(
+                "la operación ha terminado sin esperar a la anulación: ha decidido sin pedir la " +
+                "fila del ejercicio que la anulación tiene cogida");
+
+            if ((long)(await quienEspera.ExecuteScalarAsync())! > 0)
+            {
+                return;
+            }
+
+            await Task.Delay(50);
+        }
+
+        throw new ShouldAssertException(
+            "en treinta segundos nadie se ha puesto a esperar a la anulación");
     }
 
     private async Task<(HttpClient Cliente, EmpresaDto Empresa)> EnUnaEmpresaNuevaAsync(int semilla)

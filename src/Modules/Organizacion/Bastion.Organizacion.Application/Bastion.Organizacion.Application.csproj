@@ -38,6 +38,16 @@
       `internal` a propósito y no se abren al mundo por esto: se abren a un ensamblado nombrado.
     -->
     <InternalsVisibleTo Include="Bastion.Organizacion.IntegrationTests" />
+
+    <!--
+      Mover y borrar un ejercicio compiten con la confirmación de un documento de OTRO módulo, y
+      lo que hay que ejercer es el solape: el caso de uso con su transacción abierta, parado antes
+      del `COMMIT`, mientras Inventario intenta escribir dentro. Eso solo se puede hacer con el
+      caso de uso cableado a mano sobre una base de verdad, y el único carril que levanta los dos
+      módulos sobre PostgreSQL es `Bastion.Api.IntegrationTests`. Es la misma apertura, y por el
+      mismo motivo, que ya tiene la capa de aplicación de Inventario.
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
   </ItemGroup>
 
 </Project>
