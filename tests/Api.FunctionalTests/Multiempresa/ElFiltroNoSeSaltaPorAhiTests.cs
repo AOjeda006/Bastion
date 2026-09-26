@@ -240,12 +240,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
 
         ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/" +
          "CerrojoDeEjercicios.cs usa .SqlQuery"] =
-            "el otro lado: toma el cerrojo EXCLUSIVO con el que cerrar espera a las confirmaciones "
-            + "que ya estaban dentro, y trae el estado con el que se decide el 409, de esa misma "
-            + "lectura. Esta sobre el esquema del propio modulo, pero el filtro global tampoco "
-            + "alcanza al SQL crudo y el identificador viene de la ruta, asi que compara la "
-            + "empresa ella misma con el valor de IInquilinoActual. Vive en un fichero propio, como "
-            + "CerrojoDeLaBandeja, para que la excepcion se lea de una vez",
+            "el otro lado: toma el cerrojo EXCLUSIVO con el que cerrar, mover y borrar esperan a "
+            + "las confirmaciones que ya estaban dentro, y trae el estado con el que cerrar decide "
+            + "el 409, de esa misma lectura. Esta sobre el esquema del propio modulo, pero el "
+            + "filtro global tampoco alcanza al SQL crudo y el identificador viene de la ruta, asi "
+            + "que compara la empresa ella misma con el valor de IInquilinoActual. Vive en un "
+            + "fichero propio, como CerrojoDeLaBandeja, para que la excepcion se lea de una vez",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

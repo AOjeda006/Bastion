@@ -25,17 +25,49 @@ public interface IModificarEjercicio
 /// <inheritdoc cref="IModificarEjercicio"/>
 internal sealed class ModificarEjercicio(
     IRepositorioDeEjercicios ejercicios,
+    ICerrojoDeEjercicios cerrojo,
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
     IVersionesDeOrganizacion versiones,
     IEnumerable<IDocumentosDeUnPeriodo> documentos) : IModificarEjercicio
 {
-    public async Task<Resultado<EjercicioDto>> EjecutarAsync(
+    /// <inheritdoc />
+    /// <remarks>
+    /// <b>Dentro de UNA transacción y con el cerrojo exclusivo lo primero, como cerrar.</b> Mover
+    /// compite con confirmar por lo mismo que cerrar: decide mirando qué documentos hay dentro, y
+    /// un documento que se está confirmando en ese momento no se ve hasta su <c>COMMIT</c>. El
+    /// <c>UPDATE</c> del final también toma un cerrojo sobre la fila, y también espera a la
+    /// confirmación en vuelo; pero espera DESPUÉS de haber preguntado, así que lo que decide es
+    /// una respuesta vieja. Y la R11 no lo recoge por detrás: confirmar no escribe la fila del
+    /// ejercicio, su <c>FOR SHARE</c> no mueve el <c>xmin</c>, y el <c>UPDATE</c> pasa. Sin el
+    /// cerrojo, el inverso de una anulación en vuelo se quedaba fuera de todo ejercicio con un 200.
+    /// </remarks>
+    public Task<Resultado<EjercicioDto>> EjecutarAsync(
         Guid id,
         VersionDeRecurso version,
         ModificarEjercicioDto peticion,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(peticion);
+
+        return unidadTrabajo.EnTransaccionAsync(
+            dentro => MoverDentroDeLaTransaccionAsync(id, version, peticion, dentro), cancelacion);
+    }
+
+    private async Task<Resultado<EjercicioDto>> MoverDentroDeLaTransaccionAsync(
+        Guid id,
+        VersionDeRecurso version,
+        ModificarEjercicioDto peticion,
+        CancellationToken cancelacion)
+    {
+        // EL CERROJO ANTES DE PREGUNTAR AL PUERTO, que es lo que compra: la pregunta de abajo se
+        // hace cuando ya no puede entrar ningún documento nuevo en el intervalo, y después de que
+        // los que se estaban confirmando hayan llegado a su `COMMIT`. Va antes también de la
+        // lectura por el ORM, por el motivo que da `CerrarEjercicio`: así no hay dos versiones de
+        // la fila en la misma operación.
+        if (await cerrojo.TomarEnExclusivaAsync(id, cancelacion).ConfigureAwait(false) is null)
+        {
+            return Resultado.Fallo<EjercicioDto>(ErroresDeEjercicio.NoEncontrado(id));
+        }
 
         Ejercicio? ejercicio = await ejercicios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 

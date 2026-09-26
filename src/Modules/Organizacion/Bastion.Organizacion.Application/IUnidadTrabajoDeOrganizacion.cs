@@ -27,12 +27,13 @@ public interface IUnidadTrabajoDeOrganizacion : IUnidadTrabajo
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>Existe desde el ítem 2.6 y por un solo caso de uso: cerrar un ejercicio.</b> Cerrar toma
-    /// un cerrojo exclusivo sobre la fila —para que ninguna confirmación en vuelo se cuele entre la
-    /// comprobación del estado y el <c>COMMIT</c>—, y un cerrojo <b>solo dura hasta el final de su
+    /// <b>Existe desde el ítem 2.6 y por el cerrojo del ejercicio.</b> Cerrar lo toma en exclusiva
+    /// sobre la fila —para que ninguna confirmación en vuelo se cuele entre la comprobación del
+    /// estado y el <c>COMMIT</c>—, y un cerrojo <b>solo dura hasta el final de su
     /// transacción</b>. Sin una que abarque la lectura y el guardado, el cerrojo se soltaría al
     /// acabar su propia consulta y el cierre parecería protegido sin estarlo, que es peor que no
-    /// protegerlo.
+    /// protegerlo. Mover y borrar el ejercicio lo toman igual desde el cierre del 2.6, porque
+    /// deciden por lo mismo: por qué documentos hay dentro.
     /// </para>
     /// <para>
     /// <b>Por qué no la abre el filtro de idempotencia, que es quien la abre en todo lo demás.</b>

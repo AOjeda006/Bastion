@@ -26,12 +26,30 @@ public interface IEliminarEjercicio
 /// <inheritdoc cref="IEliminarEjercicio"/>
 internal sealed class EliminarEjercicio(
     IRepositorioDeEjercicios ejercicios,
+    ICerrojoDeEjercicios cerrojo,
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
     IVersionesDeOrganizacion versiones,
     IEnumerable<IDocumentosDeUnPeriodo> documentos) : IEliminarEjercicio
 {
-    public async Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion)
+    /// <inheritdoc />
+    /// <remarks>
+    /// <b>Dentro de UNA transacción y con el cerrojo exclusivo lo primero</b>, por lo que cuenta
+    /// <c>ModificarEjercicio</c>: el <c>DELETE</c> espera a la confirmación en vuelo, pero espera
+    /// después de haber preguntado, y cuando pasa se lleva un ejercicio con un documento dentro.
+    /// </remarks>
+    public Task<Resultado> EjecutarAsync(Guid id, VersionDeRecurso version, CancellationToken cancelacion) =>
+        unidadTrabajo.EnTransaccionAsync(
+            dentro => BorrarDentroDeLaTransaccionAsync(id, version, dentro), cancelacion);
+
+    private async Task<Resultado> BorrarDentroDeLaTransaccionAsync(
+        Guid id, VersionDeRecurso version, CancellationToken cancelacion)
     {
+        // El cerrojo antes de preguntar al puerto: ver `ModificarEjercicio`.
+        if (await cerrojo.TomarEnExclusivaAsync(id, cancelacion).ConfigureAwait(false) is null)
+        {
+            return Resultado.Fallo(ErroresDeEjercicio.NoEncontrado(id));
+        }
+
         Ejercicio? ejercicio = await ejercicios.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
         if (ejercicio is null)

@@ -22,6 +22,13 @@ namespace Bastion.Organizacion.Application.Ejercicios;
 /// mientras lo tiene, ninguna confirmación nueva pasa de su lectura.
 /// </para>
 /// <para>
+/// <b>Lo toman cerrar, mover y borrar</b>: las tres deciden por qué documentos hay dentro del
+/// intervalo, y un documento que se está confirmando no se ve hasta su <c>COMMIT</c>. Mover y
+/// borrar sí escriben la fila, y su <c>UPDATE</c> o su <c>DELETE</c> esperan a la confirmación
+/// en vuelo; pero esperan después de haber preguntado, y pasan con la respuesta de antes. Por eso
+/// el cerrojo va antes de la pregunta y no basta con el que la escritura toma sola.
+/// </para>
+/// <para>
 /// <b>Y el estado viene con él, de la misma lectura.</b> Preguntar el estado por un lado y bloquear
 /// por otro deja entre las dos órdenes exactamente la ventana que esto viene a cerrar: el estado
 /// leído antes del cerrojo es un estado de antes.

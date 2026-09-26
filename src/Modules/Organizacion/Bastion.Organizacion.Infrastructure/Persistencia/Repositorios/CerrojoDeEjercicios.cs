@@ -75,13 +75,13 @@ internal sealed class CerrojoDeEjercicios(
             throw new InvalidOperationException(
                 "No hay transacción abierta en el contexto de Organización, así que el cerrojo " +
                 "exclusivo sobre la fila del ejercicio se soltaría al acabar esta lectura y una " +
-                "confirmación podría colarse entre la comprobación y el `COMMIT` del cierre. El " +
-                "dueño de la transacción es el filtro de idempotencia: la acción que cierra tiene " +
-                "que declarar la Idempotency-Key obligatoria.");
+                "confirmación podría colarse entre la comprobación y el `COMMIT`. Quien lo pide " +
+                "—cerrar, mover o borrar el ejercicio— tiene que ir dentro de " +
+                "`EnTransaccionAsync` de la unidad de trabajo del módulo.");
         }
 
         Guid empresaId = inquilino.EmpresaDelFiltro ?? throw new InvalidOperationException(
-            "Se está cerrando un ejercicio dentro de un ámbito sin inquilino, y un ejercicio es " +
+            "Se está bloqueando un ejercicio dentro de un ámbito sin inquilino, y un ejercicio es " +
             "siempre de una empresa: sin ella la sentencia bloquearía el de cualquiera.");
 
         List<string> estados = await contexto.Database
