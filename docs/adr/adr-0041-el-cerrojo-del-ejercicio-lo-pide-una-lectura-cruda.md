@@ -3,12 +3,13 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql]
 aplica_a: [ddd, ef-core, sql, concurrencia, multiempresa, transacciones]
 tags: [adr, r2, r5, r9, r11, r16, ejercicio, periodo, sql-crudo, cerrojo, for-share, for-update, transacciones, adr-0013, adr-0014, adr-0040]
-revisado: 2026-09-25
+revisado: 2026-09-26
 ---
 
 # ADR-0041: El cerrojo del ejercicio lo pide una lectura cruda, y la cláusula 2 del criterio admite leer si la lectura trae el cerrojo
 
-- **Estado:** aceptado
+- **Estado:** aceptado, con el §2 y el §8 **ampliados** por el [ADR-0042](adr-0042-la-escritura-que-espera-no-protege-lo-que-ya-decidio.md):
+  el exclusivo lo toman también mover y borrar, y en ellos el orden compra la seguridad
 - **Fecha:** 2026-09-25
 - **Enmienda el [ADR-0040](adr-0040-el-numero-lo-toma-una-sentencia-en-el-esquema-de-otro-modulo.md)**
   en la cláusula 2 de su criterio (§2): «una sentencia que **no lee nada para decidir**». Las dos
