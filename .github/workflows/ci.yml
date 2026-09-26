@@ -27,12 +27,16 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
+# El runner va FIJADO en ubuntu-24.04, y no en ubuntu-latest, en los tres jobs. La etiqueta
+# latest cambia sola de imagen —pasa a Ubuntu 26 a partir del 19 de octubre de 2026— y un
+# cambio de sistema no puede entrar de rebote en un run cualquiera: la subida a la 26 irá en
+# su propio commit, cuando se decida, con su run para compararlo con este.
 jobs:
   # ==================================================================== FRONTAL
   # Corre de verdad desde el primer commit.
   frontend:
     name: Frontal (bastion-web)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend
@@ -163,7 +167,7 @@ jobs:
   # que tocar este fichero, y a partir de ahí un fallo suyo es un fallo de verdad.
   backend:
     name: Backend (Bastion.sln)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -487,7 +491,7 @@ jobs:
   # SIEMPRE, en un equipo limpio, y no "la vez que lo probé".
   humo:
     name: Humo (docker compose)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [frontend, backend]
     steps:
       - uses: actions/checkout@v5
