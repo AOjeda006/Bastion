@@ -13056,6 +13056,13 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   como fue el del 2.5. Con ese commit, `git rev-list --count main..HEAD` pasa de **22** a **23**
   antes del avance, y es el último del ítem.
 
+  **Y es el 36139488895** sobre `8ad3727`, **success al primer intento**, leído del run al abrir el
+  trabajo siguiente —que no fue el 2.7, sino el arreglo de mover y borrar, en la rama
+  `item-2.6-mover-y-borrar-toman-el-cerrojo`—: los tres jobs en verde, *Diagnóstico* omitido y las
+  mismas cifras que el de cierre (**928**, **477**, **130**/**77**, **116**/**122**, **412/450** y
+  **600/900** KiB). `8ad3727` tiene **dos** runs (`total_count: 2`): éste y el 36139494088 de la
+  rama, los dos success y ninguno cancelado.
+
 - [ ] **2.7 · Las existencias, proyección de un libro que es la verdad** — criterio de aceptación: el
   saldo se **define** como la suma del libro, y la instantánea mensual —el mismo límite que la
   partición del 2.3— es una optimización que se puede **borrar y recalcular sin que cambie un
@@ -13162,7 +13169,7 @@ cuando hace falta el porqué.
   Y el `WHERE` de `NumeradorDeSerie` —empresa, identificador, `Activa`— no mira el ejercicio. **No es
   solo el inverso**: un borrador cualquiera con fecha de este año, abierto sobre una serie del año
   pasado que sigue activa, se numera igual. El inverso es el caso en que nadie elige la serie. Para
-  un ajuste de inventario es desorden en el correlativo. Para una factura —fase 3— es la R5 con otra
+  un ajuste de inventario es desorden en el correlativo. Para una factura —fase 5— es la R5 con otra
   cara, porque la serie mezclaría años. Las salidas, y lo que cuesta cada una:
   - **El inverso numera en la serie del ejercicio de hoy.** Hay que encontrar esa serie —del mismo
     tipo, en el ejercicio abierto—, y puede no existir: anular fallaría por un motivo que no tiene
@@ -13175,7 +13182,7 @@ cuando hace falta el porqué.
   La comprobación, sea cual sea, va donde está la garantía: en el `WHERE` del numerador, con el
   ejercicio de la fecha a su lado, como `s.tipo_de_documento` en la nota del 2.4. Es una decisión y
   no una línea. **No se toma aquí ni se amplía el checklist por cuenta propia**: el sitio natural es
-  la primera serie que numere documentos fiscales (fase 3) o un addendum, y quien la conteste no es
+  la primera serie que numere documentos fiscales (fase 5) o un addendum, y quien la conteste no es
   el agente.
 
 - **ABIERTA (2026-09-19, ítem 2.4) · nadie comprueba de qué documentos es una serie.** `Serie`
