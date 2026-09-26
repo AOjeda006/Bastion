@@ -5457,6 +5457,20 @@ la rama del punto 2, igual que se hizo con los del 2.6.
 
 El siguiente ADR es el **0043**.
 
+**Los runs del primer punto**, anotados al abrir la rama del segundo
+(`addendum-el-numerador-mira-tipo-y-ejercicio`) y leídos de la API, no de la memoria. `GET
+/repos/AOjeda006/Bastion/actions/runs?head_sha=814c83d14fa30102ee162e2d664d091dd250376c` da
+`total_count: 2`, y los dos van sobre `814c83d`:
+
+- `36256715821`, de la rama `item-2.6-mover-y-borrar-toman-el-cerrojo`;
+- `36257339246`, de `main`.
+
+Los dos son **success** en su primer intento. `?branch=item-2.6-mover-y-borrar-toman-el-cerrojo` da
+`total_count: 1`, así que la rama no tuvo otro run ni ninguno cancelado. En los dos, 928 casos en el
+carril rápido y 481 en el de integración, 0 con error, y el humo verde: 65 pasos, 64 verdes y el de
+*Diagnóstico* omitido, que solo corre si algo falla. `main` avanzó por *fast-forward* de `8ad3727` a
+`814c83d`.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
