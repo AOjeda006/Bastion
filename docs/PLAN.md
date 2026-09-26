@@ -5579,6 +5579,23 @@ pasos, 64 verdes y *Diagnóstico* omitido. `main` avanzó por *fast-forward* de 
 Los tres jobs de la rama corrieron con `labels: ['ubuntu-latest']`, según `GET
 …/actions/runs/36259707702/jobs`. Es la referencia para el punto 3.
 
+**El tercer punto del encargo, el *runner* fijado**, va en la misma rama. Los tres jobs de `ci.yml`
+—Frontal, Backend y Humo— pasan de `runs-on: ubuntu-latest` a `runs-on: ubuntu-24.04` en **un
+commit propio** (`29847b3`), con un comentario sobre `jobs:` que dice por qué. La subida a Ubuntu 26
+irá en **otro commit, cuando se decida**, y no de rebote el 19 de octubre, que es cuando
+`ubuntu-latest` cambia solo. El aviso de ese cambio salía en los tres jobs de cada run como anotación
+(*"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026"*).
+
+**Qué se comprueba y qué no.** Se comprueba la **etiqueta**, con `GET …/actions/runs/{id}/jobs` →
+`labels` de cada job: tiene que decir `ubuntu-24.04` en el run de la rama y en el de `main`. Se
+anotan al abrir la rama del punto 4. **La versión de la imagen no se ha medido.** El registro del job,
+que es donde sale, pide testigo: `GET …/actions/jobs/108453066457/logs` contesta **403** sin él. Así
+que «la imagen es la misma que hoy sirve `latest`», que dice el mensaje de `29847b3`, es lo que anuncia
+GitHub en `actions/runner-images#14748`, y no algo que se haya visto aquí. Lo que sí se verá es el
+efecto: los mismos casos, el mismo humo y la anotación del cambio fuera de los tres jobs.
+
+**Los commits, contados** en `git log --format='%h %G? %s' main..HEAD`: **3** con éste, todos `G`.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
