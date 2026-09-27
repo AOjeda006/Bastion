@@ -41,6 +41,13 @@ namespace Bastion.Api.FunctionalTests.Auditoria;
 /// Si se pone rojo, <b>no se añade a la lista sin más</b>: se mira si la premisa del interceptor
 /// sigue en pie, y si no, se reabre la decisión con un ADR que sustituya al vigente.
 /// </para>
+/// <para>
+/// <b>Se volvió a poner rojo en el 2.7</b>, con la primera columna que calcula el motor: el
+/// disponible de una existencia. Se miró la premisa y sigue en pie —la columna no es clave, no se
+/// audita y ninguna escritura del rastreador la toca—, y el ADR-0044 enmienda el punto 2 del
+/// ADR-0015: lo que genera el servidor son los testigos <b>y</b> las columnas calculadas, cada una
+/// en su lista y por su nombre, y cada una comprobada por lo que la hace ser lo que se declara.
+/// </para>
 /// </remarks>
 public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
 {
@@ -137,6 +144,21 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         "ContadorDeSerie",
     ];
 
+    // Las columnas que CALCULA EL MOTOR, y es la segunda cosa que el servidor genera (ADR-0044,
+    // que enmienda el punto 2 del ADR-0015). Van en una lista aparte y no en la de los testigos
+    // porque son otra cosa y se comprueban por otra cosa: una calculada no se mete en el `WHERE`
+    // de nadie, y un testigo no se calcula de otras columnas.
+    //
+    // `Existencia.Disponible` es la primera, del ítem 2.7: el físico menos lo reservado, guardado
+    // por el motor. Lo que la deja entrar sin reabrir la fase única del interceptor es que la
+    // premisa sigue en pie para ella: no es clave, la existencia no se audita, y ninguna escritura
+    // del rastreador la toca —la fila la mueven sentencias crudas, y el motor rechaza cualquier
+    // `INSERT` o `UPDATE` que la nombre—.
+    private static readonly string[] s_calculadasPorElMotor =
+    [
+        "Existencia.Disponible",
+    ];
+
     private readonly ApiSinDependencias _api = new();
 
     public void Dispose() => _api.Dispose();
@@ -153,36 +175,50 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     }
 
     [Fact]
-    public void Lo_unico_que_genera_el_servidor_son_los_testigos_de_concurrencia()
+    public void Lo_unico_que_genera_el_servidor_es_lo_declarado()
     {
         List<string> generadas = [.. Modelos().SelectMany(modelo => Donde(modelo, EsDelServidor))];
 
         generadas.Sort(StringComparer.Ordinal);
 
-        // Las dos listas ENTERAS y en el mismo orden, no «lo que sobra»: un testigo que
-        // DESAPARECE del modelo deja ese recurso sin control de concurrencia, y eso también
-        // tiene que verse aquí.
+        List<string> declaradas = [.. s_generadasPorElServidor, .. s_calculadasPorElMotor];
+
+        declaradas.Sort(StringComparer.Ordinal);
+
+        // Las listas ENTERAS y en el mismo orden, no «lo que sobra»: un testigo que DESAPARECE
+        // del modelo deja ese recurso sin control de concurrencia, y eso también tiene que verse
+        // aquí.
         string.Join(", ", generadas).ShouldBe(
-            string.Join(", ", s_generadasPorElServidor),
-            "el servidor solo genera los testigos de concurrencia del R11. Cualquier otra cosa " +
-            "—un DEFAULT, una columna calculada, un IDENTITY— vuelve a poner en duda la fase " +
-            "única del interceptor de auditoría, y eso se decide en un ADR, no aquí.");
+            string.Join(", ", declaradas),
+            "el servidor solo genera los testigos de concurrencia del R11 y las columnas " +
+            "calculadas declaradas del ADR-0044. Cualquier otra cosa —un DEFAULT, un IDENTITY, " +
+            "una calculada sin declarar— vuelve a poner en duda la fase única del interceptor de " +
+            "auditoría, y eso se decide en un ADR, no aquí.");
     }
 
     [Fact]
-    public void Todo_lo_que_genera_el_servidor_es_de_verdad_un_testigo_de_concurrencia()
+    public void Cada_cosa_que_genera_el_servidor_es_de_verdad_lo_que_se_declaro()
     {
-        // Y no algo que se le PAREZCA. La lista de arriba se compara por nombre, así que una
+        // Y no algo que se le PAREZCA. Las listas de arriba se comparan por nombre, así que una
         // propiedad llamada `Version` con un DEFAULT en la base pasaría por testigo sin serlo:
-        // aquí se comprueba que cada una lo es por lo que la hace serlo —uint, generada en cada
-        // escritura y marcada como testigo—, que es lo que mete el valor en el WHERE del UPDATE.
+        // aquí se comprueba que cada una lo es por lo que la hace serlo. Un testigo es uint,
+        // generado en cada escritura y marcado como testigo, que es lo que mete el valor en el
+        // WHERE del UPDATE. Una calculada lleva su expresión, GUARDADA —no al vuelo: así vale
+        // igual para el ORM, para una consulta cruda y para un informe— y nada más: ni un
+        // DEFAULT, ni un IDENTITY, ni el papel de testigo.
         List<string> impostoras = [.. Modelos()
             .SelectMany(modelo => modelo.GetEntityTypes())
             .SelectMany(tipo => tipo.PropiedadesConCamino()
-                .Where(par => EsDelServidor(par.Propiedad) && !par.Propiedad.EsElTestigo())
-                .Select(par => $"{tipo.ShortName()}.{par.Camino}"))];
+                .Where(par => EsDelServidor(par.Propiedad))
+                .Select(par => (Nombre: $"{tipo.ShortName()}.{par.Camino}", par.Propiedad)))
+            .Where(generada => !(s_calculadasPorElMotor.Contains(generada.Nombre, StringComparer.Ordinal)
+                    ? EsUnaCalculadaGuardada(generada.Propiedad)
+                    : generada.Propiedad.EsElTestigo()))
+            .Select(generada => generada.Nombre)];
 
-        impostoras.ShouldBeEmpty("esto lo genera el servidor y no es el testigo de concurrencia");
+        impostoras.ShouldBeEmpty(
+            "esto lo genera el servidor y no es lo que su lista dice: ni el testigo de " +
+            "concurrencia, ni una columna calculada y guardada");
     }
 
     [Fact]
@@ -310,6 +346,13 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
             .SelectMany(tipo => tipo.PropiedadesConCamino()
                 .Where(par => condicion(par.Propiedad))
                 .Select(par => $"{tipo.ShortName()}.{par.Camino}"));
+
+    private static bool EsUnaCalculadaGuardada(IReadOnlyProperty propiedad) =>
+        propiedad.GetComputedColumnSql() is not null
+        && propiedad.GetIsStored() == true
+        && propiedad.GetDefaultValueSql() is null
+        && propiedad.GetValueGenerationStrategy() == NpgsqlValueGenerationStrategy.None
+        && !propiedad.IsConcurrencyToken;
 
     private static bool EsAuditadaYDelServidor(IReadOnlyProperty propiedad) =>
         propiedad.Auditoria().Que == ClasificacionDeAuditoria.Auditada && EsDelServidor(propiedad);

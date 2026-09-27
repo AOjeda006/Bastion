@@ -1,0 +1,79 @@
+using Bastion.BuildingBlocks.Domain.Multiempresa;
+
+namespace Bastion.Inventario.Domain.Existencias;
+
+/// <summary>
+/// Lo que hay ahora de un artículo en una ubicación: la <b>fila viva</b> de la proyección del
+/// libro (ADR-0044).
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Esto es un contador, y la R3 dice que el stock no lo es.</b> Las dos cosas se sostienen a la
+/// vez porque esta fila no es la verdad: es una copia de la suma del libro que se guarda para no
+/// tener que sumarlo entero cada vez que alguien pregunta. La definición del saldo sigue siendo
+/// la suma de <c>MovimientoStock</c> con fecha hasta hoy. Que esta fila diga lo mismo no se da por
+/// supuesto. Lo comprueban el cuadre, que las compara, y el test de propiedad del 2.7.
+/// </para>
+/// <para>
+/// <b>Aquí no hay forma de moverla</b>, y esa ausencia es la decisión: ni un <c>set</c> accesible
+/// ni un método que sume. La única escritura es la sentencia que anota el libro, que suma sobre lo
+/// que hay en el motor y en la misma transacción que las filas del libro. Si la aplicación leyera
+/// la fila para escribirla, dos confirmaciones simultáneas del mismo artículo leerían el mismo
+/// saldo y una de las dos se perdería.
+/// </para>
+/// <para>
+/// <b>No es una entidad del tipo base</b>, por lo mismo que <c>ContadorDeSerie</c>: sus marcas de
+/// tiempo las pondría el interceptor al guardar, y a esta fila no la guarda nadie por el
+/// rastreador. Unas marcas congeladas mentirían.
+/// </para>
+/// </remarks>
+public sealed class Existencia : IDeInquilino
+{
+    /// <summary>Constructor de materialización: EF Core rellena la fila.</summary>
+    private Existencia()
+    {
+    }
+
+    /// <summary>Identificador de la fila.</summary>
+    /// <remarks>
+    /// No es la clave de negocio: la clave es la combinación de abajo, y la sostiene un índice
+    /// único. Existe porque el lote puede ser nulo, y una clave primaria no admite nulos. Las
+    /// instantáneas mensuales cuelgan de él.
+    /// </remarks>
+    public Guid Id { get; private set; }
+
+    /// <inheritdoc/>
+    public Guid EmpresaId { get; private set; }
+
+    /// <summary>El artículo. Vive en el esquema de Catálogo.</summary>
+    public Guid ArticuloId { get; private set; }
+
+    /// <summary>El almacén. Vive en el esquema de Organización.</summary>
+    public Guid AlmacenId { get; private set; }
+
+    /// <summary>La ubicación dentro del almacén. Vive en el esquema de Organización.</summary>
+    public Guid UbicacionId { get; private set; }
+
+    /// <summary>El lote, o <see langword="null"/> si el artículo no lo lleva.</summary>
+    /// <remarks>
+    /// <b>Está en la clave desde esta migración aunque nadie lo escriba todavía.</b> El lote lo trae
+    /// el ítem 2.9, y con él la columna del libro y su clave ajena. Hasta entonces todas las filas
+    /// llevan el lote nulo, y lo que las mantiene en una por artículo y ubicación es que la
+    /// unicidad no distingue nulos.
+    /// </remarks>
+    public Guid? LoteId { get; private set; }
+
+    /// <summary>Lo que hay, en la unidad base del artículo: la suma del libro.</summary>
+    public decimal Fisico { get; private set; }
+
+    /// <summary>Lo comprometido. Cero hasta que el ítem 2.13 traiga las reservas.</summary>
+    public decimal Reservado { get; private set; }
+
+    /// <summary>Lo que se puede comprometer: <see cref="Fisico"/> menos <see cref="Reservado"/>.</summary>
+    /// <remarks>
+    /// <b>Lo calcula el motor y no esta clase</b>, con una columna generada. Una resta escrita aquí
+    /// valdría para lo que se lea por el ORM, y no para lo que lea una consulta cruda o un informe.
+    /// Declarada en el censo de lo que genera el servidor, con su motivo en el ADR-0044.
+    /// </remarks>
+    public decimal Disponible { get; private set; }
+}

@@ -174,12 +174,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Las_cadenas_del_puerto_de_Inventario_son_las_del_modelo",
         "LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests.Ninguna_de_las_dos_lleva_punto_y_coma_final",
 
+        "LasClavesSeConocenAntesDeGuardarTests.Cada_cosa_que_genera_el_servidor_es_de_verdad_lo_que_se_declaro",
         "LasClavesSeConocenAntesDeGuardarTests.El_universo_de_modelos_es_el_declarado",
         "LasClavesSeConocenAntesDeGuardarTests.Las_entidades_del_tipo_base_y_las_que_llevan_testigo_son_las_MISMAS",
-        "LasClavesSeConocenAntesDeGuardarTests.Lo_unico_que_genera_el_servidor_son_los_testigos_de_concurrencia",
+        "LasClavesSeConocenAntesDeGuardarTests.Lo_unico_que_genera_el_servidor_es_lo_declarado",
         "LasClavesSeConocenAntesDeGuardarTests.Ninguna_propiedad_auditada_la_pone_la_base_de_datos",
         "LasClavesSeConocenAntesDeGuardarTests.Toda_entidad_tiene_su_clave_completa_antes_de_guardar",
-        "LasClavesSeConocenAntesDeGuardarTests.Todo_lo_que_genera_el_servidor_es_de_verdad_un_testigo_de_concurrencia",
 
         "LasFechasDicenDeQueTipoSonTests.El_barrido_encuentra_fechas_de_las_dos_clases",
         "LasFechasDicenDeQueTipoSonTests.No_hay_ni_una_fecha_que_no_diga_si_lleva_zona",

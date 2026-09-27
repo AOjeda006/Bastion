@@ -702,12 +702,63 @@ internal static class Inventario
                 "el papel va en el nombre —origen y destino— y por eso no casa con el del tipo. " +
                 "Mismo módulo: no cruza ninguna frontera."),
 
+            ["CorteDeLaInstantanea.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del de la existencia: el corte es de la empresa del inquilino y lo escribe " +
+                "el recálculo con el valor de IInquilinoActual, nunca con uno que traiga quien " +
+                "llama (ADR-0044)."),
+
             ["EventoDeIntegracion.EventoId"] = new(
                 "",
                 "",
                 "no apunta a nada: es su PROPIA identidad, la clave de deduplicación de la " +
                 "bandeja. Se llama EventoId y no Id porque un evento no es una EntidadBase, y ese " +
                 "nombre es justo el que engaña a una heurística de sufijos."),
+
+            // LAS DEL ÍTEM 2.7, y todas por el mismo puerto que su gemela del libro, porque son
+            // COPIAS: la existencia y la instantánea no reciben identificadores de ningún sitio más
+            // que de las filas del libro que suman, y esas ya los traen preguntados por el alta del
+            // documento. No hay una segunda pregunta que hacer, y hacerla aquí sería peor: una
+            // existencia que se negara a sumar una fila que el libro ya tiene es el descuadre que
+            // la R3 prohíbe.
+            ["Existencia.AlmacenId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "copia del de la fila del libro que la mueve, preguntado por el alta del " +
+                "documento. La existencia no lo recibe de ningún otro sitio (ADR-0044)."),
+
+            ["Existencia.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "copia del de la fila del libro que la mueve, y por el mismo puerto."),
+
+            ["Existencia.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "la sentencia que anota el libro la escribe con el valor de IInquilinoActual, y " +
+                "antes comprueba que cada fila del libro sea de esa misma empresa."),
+
+            ["Existencia.LoteId"] = new(
+                "",
+                "",
+                "NO APUNTA TODAVÍA A NADA, y por eso va vacío en las dos casillas: el lote lo trae " +
+                "el ítem 2.9, con su tabla y su tipo, y vivirá en este mismo módulo —con clave " +
+                "ajena de verdad, sin puerto que declarar—. Hasta entonces es siempre nulo: lo " +
+                "escriben nulo la sentencia del libro y la migración, porque el libro todavía no " +
+                "lleva lote. Declararlo apuntando a «Lote» sería nombrar un tipo que no existe."),
+
+            ["Existencia.UbicacionId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "copia del de la fila del libro que la mueve, y por el mismo puerto."),
+
+            ["InstantaneaMensual.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del de la existencia, repetido en la fila por lo mismo que en el libro: el " +
+                "filtro de la R8 se evalúa sobre las columnas de la fila, y el recálculo borra por " +
+                "empresa sin pasar por la existencia."),
 
             ["LineaDeAjuste.ArticuloId"] = new(
                 "Articulo",

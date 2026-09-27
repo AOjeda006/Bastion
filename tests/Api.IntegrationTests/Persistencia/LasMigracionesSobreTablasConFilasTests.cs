@@ -80,6 +80,10 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_bandeja_empresa_o_motivo"] = new(["empresa_id"], []),
         ["ck_categorias_padre_distinto_de_si_misma"] = Relleno.Ninguno,
         ["ck_condiciones_pago_plazo_legal"] = new([], [("dias_de_plazo", "30")]),
+        ["ck_cortes_de_la_instantanea_mes_es_primer_dia"] =
+            new([], [("hasta_el_mes", "date_trunc('month', current_date)::date")]),
+        ["ck_instantaneas_mensuales_mes_es_primer_dia"] =
+            new([], [("mes", "date_trunc('month', current_date)::date")]),
         ["ck_lineas_ajuste_cantidad_y_factor"] = Relleno.Ninguno,
         ["ck_lineas_tarifa_articulo_o_categoria"] = new(["articulo_id"], []),
         ["ck_lineas_tarifa_cantidad_desde_no_negativa"] = Relleno.Ninguno,

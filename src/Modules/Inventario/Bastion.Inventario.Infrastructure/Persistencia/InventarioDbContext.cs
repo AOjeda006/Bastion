@@ -5,6 +5,7 @@ using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.Movimientos;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,6 +58,18 @@ public sealed class InventarioDbContext(
     /// </remarks>
     public DbSet<Ajuste> Ajustes => Set<Ajuste>();
 
+    /// <summary>La fila viva de cada existencia: la suma del libro, guardada (ADR-0044).</summary>
+    /// <remarks>
+    /// Se lee por aquí y no se escribe por aquí: la mueve en crudo la sentencia que anota el libro.
+    /// </remarks>
+    public DbSet<Existencia> Existencias => Set<Existencia>();
+
+    /// <summary>El saldo de cada existencia al cierre de cada mes, hasta el corte (ADR-0044).</summary>
+    public DbSet<InstantaneaMensual> InstantaneasMensuales => Set<InstantaneaMensual>();
+
+    /// <summary>Hasta qué mes tiene instantáneas cada empresa (ADR-0044).</summary>
+    public DbSet<CorteDeLaInstantanea> CortesDeLaInstantanea => Set<CorteDeLaInstantanea>();
+
     /// <summary>
     /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive el
     /// historial de migraciones y qué convención de nombres se aplica.
@@ -99,6 +112,20 @@ public sealed class InventarioDbContext(
         // llevan el suyo: cuelgan del ajuste, se cargan con él y no se consultan sueltas.
         modelBuilder.Entity<Ajuste>().HasQueryFilter(
             "Inquilinato", ajuste => EmpresaDelFiltro == null || ajuste.EmpresaId == EmpresaDelFiltro);
+
+        // La proyección del libro, con el filtro del libro: las existencias de otra empresa no se
+        // leen, igual que sus movimientos. Las sentencias crudas que la escriben no pasan por aquí,
+        // y por eso cada una compara la empresa ella misma.
+        modelBuilder.Entity<Existencia>().HasQueryFilter(
+            "Inquilinato",
+            existencia => EmpresaDelFiltro == null || existencia.EmpresaId == EmpresaDelFiltro);
+
+        modelBuilder.Entity<InstantaneaMensual>().HasQueryFilter(
+            "Inquilinato",
+            instantanea => EmpresaDelFiltro == null || instantanea.EmpresaId == EmpresaDelFiltro);
+
+        modelBuilder.Entity<CorteDeLaInstantanea>().HasQueryFilter(
+            "Inquilinato", corte => EmpresaDelFiltro == null || corte.EmpresaId == EmpresaDelFiltro);
 
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
             "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);

@@ -122,10 +122,17 @@ public sealed class LasFechasDicenDeQueTipoSonTests : IDisposable
         // partición mensual cae la fila, que es la única de esta lista con esa segunda función.
         // Con un instante, un ajuste de las 23:30 del 31 de diciembre en Madrid caería en la
         // partición de enero vista desde Canarias.
+        //
+        // Las dos del ítem 2.7 no son un día sino un MES, escrito con su primer día: el de cada
+        // instantánea y el corte hasta el que llegan. Son de la misma clase porque el mes es el de
+        // la partición del libro, que es de calendario: con un instante, el mes de una instantánea
+        // empezaría una hora antes en Canarias que en Madrid, y un movimiento del día 1 a las 00:30
+        // caería en dos meses distintos según quién sumara.
         cuantas.Fechas.ShouldBe(
-            9,
+            11,
             "las dos del ejercicio, las dos de la vigencia del impuesto, la del tipo de cambio, " +
-            "las dos de la vigencia de la tarifa y las dos de operación del ítem 2.3");
+            "las dos de la vigencia de la tarifa, las dos de operación del ítem 2.3 y los dos " +
+            "meses del ítem 2.7");
     }
 
     private static bool EsDelTipo<T>(IReadOnlyProperty propiedad) =>
