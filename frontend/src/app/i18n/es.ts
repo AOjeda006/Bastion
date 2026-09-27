@@ -96,6 +96,9 @@ export const es = {
       'ajuste-articulo-no-se-almacena':
         'Ese artículo es un servicio: no tiene existencias que ajustar. Quita esa línea o cambia ' +
         'el artículo.',
+      'ajuste-con-fecha-futura':
+        'La fecha de ese ajuste es posterior a hoy: el libro solo recoge lo que ya ha pasado. ' +
+        'Confírmalo ese día o corrige la fecha.',
       'ajuste-en-ejercicio-cerrado':
         'La fecha de ese ajuste cae en un ejercicio cerrado: ese periodo ya es definitivo y no ' +
         'admite documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',

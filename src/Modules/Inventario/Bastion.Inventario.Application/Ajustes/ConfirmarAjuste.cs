@@ -85,6 +85,23 @@ internal sealed class ConfirmarAjuste(
                 ErroresDeAjuste.NoEstaEnBorrador(ajusteId, ajuste.Estado.ToString()));
         }
 
+        // NADA CON FECHA FUTURA, que es la decisión (b) de la puerta del 2.7 (ADR-0044). El libro
+        // dice lo que ha pasado, y la existencia es su suma: un movimiento de mañana haría que el
+        // saldo de hoy contara algo que todavía no ha ocurrido, y el cuadre —que suma el libro
+        // hasta hoy— lo vería como un descuadre que nadie ha cometido.
+        //
+        // ANTES QUE EL EJERCICIO, porque es más barato y no toma cerrojos: una fecha futura no se
+        // arregla reabriendo nada.
+        //
+        // «Hoy» es el día UTC. En España eso deja dos horas —de 00:00 a 02:00 en verano— en las que
+        // hoy aquí ya es mañana allí; la zona horaria de la empresa está anotada en `docs/PLAN.md`
+        // como nota abierta, con su disparador.
+        if (ajuste.FechaDeOperacion > DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime))
+        {
+            return Resultado.Fallo<AjusteDto>(
+                ErroresDeAjuste.ConFechaFutura(ajuste.FechaDeOperacion));
+        }
+
         // EL EJERCICIO, ANTES QUE EL NÚMERO. El orden es el que importa: esta lectura toma un
         // cerrojo COMPARTIDO sobre la fila del ejercicio y no lo suelta hasta el `COMMIT`, así que
         // un cierre que llegue a partir de aquí espera a que este documento acabe —y uno que ya

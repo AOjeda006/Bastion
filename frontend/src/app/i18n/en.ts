@@ -72,6 +72,9 @@ export const en: Diccionario = {
       'ajuste-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
       'ajuste-articulo-no-se-almacena':
         'That item is a service: it has no stock to adjust. Remove that line or change the item.',
+      'ajuste-con-fecha-futura':
+        'That adjustment is dated after today: the ledger only records what has already ' +
+        'happened. Confirm it on that day or fix the date.',
       'ajuste-en-ejercicio-cerrado':
         'That adjustment is dated inside a closed financial year: the period is already final ' +
         'and takes no new documents. Change the date or ask for the year to be reopened.',

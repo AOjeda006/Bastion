@@ -12,6 +12,7 @@ internal static class ErroresDeAjuste
     internal const string CodigoMotivoNoValido = "ajuste-motivo-no-valido";
     internal const string CodigoSinEjercicio = "ajuste-sin-ejercicio";
     internal const string CodigoEnEjercicioCerrado = "ajuste-en-ejercicio-cerrado";
+    internal const string CodigoConFechaFutura = "ajuste-con-fecha-futura";
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,
@@ -75,6 +76,20 @@ internal static class ErroresDeAjuste
             $"El ejercicio al que cae la fecha de operación {fecha:yyyy-MM-dd} está cerrado: ese " +
             "periodo ya es definitivo y no admite documentos nuevos. Reabra el ejercicio, con su " +
             "motivo, o lleve el documento a una fecha del ejercicio abierto (R9).");
+
+    /// <summary>La fecha del documento es posterior a hoy (ADR-0044).</summary>
+    /// <remarks>
+    /// <b>Un código propio y no el del ejercicio</b>: la fecha puede caer en un ejercicio abierto y
+    /// seguir sin poder confirmarse. Lo que se arregla aquí es esperar al día, o corregir la fecha
+    /// si estaba mal escrita.
+    /// </remarks>
+    /// <param name="fecha">La fecha de operación del documento.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion ConFechaFutura(DateOnly fecha) => ErrorDeOperacion.Conflicto(
+        CodigoConFechaFutura,
+        $"La fecha de operación {fecha:yyyy-MM-dd} es posterior a hoy: el libro dice lo que ha " +
+        "pasado, y la existencia es su suma, así que un movimiento futuro la haría contar algo " +
+        "que todavía no ha ocurrido. Confírmelo ese día, o corrija la fecha (R3).");
 
     internal static ErrorDeOperacion NoEstaConfirmado(Guid ajusteId, string estado) =>
         ErrorDeOperacion.Conflicto(
