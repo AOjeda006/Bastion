@@ -254,6 +254,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElReciboCaducaYSeBorraTests.La_purga_deja_lo_que_no_ha_vencido_y_se_lleva_lo_vencido_de_todas_las_empresas",
         "ElReciboCaducaYSeBorraTests.Purgado_el_recibo_el_mismo_reintento_vuelve_a_hacer_el_trabajo",
 
+        // Del ítem 2.7: la R3 como propiedad. Un solo método y seis semillas; cada semilla es una
+        // secuencia distinta, y todas tienen que pasar por todas las clases de paso.
+        "ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro",
+
         "ElSelectorDeEmpresaTests.Cambiar_a_una_empresa_bloqueada_se_rechaza_como_si_no_se_perteneciera",
         "ElSelectorDeEmpresaTests.El_selector_trae_los_nombres_aunque_no_se_tenga_permiso_para_ver_empresas",
         "ElSelectorDeEmpresaTests.La_sesion_no_se_abre_en_una_empresa_bloqueada_aunque_sea_la_primera_pertenencia",
@@ -445,6 +449,21 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Tras_un_412_ni_traza_ni_evento",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Una_cabecera_que_no_es_una_version_concreta_es_400",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Una_version_obsoleta_es_412_y_trae_la_actual",
+
+        // Del ítem 2.7: la R3 entera. La fila viva se mueve con el libro —sola, a la vez que otra
+        // confirmación y nunca con una fecha futura—; la instantánea se borra, se recalcula y dice
+        // lo mismo; el cuadre encuentra cada copia que miente y dice cuántas comparó; el
+        // recálculo espera a la confirmación en vuelo; y dos empresas no se mezclan en ninguna de
+        // las sentencias crudas.
+        "LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_o_con_filas_de_otra_empresa_revienta",
+        "LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero",
+        "LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos",
+        "LasExistenciasSonLaSumaDelLibroTests.Dos_lineas_de_la_misma_clave_y_otro_documento_dejan_una_sola_fila_viva_con_la_suma",
+        "LasExistenciasSonLaSumaDelLibroTests.El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro",
+        "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro",
+        "LasExistenciasSonLaSumaDelLibroTests.Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan",
+        "LasExistenciasSonLaSumaDelLibroTests.Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor",
+        "LasExistenciasSonLaSumaDelLibroTests.Una_fecha_futura_no_se_confirma_y_no_deja_nada_en_el_libro_ni_en_la_existencia",
 
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.El_alta_no_pasa_por_el_interceptor_y_por_eso_lleva_la_hora_del_dominio",
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.La_hora_del_cambio_sale_del_reloj_inyectado_y_no_del_de_la_base",
