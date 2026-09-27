@@ -5076,10 +5076,37 @@ recomendada.
 - el run de la rama y el de `main`;
 - rama propia por unidad, y commits pequeños y firmados.
 
+### Tomadas por el agente de desarrollo — ítem 2.7, al escribir su código (2026-09-27)
+
+Las cuatro de la puerta están arriba, en el encargo del 2026-09-26. Éstas salieron al escribirlo.
+Son reversibles, y el porqué largo está en el **ADR-0044**.
+
+- **Una tercera tabla, el corte** (`inventario.cortes_de_la_instantanea`), que el encargo no
+  nombraba. Sin ella, «desde su mes en adelante» no tiene final: la sentencia no sabría hasta qué
+  mes crear instantáneas, y el recálculo no tendría dónde dejar hasta dónde llegó. **Sin corte no
+  hay instantáneas**, y en producción no lo pone nadie hasta el 2.14 (nota abierta).
+- **Una sola sentencia mueve la fila viva y las instantáneas**, con la fila viva en un `WITH`, las
+  cantidades agrupadas por clave y las claves ordenadas.
+- **El recálculo abre su propia transacción y toma lo primero `LOCK TABLE … IN SHARE ROW EXCLUSIVE
+  MODE`**: el modo más débil que choca con el `ROW EXCLUSIVE` de quien anota y consigo mismo, y no
+  con las lecturas.
+- **El cuadre es una sola lectura y devuelve cuánto comparó.** Las instantáneas debidas salen del
+  mismo fragmento de SQL que usa el recálculo, `LasDebidas`.
+- **`reservado` no tiene valor por defecto.** La sentencia lo escribe a cero: un defecto le
+  escondería al 2.13 una escritura que no está.
+- **La migración rellena la fila viva** con el libro entero, con identificadores de
+  `gen_random_uuid()` —v4, y los únicos: los demás los pone la aplicación—, y no crea instantáneas.
+- **«Hoy» es el día UTC**, con nota abierta y su disparador.
+- **El SQL crudo en el esquema propio se defiende con el criterio del ADR-0040**, con la cláusula 2
+  sustituida (ADR-0044 §9). Las tres entradas de `ElFiltroNoSeSaltaPorAhiTests` llevan su motivo.
+- **El ADR-0015 se enmienda y no se exceptúa**: testigos y calculadas, cada una en su lista.
+- **Las semillas**: 440 a 458 para los casos, y 460 a 485 para la propiedad (empresas 460 a 465,
+  instalaciones +10 y +20).
+
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 6 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 7 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -5648,6 +5675,128 @@ pasos, 64 verdes y *Diagnóstico* omitido. `main` avanzó por *fast-forward* de 
 **El cuarto punto del encargo es el 2.7**, en la rama `item-2.7-las-existencias`. Se abre con las
 cuatro decisiones contestadas y anotadas en *Decisiones*, bajo el encargo del 2026-09-26, antes de
 escribir una línea.
+
+**Hecho el 2.7**, el 2026-09-27, en la rama `item-2.7-las-existencias`. **La R3 está viva.** El
+libro sigue siendo la verdad, y el saldo se **define** como su suma con fecha menor o igual que hoy.
+Lo nuevo es la copia que puede discrepar, en tres tablas:
+
+- la **fila viva** de cada existencia, una por clave de artículo, almacén, ubicación y lote
+  (`inventario.existencias`);
+- su **instantánea mensual** (`inventario.instantaneas_mensuales`);
+- y el **corte** de cada empresa, que dice hasta qué mes hay instantáneas
+  (`inventario.cortes_de_la_instantanea`).
+
+Las mueve **la misma sentencia** que anota el libro, sumando sobre lo que hay. El recálculo las tira
+y las repone bajo un `LOCK TABLE`, y el cuadre las compara con el libro y dice cuánto comparó. El
+porqué está en el **ADR-0044**, que enmienda los puntos 2 y 3 del ADR-0015 y amplía al esquema
+propio el criterio del ADR-0040.
+
+**Los commits, en el orden en que importan:**
+
+- `19d272e`, las tres tablas y su migración, que rellena la fila viva con el libro entero, y las
+  guardas del proyecto que las cuentan;
+- `4a32399`, la guarda de la fecha futura, con su código `ajuste-con-fecha-futura`;
+- `62c036b`, la sentencia: confirmar y anular anotan el libro por `AnotarEnElLibroAsync`, que mueve
+  la fila viva y las instantáneas, y con ella el recálculo y el cuadre;
+- `418184f`, los nueve casos y la propiedad;
+- `154d0bd`, las dos copias que solo ve la cuenta de filas (abajo, la mutación 48);
+- y los tres de la documentación: el ADR, el dominio y éste.
+
+`a6e8ff2`, el primero de la rama, es el epílogo del tercer punto y las cuatro decisiones.
+
+**Los intermedios compilan y pasan.** `19d272e`, `4a32399` y `62c036b`, cada uno en su *worktree*:
+`dotnet build Bastion.sln` sale con 0, y el carril rápido pasa **932** con 0 con error.
+
+**Qué pone rojo cada mutación.** La numeración sigue la del PLAN: la tanda anterior acabó en la 36.
+Cada una la aplicó un guion que exige el árbol limpio y comprueba que el fichero cambió; luego
+compila, corre los dos carriles, revierte y recompila. El carril rápido siguió en verde en todas
+menos la 49 y la 50, que mutan sus propias guardas.
+
+| # | Mutación | Qué se puso rojo |
+|---|---|---|
+| 37 | La fila viva escribe `= excluded.fisico` en vez de sumar. | 11: las seis semillas de la propiedad, `Borrar_las_instantaneas…`, `Dos_confirmaciones…`, `Dos_lineas…`, `El_cuadre_encuentra…` y `…de_dos_empresas_no_se_mezclan` |
+| 38 | La fila viva lee con una subconsulta y escribe lo leído más lo nuevo. | 1: `Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos` |
+| 39 | `generate_series` empieza un mes después del del movimiento. | 7: la propiedad y `Borrar_las_instantaneas…` |
+| 40 | La instantánea escribe `= excluded.fisico` en vez de sumar. | 7: los mismos |
+| 41 | La migración, sin `NULLS NOT DISTINCT` en el índice único. | 11: los de la 37 |
+| 42 | El `LOCK TABLE` del recálculo, cambiado por un `SELECT 1`. | 1: `El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro` |
+| 43 | El corte de la sentencia, sin su `WHERE` de empresa. | 38 en la tanda (abajo) |
+| 44 | El `DELETE` del recálculo, con `OR true` en la empresa. | 1: `Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan` |
+| 45 | Las debidas, con `OR true` en la empresa del libro. | 10: la propiedad, `Borrar…`, `El_cuadre…`, `El_recalculo…` y `…de_dos_empresas…` |
+| 46 | El libro del cuadre, con `OR true` en la empresa. | 12: la propiedad, `Borrar…`, `Dos_confirmaciones…`, `Dos_lineas…`, `El_cuadre…`, `El_recalculo…` y `…de_dos_empresas…` |
+| 47 | La guarda de lo futuro, con un año de gracia. | 7: la propiedad y `Una_fecha_futura_no_se_confirma_y_no_deja_nada_en_el_libro_ni_en_la_existencia` |
+| 48 | El cuadre de la fila viva, sin `OR c.filas <> 1`. | **0 en la primera tanda**; tras `154d0bd`, 1: `El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro` |
+| 49 | `Disponible`, calculada sin guardar (`stored: false`). | 1 en el carril rápido, `Cada_cosa_que_genera_el_servidor_es_de_verdad_lo_que_se_declaro`, y los 418 de `Api.IntegrationTests` (abajo) |
+| 50 | `Existencia.Disponible`, fuera de la lista de calculadas. | 2 en el carril rápido: `Cada_cosa_que_genera…` y `Lo_unico_que_genera_el_servidor_es_lo_declarado` |
+| 51 | El cuadre de las instantáneas, sin `OR c.filas <> 1`. | 1: `El_cuadre_encuentra…` |
+
+**La 48 salió verde, y la medición mandó.** El comentario del cuadre decía que dos filas vivas de la
+misma clave son un descuadre aunque sumen lo que deben, y con la cláusula quitada no se puso rojo
+ningún caso de los dos carriles. Esa cuenta es la defensa del cuadre si el índice único deja de
+tratar el lote nulo como un valor, porque las filas repetidas que eso deja suman, entre todas, lo que
+dice el libro. `154d0bd` planta en `El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro`
+dos copias que solo ve la cuenta de filas:
+
+- una clave con **dos filas vivas que juntas suman lo que deben**, quitando el índice único dentro
+  de la transacción que se deshace;
+- y una **instantánea de más, a cero**, en una clave y un mes que ya tenían la suya.
+
+La 51 mide la misma cláusula en la rama de las instantáneas, y solo se corrió después de `154d0bd`.
+Antes, ninguna copia del caso dependía de ella: la instantánea que falta ya la delataba la suma
+—esperado 3, guardado 0—.
+
+**La 43, medida sola.** Sin la empresa en el `WHERE`, la subconsulta del corte devuelve una fila por
+cada empresa con corte, y la sentencia revienta con `21000: more than one row returned by a subquery
+used as an expression`. En la tanda, con el contenedor compartido lleno de cortes de otros casos,
+eso pone rojos 38 casos que confirman ajustes, de doce ficheros (contados por fichero en el registro
+de la tanda). Esos rojos dependen del orden y de lo que otros casos dejaron en la base. El caso que la ve **a propósito** es
+`Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan`, que confirma con los dos cortes
+puestos. Solo, sobre un contenedor nuevo, sale rojo con ese mismo `21000`:
+`dotnet test tests/Api.IntegrationTests --no-build --filter
+"FullyQualifiedName~Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan"`, con 1 con
+error de 1.
+
+**La 49, medida sola.** Los 418 rojos de `Api.IntegrationTests` son accidentales. El modelo deja de
+coincidir con la instantánea del modelo, y el `MigrateAsync` del fixture
+(`PostgresConTodosLosModulos.InitializeAsync`) lanza `PendingModelChangesWarning` antes de que corra
+ningún caso. Lo midió `Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor`
+corrido solo con la mutación puesta. El testigo que la ve a propósito es el del carril rápido.
+
+**Las entradas y las salidas son hoy líneas de ajuste con signo.** El `Ajuste` es el único
+documento que escribe en el libro, así que la propiedad genera:
+
+- una entrada, como un ajuste de una línea positiva;
+- una salida, como uno de una línea negativa;
+- un ajuste, como uno de varias líneas.
+
+El documento que escriba después en el libro lo hará por `AnotarEnElLibroAsync`, y la propiedad
+tendrá que generarlo.
+
+**Lo que no tiene caso, dicho** (ADR-0044, *Consecuencias*): el orden de las claves, que evita el
+interbloqueo entre dos confirmaciones con las mismas claves. Lo sostiene el razonamiento, no un caso
+que se ponga rojo.
+
+**Las cifras, con la orden que las mide**, sobre el árbol de `c5873c0`:
+
+- `dotnet build Bastion.sln`: **0 avisos** y 0 errores. `dotnet format --verify-no-changes` sale
+  con 0.
+- Carril rápido, `dotnet test Bastion.sln --no-build --filter "Category!=Integracion"`: **932 en 10 ensamblados**, los mismos que antes del ítem: los dos
+  renombrados no cambian la cuenta.
+- Carril de integración, `--filter "Category=Integracion"`: **502**, de ellos **84** en
+  `Organizacion.IntegrationTests` y **418** en `Api.IntegrationTests`. Son los 487 de antes más los
+  quince nuevos: los nueve casos y las seis semillas.
+- `bash scripts/comprobar-migraciones.sh` sale con 0.
+- `bash scripts/generar-openapi.sh --comprobar`: **130** operaciones. El 2.7 no añade ninguna.
+- `bash scripts/generar-errores.sh --comprobar`: **119** tipos de **125** sitios. El nuevo,
+  `ajuste-con-fecha-futura`, lleva su texto en `es.ts` y `en.ts`.
+- El frontal: tipado, *lint* y formato a 0, `CI=true npm test` pasa **103** de 103, y `bash
+  scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` da **413/450** y **601/900** KiB.
+
+**Los commits, contados**: `git rev-list --count main..HEAD` da **9** con éste, todos
+`G` en `git log --format='%h %G? %s' main..HEAD`. El run de la rama se anota en la casilla del 2.7,
+en un commit propio, y el de `main` al abrir la rama siguiente.
+
+El siguiente ADR es el **0045**.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -13373,7 +13522,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **600/900** KiB). `8ad3727` tiene **dos** runs (`total_count: 2`): éste y el 36139494088 de la
   rama, los dos success y ninguno cancelado.
 
-- [ ] **2.7 · Las existencias, proyección de un libro que es la verdad** — criterio de aceptación: el
+- [x] **2.7 · Las existencias, proyección de un libro que es la verdad** — criterio de aceptación: el
   saldo se **define** como la suma del libro, y la instantánea mensual —el mismo límite que la
   partición del 2.3— es una optimización que se puede **borrar y recalcular sin que cambie un
   número**, con un caso que la borra, la recalcula y compara; el **cuadre** recorre y compara y
@@ -13381,6 +13530,44 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   secuencia de entradas, salidas, ajustes y anulaciones y afirma la igualdad al final. La proyección
   lleva `Disponible = Físico − Reservado` desde esta migración, con `Reservado` a cero hasta el 2.13.
   Hace viva **R3** y cambia su fila.
+
+  **Hecho el 2026-09-27**, en la rama `item-2.7-las-existencias`. Los commits, las mutaciones de la
+  37 a la 51 y las cifras están en *Estado actual → Hecho el 2.7*. Cada punto del criterio tiene su
+  caso:
+
+  - el saldo como suma del libro: `ElSaldoEsLaSumaDelLibroPorPropiedadTests`, que compara tras cada
+    paso;
+  - borrar y recalcular sin que cambie un número: `Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`;
+  - el cuadre sobre un conjunto no vacío: `El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro`
+    y la propiedad al final de cada semilla;
+  - la secuencia de entradas, salidas, ajustes y anulaciones: la propiedad, que afirma que pasó por
+    todas;
+  - `Disponible = Físico − Reservado`, con `Reservado` a cero:
+    `Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor`.
+
+  La fila de la **R3** está reescrita, en `viva`.
+
+  **Vistos en rojo** —entre paréntesis, la mutación que lo puso rojo—:
+
+  - `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`, las seis semillas (37, 39, 40, 41, 45, 46, 47)
+  - `LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero` (37, 39, 40, 41, 45, 46)
+  - `LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos` (37, 38, 41, 46)
+  - `LasExistenciasSonLaSumaDelLibroTests.Dos_lineas_de_la_misma_clave_y_otro_documento_dejan_una_sola_fila_viva_con_la_suma` (37, 41, 46)
+  - `LasExistenciasSonLaSumaDelLibroTests.El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro` (37, 41, 45, 46, 48, 51)
+  - `LasExistenciasSonLaSumaDelLibroTests.El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro` (42, 45, 46)
+  - `LasExistenciasSonLaSumaDelLibroTests.Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan` (37, 41, 43, 44, 45, 46)
+  - `LasExistenciasSonLaSumaDelLibroTests.Una_fecha_futura_no_se_confirma_y_no_deja_nada_en_el_libro_ni_en_la_existencia` (47)
+  - `LasClavesSeConocenAntesDeGuardarTests.Cada_cosa_que_genera_el_servidor_es_de_verdad_lo_que_se_declaro`, renombrado (49, 50)
+  - `LasClavesSeConocenAntesDeGuardarTests.Lo_unico_que_genera_el_servidor_es_lo_declarado`, renombrado (50)
+
+  **Vistos solo en verde** —sostienen lo que dicen y nada más—:
+
+  - `LasExistenciasSonLaSumaDelLibroTests.Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor`.
+    Se puso rojo en la 49, pero por accidente —el fixture no llega a migrar—, y eso no cuenta.
+  - `LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_o_con_filas_de_otra_empresa_revienta`
+
+  Son **12** métodos nuevos o renombrados en el ítem: **10** vistos en rojo y **2** solo en verde.
+  Salen de `git diff main..HEAD -- tests`, buscando las firmas `public … Task|void` añadidas.
 
 - [ ] **2.8 · La valoración PMP** — criterio de aceptación: el PMP se recalcula en cada entrada y se
   guarda **en el movimiento**, no solo en la proyección; una salida congela el PMP vigente en su fila,
@@ -13467,6 +13654,29 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-09-27, ítem 2.7) · «hoy» es el día UTC, y no el de la empresa.** Confirmar
+  rechaza una fecha de operación posterior a hoy —la decisión (b), ADR-0044 §4—, y el cuadre suma el
+  libro hasta hoy. Los dos sacan «hoy» del `TimeProvider` en UTC. En España eso deja dos horas, de
+  00:00 a 02:00 en verano (una en invierno), en las que aquí ya ha empezado el día y en UTC todavía
+  no: un ajuste fechado hoy a esa hora se rechaza como futuro, con `ajuste-con-fecha-futura`, y se
+  confirma sin tocar nada pasadas las dos. **Hoy es una molestia y no una discrepancia**: lo que se
+  rechaza no entra en el libro, así que la R3 no se rompe. La salida probable es una zona horaria
+  por empresa, en Organización, y «hoy» calculado en ella; toca a la R14 —una fecha de negocio no
+  lleva zona, y aquí la zona decide qué fecha es hoy—. **El disparador:** antes de la **fase 5**,
+  porque la fecha de expedición de una factura sí tiene consecuencias fiscales; o antes, en cuanto
+  alguien confirme de madrugada. No se decide aquí ni se amplía el checklist por cuenta propia.
+
+- **ABIERTA (2026-09-27, ítem 2.7) · nadie avanza el corte de la instantánea hasta el 2.14.** En el
+  2.7 el recálculo y el cuadre (`LasInstantaneasMensuales`, `ElCuadreDeLasExistencias`) no tienen
+  quien los llame en producción, a propósito: los llaman los casos, que es lo que pide el criterio.
+  Así que en producción **ninguna empresa tiene corte**, y la sentencia que anota el libro no escribe
+  ninguna instantánea: lo correcto, porque ningún mes se ha materializado. **Lo que el 2.14 tiene que
+  traer**, porque es el primer lector de la instantánea: un trabajo periódico que, al empezar cada
+  mes, avanza el corte de cada empresa al mes anterior —con el recálculo, que toma su cerrojo— y
+  cuadra después, con los descuadres y las cifras comparadas a la vista (observabilidad), no en un
+  registro que nadie lee. Y la consulta del saldo a una fecha tiene que saber qué hacer con una fecha
+  posterior al corte: la instantánea del último mes cortado más el libro desde ahí.
 
 - **CERRADA (2026-09-26, addendum del ADR-0043) · el inverso numera en la serie del ejercicio del
   original, y lleva la fecha de otro.** **La cerró el usuario** en el encargo del 2026-09-26 con la
@@ -13571,6 +13781,10 @@ cuando hace falta el porqué.
   agente y no se amplía el checklist por cuenta propia**: si la respuesta es que sí, es un
   **addendum**, la forma que el proyecto ya usó dos veces —las tres addenda de la fase 0 y las tres
   de la fase 1—. Si es que no, el disparador queda escrito y con nombre en `IConsultaDeArticulos`.
+
+  **Añadido el 2026-09-27 (ítem 2.7):** la condición ya se cumple. El artículo tiene existencias,
+  en `inventario.existencias`, y la pregunta sigue en pie y sin contestar, para el cierre de la
+  fase.
 
 - **TRASLADADA A *DECISIONES* (2026-09-07, ítem 1.6) · el conflicto no revela, pero DOS respuestas
   juntas sí.** El hecho sigue siendo el que se anotó en el 1.5 y no ha cambiado: la búsqueda no
