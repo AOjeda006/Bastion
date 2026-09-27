@@ -5039,6 +5039,34 @@ y no de rebote el 19 de octubre, que es cuando `ubuntu-latest` cambia solo.
 Además, `Disponible` como columna generada (`GENERATED ALWAYS AS (fisico - reservado) STORED`), con un
 caso que escribe por SQL un `reservado` distinto de cero. Lo demás, como está en la casilla del 2.7.
 
+**Las cuatro, contestadas.** La (c) y el `Disponible` ya venían decididos en el encargo. Las otras
+tres las preguntó el agente y las contestó el usuario el 2026-09-27; en las tres eligió la opción
+recomendada.
+
+- **(a) Sumar a las posteriores.** En la misma transacción que escribe el movimiento, y en **una
+  sola sentencia atómica**, el movimiento suma su cantidad a toda instantánea de su clave **desde su
+  mes en adelante**. Una reapertura no es un caso aparte: lo que entra en un ejercicio reabierto es
+  un movimiento atrasado más.
+- **(b) El saldo cuenta lo que tiene fecha ≤ hoy, y lo futuro se prohíbe.** Confirmar rechaza una
+  fecha posterior a hoy con **su propio código**, y la definición del saldo lo dice. Hasta ahora no
+  era así: un ajuste con fecha futura dentro del ejercicio abierto se confirmaba, porque nada lo
+  miraba.
+- **(c) El lote va en la clave desde ya**, nullable, con `UNIQUE NULLS NOT DISTINCT`.
+- **(d) Fila viva y atómica.** Una fila por (empresa, artículo, almacén, ubicación, lote), que se
+  mueve en la transacción que confirma con `INSERT … ON CONFLICT … DO UPDATE SET fisico =
+  existencias.fisico + excluded.fisico`. La aplicación nunca la lee para escribirla. Hay un caso con
+  dos confirmaciones simultáneas del mismo artículo. El `reservado` del 2.13 y el `disponible`
+  generado viven en esa fila; la instantánea mensual es para el 2.14.
+
+**Lo que decidió el agente y solo queda anotado**, porque es reversible:
+
+- **`lote_id uuid NULL`, sin clave ajena hasta el 2.9**, que es el ítem que trae el lote. El libro
+  todavía no tiene columna de lote, así que en el 2.7 todas las filas vivas llevan el lote nulo. Lo
+  que las mantiene en una por clave es la unicidad que no distingue nulos.
+- **El test de propiedad lleva su propio generador**, sin librería nueva. Se sustituye el
+  *shrinking* como pide `principios/testing.md`: semilla fija e impresa, un caso con nombre por
+  semilla y la secuencia entera en el mensaje del fallo.
+
 **El método, para los cuatro:**
 
 - la mutación sobre la línea que decide —en el 2.7, la que suma el libro o invalida la
@@ -5595,6 +5623,31 @@ GitHub en `actions/runner-images#14748`, y no algo que se haya visto aquí. Lo q
 efecto: los mismos casos, el mismo humo y la anotación del cambio fuera de los tres jobs.
 
 **Los commits, contados** en `git log --format='%h %G? %s' main..HEAD`: **3** con éste, todos `G`.
+
+**Los runs del tercer punto**, anotados al abrir la rama del cuarto (`item-2.7-las-existencias`) y
+leídos de la API. `GET /repos/AOjeda006/Bastion/actions/runs?head_sha=ca4ee82…` (con el sha entero)
+da `total_count: 2`:
+
+- `36260645367`, de la rama `ci-el-runner-fijado-en-ubuntu-24.04`;
+- `36289649157`, de `main`.
+
+Los dos son **success** en su primer intento, y ninguno se canceló. En los dos, 932 casos en el
+carril rápido y 487 en el de integración, 0 con error, el catálogo con 118 tipos y el humo verde: 65
+pasos, 64 verdes y *Diagnóstico* omitido. `main` avanzó por *fast-forward* de `d920ef4` a `ca4ee82`.
+
+- **La etiqueta, en los dos runs:** `GET …/actions/runs/{id}/jobs` da `labels: ['ubuntu-24.04']` en
+  los tres jobs de cada uno.
+- **El aviso, fuera:** en el run de `main`, `GET …/check-runs/{job}/annotations` devuelve 3, 8 y 12
+  anotaciones en los tres jobs, y **ninguna** nombra `ubuntu-latest` ni es de aviso. Lo mismo que en
+  el de la rama. En `36256715821`, antes del cambio, había una por job.
+- **El frontal pesa un kilobyte más, y no por esto:** 413/450 y 601/900 KiB. El run de `main` del
+  punto 1 (`36257339246`) daba 412 y 600, y el del punto 2 (`36260142302`) ya daba 413 y 601. Entre
+  los dos, lo único que cambió en `frontend/` son los textos de los dos códigos nuevos, en `es.ts` y
+  `en.ts` (`git diff --stat 814c83d d920ef4 -- frontend`).
+
+**El cuarto punto del encargo es el 2.7**, en la rama `item-2.7-las-existencias`. Se abre con las
+cuatro decisiones contestadas y anotadas en *Decisiones*, bajo el encargo del 2026-09-26, antes de
+escribir una línea.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
