@@ -376,7 +376,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         Guid laSegunda = vivas.Single(viva => viva.UbicacionId == caso.Ubicaciones[1]).Id;
         var unaUbicacionSinLibro = Guid.CreateVersion7();
 
-        // CINCO COPIAS ESTROPEADAS, una de cada manera en que una copia puede mentir, y todas en una
+        // SIETE COPIAS ESTROPEADAS, una de cada manera en que una copia puede mentir, y todas en una
         // transacción que se deshace: el cuadre corre dentro de ella, con el mismo contexto.
         await using InventarioDbContext contexto = postgres.AbrirInventario(caso.EmpresaId);
         await using IDbContextTransaction estropeando = await contexto.Database.BeginTransactionAsync();
@@ -418,6 +418,37 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             corte.AddMonths(1),
             caso.EmpresaId)).ShouldBe(1);
 
+        // Una clave con dos filas vivas que, juntas, dicen lo que el libro. La suma no la delata:
+        // solo la cuenta de filas. Para plantarla hay que quitar el índice único, que es justo lo
+        // que la cuenta vigila por si un día deja de distinguir el lote nulo; el índice vuelve con
+        // el rollback.
+        await contexto.Database.ExecuteSqlRawAsync("DROP INDEX inventario.ix_existencias_una_por_clave");
+
+        (await contexto.Database.ExecuteSqlRawAsync(
+            "UPDATE inventario.existencias SET fisico = fisico - 2 WHERE id = {0}", laPrimera))
+            .ShouldBe(1);
+
+        var laCopia = Guid.CreateVersion7();
+
+        (await contexto.Database.ExecuteSqlRawAsync(
+            "INSERT INTO inventario.existencias " +
+            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, reservado) " +
+            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0)",
+            laCopia,
+            caso.EmpresaId,
+            caso.ArticuloId,
+            caso.AlmacenId,
+            caso.Ubicaciones[0])).ShouldBe(1);
+
+        // Y una instantánea de más, a cero, para una clave y un mes que ya tenían la suya: tampoco
+        // cambia la suma.
+        (await contexto.Database.ExecuteSqlRawAsync(
+            "INSERT INTO inventario.instantaneas_mensuales (existencia_id, mes, empresa_id, fisico) " +
+            "VALUES ({0}, {1}, {2}, 0)",
+            laCopia,
+            junio.AddMonths(1),
+            caso.EmpresaId)).ShouldBe(1);
+
         CuadreDeLasExistencias sucio = await LasExistencias.CuadrarEnAsync(contexto, caso.EmpresaId);
 
         sucio.ExistenciasComparadas.ShouldBe(3, "las dos de antes y la que no tiene libro");
@@ -443,9 +474,11 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
                     new Hallado("instantanea", caso.Ubicaciones[0], junio, 5m, 15m, 1),
                     new Hallado("instantanea", caso.Ubicaciones[1], junio.AddMonths(1), 3m, 0m, 0),
                     new Hallado("instantanea", caso.Ubicaciones[0], corte.AddMonths(1), 0m, 6m, 1),
+                    new Hallado("existencia", caso.Ubicaciones[0], null, 6m, 6m, 2),
+                    new Hallado("instantanea", caso.Ubicaciones[0], junio.AddMonths(1), 5m, 5m, 2),
                 ],
                 ignoreOrder: true,
-                customMessage: "las cinco, y ninguna más: cada una dice qué esperaba y qué encontró");
+                customMessage: "las siete, y ninguna más: cada una dice qué esperaba y qué encontró");
 
         await estropeando.RollbackAsync();
 
