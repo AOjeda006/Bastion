@@ -6,6 +6,8 @@ using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using Shouldly;
 
@@ -60,9 +62,16 @@ internal static class ElLibro
 
     /// <summary>Abre un ajuste, le pone líneas, lo confirma y guarda las dos cosas a la vez.</summary>
     /// <remarks>
+    /// <para>
     /// Es la transacción que dobla la R12 a sabiendas —el documento y las filas del libro en el
     /// mismo <c>COMMIT</c>—, hecha por el camino de producción: el agregado, el repositorio del
     /// módulo y su unidad de trabajo.
+    /// </para>
+    /// <para>
+    /// <b>Con su transacción abierta aquí</b>, desde el 2.7: anotar el libro mueve también la
+    /// existencia, con una sentencia que revienta si no hay transacción. En una petición de verdad
+    /// la abre el filtro de idempotencia.
+    /// </para>
     /// </remarks>
     /// <param name="postgres">El contenedor con las migraciones puestas.</param>
     /// <param name="fechaDeOperacion">Día al que se imputa, y con él la partición de destino.</param>
@@ -114,12 +123,15 @@ internal static class ElLibro
             ajuste.Confirmar(PrimerNumeroDeEsaSerie, evento, momento);
 
         await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
 
-        RepositorioDeAjustes repositorio = new(contexto);
+        RepositorioDeAjustes repositorio = new(contexto, new InquilinoFijo(empresaId));
         repositorio.Agregar(ajuste);
-        repositorio.AgregarMovimientos(movimientos);
+        await repositorio.AnotarEnElLibroAsync(movimientos, CancellationToken.None);
 
         await new UnidadDeTrabajoDeInventario(contexto).ConfirmarAsync(CancellationToken.None);
+        await transaccion.CommitAsync();
 
         return new UnAjusteConfirmado(
             empresaId, ajuste.Id, almacenId, fechaDeOperacion, movimientos);
@@ -149,8 +161,10 @@ internal static class ElLibro
         DateTimeOffset momento = DateTimeOffset.UtcNow;
 
         await using InventarioDbContext contexto = postgres.AbrirInventario(original.EmpresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
 
-        RepositorioDeAjustes repositorio = new(contexto);
+        RepositorioDeAjustes repositorio = new(contexto, new InquilinoFijo(original.EmpresaId));
 
         Ajuste confirmado = await repositorio.ObtenerAsync(original.AjusteId, CancellationToken.None)
             ?? throw new InvalidOperationException("El ajuste que se iba a anular no está.");
@@ -170,9 +184,10 @@ internal static class ElLibro
         confirmado.Anular(inverso, new AjusteAnulado(confirmado.Id, confirmado.EmpresaId));
 
         repositorio.Agregar(inverso);
-        repositorio.AgregarMovimientos(movimientos);
+        await repositorio.AnotarEnElLibroAsync(movimientos, CancellationToken.None);
 
         await new UnidadDeTrabajoDeInventario(contexto).ConfirmarAsync(CancellationToken.None);
+        await transaccion.CommitAsync();
 
         return new UnAjusteConfirmado(
             original.EmpresaId, inverso.Id, inverso.AlmacenId, fechaDelInverso, movimientos);

@@ -66,7 +66,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
 
         _inventario = postgres.AbrirInventario(empresaId);
 
-        RepositorioDeAjustes ajustes = new(_inventario);
+        RepositorioDeAjustes ajustes = new(_inventario, new InquilinoFijo(empresaId));
         UnidadDeTrabajoDeInventario unidadDeTrabajo = new(_inventario);
         ConsultaDeAlmacenes almacenes = new(_organizacion, acceso);
 

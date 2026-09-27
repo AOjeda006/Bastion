@@ -1,12 +1,17 @@
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 
 /// <inheritdoc cref="IRepositorioDeAjustes"/>
-internal sealed class RepositorioDeAjustes(InventarioDbContext contexto) : IRepositorioDeAjustes
+/// <param name="contexto">El contexto del módulo.</param>
+/// <param name="inquilino">De donde sale la empresa cuyas existencias se mueven.</param>
+internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquilinoActual inquilino)
+    : IRepositorioDeAjustes
 {
     /// <inheritdoc/>
     /// <remarks>
@@ -21,9 +26,29 @@ internal sealed class RepositorioDeAjustes(InventarioDbContext contexto) : IRepo
     public void Agregar(Ajuste ajuste) => contexto.Ajustes.Add(ajuste);
 
     /// <inheritdoc/>
-    public void AgregarMovimientos(IReadOnlyCollection<MovimientoStock> movimientos)
+    /// <remarks>
+    /// <para>
+    /// <b>Primero la existencia y después el libro, y el orden da igual</b>: los dos van en la
+    /// misma transacción, así que nadie ve el uno sin el otro. La existencia se mueve ya, con una
+    /// sentencia; las filas del libro se escriben cuando la unidad de trabajo guarda.
+    /// </para>
+    /// <para>
+    /// <b>La empresa sale del inquilino y no de las filas</b>, y la sentencia comprueba que cada
+    /// fila es de ella antes de mandar nada (ADR-0044). Un ámbito sin inquilino no puede anotar: la
+    /// sentencia cruda no pasa por el filtro global y sumaría en la empresa de cualquiera.
+    /// </para>
+    /// </remarks>
+    public async Task AnotarEnElLibroAsync(
+        IReadOnlyCollection<MovimientoStock> movimientos, CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(movimientos);
+
+        Guid empresaId = inquilino.EmpresaDelFiltro ?? throw new InvalidOperationException(
+            "Se está anotando el libro dentro de un ámbito sin inquilino, y una existencia es " +
+            "siempre de una empresa: sin ella la sentencia sumaría en la de cualquiera.");
+
+        await LaProyeccionDelLibro.MoverAsync(contexto, empresaId, movimientos, cancelacion)
+            .ConfigureAwait(false);
 
         contexto.Movimientos.AddRange(movimientos);
     }

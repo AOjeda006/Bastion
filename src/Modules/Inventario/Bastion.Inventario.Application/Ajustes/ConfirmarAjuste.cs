@@ -153,7 +153,7 @@ internal sealed class ConfirmarAjuste(
         IReadOnlyList<MovimientoStock> movimientos =
             ajuste.Confirmar(numero.Valor, evento, reloj.GetUtcNow());
 
-        ajustes.AgregarMovimientos(movimientos);
+        await ajustes.AnotarEnElLibroAsync(movimientos, cancelacion).ConfigureAwait(false);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto(ajuste.ADto());

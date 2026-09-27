@@ -183,7 +183,7 @@ internal sealed class AnularAjuste(
         original.Anular(inverso, new AjusteAnulado(original.Id, original.EmpresaId));
 
         ajustes.Agregar(inverso);
-        ajustes.AgregarMovimientos(movimientos);
+        await ajustes.AnotarEnElLibroAsync(movimientos, cancelacion).ConfigureAwait(false);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto(new AnulacionDto(original.ADto(), inverso.ADto()));

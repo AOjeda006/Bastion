@@ -102,9 +102,9 @@ public sealed class LaParticionPorDefectoSeDenunciaTests(PostgresConTodosLosModu
         await using IDbContextTransaction transaccion =
             await contexto.Database.BeginTransactionAsync();
 
-        RepositorioDeAjustes repositorio = new(contexto);
+        RepositorioDeAjustes repositorio = new(contexto, new InquilinoFijo(empresaId));
         repositorio.Agregar(ajuste);
-        repositorio.AgregarMovimientos(movimientos);
+        await repositorio.AnotarEnElLibroAsync(movimientos, CancellationToken.None);
         await contexto.SaveChangesAsync();
 
         DbConnection conexion = contexto.Database.GetDbConnection();

@@ -238,6 +238,44 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "habria protegido. Que las cuatro cadenas del esquema sigan siendo las del mapeo de "
             + "verdad lo comprueba LaSentenciaDelEjercicioNombraLaTablaDeVerdadTests",
 
+        // LAS TRES DEL ITEM 2.7, y son las primeras en el esquema DEL PROPIO MODULO que escriben
+        // tablas de negocio. No cruzan ninguna frontera, asi que la excepcion al «unico camino»
+        // del ADR-0040 no va con ellas; lo que si va es la prohibicion de SQL crudo, y el criterio
+        // con el que se defienden es el mismo, con la clausula 2 ampliada por el ADR-0044:
+        //
+        //   - Por que no hay forma de evitarlo: la existencia es la suma del libro y se mueve SIN
+        //     LEERLA, con `INSERT ... ON CONFLICT DO UPDATE SET fisico = fisico + delta`. EF Core
+        //     no traduce ni el upsert ni el incremento sobre lo que hay, y leer-sumar-guardar por
+        //     el ORM deja la ventana por la que dos confirmaciones del mismo articulo se llevan el
+        //     mismo saldo de partida y una cantidad se pierde sin error. Tampoco traduce un
+        //     `LOCK TABLE`, ni una funcion de ventana en un `INSERT ... SELECT`.
+        //   - Por que no leen para decidir: la sentencia del libro suma sobre lo que hay y lee una
+        //     sola cosa, el corte de la empresa, que el cerrojo del recalculo impide que cambie
+        //     mientras ella esta en vuelo. El recalculo lee el libro entero, pero despues de tomar
+        //     ese cerrojo. El cuadre solo lee, en una sola foto.
+        //   - Y las tres comparan la empresa ellas mismas, con el valor de IInquilinoActual, en
+        //     cada tabla que tocan. Que una comparacion que falte ponga algo rojo lo comprueba
+        //     LasExistenciasSonLaSumaDelLibroTests con dos empresas de verdad, no con los vecinos
+        //     de la base compartida.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
+         "LaProyeccionDelLibro.cs usa .ExecuteSql"] =
+            "mueve la fila viva de cada existencia y sus instantaneas en una sola sentencia, "
+            + "sumando sobre lo que hay y sin leer el saldo, dentro de la transaccion que anota el "
+            + "libro. Escribe la empresa con el valor de IInquilinoActual, despues de comprobar que "
+            + "cada fila del libro es de esa misma empresa, y lee el corte comparandola",
+
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
+         "LasInstantaneasMensuales.cs usa .ExecuteSql"] =
+            "tira y repone las instantaneas de una empresa desde el libro, con el cerrojo de la "
+            + "tabla tomado lo primero para que ninguna confirmacion quede a medias. Cada sentencia "
+            + "compara la empresa con el valor de IInquilinoActual en cada tabla que toca",
+
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
+         "ElCuadreDeLasExistencias.cs usa .SqlQuery"] =
+            "compara el libro con las filas vivas y con las instantaneas en una sola lectura, que "
+            + "es lo que impide que una confirmacion a medias aparezca en una y no en la otra. Solo "
+            + "lee, y compara la empresa con el valor de IInquilinoActual en cada tabla que toca",
+
         ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/" +
          "CerrojoDeEjercicios.cs usa .SqlQuery"] =
             "el otro lado: toma el cerrojo EXCLUSIVO con el que cerrar, mover y borrar esperan a "
