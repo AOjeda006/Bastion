@@ -13569,6 +13569,22 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Son **12** métodos nuevos o renombrados en el ítem: **10** vistos en rojo y **2** solo en verde.
   Salen de `git diff main..HEAD -- tests`, buscando las firmas `public … Task|void` añadidas.
 
+  **El 2.7 lo cierra el run 36296564370** sobre `e1ffce3`, **success al primer intento**, con sus
+  tres jobs —Backend `108556394723`, Frontal `108556394838` y Humo `108557298067`—, los tres con
+  `labels: ['ubuntu-24.04']`, y **65 pasos: 64 en verde y 1 omitido**, que es *Diagnóstico* con su
+  `if: failure()`. Las cifras del *runner*, leídas de las anotaciones del run y no dadas por buenas:
+  **932** y **502** casos con **10 `.trx`** en cada artefacto, **130** operaciones sobre **77**
+  rutas, **119** tipos de error de **125** sitios, modelo y migraciones coincidiendo en todos los
+  módulos y el presupuesto del frontal idéntico al de esta máquina, **413/450** y **601/900** KiB. El
+  segundo arranque del Humo dice lo mismo que antes del ítem: **95** permisos antes y después, `403`
+  con el estado viejo, las **14** particiones con su disparador y `200` con la semilla fuera. Es el
+  **único** run de la rama —`GET …/actions/runs?branch=item-2.7-las-existencias` da
+  `total_count: 1`—, y ninguno se canceló.
+
+  **El run de `main`** sale de empujar el commit que escribe éste, y va al abrir la rama siguiente,
+  como el del 2.6. Con ese commit, `git rev-list --count main..HEAD` pasa de **9** a **10** antes del
+  avance, y es el último del ítem.
+
 - [ ] **2.8 · La valoración PMP** — criterio de aceptación: el PMP se recalcula en cada entrada y se
   guarda **en el movimiento**, no solo en la proyección; una salida congela el PMP vigente en su fila,
   de modo que valorar el pasado **no exige reproducir la historia**; el **stock negativo se rechaza**
