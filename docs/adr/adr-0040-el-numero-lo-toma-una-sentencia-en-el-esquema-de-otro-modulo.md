@@ -8,7 +8,8 @@ revisado: 2026-09-19
 
 # ADR-0040: El número lo toma una sentencia en el esquema de otro módulo, y esa es la segunda excepción al «único camino»
 
-- **Estado:** aceptado, con la **cláusula 2 del criterio enmendada** por el [ADR-0041](adr-0041-el-cerrojo-del-ejercicio-lo-pide-una-lectura-cruda.md)
+- **Estado:** aceptado, con la **cláusula 2 del criterio enmendada** por el [ADR-0041](adr-0041-el-cerrojo-del-ejercicio-lo-pide-una-lectura-cruda.md) y el criterio
+  **ampliado al esquema propio** por el [ADR-0044](adr-0044-la-existencia-se-mueve-en-la-sentencia-que-anota-el-libro.md)
 - **Fecha:** 2026-09-19
 - **Enmienda el [ADR-0013](adr-0013-el-evento-va-en-la-misma-transaccion-y-el-efecto-ocurre-una-vez.md)**
   en sus dos frases cerradas: «la bandeja de salida es el único camino por el que un módulo escribe
@@ -77,6 +78,12 @@ fuera de la bandeja **solo si se cumplen las cuatro**:
    > una forma de cumplirlo. Hoy la cláusula admite también una lectura que decide **si trae en
    > la misma sentencia el cerrojo** que impide que se quede vieja hasta el `COMMIT`: es lo que
    > hacen las dos sentencias del ejercicio del ítem 2.6, que no se pueden escribir sin leer.
+
+   > **Ampliado por el ADR-0044 (2026-09-27).** El criterio rige también el SQL crudo que
+   > escribe tablas de negocio en el esquema **del propio módulo**: la proyección del libro del
+   > ítem 2.7. Ahí «una sola fila» no se puede cumplir, porque una proyección toca tantas filas
+   > como claves y meses, y lo sustituye esto: **cada fila se mueve solo sumando sobre lo que
+   > hay, y lo que se reescribe entero se reescribe bajo un cerrojo que excluye a los que suman**.
 3. **El módulo dueño no expone —ni puede exponer— un método que haga eso.** No es que no se haya
    escrito: `Serie` vive en `Organizacion.Domain` y ningún módulo ve el interior de otro, así que
    ningún método de allí es llamable desde aquí. El punto 6 lo desarrolla.

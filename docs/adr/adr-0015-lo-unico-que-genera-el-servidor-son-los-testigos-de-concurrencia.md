@@ -8,7 +8,7 @@ revisado: 2026-08-31
 
 # ADR-0015: Lo único que genera el servidor son los testigos de concurrencia
 
-- **Estado:** aceptado
+- **Estado:** aceptado, con los **puntos 2 y 3 enmendados** por el [ADR-0044](adr-0044-la-existencia-se-mueve-en-la-sentencia-que-anota-el-libro.md)
 - **Fecha:** 2026-08-31
 - **Sustituye a:** el **punto 2** del
   [ADR-0012](adr-0012-la-traza-va-en-la-misma-transaccion-que-el-cambio.md) («Una sola fase, porque
@@ -44,11 +44,23 @@ el test se puso rojo, como estaba escrito que haría. Esto es el cumplimiento de
    enteras** —la del modelo y la escrita a mano, `Almacen.Version`, `Ejercicio.Version`,
    `Empresa.Version`, `Rol.Version`, `Serie.Version`, `Usuario.Version`— en el mismo orden.
 
+   > **Enmendado por el ADR-0044 (2026-09-27).** La lista ya no es solo de testigos: el ítem 2.7
+   > trajo la primera columna que calcula el motor, `Existencia.Disponible`. La premisa de la fase
+   > única sigue en pie para ella —no es clave, la existencia no se audita y ninguna escritura del
+   > rastreador la toca—, así que no se exceptúa: se declara en una **segunda lista**, la de las
+   > calculadas, y el caso compara el modelo con las dos juntas, enteras y en orden. Se llama
+   > ahora `Lo_unico_que_genera_el_servidor_es_lo_declarado`.
+
 Y una tercera que no estaba y hace falta al partirlo así:
 
 3. **Lo que genera el servidor es de verdad un testigo**, no algo que se le parezca.
    `Todo_lo_que_genera_el_servidor_es_de_verdad_un_testigo_de_concurrencia` comprueba, propiedad a
    propiedad, que es `uint`, que se regenera en cada escritura y que está marcada como testigo.
+
+   > **Enmendado por el ADR-0044 (2026-09-27).** Cada una se comprueba por lo que dice su lista:
+   > un testigo, por lo de arriba; una calculada, porque lleva su expresión **guardada** y nada
+   > más —ni un `DEFAULT`, ni un `IDENTITY`, ni el papel de testigo—. Se llama ahora
+   > `Cada_cosa_que_genera_el_servidor_es_de_verdad_lo_que_se_declaro`.
 
 ### Por qué esto no es debilitar la premisa
 
