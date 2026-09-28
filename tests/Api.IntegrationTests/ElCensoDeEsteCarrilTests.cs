@@ -456,7 +456,7 @@ public sealed class ElCensoDeEsteCarrilTests
         // lo mismo; el cuadre encuentra cada copia que miente y dice cuántas comparó; el
         // recálculo espera a la confirmación en vuelo; y dos empresas no se mezclan en ninguna de
         // las sentencias crudas.
-        "LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_o_con_filas_de_otra_empresa_revienta",
+        "LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta",
         "LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_lineas_de_la_misma_clave_y_otro_documento_dejan_una_sola_fila_viva_con_la_suma",

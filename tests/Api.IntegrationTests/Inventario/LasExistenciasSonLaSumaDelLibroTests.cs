@@ -595,7 +595,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     }
 
     [Fact]
-    public async Task Anotar_el_libro_sin_transaccion_o_con_filas_de_otra_empresa_revienta()
+    public async Task Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta()
     {
         var empresaId = Guid.CreateVersion7();
         IReadOnlyList<MovimientoStock> movimientos = UnasFilasDelLibro(empresaId);
@@ -614,6 +614,17 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         // CON FILAS DE OTRA EMPRESA, la sentencia sumaría con la empresa del inquilino lo que el
         // libro apunta en otra.
         await using IDbContextTransaction transaccion = await contexto.Database.BeginTransactionAsync();
+
+        // SIN INQUILINO, la sentencia no sabría en qué empresa sumar. Va dentro de la transacción
+        // para que la de la transacción no salte antes que la suya. Y se afirma el mensaje, no solo
+        // el tipo: si el repositorio sumara en una empresa vacía, la comprobación de la otra
+        // empresa lo pararía igual, con otras palabras, y el caso seguiría en verde sin la suya.
+        RepositorioDeAjustes deNadie = new(contexto, new InquilinoFijo(null));
+
+        InvalidOperationException sinInquilino = await Should.ThrowAsync<InvalidOperationException>(
+            () => deNadie.AnotarEnElLibroAsync(movimientos, CancellationToken.None));
+
+        sinInquilino.Message.ShouldContain("sin inquilino");
 
         RepositorioDeAjustes deOtra = new(contexto, new InquilinoFijo(Guid.CreateVersion7()));
 
