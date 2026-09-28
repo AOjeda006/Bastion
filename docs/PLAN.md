@@ -5949,12 +5949,67 @@ Hecho, por puntos:
    quedó en rojo en ese commit: `ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados`,
    medido volviendo a él. Lo arregla `fcfa928`, y es el único commit del tramo en rojo. La guardia
    de la tabla se vio en rojo con un canario: un nombre de la fila nueva cambiado a mano.
+4. **Los dos casos vistos solo en verde, a rojo**, y el nuevo del punto 3 con ellos. La numeración
+   sigue la de la tabla del 2.7, que acabó en la 51. Cada mutación se corrió **sola**, con el caso
+   diseñado sobre un contenedor nuevo, y **en los dos carriles** con el guion de siempre (árbol
+   limpio, canario del fichero, compilar, revertir y recompilar). La 53 muta el propio caso, así que
+   solo se corre sola.
+
+   | # | Mutación | Sola | Dos carriles |
+   |---|---|---|---|
+   | 52 | El filtro de idempotencia no toma nunca la rama del recibo guardado (`if (!mia)`, con una condición imposible añadida): el reintento se ejecuta otra vez. | rojo: el segundo `POST` contesta `409` `ajuste-no-esta-confirmado` | 7 en integración y 0 en el rápido (abajo) |
+   | 53 | `disponible`, cambiada **en la base** con `ALTER TABLE inventario.existencias ALTER COLUMN disponible SET EXPRESSION AS (fisico)`, dentro de la transacción del caso, que se deshace. | rojo: `lector.GetDecimal(2)` debía ser 3 y fue 5 | — |
+   | 54 | La guarda de la transacción, con una condición imposible añadida (`&& movimientos.Count < 0`). | rojo: esperaba `InvalidOperationException` y no llegó | 1 en integración y 0 en el rápido |
+   | 55 | La guarda de la otra empresa, con la misma condición imposible. | rojo, en la segunda mitad del caso | 1 y 0 |
+   | 56 | La guarda del inquilino: `?? Guid.Empty` en vez de reventar. | **verde**; tras `1ba7b2b`, rojo: esperaba «sin inquilino» y llegó «…de otra empresa…» | **verde en los dos**; tras `1ba7b2b`, 1 y 0 |
+
+   - **La 53 es de PostgreSQL 17, y se comprobó**: `SET EXPRESSION` sobre una columna generada
+     llegó en esa versión, y el contenedor de los tests, `postgres:17.6-alpine`, lo acepta dentro de
+     una transacción. Muta la base y no el modelo, así que el `MigrateAsync` del fixture no se entera
+     y el único que puede verla es el caso. La 49 del 2.7 mutaba el modelo, y la paró el fixture.
+   - **La 56 salió verde, y es la clase de la 27**: una guarda quitada que otra guarda tapa. Con el
+     inquilino nulo convertido en `Guid.Empty`, dentro de la transacción salta la de la otra empresa,
+     con otro mensaje, y el caso solo miraba el tipo de la excepción. `1ba7b2b` llama sin inquilino
+     dentro de la transacción y afirma el mensaje. El caso se renombra a
+     `Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta`, y el
+     censo lo declara en el mismo commit. La lista del 2.7, más abajo, conserva el nombre de
+     entonces.
+   - **Los 7 de la 52 son todos por diseño**: todo caso que reintenta con la misma clave. Son los
+     tres de `LaMismaClaveDevuelveElMismoRecursoTests`, los dos de misma clave de
+     `LaImportacionEsUnaOperacionTests`, `ElNumeroEntraEnElReciboTests.El_reintento_con_la_misma_clave_devuelve_el_numero_y_no_gasta_otro`
+     y el nuevo, `LaAnulacionConContraDocumentoTests.El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso`.
+
+   **Las dos listas.** Vistos en rojo por diseño:
+
+   - `LasExistenciasSonLaSumaDelLibroTests.Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor`: la 53;
+   - `LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta`:
+     la 54, la 55 y la 56, cada comprobación por separado;
+   - `LaAnulacionConContraDocumentoTests.El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso`: la 52.
+
+   **Vistos solo en verde: ninguno.** Los dos que el encargo señalaba, y el nuevo del punto 3, han
+   salido rojos con su mutación.
 5. **El cerrojo del recálculo**, en el **ADR-0044 §5**. Se corrige el párrafo del «modo más
    débil»: el modo lo era, pero el problema es el alcance, porque la tabla es de todas las
    empresas. El arreglo queda escrito en el criterio del **2.14**, que es quien llamará al recálculo:
    `pg_advisory_xact_lock_shared` al anotar y `pg_advisory_xact_lock` al recalcular, los dos por
    empresa, con su caso de dos empresas. No se toca código, porque hasta el 2.14 el recálculo solo
    lo llaman los casos.
+
+**Las tres preguntas del cierre de la fase**, que el encargo deja escritas sin decidir, están en
+*Notas / riesgos*: la baja del artículo, con un añadido en la nota del 2.2; las pantallas del ajuste
+y la lectura de las existencias, en una nota nueva; y la zona de «hoy», corregida en la nota del
+2.7.
+
+**Los commits del epílogo**: `git rev-list --count 5d405d2..epilogo-del-2.7-cinco-cosas` da **11**,
+contando el que cierra el epílogo, todos `G` en `git log --format='%h %G? %s' 5d405d2..`.
+
+- `b5a769c`: la apertura, con los runs del cuarto punto y el encargo;
+- `6eb6723`: el punto 1;
+- `4bcbbb0`, `008137b` y `78c521f`: el punto 2;
+- `828f7b2`, `fcfa928` y `ae585e8`: el punto 3;
+- `1ba7b2b`: el punto 4;
+- `d9dd1e1`: el punto 5;
+- y el cierre.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -13836,17 +13891,39 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTA (2026-09-28, encargo del usuario) · ¿trae algún ítem, hasta el 2.14, el alta, el
+  listado y la ficha del ajuste, y la lectura de las existencias?** Es pregunta del **cierre de la
+  fase**, y el usuario la deja escrita sin decidir. Hoy el borde HTTP de Inventario tiene **dos**
+  acciones, confirmar y anular (`AjustesController`), y su cabecera dice que «el alta, el listado y
+  la ficha van con sus pantallas». `PermisosDeInventario` dice lo mismo de sus permisos. **El frontal
+  no tiene inventario**: `frontend/src/features` tiene catálogo, identidad, organización y terceros.
+  Repasados los criterios del 2.8 al 2.14, los que nombran pantalla son:
+  - el 2.9, la de la trazabilidad del artículo;
+  - el 2.12, la del recuento, con la diferencia entre lo contado y lo teórico;
+  - el 2.14, la del saldo a una fecha.
+
+  **Ninguno nombra el alta, el listado o la ficha del ajuste, ni la lectura de las existencias de
+  hoy.** Así que la fase puede cerrarse con un documento que solo se crea desde los tests. Si la
+  respuesta es que sí, es un **addendum** al checklist, como las de las fases 0 y 1. Si es que no,
+  el disparador se escribe en `AjustesController`. No se amplía el checklist por cuenta propia.
+
 - **ABIERTA (2026-09-27, ítem 2.7) · «hoy» es el día UTC, y no el de la empresa.** Confirmar
   rechaza una fecha de operación posterior a hoy —la decisión (b), ADR-0044 §4—, y el cuadre suma el
   libro hasta hoy. Los dos sacan «hoy» del `TimeProvider` en UTC. En España eso deja dos horas, de
   00:00 a 02:00 en verano (una en invierno), en las que aquí ya ha empezado el día y en UTC todavía
   no: un ajuste fechado hoy a esa hora se rechaza como futuro, con `ajuste-con-fecha-futura`, y se
   confirma sin tocar nada pasadas las dos. **Hoy es una molestia y no una discrepancia**: lo que se
-  rechaza no entra en el libro, así que la R3 no se rompe. La salida probable es una zona horaria
-  por empresa, en Organización, y «hoy» calculado en ella; toca a la R14 —una fecha de negocio no
-  lleva zona, y aquí la zona decide qué fecha es hoy—. **El disparador:** antes de la **fase 5**,
+  rechaza no entra en el libro, así que la R3 no se rompe. Toca a la R14: una fecha de negocio no
+  lleva zona, y aquí la zona decide qué fecha es hoy. **El disparador:** antes de la **fase 5**,
   porque la fecha de expedición de una factura sí tiene consecuencias fiscales; o antes, en cuanto
   alguien confirme de madrugada. No se decide aquí ni se amplía el checklist por cuenta propia.
+
+  **Corregido el 2026-09-28 (encargo del usuario):** esta nota decía que la salida probable era una
+  zona horaria **por empresa**. El usuario lo corrige: la zona es **del sitio, no de la empresa**,
+  porque Canarias va una hora por detrás de la península, y una misma empresa puede tener almacenes
+  en los dos sitios. Un ajuste de un almacén de Las Palmas a las 23:30 es de hoy allí y ya de mañana
+  en Madrid. Es una de las tres preguntas que el usuario deja para el **cierre de la fase**, y sigue
+  sin decidir: qué «sitio» es (el almacén, el centro o el terminal) y dónde vive su zona.
 
 - **ABIERTA (2026-09-27, ítem 2.7) · nadie avanza el corte de la instantánea hasta el 2.14.** En el
   2.7 el recálculo y el cuadre (`LasInstantaneasMensuales`, `ElCuadreDeLasExistencias`) no tienen
@@ -13966,6 +14043,10 @@ cuando hace falta el porqué.
   **Añadido el 2026-09-27 (ítem 2.7):** la condición ya se cumple. El artículo tiene existencias,
   en `inventario.existencias`, y la pregunta sigue en pie y sin contestar, para el cierre de la
   fase.
+
+  **Añadido el 2026-09-28 (encargo del usuario):** es una de las tres preguntas que el usuario deja
+  escritas para el cierre de la fase, sin decidir. Las otras dos son las pantallas del ajuste y la
+  zona de «hoy», en las notas de arriba.
 
 - **TRASLADADA A *DECISIONES* (2026-09-07, ítem 1.6) · el conflicto no revela, pero DOS respuestas
   juntas sí.** El hecho sigue siendo el que se anotó en el 1.5 y no ha cambiado: la búsqueda no
