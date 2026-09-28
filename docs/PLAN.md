@@ -5089,7 +5089,9 @@ Son reversibles, y el porqué largo está en el **ADR-0044**.
   cantidades agrupadas por clave y las claves ordenadas.
 - **El recálculo abre su propia transacción y toma lo primero `LOCK TABLE … IN SHARE ROW EXCLUSIVE
   MODE`**: el modo más débil que choca con el `ROW EXCLUSIVE` de quien anota y consigo mismo, y no
-  con las lecturas.
+  con las lecturas. **Corregido en el epílogo, el 2026-09-28:** el modo es el más débil, pero el
+  alcance es la tabla entera, así que recalcular una empresa detiene las confirmaciones de todas. El
+  cerrojo por empresa llega con el 2.14, que es quien lo llama (ADR-0044 §5).
 - **El cuadre es una sola lectura y devuelve cuánto comparó.** Las instantáneas debidas salen del
   mismo fragmento de SQL que usa el recálculo, `LasDebidas`.
 - **`reservado` no tiene valor por defecto.** La sentencia lo escribe a cero: un defecto le
@@ -5947,6 +5949,12 @@ Hecho, por puntos:
    quedó en rojo en ese commit: `ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados`,
    medido volviendo a él. Lo arregla `fcfa928`, y es el único commit del tramo en rojo. La guardia
    de la tabla se vio en rojo con un canario: un nombre de la fila nueva cambiado a mano.
+5. **El cerrojo del recálculo**, en el **ADR-0044 §5**. Se corrige el párrafo del «modo más
+   débil»: el modo lo era, pero el problema es el alcance, porque la tabla es de todas las
+   empresas. El arreglo queda escrito en el criterio del **2.14**, que es quien llamará al recálculo:
+   `pg_advisory_xact_lock_shared` al anotar y `pg_advisory_xact_lock` al recalcular, los dos por
+   empresa, con su caso de dos empresas. No se toca código, porque hasta el 2.14 el recálculo solo
+   lo llaman los casos.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -13788,8 +13796,15 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   cualquier día pasado desde la instantánea más el tramo, **coincide con la suma del libro hasta esa
   fecha** sobre una historia que incluye ajustes, anulaciones y transferencias, y la pantalla lo
   enseña con su fecha; una fecha anterior al primer movimiento contesta **cero y no un error**; y una
-  fecha futura se rechaza. Es el último criterio del §15 que quedaba por cubrir, y con él la fase se
-  repasa criterio por criterio antes de cerrarla.
+  fecha futura se rechaza. Y **el recálculo deja de cerrar la tabla entera** antes de que lo llame el
+  trabajo mensual. El cerrojo pasa a ser por empresa, en lugar del `LOCK TABLE`:
+  `pg_advisory_xact_lock_shared(clave, empresa)` al anotar y `pg_advisory_xact_lock(clave, empresa)`
+  al recalcular. Lleva un caso de **dos empresas y dos transacciones de verdad** que demuestra que la
+  confirmación de B no espera al recálculo abierto de A. El de la clave nueva en vuelo sigue
+  demostrando que la misma empresa sí espera. La fila del corte no vale como cerrojo, porque una
+  empresa sin corte no la tiene (ADR-0044 §5, corregido en el epílogo del 2.7). Es el último
+  criterio del §15 que quedaba por cubrir, y con él la fase se repasa criterio por criterio antes de
+  cerrarla.
 
 ## Imports pendientes de `CLAUDE.md`
 

@@ -131,11 +131,43 @@ y ella las habría creado con el corte de antes: a esa clave le faltarían los m
 acaba de añadir. Y al revés: una confirmación que empezara durante el recálculo leería el corte
 viejo.
 
-**El modo es el más débil que choca con quien escribe.** La sentencia del punto 2 toma
-`ROW EXCLUSIVE` sobre la tabla al analizarse, aunque no llegue a escribir ninguna instantánea, y lo
-suelta en su `COMMIT`. `SHARE ROW EXCLUSIVE` choca con él y consigo mismo, así que dos recálculos se
-esperan. No choca con las lecturas: el cuadre y las consultas siguen leyendo mientras tanto. Y no
-hay interbloqueo, porque el recálculo no necesita nada que una confirmación tenga cogido.
+**El modo es el más débil que choca con quien escribe, pero el alcance es el problema.** La
+sentencia del punto 2 toma `ROW EXCLUSIVE` sobre la tabla al analizarse, aunque no llegue a escribir
+ninguna instantánea, y lo suelta en su `COMMIT`. `SHARE ROW EXCLUSIVE` choca con él y consigo mismo,
+así que dos recálculos se esperan. No choca con las lecturas, y no hay interbloqueo, porque el
+recálculo no necesita nada que una confirmación tenga cogido.
+
+Hasta aquí es cierto, y no basta. **`LOCK TABLE` cierra la tabla entera, y la tabla es de todas las
+empresas**: mientras se recalcula la empresa A, se paran las confirmaciones y las anulaciones de la
+B, de cualquier almacén y de cualquier artículo. Este párrafo decía que el modo era «el más débil»
+como si eso lo hiciera barato. Del modo es verdad, pero del cerrojo engaña, y ningún modo más débil
+lo arregla, porque lo que sobra es el alcance. *(Corregido en el epílogo del 2.7, el 2026-09-28, por
+el encargo del usuario.)*
+
+**El arreglo va en el 2.14: un cerrojo por empresa.** Hasta el 2.14 el recálculo no lo llama nadie
+en producción (el párrafo siguiente), así que el defecto todavía no alcanza a nadie. El 2.14 es el
+que lo llamará cada mes para todas las empresas, y lo cambia antes de llamarlo:
+
+- **Quien anota toma `pg_advisory_xact_lock_shared(clave, empresa)`** antes de la sentencia que
+  mueve la proyección, cuando todavía no tiene cogida ninguna fila de la proyección. Ya tiene el
+  contador y el ejercicio, pero el recálculo no los necesita, así que esperar no forma un ciclo.
+  **El recálculo toma `pg_advisory_xact_lock(clave, empresa)`** en lugar del `LOCK
+  TABLE`.
+  - Los compartidos no se esperan entre sí, así que dos confirmaciones de la misma empresa siguen
+    sin esperarse.
+  - El exclusivo espera a los compartidos de su empresa y detiene a los que lleguen después, pero no
+    toca los de otra empresa.
+  - Los dos se sueltan solos al acabar la transacción.
+- **`clave` es una constante del módulo** que nombra las instantáneas de Inventario. **`empresa` es
+  un entero sacado del identificador**, `hashtext(empresa_id::text)`, porque el identificador es un
+  `uuid` y el cerrojo pide dos `int4`. Dos empresas con el mismo resumen se esperarían entre sí: se
+  pierde paralelismo, no corrección.
+- **La fila del corte no vale como cerrojo**, aunque sea la otra forma evidente de ponerlo por
+  empresa. Una empresa sin corte no tiene fila, y el primer recálculo es justo el que la crea, así
+  que la confirmación en vuelo no tendría nada que bloquear.
+- **Con un caso de dos empresas y dos transacciones de verdad** que demuestre que la confirmación de
+  B no espera mientras el recálculo de A sigue abierto. El caso de hoy, el de la clave nueva en
+  vuelo, sigue demostrando que dentro de una misma empresa sí se espera.
 
 **En el 2.7 no lo llama nadie en producción, a propósito.** Lo llaman los casos, que es lo que pide
 el criterio. El primer lector de la instantánea es el 2.14, y con él llega quien avanza el corte
