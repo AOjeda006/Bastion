@@ -6179,10 +6179,33 @@ empujarse: ningún run lo vio. Ahora nombra `EstadoDeAjuste.Confirmado`, que el 
   `vitest run`, **103** de **103** en **16** ficheros;
 - `dotnet format Bastion.sln --verify-no-changes`.
 
-**Lo que falta del 2.8**, en este orden: el precio medio en el dominio, con sus casos dorados; su
-cableado (la tabla de valoraciones, las tres sentencias, la divisa del documento, los códigos
-nuevos y los casos de carrera y de dos empresas); y el cierre, con las mutaciones sobre la línea
-que calcula y congela el precio medio y sobre la lectura bajo cerrojo.
+**2.8, segunda pieza: el precio medio, en el dominio** (2026-09-28). Es el punto 10 del ADR-0046, y
+todavía no lo llama nadie: el cableado es la pieza siguiente.
+
+- **`IValoracionDeExistencias` es la costura para FIFO**, y `ElPrecioMedioPonderado` la implementa.
+  `LoQueImpide` dice sin lanzar por qué no se puede valorar, y `Valorar` lanza si se le llama
+  igualmente.
+- **Los tipos**, en `Bastion.Inventario.Domain.Valoraciones`:
+  - `ClaveDeValoracion`, el artículo y el almacén;
+  - `SaldoValorado`, la cantidad y el valor, con las tres guardas de la tabla y el precio medio
+    deducido;
+  - `LineaAValorar`, con la cantidad en unidad base, el coste si sube y el valor que compensa si es
+    un inverso;
+  - `LineaValorada`, el valor con signo y el precio que congela;
+  - y `ImpedimentoDeValoracion`, con sus dos motivos.
+- **`ClaveDeValoracion` es una estructura, y eso la deja fuera de `LosIdentificadoresAjenosTests`**,
+  que solo mira clases. Es un valor de cálculo y no una referencia guardada: los identificadores que
+  se guardan son los de la entidad de la valoración, que llega en el cableado y se declara allí con
+  su puerto.
+- **Los casos**, en el carril rápido: `LosCasosDoradosDelPrecioMedioTests`, diez, con los cuatro
+  dorados del ADR-0046 §5 y un testigo al lado de cada cifra que decide el redondeo, y
+  `LoQueImpideValorarTests`, nueve. `dotnet test tests/Inventario.UnitTests` pasa de **31** a
+  **50**.
+
+**Lo que falta del 2.8**, en este orden: el cableado (la tabla de valoraciones, las tres sentencias,
+la divisa del documento, los códigos nuevos y los casos de carrera y de dos empresas); y el cierre,
+con las mutaciones sobre la línea que calcula y congela el precio medio y sobre la lectura bajo
+cerrojo.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
