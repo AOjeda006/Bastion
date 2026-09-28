@@ -313,6 +313,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaAnulacionConContraDocumentoTests.Dos_anulaciones_simultaneas_dejan_un_solo_inverso",
         "LaAnulacionConContraDocumentoTests.El_inverso_es_un_documento_confirmado_con_su_numero_y_su_flecha",
         "LaAnulacionConContraDocumentoTests.El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion",
+        "LaAnulacionConContraDocumentoTests.El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso",
         "LaAnulacionConContraDocumentoTests.Sin_la_cabecera_la_anulacion_es_428_y_no_toca_nada",
 
         "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Una_fila_que_no_mueve_nada_la_rechaza_el_motor",
