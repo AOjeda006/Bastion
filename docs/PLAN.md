@@ -5745,6 +5745,16 @@ que «la imagen es la misma que hoy sirve `latest`», que dice el mensaje de `29
 GitHub en `actions/runner-images#14748`, y no algo que se haya visto aquí. Lo que sí se verá es el
 efecto: los mismos casos, el mismo humo y la anotación del cambio fuera de los tres jobs.
 
+> **Medida el 2026-09-28, y no por este agente.** El usuario leyó la imagen en el registro del job,
+> que a este agente la API le sigue negando con el 403:
+>
+> - imagen `ubuntu-24.04`, versión **`20260920.314.1`**;
+> - sistema **Ubuntu 24.04.5 LTS**;
+> - *runner* **2.337.0**.
+>
+> Lo que sigue sin verse aquí es la otra mitad de la frase de `29847b3`: que sea la misma imagen que
+> servía `latest`. Para eso haría falta la versión de un job de antes del cambio, y nadie la leyó.
+
 **Los commits, contados** en `git log --format='%h %G? %s' main..HEAD`: **3** con éste, todos `G`.
 
 **Los runs del tercer punto**, anotados al abrir la rama del cuarto (`item-2.7-las-existencias`) y
