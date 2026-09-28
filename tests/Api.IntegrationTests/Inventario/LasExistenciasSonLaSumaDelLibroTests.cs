@@ -743,7 +743,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         var almacenId = Guid.CreateVersion7();
 
         var ajuste = Ajuste.Abrir(
-            empresaId, Guid.CreateVersion7(), almacenId, Hoy, "Recuento del ítem 2.7", momento);
+            empresaId, Guid.CreateVersion7(), almacenId, Hoy, "Recuento del ítem 2.7", "EUR", momento);
 
         ajuste.AnadirLinea(
             Guid.CreateVersion7(),
@@ -751,7 +751,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             3m,
             Guid.CreateVersion7(),
             1m,
-            Importe.De(1.50m, "EUR"),
+            1.50m,
             momento);
 
         return ajuste.Confirmar(
@@ -817,8 +817,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
                 linea.Cantidad,
                 caso.UnidadId,
                 linea.Factor,
-                1.50m,
-                "EUR"))]);
+                linea.Cantidad > 0m ? 1.50m : null))]);
 
         Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
 

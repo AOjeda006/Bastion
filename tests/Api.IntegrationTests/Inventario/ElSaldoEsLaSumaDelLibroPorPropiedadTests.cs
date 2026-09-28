@@ -518,8 +518,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                     linea.Cantidad,
                     empresa.UnidadDe[clave.ArticuloId],
                     linea.Factor,
-                    1.50m,
-                    "EUR");
+                    linea.Cantidad > 0m ? 1.50m : null);
             })]);
 
         Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);

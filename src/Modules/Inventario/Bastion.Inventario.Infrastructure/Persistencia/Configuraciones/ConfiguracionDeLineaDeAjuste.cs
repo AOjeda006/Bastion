@@ -56,20 +56,11 @@ internal sealed class ConfiguracionDeLineaDeAjuste : IEntityTypeConfiguration<Li
             .IsRequired()
             .SeAudita();
 
-        linea.ComplexProperty(fila => fila.CosteUnitario, coste =>
-        {
-            coste.IsRequired();
-
-            coste.Property(campo => campo.Cantidad)
-                .HasColumnName("coste_unitario_cantidad")
-                .HasPrecision(18, Importe.Decimales)
-                .SeAudita();
-
-            coste.Property(campo => campo.Divisa)
-                .HasColumnName("coste_unitario_divisa")
-                .HasMaxLength(3)
-                .SeAudita();
-        });
+        // SIN DIVISA PROPIA: la pone la cabecera, como en una factura (ADR-0046 §7). Y anulable,
+        // porque solo la lleva una línea que sube.
+        linea.Property(fila => fila.CosteUnitario)
+            .HasPrecision(18, Importe.Decimales)
+            .SeAudita();
 
         linea.HasIndex(fila => fila.AjusteId);
     }

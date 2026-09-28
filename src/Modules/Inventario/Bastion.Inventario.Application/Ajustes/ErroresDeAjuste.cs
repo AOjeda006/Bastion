@@ -13,6 +13,7 @@ internal static class ErroresDeAjuste
     internal const string CodigoSinEjercicio = "ajuste-sin-ejercicio";
     internal const string CodigoEnEjercicioCerrado = "ajuste-en-ejercicio-cerrado";
     internal const string CodigoConFechaFutura = "ajuste-con-fecha-futura";
+    internal const string CodigoCosteNoValido = "ajuste-coste-no-valido";
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,
@@ -30,6 +31,18 @@ internal static class ErroresDeAjuste
         CodigoSinLineas,
         $"El ajuste {ajusteId} no tiene ninguna línea: un documento que no mueve el libro no " +
         "ajusta nada (R13).");
+
+    /// <summary>Una línea que baja con coste, o un coste negativo (ADR-0046 §7).</summary>
+    /// <remarks>
+    /// <b>Se rechaza y no se ignora.</b> Una salida se valora al precio medio, así que un coste
+    /// escrito ahí no se usaría, y quien lo escribió creería que sí. Un coste negativo no existe:
+    /// una muestra o un regalo entran a cero.
+    /// </remarks>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion CosteNoValido() => ErrorDeOperacion.Validacion(
+        CodigoCosteNoValido,
+        "Una línea que baja existencias no lleva coste, porque se valora al precio medio, y " +
+        "ninguna lleva un coste negativo: una muestra o un regalo entran a cero (ADR-0046).");
 
     internal static ErrorDeOperacion NoEstaEnBorrador(Guid ajusteId, string estado) =>
         ErrorDeOperacion.Conflicto(

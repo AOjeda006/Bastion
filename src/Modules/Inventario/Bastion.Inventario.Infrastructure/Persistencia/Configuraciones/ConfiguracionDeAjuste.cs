@@ -51,6 +51,11 @@ internal sealed class ConfiguracionDeAjuste : IEntityTypeConfiguration<Ajuste>
             .IsRequired()
             .SeAudita();
 
+        ajuste.Property(documento => documento.Divisa)
+            .HasMaxLength(3)
+            .IsRequired()
+            .SeAudita();
+
         // Como TEXTO, igual que los demás enumerados del proyecto: un entero en la base obliga a
         // tener el código delante para leer una fila. Y se audita, que es lo que convierte la
         // máquina de estados en algo que se puede contar después: quién confirmó y cuándo.

@@ -16,6 +16,14 @@ internal sealed class ConsultaDeEmpresas(OrganizacionDbContext contexto) : ICons
     public Task<bool> EstaActivaAsync(Guid empresaId, CancellationToken cancelacion) =>
         contexto.Empresas.AnyAsync(empresa => empresa.Id == empresaId, cancelacion);
 
+    // Nula si no existe o está bloqueada, por el mismo filtro de R16 que la de arriba.
+    public async Task<string?> DivisaBaseDeAsync(Guid empresaId, CancellationToken cancelacion) =>
+        await contexto.Empresas
+            .Where(empresa => empresa.Id == empresaId)
+            .Select(empresa => empresa.DivisaBase)
+            .FirstOrDefaultAsync(cancelacion)
+            .ConfigureAwait(false);
+
     // Orden explícito: «la primera» tiene que ser siempre la misma, o la semilla elegiría una
     // empresa distinta en cada arranque según lo que devolviera PostgreSQL.
     public async Task<Guid?> PrimeraActivaAsync(CancellationToken cancelacion) =>

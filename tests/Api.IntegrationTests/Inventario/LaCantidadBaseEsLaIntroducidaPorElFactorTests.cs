@@ -122,7 +122,7 @@ public sealed class LaCantidadBaseEsLaIntroducidaPorElFactorTests(PostgresConTod
                 (id, fecha_de_operacion, empresa_id, almacen_id, ubicacion_id, articulo_id,
                  cantidad_en_unidad_base, cantidad_introducida, unidad_introducida_id,
                  factor_a_unidad_base, documento_origen_tipo, documento_origen_id,
-                 coste_unitario_cantidad, coste_unitario_divisa, creado_en, modificado_en)
+                 coste_unitario, divisa, creado_en, modificado_en)
             VALUES (gen_random_uuid(), current_date, gen_random_uuid(), gen_random_uuid(),
                     gen_random_uuid(), gen_random_uuid(), {0}, {1}, gen_random_uuid(), {2},
                     'Ajuste', gen_random_uuid(), 1.0, 'EUR', now(), now())

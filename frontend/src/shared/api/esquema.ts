@@ -1845,6 +1845,8 @@ export interface components {
              * @description El ajuste que este compensa, o `null` si no es un inverso.
              */
             anulaAId: null | string;
+            /** @description La de todos sus importes: la divisa base de la empresa al abrirlo. */
+            divisa: string;
         };
         /** @description Un almacén, tal como sale de la API. */
         AlmacenDto: {

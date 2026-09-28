@@ -84,21 +84,22 @@ internal sealed class ConfiguracionDeMovimientoStock : IEntityTypeConfiguration<
             .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
             .IsRequired();
 
-        // EL COSTE: DOS COLUMNAS, Y LA DIVISA ES UNA DE ELLAS (R6). Obligatorio, a diferencia del
-        // límite de crédito de un tercero: un movimiento sin coste no se puede valorar, y valorar
-        // existencias es la mitad de para qué existe el libro.
-        movimiento.ComplexProperty(fila => fila.CosteUnitario, coste =>
-        {
-            coste.IsRequired();
+        // LA DIVISA, UNA VEZ POR FILA, Y EL COSTE SIN LA SUYA (ADR-0046 §7). Todos los importes de
+        // una fila van en la misma divisa, y con una sola columna no se puede escribir una que las
+        // mezcle. Es `coste_unitario_divisa` renombrada: una columna nueva habría que rellenarla en
+        // las filas que ya están, y el libro no admite un `UPDATE`.
+        movimiento.Property(fila => fila.Divisa)
+            .HasMaxLength(3)
+            .IsRequired();
 
-            coste.Property(campo => campo.Cantidad)
-                .HasColumnName("coste_unitario_cantidad")
-                .HasPrecision(18, Importe.Decimales);
+        // El coste es anulable, porque una salida se valora al precio medio y no lo trae. El
+        // dominio lo ve como `Importe`, compuesto al leer con la divisa de la fila, así que esa
+        // propiedad se ignora y lo que se mapea es la privada que guarda la cantidad.
+        movimiento.Ignore(fila => fila.CosteUnitario);
 
-            coste.Property(campo => campo.Divisa)
-                .HasColumnName("coste_unitario_divisa")
-                .HasMaxLength(3);
-        });
+        movimiento.Property<decimal?>("CosteUnitarioSinDivisa")
+            .HasColumnName("coste_unitario")
+            .HasPrecision(18, Importe.Decimales);
 
         // Como TEXTO, igual que los demás enumerados del proyecto: un entero en la base obliga a
         // tener el código delante para leer una fila.

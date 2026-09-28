@@ -197,6 +197,7 @@ public sealed class LaParticionPorDefectoSeDenunciaTests(PostgresConTodosLosModu
             almacenId,
             fecha,
             "Ajuste de un mes que no tiene partición",
+            "EUR",
             momento);
 
         ajuste.AnadirLinea(
@@ -205,7 +206,7 @@ public sealed class LaParticionPorDefectoSeDenunciaTests(PostgresConTodosLosModu
             7m,
             Guid.CreateVersion7(),
             1m,
-            Importe.De(2m, "EUR"),
+            2m,
             momento);
 
         var evento = new AjusteConfirmado(ajuste.Id, empresaId, almacenId, fecha, ajuste.Lineas.Count);

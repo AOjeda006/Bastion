@@ -6219,10 +6219,94 @@ todavía no lo llama nadie: el cableado es la pieza siguiente.
   `LoQueImpideValorarTests`, nueve. `dotnet test tests/Inventario.UnitTests` pasa de **31** a
   **50**.
 
-**Lo que falta del 2.8**, en este orden: el cableado (la tabla de valoraciones, las tres sentencias,
-la divisa del documento, los códigos nuevos y los casos de carrera y de dos empresas); y el cierre,
-con las mutaciones sobre la línea que calcula y congela el precio medio y sobre la lectura bajo
-cerrojo.
+**2.8, tercera pieza: la divisa del documento y el coste que admite cada línea** (2026-09-28). Es
+el punto 7 del ADR-0046, con la parte del punto 8 que le toca. Va antes de la tabla de valoraciones
+porque la valoración suma importes, y para eso tiene que saber en qué divisa están.
+
+- **La divisa va en la cabecera del ajuste**, como en una factura. `Ajuste.Divisa` es la divisa base
+  de la empresa al abrirlo. `AbrirAjuste` se la pregunta a Organización por el puerto nuevo
+  `IConsultaDeEmpresas.DivisaBaseDeAsync`, y sin empresa contesta el mismo
+  `EmpresaActivaNoOperativa` de siempre. La línea deja de llevar divisa propia: `LineaDeAjusteDto`
+  pierde `Divisa`, y su coste pasa a `decimal?`.
+- **El coste solo lo lleva una línea que sube, y nunca es negativo.** Una salida con coste, o un
+  coste negativo, se rechaza con un `400` `ajuste-coste-no-valido`. `LineaDeAjuste.Crear` lanza por
+  lo mismo, así que ningún otro camino que abra un ajuste podrá escribir un coste que nadie usaría.
+  El coste se guarda a la escala del importe, redondeado alejándose del cero.
+- **El libro lleva una columna de divisa por fila**, `divisa`, y no una por importe.
+  `MovimientoStock.Registrar` recibe la divisa del documento y lanza si el coste viene en otra. El
+  coste, `coste_unitario`, puede faltar. En EF Core, `CosteUnitario` es un `Importe?` calculado, y
+  lo que se mapea es la propiedad privada `CosteUnitarioSinDivisa`. Con un campo de solo lectura no
+  se podía, porque `dotnet format` pide `readonly` (IDE0044) y EF Core no puede escribir en él.
+- **El inverso no copia el coste** (ADR-0046 §6): lo que compensa el valor será el importe del
+  original, que llega con el cableado. La divisa sí la hereda. La fila de la R2 y el glosario ya lo
+  dicen.
+- **La migración `ElAjusteLlevaSuDivisa` renombra, no recrea.** EF Core proponía borrar las columnas
+  del coste y crearlas de nuevo, y eso se llevaba el coste de cada fila del libro sin forma de
+  reescribirlo, porque el libro no admite un `UPDATE`. Así que está escrita a mano:
+  - la cabecera recibe la divisa de sus líneas, o el euro si no tiene líneas;
+  - `coste_unitario_cantidad` pasa a llamarse `coste_unitario` y admite nulos, en las líneas y en el
+    libro;
+  - `coste_unitario_divisa` pasa a llamarse `divisa` en el libro, y desaparece de la línea;
+  - las líneas en borrador que bajan pierden el coste, y las confirmadas lo conservan;
+  - el libro no recibe ni una sentencia de cambio sobre sus filas.
+- **La auditoría pierde dos entradas.** `LineaDeAjuste.CosteUnitario` y
+  `MovimientoStock.CosteUnitario` ya no son tipos complejos, así que salen de la lista de
+  `CadaEntidadDeclaraSuAuditoriaTests`. El coste de la línea y la divisa de la cabecera se auditan
+  con `SeAudita()`.
+- **Los casos nuevos:**
+  - `ElCosteYLaDivisaDelAjusteTests`, en el carril rápido, con cinco:
+    - el rechazo del dominio;
+    - la escala, donde 1,23465 se guarda como 1,2347 y el redondeo del banquero daría 1,2346;
+    - la divisa normalizada en cada fila del libro;
+    - una divisa sin forma de ISO 4217;
+    - y una fila que mezcla divisas.
+
+    `dotnet test tests/Inventario.UnitTests` pasa de **50** a **55**.
+  - `LaValoracionDelAjusteTests`, con dos, en el censo del carril de integración. Este fichero tiene
+    las semillas 500 a 519.
+    - `Una_salida_con_coste_o_un_coste_negativo_no_abren_el_borrador` usa maestros inventados,
+      porque el coste se mira antes que ellos.
+    - `El_borrador_toma_la_divisa_base_de_la_empresa` usa una empresa en dólares, porque con una en
+      euros también pasaría un `EUR` escrito a fuego.
+
+**Los rojos de la primera pasada, por nombre.** El carril de integración dio **3 rojos de 423**
+(`dotnet test Bastion.sln --no-build --filter "Category=Integracion"`; los nombres salen de su
+`.trx`). Ninguno era una regresión: los tres eran pruebas escritas contra el esquema de antes.
+
+| Rojo | Por qué | Arreglo |
+|---|---|---|
+| `LaDobleFlechaDelLibroTests.Ningun_ajuste_confirmado_se_queda_sin_una_sola_fila_del_libro` | su `INSERT` a pelo en `ajustes` no trae la `divisa`, y el `NOT NULL` salta con un `23502` | escribirla |
+| `LaDobleFlechaDeLaAnulacionTests.Ningun_anulado_se_queda_sin_exactamente_un_inverso` | lo mismo, y el `23502` llega antes que el `23505` que el caso espera | escribirla en sus dos `INSERT`; el segundo no llegó a ejecutarse |
+| `LaAnulacionConContraDocumentoTests.Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada` | saca las unidades copiando la entrada con la cantidad en negativo, y así copia también el coste: `ajuste-coste-no-valido` | `CosteUnitario = null` en la copia |
+
+**Lo que se ejecutó antes del commit**, todo en verde:
+
+- los tres rojos, solos: **3 de 3**;
+- `dotnet test tests/Api.IntegrationTests --no-build`, sin filtro: **436**. De esas,
+  **423** son del carril de integración y 13 son del censo;
+- `dotnet test tests/Organizacion.IntegrationTests --no-build`: **106**;
+- `dotnet test Bastion.sln --no-build --filter "Category!=Integracion"`:
+  - funcionales **189** y arquitectura **54**;
+  - `BuildingBlocks` **215**, Catálogo **78**, Identidad **61** e Inventario **55**;
+  - Organización **188** y Terceros **85**;
+- `bash scripts/comprobar-migraciones.sh`: Inventario tiene **7** migraciones y el modelo coincide;
+- `bash scripts/generar-openapi.sh --comprobar`: **130** operaciones, y `AjusteDto` gana `divisa`;
+- `bash scripts/generar-errores.sh --comprobar`: **121** tipos, de **127** sitios de llamada;
+- `npm --prefix frontend run api`, que en `esquema.ts` añade la `divisa`;
+- `lint`, `typecheck` y `CI=true npx vitest run`: **103** de **103** en **16** ficheros, con
+  `ajuste-coste-no-valido` en los dos diccionarios;
+- `dotnet format Bastion.sln --verify-no-changes --no-restore`.
+
+**Lo que falta del 2.8**, en este orden:
+
+- **el cableado:**
+  - la tabla de valoraciones;
+  - las tres sentencias (cerrojo, lectura y suma);
+  - los dos `422` nuevos;
+  - el valor y el precio medio en el libro;
+  - los casos de carrera y de dos empresas;
+- **el cierre:** las mutaciones sobre la línea que calcula y congela el precio medio y sobre la
+  lectura bajo cerrojo.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 

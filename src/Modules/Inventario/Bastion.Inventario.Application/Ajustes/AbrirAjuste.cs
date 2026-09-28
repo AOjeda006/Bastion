@@ -1,6 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
-using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -52,7 +51,7 @@ public interface IAbrirAjuste
 /// </remarks>
 /// <param name="usuarioActual">De dónde sale la empresa (R8).</param>
 /// <param name="ajustes">Dónde se apunta el documento.</param>
-/// <param name="empresas">Puerto de empresas.</param>
+/// <param name="empresas">Puerto de empresas: si está activa, y su divisa base.</param>
 /// <param name="almacenes">Puerto de almacenes (ítem 2.2).</param>
 /// <param name="series">Puerto de series (ítem 2.4).</param>
 /// <param name="ubicaciones">Puerto de ubicaciones (ítem 2.2).</param>
@@ -81,7 +80,11 @@ internal sealed class AbrirAjuste(
 
         Guid empresaId = usuarioActual.EmpresaId;
 
-        if (!await empresas.EstaActivaAsync(empresaId, cancelacion).ConfigureAwait(false))
+        // LA DIVISA DEL DOCUMENTO ES LA BASE DE LA EMPRESA (ADR-0046 §7), y la misma pregunta dice
+        // si está activa: nula es que no existe o está bloqueada.
+        string? divisa = await empresas.DivisaBaseDeAsync(empresaId, cancelacion).ConfigureAwait(false);
+
+        if (divisa is null)
         {
             return Resultado.Fallo<AjusteDto>(ErroresDeInquilinato.EmpresaActivaNoOperativa());
         }
@@ -89,6 +92,12 @@ internal sealed class AbrirAjuste(
         if (peticion.Lineas is null || peticion.Lineas.Count == 0)
         {
             return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.SinLineas(Guid.Empty));
+        }
+
+        if (peticion.Lineas.Any(linea =>
+            linea.CosteUnitario is { } coste && (linea.CantidadIntroducida < 0m || coste < 0m)))
+        {
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.CosteNoValido());
         }
 
         EstadoDeMaestro estadoDelAlmacen = await almacenes
@@ -128,6 +137,7 @@ internal sealed class AbrirAjuste(
             peticion.AlmacenId,
             peticion.FechaDeOperacion,
             peticion.Motivo,
+            divisa,
             momento);
 
         foreach (LineaDeAjusteDto linea in peticion.Lineas)
@@ -138,7 +148,7 @@ internal sealed class AbrirAjuste(
                 linea.CantidadIntroducida,
                 linea.UnidadIntroducidaId,
                 linea.FactorAUnidadBase,
-                Importe.De(linea.CosteUnitario, linea.Divisa),
+                linea.CosteUnitario,
                 momento);
         }
 

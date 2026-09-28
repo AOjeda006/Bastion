@@ -62,8 +62,8 @@ public sealed class ElLibroNoSePuedeLimpiarTests(PostgresConTodosLosModulos post
         PostgresException fallo = await ElLibro.ElMotorRechazaAsync(
             postgres,
             Sentencia(
-                "UPDATE inventario.movimiento_stock SET coste_unitario_cantidad = " +
-                "coste_unitario_cantidad + 1 WHERE documento_origen_id = '{0}'",
+                "UPDATE inventario.movimiento_stock SET coste_unitario = " +
+                "coste_unitario + 1 WHERE documento_origen_id = '{0}'",
                 confirmado));
 
         ElRechazoEsElDelLibro(fallo, "UPDATE");
@@ -100,7 +100,7 @@ public sealed class ElLibroNoSePuedeLimpiarTests(PostgresConTodosLosModulos post
             postgres,
             Sentencia(
                 "UPDATE inventario." + ElLibro.ParticionDe(confirmado.FechaDeOperacion) +
-                " SET coste_unitario_cantidad = coste_unitario_cantidad + 1 " +
+                " SET coste_unitario = coste_unitario + 1 " +
                 "WHERE documento_origen_id = '{0}'",
                 confirmado));
 

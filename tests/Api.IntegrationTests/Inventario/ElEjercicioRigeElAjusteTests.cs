@@ -794,7 +794,7 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
             almacen.Id,
             fecha,
             "Regularización de un recuento",
-            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m, "EUR")]);
+            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m)]);
 
         return (peticion, serie, ejercicio);
     }

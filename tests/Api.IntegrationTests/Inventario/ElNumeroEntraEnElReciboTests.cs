@@ -222,7 +222,7 @@ public sealed class ElNumeroEntraEnElReciboTests(PostgresConTodosLosModulos post
                 almacen.Id,
                 DateOnly.FromDateTime(DateTime.UtcNow),
                 "Regularización de un recuento",
-                [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m, "EUR")]),
+                [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m)]),
             CancellationToken.None);
 
         alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");

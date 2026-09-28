@@ -295,7 +295,7 @@ public sealed class ElCierreLePreguntaALosModulosTests(PostgresConTodosLosModulo
             almacen.Id,
             ElDiaDelDocumento,
             "Regularización de un recuento",
-            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m, "EUR")]);
+            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m)]);
 
         return (peticion, serie);
     }

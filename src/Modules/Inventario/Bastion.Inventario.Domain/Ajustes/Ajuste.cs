@@ -38,6 +38,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         Guid almacenId,
         DateOnly fechaDeOperacion,
         string motivo,
+        string divisa,
         DateTimeOffset momento)
         : base(EstadoDeAjuste.Borrador, momento)
     {
@@ -47,6 +48,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         AlmacenId = almacenId;
         FechaDeOperacion = fechaDeOperacion;
         Motivo = motivo;
+        Divisa = divisa;
     }
 
     /// <summary>Constructor de materialización para EF Core.</summary>
@@ -96,6 +98,14 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// <summary>Por qué se ajusta, escrito por quien lo hace.</summary>
     public string Motivo { get; private set; } = string.Empty;
 
+    /// <summary>La divisa de todos los importes del documento: la divisa base de la empresa.</summary>
+    /// <remarks>
+    /// <b>Va en la cabecera y no en cada línea</b>, como en una factura (ADR-0046 §7). Con una por
+    /// línea, un documento podría mezclar euros y dólares, y su valor no se sumaría sin un tipo de
+    /// cambio. Se pone al abrirlo, con la que la empresa tenga ese día, y no cambia.
+    /// </remarks>
+    public string Divisa { get; private set; } = string.Empty;
+
     /// <summary>El ajuste que este documento compensa, o <c>null</c> si no es un inverso.</summary>
     /// <remarks>
     /// <para>
@@ -134,6 +144,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// <param name="almacenId">Almacén contra el que se ajusta.</param>
     /// <param name="fechaDeOperacion">Día al que se imputa.</param>
     /// <param name="motivo">Por qué se ajusta.</param>
+    /// <param name="divisa">La divisa base de la empresa, en la que irán todos los importes.</param>
     /// <param name="momento">Ahora.</param>
     /// <returns>El ajuste en borrador, sin líneas ni número.</returns>
     public static Ajuste Abrir(
@@ -142,6 +153,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         Guid almacenId,
         DateOnly fechaDeOperacion,
         string motivo,
+        string divisa,
         DateTimeOffset momento)
     {
         if (empresaId == Guid.Empty)
@@ -180,7 +192,14 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         }
 
         return new Ajuste(
-            Guid.CreateVersion7(), empresaId, serieId, almacenId, fechaDeOperacion, limpio, momento);
+            Guid.CreateVersion7(),
+            empresaId,
+            serieId,
+            almacenId,
+            fechaDeOperacion,
+            limpio,
+            CatalogoDeDivisas.Normalizar(divisa),
+            momento);
     }
 
     /// <summary>Añade una línea. Solo en borrador.</summary>
@@ -189,7 +208,9 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// <param name="cantidadIntroducida">Cantidad con signo, tal como se escribió.</param>
     /// <param name="unidadIntroducidaId">Unidad en la que se escribió.</param>
     /// <param name="factorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
-    /// <param name="costeUnitario">Coste de una unidad base.</param>
+    /// <param name="costeUnitario">
+    /// Coste de una unidad base, en <see cref="Divisa"/>, o <c>null</c>. Solo en una línea que sube.
+    /// </param>
     /// <param name="momento">Ahora.</param>
     public void AnadirLinea(
         Guid ubicacionId,
@@ -197,7 +218,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         decimal cantidadIntroducida,
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
-        Importe costeUnitario,
+        decimal? costeUnitario,
         DateTimeOffset momento)
     {
         if (Estado != EstadoDeAjuste.Borrador)
@@ -288,7 +309,8 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 linea.CantidadIntroducida,
                 linea.UnidadIntroducidaId,
                 linea.FactorAUnidadBase,
-                linea.CosteUnitario,
+                Divisa,
+                linea.CosteUnitario is { } coste ? Importe.De(coste, Divisa) : null,
                 TipoDeDocumentoOrigen.Ajuste,
                 Id,
                 momento)),
@@ -308,9 +330,10 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// segundo sitio donde olvidarse.
     /// </para>
     /// <para>
-    /// <b>El coste se copia, no se recalcula.</b> El inverso compensa lo que el original escribió,
-    /// no lo que costaría hoy: recalcularlo dejaría el par sumando cero en cantidad y distinto de
-    /// cero en valor, y entonces anular movería el valor del almacén sin mover una sola unidad.
+    /// <b>El coste no se copia.</b> El inverso de una entrada es una salida, y una salida no lleva
+    /// coste, porque se valora al precio medio. Lo que el par necesita para sumar cero también en
+    /// valor es el importe exacto que escribió el original, y un coste por unidad no siempre lo
+    /// reproduce (ADR-0046 §6). La divisa sí se hereda: el par habla la misma.
     /// </para>
     /// <para>
     /// <b>La fecha entra por parámetro y no se hereda</b>, que es lo que decidió el ítem 2.5. Un
@@ -338,7 +361,8 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 "tiene su inverso (R2).");
         }
 
-        Ajuste inverso = Abrir(EmpresaId, SerieId, AlmacenId, fechaDeOperacion, motivo, momento);
+        Ajuste inverso = Abrir(
+            EmpresaId, SerieId, AlmacenId, fechaDeOperacion, motivo, Divisa, momento);
         inverso.AnulaAId = Id;
 
         foreach (LineaDeAjuste linea in _lineas)
@@ -349,7 +373,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 -linea.CantidadIntroducida,
                 linea.UnidadIntroducidaId,
                 linea.FactorAUnidadBase,
-                linea.CosteUnitario,
+                costeUnitario: null,
                 momento);
         }
 

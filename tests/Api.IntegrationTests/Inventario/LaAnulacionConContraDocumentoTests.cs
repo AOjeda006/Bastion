@@ -434,10 +434,12 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
         UnCaso caso = await UnAjusteConfirmadoAsync(493, "ANU-G", 494, 495);
 
         // LA PRIMERA LÍNEA DEL ORIGINAL ES UNA ENTRADA, y sus unidades salen enteras con otro
-        // documento de la misma serie, el 2. Anular el original sería sacarlas otra vez.
+        // documento de la misma serie, el 2. Anular el original sería sacarlas otra vez. La salida
+        // va sin coste, porque se valora al precio medio (ADR-0046 §7).
         LineaDeAjusteDto entrada = caso.Lineas[0];
 
-        await ConfirmarOtroAsync(caso, entrada with { CantidadIntroducida = -entrada.CantidadIntroducida }, 2);
+        await ConfirmarOtroAsync(
+            caso, entrada with { CantidadIntroducida = -entrada.CantidadIntroducida, CosteUnitario = null }, 2);
 
         long filasAntes = await FilasDelLibroAsync(caso);
 
@@ -638,8 +640,8 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
 
         LineaDeAjusteDto[] lineas =
         [
-            new(ubicacion.Id, unArticulo, 3m, unaUnidad, 12m, 1.50m, "EUR"),
-            new(ubicacion.Id, otroArticulo, -2.5m, otraUnidad, 1m, 4.20m, "EUR"),
+            new(ubicacion.Id, unArticulo, 3m, unaUnidad, 12m, 1.50m),
+            new(ubicacion.Id, otroArticulo, -2.5m, otraUnidad, 1m, null),
         ];
 
         Guid entradaPreviaId;

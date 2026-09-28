@@ -60,7 +60,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         decimal cantidadIntroducida,
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
-        Importe costeUnitario,
+        string divisa,
+        Importe? costeUnitario,
         TipoDeDocumentoOrigen documentoOrigenTipo,
         Guid documentoOrigenId,
         DateTimeOffset momento)
@@ -76,7 +77,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         UnidadIntroducidaId = unidadIntroducidaId;
         FactorAUnidadBase = factorAUnidadBase;
         CantidadEnUnidadBase = EnUnidadBase(cantidadIntroducida, factorAUnidadBase);
-        CosteUnitario = costeUnitario;
+        Divisa = divisa;
+        CosteUnitarioSinDivisa = costeUnitario?.Cantidad;
         DocumentoOrigenTipo = documentoOrigenTipo;
         DocumentoOrigenId = documentoOrigenId;
     }
@@ -138,8 +140,26 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// </remarks>
     public decimal FactorAUnidadBase { get; private set; }
 
-    /// <summary>Coste de una unidad base, con su divisa (R6).</summary>
-    public Importe CosteUnitario { get; private set; } = default!;
+    /// <summary>La divisa de todos los importes de la fila (R6).</summary>
+    /// <remarks>
+    /// <b>Una columna por fila, y no una por importe</b> como en el resto del proyecto: con una
+    /// sola no se puede escribir una fila que mezcle divisas. Y es la columna que el coste ya
+    /// tenía, renombrada, porque una nueva habría que rellenarla en las filas que ya están, y el
+    /// libro no admite un <c>UPDATE</c> (ADR-0046 §7).
+    /// </remarks>
+    public string Divisa { get; private set; } = string.Empty;
+
+    /// <summary>Coste de una unidad base, o <c>null</c> si la fila no lo trajo.</summary>
+    /// <remarks>
+    /// Lo trae una entrada con coste. Una salida no lo lleva, porque se valora al precio medio
+    /// (ADR-0046 §7), y las escritas antes del 2.8 lo llevan y se quedan como están. Se compone al
+    /// leer, con la divisa de la fila.
+    /// </remarks>
+    public Importe? CosteUnitario =>
+        CosteUnitarioSinDivisa is { } coste ? Importe.De(coste, Divisa) : null;
+
+    /// <summary>La columna del coste, sin divisa: lo que EF Core lee y escribe.</summary>
+    private decimal? CosteUnitarioSinDivisa { get; set; }
 
     /// <summary>Qué clase de documento lo escribió (R13).</summary>
     public TipoDeDocumentoOrigen DocumentoOrigenTipo { get; private set; }
@@ -186,7 +206,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// <param name="cantidadIntroducida">Cantidad tal como se escribió, con signo.</param>
     /// <param name="unidadIntroducidaId">Unidad en la que se escribió.</param>
     /// <param name="factorAUnidadBase">Factor hacia la unidad base del artículo.</param>
-    /// <param name="costeUnitario">Coste de una unidad base.</param>
+    /// <param name="divisa">La divisa de los importes de la fila.</param>
+    /// <param name="costeUnitario">Coste de una unidad base, en esa divisa, o <c>null</c>.</param>
     /// <param name="documentoOrigenTipo">Clase del documento que la escribe (R13).</param>
     /// <param name="documentoOrigenId">Identificador de ese documento (R13).</param>
     /// <param name="momento">Ahora, de quien tenga el <c>TimeProvider</c>.</param>
@@ -194,6 +215,7 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// <exception cref="ArgumentOutOfRangeException">
     /// El factor no es positivo, o la cantidad —introducida o en base— es cero.
     /// </exception>
+    /// <exception cref="ArgumentException">El coste va en otra divisa que la fila.</exception>
     public static MovimientoStock Registrar(
         Guid empresaId,
         DateOnly fechaDeOperacion,
@@ -203,12 +225,23 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         decimal cantidadIntroducida,
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
-        Importe costeUnitario,
+        string divisa,
+        Importe? costeUnitario,
         TipoDeDocumentoOrigen documentoOrigenTipo,
         Guid documentoOrigenId,
         DateTimeOffset momento)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(factorAUnidadBase);
+
+        string laDeLaFila = CatalogoDeDivisas.Normalizar(divisa);
+
+        if (costeUnitario is not null && costeUnitario.Divisa != laDeLaFila)
+        {
+            throw new ArgumentException(
+                $"El coste va en {costeUnitario.Divisa} y la fila en {laDeLaFila}: todos los " +
+                "importes de una fila van en su divisa (R6).",
+                nameof(costeUnitario));
+        }
 
         if (cantidadIntroducida == 0m)
         {
@@ -235,6 +268,7 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
             cantidadIntroducida,
             unidadIntroducidaId,
             factorAUnidadBase,
+            laDeLaFila,
             costeUnitario,
             documentoOrigenTipo,
             documentoOrigenId,

@@ -114,5 +114,6 @@ public sealed class ElMotivoDeUnAjusteEsObligatorioTests
             almacenId ?? Guid.CreateVersion7(),
             new DateOnly(2026, 3, 14),
             motivo,
+            "EUR",
             s_momento);
 }

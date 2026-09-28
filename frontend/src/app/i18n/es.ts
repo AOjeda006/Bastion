@@ -99,6 +99,9 @@ export const es = {
       'ajuste-con-fecha-futura':
         'La fecha de ese ajuste es posterior a hoy: el libro solo recoge lo que ya ha pasado. ' +
         'Confírmalo ese día o corrige la fecha.',
+      'ajuste-coste-no-valido':
+        'Una línea que saca existencias no lleva coste: se valora al precio medio. Y ningún ' +
+        'coste puede ser negativo; una muestra o un regalo entran a cero.',
       'ajuste-en-ejercicio-cerrado':
         'La fecha de ese ajuste cae en un ejercicio cerrado: ese periodo ya es definitivo y no ' +
         'admite documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',

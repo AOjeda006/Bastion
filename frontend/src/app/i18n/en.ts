@@ -75,6 +75,9 @@ export const en: Diccionario = {
       'ajuste-con-fecha-futura':
         'That adjustment is dated after today: the ledger only records what has already ' +
         'happened. Confirm it on that day or fix the date.',
+      'ajuste-coste-no-valido':
+        'A line that takes stock out carries no cost: it is valued at the average cost. And no ' +
+        'cost can be negative; a sample or a gift comes in at zero.',
       'ajuste-en-ejercicio-cerrado':
         'That adjustment is dated inside a closed financial year: the period is already final ' +
         'and takes no new documents. Change the date or ask for the year to be reopened.',

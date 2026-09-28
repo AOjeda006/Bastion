@@ -6,6 +6,7 @@
     { "codigo": "ajuste-articulo-no-encontrado", "type": "/errors/ajuste-articulo-no-encontrado", "clase": "Validacion" },
     { "codigo": "ajuste-articulo-no-se-almacena", "type": "/errors/ajuste-articulo-no-se-almacena", "clase": "Conflicto" },
     { "codigo": "ajuste-con-fecha-futura", "type": "/errors/ajuste-con-fecha-futura", "clase": "Conflicto" },
+    { "codigo": "ajuste-coste-no-valido", "type": "/errors/ajuste-coste-no-valido", "clase": "Validacion" },
     { "codigo": "ajuste-en-ejercicio-cerrado", "type": "/errors/ajuste-en-ejercicio-cerrado", "clase": "Conflicto" },
     { "codigo": "ajuste-motivo-no-valido", "type": "/errors/ajuste-motivo-no-valido", "clase": "Validacion" },
     { "codigo": "ajuste-no-encontrado", "type": "/errors/ajuste-no-encontrado", "clase": "NoEncontrado" },

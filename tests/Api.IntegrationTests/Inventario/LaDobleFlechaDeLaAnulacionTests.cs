@@ -148,9 +148,9 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
         string segundoInverso = Consulta(
             """
             INSERT INTO inventario.ajustes
-                (id, empresa_id, almacen_id, fecha_de_operacion, motivo, creado_en,
+                (id, empresa_id, almacen_id, fecha_de_operacion, motivo, divisa, creado_en,
                  modificado_en, estado, anula_a_id)
-            VALUES ('{1}', '{0}', '{2}', current_date, 'Segundo inverso del mismo',
+            VALUES ('{1}', '{0}', '{2}', current_date, 'Segundo inverso del mismo', 'EUR',
                     now(), now(), 'Confirmado', '{3}')
             """,
             original.EmpresaId,
@@ -216,9 +216,9 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
                 Consulta(
                     """
                     INSERT INTO inventario.ajustes
-                        (id, empresa_id, almacen_id, fecha_de_operacion, motivo, creado_en,
+                        (id, empresa_id, almacen_id, fecha_de_operacion, motivo, divisa, creado_en,
                          modificado_en, estado)
-                    VALUES ('{1}', '{0}', '{2}', current_date, 'Anulado sin nada que lo compense',
+                    VALUES ('{1}', '{0}', '{2}', current_date, 'Anulado sin nada que lo compense', 'EUR',
                             now(), now(), 'Anulado')
                     """,
                     original.EmpresaId,

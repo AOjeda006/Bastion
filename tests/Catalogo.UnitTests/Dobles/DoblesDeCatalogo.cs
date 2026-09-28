@@ -30,7 +30,7 @@ internal sealed class UsuarioDe(Guid empresaId) : IUsuarioActual
 
 /// <summary>Una empresa que contesta lo que se le diga que conteste.</summary>
 /// <remarks>
-/// Las otras dos preguntas del puerto lanzan a propósito en vez de devolver algo inofensivo: si
+/// Las otras tres preguntas del puerto lanzan a propósito en vez de devolver algo inofensivo: si
 /// un caso de uso de Catálogo empezara a usarlas, este doble tiene que decirlo en vez de fingir
 /// una respuesta que nadie ha decidido.
 /// </remarks>
@@ -38,6 +38,9 @@ internal sealed class EmpresasQueContestan(bool activa) : IConsultaDeEmpresas
 {
     public Task<bool> EstaActivaAsync(Guid empresaId, CancellationToken cancelacion) =>
         Task.FromResult(activa);
+
+    public Task<string?> DivisaBaseDeAsync(Guid empresaId, CancellationToken cancelacion) =>
+        throw new NotSupportedException("Catálogo no guarda importes en la divisa de la empresa.");
 
     public Task<Guid?> PrimeraActivaAsync(CancellationToken cancelacion) =>
         throw new NotSupportedException("Catálogo no elige empresa: la recibe en el claim.");

@@ -353,6 +353,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         Guid.CreateVersion7(),
         new DateOnly(2026, 3, 14),
         "Recuento de marzo",
+        "EUR",
         s_momento);
 
     private static void ConLinea(Ajuste ajuste, decimal cantidad, decimal factor) =>
@@ -362,7 +363,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
             cantidad,
             Guid.CreateVersion7(),
             factor,
-            Importe.De(2.50m, "EUR"),
+            cantidad > 0m ? 2.50m : null,
             s_momento);
 
     private static AjusteConfirmado Confirmado(Ajuste ajuste) => new(

@@ -102,6 +102,7 @@ internal static class ElLibro
             almacenId,
             fechaDeOperacion,
             "Recuento de prueba del carril",
+            "EUR",
             momento);
 
         for (int numero = 1; numero <= lineas; numero++)
@@ -112,7 +113,7 @@ internal static class ElLibro
                 numero,
                 Guid.CreateVersion7(),
                 1.5m,
-                Importe.De(3.25m, "EUR"),
+                3.25m,
                 momento);
         }
 

@@ -16,7 +16,8 @@ internal static class Mapeos
         ajuste.Motivo,
         ajuste.Estado.ToString(),
         ajuste.Lineas.Count,
-        ajuste.AnulaAId);
+        ajuste.AnulaAId,
+        ajuste.Divisa);
 
     /// <summary>Una fila del libro, con el estado de su almacén resuelto por el puerto.</summary>
     /// <param name="movimiento">La fila.</param>
@@ -35,8 +36,8 @@ internal static class Mapeos
         movimiento.CantidadIntroducida,
         movimiento.UnidadIntroducidaId,
         movimiento.FactorAUnidadBase,
-        movimiento.CosteUnitario.Cantidad,
-        movimiento.CosteUnitario.Divisa,
+        movimiento.CosteUnitario?.Cantidad,
+        movimiento.Divisa,
         movimiento.DocumentoOrigenTipo.ToString(),
         movimiento.DocumentoOrigenId);
 }

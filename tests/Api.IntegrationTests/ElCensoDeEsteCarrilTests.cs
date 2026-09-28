@@ -444,6 +444,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaTrazaVaEnLaMismaTransaccionTests.Un_guardado_que_revienta_no_deja_ni_la_fila_ni_su_traza",
         "LaTrazaVaEnLaMismaTransaccionTests.Y_uno_que_va_bien_deja_las_dos_cosas",
 
+        "LaValoracionDelAjusteTests.El_borrador_toma_la_divisa_base_de_la_empresa",
+        "LaValoracionDelAjusteTests.Una_salida_con_coste_o_un_coste_negativo_no_abren_el_borrador",
+
         "LaVersionViajaDeLaLecturaALaEscrituraTests.De_dos_que_leyeron_lo_mismo_solo_guarda_el_primero",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.La_etiqueta_que_emite_la_lectura_es_la_que_acepta_la_escritura",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.La_version_cambia_cuando_el_recurso_cambia",

@@ -85,6 +85,7 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
             1m,
             Guid.CreateVersion7(),
             1m,
+            "EUR",
             Importe.De(1m, "EUR"),
             TipoDeDocumentoOrigen.Ajuste,
             documentoQueNoExiste,
@@ -158,9 +159,9 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
             Consulta(
                 """
                 INSERT INTO inventario.ajustes
-                    (id, empresa_id, almacen_id, fecha_de_operacion, motivo, creado_en,
+                    (id, empresa_id, almacen_id, fecha_de_operacion, motivo, divisa, creado_en,
                      modificado_en, estado)
-                VALUES ('{1}', '{0}', '{2}', current_date, 'Confirmado sin mover el libro',
+                VALUES ('{1}', '{0}', '{2}', current_date, 'Confirmado sin mover el libro', 'EUR',
                         now(), now(), 'Confirmado')
                 """,
                 confirmado.EmpresaId,

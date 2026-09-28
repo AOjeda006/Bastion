@@ -13110,7 +13110,8 @@
           "motivo",
           "estado",
           "lineas",
-          "anulaAId"
+          "anulaAId",
+          "divisa"
         ],
         "type": "object",
         "properties": {
@@ -13168,6 +13169,10 @@
             ],
             "description": "El ajuste que este compensa, o `null` si no es un inverso.",
             "format": "uuid"
+          },
+          "divisa": {
+            "type": "string",
+            "description": "La de todos sus importes: la divisa base de la empresa al abrirlo."
           }
         },
         "description": "Un ajuste, como se enseña."

@@ -42,13 +42,13 @@ public sealed class ElInversoQueAnulaTests
 
     private static readonly DateOnly s_diaDeLaAnulacion = new(2026, 4, 2);
 
-    /// <summary>El inverso copia cada línea con la cantidad cambiada de signo y el mismo coste.</summary>
+    /// <summary>El inverso copia cada línea con la cantidad cambiada de signo, y sin coste.</summary>
     /// <remarks>
     /// <para>
-    /// <b>El coste se copia y no se recalcula</b>, y eso se afirma línea a línea. El inverso
-    /// compensa lo que el original escribió, no lo que costaría hoy: con un coste nuevo, el par
-    /// sumaría cero en unidades y distinto de cero en valor, y anular movería el valor del
-    /// almacén sin mover una sola unidad.
+    /// <b>El coste no se copia</b>, y eso se afirma línea a línea, también en la que lo tenía. El
+    /// inverso de una entrada es una salida, que no lleva coste, y lo que hace sumar cero al par en
+    /// valor es el importe exacto del original, no un coste por unidad (ADR-0046 §6). Hasta el 2.8
+    /// el coste se copiaba, y el caso afirmaba lo contrario.
     /// </para>
     /// <para>
     /// <b>Y se afirma que hay líneas que mirar antes de mirarlas</b> (ADR-0020): sobre un inverso
@@ -65,10 +65,14 @@ public sealed class ElInversoQueAnulaTests
         inverso.Lineas.Count.ShouldBe(
             2, "el inverso tiene una línea por línea del original, ni una más ni una menos");
 
+        original.Lineas.ShouldContain(
+            linea => linea.CosteUnitario != null,
+            "sin una línea con coste en el original, que el inverso no lo lleve no diría nada");
+
         foreach ((LineaDeAjuste suya, LineaDeAjuste mia) in original.Lineas.Zip(inverso.Lineas))
         {
             mia.CantidadIntroducida.ShouldBe(-suya.CantidadIntroducida);
-            mia.CosteUnitario.ShouldBe(suya.CosteUnitario);
+            mia.CosteUnitario.ShouldBeNull("el inverso no copia el coste, ni el de la línea que lo tenía");
             mia.ArticuloId.ShouldBe(suya.ArticuloId);
             mia.UbicacionId.ShouldBe(suya.UbicacionId);
             mia.UnidadIntroducidaId.ShouldBe(suya.UnidadIntroducidaId);
@@ -291,6 +295,7 @@ public sealed class ElInversoQueAnulaTests
             Guid.CreateVersion7(),
             s_diaDelOriginal,
             "Recuento de marzo",
+            "EUR",
             s_momento);
 
         ConLinea(ajuste, cantidad: 3m, factor: 12m);
@@ -306,7 +311,7 @@ public sealed class ElInversoQueAnulaTests
             cantidad,
             Guid.CreateVersion7(),
             factor,
-            Importe.De(2.50m, "EUR"),
+            cantidad > 0m ? 2.50m : null,
             s_momento);
 
     private static AjusteConfirmado Confirmado(Ajuste ajuste) => new(

@@ -33,22 +33,27 @@ public sealed record AbrirAjusteDto(
 /// dominio a partir de estas dos y ningún camino permite enviarla. Está anotado como pregunta
 /// abierta del cierre de fase en <c>docs/PLAN.md</c>.
 /// </para>
+/// <para>
+/// <b>No lleva divisa</b>: la del documento es la divisa base de la empresa, y la pone el servidor
+/// al abrirlo (ADR-0046 §7). Con una por línea, un documento podría mezclarlas.
+/// </para>
 /// </remarks>
 /// <param name="UbicacionId">Hueco del almacén.</param>
 /// <param name="ArticuloId">Artículo que se mueve.</param>
 /// <param name="CantidadIntroducida">Cantidad con signo, tal como se escribe.</param>
 /// <param name="UnidadIntroducidaId">Unidad en la que se escribe.</param>
 /// <param name="FactorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
-/// <param name="CosteUnitario">Coste de una unidad base.</param>
-/// <param name="Divisa">Código ISO-4217 del coste (R6).</param>
+/// <param name="CosteUnitario">
+/// Coste de una unidad base, en la divisa base de la empresa, o nada. Solo lo lleva una línea que
+/// sube, y nunca negativo: si no, <c>ajuste-coste-no-valido</c>.
+/// </param>
 public sealed record LineaDeAjusteDto(
     Guid UbicacionId,
     Guid ArticuloId,
     decimal CantidadIntroducida,
     Guid UnidadIntroducidaId,
     decimal FactorAUnidadBase,
-    decimal CosteUnitario,
-    string Divisa);
+    decimal? CosteUnitario);
 
 /// <summary>Un ajuste, como se enseña.</summary>
 /// <remarks>
@@ -65,6 +70,7 @@ public sealed record LineaDeAjusteDto(
 /// <param name="Estado">En qué punto de su vida está.</param>
 /// <param name="Lineas">Cuántas líneas tiene.</param>
 /// <param name="AnulaAId">El ajuste que este compensa, o <c>null</c> si no es un inverso.</param>
+/// <param name="Divisa">La de todos sus importes: la divisa base de la empresa al abrirlo.</param>
 public sealed record AjusteDto(
     Guid Id,
     Guid SerieId,
@@ -74,7 +80,8 @@ public sealed record AjusteDto(
     string Motivo,
     string Estado,
     int Lineas,
-    Guid? AnulaAId);
+    Guid? AnulaAId,
+    string Divisa);
 
 /// <summary>Lo que hace falta para anular un ajuste confirmado.</summary>
 /// <remarks>
@@ -120,8 +127,8 @@ public sealed record AnulacionDto(AjusteDto Original, AjusteDto Inverso);
 /// <param name="CantidadIntroducida">Cantidad tal como se escribió.</param>
 /// <param name="UnidadIntroducidaId">Unidad en la que se escribió.</param>
 /// <param name="FactorAUnidadBase">El puente entre las dos.</param>
-/// <param name="CosteUnitario">Coste de una unidad base.</param>
-/// <param name="Divisa">Código ISO-4217 del coste (R6).</param>
+/// <param name="CosteUnitario">Coste de una unidad base, o nada si la fila no lo trajo.</param>
+/// <param name="Divisa">Código ISO-4217 de todos los importes de la fila (R6).</param>
 /// <param name="DocumentoOrigenTipo">Qué clase de documento la escribió (R13).</param>
 /// <param name="DocumentoOrigenId">Cuál (R13).</param>
 public sealed record MovimientoDto(
@@ -135,7 +142,7 @@ public sealed record MovimientoDto(
     decimal CantidadIntroducida,
     Guid UnidadIntroducidaId,
     decimal FactorAUnidadBase,
-    decimal CosteUnitario,
+    decimal? CosteUnitario,
     string Divisa,
     string DocumentoOrigenTipo,
     Guid DocumentoOrigenId);

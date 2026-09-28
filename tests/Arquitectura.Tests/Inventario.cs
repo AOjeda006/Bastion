@@ -519,8 +519,9 @@ internal static class Inventario
                 "quién se ha negado.",
 
             ["Bastion.Organizacion.Contracts.Empresas.IConsultaDeEmpresas"] =
-                "LECTURA: Identidad le pregunta a Organización si una empresa existe y no está " +
-                "bloqueada, para poder emitir un testigo con ella dentro. No escribe.",
+                "LECTURA: si una empresa existe y no está bloqueada —Identidad, para poder " +
+                "emitir un testigo con ella dentro— y cuál es su divisa base —Inventario, que " +
+                "lleva en ella los importes de sus documentos (ADR-0046 §7)—. No escribe.",
 
             ["Bastion.Organizacion.Contracts.Impuestos.IConsultaDeImpuestos"] =
                 "LECTURA: en qué estado está un tramo de impuesto para una fecha de devengo, " +

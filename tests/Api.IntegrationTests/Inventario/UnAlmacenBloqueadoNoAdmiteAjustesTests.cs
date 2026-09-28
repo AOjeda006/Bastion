@@ -126,7 +126,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
             almacen.Id,
             DateOnly.FromDateTime(DateTime.UtcNow),
             "Regularización de un recuento",
-            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m, "EUR")]);
+            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m)]);
 
         Guid ajusteId;
 
@@ -273,7 +273,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
         DateOnly.FromDateTime(DateTime.UtcNow),
         "Ajuste que no debería llegar a mirar sus líneas",
         [new LineaDeAjusteDto(
-            Guid.CreateVersion7(), Guid.CreateVersion7(), 1m, Guid.CreateVersion7(), 1m, 1m, "EUR")]);
+            Guid.CreateVersion7(), Guid.CreateVersion7(), 1m, Guid.CreateVersion7(), 1m, 1m)]);
 
     /// <summary>
     /// El módulo de Inventario cableado a mano, con los adaptadores de verdad y contra la base.
