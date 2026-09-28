@@ -5287,15 +5287,13 @@ decimal que una salida puede mover.
 
 ### Tomadas por el agente de desarrollo — ítem 2.8, al escribir su código (2026-09-28)
 
-12. **El coste de una línea es por la unidad en que se escribió, y no por la unidad base.** Quien
-    escribe «3 cajas a 18 €» ha escrito el precio de una caja: la entrada suma `18 × 3`, redondeado
-    una vez en `PrecioUnitario.Por`, y el precio medio que deja es por unidad base (54 € en 36
-    unidades, 1,50). Nada lo había fijado: los documentos no lo decían y todos los casos tenían
-    factor uno. Se decide por el glosario, que pone el coste junto a «la cantidad tal como se
-    escribió, la unidad en la que se escribió». Y se puede deshacer mientras no haya datos de
-    verdad. En el dominio lo lleva `CosteDeEntrada`, con el coste y sus unidades al lado. Pasarlo a
-    unidad base antes de multiplicar serían dos redondeos, donde la R6 admite uno. **El caso:**
-    `LosCasosDoradosDelPrecioMedioTests.Una_entrada_en_cajas_vale_su_coste_por_las_cajas_y_su_medio_es_por_unidad_base`.
+12. **El coste de una línea es por unidad base, como dice el contrato desde el 2.3.** El `param` de
+    `LineaDeAjusteDto.CosteUnitario`, que publica el OpenAPI, y los de `LineaDeAjuste` y
+    `MovimientoStock` dicen «coste de una unidad base». Así, la entrada suma `c.Por(q)` con `q` en
+    unidad base, y el precio medio sale en la misma unidad que el coste. **Una corrección, dicha:**
+    el commit `0f859c2` lo decidió al revés, por la unidad introducida, creyendo que nada lo había
+    fijado. No miró el contrato, y lo deshace `git revert`, no una reescritura. Cambiar la unidad
+    de un campo publicado es cambiar el contrato, y eso no se hace de paso dentro de un ítem.
 13. **El coste sigue siendo un `Importe` de escala 4**, como pide el criterio, y no pasa a la escala
     6 de `PrecioUnitario`. La valoración lo recibe como `PrecioUnitario`, y la conversión es exacta
     porque cuatro decimales caben en seis. Cambiar la escala de la columna reescribiría el libro

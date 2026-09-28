@@ -13,9 +13,8 @@ namespace Bastion.Inventario.Domain.Valoraciones;
 /// </para>
 /// <para>
 /// <b>Una línea que baja no lleva coste</b>, porque su valor es el precio medio, y un coste escrito
-/// ahí no se usaría. Tampoco lo lleva negativo, y eso ya lo impide <see cref="CosteDeEntrada"/>. Las
-/// dos cosas las rechaza el borde con <c>ajuste-coste-no-valido</c>, así que aquí llegan como
-/// defecto de quien llama.
+/// ahí no se usaría. Tampoco lo lleva negativo. Las dos cosas las rechaza el borde con
+/// <c>ajuste-coste-no-valido</c>, así que aquí llegan como defecto de quien llama.
 /// </para>
 /// <para>
 /// <b><see cref="ValorQueCompensa"/> es lo que trae el inverso</b> (ADR-0046 §6): el valor de la
@@ -28,12 +27,12 @@ public sealed record LineaAValorar
     /// <summary>Una línea con su clave, su cantidad y lo que dice su valor, si dice algo.</summary>
     /// <param name="clave">El artículo y el almacén.</param>
     /// <param name="cantidad">La cantidad en unidad base, con signo y distinta de cero.</param>
-    /// <param name="coste">El coste de una línea que sube, si lo trae.</param>
+    /// <param name="coste">El coste por unidad base de una línea que sube, si lo trae.</param>
     /// <param name="valorQueCompensa">El valor exacto que compensa, si es la línea de un inverso.</param>
     public LineaAValorar(
         ClaveDeValoracion clave,
         decimal cantidad,
-        CosteDeEntrada? coste = null,
+        PrecioUnitario? coste = null,
         Importe? valorQueCompensa = null)
     {
         if (cantidad == 0m)
@@ -42,11 +41,11 @@ public sealed record LineaAValorar
                 nameof(cantidad), "una línea que no mueve nada no tiene nada que valorar");
         }
 
-        if (coste is not null && cantidad < 0m)
+        if (coste is not null && (cantidad < 0m || coste.Cantidad < 0m))
         {
             throw new ArgumentException(
-                "Solo una línea que sube lleva coste: la que baja se valora al precio medio " +
-                "(ADR-0046 §7).",
+                "Solo una línea que sube lleva coste, y no negativo: la que baja se valora al " +
+                "precio medio (ADR-0046 §7).",
                 nameof(coste));
         }
 
@@ -80,8 +79,8 @@ public sealed record LineaAValorar
     /// <summary>La cantidad en unidad base, con signo.</summary>
     public decimal Cantidad { get; }
 
-    /// <summary>El coste, solo en una línea que sube.</summary>
-    public CosteDeEntrada? Coste { get; }
+    /// <summary>El coste por unidad base, solo en una línea que sube.</summary>
+    public PrecioUnitario? Coste { get; }
 
     /// <summary>El valor exacto que compensa la línea de un inverso, con el signo de la cantidad.</summary>
     public Importe? ValorQueCompensa { get; }

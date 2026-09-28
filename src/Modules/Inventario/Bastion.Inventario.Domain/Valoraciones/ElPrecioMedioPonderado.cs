@@ -10,8 +10,7 @@ namespace Bastion.Inventario.Domain.Valoraciones;
 /// <b>Cada fila, con <c>p</c> el precio medio de antes y <c>V</c> el valor de antes:</b>
 /// </para>
 /// <list type="bullet">
-/// <item>una entrada con coste <c>c</c> suma <c>c.Por(q)</c>, con <c>q</c> la cantidad tal como
-/// se escribió (<see cref="CosteDeEntrada"/>), y congela el precio de después;</item>
+/// <item>una entrada con coste <c>c</c> suma <c>c.Por(q)</c>, y congela el precio de después;</item>
 /// <item>una entrada sin coste suma <c>p.Por(q)</c>, y sin <c>p</c> no se puede valorar;</item>
 /// <item>una salida resta <c>min(p.Por(q), V)</c>, o <c>V</c> entero si vacía la clave, y congela
 /// <c>p</c>;</item>
@@ -88,7 +87,7 @@ public sealed class ElPrecioMedioPonderado : IValoracionDeExistencias
         {
             ArgumentNullException.ThrowIfNull(linea, nameof(lineas));
 
-            if ((linea.Coste is { } coste && coste.PorUnidad.Divisa != laDelDocumento)
+            if ((linea.Coste is { } coste && coste.Divisa != laDelDocumento)
                 || (linea.ValorQueCompensa is { } compensa && compensa.Divisa != laDelDocumento))
             {
                 throw new ArgumentException(
@@ -142,7 +141,7 @@ public sealed class ElPrecioMedioPonderado : IValoracionDeExistencias
 
             if (linea.Cantidad > 0m)
             {
-                Importe? suma = linea.ValorQueCompensa ?? linea.Coste?.Valor ?? antes?.Por(linea.Cantidad);
+                Importe? suma = linea.ValorQueCompensa ?? linea.Coste?.Por(linea.Cantidad) ?? antes?.Por(linea.Cantidad);
 
                 if (suma is null)
                 {
