@@ -5103,6 +5103,102 @@ Son reversibles, y el porqué largo está en el **ADR-0044**.
 - **Las semillas**: 440 a 458 para los casos, y 460 a 485 para la propiedad (empresas 460 a 465,
   instalaciones +10 y +20).
 
+### Traídas por el encargo del 2026-09-28 — entre el cierre del 2.7 y la apertura del 2.8
+
+El usuario lo trae tras verificar el 2.7. Confirmó al empezar que se ejecuta entero y en modo
+`commit+push`. Tiene **dos partes, en este orden**: cinco cosas pequeñas del 2.7, cada una en su
+commit, y el 2.8. Nada de esto es un decimoquinto ítem. Está aquí para que sobreviva a un `/compact`.
+
+#### Las cinco cosas pequeñas (epílogo del 2.7)
+
+1. **La imagen del *runner***, leída del registro por el usuario, porque a este agente la API le
+   contesta 403: `ubuntu-24.04`, versión `20260920.314.1`, Ubuntu 24.04.5 LTS, *runner* 2.337.0. Se
+   anota donde `ca4ee82` dijo que no se había medido.
+2. **`npm audit`.** `npm ci` avisa en cada run de 4 vulnerabilidades (2 altas) y de que
+   `eslint@9.39.5` ya no tiene soporte. Se pasa en local y se separa lo que llega al navegador de lo
+   que es solo herramienta. Se decide y se escribe si la CI debe fallar con `npm audit --omit=dev
+   --audit-level=high`. **Nada de `--force`**, y la subida de ESLint va en su propio commit.
+3. **La fila de la R10** dice todavía «documentos no hay», y hay dos acciones que exigen la clave y
+   una que crea un documento, el inverso. Se reescribe cláusula por cláusula, diciendo que **el alta
+   del borrador aún no tiene puerta**.
+4. **Los dos casos vistos solo en verde, a rojo.**
+   - Disponible: la mutación va en la base y no en el modelo, `ALTER TABLE … ALTER COLUMN
+     disponible SET EXPRESSION AS (fisico)` dentro de una transacción que se deshace. Es de
+     PostgreSQL 17, y hay que comprobarlo.
+   - La anotación: se quita cada comprobación, que es la clase de la 27.
+5. **El cerrojo del recálculo es de toda la tabla** y bloquea a todas las empresas: recalcular A
+   congela las confirmaciones de B.
+   - En el ADR-0044 se corrige la frase del «modo más débil», porque el problema es el alcance.
+   - Al criterio del **2.14** se añade un cerrojo por empresa: `pg_advisory_xact_lock_shared(clave,
+     empresa)` al anotar y `pg_advisory_xact_lock(clave, empresa)` al recalcular, con un caso de dos
+     empresas y dos transacciones que demuestre que B no espera.
+   - La fila del corte no vale, porque puede no existir.
+
+#### El 2.8: cinco decisiones antes de escribir
+
+Las toma el agente, y cada una se escribe con su motivo antes del código.
+
+1. **La R2 choca con «el stock negativo se rechaza».** Anular una entrada cuyas unidades ya
+   salieron crea un inverso que es una salida y deja el stock negativo. Hay dos salidas:
+   - se rechaza esa anulación, y entonces el «anular siempre se puede» de la R2 tiene una excepción,
+     que se escribe en su fila;
+   - o se admite, y entonces la tiene el rechazo del negativo.
+
+   Se decide, se escribe y se pone un caso con esa secuencia.
+2. **El PMP obliga a leer, y el 2.7 prometió no leer.** Para congelar el PMP en una fila del libro
+   hay que conocer el saldo y el valor antes de insertarla. Y la fila no se corrige después, porque
+   el libro es de solo añadido: dos entradas simultáneas que lean sin cerrojo congelan el mismo PMP
+   de partida. Hay dos caminos:
+   - el cálculo entra en la sentencia SQL, sobre la fila bloqueada;
+   - o hay una lectura `FOR UPDATE`, con las claves en orden, antes de escribir.
+
+   **Lo que no vale es leer sin cerrojo.** Hace falta un caso con dos entradas simultáneas del mismo
+   artículo.
+3. **La clave de valoración no es la de la existencia.** La existencia va por ubicación y lote, y
+   mover entre estanterías no puede cambiar el valor. El PMP es por empresa y artículo, o por
+   empresa, artículo y almacén. Se decide con su motivo, porque es tan difícil de deshacer como las
+   cinco del ADR-0007, y de ella depende qué valor viaja con la transferencia del 2.11.
+4. **El negativo lo rechaza el motor**, no una comprobación previa, que dos salidas simultáneas se
+   saltarían.
+   - Si es por fila de existencia: `CHECK (fisico >= 0)`, traducido por su nombre como ya se hace
+     con el índice.
+   - Si es por artículo y almacén, un `CHECK` no llega, y hay que decir qué lo sostiene.
+
+   Hace falta un caso con dos salidas simultáneas.
+5. **Se guarda el valor total y se deduce el PMP, no al revés.** Con el PMP redondeado y el valor
+   recalculado como PMP × cantidad, el valor se desvía un poco en cada movimiento. La salida congela
+   el PMP con la escala de `PrecioUnitario`, y resta de la valoración exactamente el importe
+   redondeado de su fila (R6). La propiedad y el cuadre se extienden al valor: **la valoración es la
+   suma del valor de las filas del libro**.
+
+**El resto, como está escrito:**
+
+- el PMP se recalcula en cada entrada y se guarda en el movimiento;
+- una salida congela el vigente en su fila, así que valorar el pasado no exige reproducir la
+  historia;
+- el stock negativo se rechaza;
+- y lo que diga el criterio completo de la casilla.
+
+#### Tres preguntas que se dejan escritas para el cierre de la fase, sin decidirlas
+
+- **La baja del artículo**, que es la nota del 2.2.
+- **Si algún ítem hasta el 2.14 trae el alta, el listado y la ficha del ajuste, y la lectura de
+  existencias.** El controlador dice que van con sus pantallas, y el frontal no tiene inventario.
+- **«Hoy» en UTC**, que hoy rechaza trabajo legítimo de madrugada. Su zona es **del sitio, no de la
+  empresa**, porque Canarias va una hora por detrás.
+
+#### El método
+
+- la mutación sobre la línea que decide; en el 2.8, la que calcula y congela el PMP;
+- las dos listas por nombre;
+- **los commits del tramo entero**, no solo los del ítem;
+- los runs de la rama y de `main`;
+- rama propia por unidad, y commits pequeños y firmados.
+
+**Lo que decidió el agente al abrirlo, y solo queda anotado**, porque es reversible: las cinco
+cosas son una unidad y van en una sola rama, `epilogo-del-2.7-cinco-cosas`, cada una en su commit o
+sus commits. El 2.8 va en la suya, `item-2.8-la-valoracion-pmp`.
+
 
 ## Estado actual
 
@@ -5797,6 +5893,33 @@ que se ponga rojo.
 en un commit propio, y el de `main` al abrir la rama siguiente.
 
 El siguiente ADR es el **0045**.
+
+**Los runs del cuarto punto**, anotados al abrir la rama del epílogo (`epilogo-del-2.7-cinco-cosas`)
+y leídos de la API. `GET /repos/AOjeda006/Bastion/actions/runs?head_sha=5d405d2…` (con el sha entero)
+da `total_count: 2`:
+
+- `36297074245`, de la rama `item-2.7-las-existencias`;
+- `36297076010`, de `main`.
+
+Los dos son **success** en su primer intento. Los tres jobs de cada uno corren en `ubuntu-24.04`, con
+65 pasos: 64 en verde y *Diagnóstico* omitido. Las cifras son las del run de cierre: 932 y 502 casos,
+130 operaciones sobre 77 rutas, 119 tipos de 125 sitios y 413/450 y 601/900 KiB. `main` avanzó por
+*fast-forward* de `ca4ee82` a `5d405d2`.
+
+**El tramo entero del encargo del 2026-09-26, y no solo el 2.7**, que es lo único que contó el
+informe del ítem:
+
+- **Commits:** `git rev-list --count 8ad3727..5d405d2` da **26**, todos `G` en `git log
+  --format='%h %G? %s' 8ad3727..5d405d2`. Son **16** de los puntos 1 a 3 (`8ad3727..ca4ee82`) y
+  **10** del 2.7 (`ca4ee82..5d405d2`).
+- **Runs:** son los números **160 a 168** de `GET …/actions/runs?per_page=14`. Son nueve, todos
+  **success** al primer intento, y **ninguno cancelado**: los números son consecutivos, y uno
+  cancelado seguiría teniendo el suyo.
+- **Reglas:** quedan **13 vivas** de diecisiete. `grep -c "^| R[0-9]* | .* | viva |"
+  docs/dominio/reglas-duras.md` da 13.
+
+**El epílogo del 2.7**, las cinco cosas pequeñas del encargo del 2026-09-28, en esta rama y cada
+una en su commit. Lo que pide cada una está en *Decisiones*, bajo ese encargo.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
