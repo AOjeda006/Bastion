@@ -46,6 +46,14 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// rechaza, y el original se puede anular más adelante.
 /// </para>
 /// <para>
+/// <b>Y la valoración, con una cuenta propia</b> (ítem 2.8, ADR-0046). El modelo lleva el valor de
+/// cada artículo y el precio medio que congela cada fila, calculados aquí con decimales y redondeos
+/// a mano, sin el servicio del dominio ni los tipos del dinero; tras cada paso se comparan con la
+/// tabla de la valoración y con el valor y el precio medio de cada fila del libro. Para que el
+/// precio medio se mueva, cada entrada lleva un coste distinto, y las de 3, 6 o 9 unidades de un
+/// artículo que ya tiene existencias van sin coste, al precio medio.
+/// </para>
+/// <para>
 /// <b>Cada semilla tiene que pasar por todas las clases de paso</b>, y el caso lo afirma: una
 /// semilla que no anulara nunca pasaría por prueba de las anulaciones sin haberlas probado.
 /// </para>
@@ -161,7 +169,12 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         cuadre.ExistenciasComparadas.ShouldBe(claves, secuencia.Relato());
         cuadre.InstantaneasComparadas.ShouldBe(debidas.Count, secuencia.Relato());
+        cuadre.ValoracionesComparadas.ShouldBe(secuencia.Valoracion.Count, secuencia.Relato());
         cuadre.Descuadres.ShouldBeEmpty(secuencia.Relato());
+
+        secuencia.Valoracion.Count.ShouldBeGreaterThan(0, secuencia.Relato());
+        secuencia.AlPrecioMedio.ShouldBeGreaterThan(
+            0, "ninguna entrada se ha valorado al precio medio\n" + secuencia.Relato());
 
         secuencia.Clases.ShouldBe(s_clasesDePaso, ignoreOrder: true, customMessage: secuencia.Relato());
     }
@@ -198,6 +211,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             "salida" => [UnaSalidaAlAzar(azar, empresa, secuencia)],
             _ => LineasAlAzar(azar, minimo: 2),
         };
+
+        // EL COSTE SE PONE DESPUÉS, SIN TOCAR EL AZAR (ítem 2.8): una llamada más al generador
+        // cambiaría la secuencia de todas las semillas, que hoy pasan por todas las clases de paso.
+        lineas = [.. lineas.Select(linea => ConCoste(linea, empresa, secuencia))];
 
         bool delAnioCerrado = fecha.Year == pasado && secuencia.PasadoCerrado;
 
@@ -253,7 +270,13 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»\n{secuencia.Relato()}");
 
         secuencia.Libro.AddRange(apuntes);
-        secuencia.Anulables.Add((ajusteId, apuntes));
+
+        FilaValorada[] valoradas = secuencia.Valorar(
+            [.. lineas.Select(linea => new LineaQueSeValora(
+                empresa.Claves[linea.Clave].ArticuloId, linea.Cantidad * linea.Factor, linea.Coste, null))]);
+
+        secuencia.AlPrecioMedio += lineas.Count(linea => linea.Cantidad > 0m && linea.Coste is null);
+        secuencia.Anulables.Add((ajusteId, apuntes, valoradas));
     }
 
     /// <summary>La anulación de un documento confirmado que todavía no se ha anulado.</summary>
@@ -272,7 +295,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         }
 
         int cual = azar.Next(secuencia.Anulables.Count);
-        (Guid ajusteId, ApunteDelLibro[] apuntes) = secuencia.Anulables[cual];
+        (Guid ajusteId, ApunteDelLibro[] apuntes, FilaValorada[] valoradas) = secuencia.Anulables[cual];
 
         ApunteDelLibro[] inverso =
         [
@@ -304,6 +327,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         anulacion.EsCorrecto.ShouldBeTrue($"«{anulacion.Error?.Codigo}»\n{secuencia.Relato()}");
 
         secuencia.Libro.AddRange(inverso);
+
+        // EL INVERSO COMPENSA LO QUE CADA LÍNEA MOVIÓ, y no lo que valen hoy sus unidades
+        // (ADR-0046 §6): cada línea lleva el valor de la suya con el signo cambiado.
+        secuencia.Valorar(
+            [.. valoradas.Select(fila => new LineaQueSeValora(fila.ArticuloId, -fila.Cantidad, null, -fila.Valor))]);
     }
 
     /// <summary>Si sumar estas filas al libro del modelo dejaría alguna clave por debajo de cero.</summary>
@@ -336,7 +364,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Random azar, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
     {
         DateOnly fecha = Hoy.AddDays(azar.Next(1, 40));
-        IReadOnlyList<LineaAlAzar> lineas = LineasAlAzar(azar);
+        IReadOnlyList<LineaAlAzar> lineas = [.. LineasAlAzar(azar).Select(ConSuCoste)];
 
         secuencia.Anotar(Futuro, fecha, lineas);
 
@@ -437,6 +465,67 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         (await LasExistencias.InstantaneasAsync(postgres, empresa.EmpresaId)).ShouldBe(
             LasExistencias.DebidasEnCSharp(secuencia.Libro, secuencia.Corte),
             "las instantáneas no son las del libro\n" + secuencia.Relato());
+
+        (await ValoracionesAsync(empresa.EmpresaId)).ShouldBe(
+            [.. secuencia.Valoracion
+                .OrderBy(par => par.Key)
+                .Select(par => (par.Key, par.Value.Cantidad, par.Value.Valor, "EUR"))],
+            "la valoración no es la del modelo\n" + secuencia.Relato());
+
+        Ordenado(await FilasValoradasAsync(empresa.EmpresaId)).ShouldBe(
+            Ordenado(secuencia.Valorado), "el libro no vale lo que dice el modelo\n" + secuencia.Relato());
+    }
+
+    /// <summary>La tabla de la valoración de la empresa, leída sin el filtro y sin el mapeo.</summary>
+    private async Task<(Guid ArticuloId, decimal Cantidad, decimal Valor, string Divisa)[]> ValoracionesAsync(
+        Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand orden = new(
+            "SELECT articulo_id, cantidad, valor, divisa FROM inventario.valoraciones WHERE empresa_id = @empresa",
+            conexion);
+
+        orden.Parameters.AddWithValue("empresa", empresaId);
+
+        List<(Guid, decimal, decimal, string)> filas = [];
+
+        await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
+
+        while (await lector.ReadAsync())
+        {
+            filas.Add((lector.GetGuid(0), lector.GetDecimal(1), lector.GetDecimal(2), lector.GetString(3)));
+        }
+
+        // EN C#, Y NO CON UN ORDER BY: el motor y .NET no ordenan los uuid igual.
+        return [.. filas.OrderBy(fila => fila.Item1)];
+    }
+
+    /// <summary>El valor y el precio medio de cada fila del libro de la empresa.</summary>
+    private async Task<List<FilaValorada>> FilasValoradasAsync(Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand orden = new(
+            "SELECT articulo_id, cantidad_en_unidad_base, valor, precio_medio "
+            + "FROM inventario.movimiento_stock WHERE empresa_id = @empresa",
+            conexion);
+
+        orden.Parameters.AddWithValue("empresa", empresaId);
+
+        List<FilaValorada> filas = [];
+
+        await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
+
+        while (await lector.ReadAsync())
+        {
+            filas.Add(new FilaValorada(
+                lector.GetGuid(0), lector.GetDecimal(1), lector.GetDecimal(2), lector.GetDecimal(3)));
+        }
+
+        return filas;
     }
 
     private static List<LineaAlAzar> LineasAlAzar(Random azar, int minimo = 1)
@@ -496,6 +585,38 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private static LineaAlAzar UnaLineaAlAzar(Random azar, int signo) => new(
         azar.Next(4), signo * azar.Next(1, 10), s_factores[azar.Next(s_factores.Length)]);
 
+    /// <summary>
+    /// La línea con su coste si suma, salvo la de 3, 6 o 9 unidades de un artículo que ya tiene
+    /// existencias, que va sin él y se valora al precio medio.
+    /// </summary>
+    /// <remarks>
+    /// Solo sin coste si el artículo tiene existencias ANTES del documento: dentro de él, las líneas
+    /// que suman se valoran antes que las que restan, así que nada lo vacía antes de llegar a ella.
+    /// Una entrada sin coste en un artículo vacío se rechaza, y eso lo mira su caso propio.
+    /// </remarks>
+    private static LineaAlAzar ConCoste(LineaAlAzar linea, UnaEmpresa empresa, Secuencia secuencia) =>
+        linea.Cantidad % 3m == 0m
+            && secuencia.Valoracion.GetValueOrDefault(empresa.Claves[linea.Clave].ArticuloId).Cantidad > 0m
+            ? linea
+            : ConSuCoste(linea);
+
+    /// <summary>La línea con su coste si suma; la que resta no lo lleva nunca.</summary>
+    /// <remarks>
+    /// El coste sale de la propia línea, con cuatro decimales y distinto por clave, cantidad y
+    /// factor. Con el de antes, 1,50 para todas, el precio medio no se movía nunca de 1,50 y ninguna
+    /// fila pasaba por un redondeo.
+    /// </remarks>
+    private static LineaAlAzar ConSuCoste(LineaAlAzar linea) =>
+        linea.Cantidad > 0m
+            ? linea with
+            {
+                Coste = decimal.Round(
+                    0.8125m + (0.3791m * linea.Clave) + (0.0617m * linea.Cantidad / linea.Factor),
+                    4,
+                    MidpointRounding.AwayFromZero),
+            }
+            : linea;
+
     private static async Task<Guid> AbrirAsync(
         ElModuloDeInventario modulo,
         UnaEmpresa empresa,
@@ -518,7 +639,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                     linea.Cantidad,
                     empresa.UnidadDe[clave.ArticuloId],
                     linea.Factor,
-                    linea.Cantidad > 0m ? 1.50m : null);
+                    linea.Coste);
             })]);
 
         Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
@@ -535,6 +656,13 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             .ThenBy(apunte => apunte.Clave.UbicacionId)
             .ThenBy(apunte => apunte.Fecha)
             .ThenBy(apunte => apunte.Cantidad)];
+
+    private static FilaValorada[] Ordenado(IEnumerable<FilaValorada> filas) =>
+        [.. filas
+            .OrderBy(fila => fila.ArticuloId)
+            .ThenBy(fila => fila.Cantidad)
+            .ThenBy(fila => fila.Valor)
+            .ThenBy(fila => fila.PrecioMedio)];
 
     /// <summary>La fecha de hoy, en el mismo calendario que usa el caso de uso.</summary>
     private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);
@@ -593,7 +721,22 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// <param name="Clave">Cuál de las cuatro claves de la empresa.</param>
     /// <param name="Cantidad">La cantidad tecleada, con signo.</param>
     /// <param name="Factor">El factor a unidad base.</param>
-    private sealed record LineaAlAzar(int Clave, decimal Cantidad, decimal Factor);
+    /// <param name="Coste">El coste por unidad base, o nada si resta o va al precio medio.</param>
+    private sealed record LineaAlAzar(int Clave, decimal Cantidad, decimal Factor, decimal? Coste = null);
+
+    /// <summary>Una línea tal como la valora el modelo.</summary>
+    /// <param name="ArticuloId">El artículo; el almacén es uno solo.</param>
+    /// <param name="Cantidad">La cantidad en unidad base, con signo.</param>
+    /// <param name="Coste">El coste por unidad base, o nada.</param>
+    /// <param name="Compensa">Lo que compensa si es la de un inverso, o nada.</param>
+    private sealed record LineaQueSeValora(Guid ArticuloId, decimal Cantidad, decimal? Coste, decimal? Compensa);
+
+    /// <summary>Una fila del libro con lo que vale.</summary>
+    /// <param name="ArticuloId">El artículo.</param>
+    /// <param name="Cantidad">La cantidad en unidad base, con signo.</param>
+    /// <param name="Valor">Lo que movió, con signo.</param>
+    /// <param name="PrecioMedio">El precio medio que congeló.</param>
+    private sealed record FilaValorada(Guid ArticuloId, decimal Cantidad, decimal Valor, decimal PrecioMedio);
 
     /// <summary>Los maestros de la empresa del caso.</summary>
     private sealed record UnaEmpresa(
@@ -614,7 +757,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         internal List<ApunteDelLibro> Libro { get; } = [];
 
-        internal List<(Guid AjusteId, ApunteDelLibro[] Apuntes)> Anulables { get; } = [];
+        internal List<(Guid AjusteId, ApunteDelLibro[] Apuntes, FilaValorada[] Valoradas)> Anulables { get; } = [];
+
+        /// <summary>La valoración de cada artículo que se ha movido: su cantidad y su valor.</summary>
+        internal Dictionary<Guid, (decimal Cantidad, decimal Valor)> Valoracion { get; } = [];
+
+        /// <summary>Cada fila del libro con lo que vale.</summary>
+        internal List<FilaValorada> Valorado { get; } = [];
+
+        internal int AlPrecioMedio { get; set; }
 
         internal HashSet<string> Clases { get; } = [];
 
@@ -648,6 +799,61 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                 CultureInfo.InvariantCulture, $"{_pasos.Count + 1,2}. {clase} {detalle}"));
         }
 
+        /// <summary>
+        /// La segunda cuenta de la valoración: el precio medio ponderado escrito aquí desde el
+        /// ADR-0046, con decimales y redondeos a mano. Apunta las filas y mueve la valoración.
+        /// </summary>
+        /// <remarks>
+        /// Primero las líneas que suman y después las que restan, cada grupo en su orden. La que
+        /// suma mueve lo que compensa, o su coste por la cantidad, o el precio medio de antes por la
+        /// cantidad, y congela el precio medio de después. La que resta congela el de antes y mueve
+        /// lo que compensa, o ese precio por la cantidad; salvo si vacía el artículo o se llevaría
+        /// más de lo que hay, y entonces se lleva todo lo que hay.
+        /// </remarks>
+        internal FilaValorada[] Valorar(IReadOnlyList<LineaQueSeValora> lineas)
+        {
+            var filas = new FilaValorada[lineas.Count];
+
+            IEnumerable<int> enOrden = Enumerable.Range(0, lineas.Count)
+                .Where(indice => lineas[indice].Cantidad > 0m)
+                .Concat(Enumerable.Range(0, lineas.Count).Where(indice => lineas[indice].Cantidad <= 0m));
+
+            foreach (int indice in enOrden)
+            {
+                LineaQueSeValora linea = lineas[indice];
+                (decimal cantidad, decimal valor) = Valoracion.GetValueOrDefault(linea.ArticuloId);
+                decimal? antes = cantidad > 0m ? Redondear(valor / cantidad, 6) : null;
+                decimal despues = cantidad + linea.Cantidad;
+
+                if (linea.Cantidad > 0m)
+                {
+                    decimal suma = linea.Compensa ?? Redondear(
+                        (linea.Coste ?? antes ?? throw new InvalidOperationException(
+                            "El generador ha sacado una entrada sin coste en un artículo vacío.")) * linea.Cantidad,
+                        4);
+
+                    filas[indice] = new FilaValorada(
+                        linea.ArticuloId, linea.Cantidad, suma, Redondear((valor + suma) / despues, 6));
+                }
+                else
+                {
+                    decimal congelado = antes ?? 0m;
+                    decimal dice = linea.Compensa is { } compensa
+                        ? -compensa
+                        : Redondear(congelado * -linea.Cantidad, 4);
+
+                    filas[indice] = new FilaValorada(
+                        linea.ArticuloId, linea.Cantidad, despues <= 0m || dice > valor ? -valor : -dice, congelado);
+                }
+
+                Valoracion[linea.ArticuloId] = (despues, valor + filas[indice].Valor);
+            }
+
+            Valorado.AddRange(filas);
+
+            return filas;
+        }
+
         internal string Relato() =>
             string.Create(CultureInfo.InvariantCulture, $"semilla {semilla}:\n") +
             string.Join("\n", _pasos);
@@ -655,6 +861,12 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         private static string Describir(LineaAlAzar linea) =>
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"clave {linea.Clave}: {linea.Cantidad:+0;-0} x {linea.Factor}");
+                $"clave {linea.Clave}: {linea.Cantidad:+0;-0} x {linea.Factor}")
+            + (linea.Coste is { } coste
+                ? string.Create(CultureInfo.InvariantCulture, $" a {coste}")
+                : linea.Cantidad > 0m ? " al precio medio" : string.Empty);
+
+        private static decimal Redondear(decimal cantidad, int decimales) =>
+            decimal.Round(cantidad, decimales, MidpointRounding.AwayFromZero);
     }
 }

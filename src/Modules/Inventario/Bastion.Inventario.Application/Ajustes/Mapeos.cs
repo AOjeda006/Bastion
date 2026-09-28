@@ -37,6 +37,8 @@ internal static class Mapeos
         movimiento.UnidadIntroducidaId,
         movimiento.FactorAUnidadBase,
         movimiento.CosteUnitario?.Cantidad,
+        movimiento.Valor.Cantidad,
+        movimiento.PrecioMedio.Cantidad,
         movimiento.Divisa,
         movimiento.DocumentoOrigenTipo.ToString(),
         movimiento.DocumentoOrigenId);

@@ -95,14 +95,16 @@ public sealed class LaParticionPorDefectoSeDenunciaTests(PostgresConTodosLosModu
             "con ella, la fila de abajo no llegaría nunca a la de por defecto");
 
         var empresaId = Guid.CreateVersion7();
-        (Ajuste ajuste, IReadOnlyList<MovimientoStock> movimientos) =
-            UnAjusteConfirmadoDe(empresaId, fueraDeLaPista);
 
         await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
         await using IDbContextTransaction transaccion =
             await contexto.Database.BeginTransactionAsync();
 
         RepositorioDeAjustes repositorio = new(contexto, new InquilinoFijo(empresaId));
+
+        (Ajuste ajuste, IReadOnlyList<MovimientoStock> movimientos) =
+            await UnAjusteConfirmadoDeAsync(repositorio, empresaId, fueraDeLaPista);
+
         repositorio.Agregar(ajuste);
         await repositorio.AnotarEnElLibroAsync(movimientos, CancellationToken.None);
         await contexto.SaveChangesAsync();
@@ -183,9 +185,8 @@ public sealed class LaParticionPorDefectoSeDenunciaTests(PostgresConTodosLosModu
             "carril y el segundo arranque envenenados");
     }
 
-    private static (Ajuste Ajuste, IReadOnlyList<MovimientoStock> Movimientos) UnAjusteConfirmadoDe(
-        Guid empresaId,
-        DateOnly fecha)
+    private static async Task<(Ajuste Ajuste, IReadOnlyList<MovimientoStock> Movimientos)>
+        UnAjusteConfirmadoDeAsync(RepositorioDeAjustes repositorio, Guid empresaId, DateOnly fecha)
     {
         var almacenId = Guid.CreateVersion7();
         var serieId = Guid.CreateVersion7();
@@ -214,7 +215,7 @@ public sealed class LaParticionPorDefectoSeDenunciaTests(PostgresConTodosLosModu
         // La serie es nueva en cada llamada, así que el primer número nunca choca con el índice
         // único de `(serie_id, numero)`. Lo que este caso persigue está en la partición, no en el
         // correlativo.
-        return (ajuste, ajuste.Confirmar(numero: 1, evento, momento));
+        return (ajuste, await ElLibro.ConfirmarBajoCerrojoAsync(repositorio, ajuste, 1, evento, momento));
     }
 
     private static async Task<IReadOnlyList<string>> LeerAsync(

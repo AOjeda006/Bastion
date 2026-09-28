@@ -1,5 +1,6 @@
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Valoraciones;
 
 namespace Bastion.Inventario.Application.Ajustes;
 
@@ -24,8 +25,31 @@ public interface IRepositorioDeAjustes
     void Agregar(Ajuste ajuste);
 
     /// <summary>
+    /// Bloquea la valoración de cada clave, en orden de clave y creándola si no existe, y la lee ya
+    /// bloqueada (ADR-0046 §2).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El cerrojo dura hasta el <c>COMMIT</c></b>, así que lo que se lee no se queda viejo: otra
+    /// confirmación de la misma clave espera aquí a que esta acabe, y después lee lo que esta dejó.
+    /// </para>
+    /// <para>
+    /// <b>Una clave nueva nace vacía, en la divisa del documento</b>. Si el documento no llega a
+    /// confirmarse, la transacción se deshace y la fila no queda.
+    /// </para>
+    /// </remarks>
+    /// <param name="claves">Las claves que el documento va a valorar.</param>
+    /// <param name="divisa">La del documento, para las claves que nazcan.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El saldo bloqueado de cada clave.</returns>
+    Task<IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado>> BloquearLasValoracionesAsync(
+        IReadOnlyCollection<ClaveDeValoracion> claves,
+        string divisa,
+        CancellationToken cancelacion);
+
+    /// <summary>
     /// Anota en el libro las filas que un documento acaba de generar, y mueve con ellas sus
-    /// existencias (R3).
+    /// existencias y su valoración (R3).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -38,6 +62,11 @@ public interface IRepositorioDeAjustes
     /// <b>Y es asíncrona aunque las filas se guarden al confirmar la unidad de trabajo</b>: la
     /// existencia se mueve aquí, con una sentencia contra el motor, dentro de la transacción que ya
     /// está abierta. Si esa transacción no llega a confirmarse, no queda ni lo uno ni lo otro.
+    /// </para>
+    /// <para>
+    /// <b>La valoración se suma aquí también, después de la existencia</b> (ADR-0046 §2), sobre las
+    /// filas que <see cref="BloquearLasValoracionesAsync"/> dejó bloqueadas. Si alguna clave no se
+    /// bloqueó antes, revienta: sería un defecto de quien llama, no un saldo nuevo.
     /// </para>
     /// <para>
     /// <b>Antes de mover la existencia guarda lo que el documento tenga pendiente</b> (ítem 2.8):

@@ -918,5 +918,26 @@ internal static class Inventario
                 "",
                 "el papel va en el nombre —origen y destino— y por eso no casa con el del tipo. " +
                 "Mismo módulo: no cruza ninguna frontera."),
+
+            // LAS DEL ÍTEM 2.8, copias como las de la existencia y por lo mismo: la valoración no
+            // recibe identificadores de ningún sitio más que de las líneas del documento que la
+            // mueve, que ya los traen preguntados por su alta.
+            ["Valoracion.AlmacenId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "copia del de la cabecera del documento que la mueve, preguntado por su alta. La " +
+                "valoración no lo recibe de ningún otro sitio (ADR-0046)."),
+
+            ["Valoracion.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "copia del de la línea del documento que la mueve, y por el mismo puerto."),
+
+            ["Valoracion.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "las sentencias que la bloquean y la suman la escriben con el valor de " +
+                "IInquilinoActual, y la que suma comprueba antes que cada fila del libro sea de " +
+                "esa misma empresa."),
         };
 }

@@ -2,7 +2,9 @@ using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
+using Bastion.Inventario.Infrastructure.Persistencia.Valoraciones;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
@@ -27,6 +29,25 @@ internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquil
 
     /// <inheritdoc/>
     /// <remarks>
+    /// <b>La empresa sale del inquilino</b>, como al anotar: la sentencia cruda no pasa por el
+    /// filtro global, y bloquearía la valoración de cualquiera.
+    /// </remarks>
+    public Task<IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado>> BloquearLasValoracionesAsync(
+        IReadOnlyCollection<ClaveDeValoracion> claves,
+        string divisa,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(claves);
+
+        Guid empresaId = inquilino.EmpresaDelFiltro ?? throw new InvalidOperationException(
+            "Se está bloqueando la valoración dentro de un ámbito sin inquilino, y una valoración " +
+            "es siempre de una empresa: sin ella la sentencia bloquearía la de cualquiera.");
+
+        return LaValoracionDelLibro.BloquearYLeerAsync(contexto, empresaId, claves, divisa, cancelacion);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
     /// <para>
     /// <b>Primero la existencia y después el libro, y ese orden da igual</b>: los dos van en la
     /// misma transacción, así que nadie ve el uno sin el otro. La existencia se mueve ya, con una
@@ -42,6 +63,12 @@ internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquil
     /// <c>422</c> <c>stock-insuficiente</c> a quien solo llegó tarde, en vez del <c>412</c> que le
     /// dice que recargue. Con el documento primero, la perdedora choca con su guarda y no llega a
     /// la sentencia.
+    /// </para>
+    /// <para>
+    /// <b>Y la valoración va después de la existencia, que tampoco da igual</b> (ADR-0046 §2). Las
+    /// dos rechazan una salida sin stock, cada una con su guarda: la de la existencia lleva el
+    /// nombre que el borde traduce a <c>422</c>, y la de la valoración sería un defecto. Con la
+    /// existencia primero, choca la que tiene que chocar.
     /// </para>
     /// <para>
     /// <b>La empresa sale del inquilino y no de las filas</b>, y la sentencia comprueba que cada
@@ -65,6 +92,11 @@ internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquil
         await contexto.SaveChangesAsync(cancelacion).ConfigureAwait(false);
 
         await LaProyeccionDelLibro.MoverAsync(contexto, empresaId, movimientos, cancelacion)
+            .ConfigureAwait(false);
+
+        // LA VALORACIÓN, DESPUÉS DE LA EXISTENCIA (ADR-0046 §2): una salida sin stock ya ha chocado
+        // con su restricción, por el nombre, y aquí solo llega lo que cabe.
+        await LaValoracionDelLibro.SumarAsync(contexto, empresaId, movimientos, cancelacion)
             .ConfigureAwait(false);
 
         contexto.Movimientos.AddRange(movimientos);

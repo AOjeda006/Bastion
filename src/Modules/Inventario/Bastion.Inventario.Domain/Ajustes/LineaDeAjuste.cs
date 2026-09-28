@@ -26,6 +26,7 @@ public sealed class LineaDeAjuste : EntidadBase
     private LineaDeAjuste(
         Guid id,
         Guid ajusteId,
+        int numero,
         Guid ubicacionId,
         Guid articuloId,
         decimal cantidadIntroducida,
@@ -37,6 +38,7 @@ public sealed class LineaDeAjuste : EntidadBase
     {
         Id = id;
         AjusteId = ajusteId;
+        Numero = numero;
         UbicacionId = ubicacionId;
         ArticuloId = articuloId;
         CantidadIntroducida = cantidadIntroducida;
@@ -55,6 +57,16 @@ public sealed class LineaDeAjuste : EntidadBase
 
     /// <summary>Ajuste al que pertenece.</summary>
     public Guid AjusteId { get; private set; }
+
+    /// <summary>La posición de la línea en su documento, desde uno.</summary>
+    /// <remarks>
+    /// <b>Es el orden en que se valora</b> (ADR-0046 §3): dentro de un documento, la segunda línea
+    /// del mismo artículo valora contra lo que dejó la primera. Sin guardarlo, el orden sería el
+    /// que el motor devuelve al leer, y ese no es el que se escribió: los identificadores se crean
+    /// en el mismo milisegundo, la versión 7 no ordena dentro de él, y EF Core no ordena las filas
+    /// de una colección dentro de su documento.
+    /// </remarks>
+    public int Numero { get; private set; }
 
     /// <summary>Hueco concreto del almacén al que afecta.</summary>
     public Guid UbicacionId { get; private set; }
@@ -80,6 +92,29 @@ public sealed class LineaDeAjuste : EntidadBase
     /// </remarks>
     public decimal? CosteUnitario { get; private set; }
 
+    /// <summary>
+    /// Lo que la línea sumó a la valoración al confirmarse, o lo que le restó, en la divisa del
+    /// documento: el valor de su fila del libro. <see langword="null"/> mientras es borrador.
+    /// </summary>
+    /// <remarks>
+    /// <b>Se guarda en la línea y no se busca en el libro</b>, porque la fila del libro no sabe de
+    /// qué línea sale, y emparejarlas por orden no es fiable: sus identificadores se crean en el
+    /// mismo milisegundo (ADR-0046 §6). Lo necesita el inverso, que compensa este importe exacto y
+    /// no el coste por la cantidad.
+    /// </remarks>
+    public decimal? Valor { get; private set; }
+
+    /// <summary>
+    /// En la línea de un inverso, el valor de la línea original con el signo cambiado: lo que esta
+    /// línea compensa. <see langword="null"/> en cualquier otra.
+    /// </summary>
+    /// <remarks>
+    /// Al confirmar, el inverso se valora contra esto y no contra un coste. Si entre el original y la
+    /// anulación otras salidas se llevaron parte de ese valor, <see cref="Valor"/> se queda con lo
+    /// que quedaba, y las dos cifras dicen la diferencia (ADR-0046 §6).
+    /// </remarks>
+    public decimal? ValorQueCompensa { get; private set; }
+
     /// <summary>Crea una línea de ajuste ya validada.</summary>
     /// <remarks>
     /// <para>
@@ -94,6 +129,7 @@ public sealed class LineaDeAjuste : EntidadBase
     /// </para>
     /// </remarks>
     /// <param name="ajusteId">Ajuste al que pertenece.</param>
+    /// <param name="numero">Su posición en el documento, desde uno.</param>
     /// <param name="ubicacionId">Hueco del almacén.</param>
     /// <param name="articuloId">Artículo que se mueve.</param>
     /// <param name="cantidadIntroducida">Cantidad con signo, tal como se escribió.</param>
@@ -104,6 +140,7 @@ public sealed class LineaDeAjuste : EntidadBase
     /// <returns>La línea.</returns>
     public static LineaDeAjuste Crear(
         Guid ajusteId,
+        int numero,
         Guid ubicacionId,
         Guid articuloId,
         decimal cantidadIntroducida,
@@ -112,6 +149,8 @@ public sealed class LineaDeAjuste : EntidadBase
         decimal? costeUnitario,
         DateTimeOffset momento)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(numero);
+
         if (cantidadIntroducida == 0m)
         {
             throw new ArgumentOutOfRangeException(
@@ -139,6 +178,7 @@ public sealed class LineaDeAjuste : EntidadBase
         return new LineaDeAjuste(
             Guid.CreateVersion7(),
             ajusteId,
+            numero,
             ubicacionId,
             articuloId,
             cantidadIntroducida,
@@ -148,5 +188,53 @@ public sealed class LineaDeAjuste : EntidadBase
                 ? decimal.Round(redondeable, Importe.Decimales, MidpointRounding.AwayFromZero)
                 : null,
             momento);
+    }
+
+    /// <summary>
+    /// La línea del inverso que compensa a esta: la cantidad con el signo cambiado, sin coste y con
+    /// el valor de esta, también con el signo cambiado (ADR-0046 §6). Y con su mismo número, así
+    /// que el inverso se escribe en el orden del original.
+    /// </summary>
+    /// <param name="ajusteId">El inverso.</param>
+    /// <param name="momento">Ahora.</param>
+    /// <returns>La línea del inverso.</returns>
+    /// <exception cref="InvalidOperationException">Esta línea no tiene valor: no se ha confirmado.</exception>
+    internal LineaDeAjuste Compensada(Guid ajusteId, DateTimeOffset momento)
+    {
+        if (Valor is not { } valor)
+        {
+            throw new InvalidOperationException(
+                "Una línea sin valor no se compensa: su documento no llegó a confirmarse (ADR-0046 §6).");
+        }
+
+        LineaDeAjuste inversa = Crear(
+            ajusteId,
+            Numero,
+            UbicacionId,
+            ArticuloId,
+            -CantidadIntroducida,
+            UnidadIntroducidaId,
+            FactorAUnidadBase,
+            costeUnitario: null,
+            momento);
+
+        inversa.ValorQueCompensa = -valor;
+
+        return inversa;
+    }
+
+    /// <summary>Anota el valor con el que la línea entró en el libro, al confirmar.</summary>
+    /// <param name="valor">El valor de su fila del libro, en la divisa del documento.</param>
+    /// <exception cref="InvalidOperationException">La línea ya tenía valor.</exception>
+    internal void AnotarValor(decimal valor)
+    {
+        if (Valor is not null)
+        {
+            throw new InvalidOperationException(
+                "El valor de una línea se anota una vez, al confirmar: su fila del libro ya está " +
+                "escrita, y el libro no se reescribe (R2).");
+        }
+
+        Valor = valor;
     }
 }

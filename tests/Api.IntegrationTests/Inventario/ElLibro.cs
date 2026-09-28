@@ -1,9 +1,11 @@
 using System.Globalization;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
+using Bastion.BuildingBlocks.Domain.Eventos;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
@@ -120,14 +122,15 @@ internal static class ElLibro
         var evento = new AjusteConfirmado(
             ajuste.Id, empresaId, almacenId, fechaDeOperacion, ajuste.Lineas.Count);
 
-        IReadOnlyList<MovimientoStock> movimientos =
-            ajuste.Confirmar(PrimerNumeroDeEsaSerie, evento, momento);
-
         await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
         await using IDbContextTransaction transaccion =
             await contexto.Database.BeginTransactionAsync();
 
         RepositorioDeAjustes repositorio = new(contexto, new InquilinoFijo(empresaId));
+
+        IReadOnlyList<MovimientoStock> movimientos = await ConfirmarBajoCerrojoAsync(
+            repositorio, ajuste, PrimerNumeroDeEsaSerie, evento, momento);
+
         repositorio.Agregar(ajuste);
         await repositorio.AnotarEnElLibroAsync(movimientos, CancellationToken.None);
 
@@ -136,6 +139,70 @@ internal static class ElLibro
 
         return new UnAjusteConfirmado(
             empresaId, ajuste.Id, almacenId, fechaDeOperacion, movimientos);
+    }
+
+    /// <summary>
+    /// Confirma un documento como lo hace el caso de uso: bloquea la valoración de sus claves, la
+    /// lee, valora contra ella y después confirma.
+    /// </summary>
+    /// <remarks>
+    /// <b>Bajo el cerrojo y no desde cero</b>, porque anotar el libro suma sobre la fila de
+    /// valoración de cada clave, y la sentencia exige que esa fila se haya bloqueado antes en la
+    /// misma transacción (ADR-0046 §2). Valorado desde cero, un inverso restaría un valor que no
+    /// es el que dejó su original.
+    /// </remarks>
+    /// <param name="repositorio">El repositorio de la empresa, con la transacción ya abierta.</param>
+    /// <param name="documento">El documento en borrador.</param>
+    /// <param name="numero">El correlativo que se le da.</param>
+    /// <param name="evento">El hecho que cuenta la confirmación.</param>
+    /// <param name="momento">Instante de la confirmación.</param>
+    /// <returns>Las filas del libro que el documento deja para anotar.</returns>
+    internal static async Task<IReadOnlyList<MovimientoStock>> ConfirmarBajoCerrojoAsync(
+        RepositorioDeAjustes repositorio,
+        Ajuste documento,
+        long numero,
+        EventoDeIntegracion evento,
+        DateTimeOffset momento)
+    {
+        ArgumentNullException.ThrowIfNull(repositorio);
+        ArgumentNullException.ThrowIfNull(documento);
+
+        IReadOnlyList<LineaAValorar> lineas = documento.LineasAValorar();
+
+        IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos =
+            await repositorio.BloquearLasValoracionesAsync(
+                [.. lineas.Select(linea => linea.Clave).Distinct()],
+                documento.Divisa,
+                CancellationToken.None);
+
+        return documento.Confirmar(
+            numero,
+            evento,
+            new ElPrecioMedioPonderado().Valorar(saldos, lineas, documento.Divisa),
+            momento);
+    }
+
+    /// <summary>Valora un documento como si ninguna de sus claves se hubiera movido nunca.</summary>
+    /// <remarks>
+    /// Solo para filas que no llegan a la base: las que se anotan salen de
+    /// <see cref="ConfirmarBajoCerrojoAsync"/>, porque la sentencia que suma la valoración rechaza
+    /// una clave que no se bloqueó antes.
+    /// </remarks>
+    /// <param name="documento">El documento en borrador.</param>
+    /// <returns>Una valoración por línea, en su orden.</returns>
+    internal static IReadOnlyList<LineaValorada> ValoracionDesdeCero(Ajuste documento)
+    {
+        ArgumentNullException.ThrowIfNull(documento);
+
+        IReadOnlyList<LineaAValorar> lineas = documento.LineasAValorar();
+
+        return new ElPrecioMedioPonderado().Valorar(
+            lineas
+                .Select(linea => linea.Clave)
+                .Distinct()
+                .ToDictionary(clave => clave, _ => SaldoValorado.Vacio(documento.Divisa)),
+            lineas,
+            documento.Divisa);
     }
 
     /// <summary>Anula un ajuste ya confirmado: crea el inverso, lo confirma y guarda las dos cosas.</summary>
@@ -179,8 +246,8 @@ internal static class ElLibro
             inverso.FechaDeOperacion,
             inverso.Lineas.Count);
 
-        IReadOnlyList<MovimientoStock> movimientos =
-            inverso.Confirmar(SegundoNumeroDeEsaSerie, evento, momento);
+        IReadOnlyList<MovimientoStock> movimientos = await ConfirmarBajoCerrojoAsync(
+            repositorio, inverso, SegundoNumeroDeEsaSerie, evento, momento);
 
         confirmado.Anular(inverso, new AjusteAnulado(confirmado.Id, confirmado.EmpresaId));
 

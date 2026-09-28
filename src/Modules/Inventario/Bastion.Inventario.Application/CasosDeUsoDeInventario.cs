@@ -1,4 +1,5 @@
 using Bastion.Inventario.Application.Ajustes;
+using Bastion.Inventario.Domain.Valoraciones;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bastion.Inventario.Application;
@@ -21,6 +22,10 @@ public static class CasosDeUsoDeInventario
         servicios.AddScoped<IConfirmarAjuste, ConfirmarAjuste>();
         servicios.AddScoped<IAnularAjuste, AnularAjuste>();
         servicios.AddScoped<IMovimientosDelDocumento, MovimientosDelDocumento>();
+
+        // SIN ESTADO, así que una para todo el proceso. Es la costura para FIFO (ADR-0046 §10):
+        // cambiar de método es cambiar esta línea.
+        servicios.AddSingleton<IValoracionDeExistencias, ElPrecioMedioPonderado>();
 
         return servicios;
     }

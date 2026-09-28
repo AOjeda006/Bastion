@@ -275,9 +275,10 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
 
         ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
          "ElCuadreDeLasExistencias.cs usa .SqlQuery"] =
-            "compara el libro con las filas vivas y con las instantaneas en una sola lectura, que "
-            + "es lo que impide que una confirmacion a medias aparezca en una y no en la otra. Solo "
-            + "lee, y compara la empresa con el valor de IInquilinoActual en cada tabla que toca",
+            "compara el libro con las filas vivas, con las instantaneas y, desde el item 2.8, con "
+            + "la valoracion, en una sola lectura, que es lo que impide que una confirmacion a "
+            + "medias aparezca en una y no en otra. Solo lee, y compara la empresa con el valor de "
+            + "IInquilinoActual en cada tabla que toca",
 
         ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/" +
          "CerrojoDeEjercicios.cs usa .SqlQuery"] =
@@ -287,6 +288,41 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "filtro global tampoco alcanza al SQL crudo y el identificador viene de la ruta, asi "
             + "que compara la empresa ella misma con el valor de IInquilinoActual. Vive en un "
             + "fichero propio, como CerrojoDeLaBandeja, para que la excepcion se lea de una vez",
+
+        // LAS DOS DEL ITEM 2.8, en el mismo esquema que las del 2.7 y con su mismo criterio, salvo
+        // en una cosa, que es la que las trae aparte: ESTAS SI LEEN PARA DECIDIR.
+        //
+        //   - Por que leen: el valor de una salida depende del precio medio de ese momento, y el
+        //     de una linea, de lo que dejo la anterior del mismo articulo. Ese calculo es del
+        //     dominio, con el redondeo de la R6 en un solo sitio, y necesita el saldo de partida.
+        //     Sumar sin leer, como la existencia, no sabe cuanto vale lo que sale.
+        //   - Por que lo leido no se queda viejo: la lectura va despues de un `INSERT ... ON
+        //     CONFLICT DO UPDATE` que crea la fila si no esta y la bloquea hasta el COMMIT, en
+        //     orden de clave. Es la clausula 2 del ADR-0040 tal como la dejo el ADR-0041: se lee
+        //     para decidir porque la misma transaccion tiene el cerrojo que impide que lo leido
+        //     cambie (ADR-0046 §2). Leer por el ORM y guardar despues es la ventana por la que dos
+        //     entradas simultaneas valorarian contra el mismo saldo.
+        //   - Por que no hay forma de evitarlo: EF Core no traduce el upsert ni la suma sobre lo
+        //     que hay, igual que en la existencia. Y la lectura va aparte y no con RETURNING
+        //     porque una consulta cruda de EF Core mete el texto en un SELECT, y ahi no cabe un
+        //     INSERT.
+        //   - Y las tres sentencias comparan la empresa ellas mismas, con el valor de
+        //     IInquilinoActual, que ademas es parte de la clave primaria de la tabla. Que una
+        //     comparacion que falte ponga algo rojo lo comprueba LaValoracionDelAjusteTests con
+        //     dos empresas de verdad.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Valoraciones/" +
+         "LaValoracionDelLibro.cs usa .ExecuteSql"] =
+            "crea a cero y bloquea en orden de clave la valoracion de cada articulo y almacen del "
+            + "documento, y despues le suma la cantidad y el valor de sus filas del libro, sobre lo "
+            + "bloqueado y en la transaccion que anota el libro. Escribe la empresa con el valor de "
+            + "IInquilinoActual, despues de comprobar que cada fila del libro es de esa misma "
+            + "empresa, y la compara en la fila que suma",
+
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Valoraciones/" +
+         "LaValoracionDelLibro.cs usa .SqlQuery"] =
+            "lee la valoracion que la sentencia de al lado acaba de bloquear, en la misma "
+            + "transaccion, para que el dominio valore contra un saldo que nadie puede cambiar "
+            + "hasta el COMMIT. Compara la empresa con el valor de IInquilinoActual",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

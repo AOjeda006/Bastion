@@ -633,6 +633,8 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
 
         // LAS UNIDADES QUE LA SEGUNDA LÍNEA SACA ENTRAN ANTES, por otra serie del mismo ejercicio:
         // el físico no baja de cero (ítem 2.8), y con la misma serie el original ya no sería el 1.
+        // Y entran CON COSTE, porque la clave está vacía y sin existencias no hay precio medio al
+        // que valorarlas (ADR-0046 §5).
         SerieDto deLaEntradaPrevia =
             await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, serie.EjercicioId, codigo + "-E");
 
@@ -654,7 +656,7 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
                 deLaEntradaPrevia.Id,
                 almacen.Id,
                 fecha,
-                [lineas[1] with { CantidadIntroducida = 10m }]);
+                [lineas[1] with { CantidadIntroducida = 10m, CosteUnitario = 1.50m }]);
 
             Resultado<AjusteDto> previa = await modulo.ConfirmarAsync(entradaPreviaId);
 

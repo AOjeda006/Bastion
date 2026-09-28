@@ -258,6 +258,12 @@ medio vigente antes de la fila, y `V` el valor de la clave en ese momento:
   sus líneas. Si no, un documento con una salida y una entrada del mismo artículo pasaría a mitad de
   camino por un saldo negativo que no ha existido, y valoraría contra él. El libro y la existencia
   suman igual en cualquier orden. La valoración no, y por eso se fija este.
+- **El orden de las líneas es su número, y se guarda.** El que devuelve la base al leer el documento
+  no es el que se escribió: EF Core no ordena las filas de una colección dentro de su documento, y
+  los identificadores de la versión 7 no ordenan dentro del mismo milisegundo. Y el orden no solo
+  cambia el precio que se congela: con una entrada con coste y otra sin él del mismo artículo, cambia
+  el valor del documento. Cada línea guarda su posición, la del inverso copia la de la suya, y el
+  agregado recorre sus líneas por ella, las lea de donde las lea.
 - **El orden de valoración es el de confirmación, no el de la fecha de operación.** Un movimiento con
   fecha atrasada entra en el libro en su mes, pero se valora con el precio medio del momento en que
   se confirma. Es el PMP perpetuo de siempre, y lo que el criterio pide: el valor de una fecha pasada
@@ -358,6 +364,12 @@ instalación, pero la migración no puede dejar nulo lo que es obligatorio. En e
 dos divisas, se queda con la primera por orden alfabético, y la próxima confirmación en la otra se
 rechaza con su código.
 
+**Las líneas que ya están se numeran por su identificador**, dentro de cada documento, en una
+segunda migración, `ElOrdenDeLasLineas`. No hay otro orden guardado y no hace falta: las líneas de
+antes del 2.8 valen cero, así que su orden no cambia ningún valor. El número entra con un valor por
+defecto que se quita después, como el valor del libro, y el índice único de `(ajuste_id, numero)` va
+detrás del relleno.
+
 **El `CHECK` de la existencia falla si la base ya tiene negativos.** La migración no los arregla:
 una base de desarrollo con un negativo se rehace o se le da la entrada que falta, y el error lleva
 el nombre de la restricción.
@@ -413,6 +425,9 @@ decimales, y la divisa, de la empresa. El disparador sigue armado para la fase 3
   uno se arregla dando antes la entrada, no quitando la guarda. Los de la anulación con
   contradocumento reciben una entrada previa en otra serie, y el generador de la propiedad modela
   el rechazo.
+- **La línea de ajuste lleva número**, y no estaba en el encargo: lo destapó la propiedad. Con un
+  coste distinto por entrada, un inverso leído de la base valoraba sus salidas en otro orden que el
+  que tenía el original en memoria, y el precio congelado no casaba con el modelo.
 - **Lo que no tiene caso, dicho.** El interbloqueo entre dos documentos con las mismas dos claves en
   orden inverso lo sostiene el orden de las claves, como en el 2.7 (ADR-0044, *Consecuencias*).
 

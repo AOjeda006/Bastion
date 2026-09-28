@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.UnitTests.Valoraciones;
 using Shouldly;
 
 namespace Bastion.Inventario.UnitTests.Ajustes;
@@ -63,7 +64,7 @@ public sealed class ElCosteYLaDivisaDelAjusteTests
 
         ajuste.Divisa.ShouldBe("USD");
 
-        IReadOnlyList<MovimientoStock> filas = ajuste.Confirmar(1, Confirmado(ajuste), s_momento);
+        IReadOnlyList<MovimientoStock> filas = ajuste.Confirmar(1, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento);
 
         filas.Select(fila => fila.Divisa).ShouldBe(["USD", "USD"]);
         filas[0].CosteUnitario.ShouldBe(Importe.De(2.50m, "USD"));
@@ -92,6 +93,8 @@ public sealed class ElCosteYLaDivisaDelAjusteTests
             1m,
             "EUR",
             Importe.De(2.50m, "USD"),
+            Importe.De(2.50m, "EUR"),
+            PrecioUnitario.De(2.50m, "EUR"),
             TipoDeDocumentoOrigen.Ajuste,
             Guid.CreateVersion7(),
             s_momento)).ParamName.ShouldBe("costeUnitario");

@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Organizacion.Contracts.Ejercicios;
 
 namespace Bastion.Inventario.Application.Ajustes;
@@ -85,12 +86,14 @@ public interface IAnularAjuste
 /// <param name="ajustes">Dónde viven el documento y el libro.</param>
 /// <param name="numerador">Quién entrega el correlativo, en esta misma transacción (R5).</param>
 /// <param name="ejercicios">Si <b>hoy</b> admite escrituras, con la fila bloqueada (R9).</param>
+/// <param name="valoracion">Quién valora el inverso contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «hoy».</param>
 internal sealed class AnularAjuste(
     IRepositorioDeAjustes ajustes,
     INumeradorDeSeriesDeInventario numerador,
     IConsultaDeEjercicios ejercicios,
+    IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IAnularAjuste
 {
@@ -170,6 +173,24 @@ internal sealed class AnularAjuste(
             return Resultado.Fallo<AnulacionDto>(numero.Error!);
         }
 
+        // LA VALORACIÓN DEL INVERSO, en el mismo sitio que al confirmar (ADR-0046 §2). Cada línea
+        // trae el valor de la del original como valor que compensa, así que el par suma cero
+        // también en valor, salvo que otras salidas se hayan llevado parte de él entretanto
+        // (ADR-0046 §6).
+        IReadOnlyList<LineaAValorar> lineas = inverso.LineasAValorar();
+
+        IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos = await ajustes
+            .BloquearLasValoracionesAsync(
+                [.. lineas.Select(linea => linea.Clave).Distinct()], inverso.Divisa, cancelacion)
+            .ConfigureAwait(false);
+
+        if (valoracion.LoQueImpide(saldos, lineas, inverso.Divisa) is { } impedimento)
+        {
+            return Resultado.Fallo<AnulacionDto>(ErroresDeAjuste.NoSeValora(impedimento, inverso.Divisa));
+        }
+
+        IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, inverso.Divisa);
+
         var confirmado = new AjusteConfirmado(
             inverso.Id,
             inverso.EmpresaId,
@@ -178,7 +199,7 @@ internal sealed class AnularAjuste(
             inverso.Lineas.Count);
 
         IReadOnlyList<MovimientoStock> movimientos =
-            inverso.Confirmar(numero.Valor, confirmado, ahora);
+            inverso.Confirmar(numero.Valor, confirmado, valoradas, ahora);
 
         original.Anular(inverso, new AjusteAnulado(original.Id, original.EmpresaId));
 

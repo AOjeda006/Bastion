@@ -81,6 +81,9 @@ export const en: Diccionario = {
       'ajuste-en-ejercicio-cerrado':
         'That adjustment is dated inside a closed financial year: the period is already final ' +
         'and takes no new documents. Change the date or ask for the year to be reopened.',
+      'ajuste-entrada-sin-coste-ni-precio-medio':
+        'A line brings in an item that has no stock in that warehouse, and with no stock there is ' +
+        'no average cost to value it at. Enter the cost of that line.',
       'ajuste-motivo-no-valido':
         'Write why you are reversing the adjustment, in 300 characters or fewer. It is the only ' +
         'thing left to explain the correction two years from now.',
@@ -110,6 +113,10 @@ export const en: Diccionario = {
       'ajuste-unidad-retirada':
         'That unit has been withdrawn: movements already written in it are still read, but a new ' +
         'one is not written with it. Pick another unit.',
+      'ajuste-valoracion-en-otra-divisa':
+        'The stock of an item in this document is valued in another currency in that warehouse, ' +
+        'and adding them up would need an exchange rate. Make the adjustment in the currency the ' +
+        'stock is valued in.',
       'almacen-duplicado': 'There is already a warehouse with that code at this company.',
       'almacen-no-encontrado': 'That warehouse no longer exists. Go back to the list and refresh.',
       'articulo-duplicado': 'There is already an item with that code at this company.',

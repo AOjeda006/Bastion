@@ -87,6 +87,8 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
             1m,
             "EUR",
             Importe.De(1m, "EUR"),
+            Importe.De(1m, "EUR"),
+            PrecioUnitario.De(1m, "EUR"),
             TipoDeDocumentoOrigen.Ajuste,
             documentoQueNoExiste,
             DateTimeOffset.UtcNow));

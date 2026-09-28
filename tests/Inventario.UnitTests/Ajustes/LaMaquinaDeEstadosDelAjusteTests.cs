@@ -5,6 +5,7 @@ using Bastion.BuildingBlocks.Domain.Eventos;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.UnitTests.Valoraciones;
 using Shouldly;
 
 namespace Bastion.Inventario.UnitTests.Ajustes;
@@ -80,7 +81,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         ConLinea(ajuste, cantidad: 4m, factor: 2m);
         ConLinea(ajuste, cantidad: -1m, factor: 1m);
 
-        IReadOnlyList<MovimientoStock> movimientos = ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento);
+        IReadOnlyList<MovimientoStock> movimientos = ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento);
 
         ajuste.Estado.ShouldBe(EstadoDeAjuste.Confirmado);
 
@@ -127,7 +128,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         Ajuste ajuste = UnAjuste();
 
         InvalidOperationException fallo = Should.Throw<InvalidOperationException>(
-            () => ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento));
+            () => ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento));
 
         fallo.Message.ShouldContain("R13");
 
@@ -143,10 +144,10 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
     {
         Ajuste ajuste = UnAjuste();
         ConLinea(ajuste, cantidad: 1m, factor: 1m);
-        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento);
+        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento);
 
         InvalidOperationException fallo = Should.Throw<InvalidOperationException>(
-            () => ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento));
+            () => ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento));
 
         // El mensaje dice de DÓNDE sale la transición, no solo que no se pueda: es lo que
         // necesita quien la intentó desde donde no tocaba.
@@ -168,10 +169,10 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
     {
         Ajuste ajuste = UnAjuste();
         ConLinea(ajuste, cantidad: 1m, factor: 1m);
-        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento);
+        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento);
 
         Should.Throw<InvalidOperationException>(
-            () => ajuste.Confirmar(NumeroQueDioLaSerie + 1, Confirmado(ajuste), s_momento));
+            () => ajuste.Confirmar(NumeroQueDioLaSerie + 1, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento));
 
         ajuste.Numero.ShouldBe(NumeroQueDioLaSerie);
     }
@@ -199,7 +200,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         ConLinea(ajuste, cantidad: 1m, factor: 1m);
 
         Should.Throw<ArgumentOutOfRangeException>(
-            () => ajuste.Confirmar(numero, Confirmado(ajuste), s_momento))
+            () => ajuste.Confirmar(numero, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento))
             .ParamName.ShouldBe("numero");
 
         ajuste.Estado.ShouldBe(EstadoDeAjuste.Borrador);
@@ -218,7 +219,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
     {
         Ajuste ajuste = UnAjuste();
         ConLinea(ajuste, cantidad: 1m, factor: 1m);
-        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), s_momento);
+        ajuste.Confirmar(NumeroQueDioLaSerie, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento);
 
         Should.Throw<InvalidOperationException>(() => ConLinea(ajuste, cantidad: 2m, factor: 1m));
 
@@ -254,11 +255,11 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
 
         Ajuste confirmado = UnAjuste();
         ConLinea(confirmado, cantidad: 1m, factor: 1m);
-        confirmado.Confirmar(NumeroQueDioLaSerie, Confirmado(confirmado), s_momento);
+        confirmado.Confirmar(NumeroQueDioLaSerie, Confirmado(confirmado), LaValoracion.DesdeCero(confirmado), s_momento);
 
         Ajuste inverso = confirmado.CrearInverso(
             new DateOnly(2026, 4, 1), "Me equivoqué", s_momento);
-        inverso.Confirmar(NumeroQueDioLaSerie + 1, Confirmado(inverso), s_momento);
+        inverso.Confirmar(NumeroQueDioLaSerie + 1, Confirmado(inverso), LaValoracion.DesdeCero(inverso), s_momento);
 
         confirmado.Anular(inverso, Anulado(confirmado));
 
@@ -280,7 +281,7 @@ public sealed class LaMaquinaDeEstadosDelAjusteTests
         ConLinea(ajuste, cantidad: 1m, factor: 1m);
 
         Should.Throw<ArgumentNullException>(
-            () => ajuste.Confirmar(NumeroQueDioLaSerie, null!, s_momento));
+            () => ajuste.Confirmar(NumeroQueDioLaSerie, null!, LaValoracion.DesdeCero(ajuste), s_momento));
 
         ajuste.Estado.ShouldBe(EstadoDeAjuste.Borrador);
     }

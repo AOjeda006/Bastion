@@ -444,8 +444,17 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaTrazaVaEnLaMismaTransaccionTests.Un_guardado_que_revienta_no_deja_ni_la_fila_ni_su_traza",
         "LaTrazaVaEnLaMismaTransaccionTests.Y_uno_que_va_bien_deja_las_dos_cosas",
 
+        "LaValoracionDelAjusteTests.Dos_empresas_con_la_misma_clave_no_comparten_valoracion",
         "LaValoracionDelAjusteTests.El_borrador_toma_la_divisa_base_de_la_empresa",
+        "LaValoracionDelAjusteTests.El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro",
+        "LaValoracionDelAjusteTests.El_inverso_resta_el_valor_que_sumo_la_entrada_y_el_par_suma_cero",
+        "LaValoracionDelAjusteTests.La_segunda_de_dos_confirmaciones_a_la_vez_se_valora_con_lo_que_dejo_la_primera",
+        "LaValoracionDelAjusteTests.Las_lineas_se_valoran_en_el_orden_en_que_se_escribieron_aunque_la_base_las_devuelva_en_otro",
+        "LaValoracionDelAjusteTests.Un_documento_en_otra_divisa_que_la_de_la_valoracion_es_422_salvo_en_una_clave_vacia",
+        "LaValoracionDelAjusteTests.Una_entrada_sin_coste_en_una_clave_vacia_es_422_y_no_deja_nada",
+        "LaValoracionDelAjusteTests.Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave",
         "LaValoracionDelAjusteTests.Una_salida_con_coste_o_un_coste_negativo_no_abren_el_borrador",
+        "LaValoracionDelAjusteTests.Una_salida_congela_el_precio_medio_y_la_que_vacia_se_lleva_todo_el_valor",
 
         "LaVersionViajaDeLaLecturaALaEscrituraTests.De_dos_que_leyeron_lo_mismo_solo_guarda_el_primero",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.La_etiqueta_que_emite_la_lectura_es_la_que_acepta_la_escritura",

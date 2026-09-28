@@ -19,13 +19,19 @@ internal sealed class ConfiguracionDeLineaDeAjuste : IEntityTypeConfiguration<Li
     internal const string CantidadYFactor =
         "cantidad_introducida <> 0 AND factor_a_unidad_base > 0";
 
+    internal const string NumeroDesdeUno = "numero > 0";
+
     public void Configure(EntityTypeBuilder<LineaDeAjuste> linea)
     {
         ArgumentNullException.ThrowIfNull(linea);
 
         linea.ToTable(
             "lineas_ajuste",
-            tabla => tabla.HasCheckConstraint("ck_lineas_ajuste_cantidad_y_factor", CantidadYFactor));
+            tabla =>
+            {
+                tabla.HasCheckConstraint("ck_lineas_ajuste_cantidad_y_factor", CantidadYFactor);
+                tabla.HasCheckConstraint("ck_lineas_ajuste_numero_desde_uno", NumeroDesdeUno);
+            });
 
         linea.HasKey(fila => fila.Id);
 
@@ -42,6 +48,11 @@ internal sealed class ConfiguracionDeLineaDeAjuste : IEntityTypeConfiguration<Li
         ConfiguracionDeEntidadBase.Mapear(linea);
 
         linea.Property(fila => fila.AjusteId).IsRequired().SeAudita();
+
+        // EL ORDEN EN QUE SE ESCRIBIÓ, que es en el que se valora (ADR-0046 §3). Único dentro del
+        // documento, porque dos líneas con el mismo número no tendrían orden entre ellas; y el
+        // índice único sirve también a la clave ajena, que empieza por la misma columna.
+        linea.Property(fila => fila.Numero).IsRequired().SeAudita();
         linea.Property(fila => fila.UbicacionId).IsRequired().SeAudita();
         linea.Property(fila => fila.ArticuloId).IsRequired().SeAudita();
         linea.Property(fila => fila.UnidadIntroducidaId).IsRequired().SeAudita();
@@ -62,6 +73,18 @@ internal sealed class ConfiguracionDeLineaDeAjuste : IEntityTypeConfiguration<Li
             .HasPrecision(18, Importe.Decimales)
             .SeAudita();
 
-        linea.HasIndex(fila => fila.AjusteId);
+        // EL VALOR DE LA LÍNEA Y EL QUE COMPENSA (ADR-0046 §6), en la divisa de la cabecera como el
+        // coste. Nulos mientras no aplican: el primero hasta confirmar, el segundo fuera de un
+        // inverso. Se auditan porque son lo que el inverso compensa: si cambiaran, el par dejaría
+        // de sumar cero en valor.
+        linea.Property(fila => fila.Valor)
+            .HasPrecision(18, Importe.Decimales)
+            .SeAudita();
+
+        linea.Property(fila => fila.ValorQueCompensa)
+            .HasPrecision(18, Importe.Decimales)
+            .SeAudita();
+
+        linea.HasIndex(fila => new { fila.AjusteId, fila.Numero }).IsUnique();
     }
 }

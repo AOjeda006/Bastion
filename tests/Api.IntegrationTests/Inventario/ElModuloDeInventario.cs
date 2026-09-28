@@ -8,6 +8,7 @@ using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 using Bastion.Organizacion.Infrastructure.Persistencia;
@@ -93,6 +94,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             ajustes,
             new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
             ejercicios,
+            new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
             TimeProvider.System);
 
@@ -100,6 +102,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             ajustes,
             new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
             ejercicios,
+            new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
             TimeProvider.System);
 
@@ -205,6 +208,23 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
 
     /// <summary>Lo que espera quien llega segundo antes de rendirse con un 55P03.</summary>
     internal const string PlazoCorto = "SET LOCAL lock_timeout = '300ms'";
+
+    /// <summary>
+    /// Quita los índices a las lecturas de este módulo, dentro de su transacción: el motor recorre
+    /// cada tabla en el orden en que están guardadas sus filas.
+    /// </summary>
+    /// <remarks>
+    /// Para el caso del orden de las líneas. Con el índice de <c>(ajuste_id, numero)</c> el motor
+    /// las devolvería casi siempre ya ordenadas, y el caso saldría verde aunque el agregado no las
+    /// ordenara. Sin él, las devuelve en el orden en que están guardadas, que el caso ha cambiado.
+    /// </remarks>
+    internal Task LeerSinIndicesAsync() =>
+        _inventario.Database.ExecuteSqlRawAsync(SinIndices);
+
+    /// <summary>Los tres recorridos por índice, apagados hasta el final de la transacción.</summary>
+    internal const string SinIndices =
+        "SET LOCAL enable_indexscan = off; SET LOCAL enable_bitmapscan = off; "
+        + "SET LOCAL enable_indexonlyscan = off";
 
     /// <summary>El proceso de PostgreSQL que atiende la conexión de este módulo.</summary>
     /// <remarks>

@@ -181,6 +181,8 @@ public sealed class LaCantidadBaseSeRedondeaAlejandoseDelCeroTests
             1m,
             "EUR",
             Importe.De(2.50m, "EUR"),
+            Importe.Cero("EUR"),
+            PrecioUnitario.De(2.50m, "EUR"),
             TipoDeDocumentoOrigen.Ajuste,
             documento,
             DateTimeOffset.UnixEpoch);
@@ -201,6 +203,8 @@ public sealed class LaCantidadBaseSeRedondeaAlejandoseDelCeroTests
             factorAUnidadBase,
             "EUR",
             Importe.De(2.50m, "EUR"),
+            Importe.Cero("EUR"),
+            PrecioUnitario.De(2.50m, "EUR"),
             TipoDeDocumentoOrigen.Ajuste,
             Guid.CreateVersion7(),
             DateTimeOffset.UnixEpoch);

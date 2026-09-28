@@ -45,7 +45,9 @@ public sealed record AbrirAjusteDto(
 /// <param name="FactorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
 /// <param name="CosteUnitario">
 /// Coste de una unidad base, en la divisa base de la empresa, o nada. Solo lo lleva una línea que
-/// sube, y nunca negativo: si no, <c>ajuste-coste-no-valido</c>.
+/// sube, y nunca negativo: si no, <c>ajuste-coste-no-valido</c>. Sin él, la entrada se valora al
+/// precio medio de su artículo en el almacén; y sin precio medio, porque no hay existencias,
+/// confirmar contesta <c>ajuste-entrada-sin-coste-ni-precio-medio</c>.
 /// </param>
 public sealed record LineaDeAjusteDto(
     Guid UbicacionId,
@@ -128,6 +130,13 @@ public sealed record AnulacionDto(AjusteDto Original, AjusteDto Inverso);
 /// <param name="UnidadIntroducidaId">Unidad en la que se escribió.</param>
 /// <param name="FactorAUnidadBase">El puente entre las dos.</param>
 /// <param name="CosteUnitario">Coste de una unidad base, o nada si la fila no lo trajo.</param>
+/// <param name="Valor">
+/// Lo que la fila sumó a la valoración de su artículo en su almacén, o lo que le restó, con el
+/// signo de la cantidad. Cero en las filas de antes de la valoración (ADR-0046 §8).
+/// </param>
+/// <param name="PrecioMedio">
+/// El precio medio que la fila congeló: el de después en lo que entra, el de antes en lo que sale.
+/// </param>
 /// <param name="Divisa">Código ISO-4217 de todos los importes de la fila (R6).</param>
 /// <param name="DocumentoOrigenTipo">Qué clase de documento la escribió (R13).</param>
 /// <param name="DocumentoOrigenId">Cuál (R13).</param>
@@ -143,6 +152,8 @@ public sealed record MovimientoDto(
     Guid UnidadIntroducidaId,
     decimal FactorAUnidadBase,
     decimal? CosteUnitario,
+    decimal Valor,
+    decimal PrecioMedio,
     string Divisa,
     string DocumentoOrigenTipo,
     Guid DocumentoOrigenId);

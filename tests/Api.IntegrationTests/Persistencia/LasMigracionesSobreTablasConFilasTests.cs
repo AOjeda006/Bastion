@@ -86,6 +86,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_instantaneas_mensuales_mes_es_primer_dia"] =
             new([], [("mes", "date_trunc('month', current_date)::date")]),
         ["ck_lineas_ajuste_cantidad_y_factor"] = Relleno.Ninguno,
+        ["ck_lineas_ajuste_numero_desde_uno"] = new([], [("numero", "1")]),
         ["ck_lineas_tarifa_articulo_o_categoria"] = new(["articulo_id"], []),
         ["ck_lineas_tarifa_cantidad_desde_no_negativa"] = Relleno.Ninguno,
         ["ck_lineas_tarifa_descuento_en_rango"] = Relleno.Ninguno,
@@ -97,6 +98,9 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_tarifas_vigencia_no_invertida"] = Relleno.Ninguno,
         ["ck_terceros_limite_credito_completo"] = Relleno.Ninguno,
         ["ck_terceros_territorio_fiscal"] = new([], [("territorio_fiscal", "'PeninsulaYBaleares'")]),
+        ["ck_valoraciones_cantidad_no_negativa"] = Relleno.Ninguno,
+        ["ck_valoraciones_sin_cantidad_no_hay_valor"] = Relleno.Ninguno,
+        ["ck_valoraciones_valor_no_negativo"] = Relleno.Ninguno,
     };
 
     [Fact]

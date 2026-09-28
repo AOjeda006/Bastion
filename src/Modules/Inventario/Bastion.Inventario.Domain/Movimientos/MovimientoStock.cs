@@ -62,6 +62,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         decimal factorAUnidadBase,
         string divisa,
         Importe? costeUnitario,
+        Importe valor,
+        PrecioUnitario precioMedio,
         TipoDeDocumentoOrigen documentoOrigenTipo,
         Guid documentoOrigenId,
         DateTimeOffset momento)
@@ -79,6 +81,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         CantidadEnUnidadBase = EnUnidadBase(cantidadIntroducida, factorAUnidadBase);
         Divisa = divisa;
         CosteUnitarioSinDivisa = costeUnitario?.Cantidad;
+        ValorSinDivisa = valor.Cantidad;
+        PrecioMedioSinDivisa = precioMedio.Cantidad;
         DocumentoOrigenTipo = documentoOrigenTipo;
         DocumentoOrigenId = documentoOrigenId;
     }
@@ -161,6 +165,40 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// <summary>La columna del coste, sin divisa: lo que EF Core lee y escribe.</summary>
     private decimal? CosteUnitarioSinDivisa { get; set; }
 
+    /// <summary>
+    /// Lo que la fila sumó a la valoración de su artículo y almacén, o lo que le restó: lleva el
+    /// signo de la cantidad (ADR-0046 §5).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es un importe redondeado una sola vez</b>, en <c>PrecioUnitario.Por</c>, y la valoración
+    /// suma exactamente esto. Así, el valor de una fecha pasada es la suma de esta columna hasta
+    /// esa fecha, sin reproducir nada.
+    /// </para>
+    /// <para>
+    /// <b>Las filas de antes del 2.8 valen cero</b>, porque no congelaron ningún precio y el libro
+    /// no se reescribe (ADR-0046 §8).
+    /// </para>
+    /// </remarks>
+    public Importe Valor => Importe.De(ValorSinDivisa, Divisa);
+
+    /// <summary>
+    /// El precio medio que la fila congela: el de después en lo que entra, el de antes en lo que
+    /// sale (ADR-0046 §5).
+    /// </summary>
+    /// <remarks>
+    /// Se guarda aunque se pudiera deducir del libro, por lo mismo que el factor: la fila tiene que
+    /// explicarse sola, y reproducir la valoración para saber a qué precio salió una unidad hace dos
+    /// años es justo lo que el PMP perpetuo evita.
+    /// </remarks>
+    public PrecioUnitario PrecioMedio => PrecioUnitario.De(PrecioMedioSinDivisa, Divisa);
+
+    /// <summary>La columna del valor, sin divisa: lo que EF Core lee y escribe.</summary>
+    private decimal ValorSinDivisa { get; set; }
+
+    /// <summary>La columna del precio medio, sin divisa: lo que EF Core lee y escribe.</summary>
+    private decimal PrecioMedioSinDivisa { get; set; }
+
     /// <summary>Qué clase de documento lo escribió (R13).</summary>
     public TipoDeDocumentoOrigen DocumentoOrigenTipo { get; private set; }
 
@@ -208,6 +246,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// <param name="factorAUnidadBase">Factor hacia la unidad base del artículo.</param>
     /// <param name="divisa">La divisa de los importes de la fila.</param>
     /// <param name="costeUnitario">Coste de una unidad base, en esa divisa, o <c>null</c>.</param>
+    /// <param name="valor">Lo que la fila suma o resta a la valoración, con el signo de la cantidad.</param>
+    /// <param name="precioMedio">El precio medio que la fila congela.</param>
     /// <param name="documentoOrigenTipo">Clase del documento que la escribe (R13).</param>
     /// <param name="documentoOrigenId">Identificador de ese documento (R13).</param>
     /// <param name="momento">Ahora, de quien tenga el <c>TimeProvider</c>.</param>
@@ -215,7 +255,10 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// <exception cref="ArgumentOutOfRangeException">
     /// El factor no es positivo, o la cantidad —introducida o en base— es cero.
     /// </exception>
-    /// <exception cref="ArgumentException">El coste va en otra divisa que la fila.</exception>
+    /// <exception cref="ArgumentException">
+    /// Algún importe va en otra divisa que la fila, el valor no lleva el signo de la cantidad o el
+    /// precio medio es negativo.
+    /// </exception>
     public static MovimientoStock Registrar(
         Guid empresaId,
         DateOnly fechaDeOperacion,
@@ -227,11 +270,15 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         decimal factorAUnidadBase,
         string divisa,
         Importe? costeUnitario,
+        Importe valor,
+        PrecioUnitario precioMedio,
         TipoDeDocumentoOrigen documentoOrigenTipo,
         Guid documentoOrigenId,
         DateTimeOffset momento)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(factorAUnidadBase);
+        ArgumentNullException.ThrowIfNull(valor);
+        ArgumentNullException.ThrowIfNull(precioMedio);
 
         string laDeLaFila = CatalogoDeDivisas.Normalizar(divisa);
 
@@ -241,6 +288,31 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
                 $"El coste va en {costeUnitario.Divisa} y la fila en {laDeLaFila}: todos los " +
                 "importes de una fila van en su divisa (R6).",
                 nameof(costeUnitario));
+        }
+
+        if (valor.Divisa != laDeLaFila || precioMedio.Divisa != laDeLaFila)
+        {
+            throw new ArgumentException(
+                $"El valor va en {valor.Divisa}, el precio medio en {precioMedio.Divisa} y la fila " +
+                $"en {laDeLaFila}: todos los importes de una fila van en su divisa (R6).",
+                nameof(valor));
+        }
+
+        // CERO VALE CON CUALQUIER SIGNO: una entrada a coste cero, o la salida de una clave que
+        // solo tiene filas de antes del 2.8, no mueven valor.
+        if (valor.Cantidad * cantidadIntroducida < 0m)
+        {
+            throw new ArgumentException(
+                "El valor va con el signo de la cantidad: lo que entra suma valor y lo que sale lo " +
+                "resta (ADR-0046 §5).",
+                nameof(valor));
+        }
+
+        if (precioMedio.Cantidad < 0m)
+        {
+            throw new ArgumentException(
+                "Un precio medio negativo no existe: sale de un valor y una cantidad que no lo son.",
+                nameof(precioMedio));
         }
 
         if (cantidadIntroducida == 0m)
@@ -270,6 +342,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
             factorAUnidadBase,
             laDeLaFila,
             costeUnitario,
+            valor,
+            precioMedio,
             documentoOrigenTipo,
             documentoOrigenId,
             momento);

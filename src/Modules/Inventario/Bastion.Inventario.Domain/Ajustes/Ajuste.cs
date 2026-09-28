@@ -3,6 +3,7 @@ using Bastion.BuildingBlocks.Domain.Documentos;
 using Bastion.BuildingBlocks.Domain.Eventos;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Valoraciones;
 
 namespace Bastion.Inventario.Domain.Ajustes;
 
@@ -129,8 +130,13 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// </remarks>
     public Guid? AnulaAId { get; private set; }
 
-    /// <summary>Las líneas del documento.</summary>
-    public IReadOnlyList<LineaDeAjuste> Lineas => _lineas;
+    /// <summary>Las líneas del documento, en el orden en que se escribieron.</summary>
+    /// <remarks>
+    /// <b>Por su número, y no por cómo estén en la colección</b>: EF Core la llena en el orden en
+    /// que el motor devuelve las filas, y la valoración depende del orden (ADR-0046 §3). Todo lo
+    /// que recorre las líneas pasa por aquí.
+    /// </remarks>
+    public IReadOnlyList<LineaDeAjuste> Lineas => [.. _lineas.OrderBy(linea => linea.Numero)];
 
     /// <summary>Abre un ajuste en borrador.</summary>
     /// <remarks>
@@ -230,6 +236,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
 
         _lineas.Add(LineaDeAjuste.Crear(
             Id,
+            _lineas.Count + 1,
             ubicacionId,
             articuloId,
             cantidadIntroducida,
@@ -267,14 +274,27 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// que sí se sostiene aquí es que <b>no hay forma de confirmar sin número</b>: no existe una
     /// sobrecarga sin él, y volver a llamar con otro no pasa de la transición de estado.
     /// </para>
+    /// <para>
+    /// <b>La valoración también entra por parámetro, y por lo mismo</b> (ADR-0046 §10): la calcula
+    /// <c>IValoracionDeExistencias</c> contra los saldos que el caso de uso acaba de bloquear, y
+    /// el dominio no bloquea nada. Lo que sí se sostiene aquí es que <b>no hay forma de confirmar
+    /// sin valorar</b>: se exige una por línea, en el orden de <see cref="LineasAValorar"/>, y cada
+    /// línea anota la suya.
+    /// </para>
     /// </remarks>
     /// <param name="numero">El correlativo que la serie acaba de dar, en esta misma transacción.</param>
     /// <param name="evento">Lo que se cuenta de la confirmación.</param>
+    /// <param name="valoracion">Una línea valorada por cada línea del documento, en su orden.</param>
     /// <param name="momento">Ahora.</param>
     /// <returns>Una fila del libro por línea del documento.</returns>
     public IReadOnlyList<MovimientoStock> Confirmar(
-        long numero, EventoDeIntegracion evento, DateTimeOffset momento)
+        long numero,
+        EventoDeIntegracion evento,
+        IReadOnlyList<LineaValorada> valoracion,
+        DateTimeOffset momento)
     {
+        ArgumentNullException.ThrowIfNull(valoracion);
+
         if (_lineas.Count == 0)
         {
             throw new InvalidOperationException(
@@ -291,6 +311,20 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 "significa que el número no salió del mecanismo de numeración.");
         }
 
+        // ANTES DE TRANSITAR, para que una valoración que no casa no deje el documento a medias.
+        // La divisa la vuelve a mirar cada fila del libro, pero entonces el estado ya habría cambiado.
+        if (valoracion.Count != _lineas.Count
+            || valoracion.Any(valorada => valorada is null
+                || valorada.Valor.Divisa != Divisa
+                || valorada.PrecioMedio.Divisa != Divisa))
+        {
+            throw new ArgumentException(
+                $"El documento tiene {_lineas.Count} líneas en {Divisa}, y la valoración trae " +
+                $"{valoracion.Count}: hace falta una por línea, en la divisa del documento " +
+                "(ADR-0046 §10).",
+                nameof(valoracion));
+        }
+
         Transitar(EstadoDeAjuste.Borrador, EstadoDeAjuste.Confirmado, evento);
 
         // DESPUÉS DE TRANSITAR, y ese orden es el que hace que confirmar dos veces no repinte el
@@ -298,9 +332,17 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         // asignación no llega a ejecutarse.
         Numero = numero;
 
-        return
-        [
-            .. _lineas.Select(linea => MovimientoStock.Registrar(
+        IReadOnlyList<LineaDeAjuste> lineas = Lineas;
+        List<MovimientoStock> movimientos = new(lineas.Count);
+
+        for (int indice = 0; indice < lineas.Count; indice++)
+        {
+            LineaDeAjuste linea = lineas[indice];
+            LineaValorada valorada = valoracion[indice];
+
+            linea.AnotarValor(valorada.Valor.Cantidad);
+
+            movimientos.Add(MovimientoStock.Registrar(
                 EmpresaId,
                 FechaDeOperacion,
                 AlmacenId,
@@ -311,11 +353,35 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 linea.FactorAUnidadBase,
                 Divisa,
                 linea.CosteUnitario is { } coste ? Importe.De(coste, Divisa) : null,
+                valorada.Valor,
+                valorada.PrecioMedio,
                 TipoDeDocumentoOrigen.Ajuste,
                 Id,
-                momento)),
-        ];
+                momento));
+        }
+
+        return movimientos;
     }
+
+    /// <summary>
+    /// Lo que el documento pide valorar: una línea por línea, en su orden y en la divisa del
+    /// documento.
+    /// </summary>
+    /// <remarks>
+    /// <b>La clave es el artículo y el almacén del documento</b>, sin la ubicación (ADR-0046 §3). La
+    /// cantidad es la de la fila del libro, en unidad base y redondeada igual que ella, porque el
+    /// coste es por unidad base desde el 2.3. La línea de un inverso no trae coste: trae el valor
+    /// que compensa.
+    /// </remarks>
+    /// <returns>Las líneas a valorar, en el orden de <see cref="Lineas"/>.</returns>
+    public IReadOnlyList<LineaAValorar> LineasAValorar() =>
+    [
+        .. Lineas.Select(linea => new LineaAValorar(
+            new ClaveDeValoracion(linea.ArticuloId, AlmacenId),
+            MovimientoStock.EnUnidadBase(linea.CantidadIntroducida, linea.FactorAUnidadBase),
+            linea.CosteUnitario is { } coste ? PrecioUnitario.De(coste, Divisa) : null,
+            linea.ValorQueCompensa is { } compensa ? Importe.De(compensa, Divisa) : null)),
+    ];
 
     /// <summary>
     /// Construye el ajuste <b>inverso</b> que compensará a este: mismo almacén y misma serie, las
@@ -330,10 +396,12 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// segundo sitio donde olvidarse.
     /// </para>
     /// <para>
-    /// <b>El coste no se copia.</b> El inverso de una entrada es una salida, y una salida no lleva
-    /// coste, porque se valora al precio medio. Lo que el par necesita para sumar cero también en
-    /// valor es el importe exacto que escribió el original, y un coste por unidad no siempre lo
-    /// reproduce (ADR-0046 §6). La divisa sí se hereda: el par habla la misma.
+    /// <b>El coste no se copia: se copia el valor.</b> El inverso de una entrada es una salida, y una
+    /// salida no lleva coste, porque se valora al precio medio. Lo que el par necesita para sumar
+    /// cero también en valor es el importe exacto que escribió el original, y un coste por unidad
+    /// no siempre lo reproduce. Así que cada línea del inverso lleva el valor de la del original,
+    /// con el signo cambiado, como valor que compensa (ADR-0046 §6). La divisa sí se hereda: el par
+    /// habla la misma.
     /// </para>
     /// <para>
     /// <b>La fecha entra por parámetro y no se hereda</b>, que es lo que decidió el ítem 2.5. Un
@@ -365,16 +433,9 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
             EmpresaId, SerieId, AlmacenId, fechaDeOperacion, motivo, Divisa, momento);
         inverso.AnulaAId = Id;
 
-        foreach (LineaDeAjuste linea in _lineas)
+        foreach (LineaDeAjuste linea in Lineas)
         {
-            inverso.AnadirLinea(
-                linea.UbicacionId,
-                linea.ArticuloId,
-                -linea.CantidadIntroducida,
-                linea.UnidadIntroducidaId,
-                linea.FactorAUnidadBase,
-                costeUnitario: null,
-                momento);
+            inverso._lineas.Add(linea.Compensada(inverso.Id, momento));
         }
 
         return inverso;

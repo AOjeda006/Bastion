@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 
 /// <summary>
-/// Recorre las existencias y las instantáneas de una empresa y las compara con el libro (R3,
-/// ADR-0044).
+/// Recorre las existencias, las instantáneas y la valoración de una empresa y las compara con el
+/// libro (R3, ADR-0044, ADR-0046).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -15,9 +15,14 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// parecería una buena noticia. Quien lo llama afirma que el conjunto comparado no era vacío.
 /// </para>
 /// <para>
-/// <b>Una sola lectura</b>, y no una por tabla: el libro, las filas vivas y las instantáneas se
-/// leen con la misma foto del motor, así que una confirmación que acabe a mitad no puede aparecer
-/// en una y no en la otra.
+/// <b>Una sola lectura</b>, y no una por tabla: el libro, las filas vivas, las instantáneas y la
+/// valoración se leen con la misma foto del motor, así que una confirmación que acabe a mitad no
+/// puede aparecer en una y no en la otra.
+/// </para>
+/// <para>
+/// <b>La valoración es la tercera copia desde el 2.8</b>, y se cuadra en sus dos columnas: la
+/// cantidad contra la suma de las cantidades del libro, y el valor contra la suma de sus valores. El
+/// precio medio no se cuadra porque no se guarda: se deduce de las dos.
 /// </para>
 /// <para>
 /// <b>En el 2.7 no tiene quien lo llame en producción</b>, igual que el recálculo: el trabajo
@@ -48,6 +53,12 @@ internal sealed class ElCuadreDeLasExistencias(
     /// <para>
     /// <b>Las instantáneas se comparan contra las debidas del fragmento del recálculo</b>, por
     /// clave y mes, así que una que falte, una que sobre y una que diga otra cosa salen las tres.
+    /// </para>
+    /// <para>
+    /// <b>La valoración, por artículo y almacén y sin mirar la divisa.</b> Una clave que cambia de
+    /// divisa lo hace vacía, y vaciarla se lleva todo el valor (ADR-0046 §5), así que las filas de
+    /// la divisa de antes suman cero y la suma de todas es la de la divisa de ahora. Una valoración
+    /// sin filas en el libro cuadra solo si está a cero, igual que una fila viva.
     /// </para>
     /// </remarks>
     internal const string SqlDelCuadre =
@@ -82,6 +93,25 @@ internal sealed class ElCuadreDeLasExistencias(
                 WHERE i.empresa_id = {0} AND e.empresa_id = {0}
             ) AS x
             GROUP BY x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.mes
+        ),
+        valoraciones_cuadradas AS (
+            SELECT x.articulo_id, x.almacen_id,
+                   sum(x.cantidad_esperada) AS cantidad_esperada,
+                   sum(x.cantidad_guardada) AS cantidad_guardada,
+                   sum(x.valor_esperado) AS valor_esperado, sum(x.valor_guardado) AS valor_guardado,
+                   sum(x.filas) AS filas
+            FROM (
+                SELECT m.articulo_id, m.almacen_id,
+                       m.cantidad_en_unidad_base AS cantidad_esperada, 0::numeric AS cantidad_guardada,
+                       m.valor AS valor_esperado, 0::numeric AS valor_guardado, 0 AS filas
+                FROM inventario.movimiento_stock AS m
+                WHERE m.empresa_id = {0} AND m.fecha_de_operacion <= {1}
+                UNION ALL
+                SELECT v.articulo_id, v.almacen_id, 0, v.cantidad, 0, v.valor, 1
+                FROM inventario.valoraciones AS v
+                WHERE v.empresa_id = {0}
+            ) AS x
+            GROUP BY x.articulo_id, x.almacen_id
         )
         SELECT 'existencia' AS que, true AS es_resumen, count(*) AS comparadas,
                NULL::uuid AS articulo_id, NULL::uuid AS almacen_id, NULL::uuid AS ubicacion_id,
@@ -92,6 +122,9 @@ internal sealed class ElCuadreDeLasExistencias(
         SELECT 'instantanea', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
         FROM instantaneas_cuadradas
         UNION ALL
+        SELECT 'valoracion', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        FROM valoraciones_cuadradas
+        UNION ALL
         SELECT 'existencia', false, 0, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id,
                NULL, c.esperado, c.guardado, c.filas
         FROM existencias_cuadradas AS c
@@ -101,11 +134,21 @@ internal sealed class ElCuadreDeLasExistencias(
                c.mes, c.esperado, c.guardado, c.filas
         FROM instantaneas_cuadradas AS c
         WHERE c.esperado <> c.guardado OR c.filas <> 1
+        UNION ALL
+        SELECT 'valoracion-cantidad', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL,
+               c.cantidad_esperada, c.cantidad_guardada, c.filas
+        FROM valoraciones_cuadradas AS c
+        WHERE c.cantidad_esperada <> c.cantidad_guardada OR c.filas <> 1
+        UNION ALL
+        SELECT 'valoracion-valor', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL,
+               c.valor_esperado, c.valor_guardado, c.filas
+        FROM valoraciones_cuadradas AS c
+        WHERE c.valor_esperado <> c.valor_guardado
         """;
 
     /// <summary>Cuadra la empresa del inquilino.</summary>
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
-    /// <returns>Cuántas claves y cuántas instantáneas ha comparado, y lo que no cuadra.</returns>
+    /// <returns>Cuántas claves, instantáneas y valoraciones ha comparado, y lo que no cuadra.</returns>
     /// <exception cref="InvalidOperationException">No hay empresa en el inquilino.</exception>
     internal async Task<CuadreDeLasExistencias> CuadrarAsync(CancellationToken cancelacion)
     {
@@ -123,13 +166,14 @@ internal sealed class ElCuadreDeLasExistencias(
         return new CuadreDeLasExistencias(
             filas.Single(fila => fila.EsResumen && fila.Que == Existencia).Comparadas,
             filas.Single(fila => fila.EsResumen && fila.Que == Instantanea).Comparadas,
+            filas.Single(fila => fila.EsResumen && fila.Que == Valoracion).Comparadas,
             [.. filas
                 .Where(fila => !fila.EsResumen)
                 .Select(fila => new Descuadre(
                     fila.Que,
                     fila.ArticuloId!.Value,
                     fila.AlmacenId!.Value,
-                    fila.UbicacionId!.Value,
+                    fila.UbicacionId,
                     fila.LoteId,
                     fila.Mes,
                     fila.Esperado!.Value,
@@ -139,22 +183,28 @@ internal sealed class ElCuadreDeLasExistencias(
 
     private const string Existencia = "existencia";
     private const string Instantanea = "instantanea";
+    private const string Valoracion = "valoracion";
 }
 
 /// <summary>Lo que devuelve el cuadre.</summary>
 /// <param name="ExistenciasComparadas">Cuántas claves ha comparado entre el libro y las filas vivas.</param>
 /// <param name="InstantaneasComparadas">Cuántos pares de clave y mes ha comparado.</param>
+/// <param name="ValoracionesComparadas">Cuántos pares de artículo y almacén ha comparado.</param>
 /// <param name="Descuadres">Lo que no cuadra; vacía si todo cuadra.</param>
 internal sealed record CuadreDeLasExistencias(
     long ExistenciasComparadas,
     long InstantaneasComparadas,
+    long ValoracionesComparadas,
     IReadOnlyList<Descuadre> Descuadres);
 
 /// <summary>Una clave —o una clave y un mes— en la que la copia no dice lo que el libro.</summary>
-/// <param name="Que">«existencia» o «instantanea».</param>
+/// <param name="Que">
+/// «existencia», «instantanea», «valoracion-cantidad» o «valoracion-valor»; las dos últimas son las
+/// dos columnas de la valoración, cada una con su descuadre.
+/// </param>
 /// <param name="ArticuloId">El artículo de la clave.</param>
 /// <param name="AlmacenId">El almacén de la clave.</param>
-/// <param name="UbicacionId">La ubicación de la clave.</param>
+/// <param name="UbicacionId">La ubicación de la clave; nula en la valoración, que no la lleva.</param>
 /// <param name="LoteId">El lote de la clave, nulo mientras el libro no lo lleve.</param>
 /// <param name="Mes">El mes, en las instantáneas.</param>
 /// <param name="Esperado">Lo que dice el libro.</param>
@@ -164,7 +214,7 @@ internal sealed record Descuadre(
     string Que,
     Guid ArticuloId,
     Guid AlmacenId,
-    Guid UbicacionId,
+    Guid? UbicacionId,
     Guid? LoteId,
     DateOnly? Mes,
     decimal Esperado,

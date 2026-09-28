@@ -5301,6 +5301,17 @@ decimal que una salida puede mover.
 14. **La línea guarda sus importes como decimales, y la divisa la pone la cabecera**, como hace
     `LineaTarifa` con su precio y la divisa de su `Tarifa`. El dominio compone el `Importe` con la
     divisa del documento.
+15. **La línea de ajuste lleva número, y el agregado recorre sus líneas por él** (ADR-0046 §5 y §8).
+    El ADR fijaba «cada grupo en el orden de sus líneas», pero nada guardaba ese orden: EF Core no
+    ordena las filas de una colección dentro de su documento, y la versión 7 no ordena dentro del
+    mismo milisegundo. Y el orden decide el valor, no solo el precio congelado. Lo destapó la
+    propiedad, y la alternativa —ordenar por el identificador— sería determinista pero no el orden
+    en que se escribió. La migración `ElOrdenDeLasLineas` numera las líneas que ya están por su
+    identificador, que no cambia ningún valor porque las de antes del 2.8 valen cero.
+16. **La propiedad valora con una segunda cuenta**, escrita en el test con decimales y redondeos a
+    mano, sin `ElPrecioMedioPonderado` ni los tipos del dinero. El coste de cada entrada sale de la
+    propia línea, sin tocar el generador: una llamada más a `azar` cambiaría las secuencias que hoy
+    pasan por todas las clases de paso.
 
 
 ## Estado actual
@@ -6297,16 +6308,91 @@ porque la valoración suma importes, y para eso tiene que saber en qué divisa e
   `ajuste-coste-no-valido` en los dos diccionarios;
 - `dotnet format Bastion.sln --verify-no-changes --no-restore`.
 
-**Lo que falta del 2.8**, en este orden:
+**2.8, cuarta pieza: el cableado, bajo cerrojo** (2026-09-28). Son los puntos 2, 5, 6 y 8 del
+ADR-0046, y con ellos el precio medio deja de estar solo en el dominio.
 
-- **el cableado:**
-  - la tabla de valoraciones;
-  - las tres sentencias (cerrojo, lectura y suma);
-  - los dos `422` nuevos;
-  - el valor y el precio medio en el libro;
-  - los casos de carrera y de dos empresas;
-- **el cierre:** las mutaciones sobre la línea que calcula y congela el precio medio y sobre la
-  lectura bajo cerrojo.
+- **La tabla `inventario.valoraciones`**, una fila por empresa, artículo y almacén, con la cantidad,
+  el valor y la divisa. Sus tres `CHECK` son las tres guardas de `SaldoValorado`: la cantidad y el
+  valor no bajan de cero, y sin cantidad no hay valor.
+- **Las tres sentencias**, en `LaValoracionDelLibro`, y las dos del filtro, registradas en
+  `ElFiltroNoSeSaltaPorAhiTests` con su motivo:
+  1. la que crea a cero y bloquea, en orden de clave, con `INSERT … ON CONFLICT DO UPDATE SET
+     cantidad = v.cantidad`;
+  2. la que lee lo bloqueado;
+  3. y la que suma el valor del libro, detrás de la de la existencia.
+
+  El orden de los cerrojos es ejercicio, contador, valoración, documento y existencia, igual al
+  confirmar y al anular.
+- **Los dos `422` nuevos**: `ajuste-entrada-sin-coste-ni-precio-medio` y
+  `ajuste-valoracion-en-otra-divisa`, preguntados a `IValoracionDeExistencias.LoQueImpide` antes de
+  transitar, con su texto en los dos diccionarios.
+- **El libro guarda el valor y el precio medio de cada fila**, y la línea, su `Valor` y, en un
+  inverso, el `ValorQueCompensa`. La migración `LaValoracion` deja a cero lo de antes, sin una
+  sentencia de cambio sobre el libro.
+- **El cuadre mira la valoración**, en sus dos columnas: `valoracion-cantidad` y `valoracion-valor`,
+  por artículo y almacén, sin la ubicación.
+- **La línea lleva número** (decisión 15), con su migración `ElOrdenDeLasLineas` y su índice único
+  de `(ajuste_id, numero)`.
+- **La propiedad lleva la segunda cuenta** (decisión 16), y la compara tras cada paso con la tabla y
+  con el valor y el precio medio de cada fila del libro. Al final, el cuadre tiene que haber
+  comparado una valoración por artículo movido, y cada semilla tiene que haber valorado alguna
+  entrada al precio medio.
+- **Los casos nuevos:**
+  - `LaValoracionDelAjusteTests`, nueve más, todos en el censo:
+    - `Una_entrada_sin_coste_en_una_clave_vacia_es_422_y_no_deja_nada`;
+    - `Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave`, con 11 entre 7;
+    - `Una_salida_congela_el_precio_medio_y_la_que_vacia_se_lleva_todo_el_valor`, 60 y no 59,9999;
+    - `La_segunda_de_dos_confirmaciones_a_la_vez_se_valora_con_lo_que_dejo_la_primera`, la carrera
+      sobre una clave que ya existe, que es la que decide el cerrojo;
+    - `Un_documento_en_otra_divisa_que_la_de_la_valoracion_es_422_salvo_en_una_clave_vacia`;
+    - `El_inverso_resta_el_valor_que_sumo_la_entrada_y_el_par_suma_cero`, −50 y no −40;
+    - `Las_lineas_se_valoran_en_el_orden_en_que_se_escribieron_aunque_la_base_las_devuelva_en_otro`,
+      que desordena la base, lo comprueba y confirma sin índices;
+    - `Dos_empresas_con_la_misma_clave_no_comparten_valoracion`, con identificadores inventados;
+    - `El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro`, el arnés del cuadre: cinco
+      descuadres nombrados, y ninguno más.
+  - `ElValorQueLlevaElAjusteTests`, catorce en el carril rápido, con el par que suma cero en valor
+    y el número de línea. `dotnet test tests/Inventario.UnitTests` pasa de **55** a **69**.
+
+**Los rojos de la primera pasada, por nombre.**
+
+| Rojos | Por qué | Arreglo |
+|---|---|---|
+| `LosIdentificadoresAjenosTests.Todo_identificador_de_otro_modulo_esta_declarado_con_su_puerto` | `Valoracion` guarda tres identificadores de otros módulos | declararlos con su puerto |
+| `ElFiltroNoSeSaltaPorAhiTests.Ninguna_llamada_de_las_que_rodean_el_filtro_aparece_en_el_codigo` | las dos llamadas de SQL crudo de `LaValoracionDelLibro` | registrarlas con su motivo |
+| `LaAnulacionConContraDocumentoTests`, siete: `Sin_la_cabecera_la_anulacion_es_428_y_no_toca_nada`, `El_inverso_es_un_documento_confirmado_con_su_numero_y_su_flecha`, `El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso`, `El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion`, `Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada`, `Dos_anulaciones_simultaneas_dejan_un_solo_inverso` y `Anular_dos_veces_seguidas_no_crea_dos_inversos` | la entrada previa del ayudante no traía coste, en una clave vacía: `ajuste-entrada-sin-coste-ni-precio-medio`, la regla nueva haciendo su trabajo | la previa, con coste |
+| `ElSaldoEsLaSumaDelLibroPorPropiedadTests`, semillas 463 y 464 | el precio congelado de las salidas de un inverso con dos líneas del mismo artículo: el original se había valorado en el orden en que se escribió, y el inverso, leído de la base, en otro | la decisión 15 |
+
+Los de la anulación los dio `dotnet test tests/Api.IntegrationTests --no-build`, que dijo **7** con
+error de **436**, antes de los casos nuevos. Los dos primeros son del carril rápido, y las dos
+semillas, de la propiedad, en cuanto la segunda cuenta llevó un coste distinto por entrada.
+
+**Lo que se ejecutó antes del commit**, todo en verde:
+
+- `dotnet test Bastion.sln --no-build --filter "Category=Integracion"`: **432** en
+  `Api.IntegrationTests` y **84** en `Organizacion.IntegrationTests`; `bash
+  scripts/ci/recuento-de-tests.sh` sobre sus `.trx`, con la lista del workflow, da **516**;
+- `dotnet test Bastion.sln --no-build --filter "Category!=Integracion"`, que el mismo recuento da
+  en **974**:
+  - funcionales **189** y arquitectura **54**;
+  - `BuildingBlocks` **215**, Catálogo **78**, Identidad **61** e Inventario **69**;
+  - Organización **188** y **22** del carril rápido de su integración, y Terceros **85**;
+  - y **13** del censo, en `Api.IntegrationTests`;
+- `bash scripts/comprobar-migraciones.sh`: Inventario tiene **9** migraciones y el modelo coincide;
+- `bash scripts/generar-openapi.sh --comprobar`: **130** operaciones, sin cambios;
+- `bash scripts/generar-errores.sh --comprobar`: **123** tipos, de **129** sitios de llamada;
+- `npm --prefix frontend run api`, sin cambios en `esquema.ts`;
+- `typecheck`, `lint`, `format:check`, `build` y `vitest run`: **103** de **103** en **16** ficheros;
+  el presupuesto, **414/450** KiB de arranque y **603/900** en total;
+- `dotnet format Bastion.sln --verify-no-changes --no-restore`.
+
+**Lo que falta del 2.8: el cierre.**
+
+- las mutaciones sobre la lectura bajo cerrojo, sobre la línea que calcula y congela el precio medio
+  y sobre la que ordena las líneas, con los rojos por nombre;
+- las filas de la R2, la R3 y la R6, y la valoración en el glosario;
+- el invariante 8, escrito aquí;
+- y la casilla, con el run de `main` del 2.7.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 

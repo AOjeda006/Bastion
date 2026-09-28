@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Inventario.Domain.Valoraciones;
 
 namespace Bastion.Inventario.Application.Ajustes;
 
@@ -14,6 +15,8 @@ internal static class ErroresDeAjuste
     internal const string CodigoEnEjercicioCerrado = "ajuste-en-ejercicio-cerrado";
     internal const string CodigoConFechaFutura = "ajuste-con-fecha-futura";
     internal const string CodigoCosteNoValido = "ajuste-coste-no-valido";
+    internal const string CodigoEntradaSinCosteNiPrecioMedio = "ajuste-entrada-sin-coste-ni-precio-medio";
+    internal const string CodigoValoracionEnOtraDivisa = "ajuste-valoracion-en-otra-divisa";
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,
@@ -43,6 +46,39 @@ internal static class ErroresDeAjuste
         CodigoCosteNoValido,
         "Una línea que baja existencias no lleva coste, porque se valora al precio medio, y " +
         "ninguna lleva un coste negativo: una muestra o un regalo entran a cero (ADR-0046).");
+
+    /// <summary>Lo que impide valorar el documento, con su código (ADR-0046 §10).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Los dos son un <c>422</c></b>: el cuerpo está bien escrito, y lo que falla es lo que hay
+    /// en el almacén cuando se confirma. El mismo documento se confirmaría con otro saldo.
+    /// </para>
+    /// <para>
+    /// <b>Una entrada sin coste</b> se valora al precio medio de su artículo en su almacén, y sin
+    /// existencias no hay precio medio. <b>Una valoración en otra divisa</b> es la de una empresa que
+    /// cambió de divisa base con existencias: sumarlas exigiría un tipo de cambio con fecha, y eso es
+    /// de la fase 6.
+    /// </para>
+    /// </remarks>
+    /// <param name="impedimento">Lo que contestó <c>LoQueImpide</c>.</param>
+    /// <param name="divisa">La divisa del documento.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion NoSeValora(ImpedimentoDeValoracion impedimento, string divisa) =>
+        impedimento.Motivo switch
+        {
+            MotivoDelImpedimento.EntradaSinCosteNiPrecioMedio => ErrorDeOperacion.ReglaDeNegocio(
+                CodigoEntradaSinCosteNiPrecioMedio,
+                $"El artículo {impedimento.Clave.ArticuloId} no tiene existencias en el almacén " +
+                $"{impedimento.Clave.AlmacenId}, así que no tiene precio medio: su entrada necesita " +
+                "un coste (ADR-0046 §5)."),
+            MotivoDelImpedimento.ValoracionEnOtraDivisa => ErrorDeOperacion.ReglaDeNegocio(
+                CodigoValoracionEnOtraDivisa,
+                $"Las existencias del artículo {impedimento.Clave.ArticuloId} en el almacén " +
+                $"{impedimento.Clave.AlmacenId} están valoradas en otra divisa que la del " +
+                $"documento, {divisa}, y sumarlas exigiría un tipo de cambio (ADR-0046 §7)."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(impedimento), impedimento.Motivo, "un impedimento que el borde no sabe decir"),
+        };
 
     internal static ErrorDeOperacion NoEstaEnBorrador(Guid ajusteId, string estado) =>
         ErrorDeOperacion.Conflicto(

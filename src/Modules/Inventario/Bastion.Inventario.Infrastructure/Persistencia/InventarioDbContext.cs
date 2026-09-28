@@ -7,6 +7,7 @@ using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Valoraciones;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Inventario.Infrastructure.Persistencia;
@@ -71,6 +72,12 @@ public sealed class InventarioDbContext(
     public DbSet<CorteDeLaInstantanea> CortesDeLaInstantanea => Set<CorteDeLaInstantanea>();
 
     /// <summary>
+    /// Lo que vale lo que hay de cada artículo en cada almacén (ADR-0046). Solo se lee por aquí: la
+    /// escriben las sentencias que anotan el libro.
+    /// </summary>
+    public DbSet<Valoracion> Valoraciones => Set<Valoracion>();
+
+    /// <summary>
     /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive el
     /// historial de migraciones y qué convención de nombres se aplica.
     /// </summary>
@@ -126,6 +133,10 @@ public sealed class InventarioDbContext(
 
         modelBuilder.Entity<CorteDeLaInstantanea>().HasQueryFilter(
             "Inquilinato", corte => EmpresaDelFiltro == null || corte.EmpresaId == EmpresaDelFiltro);
+
+        modelBuilder.Entity<Valoracion>().HasQueryFilter(
+            "Inquilinato",
+            valoracion => EmpresaDelFiltro == null || valoracion.EmpresaId == EmpresaDelFiltro);
 
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
             "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);

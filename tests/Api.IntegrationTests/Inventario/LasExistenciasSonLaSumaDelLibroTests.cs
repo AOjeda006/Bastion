@@ -755,7 +755,10 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             momento);
 
         return ajuste.Confirmar(
-            1, new AjusteConfirmado(ajuste.Id, empresaId, almacenId, Hoy, 1), momento);
+            1,
+            new AjusteConfirmado(ajuste.Id, empresaId, almacenId, Hoy, 1),
+            ElLibro.ValoracionDesdeCero(ajuste),
+            momento);
     }
 
     /// <summary>Tira a mano las instantáneas de la empresa, por debajo del sistema.</summary>
@@ -955,7 +958,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
     /// <summary>Un descuadre, sin lo que todos comparten.</summary>
     private sealed record Hallado(
-        string Que, Guid UbicacionId, DateOnly? Mes, decimal Esperado, decimal Guardado, long Filas);
+        string Que, Guid? UbicacionId, DateOnly? Mes, decimal Esperado, decimal Guardado, long Filas);
 
     /// <summary>Los maestros de un caso.</summary>
     /// <param name="EmpresaId">La empresa.</param>

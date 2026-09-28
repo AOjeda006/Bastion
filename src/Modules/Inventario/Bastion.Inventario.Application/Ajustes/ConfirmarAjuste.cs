@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Organizacion.Contracts.Ejercicios;
 
 namespace Bastion.Inventario.Application.Ajustes;
@@ -54,12 +55,14 @@ public interface IConfirmarAjuste
 /// <param name="ajustes">Dónde viven el documento y el libro.</param>
 /// <param name="numerador">Quién entrega el correlativo, en esta misma transacción (R5).</param>
 /// <param name="ejercicios">Si la fecha del documento se puede escribir, con la fila bloqueada.</param>
+/// <param name="valoracion">Quién valora las líneas contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class ConfirmarAjuste(
     IRepositorioDeAjustes ajustes,
     INumeradorDeSeriesDeInventario numerador,
     IConsultaDeEjercicios ejercicios,
+    IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IConfirmarAjuste
 {
@@ -143,6 +146,25 @@ internal sealed class ConfirmarAjuste(
             return Resultado.Fallo<AjusteDto>(numero.Error!);
         }
 
+        // LA VALORACIÓN, DESPUÉS DEL NÚMERO Y ANTES DEL DOCUMENTO, que es el orden de los cerrojos
+        // del ADR-0046 §2 y el mismo en confirmar y en anular. Lo que se lee aquí no se queda viejo:
+        // el cerrojo dura hasta el `COMMIT`. Y el impedimento se pregunta antes de valorar, porque el
+        // dominio lanza y el borde necesita un 422 con su código (ADR-0004). Si no se puede valorar,
+        // la transacción se deshace con el número y con las valoraciones que el cerrojo creó.
+        IReadOnlyList<LineaAValorar> lineas = ajuste.LineasAValorar();
+
+        IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos = await ajustes
+            .BloquearLasValoracionesAsync(
+                [.. lineas.Select(linea => linea.Clave).Distinct()], ajuste.Divisa, cancelacion)
+            .ConfigureAwait(false);
+
+        if (valoracion.LoQueImpide(saldos, lineas, ajuste.Divisa) is { } impedimento)
+        {
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.NoSeValora(impedimento, ajuste.Divisa));
+        }
+
+        IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, ajuste.Divisa);
+
         var evento = new AjusteConfirmado(
             ajuste.Id,
             ajuste.EmpresaId,
@@ -151,7 +173,7 @@ internal sealed class ConfirmarAjuste(
             ajuste.Lineas.Count);
 
         IReadOnlyList<MovimientoStock> movimientos =
-            ajuste.Confirmar(numero.Valor, evento, reloj.GetUtcNow());
+            ajuste.Confirmar(numero.Valor, evento, valoradas, reloj.GetUtcNow());
 
         await ajustes.AnotarEnElLibroAsync(movimientos, cancelacion).ConfigureAwait(false);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

@@ -101,6 +101,23 @@ internal sealed class ConfiguracionDeMovimientoStock : IEntityTypeConfiguration<
             .HasColumnName("coste_unitario")
             .HasPrecision(18, Importe.Decimales);
 
+        // EL VALOR Y EL PRECIO QUE CONGELA LA FILA (ADR-0046 §5), obligatorios y sin valor por
+        // omisión. Las filas de antes del 2.8 los reciben a cero en la migración, con un valor por
+        // omisión que se quita después: así el libro no recibe ni una sentencia de cambio, y una
+        // fila nueva que llegara sin valorar no entraría.
+        movimiento.Ignore(fila => fila.Valor);
+        movimiento.Ignore(fila => fila.PrecioMedio);
+
+        movimiento.Property<decimal>("ValorSinDivisa")
+            .HasColumnName("valor")
+            .HasPrecision(18, Importe.Decimales)
+            .IsRequired();
+
+        movimiento.Property<decimal>("PrecioMedioSinDivisa")
+            .HasColumnName("precio_medio")
+            .HasPrecision(18, PrecioUnitario.Decimales)
+            .IsRequired();
+
         // Como TEXTO, igual que los demás enumerados del proyecto: un entero en la base obliga a
         // tener el código delante para leer una fila.
         movimiento.Property(fila => fila.DocumentoOrigenTipo)

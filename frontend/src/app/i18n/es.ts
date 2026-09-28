@@ -105,6 +105,9 @@ export const es = {
       'ajuste-en-ejercicio-cerrado':
         'La fecha de ese ajuste cae en un ejercicio cerrado: ese periodo ya es definitivo y no ' +
         'admite documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
+      'ajuste-entrada-sin-coste-ni-precio-medio':
+        'Una línea mete un artículo que no tiene existencias en ese almacén, y sin existencias no ' +
+        'hay precio medio al que valorarla. Escribe el coste de esa línea.',
       'ajuste-motivo-no-valido':
         'Escribe por qué anulas el ajuste, en 300 caracteres o menos. Es lo único que quedará ' +
         'para entender la corrección dentro de dos años.',
@@ -135,6 +138,10 @@ export const es = {
       'ajuste-unidad-retirada':
         'Esa unidad está retirada: los movimientos que ya se escribieron en ella se siguen ' +
         'leyendo, pero no se escribe uno nuevo con ella. Elige otra unidad.',
+      'ajuste-valoracion-en-otra-divisa':
+        'Las existencias de algún artículo del documento están valoradas en otra divisa en ese ' +
+        'almacén, y sumarlas pediría un tipo de cambio. Haz el ajuste en la divisa en que están ' +
+        'valoradas.',
       'almacen-duplicado': 'Ya hay un almacén con ese código en esta empresa.',
       'almacen-no-encontrado': 'Ese almacén ya no existe. Vuelve al listado y actualiza.',
       'articulo-duplicado': 'Ya hay un artículo con ese código en esta empresa.',
