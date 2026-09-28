@@ -49,6 +49,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     private readonly OrganizacionDbContext _organizacion;
     private readonly CatalogoDbContext _catalogo;
     private readonly InventarioDbContext _inventario;
+    private readonly RepositorioDeAjustes _ajustes;
 
     internal ElModuloDeInventario(PostgresConTodosLosModulos postgres, Guid empresaId)
     {
@@ -68,6 +69,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         _inventario = postgres.AbrirInventario(empresaId);
 
         RepositorioDeAjustes ajustes = new(_inventario, new InquilinoFijo(empresaId));
+        _ajustes = ajustes;
         UnidadDeTrabajoDeInventario unidadDeTrabajo = new(_inventario);
         ConsultaDeAlmacenes almacenes = new(_organizacion, acceso);
 
@@ -183,6 +185,25 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     /// <returns>Lo que contestó el caso de uso.</returns>
     internal Task<Resultado<AjusteDto>> ConfirmarSinAbrirTransaccionAsync(Guid ajusteId) =>
         Confirmacion.EjecutarAsync(ajusteId, CancellationToken.None);
+
+    /// <summary>
+    /// Bloquea la valoración de unas claves en la transacción que ya abrió quien llama, como hace el
+    /// caso de uso antes de valorar, y no hace nada más.
+    /// </summary>
+    /// <remarks>
+    /// <b>Para la carrera de la valoración, que tiene que ver el cerrojo solo.</b> Si esta
+    /// transacción ya hubiera sumado la fila, quien llega segundo esperaría igual: su
+    /// <c>INSERT … ON CONFLICT</c> espera en el índice único a la transacción que cambió la fila,
+    /// bloquee lo que ya está o no. Con la fila bloqueada y nada escrito, solo espera si el cerrojo
+    /// bloquea de verdad.
+    /// </remarks>
+    /// <param name="claves">Las claves que bloquear.</param>
+    /// <param name="divisa">La del documento, para las claves que nazcan.</param>
+    /// <returns>Lo que la valoración de cada clave tenía al bloquearla.</returns>
+    internal Task<IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado>> BloquearLasValoracionesAsync(
+        IReadOnlyCollection<ClaveDeValoracion> claves,
+        string divisa) =>
+        _ajustes.BloquearLasValoracionesAsync(claves, divisa, CancellationToken.None);
 
     /// <summary>Abre la transacción de este módulo sin hacer nada más.</summary>
     /// <remarks>

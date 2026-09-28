@@ -256,6 +256,13 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
     /// casos, porque la sentencia que suma espera igual: lo que se equivoca es el valor de la fila.
     /// </para>
     /// <para>
+    /// <b>La primera se para con la valoración bloqueada y nada escrito</b>, y confirma después de ver
+    /// a la segunda esperando. Parada ya confirmada, como en la carrera de la existencia, el caso no
+    /// ve el cerrojo: el <c>INSERT … ON CONFLICT</c> de la segunda espera en el índice único a la
+    /// transacción que cambió la fila, bloquee lo que ya está o no. Lo midió la mutación que cambia
+    /// <c>DO UPDATE</c> por <c>DO NOTHING</c>, que con aquella forma dejó el carril entero en verde.
+    /// </para>
+    /// <para>
     /// <b>La clave ya existe, y a propósito.</b> Con una clave nueva, las dos chocarían en el índice
     /// único al crearla, y la segunda esperaría aunque el cerrojo no bloqueara nada de lo que ya hay:
     /// el caso saldría verde con la mitad del mecanismo.
@@ -278,16 +285,20 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
         Guid laPrimera = await AbrirAsync(unos, caso, caso.Serie.Id, new Linea(0, 10m, 3m));
         Guid laSegunda = await AbrirAsync(otros, caso, otra.Id, new Linea(0, 5m, null));
 
-        (Resultado<AjusteDto> confirmacion, IDbContextTransaction enVuelo) =
-            await unos.ConfirmarYQuedarseDentroAsync(laPrimera);
-
-        await using (enVuelo)
+        await using (IDbContextTransaction enVuelo = await unos.AbrirTransaccionAsync())
         {
-            confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»");
+            (await unos.BloquearLasValoracionesAsync(
+                    [new ClaveDeValoracion(caso.Articulos[0].ArticuloId, caso.AlmacenId)], "EUR"))
+                .ShouldHaveSingleItem().Value
+                .ShouldBe(new SaldoValorado(10m, Importe.De(10m, "EUR")));
 
             Task<Resultado<AjusteDto>> laOtra = otros.ConfirmarAsync(laSegunda);
 
             await EsperarAQueLaFreneAsync(unos.ProcesoDeLaBase, laOtra);
+
+            Resultado<AjusteDto> confirmacion = await unos.ConfirmarSinAbrirTransaccionAsync(laPrimera);
+
+            confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»");
 
             await enVuelo.CommitAsync();
 
