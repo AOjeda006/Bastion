@@ -9,6 +9,7 @@ using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Infrastructure.Persistencia;
+using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
@@ -46,8 +47,14 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// nada de eso.
 /// </para>
 /// <para>
-/// <b>Semillas: las empresas van de la 315 a la 319, y la 490; los maestros de instalación, de la
-/// 354 a la 363, y la 491 y la 492.</b> El resto del reparto de este carril está en <c>ElCerrojoDeLaNumeracionTests</c> —del
+/// <b>Desde el ítem 2.8, las unidades que el original saca tienen que estar antes</b>, porque el
+/// físico no baja de cero (ADR-0046 §4). Cada caso las mete con una entrada previa en OTRA serie
+/// del mismo ejercicio, para que el original siga gastando el primer correlativo de la suya, y
+/// la suma del par la deja fuera: lo que se afirma es que el par suma cero, no el libro entero.
+/// </para>
+/// <para>
+/// <b>Semillas: las empresas van de la 315 a la 319, y la 490 y la 493; los maestros de
+/// instalación, de la 354 a la 363, y de la 491 a la 495, sin la 493.</b> El resto del reparto de este carril está en <c>ElCerrojoDeLaNumeracionTests</c> —del
 /// 301 al 308 y del 320 en adelante—, en <c>LaSerieDelAjusteTests</c> —309 al 312, maestros 350 y
 /// 351— y en <c>ElNumeroEntraEnElReciboTests</c> —313 y 314, maestros 352 y 353—. Un número de
 /// empresa acaba en un NIF único y uno de maestro en el código único de otra tabla, así que son
@@ -108,8 +115,10 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
             postgres,
             Consulta(
                 "SELECT count(*) FROM inventario.movimiento_stock " +
-                "WHERE empresa_id = '{0}' AND cantidad_en_unidad_base <> 0",
-                caso.EmpresaId));
+                "WHERE empresa_id = '{0}' AND documento_origen_id <> '{1}' " +
+                "AND cantidad_en_unidad_base <> 0",
+                caso.EmpresaId,
+                caso.EntradaPreviaId));
 
         filas.ShouldBe(
             4,
@@ -123,15 +132,16 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
                 """
                 SELECT count(*) FROM (
                     SELECT 1 FROM inventario.movimiento_stock
-                    WHERE empresa_id = '{0}'
+                    WHERE empresa_id = '{0}' AND documento_origen_id <> '{1}'
                     GROUP BY articulo_id, almacen_id, ubicacion_id) AS grupos
                 """,
-                caso.EmpresaId));
+                caso.EmpresaId,
+                caso.EntradaPreviaId));
 
         grupos.ShouldBe(2, "dos artículos, cada uno en su hueco: dos grupos que tienen que cuadrar");
 
         IReadOnlyList<string> descuadrados = await ElLibro.TextosAsync(
-            postgres, Descuadres(caso.EmpresaId));
+            postgres, Descuadres(caso));
 
         descuadrados.ShouldBeEmpty(
             "el par tenía que dejar cada artículo donde estaba. Lo que sale aquí es «artículo → " +
@@ -399,6 +409,78 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
         (await ContadorAsync(caso.Cliente, caso.Serie.Id)).ShouldBe(2);
     }
 
+    /// <summary>
+    /// Anular una entrada cuyas unidades ya salieron se rechaza con un <c>422</c>, y no escribe
+    /// nada: ni inverso, ni número, ni una fila del libro.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El inverso de una entrada es una salida</b>, y el ítem 2.8 decidió que la anulación no
+    /// tiene un camino propio que se salte la regla (ADR-0046 §1): si las unidades que entraron
+    /// ya no están, el inverso dejaría el físico por debajo de cero y el motor lo rechaza como a
+    /// cualquier salida. Este es el caso que lo afirma de punta a punta, por la API: la
+    /// restricción choca dentro del filtro de idempotencia, la transacción se deshace entera y el
+    /// borde lo traduce por el nombre de la restricción.
+    /// </para>
+    /// <para>
+    /// <b>Y el rechazo no ha quemado nada</b>, que se afirma como en el caso de la cabecera: cuando
+    /// las unidades vuelven, el MISMO documento se anula, y su inverso toma el número que le toca
+    /// y no uno más.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada()
+    {
+        UnCaso caso = await UnAjusteConfirmadoAsync(493, "ANU-G", 494, 495);
+
+        // LA PRIMERA LÍNEA DEL ORIGINAL ES UNA ENTRADA, y sus unidades salen enteras con otro
+        // documento de la misma serie, el 2. Anular el original sería sacarlas otra vez.
+        LineaDeAjusteDto entrada = caso.Lineas[0];
+
+        await ConfirmarOtroAsync(caso, entrada with { CantidadIntroducida = -entrada.CantidadIntroducida }, 2);
+
+        long filasAntes = await FilasDelLibroAsync(caso);
+
+        using HttpResponseMessage rechazo = await AnularAsync(caso, "Me equivoqué");
+
+        rechazo.StatusCode.ShouldBe(
+            HttpStatusCode.UnprocessableContent,
+            $"las unidades ya no están: es una regla, no un fallo. {await Escenario.Detalle(rechazo)}");
+
+        (await rechazo.Content.ReadAsStringAsync()).ShouldContain("/errors/stock-insuficiente");
+
+        // NADA se ha escrito: ni el inverso, ni el número que tomó, ni una fila del libro.
+        (await InversosDeAsync(caso)).ShouldBe(0);
+
+        (await ContadorAsync(caso.Cliente, caso.Serie.Id)).ShouldBe(
+            2,
+            "el original y la salida: el número que tomó el inverso volvió a la serie con el " +
+            "rollback, y si se hubiera quedado gastado la R5 tendría un hueco");
+
+        (await FilasDelLibroAsync(caso)).ShouldBe(filasAntes, "el inverso rechazado no deja filas");
+
+        await using (InventarioDbContext inventario = postgres.AbrirInventario(caso.EmpresaId))
+        {
+            Ajuste intacto = await inventario.Ajustes.SingleAsync(fila => fila.Id == caso.AjusteId);
+            intacto.Estado.ShouldBe(EstadoDeAjuste.Confirmado, "sigue confirmado y se puede anular más tarde");
+        }
+
+        CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, caso.EmpresaId);
+
+        cuadre.ExistenciasComparadas.ShouldBe(2);
+        cuadre.Descuadres.ShouldBeEmpty();
+
+        // CUANDO LAS UNIDADES VUELVEN, el mismo documento se anula. Sin esta mitad, un rechazo que
+        // hubiera dejado algo a medias por el camino saldría verde arriba.
+        await ConfirmarOtroAsync(caso, entrada, 3);
+
+        using HttpResponseMessage despues = await AnularAsync(caso, "Me equivoqué");
+
+        despues.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(despues));
+
+        (await despues.Content.ReadFromJsonAsync<AnulacionDto>())!.Inverso.Numero.ShouldBe(4);
+    }
+
     /// <summary>La anulación por HTTP, con la clave o deliberadamente sin ella.</summary>
     /// <param name="caso">Lo que este caso montó.</param>
     /// <param name="motivo">Por qué se anula.</param>
@@ -439,18 +521,50 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
             "SELECT count(*) FROM inventario.ajustes WHERE anula_a_id = '{0}'",
             caso.AjusteId));
 
+    /// <summary>Cuántas filas tiene el libro de la empresa del caso, las que mueven y las que no.</summary>
+    /// <param name="caso">Lo que este caso montó.</param>
+    /// <returns>El recuento.</returns>
+    private async Task<long> FilasDelLibroAsync(UnCaso caso) => await ElLibro.EscalarAsync<long>(
+        postgres,
+        Consulta(
+            "SELECT count(*) FROM inventario.movimiento_stock WHERE empresa_id = '{0}'",
+            caso.EmpresaId));
+
+    /// <summary>
+    /// Otro documento de una línea en la serie del caso, confirmado por la API, con el número que
+    /// le toca.
+    /// </summary>
+    /// <param name="caso">Lo que este caso montó.</param>
+    /// <param name="linea">Lo que mueve.</param>
+    /// <param name="numero">El correlativo que tiene que tomar.</param>
+    /// <returns>Una tarea que termina con el documento confirmado.</returns>
+    private async Task ConfirmarOtroAsync(UnCaso caso, LineaDeAjusteDto linea, long numero)
+    {
+        Guid ajusteId;
+
+        await using (ElModuloDeInventario modulo = new(postgres, caso.EmpresaId))
+        {
+            ajusteId = await AbrirAsync(modulo, caso.Serie.Id, caso.AlmacenId, Hoy(), [linea]);
+        }
+
+        (await ConfirmarPorLaApiAsync(caso.Cliente, ajusteId)).Numero.ShouldBe(numero);
+    }
+
     /// <summary>Los grupos del libro que NO han quedado donde estaban, con lo que les sobra.</summary>
-    /// <param name="empresaId">La empresa del caso, que es su universo entero.</param>
+    /// <param name="caso">
+    /// Lo que este caso montó: su empresa es su universo, sin la entrada previa, que no es del par.
+    /// </param>
     /// <returns>La consulta.</returns>
-    private static string Descuadres(Guid empresaId) => Consulta(
+    private static string Descuadres(UnCaso caso) => Consulta(
         """
         SELECT articulo_id::text || ' → ' || sum(cantidad_en_unidad_base)::text
         FROM inventario.movimiento_stock
-        WHERE empresa_id = '{0}'
+        WHERE empresa_id = '{0}' AND documento_origen_id <> '{1}'
         GROUP BY articulo_id, almacen_id, ubicacion_id
         HAVING sum(cantidad_en_unidad_base) <> 0
         """,
-        empresaId);
+        caso.EmpresaId,
+        caso.EntradaPreviaId);
 
     private static string Consulta(string plantilla, params object[] valores) =>
         string.Format(CultureInfo.InvariantCulture, plantilla, valores);
@@ -460,8 +574,19 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
     /// <param name="EmpresaId">La empresa (R8).</param>
     /// <param name="AjusteId">El ajuste ya confirmado, listo para anular.</param>
     /// <param name="Serie">La serie que lo numeró y que numerará a su inverso.</param>
+    /// <param name="AlmacenId">El almacén del ajuste.</param>
+    /// <param name="Lineas">Las dos líneas del ajuste, tal como se dieron de alta.</param>
+    /// <param name="EntradaPreviaId">
+    /// La entrada que puso antes las unidades que el ajuste saca, en otra serie: no es del par.
+    /// </param>
     private sealed record UnCaso(
-        HttpClient Cliente, Guid EmpresaId, Guid AjusteId, SerieDto Serie);
+        HttpClient Cliente,
+        Guid EmpresaId,
+        Guid AjusteId,
+        SerieDto Serie,
+        Guid AlmacenId,
+        IReadOnlyList<LineaDeAjusteDto> Lineas,
+        Guid EntradaPreviaId);
 
     /// <summary>
     /// Una empresa nueva con sus maestros y, dentro, un ajuste de DOS líneas ya confirmado por la
@@ -504,30 +629,75 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
 
         SerieDto serie = await LosMaestrosPorLaApi.CrearSerieAsync(cliente, codigo);
 
+        // LAS UNIDADES QUE LA SEGUNDA LÍNEA SACA ENTRAN ANTES, por otra serie del mismo ejercicio:
+        // el físico no baja de cero (ítem 2.8), y con la misma serie el original ya no sería el 1.
+        SerieDto deLaEntradaPrevia =
+            await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, serie.EjercicioId, codigo + "-E");
+
+        DateOnly fecha = Hoy().AddDays(-diasAtras);
+
+        LineaDeAjusteDto[] lineas =
+        [
+            new(ubicacion.Id, unArticulo, 3m, unaUnidad, 12m, 1.50m, "EUR"),
+            new(ubicacion.Id, otroArticulo, -2.5m, otraUnidad, 1m, 4.20m, "EUR"),
+        ];
+
+        Guid entradaPreviaId;
         Guid ajusteId;
 
         await using (ElModuloDeInventario modulo = new(postgres, empresa.Id))
         {
-            Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(
-                new AbrirAjusteDto(
-                    serie.Id,
-                    almacen.Id,
-                    DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-diasAtras),
-                    "Regularización de un recuento",
-                    [
-                        new LineaDeAjusteDto(
-                            ubicacion.Id, unArticulo, 3m, unaUnidad, 12m, 1.50m, "EUR"),
-                        new LineaDeAjusteDto(
-                            ubicacion.Id, otroArticulo, -2.5m, otraUnidad, 1m, 4.20m, "EUR"),
-                    ]),
-                CancellationToken.None);
+            entradaPreviaId = await AbrirAsync(
+                modulo,
+                deLaEntradaPrevia.Id,
+                almacen.Id,
+                fecha,
+                [lineas[1] with { CantidadIntroducida = 10m }]);
 
-            alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");
+            Resultado<AjusteDto> previa = await modulo.ConfirmarAsync(entradaPreviaId);
 
-            ajusteId = alta.Valor.Id;
+            previa.EsCorrecto.ShouldBeTrue($"«{previa.Error?.Codigo}»");
+
+            ajusteId = await AbrirAsync(modulo, serie.Id, almacen.Id, fecha, lineas);
         }
 
-        HttpRequestMessage confirmacion =
+        (await ConfirmarPorLaApiAsync(cliente, ajusteId)).Numero.ShouldBe(
+            1, "el original gasta el primer correlativo, y es lo que hace que el 2 del inverso " +
+               "signifique algo");
+
+        return new UnCaso(cliente, empresa.Id, ajusteId, serie, almacen.Id, lineas, entradaPreviaId);
+    }
+
+    /// <summary>Un borrador, abierto por el caso de uso cableado a mano.</summary>
+    /// <param name="modulo">El módulo de la empresa del caso.</param>
+    /// <param name="serieId">La serie que lo numerará.</param>
+    /// <param name="almacenId">El almacén.</param>
+    /// <param name="fecha">El día al que se imputa.</param>
+    /// <param name="lineas">Lo que mueve.</param>
+    /// <returns>El identificador del borrador.</returns>
+    private static async Task<Guid> AbrirAsync(
+        ElModuloDeInventario modulo,
+        Guid serieId,
+        Guid almacenId,
+        DateOnly fecha,
+        IReadOnlyList<LineaDeAjusteDto> lineas)
+    {
+        Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(
+            new AbrirAjusteDto(serieId, almacenId, fecha, "Regularización de un recuento", lineas),
+            CancellationToken.None);
+
+        alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");
+
+        return alta.Valor.Id;
+    }
+
+    /// <summary>La confirmación por HTTP, con su clave, que tiene que salir bien.</summary>
+    /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
+    /// <param name="ajusteId">El borrador que confirmar.</param>
+    /// <returns>El documento confirmado.</returns>
+    private static async Task<AjusteDto> ConfirmarPorLaApiAsync(HttpClient cliente, Guid ajusteId)
+    {
+        using HttpRequestMessage confirmacion =
             new(HttpMethod.Post, $"/api/v1/inventario/ajustes/{ajusteId}/confirmacion");
 
         confirmacion.Headers.TryAddWithoutValidation(Cabecera, Guid.NewGuid().ToString());
@@ -536,10 +706,8 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
 
         confirmado.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(confirmado));
 
-        (await confirmado.Content.ReadFromJsonAsync<AjusteDto>())!.Numero.ShouldBe(
-            1, "el original gasta el primer correlativo, y es lo que hace que el 2 del inverso " +
-               "signifique algo");
-
-        return new UnCaso(cliente, empresa.Id, ajusteId, serie);
+        return (await confirmado.Content.ReadFromJsonAsync<AjusteDto>())!;
     }
+
+    private static DateOnly Hoy() => DateOnly.FromDateTime(DateTime.UtcNow);
 }

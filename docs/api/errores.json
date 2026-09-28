@@ -96,6 +96,7 @@
     { "codigo": "serie-no-numera", "type": "/errors/serie-no-numera", "clase": "Conflicto" },
     { "codigo": "serie-ya-numerada", "type": "/errors/serie-ya-numerada", "clase": "Conflicto" },
     { "codigo": "sesion-no-renovable", "type": "/errors/sesion-no-renovable", "clase": "NoAutenticado" },
+    { "codigo": "stock-insuficiente", "type": "/errors/stock-insuficiente", "clase": "ReglaDeNegocio" },
     { "codigo": "tarifa-divisa-no-encontrada", "type": "/errors/tarifa-divisa-no-encontrada", "clase": "Validacion" },
     { "codigo": "tarifa-divisa-retirada", "type": "/errors/tarifa-divisa-retirada", "clase": "Conflicto" },
     { "codigo": "tarifa-linea-articulo-o-categoria", "type": "/errors/tarifa-linea-articulo-o-categoria", "clase": "Validacion" },

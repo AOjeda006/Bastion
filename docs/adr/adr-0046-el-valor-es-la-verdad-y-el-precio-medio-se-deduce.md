@@ -13,8 +13,9 @@ revisado: 2026-09-28
 - **Sale del ítem 2.8** y de las cinco decisiones que el encargo del 2026-09-28 pidió tomar y
   escribir **antes del código**. Las toma el agente. Cada una lleva aquí su motivo, y en el PLAN la
   entrada que la resume.
-- **Enmienda el ADR-0044 §2** para las sentencias de la valoración. Una proyección que necesita
-  leer lo que suma lo lee **con la fila bloqueada** (punto 2).
+- **Enmienda el ADR-0044 §2** en dos cosas. Una proyección que necesita leer lo que suma lo lee
+  **con la fila bloqueada** (punto 2). Y la sentencia de la existencia se parte en dos, porque el
+  `CHECK` del stock mira la fila propuesta y no la sumada (punto 4).
 - **Sustituye el mecanismo de la decisión 4 del ítem 2.5** («el coste del inverso se copia»), y
   conserva su motivo: el par suma cero también en valor (punto 6).
 
@@ -93,8 +94,8 @@ dentro de un `SELECT … FROM (…)`, y PostgreSQL no admite un `INSERT` ahí.
 - **El orden de clave es lo que impide el interbloqueo**, igual que en la sentencia de la
   existencia (ADR-0044 §2).
 - **El orden de los cerrojos es el mismo en las dos acciones que valoran**, confirmar y anular:
-  primero el ejercicio, luego el contador de la serie, luego la valoración y, por último, las
-  filas de la existencia. Toda transacción que toca la existencia de una clave ha tomado antes su
+  primero el ejercicio, luego el contador de la serie, luego la valoración, luego la fila del
+  documento (punto 4) y, por último, las filas de la existencia. Toda transacción que toca la existencia de una clave ha tomado antes su
   valoración, así que dos confirmaciones del mismo artículo y almacén se ordenan en la valoración y
   no llegan a cruzarse en la existencia.
 
@@ -148,6 +149,36 @@ su clave, tampoco puede bajar de cero.
 **No hay comprobación previa en el dominio.** Leer el saldo, compararlo y escribir es la ventana que
 dos salidas simultáneas se saltan juntas. El `CHECK` se evalúa con la fila ya bloqueada y el valor
 ya sumado, y es la única guarda que las dos no pueden cruzar a la vez.
+
+**Para que eso sea verdad, la sentencia de la existencia se parte en dos.** Se midió, no se supuso.
+En un `INSERT … ON CONFLICT DO UPDATE`, PostgreSQL comprueba los `CHECK` sobre la fila **propuesta**
+antes de mirar si choca. La sentencia única del 2.7 proponía una fila nueva con la cantidad del
+documento, así que una salida de 2 sobre una existencia de 5 chocaba con el −2 de una fila que nunca
+se iba a escribir. Lo destapó `Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`, que
+confirma 5 y después −2 en la misma clave: con la sentencia única, el segundo contestaba `23514` con
+el saldo en 3. Ahora son dos sentencias:
+
+1. **La primera crea a cero y bloquea**, en orden de clave, las filas vivas del documento. Es el
+   mismo `DO UPDATE` que no cambia nada del punto 2, y propone cero, que cumple el `CHECK` tanto si
+   la fila entra como si choca.
+2. **La segunda suma y escribe.** Es un `UPDATE` sobre filas que ya son de esta transacción, y en la
+   misma sentencia escribe las instantáneas del mes. El `CHECK` ve la fila ya sumada.
+
+La fila viva y las instantáneas siguen moviéndose juntas, que es lo que el ADR-0044 §2 exige. Lo que
+cambia es que el cerrojo va en una sentencia aparte, como en la valoración.
+
+**Y el documento se guarda antes de mover la existencia.** Dos transacciones que confirman o anulan
+el **mismo** documento a la vez se separan en las guardas del documento: el testigo de la R11 y el
+índice único del inverso. La guarda del stock separa a dos documentos **distintos** que no caben
+juntos. Si la existencia se moviera antes, la perdedora de una carrera sobre el mismo documento
+chocaría con el stock que la ganadora ya se llevó. Contestaría `422` `stock-insuficiente` a quien
+solo llegó tarde, en vez del `412` que le dice que recargue.
+
+- **Por eso `AnotarEnElLibroAsync` guarda lo pendiente del documento antes de la sentencia.** Antes
+  comprueba la transacción y la empresa, porque ese guardado, sin transacción, se confirmaría solo.
+- **Lo destapó `Dos_anulaciones_simultaneas_dejan_un_solo_inverso`.** Su perdedora chocó con
+  `ck_existencias_fisico_no_negativo` y no con `ix_ajustes_anula_a_id`, que es lo que el caso
+  afirma.
 
 **La traducción va en el borde, por el nombre de la restricción, como la del índice del inverso.**
 La excepción del motor sube sin traducir, que es lo que el ADR-0004 manda a la infraestructura. Un
@@ -376,7 +407,9 @@ decimales, y la divisa, de la empresa. El disparador sigue armado para la fase 3
 - **Todo documento que mueva el libro se valora.** No hay forma de confirmar sin valoración: el
   dominio exige una por cada línea, y la sentencia que suma exige la fila que dejó el cerrojo.
 - **Los tests que sacaban stock de un almacén vacío dejan de valer.** Ahora contestan `422`, y cada
-  uno se arregla dando antes la entrada, no quitando la guarda.
+  uno se arregla dando antes la entrada, no quitando la guarda. Los de la anulación con
+  contradocumento reciben una entrada previa en otra serie, y el generador de la propiedad modela
+  el rechazo.
 - **Lo que no tiene caso, dicho.** El interbloqueo entre dos documentos con las mismas dos claves en
   orden inverso lo sostiene el orden de las claves, como en el 2.7 (ADR-0044, *Consecuencias*).
 

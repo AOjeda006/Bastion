@@ -11,6 +11,7 @@ using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
+using Npgsql;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Inventario;
@@ -38,6 +39,13 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// venga del documento que venga.
 /// </para>
 /// <para>
+/// <b>Y el saldo no baja nunca de cero</b> (ítem 2.8, ADR-0046 §4). El modelo sabe, antes de
+/// confirmar, si el documento dejaría alguna clave por debajo de cero, y entonces exige el rechazo
+/// del motor por el nombre de su restricción, sin una fila más en el libro. Vale igual para una
+/// anulación, cuyo inverso es otro documento: si las unidades de la entrada ya salieron, se
+/// rechaza, y el original se puede anular más adelante.
+/// </para>
+/// <para>
 /// <b>Cada semilla tiene que pasar por todas las clases de paso</b>, y el caso lo afirma: una
 /// semilla que no anulara nunca pasaría por prueba de las anulaciones sin haberlas probado.
 /// </para>
@@ -52,18 +60,25 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLosModulos postgres)
     : IDisposable
 {
-    private const int Pasos = 40;
+    // OCHENTA DESDE EL ÍTEM 2.8. Con el stock que no baja de cero, cuarenta dejaban semillas sin
+    // una salida confirmada —sus anulaciones vaciaban todas las claves— o sin un documento contra
+    // el año cerrado. Alargar no cambia los primeros pasos: el generador sigue la misma serie.
+    private const int Pasos = 80;
     private const string Anulacion = "anulación";
     private const string Futuro = "futuro";
     private const string Recalculo = "recálculo";
     private const string Cierre = "cierre";
     private const string Reapertura = "reapertura";
     private const string RechazadoPorElCierre = "rechazado por el cierre";
+    private const string RechazadoSinStock = "rechazado sin stock";
+
+    /// <summary>La restricción que guarda el stock, escrita a mano como en el borde.</summary>
+    private const string FisicoNoNegativo = "ck_existencias_fisico_no_negativo";
 
     private static readonly string[] s_clasesDePaso =
     [
         "entrada", "salida", "ajuste", Anulacion, Futuro, Recalculo, Cierre, Reapertura,
-        RechazadoPorElCierre,
+        RechazadoPorElCierre, RechazadoSinStock,
     ];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
@@ -167,35 +182,75 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             _ => new DateOnly(Hoy.Year, 1, 1).AddDays(azar.Next(Hoy.DayOfYear)),
         };
 
-        IReadOnlyList<LineaAlAzar> lineas = LineasAlAzar(azar);
+        // LA CLASE SE ELIGE PRIMERO, un tercio cada una, y las líneas después (ítem 2.8). Sacadas
+        // las líneas al azar y la clase de ellas, una salida de una sola línea salía una de cada
+        // nueve veces, casi todas chocaban con el cero, y había semillas que no confirmaban ninguna.
+        string clase = azar.Next(3) switch
+        {
+            0 => "entrada",
+            1 => "salida",
+            _ => "ajuste",
+        };
 
-        string clase = lineas.Count > 1 ? "ajuste" : lineas[0].Cantidad > 0 ? "entrada" : "salida";
+        IReadOnlyList<LineaAlAzar> lineas = clase switch
+        {
+            "entrada" => [UnaLineaAlAzar(azar, 1)],
+            "salida" => [UnaSalidaAlAzar(azar, empresa, secuencia)],
+            _ => LineasAlAzar(azar, minimo: 2),
+        };
+
+        bool delAnioCerrado = fecha.Year == pasado && secuencia.PasadoCerrado;
+
+        // UN RECHAZO POR STOCK VA CON FECHA DE ESTE AÑO. El motor lo rechaza con cualquier fecha
+        // —la fila viva es la suma de todas—, pero el borrador se queda, no hay forma de tirarlo, y
+        // uno del año pasado impediría cerrarlo durante el resto de la secuencia: la semilla no
+        // llegaría a ver el cierre. El del año cerrado no se toca, porque ese rechazo es otro.
+        if (!delAnioCerrado && fecha.Year == pasado && DejariaUnaClaveEnNegativo(
+            secuencia,
+            lineas.Select(linea => new ApunteDelLibro(
+                empresa.Claves[linea.Clave], fecha, linea.Cantidad * linea.Factor))))
+        {
+            fecha = Hoy;
+        }
 
         Guid ajusteId = await AbrirAsync(
             modulo, empresa, fecha.Year == pasado ? empresa.SerieDelAnioPasado : empresa.Serie, fecha, lineas);
-
-        Resultado<AjusteDto> confirmacion = await modulo.ConfirmarAsync(ajusteId);
-
-        if (fecha.Year == pasado && secuencia.PasadoCerrado)
-        {
-            secuencia.Anotar(RechazadoPorElCierre, fecha, lineas);
-            secuencia.BorradoresEnElPasado++;
-
-            confirmacion.EsCorrecto.ShouldBeFalse(secuencia.Relato());
-            confirmacion.Error!.Codigo.ShouldBe("ajuste-en-ejercicio-cerrado", secuencia.Relato());
-
-            return;
-        }
-
-        secuencia.Anotar(clase, fecha, lineas);
-
-        confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»\n{secuencia.Relato()}");
 
         ApunteDelLibro[] apuntes =
         [
             .. lineas.Select(linea => new ApunteDelLibro(
                 empresa.Claves[linea.Clave], fecha, linea.Cantidad * linea.Factor)),
         ];
+
+        // EL CIERRE SE MIRA ANTES QUE EL STOCK, porque el caso de uso lo mira antes: un documento
+        // del año cerrado no llega a tocar la existencia, deje lo que deje.
+        if (delAnioCerrado)
+        {
+            Resultado<AjusteDto> rechazada = await modulo.ConfirmarAsync(ajusteId);
+
+            secuencia.Anotar(RechazadoPorElCierre, fecha, lineas);
+            secuencia.BorradoresEnElPasado++;
+
+            rechazada.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+            rechazada.Error!.Codigo.ShouldBe("ajuste-en-ejercicio-cerrado", secuencia.Relato());
+
+            return;
+        }
+
+        if (DejariaUnaClaveEnNegativo(secuencia, apuntes))
+        {
+            secuencia.Anotar(RechazadoSinStock, fecha, lineas);
+
+            await ExigirElRechazoDelMotorAsync(() => modulo.ConfirmarAsync(ajusteId), secuencia);
+
+            return;
+        }
+
+        Resultado<AjusteDto> confirmacion = await modulo.ConfirmarAsync(ajusteId);
+
+        secuencia.Anotar(clase, fecha, lineas);
+
+        confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»\n{secuencia.Relato()}");
 
         secuencia.Libro.AddRange(apuntes);
         secuencia.Anulables.Add((ajusteId, apuntes));
@@ -218,6 +273,28 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         int cual = azar.Next(secuencia.Anulables.Count);
         (Guid ajusteId, ApunteDelLibro[] apuntes) = secuencia.Anulables[cual];
+
+        ApunteDelLibro[] inverso =
+        [
+            .. apuntes.Select(apunte => apunte with
+            {
+                Fecha = Hoy,
+                Cantidad = -apunte.Cantidad,
+            }),
+        ];
+
+        // EL INVERSO DE UNA ENTRADA ES UNA SALIDA, y si las unidades ya salieron se rechaza
+        // (ADR-0046 §1). El original sigue siendo anulable: se puede anular cuando vuelvan.
+        if (DejariaUnaClaveEnNegativo(secuencia, inverso))
+        {
+            secuencia.Anotar(RechazadoSinStock, apuntes);
+
+            await ExigirElRechazoDelMotorAsync(
+                () => modulo.AnularAsync(ajusteId, "Anulación del generador"), secuencia);
+
+            return;
+        }
+
         secuencia.Anulables.RemoveAt(cual);
 
         secuencia.Anotar(Anulacion, apuntes);
@@ -226,11 +303,32 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         anulacion.EsCorrecto.ShouldBeTrue($"«{anulacion.Error?.Codigo}»\n{secuencia.Relato()}");
 
-        secuencia.Libro.AddRange(apuntes.Select(apunte => apunte with
-        {
-            Fecha = Hoy,
-            Cantidad = -apunte.Cantidad,
-        }));
+        secuencia.Libro.AddRange(inverso);
+    }
+
+    /// <summary>Si sumar estas filas al libro del modelo dejaría alguna clave por debajo de cero.</summary>
+    /// <remarks>
+    /// Por clave y con las filas del documento sumadas, porque así las suma la sentencia: agrupa
+    /// las líneas de la misma clave antes de tocar la fila viva, y el motor mira el resultado. Una
+    /// salida y una entrada de la misma clave en el mismo documento no pasan por un negativo.
+    /// </remarks>
+    private static bool DejariaUnaClaveEnNegativo(Secuencia secuencia, IEnumerable<ApunteDelLibro> filas)
+    {
+        IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+
+        return filas
+            .GroupBy(fila => fila.Clave)
+            .Any(clave => saldos.GetValueOrDefault(clave.Key) + clave.Sum(fila => fila.Cantidad) < 0m);
+    }
+
+    /// <summary>Exige que el motor rechace la operación por la restricción del stock, y no por otra.</summary>
+    private static async Task ExigirElRechazoDelMotorAsync(Func<Task> operacion, Secuencia secuencia)
+    {
+        PostgresException rechazo =
+            await Should.ThrowAsync<PostgresException>(operacion, secuencia.Relato());
+
+        rechazo.SqlState.ShouldBe("23514", secuencia.Relato());
+        rechazo.ConstraintName.ShouldBe(FisicoNoNegativo, secuencia.Relato());
     }
 
     /// <summary>Un documento con fecha futura, que tiene que rechazarse sin mover nada.</summary>
@@ -341,21 +439,62 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             "las instantáneas no son las del libro\n" + secuencia.Relato());
     }
 
-    private static List<LineaAlAzar> LineasAlAzar(Random azar)
+    private static List<LineaAlAzar> LineasAlAzar(Random azar, int minimo = 1)
     {
-        int cuantas = azar.Next(1, 4);
+        int cuantas = azar.Next(minimo, 4);
         List<LineaAlAzar> lineas = [];
 
         for (int numero = 0; numero < cuantas; numero++)
         {
-            int signo = azar.Next(2) == 0 ? 1 : -1;
-
-            lineas.Add(new LineaAlAzar(
-                azar.Next(4), signo * azar.Next(1, 10), s_factores[azar.Next(s_factores.Length)]));
+            // DOS DE CADA TRES SUMAN (ítem 2.8). Con la mitad, el stock no crece y casi todo
+            // documento que saca algo choca con el cero.
+            lineas.Add(UnaLineaAlAzar(azar, azar.Next(3) == 0 ? -1 : 1));
         }
 
         return lineas;
     }
+
+    /// <summary>Una salida de una línea, que saca de donde hay si hay en algún sitio.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>De una clave con existencias, si alguna tiene</b> (ítem 2.8). Con la clave al azar, la
+    /// mitad de las salidas iban a una clave vacía, chocaban con el cero y había semillas que no
+    /// confirmaban ninguna. Si no hay existencias en ninguna, la clave es cualquiera y choca.
+    /// </para>
+    /// <para>
+    /// <b>Y si no cabe, la mitad de las veces se queda en lo que cabe.</b> La otra mitad se intenta
+    /// entera y el motor la rechaza. Cuando lo que hay es múltiplo del factor, la que se queda en lo
+    /// que cabe deja la clave justo a cero, que es el borde del <c>CHECK</c> y tiene que admitirse.
+    /// </para>
+    /// </remarks>
+    private static LineaAlAzar UnaSalidaAlAzar(Random azar, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        LineaAlAzar salida = UnaLineaAlAzar(azar, -1);
+
+        IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+
+        int[] conExistencias =
+        [
+            .. Enumerable.Range(0, empresa.Claves.Count)
+                .Where(clave => saldos.GetValueOrDefault(empresa.Claves[clave]) > 0m),
+        ];
+
+        if (conExistencias.Length == 0)
+        {
+            return salida;
+        }
+
+        salida = salida with { Clave = conExistencias[azar.Next(conExistencias.Length)] };
+
+        decimal caben = decimal.Floor(saldos[empresa.Claves[salida.Clave]] / salida.Factor);
+
+        return -salida.Cantidad > caben && caben > 0m && azar.Next(2) == 0
+            ? salida with { Cantidad = -caben }
+            : salida;
+    }
+
+    private static LineaAlAzar UnaLineaAlAzar(Random azar, int signo) => new(
+        azar.Next(4), signo * azar.Next(1, 10), s_factores[azar.Next(s_factores.Length)]);
 
     private static async Task<Guid> AbrirAsync(
         ElModuloDeInventario modulo,

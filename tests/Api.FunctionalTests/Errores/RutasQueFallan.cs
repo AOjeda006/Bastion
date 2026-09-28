@@ -50,6 +50,8 @@ internal sealed class RutasQueFallan : IStartupFilter
     internal const string DemasiadoGrande = "/pruebas/errores/demasiado-grande";
     internal const string CarreraPerdida = "/pruebas/errores/carrera-perdida";
     internal const string UnicidadSinDeclarar = "/pruebas/errores/unicidad-sin-declarar";
+    internal const string ReglaGuardadaPorLaBase = "/pruebas/errores/regla-guardada-por-la-base";
+    internal const string RestriccionSinDeclarar = "/pruebas/errores/restriccion-sin-declarar";
 
     /// <summary>El índice que Inventario declara como carrera perdida, con su nombre real.</summary>
     /// <remarks>
@@ -61,6 +63,13 @@ internal sealed class RutasQueFallan : IStartupFilter
 
     /// <summary>Un índice único cualquiera de los que NO se traducen.</summary>
     internal const string IndiceSinDeclarar = "ix_terceros_nif_por_empresa";
+
+    /// <summary>La restricción que Inventario declara como regla, con su nombre real.</summary>
+    /// <remarks>Escrita a mano por lo mismo que el índice declarado.</remarks>
+    internal const string RestriccionDeclarada = "ck_existencias_fisico_no_negativo";
+
+    /// <summary>Una restricción cualquiera de las que NO se traducen: la del libro sin cantidad.</summary>
+    internal const string RestriccionNoDeclarada = "ck_movimiento_stock_cantidad_no_nula";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => aplicacion =>
     {
@@ -135,6 +144,15 @@ internal sealed class RutasQueFallan : IStartupFilter
             // regla general: el MISMO 23505 sobre un índice que nadie declaró sigue siendo un 500.
             UnicidadSinDeclarar => throw ChoqueDeUnicidad(IndiceSinDeclarar),
 
+            // LAS DOS DE RESTRICCIÓN, con la forma con la que llega la del stock: el
+            // `PostgresException` del motor SOLO, sin envolver, porque la lanza la sentencia cruda
+            // que anota el libro y no un `SaveChanges`. El carril de integración comprueba que la
+            // salida que no cabe choca con ESTE nombre; aquí, que el borde lo traduce.
+            ReglaGuardadaPorLaBase => throw ChoqueDeRestriccion(RestriccionDeclarada),
+
+            // Y el contraste: el MISMO 23514 sobre una restricción que nadie declaró es un defecto.
+            RestriccionSinDeclarar => throw ChoqueDeRestriccion(RestriccionNoDeclarada),
+
             _ => Task.CompletedTask,
         };
     }
@@ -152,4 +170,12 @@ internal sealed class RutasQueFallan : IStartupFilter
             "ERROR",
             "23505",
             constraintName: indice));
+
+    // El `23514` tal como lo levanta Npgsql desde una sentencia cruda, con el nombre dentro.
+    private static PostgresException ChoqueDeRestriccion(string restriccion) => new(
+        $"new row for relation \"existencias\" violates check constraint \"{restriccion}\": {RastroInterno}",
+        "ERROR",
+        "ERROR",
+        "23514",
+        constraintName: restriccion);
 }

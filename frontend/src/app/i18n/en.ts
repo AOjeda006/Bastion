@@ -229,6 +229,10 @@ export const en: Diccionario = {
         'open. Open the adjustment with another series.',
       'serie-ya-numerada': 'The series has already numbered documents, so that cannot be changed.',
       'sesion-no-renovable': 'Your session could not be renewed. Sign in again.',
+      'stock-insuficiente':
+        'There is not enough stock in one of the locations on this document, and nothing was ' +
+        'saved. If you are cancelling a receipt, its units have already gone out: cancel those ' +
+        'issues first or record the missing receipt.',
       'tarifa-divisa-no-encontrada':
         'That currency does not exist. Pick one from the currency list.',
       'tarifa-divisa-retirada':

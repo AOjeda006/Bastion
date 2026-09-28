@@ -40,6 +40,11 @@ public interface IRepositorioDeAjustes
     /// está abierta. Si esa transacción no llega a confirmarse, no queda ni lo uno ni lo otro.
     /// </para>
     /// <para>
+    /// <b>Antes de mover la existencia guarda lo que el documento tenga pendiente</b> (ítem 2.8):
+    /// quien confirma o anula un documento que otro acaba de cambiar tiene que chocar con la guarda
+    /// del documento, no con el stock que el otro ya movió.
+    /// </para>
+    /// <para>
     /// Solo se añaden. No hay ningún método para modificarlas ni para quitarlas, y no es un olvido:
     /// la tabla las rechazaría igualmente en el motor, y una firma que no existe no hace falta
     /// explicarla dos veces.

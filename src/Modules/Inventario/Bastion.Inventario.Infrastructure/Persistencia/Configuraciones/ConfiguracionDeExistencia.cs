@@ -17,11 +17,25 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
     /// <summary>La resta del disponible, dicha en SQL.</summary>
     internal const string Disponible = "fisico - reservado";
 
+    /// <summary>La restricción que impide el stock negativo, que el borde traduce por su nombre.</summary>
+    internal const string FisicoNoNegativo = "ck_existencias_fisico_no_negativo";
+
     public void Configure(EntityTypeBuilder<Existencia> existencia)
     {
         ArgumentNullException.ThrowIfNull(existencia);
 
-        existencia.ToTable(Tabla);
+        // EL STOCK NO BAJA DE CERO, Y LO GUARDA EL MOTOR (ADR-0046 §4). Sobre la fila viva, que
+        // es por ubicación: sacar de una estantería vacía lo que está en la de al lado también se
+        // rechaza, que es lo que pasa en el almacén. No hay comprobación previa en el dominio,
+        // porque dos salidas simultáneas la pasarían juntas; esto se evalúa con la fila ya
+        // bloqueada y la cantidad ya sumada. El nombre es contrato con el borde, que lo traduce a
+        // `422` `stock-insuficiente`, y la declaración está en `ModuloDeInventario`.
+        //
+        // Las instantáneas NO llevan la suya: un movimiento con fecha atrasada puede dejar un mes
+        // pasado por debajo de cero sin que el saldo de hoy lo esté, y eso ya lo admitía el 2.7.
+        existencia.ToTable(
+            Tabla,
+            tabla => tabla.HasCheckConstraint(FisicoNoNegativo, "fisico >= 0"));
 
         // NO SE AUDITA, y por el mismo motivo que el contador de una serie: la escribe una sentencia
         // cruda, que no pasa por el rastreador de cambios. Un `SeAudita()` prometería una traza que

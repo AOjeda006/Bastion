@@ -7,6 +7,8 @@ using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Infrastructure.Persistencia;
+using Bastion.Inventario.Infrastructure.Persistencia.Configuraciones;
+using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Microsoft.EntityFrameworkCore;
@@ -119,6 +121,17 @@ public static class ModuloDeInventario
             "significan exactamente lo mismo: otra anulación legítima llegó primero. No hay " +
             "ningún otro desenlace posible, porque un `anula_a_id` repetido solo se escribe " +
             "anulando dos veces el mismo documento"));
+
+        // Y LA RESTRICCIÓN QUE GUARDA EL STOCK contesta con su regla, y no con un 500. Se declara
+        // aquí por lo mismo que el índice: que un físico por debajo de cero sea «no hay bastante
+        // stock» y no un defecto es una afirmación sobre la existencia, y es de este módulo.
+        servicios.Configure<RestriccionesQueGuardanUnaRegla>(restricciones => restricciones.Declarar(
+            ConfiguracionDeExistencia.FisicoNoNegativo,
+            ErroresDeExistencias.StockInsuficiente(),
+            "leer el saldo, compararlo y escribir deja una ventana que dos salidas simultáneas " +
+            "cruzan juntas, y las dos pasarían la comprobación. El CHECK se evalúa con la fila ya " +
+            "bloqueada y la cantidad ya sumada, así que es la única guarda que no se saltan; y lo " +
+            "único que puede significar que salte es que no había bastante stock (ADR-0046 §4)"));
 
         servicios.AgregarCasosDeUsoDeInventario();
 

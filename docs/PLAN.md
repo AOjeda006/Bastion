@@ -6103,6 +6103,87 @@ sondeo de la API (`vigilar26r.sh`, `total_count: 1` para ese sha en esa rama). `
 decisiones, antes del código: las cinco del encargo y seis más, en *Decisiones tomadas* y en el
 **ADR-0046**. La excepción de la R2 queda escrita en su fila en el mismo commit.
 
+**2.8, primera pieza: el stock no baja de cero** (2026-09-28). Es el punto 4 del ADR-0046, y va
+antes que el precio medio porque el precio medio lo da por supuesto: un saldo negativo no tiene
+precio.
+
+- **La guarda está en el motor.** `ck_existencias_fisico_no_negativo CHECK (fisico >= 0)` va sobre la
+  fila viva, con su migración `ElFisicoNoBajaDeCero`. Las instantáneas no llevan `CHECK`.
+- **El borde la traduce por el nombre.** `ManejadorDeReglaQueGuardaLaBase` va entre el de la carrera
+  perdida y el general, y contesta `422` `stock-insuficiente` solo para un `23514` declarado. El
+  módulo declara la restricción en `RestriccionesQueGuardanUnaRegla`, con su motivo.
+  - `CadaRestriccionTraducidaSeJustificaTests` compara la lista con el modelo de diseño, porque el
+    de ejecución no guarda los `CHECK`.
+  - `PoliticaDeErroresTests` tiene los dos casos: el declarado sale `422`, y el mismo `23514` sin
+    declarar sigue siendo `500`.
+- **Dos cosas que el ADR no preveía**, medidas y escritas ya en su punto 4:
+  1. **PostgreSQL mira el `CHECK` sobre la fila propuesta** de un `INSERT … ON CONFLICT DO UPDATE`,
+     antes de mirar si choca. La sentencia de la existencia se parte en dos: una crea a cero y
+     bloquea, la otra suma con un `UPDATE`. Lo destapó
+     `Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`, que confirma 5 y después −2
+     en la misma clave y recibía un `23514` con el saldo en 3.
+  2. **El documento se guarda antes de mover la existencia.** Si no, la perdedora de dos
+     anulaciones simultáneas choca con el stock que la ganadora ya se llevó y contesta `422` en vez
+     de `412`. Lo destapó `Dos_anulaciones_simultaneas_dejan_un_solo_inverso`, cuya perdedora chocó
+     con `ck_existencias_fisico_no_negativo` y no con `ix_ajustes_anula_a_id`.
+- **Los casos nuevos**, los dos en el censo del carril:
+  - `LasExistenciasSonLaSumaDelLibroTests.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una`:
+    dos transacciones de verdad; la segunda choca por el nombre de la restricción, el físico queda
+    en 4 y el contador de su serie en 0.
+  - `LaAnulacionConContraDocumentoTests.Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada`:
+    por la API, `422`, sin inverso, sin número y sin fila del libro. Cuando las unidades vuelven, el
+    mismo documento se anula con el número que le toca.
+- **La propiedad modela el rechazo.** El modelo sabe si un documento dejaría una clave por debajo de
+  cero, y entonces exige el rechazo del motor por el nombre, sin una fila más. `rechazado sin stock`
+  es una clase de paso más. Para que cada semilla siga pasando por todas, el generador:
+  - elige la clase antes que las líneas;
+  - saca de una clave con existencias si alguna tiene;
+  - la mitad de las veces se queda en lo que cabe, lo que a veces deja la clave justo a cero, el
+    borde del `CHECK`;
+  - date este año los rechazos por stock, porque un borrador del año pasado impediría cerrarlo;
+  - y da 80 pasos en vez de 40. Con 40, la 460 no confirmaba ninguna salida y la 463 no tenía
+    ningún documento contra el año cerrado.
+
+**Los rojos de la primera pasada, por nombre.** Con solo el `CHECK` puesto, el carril de integración
+dio **19 rojos de 419** (`dotnet test tests/Api.IntegrationTests --no-build --filter
+"Category=Integracion"`; los nombres, de su `.trx`):
+
+| Rojos | Por qué | Arreglo |
+|---|---|---|
+| `LaAnulacionConContraDocumentoTests`: los seis de entonces | el ajuste del ayudante saca 2,5 de un almacén vacío, y ya contestaba `422` por la API: la traducción funcionaba con la excepción de verdad | una entrada previa en otra serie del mismo ejercicio, fuera de la suma del par |
+| `ElSaldoEsLaSumaDelLibroPorPropiedadTests`, semillas 460 a 465 | el modelo no sabía del rechazo | modelarlo, y el generador de arriba |
+| `LasMigracionesSobreTablasConFilasTests.Una_a_una…` | el `CHECK` nuevo sin relleno registrado | registrarlo, `Relleno.Ninguno` |
+| `ElEjercicioRigeElAjusteTests`: `Mover_el_ejercicio_espera_a_la_anulacion…`, `Borrar_el_ejercicio_espera_a_la_anulacion…`, `Anular_un_ajuste_de_un_ejercicio_cerrado…` | la fila propuesta | las dos sentencias |
+| `LaDobleFlechaDeLaAnulacionTests`: `Ningun_anulado_se_queda_sin_exactamente_un_inverso`, `Ningun_inverso_compensa_a_un_documento_que_no_esta_anulado` | la fila propuesta | las dos sentencias |
+| `LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero` | la fila propuesta | las dos sentencias |
+
+La segunda pasada, ya con las dos sentencias, dio **6 rojos de 421**: cinco semillas de la
+propiedad, que se quedaban sin cierre, y `Dos_anulaciones_simultaneas_dejan_un_solo_inverso`, la
+del orden del documento.
+
+**Un rojo que no era de esta pieza, y se arregla en ella.** `LasDiecisieteReglasTests.Lo_que_la_tabla_nombra_existe`
+salió rojo con «R2: `Confirmado` no está declarado». Lo dejó el commit de las decisiones (`4b07599`),
+que escribió la excepción de la R2 con el nombre del estado suelto, y ese commit no llegó a
+empujarse: ningún run lo vio. Ahora nombra `EstadoDeAjuste.Confirmado`, que el barrido sí encuentra.
+
+**Lo que se ejecutó antes del commit**, todo en verde:
+
+- `dotnet test tests/Api.IntegrationTests --no-build --filter "Category=Integracion"`: **421 de 421**;
+- `dotnet test` proyecto a proyecto, con `--no-build`: funcionales **189**, integración sin filtro
+  **434**, arquitectura **54** (con el arreglo de arriba), `BuildingBlocks` **215**, Catálogo **78**,
+  Identidad **61**, Inventario **31**, Organización **188** y **106** de integración, y Terceros **85**;
+- `bash scripts/comprobar-migraciones.sh` (Inventario, **6** migraciones, y el modelo coincide),
+  `bash scripts/generar-openapi.sh --comprobar` (**130** operaciones) y
+  `bash scripts/generar-errores.sh --comprobar` (**120** tipos, de **126** sitios de llamada);
+- `npm --prefix frontend run api`, sin cambios en `esquema.ts`; y `lint`, `typecheck` y
+  `vitest run`, **103** de **103** en **16** ficheros;
+- `dotnet format Bastion.sln --verify-no-changes`.
+
+**Lo que falta del 2.8**, en este orden: el precio medio en el dominio, con sus casos dorados; su
+cableado (la tabla de valoraciones, las tres sentencias, la divisa del documento, los códigos
+nuevos y los casos de carrera y de dos empresas); y el cierre, con las mutaciones sobre la línea
+que calcula y congela el precio medio y sobre la lectura bajo cerrojo.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo

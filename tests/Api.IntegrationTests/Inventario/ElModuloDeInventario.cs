@@ -121,6 +121,13 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     /// a guardarse—. En una petición de verdad la abre el filtro de idempotencia, que este
     /// cableado a mano no tiene porque no hay borde todavía; aquí la abre esto, con el mismo
     /// criterio: solo se confirma lo que sale bien.
+    /// <para>
+    /// <b>Y si el motor la rechaza, el contexto olvida lo que el caso de uso había cambiado</b>
+    /// (ítem 2.8). El agregado ya había transitado en memoria —confirmado, con su número— cuando
+    /// la sentencia del libro chocó contra la restricción del stock. En una petición de verdad ese
+    /// contexto muere con ella; aquí se reutiliza, y el siguiente <c>SaveChanges</c> escribiría un
+    /// documento confirmado que la base acaba de rechazar.
+    /// </para>
     /// </remarks>
     /// <param name="ajusteId">El documento que confirmar.</param>
     /// <returns>Lo que contestó el caso de uso.</returns>
@@ -130,7 +137,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             await _inventario.Database.BeginTransactionAsync();
 
         Resultado<AjusteDto> confirmacion =
-            await Confirmacion.EjecutarAsync(ajusteId, CancellationToken.None);
+            await OlvidandoSiFallaAsync(() => Confirmacion.EjecutarAsync(ajusteId, CancellationToken.None));
 
         if (confirmacion.EsCorrecto)
         {
@@ -222,7 +229,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         await using IDbContextTransaction transaccion =
             await _inventario.Database.BeginTransactionAsync();
 
-        Resultado<AnulacionDto> anulacion = await AnularSinAbrirTransaccionAsync(ajusteId, motivo);
+        Resultado<AnulacionDto> anulacion =
+            await OlvidandoSiFallaAsync(() => AnularSinAbrirTransaccionAsync(ajusteId, motivo));
 
         if (anulacion.EsCorrecto)
         {
@@ -266,6 +274,21 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal Task<Resultado<AnulacionDto>> AnularSinAbrirTransaccionAsync(
         Guid ajusteId, string motivo) =>
         Anulacion.EjecutarAsync(ajusteId, new AnularAjusteDto(motivo), CancellationToken.None);
+
+    // Lo que haría el fin de la petición: si la operación revienta, el contexto suelta todo lo
+    // que el caso de uso había cambiado en memoria, y la excepción sigue su camino.
+    private async Task<T> OlvidandoSiFallaAsync<T>(Func<Task<T>> operacion)
+    {
+        try
+        {
+            return await operacion();
+        }
+        catch
+        {
+            _inventario.ChangeTracker.Clear();
+            throw;
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {

@@ -28,9 +28,20 @@ internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquil
     /// <inheritdoc/>
     /// <remarks>
     /// <para>
-    /// <b>Primero la existencia y después el libro, y el orden da igual</b>: los dos van en la
+    /// <b>Primero la existencia y después el libro, y ese orden da igual</b>: los dos van en la
     /// misma transacción, así que nadie ve el uno sin el otro. La existencia se mueve ya, con una
     /// sentencia; las filas del libro se escriben cuando la unidad de trabajo guarda.
+    /// </para>
+    /// <para>
+    /// <b>Lo que no da igual es que el documento vaya antes que la existencia</b> (ítem 2.8,
+    /// ADR-0046 §4), y por eso lo pendiente se guarda aquí, antes de la sentencia. Las guardas del
+    /// documento en el motor —el testigo de la R11 y el índice único del inverso— separan a dos
+    /// que confirman o anulan el mismo documento a la vez. La del stock separa a dos documentos
+    /// que no caben juntos. Si la existencia se moviera antes, la perdedora de una carrera sobre el
+    /// mismo documento chocaría con el stock que la ganadora ya se llevó, y contestaría
+    /// <c>422</c> <c>stock-insuficiente</c> a quien solo llegó tarde, en vez del <c>412</c> que le
+    /// dice que recargue. Con el documento primero, la perdedora choca con su guarda y no llega a
+    /// la sentencia.
     /// </para>
     /// <para>
     /// <b>La empresa sale del inquilino y no de las filas</b>, y la sentencia comprueba que cada
@@ -46,6 +57,12 @@ internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquil
         Guid empresaId = inquilino.EmpresaDelFiltro ?? throw new InvalidOperationException(
             "Se está anotando el libro dentro de un ámbito sin inquilino, y una existencia es " +
             "siempre de una empresa: sin ella la sentencia sumaría en la de cualquiera.");
+
+        // LAS GUARDAS, ANTES DE ESCRIBIR NADA: sin transacción, guardar el documento lo
+        // confirmaría solo, y la sentencia reventaría después con el documento ya escrito.
+        LaProyeccionDelLibro.ExigirLoQueLaSentenciaNecesita(contexto, empresaId, movimientos);
+
+        await contexto.SaveChangesAsync(cancelacion).ConfigureAwait(false);
 
         await LaProyeccionDelLibro.MoverAsync(contexto, empresaId, movimientos, cancelacion)
             .ConfigureAwait(false);

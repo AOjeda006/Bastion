@@ -41,9 +41,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// van dentro de una transacción que se deshace.
 /// </para>
 /// <para>
-/// <b>Semillas: el fichero entero es del 440 al 458.</b> Las empresas, del 440 al 448; los maestros
-/// de instalación, del 450 al 458. El caso de las dos empresas se lleva la 447 y la 448, y la 457 y
-/// la 458.
+/// <b>Semillas: el fichero entero es del 440 al 459.</b> Las empresas, del 440 al 449; los maestros
+/// de instalación, del 450 al 459. El caso de las dos empresas se lleva la 447 y la 448, y la 457 y
+/// la 458; el de las dos salidas del ítem 2.8, la 449 y la 459.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -210,6 +210,98 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
                 17m,
                 "10 de antes, más 3 de la primera, más 4 de la segunda: la segunda suma sobre lo que " +
                 "la primera dejó al confirmarse, no sobre lo que había cuando empezó");
+
+        CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, caso.EmpresaId);
+
+        cuadre.ExistenciasComparadas.ShouldBe(1);
+        cuadre.Descuadres.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Dos salidas a la vez que caben una a una y no juntas: una confirma, la otra choca con la
+    /// restricción del motor, y el físico no baja de cero en ningún momento (ítem 2.8).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el caso por el que la guarda está en el motor y no en el dominio</b> (ADR-0046 §4). Con
+    /// una comprobación previa, las dos leerían 10, las dos verían que 6 caben y las dos
+    /// escribirían: el físico acabaría en −2. El <c>CHECK</c> se evalúa sobre la fila ya bloqueada y
+    /// con la cantidad ya sumada, así que la segunda, al despertar, suma sobre el 4 que dejó la
+    /// primera y choca.
+    /// </para>
+    /// <para>
+    /// <b>Se afirma el nombre de la restricción y no solo el código</b>, por lo mismo que en la
+    /// carrera del inverso: es el nombre que el borde traduce a <c>422</c>
+    /// <c>stock-insuficiente</c>, y el carril funcional afirma el mismo, escrito a mano.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una()
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(449);
+
+        // DOS SERIES, como en el caso de las dos entradas: con una sola, la segunda se pararía en
+        // el contador y llegaría a la existencia con la primera ya confirmada.
+        EjercicioDto esteAnio = await LosMaestrosPorLaApi.CrearEjercicioAsync(cliente, Hoy.Year);
+        SerieDto primera = await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, esteAnio.Id, "EXI-J1");
+        SerieDto segunda = await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, esteAnio.Id, "EXI-J2");
+
+        ElAlmacenDelCaso caso = await LosMaestrosDeAsync(cliente, empresa.Id, "EXI-J", 459, primera);
+
+        await using ElModuloDeInventario unos = new(postgres, caso.EmpresaId);
+        await using ElModuloDeInventario otros = new(postgres, caso.EmpresaId);
+
+        await ConfirmarAsync(unos, caso, Hoy, new Linea(0, 10m));
+
+        Guid delPrimero = await AbrirAsync(unos, caso, primera.Id, Hoy, [new Linea(0, -6m)]);
+        Guid delSegundo = await AbrirAsync(otros, caso, segunda.Id, Hoy, [new Linea(0, -6m)]);
+
+        (Resultado<AjusteDto> confirmacion, IDbContextTransaction enVuelo) =
+            await unos.ConfirmarYQuedarseDentroAsync(delPrimero);
+
+        await using (enVuelo)
+        {
+            confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»");
+
+            Task<Resultado<AjusteDto>> laOtra = otros.ConfirmarAsync(delSegundo);
+
+            await EsperarAQueLaFreneAsync(unos.ProcesoDeLaBase, laOtra);
+
+            await enVuelo.CommitAsync();
+
+            PostgresException rechazo = await Should.ThrowAsync<PostgresException>(
+                () => laOtra.WaitAsync(TimeSpan.FromSeconds(30)));
+
+            rechazo.SqlState.ShouldBe("23514", rechazo.MessageText);
+            rechazo.ConstraintName.ShouldBe(
+                "ck_existencias_fisico_no_negativo",
+                "es el nombre que el borde traduce a 422: con otro, la segunda salida saldría 500");
+        }
+
+        (await LasExistencias.VivasAsync(postgres, caso.EmpresaId))
+            .ShouldHaveSingleItem()
+            .Fisico.ShouldBe(4m, "10 menos los 6 de la primera; la segunda no ha movido nada");
+
+        IReadOnlyList<ApunteDelLibro> libro = await LasExistencias.LibroAsync(postgres, caso.EmpresaId);
+
+        libro.Select(apunte => apunte.Cantidad).ShouldBe(
+            [10m, -6m],
+            ignoreOrder: true,
+            "la entrada y la primera salida: de la segunda no queda ni una fila");
+
+        await using (InventarioDbContext inventario = postgres.AbrirInventario(caso.EmpresaId))
+        {
+            Ajuste rechazado = await inventario.Ajustes.SingleAsync(fila => fila.Id == delSegundo);
+
+            rechazado.Estado.ShouldBe(EstadoDeAjuste.Borrador, "su transacción entera se deshizo");
+            rechazado.Numero.ShouldBeNull();
+        }
+
+        (await cliente.GetFromJsonAsync<SerieDto>($"{LosMaestrosPorLaApi.Series}/{segunda.Id}"))!
+            .Contador.ShouldBe(
+                0,
+                "el número que tomó volvió a la serie con el rollback: si se hubiera quedado " +
+                "gastado, la R5 tendría un hueco");
 
         CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, caso.EmpresaId);
 

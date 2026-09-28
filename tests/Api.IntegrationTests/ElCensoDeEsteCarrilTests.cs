@@ -310,6 +310,7 @@ public sealed class ElCensoDeEsteCarrilTests
         // otros cuatro dicen que el inverso es un documento entero, que anular dos veces seguidas
         // no crea dos, que anular dos veces A LA VEZ tampoco, y que sin la clave no se anula.
         "LaAnulacionConContraDocumentoTests.Anular_dos_veces_seguidas_no_crea_dos_inversos",
+        "LaAnulacionConContraDocumentoTests.Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada",
         "LaAnulacionConContraDocumentoTests.Dos_anulaciones_simultaneas_dejan_un_solo_inverso",
         "LaAnulacionConContraDocumentoTests.El_inverso_es_un_documento_confirmado_con_su_numero_y_su_flecha",
         "LaAnulacionConContraDocumentoTests.El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion",
@@ -460,6 +461,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_lineas_de_la_misma_clave_y_otro_documento_dejan_una_sola_fila_viva_con_la_suma",
+        "LasExistenciasSonLaSumaDelLibroTests.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una",
         "LasExistenciasSonLaSumaDelLibroTests.El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro",
         "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro",
         "LasExistenciasSonLaSumaDelLibroTests.Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan",

@@ -262,6 +262,10 @@ export const es = {
         'borrador abierto. Abre el ajuste con otra serie.',
       'serie-ya-numerada': 'La serie ya ha numerado documentos, así que eso no se puede cambiar.',
       'sesion-no-renovable': 'Tu sesión no se ha podido renovar. Vuelve a entrar.',
+      'stock-insuficiente':
+        'No hay bastante stock en alguna ubicación del documento, y no se ha guardado nada. Si ' +
+        'anulas una entrada, sus unidades ya han salido: anula antes esas salidas o registra la ' +
+        'entrada que falta.',
       // Las doce de la tarifa. La de la divisa retirada dice las DOS mitades del ADR-0023, igual
       // que la de la unidad: quien la lee tiene delante tarifas que la siguen usando, y una frase
       // que dijera que no existe le mandaría a buscar un fallo que no hay.

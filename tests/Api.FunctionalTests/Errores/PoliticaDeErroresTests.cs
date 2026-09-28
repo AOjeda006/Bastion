@@ -103,6 +103,57 @@ public sealed class PoliticaDeErroresTests(ApiConRutasQueFallan api) : IClassFix
             .ShouldNotContain(RutasQueFallan.IndiceSinDeclarar);
     }
 
+    /// <summary>
+    /// La restricción DECLARADA que rechaza una escritura sale con el error que su módulo declaró:
+    /// el stock que no baja de cero es un <c>422</c> <c>stock-insuficiente</c>, y no un <c>500</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Es la mitad de arriba, como la de la carrera.</b> Que dos salidas simultáneas choquen
+    /// contra <c>ck_existencias_fisico_no_negativo</c> lo comprueba el carril de integración contra
+    /// PostgreSQL; que esa excepción salga como <c>422</c> se comprueba aquí. Los dos afirman el
+    /// mismo nombre, escrito a mano.
+    /// </remarks>
+    [Fact]
+    public async Task Una_restriccion_declarada_sale_con_su_error_y_no_500()
+    {
+        using HttpResponseMessage respuesta = await api.CreateClient()
+            .GetAsync(new Uri(RutasQueFallan.ReglaGuardadaPorLaBase, UriKind.Relative));
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.UnprocessableContent);
+        respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+
+        string cuerpo = await respuesta.Content.ReadAsStringAsync();
+
+        using var problema = JsonDocument.Parse(cuerpo);
+        problema.RootElement.GetProperty("type").GetString().ShouldBe("/errors/stock-insuficiente");
+        problema.RootElement.GetProperty("status").GetInt32().ShouldBe(422);
+
+        // Sin el nombre de la restricción ni el de la tabla, que el mensaje del motor trae.
+        cuerpo.ShouldNotContain(RutasQueFallan.RestriccionDeclarada);
+        foreach (string rastro in s_rastrosDelInterior)
+        {
+            cuerpo.ShouldNotContain(rastro);
+        }
+    }
+
+    /// <summary>El MISMO <c>23514</c> sobre una restricción que nadie declaró sigue siendo un <c>500</c>.</summary>
+    /// <remarks>
+    /// Sin este caso, un manejador que tradujera todo <c>23514</c> pondría el de arriba igual de
+    /// verde, y un defecto —una fila del libro sin cantidad— le diría al cliente que no hay stock.
+    /// </remarks>
+    [Fact]
+    public async Task Una_restriccion_sin_declarar_sigue_siendo_500()
+    {
+        using HttpResponseMessage respuesta = await api.CreateClient()
+            .GetAsync(new Uri(RutasQueFallan.RestriccionSinDeclarar, UriKind.Relative));
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+
+        (await respuesta.Content.ReadAsStringAsync())
+            .ShouldNotContain(RutasQueFallan.RestriccionNoDeclarada);
+    }
+
     // La teoría de arriba enumera las clases A MANO, y una lista a mano se queda corta: añadir una
     // clase de error nueva y no añadir su fila la dejaría sin comprobar, y el síntoma sería un
     // `NotSupportedException` desde dentro del manejador de errores —o sea, un 500 justo cuando ya

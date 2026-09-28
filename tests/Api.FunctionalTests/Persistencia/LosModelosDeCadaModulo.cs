@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -72,4 +73,22 @@ internal static class LosModelosDeCadaModulo
     /// <param name="servicios">El contenedor de la API levantada.</param>
     internal static IReadOnlyList<IEntityType> Entidades(IServiceProvider servicios) =>
         [.. De(servicios).SelectMany(modelo => modelo.GetEntityTypes())];
+
+    /// <summary>Todas las entidades de los modelos de DISEÑO, los que genera cada migración.</summary>
+    /// <remarks>
+    /// El modelo de ejecución está optimizado para leer y escribir, y no guarda lo que solo le
+    /// importa a la migración: las restricciones <c>CHECK</c>, por ejemplo, lanzan
+    /// <c>InvalidOperationException</c> si se le preguntan. El de diseño es el mismo modelo con
+    /// todo dentro, y se construye igual sin abrir ninguna conexión.
+    /// </remarks>
+    /// <param name="servicios">El contenedor de la API levantada.</param>
+    internal static IReadOnlyList<IEntityType> EntidadesDeDiseno(IServiceProvider servicios)
+    {
+        using IServiceScope alcance = servicios.CreateScope();
+
+        return [.. Contextos()
+            .Select(tipo => ((DbContext)alcance.ServiceProvider.GetRequiredService(tipo))
+                .GetService<IDesignTimeModel>().Model)
+            .SelectMany(modelo => modelo.GetEntityTypes())];
+    }
 }

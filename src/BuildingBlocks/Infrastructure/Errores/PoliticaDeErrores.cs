@@ -45,6 +45,10 @@ public static class PoliticaDeErrores
         // la reconoce. Va después de él porque el testigo es el camino normal y además lleva la
         // versión dentro; y antes del general por lo mismo que el testigo.
         servicios.AddExceptionHandler<ManejadorDeCarreraPerdidaEnLaBase>();
+        // Y la regla que solo el motor puede guardar: una restricción `CHECK` declarada, como la
+        // del stock que no baja de cero, que llega como un `23514` y sale con el error que su
+        // módulo declaró. Antes del general, por lo mismo que los dos de arriba (ADR-0046 §4).
+        servicios.AddExceptionHandler<ManejadorDeReglaQueGuardaLaBase>();
         servicios.AddExceptionHandler<ManejadorDeExcepcionesNoControladas>();
 
         // Y el 400 automático de `[ApiController]`, que MVC compone por su cuenta y por fuera de

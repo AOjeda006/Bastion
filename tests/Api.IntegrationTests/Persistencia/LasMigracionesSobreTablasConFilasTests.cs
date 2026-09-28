@@ -82,6 +82,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_condiciones_pago_plazo_legal"] = new([], [("dias_de_plazo", "30")]),
         ["ck_cortes_de_la_instantanea_mes_es_primer_dia"] =
             new([], [("hasta_el_mes", "date_trunc('month', current_date)::date")]),
+        ["ck_existencias_fisico_no_negativo"] = Relleno.Ninguno,
         ["ck_instantaneas_mensuales_mes_es_primer_dia"] =
             new([], [("mes", "date_trunc('month', current_date)::date")]),
         ["ck_lineas_ajuste_cantidad_y_factor"] = Relleno.Ninguno,

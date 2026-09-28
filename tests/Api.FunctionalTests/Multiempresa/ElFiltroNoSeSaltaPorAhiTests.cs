@@ -244,7 +244,8 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // con el que se defienden es el mismo, con la clausula 2 ampliada por el ADR-0044:
         //
         //   - Por que no hay forma de evitarlo: la existencia es la suma del libro y se mueve SIN
-        //     LEERLA, con `INSERT ... ON CONFLICT DO UPDATE SET fisico = fisico + delta`. EF Core
+        //     LEERLA, con `INSERT ... ON CONFLICT DO UPDATE` que la crea y la bloquea y, desde el
+        //     item 2.8, un `UPDATE ... SET fisico = fisico + delta` sobre lo bloqueado. EF Core
         //     no traduce ni el upsert ni el incremento sobre lo que hay, y leer-sumar-guardar por
         //     el ORM deja la ventana por la que dos confirmaciones del mismo articulo se llevan el
         //     mismo saldo de partida y una cantidad se pierde sin error. Tampoco traduce un
@@ -259,10 +260,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         //     de la base compartida.
         ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
          "LaProyeccionDelLibro.cs usa .ExecuteSql"] =
-            "mueve la fila viva de cada existencia y sus instantaneas en una sola sentencia, "
+            "crea a cero y bloquea en orden de clave las filas vivas del documento, y despues "
+            + "mueve la fila viva de cada existencia y sus instantaneas en una sola sentencia, "
             + "sumando sobre lo que hay y sin leer el saldo, dentro de la transaccion que anota el "
             + "libro. Escribe la empresa con el valor de IInquilinoActual, despues de comprobar que "
-            + "cada fila del libro es de esa misma empresa, y lee el corte comparandola",
+            + "cada fila del libro es de esa misma empresa; la compara en la fila viva que suma y "
+            + "lee el corte comparandola",
 
         ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
          "LasInstantaneasMensuales.cs usa .ExecuteSql"] =
