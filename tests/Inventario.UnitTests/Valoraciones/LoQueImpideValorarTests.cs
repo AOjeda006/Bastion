@@ -49,7 +49,7 @@ public sealed class LoQueImpideValorarTests
     public void Una_entrada_sin_coste_detras_de_una_con_coste_del_mismo_documento_se_valora()
     {
         Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new() { [s_clave] = SaldoValorado.Vacio("EUR") };
-        LineaAValorar[] lineas = [new(s_clave, 10m, PrecioUnitario.De(2m, "EUR")), new(s_clave, 5m)];
+        LineaAValorar[] lineas = [new(s_clave, 10m, Coste(2m, 10m)), new(s_clave, 5m)];
 
         s_valoracion.LoQueImpide(saldos, lineas, "EUR").ShouldBeNull();
 
@@ -65,7 +65,7 @@ public sealed class LoQueImpideValorarTests
         {
             [s_clave] = new SaldoValorado(10m, Importe.De(20m, "USD")),
         };
-        LineaAValorar[] lineas = [new(s_clave, 5m, PrecioUnitario.De(2m, "EUR"))];
+        LineaAValorar[] lineas = [new(s_clave, 5m, Coste(2m, 5m))];
 
         s_valoracion.LoQueImpide(saldos, lineas, "EUR").ShouldBe(
             new ImpedimentoDeValoracion(MotivoDelImpedimento.ValoracionEnOtraDivisa, s_clave));
@@ -82,7 +82,7 @@ public sealed class LoQueImpideValorarTests
     public void Una_clave_vacia_en_otra_divisa_empieza_de_nuevo_en_la_del_documento()
     {
         Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new() { [s_clave] = SaldoValorado.Vacio("USD") };
-        LineaAValorar[] lineas = [new(s_clave, 5m, PrecioUnitario.De(2m, "EUR"))];
+        LineaAValorar[] lineas = [new(s_clave, 5m, Coste(2m, 5m))];
 
         s_valoracion.LoQueImpide(saldos, lineas, "EUR").ShouldBeNull();
 
@@ -94,7 +94,7 @@ public sealed class LoQueImpideValorarTests
     [Fact]
     public void Una_clave_sin_su_saldo_bloqueado_no_se_valora_desde_cero()
     {
-        LineaAValorar[] lineas = [new(s_clave, 5m, PrecioUnitario.De(2m, "EUR"))];
+        LineaAValorar[] lineas = [new(s_clave, 5m, Coste(2m, 5m))];
 
         Should.Throw<ArgumentException>(() => s_valoracion.LoQueImpide(
             new Dictionary<ClaveDeValoracion, SaldoValorado>(), lineas, "EUR"));
@@ -107,16 +107,19 @@ public sealed class LoQueImpideValorarTests
         Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new() { [s_clave] = SaldoValorado.Vacio("EUR") };
 
         Should.Throw<ArgumentException>(() => s_valoracion.LoQueImpide(
-            saldos, [new(s_clave, 5m, PrecioUnitario.De(2m, "USD"))], "EUR"));
+            saldos, [new(s_clave, 5m, new CosteDeEntrada(PrecioUnitario.De(2m, "USD"), 5m))], "EUR"));
     }
 
     /// <summary>Lo que el borde rechaza con <c>ajuste-coste-no-valido</c> no llega a construirse.</summary>
     [Fact]
     public void Una_linea_que_baja_no_lleva_coste_y_ninguna_lo_lleva_negativo()
     {
-        Should.Throw<ArgumentException>(() => new LineaAValorar(s_clave, -5m, PrecioUnitario.De(2m, "EUR")));
-        Should.Throw<ArgumentException>(() => new LineaAValorar(s_clave, 5m, PrecioUnitario.De(-2m, "EUR")));
+        Should.Throw<ArgumentException>(() => new LineaAValorar(s_clave, -5m, Coste(2m, 5m)));
+        Should.Throw<ArgumentOutOfRangeException>(() => Coste(-2m, 5m));
+        Should.Throw<ArgumentOutOfRangeException>(() => Coste(2m, 0m));
         Should.Throw<ArgumentOutOfRangeException>(() => new LineaAValorar(s_clave, 0m));
+
+        Coste(0m, 5m).Valor.ShouldBe(Importe.Cero("EUR"), "una muestra o un regalo entran a cero a propósito");
     }
 
     /// <summary>El valor que compensa sustituye al coste, y va con el signo de la cantidad.</summary>
@@ -124,7 +127,7 @@ public sealed class LoQueImpideValorarTests
     public void El_valor_que_compensa_no_va_con_coste_ni_con_el_signo_cambiado()
     {
         Should.Throw<ArgumentException>(() => new LineaAValorar(
-            s_clave, 5m, PrecioUnitario.De(2m, "EUR"), Importe.De(10m, "EUR")));
+            s_clave, 5m, Coste(2m, 5m), Importe.De(10m, "EUR")));
         Should.Throw<ArgumentException>(() => new LineaAValorar(s_clave, -5m, valorQueCompensa: Importe.De(10m, "EUR")));
 
         new LineaAValorar(s_clave, -5m, valorQueCompensa: Importe.Cero("EUR")).ValorQueCompensa
@@ -142,4 +145,7 @@ public sealed class LoQueImpideValorarTests
         new SaldoValorado(1m, Importe.Cero("EUR")).PrecioMedio.ShouldBe(PrecioUnitario.De(0m, "EUR"));
         SaldoValorado.Vacio("EUR").PrecioMedio.ShouldBeNull();
     }
+
+    private static CosteDeEntrada Coste(decimal porUnidad, decimal unidades) =>
+        new(PrecioUnitario.De(porUnidad, "EUR"), unidades);
 }

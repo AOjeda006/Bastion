@@ -138,6 +138,26 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
         fila.ShouldBe(Fila(15m, 0.75m));
     }
 
+    /// <summary>
+    /// Una entrada en cajas vale su coste por las cajas, y su precio medio es por unidad base.
+    /// </summary>
+    /// <remarks>
+    /// 3 cajas de 12 a 18 € la caja son 54 €, y 36 unidades base a 1,50 €. Un coste que se tomara
+    /// por unidad base multiplicaría 18 por 36, y la clave valdría 648 €.
+    /// </remarks>
+    [Fact]
+    public void Una_entrada_en_cajas_vale_su_coste_por_las_cajas_y_su_medio_es_por_unidad_base()
+    {
+        Precio(18m).Por(36m).ShouldBe(
+            Importe.De(648m, "EUR"),
+            "si el coste por la cantidad base diera lo mismo, el caso no distinguiría las dos unidades");
+
+        s_valoracion.Valorar(
+            Saldos((s_clave, SaldoValorado.Vacio("EUR"))),
+            [new LineaAValorar(s_clave, 36m, Coste(18m, 3m))],
+            "EUR").ShouldHaveSingleItem().ShouldBe(Fila(54m, 1.5m));
+    }
+
     /// <summary>Dentro de un documento, primero lo que sube y después lo que baja.</summary>
     /// <remarks>
     /// La salida va primero en las líneas y se valora después de la entrada. En el orden de las
@@ -149,7 +169,7 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
     {
         IReadOnlyList<LineaValorada> filas = s_valoracion.Valorar(
             Saldos((s_clave, SaldoValorado.Vacio("EUR"))),
-            [new LineaAValorar(s_clave, -5m), new LineaAValorar(s_clave, 10m, Precio(2m))],
+            [new LineaAValorar(s_clave, -5m), new LineaAValorar(s_clave, 10m, Coste(2m, 10m))],
             "EUR");
 
         filas.ShouldBe([Fila(-10m, 2m), Fila(20m, 2m)]);
@@ -165,8 +185,8 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
         IReadOnlyList<LineaValorada> filas = s_valoracion.Valorar(
             Saldos((s_clave, SaldoValorado.Vacio("EUR")), (s_otra, new SaldoValorado(10m, Importe.De(10m, "EUR")))),
             [
-                new LineaAValorar(s_clave, 10m, Precio(2m)),
-                new LineaAValorar(s_clave, 10m, Precio(4m)),
+                new LineaAValorar(s_clave, 10m, Coste(2m, 10m)),
+                new LineaAValorar(s_clave, 10m, Coste(4m, 10m)),
                 new LineaAValorar(s_otra, -4m),
                 new LineaAValorar(s_clave, -5m),
                 new LineaAValorar(s_clave, 5m),
@@ -258,7 +278,7 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
                 new LineaAValorar(
                     s_clave,
                     cantidad,
-                    coste is null ? null : Precio(coste.Value),
+                    coste is null ? null : Coste(coste.Value, cantidad),
                     compensa is null ? null : Importe.De(compensa.Value, "EUR")),
             ],
             "EUR").ShouldHaveSingleItem();
@@ -274,4 +294,6 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
         new(Importe.De(valor, "EUR"), Precio(precioMedio));
 
     private static PrecioUnitario Precio(decimal cantidad) => PrecioUnitario.De(cantidad, "EUR");
+
+    private static CosteDeEntrada Coste(decimal porUnidad, decimal unidades) => new(Precio(porUnidad), unidades);
 }

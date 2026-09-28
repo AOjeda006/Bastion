@@ -5285,6 +5285,25 @@ decimal que una salida puede mover.
     FIFO, sin tabla de capas.
 11. **El invariante 8 no se cruza**: ningún `PrecioResueltoDto` se convierte en `Importe`.
 
+### Tomadas por el agente de desarrollo — ítem 2.8, al escribir su código (2026-09-28)
+
+12. **El coste de una línea es por la unidad en que se escribió, y no por la unidad base.** Quien
+    escribe «3 cajas a 18 €» ha escrito el precio de una caja: la entrada suma `18 × 3`, redondeado
+    una vez en `PrecioUnitario.Por`, y el precio medio que deja es por unidad base (54 € en 36
+    unidades, 1,50). Nada lo había fijado: los documentos no lo decían y todos los casos tenían
+    factor uno. Se decide por el glosario, que pone el coste junto a «la cantidad tal como se
+    escribió, la unidad en la que se escribió». Y se puede deshacer mientras no haya datos de
+    verdad. En el dominio lo lleva `CosteDeEntrada`, con el coste y sus unidades al lado. Pasarlo a
+    unidad base antes de multiplicar serían dos redondeos, donde la R6 admite uno. **El caso:**
+    `LosCasosDoradosDelPrecioMedioTests.Una_entrada_en_cajas_vale_su_coste_por_las_cajas_y_su_medio_es_por_unidad_base`.
+13. **El coste sigue siendo un `Importe` de escala 4**, como pide el criterio, y no pasa a la escala
+    6 de `PrecioUnitario`. La valoración lo recibe como `PrecioUnitario`, y la conversión es exacta
+    porque cuatro decimales caben en seis. Cambiar la escala de la columna reescribiría el libro
+    entero.
+14. **La línea guarda sus importes como decimales, y la divisa la pone la cabecera**, como hace
+    `LineaTarifa` con su precio y la divisa de su `Tarifa`. El dominio compone el `Importe` con la
+    divisa del documento.
+
 
 ## Estado actual
 

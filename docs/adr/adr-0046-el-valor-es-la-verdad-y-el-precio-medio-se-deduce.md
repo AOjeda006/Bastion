@@ -391,7 +391,28 @@ coste ni precio medio, o una valoración en otra divisa). `Valorar` lanza si se 
 El caso de uso pregunta primero y devuelve el `422` con su código, como ya hace con el estado del
 documento antes de transitar.
 
-### 11. El invariante 8, sin cruzar
+### 11. El coste es por la unidad en que se escribió
+
+**Quien escribe «3 cajas a 18 €» ha escrito el precio de una caja.** La línea guarda la cantidad, la
+unidad y el coste tal como se escribieron, así que la entrada suma `18 × 3 = 54 €`, redondeado una
+sola vez en `PrecioUnitario.Por`. El precio medio, en cambio, es por **unidad base**, porque es lo que
+suman todas las filas de la clave sea cual sea la unidad en que se escribieron: 54 € en 36 unidades
+son 1,50.
+
+- **En la tabla del punto 5, `q` es la cantidad tal como se escribió** en la entrada con coste, y la
+  cantidad en unidad base en todas las demás filas. El dominio lo lleva en `CosteDeEntrada`, que
+  guarda el coste por unidad y las unidades a las que multiplica.
+- **No se pasa a unidad base antes de multiplicar.** Dividir por el factor redondea a seis decimales,
+  y el producto se redondea otra vez: son dos redondeos donde la R6 admite uno.
+- **El coste sigue siendo un `Importe` de escala 4**, como fijó la decisión 8 de la puerta. La
+  valoración lo recibe como `PrecioUnitario`, y la conversión es exacta porque cuatro decimales
+  caben en seis. Cambiar la escala de la columna reescribiría el libro entero, y el libro no se
+  reescribe.
+
+Nada lo había fijado antes: los documentos no lo decían y todos los casos tenían factor uno. Se
+decide por el glosario, que pone el coste unitario junto a la unidad en la que se escribió.
+
+### 12. El invariante 8, sin cruzar
 
 La decisión 8 de la puerta lo dejó escrito, y aquí se confirma sobre el código. Ninguna línea de este
 ítem convierte un `PrecioResueltoDto` en un `Importe`. Los costes llegan del documento como
