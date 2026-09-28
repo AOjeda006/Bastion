@@ -5201,6 +5201,90 @@ Las toma el agente, y cada una se escribe con su motivo antes del código.
 cosas son una unidad y van en una sola rama, `epilogo-del-2.7-cinco-cosas`, cada una en su commit o
 sus commits. El 2.8 va en la suya, `item-2.8-la-valoracion-pmp`.
 
+### Tomadas por el agente de desarrollo — ítem 2.8, antes de escribir su código (2026-09-28)
+
+Las cinco que el encargo pide, con su motivo, y seis más que salen de aplicarlas al código que ya
+había. El detalle, con las alternativas descartadas, está en el **ADR-0046**. Aquí va lo que se
+decidió y la razón que decide.
+
+#### 1. La R2 cede: el inverso que deja el stock negativo se rechaza
+
+Anular una entrada cuyas unidades ya salieron contesta **`422` `stock-insuficiente`**, el mismo de
+cualquier salida, y no escribe nada. La excepción va escrita en la fila de la R2.
+
+**Motivo:** el inverso es un documento como otro cualquiera, y el motor no distingue quién escribe.
+Admitir el negativo solo para las anulaciones obligaría a quitarle la guarda al motor, y la guarda
+es lo único que dos salidas simultáneas no se saltan. Además, un saldo negativo no tiene precio
+medio. **El caso:** entran 10, salen 6, se anula la entrada; `422`, el original sigue `Confirmado`
+y el contador no se mueve.
+
+#### 2. Se lee con la fila bloqueada, en dos sentencias
+
+Primero, un `INSERT … ON CONFLICT DO UPDATE SET cantidad = v.cantidad` en orden de clave, que
+bloquea la fila de cada clave y crea la que falta. Después, una lectura de lo bloqueado, como hace
+el numerador con el contador. El valor lo calcula el dominio, y se escribe sumando en una tercera
+sentencia, después de la de la existencia.
+
+**Motivo:** el `ON CONFLICT` bloquea también la clave que todavía no existe, y un `FOR UPDATE` no
+encontraría nada que bloquear en dos primeras entradas simultáneas. El cálculo va en el dominio
+porque depende de las líneas en secuencia y del único redondeo de la R6. **El caso:** dos entradas
+simultáneas del mismo artículo a costes distintos; el precio medio de la segunda incluye a la
+primera. **La mutación:** leer sin el cerrojo.
+
+#### 3. La clave de valoración es empresa, artículo y almacén
+
+**Motivo:** la clave fina se agrega exacta (ΣV / ΣQ, porque se guarda el valor) y la gruesa no se
+parte. Además, el coste de poner la mercancía en un almacén no es el mismo en todos, y hay menos
+contención. **Para el 2.11:** la transferencia lleva al destino el importe exacto de la fila de
+salida del origen.
+
+#### 4. El motor rechaza el negativo, y el borde lo traduce por el nombre
+
+`ck_existencias_fisico_no_negativo CHECK (fisico >= 0)`, sobre la fila viva por ubicación. Un
+manejador nuevo, en el borde, traduce **ese** `23514`, y solo ese, al `422` que el módulo declara.
+La lista de restricciones traducidas es cerrada y la compara con el modelo un barrido, como la de
+los índices.
+
+**Motivo:** una comprobación previa la saltan dos salidas simultáneas. Traducir en el borde y no en
+el repositorio es el ADR-0004: la infraestructura lanza, y el ejemplo 2 de ese ADR es justamente
+`stock-insuficiente` como `422`. **El caso:** dos salidas simultáneas que caben una a una y no
+juntas.
+
+#### 5. Se guarda el valor y se deduce el precio medio
+
+`valoraciones.valor` es la verdad, con escala 4. El precio medio es `valor / cantidad` con escala 6,
+y solo existe con cantidad. Cada fila del libro gana:
+
+- `valor`, con signo;
+- `precio_medio`, el que congela: el de después en lo que sube y el de antes en lo que baja.
+
+La salida resta exactamente el importe redondeado de su fila. Vaciar la clave se lleva todo el
+valor, y el redondeo no resta nunca más de lo que hay.
+
+**Motivo:** con el precio medio guardado y el valor recalculado, el valor se desvía en cada
+movimiento sin que nadie lo vea. **Los casos dorados** están en el ADR-0046, incluida la sexta
+decimal que una salida puede mover.
+
+#### Y seis que salen de las cinco
+
+6. **El inverso compensa el valor de la línea del original**, no su coste. La línea confirmada
+   guarda su `Valor`, y el inverso lo copia con el signo cambiado en `ValorQueCompensa`. Un coste
+   por unidad no reproduce un importe redondeado, y una salida no tiene coste.
+7. **La divisa va en la cabecera del documento**, puesta al abrirlo con la divisa base de la empresa
+   por un método nuevo de `IConsultaDeEmpresas`. En el libro va **una** columna `divisa` por fila:
+   es la de siempre renombrada, porque una pareja por importe exigiría rellenar filas en una tabla
+   que no admite `UPDATE`. Una línea que baja stock no admite coste (`400`
+   `ajuste-coste-no-valido`).
+8. **La migración valora a cero lo que ya había**, sin reescribir el libro. Las valoraciones nacen de
+   la existencia. Usa el euro solo donde no hay de dónde sacar la divisa, y eso no pasa en una
+   instalación.
+9. **El SQL nuevo va en un fichero propio**, en la lista cerrada de `ElFiltroNoSeSaltaPorAhiTests`,
+   con las cuatro cláusulas del ADR-0040 y un caso de dos empresas.
+10. **El dominio no devuelve `Resultado`** (ADR-0004). `IValoracionDeExistencias` tiene
+    `LoQueImpide`, que pregunta sin lanzar, y `Valorar`, que lanza. Es la costura preparada para
+    FIFO, sin tabla de capas.
+11. **El invariante 8 no se cruza**: ningún `PrecioResueltoDto` se convierte en `Importe`.
+
 
 ## Estado actual
 
@@ -6010,6 +6094,14 @@ contando el que cierra el epílogo, todos `G` en `git log --format='%h %G? %s' 5
 - `1ba7b2b`: el punto 4;
 - `d9dd1e1`: el punto 5;
 - y el cierre.
+
+**El run de la rama del epílogo** es el **36435664176** sobre `6d10642`, **success**, leído por el
+sondeo de la API (`vigilar26r.sh`, `total_count: 1` para ese sha en esa rama). `main` avanzó por
+*fast-forward* de `5d405d2` a `6d10642`, y su run se anota al cerrar el 2.8, como el del 2.6.
+
+**Abierto el 2.8**, el 2026-09-28, en la rama `item-2.8-la-valoracion-pmp`. Lo primero son las
+decisiones, antes del código: las cinco del encargo y seis más, en *Decisiones tomadas* y en el
+**ADR-0046**. La excepción de la R2 queda escrita en su fila en el mismo commit.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
