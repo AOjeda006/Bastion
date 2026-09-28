@@ -56,6 +56,29 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # LO QUE LLEGA AL NAVEGADOR NO LLEVA NINGUNA VULNERABILIDAD ALTA (ADR-0045). `--omit=dev` deja
+      # fuera la herramienta —ESLint, Vitest, el generador del cliente—, que corre aquí y en el equipo
+      # de desarrollo y no viaja en el paquete. Si el registro no contesta, `npm audit` sale con error
+      # y el paso se pone rojo: se relanza, no se salta.
+      - name: Auditoría — lo que llega al navegador
+        run: npm audit --omit=dev --audit-level=high
+
+      # Y LA HERRAMIENTA, CONTADA Y A LA VISTA, SIN DECIDIR. Va en una anotación porque el registro
+      # del job pide testigo, y el aviso de `npm ci` solo se lee ahí.
+      - name: Auditoría — la herramienta, contada y sin decidir
+        run: |
+          npm audit --json > "$RUNNER_TEMP/auditoria.json" || true
+          node -e '
+            const j = require(process.argv[1]);
+            const m = j.metadata && j.metadata.vulnerabilities;
+            if (!m) {
+              console.log("::warning title=npm audit, con la herramienta::No se pudo leer la auditoría entera. La del navegador, la del paso de antes, decide igual.");
+              process.exit(0);
+            }
+            const nombres = Object.keys(j.vulnerabilities || {}).sort().join(", ") || "ninguno";
+            console.log(`::notice title=npm audit, con la herramienta::${m.critical} críticas, ${m.high} altas, ${m.moderate} moderadas y ${m.low} bajas, en ${nombres}. Informa y no decide (ADR-0045).`);
+          ' "$RUNNER_TEMP/auditoria.json"
+
       # El mismo cerrojo que `docs/api/openapi.json`, un eslabón más abajo. Que el documento esté al
       # día no dice nada del cliente: `esquema.ts` se genera de él, se versiona, y entre uno y otro
       # cabe perfectamente un contrato nuevo con un cliente viejo — que compila, porque el

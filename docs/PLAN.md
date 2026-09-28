@@ -5931,6 +5931,16 @@ informe del ítem:
 **El epílogo del 2.7**, las cinco cosas pequeñas del encargo del 2026-09-28, en esta rama y cada
 una en su commit. Lo que pide cada una está en *Decisiones*, bajo ese encargo.
 
+Hecho, por puntos:
+
+1. **La imagen del *runner***, en `6eb6723`, junto al párrafo de `ca4ee82` que decía que no se
+   había medido.
+2. **`npm audit`**, en el **ADR-0045**. La CI falla con `npm audit --omit=dev --audit-level=high`,
+   que en local da 0. La auditoría entera se cuenta en una anotación y no decide: hoy son **2
+   moderadas**, `@vitest/mocker` y `vitest`, y quedan con su disparador. ESLint 10 va en `4bcbbb0` y
+   `js-yaml` 4.3.2 en `008137b`, sin `--force`. El aviso de `eslint@9.39.5` desaparece de `npm ci`.
+   **El siguiente ADR es el 0046.**
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
