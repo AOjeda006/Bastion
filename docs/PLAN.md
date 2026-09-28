@@ -5940,6 +5940,13 @@ Hecho, por puntos:
    moderadas**, `@vitest/mocker` y `vitest`, y quedan con su disparador. ESLint 10 va en `4bcbbb0` y
    `js-yaml` 4.3.2 en `008137b`, sin `--force`. El aviso de `eslint@9.39.5` desaparece de `npm ci`.
    **El siguiente ADR es el 0046.**
+3. **La fila de la R10**, reescrita cláusula por cláusula: *toda escritura*, *que crea un
+   documento* y *es idempotente*, con **el alta del borrador sin puerta** dicha al final. Al
+   escribirla salió que la anulación, la única acción que crea un documento, no tenía caso de
+   reintento con la misma clave. Entró en `828f7b2`, sin su línea en el censo, y el carril rápido
+   quedó en rojo en ese commit: `ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados`,
+   medido volviendo a él. Lo arregla `fcfa928`, y es el único commit del tramo en rojo. La guardia
+   de la tabla se vio en rojo con un canario: un nombre de la fila nueva cambiado a mano.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
