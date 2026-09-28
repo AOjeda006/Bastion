@@ -5,6 +5,7 @@ using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Idempotencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Infrastructure.Persistencia;
@@ -45,8 +46,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// nada de eso.
 /// </para>
 /// <para>
-/// <b>Semillas: las empresas van de la 315 a la 319 y los maestros de instalación de la 354 a la
-/// 360.</b> El resto del reparto de este carril está en <c>ElCerrojoDeLaNumeracionTests</c> —del
+/// <b>Semillas: las empresas van de la 315 a la 319, y la 490; los maestros de instalación, de la
+/// 354 a la 363, y la 491 y la 492.</b> El resto del reparto de este carril está en <c>ElCerrojoDeLaNumeracionTests</c> —del
 /// 301 al 308 y del 320 en adelante—, en <c>LaSerieDelAjusteTests</c> —309 al 312, maestros 350 y
 /// 351— y en <c>ElNumeroEntraEnElReciboTests</c> —313 y 314, maestros 352 y 353—. Un número de
 /// empresa acaba en un NIF único y uno de maestro en el código único de otra tabla, así que son
@@ -344,6 +345,58 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
         conClave.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(conClave));
 
         (await conClave.Content.ReadFromJsonAsync<AnulacionDto>())!.Inverso.Numero.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// El reintento de una anulación con la misma clave devuelve el par de la primera vez: ni otro
+    /// inverso, ni otro número.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es la R10 sobre un documento</b>, y hasta el epílogo del 2.7 no tenía caso. La anulación
+    /// es la única acción de la API que crea un documento —el inverso—, y lo que se afirmaba de
+    /// ella era otra cosa: que sin la clave no toca nada, y que dos anulaciones con claves
+    /// distintas dejan un solo inverso. La regla es que el mismo intento, repetido, devuelve lo ya
+    /// creado.
+    /// </para>
+    /// <para>
+    /// <b>Y no basta con que no haya un segundo inverso.</b> Eso ya lo da la máquina de estados:
+    /// sin la repetición, el segundo intento se encuentra un ajuste que ya no está confirmado y
+    /// sale <c>409</c>, que le dice al cliente que ha fallado algo que hizo bien. Con la clave sale
+    /// <c>200</c>, con los mismos bytes, con el número del inverso dentro y con la marca de que es
+    /// una repetición.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso()
+    {
+        UnCaso caso = await UnAjusteConfirmadoAsync(490, "ANU-F", 491, 492);
+
+        string clave = Guid.NewGuid().ToString();
+
+        using HttpResponseMessage primera = await AnularAsync(caso, "Me equivoqué", clave);
+        using HttpResponseMessage segunda = await AnularAsync(caso, "Me equivoqué", clave);
+
+        primera.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(primera));
+
+        segunda.StatusCode.ShouldBe(
+            HttpStatusCode.OK,
+            $"el mismo intento devuelve lo ya creado, no un 409. {await Escenario.Detalle(segunda)}");
+
+        string bytesDeLaPrimera = await primera.Content.ReadAsStringAsync();
+
+        (await segunda.Content.ReadAsStringAsync()).ShouldBe(bytesDeLaPrimera);
+
+        // Lo comparado lleva el inverso dentro, dicho aparte: dos cuerpos idénticos y sin número
+        // habrían pasado igual la comparación de arriba.
+        (await primera.Content.ReadFromJsonAsync<AnulacionDto>())!.Inverso.Numero.ShouldBe(2);
+
+        primera.Headers.Contains(RespuestaRepetida.CabeceraDeRepeticion).ShouldBeFalse();
+        segunda.Headers.GetValues(RespuestaRepetida.CabeceraDeRepeticion).ShouldContain("true");
+
+        // Y por el efecto: un inverso, y dos correlativos, el del original y el suyo.
+        (await InversosDeAsync(caso)).ShouldBe(1);
+        (await ContadorAsync(caso.Cliente, caso.Serie.Id)).ShouldBe(2);
     }
 
     /// <summary>La anulación por HTTP, con la clave o deliberadamente sin ella.</summary>
