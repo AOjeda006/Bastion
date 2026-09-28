@@ -5,7 +5,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
+import jsxA11y from 'eslint-plugin-jsx-a11y-x';
 import i18next from 'eslint-plugin-i18next';
 import prettier from 'eslint-config-prettier';
 
@@ -98,7 +98,10 @@ export default tseslint.config(
       // v7: la config PLANA vive bajo `configs.flat`; `configs['recommended-latest']`
       // a secas sigue siendo la de eslintrc y ESLint 9 la rechaza.
       reactHooks.configs.flat['recommended-latest'],
-      jsxA11y.flatConfigs.strict,
+      // El bifurcado de es-tooling y no el original, que no admite ESLint 10 y no se publica desde
+      // 2024. Trae las mismas 33 reglas de `strict`, con los mismos niveles y opciones; solo cambia
+      // el prefijo, `jsx-a11y-x/`, y su config plana vive en `configs`.
+      jsxA11y.configs.strict,
       // Prettier va SIEMPRE el último: apaga las reglas de formato para que no se peleen.
       prettier,
     ],
