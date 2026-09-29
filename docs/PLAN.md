@@ -6640,6 +6640,12 @@ sigue armado para la fase 3 (decisión 11 y ADR-0046 §11).
   en **974**;
 - `dotnet format Bastion.sln --verify-no-changes --no-restore`.
 
+**El run de `main` del 2.8** es el **36501859271** sobre `ab09dc6`, **success** al primer intento,
+leído por el sondeo de la API (`vigilar26r.sh`, que dice «runs con ese sha: 1»). El de la rama sobre
+el mismo commit, el que sale de empujar la nota del run, es el **36501844792**, también **success**
+al primer intento. `GET …/actions/runs?head_sha=ab09dc6…` da `total_count: 2`, esos dos, y
+ninguno se canceló.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
@@ -14532,7 +14538,8 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 
   **El run de `main`** sale de empujar el commit que escribe éste, y va al abrir la rama siguiente,
   como el del 2.7. Con ese commit, `git rev-list --count main..HEAD` pasa de **9** a **10** antes del
-  avance, y es el último del ítem.
+  avance, y es el último del ítem. **Es el 36501859271** sobre `ab09dc6`, **success** al primer
+  intento, anotado en *Estado actual* al abrir el addendum.
 
 - [ ] **2.9 · Lotes y números de serie, y la marca que los gobierna** — criterio de aceptación:
   `Articulo` gana su trazabilidad (`Ninguna` / `PorLote` / `PorNumeroSerie`) con su migración, su DTO,
