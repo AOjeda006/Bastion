@@ -6699,7 +6699,8 @@ git, recortada al aviso de la firma y al remoto por SSH. Las otras 26 se borran:
 dos ya estaban. AGENTS.md se carga al arrancar desde `dbf2664`, así que no hace falta recordarlas por
 fuera.
 
-**El addendum del 2.8, en curso**, en la rama `addendum-2.8-ninguna-fecha-anterior`. El
+**El addendum del 2.8, cerrado el 2026-09-29**, en la rama `addendum-2.8-ninguna-fecha-anterior`,
+que ya está en `main` y borrada. El
 **[ADR-0047](adr/adr-0047-ninguna-fecha-anterior-al-ultimo-movimiento-de-su-clave.md)** va antes
 del código, en el commit `docs(adr)` que sigue a `82ef4f5`. Enmienda el último punto del ADR-0046
 §5, y el ADR-0046 lo anota en su *Estado* y al principio de su §5. Las dos afirmaciones técnicas del
@@ -6792,7 +6793,13 @@ de cerrar sus contextos. Con el arreglo, la 73 dio sus 27 rojos sobre 438, sin c
 entonces, la tanda lleva el plazo en el carril de integración: un cuelgue es un rojo con nombre, no
 tres horas.
 
-Faltan los runs.
+**Los runs.** Once commits sobre `dbf2664`, del `0f431b7` al `39faab2`:
+
+- **La rama**, sobre `39faab2`: run **36534407773**, **success**, con sus tres trabajos en verde:
+  *Backend*, *Frontal* y *Humo*.
+- **`main`**, por avance rápido de `dbf2664` a `39faab2`: run **36535303129**, **success**, con sus tres
+  trabajos en verde.
+- **La rama se borró**, local y remota, en cuanto `main` la contuvo.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
