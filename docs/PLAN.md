@@ -6801,6 +6801,38 @@ tres horas.
   trabajos en verde.
 - **La rama se borró**, local y remota, en cuanto `main` la contuvo.
 
+**El 2.9, en curso**, en la rama `2.9-lotes-y-series`, abierta desde `main` en `39faab2`. El
+**[ADR-0048](adr/adr-0048-el-lote-y-la-serie-van-con-su-articulo-y-la-marca-se-lee-con-cerrojo.md)**
+va antes del código, en el commit `docs(adr)` que sigue a `4e9b930`. Recoge las seis decisiones del
+encargo y enmienda el orden de los cerrojos del ADR-0046 §2, que lo anota en su *Estado* y al
+principio de su §2.
+
+- **Lo que el encargo dejó al agente** está en su punto 9:
+  - el límite de GS1 es regla, de 1 a 20 caracteres del conjunto 82 y sin cambiar la caja;
+  - el `CHECK` de la serie, solo por arriba;
+  - una serie sale una sola vez por documento;
+  - el cambio de marca pide `FOR NO KEY UPDATE`;
+  - los lotes van después de la valoración;
+  - y `23505` entra en la lista de las reglas guardadas por la base.
+- **Las fuentes, leídas directamente en la documentación oficial:**
+  - el conjunto de datos de los AI de GS1, entradas `10` y `21`;
+  - la figura 7.11-1 de las *GS1 General Specifications*;
+  - y `CREATE TABLE` de PostgreSQL 17, por el orden de los `CHECK` y la unicidad no diferible.
+
+**Lo que queda, por este orden:**
+
+1. **Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo
+   cerrojo y pregunta por el puerto de Inventario.
+2. **Inventario:**
+   - el lote y la serie en la línea, sus tablas y la clave de la existencia y del libro;
+   - la marca, leída con `FOR SHARE`;
+   - la traducción de la serie.
+3. **Las carreras, la propiedad y el cuadre.**
+4. **La pantalla de la marca.** Hoy el frontal del artículo es solo el listado.
+5. **La tanda de mutaciones, desde la 80.** Antes de abrirla, se le pregunta al usuario si enciende
+   `context-mode`.
+6. **La batería y los runs.**
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo

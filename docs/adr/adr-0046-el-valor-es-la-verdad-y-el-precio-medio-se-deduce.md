@@ -8,11 +8,15 @@ revisado: 2026-09-29
 
 # ADR-0046: El valor es la verdad y el precio medio se deduce, por artículo y almacén y bajo cerrojo
 
-- **Estado:** aceptado. **Enmendado por el ADR-0047 (§5, último punto).**
+- **Estado:** aceptado. **Enmendado por el ADR-0047 (§5, último punto) y por el ADR-0048 (§2, el
+  orden de los cerrojos).**
   - El [ADR-0047](adr-0047-ninguna-fecha-anterior-al-ultimo-movimiento-de-su-clave.md) prohíbe
     confirmar o anular con una fecha anterior al último movimiento de alguna clave del documento.
     El orden de valoración sigue siendo el de confirmación, y dentro de cada clave coincide con el
     de la fecha.
+  - El [ADR-0048](adr-0048-el-lote-y-la-serie-van-con-su-articulo-y-la-marca-se-lee-con-cerrojo.md)
+    mete dos eslabones en el orden de los cerrojos: la marca del artículo, después del ejercicio, y
+    los lotes y las series, después de la valoración.
 - **Fecha:** 2026-09-28
 - **Sale del ítem 2.8** y de las cinco decisiones que el encargo del 2026-09-28 pidió tomar y
   escribir **antes del código**. Las toma el agente. Cada una lleva aquí su motivo, y en el PLAN la
@@ -73,6 +77,11 @@ motivos:
 `Confirmado`, el contador de la serie no se mueve y el libro no gana ninguna fila.
 
 ### 2. Se lee con la fila bloqueada: una sentencia bloquea y la siguiente lee lo bloqueado
+
+> **Enmendado por el ADR-0048 (2026-09-29), en el orden de los cerrojos.** Entre el ejercicio y el
+> contador va la marca de los artículos del documento, con `FOR SHARE`; entre la valoración y el
+> documento, los lotes y las series, con `INSERT … ON CONFLICT DO NOTHING`. Lo demás del punto sigue
+> igual.
 
 **Antes de valorar**, para cada clave del documento y **en orden de clave**, una sentencia toma la
 fila de la valoración:
