@@ -51,6 +51,10 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     private readonly InventarioDbContext _inventario;
     private readonly RepositorioDeAjustes _ajustes;
 
+    // Lo que este módulo ha lanzado con su propia transacción, para que no se cierre su conexión
+    // con algo todavía dentro. Ver `DisposeAsync`.
+    private readonly List<Task> _lanzadas = [];
+
     internal ElModuloDeInventario(PostgresConTodosLosModulos postgres, Guid empresaId)
     {
         AccesoALoBloqueado acceso =
@@ -136,7 +140,10 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     /// </remarks>
     /// <param name="ajusteId">El documento que confirmar.</param>
     /// <returns>Lo que contestó el caso de uso.</returns>
-    internal async Task<Resultado<AjusteDto>> ConfirmarAsync(Guid ajusteId)
+    internal Task<Resultado<AjusteDto>> ConfirmarAsync(Guid ajusteId) =>
+        Lanzada(ConfirmarConSuTransaccionAsync(ajusteId));
+
+    private async Task<Resultado<AjusteDto>> ConfirmarConSuTransaccionAsync(Guid ajusteId)
     {
         await using IDbContextTransaction transaccion =
             await _inventario.Database.BeginTransactionAsync();
@@ -227,6 +234,9 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal Task PonerPlazoCortoDeCerrojoAsync() =>
         _inventario.Database.ExecuteSqlRawAsync(PlazoCorto);
 
+    /// <summary>Lo que se espera a una operación en vuelo antes de cerrar su contexto.</summary>
+    private static readonly TimeSpan s_plazoDeLoQueQuedoEnVuelo = TimeSpan.FromSeconds(30);
+
     /// <summary>Lo que espera quien llega segundo antes de rendirse con un 55P03.</summary>
     internal const string PlazoCorto = "SET LOCAL lock_timeout = '300ms'";
 
@@ -265,7 +275,10 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     /// <param name="ajusteId">El documento que anular.</param>
     /// <param name="motivo">Por qué se anula.</param>
     /// <returns>Lo que contestó el caso de uso.</returns>
-    internal async Task<Resultado<AnulacionDto>> AnularAsync(Guid ajusteId, string motivo)
+    internal Task<Resultado<AnulacionDto>> AnularAsync(Guid ajusteId, string motivo) =>
+        Lanzada(AnularConSuTransaccionAsync(ajusteId, motivo));
+
+    private async Task<Resultado<AnulacionDto>> AnularConSuTransaccionAsync(Guid ajusteId, string motivo)
     {
         await using IDbContextTransaction transaccion =
             await _inventario.Database.BeginTransactionAsync();
@@ -331,8 +344,41 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         }
     }
 
+    private Task<T> Lanzada<T>(Task<T> operacion)
+    {
+        _lanzadas.Add(operacion);
+
+        return operacion;
+    }
+
+    /// <summary>
+    /// Espera a lo que este módulo dejó en vuelo, y solo entonces cierra sus contextos.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Un caso de carrera que falla a medias sale sin esperar a la operación que dejó en
+    /// vuelo</b>, y el <c>await using</c> cerraría el contexto con ella dentro. La operación se
+    /// queda colgada para siempre, con su transacción abierta y su cerrojo puesto, y el carril no
+    /// termina: la tanda del addendum del 2.8 estuvo tres horas y media parada en la mutación 73.
+    /// Quien la tenía frenada ya soltó al salir de su bloque, así que aquí termina sola.
+    /// </para>
+    /// <para>
+    /// <b>Su desenlace no se mira</b>, porque es cosa del caso: o ya lo afirmó, o el caso ya ha
+    /// fallado por otra cosa y ese es el fallo que tiene que salir. Si no termina en el plazo, eso
+    /// sí se dice, porque cerrar el contexto entonces volvería a colgar el carril.
+    /// </para>
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
+        var todas = Task.WhenAll(_lanzadas);
+
+        if (await Task.WhenAny(todas, Task.Delay(s_plazoDeLoQueQuedoEnVuelo)) != todas)
+        {
+            throw new TimeoutException(
+                "una operación de este módulo sigue en vuelo tras treinta segundos: cerrar su " +
+                "contexto la dejaría colgada con su transacción abierta");
+        }
+
         await _inventario.DisposeAsync();
         await _catalogo.DisposeAsync();
         await _organizacion.DisposeAsync();
