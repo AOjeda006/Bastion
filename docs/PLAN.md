@@ -5340,6 +5340,137 @@ demás.
    `main` (`git ls-remote --heads origin`). Desde ahora, cada rama se borra tras su avance y su run
    de `main`.
 
+#### Cómo se cuenta el tramo, desde ahora
+
+El usuario verificó el 2.8 desde fuera: `main` en `ab09dc6`, **21** commits desde `5d405d2`, las 21
+firmas válidas y con la misma clave, los runs del 169 al 173 en verde y ninguno cancelado, y las
+cifras del *runner* iguales a las de esta máquina. **El informe se quedó corto:** contó los 10 del
+2.8 y no los 11 del epílogo. **Desde ahora, el tramo se cuenta desde el último commit verificado**, y
+el próximo informe cuenta desde `ab09dc6` todo lo que haya encima, sea del ítem o no, con sus runs
+de rama y de `main`.
+
+#### Las cuatro cosas pequeñas, cada una en su commit y en la rama del addendum
+
+1. **El run de `main` del 2.8**, el **36501859271**, anotado.
+2. **Las mutaciones 52 a 56 están numeradas dos veces**, en la tabla del epílogo del 2.7 y en la del
+   2.8. Los mensajes de commit no se tocan. En el PLAN se cualifican —«52 del epílogo», «52 del
+   2.8»— y las dos tablas llevan una nota. **La siguiente es la 69.** Y va a *Reglas de oro propias*
+   que el número se toma del final de la última tabla, sea del tramo que sea.
+3. **El ADR-0044 se reescribió por dentro en `d9dd1e1`**, por encargo del usuario, y eso choca con
+   la regla de que un ADR aceptado se enmienda desde uno nuevo. No se deshace. Su cabecera dice
+   «Enmendado por el ADR-0046 (§2 y §4); §5 corregido en `d9dd1e1`», y la regla va a *Reglas de oro
+   propias*.
+4. **Lo aprendido que vivía en la memoria local del agente pasa al repositorio.** Una memoria local
+   no llega a otra máquina ni a una sesión en la nube, y nadie la revisa. Lo que sea método va a
+   *Reglas de oro propias* en un commit `docs(metodo)`, y lo que se quede fuera se dice con su
+   porqué.
+
+#### El addendum del 2.8: ninguna fecha anterior al último movimiento de su clave
+
+En su rama y con el **ADR-0047**, que enmienda el último punto del ADR-0046 §5.
+
+**Por qué.** Se valora en orden de confirmación, y el valor de una fecha pasada se obtiene sumando
+el `valor` de las filas hasta esa fecha. Juntas, las dos cosas dan cifras imposibles:
+
+- el día 10 entran 10 unidades a 10 €;
+- el día 20 entran 10 a 100 €, y el precio medio queda en 55;
+- después se confirma una salida de 10, fechada el día 15.
+
+El día 15 queda con 0 unidades y −450 €. Si la salida se fecha antes de la primera entrada, salen
+−10 unidades y −550 €. **El usuario decide cerrarlo en origen.**
+
+**Criterio de aceptación:**
+
+- **La columna.** `valoraciones` gana `ultima_fecha`, la fecha de operación más alta de su clave. La
+  migración la rellena con el máximo del libro por clave.
+- **El rechazo.** Confirmar o anular con fecha anterior a la `ultima_fecha` de alguna clave es un
+  `422` con código propio, y no escribe nada. Lo decide el dominio contra la fila ya bloqueada:
+  `LoQueImpide` gana el motivo.
+- **La guarda de la sentencia.** La que suma se niega a mover una fila hacia atrás, como ya hace con
+  la divisa. Quien se salte el dominio se estrella como un defecto.
+- **Lo que sigue permitido.** La misma fecha vale. Otra clave, u otro almacén del mismo artículo, no
+  se ven afectados. El inverso lleva su propia fecha, así que anular hoy sigue funcionando.
+- **Los casos:**
+  - el contraejemplo, ahora `422`;
+  - la misma fecha;
+  - otra clave;
+  - dos transacciones de verdad con las fechas cruzadas: la del día 20 tiene el cerrojo, y la del
+    día 15 espera y recibe el `422`.
+- **La propiedad gana el invariante que el contraejemplo rompe.** Para cada clave y cada fecha del
+  libro, la suma hasta esa fecha no deja cantidad negativa ni valor sin cantidad. El generador
+  modela el rechazo, como ya hace con el stock.
+- **La mutación** quita la comprobación del dominio y la guarda de la sentencia, y la propiedad
+  tiene que ponerse roja.
+- **La fila de la R3** lo dice.
+- **Los casos que ya atrasan fechas** sobre una clave que se movió después se arreglan con otra
+  clave u otra fecha, nunca aflojando la regla, y se nombran.
+- **Lo que no cambia.** La maquinaria del 2.7 para las instantáneas se queda: un movimiento
+  posterior al último de su clave puede ser anterior al corte.
+
+#### El 2.9: lotes y números de serie, con el ADR-0048 antes del código
+
+Cada decisión, con su caso.
+
+1. **Lote y serie van en dos columnas, aunque la marca sea excluyente.**
+   `negocio/identificacion-articulos` pone como antipatrón una trazabilidad por serie que no pueda
+   guardar también el lote, o al revés. La marca de tres valores está acordada en la puerta de la
+   fase y se queda así, por decisión del usuario. Aun así, la existencia y el libro llevan
+   `lote_id` y `serie_id` por separado: el día que un artículo necesite las dos cosas será un cambio
+   del dominio, no de la clave del libro, que está particionado y es de solo añadido. El ADR dice la
+   desviación y su disparador.
+2. **El lote es (empresa, artículo, código)**, nunca el código suelto.
+   - Tiene tabla propia con índice único, y el número de serie lo mismo.
+   - Se crea en la primera entrada, con `INSERT … ON CONFLICT` dentro de la transacción.
+   - Una salida con lote desconocido la para la guarda del stock (`422`), sin camino propio.
+   - Se decide si el límite de 20 caracteres del lote en GS1 (AI 10) es regla de negocio, con su
+     motivo.
+3. **«Un número de serie no puede estar en dos sitios a la vez» lo sostiene el motor.** Un `CHECK`
+   de fila no ve las demás filas, así que hacen falta dos piezas:
+   - `CHECK (serie_id IS NULL OR fisico BETWEEN 0 AND 1)`;
+   - un índice único parcial `(empresa_id, articulo_id, serie_id) WHERE fisico > 0`.
+
+   Con las dos sentencias del 2.8, el índice se comprueba en el `UPDATE`: la perdedora espera y
+   recibe un `23505`. Ese error se traduce por su nombre, con el mecanismo del ADR-0046, a su error
+   de negocio, y no al `412` de la carrera perdida. Una línea con serie mueve ±1 en unidad base. El
+   caso: la misma serie entra en dos almacenes a la vez, con dos transacciones de verdad.
+4. **Cambiar la marca con el primer movimiento en vuelo es la carrera del ADR-0042.** Catálogo
+   pregunta «¿tiene movimientos?» y después cambia, mientras Inventario confirma contra la marca
+   vieja.
+   - El cambio bloquea la fila del artículo con `FOR UPDATE` y pregunta después.
+   - La confirmación lee la marca con `FOR SHARE` desde su adaptador, como el ejercicio en el
+     ADR-0041, y valida sus líneas contra lo que leyó.
+   - El ADR dice en qué lugar entra ese cerrojo dentro del orden del ADR-0046 §2.
+   - Un borrador con líneas que ya no casan con la marca se rechaza al confirmar, con su error.
+   - Casos: los dos órdenes, con dos transacciones de verdad.
+   - Mutaciones: preguntar antes de tomar el cerrojo, y leer sin `FOR SHARE`.
+5. **El inverso copia lote y serie.** Anular la entrada de una serie que ya salió es el `422` de la
+   excepción de la R2. La clave de valoración no cambia, porque el lote no entra en ella (ADR-0046
+   §3), y el ADR lo dice.
+6. **La propiedad y el cuadre se extienden a la clave trazable.**
+
+El resto del criterio va como está en el checklist: la migración, el DTO, el contrato y la pantalla
+de la marca, con el error del servidor en su campo y en los dos idiomas; el segundo cruce mutuo,
+declarado en los tests de arquitectura; y por los puertos, solo `Guid` y primitivos.
+
+#### Las herramientas de la máquina, en este encargo
+
+- **`ctx7` (Context7)**, cuando la versión importe; por ejemplo, el índice parcial y `NULLS NOT
+  DISTINCT` en EF Core 10 con Npgsql. Se invoca de forma explícita y solo con la pregunta técnica:
+  nada de artículos, lotes ni otros datos del dominio. Lo que vaya a quedar en un ADR se contrasta
+  con la documentación oficial, y se dice cuál.
+- **`playwright-cli`**, para ver la marca funcionando en la pantalla del artículo, contra el entorno
+  local y con datos sintéticos. No sustituye al test de Vitest con MSW, que es el que cuenta.
+- **`context-mode` está apagado**, y no se da por disponible. La tanda de mutaciones es la sesión de
+  más salida: se poda en origen, y el guion imprime solo las cifras y los nombres de los casos en
+  rojo. Si aun así compensa encenderlo, se le pide al usuario antes de abrir esa sesión, sabiendo
+  que bloquea `curl` y `wget`.
+- **Si una herramienta no responde**, se sigue por el camino manual y se anota.
+
+#### El método
+
+El de siempre: la mutación sobre la línea que decide, las dos listas por nombre, commits pequeños y
+firmados, y una rama propia por unidad.
+
 
 ## Estado actual
 
