@@ -5316,7 +5316,7 @@ decimal que una salida puede mover.
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 7 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 8 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -6386,13 +6386,101 @@ semillas, de la propiedad, en cuanto la segunda cuenta llevó un coste distinto 
   el presupuesto, **414/450** KiB de arranque y **603/900** en total;
 - `dotnet format Bastion.sln --verify-no-changes --no-restore`.
 
-**Lo que falta del 2.8: el cierre.**
+**El run de `main` del epílogo del 2.7** es el **36437009968** sobre `6d10642`, **success**, leído
+por el sondeo de la API (`vigilar26r.sh`, que dice «runs con ese sha: 1»). Con él se cierra lo que
+quedó pendiente al abrir el 2.8.
 
-- las mutaciones sobre la lectura bajo cerrojo, sobre la línea que calcula y congela el precio medio
-  y sobre la que ordena las líneas, con los rojos por nombre;
-- las filas de la R2, la R3 y la R6, y la valoración en el glosario;
-- el invariante 8, escrito aquí;
-- y la casilla, con el run de `main` del 2.7.
+**Hecho el 2.8**, el 2026-09-29, en la rama `item-2.8-la-valoracion-pmp`. El libro guarda el valor
+de cada fila y el precio medio que dejó o al que salió, y la valoración de cada artículo y almacén es
+su suma, movida bajo cerrojo en la transacción que anota el libro. El porqué está en el
+**ADR-0046**. Las filas de la **R2**, la **R3** y la **R6** están reescritas en
+`docs/dominio/reglas-duras.md`:
+
+- la R2, que desde `4b07599` dice que cede ante el stock negativo, gana el par que suma cero también
+  en valor;
+- la R3 se extiende al valor;
+- y la R6, al precio medio.
+
+El glosario suma la valoración, el valor y el precio medio, y la línea y el movimiento dicen lo que
+guardan ahora.
+
+**Los commits del tramo**, todos `G` en `git log --format='%h %G? %s' main..`, **9** con el del
+cierre según `git rev-list --count main..HEAD`:
+
+- `4b07599`: las cinco decisiones de la valoración, y las seis que salen de aplicarlas, antes del
+  código;
+- `4995b1b`: la primera pieza, el stock no baja de cero;
+- `59bf1a7`: la segunda, el precio medio en el dominio, con sus casos dorados;
+- `0f859c2` y `5aab1cb`: el coste por la unidad en que se escribió, y su reversión, porque el
+  contrato dice unidad base desde el 2.3;
+- `da6c960`: la tercera, la divisa del documento y el coste que admite cada línea;
+- `5c1b0b7`: la cuarta, el cableado bajo cerrojo;
+- `40c1530`: la carrera de la valoración, rehecha por la mutación 64;
+- y el cierre.
+
+**Qué pone rojo cada mutación.** La numeración sigue la del PLAN, y la del 2.7 acabó en la 51. Cada
+una la aplicó un guion que exige el fichero como está en `HEAD` y comprueba que cambió. Luego compila
+la solución y corre los dos carriles: `Category!=Integracion` sobre `Bastion.sln` (**974** casos) y
+`Category=Integracion` sobre `Api.IntegrationTests` (**432**). Al acabar, reescribe el fichero con la
+fecha de ahora, y el guion recompila al final. Van en el orden de las piezas.
+
+| # | Mutación | Qué se puso rojo |
+|---|---|---|
+| 52 | La migración `ElFisicoNoBajaDeCero`, con `fisico >= -1000000` en el `CHECK`. | rápido 0; integración 8: las seis semillas de la propiedad, `Anular_una_entrada_cuyas_unidades_ya_salieron…` y `Dos_salidas_a_la_vez_que_caben_una_a_una…` |
+| 53 | La restricción que declara `ModuloDeInventario`, con otro nombre. | rápido 3: `Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista`, `Toda_restriccion_declarada_existe_en_el_modelo` y `Una_restriccion_declarada_sale_con_su_error_y_no_500`; integración 1: `Anular_una_entrada_cuyas_unidades_ya_salieron…` |
+| 54 | La salida congela el precio de después, no el de antes. | rápido 4: `Casi_vaciar…`, `El_inverso_de_una_entrada_resta…`, `El_inverso_de_una_entrada_ya_repartida…` y `Sacar_un_tercio…`; integración 7: la propiedad y `El_inverso_resta_el_valor_que_sumo_la_entrada…` |
+| 55 | La entrada no recalcula el precio medio. | rápido 4: `Cada_linea_valora_contra…`, `El_inverso_de_una_salida…`, `La_secuencia_del_criterio…` y `Una_entrada_sin_coste_en_una_clave_de_antes_del_2_8…`; integración 7: la propiedad y `Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave` |
+| 56 | La salida que vacía la clave no se lleva todo el valor. | rápido 1: `Vaciar_la_clave_de_golpe…`; integración 1: `Una_salida_congela_el_precio_medio_y_la_que_vacia…` |
+| 57 | Sin tope: una salida puede restar más valor del que hay. | rápido 2: `Casi_vaciar…` y `El_inverso_de_una_entrada_ya_repartida…`; integración 0 |
+| 58 | Las líneas se valoran en su orden, sin subir primero. | rápido 1: `Dentro_de_un_documento_primero_sube_y_despues_baja`; integración 6: la propiedad |
+| 59 | El inverso se valora con su coste o al precio medio, no con lo que compensa. | rápido 1: `El_inverso_de_una_salida…`; integración 6: la propiedad |
+| 60 | La entrada sin coste vale cero en vez del precio medio. | rápido 3: `Una_entrada_sin_coste_detras_de_una_con_coste…`, `Cada_linea_valora_contra…` y `La_secuencia_del_criterio…`; integración 10: la propiedad, `Dos_empresas_con_la_misma_clave…`, `La_segunda_de_dos_confirmaciones…`, `Las_lineas_se_valoran_en_el_orden…` y `Una_entrada_sin_coste_se_valora_al_precio_medio…` |
+| 61 | `LineaDeAjuste.Crear` admite coste en una línea que baja. | rápido 1: `ElCosteYLaDivisaDelAjusteTests.Una_linea_que_baja_no_lleva_coste…`; integración 0 |
+| 62 | `AbrirAjuste` admite coste en una línea que baja. | rápido 0; integración 1: `Una_salida_con_coste_o_un_coste_negativo_no_abren_el_borrador` |
+| 63 | El borrador toma `EUR` en vez de la divisa base de la empresa. | rápido 0; integración 2: `El_borrador_toma_la_divisa_base_de_la_empresa` y `Un_documento_en_otra_divisa…` |
+| 64 | El cerrojo de la valoración, con `DO NOTHING` en vez de `DO UPDATE`. | integración **0 de 432 con la primera forma del caso**, sobre `5c1b0b7`; tras `40c1530`, rápido 0 e integración 1: `La_segunda_de_dos_confirmaciones_a_la_vez…` |
+| 65 | `Ajuste.Lineas`, sin ordenar por número. | rápido 0; integración 3: las semillas 463 y 464, y `Las_lineas_se_valoran_en_el_orden…` |
+| 66 | El cuadre de la valoración, sin su rama de valor. | rápido 0; integración 1: `El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro` |
+| 67 | La entrada sin coste en una clave vacía vale cero, sin impedimento. | rápido 1: `Una_entrada_sin_coste_en_una_clave_vacia_no_se_puede_valorar`; integración 1: `Una_entrada_sin_coste_en_una_clave_vacia_es_422_y_no_deja_nada` |
+| 68 | Una clave con cantidad en otra divisa empieza de nuevo, como si estuviera vacía. | rápido 1: `Una_clave_con_existencias_en_otra_divisa_no_se_valora`; integración 1: `Un_documento_en_otra_divisa…` |
+
+**La 64 salió verde, y la medición mandó.** El caso de la carrera paraba a la primera confirmación
+ya hecha y sin soltar. Así la segunda esperaba igual con `DO NOTHING`, porque un `INSERT … ON
+CONFLICT` espera en el índice único a la transacción que cambió la fila, bloquee lo que ya está o no.
+Y su sentencia siguiente ya leía lo que la primera dejó. El mutante no es equivalente en producción:
+la ventana está entre la lectura de la primera y su `UPDATE`, y el caso no la abría. `40c1530` la
+abre: la primera bloquea la valoración y no escribe nada hasta ver a la segunda esperando. Con `DO
+NOTHING`, la segunda termina sin esperar y el caso sale rojo con «la operación ha terminado sin
+esperar a la transacción en vuelo». La primera forma se midió en una tanda anterior, sobre
+`5c1b0b7`, con el carril entero en verde. De esa tanda es también la cifra de integración de la 65,
+porque la última solo la pasó por el carril rápido. Y la 54, que esa tanda midió también, dio los
+mismos siete rojos que la última.
+
+**Tres mutaciones solo las ve un carril, y está dicho por qué.**
+
+- **La 57, solo el rápido.** Los dos casos que la ven son dorados, y escriben a mano el redondeo que
+  hace que una salida que no vacía la clave diga restar más valor del que queda. Ni la propiedad ni
+  ningún otro caso de integración se pone rojo con ella: o no llegan a esa salida, o no afirman
+  sobre ella. La regla la sostiene el carril rápido.
+- **La 61 y la 62 son la misma regla en dos sitios.** El caso de uso contesta antes con su `422`, así
+  que la guarda del dominio solo la ve el carril rápido, y la del caso de uso, solo el de
+  integración.
+
+**El invariante 8 no se cruza, comprobado sobre el código.** `git grep -n
+"PrecioResueltoDto\|ResolverPrecio\|IConsultaDeTarifas" -- src/Modules/Inventario` no encuentra nada
+y sale con 1: Inventario no le pide precios a Catálogo. Así que ningún documento de esta fase
+convierte un precio resuelto en un `Importe`. El coste llega del documento como decimal, y la divisa
+es la base de la empresa, una cadena, por `IConsultaDeEmpresas.DivisaBaseDeAsync`. El disparador
+sigue armado para la fase 3 (decisión 11 y ADR-0046 §11).
+
+**Lo que se ejecutó antes del commit del cierre**, sobre el árbol final y todo en verde:
+
+- `dotnet test Bastion.sln --no-build --filter "Category=Integracion"`: **432** en
+  `Api.IntegrationTests` y **84** en `Organizacion.IntegrationTests`; `bash
+  scripts/ci/recuento-de-tests.sh` sobre sus `.trx`, con la lista del workflow, da **516**;
+- `dotnet test Bastion.sln --no-build --filter "Category!=Integracion"`, que el mismo recuento da
+  en **974**;
+- `dotnet format Bastion.sln --verify-no-changes --no-restore`.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -14181,13 +14269,96 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   como el del 2.6. Con ese commit, `git rev-list --count main..HEAD` pasa de **9** a **10** antes del
   avance, y es el último del ítem.
 
-- [ ] **2.8 · La valoración PMP** — criterio de aceptación: el PMP se recalcula en cada entrada y se
+- [x] **2.8 · La valoración PMP** — criterio de aceptación: el PMP se recalcula en cada entrada y se
   guarda **en el movimiento**, no solo en la proyección; una salida congela el PMP vigente en su fila,
   de modo que valorar el pasado **no exige reproducir la historia**; el **stock negativo se rechaza**
   con su error —el *backorder* es de la fase 4—; un ajuste positivo **sin coste** toma el PMP vigente;
   y los **casos dorados** pasan con sus cifras escritas, incluida la entrada que cambia el medio y la
   salida posterior que ya no lo mueve. El coste es un `Importe` en la divisa base de la empresa, y el
   ítem deja escrito por qué el disparador del invariante 8 **no se cruza aquí**.
+
+  **Hecho el 2026-09-29**, en la rama `item-2.8-la-valoracion-pmp`. Los commits, las mutaciones de
+  la 52 a la 68 y las cifras están en *Estado actual → Hecho el 2.8*. Cada punto del criterio tiene
+  su caso:
+
+  - el precio medio se recalcula en cada entrada y se guarda en la fila:
+    `La_secuencia_del_criterio_da_sus_cifras_fila_a_fila` y
+    `Cada_linea_y_cada_fila_se_quedan_el_valor_y_el_precio_que_les_dieron`; sobre la base, la
+    propiedad, que compara el valor y el precio medio de cada fila tras cada paso;
+  - una salida congela el precio medio vigente: `Sacar_un_tercio_congela_el_precio_de_antes_y_el_que_se_deduce_cambia_en_la_sexta_decimal`
+    y `Una_salida_congela_el_precio_medio_y_la_que_vacia_se_lleva_todo_el_valor`;
+  - el stock negativo se rechaza con su error: `Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una`
+    y `Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada`;
+  - un ajuste positivo sin coste toma el precio medio: `Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave`,
+    y sin precio medio es un `422`: `Una_entrada_sin_coste_en_una_clave_vacia_es_422_y_no_deja_nada`;
+  - los casos dorados, con la entrada que cambia el medio y la salida posterior que ya no lo mueve:
+    `La_secuencia_del_criterio_da_sus_cifras_fila_a_fila`, y los otros nueve de
+    `LosCasosDoradosDelPrecioMedioTests`;
+  - el coste es un `Importe` en la divisa base de la empresa: `El_borrador_toma_la_divisa_base_de_la_empresa`
+    y `Cada_fila_del_libro_lleva_la_divisa_del_ajuste_y_la_salida_ninguna_coste`;
+  - el invariante 8: en *Estado actual → Hecho el 2.8*, con la orden que lo comprueba.
+
+  Las filas de la **R2**, la **R3** y la **R6** están reescritas.
+
+  **Vistos en rojo** —entre paréntesis, la mutación que lo puso rojo—:
+
+  - `CadaRestriccionTraducidaSeJustificaTests.Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista` (53)
+  - `CadaRestriccionTraducidaSeJustificaTests.Toda_restriccion_declarada_existe_en_el_modelo` (53)
+  - `ElCosteYLaDivisaDelAjusteTests.Una_linea_que_baja_no_lleva_coste_y_ninguna_lo_lleva_negativo` (61)
+  - `LaAnulacionConContraDocumentoTests.Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada` (52, 53)
+  - `LaValoracionDelAjusteTests.Dos_empresas_con_la_misma_clave_no_comparten_valoracion` (60)
+  - `LaValoracionDelAjusteTests.El_borrador_toma_la_divisa_base_de_la_empresa` (63)
+  - `LaValoracionDelAjusteTests.El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro` (66)
+  - `LaValoracionDelAjusteTests.El_inverso_resta_el_valor_que_sumo_la_entrada_y_el_par_suma_cero` (54)
+  - `LaValoracionDelAjusteTests.La_segunda_de_dos_confirmaciones_a_la_vez_se_valora_con_lo_que_dejo_la_primera` (60, 64)
+  - `LaValoracionDelAjusteTests.Las_lineas_se_valoran_en_el_orden_en_que_se_escribieron_aunque_la_base_las_devuelva_en_otro` (60, 65)
+  - `LaValoracionDelAjusteTests.Un_documento_en_otra_divisa_que_la_de_la_valoracion_es_422_salvo_en_una_clave_vacia` (63, 68)
+  - `LaValoracionDelAjusteTests.Una_entrada_sin_coste_en_una_clave_vacia_es_422_y_no_deja_nada` (67)
+  - `LaValoracionDelAjusteTests.Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave` (55, 60)
+  - `LaValoracionDelAjusteTests.Una_salida_con_coste_o_un_coste_negativo_no_abren_el_borrador` (62)
+  - `LaValoracionDelAjusteTests.Una_salida_congela_el_precio_medio_y_la_que_vacia_se_lleva_todo_el_valor` (56)
+  - `LasExistenciasSonLaSumaDelLibroTests.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una` (52)
+  - `LoQueImpideValorarTests.Una_clave_con_existencias_en_otra_divisa_no_se_valora` (68)
+  - `LoQueImpideValorarTests.Una_entrada_sin_coste_detras_de_una_con_coste_del_mismo_documento_se_valora` (60)
+  - `LoQueImpideValorarTests.Una_entrada_sin_coste_en_una_clave_vacia_no_se_puede_valorar` (67)
+  - `LosCasosDoradosDelPrecioMedioTests.Cada_linea_valora_contra_lo_que_dejaron_las_anteriores_de_su_clave` (55, 60)
+  - `LosCasosDoradosDelPrecioMedioTests.Casi_vaciar_la_clave_resta_como_mucho_lo_que_hay` (54, 57)
+  - `LosCasosDoradosDelPrecioMedioTests.Dentro_de_un_documento_primero_sube_y_despues_baja` (58)
+  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_entrada_resta_su_valor_exacto_y_deja_el_precio_de_las_demas` (54)
+  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_entrada_ya_repartida_se_lleva_como_mucho_lo_que_queda` (54, 57)
+  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_salida_devuelve_su_valor_exacto_y_el_par_suma_cero` (55, 59)
+  - `LosCasosDoradosDelPrecioMedioTests.La_secuencia_del_criterio_da_sus_cifras_fila_a_fila` (55, 60)
+  - `LosCasosDoradosDelPrecioMedioTests.Sacar_un_tercio_congela_el_precio_de_antes_y_el_que_se_deduce_cambia_en_la_sexta_decimal` (54)
+  - `LosCasosDoradosDelPrecioMedioTests.Una_entrada_sin_coste_en_una_clave_de_antes_del_2_8_se_valora_a_cero` (55)
+  - `LosCasosDoradosDelPrecioMedioTests.Vaciar_la_clave_de_golpe_se_lleva_todo_el_valor_y_no_lo_que_dice_el_redondeo` (56)
+  - `PoliticaDeErroresTests.Una_restriccion_declarada_sale_con_su_error_y_no_500` (53)
+
+  **Vistos solo en verde** —sostienen lo que dicen y nada más—:
+
+  - `ElCosteYLaDivisaDelAjusteTests.Cada_fila_del_libro_lleva_la_divisa_del_ajuste_y_la_salida_ninguna_coste`
+  - `ElCosteYLaDivisaDelAjusteTests.El_coste_se_guarda_a_la_escala_del_importe`
+  - `ElCosteYLaDivisaDelAjusteTests.Una_divisa_sin_forma_no_abre_el_ajuste`
+  - `ElCosteYLaDivisaDelAjusteTests.Una_fila_del_libro_no_mezcla_divisas`
+  - `ElValorQueLlevaElAjusteTests.Cada_linea_lleva_el_numero_en_que_se_escribio_y_la_del_inverso_el_de_la_suya`
+  - `ElValorQueLlevaElAjusteTests.Cada_linea_y_cada_fila_se_quedan_el_valor_y_el_precio_que_les_dieron`
+  - `ElValorQueLlevaElAjusteTests.El_par_suma_cero_en_valor_y_el_inverso_lleva_el_valor_y_no_el_coste`
+  - `ElValorQueLlevaElAjusteTests.Pregunta_por_su_almacen_la_cantidad_base_y_el_coste_en_su_divisa`
+  - `ElValorQueLlevaElAjusteTests.Una_fila_del_libro_no_lleva_un_valor_que_no_es_el_suyo`
+  - `ElValorQueLlevaElAjusteTests.Una_valoracion_que_no_casa_no_confirma`
+  - `LoQueImpideValorarTests.El_valor_que_compensa_no_va_con_coste_ni_con_el_signo_cambiado`
+  - `LoQueImpideValorarTests.Un_coste_en_otra_divisa_que_la_del_documento_es_un_defecto`
+  - `LoQueImpideValorarTests.Un_saldo_no_baja_de_cero_y_sin_cantidad_no_tiene_valor`
+  - `LoQueImpideValorarTests.Una_clave_sin_su_saldo_bloqueado_no_se_valora_desde_cero`
+  - `LoQueImpideValorarTests.Una_clave_vacia_en_otra_divisa_empieza_de_nuevo_en_la_del_documento`
+  - `LoQueImpideValorarTests.Una_linea_que_baja_no_lleva_coste_y_ninguna_lo_lleva_negativo`
+  - `PoliticaDeErroresTests.Una_restriccion_sin_declarar_sigue_siendo_500`
+
+  Son **47** métodos nuevos en el ítem: **30** vistos en rojo y **17** solo en verde. Salen
+  de `git diff main..HEAD -- tests`, buscando las firmas `public … Task|void` añadidas, sin
+  `Dispose`. No hay ninguno renombrado. `ElSaldoEsLaSumaDelLibroPorPropiedadTests` no cuenta, porque
+  no es nuevo: se amplió, y se puso rojo en la 52, la 54, la 55, la 58, la 59, la 60 y la 65.
+
+  **El run de la rama** sale de empujar este commit, y el de `main`, de empujar el que lo anota.
 
 - [ ] **2.9 · Lotes y números de serie, y la marca que los gobierna** — criterio de aceptación:
   `Articulo` gana su trazabilidad (`Ninguna` / `PorLote` / `PorNumeroSerie`) con su migración, su DTO,
