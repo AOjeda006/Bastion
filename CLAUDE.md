@@ -1,7 +1,7 @@
 # CLAUDE.md — Bastion
 
 Eres el agente encargado de desarrollar este proyecto (desde cero o ampliándolo). Trabaja según
-el contrato de `@AGENTS.md` y mantén siempre actualizado el plan de registro `@docs/PLAN.md`.
+el contrato de @AGENTS.md y mantén siempre actualizado el plan de registro `@docs/PLAN.md`.
 
 La especificación completa del producto —stack, arquitectura, dominio, las diecisiete reglas duras
 y la hoja de ruta— es **`ERP-PLAN-MAESTRO.md`**, que el usuario aporta fuera del repositorio. Es la
@@ -34,6 +34,7 @@ Sigue estas convenciones como **fuente de verdad** de estilo y buenas prácticas
 @../BibliotecaDocumentacion/herramientas/docker.md
 @../BibliotecaDocumentacion/herramientas/observabilidad.md
 @../BibliotecaDocumentacion/herramientas/entrega-continua.md
+@../BibliotecaDocumentacion/herramientas/arnes-de-agente.md
 @../BibliotecaDocumentacion/patrones/inyeccion-dependencias.md
 @../BibliotecaDocumentacion/patrones/repository-y-dto.md
 

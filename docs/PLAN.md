@@ -5313,6 +5313,33 @@ decimal que una salida puede mover.
     propia línea, sin tocar el generador: una llamada más a `azar` cambiaría las secuencias que hoy
     pasan por todas las clases de paso.
 
+### Traídas por el encargo del 2026-09-29 — entre el cierre del 2.8 y la apertura del 2.9
+
+El usuario lo trae tras verificar el 2.8 desde fuera. Son **tres unidades, cada una en su rama y en
+este orden**: el arnés, el addendum del 2.8 y el 2.9. El arnés llega a `main` antes que todo lo
+demás.
+
+#### El arnés
+
+1. **`herramientas/arnes-de-agente.md`, importado** en `CLAUDE.md`, junto a los demás de
+   `herramientas/`. Cuándo usar `ctx7`, `playwright-cli` y `context-mode`, y qué no pueden hacer
+   nunca.
+2. **`.claude/settings.json` no cambia: ya es la plantilla.** Tiene `autoCompactWindow` en 300000 y
+   el *hook* `SessionStart` de identidad con firma. `cmp` dice que difieren en el segundo byte, pero
+   es el final de línea de la copia de trabajo de la biblioteca: CRLF en disco y LF en git. Sin los
+   `\r`, `diff` no encuentra nada.
+3. **El `/context`, lanzado por el usuario**, dice que ningún import de la biblioteca se carga. Lo
+   medido y lo decidido están en *Imports pendientes de `CLAUDE.md`*.
+4. **`AGENTS.md` pasa a ser un import de verdad** (decidido por el usuario). `CLAUDE.md` lo nombraba
+   entre comillas invertidas, y un import dentro de código no se evalúa. Como existe `CLAUDE.md`,
+   Claude Code no lo leía por su cuenta. Ahora entra en cada arranque, y con él sus *Reglas de oro
+   propias*.
+5. **Las ramas que `main` ya contiene se borran, local y remota** (decidido por el usuario), como
+   manda `AGENTS.md` y no se había hecho. Se borraron **13** remotas y **14** locales, todas
+   comprobadas antes con `git merge-base --is-ancestor <rama> main`. En el remoto solo queda
+   `main` (`git ls-remote --heads origin`). Desde ahora, cada rama se borra tras su avance y su run
+   de `main`.
+
 
 ## Estado actual
 
@@ -14437,6 +14464,28 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 **no están puestos a propósito**: cada import cuesta contexto en **cada** turno, así que se añaden
 al empezar su fase y se quedan (Anexo A.2.3).
 
+> **Medido el 2026-09-29: ningún import de la biblioteca se carga.** El `/context` de la sesión,
+> lanzado por el usuario al importar `herramientas/arnes-de-agente.md`, da:
+>
+> - un arranque de **35,6k** tokens sobre una ventana de **300k**, la de `autoCompactWindow`;
+> - repartidos en **3,3k** del *prompt* del sistema, **21,1k** de herramientas, **6,7k** de memoria
+>   y **4,5k** de *skills*;
+> - y en *Memory files*, solo `CLAUDE.md`, con **3,9k** para sus 8.807 bytes, y el índice de la
+>   memoria local.
+>
+> Los **26** imports de la biblioteca, contando el nuevo, suman **200.392** bytes (`wc -c` sobre
+> cada uno), unos **89k** tokens con la misma proporción, y no están. El motivo lo da la documentación oficial de
+> Claude Code (code.claude.com/docs/en/memory). Un import que sale del directorio del proyecto es
+> *externo*, y necesita una aprobación que se pide una sola vez. Sin ella, queda apagado. En este
+> proyecto no se aprobó nunca, y el diálogo no llegó a mostrarse:
+> `hasClaudeMdExternalIncludesApproved` y `hasClaudeMdExternalIncludesWarningShown` están los dos
+> en `false` en `~/.claude.json`.
+>
+> **Decidido por el usuario, el mismo día: siguen apagados.** Cargarlos costaría unos 89k tokens en
+> cada sesión, más de dos veces el arranque entero. Las convenciones se leen bajo demanda, como
+> hasta hoy, y los imports se quedan escritos para el día que se aprueben. La tabla de abajo sigue
+> diciendo qué se lee al empezar cada fase.
+>
 > **El de la fase 2 ya está puesto** (2026-09-18, al pasar la puerta de clarificación de la
 > fase): `negocio/identificacion-articulos/convenciones.md`, ese y solo ese. Con él entra
 > `CodigoBarras`, que los ítems de la fase 1 que rozaban el artículo dejaron fuera con ese
