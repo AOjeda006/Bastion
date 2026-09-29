@@ -5339,6 +5339,11 @@ demás.
    comprobadas antes con `git merge-base --is-ancestor <rama> main`. En el remoto solo queda
    `main` (`git ls-remote --heads origin`). Desde ahora, cada rama se borra tras su avance y su run
    de `main`.
+6. **Los runs del arnés**, sobre `dbf2664` y los dos **success** al primer intento: el de la rama
+   `arnes-reglas-y-settings`, el **36508332778**, y el de `main`, el **36509080098**, leídos por
+   `vigilar26r.sh`, que dice «runs con ese sha: 1» en cada rama. `main` avanzó de `ab09dc6` a
+   `dbf2664` por avance rápido, y la rama se borró después, local y remota, comprobada con
+   `git merge-base --is-ancestor arnes-reglas-y-settings origin/main`.
 
 #### Cómo se cuenta el tramo, desde ahora
 
