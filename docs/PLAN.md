@@ -6750,7 +6750,49 @@ casos nuevos, dio 12 rojos de 432 (`dotnet test Bastion.sln --no-build --filter
   `LasFechasDicenDeQueTipoSonTests.El_barrido_encuentra_fechas_de_las_dos_clases` contaba 11 fechas
   y ahora cuenta 12: la última de la valoración es un `date`, como debe.
 
-Falta la tanda de mutaciones, desde la 69, y los runs.
+**La tanda de mutaciones, de la 69 a la 79**, sobre `f7353c1` y con el arnés de `3758690` desde la
+73. Cada una se aplicó sobre el árbol limpio, se restauró con la fecha de ahora, y el guion
+recompiló al final y dejó `src`, `db` y `tests` como en `HEAD`. Todos los carriles de la tabla
+contaron sus casos enteros, 979 el rápido y 438 el de integración, sin colgarse ni anularse; el que
+se colgó, antes del arreglo, se cuenta debajo. La orden de
+cada carril es la de la batería, `dotnet test … --no-build --filter "Category!=Integracion"` y
+`"Category=Integracion"`; el de integración, con `--blame-hang --blame-hang-timeout 4m`.
+
+| # | Mutación | Qué se puso rojo |
+|---|---|---|
+| 69 | Sin la comprobación del dominio y sin la guarda de la sentencia. | rápido 3: `LoQueImpideValorarTests.La_fecha_se_mira_antes_que_la_divisa`, `…Una_fecha_anterior_al_ultimo_movimiento_de_la_clave_no_se_puede_valorar` y `…Una_sola_clave_movida_despues_rechaza_el_documento_y_se_nombra`; integración 9: las seis semillas de la propiedad —462 a 465 en `rechazada.EsCorrecto`, que esperaba el rechazo, y 460 y 461 antes, en el `CHECK` del stock—, `El_contraejemplo_con_la_salida_del_dia_15…`, `Con_las_fechas_cruzadas…` y `La_sentencia_que_suma_no_mueve_la_fecha…` |
+| 70 | La 69, con la propiedad ciega a la fecha: sin su rama de rechazo y sin comparar `ultima_fecha`. Solo queda el invariante. | propiedad 6 de 6: **el invariante en 461 y 465** (`LosEstadosDelLibroAsync(…).Imposibles` debería ser 0); en 460, 462, 463 y 464 el invariante no ve nada y salta la cobertura del generador, `secuencia.Clases`, que echa en falta «rechazado por la fecha» |
+| 71 | Solo sin la comprobación del dominio. | rápido 3: los mismos de la 69; integración 8: la sentencia lo para, pero como defecto y no como `422` —`El_contraejemplo…`, `Con_las_fechas_cruzadas…` y las semillas 462 a 465, con «la sentencia ha sumado 0»—, y 460 y 461 en el `CHECK` del stock, que va delante de la suma |
+| 72 | Solo sin la guarda de la sentencia. | rápido 0; integración 1: `La_sentencia_que_suma_no_mueve_la_fecha_hacia_atras_aunque_se_salte_el_dominio`, el caso que se salta el dominio a propósito |
+| 73 | El dominio rechaza también la misma fecha (`<=`). | rápido 3: `LoQueImpideValorarTests.La_misma_fecha_que_el_ultimo_movimiento_se_valora`, `…La_fecha_se_mira_antes_que_la_divisa` y `ElValorQueLlevaElAjusteTests.El_par_suma_cero_en_valor…`; integración 27 **en masa**, porque casi todos los casos confirman dos documentos de hoy sobre la misma clave. Solo, `La_misma_fecha_que_el_ultimo_movimiento_se_confirma` da 1 rojo de 1, en `confirmacion.EsCorrecto`: el `422` de la fecha |
+| 74 | La sentencia rechaza también la misma fecha (`<`). | rápido 0; integración 27 **en masa**, los mismos casos que la 73 con «la sentencia ha sumado 0» en vez del `422`. Solo, `La_misma_fecha_que_el_ultimo_movimiento_se_confirma` da 1 rojo de 1, con «la sentencia ha sumado 0» |
+| 75 | La migración deja `ultima_fecha` a nulo. | rápido 0; integración 1: `La_migracion_rellena_la_fecha_con_el_maximo_del_libro_de_cada_clave` |
+| 76 | La lectura del cerrojo no trae la fecha (`NULL::date`). | rápido 0; integración 10: el dominio no la ve y el documento llega a la sentencia, que lo para como defecto. Solo, `El_contraejemplo_con_la_salida_del_dia_15…` da 1 rojo de 1: llega a la sentencia, que lo para como defecto y no como `422`. Los otros: las dos carreras y `La_sentencia_que_suma…`, en lo que leen del cerrojo, y la propiedad, en la sentencia o en el stock |
+| 77 | La sentencia que suma no avanza la fecha (`ultima_fecha = v.ultima_fecha`). | rápido 0; integración 16: toda afirmación sobre la fecha que queda. Solo, `Otra_clave_y_el_mismo_articulo_en_otro_almacen_admiten_una_fecha_atrasada` da 1 rojo de 1, en las fechas que quedan. Los otros: las seis semillas, al comparar `ultima_fecha` con el libro del modelo; cinco de `LaValoracionDelAjusteTests`; y `El_contraejemplo…`, `Con_las_fechas_cruzadas…`, `La_misma_fecha…_se_confirma` y `La_sentencia_que_suma…` |
+| 78 | El cerrojo, con `DO NOTHING` en vez de `DO UPDATE` (la 64, ahora con la fecha). | rápido 0; integración 2: `La_segunda_de_dos_confirmaciones_a_la_vez…` y `Con_las_fechas_cruzadas…`, las dos en `enVuelo.IsCompleted`: la segunda termina sin esperar |
+| 79 | La migración rellena sin la empresa en la clave. | rápido 0; integración 1: `La_migracion_rellena…`, cuya misma clave en otra empresa, con el día 25, se cuela en la de la primera |
+
+**La 70 es la que dice qué ve el invariante por sí solo**, y lo dice con dos semillas de seis. Las
+otras cuatro no confirman ningún documento atrasado que deje un estado imposible: una entrada
+atrasada, por ejemplo, no deja el libro en negativo en ninguna fecha. El invariante no sustituye al
+modelo del rechazo, que es el que pone rojas las seis en la 69. Está por si el modelo y el código se
+equivocan juntos.
+
+**La 73 colgó la primera tanda tres horas y media, y el fallo era del arnés**, no del sujeto. Con la
+73, la primera confirmación de `La_segunda_de_dos_confirmaciones_a_la_vez…` se rechaza, y el caso
+falla a medias. Sale de su bloque sin esperar a la otra confirmación, que seguía en vuelo, y el
+`await using` cierra su contexto con ella dentro. Se queda colgada con su transacción abierta y su
+cerrojo puesto: en `pg_stat_activity`, `idle in transaction` desde hacía 3 h 25 min, y en el volcado
+de `dotnet-stack`, ningún hilo parado en Npgsql, solo xUnit esperando una tarea. **Se reprodujo antes
+de arreglarlo.** Solo, el caso falla en tres segundos con su aserción. En el carril entero se colgó
+las dos veces, y la segunda `--blame-hang-timeout 4m` lo nombró («Proceso de host de pruebas
+bloqueado», con la secuencia terminando en ese caso). **`3758690` lo arregla en el arnés compartido:**
+`ElModuloDeInventario` apunta lo que lanza con su propia transacción, y `DisposeAsync` lo espera antes
+de cerrar sus contextos. Con el arreglo, la 73 dio sus 27 rojos sobre 438, sin colgarse. Desde
+entonces, la tanda lleva el plazo en el carril de integración: un cuelgue es un rojo con nombre, no
+tres horas.
+
+Faltan los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
