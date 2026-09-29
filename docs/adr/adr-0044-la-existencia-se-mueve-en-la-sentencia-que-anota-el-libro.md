@@ -3,12 +3,19 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql]
 aplica_a: [ddd, ef-core, sql, inventario, concurrencia, multiempresa]
 tags: [adr, r3, r8, r9, existencias, instantanea, cuadre, proyeccion, adr-0015, adr-0040]
-revisado: 2026-09-27
+revisado: 2026-09-29
 ---
 
 # ADR-0044: La existencia se mueve en la sentencia que anota el libro, y la instantánea mensual se puede tirar
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0046 (§2 y §4); §5 corregido en `d9dd1e1`.**
+  - El [ADR-0046](adr-0046-el-valor-es-la-verdad-y-el-precio-medio-se-deduce.md) enmienda, en sus
+    puntos 2 y 4, el §2 de este: una proyección que necesita leer lo que suma lo lee con la fila
+    bloqueada, y la sentencia de la existencia se parte en dos.
+  - El §5 no se enmendó desde un ADR nuevo, como pide `principios/git-workflow.md`, sino que se
+    reescribió por dentro en `d9dd1e1` (2026-09-28), por encargo del usuario: el cerrojo del
+    recálculo es de todas las empresas. No se deshace; esta línea lo declara, y el mensaje de ese
+    commit dice qué cambió y por qué.
 - **Fecha:** 2026-09-27
 - **Enmienda el [ADR-0015](adr-0015-lo-unico-que-genera-el-servidor-son-los-testigos-de-concurrencia.md)**,
   puntos 2 y 3: lo que genera el servidor ya no son solo los testigos de concurrencia. También lo
@@ -58,6 +65,10 @@ La migración rellena la fila viva de toda clave que ya tuviera movimientos, sum
 entero. No crea instantáneas, porque ninguna empresa tiene corte todavía.
 
 ### 2. La fila viva se mueve en la misma sentencia que anota el libro — decisión (d)
+
+> **Enmendado por el ADR-0046 (2026-09-28), puntos 2 y 4.** Una proyección que necesita leer lo que
+> suma lo lee con la fila bloqueada, y la sentencia de la existencia se parte en dos, porque el
+> `CHECK` del stock mira la fila propuesta y no la sumada.
 
 Confirmar y anular ya no añaden filas al libro a secas: las **anotan**
 (`IRepositorioDeAjustes.AnotarEnElLibroAsync`), y anotar mueve la proyección con **una sentencia**
@@ -114,6 +125,10 @@ hora se rechaza como futuro. La zona horaria de la empresa queda como nota abier
 su disparador.
 
 ### 5. El recálculo, y el cerrojo que lo hace seguro
+
+> **Corregido por dentro en `d9dd1e1` (2026-09-28), por encargo del usuario.** El párrafo del modo
+> del cerrojo decía que era el más débil que choca con quien escribe, y del modo es verdad; faltaba
+> que la tabla es de todas las empresas. Lo que sigue es el texto corregido, no el del 2026-09-27.
 
 `LasInstantaneasMensuales.RecalcularAsync(hastaElMes)` es lo que hace de la instantánea una
 optimización y no una segunda verdad: si se puede tirar y rehacer sin que cambie un número, no dice

@@ -126,6 +126,16 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
   de más abajo: `grep -n "| # | Mutación" docs/PLAN.md` lista todas las tablas, y el número
   siguiente es uno más que la mayor de sus filas.
 
+- **Un ADR aceptado no se reescribe: se enmienda desde uno nuevo. Y si se reescribe, lo dice su
+  cabecera.** Lo pide `principios/git-workflow.md`: la historia de decisiones es inmutable, como la
+  de git, y quien lee un ADR tiene que poder fiarse de que dice lo que se decidió aquel día. El ADR
+  nuevo cita el punto que enmienda. El viejo lo anota en su *Estado* y, al principio del punto, con
+  una nota («> **Enmendado por el ADR-NNNN (fecha).**»). Si el usuario encarga corregir un ADR por
+  dentro, se hace, pero su *Estado* lo declara con el commit, y el punto lleva la misma nota. El
+  mensaje de ese commit dice qué cambió y por qué. Así pasó con el ADR-0044 §5, corregido en
+  `d9dd1e1` porque el cerrojo del recálculo era de todas las empresas. Sin esa línea, el ADR parece
+  haber dicho siempre lo que dice ahora.
+
 ## Comandos del proyecto (parte variable)
 
 Desde la raíz del repositorio.

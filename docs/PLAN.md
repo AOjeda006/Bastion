@@ -6656,6 +6656,17 @@ el mismo commit, el que sale de empujar la nota del run, es el **36501844792**, 
 al primer intento. `GET …/actions/runs?head_sha=ab09dc6…` da `total_count: 2`, esos dos, y
 ninguno se canceló.
 
+**Las cuatro cosas pequeñas del encargo del 2026-09-29**, en la rama del addendum y cada una en su
+commit:
+
+- la 1, el run de `main` del 2.8, en `cd221ac`;
+- la 2, las mutaciones 52 a 56 cualificadas y la regla del número, en `27a1718`;
+- la 3, la cabecera del ADR-0044 y la regla de la enmienda, en el commit `docs(adr)` que sigue a
+  `27a1718`. La cabecera lleva el texto que dictó el usuario. Debajo aclara que los dos puntos del
+  ADR-0046 enmiendan el §2 de este, y que el §5 se corrigió por dentro. El §2 y el §5 llevan su nota
+  al principio, como los puntos 2 y 3 del ADR-0015;
+- la 4, las memorias que son método, pendiente.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
