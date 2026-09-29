@@ -31,6 +31,10 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
 
     private static readonly ElPrecioMedioPonderado s_valoracion = new();
 
+    // Ningún saldo de estos casos lleva fecha, así que la del documento no decide nada: la regla del
+    // ADR-0047 tiene sus casos en LoQueImpideValorarTests.
+    private static readonly DateOnly s_dia = new(2026, 6, 15);
+
     /// <summary>La secuencia del criterio, fila a fila.</summary>
     /// <remarks>
     /// Es la que nombra el criterio del 2.8: la entrada que cambia el medio (5 a 3,50 € lo lleva de 2
@@ -150,7 +154,8 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
         IReadOnlyList<LineaValorada> filas = s_valoracion.Valorar(
             Saldos((s_clave, SaldoValorado.Vacio("EUR"))),
             [new LineaAValorar(s_clave, -5m), new LineaAValorar(s_clave, 10m, Precio(2m))],
-            "EUR");
+            "EUR",
+            s_dia);
 
         filas.ShouldBe([Fila(-10m, 2m), Fila(20m, 2m)]);
     }
@@ -171,7 +176,8 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
                 new LineaAValorar(s_clave, -5m),
                 new LineaAValorar(s_clave, 5m),
             ],
-            "EUR");
+            "EUR",
+            s_dia);
 
         filas.ShouldBe(
         [
@@ -261,7 +267,8 @@ public sealed class LosCasosDoradosDelPrecioMedioTests
                     coste is null ? null : Precio(coste.Value),
                     compensa is null ? null : Importe.De(compensa.Value, "EUR")),
             ],
-            "EUR").ShouldHaveSingleItem();
+            "EUR",
+            s_dia).ShouldHaveSingleItem();
 
         return (fila, new SaldoValorado(saldo.Cantidad + cantidad, saldo.Valor + fila.Valor));
     }

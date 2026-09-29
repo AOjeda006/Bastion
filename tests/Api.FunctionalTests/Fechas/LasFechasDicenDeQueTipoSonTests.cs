@@ -128,11 +128,15 @@ public sealed class LasFechasDicenDeQueTipoSonTests : IDisposable
         // la partición del libro, que es de calendario: con un instante, el mes de una instantánea
         // empezaría una hora antes en Canarias que en Madrid, y un movimiento del día 1 a las 00:30
         // caería en dos meses distintos según quién sumara.
+        //
+        // La del addendum del 2.8 es la última fecha de operación de cada valoración (ADR-0047):
+        // la más alta de las filas del libro de su clave, así que es de la misma clase que ellas.
+        // Con un instante, «anterior al último movimiento» dependería del huso de quien confirma.
         cuantas.Fechas.ShouldBe(
-            11,
+            12,
             "las dos del ejercicio, las dos de la vigencia del impuesto, la del tipo de cambio, " +
-            "las dos de la vigencia de la tarifa, las dos de operación del ítem 2.3 y los dos " +
-            "meses del ítem 2.7");
+            "las dos de la vigencia de la tarifa, las dos de operación del ítem 2.3, los dos " +
+            "meses del ítem 2.7 y la última de la valoración, del addendum del 2.8");
     }
 
     private static bool EsDelTipo<T>(IReadOnlyProperty propiedad) =>

@@ -6705,8 +6705,52 @@ del código, en el commit `docs(adr)` que sigue a `82ef4f5`. Enmienda el último
 §5, y el ADR-0046 lo anota en su *Estado* y al principio de su §5. Las dos afirmaciones técnicas del
 ADR están contrastadas con `ctx7`: que un `CHECK` no ve la fila de antes, con la documentación de
 PostgreSQL (`ddl-constraints.html`), y que Npgsql escribe `DateOnly` como `date`, con la de Npgsql
-(`types/datetime.html`). Falta todo lo demás: el código, los casos, la migración, la propiedad, las
-mutaciones desde la 69, la fila de la R3 y los runs.
+(`types/datetime.html`).
+
+**El código, en el commit `feat(inventario)` que sigue al ADR.**
+
+- **La columna.** `valoraciones.ultima_fecha`, que admite nulo. La migración
+  `LaUltimaFechaDeLaValoracion` la rellena con el máximo del libro por empresa, artículo y almacén.
+- **El dominio.** `LoQueImpide` gana `FechaAnteriorAlUltimoMovimiento`, que se mira antes que la
+  divisa. El borde lo contesta con `ajuste-fecha-anterior-al-ultimo-movimiento`, un `422` con su
+  texto en los dos idiomas.
+- **La sentencia que suma** se niega a mover la fecha hacia atrás.
+- **Los casos.** Seis nuevos en `NingunaFechaAnteriorAlUltimoMovimientoTests` y cinco en
+  `LoQueImpideValorarTests`.
+- **La propiedad** gana el invariante y modela el rechazo.
+- **La fila de la R3** lo dice, y corrige de paso los «cuarenta pasos» de la propiedad, que son
+  ochenta desde el 2.8.
+
+**Lo que la regla puso en rojo, por su nombre.** El carril de integración, con la regla y sin los
+casos nuevos, dio 12 rojos de 432 (`dotnet test Bastion.sln --no-build --filter
+"Category=Integracion"`).
+
+- **Dos casos atrasaban fechas de verdad**, siete rojos porque la propiedad son seis semillas. Se
+  arreglan sin aflojar la regla:
+  - `LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`.
+    Un artículo en un almacén, y dos de las tres confirmaciones de después del corte iban por delante
+    del primer mes de su clave. Se arregla **con otras fechas**, que van en orden y siguen siendo de
+    meses anteriores al corte: una clave nueva que estrena meses, y una fila en los meses que ya
+    tiene cada una de las otras dos. La de hoy pasa detrás de ellas. Lo que el caso afirma de las
+    instantáneas es lo mismo.
+  - `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`,
+    las seis semillas: el generador no modelaba el rechazo, y ahora lo modela. Cada anulación deja
+    su artículo con la fecha de hoy, y con todos rechazados solo se confirmaba lo de hoy: la semilla
+    460 no valoraba ninguna entrada al precio medio, porque la única que tenía, la del paso 63, se
+    rechazaba. Por eso la mitad de los documentos de este año que irían por detrás toman la fecha
+    del último movimiento de sus claves, que vale; la otra mitad se rechaza. Decide la paridad del
+    día, sin tocar el azar, y así la propiedad pasa también por la frontera de la misma fecha.
+- **Los otros cinco no atrasaban nada.** Comparaban un `SaldoValorado` sin la fecha que ahora lleva,
+  y se arreglan añadiéndola: `LaValoracionDelAjusteTests.Dos_empresas_con_la_misma_clave_no_comparten_valoracion`,
+  `…El_inverso_resta_el_valor_que_sumo_la_entrada_y_el_par_suma_cero`,
+  `…La_segunda_de_dos_confirmaciones_a_la_vez_se_valora_con_lo_que_dejo_la_primera`,
+  `…Las_lineas_se_valoran_en_el_orden_en_que_se_escribieron_aunque_la_base_las_devuelva_en_otro` y
+  `…Un_documento_en_otra_divisa_que_la_de_la_valoracion_es_422_salvo_en_una_clave_vacia`.
+- **Y el carril rápido encontró la columna nueva.**
+  `LasFechasDicenDeQueTipoSonTests.El_barrido_encuentra_fechas_de_las_dos_clases` contaba 11 fechas
+  y ahora cuenta 12: la última de la valoración es un `date`, como debe.
+
+Falta la tanda de mutaciones, desde la 69, y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 

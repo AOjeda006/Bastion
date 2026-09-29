@@ -3,11 +3,19 @@ namespace Bastion.Inventario.Domain.Valoraciones;
 /// <summary>
 /// Por qué un documento no se puede valorar, y en qué clave (ADR-0046 §10).
 /// </summary>
-/// <param name="Motivo">Cuál de las dos cosas lo impide.</param>
+/// <param name="Motivo">Cuál de las tres cosas lo impide.</param>
 /// <param name="Clave">La clave en la que se encontró.</param>
-public sealed record ImpedimentoDeValoracion(MotivoDelImpedimento Motivo, ClaveDeValoracion Clave);
+public sealed record ImpedimentoDeValoracion(MotivoDelImpedimento Motivo, ClaveDeValoracion Clave)
+{
+    /// <summary>
+    /// El último movimiento de la clave, cuando el motivo es
+    /// <see cref="MotivoDelImpedimento.FechaAnteriorAlUltimoMovimiento"/>: la fecha que el
+    /// documento tiene que alcanzar. Con los demás motivos no se dice.
+    /// </summary>
+    public DateOnly? UltimaFecha { get; init; }
+}
 
-/// <summary>Las dos cosas que impiden valorar. Cada una tiene su código en el borde.</summary>
+/// <summary>Las tres cosas que impiden valorar. Cada una tiene su código en el borde.</summary>
 public enum MotivoDelImpedimento
 {
     /// <summary>
@@ -22,4 +30,11 @@ public enum MotivoDelImpedimento
     /// <c>ajuste-valoracion-en-otra-divisa</c>.
     /// </summary>
     ValoracionEnOtraDivisa = 2,
+
+    /// <summary>
+    /// El documento lleva una fecha anterior al último movimiento de la clave, y sumar hasta los
+    /// días de en medio daría un estado que la clave no tuvo nunca (ADR-0047). Se arregla con esa
+    /// fecha o una posterior. Es <c>ajuste-fecha-anterior-al-ultimo-movimiento</c>.
+    /// </summary>
+    FechaAnteriorAlUltimoMovimiento = 3,
 }

@@ -3,7 +3,8 @@ using Bastion.BuildingBlocks.Domain.Dinero;
 namespace Bastion.Inventario.Domain.Valoraciones;
 
 /// <summary>
-/// Cuánto hay de una clave y cuánto vale, tal como lo dejó la última confirmación (ADR-0046 §5).
+/// Cuánto hay de una clave, cuánto vale y de qué fecha es su último movimiento, tal como lo dejó la
+/// última confirmación (ADR-0046 §5, ADR-0047).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -16,13 +17,22 @@ namespace Bastion.Inventario.Domain.Valoraciones;
 /// valor tampoco, y sin cantidad no hay valor. Un saldo que llegue sin cumplirlas no se ha leído de
 /// la tabla, y valorar contra él sería valorar contra algo que no existe.
 /// </para>
+/// <para>
+/// <b>La fecha va con el saldo porque se lee con él</b>, de la misma fila bloqueada (ADR-0047 §2).
+/// Leída aparte, dos documentos de la misma clave con las fechas cruzadas no se verían, y los dos
+/// pasarían.
+/// </para>
 /// </remarks>
 public sealed record SaldoValorado
 {
-    /// <summary>Un saldo con su cantidad en unidad base y su valor.</summary>
+    /// <summary>Un saldo con su cantidad en unidad base, su valor y su último movimiento.</summary>
     /// <param name="cantidad">La cantidad en unidad base, la suma de las filas del libro de la clave.</param>
     /// <param name="valor">El valor, la suma del valor de esas mismas filas.</param>
-    public SaldoValorado(decimal cantidad, Importe valor)
+    /// <param name="ultimaFecha">
+    /// La fecha de operación más alta de esas filas, o <see langword="null"/> si la clave no se ha
+    /// movido nunca.
+    /// </param>
+    public SaldoValorado(decimal cantidad, Importe valor, DateOnly? ultimaFecha = null)
     {
         ArgumentNullException.ThrowIfNull(valor);
         ArgumentOutOfRangeException.ThrowIfNegative(cantidad);
@@ -38,6 +48,7 @@ public sealed record SaldoValorado
 
         Cantidad = cantidad;
         Valor = valor;
+        UltimaFecha = ultimaFecha;
     }
 
     /// <summary>La cantidad en unidad base.</summary>
@@ -45,6 +56,12 @@ public sealed record SaldoValorado
 
     /// <summary>El valor de esa cantidad, en la divisa de la valoración.</summary>
     public Importe Valor { get; }
+
+    /// <summary>
+    /// La fecha del último movimiento de la clave. Ningún documento puede llevar una anterior
+    /// (ADR-0047), y es <see langword="null"/> en una clave que no se ha movido nunca.
+    /// </summary>
+    public DateOnly? UltimaFecha { get; }
 
     /// <summary>
     /// El valor por unidad, redondeado a la escala de <see cref="PrecioUnitario"/>. Sin cantidad no

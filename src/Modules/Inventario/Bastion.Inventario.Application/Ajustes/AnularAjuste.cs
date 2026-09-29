@@ -184,12 +184,12 @@ internal sealed class AnularAjuste(
                 [.. lineas.Select(linea => linea.Clave).Distinct()], inverso.Divisa, cancelacion)
             .ConfigureAwait(false);
 
-        if (valoracion.LoQueImpide(saldos, lineas, inverso.Divisa) is { } impedimento)
+        if (valoracion.LoQueImpide(saldos, lineas, inverso.Divisa, inverso.FechaDeOperacion) is { } impedimento)
         {
             return Resultado.Fallo<AnulacionDto>(ErroresDeAjuste.NoSeValora(impedimento, inverso.Divisa));
         }
 
-        IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, inverso.Divisa);
+        IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, inverso.Divisa, inverso.FechaDeOperacion);
 
         var confirmado = new AjusteConfirmado(
             inverso.Id,

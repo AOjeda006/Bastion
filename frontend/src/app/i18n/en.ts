@@ -84,6 +84,9 @@ export const en: Diccionario = {
       'ajuste-entrada-sin-coste-ni-precio-medio':
         'A line brings in an item that has no stock in that warehouse, and with no stock there is ' +
         'no average cost to value it at. Enter the cost of that line.',
+      'ajuste-fecha-anterior-al-ultimo-movimiento':
+        'An item in this document already has a later movement in that warehouse, and a document ' +
+        'cannot be dated before the last movement of its item. Use that date or a later one.',
       'ajuste-motivo-no-valido':
         'Write why you are reversing the adjustment, in 300 characters or fewer. It is the only ' +
         'thing left to explain the correction two years from now.',

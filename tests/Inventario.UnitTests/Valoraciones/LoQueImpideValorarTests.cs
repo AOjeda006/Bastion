@@ -11,8 +11,8 @@ namespace Bastion.Inventario.UnitTests.Valoraciones;
 /// <remarks>
 /// <para>
 /// <b>Los impedimentos se preguntan y los defectos lanzan.</b> Un impedimento es algo que el usuario
-/// puede arreglar —darle coste a la entrada, o esperar al tipo de cambio— y el borde lo contesta con
-/// su código. Un defecto es algo que el borde ya rechazó o que la infraestructura tenía que haber
+/// puede arreglar —darle coste a la entrada, esperar al tipo de cambio o poner otra fecha— y el borde
+/// lo contesta con su código. Un defecto es algo que el borde ya rechazó o que la infraestructura tenía que haber
 /// hecho, y si llega aquí, llega por un camino roto.
 /// </para>
 /// <para>
@@ -26,7 +26,111 @@ public sealed class LoQueImpideValorarTests
     private static readonly ClaveDeValoracion s_clave = new(
         Guid.Parse("0197f000-0000-7000-8000-000000000b01"), Guid.Parse("0197f000-0000-7000-8000-000000000b02"));
 
+    private static readonly ClaveDeValoracion s_otra = new(
+        Guid.Parse("0197f000-0000-7000-8000-000000000b01"), Guid.Parse("0197f000-0000-7000-8000-000000000b03"));
+
     private static readonly ElPrecioMedioPonderado s_valoracion = new();
+
+    private static readonly DateOnly s_dia10 = new(2026, 6, 10);
+
+    private static readonly DateOnly s_dia15 = new(2026, 6, 15);
+
+    private static readonly DateOnly s_dia20 = new(2026, 6, 20);
+
+    /// <summary>
+    /// El contraejemplo del ADR-0047: una salida del día 15 sobre una clave que ya se movió el 20.
+    /// </summary>
+    /// <remarks>
+    /// Valorada a 55, el precio de cuando se confirma, dejaría la clave con 0 unidades y −450 €
+    /// sumando el libro hasta el 15. El impedimento dice la fecha que el documento tiene que
+    /// alcanzar.
+    /// </remarks>
+    [Fact]
+    public void Una_fecha_anterior_al_ultimo_movimiento_de_la_clave_no_se_puede_valorar()
+    {
+        Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new()
+        {
+            [s_clave] = new SaldoValorado(20m, Importe.De(1100m, "EUR"), s_dia20),
+        };
+        LineaAValorar[] lineas = [new(s_clave, -10m)];
+
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15).ShouldBe(
+            new ImpedimentoDeValoracion(MotivoDelImpedimento.FechaAnteriorAlUltimoMovimiento, s_clave)
+            {
+                UltimaFecha = s_dia20,
+            });
+
+        Should.Throw<InvalidOperationException>(() => s_valoracion.Valorar(saldos, lineas, "EUR", s_dia15));
+    }
+
+    /// <summary>La misma fecha que el último movimiento vale: la regla es «anterior».</summary>
+    [Fact]
+    public void La_misma_fecha_que_el_ultimo_movimiento_se_valora()
+    {
+        Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new()
+        {
+            [s_clave] = new SaldoValorado(20m, Importe.De(1100m, "EUR"), s_dia20),
+        };
+        LineaAValorar[] lineas = [new(s_clave, -10m)];
+
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia20).ShouldBeNull();
+
+        s_valoracion.Valorar(saldos, lineas, "EUR", s_dia20).ShouldHaveSingleItem().ShouldBe(
+            new LineaValorada(Importe.De(-550m, "EUR"), PrecioUnitario.De(55m, "EUR")));
+    }
+
+    /// <summary>
+    /// Una clave que se movió antes, y otra que no se ha movido nunca, no impiden atrasar la fecha.
+    /// </summary>
+    [Fact]
+    public void Una_clave_movida_antes_y_otra_sin_movimientos_no_impiden_una_fecha_atrasada()
+    {
+        Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new()
+        {
+            [s_clave] = new SaldoValorado(10m, Importe.De(100m, "EUR"), s_dia10),
+            [s_otra] = SaldoValorado.Vacio("EUR"),
+        };
+        LineaAValorar[] lineas = [new(s_clave, -10m), new(s_otra, 5m, PrecioUnitario.De(2m, "EUR"))];
+
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Basta una clave con un movimiento posterior para rechazar el documento entero, y el
+    /// impedimento dice cuál.
+    /// </summary>
+    [Fact]
+    public void Una_sola_clave_movida_despues_rechaza_el_documento_y_se_nombra()
+    {
+        Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new()
+        {
+            [s_clave] = new SaldoValorado(10m, Importe.De(100m, "EUR"), s_dia10),
+            [s_otra] = new SaldoValorado(10m, Importe.De(100m, "EUR"), s_dia20),
+        };
+        LineaAValorar[] lineas = [new(s_clave, -10m), new(s_otra, -5m)];
+
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15).ShouldBe(
+            new ImpedimentoDeValoracion(MotivoDelImpedimento.FechaAnteriorAlUltimoMovimiento, s_otra)
+            {
+                UltimaFecha = s_dia20,
+            });
+    }
+
+    /// <summary>La fecha se mira antes que la divisa: es lo primero que se le dice al documento.</summary>
+    [Fact]
+    public void La_fecha_se_mira_antes_que_la_divisa()
+    {
+        Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new()
+        {
+            [s_clave] = new SaldoValorado(10m, Importe.De(20m, "USD"), s_dia20),
+        };
+        LineaAValorar[] lineas = [new(s_clave, 5m, PrecioUnitario.De(2m, "EUR"))];
+
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15)!.Motivo
+            .ShouldBe(MotivoDelImpedimento.FechaAnteriorAlUltimoMovimiento);
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia20)!.Motivo
+            .ShouldBe(MotivoDelImpedimento.ValoracionEnOtraDivisa, "con la misma fecha, lo que queda es la divisa");
+    }
 
     /// <summary>Una entrada sin coste en una clave vacía no tiene precio medio que tomar.</summary>
     [Fact]
@@ -35,10 +139,10 @@ public sealed class LoQueImpideValorarTests
         Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new() { [s_clave] = SaldoValorado.Vacio("EUR") };
         LineaAValorar[] lineas = [new(s_clave, 5m)];
 
-        s_valoracion.LoQueImpide(saldos, lineas, "EUR").ShouldBe(
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15).ShouldBe(
             new ImpedimentoDeValoracion(MotivoDelImpedimento.EntradaSinCosteNiPrecioMedio, s_clave));
 
-        Should.Throw<InvalidOperationException>(() => s_valoracion.Valorar(saldos, lineas, "EUR"));
+        Should.Throw<InvalidOperationException>(() => s_valoracion.Valorar(saldos, lineas, "EUR", s_dia15));
     }
 
     /// <summary>
@@ -51,9 +155,9 @@ public sealed class LoQueImpideValorarTests
         Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new() { [s_clave] = SaldoValorado.Vacio("EUR") };
         LineaAValorar[] lineas = [new(s_clave, 10m, PrecioUnitario.De(2m, "EUR")), new(s_clave, 5m)];
 
-        s_valoracion.LoQueImpide(saldos, lineas, "EUR").ShouldBeNull();
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15).ShouldBeNull();
 
-        s_valoracion.Valorar(saldos, lineas, "EUR")[1].ShouldBe(
+        s_valoracion.Valorar(saldos, lineas, "EUR", s_dia15)[1].ShouldBe(
             new LineaValorada(Importe.De(10m, "EUR"), PrecioUnitario.De(2m, "EUR")));
     }
 
@@ -67,10 +171,10 @@ public sealed class LoQueImpideValorarTests
         };
         LineaAValorar[] lineas = [new(s_clave, 5m, PrecioUnitario.De(2m, "EUR"))];
 
-        s_valoracion.LoQueImpide(saldos, lineas, "EUR").ShouldBe(
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15).ShouldBe(
             new ImpedimentoDeValoracion(MotivoDelImpedimento.ValoracionEnOtraDivisa, s_clave));
 
-        Should.Throw<InvalidOperationException>(() => s_valoracion.Valorar(saldos, lineas, "EUR"));
+        Should.Throw<InvalidOperationException>(() => s_valoracion.Valorar(saldos, lineas, "EUR", s_dia15));
     }
 
     /// <summary>Y la misma clave, vacía, empieza de nuevo en la divisa del documento.</summary>
@@ -84,9 +188,9 @@ public sealed class LoQueImpideValorarTests
         Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new() { [s_clave] = SaldoValorado.Vacio("USD") };
         LineaAValorar[] lineas = [new(s_clave, 5m, PrecioUnitario.De(2m, "EUR"))];
 
-        s_valoracion.LoQueImpide(saldos, lineas, "EUR").ShouldBeNull();
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15).ShouldBeNull();
 
-        s_valoracion.Valorar(saldos, lineas, "EUR").ShouldHaveSingleItem().ShouldBe(
+        s_valoracion.Valorar(saldos, lineas, "EUR", s_dia15).ShouldHaveSingleItem().ShouldBe(
             new LineaValorada(Importe.De(10m, "EUR"), PrecioUnitario.De(2m, "EUR")));
     }
 
@@ -97,7 +201,7 @@ public sealed class LoQueImpideValorarTests
         LineaAValorar[] lineas = [new(s_clave, 5m, PrecioUnitario.De(2m, "EUR"))];
 
         Should.Throw<ArgumentException>(() => s_valoracion.LoQueImpide(
-            new Dictionary<ClaveDeValoracion, SaldoValorado>(), lineas, "EUR"));
+            new Dictionary<ClaveDeValoracion, SaldoValorado>(), lineas, "EUR", s_dia15));
     }
 
     /// <summary>Los importes de una línea van en la divisa del documento.</summary>
@@ -107,7 +211,7 @@ public sealed class LoQueImpideValorarTests
         Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new() { [s_clave] = SaldoValorado.Vacio("EUR") };
 
         Should.Throw<ArgumentException>(() => s_valoracion.LoQueImpide(
-            saldos, [new(s_clave, 5m, PrecioUnitario.De(2m, "USD"))], "EUR"));
+            saldos, [new(s_clave, 5m, PrecioUnitario.De(2m, "USD"))], "EUR", s_dia15));
     }
 
     /// <summary>Lo que el borde rechaza con <c>ajuste-coste-no-valido</c> no llega a construirse.</summary>

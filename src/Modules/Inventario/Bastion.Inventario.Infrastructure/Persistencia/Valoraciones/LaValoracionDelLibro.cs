@@ -68,7 +68,7 @@ internal static class LaValoracionDelLibro
     /// </remarks>
     internal const string SqlQueLeeLoBloqueado =
         """
-        SELECT v.articulo_id, v.almacen_id, v.cantidad, v.valor, v.divisa
+        SELECT v.articulo_id, v.almacen_id, v.cantidad, v.valor, v.divisa, v.ultima_fecha
         FROM inventario.valoraciones AS v
         JOIN unnest({1}::uuid[], {2}::uuid[]) AS c (articulo_id, almacen_id)
             ON c.articulo_id = v.articulo_id
@@ -88,6 +88,14 @@ internal static class LaValoracionDelLibro
     /// y una clave que no la cumpla no se toca, así que el recuento lo denuncia.
     /// </para>
     /// <para>
+    /// <b>La fecha no va hacia atrás</b> (ADR-0047 §3). Una clave cuyo último movimiento sea
+    /// posterior a la fila más temprana del documento no se toca, y el recuento lo denuncia, como
+    /// con la divisa. El caso de uso ya contestó <c>ajuste-fecha-anterior-al-ultimo-movimiento</c>
+    /// contra la fila bloqueada, así que llegar aquí es haberse saltado el dominio. No es un
+    /// <c>CHECK</c> porque un <c>CHECK</c> no ve la fila de antes, que es justo sobre lo que habla
+    /// la regla.
+    /// </para>
+    /// <para>
     /// <b>Las tres guardas se miran sobre la fila ya sumada.</b> Va después de la sentencia de la
     /// existencia, así que una salida sin stock ya ha chocado allí, con su nombre.
     /// </para>
@@ -97,16 +105,19 @@ internal static class LaValoracionDelLibro
         UPDATE inventario.valoraciones AS v
         SET cantidad = v.cantidad + d.cantidad,
             valor = v.valor + d.valor,
-            divisa = {1}
+            divisa = {1},
+            ultima_fecha = d.ultima
         FROM (
-            SELECT m.articulo_id, m.almacen_id, sum(m.cantidad) AS cantidad, sum(m.valor) AS valor
-            FROM unnest({2}::uuid[], {3}::uuid[], {4}::numeric[], {5}::numeric[])
-                AS m (articulo_id, almacen_id, cantidad, valor)
+            SELECT m.articulo_id, m.almacen_id, sum(m.cantidad) AS cantidad, sum(m.valor) AS valor,
+                min(m.fecha) AS primera, max(m.fecha) AS ultima
+            FROM unnest({2}::uuid[], {3}::uuid[], {4}::numeric[], {5}::numeric[], {6}::date[])
+                AS m (articulo_id, almacen_id, cantidad, valor, fecha)
             GROUP BY m.articulo_id, m.almacen_id) AS d
         WHERE v.empresa_id = {0}
             AND v.articulo_id = d.articulo_id
             AND v.almacen_id = d.almacen_id
             AND (v.divisa = {1} OR v.cantidad = 0)
+            AND (v.ultima_fecha IS NULL OR v.ultima_fecha <= d.primera)
         """;
 
     /// <summary>Bloquea la valoración de cada clave y la lee ya bloqueada.</summary>
@@ -159,7 +170,7 @@ internal static class LaValoracionDelLibro
 
         return filas.ToDictionary(
             fila => new ClaveDeValoracion(fila.ArticuloId, fila.AlmacenId),
-            fila => new SaldoValorado(fila.Cantidad, Importe.De(fila.Valor, fila.Divisa)));
+            fila => new SaldoValorado(fila.Cantidad, Importe.De(fila.Valor, fila.Divisa), fila.UltimaFecha));
     }
 
     /// <summary>Suma a cada valoración lo que traen las filas del libro que se van a anotar.</summary>
@@ -169,8 +180,8 @@ internal static class LaValoracionDelLibro
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
     /// <returns>Una tarea que acaba cuando la sentencia ha corrido.</returns>
     /// <exception cref="InvalidOperationException">
-    /// No hay transacción, alguna fila es de otra empresa, las filas mezclan divisas o alguna clave
-    /// no se bloqueó antes.
+    /// No hay transacción, alguna fila es de otra empresa, las filas mezclan divisas, alguna clave
+    /// no se bloqueó antes o alguna se movió después de la fecha del documento.
     /// </exception>
     internal static async Task SumarAsync(
         InventarioDbContext contexto,
@@ -198,11 +209,12 @@ internal static class LaValoracionDelLibro
         Guid[] almacenes = [.. movimientos.Select(movimiento => movimiento.AlmacenId)];
         decimal[] cantidades = [.. movimientos.Select(movimiento => movimiento.CantidadEnUnidadBase)];
         decimal[] valores = [.. movimientos.Select(movimiento => movimiento.Valor.Cantidad)];
+        DateOnly[] fechas = [.. movimientos.Select(movimiento => movimiento.FechaDeOperacion)];
 
         int sumadas = await contexto.Database
             .ExecuteSqlRawAsync(
                 SqlQueSuma,
-                [empresaId, divisas[0], articulos, almacenes, cantidades, valores],
+                [empresaId, divisas[0], articulos, almacenes, cantidades, valores, fechas],
                 cancelacion)
             .ConfigureAwait(false);
 
@@ -215,7 +227,8 @@ internal static class LaValoracionDelLibro
         {
             throw new InvalidOperationException(
                 $"El documento mueve {claves} valoraciones y la sentencia ha sumado {sumadas}: alguna " +
-                "no se bloqueó antes, o está en otra divisa con cantidad (ADR-0046 §2).");
+                "no se bloqueó antes, está en otra divisa con cantidad o se movió después de la fecha " +
+                "del documento (ADR-0046 §2, ADR-0047 §3).");
         }
     }
 
@@ -247,4 +260,6 @@ internal sealed class FilaDeValoracion
     public decimal Valor { get; init; }
 
     public string Divisa { get; init; } = string.Empty;
+
+    public DateOnly? UltimaFecha { get; init; }
 }

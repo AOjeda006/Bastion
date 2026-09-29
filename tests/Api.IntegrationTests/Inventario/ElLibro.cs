@@ -178,7 +178,7 @@ internal static class ElLibro
         return documento.Confirmar(
             numero,
             evento,
-            new ElPrecioMedioPonderado().Valorar(saldos, lineas, documento.Divisa),
+            new ElPrecioMedioPonderado().Valorar(saldos, lineas, documento.Divisa, documento.FechaDeOperacion),
             momento);
     }
 
@@ -202,7 +202,8 @@ internal static class ElLibro
                 .Distinct()
                 .ToDictionary(clave => clave, _ => SaldoValorado.Vacio(documento.Divisa)),
             lineas,
-            documento.Divisa);
+            documento.Divisa,
+            documento.FechaDeOperacion);
     }
 
     /// <summary>Anula un ajuste ya confirmado: crea el inverso, lo confirma y guarda las dos cosas.</summary>

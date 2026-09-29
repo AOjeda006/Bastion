@@ -507,6 +507,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests.La_pregunta_ve_una_clave_ajena_escrita_a_mano_entre_dos_esquemas",
         "NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests.Ninguna_clave_ajena_de_la_base_cruza_de_esquema",
 
+        "NingunaFechaAnteriorAlUltimoMovimientoTests.Con_las_fechas_cruzadas_la_del_dia_15_espera_a_la_del_20_y_recibe_el_422",
+        "NingunaFechaAnteriorAlUltimoMovimientoTests.El_contraejemplo_con_la_salida_del_dia_15_es_422_y_no_escribe_nada",
+        "NingunaFechaAnteriorAlUltimoMovimientoTests.La_migracion_rellena_la_fecha_con_el_maximo_del_libro_de_cada_clave",
+        "NingunaFechaAnteriorAlUltimoMovimientoTests.La_misma_fecha_que_el_ultimo_movimiento_se_confirma",
+        "NingunaFechaAnteriorAlUltimoMovimientoTests.La_sentencia_que_suma_no_mueve_la_fecha_hacia_atras_aunque_se_salte_el_dominio",
+        "NingunaFechaAnteriorAlUltimoMovimientoTests.Otra_clave_y_el_mismo_articulo_en_otro_almacen_admiten_una_fecha_atrasada",
+
         "NadieEscribeEnLaEmpresaDeOtroTests.Con_la_empresa_de_uno_no_estorba",
         "NadieEscribeEnLaEmpresaDeOtroTests.Un_alta_con_la_empresa_de_otro_no_llega_a_la_base",
         "NadieEscribeEnLaEmpresaDeOtroTests.Y_una_modificacion_que_cambia_la_empresa_de_una_fila_tampoco",

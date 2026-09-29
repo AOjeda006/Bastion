@@ -43,9 +43,10 @@ internal static class LaValoracion
 
                     return new SaldoValorado(
                         suyas.Sum(fila => fila.CantidadEnUnidadBase),
-                        Importe.De(suyas.Sum(fila => fila.Valor.Cantidad), documento.Divisa));
+                        Importe.De(suyas.Sum(fila => fila.Valor.Cantidad), documento.Divisa),
+                        suyas.Length == 0 ? null : suyas.Max(fila => fila.FechaDeOperacion));
                 });
 
-        return new ElPrecioMedioPonderado().Valorar(saldos, lineas, documento.Divisa);
+        return new ElPrecioMedioPonderado().Valorar(saldos, lineas, documento.Divisa, documento.FechaDeOperacion);
     }
 }

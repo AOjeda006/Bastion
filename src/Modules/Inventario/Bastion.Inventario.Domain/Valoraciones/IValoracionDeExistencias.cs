@@ -22,6 +22,10 @@ namespace Bastion.Inventario.Domain.Valoraciones;
 /// Una clave sin saldo es un defecto de quien llama: no se bloqueó, y valorar contra un cero
 /// supuesto es la ventana que dos entradas simultáneas se saltan juntas.
 /// </para>
+/// <para>
+/// <b>La fecha del documento se mira contra la del saldo</b>, que viene de la misma fila bloqueada:
+/// ninguna clave puede tener un movimiento posterior a ella (ADR-0047). La misma fecha vale.
+/// </para>
 /// </remarks>
 public interface IValoracionDeExistencias
 {
@@ -29,20 +33,24 @@ public interface IValoracionDeExistencias
     /// <param name="saldos">El saldo bloqueado de cada clave del documento.</param>
     /// <param name="lineas">Las líneas del documento, en su orden.</param>
     /// <param name="divisa">La divisa del documento.</param>
+    /// <param name="fechaDeOperacion">La fecha del documento.</param>
     /// <returns>El primer impedimento, o <see langword="null"/> si todo se puede valorar.</returns>
     ImpedimentoDeValoracion? LoQueImpide(
         IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos,
         IReadOnlyList<LineaAValorar> lineas,
-        string divisa);
+        string divisa,
+        DateOnly fechaDeOperacion);
 
     /// <summary>Valora cada línea contra los saldos y contra las líneas anteriores.</summary>
     /// <param name="saldos">El saldo bloqueado de cada clave del documento.</param>
     /// <param name="lineas">Las líneas del documento, en su orden.</param>
     /// <param name="divisa">La divisa del documento.</param>
+    /// <param name="fechaDeOperacion">La fecha del documento.</param>
     /// <returns>Una valoración por línea, en el orden de las líneas.</returns>
     /// <exception cref="InvalidOperationException">Si <see cref="LoQueImpide"/> habría dicho algo.</exception>
     IReadOnlyList<LineaValorada> Valorar(
         IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos,
         IReadOnlyList<LineaAValorar> lineas,
-        string divisa);
+        string divisa,
+        DateOnly fechaDeOperacion);
 }

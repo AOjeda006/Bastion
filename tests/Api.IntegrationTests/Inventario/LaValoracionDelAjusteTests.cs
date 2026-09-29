@@ -290,7 +290,7 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
             (await unos.BloquearLasValoracionesAsync(
                     [new ClaveDeValoracion(caso.Articulos[0].ArticuloId, caso.AlmacenId)], "EUR"))
                 .ShouldHaveSingleItem().Value
-                .ShouldBe(new SaldoValorado(10m, Importe.De(10m, "EUR")));
+                .ShouldBe(new SaldoValorado(10m, Importe.De(10m, "EUR"), Hoy));
 
             Task<Resultado<AjusteDto>> laOtra = otros.ConfirmarAsync(laSegunda);
 
@@ -374,9 +374,9 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
         IReadOnlyList<Valoracion> valoraciones = await LasValoracionesAsync(caso.EmpresaId);
 
         valoraciones.Single(fila => fila.ArticuloId == caso.Articulos[0].ArticuloId).Saldo
-            .ShouldBe(new SaldoValorado(5m, Importe.De(5m, "EUR")), "la de euros sigue como estaba");
+            .ShouldBe(new SaldoValorado(5m, Importe.De(5m, "EUR"), Hoy), "la de euros sigue como estaba");
         valoraciones.Single(fila => fila.ArticuloId == caso.Articulos[1].ArticuloId).Saldo
-            .ShouldBe(new SaldoValorado(3m, Importe.De(6m, "USD")), "la vacía ha empezado en dólares");
+            .ShouldBe(new SaldoValorado(3m, Importe.De(6m, "USD"), Hoy), "la vacía ha empezado en dólares");
 
         await ExigirQueCuadraAsync(caso.EmpresaId, valoraciones: 2);
     }
@@ -417,7 +417,7 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
 
         Valoracion valoracion = (await LasValoracionesAsync(caso.EmpresaId)).ShouldHaveSingleItem();
 
-        valoracion.Saldo.ShouldBe(new SaldoValorado(5m, Importe.De(10m, "EUR")));
+        valoracion.Saldo.ShouldBe(new SaldoValorado(5m, Importe.De(10m, "EUR"), Hoy));
 
         await ExigirQueCuadraAsync(caso.EmpresaId, valoraciones: 1);
     }
@@ -487,7 +487,7 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
             "valdría si se valorara en el orden en que la base devolvió las filas");
 
         (await LasValoracionesAsync(caso.EmpresaId)).ShouldHaveSingleItem().Saldo
-            .ShouldBe(new SaldoValorado(25m, Importe.De(50m, "EUR")));
+            .ShouldBe(new SaldoValorado(25m, Importe.De(50m, "EUR"), Hoy));
 
         await ExigirQueCuadraAsync(caso.EmpresaId, valoraciones: 1);
     }
@@ -529,9 +529,9 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
             .ShouldBe(2, "una fila por empresa: la empresa es parte de la clave");
 
         (await LasValoracionesAsync(deA)).ShouldHaveSingleItem().Saldo
-            .ShouldBe(new SaldoValorado(5m, Importe.De(10m, "EUR")));
+            .ShouldBe(new SaldoValorado(5m, Importe.De(10m, "EUR"), Hoy));
         (await LasValoracionesAsync(deB)).ShouldHaveSingleItem().Saldo
-            .ShouldBe(new SaldoValorado(5m, Importe.De(25m, "EUR")));
+            .ShouldBe(new SaldoValorado(5m, Importe.De(25m, "EUR"), Hoy));
 
         await ExigirQueCuadraAsync(deA, valoraciones: 1);
         await ExigirQueCuadraAsync(deB, valoraciones: 1);

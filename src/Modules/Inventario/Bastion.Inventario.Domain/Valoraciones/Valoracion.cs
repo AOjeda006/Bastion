@@ -52,11 +52,18 @@ public sealed class Valoracion : IDeInquilino
     /// </remarks>
     public string Divisa { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// La fecha de operación más alta de las filas del libro de la clave (ADR-0047). La pone la
+    /// sentencia que suma, que se niega a moverla hacia atrás.
+    /// </summary>
+    /// <remarks>Es nula en la clave que el cerrojo acaba de crear y que todavía no se ha movido.</remarks>
+    public DateOnly? UltimaFecha { get; private set; }
+
     /// <summary>El valor total, que es la verdad: el precio medio se deduce de él.</summary>
     public Importe Valor => Importe.De(ValorSinDivisa, Divisa);
 
-    /// <summary>La cantidad y el valor juntos, con el precio medio deducido.</summary>
-    public SaldoValorado Saldo => new(Cantidad, Valor);
+    /// <summary>La cantidad, el valor y el último movimiento juntos, con el precio medio deducido.</summary>
+    public SaldoValorado Saldo => new(Cantidad, Valor, UltimaFecha);
 
     /// <summary>La columna del valor, sin divisa: lo que EF Core lee y escribe.</summary>
     private decimal ValorSinDivisa { get; set; }

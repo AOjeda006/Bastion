@@ -35,6 +35,12 @@ namespace Bastion.Inventario.Domain.Valoraciones;
 /// salidas simultáneas no cruzan a la vez (ADR-0046 §4). Una salida que no cabe se valora como si
 /// vaciara la clave, y el documento no llega a escribirse.
 /// </para>
+/// <para>
+/// <b>La fecha, antes que la divisa</b>, clave por clave: un documento con una fecha anterior al
+/// último movimiento de una de sus claves no se valora (ADR-0047). Así, dentro de cada clave, el
+/// orden de confirmación y el de la fecha coinciden, y la suma del libro hasta un día cualquiera es
+/// un estado que la clave tuvo de verdad.
+/// </para>
 /// </remarks>
 public sealed class ElPrecioMedioPonderado : IValoracionDeExistencias
 {
@@ -42,16 +48,19 @@ public sealed class ElPrecioMedioPonderado : IValoracionDeExistencias
     public ImpedimentoDeValoracion? LoQueImpide(
         IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos,
         IReadOnlyList<LineaAValorar> lineas,
-        string divisa) =>
-        Recorrer(saldos, lineas, divisa).Impedimento;
+        string divisa,
+        DateOnly fechaDeOperacion) =>
+        Recorrer(saldos, lineas, divisa, fechaDeOperacion).Impedimento;
 
     /// <inheritdoc/>
     public IReadOnlyList<LineaValorada> Valorar(
         IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos,
         IReadOnlyList<LineaAValorar> lineas,
-        string divisa)
+        string divisa,
+        DateOnly fechaDeOperacion)
     {
-        (LineaValorada[]? valoradas, ImpedimentoDeValoracion? impedimento) = Recorrer(saldos, lineas, divisa);
+        (LineaValorada[]? valoradas, ImpedimentoDeValoracion? impedimento) =
+            Recorrer(saldos, lineas, divisa, fechaDeOperacion);
 
         return impedimento is null
             ? valoradas!
@@ -75,7 +84,8 @@ public sealed class ElPrecioMedioPonderado : IValoracionDeExistencias
     private static (LineaValorada[]? Valoradas, ImpedimentoDeValoracion? Impedimento) Recorrer(
         IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos,
         IReadOnlyList<LineaAValorar> lineas,
-        string divisa)
+        string divisa,
+        DateOnly fechaDeOperacion)
     {
         ArgumentNullException.ThrowIfNull(saldos);
         ArgumentNullException.ThrowIfNull(lineas);
@@ -107,6 +117,16 @@ public sealed class ElPrecioMedioPonderado : IValoracionDeExistencias
                     $"El artículo {linea.Clave.ArticuloId} del almacén {linea.Clave.AlmacenId} " +
                     "llega sin su saldo bloqueado: valorarlo desde cero sería valorar sin cerrojo.",
                     nameof(saldos));
+            }
+
+            // NINGUNA FECHA ANTERIOR AL ÚLTIMO MOVIMIENTO DE LA CLAVE (ADR-0047), y es lo primero:
+            // un documento atrasado no se confirma en esa fecha, pase lo que pase con la divisa. La
+            // misma fecha vale; dos documentos del mismo día sobre la misma clave son lo normal.
+            if (saldo.UltimaFecha is { } ultima && fechaDeOperacion < ultima)
+            {
+                return (null, new ImpedimentoDeValoracion(
+                    MotivoDelImpedimento.FechaAnteriorAlUltimoMovimiento, linea.Clave)
+                { UltimaFecha = ultima });
             }
 
             // UNA CLAVE VACÍA EN OTRA DIVISA EMPIEZA DE NUEVO en la del documento: no hay nada que

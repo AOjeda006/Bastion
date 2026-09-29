@@ -369,9 +369,6 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         Guid delVerano = await ConfirmarAsync(
             modulo, caso, new DateOnly(pasado, 7, 20), new Linea(0, -2m), new Linea(1, 7m));
 
-        await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 11, 5), new Linea(1, 1m));
-        await ConfirmarAsync(modulo, caso, Hoy, new Linea(0, 3m));
-
         // EL PRIMER RECÁLCULO pone el corte en este mes y saca las instantáneas del libro.
         int repuestas = await LasExistencias.RecalcularAsync(postgres, caso.EmpresaId, corte);
 
@@ -381,14 +378,20 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         repuestas.ShouldBe(debidas.Count);
         (await LasExistencias.InstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(debidas);
 
-        // DESPUÉS DEL CORTE, TRES CONFIRMACIONES CON FECHA ATRÁS Y UNA ANULACIÓN. Es la decisión
-        // (a) del ítem: quien anota el libro suma también en las instantáneas de ese mes y de todos
-        // los que vienen detrás hasta el corte. Una de antes del primer mes de su clave —que
-        // estrena meses—, una de antes del primero de la otra, una clave nueva, y el inverso de
-        // hoy, que suma en el mes del corte.
-        await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 5, 15), new Linea(1, 2m));
-        await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 1, 2), new Linea(0, -1m));
+        // DESPUÉS DEL CORTE, TRES CONFIRMACIONES CON FECHA DE UN MES ANTERIOR, UNA DE HOY Y UNA
+        // ANULACIÓN. Es la decisión (a) del ítem: quien anota el libro suma también en las
+        // instantáneas de ese mes y de todos los que vienen detrás hasta el corte. Una clave nueva
+        // —que estrena meses—, una fila en los meses que ya tiene cada una de las otras dos, la de
+        // hoy, que suma solo en el mes del corte, y el inverso, también de hoy.
+        //
+        // NINGUNA VA POR DETRÁS DE SU CLAVE (addendum del 2.8, ADR-0047). Dos de las tres de antes
+        // iban por delante del primer mes de su clave, y ya no se confirman: el artículo se había
+        // movido después en el mismo almacén. Las fechas van ahora en el orden en que se confirman,
+        // y lo que el caso afirma de las instantáneas es lo mismo.
         await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 9, 1), new Linea(2, 4m));
+        await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 11, 5), new Linea(1, 1m));
+        await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 12, 2), new Linea(0, -1m));
+        await ConfirmarAsync(modulo, caso, Hoy, new Linea(0, 3m));
 
         Resultado<AnulacionDto> anulacion =
             await modulo.AnularAsync(delVerano, "Recuento repetido por error");

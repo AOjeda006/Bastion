@@ -108,6 +108,10 @@ export const es = {
       'ajuste-entrada-sin-coste-ni-precio-medio':
         'Una línea mete un artículo que no tiene existencias en ese almacén, y sin existencias no ' +
         'hay precio medio al que valorarla. Escribe el coste de esa línea.',
+      'ajuste-fecha-anterior-al-ultimo-movimiento':
+        'Algún artículo del documento ya tiene un movimiento posterior a esa fecha en ese almacén, ' +
+        'y un documento no puede ir por detrás del último movimiento de su artículo. Pon esa fecha ' +
+        'o una posterior.',
       'ajuste-motivo-no-valido':
         'Escribe por qué anulas el ajuste, en 300 caracteres o menos. Es lo único que quedará ' +
         'para entender la corrección dentro de dos años.',

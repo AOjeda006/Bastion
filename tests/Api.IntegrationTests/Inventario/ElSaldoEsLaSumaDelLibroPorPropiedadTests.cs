@@ -54,6 +54,15 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// artículo que ya tiene existencias van sin coste, al precio medio.
 /// </para>
 /// <para>
+/// <b>Y ningún documento por detrás del último movimiento de su clave</b> (addendum del 2.8,
+/// ADR-0047). El modelo sabe la última fecha de cada artículo, y un documento de este año que iría
+/// por detrás tiene que rechazarse con su código antes de llegar al stock, porque la valoración va
+/// antes que la existencia; la mitad de ellos toman antes la fecha de ese último movimiento, que
+/// vale. Uno del año pasado va con fecha de hoy, como el que no tiene stock. Y tras cada paso, el
+/// invariante que el contraejemplo rompe, contra el libro de verdad: la suma hasta cada fecha de
+/// cada clave no deja cantidad negativa, valor negativo ni valor sin cantidad.
+/// </para>
+/// <para>
 /// <b>Cada semilla tiene que pasar por todas las clases de paso</b>, y el caso lo afirma: una
 /// semilla que no anulara nunca pasaría por prueba de las anulaciones sin haberlas probado.
 /// </para>
@@ -79,6 +88,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string Reapertura = "reapertura";
     private const string RechazadoPorElCierre = "rechazado por el cierre";
     private const string RechazadoSinStock = "rechazado sin stock";
+    private const string RechazadoPorLaFecha = "rechazado por la fecha";
+
+    /// <summary>El código del documento que va por detrás de su clave (ADR-0047).</summary>
+    private const string FechaAnterior = "ajuste-fecha-anterior-al-ultimo-movimiento";
 
     /// <summary>La restricción que guarda el stock, escrita a mano como en el borde.</summary>
     private const string FisicoNoNegativo = "ck_existencias_fisico_no_negativo";
@@ -86,7 +99,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private static readonly string[] s_clasesDePaso =
     [
         "entrada", "salida", "ajuste", Anulacion, Futuro, Recalculo, Cierre, Reapertura,
-        RechazadoPorElCierre, RechazadoSinStock,
+        RechazadoPorElCierre, RechazadoSinStock, RechazadoPorLaFecha,
     ];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
@@ -173,6 +186,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         cuadre.Descuadres.ShouldBeEmpty(secuencia.Relato());
 
         secuencia.Valoracion.Count.ShouldBeGreaterThan(0, secuencia.Relato());
+
+        (await LosEstadosDelLibroAsync(empresa.EmpresaId)).Fechas.ShouldBeGreaterThan(
+            0, "sin fechas que sumar, «ningún estado imposible» sale verde por no mirar\n" + secuencia.Relato());
+
         secuencia.AlPrecioMedio.ShouldBeGreaterThan(
             0, "ninguna entrada se ha valorado al precio medio\n" + secuencia.Relato());
 
@@ -230,6 +247,26 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             fecha = Hoy;
         }
 
+        // Y POR LO MISMO, UNO DEL AÑO PASADO QUE IRÍA POR DETRÁS DE SU CLAVE (ADR-0047): se
+        // rechazaría y su borrador impediría el cierre. Hoy no va por detrás de nada, porque el
+        // libro no tiene fechas futuras. Sin tocar el azar, como el coste.
+        DateOnly? ultima = LaUltimaFechaDeSusClaves(secuencia, lineas.Select(linea => empresa.Claves[linea.Clave]));
+
+        if (!delAnioCerrado && fecha.Year == pasado && fecha < ultima)
+        {
+            fecha = Hoy;
+        }
+
+        // UNO DE ESTE AÑO QUE IRÍA POR DETRÁS, LA MITAD DE LAS VECES TOMA LA FECHA DEL ÚLTIMO
+        // MOVIMIENTO DE SUS CLAVES, que vale (ADR-0047 §4), y la otra mitad se queda con la suya y
+        // se rechaza. Cada anulación deja su artículo con la fecha de hoy, y con todos rechazados,
+        // a partir de ahí solo se confirmaba lo de hoy: había semillas que no valoraban ninguna
+        // entrada al precio medio. La paridad del día decide, sin tocar el azar.
+        if (fecha.Year != pasado && fecha < ultima && fecha.DayNumber % 2 == 1)
+        {
+            fecha = ultima.Value;
+        }
+
         Guid ajusteId = await AbrirAsync(
             modulo, empresa, fecha.Year == pasado ? empresa.SerieDelAnioPasado : empresa.Serie, fecha, lineas);
 
@@ -250,6 +287,20 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
             rechazada.EsCorrecto.ShouldBeFalse(secuencia.Relato());
             rechazada.Error!.Codigo.ShouldBe("ajuste-en-ejercicio-cerrado", secuencia.Relato());
+
+            return;
+        }
+
+        // LA FECHA SE MIRA ANTES QUE EL STOCK, porque el caso de uso valora antes de tocar la
+        // existencia: un documento por detrás de su clave no llega a ella (ADR-0047 §2).
+        if (fecha < ultima)
+        {
+            Resultado<AjusteDto> rechazada = await modulo.ConfirmarAsync(ajusteId);
+
+            secuencia.Anotar(RechazadoPorLaFecha, fecha, lineas);
+
+            rechazada.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+            rechazada.Error!.Codigo.ShouldBe(FechaAnterior, secuencia.Relato());
 
             return;
         }
@@ -348,6 +399,19 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             .GroupBy(fila => fila.Clave)
             .Any(clave => saldos.GetValueOrDefault(clave.Key) + clave.Sum(fila => fila.Cantidad) < 0m);
     }
+
+    /// <summary>
+    /// La fecha más alta del libro del modelo entre los artículos de estas claves, o nada si ninguno
+    /// se ha movido.
+    /// </summary>
+    /// <remarks>
+    /// Un documento lleva una sola fecha, así que va por detrás de alguna de sus claves si y solo si
+    /// va por detrás de la más alta. La misma fecha no va por detrás: la regla es «anterior»
+    /// (ADR-0047 §4). Comparada con nada, una fecha no es menor, y un artículo sin movimientos no
+    /// rechaza ninguna.
+    /// </remarks>
+    private static DateOnly? LaUltimaFechaDeSusClaves(Secuencia secuencia, IEnumerable<ClaveDeExistencia> claves) =>
+        claves.Select(clave => secuencia.UltimaFechaDe(clave.ArticuloId)).Max();
 
     /// <summary>Exige que el motor rechace la operación por la restricción del stock, y no por otra.</summary>
     private static async Task ExigirElRechazoDelMotorAsync(Func<Task> operacion, Secuencia secuencia)
@@ -469,37 +533,91 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         (await ValoracionesAsync(empresa.EmpresaId)).ShouldBe(
             [.. secuencia.Valoracion
                 .OrderBy(par => par.Key)
-                .Select(par => (par.Key, par.Value.Cantidad, par.Value.Valor, "EUR"))],
+                .Select(par => (par.Key, par.Value.Cantidad, par.Value.Valor, "EUR", secuencia.UltimaFechaDe(par.Key)))],
             "la valoración no es la del modelo\n" + secuencia.Relato());
+
+        (await LosEstadosDelLibroAsync(empresa.EmpresaId)).Imposibles.ShouldBe(
+            0, "el libro sumado hasta alguna fecha deja un estado que no existió nunca\n" + secuencia.Relato());
 
         Ordenado(await FilasValoradasAsync(empresa.EmpresaId)).ShouldBe(
             Ordenado(secuencia.Valorado), "el libro no vale lo que dice el modelo\n" + secuencia.Relato());
     }
 
     /// <summary>La tabla de la valoración de la empresa, leída sin el filtro y sin el mapeo.</summary>
-    private async Task<(Guid ArticuloId, decimal Cantidad, decimal Valor, string Divisa)[]> ValoracionesAsync(
-        Guid empresaId)
+    private async Task<(Guid ArticuloId, decimal Cantidad, decimal Valor, string Divisa, DateOnly? UltimaFecha)[]>
+        ValoracionesAsync(Guid empresaId)
     {
         await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
         await conexion.OpenAsync();
 
         await using NpgsqlCommand orden = new(
-            "SELECT articulo_id, cantidad, valor, divisa FROM inventario.valoraciones WHERE empresa_id = @empresa",
+            "SELECT articulo_id, cantidad, valor, divisa, ultima_fecha FROM inventario.valoraciones "
+            + "WHERE empresa_id = @empresa",
             conexion);
 
         orden.Parameters.AddWithValue("empresa", empresaId);
 
-        List<(Guid, decimal, decimal, string)> filas = [];
+        List<(Guid, decimal, decimal, string, DateOnly?)> filas = [];
 
         await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
 
         while (await lector.ReadAsync())
         {
-            filas.Add((lector.GetGuid(0), lector.GetDecimal(1), lector.GetDecimal(2), lector.GetString(3)));
+            filas.Add((
+                lector.GetGuid(0),
+                lector.GetDecimal(1),
+                lector.GetDecimal(2),
+                lector.GetString(3),
+                lector.IsDBNull(4) ? null : lector.GetFieldValue<DateOnly>(4)));
         }
 
         // EN C#, Y NO CON UN ORDER BY: el motor y .NET no ordenan los uuid igual.
         return [.. filas.OrderBy(fila => fila.Item1)];
+    }
+
+    /// <summary>
+    /// Cuántas fechas tiene el libro por clave de la valoración, y en cuántas la suma hasta esa
+    /// fecha deja un estado que no pudo existir (ADR-0047 §5).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Contra el libro de verdad, y no contra el modelo</b>: es lo que la regla promete del libro,
+    /// y el modelo confirma en el mismo orden que el motor, así que cometería el mismo error. Por
+    /// clave de la valoración, que es el artículo en el almacén, y con todas las filas de la misma
+    /// fecha sumadas, porque la regla deja confirmar con la misma fecha en cualquier orden.
+    /// </para>
+    /// <para>
+    /// <b>Imposible es cantidad negativa, valor negativo o valor sin cantidad.</b> Con la regla, las
+    /// filas hasta cada fecha son las de las confirmaciones hasta una de ellas, y cada confirmación
+    /// deja un estado que la valoración admitió. El contraejemplo del ADR deja cero unidades y −450 €
+    /// sumado hasta el día 15.
+    /// </para>
+    /// </remarks>
+    private async Task<(long Fechas, long Imposibles)> LosEstadosDelLibroAsync(Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand orden = new(
+            """
+            SELECT count(*),
+                   count(*) FILTER (WHERE s.cantidad < 0 OR s.valor < 0 OR (s.cantidad = 0 AND s.valor <> 0))
+              FROM (SELECT sum(sum(m.cantidad_en_unidad_base)) OVER hasta AS cantidad,
+                           sum(sum(m.valor)) OVER hasta AS valor
+                      FROM inventario.movimiento_stock AS m
+                     WHERE m.empresa_id = @empresa
+                     GROUP BY m.articulo_id, m.almacen_id, m.fecha_de_operacion
+                    WINDOW hasta AS (PARTITION BY m.articulo_id, m.almacen_id ORDER BY m.fecha_de_operacion)) AS s
+            """,
+            conexion);
+
+        orden.Parameters.AddWithValue("empresa", empresaId);
+
+        await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
+
+        await lector.ReadAsync();
+
+        return (lector.GetInt64(0), lector.GetInt64(1));
     }
 
     /// <summary>El valor y el precio medio de cada fila del libro de la empresa.</summary>
@@ -774,6 +892,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         internal bool PasadoCerrado { get; set; }
 
         internal int BorradoresEnElPasado { get; set; }
+
+        /// <summary>
+        /// La fecha más alta del libro del modelo para el artículo, o nada si no se ha movido: es la
+        /// que guarda su valoración (ADR-0047 §1). El almacén es uno solo.
+        /// </summary>
+        internal DateOnly? UltimaFechaDe(Guid articuloId) =>
+            Libro.Where(apunte => apunte.Clave.ArticuloId == articuloId)
+                .Select(apunte => (DateOnly?)apunte.Fecha)
+                .Max();
 
         internal void Anotar(string clase, DateOnly fecha, IReadOnlyList<LineaAlAzar> lineas) =>
             Anotar(clase, string.Create(

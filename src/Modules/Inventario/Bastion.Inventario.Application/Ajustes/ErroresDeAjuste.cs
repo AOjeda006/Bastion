@@ -17,6 +17,7 @@ internal static class ErroresDeAjuste
     internal const string CodigoCosteNoValido = "ajuste-coste-no-valido";
     internal const string CodigoEntradaSinCosteNiPrecioMedio = "ajuste-entrada-sin-coste-ni-precio-medio";
     internal const string CodigoValoracionEnOtraDivisa = "ajuste-valoracion-en-otra-divisa";
+    internal const string CodigoFechaAnteriorAlUltimoMovimiento = "ajuste-fecha-anterior-al-ultimo-movimiento";
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,
@@ -50,7 +51,7 @@ internal static class ErroresDeAjuste
     /// <summary>Lo que impide valorar el documento, con su código (ADR-0046 §10).</summary>
     /// <remarks>
     /// <para>
-    /// <b>Los dos son un <c>422</c></b>: el cuerpo está bien escrito, y lo que falla es lo que hay
+    /// <b>Los tres son un <c>422</c></b>: el cuerpo está bien escrito, y lo que falla es lo que hay
     /// en el almacén cuando se confirma. El mismo documento se confirmaría con otro saldo.
     /// </para>
     /// <para>
@@ -76,6 +77,12 @@ internal static class ErroresDeAjuste
                 $"Las existencias del artículo {impedimento.Clave.ArticuloId} en el almacén " +
                 $"{impedimento.Clave.AlmacenId} están valoradas en otra divisa que la del " +
                 $"documento, {divisa}, y sumarlas exigiría un tipo de cambio (ADR-0046 §7)."),
+            MotivoDelImpedimento.FechaAnteriorAlUltimoMovimiento => ErrorDeOperacion.ReglaDeNegocio(
+                CodigoFechaAnteriorAlUltimoMovimiento,
+                $"El artículo {impedimento.Clave.ArticuloId} se movió por última vez en el almacén " +
+                $"{impedimento.Clave.AlmacenId} el {impedimento.UltimaFecha:yyyy-MM-dd}, y el " +
+                "documento lleva una fecha anterior: sumar el libro hasta los días de en medio daría " +
+                "un estado que no existió. Póngale esa fecha o una posterior (ADR-0047)."),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(impedimento), impedimento.Motivo, "un impedimento que el borde no sabe decir"),
         };

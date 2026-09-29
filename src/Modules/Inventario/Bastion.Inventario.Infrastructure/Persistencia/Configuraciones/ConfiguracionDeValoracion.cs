@@ -61,6 +61,11 @@ internal sealed class ConfiguracionDeValoracion : IEntityTypeConfiguration<Valor
             .HasMaxLength(3)
             .IsRequired();
 
+        // LA FECHA DEL ÚLTIMO MOVIMIENTO (ADR-0047), nula en la clave que el cerrojo acaba de
+        // crear. La pone la sentencia que suma, que se niega a moverla hacia atrás. No es un
+        // `CHECK`, porque un `CHECK` no ve el valor de antes de la fila.
+        valoracion.Property(fila => fila.UltimaFecha);
+
         valoracion.Ignore(fila => fila.Valor);
         valoracion.Ignore(fila => fila.Saldo);
 
