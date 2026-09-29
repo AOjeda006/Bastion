@@ -153,7 +153,7 @@ public sealed class LaCasillaDeLaRetiradaTests
         // artículo se retiró AYER; su descripción tenía una errata y hay que corregirla hoy.
         ArticulosEnMemoria articulos = new();
         var articulo = Articulo.Crear(
-            s_empresa, "TORN-8", "Tornillo de 8", TipoDeArticulo.Bien,
+            s_empresa, "TORN-8", "Tornillo de 8", TipoDeArticulo.Bien, Trazabilidad.Ninguna,
             s_unidad, s_impuesto, null, s_momento);
         articulos.Guardados.Add(articulo);
 
@@ -167,6 +167,8 @@ public sealed class LaCasillaDeLaRetiradaTests
             articulos,
             new CategoriasEnMemoria(),
             new ImpuestosEn(EstadoDeMaestro.SeOfreceParaLoNuevo),
+            new CerrojoApuntado(),
+            new MovimientosQueContestan(tiene: true),
             confirmaciones,
             new VersionesQueDanIgual(),
             new RelojParado(s_momento));
@@ -178,6 +180,7 @@ public sealed class LaCasillaDeLaRetiradaTests
             {
                 Descripcion = "Tornillo de 8 mm",
                 Tipo = nameof(TipoDeArticulo.Bien),
+                Trazabilidad = nameof(Trazabilidad.Ninguna),
                 ImpuestoPorDefectoId = s_impuesto,
                 CategoriaId = null,
             },
@@ -201,7 +204,7 @@ public sealed class LaCasillaDeLaRetiradaTests
         // derogado, corregir la descripción tiene que seguir siendo posible.
         ArticulosEnMemoria articulos = new();
         var articulo = Articulo.Crear(
-            s_empresa, "TORN-8", "Tornillo de 8", TipoDeArticulo.Bien,
+            s_empresa, "TORN-8", "Tornillo de 8", TipoDeArticulo.Bien, Trazabilidad.Ninguna,
             s_unidad, s_impuesto, null, s_momento);
         articulos.Guardados.Add(articulo);
 
@@ -211,6 +214,8 @@ public sealed class LaCasillaDeLaRetiradaTests
             articulos,
             new CategoriasEnMemoria(),
             impuestos,
+            new CerrojoApuntado(),
+            new MovimientosQueContestan(tiene: true),
             new ConfirmacionesContadas(),
             new VersionesQueDanIgual(),
             new RelojParado(s_momento));
@@ -222,6 +227,7 @@ public sealed class LaCasillaDeLaRetiradaTests
             {
                 Descripcion = "Tornillo de 8 mm",
                 Tipo = nameof(TipoDeArticulo.Bien),
+                Trazabilidad = nameof(Trazabilidad.Ninguna),
                 ImpuestoPorDefectoId = s_impuesto,
                 CategoriaId = null,
             },
@@ -240,7 +246,7 @@ public sealed class LaCasillaDeLaRetiradaTests
         // deja pasar es no tocarlo; elegir uno derogado a propósito es otra cosa.
         ArticulosEnMemoria articulos = new();
         var articulo = Articulo.Crear(
-            s_empresa, "TORN-8", "Tornillo de 8", TipoDeArticulo.Bien,
+            s_empresa, "TORN-8", "Tornillo de 8", TipoDeArticulo.Bien, Trazabilidad.Ninguna,
             s_unidad, s_impuesto, null, s_momento);
         articulos.Guardados.Add(articulo);
 
@@ -251,6 +257,8 @@ public sealed class LaCasillaDeLaRetiradaTests
             articulos,
             new CategoriasEnMemoria(),
             impuestos,
+            new CerrojoApuntado(),
+            new MovimientosQueContestan(tiene: true),
             new ConfirmacionesContadas(),
             new VersionesQueDanIgual(),
             new RelojParado(s_momento));
@@ -262,6 +270,7 @@ public sealed class LaCasillaDeLaRetiradaTests
             {
                 Descripcion = "Tornillo de 8",
                 Tipo = nameof(TipoDeArticulo.Bien),
+                Trazabilidad = nameof(Trazabilidad.Ninguna),
                 ImpuestoPorDefectoId = otroImpuesto,
                 CategoriaId = null,
             },

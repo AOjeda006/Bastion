@@ -23,6 +23,10 @@ namespace Bastion.Catalogo.Contracts.Catalogo;
 /// <param name="Codigo">Código, en mayúsculas. No cambia.</param>
 /// <param name="Descripcion">Lo que sale impreso en una factura.</param>
 /// <param name="Tipo">Si es mercancía o prestación, como texto: <c>Bien</c> o <c>Servicio</c>.</param>
+/// <param name="Trazabilidad">
+/// Si sus movimientos llevan lote, número de serie o nada, como texto: <c>Ninguna</c>,
+/// <c>PorLote</c> o <c>PorNumeroSerie</c>.
+/// </param>
 /// <param name="UnidadBaseId">Unidad en la que se cuenta, del maestro de Organización.</param>
 /// <param name="ImpuestoPorDefectoId">Tramo de impuesto propuesto, del maestro de Organización.</param>
 /// <param name="CategoriaId">Categoría en la que se clasifica, o nula.</param>
@@ -32,6 +36,7 @@ public sealed record ArticuloDto(
     string Codigo,
     string Descripcion,
     string Tipo,
+    string Trazabilidad,
     Guid UnidadBaseId,
     Guid ImpuestoPorDefectoId,
     Guid? CategoriaId);
@@ -61,6 +66,16 @@ public sealed record CrearArticuloDto
     /// </remarks>
     [Required(ErrorMessage = "El tipo de artículo es obligatorio.")]
     public string Tipo { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Si sus movimientos llevan lote, número de serie o nada: <c>Ninguna</c>, <c>PorLote</c> o
+    /// <c>PorNumeroSerie</c>. Un servicio solo admite <c>Ninguna</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>En el alta se puede omitir, y entonces es <c>Ninguna</c></b>, que es lo que es un artículo
+    /// sin marcar. Al modificar no: ver <see cref="ModificarArticuloDto.Trazabilidad"/>.
+    /// </remarks>
+    public string Trazabilidad { get; init; } = "Ninguna";
 
     /// <summary>
     /// Unidad en la que se cuenta este artículo. Tiene que existir y <b>ofrecerse para lo nuevo</b>.
@@ -112,6 +127,18 @@ public sealed record ModificarArticuloDto
 
     /// <summary>Si es mercancía o prestación: <c>Bien</c> o <c>Servicio</c>.</summary>
     public string Tipo { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Si sus movimientos llevan lote, número de serie o nada: <c>Ninguna</c>, <c>PorLote</c> o
+    /// <c>PorNumeroSerie</c>. No cambia si el artículo ya tiene movimientos.
+    /// </summary>
+    /// <remarks>
+    /// <b>Obligatoria, al revés que en el alta.</b> Esto sustituye la ficha entera, así que omitirla
+    /// no puede querer decir «la que tenga»: querría decir <c>Ninguna</c>, y le quitaría la marca en
+    /// silencio a un artículo por lote que todavía no se ha movido.
+    /// </remarks>
+    [Required(ErrorMessage = "La trazabilidad es obligatoria.")]
+    public string Trazabilidad { get; init; } = string.Empty;
 
     /// <summary>Tramo de impuesto que se propone al facturarlo.</summary>
     /// <remarks>

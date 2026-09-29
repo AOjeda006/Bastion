@@ -183,7 +183,7 @@ public sealed class ResolverPrecioTests
             s_hoy.AddYears(-1), null, s_ahora);
 
         var articulo = Articulo.Crear(
-            s_empresa, "ART-1", "Un artículo", TipoDeArticulo.Bien,
+            s_empresa, "ART-1", "Un artículo", TipoDeArticulo.Bien, Trazabilidad.Ninguna,
             Guid.NewGuid(), Guid.NewGuid(), categoriaId, s_ahora);
 
         TarifasEnMemoria tarifas = new();

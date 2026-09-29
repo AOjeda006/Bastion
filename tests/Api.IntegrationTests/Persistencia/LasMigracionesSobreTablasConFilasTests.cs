@@ -76,7 +76,9 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
     /// </summary>
     private static readonly Dictionary<string, Relleno> s_restricciones = new(StringComparer.Ordinal)
     {
+        ["ck_articulos_servicio_sin_trazabilidad"] = Relleno.Ninguno,
         ["ck_articulos_tipo"] = new([], [("tipo", "'Bien'")]),
+        ["ck_articulos_trazabilidad"] = new([], [("trazabilidad", "'Ninguna'")]),
         ["ck_bandeja_empresa_o_motivo"] = new(["empresa_id"], []),
         ["ck_categorias_padre_distinto_de_si_misma"] = Relleno.Ninguno,
         ["ck_condiciones_pago_plazo_legal"] = new([], [("dias_de_plazo", "30")]),

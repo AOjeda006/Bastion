@@ -45,6 +45,13 @@
       Terceros, y por el mismo motivo.
     -->
     <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
+    <!--
+      Y al carril rápido, desde el ítem 2.9, por lo mismo que Organización e Inventario en el 2.6:
+      la sentencia del cerrojo del artículo nombra el esquema, la tabla y la columna de la empresa
+      COMO CADENAS, y una cadena no se entera de un renombrado. Compararlas contra el modelo no
+      necesita base de datos.
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.FunctionalTests" />
   </ItemGroup>
 
 </Project>

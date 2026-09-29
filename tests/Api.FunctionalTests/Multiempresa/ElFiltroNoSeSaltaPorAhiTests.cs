@@ -289,6 +289,20 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "que compara la empresa ella misma con el valor de IInquilinoActual. Vive en un "
             + "fichero propio, como CerrojoDeLaBandeja, para que la excepcion se lea de una vez",
 
+        // LA DEL ITEM 2.9, y es la tercera sentencia de cerrojo, con el criterio de las dos del 2.6
+        // y sobre el esquema del propio modulo, como la de Organizacion. Bloquea la fila del
+        // articulo antes de preguntar a Inventario si tiene movimientos, porque cambiar la marca de
+        // trazabilidad no escribe nada que una confirmacion de Inventario vaya a escribir: no hay
+        // version con la que chocar (ADR-0048 §4). Compara la empresa ella misma, y lo comprueba
+        // LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.
+        ["src/Modules/Catalogo/Bastion.Catalogo.Infrastructure/Persistencia/Repositorios/" +
+         "CerrojoDeArticulos.cs usa .SqlQuery"] =
+            "toma el cerrojo del UPDATE (FOR NO KEY UPDATE) sobre la fila del articulo, que choca "
+            + "con el FOR SHARE con el que Inventario lee la marca al confirmar, y devuelve solo si "
+            + "la fila existe: ni un dato de la ficha. El identificador viene de la ruta y el filtro "
+            + "no alcanza al SQL crudo, asi que compara la empresa ella misma con el valor de "
+            + "IInquilinoActual. Vive en un fichero propio, como CerrojoDeEjercicios",
+
         // LAS DOS DEL ITEM 2.8, en el mismo esquema que las del 2.7 y con su mismo criterio, salvo
         // en una cosa, que es la que las trae aparte: ESTAS SI LEEN PARA DECIDIR.
         //

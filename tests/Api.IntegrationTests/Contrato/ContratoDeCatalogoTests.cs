@@ -140,6 +140,7 @@ public sealed class ContratoDeCatalogoTests(PostgresConTodosLosModulos postgres)
             {
                 Descripcion = "Descripción corregida",
                 Tipo = "Bien",
+                Trazabilidad = "Ninguna",
                 ImpuestoPorDefectoId = impuesto,
                 CategoriaId = null,
             });
@@ -541,6 +542,7 @@ public sealed class ContratoDeCatalogoTests(PostgresConTodosLosModulos postgres)
     {
         Descripcion = descripcion,
         Tipo = "Bien",
+        Trazabilidad = "Ninguna",
         ImpuestoPorDefectoId = impuesto,
         CategoriaId = null,
     };

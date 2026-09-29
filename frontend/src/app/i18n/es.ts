@@ -165,7 +165,15 @@ export const es = {
       'articulo-proveedor-tercero-no-valido':
         'Ese tercero no se puede poner como proveedor de este artículo. Comprueba en el maestro ' +
         'de terceros que la ficha existe y que está marcada como proveedora.',
+      'articulo-servicio-con-trazabilidad':
+        'Un servicio no tiene existencias, así que no lleva lote ni número de serie.',
       'articulo-tipo-no-valido': 'El tipo de un artículo solo puede ser «Bien» o «Servicio».',
+      // Un conflicto con el libro, no un error de lo tecleado: lo que hay que decir es por qué
+      // ya no se puede, para que nadie lo reintente esperando otra respuesta.
+      'articulo-trazabilidad-con-movimientos':
+        'Este artículo ya tiene movimientos de stock, así que su trazabilidad no se puede cambiar.',
+      'articulo-trazabilidad-no-valida':
+        'La trazabilidad de un artículo solo puede ser ninguna, por lote o por número de serie.',
       'articulo-unidad-no-encontrada':
         'Esa unidad de medida no existe. Elige una del maestro de unidades.',
       // La retirada del ADR-0023 dicha entera, con sus dos mitades: por eso no vale «esa unidad

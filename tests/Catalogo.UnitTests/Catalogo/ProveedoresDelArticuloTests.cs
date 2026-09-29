@@ -415,6 +415,7 @@ public sealed class ProveedoresDelArticuloTests
             "ART-1",
             "Artículo de prueba",
             TipoDeArticulo.Bien,
+            Trazabilidad.Ninguna,
             Guid.CreateVersion7(),
             Guid.CreateVersion7(),
             null,

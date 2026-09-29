@@ -9,6 +9,12 @@ namespace Bastion.Catalogo.Infrastructure.Persistencia.Configuraciones;
 
 internal sealed class ConfiguracionDeArticulo : IEntityTypeConfiguration<Articulo>
 {
+    /// <summary>La lista cerrada de la marca, en el motor.</summary>
+    public const string TrazabilidadAdmitida = "ck_articulos_trazabilidad";
+
+    /// <summary>Un servicio no lleva lote ni número de serie.</summary>
+    public const string ServicioSinTrazabilidad = "ck_articulos_servicio_sin_trazabilidad";
+
     public void Configure(EntityTypeBuilder<Articulo> articulo)
     {
         ArgumentNullException.ThrowIfNull(articulo);
@@ -18,9 +24,25 @@ internal sealed class ConfiguracionDeArticulo : IEntityTypeConfiguration<Articul
         // dejaría de convertirse al leerlo. Los nombres se sacan de `Enum.GetNames`, no copiados:
         // añadir un tercer tipo y olvidar el CHECK sería exactamente el fallo que este CHECK
         // existe para no tener.
-        articulo.ToTable("articulos", tabla => tabla.HasCheckConstraint(
-            "ck_articulos_tipo",
-            "tipo IN ('" + string.Join("', '", Enum.GetNames<TipoDeArticulo>()) + "')"));
+        //
+        // La marca de trazabilidad lleva la suya por lo mismo (ADR-0048 §1), y otra más: un
+        // servicio no tiene existencias, así que no lleva lote ni serie. Lo impiden el dominio y el
+        // caso de uso, y esta es la guarda que no se salta un `UPDATE` a mano.
+        articulo.ToTable("articulos", tabla =>
+        {
+            tabla.HasCheckConstraint(
+                "ck_articulos_tipo",
+                "tipo IN ('" + string.Join("', '", Enum.GetNames<TipoDeArticulo>()) + "')");
+
+            tabla.HasCheckConstraint(
+                TrazabilidadAdmitida,
+                "trazabilidad IN ('" + string.Join("', '", Enum.GetNames<Trazabilidad>()) + "')");
+
+            tabla.HasCheckConstraint(
+                ServicioSinTrazabilidad,
+                "tipo <> '" + nameof(TipoDeArticulo.Servicio) + "'" +
+                " OR trazabilidad = '" + nameof(Trazabilidad.Ninguna) + "'");
+        });
 
         articulo.SeAudita();
         articulo.HasKey(fila => fila.Id);
@@ -44,6 +66,14 @@ internal sealed class ConfiguracionDeArticulo : IEntityTypeConfiguration<Articul
         // Como TEXTO, igual que los demás enumerados del sistema: guardado por su valor entero
         // dejaría de significar nada en cuanto alguien reordenara el enumerado.
         articulo.Property(fila => fila.Tipo)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .SeAudita();
+
+        // Igual que el tipo. Y se audita: cambiarla es de las pocas cosas de la ficha que decide
+        // cómo se lee el libro de existencias.
+        articulo.Property(fila => fila.Trazabilidad)
             .HasConversion<string>()
             .HasMaxLength(20)
             .IsRequired()

@@ -50,6 +50,10 @@ public static class ModuloDeCatalogo
         servicios.AddScoped<IUnidadTrabajoDeCatalogo, UnidadDeTrabajoDeCatalogo>();
         servicios.AddScoped<IVersionesDeCatalogo, VersionesDeCatalogo>();
 
+        // El cerrojo del artículo, que corre en la transacción de ESTE contexto: cambiar la marca
+        // de trazabilidad lo toma antes de preguntar a Inventario (ADR-0048 §4).
+        servicios.AddScoped<ICerrojoDeArticulos, CerrojoDeArticulos>();
+
         // El almacén de claves de idempotencia (R10), con la clave del módulo: el filtro del borde
         // resuelve el suyo por el segmento de la ruta, para que la clave y el trabajo caigan en la
         // transacción del MISMO contexto.

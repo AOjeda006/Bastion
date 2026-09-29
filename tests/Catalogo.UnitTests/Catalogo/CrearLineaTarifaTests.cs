@@ -230,7 +230,7 @@ public sealed class CrearLineaTarifaTests
             Categoria = Guid.NewGuid();
 
             Articulo = Articulo.Crear(
-                s_empresa, "ART-1", "Un artículo", TipoDeArticulo.Bien,
+                s_empresa, "ART-1", "Un artículo", TipoDeArticulo.Bien, Trazabilidad.Ninguna,
                 Guid.NewGuid(), Guid.NewGuid(), Categoria, s_ahora);
 
             Tarifa = Tarifa.Crear(

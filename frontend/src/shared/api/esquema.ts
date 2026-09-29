@@ -1899,6 +1899,11 @@ export interface components {
             /** @description Si es mercancía o prestación, como texto: `Bien` o `Servicio`. */
             tipo: string;
             /**
+             * @description Si sus movimientos llevan lote, número de serie o nada, como texto: `Ninguna`,
+             *     `PorLote` o `PorNumeroSerie`.
+             */
+            trazabilidad: string;
+            /**
              * Format: uuid
              * @description Unidad en la que se cuenta, del maestro de Organización.
              */
@@ -2213,6 +2218,11 @@ export interface components {
             descripcion: string;
             /** @description Si es mercancía o prestación: `Bien` o `Servicio`. */
             tipo: string;
+            /**
+             * @description Si sus movimientos llevan lote, número de serie o nada: `Ninguna`, `PorLote` o
+             *     `PorNumeroSerie`. Un servicio solo admite `Ninguna`.
+             */
+            trazabilidad?: string;
             /**
              * Format: uuid
              * @description Unidad en la que se cuenta este artículo. Tiene que existir y <b>ofrecerse para lo nuevo</b>.
@@ -2786,6 +2796,11 @@ export interface components {
             descripcion: string;
             /** @description Si es mercancía o prestación: `Bien` o `Servicio`. */
             tipo?: string;
+            /**
+             * @description Si sus movimientos llevan lote, número de serie o nada: `Ninguna`, `PorLote` o
+             *     `PorNumeroSerie`. No cambia si el artículo ya tiene movimientos.
+             */
+            trazabilidad: string;
             /**
              * Format: uuid
              * @description Tramo de impuesto que se propone al facturarlo.

@@ -64,6 +64,13 @@ internal sealed class CrearArticulo(
                 ErroresDeArticulo.TipoNoValido(TiposDeArticulo.Admitidos));
         }
 
+        Resultado<Trazabilidad> trazabilidad = Trazabilidades.ParaElTipo(tipo.Value, peticion.Trazabilidad);
+
+        if (!trazabilidad.EsCorrecto)
+        {
+            return Resultado.Fallo<ArticuloDto>(trazabilidad.Error!);
+        }
+
         string codigo = Articulo.NormalizarCodigo(peticion.Codigo);
 
         if (await articulos.ExisteElCodigoAsync(empresaId, codigo, cancelacion).ConfigureAwait(false))
@@ -127,6 +134,7 @@ internal sealed class CrearArticulo(
             codigo,
             peticion.Descripcion,
             tipo.Value,
+            trazabilidad.Valor,
             peticion.UnidadBaseId,
             peticion.ImpuestoPorDefectoId,
             peticion.CategoriaId,

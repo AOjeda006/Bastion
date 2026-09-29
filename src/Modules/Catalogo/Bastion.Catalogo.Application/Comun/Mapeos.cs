@@ -28,6 +28,7 @@ internal static class Mapeos
             articulo.Codigo,
             articulo.Descripcion,
             articulo.Tipo.ToString(),
+            articulo.Trazabilidad.ToString(),
             articulo.UnidadBaseId,
             articulo.ImpuestoPorDefectoId,
             articulo.CategoriaId);

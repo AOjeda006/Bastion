@@ -49,6 +49,7 @@ public sealed class Articulo : EntidadBase, IDeInquilino
         string codigo,
         string descripcion,
         TipoDeArticulo tipo,
+        Trazabilidad trazabilidad,
         Guid unidadBaseId,
         Guid impuestoPorDefectoId,
         Guid? categoriaId,
@@ -60,6 +61,7 @@ public sealed class Articulo : EntidadBase, IDeInquilino
         Codigo = codigo;
         Descripcion = descripcion;
         Tipo = tipo;
+        Trazabilidad = trazabilidad;
         UnidadBaseId = unidadBaseId;
         ImpuestoPorDefectoId = impuestoPorDefectoId;
         CategoriaId = categoriaId;
@@ -85,6 +87,14 @@ public sealed class Articulo : EntidadBase, IDeInquilino
 
     /// <summary>Si es mercancía o prestación.</summary>
     public TipoDeArticulo Tipo { get; private set; }
+
+    /// <summary>Si sus movimientos llevan lote, número de serie o nada.</summary>
+    /// <remarks>
+    /// <b>Un servicio no lleva ninguna</b>: no tiene existencias a las que seguir la pista. Cambiarla
+    /// con movimientos ya anotados lo impide la aplicación, que es quien puede preguntar a
+    /// Inventario (ADR-0048 §4).
+    /// </remarks>
+    public Trazabilidad Trazabilidad { get; private set; }
 
     /// <summary>
     /// Unidad en la que se cuenta este artículo, del maestro de Organización.
@@ -121,6 +131,7 @@ public sealed class Articulo : EntidadBase, IDeInquilino
     /// <param name="codigo">Código; se normaliza a mayúsculas.</param>
     /// <param name="descripcion">Lo que sale impreso.</param>
     /// <param name="tipo">Si es mercancía o prestación.</param>
+    /// <param name="trazabilidad">Si sus movimientos llevan lote, número de serie o nada.</param>
     /// <param name="unidadBaseId">Unidad en la que se cuenta, ya validada contra su puerto.</param>
     /// <param name="impuestoPorDefectoId">Tramo de impuesto, ya validado contra su puerto.</param>
     /// <param name="categoriaId">Categoría, o nula.</param>
@@ -130,6 +141,7 @@ public sealed class Articulo : EntidadBase, IDeInquilino
         string codigo,
         string descripcion,
         TipoDeArticulo tipo,
+        Trazabilidad trazabilidad,
         Guid unidadBaseId,
         Guid impuestoPorDefectoId,
         Guid? categoriaId,
@@ -162,6 +174,7 @@ public sealed class Articulo : EntidadBase, IDeInquilino
             CodigoValido(codigo),
             DescripcionValida(descripcion),
             tipo,
+            TrazabilidadValida(tipo, trazabilidad),
             unidadBaseId,
             impuestoPorDefectoId,
             CategoriaValida(categoriaId),
@@ -171,11 +184,16 @@ public sealed class Articulo : EntidadBase, IDeInquilino
     /// <summary>Cambia lo que se puede cambiar. Ni el código ni la unidad base.</summary>
     /// <param name="descripcion">Lo que sale impreso.</param>
     /// <param name="tipo">Si es mercancía o prestación.</param>
+    /// <param name="trazabilidad">
+    /// Si sus movimientos llevan lote, número de serie o nada. Que no tenga movimientos, si
+    /// cambia, lo ha comprobado ya la aplicación.
+    /// </param>
     /// <param name="impuestoPorDefectoId">Tramo de impuesto, ya validado si ha cambiado.</param>
     /// <param name="categoriaId">Categoría, o nula.</param>
     public void Modificar(
         string descripcion,
         TipoDeArticulo tipo,
+        Trazabilidad trazabilidad,
         Guid impuestoPorDefectoId,
         Guid? categoriaId)
     {
@@ -185,6 +203,7 @@ public sealed class Articulo : EntidadBase, IDeInquilino
                 "Un artículo propone algún impuesto.", nameof(impuestoPorDefectoId));
         }
 
+        Trazabilidad = TrazabilidadValida(tipo, trazabilidad);
         Descripcion = DescripcionValida(descripcion);
         Tipo = tipo;
         ImpuestoPorDefectoId = impuestoPorDefectoId;
@@ -198,6 +217,24 @@ public sealed class Articulo : EntidadBase, IDeInquilino
         ArgumentNullException.ThrowIfNull(codigo);
 
         return codigo.Trim().ToUpperInvariant();
+    }
+
+    // UN SERVICIO NO LLEVA MARCA. No tiene existencias, así que un lote o una serie no tendrían a
+    // qué pegarse. Y un valor fuera del enumerado tampoco pasa: llegaría como un entero que nadie
+    // declaró, y se guardaría como un texto que ningún `CHECK` admite.
+    private static Trazabilidad TrazabilidadValida(TipoDeArticulo tipo, Trazabilidad trazabilidad)
+    {
+        if (!Enum.IsDefined(trazabilidad))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(trazabilidad), trazabilidad, "La trazabilidad no es ninguna de las tres.");
+        }
+
+        return tipo == TipoDeArticulo.Servicio && trazabilidad != Trazabilidad.Ninguna
+            ? throw new ArgumentException(
+                "Un servicio no tiene existencias, así que no lleva lote ni número de serie.",
+                nameof(trazabilidad))
+            : trazabilidad;
     }
 
     private static Guid? CategoriaValida(Guid? categoriaId) =>

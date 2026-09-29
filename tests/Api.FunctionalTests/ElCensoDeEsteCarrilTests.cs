@@ -163,6 +163,15 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.El_tipo_que_condiciona_el_incremento_se_guarda_como_el_nombre_del_enumerado",
         "LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests.Las_cinco_cadenas_escritas_a_mano_son_las_del_modelo",
 
+        // Del ítem 2.9: el cerrojo del artículo, con el trato de los del ejercicio.
+        "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Cada_columna_que_la_sentencia_nombra_existe_en_la_tabla",
+        "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Compara_la_empresa_contra_el_segundo_parametro",
+        "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa",
+        "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.El_valor_que_compara_sale_del_inquilino_y_va_en_su_sitio",
+        "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Es_el_cerrojo_del_UPDATE_y_no_otro",
+        "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Las_cadenas_del_cerrojo_son_las_del_modelo",
+        "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.No_lleva_punto_y_coma_final",
+
         // Del ítem 2.6, y aquí por lo mismo que las de arriba: dos sentencias crudas cuyas
         // cadenas nadie compila, atadas al modelo desde el carril rápido.
         "LaSentenciaDelEjercicioMiraLaEmpresaTests.El_cerrojo_de_Organizacion_compara_la_empresa_contra_el_segundo_parametro",

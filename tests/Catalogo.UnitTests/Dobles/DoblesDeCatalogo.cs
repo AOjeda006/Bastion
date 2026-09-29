@@ -7,6 +7,7 @@ using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.Catalogo.Application;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
+using Bastion.Inventario.Contracts.Movimientos;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Empresas;
@@ -89,13 +90,20 @@ internal sealed class ArticulosEnMemoria : IRepositorioDeArticulos
 {
     internal List<Articulo> Guardados { get; } = [];
 
+    /// <summary>Dónde apunta cada lectura, si el caso quiere saber cuándo se leyó.</summary>
+    internal Bitacora? Bitacora { get; init; }
+
     internal HashSet<string> CodigosOcupados { get; } = new(StringComparer.Ordinal);
 
     public IReadOnlySet<string> CamposOrdenables { get; } =
         new HashSet<string>(StringComparer.Ordinal) { "codigo", "descripcion" };
 
-    public Task<Articulo?> ObtenerAsync(Guid id, CancellationToken cancelacion) =>
-        Task.FromResult(Guardados.Find(uno => uno.Id == id));
+    public Task<Articulo?> ObtenerAsync(Guid id, CancellationToken cancelacion)
+    {
+        Bitacora?.Apunta("leer");
+
+        return Task.FromResult(Guardados.Find(uno => uno.Id == id));
+    }
 
     public Task<bool> ExisteElCodigoAsync(Guid empresaId, string codigo, CancellationToken cancelacion) =>
         Task.FromResult(CodigosOcupados.Contains(codigo));
@@ -226,16 +234,80 @@ internal sealed class CategoriasEnMemoria : IRepositorioDeCategorias
     public void Agregar(Categoria categoria) => Guardadas.Add(categoria);
 }
 
+/// <summary>Lo que ha pasado, en orden, entre varios dobles que la comparten.</summary>
+/// <remarks>
+/// Existe por el cerrojo del artículo (ADR-0048 §4): lo que se prueba ahí no es un resultado sino
+/// un orden —bloquear, leer y preguntar, todo dentro de la transacción—, y un orden solo se ve si
+/// todos los dobles apuntan en la misma lista.
+/// </remarks>
+internal sealed class Bitacora
+{
+    internal List<string> Pasos { get; } = [];
+
+    internal void Apunta(string paso) => Pasos.Add(paso);
+}
+
 /// <summary>Una unidad de trabajo que cuenta las confirmaciones y no guarda nada.</summary>
-internal sealed class ConfirmacionesContadas : IUnidadTrabajoDeCatalogo
+/// <param name="bitacora">Dónde apunta abrir, confirmar y cerrar, si el caso lo quiere saber.</param>
+internal sealed class ConfirmacionesContadas(Bitacora? bitacora = null) : IUnidadTrabajoDeCatalogo
 {
     internal int Veces { get; private set; }
+
+    internal int Transacciones { get; private set; }
 
     public Task<int> ConfirmarAsync(CancellationToken cancelacion)
     {
         Veces++;
+        bitacora?.Apunta("confirmar");
 
         return Task.FromResult(1);
+    }
+
+    public async Task<T> EnTransaccionAsync<T>(
+        Func<CancellationToken, Task<T>> trabajo, CancellationToken cancelacion)
+    {
+        Transacciones++;
+        bitacora?.Apunta("abrir");
+
+        T resultado = await trabajo(cancelacion);
+
+        bitacora?.Apunta("cerrar");
+
+        return resultado;
+    }
+}
+
+/// <summary>El cerrojo del artículo, que apunta cuándo se tomó y sobre qué.</summary>
+/// <param name="bitacora">Dónde apunta el cerrojo, si el caso lo quiere saber.</param>
+/// <param name="existe">Lo que contesta: falso es «no hay tal artículo en esta empresa».</param>
+internal sealed class CerrojoApuntado(Bitacora? bitacora = null, bool existe = true)
+    : ICerrojoDeArticulos
+{
+    internal List<Guid> Bloqueados { get; } = [];
+
+    public Task<bool> TomarEnExclusivaAsync(Guid id, CancellationToken cancelacion)
+    {
+        Bloqueados.Add(id);
+        bitacora?.Apunta("bloquear");
+
+        return Task.FromResult(existe);
+    }
+}
+
+/// <summary>La pregunta a Inventario, fijada en una respuesta, que apunta por quién se preguntó.</summary>
+/// <param name="tiene">Lo que contesta.</param>
+/// <param name="bitacora">Dónde apunta la pregunta, si el caso lo quiere saber.</param>
+internal sealed class MovimientosQueContestan(bool tiene, Bitacora? bitacora = null)
+    : IMovimientosDeArticulos
+{
+    internal List<Guid> Preguntados { get; } = [];
+
+    public Task<bool> TieneMovimientosAsync(Guid articuloId, CancellationToken cancelacion)
+    {
+        Preguntados.Add(articuloId);
+        bitacora?.Apunta("preguntar");
+
+        return Task.FromResult(tiene);
     }
 }
 

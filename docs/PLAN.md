@@ -5457,6 +5457,38 @@ El resto del criterio va como está en el checklist: la migración, el DTO, el c
 de la marca, con el error del servidor en su campo y en los dos idiomas; el segundo cruce mutuo,
 declarado en los tests de arquitectura; y por los puertos, solo `Guid` y primitivos.
 
+#### Lo que el agente decidió al montar la marca (2026-09-29)
+
+Todo es reversible y ninguna decisión toca lo cerrado en A.4. Se anota para no volver a discutirlo.
+
+- **En el alta, la marca se puede omitir, y entonces es `Ninguna`. Al modificar, es obligatoria.**
+  El `PUT` sustituye la ficha entera. Si omitirla quisiera decir `Ninguna`, un artículo por lote
+  que todavía no se ha movido perdería la marca en silencio. Al modificar, omitirla o dejarla vacía
+  lo para el `[Required]` del DTO en el borde, con el `400` de validación, y el caso de uso la
+  rechaza igual si le llega. En el alta, una cadena vacía no es omitirla: se rechaza con
+  `articulo-trazabilidad-no-valida`. Tampoco se admite otra caja (`porLote`) ni el número del
+  enumerado (`1`).
+- **El cerrojo se toma siempre, pero a Inventario solo se le pregunta si la marca cambia.** El
+  cerrojo no cuesta nada, porque el `UPDATE` de la ficha toma el mismo un instante después. La
+  pregunta, en cambio, es otro módulo y otra consulta. Con la marca igual, la ficha se sigue
+  corrigiendo aunque el libro tenga filas: si se preguntara siempre, un artículo con movimientos no
+  podría cambiar de descripción.
+- **El orden es cerrojo, lectura, versión, tipo, marca y pregunta.** Se bloquea antes de leer, así
+  que lo que no se puede bloquear no existe y ni se lee (`404`). Los errores de lo tecleado van
+  antes de la pregunta: un servicio con lote se rechaza sin molestar a Inventario.
+- **Un borrador no es un movimiento.** `IMovimientosDeArticulos` mira el libro, no los ajustes
+  abiertos. Si la marca cambia con un borrador dentro, lo que lo para es la confirmación, que lee
+  la marca con `FOR SHARE` (paso 2).
+- **La unidad de trabajo de Catálogo aprende `EnTransaccionAsync`**, copiada de la de Organización:
+  reutiliza la transacción en curso si la hay y confirma también cuando el resultado es un fallo.
+  Así, cerrojo, lectura y escritura van en una sola transacción.
+- **El carril rápido ve lo interno de `Catalogo.Infrastructure`** (`InternalsVisibleTo`), como
+  Organización e Inventario desde el 2.6, para comparar las cadenas del cerrojo contra el modelo.
+- **La carpeta de los tests es `LotesYSeries`, no `Trazabilidad`**: con ese nombre, el espacio de
+  nombres taparía el enumerado.
+- **Las semillas de integración del 540 al 549 son de `LaMarcaNoCambiaConMovimientosTests`.** Las
+  empresas van del 540 al 542, y los maestros de instalación, del 545 al 547.
+
 #### Las herramientas de la máquina, en este encargo
 
 - **`ctx7` (Context7)**, cuando la versión importe; por ejemplo, el índice parcial y `NULLS NOT
@@ -6819,10 +6851,33 @@ principio de su §2.
   - la figura 7.11-1 de las *GS1 General Specifications*;
   - y `CREATE TABLE` de PostgreSQL 17, por el orden de los `CHECK` y la unicidad no diferible.
 
+**Hecho el paso 1, Catálogo**, en el commit `feat(catalogo)` que sigue a `0eb7a96`. Las decisiones
+que tomó el agente están arriba, en *Lo que el agente decidió al montar la marca*.
+
+- **El dominio.** La marca es el enumerado `Trazabilidad` (`Ninguna`, `PorLote`, `PorNumeroSerie`),
+  y el artículo la guarda. Un servicio no puede llevar lote ni serie: se rechaza con
+  `articulo-servicio-con-trazabilidad`.
+- **La migración `LaTrazabilidadDelArticulo`.** Añade la columna, la rellena con `Ninguna` y
+  después la hace `NOT NULL`, porque con filas un valor por defecto vacío violaría el `CHECK`.
+  Añade dos `CHECK`: `ck_articulos_trazabilidad` y `ck_articulos_servicio_sin_trazabilidad`.
+- **El cambio de marca**, dentro de una transacción. `CerrojoDeArticulos` bloquea la fila con
+  `FOR NO KEY UPDATE`, y después se pregunta por el puerto nuevo de Inventario,
+  `IMovimientosDeArticulos`. Con movimientos, la respuesta es un `409`,
+  `articulo-trazabilidad-con-movimientos`.
+- **Lo declarado.** Es el noveno cruce y la mitad de vuelta del segundo mutuo, la primera puerta
+  que publica Inventario, y una entrada más en la lista cerrada del SQL crudo.
+- **El contrato.** Hay tres `type` nuevos, con su texto en los dos idiomas, y el OpenAPI y el
+  cliente están regenerados.
+- **Los casos:**
+  - `LaMarcaDeTrazabilidadTests`, trece en el carril rápido. Una bitácora de dobles fija el orden:
+    abrir, bloquear, leer, preguntar, confirmar y cerrar.
+  - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests`, siete, sobre las cadenas del cerrojo.
+  - `LaMarcaNoCambiaConMovimientosTests`, tres de integración, con el libro de verdad.
+
 **Lo que queda, por este orden:**
 
-1. **Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo
-   cerrojo y pregunta por el puerto de Inventario.
+1. ~~**Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo
+   cerrojo y pregunta por el puerto de Inventario.~~ Hecho.
 2. **Inventario:**
    - el lote y la serie en la línea, sus tablas y la clave de la existencia y del libro;
    - la marca, leída con `FOR SHARE`;

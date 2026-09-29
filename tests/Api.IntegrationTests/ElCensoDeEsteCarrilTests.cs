@@ -392,6 +392,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaMatrizDeLosPuertosDeEstadoTests.Cada_familia_delegada_tiene_su_matriz_en_el_otro_carril",
         "LaMatrizDeLosPuertosDeEstadoTests.La_matriz_no_esta_vacia_y_ve_los_dos_sentidos_del_cruce",
 
+        // Del ítem 2.9: la marca del artículo pregunta al libro por el segundo cruce mutuo.
+        "LaMarcaNoCambiaConMovimientosTests.Con_un_ajuste_confirmado_la_marca_no_cambia_y_se_contesta_409",
+        "LaMarcaNoCambiaConMovimientosTests.Sin_movimientos_la_marca_cambia_y_se_lee_por_la_api",
+        "LaMarcaNoCambiaConMovimientosTests.Un_borrador_no_es_un_movimiento",
+
         "LaMismaClaveDevuelveElMismoRecursoTests.De_dos_peticiones_simultaneas_con_la_misma_clave_solo_una_hace_el_trabajo",
         "LaMismaClaveDevuelveElMismoRecursoTests.El_recibo_y_el_almacen_llevan_el_mismo_xmin",
         "LaMismaClaveDevuelveElMismoRecursoTests.El_reintento_con_la_misma_clave_devuelve_los_mismos_bytes_y_no_crea_otro",

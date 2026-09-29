@@ -134,7 +134,13 @@ export const en: Diccionario = {
       'articulo-proveedor-tercero-no-valido':
         'That business partner cannot be added as a supplier of this item. Check in the ' +
         'business partners master that the record exists and is marked as a supplier.',
+      'articulo-servicio-con-trazabilidad':
+        'A service has no stock, so it carries neither a batch nor a serial number.',
       'articulo-tipo-no-valido': 'An item can only be of type “Bien” or “Servicio”.',
+      'articulo-trazabilidad-con-movimientos':
+        'This item already has stock movements, so its traceability can no longer change.',
+      'articulo-trazabilidad-no-valida':
+        'An item’s traceability can only be none, by batch or by serial number.',
       'articulo-unidad-no-encontrada':
         'That unit of measure does not exist. Pick one from the unit list.',
       'articulo-unidad-retirada':

@@ -259,6 +259,13 @@ internal static class Inventario
         // bloqueado y si hace de proveedor es Terceros, por `IConsultaDeTerceros`.
         "Catalogo.Application -> Terceros.Contracts",
 
+        // El NOVENO cruce, y la mitad de vuelta del segundo MUTUO (ADR-0048 §7). Inventario ya
+        // miraba a `Catalogo.Contracts` para saber si contra un artículo se mueven existencias;
+        // ahora Catálogo mira a `Inventario.Contracts` para saber si un artículo tiene
+        // movimientos antes de cambiarle la marca de trazabilidad. Los dos `Contracts` siguen sin
+        // verse: por `IMovimientosDeArticulos` cruzan un Guid y un bool.
+        "Catalogo.Application -> Inventario.Contracts",
+
         // Catalogo.Contracts SIGUE sin ninguna arista, y desde el 1.10 eso ya no es una
         // casualidad de un proyecto pequeño: aquí vive `IConsultaDeTarifas`, la mitad de vuelta
         // del primer cruce mutuo, y NO referencia `Terceros.Contracts` —que es donde vive la
@@ -388,6 +395,15 @@ internal static class Inventario
                 "para lo nuevo de lo que únicamente resuelve lo viejo, y ese alguien es " +
                 "este módulo.",
 
+            ["Catalogo.Application -> Bastion.Inventario.Contracts"] =
+                "el noveno, y la mitad de VUELTA del segundo mutuo (ADR-0048 §7). Inventario " +
+                "pregunta a Catálogo si contra un artículo se mueven existencias, y Catálogo " +
+                "pregunta a Inventario si el artículo ya tiene movimientos, porque la marca de " +
+                "trazabilidad no cambia en cuanto el libro tiene una fila: un libro con filas sin " +
+                "lote no se puede leer por lote. Es el primer cruce que sale HACIA Inventario, y " +
+                "la pregunta se hace con la fila del artículo bloqueada, porque la respuesta de un " +
+                "puerto de lectura caduca antes del COMMIT de quien la usa (ADR-0042).",
+
             ["Catalogo.Application -> Bastion.Terceros.Contracts"] =
                 "el cuarto, y la mitad de IDA del primero MUTUO del proyecto. Los tres " +
                 "anteriores apuntaban todos a Organización: un módulo dueño publicaba una " +
@@ -483,6 +499,13 @@ internal static class Inventario
                 "que no publica Organización, y la mitad de vuelta del primer cruce mutuo. No " +
                 "escribe.",
 
+            ["Bastion.Inventario.Contracts.Movimientos.IMovimientosDeArticulos"] =
+                "LECTURA: si el libro tiene alguna fila de un artículo, para quien vaya a cambiar " +
+                "algo que el libro ya no admite que cambie — la marca de trazabilidad del " +
+                "artículo (ADR-0048 §4). Es la PRIMERA puerta que publica Inventario, y la mitad " +
+                "de vuelta del segundo cruce mutuo. Contesta un bool: ni cantidades, ni fechas, " +
+                "ni documentos. No escribe.",
+
             ["Bastion.Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes"] =
                 "LECTURA: en qué estado está un almacén, para quien guarde su identificador — cada " +
                 "movimiento de existencias apunta al suyo para siempre (§7.4). Es el PRIMER puerto " +
@@ -496,7 +519,7 @@ internal static class Inventario
                 "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe.",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IConsultaDeEjercicios"] =
-                "LECTURA, y la puerta con la forma más rara de las doce: la declara Organización, " +
+                "LECTURA, y la puerta con la forma más rara de las trece: la declara Organización, " +
                 "la implementa CADA MÓDULO CON DOCUMENTOS y la llama ESE MISMO MÓDULO. No es una " +
                 "salida —Organización no la implementa— ni una entrada —Organización tampoco la " +
                 "llama—: es una condición que Organización dicta y que cada módulo se aplica a sí " +
@@ -509,7 +532,7 @@ internal static class Inventario
                 "escribe, y no publica ni las fechas ni el año del ejercicio.",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IDocumentosDeUnPeriodo"] =
-                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras once las implementa el módulo " +
+                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras doce las implementa el módulo " +
                 "que las publica y las llaman los demás; ésta la publica Organización y la " +
                 "implementa cada módulo con documentos. Contesta si en un intervalo de fechas " +
                 "queda algún borrador —la pregunta del cierre— o algún documento en el estado " +

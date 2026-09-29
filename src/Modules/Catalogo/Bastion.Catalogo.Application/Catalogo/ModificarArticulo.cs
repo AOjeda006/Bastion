@@ -3,6 +3,7 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Comun;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
+using Bastion.Inventario.Contracts.Movimientos;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Impuestos;
 
@@ -41,22 +42,55 @@ public interface IModificarArticulo
 /// cambiar</b>. No está en el DTO, no está en <c>Articulo.Modificar</c>, y por tanto ninguna
 /// unidad retirada puede impedir que se toque una ficha que la usa.
 /// </para>
+/// <para>
+/// <b>La marca de trazabilidad es lo único que se decide con la fila bloqueada</b> (ADR-0048 §4).
+/// No cambia en cuanto el artículo tiene un movimiento, y quien lo sabe es Inventario. Preguntar
+/// sin bloquear deja una ventana: Inventario confirma el primer ajuste contra la marca vieja justo
+/// después de que conteste «no tiene», y el libro se queda con una fila que la marca nueva no sabe
+/// leer. Así que todo va en una transacción, el cerrojo se toma <b>antes</b> de leer, y la
+/// confirmación de Inventario, que lee la marca con un cerrojo compartido, espera a este
+/// <c>COMMIT</c> o lo hace esperar.
+/// </para>
+/// <para>
+/// El cerrojo se toma aunque la marca no cambie: el <c>UPDATE</c> tomaría el mismo al guardar, así
+/// que no añade espera, y el caso de uso no tiene dos caminos. La pregunta a Inventario, en cambio,
+/// <b>solo si cambia</b>, por lo mismo que el impuesto y la categoría.
+/// </para>
 /// </remarks>
 internal sealed class ModificarArticulo(
     IRepositorioDeArticulos articulos,
     IRepositorioDeCategorias categorias,
     IConsultaDeImpuestos impuestos,
+    ICerrojoDeArticulos cerrojo,
+    IMovimientosDeArticulos movimientos,
     IUnidadTrabajoDeCatalogo unidadTrabajo,
     IVersionesDeCatalogo versiones,
     TimeProvider reloj) : IModificarArticulo
 {
-    public async Task<Resultado<ArticuloDto>> EjecutarAsync(
+    public Task<Resultado<ArticuloDto>> EjecutarAsync(
         Guid id,
         VersionDeRecurso version,
         ModificarArticuloDto peticion,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(peticion);
+
+        return unidadTrabajo.EnTransaccionAsync(
+            enCurso => ModificarAsync(id, version, peticion, enCurso), cancelacion);
+    }
+
+    private async Task<Resultado<ArticuloDto>> ModificarAsync(
+        Guid id,
+        VersionDeRecurso version,
+        ModificarArticuloDto peticion,
+        CancellationToken cancelacion)
+    {
+        // EL CERROJO ANTES QUE LA LECTURA. Leer primero y bloquear despues compararia la marca y la
+        // version de una fila que otra transaccion ya podia haber cambiado.
+        if (!await cerrojo.TomarEnExclusivaAsync(id, cancelacion).ConfigureAwait(false))
+        {
+            return Resultado.Fallo<ArticuloDto>(ErroresDeArticulo.NoEncontrado(id));
+        }
 
         Articulo? articulo = await articulos.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
@@ -73,6 +107,21 @@ internal sealed class ModificarArticulo(
         {
             return Resultado.Fallo<ArticuloDto>(
                 ErroresDeArticulo.TipoNoValido(TiposDeArticulo.Admitidos));
+        }
+
+        Resultado<Trazabilidad> trazabilidad = Trazabilidades.ParaElTipo(
+            tipo.Value, peticion.Trazabilidad);
+
+        if (!trazabilidad.EsCorrecto)
+        {
+            return Resultado.Fallo<ArticuloDto>(trazabilidad.Error!);
+        }
+
+        // SOLO SI CAMBIA, y con la fila ya bloqueada: la respuesta vale hasta el `COMMIT`.
+        if (trazabilidad.Valor != articulo.Trazabilidad
+            && await movimientos.TieneMovimientosAsync(id, cancelacion).ConfigureAwait(false))
+        {
+            return Resultado.Fallo<ArticuloDto>(ErroresDeArticulo.TrazabilidadConMovimientos(id));
         }
 
         // SOLO SI CAMBIA. Ver el comentario de la clase: revalidar lo que no se ha tocado
@@ -105,6 +154,7 @@ internal sealed class ModificarArticulo(
         articulo.Modificar(
             peticion.Descripcion,
             tipo.Value,
+            trazabilidad.Valor,
             peticion.ImpuestoPorDefectoId,
             peticion.CategoriaId);
 

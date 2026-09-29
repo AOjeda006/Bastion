@@ -13262,6 +13262,7 @@
           "codigo",
           "descripcion",
           "tipo",
+          "trazabilidad",
           "unidadBaseId",
           "impuestoPorDefectoId",
           "categoriaId"
@@ -13289,6 +13290,10 @@
           "tipo": {
             "type": "string",
             "description": "Si es mercancía o prestación, como texto: `Bien` o `Servicio`."
+          },
+          "trazabilidad": {
+            "type": "string",
+            "description": "Si sus movimientos llevan lote, número de serie o nada, como texto: `Ninguna`,\n`PorLote` o `PorNumeroSerie`."
           },
           "unidadBaseId": {
             "type": "string",
@@ -13944,6 +13949,10 @@
           "tipo": {
             "type": "string",
             "description": "Si es mercancía o prestación: `Bien` o `Servicio`."
+          },
+          "trazabilidad": {
+            "type": "string",
+            "description": "Si sus movimientos llevan lote, número de serie o nada: `Ninguna`, `PorLote` o\n`PorNumeroSerie`. Un servicio solo admite `Ninguna`."
           },
           "unidadBaseId": {
             "type": "string",
@@ -15213,6 +15222,7 @@
       "ModificarArticuloDto": {
         "required": [
           "descripcion",
+          "trazabilidad",
           "impuestoPorDefectoId"
         ],
         "type": "object",
@@ -15226,6 +15236,10 @@
           "tipo": {
             "type": "string",
             "description": "Si es mercancía o prestación: `Bien` o `Servicio`."
+          },
+          "trazabilidad": {
+            "type": "string",
+            "description": "Si sus movimientos llevan lote, número de serie o nada: `Ninguna`, `PorLote` o\n`PorNumeroSerie`. No cambia si el artículo ya tiene movimientos."
           },
           "impuestoPorDefectoId": {
             "type": "string",

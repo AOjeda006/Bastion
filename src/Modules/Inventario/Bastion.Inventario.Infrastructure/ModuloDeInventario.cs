@@ -6,6 +6,7 @@ using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Movimientos;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Configuraciones;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -80,6 +81,12 @@ public static class ModuloDeInventario
         // se esta confirmando. Contestarlo desde `OrganizacionDbContext` seria otra conexion, y el
         // cerrojo se soltaria antes de que el documento llegara a escribirse.
         servicios.AddScoped<IConsultaDeEjercicios, LosEjerciciosDesdeInventario>();
+
+        // LO QUE ESTE MÓDULO EXPONE A LOS DEMÁS, bajo el tipo de su `Contracts`, y la mitad de
+        // vuelta del segundo cruce mutuo (ADR-0048 §7): Catálogo pregunta por aquí si un artículo
+        // tiene movimientos antes de cambiarle la marca. Sin esta línea todo compila, y lo que
+        // falla es modificar CUALQUIER artículo, porque el caso de uso lo recibe por constructor.
+        servicios.AddScoped<IMovimientosDeArticulos, LosMovimientosDeUnArticulo>();
 
         // LOS DOS EVENTOS DEL DOCUMENTO, con su nombre escrito a mano: el catálogo no lo saca del
         // tipo a propósito, porque renombrar la clase rompería las filas que ya están en la cola.

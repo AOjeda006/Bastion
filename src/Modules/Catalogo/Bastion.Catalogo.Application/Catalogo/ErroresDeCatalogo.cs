@@ -26,6 +26,28 @@ internal static class ErroresDeArticulo
     internal static ErrorDeOperacion TipoNoValido(string valores) => ErrorDeOperacion.Validacion(
         "articulo-tipo-no-valido",
         $"El tipo de artículo tiene que ser uno de estos: {valores}.");
+
+    internal static ErrorDeOperacion TrazabilidadNoValida(string valores) => ErrorDeOperacion.Validacion(
+        "articulo-trazabilidad-no-valida",
+        $"La trazabilidad tiene que ser una de estas: {valores}.");
+
+    internal static ErrorDeOperacion ServicioConTrazabilidad() => ErrorDeOperacion.Validacion(
+        "articulo-servicio-con-trazabilidad",
+        "Un servicio no tiene existencias, así que no lleva lote ni número de serie: su " +
+        "trazabilidad es Ninguna.");
+
+    /// <summary>
+    /// La marca no cambia porque Inventario ya tiene movimientos del artículo.
+    /// </summary>
+    /// <remarks>
+    /// <b>Un <c>409</c> y no un <c>400</c></b>: la petición está bien escrita, y lo que la impide
+    /// es el estado de otro recurso. Un libro con filas sin lote no se puede leer por lote, y el
+    /// libro no se reescribe (R2). Si la marca estaba mal, el camino es otro artículo.
+    /// </remarks>
+    internal static ErrorDeOperacion TrazabilidadConMovimientos(Guid id) => ErrorDeOperacion.Conflicto(
+        "articulo-trazabilidad-con-movimientos",
+        $"El artículo {id} ya tiene movimientos de stock, así que su trazabilidad no se puede " +
+        "cambiar: el libro guardado no se puede releer de otra manera.");
 }
 
 /// <summary>Los desenlaces fallidos que comparten los casos de uso de categoría.</summary>

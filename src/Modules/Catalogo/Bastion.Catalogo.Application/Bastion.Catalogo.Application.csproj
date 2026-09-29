@@ -38,6 +38,16 @@
       `IConsultaDeTerceros`, resuelta en proceso.
     -->
     <ProjectReference Include="../../Terceros/Bastion.Terceros.Contracts/Bastion.Terceros.Contracts.csproj" />
+
+    <!--
+      Contracts de Inventario, y SOLO Contracts. Es el NOVENO cruce del sistema y la mitad de
+      vuelta del segundo MUTUO (ADR-0048 §7): Inventario ya miraba a `Bastion.Catalogo.Contracts`
+      para preguntar si contra un artículo se mueven existencias, y ahora Catálogo mira aquí para
+      preguntar si el artículo tiene movimientos antes de cambiarle la marca de trazabilidad. Un
+      libro con filas sin lote no se puede leer por lote. Los dos `Contracts` siguen sin verse
+      entre sí: por `IMovimientosDeArticulos` cruzan un `Guid` y un `bool`.
+    -->
+    <ProjectReference Include="../../Inventario/Bastion.Inventario.Contracts/Bastion.Inventario.Contracts.csproj" />
   </ItemGroup>
 
   <!--
