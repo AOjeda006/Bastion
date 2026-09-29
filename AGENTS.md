@@ -101,6 +101,10 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
   3. Si por lo que sea la mutación cae sobre trabajo sin guardar, **la primera orden del ciclo es
      `git stash push`**, y la última `git stash pop`.
   4. `git checkout -- <fichero>` no se usa nunca con trabajo sin guardar dentro del fichero.
+  5. **Lo que se restaura copiando se toca con la fecha de ahora** (`os.utime(ruta, None)`). `copy2`
+     y `cp -p` conservan el `mtime`, MSBuild no recompila ese proyecto, y la mutación anterior se
+     queda dentro del `.dll`. Al revés es peor: una mutación copiada con fecha vieja no se compila,
+     sale verde y parece que ningún caso la ve.
   En el ítem 1.4 esto costó ~128 líneas de `ElFiltroNoSeSaltaPorAhiTests.cs` —una apertura declarada
   y dos reglas enteras—, que hubo que rehacer; el reflex de «revertir con git» supone que lo bueno
   ya está a salvo, y durante un ítem largo casi nunca lo está.
@@ -135,6 +139,117 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
   mensaje de ese commit dice qué cambió y por qué. Así pasó con el ADR-0044 §5, corregido en
   `d9dd1e1` porque el cerrojo del recálculo era de todas las empresas. Sin esa línea, el ADR parece
   haber dicho siempre lo que dice ahora.
+
+### El método, aprendido ítem a ítem
+
+Vivía en la memoria local del agente, que no llega a otra máquina ni a una sesión en la nube, y que
+nadie revisa. Pasó aquí el 2026-09-29. Cada regla dice dónde se aprendió, y la historia entera está
+en el PLAN. Lo que solo vale en esta máquina o en su *shell* se quedó fuera.
+
+**Verificar**
+
+- **Se verifica por el efecto, no por el código de salida.** Un `dotnet test --filter` que no
+  encuentra ningún caso sale con 0 (0.1). Antes de escribir «verificado», se dice qué ejerció la
+  orden, y si no ejerció nada, se dice eso. Tras empujar se espera al run y se lee su conclusión,
+  trabajo a trabajo. Un rojo se arregla antes de seguir, no se anota como riesgo. En un run rojo se
+  mira el último paso ejecutado, no el último del YAML.
+- **Toda regla nace con la afirmación que la pondría roja.** Una regla que deja de mirar no se pone
+  roja: se pone verde. Un selector con una letra cambiada (`Microsoft.EntityFramworkCore`, 0.12),
+  una lista vacía o un captador sin cable (1.5) tienen el aspecto de un carril sano. Por eso:
+  - la regla afirma que encontró algo;
+  - toda prohibición va con su pareja, el sitio donde lo prohibido existe de verdad. Si ese
+    contraejemplo sale a cero, la regla no protege nada y se borra (`System.Data`, 0.12);
+  - toda cadena tecleada que no se deriva del proyecto es un selector, y necesita su contraejemplo;
+  - la tanda de mutaciones lleva una que rompe el arnés sin tocar el sujeto;
+  - el enganche del arnés se comparte, no se copia, y su canario va al carril más barato que lo
+    ejerza.
+- **Comparar entero solo vale si las dos fuentes pueden dar la misma lista** (ADR-0024). Si una
+  infradetecta por diseño, la igualdad es falsa antes de escribirla. Hacen falta cinco afirmaciones:
+  - la contención en un sentido;
+  - la simetría que sí se cumple;
+  - las dos listas, no vacías;
+  - que cada entrada obligue a que exista lo que la valida;
+  - la que no es obvia: nada del universo queda sin clasificar.
+- **Un test fija su ambiente, nunca lo hereda.** La cultura, la zona horaria y el fin de línea van al
+  valor de producción; si hay que cambiarlos, en un hilo propio. En el 0.15, `[Range(typeof(decimal),
+  "0.000001", …)]` lanzaba en es-ES y pasaba en en-US, que es el *runner*, y OpenAPI publicó
+  `minimum: 1`. Ante un valor escrito como cadena que convierte un *framework*, se pregunta quién lo
+  parsea y con qué cultura.
+- **Si la CI da rojo y aquí sale verde, se prueba primero el entorno de la CI, empezando por
+  `CI=true`.** En el 0.16, `typescript-eslint` leía `CI` y analizaba el fichero de disco en vez del
+  texto inyectado. Una comprobación que inyecta entrada a una herramienta lleva un canario que la
+  herramienta está obligada a marcar, con la polaridad que pone rojo el fallo.
+- **El guion que decide un paso de la CI se verifica en la plataforma de la CI.** En el 1.12,
+  `logs | grep -q` bajo `pipefail` dio 25 rojos de 30 en Linux, por el SIGPIPE, y verde en Git
+  Bash. Los registros van a un fichero, y el `grep`, sobre el fichero. Lo que puede fallar por azar
+  se repite N veces antes de fiarse.
+- **El paso de la CI no es solo su comando.** Antes de cerrar, también se ejecutan aquí el guion que
+  decide el desenlace y los generadores en modo `--comprobar`. En el 2.3 el run murió en el catálogo
+  de errores con los dos carriles en verde. Si un generador cambia algo, se busca quién consume su
+  salida: un `type` nuevo necesita su texto en todos los diccionarios.
+- **Parado no es ausente, y lo que no necesita la dependencia se ejerce sin ella.** «No se puede en
+  local» se comprueba: en el 1.7 Docker solo estaba apagado, y 334 rojos pasaron a 334 verdes.
+  Antes de empujar un test que no se puede correr, un canario temporal ejerce lo que no la necesita.
+  Y un caso frontera no vive solo detrás de un contenedor: la aritmética baja al carril rápido.
+- **Un `AgregarX()` que promete bastarse se prueba construyendo lo que registra** (1.4). En el
+  carril rápido:
+  - los descriptores que añade (`Skip(antes)`), no vacíos;
+  - `BuildServiceProvider(validateScopes: true)`;
+  - `GetRequiredService` sobre todos.
+
+  Si dos extensiones pueden registrar lo mismo, `TryAdd`.
+- **El SQL que compone el ORM no es el que se escribe** (2.3, ADR-0043). `SqlQueryRaw` y `FromSql`
+  lo meten dentro de un `SELECT … FROM (<sql>)`, así que un `;` final da un `42601`. Una fila de
+  `SqlQueryRaw<Clase>` se lee con la convención de nombres del contexto; un escalar `AS "Value"`,
+  no. Lo que solo corre al arrancar lo ve solo el humo.
+- **El humo local va en su propio proyecto de *compose*.** `segundo-arranque.sh` afirma sobre un
+  primer arranque (`SinRolesDelSistema`) y muta la base para fabricar el estado viejo. Así que:
+  - va sobre una copia del `.env` en el *scratchpad*, con sus puertos añadidos al final;
+  - se levanta con `-p bastion-humo-<item>`;
+  - el `down -v` lleva ese `-p` en la misma orden;
+  - la copia se borra al terminar, porque tiene secretos.
+
+**Mutar y atribuir**
+
+- **La mutación va sobre la línea que decide, y manda lo medido.** En el 2.2, `Math.Min` partió las
+  cuatro combinaciones en dos mitades, porque las simétricas acertaban por casualidad. Las dos
+  listas van por nombre. Un comentario que contradice la medida se reescribe.
+- **Rojo contra rojo no es atribución** (1.5). Con la base roja, se comparan los conjuntos de casos
+  rojos nombrados. Cada mutación añade los suyos, ninguno es de la base, y la base va escrita en el
+  informe.
+- **Un rojo en masa se mide con el caso solo** (2.7). Los 38 rojos de un `WHERE` venían de cortes
+  que habían dejado otros casos, y los 418 de un `stored: false`, del `MigrateAsync` del *fixture*.
+  El número de la mutación va solo junto al caso que la ve por diseño. Una mutación verde en los dos
+  carriles es un hallazgo: se cubre en su commit y se vuelve a medir.
+- **Un caso de carrera para a la primera transacción con el cerrojo tomado y nada escrito** (2.8).
+  Si la primera ya escribió, la segunda espera por otra razón: un `INSERT … ON CONFLICT` espera en el
+  índice único. Así, la mutación que quitaba el cerrojo dio 0 rojos de 432. Se mide con esa
+  mutación, sola.
+
+**Escribir tests**
+
+- **Un flake se reproduce antes de arreglarlo.** Un rojo sobre un commit que no pudo causarlo es un
+  test no determinista, y hay que demostrarlo. N copias del mismo fichero a la vez dan la contención
+  del *runner*. El orden es rojo de control, arreglo, varias rondas en verde y mutar el arreglo.
+- **Lo que pone un efecto se espera; lo que ya estaba antes de montar, no.** `document.title` lo
+  pone un `useEffect` y necesita `waitFor`. `lang` lo pone el arranque del i18n antes del `render`, y
+  envolverlo taparía una regresión. El test dice en cuál de los dos casos está.
+- **Las semillas de integración se reparten entre ficheros.** `Api.IntegrationTests` corre en un
+  solo contenedor, y una semilla repetida pone rojo al que llega segundo, que puede ser un caso
+  viejo. Los números libres se buscan por literal y por cálculo (`320 + (int)tipo`), y el reparto va
+  en la cabecera del fichero.
+- **Un caso nuevo o renombrado entra en `ElCensoDeEsteCarrilTests` en su commit.** El censo corre en
+  el carril rápido aunque cense casos de integración, así que filtrar por la clase del caso no lo
+  ejecuta. Antes de commitear se corre `--filter "FullyQualifiedName~ElCensoDeEsteCarrilTests"`.
+  `828f7b2` quedó rojo por eso, y lo arregló `fcfa928`.
+
+**Informar y publicar**
+
+- **La comprobación no va en la misma orden que la acción irreversible** (1.10). El barrido va en
+  una llamada y se lee; el commit y el push, en la siguiente. Si el PLAN pega el patrón del barrido,
+  el barrido se encuentra a sí mismo: esa línea se excluye y se dice.
+- **El informe cuenta los commits desde el último verificado, sean del ítem o no**, con sus sujetos
+  y sus runs de rama y de `main`. «Se subió el trabajo» no vale.
 
 ## Comandos del proyecto (parte variable)
 

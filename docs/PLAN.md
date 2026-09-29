@@ -6661,11 +6661,38 @@ commit:
 
 - la 1, el run de `main` del 2.8, en `cd221ac`;
 - la 2, las mutaciones 52 a 56 cualificadas y la regla del número, en `27a1718`;
-- la 3, la cabecera del ADR-0044 y la regla de la enmienda, en el commit `docs(adr)` que sigue a
-  `27a1718`. La cabecera lleva el texto que dictó el usuario. Debajo aclara que los dos puntos del
+- la 3, la cabecera del ADR-0044 y la regla de la enmienda, en `c1ada1b`. La cabecera lleva el texto que dictó el usuario. Debajo aclara que los dos puntos del
   ADR-0046 enmiendan el §2 de este, y que el §5 se corrigió por dentro. El §2 y el §5 llevan su nota
   al principio, como los puntos 2 y 3 del ADR-0015;
-- la 4, las memorias que son método, pendiente.
+- la 4, las memorias que son método, en el commit `docs(metodo)` que sigue a `c1ada1b`.
+
+**De las 34 memorias, 24 pasan a AGENTS.md.** Veintitrés van como 20 reglas de una subsección nueva
+de *Reglas de oro propias*, *El método, aprendido ítem a ítem*. La que exige que una regla nazca con
+su afirmación roja junta tres memorias, y la de *parado no es ausente*, dos. La que queda es el
+quinto paso del ciclo de una mutación, el de la fecha nueva al revertir. La subsección tiene una
+regla más, la 21: contar los commits desde el último verificado. Sale del encargo y de una memoria
+que se queda fuera por repetida. **Diez se quedan fuera:**
+
+- **Tres, porque ya estaban.**
+  - *Bastion: estado y flujo de git* está en el §3 de CLAUDE.md y en la regla de la rama. Solo pasa
+    lo de contar los commits, que es la última regla nueva.
+  - *Revertir una mutación no es revertir el ítem* es el ciclo de una mutación.
+  - *Una cifra va con su comando* ya era una regla.
+- **Seis, porque solo valen en esta máquina o en su *shell*:**
+  - *Backticks dentro de python -c*;
+  - *Python en Windows escribe CRLF*;
+  - *Una contraseña que empieza por barra es una ruta*, de Git Bash;
+  - *Parar la tarea no para sus hijos*, del TaskStop de Windows;
+  - *El monitor mudo parece el run lento*, porque aquí no hay `gh`;
+  - *No sondear a mano la API de GitHub*, porque aquí no hay token y el cupo es de 60 peticiones
+    por hora.
+- **Una, porque es un hecho del lenguaje y no método:** *Un array nulo no es una memoria nula*, de
+  C#. La protege `ElFormateadorDeCsvNoLeeLaRedTests`, y el PLAN la cuenta en el 1.11.
+
+**La memoria local se queda con ocho:** las seis de la máquina, la del lenguaje y la del flujo de
+git, recortada al aviso de la firma y al remoto por SSH. Las otras 26 se borran: 24 viven ya aquí y
+dos ya estaban. AGENTS.md se carga al arrancar desde `dbf2664`, así que no hace falta recordarlas por
+fuera.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
