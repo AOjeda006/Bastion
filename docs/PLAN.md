@@ -14358,7 +14358,23 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   `Dispose`. No hay ninguno renombrado. `ElSaldoEsLaSumaDelLibroPorPropiedadTests` no cuenta, porque
   no es nuevo: se amplió, y se puso rojo en la 52, la 54, la 55, la 58, la 59, la 60 y la 65.
 
-  **El run de la rama** sale de empujar este commit, y el de `main`, de empujar el que lo anota.
+  **El 2.8 lo cierra el run 36501020299** sobre `45822cb`, **success al primer intento**, con sus
+  tres jobs —Backend `109191618721`, Frontal `109191618110` y Humo `109193111436`—, los tres con
+  `labels: ['ubuntu-24.04']`, y **67 pasos: 66 en verde y 1 omitido**, que es *Diagnóstico* con su
+  `if: failure()`. Las cifras del *runner*, leídas de las anotaciones del run y no dadas por buenas:
+  **974** y **516** casos con **10 `.trx`** en cada artefacto, las mismas que en esta máquina;
+  **130** operaciones sobre **77** rutas, **123** tipos de error de **129** sitios, modelo y
+  migraciones coincidiendo en todos los módulos y el presupuesto del frontal idéntico al de esta
+  máquina, **414/450** y **603/900** KiB. El segundo arranque del Humo dice lo mismo que antes del
+  ítem: **95** permisos antes y después, `403` con el estado viejo, las **14** particiones con su
+  disparador y `200` con la semilla fuera. La auditoría de las dependencias del frontal da **0**
+  críticas, **0** altas y **3** moderadas —en `@vitest/mocker`, `undici` y `vitest`—, e informa sin
+  decidir (ADR-0045). Es el **único** run de la rama
+  —`GET …/actions/runs?branch=item-2.8-la-valoracion-pmp` da `total_count: 1`—, y ninguno se canceló.
+
+  **El run de `main`** sale de empujar el commit que escribe éste, y va al abrir la rama siguiente,
+  como el del 2.7. Con ese commit, `git rev-list --count main..HEAD` pasa de **9** a **10** antes del
+  avance, y es el último del ítem.
 
 - [ ] **2.9 · Lotes y números de serie, y la marca que los gobierna** — criterio de aceptación:
   `Articulo` gana su trazabilidad (`Ninguna` / `PorLote` / `PorNumeroSerie`) con su migración, su DTO,
