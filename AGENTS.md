@@ -225,6 +225,11 @@ en el PLAN. Lo que solo vale en esta máquina o en su *shell* se quedó fuera.
   Si la primera ya escribió, la segunda espera por otra razón: un `INSERT … ON CONFLICT` espera en el
   índice único. Así, la mutación que quitaba el cerrojo dio 0 rojos de 432. Se mide con esa
   mutación, sola.
+- **La tanda lleva plazo de cuelgue, y un caso no cierra un contexto con algo en vuelo** (addendum
+  del 2.8). Sin plazo, la 73 tuvo la tanda parada tres horas y media: un caso de carrera falló a
+  medias y el `await using` cerró el contexto de la operación que seguía esperando. Con
+  `--blame-hang --blame-hang-timeout 4m`, un cuelgue es un rojo con el nombre del caso. Lo que un
+  caso lanza sin esperar, lo espera quien cierra su contexto (`ElModuloDeInventario.DisposeAsync`).
 
 **Escribir tests**
 
