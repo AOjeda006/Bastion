@@ -3,12 +3,16 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql]
 aplica_a: [ddd, ef-core, sql, inventario, concurrencia, dinero]
 tags: [adr, r2, r3, r6, pmp, valoracion, existencias, cerrojo, adr-0004, adr-0040, adr-0044]
-revisado: 2026-09-28
+revisado: 2026-09-29
 ---
 
 # ADR-0046: El valor es la verdad y el precio medio se deduce, por artículo y almacén y bajo cerrojo
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0047 (§5, último punto).**
+  - El [ADR-0047](adr-0047-ninguna-fecha-anterior-al-ultimo-movimiento-de-su-clave.md) prohíbe
+    confirmar o anular con una fecha anterior al último movimiento de alguna clave del documento.
+    El orden de valoración sigue siendo el de confirmación, y dentro de cada clave coincide con el
+    de la fecha.
 - **Fecha:** 2026-09-28
 - **Sale del ítem 2.8** y de las cinco decisiones que el encargo del 2026-09-28 pidió tomar y
   escribir **antes del código**. Las toma el agente. Cada una lleva aquí su motivo, y en el PLAN la
@@ -218,6 +222,11 @@ restricciones salta primero no estaría definido.
 contesta `422`, y el físico no baja de cero en ningún momento.
 
 ### 5. Se guarda el valor total y se deduce el precio medio
+
+> **Enmendado por el ADR-0047 (2026-09-29), en su último punto.** Un documento ya no puede llevar
+> una fecha anterior al último movimiento de alguna de sus claves. Así, el valor de una fecha pasada
+> es un estado que la clave tuvo de verdad, y el aviso que el último punto le pedía al 2.14 deja de
+> hacer falta para lo que se confirme desde entonces.
 
 **La verdad es `valoraciones.valor`**, un importe de escala 4. El precio medio es `valor /
 cantidad` redondeado a la escala de `PrecioUnitario` (6), y solo existe con cantidad mayor que cero.

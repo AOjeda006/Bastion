@@ -6699,6 +6699,15 @@ git, recortada al aviso de la firma y al remoto por SSH. Las otras 26 se borran:
 dos ya estaban. AGENTS.md se carga al arrancar desde `dbf2664`, así que no hace falta recordarlas por
 fuera.
 
+**El addendum del 2.8, en curso**, en la rama `addendum-2.8-ninguna-fecha-anterior`. El
+**[ADR-0047](adr/adr-0047-ninguna-fecha-anterior-al-ultimo-movimiento-de-su-clave.md)** va antes
+del código, en el commit `docs(adr)` que sigue a `82ef4f5`. Enmienda el último punto del ADR-0046
+§5, y el ADR-0046 lo anota en su *Estado* y al principio de su §5. Las dos afirmaciones técnicas del
+ADR están contrastadas con `ctx7`: que un `CHECK` no ve la fila de antes, con la documentación de
+PostgreSQL (`ddl-constraints.html`), y que Npgsql escribe `DateOnly` como `date`, con la de Npgsql
+(`types/datetime.html`). Falta todo lo demás: el código, los casos, la migración, la propiedad, las
+mutaciones desde la 69, la fila de la R3 y los runs.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
