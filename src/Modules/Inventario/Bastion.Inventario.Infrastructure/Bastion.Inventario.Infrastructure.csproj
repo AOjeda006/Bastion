@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <!--
-    EL ÚNICO CRUCE QUE SALE DE UNA INFRAESTRUCTURA, y sale de aquí porque la flecha va al revés.
+    EL PRIMER CRUCE QUE SALE DE UNA INFRAESTRUCTURA, y sale de aquí porque la flecha va al revés.
     Los otros dos cruces del módulo los hace `Application`: Inventario pregunta y el otro módulo
     contesta. `IDocumentosDeUnPeriodo` es lo contrario —la declara Organización y la implementa
     quien tenga documentos—, y contestarla es leer `inventario.ajustes`: eso son tablas, y las
@@ -25,6 +25,17 @@
   -->
   <ItemGroup>
     <ProjectReference Include="../../Organizacion/Bastion.Organizacion.Contracts/Bastion.Organizacion.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
+    EL SEGUNDO CRUCE QUE SALE DE AQUÍ, y por lo mismo que el puerto de ejercicios: la marca del
+    artículo se lee con `FOR SHARE` en la transacción del documento que se confirma, y esa
+    transacción es de Inventario (ADR-0048 §4 y §7). `IConsultaDeTrazabilidad` la publica Catálogo
+    y la implementa `LaTrazabilidadDesdeInventario`, con SQL crudo sobre `catalogo.articulos`. Es la
+    otra mitad del segundo cruce mutuo: Catálogo pregunta a Inventario por sus movimientos.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../Catalogo/Bastion.Catalogo.Contracts/Bastion.Catalogo.Contracts.csproj" />
   </ItemGroup>
 
   <!--

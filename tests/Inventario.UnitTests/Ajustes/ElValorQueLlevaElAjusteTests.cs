@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.UnitTests.Valoraciones;
@@ -72,6 +73,7 @@ public sealed class ElValorQueLlevaElAjusteTests
                 new LineaValorada(Importe.De(90m, "EUR"), PrecioUnitario.De(2.5m, "EUR")),
                 new LineaValorada(Importe.De(-7.5m, "EUR"), PrecioUnitario.De(3m, "EUR")),
             ],
+            LotesYSeriesResueltos.Ninguno,
             s_momento);
 
         ajuste.Lineas.Select(linea => linea.Valor).ShouldBe([90m, -7.5m]);
@@ -112,7 +114,7 @@ public sealed class ElValorQueLlevaElAjusteTests
             _ => [buena, buena with { PrecioMedio = PrecioUnitario.De(2.5m, "USD") }],
         };
 
-        Should.Throw<ArgumentException>(() => ajuste.Confirmar(1, Confirmado(ajuste), valoracion, s_momento))
+        Should.Throw<ArgumentException>(() => ajuste.Confirmar(1, Confirmado(ajuste), valoracion, LotesYSeriesResueltos.Ninguno, s_momento))
             .ParamName.ShouldBe("valoracion");
 
         ajuste.Estado.ShouldBe(EstadoDeAjuste.Borrador);
@@ -143,13 +145,13 @@ public sealed class ElValorQueLlevaElAjusteTests
         Ajuste previo = UnAjuste(almacenId);
         ConLinea(previo, queBaja, 10m, 1m, 3m);
         IReadOnlyList<MovimientoStock> delPrevio =
-            previo.Confirmar(1, Confirmado(previo), LaValoracion.DesdeCero(previo), s_momento);
+            previo.Confirmar(1, Confirmado(previo), LaValoracion.DesdeCero(previo), LotesYSeriesResueltos.Ninguno, s_momento);
 
         Ajuste original = UnAjuste(almacenId);
         ConLinea(original, queSube, 3m, 12m, 2.50m);
         ConLinea(original, queBaja, -2.5m, 1m, null);
         IReadOnlyList<MovimientoStock> delOriginal =
-            original.Confirmar(2, Confirmado(original), LaValoracion.Tras(delPrevio, original), s_momento);
+            original.Confirmar(2, Confirmado(original), LaValoracion.Tras(delPrevio, original), LotesYSeriesResueltos.Ninguno, s_momento);
 
         delOriginal.Select(fila => fila.Valor.Cantidad).ShouldBe(
             [90m, -7.5m], "36 unidades a 2,50 y 2,5 al precio medio de 3,00, con su signo");
@@ -163,7 +165,11 @@ public sealed class ElValorQueLlevaElAjusteTests
         inverso.Lineas.Select(linea => linea.ValorQueCompensa).ShouldBe([-90m, 7.5m]);
 
         IReadOnlyList<MovimientoStock> delInverso = inverso.Confirmar(
-            3, Confirmado(inverso), LaValoracion.Tras(delPrevio.Concat(delOriginal), inverso), s_momento);
+            3,
+            Confirmado(inverso),
+            LaValoracion.Tras(delPrevio.Concat(delOriginal), inverso),
+            LotesYSeriesResueltos.Ninguno,
+            s_momento);
 
         var claves = delOriginal.Concat(delInverso)
             .GroupBy(fila => fila.ArticuloId)
@@ -202,7 +208,7 @@ public sealed class ElValorQueLlevaElAjusteTests
         original.Lineas.Select(linea => (linea.Numero, linea.CantidadIntroducida))
             .ShouldBe([(1, 4m), (2, 3m), (3, -1m)]);
 
-        original.Confirmar(1, Confirmado(original), LaValoracion.DesdeCero(original), s_momento);
+        original.Confirmar(1, Confirmado(original), LaValoracion.DesdeCero(original), LotesYSeriesResueltos.Ninguno, s_momento);
 
         Ajuste inverso = original.CrearInverso(s_dia.AddDays(1), "Me equivoqué", s_momento);
 
@@ -244,6 +250,8 @@ public sealed class ElValorQueLlevaElAjusteTests
             Guid.CreateVersion7(),
             Guid.CreateVersion7(),
             Guid.CreateVersion7(),
+            null,
+            null,
             (decimal)cantidad,
             Guid.CreateVersion7(),
             1m,

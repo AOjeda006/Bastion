@@ -303,6 +303,33 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "no alcanza al SQL crudo, asi que compara la empresa ella misma con el valor de "
             + "IInquilinoActual. Vive en un fichero propio, como CerrojoDeEjercicios",
 
+        // Y SU PAREJA, al otro lado del segundo cruce mutuo: la marca, leida por Inventario con el
+        // criterio del ejercicio (ADR-0048 §4). Es la unica de la lista, con la del ejercicio, que
+        // lee el esquema de OTRO modulo, y por lo mismo: el cerrojo tiene que vivir en la
+        // transaccion del documento que se confirma. Compara la empresa ella misma, y lo comprueba
+        // LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Repositorios/" +
+         "LaTrazabilidadDesdeInventario.cs usa .SqlQuery"] =
+            "trae la marca de trazabilidad de los articulos de un documento: sin cerrojo al "
+            + "abrir, y con la fila del articulo bloqueada en COMPARTIDO hasta el COMMIT al "
+            + "confirmar, sobre la transaccion de Inventario, que es la que confirma. Lee "
+            + "`catalogo.articulos`, que es `IDeInquilino`, y COMPRUEBA LA EMPRESA ELLA MISMA con "
+            + "el valor de IInquilinoActual. Devuelve el identificador y la marca, ni un dato mas "
+            + "de la ficha. Que la tabla y la columna sigan siendo las del mapeo de verdad lo "
+            + "comprueba LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests",
+
+        // LA DEL LOTE Y LA SERIE, en el esquema del propio modulo y con el criterio de las del
+        // 2.7: EF Core no traduce un `INSERT ... ON CONFLICT DO NOTHING`, y es lo unico que dos
+        // primeras entradas simultaneas del mismo lote no pueden duplicar. Leer y crear por el ORM
+        // deja la ventana entre la lectura y el alta (ADR-0048 §2). No lee para decidir: la lectura
+        // que sigue va por el ORM, con el filtro puesto.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/LotesYSeries/" +
+         "LosLotesYLasSeries.cs usa .ExecuteSql"] =
+            "crea, si faltan, la fila de cada lote y de cada numero de serie que nombra el "
+            + "documento, en orden de articulo y codigo y dentro de la transaccion que confirma, "
+            + "sin tocar las que ya estaban. Escribe la empresa con el valor de IInquilinoActual, "
+            + "que es parte de la clave unica contra la que choca",
+
         // LAS DOS DEL ITEM 2.8, en el mismo esquema que las del 2.7 y con su mismo criterio, salvo
         // en una cosa, que es la que las trae aparte: ESTAS SI LEEN PARA DECIDIR.
         //

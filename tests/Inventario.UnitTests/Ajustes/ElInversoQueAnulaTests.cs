@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.UnitTests.Valoraciones;
 using Shouldly;
@@ -143,7 +144,7 @@ public sealed class ElInversoQueAnulaTests
 
         Ajuste inverso = original.CrearInverso(s_diaDeLaAnulacion, "Me equivoqué", s_momento);
         IReadOnlyList<MovimientoStock> delInverso =
-            inverso.Confirmar(NumeroDelInverso, Confirmado(inverso), LaValoracion.DesdeCero(inverso), s_momento);
+            inverso.Confirmar(NumeroDelInverso, Confirmado(inverso), LaValoracion.DesdeCero(inverso), LotesYSeriesResueltos.Ninguno, s_momento);
 
         var grupos = delOriginal.Concat(delInverso)
             .GroupBy(movimiento => new
@@ -194,7 +195,7 @@ public sealed class ElInversoQueAnulaTests
         (Ajuste original, _) = UnAjusteConfirmadoDeDosLineas();
 
         Ajuste inverso = original.CrearInverso(s_diaDeLaAnulacion, "Me equivoqué", s_momento);
-        inverso.Confirmar(NumeroDelInverso, Confirmado(inverso), LaValoracion.DesdeCero(inverso), s_momento);
+        inverso.Confirmar(NumeroDelInverso, Confirmado(inverso), LaValoracion.DesdeCero(inverso), LotesYSeriesResueltos.Ninguno, s_momento);
 
         original.Estado.ShouldBe(EstadoDeAjuste.Confirmado);
         original.EventosPendientes.Count.ShouldBe(
@@ -214,7 +215,7 @@ public sealed class ElInversoQueAnulaTests
         (Ajuste original, _) = UnAjusteConfirmadoDeDosLineas();
 
         Ajuste inverso = original.CrearInverso(s_diaDeLaAnulacion, "Me equivoqué", s_momento);
-        inverso.Confirmar(NumeroDelInverso, Confirmado(inverso), LaValoracion.DesdeCero(inverso), s_momento);
+        inverso.Confirmar(NumeroDelInverso, Confirmado(inverso), LaValoracion.DesdeCero(inverso), LotesYSeriesResueltos.Ninguno, s_momento);
         original.Anular(inverso, Anulado(original));
 
         Should.Throw<InvalidOperationException>(
@@ -236,7 +237,7 @@ public sealed class ElInversoQueAnulaTests
         (Ajuste ajeno, _) = UnAjusteConfirmadoDeDosLineas();
 
         Ajuste inversoDelAjeno = ajeno.CrearInverso(s_diaDeLaAnulacion, "Me equivoqué", s_momento);
-        inversoDelAjeno.Confirmar(NumeroDelInverso, Confirmado(inversoDelAjeno), LaValoracion.DesdeCero(inversoDelAjeno), s_momento);
+        inversoDelAjeno.Confirmar(NumeroDelInverso, Confirmado(inversoDelAjeno), LaValoracion.DesdeCero(inversoDelAjeno), LotesYSeriesResueltos.Ninguno, s_momento);
 
         Should.Throw<InvalidOperationException>(() => mio.Anular(inversoDelAjeno, Anulado(mio)));
 
@@ -302,7 +303,7 @@ public sealed class ElInversoQueAnulaTests
         ConLinea(ajuste, cantidad: 3m, factor: 12m);
         ConLinea(ajuste, cantidad: -2.5m, factor: 1m);
 
-        return (ajuste, ajuste.Confirmar(NumeroDelOriginal, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), s_momento));
+        return (ajuste, ajuste.Confirmar(NumeroDelOriginal, Confirmado(ajuste), LaValoracion.DesdeCero(ajuste), LotesYSeriesResueltos.Ninguno, s_momento));
     }
 
     private static void ConLinea(Ajuste ajuste, decimal cantidad, decimal factor) =>

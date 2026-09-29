@@ -32,6 +32,8 @@ internal static class Mapeos
         almacenSeOfreceParaLoNuevo,
         movimiento.UbicacionId,
         movimiento.ArticuloId,
+        movimiento.LoteId,
+        movimiento.SerieId,
         movimiento.CantidadEnUnidadBase,
         movimiento.CantidadIntroducida,
         movimiento.UnidadIntroducidaId,

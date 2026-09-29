@@ -49,13 +49,23 @@ public sealed record AbrirAjusteDto(
 /// precio medio de su artículo en el almacén; y sin precio medio, porque no hay existencias,
 /// confirmar contesta <c>ajuste-entrada-sin-coste-ni-precio-medio</c>.
 /// </param>
+/// <param name="CodigoDeLote">
+/// El lote, si el artículo va por lote: de 1 a 20 caracteres del conjunto 82 de GS1, con la caja
+/// que tenga. Los espacios de los extremos se recortan. Si no, <c>ajuste-lote-no-valido</c>.
+/// </param>
+/// <param name="NumeroDeSerie">
+/// El número de serie, si el artículo va por serie, con la misma forma que el lote. La línea mueve
+/// entonces una unidad base, y el número no se repite en el documento.
+/// </param>
 public sealed record LineaDeAjusteDto(
     Guid UbicacionId,
     Guid ArticuloId,
     decimal CantidadIntroducida,
     Guid UnidadIntroducidaId,
     decimal FactorAUnidadBase,
-    decimal? CosteUnitario);
+    decimal? CosteUnitario,
+    string? CodigoDeLote = null,
+    string? NumeroDeSerie = null);
 
 /// <summary>Un ajuste, como se enseña.</summary>
 /// <remarks>
@@ -125,6 +135,8 @@ public sealed record AnulacionDto(AjusteDto Original, AjusteDto Inverso);
 /// <param name="AlmacenSeOfreceParaLoNuevo">Si hoy se admitirían movimientos nuevos contra él.</param>
 /// <param name="UbicacionId">Hueco del almacén.</param>
 /// <param name="ArticuloId">Artículo.</param>
+/// <param name="LoteId">El lote que movió, o nada.</param>
+/// <param name="SerieId">El número de serie que movió, o nada. Nunca con lote.</param>
 /// <param name="CantidadEnUnidadBase">Cantidad con signo, en la unidad en la que se suma.</param>
 /// <param name="CantidadIntroducida">Cantidad tal como se escribió.</param>
 /// <param name="UnidadIntroducidaId">Unidad en la que se escribió.</param>
@@ -147,6 +159,8 @@ public sealed record MovimientoDto(
     bool AlmacenSeOfreceParaLoNuevo,
     Guid UbicacionId,
     Guid ArticuloId,
+    Guid? LoteId,
+    Guid? SerieId,
     decimal CantidadEnUnidadBase,
     decimal CantidadIntroducida,
     Guid UnidadIntroducidaId,

@@ -6,6 +6,7 @@ using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Existencias;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 using Microsoft.EntityFrameworkCore;
@@ -78,6 +79,15 @@ public sealed class InventarioDbContext(
     public DbSet<Valoracion> Valoraciones => Set<Valoracion>();
 
     /// <summary>
+    /// Los lotes de cada artículo (ADR-0048 §2). Solo se leen por aquí: los crea la sentencia que
+    /// resuelve los códigos al confirmar.
+    /// </summary>
+    public DbSet<Lote> Lotes => Set<Lote>();
+
+    /// <summary>Los números de serie de cada artículo, como los lotes (ADR-0048 §2).</summary>
+    public DbSet<NumeroDeSerie> NumerosDeSerie => Set<NumeroDeSerie>();
+
+    /// <summary>
     /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive el
     /// historial de migraciones y qué convención de nombres se aplica.
     /// </summary>
@@ -137,6 +147,13 @@ public sealed class InventarioDbContext(
         modelBuilder.Entity<Valoracion>().HasQueryFilter(
             "Inquilinato",
             valoracion => EmpresaDelFiltro == null || valoracion.EmpresaId == EmpresaDelFiltro);
+
+        // Un lote es de una empresa aunque el código se repita en otra: la empresa va en su clave.
+        modelBuilder.Entity<Lote>().HasQueryFilter(
+            "Inquilinato", lote => EmpresaDelFiltro == null || lote.EmpresaId == EmpresaDelFiltro);
+
+        modelBuilder.Entity<NumeroDeSerie>().HasQueryFilter(
+            "Inquilinato", serie => EmpresaDelFiltro == null || serie.EmpresaId == EmpresaDelFiltro);
 
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
             "Inquilinato", registro => EmpresaDelFiltro == null || registro.EmpresaId == EmpresaDelFiltro);

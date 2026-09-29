@@ -1,4 +1,5 @@
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 
@@ -45,6 +46,31 @@ public interface IRepositorioDeAjustes
     Task<IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado>> BloquearLasValoracionesAsync(
         IReadOnlyCollection<ClaveDeValoracion> claves,
         string divisa,
+        CancellationToken cancelacion);
+
+    /// <summary>
+    /// La fila de cada lote y de cada serie, creada si es la primera vez que se nombra
+    /// (ADR-0048 §2).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Crea con <c>INSERT … ON CONFLICT DO NOTHING</c> y lee después</b>, dentro de la transacción
+    /// que confirma. Dos primeras entradas del mismo lote a la vez se ordenan solas en el índice
+    /// único: la segunda espera y, cuando la primera confirma, su lectura ve la fila. Si el documento
+    /// no llega a confirmarse, el <c>ROLLBACK</c> se lleva los lotes que creó.
+    /// </para>
+    /// <para>
+    /// <b>Va después de la valoración y antes del documento</b>, en el orden de los cerrojos del
+    /// ADR-0048 §4, y los crea en el orden en que llegan, que es el de artículo y código.
+    /// </para>
+    /// </remarks>
+    /// <param name="lotes">Los lotes del documento, sin repetir y en orden.</param>
+    /// <param name="series">Las series del documento, sin repetir y en orden.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>La fila de cada uno.</returns>
+    Task<LotesYSeriesResueltos> ResolverLotesYSeriesAsync(
+        IReadOnlyList<CodigoDeUnArticulo> lotes,
+        IReadOnlyList<CodigoDeUnArticulo> series,
         CancellationToken cancelacion);
 
     /// <summary>

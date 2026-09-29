@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Documentos;
 using Bastion.BuildingBlocks.Domain.Eventos;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 
@@ -209,6 +210,13 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     }
 
     /// <summary>Añade una línea. Solo en borrador.</summary>
+    /// <remarks>
+    /// <b>Una serie sale una sola vez por documento</b> (ADR-0048 §3), aunque sea en otra ubicación
+    /// y con el signo contrario. El índice que la mantiene en un solo sitio se comprueba fila a fila,
+    /// así que un documento que la sacara de una estantería y la metiera en otra chocaría o no según
+    /// el orden en que el motor recorriera sus filas. Moverla de sitio es la reubicación, que es otro
+    /// documento.
+    /// </remarks>
     /// <param name="ubicacionId">Hueco del almacén.</param>
     /// <param name="articuloId">Artículo que se mueve.</param>
     /// <param name="cantidadIntroducida">Cantidad con signo, tal como se escribió.</param>
@@ -218,6 +226,8 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// Coste de una unidad base, en <see cref="Divisa"/>, o <c>null</c>. Solo en una línea que sube.
     /// </param>
     /// <param name="momento">Ahora.</param>
+    /// <param name="codigoDeLote">El código del lote, o <c>null</c>.</param>
+    /// <param name="numeroDeSerie">El número de serie, o <c>null</c>. Nunca con lote.</param>
     public void AnadirLinea(
         Guid ubicacionId,
         Guid articuloId,
@@ -225,7 +235,9 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
         decimal? costeUnitario,
-        DateTimeOffset momento)
+        DateTimeOffset momento,
+        string? codigoDeLote = null,
+        string? numeroDeSerie = null)
     {
         if (Estado != EstadoDeAjuste.Borrador)
         {
@@ -234,7 +246,7 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 "están escritas y el libro es de solo añadido (R2, R3).");
         }
 
-        _lineas.Add(LineaDeAjuste.Crear(
+        var nueva = LineaDeAjuste.Crear(
             Id,
             _lineas.Count + 1,
             ubicacionId,
@@ -243,8 +255,34 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
             unidadIntroducidaId,
             factorAUnidadBase,
             costeUnitario,
-            momento));
+            codigoDeLote,
+            numeroDeSerie,
+            momento);
+
+        if (nueva.NumeroDeSerie is { } serie
+            && _lineas.Any(linea => linea.ArticuloId == articuloId
+                && string.Equals(linea.NumeroDeSerie, serie, StringComparison.Ordinal)))
+        {
+            throw new InvalidOperationException(
+                $"El número de serie «{serie}» ya está en otra línea de este documento: una serie " +
+                "sale una sola vez por documento, y moverla de sitio es la reubicación (ADR-0048 §3).");
+        }
+
+        _lineas.Add(nueva);
     }
+
+    /// <summary>Los lotes que nombran las líneas, sin repetir y en el orden en que se crean.</summary>
+    /// <remarks>
+    /// <b>El orden es el del cerrojo</b>: por artículo y por código, byte a byte. La sentencia que
+    /// crea las filas los inserta en ese orden, y dos confirmaciones que nombran los mismos lotes
+    /// nuevos esperan una por la otra en vez de bloquearse en cruz (ADR-0048 §2).
+    /// </remarks>
+    /// <returns>Cada lote, con su artículo.</returns>
+    public IReadOnlyList<CodigoDeUnArticulo> LotesQueNombra() => Nombrados(linea => linea.CodigoDeLote);
+
+    /// <summary>Las series que nombran las líneas, sin repetir y en el orden en que se crean.</summary>
+    /// <returns>Cada serie, con su artículo.</returns>
+    public IReadOnlyList<CodigoDeUnArticulo> SeriesQueNombra() => Nombrados(linea => linea.NumeroDeSerie);
 
     /// <summary>
     /// Confirma el ajuste y devuelve las filas del libro que hay que escribir <b>en la misma
@@ -285,15 +323,20 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// <param name="numero">El correlativo que la serie acaba de dar, en esta misma transacción.</param>
     /// <param name="evento">Lo que se cuenta de la confirmación.</param>
     /// <param name="valoracion">Una línea valorada por cada línea del documento, en su orden.</param>
+    /// <param name="resueltos">
+    /// La fila de cada lote y de cada serie que nombra el documento (ADR-0048 §2).
+    /// </param>
     /// <param name="momento">Ahora.</param>
     /// <returns>Una fila del libro por línea del documento.</returns>
     public IReadOnlyList<MovimientoStock> Confirmar(
         long numero,
         EventoDeIntegracion evento,
         IReadOnlyList<LineaValorada> valoracion,
+        LotesYSeriesResueltos resueltos,
         DateTimeOffset momento)
     {
         ArgumentNullException.ThrowIfNull(valoracion);
+        ArgumentNullException.ThrowIfNull(resueltos);
 
         if (_lineas.Count == 0)
         {
@@ -325,6 +368,16 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 nameof(valoracion));
         }
 
+        // Y POR LO MISMO: un código sin su fila no deja confirmar, ni a medias.
+        if (LotesQueNombra().Any(lote => !resueltos.Lotes.ContainsKey(lote))
+            || SeriesQueNombra().Any(serie => !resueltos.Series.ContainsKey(serie)))
+        {
+            throw new ArgumentException(
+                "El documento nombra lotes o series que no llegan resueltos: cada código tiene que " +
+                "traer su fila, que la crea o la encuentra la confirmación (ADR-0048 §2).",
+                nameof(resueltos));
+        }
+
         Transitar(EstadoDeAjuste.Borrador, EstadoDeAjuste.Confirmado, evento);
 
         // DESPUÉS DE TRANSITAR, y ese orden es el que hace que confirmar dos veces no repinte el
@@ -348,6 +401,8 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 AlmacenId,
                 linea.UbicacionId,
                 linea.ArticuloId,
+                linea.CodigoDeLote is { } lote ? resueltos.Lotes[new(linea.ArticuloId, lote)] : null,
+                linea.NumeroDeSerie is { } serie ? resueltos.Series[new(linea.ArticuloId, serie)] : null,
                 linea.CantidadIntroducida,
                 linea.UnidadIntroducidaId,
                 linea.FactorAUnidadBase,
@@ -477,4 +532,15 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
 
         Transitar(EstadoDeAjuste.Confirmado, EstadoDeAjuste.Anulado, evento);
     }
+
+    private List<CodigoDeUnArticulo> Nombrados(Func<LineaDeAjuste, string?> codigoDe) =>
+    [
+        .. _lineas
+            .Select(linea => (linea.ArticuloId, Codigo: codigoDe(linea)))
+            .Where(nombrado => nombrado.Codigo is not null)
+            .Select(nombrado => new CodigoDeUnArticulo(nombrado.ArticuloId, nombrado.Codigo!))
+            .Distinct()
+            .OrderBy(nombrado => nombrado.ArticuloId)
+            .ThenBy(nombrado => nombrado.Codigo, StringComparer.Ordinal),
+    ];
 }

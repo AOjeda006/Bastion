@@ -303,10 +303,10 @@ internal static class Inventario
         "Identidad.Infrastructure -> BuildingBlocks.Infrastructure",
         "Identidad.Infrastructure -> Identidad.Application",
 
-        // Las TRECE de Inventario: diez hacia dentro de su módulo o hacia el bloque común, y TRES
-        // que cruzan. Todas entran por el `Contracts` del dueño, que es la única puerta (§4,
+        // Las CATORCE de Inventario: diez hacia dentro de su módulo o hacia el bloque común, y
+        // CUATRO que cruzan. Todas entran por el `Contracts` del dueño, que es la única puerta (§4,
         // frontera 1), y ninguna toca un `Domain` ajeno. Dos salen del `Application` —Inventario
-        // pregunta— y la tercera del `Infrastructure` —Inventario CONTESTA—; está justificada
+        // pregunta— y dos del `Infrastructure` —Inventario CONTESTA—; cada una está justificada
         // donde se escribe.
         //
         // Y son exactamente las que el libro necesita para no tener claves ajenas. `almacen_id`,
@@ -334,6 +334,13 @@ internal static class Inventario
         // se toca desde esta capa. Está escrita aquí y no heredada de `Application` a propósito:
         // el permiso vive donde se ejerce.
         "Inventario.Infrastructure -> Organizacion.Contracts",
+
+        // La CATORCE, y la segunda que cruza desde una `Infrastructure`, con la forma del puerto
+        // del ejercicio (ADR-0048 §4 y §7). `IConsultaDeTrazabilidad` la declara Catálogo y la
+        // contesta Inventario, porque la marca se lee con `FOR SHARE` en la transacción del
+        // documento que se confirma, y esa transacción es de Inventario. Con esta, el segundo
+        // cruce mutuo queda completo: Catálogo pregunta a Inventario por sus movimientos.
+        "Inventario.Infrastructure -> Catalogo.Contracts",
 
         "Organizacion.Application -> BuildingBlocks.Application",
         "Organizacion.Application -> Organizacion.Contracts",
@@ -441,6 +448,17 @@ internal static class Inventario
                 "mismo puerto. Lo que el bloqueo reserva es la privacidad de una persona, no la " +
                 "existencia de una estantería.",
 
+            ["Inventario.Infrastructure -> Bastion.Catalogo.Contracts"] =
+                "el DÉCIMO, y el segundo que sale de una `Infrastructure`, con la forma del octavo " +
+                "leído al revés: Catálogo publica `IConsultaDeTrazabilidad`, e Inventario la " +
+                "implementa y la llama. La marca del artículo decide qué líneas admite un " +
+                "documento, y la lectura que decide tiene que dejar la fila del artículo bloqueada " +
+                "en compartido hasta el COMMIT del documento (ADR-0048 §4). Un cerrojo tomado por " +
+                "la conexión de Catálogo se soltaría antes. Por el puerto cruzan Guid y un " +
+                "enumerado propio del Contracts, `MarcaDeTrazabilidad`, y ni un tipo del dominio " +
+                "de Catálogo; la sentencia es SQL crudo sobre `catalogo.articulos`, con la tabla y " +
+                "la columna comparadas contra el modelo.",
+
             ["Inventario.Infrastructure -> Bastion.Organizacion.Contracts"] =
                 "el OCTAVO, y el primero en el que Inventario no pregunta sino que CONTESTA. Los " +
                 "siete anteriores salen todos de un `Application`: un módulo necesita un dato " +
@@ -493,6 +511,14 @@ internal static class Inventario
                 "una tercera pregunta y no una tercera respuesta, y un `Servicio` contesta " +
                 "`NoSeAlmacena`. No escribe, y no publica ni el código ni la descripción.",
 
+            ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDeTrazabilidad"] =
+                "LECTURA, con la forma de `IConsultaDeEjercicios`: la declara Catálogo, la " +
+                "implementa Inventario y la llama Inventario. Contesta la marca de trazabilidad de " +
+                "cada artículo de un documento —`Ninguna`, `PorLote` o `PorNumeroSerie`, con un " +
+                "enumerado propio y sin valor cero—, sin cerrojo al abrir y con la fila bloqueada " +
+                "en compartido hasta el `COMMIT` al confirmar (ADR-0048 §4). No escribe, y no " +
+                "publica ni un dato de la ficha.",
+
             ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDeTarifas"] =
                 "LECTURA: en qué estado está una tarifa para una fecha, para quien guarde su " +
                 "identificador — la tarifa asignada del tercero (§7.2). Es la PRIMERA puerta " +
@@ -519,7 +545,8 @@ internal static class Inventario
                 "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe.",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IConsultaDeEjercicios"] =
-                "LECTURA, y la puerta con la forma más rara de las trece: la declara Organización, " +
+                "LECTURA, y la primera puerta con la forma más rara de todas, que desde el 2.9 " +
+                "comparte `IConsultaDeTrazabilidad`: la declara Organización, " +
                 "la implementa CADA MÓDULO CON DOCUMENTOS y la llama ESE MISMO MÓDULO. No es una " +
                 "salida —Organización no la implementa— ni una entrada —Organización tampoco la " +
                 "llama—: es una condición que Organización dicta y que cada módulo se aplica a sí " +
@@ -532,7 +559,7 @@ internal static class Inventario
                 "escribe, y no publica ni las fechas ni el año del ejercicio.",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IDocumentosDeUnPeriodo"] =
-                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras doce las implementa el módulo " +
+                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras trece las implementa el módulo " +
                 "que las publica y las llaman los demás; ésta la publica Organización y la " +
                 "implementa cada módulo con documentos. Contesta si en un intervalo de fechas " +
                 "queda algún borrador —la pregunta del cierre— o algún documento en el estado " +
@@ -763,14 +790,14 @@ internal static class Inventario
                 "la sentencia que anota el libro la escribe con el valor de IInquilinoActual, y " +
                 "antes comprueba que cada fila del libro sea de esa misma empresa."),
 
-            ["Existencia.LoteId"] = new(
+            ["Existencia.SerieId"] = new(
+                "NumeroDeSerie",
                 "",
-                "",
-                "NO APUNTA TODAVÍA A NADA, y por eso va vacío en las dos casillas: el lote lo trae " +
-                "el ítem 2.9, con su tabla y su tipo, y vivirá en este mismo módulo —con clave " +
-                "ajena de verdad, sin puerto que declarar—. Hasta entonces es siempre nulo: lo " +
-                "escriben nulo la sentencia del libro y la migración, porque el libro todavía no " +
-                "lleva lote. Declararlo apuntando a «Lote» sería nombrar un tipo que no existe."),
+                "el nombre engaña: por nombre casaría con `Serie`, que es la serie de NUMERACIÓN de " +
+                "Organización, y esto es el número de serie de una unidad, que vive en este mismo " +
+                "módulo (ADR-0048 §2). Por eso se declara, y con el puerto vacío: es clave ajena " +
+                "de verdad, dentro del esquema. El lote no necesita línea: `LoteId` casa con " +
+                "`Lote`, que es de aquí."),
 
             ["Existencia.UbicacionId"] = new(
                 "Ubicacion",
@@ -807,6 +834,22 @@ internal static class Inventario
                 "no casa con el del tipo. Hermano del UnidadBaseId del artículo, y por el mismo " +
                 "puerto: se valida por el ESTADO, porque una unidad retirada sigue explicando las " +
                 "líneas viejas y no se ofrece para una nueva (ADR-0023)."),
+
+            // LAS DEL ÍTEM 2.9. El lote y la serie los crea la sentencia que resuelve los códigos al
+            // confirmar, con la empresa del inquilino y el artículo de la línea que los nombra.
+            ["Lote.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeTrazabilidad",
+                "el lote se crea al confirmar, y solo para un artículo cuya marca, leída con " +
+                "`FOR SHARE` en la misma transacción, dice que va por lote (ADR-0048 §4). Esa " +
+                "lectura es la pregunta: un artículo que no volviera en ella es un defecto y la " +
+                "confirmación revienta antes de crear nada."),
+
+            ["Lote.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del de la existencia: la sentencia que resuelve los códigos lo escribe con " +
+                "el valor de IInquilinoActual, nunca con uno que traiga quien llama."),
 
             ["LineaTarifa.EmpresaId"] = new(
                 "Empresa",
@@ -859,6 +902,13 @@ internal static class Inventario
                 "fila, y sin esta columna una consulta que empezara por el libro sumaría las " +
                 "existencias de dos empresas de la misma instalación en un mismo saldo."),
 
+            ["MovimientoStock.SerieId"] = new(
+                "NumeroDeSerie",
+                "",
+                "gemelo del de la existencia, y engaña igual: no es la serie de numeración del " +
+                "documento —esa la lleva el ajuste—, sino el número de serie de la unidad que se " +
+                "mueve, con clave ajena dentro del esquema."),
+
             ["MovimientoStock.UbicacionId"] = new(
                 "Ubicacion",
                 Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
@@ -871,6 +921,17 @@ internal static class Inventario
                 "pasó a la unidad base, precisamente para no tener que volver a preguntar: una " +
                 "conversión se puede corregir mañana y la cantidad de ayer no puede cambiar de " +
                 "valor por eso."),
+
+            ["NumeroDeSerie.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeTrazabilidad",
+                "gemelo del del lote, y por la misma lectura: solo se crea para un artículo cuya " +
+                "marca dice que va por número de serie."),
+
+            ["NumeroDeSerie.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del del lote."),
 
             ["Tarifa.DivisaId"] = new(
                 "Divisa",

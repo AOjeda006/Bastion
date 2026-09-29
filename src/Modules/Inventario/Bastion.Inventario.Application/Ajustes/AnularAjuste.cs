@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Organizacion.Contracts.Ejercicios;
@@ -191,6 +192,13 @@ internal sealed class AnularAjuste(
 
         IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, inverso.Divisa, inverso.FechaDeOperacion);
 
+        // LOS LOTES Y LAS SERIES DEL ORIGINAL, que el inverso copia (ADR-0048 §5): resuelven a las
+        // mismas filas, porque la clave es la misma. Y la marca no se lee: el original tiene
+        // movimientos, así que su marca ya no puede cambiar.
+        LotesYSeriesResueltos resueltos = await ajustes
+            .ResolverLotesYSeriesAsync(inverso.LotesQueNombra(), inverso.SeriesQueNombra(), cancelacion)
+            .ConfigureAwait(false);
+
         var confirmado = new AjusteConfirmado(
             inverso.Id,
             inverso.EmpresaId,
@@ -199,7 +207,7 @@ internal sealed class AnularAjuste(
             inverso.Lineas.Count);
 
         IReadOnlyList<MovimientoStock> movimientos =
-            inverso.Confirmar(numero.Valor, confirmado, valoradas, ahora);
+            inverso.Confirmar(numero.Valor, confirmado, valoradas, resueltos, ahora);
 
         original.Anular(inverso, new AjusteAnulado(original.Id, original.EmpresaId));
 

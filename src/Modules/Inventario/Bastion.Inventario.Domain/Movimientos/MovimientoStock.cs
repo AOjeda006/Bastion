@@ -57,6 +57,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         Guid almacenId,
         Guid ubicacionId,
         Guid articuloId,
+        Guid? loteId,
+        Guid? serieId,
         decimal cantidadIntroducida,
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
@@ -75,6 +77,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         AlmacenId = almacenId;
         UbicacionId = ubicacionId;
         ArticuloId = articuloId;
+        LoteId = loteId;
+        SerieId = serieId;
         CantidadIntroducida = cantidadIntroducida;
         UnidadIntroducidaId = unidadIntroducidaId;
         FactorAUnidadBase = factorAUnidadBase;
@@ -120,6 +124,16 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
 
     /// <summary>Artículo que se movió. Vive en el esquema de Catálogo.</summary>
     public Guid ArticuloId { get; private set; }
+
+    /// <summary>El lote que se movió, o <see langword="null"/>.</summary>
+    /// <remarks>
+    /// <b>Este sí lleva clave ajena</b>: el lote vive en el mismo esquema (ADR-0048 §2). Y es la
+    /// fila y no el código, porque el código solo no identifica nada sin su artículo.
+    /// </remarks>
+    public Guid? LoteId { get; private set; }
+
+    /// <summary>El número de serie que se movió, o <see langword="null"/>. Nunca con lote.</summary>
+    public Guid? SerieId { get; private set; }
 
     /// <summary>Cantidad <b>con signo</b>, en la unidad base del artículo: lo que se suma.</summary>
     /// <remarks>
@@ -241,6 +255,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// <param name="almacenId">Almacén.</param>
     /// <param name="ubicacionId">Ubicación dentro del almacén.</param>
     /// <param name="articuloId">Artículo movido.</param>
+    /// <param name="loteId">El lote, o <c>null</c>.</param>
+    /// <param name="serieId">El número de serie, o <c>null</c>. Nunca con lote.</param>
     /// <param name="cantidadIntroducida">Cantidad tal como se escribió, con signo.</param>
     /// <param name="unidadIntroducidaId">Unidad en la que se escribió.</param>
     /// <param name="factorAUnidadBase">Factor hacia la unidad base del artículo.</param>
@@ -257,7 +273,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// </exception>
     /// <exception cref="ArgumentException">
     /// Algún importe va en otra divisa que la fila, el valor no lleva el signo de la cantidad o el
-    /// precio medio es negativo.
+    /// precio medio es negativo. O la fila lleva lote y serie, o una serie que no mueve una unidad
+    /// base.
     /// </exception>
     public static MovimientoStock Registrar(
         Guid empresaId,
@@ -265,6 +282,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         Guid almacenId,
         Guid ubicacionId,
         Guid articuloId,
+        Guid? loteId,
+        Guid? serieId,
         decimal cantidadIntroducida,
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
@@ -330,6 +349,23 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
                 "la cantidad en unidad base se redondea a cero: la fila sumaría nada");
         }
 
+        // LO MISMO QUE LA LÍNEA, OTRA VEZ: el libro lo escribirán cinco documentos, y no todos
+        // tendrán líneas de ajuste delante.
+        if (loteId is not null && serieId is not null)
+        {
+            throw new ArgumentException(
+                "Una fila del libro lleva lote o número de serie, no los dos (ADR-0048 §1).",
+                nameof(serieId));
+        }
+
+        if (serieId is not null
+            && Math.Abs(EnUnidadBase(cantidadIntroducida, factorAUnidadBase)) != 1m)
+        {
+            throw new ArgumentException(
+                "Una fila con número de serie mueve una unidad base, arriba o abajo (ADR-0048 §3).",
+                nameof(serieId));
+        }
+
         return new MovimientoStock(
             Guid.CreateVersion7(),
             empresaId,
@@ -337,6 +373,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
             almacenId,
             ubicacionId,
             articuloId,
+            loteId,
+            serieId,
             cantidadIntroducida,
             unidadIntroducidaId,
             factorAUnidadBase,

@@ -172,6 +172,15 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Las_cadenas_del_cerrojo_son_las_del_modelo",
         "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.No_lleva_punto_y_coma_final",
 
+        "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla",
+        "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa",
+        "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio",
+        "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.La_guarda_comparte_y_la_cortesia_no_bloquea",
+        "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.La_marca_se_guarda_como_texto_con_los_nombres_que_el_puerto_traduce",
+        "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Las_cadenas_del_puerto_son_las_del_modelo",
+        "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Las_dos_comparan_la_empresa_contra_el_segundo_parametro",
+        "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Ninguna_de_las_dos_lleva_punto_y_coma_final",
+
         // Del ítem 2.6, y aquí por lo mismo que las de arriba: dos sentencias crudas cuyas
         // cadenas nadie compila, atadas al modelo desde el carril rápido.
         "LaSentenciaDelEjercicioMiraLaEmpresaTests.El_cerrojo_de_Organizacion_compara_la_empresa_contra_el_segundo_parametro",

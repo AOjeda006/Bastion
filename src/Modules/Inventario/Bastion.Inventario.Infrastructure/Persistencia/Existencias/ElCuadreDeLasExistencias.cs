@@ -44,7 +44,7 @@ internal sealed class ElCuadreDeLasExistencias(
     /// </para>
     /// <para>
     /// <b>Se junta con <c>UNION ALL</c> y se agrupa, en vez de cruzar con un <c>FULL JOIN</c></b>.
-    /// El lote es nulo en todas las claves de hoy, y una igualdad con nulos no casa; con
+    /// El lote y la serie son nulos en casi todas las claves, y una igualdad con nulos no casa; con
     /// <c>IS NOT DISTINCT FROM</c> sí, pero entonces PostgreSQL no sabe hacer ese cruce. El
     /// <c>GROUP BY</c> trata los nulos como iguales, que es lo que la clave necesita, y de paso
     /// cuenta cuántas filas vivas tiene cada clave: dos filas para la misma es un descuadre aunque
@@ -65,34 +65,35 @@ internal sealed class ElCuadreDeLasExistencias(
         $$"""
         WITH {{LasInstantaneasMensuales.LasDebidas}},
         existencias_cuadradas AS (
-            SELECT x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id,
+            SELECT x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.serie_id,
                    sum(x.esperado) AS esperado, sum(x.guardado) AS guardado, sum(x.filas) AS filas
             FROM (
-                SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, NULL::uuid AS lote_id,
+                SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.serie_id,
                        m.cantidad_en_unidad_base AS esperado, 0::numeric AS guardado, 0 AS filas
                 FROM inventario.movimiento_stock AS m
                 WHERE m.empresa_id = {0} AND m.fecha_de_operacion <= {1}
                 UNION ALL
-                SELECT e.articulo_id, e.almacen_id, e.ubicacion_id, e.lote_id, 0, e.fisico, 1
+                SELECT e.articulo_id, e.almacen_id, e.ubicacion_id, e.lote_id, e.serie_id, 0, e.fisico, 1
                 FROM inventario.existencias AS e
                 WHERE e.empresa_id = {0}
             ) AS x
-            GROUP BY x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id
+            GROUP BY x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.serie_id
         ),
         instantaneas_cuadradas AS (
-            SELECT x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.mes,
+            SELECT x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.serie_id, x.mes,
                    sum(x.esperado) AS esperado, sum(x.guardado) AS guardado, sum(x.filas) AS filas
             FROM (
-                SELECT d.articulo_id, d.almacen_id, d.ubicacion_id, NULL::uuid AS lote_id, d.mes,
+                SELECT d.articulo_id, d.almacen_id, d.ubicacion_id, d.lote_id, d.serie_id, d.mes,
                        d.fisico AS esperado, 0::numeric AS guardado, 0 AS filas
                 FROM debidas AS d
                 UNION ALL
-                SELECT e.articulo_id, e.almacen_id, e.ubicacion_id, e.lote_id, i.mes, 0, i.fisico, 1
+                SELECT e.articulo_id, e.almacen_id, e.ubicacion_id, e.lote_id, e.serie_id, i.mes, 0,
+                       i.fisico, 1
                 FROM inventario.instantaneas_mensuales AS i
                 JOIN inventario.existencias AS e ON e.id = i.existencia_id
                 WHERE i.empresa_id = {0} AND e.empresa_id = {0}
             ) AS x
-            GROUP BY x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.mes
+            GROUP BY x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.serie_id, x.mes
         ),
         valoraciones_cuadradas AS (
             SELECT x.articulo_id, x.almacen_id,
@@ -115,32 +116,32 @@ internal sealed class ElCuadreDeLasExistencias(
         )
         SELECT 'existencia' AS que, true AS es_resumen, count(*) AS comparadas,
                NULL::uuid AS articulo_id, NULL::uuid AS almacen_id, NULL::uuid AS ubicacion_id,
-               NULL::uuid AS lote_id, NULL::date AS mes,
+               NULL::uuid AS lote_id, NULL::uuid AS serie_id, NULL::date AS mes,
                NULL::numeric AS esperado, NULL::numeric AS guardado, NULL::bigint AS filas
         FROM existencias_cuadradas
         UNION ALL
-        SELECT 'instantanea', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        SELECT 'instantanea', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
         FROM instantaneas_cuadradas
         UNION ALL
-        SELECT 'valoracion', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        SELECT 'valoracion', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
         FROM valoraciones_cuadradas
         UNION ALL
         SELECT 'existencia', false, 0, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id,
-               NULL, c.esperado, c.guardado, c.filas
+               c.serie_id, NULL, c.esperado, c.guardado, c.filas
         FROM existencias_cuadradas AS c
         WHERE c.esperado <> c.guardado OR c.filas <> 1
         UNION ALL
         SELECT 'instantanea', false, 0, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id,
-               c.mes, c.esperado, c.guardado, c.filas
+               c.serie_id, c.mes, c.esperado, c.guardado, c.filas
         FROM instantaneas_cuadradas AS c
         WHERE c.esperado <> c.guardado OR c.filas <> 1
         UNION ALL
-        SELECT 'valoracion-cantidad', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL,
+        SELECT 'valoracion-cantidad', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL, NULL,
                c.cantidad_esperada, c.cantidad_guardada, c.filas
         FROM valoraciones_cuadradas AS c
         WHERE c.cantidad_esperada <> c.cantidad_guardada OR c.filas <> 1
         UNION ALL
-        SELECT 'valoracion-valor', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL,
+        SELECT 'valoracion-valor', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL, NULL,
                c.valor_esperado, c.valor_guardado, c.filas
         FROM valoraciones_cuadradas AS c
         WHERE c.valor_esperado <> c.valor_guardado
@@ -175,6 +176,7 @@ internal sealed class ElCuadreDeLasExistencias(
                     fila.AlmacenId!.Value,
                     fila.UbicacionId,
                     fila.LoteId,
+                    fila.SerieId,
                     fila.Mes,
                     fila.Esperado!.Value,
                     fila.Guardado!.Value,
@@ -205,7 +207,8 @@ internal sealed record CuadreDeLasExistencias(
 /// <param name="ArticuloId">El artículo de la clave.</param>
 /// <param name="AlmacenId">El almacén de la clave.</param>
 /// <param name="UbicacionId">La ubicación de la clave; nula en la valoración, que no la lleva.</param>
-/// <param name="LoteId">El lote de la clave, nulo mientras el libro no lo lleve.</param>
+/// <param name="LoteId">El lote de la clave, o nulo; nulo también en la valoración.</param>
+/// <param name="SerieId">La serie de la clave, o nula; nula también en la valoración.</param>
 /// <param name="Mes">El mes, en las instantáneas.</param>
 /// <param name="Esperado">Lo que dice el libro.</param>
 /// <param name="Guardado">Lo que dice la copia.</param>
@@ -216,6 +219,7 @@ internal sealed record Descuadre(
     Guid AlmacenId,
     Guid? UbicacionId,
     Guid? LoteId,
+    Guid? SerieId,
     DateOnly? Mes,
     decimal Esperado,
     decimal Guardado,
@@ -241,6 +245,8 @@ internal sealed class FilaDelCuadre
     public Guid? UbicacionId { get; init; }
 
     public Guid? LoteId { get; init; }
+
+    public Guid? SerieId { get; init; }
 
     public DateOnly? Mes { get; init; }
 

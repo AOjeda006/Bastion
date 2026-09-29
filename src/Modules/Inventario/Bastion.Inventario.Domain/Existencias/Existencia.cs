@@ -56,12 +56,19 @@ public sealed class Existencia : IDeInquilino
 
     /// <summary>El lote, o <see langword="null"/> si el artículo no lo lleva.</summary>
     /// <remarks>
-    /// <b>Está en la clave desde esta migración aunque nadie lo escriba todavía.</b> El lote lo trae
-    /// el ítem 2.9, y con él la columna del libro y su clave ajena. Hasta entonces todas las filas
-    /// llevan el lote nulo, y lo que las mantiene en una por artículo y ubicación es que la
-    /// unicidad no distingue nulos.
+    /// <b>Estaba en la clave desde el 2.7, aunque nadie lo escribiera hasta el 2.9</b>, que trajo su
+    /// tabla y su clave ajena (ADR-0048 §2). Lo que mantiene en una fila por clave las que no llevan
+    /// lote es que la unicidad no distingue nulos.
     /// </remarks>
     public Guid? LoteId { get; private set; }
+
+    /// <summary>El número de serie, o <see langword="null"/> si el artículo no lo lleva.</summary>
+    /// <remarks>
+    /// <b>Una fila con serie tiene como mucho una unidad</b>, y una serie tiene existencias en una
+    /// sola fila. Las dos cosas las sostiene el motor, con un <c>CHECK</c> y un índice único parcial
+    /// (ADR-0048 §3), porque dos confirmaciones simultáneas no se ven la una a la otra.
+    /// </remarks>
+    public Guid? SerieId { get; private set; }
 
     /// <summary>Lo que hay, en la unidad base del artículo: la suma del libro.</summary>
     public decimal Fisico { get; private set; }

@@ -59,37 +59,41 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
             WHERE c.empresa_id = {0}
         ),
         por_mes AS (
-            SELECT m.articulo_id, m.almacen_id, m.ubicacion_id,
+            SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.serie_id,
                    date_trunc('month', m.fecha_de_operacion::timestamp)::date AS mes,
                    sum(m.cantidad_en_unidad_base) AS cantidad
             FROM inventario.movimiento_stock AS m
             CROSS JOIN corte
             WHERE m.empresa_id = {0}
                 AND m.fecha_de_operacion < corte.hasta_el_mes + interval '1 month'
-            GROUP BY m.articulo_id, m.almacen_id, m.ubicacion_id,
+            GROUP BY m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.serie_id,
                      date_trunc('month', m.fecha_de_operacion::timestamp)
         ),
         rejilla AS (
-            SELECT p.articulo_id, p.almacen_id, p.ubicacion_id, g.mes::date AS mes
+            SELECT p.articulo_id, p.almacen_id, p.ubicacion_id, p.lote_id, p.serie_id,
+                   g.mes::date AS mes
             FROM (
-                SELECT pm.articulo_id, pm.almacen_id, pm.ubicacion_id, min(pm.mes) AS primero
+                SELECT pm.articulo_id, pm.almacen_id, pm.ubicacion_id, pm.lote_id, pm.serie_id,
+                       min(pm.mes) AS primero
                 FROM por_mes AS pm
-                GROUP BY pm.articulo_id, pm.almacen_id, pm.ubicacion_id
+                GROUP BY pm.articulo_id, pm.almacen_id, pm.ubicacion_id, pm.lote_id, pm.serie_id
             ) AS p
             CROSS JOIN corte
             CROSS JOIN LATERAL generate_series(
                 p.primero::timestamp, corte.hasta_el_mes::timestamp, interval '1 month') AS g (mes)
         ),
         debidas AS (
-            SELECT r.articulo_id, r.almacen_id, r.ubicacion_id, r.mes,
+            SELECT r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.serie_id, r.mes,
                    sum(coalesce(pm.cantidad, 0)) OVER (
-                       PARTITION BY r.articulo_id, r.almacen_id, r.ubicacion_id
+                       PARTITION BY r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.serie_id
                        ORDER BY r.mes) AS fisico
             FROM rejilla AS r
             LEFT JOIN por_mes AS pm
                 ON pm.articulo_id = r.articulo_id
                 AND pm.almacen_id = r.almacen_id
                 AND pm.ubicacion_id = r.ubicacion_id
+                AND pm.lote_id IS NOT DISTINCT FROM r.lote_id
+                AND pm.serie_id IS NOT DISTINCT FROM r.serie_id
                 AND pm.mes = r.mes
         )
         """;
@@ -136,10 +140,11 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
 
     /// <summary>Repone las instantáneas de la empresa <c>{0}</c> desde el libro.</summary>
     /// <remarks>
-    /// <b>Cada una cuelga de su fila viva</b>, que se busca por la clave con el lote nulo: el libro
-    /// todavía no lleva lote (lo trae el 2.9). Una clave del libro sin fila viva se queda sin
-    /// instantáneas, y no es un olvido: es un descuadre, y lo denuncia el cuadre, que compara
-    /// contra las debidas y no contra lo que el recálculo haya podido escribir.
+    /// <b>Cada una cuelga de su fila viva</b>, que se busca por la clave entera, con el lote y la
+    /// serie comparados con <c>IS NOT DISTINCT FROM</c> porque pueden ser nulos (ADR-0048 §6). Una
+    /// clave del libro sin fila viva se queda sin instantáneas, y no es un olvido: es un descuadre, y
+    /// lo denuncia el cuadre, que compara contra las debidas y no contra lo que el recálculo haya
+    /// podido escribir.
     /// </remarks>
     internal const string SqlDeLaReposicion =
         $$"""
@@ -152,7 +157,8 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
             AND e.articulo_id = d.articulo_id
             AND e.almacen_id = d.almacen_id
             AND e.ubicacion_id = d.ubicacion_id
-            AND e.lote_id IS NULL
+            AND e.lote_id IS NOT DISTINCT FROM d.lote_id
+            AND e.serie_id IS NOT DISTINCT FROM d.serie_id
         """;
 
     /// <summary>Recalcula las instantáneas de la empresa del inquilino hasta un mes.</summary>

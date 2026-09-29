@@ -947,6 +947,7 @@
         "type": "Project",
         "dependencies": {
           "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Catalogo.Contracts": "[1.0.0, )",
           "Bastion.Inventario.Application": "[1.0.0, )",
           "Bastion.Organizacion.Contracts": "[1.0.0, )",
           "EFCore.NamingConventions": "[10.0.1, )",

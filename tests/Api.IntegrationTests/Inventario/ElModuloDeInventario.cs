@@ -77,6 +77,10 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         UnidadDeTrabajoDeInventario unidadDeTrabajo = new(_inventario);
         ConsultaDeAlmacenes almacenes = new(_organizacion, acceso);
 
+        // La marca va sobre EL CONTEXTO DE INVENTARIO, como el ejercicio y por lo mismo: al
+        // confirmar trae un cerrojo compartido sobre la fila del artículo (ADR-0048 §4).
+        LaTrazabilidadDesdeInventario trazabilidad = new(_inventario, new InquilinoFijo(empresaId));
+
         Alta = new AbrirAjuste(
             new ElUsuarioDeLaEmpresa(empresaId),
             ajustes,
@@ -85,6 +89,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             new ConsultaDeSeries(_organizacion),
             new ConsultaDeUbicaciones(_organizacion, acceso),
             new ConsultaDeArticulos(_catalogo),
+            trazabilidad,
             new ConsultaDeUnidadesDeMedida(_organizacion),
             unidadDeTrabajo,
             TimeProvider.System);
@@ -100,6 +105,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             ajustes,
             new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
             ejercicios,
+            trazabilidad,
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
             TimeProvider.System);

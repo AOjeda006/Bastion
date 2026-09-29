@@ -112,6 +112,10 @@ export const es = {
         'Algún artículo del documento ya tiene un movimiento posterior a esa fecha en ese almacén, ' +
         'y un documento no puede ir por detrás del último movimiento de su artículo. Pon esa fecha ' +
         'o una posterior.',
+      'ajuste-lote-no-valido':
+        'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
+        'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote de esa ' +
+        'línea.',
       'ajuste-motivo-no-valido':
         'Escribe por qué anulas el ajuste, en 300 caracteres o menos. Es lo único que quedará ' +
         'para entender la corrección dentro de dos años.',
@@ -122,16 +126,31 @@ export const es = {
       'ajuste-no-esta-en-borrador':
         'Ese ajuste ya no está en borrador: uno confirmado no se vuelve a confirmar, porque sus ' +
         'filas del libro ya están escritas y el libro no se reescribe. Actualiza la pantalla.',
+      'ajuste-numero-de-serie-no-valido':
+        'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
+        'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
+        'número de serie de esa línea.',
       'ajuste-serie-cerrada':
         'Esa serie está cerrada: sigue resolviendo los documentos que ya numeró, pero no entrega ' +
         'ni un número más. Elige otra serie.',
       'ajuste-serie-no-encontrada': 'Esa serie no existe. Elige una del maestro de series.',
+      'ajuste-serie-no-unitaria':
+        'Una línea con número de serie mueve exactamente una unidad, porque cada número es una ' +
+        'pieza y no hay dos con el mismo. Pon una línea por pieza, con cantidad 1 en la unidad ' +
+        'base del artículo.',
+      'ajuste-serie-repetida':
+        'Dos líneas del ajuste nombran el mismo número de serie, y cada pieza sale una sola vez ' +
+        'por documento. Cambiarla de ubicación es una reubicación, que es otro documento.',
       'ajuste-sin-ejercicio':
         'La fecha de ese ajuste no cae en ningún ejercicio: sin periodo al que imputarlo, el ' +
         'documento no entraría en ninguna declaración. Abre el ejercicio que falta o corrige la ' +
         'fecha.',
       'ajuste-sin-lineas':
         'Un ajuste necesita al menos una línea: un documento que no mueve nada no ajusta nada.',
+      'ajuste-trazabilidad-no-casa':
+        'Alguna línea no casa con la trazabilidad de su artículo: le falta el lote o el número de ' +
+        'serie que pide la ficha, o lleva uno que la ficha no pide. Corrige la línea, o la ' +
+        'trazabilidad del artículo si todavía no se ha movido.',
       'ajuste-ubicacion-bloqueada':
         'Esa ubicación está bloqueada: lo que ya hay apuntado a ella se sigue leyendo, pero no se ' +
         'mueve nada nuevo a ese hueco. Elige otra ubicación.',

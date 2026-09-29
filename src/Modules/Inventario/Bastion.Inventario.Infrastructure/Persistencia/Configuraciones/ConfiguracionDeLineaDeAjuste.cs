@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -83,6 +84,17 @@ internal sealed class ConfiguracionDeLineaDeAjuste : IEntityTypeConfiguration<Li
 
         linea.Property(fila => fila.ValorQueCompensa)
             .HasPrecision(18, Importe.Decimales)
+            .SeAudita();
+
+        // EL CÓDIGO QUE ESCRIBIÓ EL USUARIO, Y NO LA FILA DEL LOTE (ADR-0048 §2). El borrador no crea
+        // lotes: los crea la confirmación, en su transacción y con su cerrojo. Se auditan porque son
+        // parte de lo que se decidió mover.
+        linea.Property(fila => fila.CodigoDeLote)
+            .HasMaxLength(CodigoGs1.LargoMaximo)
+            .SeAudita();
+
+        linea.Property(fila => fila.NumeroDeSerie)
+            .HasMaxLength(CodigoGs1.LargoMaximo)
             .SeAudita();
 
         linea.HasIndex(fila => new { fila.AjusteId, fila.Numero }).IsUnique();

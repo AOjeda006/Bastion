@@ -1,6 +1,7 @@
 using System.Globalization;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -68,6 +69,23 @@ internal sealed class ConfiguracionDeMovimientoStock : IEntityTypeConfiguration<
         movimiento.Property(fila => fila.UbicacionId).IsRequired();
         movimiento.Property(fila => fila.ArticuloId).IsRequired();
         movimiento.Property(fila => fila.UnidadIntroducidaId).IsRequired();
+
+        // EL LOTE Y LA SERIE, COMO EN LA EXISTENCIA (ADR-0048 §1): dos columnas, aunque el dominio no
+        // deje escribir las dos a la vez. Esa regla es del dominio y puede cambiar; la forma de esta
+        // tabla, particionada y de solo añadido, no. Con clave ajena, dentro del esquema: el lote y la
+        // serie no se borran nunca. Nulas en todas las filas de antes del 2.9, que es lo que eran.
+        movimiento.Property(fila => fila.LoteId);
+        movimiento.Property(fila => fila.SerieId);
+
+        movimiento.HasOne<Lote>()
+            .WithMany()
+            .HasForeignKey(fila => fila.LoteId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        movimiento.HasOne<NumeroDeSerie>()
+            .WithMany()
+            .HasForeignKey(fila => fila.SerieId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Las tres cantidades a la misma escala. `numeric(18,6)`: nunca coma flotante —0,1 kg tres
         // veces no son 0,3 kg— y nunca el `money` del motor, que lleva pegada una configuración

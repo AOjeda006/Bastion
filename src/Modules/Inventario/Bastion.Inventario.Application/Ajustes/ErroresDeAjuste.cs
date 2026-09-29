@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Valoraciones;
 
 namespace Bastion.Inventario.Application.Ajustes;
@@ -18,6 +20,11 @@ internal static class ErroresDeAjuste
     internal const string CodigoEntradaSinCosteNiPrecioMedio = "ajuste-entrada-sin-coste-ni-precio-medio";
     internal const string CodigoValoracionEnOtraDivisa = "ajuste-valoracion-en-otra-divisa";
     internal const string CodigoFechaAnteriorAlUltimoMovimiento = "ajuste-fecha-anterior-al-ultimo-movimiento";
+    internal const string CodigoLoteNoValido = "ajuste-lote-no-valido";
+    internal const string CodigoNumeroDeSerieNoValido = "ajuste-numero-de-serie-no-valido";
+    internal const string CodigoSerieNoUnitaria = "ajuste-serie-no-unitaria";
+    internal const string CodigoSerieRepetida = "ajuste-serie-repetida";
+    internal const string CodigoTrazabilidadNoCasa = "ajuste-trazabilidad-no-casa";
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,
@@ -152,4 +159,79 @@ internal static class ErroresDeAjuste
             CodigoNoEstaConfirmado,
             $"El ajuste {ajusteId} está en estado «{estado}»: solo se anula lo que está " +
             "confirmado. Un borrador no ha movido nada, así que no hay nada que compensar.");
+
+    /// <summary>El lote de una línea no es un código GS1 (ADR-0048 §2).</summary>
+    /// <remarks>
+    /// <b>No se devuelve lo que llegó</b>, como en el motivo: el valor es del llamante. Se dice la
+    /// línea y la forma que se espera.
+    /// </remarks>
+    /// <param name="linea">La línea, desde uno.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion LoteNoValido(int linea) => ErrorDeOperacion.Validacion(
+        CodigoLoteNoValido,
+        $"El lote de la línea {linea} no es un código GS1: de 1 a {CodigoGs1.LargoMaximo} caracteres " +
+        "del conjunto 82, sin espacios dentro, que es lo que cabe en la etiqueta (ADR-0048 §2).");
+
+    /// <summary>El número de serie de una línea no es un código GS1 (ADR-0048 §2).</summary>
+    /// <param name="linea">La línea, desde uno.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion NumeroDeSerieNoValido(int linea) => ErrorDeOperacion.Validacion(
+        CodigoNumeroDeSerieNoValido,
+        $"El número de serie de la línea {linea} no es un código GS1: de 1 a " +
+        $"{CodigoGs1.LargoMaximo} caracteres del conjunto 82, sin espacios dentro, que es lo que cabe " +
+        "en la etiqueta (ADR-0048 §2).");
+
+    /// <summary>Una línea con número de serie que no mueve una unidad base (ADR-0048 §3).</summary>
+    /// <param name="linea">La línea, desde uno.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion SerieNoUnitaria(int linea) => ErrorDeOperacion.Validacion(
+        CodigoSerieNoUnitaria,
+        $"La línea {linea} lleva número de serie y no mueve una unidad base, ni arriba ni abajo: " +
+        "un número de serie es una unidad, y dos unidades con el mismo número no existen " +
+        "(ADR-0048 §3).");
+
+    /// <summary>El mismo número de serie en dos líneas del documento (ADR-0048 §3).</summary>
+    /// <remarks>
+    /// <b>Aunque sea en otra ubicación y con el signo contrario.</b> Sacarla de una estantería y
+    /// meterla en otra es la reubicación, que es otro documento: dentro de uno, el índice que la
+    /// mantiene en un sitio chocaría o no según el orden en que el motor recorriera las filas.
+    /// </remarks>
+    /// <param name="linea">La segunda línea que la nombra, desde uno.</param>
+    /// <param name="serie">El número, ya normalizado.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion SerieRepetida(int linea, string serie) => ErrorDeOperacion.Validacion(
+        CodigoSerieRepetida,
+        $"La línea {linea} repite el número de serie «{serie}» de otra línea del mismo artículo: una " +
+        "serie sale una sola vez por documento, y moverla de sitio es la reubicación (ADR-0048 §3).");
+
+    /// <summary>Una línea que no casa con la marca de su artículo (ADR-0048 §4).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Un <c>409</c> y no un <c>400</c></b>: el cuerpo puede estar bien escrito, y lo que falla es
+    /// la ficha del artículo. Al abrir es la cortesía, y al confirmar, la guarda: la marca se lee
+    /// con la fila bloqueada, y un borrador escrito con la marca de antes se para aquí.
+    /// </para>
+    /// <para>
+    /// <b>Dice qué línea y qué le falta o le sobra</b>, que es lo que hay que corregir.
+    /// </para>
+    /// </remarks>
+    /// <param name="linea">La línea, desde uno.</param>
+    /// <param name="articuloId">Su artículo.</param>
+    /// <param name="marca">La marca del artículo.</param>
+    /// <param name="discrepancia">Qué le falta o le sobra.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion TrazabilidadNoCasa(
+        int linea, Guid articuloId, MarcaDeTrazabilidad marca, DiscrepanciaDeTrazabilidad discrepancia) =>
+        ErrorDeOperacion.Conflicto(
+            CodigoTrazabilidadNoCasa,
+            $"La línea {linea} no casa con la marca del artículo {articuloId}, que es «{marca}»: " +
+            discrepancia switch
+            {
+                DiscrepanciaDeTrazabilidad.FaltaElLote => "le falta el lote.",
+                DiscrepanciaDeTrazabilidad.FaltaElNumeroDeSerie => "le falta el número de serie.",
+                DiscrepanciaDeTrazabilidad.SobraElLote => "le sobra el lote.",
+                DiscrepanciaDeTrazabilidad.SobraElNumeroDeSerie => "le sobra el número de serie.",
+                _ => throw new ArgumentOutOfRangeException(nameof(discrepancia), discrepancia, null),
+            } +
+            " Corrija la línea, o la marca si el artículo todavía no se ha movido (ADR-0048 §4).");
 }

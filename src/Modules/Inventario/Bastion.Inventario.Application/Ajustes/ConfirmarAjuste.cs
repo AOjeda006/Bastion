@@ -1,6 +1,8 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Organizacion.Contracts.Ejercicios;
@@ -55,6 +57,7 @@ public interface IConfirmarAjuste
 /// <param name="ajustes">Dónde viven el documento y el libro.</param>
 /// <param name="numerador">Quién entrega el correlativo, en esta misma transacción (R5).</param>
 /// <param name="ejercicios">Si la fecha del documento se puede escribir, con la fila bloqueada.</param>
+/// <param name="trazabilidad">La marca de los artículos, con la fila bloqueada (ADR-0048 §4).</param>
 /// <param name="valoracion">Quién valora las líneas contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
@@ -62,6 +65,7 @@ internal sealed class ConfirmarAjuste(
     IRepositorioDeAjustes ajustes,
     INumeradorDeSeriesDeInventario numerador,
     IConsultaDeEjercicios ejercicios,
+    IConsultaDeTrazabilidad trazabilidad,
     IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IConfirmarAjuste
@@ -127,6 +131,20 @@ internal sealed class ConfirmarAjuste(
                     : ErroresDeAjuste.EnEjercicioCerrado(ajuste.FechaDeOperacion));
         }
 
+        // LA MARCA, DESPUÉS DEL EJERCICIO Y ANTES DEL NÚMERO (ADR-0048 §4). Se lee con la fila del
+        // artículo bloqueada en compartido hasta el `COMMIT`, así que un cambio de marca espera a
+        // este documento, o este documento a él y lee la marca nueva. Va antes del contador porque
+        // puede esperar y puede rechazar, y el cerrojo del contador serializa toda la serie.
+        IReadOnlyDictionary<Guid, MarcaDeTrazabilidad> marcas = await trazabilidad
+            .MarcasParaMoverAsync([.. ajuste.Lineas.Select(linea => linea.ArticuloId).Distinct()], cancelacion)
+            .ConfigureAwait(false);
+
+        if (LaTrazabilidadDeLasLineas.LoQueNoCasa(
+                LaTrazabilidadDeLasLineas.DelDocumento(ajuste), marcas) is { } noCasa)
+        {
+            return Resultado.Fallo<AjusteDto>(noCasa);
+        }
+
         // EL NÚMERO, ANTES DE TOCAR EL DOCUMENTO. El orden no es estético: la sentencia toma el
         // cerrojo sobre la fila del contador y lo suelta el `COMMIT`, así que cuanto más tarde se
         // pida, más corto es el tramo en el que otra confirmación de la misma serie espera —pero
@@ -165,6 +183,12 @@ internal sealed class ConfirmarAjuste(
 
         IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, ajuste.Divisa, ajuste.FechaDeOperacion);
 
+        // LOS LOTES Y LAS SERIES, DESPUÉS DE LA VALORACIÓN Y ANTES DEL DOCUMENTO (ADR-0048 §4): la
+        // existencia los necesita y la valoración no, porque el lote no entra en su clave.
+        LotesYSeriesResueltos resueltos = await ajustes
+            .ResolverLotesYSeriesAsync(ajuste.LotesQueNombra(), ajuste.SeriesQueNombra(), cancelacion)
+            .ConfigureAwait(false);
+
         var evento = new AjusteConfirmado(
             ajuste.Id,
             ajuste.EmpresaId,
@@ -173,7 +197,7 @@ internal sealed class ConfirmarAjuste(
             ajuste.Lineas.Count);
 
         IReadOnlyList<MovimientoStock> movimientos =
-            ajuste.Confirmar(numero.Valor, evento, valoradas, reloj.GetUtcNow());
+            ajuste.Confirmar(numero.Valor, evento, valoradas, resueltos, reloj.GetUtcNow());
 
         await ajustes.AnotarEnElLibroAsync(movimientos, cancelacion).ConfigureAwait(false);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

@@ -7,6 +7,7 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Existencias;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -761,6 +762,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             1,
             new AjusteConfirmado(ajuste.Id, empresaId, almacenId, Hoy, 1),
             ElLibro.ValoracionDesdeCero(ajuste),
+            LotesYSeriesResueltos.Ninguno,
             momento);
     }
 

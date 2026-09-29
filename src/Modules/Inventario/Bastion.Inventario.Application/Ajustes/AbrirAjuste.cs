@@ -56,6 +56,7 @@ public interface IAbrirAjuste
 /// <param name="series">Puerto de series (ítem 2.4).</param>
 /// <param name="ubicaciones">Puerto de ubicaciones (ítem 2.2).</param>
 /// <param name="articulos">Puerto de artículos (ítem 2.2).</param>
+/// <param name="trazabilidad">La marca de los artículos, sin cerrojo: la cortesía (ADR-0048 §4).</param>
 /// <param name="unidades">Puerto de unidades de medida.</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
@@ -67,6 +68,7 @@ internal sealed class AbrirAjuste(
     IConsultaDeSeries series,
     IConsultaDeUbicaciones ubicaciones,
     IConsultaDeArticulos articulos,
+    IConsultaDeTrazabilidad trazabilidad,
     IConsultaDeUnidadesDeMedida unidades,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IAbrirAjuste
@@ -100,6 +102,11 @@ internal sealed class AbrirAjuste(
             return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.CosteNoValido());
         }
 
+        if (LaTrazabilidadDeLasLineas.LoQueNoTieneForma(peticion.Lineas) is { } sinForma)
+        {
+            return Resultado.Fallo<AjusteDto>(sinForma);
+        }
+
         EstadoDeMaestro estadoDelAlmacen = await almacenes
             .EstadoDeAsync(peticion.AlmacenId, cancelacion)
             .ConfigureAwait(false);
@@ -129,6 +136,18 @@ internal sealed class AbrirAjuste(
             return Resultado.Fallo<AjusteDto>(lasLineas.Error!);
         }
 
+        // LA MARCA, SIN CERROJO: es la cortesía, y la guarda es la de confirmar (ADR-0048 §4). Va
+        // después de los maestros, porque solo un artículo que existe tiene marca.
+        IReadOnlyDictionary<Guid, MarcaDeTrazabilidad> marcas = await trazabilidad
+            .MarcasDeAsync([.. peticion.Lineas.Select(linea => linea.ArticuloId).Distinct()], cancelacion)
+            .ConfigureAwait(false);
+
+        if (LaTrazabilidadDeLasLineas.LoQueNoCasa(
+                LaTrazabilidadDeLasLineas.DeLaPeticion(peticion.Lineas), marcas) is { } noCasa)
+        {
+            return Resultado.Fallo<AjusteDto>(noCasa);
+        }
+
         DateTimeOffset momento = reloj.GetUtcNow();
 
         var ajuste = Ajuste.Abrir(
@@ -149,7 +168,9 @@ internal sealed class AbrirAjuste(
                 linea.UnidadIntroducidaId,
                 linea.FactorAUnidadBase,
                 linea.CosteUnitario,
-                momento);
+                momento,
+                linea.CodigoDeLote,
+                linea.NumeroDeSerie);
         }
 
         ajustes.Agregar(ajuste);

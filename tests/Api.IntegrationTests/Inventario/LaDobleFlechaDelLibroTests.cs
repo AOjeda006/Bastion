@@ -82,6 +82,8 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
             confirmado.AlmacenId,
             Guid.CreateVersion7(),
             Guid.CreateVersion7(),
+            null,
+            null,
             1m,
             Guid.CreateVersion7(),
             1m,

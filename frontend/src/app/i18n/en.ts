@@ -87,6 +87,9 @@ export const en: Diccionario = {
       'ajuste-fecha-anterior-al-ultimo-movimiento':
         'An item in this document already has a later movement in that warehouse, and a document ' +
         'cannot be dated before the last movement of its item. Use that date or a later one.',
+      'ajuste-lote-no-valido':
+        'That batch is not a code that fits on the label: 1 to 20 characters, no spaces, using ' +
+        'unaccented letters, digits and the symbols GS1 allows. Fix the batch on that line.',
       'ajuste-motivo-no-valido':
         'Write why you are reversing the adjustment, in 300 characters or fewer. It is the only ' +
         'thing left to explain the correction two years from now.',
@@ -97,15 +100,30 @@ export const en: Diccionario = {
       'ajuste-no-esta-en-borrador':
         'That adjustment is no longer a draft: a confirmed one is not confirmed twice, because ' +
         'its ledger rows are already written and the ledger is never rewritten. Refresh the screen.',
+      'ajuste-numero-de-serie-no-valido':
+        'That serial number is not a code that fits on the label: 1 to 20 characters, no spaces, ' +
+        'using unaccented letters, digits and the symbols GS1 allows. Fix the serial number on ' +
+        'that line.',
       'ajuste-serie-cerrada':
         'That series is closed: it still resolves the documents it already numbered, but it hands ' +
         'out no further numbers. Choose another series.',
       'ajuste-serie-no-encontrada': 'That series does not exist. Pick one from the series list.',
+      'ajuste-serie-no-unitaria':
+        'A line with a serial number moves exactly one unit, because each number is one piece and ' +
+        'no two share it. Use one line per piece, with a quantity of 1 in the item’s base unit.',
+      'ajuste-serie-repetida':
+        'Two lines of the adjustment name the same serial number, and each piece appears only ' +
+        'once per document. Moving it to another location is a relocation, which is a different ' +
+        'document.',
       'ajuste-sin-ejercicio':
         'That adjustment is dated outside every financial year: with no period to book it to, ' +
         'the document would not reach any return. Open the missing year or fix the date.',
       'ajuste-sin-lineas':
         'An adjustment needs at least one line: a document that moves nothing adjusts nothing.',
+      'ajuste-trazabilidad-no-casa':
+        'A line does not match its item’s traceability: it lacks the batch or serial number the ' +
+        'item requires, or carries one the item does not track. Fix the line, or the item’s ' +
+        'traceability if it has not moved yet.',
       'ajuste-ubicacion-bloqueada':
         'That location is blocked: whatever is already assigned to it is still read, but nothing ' +
         'new moves into that slot. Pick another location.',

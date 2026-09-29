@@ -5489,6 +5489,31 @@ Todo es reversible y ninguna decisión toca lo cerrado en A.4. Se anota para no 
 - **Las semillas de integración del 540 al 549 son de `LaMarcaNoCambiaConMovimientosTests`.** Las
   empresas van del 540 al 542, y los maestros de instalación, del 545 al 547.
 
+#### Lo que el agente decidió al montar el lote y la serie (2026-09-29)
+
+Como las de la marca: reversibles, y ninguna toca lo cerrado en A.4.
+
+- **El lote y la serie entran por código y se guardan por identificador.** La línea del ajuste
+  lleva `CodigoDeLote` y `NumeroDeSerie` como texto, que es lo que se lee en la etiqueta. El libro
+  y la existencia llevan `lote_id` y `serie_id`.
+- **`MovimientoDto` publica los identificadores, no los códigos.** Hoy ningún endpoint lo devuelve:
+  del ajuste solo se exponen la confirmación y la anulación. El OpenAPI y el cliente no cambian, y
+  quien necesite el código lo resolverá cuando exista su pantalla.
+- **El código se recorta por los extremos, y nada más.** La caja se conserva, porque GS1 la
+  distingue (ADR-0048, punto 9 del encargo).
+- **Las filas de lote y de serie se crean al confirmar, nunca al abrir.** Un borrador no crea nada.
+  Solo el `INSERT … ON CONFLICT DO NOTHING` va en crudo (`LosLotesYLasSeries`). La lectura que le
+  sigue va por el ORM, con el filtro del inquilino puesto, y revienta si falta alguna pareja.
+- **El índice parcial filtra también por `serie_id IS NOT NULL`.** Es un refinamiento equivalente
+  del ADR-0048 §3, que escribe solo `WHERE fisico > 0`. Con los nulos distintos, dos filas sin
+  serie no chocarían tampoco. Así, el índice no carga con el stock que no va por serie, que es casi
+  todo.
+- **`Existencia.LoteId` sale de las declaraciones de los tests de arquitectura.** Ahora casa por
+  nombre con `Lote`, que es de este módulo. `SerieId` sí se declara, en la existencia y en el libro,
+  porque por nombre casaría con la `Serie` de numeración de Organización.
+- **El artículo del lote y de la serie se declara por `IConsultaDeTrazabilidad`.** Es la lectura
+  que decide que existan: solo se crean para un artículo cuya marca, leída con `FOR SHARE`, lo pide.
+
 #### Las herramientas de la máquina, en este encargo
 
 - **`ctx7` (Context7)**, cuando la versión importe; por ejemplo, el índice parcial y `NULLS NOT
@@ -6873,15 +6898,39 @@ que tomó el agente están arriba, en *Lo que el agente decidió al montar la ma
     abrir, bloquear, leer, preguntar, confirmar y cerrar.
   - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests`, siete, sobre las cadenas del cerrojo.
   - `LaMarcaNoCambiaConMovimientosTests`, tres de integración, con el libro de verdad.
+- **Su run de rama**, sobre `4a4c7fe`: **36539040245**, **success**, con sus tres trabajos en verde.
+
+**Hecha la primera parte del paso 2, Inventario**, en el commit `feat(inventario)` que sigue a
+`4a4c7fe`. Las decisiones del agente están arriba, en *Lo que el agente decidió al montar el lote y
+la serie*.
+
+- **El dominio.** `Lote` y `NumeroDeSerie` son de (empresa, artículo, código), con `CodigoGs1`: de 1
+  a 20 caracteres del conjunto 82, sin cambiar la caja. La línea del ajuste lleva el código; el
+  movimiento y la existencia, el identificador. Una línea con serie mueve una unidad base, arriba o
+  abajo, y una serie sale una sola vez por documento.
+- **La migración `LosLotesYLasSeries`.** Crea las dos tablas, con su índice único, y añade las
+  columnas y sus claves ajenas a la existencia y al libro. Rehace el índice de la clave con la serie
+  dentro y añade `ck_existencias_serie_como_mucho_una` e `ix_existencias_serie_en_un_sitio`.
+- **La marca, por `IConsultaDeTrazabilidad`.** La declara Catálogo y la implementa
+  `LaTrazabilidadDesdeInventario`: sin cerrojo al abrir y con `FOR SHARE` al confirmar. Es el
+  décimo cruce, y cierra el segundo mutuo.
+- **Las sentencias del libro llevan el lote y la serie en la clave:** la proyección, las
+  instantáneas y el cuadre.
+- **El contrato.** Hay cinco `type` nuevos, con su texto en los dos idiomas.
+- **Los casos:**
+  - `ElCodigoEsElDeGs1Tests`, nueve, y `LaLineaLlevaSuLoteOSuSerieTests`, veintidós, en el carril
+    rápido;
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests`, ocho, sobre las cadenas del cerrojo.
 
 **Lo que queda, por este orden:**
 
 1. ~~**Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo
    cerrojo y pregunta por el puerto de Inventario.~~ Hecho.
 2. **Inventario:**
-   - el lote y la serie en la línea, sus tablas y la clave de la existencia y del libro;
-   - la marca, leída con `FOR SHARE`;
-   - la traducción de la serie.
+   - ~~el lote y la serie en la línea, sus tablas y la clave de la existencia y del libro;~~ Hecho.
+   - ~~la marca, leída con `FOR SHARE`;~~ Hecho.
+   - la traducción de la serie: `23505` en la lista de las reglas guardadas por la base, y las dos
+     restricciones de la serie a su error de negocio.
 3. **Las carreras, la propiedad y el cuadre.**
 4. **La pantalla de la marca.** Hoy el frontal del artículo es solo el listado.
 5. **La tanda de mutaciones, desde la 80.** Antes de abrirla, se le pregunta al usuario si enciende

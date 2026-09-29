@@ -43,8 +43,10 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// en una sentencia.
 /// </para>
 /// <para>
-/// <b>El lote va nulo, escrito.</b> El libro todavía no tiene columna de lote: la trae el 2.9, y con
-/// ella esta sentencia, el recálculo y el cuadre cambian a la vez.
+/// <b>La clave lleva el lote y la serie desde el 2.9</b> (ADR-0048), y cambiaron a la vez esta
+/// sentencia, el recálculo y el cuadre. Los dos pueden ser nulos, así que la fila viva se busca con
+/// <c>IS NOT DISTINCT FROM</c>: una igualdad con nulos no casa nunca, y el <c>UPDATE</c> no tocaría
+/// las filas sin lote.
 /// </para>
 /// </remarks>
 internal static class LaProyeccionDelLibro
@@ -67,13 +69,13 @@ internal static class LaProyeccionDelLibro
     internal const string SqlQueCreaYBloqueaLasVivas =
         """
         INSERT INTO inventario.existencias AS e
-            (id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, reservado)
-        SELECT c.id, {0}, c.articulo_id, c.almacen_id, c.ubicacion_id, NULL::uuid, 0, 0
-        FROM unnest({1}::uuid[], {2}::uuid[], {3}::uuid[], {4}::uuid[])
-            AS c (id, articulo_id, almacen_id, ubicacion_id)
-        GROUP BY c.id, c.articulo_id, c.almacen_id, c.ubicacion_id
-        ORDER BY c.articulo_id, c.almacen_id, c.ubicacion_id
-        ON CONFLICT (empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id)
+            (id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, serie_id, fisico, reservado)
+        SELECT c.id, {0}, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id, c.serie_id, 0, 0
+        FROM unnest({1}::uuid[], {2}::uuid[], {3}::uuid[], {4}::uuid[], {5}::uuid[], {6}::uuid[])
+            AS c (id, articulo_id, almacen_id, ubicacion_id, lote_id, serie_id)
+        GROUP BY c.id, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id, c.serie_id
+        ORDER BY c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id, c.serie_id
+        ON CONFLICT (empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, serie_id)
         DO UPDATE SET fisico = e.fisico
         """;
 
@@ -107,23 +109,27 @@ internal static class LaProyeccionDelLibro
     internal const string SqlQueMueveLaProyeccion =
         """
         WITH movimientos AS (
-            SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.mes, m.cantidad
-            FROM unnest({1}::uuid[], {2}::uuid[], {3}::uuid[], {4}::date[], {5}::numeric[])
-                AS m (articulo_id, almacen_id, ubicacion_id, mes, cantidad)
+            SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.serie_id, m.mes, m.cantidad
+            FROM unnest(
+                {1}::uuid[], {2}::uuid[], {3}::uuid[], {4}::uuid[], {5}::uuid[], {6}::date[],
+                {7}::numeric[])
+                AS m (articulo_id, almacen_id, ubicacion_id, lote_id, serie_id, mes, cantidad)
         ),
         vivas AS (
             UPDATE inventario.existencias AS e
             SET fisico = e.fisico + d.cantidad
             FROM (
-                SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, sum(m.cantidad) AS cantidad
+                SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.serie_id,
+                       sum(m.cantidad) AS cantidad
                 FROM movimientos AS m
-                GROUP BY m.articulo_id, m.almacen_id, m.ubicacion_id) AS d
+                GROUP BY m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.serie_id) AS d
             WHERE e.empresa_id = {0}
                 AND e.articulo_id = d.articulo_id
                 AND e.almacen_id = d.almacen_id
                 AND e.ubicacion_id = d.ubicacion_id
-                AND e.lote_id IS NULL
-            RETURNING e.id, e.articulo_id, e.almacen_id, e.ubicacion_id
+                AND e.lote_id IS NOT DISTINCT FROM d.lote_id
+                AND e.serie_id IS NOT DISTINCT FROM d.serie_id
+            RETURNING e.id, e.articulo_id, e.almacen_id, e.ubicacion_id, e.lote_id, e.serie_id
         )
         INSERT INTO inventario.instantaneas_mensuales AS i (existencia_id, mes, empresa_id, fisico)
         SELECT v.id, g.mes::date, {0}, sum(m.cantidad)
@@ -132,6 +138,8 @@ internal static class LaProyeccionDelLibro
             ON v.articulo_id = m.articulo_id
             AND v.almacen_id = m.almacen_id
             AND v.ubicacion_id = m.ubicacion_id
+            AND v.lote_id IS NOT DISTINCT FROM m.lote_id
+            AND v.serie_id IS NOT DISTINCT FROM m.serie_id
         CROSS JOIN LATERAL generate_series(
             m.mes::timestamp,
             (SELECT c.hasta_el_mes FROM inventario.cortes_de_la_instantanea AS c
@@ -217,12 +225,14 @@ internal static class LaProyeccionDelLibro
         // Un identificador por CLAVE y no por fila: las filas de la misma clave tienen que caer en
         // el mismo grupo, y el identificador es parte del grupo. Solo lo usa la sentencia que crea,
         // si la clave es nueva; si ya tenía fila viva, el `ON CONFLICT` se queda con el suyo.
-        Dictionary<(Guid Articulo, Guid Almacen, Guid Ubicacion), Guid> identificadores = [];
+        Dictionary<(Guid Articulo, Guid Almacen, Guid Ubicacion, Guid? Lote, Guid? Serie), Guid> identificadores = [];
 
         var ids = new Guid[movimientos.Count];
         var articulos = new Guid[movimientos.Count];
         var almacenes = new Guid[movimientos.Count];
         var ubicaciones = new Guid[movimientos.Count];
+        var lotes = new Guid?[movimientos.Count];
+        var series = new Guid?[movimientos.Count];
         var meses = new DateOnly[movimientos.Count];
         decimal[] cantidades = new decimal[movimientos.Count];
 
@@ -230,8 +240,12 @@ internal static class LaProyeccionDelLibro
 
         foreach (MovimientoStock movimiento in movimientos)
         {
-            (Guid Articulo, Guid Almacen, Guid Ubicacion) clave =
-                (movimiento.ArticuloId, movimiento.AlmacenId, movimiento.UbicacionId);
+            (Guid Articulo, Guid Almacen, Guid Ubicacion, Guid? Lote, Guid? Serie) clave = (
+                movimiento.ArticuloId,
+                movimiento.AlmacenId,
+                movimiento.UbicacionId,
+                movimiento.LoteId,
+                movimiento.SerieId);
 
             if (!identificadores.TryGetValue(clave, out Guid id))
             {
@@ -243,6 +257,8 @@ internal static class LaProyeccionDelLibro
             articulos[posicion] = movimiento.ArticuloId;
             almacenes[posicion] = movimiento.AlmacenId;
             ubicaciones[posicion] = movimiento.UbicacionId;
+            lotes[posicion] = movimiento.LoteId;
+            series[posicion] = movimiento.SerieId;
             meses[posicion] = new DateOnly(
                 movimiento.FechaDeOperacion.Year, movimiento.FechaDeOperacion.Month, 1);
             cantidades[posicion] = movimiento.CantidadEnUnidadBase;
@@ -252,14 +268,14 @@ internal static class LaProyeccionDelLibro
         await contexto.Database
             .ExecuteSqlRawAsync(
                 SqlQueCreaYBloqueaLasVivas,
-                [empresaId, ids, articulos, almacenes, ubicaciones],
+                [empresaId, ids, articulos, almacenes, ubicaciones, lotes, series],
                 cancelacion)
             .ConfigureAwait(false);
 
         await contexto.Database
             .ExecuteSqlRawAsync(
                 SqlQueMueveLaProyeccion,
-                [empresaId, articulos, almacenes, ubicaciones, meses, cantidades],
+                [empresaId, articulos, almacenes, ubicaciones, lotes, series, meses, cantidades],
                 cancelacion)
             .ConfigureAwait(false);
     }

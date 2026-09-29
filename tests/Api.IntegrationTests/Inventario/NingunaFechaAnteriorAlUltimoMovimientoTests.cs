@@ -4,6 +4,7 @@ using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia;
@@ -286,6 +287,7 @@ public sealed class NingunaFechaAnteriorAlUltimoMovimientoTests(PostgresConTodos
                 1,
                 new AjusteConfirmado(ajuste.Id, caso.EmpresaId, caso.AlmacenId, Dia(15), 1),
                 new ElPrecioMedioPonderado().Valorar(sinFecha, lineas, "EUR", Dia(15)),
+                LotesYSeriesResueltos.Ninguno,
                 momento);
 
             repositorio.Agregar(ajuste);

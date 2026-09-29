@@ -1,9 +1,11 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
+using Bastion.Inventario.Infrastructure.Persistencia.LotesYSeries;
 using Bastion.Inventario.Infrastructure.Persistencia.Valoraciones;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,6 +46,26 @@ internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquil
             "es siempre de una empresa: sin ella la sentencia bloquearía la de cualquiera.");
 
         return LaValoracionDelLibro.BloquearYLeerAsync(contexto, empresaId, claves, divisa, cancelacion);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <b>La empresa sale del inquilino</b>, como al bloquear la valoración: la sentencia que crea
+    /// no pasa por el filtro global.
+    /// </remarks>
+    public Task<LotesYSeriesResueltos> ResolverLotesYSeriesAsync(
+        IReadOnlyList<CodigoDeUnArticulo> lotes,
+        IReadOnlyList<CodigoDeUnArticulo> series,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(lotes);
+        ArgumentNullException.ThrowIfNull(series);
+
+        Guid empresaId = inquilino.EmpresaDelFiltro ?? throw new InvalidOperationException(
+            "Se están resolviendo lotes y series dentro de un ámbito sin inquilino, y un lote es " +
+            "siempre de una empresa: sin ella la sentencia los crearía en la de cualquiera.");
+
+        return LosLotesYLasSeries.ResolverAsync(contexto, empresaId, lotes, series, cancelacion);
     }
 
     /// <inheritdoc/>

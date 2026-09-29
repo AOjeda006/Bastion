@@ -1,5 +1,7 @@
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Entidades;
+using Bastion.Inventario.Domain.LotesYSeries;
+using Bastion.Inventario.Domain.Movimientos;
 
 namespace Bastion.Inventario.Domain.Ajustes;
 
@@ -33,6 +35,8 @@ public sealed class LineaDeAjuste : EntidadBase
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
         decimal? costeUnitario,
+        string? codigoDeLote,
+        string? numeroDeSerie,
         DateTimeOffset momento)
         : base(momento)
     {
@@ -45,6 +49,8 @@ public sealed class LineaDeAjuste : EntidadBase
         UnidadIntroducidaId = unidadIntroducidaId;
         FactorAUnidadBase = factorAUnidadBase;
         CosteUnitario = costeUnitario;
+        CodigoDeLote = codigoDeLote;
+        NumeroDeSerie = numeroDeSerie;
     }
 
     /// <summary>Constructor de materialización para EF Core.</summary>
@@ -92,6 +98,18 @@ public sealed class LineaDeAjuste : EntidadBase
     /// </remarks>
     public decimal? CosteUnitario { get; private set; }
 
+    /// <summary>El código del lote, tal como lo dice la etiqueta, o <see langword="null"/>.</summary>
+    /// <remarks>
+    /// <b>El borrador guarda el texto, y el libro, la fila</b> (ADR-0048 §2). El lote se crea la
+    /// primera vez que se confirma un documento que lo nombra, así que mientras la línea es borrador
+    /// puede no existir todavía, y un borrador tirado no deja lotes huérfanos.
+    /// </remarks>
+    public string? CodigoDeLote { get; private set; }
+
+    /// <summary>El número de serie, tal como lo dice la etiqueta, o <see langword="null"/>.</summary>
+    /// <remarks>Como el lote: texto en el borrador y fila en el libro.</remarks>
+    public string? NumeroDeSerie { get; private set; }
+
     /// <summary>
     /// Lo que la línea sumó a la valoración al confirmarse, o lo que le restó, en la divisa del
     /// documento: el valor de su fila del libro. <see langword="null"/> mientras es borrador.
@@ -127,6 +145,12 @@ public sealed class LineaDeAjuste : EntidadBase
     /// llevan coste, y sus filas no se tocan. El borde rechaza lo mismo antes, con
     /// <c>ajuste-coste-no-valido</c>, así que aquí llega como defecto de quien llama.
     /// </para>
+    /// <para>
+    /// <b>El lote y la serie, lo mismo</b>: el borde los rechaza antes con su <c>type</c>, y aquí se
+    /// vuelven a mirar para que no exista una línea con un código que la etiqueta no puede llevar,
+    /// ni con los dos a la vez, ni con una serie que mueva otra cosa que una unidad base (ADR-0048
+    /// §1, §2 y §3).
+    /// </para>
     /// </remarks>
     /// <param name="ajusteId">Ajuste al que pertenece.</param>
     /// <param name="numero">Su posición en el documento, desde uno.</param>
@@ -136,6 +160,8 @@ public sealed class LineaDeAjuste : EntidadBase
     /// <param name="unidadIntroducidaId">Unidad en la que se escribió.</param>
     /// <param name="factorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
     /// <param name="costeUnitario">Coste de una unidad base, o <c>null</c>. Solo si sube.</param>
+    /// <param name="codigoDeLote">El código del lote, o <c>null</c>.</param>
+    /// <param name="numeroDeSerie">El número de serie, o <c>null</c>. Nunca con lote.</param>
     /// <param name="momento">Ahora.</param>
     /// <returns>La línea.</returns>
     public static LineaDeAjuste Crear(
@@ -147,6 +173,8 @@ public sealed class LineaDeAjuste : EntidadBase
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
         decimal? costeUnitario,
+        string? codigoDeLote,
+        string? numeroDeSerie,
         DateTimeOffset momento)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(numero);
@@ -175,6 +203,26 @@ public sealed class LineaDeAjuste : EntidadBase
                 nameof(costeUnitario));
         }
 
+        string? lote = LeerCodigo(codigoDeLote, nameof(codigoDeLote));
+        string? serie = LeerCodigo(numeroDeSerie, nameof(numeroDeSerie));
+
+        if (lote is not null && serie is not null)
+        {
+            throw new ArgumentException(
+                "Una línea lleva lote o número de serie, no los dos: el artículo tiene una sola " +
+                "marca, y el esquema guarda las dos columnas solo para no mezclarlas (ADR-0048 §1).",
+                nameof(numeroDeSerie));
+        }
+
+        if (serie is not null
+            && Math.Abs(MovimientoStock.EnUnidadBase(cantidadIntroducida, factorAUnidadBase)) != 1m)
+        {
+            throw new ArgumentException(
+                "Una línea con número de serie mueve una unidad base, arriba o abajo: la serie es " +
+                "una unidad, y dos unidades con el mismo número no existen (ADR-0048 §3).",
+                nameof(numeroDeSerie));
+        }
+
         return new LineaDeAjuste(
             Guid.CreateVersion7(),
             ajusteId,
@@ -187,6 +235,8 @@ public sealed class LineaDeAjuste : EntidadBase
             costeUnitario is { } redondeable
                 ? decimal.Round(redondeable, Importe.Decimales, MidpointRounding.AwayFromZero)
                 : null,
+            lote,
+            serie,
             momento);
     }
 
@@ -216,12 +266,28 @@ public sealed class LineaDeAjuste : EntidadBase
             UnidadIntroducidaId,
             FactorAUnidadBase,
             costeUnitario: null,
+            CodigoDeLote,
+            NumeroDeSerie,
             momento);
 
         inversa.ValorQueCompensa = -valor;
 
         return inversa;
     }
+
+    /// <summary>El código normalizado, o <see langword="null"/> si no se escribió.</summary>
+    /// <param name="codigo">Lo que se escribió.</param>
+    /// <param name="parametro">De qué parámetro viene, para el mensaje.</param>
+    /// <returns>El código en la forma de GS1, o <see langword="null"/>.</returns>
+    /// <exception cref="ArgumentException">Se escribió algo que no es un código GS1.</exception>
+    private static string? LeerCodigo(string? codigo, string parametro) =>
+        codigo is null
+            ? null
+            : CodigoGs1.Normalizar(codigo)
+                ?? throw new ArgumentException(
+                    $"«{codigo}» no es un código GS1: de 1 a {CodigoGs1.LargoMaximo} caracteres " +
+                    "del conjunto 82 (ADR-0048 §2).",
+                    parametro);
 
     /// <summary>Anota el valor con el que la línea entró en el libro, al confirmar.</summary>
     /// <param name="valor">El valor de su fila del libro, en la divisa del documento.</param>

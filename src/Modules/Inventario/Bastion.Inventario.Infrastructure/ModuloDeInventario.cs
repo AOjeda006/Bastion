@@ -3,6 +3,7 @@ using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
+using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -81,6 +82,11 @@ public static class ModuloDeInventario
         // se esta confirmando. Contestarlo desde `OrganizacionDbContext` seria otra conexion, y el
         // cerrojo se soltaria antes de que el documento llegara a escribirse.
         servicios.AddScoped<IConsultaDeEjercicios, LosEjerciciosDesdeInventario>();
+
+        // Y EL DE LA MARCA DEL ARTÍCULO, por lo mismo (ADR-0048 §4): al confirmar se lee con
+        // `FOR SHARE`, y el cerrojo tiene que vivir en la transacción del documento. Lo publica
+        // Catálogo y se contesta aquí, con SQL crudo sobre `catalogo.articulos`.
+        servicios.AddScoped<IConsultaDeTrazabilidad, LaTrazabilidadDesdeInventario>();
 
         // LO QUE ESTE MÓDULO EXPONE A LOS DEMÁS, bajo el tipo de su `Contracts`, y la mitad de
         // vuelta del segundo cruce mutuo (ADR-0048 §7): Catálogo pregunta por aquí si un artículo

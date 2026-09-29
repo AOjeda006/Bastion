@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Inventario.Domain.Existencias;
+using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -11,8 +12,16 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
     /// <summary>La tabla, nombrada aquí porque la sentencia que anota el libro la escribe en crudo.</summary>
     internal const string Tabla = "existencias";
 
-    /// <summary>El índice que deja una fila por clave, con el lote nulo contando como un valor.</summary>
+    /// <summary>
+    /// El índice que deja una fila por clave, con el lote y la serie nulos contando como un valor.
+    /// </summary>
     internal const string IndiceDeLaClave = "ix_existencias_una_por_clave";
+
+    /// <summary>La serie, como mucho en un sitio: el índice único parcial del ADR-0048 §3.</summary>
+    internal const string SerieEnUnSitio = "ix_existencias_serie_en_un_sitio";
+
+    /// <summary>La serie, como mucho una unidad en su fila: el <c>CHECK</c> del ADR-0048 §3.</summary>
+    internal const string SerieComoMuchoUna = "ck_existencias_serie_como_mucho_una";
 
     /// <summary>La resta del disponible, dicha en SQL.</summary>
     internal const string Disponible = "fisico - reservado";
@@ -33,9 +42,18 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
         //
         // Las instantáneas NO llevan la suya: un movimiento con fecha atrasada puede dejar un mes
         // pasado por debajo de cero sin que el saldo de hoy lo esté, y eso ya lo admitía el 2.7.
+        //
+        // LA SERIE, COMO MUCHO UNA UNIDAD (ADR-0048 §3). Solo por arriba: el límite de abajo ya lo
+        // pone la del stock, y repetirlo haría saltar las dos con un −1. PostgreSQL las comprueba en
+        // orden alfabético de nombre, así que el error que recibe el usuario dependería de cómo se
+        // llaman.
         existencia.ToTable(
             Tabla,
-            tabla => tabla.HasCheckConstraint(FisicoNoNegativo, "fisico >= 0"));
+            tabla =>
+            {
+                tabla.HasCheckConstraint(FisicoNoNegativo, "fisico >= 0");
+                tabla.HasCheckConstraint(SerieComoMuchoUna, "serie_id IS NULL OR fisico <= 1");
+            });
 
         // NO SE AUDITA, y por el mismo motivo que el contador de una serie: la escribe una sentencia
         // cruda, que no pasa por el rastreador de cambios. Un `SeAudita()` prometería una traza que
@@ -52,8 +70,21 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
         existencia.Property(fila => fila.AlmacenId).IsRequired();
         existencia.Property(fila => fila.UbicacionId).IsRequired();
 
-        // Nullable y SIN clave ajena: el lote lo trae el 2.9, con su tabla.
+        // EL LOTE Y LA SERIE, EN DOS COLUMNAS Y CON CLAVE AJENA (ADR-0048 §1 y §2). Dentro del
+        // esquema, así que la clave ajena no cruza ninguna frontera; y las filas de lote y de serie no
+        // se borran nunca, así que `Restrict` no le quita nada a nadie.
         existencia.Property(fila => fila.LoteId);
+        existencia.Property(fila => fila.SerieId);
+
+        existencia.HasOne<Lote>()
+            .WithMany()
+            .HasForeignKey(fila => fila.LoteId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        existencia.HasOne<NumeroDeSerie>()
+            .WithMany()
+            .HasForeignKey(fila => fila.SerieId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // LA MISMA ESCALA QUE EL LIBRO, porque es su suma: con menos decimales, la copia diría otra
         // cosa que el original en cuanto una conversión dejara el sexto.
@@ -75,9 +106,9 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
             .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
             .HasComputedColumnSql(Disponible, stored: true);
 
-        // UNA FILA POR CLAVE, CON EL LOTE NULO COMO UN VALOR MÁS. Sin `NULLS NOT DISTINCT`, dos filas
-        // con el lote nulo no chocarían nunca, y el `ON CONFLICT` de la sentencia que anota el libro
-        // no encontraría nunca la fila de antes: cada movimiento crearía una nueva.
+        // UNA FILA POR CLAVE, CON EL LOTE Y LA SERIE NULOS COMO UN VALOR MÁS. Sin `NULLS NOT
+        // DISTINCT`, dos filas con el lote nulo no chocarían nunca, y el `ON CONFLICT` de la sentencia
+        // que anota el libro no encontraría nunca la fila de antes: cada movimiento crearía una nueva.
         //
         // El orden de las columnas es el de la pregunta más frecuente: qué hay de un artículo en una
         // empresa.
@@ -88,9 +119,24 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
             fila.AlmacenId,
             fila.UbicacionId,
             fila.LoteId,
+            fila.SerieId,
         })
             .IsUnique()
             .AreNullsDistinct(false)
             .HasDatabaseName(IndiceDeLaClave);
+
+        // UNA SERIE NO ESTÁ EN DOS SITIOS (ADR-0048 §3), y un `CHECK` de fila no ve las demás filas.
+        // Solo cuentan las filas con existencias: la serie que salió deja su fila a cero, y la
+        // siguiente entrada puede ser en otra estantería. El `serie_id IS NOT NULL` no cambia lo que
+        // guarda -con los nulos distintos, dos filas sin serie no chocarían- y deja fuera del índice
+        // todo el stock que no es por serie, que es casi todo.
+        //
+        // Se comprueba fila a fila y no al final de la sentencia, y por eso una serie sale una sola
+        // vez por documento: moverla de una estantería a otra en el mismo `UPDATE` chocaría o no
+        // según el orden en que el motor recorriera las filas.
+        existencia.HasIndex(fila => new { fila.EmpresaId, fila.ArticuloId, fila.SerieId })
+            .IsUnique()
+            .HasFilter("fisico > 0 AND serie_id IS NOT NULL")
+            .HasDatabaseName(SerieEnUnSitio);
     }
 }
