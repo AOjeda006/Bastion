@@ -117,6 +117,15 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
   Si la cifra va a un documento, va con la orden exacta que la produce, para que el siguiente la
   repita en vez de creerla.
 
+- **El número de una mutación se toma del final de la última tabla, sea del tramo que sea.** Las
+  mutaciones llevan una sola numeración en todo el PLAN: un ítem, un epílogo o un addendum siguen
+  donde acabó la tabla más reciente, no donde acabó la de su propio ítem. El 2.8 empezó en la 52
+  porque la tabla del 2.7 acababa en la 51, sin ver la del epílogo, que ya llegaba a la 56. Cinco
+  quedaron numeradas dos veces, y el PLAN las cualifica («52 del epílogo», «52 del 2.8»); los
+  mensajes de commit no se tocan. El PLAN no está en orden cronológico, así que «la última» no es la
+  de más abajo: `grep -n "| # | Mutación" docs/PLAN.md` lista todas las tablas, y el número
+  siguiente es uno más que la mayor de sus filas.
+
 ## Comandos del proyecto (parte variable)
 
 Desde la raíz del repositorio.

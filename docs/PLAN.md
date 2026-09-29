@@ -6222,39 +6222,44 @@ Hecho, por puntos:
 4. **Los dos casos vistos solo en verde, a rojo**, y el nuevo del punto 3 con ellos. La numeración
    sigue la de la tabla del 2.7, que acabó en la 51. Cada mutación se corrió **sola**, con el caso
    diseñado sobre un contenedor nuevo, y **en los dos carriles** con el guion de siempre (árbol
-   limpio, canario del fichero, compilar, revertir y recompilar). La 53 muta el propio caso, así que
+   limpio, canario del fichero, compilar, revertir y recompilar). La 53 del epílogo muta el propio caso, así que
    solo se corre sola.
+
+   > **Nota (2026-09-29): de la 52 a la 56, estos números se repiten.** La tabla del 2.8 volvió a
+   > empezar en la 52, y sus 52 a 56 son otras cinco mutaciones. Donde se citen, estas son «del
+   > epílogo» y aquellas «del 2.8». Los mensajes de commit no se tocan. La siguiente libre es la
+   > **69**.
 
    | # | Mutación | Sola | Dos carriles |
    |---|---|---|---|
-   | 52 | El filtro de idempotencia no toma nunca la rama del recibo guardado (`if (!mia)`, con una condición imposible añadida): el reintento se ejecuta otra vez. | rojo: el segundo `POST` contesta `409` `ajuste-no-esta-confirmado` | 7 en integración y 0 en el rápido (abajo) |
-   | 53 | `disponible`, cambiada **en la base** con `ALTER TABLE inventario.existencias ALTER COLUMN disponible SET EXPRESSION AS (fisico)`, dentro de la transacción del caso, que se deshace. | rojo: `lector.GetDecimal(2)` debía ser 3 y fue 5 | — |
-   | 54 | La guarda de la transacción, con una condición imposible añadida (`&& movimientos.Count < 0`). | rojo: esperaba `InvalidOperationException` y no llegó | 1 en integración y 0 en el rápido |
-   | 55 | La guarda de la otra empresa, con la misma condición imposible. | rojo, en la segunda mitad del caso | 1 y 0 |
-   | 56 | La guarda del inquilino: `?? Guid.Empty` en vez de reventar. | **verde**; tras `1ba7b2b`, rojo: esperaba «sin inquilino» y llegó «…de otra empresa…» | **verde en los dos**; tras `1ba7b2b`, 1 y 0 |
+   | 52 del epílogo | El filtro de idempotencia no toma nunca la rama del recibo guardado (`if (!mia)`, con una condición imposible añadida): el reintento se ejecuta otra vez. | rojo: el segundo `POST` contesta `409` `ajuste-no-esta-confirmado` | 7 en integración y 0 en el rápido (abajo) |
+   | 53 del epílogo | `disponible`, cambiada **en la base** con `ALTER TABLE inventario.existencias ALTER COLUMN disponible SET EXPRESSION AS (fisico)`, dentro de la transacción del caso, que se deshace. | rojo: `lector.GetDecimal(2)` debía ser 3 y fue 5 | — |
+   | 54 del epílogo | La guarda de la transacción, con una condición imposible añadida (`&& movimientos.Count < 0`). | rojo: esperaba `InvalidOperationException` y no llegó | 1 en integración y 0 en el rápido |
+   | 55 del epílogo | La guarda de la otra empresa, con la misma condición imposible. | rojo, en la segunda mitad del caso | 1 y 0 |
+   | 56 del epílogo | La guarda del inquilino: `?? Guid.Empty` en vez de reventar. | **verde**; tras `1ba7b2b`, rojo: esperaba «sin inquilino» y llegó «…de otra empresa…» | **verde en los dos**; tras `1ba7b2b`, 1 y 0 |
 
-   - **La 53 es de PostgreSQL 17, y se comprobó**: `SET EXPRESSION` sobre una columna generada
+   - **La 53 del epílogo es de PostgreSQL 17, y se comprobó**: `SET EXPRESSION` sobre una columna generada
      llegó en esa versión, y el contenedor de los tests, `postgres:17.6-alpine`, lo acepta dentro de
      una transacción. Muta la base y no el modelo, así que el `MigrateAsync` del fixture no se entera
      y el único que puede verla es el caso. La 49 del 2.7 mutaba el modelo, y la paró el fixture.
-   - **La 56 salió verde, y es la clase de la 27**: una guarda quitada que otra guarda tapa. Con el
+   - **La 56 del epílogo salió verde, y es la clase de la 27**: una guarda quitada que otra guarda tapa. Con el
      inquilino nulo convertido en `Guid.Empty`, dentro de la transacción salta la de la otra empresa,
      con otro mensaje, y el caso solo miraba el tipo de la excepción. `1ba7b2b` llama sin inquilino
      dentro de la transacción y afirma el mensaje. El caso se renombra a
      `Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta`, y el
      censo lo declara en el mismo commit. La lista del 2.7, más abajo, conserva el nombre de
      entonces.
-   - **Los 7 de la 52 son todos por diseño**: todo caso que reintenta con la misma clave. Son los
+   - **Los 7 de la 52 del epílogo son todos por diseño**: todo caso que reintenta con la misma clave. Son los
      tres de `LaMismaClaveDevuelveElMismoRecursoTests`, los dos de misma clave de
      `LaImportacionEsUnaOperacionTests`, `ElNumeroEntraEnElReciboTests.El_reintento_con_la_misma_clave_devuelve_el_numero_y_no_gasta_otro`
      y el nuevo, `LaAnulacionConContraDocumentoTests.El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso`.
 
    **Las dos listas.** Vistos en rojo por diseño:
 
-   - `LasExistenciasSonLaSumaDelLibroTests.Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor`: la 53;
+   - `LasExistenciasSonLaSumaDelLibroTests.Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor`: la 53 del epílogo;
    - `LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta`:
-     la 54, la 55 y la 56, cada comprobación por separado;
-   - `LaAnulacionConContraDocumentoTests.El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso`: la 52.
+     la 54, la 55 y la 56 del epílogo, cada comprobación por separado;
+   - `LaAnulacionConContraDocumentoTests.El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso`: la 52 del epílogo.
 
    **Vistos solo en verde: ninguno.** Los dos que el encargo señalaba, y el nuevo del punto 3, han
    salido rojos con su mutación.
@@ -6576,19 +6581,24 @@ cierre según `git rev-list --count main..HEAD`:
 - `40c1530`: la carrera de la valoración, rehecha por la mutación 64;
 - y el cierre.
 
-**Qué pone rojo cada mutación.** La numeración sigue la del PLAN, y la del 2.7 acabó en la 51. Cada
+**Qué pone rojo cada mutación.** La numeración sigue la del PLAN, y se tomó mal: del final de la
+tabla del 2.7, la 51, sin ver la del epílogo, que ya llegaba a la 56. Cada
 una la aplicó un guion que exige el fichero como está en `HEAD` y comprueba que cambió. Luego compila
 la solución y corre los dos carriles: `Category!=Integracion` sobre `Bastion.sln` (**974** casos) y
 `Category=Integracion` sobre `Api.IntegrationTests` (**432**). Al acabar, reescribe el fichero con la
 fecha de ahora, y el guion recompila al final. Van en el orden de las piezas.
 
+> **Nota (2026-09-29): de la 52 a la 56, estos números se repiten.** Son también los de cinco
+> mutaciones del epílogo del 2.7. Donde se citen, estas son «del 2.8» y aquellas «del epílogo». Los
+> mensajes de commit no se tocan. La siguiente libre es la **69**.
+
 | # | Mutación | Qué se puso rojo |
 |---|---|---|
-| 52 | La migración `ElFisicoNoBajaDeCero`, con `fisico >= -1000000` en el `CHECK`. | rápido 0; integración 8: las seis semillas de la propiedad, `Anular_una_entrada_cuyas_unidades_ya_salieron…` y `Dos_salidas_a_la_vez_que_caben_una_a_una…` |
-| 53 | La restricción que declara `ModuloDeInventario`, con otro nombre. | rápido 3: `Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista`, `Toda_restriccion_declarada_existe_en_el_modelo` y `Una_restriccion_declarada_sale_con_su_error_y_no_500`; integración 1: `Anular_una_entrada_cuyas_unidades_ya_salieron…` |
-| 54 | La salida congela el precio de después, no el de antes. | rápido 4: `Casi_vaciar…`, `El_inverso_de_una_entrada_resta…`, `El_inverso_de_una_entrada_ya_repartida…` y `Sacar_un_tercio…`; integración 7: la propiedad y `El_inverso_resta_el_valor_que_sumo_la_entrada…` |
-| 55 | La entrada no recalcula el precio medio. | rápido 4: `Cada_linea_valora_contra…`, `El_inverso_de_una_salida…`, `La_secuencia_del_criterio…` y `Una_entrada_sin_coste_en_una_clave_de_antes_del_2_8…`; integración 7: la propiedad y `Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave` |
-| 56 | La salida que vacía la clave no se lleva todo el valor. | rápido 1: `Vaciar_la_clave_de_golpe…`; integración 1: `Una_salida_congela_el_precio_medio_y_la_que_vacia…` |
+| 52 del 2.8 | La migración `ElFisicoNoBajaDeCero`, con `fisico >= -1000000` en el `CHECK`. | rápido 0; integración 8: las seis semillas de la propiedad, `Anular_una_entrada_cuyas_unidades_ya_salieron…` y `Dos_salidas_a_la_vez_que_caben_una_a_una…` |
+| 53 del 2.8 | La restricción que declara `ModuloDeInventario`, con otro nombre. | rápido 3: `Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista`, `Toda_restriccion_declarada_existe_en_el_modelo` y `Una_restriccion_declarada_sale_con_su_error_y_no_500`; integración 1: `Anular_una_entrada_cuyas_unidades_ya_salieron…` |
+| 54 del 2.8 | La salida congela el precio de después, no el de antes. | rápido 4: `Casi_vaciar…`, `El_inverso_de_una_entrada_resta…`, `El_inverso_de_una_entrada_ya_repartida…` y `Sacar_un_tercio…`; integración 7: la propiedad y `El_inverso_resta_el_valor_que_sumo_la_entrada…` |
+| 55 del 2.8 | La entrada no recalcula el precio medio. | rápido 4: `Cada_linea_valora_contra…`, `El_inverso_de_una_salida…`, `La_secuencia_del_criterio…` y `Una_entrada_sin_coste_en_una_clave_de_antes_del_2_8…`; integración 7: la propiedad y `Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave` |
+| 56 del 2.8 | La salida que vacía la clave no se lleva todo el valor. | rápido 1: `Vaciar_la_clave_de_golpe…`; integración 1: `Una_salida_congela_el_precio_medio_y_la_que_vacia…` |
 | 57 | Sin tope: una salida puede restar más valor del que hay. | rápido 2: `Casi_vaciar…` y `El_inverso_de_una_entrada_ya_repartida…`; integración 0 |
 | 58 | Las líneas se valoran en su orden, sin subir primero. | rápido 1: `Dentro_de_un_documento_primero_sube_y_despues_baja`; integración 6: la propiedad |
 | 59 | El inverso se valora con su coste o al precio medio, no con lo que compensa. | rápido 1: `El_inverso_de_una_salida…`; integración 6: la propiedad |
@@ -6611,7 +6621,7 @@ abre: la primera bloquea la valoración y no escribe nada hasta ver a la segunda
 NOTHING`, la segunda termina sin esperar y el caso sale rojo con «la operación ha terminado sin
 esperar a la transacción en vuelo». La primera forma se midió en una tanda anterior, sobre
 `5c1b0b7`, con el carril entero en verde. De esa tanda es también la cifra de integración de la 65,
-porque la última solo la pasó por el carril rápido. Y la 54, que esa tanda midió también, dio los
+porque la última solo la pasó por el carril rápido. Y la 54 del 2.8, que esa tanda midió también, dio los
 mismos siete rojos que la última.
 
 **Tres mutaciones solo las ve un carril, y está dicho por qué.**
@@ -14442,7 +14452,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   ítem deja escrito por qué el disparador del invariante 8 **no se cruza aquí**.
 
   **Hecho el 2026-09-29**, en la rama `item-2.8-la-valoracion-pmp`. Los commits, las mutaciones de
-  la 52 a la 68 y las cifras están en *Estado actual → Hecho el 2.8*. Cada punto del criterio tiene
+  la 52 a la 68 del 2.8 y las cifras están en *Estado actual → Hecho el 2.8*. Cada punto del criterio tiene
   su caso:
 
   - el precio medio se recalcula en cada entrada y se guarda en la fila:
@@ -14466,36 +14476,36 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 
   **Vistos en rojo** —entre paréntesis, la mutación que lo puso rojo—:
 
-  - `CadaRestriccionTraducidaSeJustificaTests.Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista` (53)
-  - `CadaRestriccionTraducidaSeJustificaTests.Toda_restriccion_declarada_existe_en_el_modelo` (53)
+  - `CadaRestriccionTraducidaSeJustificaTests.Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista` (53 del 2.8)
+  - `CadaRestriccionTraducidaSeJustificaTests.Toda_restriccion_declarada_existe_en_el_modelo` (53 del 2.8)
   - `ElCosteYLaDivisaDelAjusteTests.Una_linea_que_baja_no_lleva_coste_y_ninguna_lo_lleva_negativo` (61)
-  - `LaAnulacionConContraDocumentoTests.Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada` (52, 53)
+  - `LaAnulacionConContraDocumentoTests.Anular_una_entrada_cuyas_unidades_ya_salieron_se_rechaza_y_no_escribe_nada` (52 y 53 del 2.8)
   - `LaValoracionDelAjusteTests.Dos_empresas_con_la_misma_clave_no_comparten_valoracion` (60)
   - `LaValoracionDelAjusteTests.El_borrador_toma_la_divisa_base_de_la_empresa` (63)
   - `LaValoracionDelAjusteTests.El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro` (66)
-  - `LaValoracionDelAjusteTests.El_inverso_resta_el_valor_que_sumo_la_entrada_y_el_par_suma_cero` (54)
+  - `LaValoracionDelAjusteTests.El_inverso_resta_el_valor_que_sumo_la_entrada_y_el_par_suma_cero` (54 del 2.8)
   - `LaValoracionDelAjusteTests.La_segunda_de_dos_confirmaciones_a_la_vez_se_valora_con_lo_que_dejo_la_primera` (60, 64)
   - `LaValoracionDelAjusteTests.Las_lineas_se_valoran_en_el_orden_en_que_se_escribieron_aunque_la_base_las_devuelva_en_otro` (60, 65)
   - `LaValoracionDelAjusteTests.Un_documento_en_otra_divisa_que_la_de_la_valoracion_es_422_salvo_en_una_clave_vacia` (63, 68)
   - `LaValoracionDelAjusteTests.Una_entrada_sin_coste_en_una_clave_vacia_es_422_y_no_deja_nada` (67)
-  - `LaValoracionDelAjusteTests.Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave` (55, 60)
+  - `LaValoracionDelAjusteTests.Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave` (55 del 2.8, 60)
   - `LaValoracionDelAjusteTests.Una_salida_con_coste_o_un_coste_negativo_no_abren_el_borrador` (62)
-  - `LaValoracionDelAjusteTests.Una_salida_congela_el_precio_medio_y_la_que_vacia_se_lleva_todo_el_valor` (56)
-  - `LasExistenciasSonLaSumaDelLibroTests.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una` (52)
+  - `LaValoracionDelAjusteTests.Una_salida_congela_el_precio_medio_y_la_que_vacia_se_lleva_todo_el_valor` (56 del 2.8)
+  - `LasExistenciasSonLaSumaDelLibroTests.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una` (52 del 2.8)
   - `LoQueImpideValorarTests.Una_clave_con_existencias_en_otra_divisa_no_se_valora` (68)
   - `LoQueImpideValorarTests.Una_entrada_sin_coste_detras_de_una_con_coste_del_mismo_documento_se_valora` (60)
   - `LoQueImpideValorarTests.Una_entrada_sin_coste_en_una_clave_vacia_no_se_puede_valorar` (67)
-  - `LosCasosDoradosDelPrecioMedioTests.Cada_linea_valora_contra_lo_que_dejaron_las_anteriores_de_su_clave` (55, 60)
-  - `LosCasosDoradosDelPrecioMedioTests.Casi_vaciar_la_clave_resta_como_mucho_lo_que_hay` (54, 57)
+  - `LosCasosDoradosDelPrecioMedioTests.Cada_linea_valora_contra_lo_que_dejaron_las_anteriores_de_su_clave` (55 del 2.8, 60)
+  - `LosCasosDoradosDelPrecioMedioTests.Casi_vaciar_la_clave_resta_como_mucho_lo_que_hay` (54 del 2.8, 57)
   - `LosCasosDoradosDelPrecioMedioTests.Dentro_de_un_documento_primero_sube_y_despues_baja` (58)
-  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_entrada_resta_su_valor_exacto_y_deja_el_precio_de_las_demas` (54)
-  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_entrada_ya_repartida_se_lleva_como_mucho_lo_que_queda` (54, 57)
-  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_salida_devuelve_su_valor_exacto_y_el_par_suma_cero` (55, 59)
-  - `LosCasosDoradosDelPrecioMedioTests.La_secuencia_del_criterio_da_sus_cifras_fila_a_fila` (55, 60)
-  - `LosCasosDoradosDelPrecioMedioTests.Sacar_un_tercio_congela_el_precio_de_antes_y_el_que_se_deduce_cambia_en_la_sexta_decimal` (54)
-  - `LosCasosDoradosDelPrecioMedioTests.Una_entrada_sin_coste_en_una_clave_de_antes_del_2_8_se_valora_a_cero` (55)
-  - `LosCasosDoradosDelPrecioMedioTests.Vaciar_la_clave_de_golpe_se_lleva_todo_el_valor_y_no_lo_que_dice_el_redondeo` (56)
-  - `PoliticaDeErroresTests.Una_restriccion_declarada_sale_con_su_error_y_no_500` (53)
+  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_entrada_resta_su_valor_exacto_y_deja_el_precio_de_las_demas` (54 del 2.8)
+  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_entrada_ya_repartida_se_lleva_como_mucho_lo_que_queda` (54 del 2.8, 57)
+  - `LosCasosDoradosDelPrecioMedioTests.El_inverso_de_una_salida_devuelve_su_valor_exacto_y_el_par_suma_cero` (55 del 2.8, 59)
+  - `LosCasosDoradosDelPrecioMedioTests.La_secuencia_del_criterio_da_sus_cifras_fila_a_fila` (55 del 2.8, 60)
+  - `LosCasosDoradosDelPrecioMedioTests.Sacar_un_tercio_congela_el_precio_de_antes_y_el_que_se_deduce_cambia_en_la_sexta_decimal` (54 del 2.8)
+  - `LosCasosDoradosDelPrecioMedioTests.Una_entrada_sin_coste_en_una_clave_de_antes_del_2_8_se_valora_a_cero` (55 del 2.8)
+  - `LosCasosDoradosDelPrecioMedioTests.Vaciar_la_clave_de_golpe_se_lleva_todo_el_valor_y_no_lo_que_dice_el_redondeo` (56 del 2.8)
+  - `PoliticaDeErroresTests.Una_restriccion_declarada_sale_con_su_error_y_no_500` (53 del 2.8)
 
   **Vistos solo en verde** —sostienen lo que dicen y nada más—:
 
@@ -14520,7 +14530,8 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Son **47** métodos nuevos en el ítem: **30** vistos en rojo y **17** solo en verde. Salen
   de `git diff main..HEAD -- tests`, buscando las firmas `public … Task|void` añadidas, sin
   `Dispose`. No hay ninguno renombrado. `ElSaldoEsLaSumaDelLibroPorPropiedadTests` no cuenta, porque
-  no es nuevo: se amplió, y se puso rojo en la 52, la 54, la 55, la 58, la 59, la 60 y la 65.
+  no es nuevo: se amplió, y se puso rojo en la 52, la 54 y la 55 del 2.8, y en la 58, la 59, la 60 y
+  la 65.
 
   **El 2.8 lo cierra el run 36501020299** sobre `45822cb`, **success al primer intento**, con sus
   tres jobs —Backend `109191618721`, Frontal `109191618110` y Humo `109193111436`—, los tres con
