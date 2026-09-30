@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 
+import { NombreDeTrazabilidad } from './NombreDeTrazabilidad.tsx';
 import { clavesDeArticulos } from '../api/claves.ts';
 import { consultarArticulos } from '../api/consultas.ts';
 import { PARAMETRO_DE_BUSQUEDA, PARAMETRO_DE_CATEGORIA, leerListado } from '../model/listado.ts';
@@ -36,6 +37,9 @@ export function PaginaDeArticulos(): React.JSX.Element {
   const sesion = useSesionAbierta();
   const [parametros, setParametros] = useSearchParams();
   const listado = leerListado(parametros, leerPaginacion(parametros));
+  // La interfaz esconde, el servidor autoriza: quien no puede modificar no ve el enlace, y si llega
+  // escribiendo la URL, es el `PUT` el que le dice que no.
+  const puedeModificar = concede(sesion, PERMISOS.articuloModificar);
 
   const consulta = useQuery({
     queryKey: clavesDeArticulos.lista(listado),
@@ -204,6 +208,9 @@ export function PaginaDeArticulos(): React.JSX.Element {
             <th scope="col" className="py-2 pr-4 font-medium">
               {t('catalogo.articulos.tipo')}
             </th>
+            <th scope="col" className="py-2 pr-4 font-medium">
+              {t('catalogo.articulos.trazabilidad')}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -213,6 +220,24 @@ export function PaginaDeArticulos(): React.JSX.Element {
               <td className="py-2 pr-4">{articulo.descripcion}</td>
               <td className="py-2 pr-4">
                 <Tipo tipo={articulo.tipo} />
+              </td>
+              <td className="py-2 pr-4">
+                <NombreDeTrazabilidad trazabilidad={articulo.trazabilidad} />
+                {puedeModificar && (
+                  <>
+                    {' '}
+                    {/* El texto visible es «Cambiar», uno por fila; el nombre accesible dice de
+                        qué artículo, que es lo que distingue un enlace de otro en la lista de
+                        enlaces del lector de pantalla. */}
+                    <Link
+                      to={`/articulos/${articulo.id}/trazabilidad`}
+                      aria-label={t('catalogo.articulos.cambiarLaDe', { codigo: articulo.codigo })}
+                      className="ml-2 text-xs underline"
+                    >
+                      {t('catalogo.articulos.cambiar')}
+                    </Link>
+                  </>
+                )}
               </td>
             </tr>
           ))}

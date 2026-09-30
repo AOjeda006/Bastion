@@ -89,11 +89,16 @@ export interface PantallaMontada extends RenderResult {
  * La sesión se escribe ANTES, en el depósito (`abrirSesionYaRecuperada`), que es donde la deja la
  * recuperación de verdad: el cliente HTTP lee de ahí el testigo, así que la petición sale con la
  * misma cabecera que en la aplicación entera.
+ *
+ * **`patron`, para la pantalla que lee un parámetro de la ruta** (`/articulos/:id/trazabilidad`).
+ * Sin él, la ruta es el camino de la entrada inicial, que no declara parámetros, y `useParams` no
+ * devolvería nada.
  */
 export function montarPantalla(
   pantalla: React.JSX.Element,
   rutaInicial: string,
   idioma: Idioma = 'es',
+  patron?: string,
 ): PantallaMontada {
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -102,7 +107,7 @@ export function montarPantalla(
 
   // La ruta es el camino de la entrada inicial: así el test escribe una sola vez a dónde entra, con
   // sus parámetros, y no puede montar una ruta distinta de la que dice estar visitando.
-  const camino = rutaInicial.split('?')[0] ?? rutaInicial;
+  const camino = patron ?? rutaInicial.split('?')[0] ?? rutaInicial;
 
   const enrutador = createMemoryRouter([{ path: camino, element: pantalla }], {
     initialEntries: [rutaInicial],

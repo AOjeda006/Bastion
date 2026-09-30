@@ -11,13 +11,18 @@ está filtrando—, que es exactamente lo que distingue «una funcionalidad» de
 
 ## `articulos` — los artículos de la empresa activa
 
-**Propósito.** Enseñar los artículos con los que se opera, paginados y filtrados.
+**Propósito.** Enseñar los artículos con los que se opera, paginados y filtrados, y cambiar la
+trazabilidad de uno mientras todavía se puede (ítem 2.9).
 
 ### Rutas
 
-| Ruta         | Exigencia                       | Título    |
-| ------------ | ------------------------------- | --------- |
-| `/articulos` | permiso `catalogo.articulo.ver` | Artículos |
+| Ruta                          | Exigencia                             | Título                    |
+| ----------------------------- | ------------------------------------- | ------------------------- |
+| `/articulos`                  | permiso `catalogo.articulo.ver`       | Artículos                 |
+| `/articulos/:id/trazabilidad` | permiso `catalogo.articulo.modificar` | Trazabilidad del artículo |
+
+La segunda no sale en la navegación: se llega desde la fila del artículo, con un enlace que solo ve
+quien puede modificar.
 
 Parámetros de URL: `?pagina=`, `?tamanio=`, `?busqueda=` y `?categoria=`. En la URL y no en un
 `useState` por lo de siempre: el listado acotado se puede pegar en un correo, la flecha de atrás
@@ -33,9 +38,12 @@ factura— y el otro es el identificador de una rama del árbol de la propia emp
 ['articulos']                                                    → clavesDeArticulos.todo
 ['articulos', 'lista']                                           → clavesDeArticulos.listas()
 ['articulos', 'lista', { pagina, tamanio, busqueda, categoriaId }] → clavesDeArticulos.lista(listado)
+['articulos', 'una', id]                                         → clavesDeArticulos.una(id)
 ```
 
-`staleTime` de cinco minutos: un artículo es dato maestro, se da de alta y se queda ahí.
+`staleTime` de cinco minutos en el listado: un artículo es dato maestro, se da de alta y se queda
+ahí. La ficha (`una`) no lo lleva: se lee para escribir sobre ella, y su versión tiene que ser la de
+ahora.
 
 ## `categorias` — el árbol de clasificación
 
@@ -124,6 +132,20 @@ declarada de `NingunCriterioSensibleViajaEnLaUrlTests`.
   un valor nuevo llega antes de que `api/consultas.ts` lo conozca. Sin ese caso, la traducción
   devolvería `undefined` y la celda saldría vacía —que es lo que se ve cuando algo se rompe— en vez
   de decir que no se sabe.
+- **La pantalla de la trazabilidad cambia UNA cosa y manda la ficha entera.** El `PUT` sustituye la
+  ficha, así que lo demás —descripción, tipo, impuesto, categoría— viaja tal como llegó en la
+  lectura (`FichaDeArticulo.intacto`), con el `If-Match` de esa lectura. Si alguien la ha tocado
+  entre medias, el servidor contesta `412` en vez de pisarla, y la pantalla ofrece cargar la versión
+  actual. El `200` del `PUT` no trae `ETag`, así que guardar invalida la ficha y la vuelve a leer: el
+  formulario lleva la versión como `key` y se monta de nuevo con lo guardado.
+- **Si el artículo ya tiene movimientos, eso lo dice el servidor, en el campo.** El formulario no
+  puede saberlo —es cosa de Inventario (ADR-0048)—, así que la pista lo avisa antes y el rechazo
+  (`articulo-trazabilidad-con-movimientos`) sale después en el mismo grupo, anunciado y en su
+  descripción. Los rechazos que no son de la trazabilidad elegida —la versión obsoleta, el artículo
+  que ya no existe— van arriba, fuera del campo.
+- **La trazabilidad tiene su `desconocida`**, por lo mismo que el tipo. En la pantalla de cambio, una
+  guardada que no se reconoce no se marca: hay que elegir una, y guardar sin elegir lo para el
+  esquema sin ir al servidor.
 - **La unidad y el impuesto de un artículo no se pintan.** Son identificadores de dos maestros de
   otro módulo, y esta funcionalidad no importa de aquélla: enseñar el `uuid` no le dice nada a
   nadie. Que existan, que estén vigentes y que una unidad retirada no valga para un alta lo decide

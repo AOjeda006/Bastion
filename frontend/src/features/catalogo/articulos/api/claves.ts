@@ -13,4 +13,6 @@ export const clavesDeArticulos = {
   todo: ['articulos'] as const,
   listas: () => [...clavesDeArticulos.todo, 'lista'] as const,
   lista: (listado: ListadoDeArticulos) => [...clavesDeArticulos.listas(), listado] as const,
+  /** La ficha de uno, con su versión: la que lee la pantalla de la trazabilidad. */
+  una: (id: string) => [...clavesDeArticulos.todo, 'una', id] as const,
 };

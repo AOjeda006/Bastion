@@ -40,6 +40,7 @@ export const en: Diccionario = {
     tarifas: 'Price lists',
     terceros: 'Business partners',
     importarTerceros: 'Import business partners',
+    trazabilidadDelArticulo: 'Item traceability',
     noEncontrada: 'Page not found',
   },
 
@@ -345,6 +346,9 @@ export const en: Diccionario = {
       codigo: 'Code',
       descripcion: 'Description',
       tipo: 'Type',
+      trazabilidad: 'Traceability',
+      cambiar: 'Change',
+      cambiarLaDe: 'Change the traceability of {{codigo}}',
 
       filtro: 'Search by code or description',
       filtrar: 'Search',
@@ -367,6 +371,30 @@ export const en: Diccionario = {
         desconocidoDetalle:
           'This version of the screen does not know how to read the type that arrived. Tell ' +
           'whoever administers Bastion.',
+      },
+
+      trazabilidades: {
+        ninguna: 'None',
+        porLote: 'By batch',
+        porNumeroSerie: 'By serial number',
+        desconocida: 'Unrecognised',
+        desconocidaDetalle:
+          'This version of the screen does not know how to read the traceability that arrived. ' +
+          'Tell whoever administers Bastion.',
+      },
+
+      cambioDeTrazabilidad: {
+        cargando: 'the item',
+        articulo: 'Item',
+        actual: 'Saved traceability',
+        leyenda: 'Traceability',
+        pista: 'It can only be changed while the item has no stock movements.',
+        elige: 'Choose one of the three.',
+        guardar: 'Save',
+        guardando: 'Saving…',
+        guardada: 'Saved. The traceability is now “{{trazabilidad}}”.',
+        recargar: 'Load the current version',
+        volver: 'Back to the items',
       },
     },
 

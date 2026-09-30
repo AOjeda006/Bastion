@@ -53,6 +53,7 @@ export const es = {
     tarifas: 'Tarifas',
     terceros: 'Terceros',
     importarTerceros: 'Importar terceros',
+    trazabilidadDelArticulo: 'Trazabilidad del artículo',
     noEncontrada: 'Página no encontrada',
   },
 
@@ -392,6 +393,11 @@ export const es = {
       codigo: 'Código',
       descripcion: 'Descripción',
       tipo: 'Tipo',
+      trazabilidad: 'Trazabilidad',
+      cambiar: 'Cambiar',
+      // El nombre accesible del enlace lleva el código: en una tabla, veinte enlaces que se
+      // llaman «Cambiar» no dicen cuál es cuál a quien los recorre con el lector de pantalla.
+      cambiarLaDe: 'Cambiar la trazabilidad de {{codigo}}',
 
       // El filtro dice por dónde busca. Quien lee «Buscar» a secas prueba con la unidad o con el
       // impuesto —que ni se enseñan ni se filtran— y concluye que el artículo no está.
@@ -419,6 +425,33 @@ export const es = {
         desconocidoDetalle:
           'Esta versión de la pantalla no sabe interpretar el tipo que ha llegado. Avisa a quien ' +
           'administre Bastion.',
+      },
+
+      trazabilidades: {
+        ninguna: 'Ninguna',
+        porLote: 'Por lote',
+        porNumeroSerie: 'Por número de serie',
+        desconocida: 'Sin reconocer',
+        desconocidaDetalle:
+          'Esta versión de la pantalla no sabe interpretar la trazabilidad que ha llegado. Avisa ' +
+          'a quien administre Bastion.',
+      },
+
+      // La pantalla de cambio. Aquí y no en `catalogo.trazabilidad`: los espacios de `catalogo` son
+      // sus recursos en disco, y la pantalla es de `articulos`.
+      cambioDeTrazabilidad: {
+        cargando: 'el artículo',
+        articulo: 'Artículo',
+        actual: 'Trazabilidad guardada',
+        leyenda: 'Trazabilidad',
+        // Lo que para el cambio, dicho antes de intentarlo y no solo en el error de después.
+        pista: 'Solo se puede cambiar mientras el artículo no tenga movimientos de stock.',
+        elige: 'Elige una de las tres.',
+        guardar: 'Guardar',
+        guardando: 'Guardando…',
+        guardada: 'Guardado. La trazabilidad es ahora «{{trazabilidad}}».',
+        recargar: 'Cargar la versión actual',
+        volver: 'Volver a los artículos',
       },
     },
 

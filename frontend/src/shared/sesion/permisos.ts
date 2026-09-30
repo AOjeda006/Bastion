@@ -13,6 +13,7 @@
 export const PERMISOS = {
   almacenVer: 'organizacion.almacen.ver',
   articuloVer: 'catalogo.articulo.ver',
+  articuloModificar: 'catalogo.articulo.modificar',
   categoriaVer: 'catalogo.categoria.ver',
   empresaVer: 'organizacion.empresa.ver',
   tarifaVer: 'catalogo.tarifa.ver',

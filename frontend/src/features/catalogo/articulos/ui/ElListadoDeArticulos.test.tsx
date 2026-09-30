@@ -1,9 +1,9 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, delay, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { ALFA, articulosDe } from '@/pruebas/datos.ts';
+import { ALFA, PERMISOS_DE_LECTURA, articulosDe } from '@/pruebas/datos.ts';
 import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 import { PaginaDeArticulos } from './PaginaDeArticulos.tsx';
@@ -17,7 +17,8 @@ const TORNILLERIA = 'eeeeeee1-0000-0000-0000-000000000002';
  * Lo de siempre —cargando, error con salida, vacío con motivo y los filtros en la URL— y dos cosas
  * que son de aquí: **el filtro por rama**, que se pone desde el árbol y se anuncia con su nombre, y
  * **el tipo del artículo**, que viaja como texto y por tanto puede llegar con un valor que esta
- * versión no conozca.
+ * versión no conozca. Y desde el ítem 2.9, **la trazabilidad**, con el mismo cuidado y con el enlace
+ * a su pantalla para quien puede cambiarla.
  */
 describe('El listado de artículos', () => {
   it('mientras llegan, dice que está cargando', async () => {
@@ -227,5 +228,63 @@ describe('El listado de artículos', () => {
 
     expect(fila).toHaveTextContent('Sin reconocer');
     expect(fila).not.toHaveTextContent('Kit');
+  });
+
+  it('la trazabilidad sale en su columna, también la que esta versión no conoce', async () => {
+    abrirSesionYaRecuperada();
+
+    servidor.use(
+      http.get('/api/v1/catalogo/articulos', () => {
+        const pagina = articulosDe(ALFA.id);
+        const [tornillo, tuerca, ...resto] = pagina.elementos;
+
+        return HttpResponse.json({
+          ...pagina,
+          elementos: [
+            { ...tornillo!, trazabilidad: 'PorPeso' },
+            { ...tuerca!, trazabilidad: 'PorLote' },
+            ...resto,
+          ],
+        });
+      }),
+    );
+
+    montarPantalla(<PaginaDeArticulos />, '/articulos');
+
+    const columna = await screen.findByRole('columnheader', { name: 'Trazabilidad' });
+    const indice = within(columna.closest('tr')!).getAllByRole('columnheader').indexOf(columna);
+    const celda = (codigo: string): HTMLElement =>
+      within(screen.getByText(codigo).closest('tr')!).getAllByRole('cell')[indice]!;
+
+    expect(celda('TUE-M6')).toHaveTextContent('Por lote');
+    expect(celda('MO-TALLER')).toHaveTextContent('Ninguna');
+    expect(celda('TOR-M6')).toHaveTextContent('Sin reconocer');
+    expect(celda('TOR-M6')).not.toHaveTextContent('PorPeso');
+
+    // Sin el permiso de modificar, el enlace no está en ninguna fila.
+    expect(screen.queryByRole('link', { name: /trazabilidad/ })).not.toBeInTheDocument();
+  });
+
+  it('a quien puede modificar, cada fila le enlaza su trazabilidad y dice de qué artículo', async () => {
+    abrirSesionYaRecuperada(ALFA.id, [...PERMISOS_DE_LECTURA, 'catalogo.articulo.modificar']);
+
+    montarPantalla(<PaginaDeArticulos />, '/articulos');
+
+    const enlace = await screen.findByRole('link', {
+      name: 'Cambiar la trazabilidad de TOR-M6',
+    });
+    expect(enlace).toHaveTextContent('Cambiar');
+    expect(enlace).toHaveAttribute(
+      'href',
+      '/articulos/fffffff1-0000-0000-0000-000000000001/trazabilidad',
+    );
+
+    // Uno por fila, cada uno con su nombre: en la lista de enlaces del lector de pantalla, tres
+    // «Cambiar» iguales no se distinguen.
+    expect(
+      screen
+        .getAllByRole('link', { name: /^Cambiar la trazabilidad de / })
+        .map((e) => e.textContent),
+    ).toEqual(['Cambiar', 'Cambiar', 'Cambiar']);
   });
 });

@@ -1,5 +1,11 @@
 import type { ListadoDeArticulos } from '../model/listado.ts';
-import type { Articulo, PaginaDeArticulos, TipoDeArticulo } from '../model/articulo.ts';
+import type {
+  Articulo,
+  FichaDeArticulo,
+  PaginaDeArticulos,
+  TipoDeArticulo,
+  Trazabilidad,
+} from '../model/articulo.ts';
 import { api } from '@/shared/api/cliente.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
@@ -29,12 +35,27 @@ function tipoDe(texto: string): TipoDeArticulo {
   return texto === 'Servicio' ? 'servicio' : 'desconocido';
 }
 
+/** Lo mismo con la trazabilidad, que también viaja como texto. */
+function trazabilidadDe(texto: string): Trazabilidad {
+  switch (texto) {
+    case 'Ninguna':
+      return 'ninguna';
+    case 'PorLote':
+      return 'porLote';
+    case 'PorNumeroSerie':
+      return 'porNumeroSerie';
+    default:
+      return 'desconocida';
+  }
+}
+
 function traducir(dto: ArticuloDto): Articulo {
   return {
     id: dto.id,
     codigo: dto.codigo,
     descripcion: dto.descripcion,
     tipo: tipoDe(dto.tipo),
+    trazabilidad: trazabilidadDe(dto.trazabilidad),
     categoriaId: dto.categoriaId,
   };
 }
@@ -65,4 +86,38 @@ export async function consultarArticulos(listado: ListadoDeArticulos): Promise<P
   }
 
   return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
+}
+
+/**
+ * Pide la ficha de UN artículo, con la versión que devuelve en su `ETag`.
+ *
+ * Sin `ETag` la ficha no se podría guardar, y el contrato dice que esta ruta siempre lo pone. Si no
+ * llega —un intermediario que lo quita, por ejemplo—, se trata como un fallo de carga y no se
+ * enseña un formulario que acabaría en un `428` al guardar.
+ */
+export async function consultarFicha(id: string): Promise<FichaDeArticulo> {
+  const { data, error, response } = await api.GET('/api/v1/catalogo/articulos/{id}', {
+    params: { path: { id } },
+  });
+
+  if (data === undefined) {
+    throw fallo(response.status, error);
+  }
+
+  const version = response.headers.get('ETag');
+
+  if (version === null) {
+    throw fallo(response.status);
+  }
+
+  return {
+    articulo: traducir(data),
+    version,
+    intacto: {
+      descripcion: data.descripcion,
+      tipo: data.tipo,
+      impuestoPorDefectoId: data.impuestoPorDefectoId,
+      categoriaId: data.categoriaId,
+    },
+  };
 }

@@ -5521,6 +5521,31 @@ Como las de la marca: reversibles, y ninguna toca lo cerrado en A.4.
 - **`numero-de-serie-en-existencias` no dice qué serie ni dónde**, igual que `stock-insuficiente`:
   la restricción solo trae su nombre. Vive en `ErroresDeExistencias`, junto al del stock.
 
+#### Lo que el agente decidió al montar la pantalla de la marca (2026-09-30)
+
+Reversibles, como las anteriores, y ninguna toca lo cerrado en A.4.
+
+- **Una pantalla solo para la marca, en `/articulos/:id/trazabilidad`**, fuera de la navegación. Se
+  llega desde la fila del listado, con un enlace «Cambiar» cuyo nombre accesible dice de qué
+  artículo. Lo ve quien tiene `catalogo.articulo.modificar`, que es lo que pide la ruta y lo que
+  exige el `PUT`. El resto de la ficha no tiene pantalla todavía, y el criterio pide la de la marca.
+- **El `PUT` sustituye la ficha, así que la pantalla manda lo demás tal como lo leyó**, con el
+  `If-Match` de esa lectura. La ficha sale de su `GET` (`clavesDeArticulos.una`), que es el único que
+  trae `ETag`. Sin ella, la pantalla no enseña el formulario: no habría con qué guardar.
+- **El `200` del `PUT` no trae `ETag`.** Guardar invalida todo lo de los artículos y la ficha se
+  vuelve a leer. El formulario lleva la versión como `key`, y el aviso de guardado vive fuera de él
+  para sobrevivir a que se monte de nuevo.
+- **Los tres rechazos de la marca van en su campo; los demás, arriba.** Son
+  `articulo-trazabilidad-con-movimientos`, `articulo-servicio-con-trazabilidad` y
+  `articulo-trazabilidad-no-valida`. Salen dentro del grupo, con `role="alert"` y en su
+  `aria-describedby`. El `412` sale arriba, con «Cargar la versión actual».
+- **Tres botones de opción en un `fieldset`, no un desplegable.** Se leen las tres de un vistazo. El
+  error va en la descripción del grupo y no en `aria-invalid`, que ARIA 1.2 no admite ni en `group`
+  ni en `radio`.
+- **Los textos van en `catalogo.articulos.cambioDeTrazabilidad`**, no en `catalogo.trazabilidad`.
+  `ElBarridoDeLasFronteras` exige que los espacios de `catalogo` sean sus recursos en disco, y lo
+  cazó en la primera pasada de la batería.
+
 #### Las herramientas de la máquina, en este encargo
 
 - **`ctx7` (Context7)**, cuando la versión importe; por ejemplo, el índice parcial y `NULLS NOT
@@ -7118,6 +7143,27 @@ cuadre.
   La pila se bajó con `down -v`, y el entorno y el testigo de la pasada se borraron. Los puertos del
   proyecto aparte van en `45xxx`: el `58080` cae en un intervalo que Windows reserva, y el primer
   `up` murió en la API por eso.
+- **La pantalla de la marca**, en el commit `feat(catalogo)` que sigue a `e0f36da`. Es
+  `/articulos/:id/trazabilidad`, con la columna «Trazabilidad» en el listado y un enlace por fila;
+  lo decidido, en *Decisiones tomadas → Lo que el agente decidió al montar la pantalla de la marca*.
+  Casos nuevos:
+  - 8 en `LaTrazabilidadDelArticulo.test.tsx`: la carga; guardar sobre la versión leída con el resto
+    de la ficha intacto, y la segunda vez con la versión nueva; el `409` de los movimientos en su
+    campo, en `es` y en `en`; el `412` con la recarga; la guardada que no se reconoce; la ficha sin
+    `ETag`; y el artículo que no está;
+  - 2 en el listado: la columna, y el enlace según el permiso;
+  - `ElBarridoDeRutas` pasa a 11 rutas, 8 de permiso y 4 de `catalogo`.
+
+  **Verificado:**
+  - la batería del frontal entera: contrato, `typecheck`, `lint`, `format:check`, `test` con 113
+    casos —los diez nuevos dentro— y cero avisos de `act()`, `build` y el presupuesto, con 418/450
+    KiB de arranque y 616/900 KiB en total. La primera pasada de `test` salió roja en
+    `ElBarridoDeLasFronteras`, por el espacio `catalogo.trazabilidad`;
+  - en un navegador (`playwright-cli`) contra la pila de verdad, ya con nginx arreglado: el listado
+    con su columna y un enlace por fila con su nombre; guardar dos veces seguidas, la segunda con la
+    versión nueva; y el rechazo de un servicio con lote en su campo y en su descripción. Es un
+    `400 articulo-servicio-con-trazabilidad`, el que se provoca sin movimientos. Al cambiar de
+    idioma, sale en inglés sin volver a guardar.
 
 **Lo que queda, por este orden:**
 
@@ -7129,7 +7175,7 @@ cuadre.
    - ~~la traducción de la serie: `23505` en la lista de las reglas guardadas por la base, y las
      dos restricciones de la serie a su error de negocio.~~ Hecho.
 3. ~~**Las carreras, la propiedad y el cuadre.**~~ Hecho.
-4. **La pantalla de la marca.** Hoy el frontal del artículo es solo el listado.
+4. ~~**La pantalla de la marca.**~~ Hecho, y con ella el arreglo de nginx.
 5. **La tanda de mutaciones, desde la 82**, porque la 80 y la 81 son del arreglo del reloj. Antes
    de abrirla, se le pregunta al usuario si enciende `context-mode`.
 6. **La batería y los runs.**

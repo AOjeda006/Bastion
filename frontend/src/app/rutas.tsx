@@ -124,6 +124,19 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
       (await import('@/features/catalogo/articulos/ui/PaginaDeArticulos.tsx')).PaginaDeArticulos,
   },
   {
+    // Fuera de la navegación: se llega desde el listado, en la fila del artículo. Pide modificar,
+    // que es para lo que existe y lo que exige el `PUT`. La ficha la lee un `GET` que pide ver: un
+    // rol hecho a mano con lo primero y sin lo segundo llega y ve el «sin permiso» de la carga.
+    ruta: '/articulos/:id/trazabilidad',
+    duenio: 'catalogo',
+    claveDeTitulo: 'trazabilidadDelArticulo',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.articuloModificar },
+    enLaNavegacion: false,
+    cargar: async () =>
+      (await import('@/features/catalogo/articulos/ui/PaginaDeTrazabilidad.tsx'))
+        .PaginaDeTrazabilidad,
+  },
+  {
     ruta: '/categorias',
     duenio: 'catalogo',
     claveDeTitulo: 'categorias',
