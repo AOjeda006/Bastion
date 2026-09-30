@@ -171,8 +171,11 @@ internal static class LosMaestrosPorLaApi
     /// La unidad y el tramo llevan el número del caso porque son maestros de instalación: los ve
     /// toda la base, y dos casos con el mismo código chocarían contra el índice único.
     /// </remarks>
+    /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
+    /// <param name="semilla">El número del caso, que va en los códigos.</param>
+    /// <param name="trazabilidad">La marca con la que nace: sin trazabilidad si no se dice.</param>
     internal static async Task<(Guid ArticuloId, Guid UnidadId)> CrearArticuloAsync(
-        HttpClient cliente, int semilla)
+        HttpClient cliente, int semilla, string trazabilidad = "Ninguna")
     {
         string sufijo = semilla.ToString(CultureInfo.InvariantCulture);
 
@@ -210,6 +213,7 @@ internal static class LosMaestrosPorLaApi
                 Codigo = "APT-" + sufijo,
                 Descripcion = "Artículo " + sufijo,
                 Tipo = "Bien",
+                Trazabilidad = trazabilidad,
                 UnidadBaseId = unidadId,
                 ImpuestoPorDefectoId =
                     (await impuesto.Content.ReadFromJsonAsync<ImpuestoDto>())!.Id,

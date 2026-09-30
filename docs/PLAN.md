@@ -6989,6 +6989,19 @@ siete sitios que esperan siguen pasando por ella, y ninguna copia de la consulta
   --filter "FullyQualifiedName~ElEjercicioRigeElAjusteTests|FullyQualifiedName~LasExistenciasSonLaSumaDelLibroTests|FullyQualifiedName~LaValoracionDelAjusteTests|FullyQualifiedName~NingunaFechaAnteriorAlUltimoMovimientoTests"`;
   y `grep -rn "pg_blocking_pids" tests/ src/ --include=*.cs`, que solo la encuentra en `LaEspera.cs`.
 
+**Empezado el paso 3, las carreras, la propiedad y el cuadre.** Va en cuatro commits: la clave de
+los tests, el lote y la serie contra la base, las dos carreras de la marca, y la propiedad con el
+cuadre.
+
+- **La clave de los tests lleva el lote y la serie**, en el commit `test(inventario)` que sigue a
+  `89b0bd3`. `ClaveDeExistencia` gana `LoteId` y `SerieId` al final y con nulo por defecto, así
+  que los casos que no los usan la siguen escribiendo con tres. Las instantáneas, el libro, la
+  clave de una fila viva y el orden de las claves los leen. `LosMaestrosPorLaApi.CrearArticuloAsync`
+  admite la marca con la que nace el artículo, `Ninguna` si no se dice. Sin un artículo trazable
+  todavía, lo que se verifica es que nada cambia: los 83 de Inventario en verde,
+  `dotnet test tests/Api.IntegrationTests --no-build --filter
+  "FullyQualifiedName~Bastion.Api.IntegrationTests.Inventario"`.
+
 **Lo que queda, por este orden:**
 
 1. ~~**Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo

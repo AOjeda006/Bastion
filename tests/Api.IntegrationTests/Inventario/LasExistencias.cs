@@ -7,11 +7,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Api.IntegrationTests.Inventario;
 
-/// <summary>Una clave de la existencia mientras el libro no lleve lote.</summary>
+/// <summary>Una clave de la existencia, con su lote o su serie si el artículo los lleva.</summary>
+/// <remarks>
+/// El lote y la serie van al final y con nulo por defecto (ítem 2.9): un artículo sin trazabilidad
+/// tiene la misma clave de siempre, y los casos que no la usan la siguen escribiendo con tres.
+/// </remarks>
 /// <param name="ArticuloId">El artículo.</param>
 /// <param name="AlmacenId">El almacén.</param>
 /// <param name="UbicacionId">La ubicación.</param>
-internal readonly record struct ClaveDeExistencia(Guid ArticuloId, Guid AlmacenId, Guid UbicacionId);
+/// <param name="LoteId">El lote, o nada.</param>
+/// <param name="SerieId">El número de serie, o nada.</param>
+internal readonly record struct ClaveDeExistencia(
+    Guid ArticuloId, Guid AlmacenId, Guid UbicacionId, Guid? LoteId = null, Guid? SerieId = null);
 
 /// <summary>Una fila del libro, reducida a lo que la proyección suma.</summary>
 /// <param name="Clave">De qué existencia es.</param>
@@ -112,13 +119,16 @@ internal static class LasExistencias
                     existencia.ArticuloId,
                     existencia.AlmacenId,
                     existencia.UbicacionId,
+                    existencia.LoteId,
+                    existencia.SerieId,
                     instantanea.Mes,
                     instantanea.Fisico,
                 })
             .ToListAsync();
 
         return Ordenadas(leidas.Select(fila => new FotoDelMes(
-            new ClaveDeExistencia(fila.ArticuloId, fila.AlmacenId, fila.UbicacionId),
+            new ClaveDeExistencia(
+                fila.ArticuloId, fila.AlmacenId, fila.UbicacionId, fila.LoteId, fila.SerieId),
             fila.Mes,
             fila.Fisico)));
     }
@@ -135,7 +145,8 @@ internal static class LasExistencias
         List<MovimientoStock> filas = await contexto.Movimientos.AsNoTracking().ToListAsync();
 
         return [.. filas.Select(fila => new ApunteDelLibro(
-            new ClaveDeExistencia(fila.ArticuloId, fila.AlmacenId, fila.UbicacionId),
+            new ClaveDeExistencia(
+                fila.ArticuloId, fila.AlmacenId, fila.UbicacionId, fila.LoteId, fila.SerieId),
             fila.FechaDeOperacion,
             fila.CantidadEnUnidadBase))];
     }
@@ -200,9 +211,14 @@ internal static class LasExistencias
 
     /// <summary>La clave de una fila viva.</summary>
     /// <param name="existencia">La fila.</param>
-    /// <returns>Su clave, sin el lote.</returns>
+    /// <returns>Su clave, con su lote o su serie.</returns>
     internal static ClaveDeExistencia ClaveDe(Existencia existencia) =>
-        new(existencia.ArticuloId, existencia.AlmacenId, existencia.UbicacionId);
+        new(
+            existencia.ArticuloId,
+            existencia.AlmacenId,
+            existencia.UbicacionId,
+            existencia.LoteId,
+            existencia.SerieId);
 
     /// <summary>El primer día del mes de una fecha.</summary>
     /// <param name="fecha">La fecha.</param>
@@ -230,7 +246,21 @@ internal static class LasExistencias
 
             int porAlmacen = x.AlmacenId.CompareTo(y.AlmacenId);
 
-            return porAlmacen != 0 ? porAlmacen : x.UbicacionId.CompareTo(y.UbicacionId);
+            if (porAlmacen != 0)
+            {
+                return porAlmacen;
+            }
+
+            int porUbicacion = x.UbicacionId.CompareTo(y.UbicacionId);
+
+            if (porUbicacion != 0)
+            {
+                return porUbicacion;
+            }
+
+            int porLote = Nullable.Compare(x.LoteId, y.LoteId);
+
+            return porLote != 0 ? porLote : Nullable.Compare(x.SerieId, y.SerieId);
         }
     }
 }
