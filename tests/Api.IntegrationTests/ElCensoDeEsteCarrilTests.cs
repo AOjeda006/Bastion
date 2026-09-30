@@ -231,6 +231,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElLibroNoSePuedeLimpiarTests.Modificar_una_fila_por_la_tabla_padre_lo_rechaza_el_motor",
         "ElLibroNoSePuedeLimpiarTests.Vaciar_LA_PARTICION_lo_rechaza_el_motor_y_este_es_el_que_se_vio_abierto",
         "ElLibroNoSePuedeLimpiarTests.Vaciar_la_tabla_padre_lo_rechaza_el_motor",
+        "ElLoteVaConSuArticuloTests.El_inverso_copia_el_lote_y_la_serie",
+        "ElLoteVaConSuArticuloTests.El_mismo_codigo_es_el_mismo_lote_y_la_caja_distingue_dos",
+        "ElLoteVaConSuArticuloTests.El_primer_lote_en_dos_almacenes_a_la_vez_es_un_solo_lote",
+        "ElLoteVaConSuArticuloTests.Una_salida_de_un_lote_que_no_hay_es_stock_insuficiente_y_no_deja_el_lote",
 
         // Del ítem 2.4: el número dentro del recibo, y el 428 de la única acción de toda la API
         // que EXIGE la clave. Los dos miran la misma frontera desde los dos lados.
@@ -557,6 +561,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "UnCambioEnUnMaestroDejaSuRastroTests.Todas_las_filas_de_un_mismo_guardado_comparten_correlacion",
         "UnCambioEnUnMaestroDejaSuRastroTests.Una_modificacion_deja_el_antes_y_el_despues_de_lo_que_cambio_y_solo_de_eso",
         "UnCambioEnUnMaestroDejaSuRastroTests.Una_peticion_que_no_cambia_nada_no_deja_traza",
+        "UnNumeroDeSerieEnUnSoloSitioTests.Anular_la_entrada_de_una_serie_que_ya_salio_es_stock_insuficiente",
+        "UnNumeroDeSerieEnUnSoloSitioTests.Anular_la_salida_de_una_serie_que_ya_esta_en_otro_hueco_es_422",
+        "UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_dos_veces_en_el_mismo_hueco_la_para_el_check_y_sale_422",
+        "UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_dos_almacenes_a_la_vez_entra_en_uno_solo",
+        "UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_otro_hueco_la_para_el_indice_y_sale_422",
+        "UnNumeroDeSerieEnUnSoloSitioTests.Una_serie_que_salio_de_un_hueco_puede_entrar_en_otro",
     ];
 
     [Fact]

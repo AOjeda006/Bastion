@@ -7001,6 +7001,33 @@ cuadre.
   todavía, lo que se verifica es que nada cambia: los 83 de Inventario en verde,
   `dotnet test tests/Api.IntegrationTests --no-build --filter
   "FullyQualifiedName~Bastion.Api.IntegrationTests.Inventario"`.
+- **El lote y la serie contra la base**, en el commit `test(inventario)` que sigue a `ed3c473`. Son
+  diez casos de integración en dos ficheros, sobre una escena compartida, `EscenaTrazable`: una
+  empresa con dos almacenes, tres huecos, una serie de ajustes y un artículo con su marca, todo por
+  la API.
+  - `UnNumeroDeSerieEnUnSoloSitioTests`, seis. La misma serie en el mismo hueco la para el
+    `CHECK` (`23514`), y en otro hueco, el índice parcial (`23505`). Los dos casos confirman el
+    mismo borrador dos veces: con el módulo, que deja ver el nombre del motor, y por la API, que da
+    el `422` `numero-de-serie-en-existencias`. Una serie que salió entra en otro hueco, que es el
+    contraste del `WHERE fisico > 0`. Anular su salida cuando ya está en otro sitio es el mismo
+    `422`, y anular la entrada de una serie que ya salió es `stock-insuficiente`. Y la carrera del
+    ADR-0048 §3: la misma serie en dos almacenes a la vez, con la serie ya creada antes para que
+    la única espera sea la del índice; la segunda recibe su `23505`.
+  - `ElLoteVaConSuArticuloTests`, cuatro. El mismo código es el mismo lote, recortado, y la caja
+    distingue dos. Una salida de un lote que no hay es `stock-insuficiente`, y el lote que creó se
+    va con la transacción. El inverso copia el lote y la serie: el par suma cero por clave. Y el
+    primer lote de un código en dos almacenes a la vez: la segunda espera en el índice de los
+    lotes, y las dos salen bien con el mismo lote.
+
+  Las semillas: las empresas del 560 al 565 y del 572 al 575; los maestros de instalación, del 566
+  al 571 y del 576 al 580. El tramo del 581 al 589 queda para las carreras de la marca.
+
+  **Verificado:** cada fichero solo, seis y cuatro en verde; el carril de integración entero, 84 de
+  Organización y 451 de la API (los 441 de antes y estos diez), `dotnet test Bastion.sln --filter
+  "Category=Integracion"`; y el censo, `dotnet test tests/Api.IntegrationTests --no-build --filter
+  "FullyQualifiedName~ElCensoDeEsteCarrilTests"`.
+- **Un caso cambia de sitio:** el del borrador escrito con la marca de antes irá con las carreras
+  de la marca, en `LaMarcaSeLeeConCerrojoTests`, porque completa `Un_borrador_no_es_un_movimiento`.
 
 **Lo que queda, por este orden:**
 
