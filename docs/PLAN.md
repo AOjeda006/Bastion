@@ -6922,6 +6922,27 @@ la serie*.
     rápido;
   - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests`, ocho, sobre las cadenas del cerrojo.
 
+**Un hallazgo por el camino: la propiedad del saldo dependía del día.** Se arregló en el commit
+`fix(tests)` que sigue a `b5a0c2f`, antes de la traducción de la serie, que quedó guardada con
+`git stash` mientras tanto.
+
+- **El rojo.** El 2026-09-30, la semilla 463 de `ElSaldoEsLaSumaDelLibroPorPropiedadTests` no pasó
+  por ningún «rechazado por la fecha», y el caso afirma que cada semilla pasa por todas las clases
+  de paso. Salió en el carril de integración de la traducción de la serie, que no toca nada de eso.
+  Se reprodujo con el caso solo: 1 rojo de 6, la 463, con el mismo mensaje.
+- **La causa.** El caso sacaba «hoy» del reloj de verdad, y su secuencia sale de la semilla y de
+  hoy: las fechas de este año se sortean hasta el día del año, y la paridad del día decide qué
+  documento toma la fecha del último movimiento. Cada día corría otra secuencia. El caso heredaba
+  su ambiente en vez de fijarlo.
+- **El arreglo.** Un `RelojParado` en el 2026-09-29 para el «hoy» del caso y para los tres casos de
+  uso, por un parámetro opcional de `ElModuloDeInventario`. Es el que ya había en
+  `Fechas/LasMarcasDeTiempoLasPoneElRelojInyectadoTests.cs`, compartido y no copiado. El cuadre
+  sigue con el reloj de verdad, porque mira el libro hasta hoy y el hoy de verdad nunca va por
+  detrás del parado: darle el parado no lo vería ningún caso.
+- **Verificado:** el rojo de control, dos veces; cinco rondas de las seis semillas en verde,
+  `dotnet test tests/Api.IntegrationTests --no-build --filter
+  "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests"`; y el carril rápido, con 1041.
+
 **Lo que queda, por este orden:**
 
 1. ~~**Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -26,6 +27,14 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// caso, con la semilla en el nombre del caso. Lo que importa de un caso de propiedades es que el
 /// contraejemplo se pueda repetir, y con la semilla se repite la misma secuencia paso a paso. La
 /// secuencia entera va en el mensaje de cada aserción: el rojo dice qué pasos lo produjeron.
+/// </para>
+/// <para>
+/// <b>Y con el reloj parado</b> (ítem 2.9). La secuencia sale de la semilla y de «hoy»: las fechas
+/// de este año se sortean hasta el día del año, y la paridad del día decide qué documento toma la
+/// fecha del último movimiento. Con el reloj de verdad cada día corría otra secuencia, y el
+/// 2026-09-30 la semilla 463 no pasó por ningún rechazo por la fecha. El reloj va a los tres casos
+/// de uso, que deciden con él qué fecha es futura y cuál lleva el inverso. El cuadre sigue con el de
+/// verdad: mira el libro hasta hoy, y el hoy de verdad nunca va por detrás de este.
 /// </para>
 /// <para>
 /// <b>Tres cuentas que no se miran entre sí.</b> El modelo lleva en memoria lo que el libro debería
@@ -104,6 +113,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
 
+    // EL DÍA EN QUE CORREN TODAS LAS SEMILLAS. Con este, las seis pasan por todas las clases de
+    // paso; cambiarlo cambia la secuencia de todas, y hay que volver a verlo semilla a semilla.
+    private static readonly RelojParado s_reloj = new(new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero));
+
     private readonly ApiDeVerdad _api = new(postgres);
     private readonly List<HttpClient> _clientes = [];
 
@@ -132,7 +145,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         UnaEmpresa empresa = await UnaEmpresaAsync(semilla);
 
-        await using ElModuloDeInventario modulo = new(postgres, empresa.EmpresaId);
+        await using ElModuloDeInventario modulo = new(postgres, empresa.EmpresaId, s_reloj);
 
         for (int paso = 1; paso <= Pasos; paso++)
         {
@@ -782,8 +795,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             .ThenBy(fila => fila.Valor)
             .ThenBy(fila => fila.PrecioMedio)];
 
-    /// <summary>La fecha de hoy, en el mismo calendario que usa el caso de uso.</summary>
-    private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);
+    /// <summary>La fecha de hoy, en el mismo calendario y con el mismo reloj que el caso de uso.</summary>
+    private static DateOnly Hoy => DateOnly.FromDateTime(s_reloj.GetUtcNow().UtcDateTime);
 
     /// <summary>
     /// Una empresa con un almacén de dos ubicaciones, dos artículos —cuatro claves— y los

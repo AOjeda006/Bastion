@@ -55,8 +55,14 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     // con algo todavía dentro. Ver `DisposeAsync`.
     private readonly List<Task> _lanzadas = [];
 
-    internal ElModuloDeInventario(PostgresConTodosLosModulos postgres, Guid empresaId)
+    // EL RELOJ ES EL DE VERDAD, SALVO QUE EL CASO FIJE EL SUYO (ítem 2.9). Los tres casos de uso
+    // deciden con él qué fecha es futura y con qué fecha va el inverso, y un caso cuya secuencia
+    // sale de «hoy» —el de la propiedad— tiene que repetirla igual cualquier otro día.
+    internal ElModuloDeInventario(
+        PostgresConTodosLosModulos postgres, Guid empresaId, TimeProvider? reloj = null)
     {
+        TimeProvider elReloj = reloj ?? TimeProvider.System;
+
         AccesoALoBloqueado acceso =
             new(NullLogger<AccesoALoBloqueado>.Instance, new NadieEnConcreto());
 
@@ -92,7 +98,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             trazabilidad,
             new ConsultaDeUnidadesDeMedida(_organizacion),
             unidadDeTrabajo,
-            TimeProvider.System);
+            elReloj);
 
         // El puerto del ejercicio va sobre EL CONTEXTO DE INVENTARIO, igual que en produccion y
         // por el mismo motivo: la respuesta trae un cerrojo compartido sobre la fila, y un cerrojo
@@ -108,7 +114,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             trazabilidad,
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
-            TimeProvider.System);
+            elReloj);
 
         Anulacion = new AnularAjuste(
             ajustes,
@@ -116,7 +122,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             ejercicios,
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
-            TimeProvider.System);
+            elReloj);
 
         Lectura = new MovimientosDelDocumento(ajustes, almacenes);
     }
