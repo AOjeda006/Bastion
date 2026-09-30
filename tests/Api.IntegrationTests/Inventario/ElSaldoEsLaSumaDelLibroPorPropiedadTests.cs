@@ -7,11 +7,13 @@ using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Existencias;
+using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Shouldly;
 
@@ -59,8 +61,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// cada artículo y el precio medio que congela cada fila, calculados aquí con decimales y redondeos
 /// a mano, sin el servicio del dominio ni los tipos del dinero; tras cada paso se comparan con la
 /// tabla de la valoración y con el valor y el precio medio de cada fila del libro. Para que el
-/// precio medio se mueva, cada entrada lleva un coste distinto, y las de 3, 6 o 9 unidades de un
-/// artículo que ya tiene existencias van sin coste, al precio medio.
+/// precio medio se mueva, cada entrada lleva un coste distinto, y las de un número par de unidades
+/// de un artículo que ya tiene existencias van sin coste, al precio medio.
 /// </para>
 /// <para>
 /// <b>Y ningún documento por detrás del último movimiento de su clave</b> (addendum del 2.8,
@@ -72,12 +74,31 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// cada clave no deja cantidad negativa, valor negativo ni valor sin cantidad.
 /// </para>
 /// <para>
+/// <b>Y la clave trazable</b> (ítem 2.9, ADR-0048 §6). Tres artículos, uno por marca: sin
+/// trazabilidad, por lote y por número de serie. Las líneas del segundo llevan uno de tres lotes,
+/// dos de ellos distintos solo en la caja, y a veces con espacios alrededor, que el sistema recorta.
+/// Las del tercero llevan uno de tres números de serie, con una unidad base cada una y sin repetirse
+/// en el documento. El modelo sabe, antes de confirmar, si el documento metería una serie donde ya
+/// está o en otro sitio mientras sigue en el primero. Si es así, exige el rechazo del motor por el
+/// nombre de alguna de las restricciones que rompería. Y tras cada paso comprueba el invariante de
+/// la serie contra el libro de verdad: sumada hasta cada fecha, ninguna tiene más de una unidad en
+/// un sitio ni está en dos.
+/// </para>
+/// <para>
+/// <b>El modelo no conoce los identificadores del sistema.</b> Para el modelo, cada lote y cada
+/// serie es su código, y les da un identificador propio. Lo que se lee de la base se traduce con las
+/// tablas de los lotes y de las series, y esas tablas tienen que tener exactamente lo que el libro
+/// del modelo ha confirmado: el lote de un documento rechazado se va con su transacción. Los
+/// códigos salen de otro generador, con su propia semilla, para que sortearlos no desplace el de
+/// los pasos: cada paso tira los mismos dados que sin ellos, aunque un código cambie su desenlace.
+/// </para>
+/// <para>
 /// <b>Cada semilla tiene que pasar por todas las clases de paso</b>, y el caso lo afirma: una
 /// semilla que no anulara nunca pasaría por prueba de las anulaciones sin haberlas probado.
 /// </para>
 /// <para>
 /// <b>Semillas: del 460 al 465 las empresas</b>, que son también las semillas del generador; del
-/// 470 al 475 y del 480 al 485 los maestros de instalación, dos artículos por caso.
+/// 470 al 475, del 480 al 485 y del 590 al 595 los maestros de instalación, tres artículos por caso.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -86,10 +107,13 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLosModulos postgres)
     : IDisposable
 {
-    // OCHENTA DESDE EL ÍTEM 2.8. Con el stock que no baja de cero, cuarenta dejaban semillas sin
-    // una salida confirmada —sus anulaciones vaciaban todas las claves— o sin un documento contra
-    // el año cerrado. Alargar no cambia los primeros pasos: el generador sigue la misma serie.
-    private const int Pasos = 80;
+    // CIENTO SESENTA DESDE EL ÍTEM 2.9. En el 2.8 fueron ochenta: con el stock que no baja de cero,
+    // cuarenta dejaban semillas sin una salida confirmada —sus anulaciones vaciaban todas las
+    // claves— o sin un documento contra el año cerrado. Con tres artículos y seis claves, ochenta
+    // dejaban cinco de las seis semillas sin ver a la serie parar un documento por sí sola, y ciento
+    // veinte, la 461 sin una entrada al precio medio. Alargar no cambia los primeros pasos: el
+    // generador sigue la misma serie.
+    private const int Pasos = 160;
     private const string Anulacion = "anulación";
     private const string Futuro = "futuro";
     private const string Recalculo = "recálculo";
@@ -98,6 +122,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string RechazadoPorElCierre = "rechazado por el cierre";
     private const string RechazadoSinStock = "rechazado sin stock";
     private const string RechazadoPorLaFecha = "rechazado por la fecha";
+    private const string RechazadoPorLaSerie = "rechazado por la serie";
+
+    /// <summary>Las claves de la empresa: dos ubicaciones por cada uno de los tres artículos.</summary>
+    private const int ClavesPorEmpresa = 6;
 
     /// <summary>El código del documento que va por detrás de su clave (ADR-0047).</summary>
     private const string FechaAnterior = "ajuste-fecha-anterior-al-ultimo-movimiento";
@@ -105,13 +133,27 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// <summary>La restricción que guarda el stock, escrita a mano como en el borde.</summary>
     private const string FisicoNoNegativo = "ck_existencias_fisico_no_negativo";
 
+    /// <summary>La que no deja dos unidades de una serie en una fila (ADR-0048 §3).</summary>
+    private const string SerieComoMuchoUna = "ck_existencias_serie_como_mucho_una";
+
+    /// <summary>La que no deja una serie en dos filas con unidades (ADR-0048 §3).</summary>
+    private const string SerieEnUnSitio = "ix_existencias_serie_en_un_sitio";
+
+    private const string PorLote = "PorLote";
+    private const string PorNumeroSerie = "PorNumeroSerie";
+
     private static readonly string[] s_clasesDePaso =
     [
         "entrada", "salida", "ajuste", Anulacion, Futuro, Recalculo, Cierre, Reapertura,
-        RechazadoPorElCierre, RechazadoSinStock, RechazadoPorLaFecha,
+        RechazadoPorElCierre, RechazadoSinStock, RechazadoPorLaFecha, RechazadoPorLaSerie,
     ];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
+
+    // DOS LOTES QUE SOLO SE DISTINGUEN POR LA CAJA: el código es el que se teclea, recortado, y la
+    // caja cuenta (ADR-0048 §2). Y POCAS SERIES, para que una entre donde ya está.
+    private static readonly string[] s_lotes = ["L-1", "l-1", "L-2"];
+    private static readonly string[] s_series = ["S-1", "S-2", "S-3"];
 
     // EL DÍA EN QUE CORREN TODAS LAS SEMILLAS. Con este, las seis pasan por todas las clases de
     // paso; cambiarlo cambia la secuencia de todas, y hay que volver a verlo semilla a semilla.
@@ -141,6 +183,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     public async Task Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro(int semilla)
     {
         Random azar = new(semilla);
+        Random codigos = new(semilla + 1_000);
         Secuencia secuencia = new(semilla);
 
         UnaEmpresa empresa = await UnaEmpresaAsync(semilla);
@@ -153,7 +196,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
             if (dado < 40)
             {
-                await UnMovimientoAsync(azar, modulo, empresa, secuencia);
+                await UnMovimientoAsync(azar, codigos, modulo, empresa, secuencia);
             }
             else if (dado < 55)
             {
@@ -161,7 +204,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             }
             else if (dado < 65)
             {
-                await UnaFechaFuturaAsync(azar, modulo, empresa, secuencia);
+                await UnaFechaFuturaAsync(azar, codigos, modulo, empresa, secuencia);
             }
             else if (dado < 80)
             {
@@ -206,12 +249,20 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         secuencia.AlPrecioMedio.ShouldBeGreaterThan(
             0, "ninguna entrada se ha valorado al precio medio\n" + secuencia.Relato());
 
+        // LA CLAVE TRAZABLE, AFIRMADA: sin un lote y una serie en el libro, la traducción y el
+        // invariante de la serie salen verdes por no tener nada que mirar.
+        secuencia.Libro.ShouldContain(
+            apunte => apunte.Clave.LoteId != null, "ningún lote ha llegado al libro\n" + secuencia.Relato());
+
+        (await LasSeriesDelLibroAsync(empresa.EmpresaId)).Fechas.ShouldBeGreaterThan(
+            0, "sin series en el libro, «ninguna en dos sitios» sale verde por no mirar\n" + secuencia.Relato());
+
         secuencia.Clases.ShouldBe(s_clasesDePaso, ignoreOrder: true, customMessage: secuencia.Relato());
     }
 
     /// <summary>Una entrada, una salida o un ajuste de varias líneas, con una fecha de hoy o de atrás.</summary>
     private static async Task UnMovimientoAsync(
-        Random azar, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
+        Random azar, Random codigos, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
     {
         int pasado = Hoy.Year - 1;
 
@@ -242,20 +293,25 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             _ => LineasAlAzar(azar, minimo: 2),
         };
 
-        // EL COSTE SE PONE DESPUÉS, SIN TOCAR EL AZAR (ítem 2.8): una llamada más al generador
-        // cambiaría la secuencia de todas las semillas, que hoy pasan por todas las clases de paso.
+        // EL COSTE Y LOS CÓDIGOS SE PONEN DESPUÉS, SIN TOCAR EL AZAR (ítems 2.8 y 2.9): una llamada
+        // más al generador cambiaría la secuencia de todas las semillas, que hoy pasan por todas las
+        // clases de paso. El coste, antes que los códigos: se decide con lo que se tecleó, y la
+        // serie deja después la línea en una unidad. Al revés, ninguna línea de una serie iría
+        // nunca al precio medio, porque una unidad no es un número par.
         lineas = [.. lineas.Select(linea => ConCoste(linea, empresa, secuencia))];
+        lineas = ConSusCodigos(codigos, empresa, secuencia, lineas);
 
         bool delAnioCerrado = fecha.Year == pasado && secuencia.PasadoCerrado;
 
-        // UN RECHAZO POR STOCK VA CON FECHA DE ESTE AÑO. El motor lo rechaza con cualquier fecha
-        // —la fila viva es la suma de todas—, pero el borrador se queda, no hay forma de tirarlo, y
-        // uno del año pasado impediría cerrarlo durante el resto de la secuencia: la semilla no
-        // llegaría a ver el cierre. El del año cerrado no se toca, porque ese rechazo es otro.
-        if (!delAnioCerrado && fecha.Year == pasado && DejariaUnaClaveEnNegativo(
+        // UN RECHAZO DEL MOTOR VA CON FECHA DE ESTE AÑO, sea por el stock o por la serie. El motor
+        // lo rechaza con cualquier fecha —la fila viva es la suma de todas—, pero el borrador se
+        // queda, no hay forma de tirarlo, y uno del año pasado impediría cerrarlo durante el resto
+        // de la secuencia: la semilla no llegaría a ver el cierre. El del año cerrado no se toca,
+        // porque ese rechazo es otro.
+        if (!delAnioCerrado && fecha.Year == pasado && LoQueRomperia(
             secuencia,
             lineas.Select(linea => new ApunteDelLibro(
-                empresa.Claves[linea.Clave], fecha, linea.Cantidad * linea.Factor))))
+                secuencia.ClaveDe(empresa, linea), fecha, linea.Cantidad * linea.Factor))).Count > 0)
         {
             fecha = Hoy;
         }
@@ -286,7 +342,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         ApunteDelLibro[] apuntes =
         [
             .. lineas.Select(linea => new ApunteDelLibro(
-                empresa.Claves[linea.Clave], fecha, linea.Cantidad * linea.Factor)),
+                secuencia.ClaveDe(empresa, linea), fecha, linea.Cantidad * linea.Factor)),
         ];
 
         // EL CIERRE SE MIRA ANTES QUE EL STOCK, porque el caso de uso lo mira antes: un documento
@@ -318,11 +374,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             return;
         }
 
-        if (DejariaUnaClaveEnNegativo(secuencia, apuntes))
+        if (LoQueRomperia(secuencia, apuntes) is { Count: > 0 } rotas)
         {
-            secuencia.Anotar(RechazadoSinStock, fecha, lineas);
+            secuencia.Anotar(ClaseDelRechazo(rotas), fecha, lineas);
 
-            await ExigirElRechazoDelMotorAsync(() => modulo.ConfirmarAsync(ajusteId), secuencia);
+            await ExigirElRechazoDelMotorAsync(() => modulo.ConfirmarAsync(ajusteId), rotas, secuencia);
 
             return;
         }
@@ -371,13 +427,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         ];
 
         // EL INVERSO DE UNA ENTRADA ES UNA SALIDA, y si las unidades ya salieron se rechaza
-        // (ADR-0046 §1). El original sigue siendo anulable: se puede anular cuando vuelvan.
-        if (DejariaUnaClaveEnNegativo(secuencia, inverso))
+        // (ADR-0046 §1). El de la salida de una serie es una entrada, y si la serie ya está en
+        // otro sitio, también (ADR-0048 §5). El original sigue siendo anulable: se puede anular
+        // cuando vuelvan, o cuando la serie se vaya de donde está.
+        if (LoQueRomperia(secuencia, inverso) is { Count: > 0 } rotas)
         {
-            secuencia.Anotar(RechazadoSinStock, apuntes);
+            secuencia.Anotar(ClaseDelRechazo(rotas), apuntes);
 
             await ExigirElRechazoDelMotorAsync(
-                () => modulo.AnularAsync(ajusteId, "Anulación del generador"), secuencia);
+                () => modulo.AnularAsync(ajusteId, "Anulación del generador"), rotas, secuencia);
 
             return;
         }
@@ -398,20 +456,69 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             [.. valoradas.Select(fila => new LineaQueSeValora(fila.ArticuloId, -fila.Cantidad, null, -fila.Valor))]);
     }
 
-    /// <summary>Si sumar estas filas al libro del modelo dejaría alguna clave por debajo de cero.</summary>
+    /// <summary>
+    /// Qué restricciones de la existencia rompería sumar estas filas al libro del modelo; ninguna si
+    /// el motor tiene que dejarlas pasar.
+    /// </summary>
     /// <remarks>
-    /// Por clave y con las filas del documento sumadas, porque así las suma la sentencia: agrupa
-    /// las líneas de la misma clave antes de tocar la fila viva, y el motor mira el resultado. Una
-    /// salida y una entrada de la misma clave en el mismo documento no pasan por un negativo.
+    /// <para>
+    /// <b>Por clave y con las filas del documento sumadas</b>, porque así las suma la sentencia:
+    /// agrupa las líneas de la misma clave antes de tocar la fila viva, y el motor mira el
+    /// resultado. Una salida y una entrada de la misma clave en el mismo documento no pasan por un
+    /// negativo.
+    /// </para>
+    /// <para>
+    /// <b>Una clave que queda en negativo rompe solo la del stock</b>, aunque sea de una serie y
+    /// también se salga del <c>BETWEEN 0 AND 1</c>: los <c>CHECK</c> se comprueban en orden
+    /// alfabético de nombre (ADR-0048 §3), y el del stock va antes. Una serie con dos unidades en
+    /// una fila rompe el <c>CHECK</c> de la serie; y con una, en una fila distinta de otra que ya la
+    /// tiene, el índice. La otra fila no la toca el documento, porque una serie va una sola vez en
+    /// cada uno.
+    /// </para>
+    /// <para>
+    /// <b>Con varias rotas, cualquiera puede ser la que salta</b>: la sentencia recorre las filas en
+    /// el orden que quiere, y para en la primera.
+    /// </para>
     /// </remarks>
-    private static bool DejariaUnaClaveEnNegativo(Secuencia secuencia, IEnumerable<ApunteDelLibro> filas)
+    private static HashSet<string> LoQueRomperia(Secuencia secuencia, IEnumerable<ApunteDelLibro> filas)
     {
         IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+        HashSet<string> rotas = [];
 
-        return filas
-            .GroupBy(fila => fila.Clave)
-            .Any(clave => saldos.GetValueOrDefault(clave.Key) + clave.Sum(fila => fila.Cantidad) < 0m);
+        foreach (IGrouping<ClaveDeExistencia, ApunteDelLibro> clave in filas.GroupBy(fila => fila.Clave))
+        {
+            decimal despues = saldos.GetValueOrDefault(clave.Key) + clave.Sum(fila => fila.Cantidad);
+
+            if (despues < 0m)
+            {
+                rotas.Add(FisicoNoNegativo);
+            }
+            else if (clave.Key.SerieId is not null && despues > 1m)
+            {
+                rotas.Add(SerieComoMuchoUna);
+            }
+            else if (clave.Key.SerieId is { } serie && despues > 0m && saldos.Any(otra =>
+                otra.Key != clave.Key
+                && otra.Key.ArticuloId == clave.Key.ArticuloId
+                && otra.Key.SerieId == serie
+                && otra.Value > 0m))
+            {
+                rotas.Add(SerieEnUnSitio);
+            }
+        }
+
+        return rotas;
     }
+
+    /// <summary>La clase de paso de un rechazo del motor, según lo que el modelo sabe roto.</summary>
+    /// <remarks>
+    /// Un rechazo que puede venir de la serie o del stock no cuenta como ninguno de los dos: la
+    /// semilla que solo pasara por esos no habría visto a la serie parar un documento.
+    /// </remarks>
+    private static string ClaseDelRechazo(HashSet<string> rotas) =>
+        rotas.Contains(FisicoNoNegativo)
+            ? rotas.Count == 1 ? RechazadoSinStock : "rechazado sin stock o por la serie"
+            : RechazadoPorLaSerie;
 
     /// <summary>
     /// La fecha más alta del libro del modelo entre los artículos de estas claves, o nada si ninguno
@@ -426,22 +533,27 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private static DateOnly? LaUltimaFechaDeSusClaves(Secuencia secuencia, IEnumerable<ClaveDeExistencia> claves) =>
         claves.Select(clave => secuencia.UltimaFechaDe(clave.ArticuloId)).Max();
 
-    /// <summary>Exige que el motor rechace la operación por la restricción del stock, y no por otra.</summary>
-    private static async Task ExigirElRechazoDelMotorAsync(Func<Task> operacion, Secuencia secuencia)
+    /// <summary>
+    /// Exige que el motor rechace la operación por una de las restricciones que el modelo sabe
+    /// rotas, y no por otra.
+    /// </summary>
+    private static async Task ExigirElRechazoDelMotorAsync(
+        Func<Task> operacion, HashSet<string> rotas, Secuencia secuencia)
     {
         PostgresException rechazo =
             await Should.ThrowAsync<PostgresException>(operacion, secuencia.Relato());
 
-        rechazo.SqlState.ShouldBe("23514", secuencia.Relato());
-        rechazo.ConstraintName.ShouldBe(FisicoNoNegativo, secuencia.Relato());
+        rechazo.ConstraintName.ShouldBeOneOf([.. rotas], secuencia.Relato());
+        rechazo.SqlState.ShouldBe(rechazo.ConstraintName == SerieEnUnSitio ? "23505" : "23514", secuencia.Relato());
     }
 
     /// <summary>Un documento con fecha futura, que tiene que rechazarse sin mover nada.</summary>
     private static async Task UnaFechaFuturaAsync(
-        Random azar, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
+        Random azar, Random codigos, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
     {
         DateOnly fecha = Hoy.AddDays(azar.Next(1, 40));
-        IReadOnlyList<LineaAlAzar> lineas = [.. LineasAlAzar(azar).Select(ConSuCoste)];
+        IReadOnlyList<LineaAlAzar> lineas =
+            ConSusCodigos(codigos, empresa, secuencia, [.. LineasAlAzar(azar).Select(ConSuCoste)]);
 
         secuencia.Anotar(Futuro, fecha, lineas);
 
@@ -520,7 +632,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// </summary>
     private async Task ComprobarAsync(UnaEmpresa empresa, Secuencia secuencia)
     {
-        Ordenado(await LasExistencias.LibroAsync(postgres, empresa.EmpresaId))
+        IReadOnlyDictionary<Guid, Guid> traduccion = await LaTraduccionAsync(empresa.EmpresaId, secuencia);
+
+        Ordenado((await LasExistencias.LibroAsync(postgres, empresa.EmpresaId))
+                .Select(apunte => apunte with { Clave = EnElModelo(apunte.Clave, traduccion) }))
             .ShouldBe(Ordenado(secuencia.Libro), "el libro no es el del modelo\n" + secuencia.Relato());
 
         IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos =
@@ -533,15 +648,27 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         foreach (Existencia viva in vivas)
         {
             viva.Fisico.ShouldBe(
-                saldos[LasExistencias.ClaveDe(viva)],
+                saldos[EnElModelo(LasExistencias.ClaveDe(viva), traduccion)],
                 "el saldo no es la suma del libro\n" + secuencia.Relato());
 
             viva.Disponible.ShouldBe(viva.Fisico, secuencia.Relato());
         }
 
-        (await LasExistencias.InstantaneasAsync(postgres, empresa.EmpresaId)).ShouldBe(
-            LasExistencias.DebidasEnCSharp(secuencia.Libro, secuencia.Corte),
-            "las instantáneas no son las del libro\n" + secuencia.Relato());
+        // SIN EL ORDEN DE LA LECTURA: se ordena por los identificadores del sistema, y traducidos
+        // a los del modelo ya no van en orden.
+        (await LasExistencias.InstantaneasAsync(postgres, empresa.EmpresaId))
+            .Select(foto => foto with { Clave = EnElModelo(foto.Clave, traduccion) })
+            .ShouldBe(
+                LasExistencias.DebidasEnCSharp(secuencia.Libro, secuencia.Corte),
+                ignoreOrder: true,
+                customMessage: "las instantáneas no son las del libro\n" + secuencia.Relato());
+
+        (_, long fueraDeRango, long enDosSitios) = await LasSeriesDelLibroAsync(empresa.EmpresaId);
+
+        (fueraDeRango, enDosSitios).ShouldBe(
+            (0L, 0L),
+            "el libro sumado hasta alguna fecha deja una serie con más de una unidad en un sitio, " +
+            "o en dos\n" + secuencia.Relato());
 
         (await ValoracionesAsync(empresa.EmpresaId)).ShouldBe(
             [.. secuencia.Valoracion
@@ -633,6 +760,111 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         return (lector.GetInt64(0), lector.GetInt64(1));
     }
 
+    /// <summary>
+    /// Cuántas fechas tiene el libro por serie, y cuántas veces la suma hasta una de ellas deja la
+    /// serie con una cantidad que no es cero ni uno en un sitio, o con unidades en dos (ADR-0048 §6).
+    /// </summary>
+    /// <remarks>
+    /// Contra el libro de verdad, como <see cref="LosEstadosDelLibroAsync"/>, y por la misma razón:
+    /// ninguna fecha va por detrás del último movimiento de su artículo en su almacén (ADR-0047), así
+    /// que las filas hasta cada fecha son las de las confirmaciones hasta una de ellas. Vale porque
+    /// la empresa tiene un solo almacén: con dos, la fecha de uno no ordena la del otro. Y con todas
+    /// las filas de la misma fecha sumadas, porque la regla deja confirmar con la misma fecha en
+    /// cualquier orden.
+    /// </remarks>
+    private async Task<(long Fechas, long FueraDeRango, long EnDosSitios)> LasSeriesDelLibroAsync(Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand orden = new(
+            """
+            WITH fechas AS (
+                SELECT DISTINCT m.articulo_id, m.serie_id, m.fecha_de_operacion AS fecha
+                  FROM inventario.movimiento_stock AS m
+                 WHERE m.empresa_id = @empresa AND m.serie_id IS NOT NULL
+            ),
+            sitios AS (
+                SELECT f.articulo_id, f.serie_id, f.fecha, sum(m.cantidad_en_unidad_base) AS cantidad
+                  FROM fechas AS f
+                  JOIN inventario.movimiento_stock AS m
+                    ON m.empresa_id = @empresa
+                   AND m.articulo_id = f.articulo_id
+                   AND m.serie_id = f.serie_id
+                   AND m.fecha_de_operacion <= f.fecha
+                 GROUP BY f.articulo_id, f.serie_id, f.fecha, m.almacen_id, m.ubicacion_id
+            )
+            SELECT (SELECT count(*) FROM fechas),
+                   (SELECT count(*) FROM sitios WHERE cantidad < 0 OR cantidad > 1),
+                   (SELECT count(*)
+                      FROM (SELECT 1 FROM sitios WHERE cantidad > 0
+                             GROUP BY articulo_id, serie_id, fecha HAVING count(*) > 1) AS en_dos)
+            """,
+            conexion);
+
+        orden.Parameters.AddWithValue("empresa", empresaId);
+
+        await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
+
+        await lector.ReadAsync();
+
+        return (lector.GetInt64(0), lector.GetInt64(1), lector.GetInt64(2));
+    }
+
+    /// <summary>
+    /// De cada lote y cada serie de la base, el identificador que el modelo dio a su código; y exige
+    /// que sean justo los del libro del modelo.
+    /// </summary>
+    /// <remarks>
+    /// Por las tablas de los lotes y de las series, que son las que dicen qué código es cada uno. Un
+    /// lote de más en la base es el de un documento rechazado que no se fue con su transacción, y
+    /// uno de menos, dos códigos que el sistema ha juntado en uno.
+    /// </remarks>
+    private async Task<IReadOnlyDictionary<Guid, Guid>> LaTraduccionAsync(Guid empresaId, Secuencia secuencia)
+    {
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+
+        var lotes = await contexto.Lotes
+            .AsNoTracking()
+            .Select(lote => new { lote.Id, lote.ArticuloId, lote.Codigo })
+            .ToListAsync();
+
+        var series = await contexto.NumerosDeSerie
+            .AsNoTracking()
+            .Select(serie => new { serie.Id, serie.ArticuloId, serie.Numero })
+            .ToListAsync();
+
+        Dictionary<Guid, Guid> traduccion = [];
+
+        foreach (var lote in lotes)
+        {
+            traduccion.Add(lote.Id, secuencia.LoteDe(lote.ArticuloId, lote.Codigo));
+        }
+
+        foreach (var serie in series)
+        {
+            traduccion.Add(serie.Id, secuencia.SerieDe(serie.ArticuloId, serie.Numero));
+        }
+
+        traduccion.Values.ShouldBe(
+            secuencia.Libro
+                .SelectMany(apunte => new[] { apunte.Clave.LoteId, apunte.Clave.SerieId })
+                .OfType<Guid>()
+                .Distinct(),
+            ignoreOrder: true,
+            customMessage: "los lotes y las series de la base no son los del libro del modelo\n" + secuencia.Relato());
+
+        return traduccion;
+    }
+
+    /// <summary>La clave leída de la base, con el lote y la serie que el modelo conoce.</summary>
+    private static ClaveDeExistencia EnElModelo(ClaveDeExistencia clave, IReadOnlyDictionary<Guid, Guid> traduccion) =>
+        clave with
+        {
+            LoteId = clave.LoteId is { } lote ? traduccion[lote] : null,
+            SerieId = clave.SerieId is { } serie ? traduccion[serie] : null,
+        };
+
     /// <summary>El valor y el precio medio de cada fila del libro de la empresa.</summary>
     private async Task<List<FilaValorada>> FilasValoradasAsync(Guid empresaId)
     {
@@ -679,7 +911,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// <para>
     /// <b>De una clave con existencias, si alguna tiene</b> (ítem 2.8). Con la clave al azar, la
     /// mitad de las salidas iban a una clave vacía, chocaban con el cero y había semillas que no
-    /// confirmaban ninguna. Si no hay existencias en ninguna, la clave es cualquiera y choca.
+    /// confirmaban ninguna. Si no hay existencias en ninguna, la clave es cualquiera y choca. Desde
+    /// el ítem 2.9 la clave lleva su lote o su serie, y la salida se los lleva.
     /// </para>
     /// <para>
     /// <b>Y si no cabe, la mitad de las veces se queda en lo que cabe.</b> La otra mitad se intenta
@@ -693,10 +926,16 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
 
-        int[] conExistencias =
+        // EN UN ORDEN QUE NO DEPENDE DE LOS IDENTIFICADORES, que el modelo saca nuevos en cada
+        // vuelta: por la clave de la empresa y por el código.
+        (LineaAlAzar Donde, decimal Saldo)[] conExistencias =
         [
-            .. Enumerable.Range(0, empresa.Claves.Count)
-                .Where(clave => saldos.GetValueOrDefault(empresa.Claves[clave]) > 0m),
+            .. saldos
+                .Where(par => par.Value > 0m)
+                .Select(par => (Donde: secuencia.LineaEn(empresa, par.Key), Saldo: par.Value))
+                .OrderBy(par => par.Donde.Clave)
+                .ThenBy(par => par.Donde.Lote, StringComparer.Ordinal)
+                .ThenBy(par => par.Donde.Serie, StringComparer.Ordinal),
         ];
 
         if (conExistencias.Length == 0)
@@ -704,9 +943,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             return salida;
         }
 
-        salida = salida with { Clave = conExistencias[azar.Next(conExistencias.Length)] };
+        (LineaAlAzar donde, decimal saldo) = conExistencias[azar.Next(conExistencias.Length)];
 
-        decimal caben = decimal.Floor(saldos[empresa.Claves[salida.Clave]] / salida.Factor);
+        salida = salida with { Clave = donde.Clave, Lote = donde.Lote, Serie = donde.Serie };
+
+        decimal caben = decimal.Floor(saldo / salida.Factor);
 
         return -salida.Cantidad > caben && caben > 0m && azar.Next(2) == 0
             ? salida with { Cantidad = -caben }
@@ -714,19 +955,129 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     }
 
     private static LineaAlAzar UnaLineaAlAzar(Random azar, int signo) => new(
-        azar.Next(4), signo * azar.Next(1, 10), s_factores[azar.Next(s_factores.Length)]);
+        azar.Next(ClavesPorEmpresa), signo * azar.Next(1, 10), s_factores[azar.Next(s_factores.Length)]);
 
     /// <summary>
-    /// La línea con su coste si suma, salvo la de 3, 6 o 9 unidades de un artículo que ya tiene
-    /// existencias, que va sin él y se valora al precio medio.
+    /// Las líneas con el lote o la serie que pide la marca de su artículo, sorteados con su propio
+    /// generador; la de la serie, además, en una unidad base.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// Una línea que ya los lleva —la salida de una clave con existencias— se queda con los suyos.
+    /// Una serie no se repite en el documento, porque el alta no lo admite (ADR-0048 §3): con tres
+    /// líneas como mucho y tres series, siempre queda una libre. Uno de cada cuatro lotes sorteados
+    /// va con espacios alrededor, que el sistema recorta.
+    /// </para>
+    /// <para>
+    /// <b>La línea que resta toma un lote o una serie de su hueco</b>, si hay alguno, igual que la
+    /// salida va a una clave con existencias. Sorteados entre los tres, casi nunca coincidían con
+    /// lo que había dentro: casi todo ajuste que restaba chocaba con el cero y se llevaba por
+    /// delante las líneas que sumaban, y había semillas que no valoraban ninguna entrada al precio
+    /// medio. El cero lo siguen viendo la línea que saca más de lo que hay y la de un hueco vacío.
+    /// </para>
+    /// <para>
+    /// <b>Y la mitad de las veces, la serie que entra es una que ya está</b> en cualquier sitio, que
+    /// el motor rechaza por la serie. Sin eso, la serie no paraba ningún documento.
+    /// </para>
+    /// </remarks>
+    private static List<LineaAlAzar> ConSusCodigos(
+        Random codigos, UnaEmpresa empresa, Secuencia secuencia, IReadOnlyList<LineaAlAzar> lineas)
+    {
+        HashSet<string> usadas = [.. lineas.Select(linea => linea.Serie).OfType<string>()];
+        List<LineaAlAzar> conCodigos = [];
+
+        // EN UN ORDEN QUE NO DEPENDE DE LOS IDENTIFICADORES, como en la salida.
+        LineaAlAzar[] conExistencias =
+        [
+            .. LasExistencias.SaldosDelLibro(secuencia.Libro)
+                .Where(par => par.Value > 0m && (par.Key.LoteId is not null || par.Key.SerieId is not null))
+                .Select(par => secuencia.LineaEn(empresa, par.Key))
+                .OrderBy(donde => donde.Clave)
+                .ThenBy(donde => donde.Lote, StringComparer.Ordinal)
+                .ThenBy(donde => donde.Serie, StringComparer.Ordinal),
+        ];
+
+        foreach (LineaAlAzar linea in lineas)
+        {
+            string marca = empresa.MarcaDe(linea.Clave);
+
+            if (marca == PorLote && linea.Lote is null)
+            {
+                string[] enSuHueco =
+                [
+                    .. conExistencias.Where(donde => donde.Clave == linea.Clave).Select(donde => donde.Lote!),
+                ];
+
+                conCodigos.Add(linea with
+                {
+                    Lote = linea.Cantidad < 0m && enSuHueco.Length > 0
+                        ? enSuHueco[codigos.Next(enSuHueco.Length)]
+                        : UnLoteAlAzar(codigos),
+                });
+            }
+            else if (marca == PorNumeroSerie)
+            {
+                string[] yaDentro =
+                [
+                    .. conExistencias
+                        .Where(donde => donde.Serie is { } serie
+                            && !usadas.Contains(serie)
+                            && (linea.Cantidad > 0m || donde.Clave == linea.Clave))
+                        .Select(donde => donde.Serie!),
+                ];
+
+                string serie = linea.Serie
+                    ?? (yaDentro.Length > 0 && (linea.Cantidad < 0m || codigos.Next(2) == 0)
+                        ? yaDentro[codigos.Next(yaDentro.Length)]
+                        : UnaSerieLibre(codigos, usadas));
+
+                usadas.Add(serie);
+
+                conCodigos.Add(linea with { Cantidad = Math.Sign(linea.Cantidad), Factor = 1m, Serie = serie });
+            }
+            else
+            {
+                conCodigos.Add(linea);
+            }
+        }
+
+        return conCodigos;
+    }
+
+    private static string UnLoteAlAzar(Random codigos)
+    {
+        string lote = s_lotes[codigos.Next(s_lotes.Length)];
+
+        return codigos.Next(4) == 0 ? " " + lote + " " : lote;
+    }
+
+    private static string UnaSerieLibre(Random codigos, HashSet<string> usadas)
+    {
+        string[] libres = [.. s_series.Where(serie => !usadas.Contains(serie))];
+
+        return libres[codigos.Next(libres.Length)];
+    }
+
+    /// <summary>
+    /// La línea con su coste si suma, salvo la de un número par de unidades de un artículo que ya
+    /// tiene existencias, que va sin él y se valora al precio medio.
+    /// </summary>
+    /// <remarks>
+    /// <para>
     /// Solo sin coste si el artículo tiene existencias ANTES del documento: dentro de él, las líneas
     /// que suman se valoran antes que las que restan, así que nada lo vacía antes de llegar a ella.
     /// Una entrada sin coste en un artículo vacío se rechaza, y eso lo mira su caso propio.
+    /// </para>
+    /// <para>
+    /// <b>Par, y no 3, 6 o 9, desde el ítem 2.9.</b> Con tres artículos, las líneas se reparten
+    /// entre más claves y hay menos confirmadas en un artículo con existencias. La semilla 460 tiene
+    /// ocho —7, 1, 8, 1, 4, 5, 7 y 1 unidades— y ninguna era múltiplo de tres. La regla no toca el
+    /// generador ni las clases de paso, porque la existencia no depende del coste: solo cambia qué
+    /// líneas se valoran al precio medio.
+    /// </para>
     /// </remarks>
     private static LineaAlAzar ConCoste(LineaAlAzar linea, UnaEmpresa empresa, Secuencia secuencia) =>
-        linea.Cantidad % 3m == 0m
+        linea.Cantidad % 2m == 0m
             && secuencia.Valoracion.GetValueOrDefault(empresa.Claves[linea.Clave].ArticuloId).Cantidad > 0m
             ? linea
             : ConSuCoste(linea);
@@ -770,7 +1121,9 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                     linea.Cantidad,
                     empresa.UnidadDe[clave.ArticuloId],
                     linea.Factor,
-                    linea.Coste);
+                    linea.Coste,
+                    linea.Lote,
+                    linea.Serie);
             })]);
 
         Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
@@ -785,6 +1138,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             .OrderBy(apunte => apunte.Clave.ArticuloId)
             .ThenBy(apunte => apunte.Clave.AlmacenId)
             .ThenBy(apunte => apunte.Clave.UbicacionId)
+            .ThenBy(apunte => apunte.Clave.LoteId)
+            .ThenBy(apunte => apunte.Clave.SerieId)
             .ThenBy(apunte => apunte.Fecha)
             .ThenBy(apunte => apunte.Cantidad)];
 
@@ -799,8 +1154,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private static DateOnly Hoy => DateOnly.FromDateTime(s_reloj.GetUtcNow().UtcDateTime);
 
     /// <summary>
-    /// Una empresa con un almacén de dos ubicaciones, dos artículos —cuatro claves— y los
-    /// ejercicios de este año y del pasado, cada uno con su serie.
+    /// Una empresa con un almacén de dos ubicaciones, tres artículos —uno por marca, seis claves— y
+    /// los ejercicios de este año y del pasado, cada uno con su serie.
     /// </summary>
     private async Task<UnaEmpresa> UnaEmpresaAsync(int semilla)
     {
@@ -830,7 +1185,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, semilla + 10);
 
         (Guid segundo, Guid unidadDelSegundo) =
-            await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, semilla + 20);
+            await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, semilla + 20, PorLote);
+
+        (Guid tercero, Guid unidadDelTercero) =
+            await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, semilla + 130, PorNumeroSerie);
 
         return new UnaEmpresa(
             cliente,
@@ -841,19 +1199,30 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                 new ClaveDeExistencia(primero, almacen.Id, ubicaciones[1]),
                 new ClaveDeExistencia(segundo, almacen.Id, ubicaciones[0]),
                 new ClaveDeExistencia(segundo, almacen.Id, ubicaciones[1]),
+                new ClaveDeExistencia(tercero, almacen.Id, ubicaciones[0]),
+                new ClaveDeExistencia(tercero, almacen.Id, ubicaciones[1]),
             ],
-            new Dictionary<Guid, Guid> { [primero] = unidadDelPrimero, [segundo] = unidadDelSegundo },
+            new Dictionary<Guid, Guid>
+            {
+                [primero] = unidadDelPrimero,
+                [segundo] = unidadDelSegundo,
+                [tercero] = unidadDelTercero,
+            },
+            new Dictionary<Guid, string> { [primero] = "Ninguna", [segundo] = PorLote, [tercero] = PorNumeroSerie },
             serie,
             delAnioPasado,
             anioPasado);
     }
 
     /// <summary>Una línea tal como la saca el generador.</summary>
-    /// <param name="Clave">Cuál de las cuatro claves de la empresa.</param>
+    /// <param name="Clave">Cuál de las seis claves de la empresa.</param>
     /// <param name="Cantidad">La cantidad tecleada, con signo.</param>
     /// <param name="Factor">El factor a unidad base.</param>
     /// <param name="Coste">El coste por unidad base, o nada si resta o va al precio medio.</param>
-    private sealed record LineaAlAzar(int Clave, decimal Cantidad, decimal Factor, decimal? Coste = null);
+    /// <param name="Lote">El lote tal como se teclea, o nada.</param>
+    /// <param name="Serie">El número de serie, o nada.</param>
+    private sealed record LineaAlAzar(
+        int Clave, decimal Cantidad, decimal Factor, decimal? Coste = null, string? Lote = null, string? Serie = null);
 
     /// <summary>Una línea tal como la valora el modelo.</summary>
     /// <param name="ArticuloId">El artículo; el almacén es uno solo.</param>
@@ -876,15 +1245,32 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Guid AlmacenId,
         IReadOnlyList<ClaveDeExistencia> Claves,
         IReadOnlyDictionary<Guid, Guid> UnidadDe,
+        IReadOnlyDictionary<Guid, string> Marcas,
         SerieDto Serie,
         SerieDto SerieDelAnioPasado,
-        EjercicioDto AnioPasado);
+        EjercicioDto AnioPasado)
+    {
+        /// <summary>La marca del artículo de una de las seis claves.</summary>
+        internal string MarcaDe(int clave) => Marcas[Claves[clave].ArticuloId];
+
+        /// <summary>Cuál de las seis claves es esta, sin su lote ni su serie.</summary>
+        internal int IndiceDe(ClaveDeExistencia clave)
+        {
+            ClaveDeExistencia sinCodigos = clave with { LoteId = null, SerieId = null };
+
+            return Enumerable.Range(0, Claves.Count).Single(indice => Claves[indice] == sinCodigos);
+        }
+    }
 
     /// <summary>El modelo: lo que el libro debería tener, y el relato de cómo se llegó ahí.</summary>
     /// <param name="semilla">La semilla del generador, que es la primera línea del relato.</param>
     private sealed class Secuencia(int semilla)
     {
         private readonly List<string> _pasos = [];
+
+        private readonly Dictionary<(string Que, Guid ArticuloId, string Codigo), Guid> _identificadores = [];
+
+        private readonly Dictionary<Guid, string> _codigos = [];
 
         internal List<ApunteDelLibro> Libro { get; } = [];
 
@@ -914,6 +1300,35 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             Libro.Where(apunte => apunte.Clave.ArticuloId == articuloId)
                 .Select(apunte => (DateOnly?)apunte.Fecha)
                 .Max();
+
+        /// <summary>
+        /// El identificador que el modelo da a un lote: uno por artículo y código, recortado como
+        /// lo recorta el sistema y con su caja (ADR-0048 §2).
+        /// </summary>
+        internal Guid LoteDe(Guid articuloId, string codigo) => IdentificadorDe("lote", articuloId, codigo);
+
+        /// <summary>El identificador que el modelo da a un número de serie, igual que al lote.</summary>
+        internal Guid SerieDe(Guid articuloId, string numero) => IdentificadorDe("serie", articuloId, numero);
+
+        /// <summary>La clave del modelo para una línea: la de la empresa, con su lote o su serie.</summary>
+        internal ClaveDeExistencia ClaveDe(UnaEmpresa empresa, LineaAlAzar linea)
+        {
+            ClaveDeExistencia clave = empresa.Claves[linea.Clave];
+
+            return clave with
+            {
+                LoteId = linea.Lote is { } lote ? LoteDe(clave.ArticuloId, lote) : null,
+                SerieId = linea.Serie is { } serie ? SerieDe(clave.ArticuloId, serie) : null,
+            };
+        }
+
+        /// <summary>Una línea vacía en una clave del modelo, con los códigos de su lote o su serie.</summary>
+        internal LineaAlAzar LineaEn(UnaEmpresa empresa, ClaveDeExistencia clave) => new(
+            empresa.IndiceDe(clave),
+            0m,
+            1m,
+            Lote: clave.LoteId is { } lote ? _codigos[lote] : null,
+            Serie: clave.SerieId is { } serie ? _codigos[serie] : null);
 
         internal void Anotar(string clase, DateOnly fecha, IReadOnlyList<LineaAlAzar> lineas) =>
             Anotar(clase, string.Create(
@@ -1004,7 +1419,23 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                 $"clave {linea.Clave}: {linea.Cantidad:+0;-0} x {linea.Factor}")
             + (linea.Coste is { } coste
                 ? string.Create(CultureInfo.InvariantCulture, $" a {coste}")
-                : linea.Cantidad > 0m ? " al precio medio" : string.Empty);
+                : linea.Cantidad > 0m ? " al precio medio" : string.Empty)
+            + (linea.Lote is { } lote ? " lote «" + lote + "»" : string.Empty)
+            + (linea.Serie is { } serie ? " serie «" + serie + "»" : string.Empty);
+
+        private Guid IdentificadorDe(string que, Guid articuloId, string codigo)
+        {
+            string recortado = codigo.Trim();
+
+            if (!_identificadores.TryGetValue((que, articuloId, recortado), out Guid id))
+            {
+                id = Guid.CreateVersion7();
+                _identificadores.Add((que, articuloId, recortado), id);
+                _codigos.Add(id, recortado);
+            }
+
+            return id;
+        }
 
         private static decimal Redondear(decimal cantidad, int decimales) =>
             decimal.Round(cantidad, decimales, MidpointRounding.AwayFromZero);

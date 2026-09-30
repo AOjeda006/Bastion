@@ -7049,6 +7049,47 @@ cuadre.
   tests/Api.IntegrationTests --no-build --filter
   "FullyQualifiedName~LaMarcaSeLeeConCerrojoTests|FullyQualifiedName~LaMarcaNoCambiaConMovimientosTests"`;
   y el censo con los tres nuevos.
+- **La propiedad y el cuadre con la clave trazable**, en el commit `test(inventario)` que sigue a
+  `626fd79`. Es el punto 6 del ADR-0048.
+  - `ElSaldoEsLaSumaDelLibroPorPropiedadTests` genera **tres artículos, uno por marca, y seis
+    claves**. Las líneas del lote llevan uno de tres códigos, dos de ellos distintos solo en la caja,
+    y una de cada cuatro va con espacios. Las de la serie llevan uno de tres números, una unidad base
+    y sin repetirse en el documento. Los códigos salen de otro generador (`semilla + 1_000`), así que
+    los dados de cada paso son los mismos que sin ellos.
+  - **El modelo predice el rechazo por la serie**: una fila con más de una unidad
+    (`ck_existencias_serie_como_mucho_una`, `23514`) o una serie en dos filas con unidades
+    (`ix_existencias_serie_en_un_sitio`, `23505`). Exige el nombre de alguna de las que rompería. La
+    clase nueva, «rechazado por la serie», la tiene que ver cada semilla, sola y no mezclada con el
+    stock.
+  - **El modelo no conoce los identificadores**: traduce lo que lee con las tablas de los lotes y de
+    las series, y esas tablas tienen que tener justo lo que el libro del modelo confirmó.
+  - Tras cada paso, **el invariante de la serie contra el libro de verdad**: sumada hasta cada fecha,
+    ninguna tiene más de una unidad en un sitio ni está en dos. Al final se exige que haya lote y
+    serie en el libro, para que eso no salga verde por no mirar.
+  - **Tres ajustes para que cada semilla pase por todas las clases**, cada uno medido:
+    - la línea que resta toma un código de su hueco, si lo hay;
+    - la serie que entra es, la mitad de las veces, una que ya está;
+    - el precio medio va en las líneas de un número par de unidades, y no en las de 3, 6 o 9. La 460
+      tiene ocho candidatas (7, 1, 8, 1, 4, 5, 7 y 1 unidades) y ninguna es múltiplo de tres. La regla
+      no toca el generador ni las clases, porque la existencia no depende del coste;
+    - y **160 pasos**: con 80, cinco semillas no veían a la serie parar un documento; con 120, la 461
+      no valoraba nada al precio medio. Medido con `Pasos` a 80, 120 y 160 y la orden de abajo.
+  - `ElCuadreMiraElLoteYLaSerieTests`, **un caso**. Una unidad pasa de un lote a otro en la fila viva
+    y en la instantánea, y la serie que estaba le deja su unidad a la que había salido. El caso
+    afirma primero que, por hueco, las copias suman lo mismo que antes. Después afirma que el cuadre
+    saca los seis descuadres con su lote o su serie, y ninguno más. La propiedad solo lo ve por la
+    cuenta de claves comparadas, porque sus copias no mienten.
+
+  Las semillas: la empresa del cuadre, la 596; sus maestros de instalación, la 597 y la 598. La 599
+  queda libre. Del 590 al 595 son los terceros artículos de la propiedad.
+
+  **Verificado:** las seis semillas en verde, `dotnet test tests/Api.IntegrationTests --no-build
+  --filter "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests" --blame-hang
+  --blame-hang-timeout 4m`; el caso del cuadre y el censo, `--filter
+  "FullyQualifiedName~ElCuadreMiraElLoteYLaSerieTests|FullyQualifiedName~ElCensoDeEsteCarrilTests"`;
+  el carril de integración entero, 84 de Organización y 455 de la API (los 451 de antes, los
+  tres de la marca y este), `dotnet test Bastion.sln --no-build --filter "Category=Integracion"`; y
+  `dotnet format Bastion.sln --verify-no-changes`.
 
 **Lo que queda, por este orden:**
 
@@ -7059,7 +7100,7 @@ cuadre.
    - ~~la marca, leída con `FOR SHARE`;~~ Hecho.
    - ~~la traducción de la serie: `23505` en la lista de las reglas guardadas por la base, y las
      dos restricciones de la serie a su error de negocio.~~ Hecho.
-3. **Las carreras, la propiedad y el cuadre.**
+3. ~~**Las carreras, la propiedad y el cuadre.**~~ Hecho.
 4. **La pantalla de la marca.** Hoy el frontal del artículo es solo el listado.
 5. **La tanda de mutaciones, desde la 82**, porque la 80 y la 81 son del arreglo del reloj. Antes
    de abrirla, se le pregunta al usuario si enciende `context-mode`.

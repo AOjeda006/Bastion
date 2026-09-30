@@ -168,6 +168,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElCerrojoDeLaNumeracionTests.Una_serie_de_otro_documento_no_numera_y_lo_dice_con_su_codigo",
         "ElCerrojoDeLaNumeracionTests.Una_serie_numera_sin_huecos_sea_cual_sea_el_documento_que_numera",
         "ElCerrojoDeLaNumeracionTests.Una_serie_que_no_existe_da_el_MISMO_error_que_una_ajena",
+        "ElCuadreMiraElLoteYLaSerieTests.El_cuadre_ve_el_lote_y_la_serie_aunque_el_hueco_sume_lo_que_debe",
 
         // Del ítem 2.6: R9 sobre el documento. Los cuatro primeros bajan al motor porque el
         // cerrojo compartido de la confirmación no existe fuera de él; los dos últimos, porque
