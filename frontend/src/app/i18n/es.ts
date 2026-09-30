@@ -287,6 +287,10 @@ export const es = {
       'impuesto-con-tramos-solapados':
         'Los tramos de vigencia de ese impuesto se solapan. Revisa las fechas.',
       'impuesto-no-encontrado': 'Ese impuesto ya no existe.',
+      'numero-de-serie-en-existencias':
+        'Algún número de serie del documento ya está en existencias: cada pieza solo puede estar ' +
+        'en un sitio, y una sola vez. No se ha guardado nada. Si la pieza ha cambiado de sitio, ' +
+        'eso es una reubicación y no una entrada.',
       'orden-no-admitido': 'No se puede ordenar por ese campo.',
       'permisos-de-rol-del-sistema':
         'Los permisos del rol del sistema los fija cada actualización. Puedes cambiarle el nombre; para dar menos permisos, crea un rol propio.',

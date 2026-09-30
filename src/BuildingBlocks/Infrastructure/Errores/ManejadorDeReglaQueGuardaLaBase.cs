@@ -10,8 +10,8 @@ using Npgsql;
 namespace Bastion.BuildingBlocks.Infrastructure.Errores;
 
 /// <summary>
-/// Traduce la violación de una restricción <c>CHECK</c> <b>declarada</b> en
-/// <see cref="RestriccionesQueGuardanUnaRegla"/> al error que su módulo declaró para ella.
+/// Traduce la violación de una restricción <c>CHECK</c> o de un índice único <b>declarados</b> en
+/// <see cref="RestriccionesQueGuardanUnaRegla"/> al error que su módulo declaró para ellos.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -33,6 +33,12 @@ namespace Bastion.BuildingBlocks.Infrastructure.Errores;
 /// sigue siendo un <c>500</c>: casi toda restricción guarda un invariante que el dominio ya
 /// comprueba, y si salta es un defecto que merece su traza. Lo que distingue una de otra es una
 /// decisión escrita, no una propiedad de la excepción.
+/// </para>
+/// <para>
+/// <b>Y el nombre con su clase</b> (ADR-0048 §3). Desde el 2.9 la lista admite índices únicos, y un
+/// <c>23505</c> solo se traduce si el nombre está declarado como índice, y un <c>23514</c>, si está
+/// declarado como <c>CHECK</c>. PostgreSQL no impide que un índice y una restricción se llamen igual,
+/// y la clase es la mitad de lo que se declaró.
 /// </para>
 /// <para>
 /// <b>Es un manejador distinto del de la carrera perdida</b>, y no una rama suya, porque aquel
@@ -58,13 +64,17 @@ internal sealed partial class ManejadorDeReglaQueGuardaLaBase(
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(restricciones);
 
-        if (RestriccionDe(exception) is not { } restriccion
-            || !restricciones.Value.Declaradas.TryGetValue(restriccion, out RestriccionDeclarada? declarada))
+        if (ViolacionDe(exception) is not { } violacion
+            || !restricciones.Value.Declaradas.TryGetValue(violacion.Nombre, out RestriccionDeclarada? declarada)
+            || declarada.Clase != violacion.Clase)
         {
-            // Un 23514 de una restricción NO declarada se deja pasar al manejador general: casi
-            // siempre es un defecto y merece su 500 con su traza.
+            // Un 23514 o un 23505 de una restricción NO declarada se deja pasar al manejador
+            // general: casi siempre es un defecto y merece su 500 con su traza. Y el de una
+            // declarada con la OTRA clase, igual: lo que se decidió fue el nombre con su clase.
             return false;
         }
+
+        string restriccion = violacion.Nombre;
 
         string metodo = httpContext.Request.Method;
         string ruta = httpContext.Request.Path.Value ?? string.Empty;
@@ -84,25 +94,35 @@ internal sealed partial class ManejadorDeReglaQueGuardaLaBase(
         }).ConfigureAwait(false);
     }
 
-    // El nombre de la restricción violada, o nada si lo que llegó no es un `23514`. Se recorre la
-    // cadena porque la excepción del motor llega sola cuando la lanza una sentencia cruda, y
-    // envuelta en la de EF Core cuando la lanza un `SaveChanges`.
-    private static string? RestriccionDe(Exception fallo)
+    // La restricción violada y su clase, o nada si lo que llegó no es un `23514` ni un `23505`. Se
+    // recorre la cadena porque la excepción del motor llega sola cuando la lanza una sentencia
+    // cruda, y envuelta en la de EF Core cuando la lanza un `SaveChanges`.
+    private static (ClaseDeRestriccion Clase, string Nombre)? ViolacionDe(Exception fallo)
     {
         for (Exception? actual = fallo; actual is not null; actual = actual.InnerException)
         {
-            if (actual is PostgresException postgres
-                && string.Equals(postgres.SqlState, ViolacionDeRestriccion, StringComparison.Ordinal))
+            if (actual is not PostgresException { ConstraintName: { } nombre } postgres)
             {
-                return postgres.ConstraintName;
+                continue;
+            }
+
+            if (string.Equals(postgres.SqlState, ViolacionDeComprobacion, StringComparison.Ordinal))
+            {
+                return (ClaseDeRestriccion.Comprobacion, nombre);
+            }
+
+            if (string.Equals(postgres.SqlState, ViolacionDeUnicidad, StringComparison.Ordinal))
+            {
+                return (ClaseDeRestriccion.Unicidad, nombre);
             }
         }
 
         return null;
     }
 
-    // `23514 check_violation`, tal cual lo publica PostgreSQL.
-    private const string ViolacionDeRestriccion = "23514";
+    // `23514 check_violation` y `23505 unique_violation`, tal cual los publica PostgreSQL.
+    private const string ViolacionDeComprobacion = "23514";
+    private const string ViolacionDeUnicidad = "23505";
 
     [LoggerMessage(
         EventId = 8503,

@@ -97,6 +97,7 @@
     { "codigo": "importacion-sin-permiso-de-limite", "type": "/errors/importacion-sin-permiso-de-limite", "clase": "PermisoDenegado" },
     { "codigo": "impuesto-con-tramos-solapados", "type": "/errors/impuesto-con-tramos-solapados", "clase": "Conflicto" },
     { "codigo": "impuesto-no-encontrado", "type": "/errors/impuesto-no-encontrado", "clase": "NoEncontrado" },
+    { "codigo": "numero-de-serie-en-existencias", "type": "/errors/numero-de-serie-en-existencias", "clase": "ReglaDeNegocio" },
     { "codigo": "orden-no-admitido", "type": "/errors/orden-no-admitido", "clase": "Validacion" },
     { "codigo": "permisos-de-rol-del-sistema", "type": "/errors/permisos-de-rol-del-sistema", "clase": "Conflicto" },
     { "codigo": "pertenencia-no-encontrada", "type": "/errors/pertenencia-no-encontrada", "clase": "NoEncontrado" },

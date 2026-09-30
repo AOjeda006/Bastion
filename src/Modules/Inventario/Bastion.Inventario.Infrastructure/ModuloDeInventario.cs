@@ -138,13 +138,39 @@ public static class ModuloDeInventario
         // Y LA RESTRICCIÓN QUE GUARDA EL STOCK contesta con su regla, y no con un 500. Se declara
         // aquí por lo mismo que el índice: que un físico por debajo de cero sea «no hay bastante
         // stock» y no un defecto es una afirmación sobre la existencia, y es de este módulo.
-        servicios.Configure<RestriccionesQueGuardanUnaRegla>(restricciones => restricciones.Declarar(
-            ConfiguracionDeExistencia.FisicoNoNegativo,
-            ErroresDeExistencias.StockInsuficiente(),
-            "leer el saldo, compararlo y escribir deja una ventana que dos salidas simultáneas " +
-            "cruzan juntas, y las dos pasarían la comprobación. El CHECK se evalúa con la fila ya " +
-            "bloqueada y la cantidad ya sumada, así que es la única guarda que no se saltan; y lo " +
-            "único que puede significar que salte es que no había bastante stock (ADR-0046 §4)"));
+        //
+        // Y LAS DOS DE LA SERIE, al mismo error (ADR-0048 §3): el CHECK salta cuando la serie entra
+        // otra vez en la misma ubicación, y el índice, cuando entra en otra. El índice es un 23505,
+        // y NO va a la lista de la carrera perdida: quien llega segundo no tiene nada que recargar.
+        servicios.Configure<RestriccionesQueGuardanUnaRegla>(restricciones => restricciones
+            .Declarar(
+                ConfiguracionDeExistencia.FisicoNoNegativo,
+                ClaseDeRestriccion.Comprobacion,
+                ErroresDeExistencias.StockInsuficiente(),
+                "leer el saldo, compararlo y escribir deja una ventana que dos salidas simultáneas " +
+                "cruzan juntas, y las dos pasarían la comprobación. El CHECK se evalúa con la fila " +
+                "ya bloqueada y la cantidad ya sumada, así que es la única guarda que no se saltan; " +
+                "y lo único que puede significar que salte es que no había bastante stock " +
+                "(ADR-0046 §4)")
+            .Declarar(
+                ConfiguracionDeExistencia.SerieComoMuchoUna,
+                ClaseDeRestriccion.Comprobacion,
+                ErroresDeExistencias.NumeroDeSerieEnExistencias(),
+                "una serie que entra otra vez en la ubicación donde ya está deja su fila en dos. " +
+                "Mirar antes que la fila esté a cero deja la ventana de siempre, y dos entradas " +
+                "simultáneas la pasarían juntas. El CHECK se evalúa con la fila ya bloqueada y la " +
+                "cantidad ya sumada, y lo único que puede significar que salte es que esa unidad ya " +
+                "estaba dentro (ADR-0048 §3)")
+            .Declarar(
+                ConfiguracionDeExistencia.SerieEnUnSitio,
+                ClaseDeRestriccion.Unicidad,
+                ErroresDeExistencias.NumeroDeSerieEnExistencias(),
+                "una serie que entra en otra ubicación, o en otro almacén, mientras sigue en la " +
+                "primera. Un CHECK de fila no ve las demás filas, y leer antes deja la ventana que " +
+                "cruzan dos confirmaciones a la vez. El índice único parcial se comprueba con cada " +
+                "fila que se escribe y espera a la transacción que tenga la otra, y lo único que " +
+                "puede significar que salte es que esa unidad ya está en otro sitio. Reintentar da " +
+                "lo mismo, así que no es una carrera perdida (ADR-0048 §3)"));
 
         servicios.AgregarCasosDeUsoDeInventario();
 

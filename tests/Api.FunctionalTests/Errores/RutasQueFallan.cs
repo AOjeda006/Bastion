@@ -52,6 +52,8 @@ internal sealed class RutasQueFallan : IStartupFilter
     internal const string UnicidadSinDeclarar = "/pruebas/errores/unicidad-sin-declarar";
     internal const string ReglaGuardadaPorLaBase = "/pruebas/errores/regla-guardada-por-la-base";
     internal const string RestriccionSinDeclarar = "/pruebas/errores/restriccion-sin-declarar";
+    internal const string UnicidadQueGuardaUnaRegla = "/pruebas/errores/unicidad-que-guarda-una-regla";
+    internal const string UnicidadConOtraClase = "/pruebas/errores/unicidad-con-otra-clase";
 
     /// <summary>El índice que Inventario declara como carrera perdida, con su nombre real.</summary>
     /// <remarks>
@@ -70,6 +72,10 @@ internal sealed class RutasQueFallan : IStartupFilter
 
     /// <summary>Una restricción cualquiera de las que NO se traducen: la del libro sin cantidad.</summary>
     internal const string RestriccionNoDeclarada = "ck_movimiento_stock_cantidad_no_nula";
+
+    /// <summary>El índice único que Inventario declara como regla, con su nombre real (ADR-0048 §3).</summary>
+    /// <remarks>Escrito a mano por lo mismo que el índice declarado.</remarks>
+    internal const string IndiceDeclaradoComoRegla = "ix_existencias_serie_en_un_sitio";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => aplicacion =>
     {
@@ -153,6 +159,13 @@ internal sealed class RutasQueFallan : IStartupFilter
             // Y el contraste: el MISMO 23514 sobre una restricción que nadie declaró es un defecto.
             RestriccionSinDeclarar => throw ChoqueDeRestriccion(RestriccionNoDeclarada),
 
+            // LAS DOS DEL ÍNDICE QUE GUARDA UNA REGLA (ADR-0048 §3). La primera, con la forma con
+            // la que llega de verdad: el 23505 del motor SOLO, porque también lo lanza la sentencia
+            // cruda que anota el libro. La segunda, con el MISMO nombre y el código de un CHECK: lo
+            // declarado es el nombre con su clase, y lo demás es un defecto.
+            UnicidadQueGuardaUnaRegla => throw ChoqueDeUnicidadCruda(IndiceDeclaradoComoRegla),
+            UnicidadConOtraClase => throw ChoqueDeRestriccion(IndiceDeclaradoComoRegla),
+
             _ => Task.CompletedTask,
         };
     }
@@ -170,6 +183,14 @@ internal sealed class RutasQueFallan : IStartupFilter
             "ERROR",
             "23505",
             constraintName: indice));
+
+    // El `23505` tal como lo levanta Npgsql desde una sentencia cruda, sin el envoltorio de EF Core.
+    private static PostgresException ChoqueDeUnicidadCruda(string indice) => new(
+        $"duplicate key value violates unique constraint \"{indice}\": {RastroInterno}",
+        "ERROR",
+        "ERROR",
+        "23505",
+        constraintName: indice);
 
     // El `23514` tal como lo levanta Npgsql desde una sentencia cruda, con el nombre dentro.
     private static PostgresException ChoqueDeRestriccion(string restriccion) => new(

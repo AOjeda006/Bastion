@@ -5513,6 +5513,13 @@ Como las de la marca: reversibles, y ninguna toca lo cerrado en A.4.
   porque por nombre casaría con la `Serie` de numeración de Organización.
 - **El artículo del lote y de la serie se declara por `IConsultaDeTrazabilidad`.** Es la lectura
   que decide que existan: solo se crean para un artículo cuya marca, leída con `FOR SHARE`, lo pide.
+- **La lista de las reglas guardadas por la base declara la clase de cada entrada**
+  (`ClaseDeRestriccion`: `Comprobacion` o `Unicidad`), y el manejador exige el nombre con su clase:
+  un `23505` solo se traduce si el nombre está declarado como índice, y un `23514`, si lo está como
+  `CHECK`. PostgreSQL no impide que un índice y un `CHECK` se llamen igual. El enumerado no tiene
+  cero, como `MarcaDeTrazabilidad`.
+- **`numero-de-serie-en-existencias` no dice qué serie ni dónde**, igual que `stock-insuficiente`:
+  la restricción solo trae su nombre. Vive en `ErroresDeExistencias`, junto al del stock.
 
 #### Las herramientas de la máquina, en este encargo
 
@@ -6950,6 +6957,28 @@ la serie*.
   | 80 | El reloj parado, un día después: el 2026-09-30. | 1 de 6, la 463, en `secuencia.Clases`, que echa en falta «rechazado por la fecha»: el mismo rojo que el de control. La fecha es lo que decide |
   | 81 | El caso construye el módulo sin su reloj. | 6 de 6, en el libro: el modelo fecha el inverso con el reloj parado y el caso de uso, con el de verdad, un día después |
 
+**Hecha la segunda parte del paso 2, la traducción de la serie**, en el commit `feat(errores)` que
+sigue a `1e476cd`.
+
+- **`RestriccionesQueGuardanUnaRegla` admite `23505`**, además de `23514`, con la clase de cada
+  entrada, y `ManejadorDeReglaQueGuardaLaBase` exige el nombre con su clase.
+- **Inventario declara las dos restricciones de la serie** al mismo `422`,
+  `numero-de-serie-en-existencias`, con su texto en los dos idiomas:
+  `ck_existencias_serie_como_mucho_una` como `CHECK` e `ix_existencias_serie_en_un_sitio` como
+  índice único. El índice no va a la lista de la carrera perdida.
+- **Los casos**, tres más en el carril rápido:
+  - `CadaRestriccionTraducidaSeJustificaTests.Ningun_nombre_es_a_la_vez_regla_y_carrera_perdida`,
+    el barrido que pedía el ADR-0048 §3. Afirma antes que hay algo que cruzar;
+  - `PoliticaDeErroresTests.Un_indice_declarado_como_regla_sale_con_su_error_y_no_412_ni_500`;
+  - `PoliticaDeErroresTests.El_nombre_declarado_con_la_otra_clase_sigue_siendo_500`, su contraste.
+
+  Los dos casos que ya había en el barrido buscan cada declaración con su clase, y la lista cerrada
+  lleva la clase en cada línea. Que el motor lance esos dos nombres con esa serie lo comprueba el
+  carril de integración en el paso 3.
+- **Verificado:** el carril rápido, con 1044, `dotnet test Bastion.sln --filter
+  "Category!=Integracion"`; y el de integración entero, con 84 de Organización y 441 de la API,
+  `dotnet test Bastion.sln --filter "Category=Integracion"`. El build y `dotnet format` sin cambios.
+
 **Lo que queda, por este orden:**
 
 1. ~~**Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo
@@ -6957,8 +6986,8 @@ la serie*.
 2. **Inventario:**
    - ~~el lote y la serie en la línea, sus tablas y la clave de la existencia y del libro;~~ Hecho.
    - ~~la marca, leída con `FOR SHARE`;~~ Hecho.
-   - la traducción de la serie: `23505` en la lista de las reglas guardadas por la base, y las dos
-     restricciones de la serie a su error de negocio.
+   - ~~la traducción de la serie: `23505` en la lista de las reglas guardadas por la base, y las
+     dos restricciones de la serie a su error de negocio.~~ Hecho.
 3. **Las carreras, la propiedad y el cuadre.**
 4. **La pantalla de la marca.** Hoy el frontal del artículo es solo el listado.
 5. **La tanda de mutaciones, desde la 82**, porque la 80 y la 81 son del arreglo del reloj. Antes

@@ -250,6 +250,10 @@ export const en: Diccionario = {
         'Some rows carry a credit limit and you are not allowed to set it. Leave those columns empty.',
       'impuesto-con-tramos-solapados': 'The validity ranges of that tax overlap. Check the dates.',
       'impuesto-no-encontrado': 'That tax no longer exists.',
+      'numero-de-serie-en-existencias':
+        'A serial number in this document is already in stock: each piece can only be in one ' +
+        'place, and only once. Nothing has been saved. If the piece has moved, that is a ' +
+        'relocation, not an entry.',
       'orden-no-admitido': 'That field cannot be used for sorting.',
       'permisos-de-rol-del-sistema':
         'The permissions of the system role are set by every update. You can rename it; to grant fewer permissions, create a role of your own.',

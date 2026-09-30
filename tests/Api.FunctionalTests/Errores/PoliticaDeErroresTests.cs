@@ -154,6 +154,59 @@ public sealed class PoliticaDeErroresTests(ApiConRutasQueFallan api) : IClassFix
             .ShouldNotContain(RutasQueFallan.RestriccionNoDeclarada);
     }
 
+    /// <summary>
+    /// El índice único DECLARADO como regla sale con su error: la serie que ya está en otro sitio
+    /// es un <c>422</c> <c>numero-de-serie-en-existencias</c>, ni el <c>412</c> de la carrera ni un
+    /// <c>500</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Es la mitad de arriba otra vez</b>, ahora con un <c>23505</c> (ADR-0048 §3). Que la misma
+    /// serie en dos almacenes choque contra ese índice lo comprueba el carril de integración.
+    /// </remarks>
+    [Fact]
+    public async Task Un_indice_declarado_como_regla_sale_con_su_error_y_no_412_ni_500()
+    {
+        using HttpResponseMessage respuesta = await api.CreateClient()
+            .GetAsync(new Uri(RutasQueFallan.UnicidadQueGuardaUnaRegla, UriKind.Relative));
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.UnprocessableContent);
+        respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+
+        string cuerpo = await respuesta.Content.ReadAsStringAsync();
+
+        using var problema = JsonDocument.Parse(cuerpo);
+        problema.RootElement.GetProperty("type").GetString()
+            .ShouldBe("/errors/numero-de-serie-en-existencias");
+        problema.RootElement.GetProperty("status").GetInt32().ShouldBe(422);
+
+        cuerpo.ShouldNotContain(RutasQueFallan.IndiceDeclaradoComoRegla);
+        foreach (string rastro in s_rastrosDelInterior)
+        {
+            cuerpo.ShouldNotContain(rastro);
+        }
+    }
+
+    /// <summary>
+    /// El MISMO nombre con el código de la otra clase sigue siendo un <c>500</c>: lo declarado es
+    /// el nombre con su clase.
+    /// </summary>
+    /// <remarks>
+    /// Sin este caso, un manejador que buscara solo por nombre pondría el de arriba igual de verde.
+    /// PostgreSQL no impide que un índice y un <c>CHECK</c> se llamen igual.
+    /// </remarks>
+    [Fact]
+    public async Task El_nombre_declarado_con_la_otra_clase_sigue_siendo_500()
+    {
+        using HttpResponseMessage respuesta = await api.CreateClient()
+            .GetAsync(new Uri(RutasQueFallan.UnicidadConOtraClase, UriKind.Relative));
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        respuesta.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+
+        (await respuesta.Content.ReadAsStringAsync())
+            .ShouldNotContain(RutasQueFallan.IndiceDeclaradoComoRegla);
+    }
+
     // La teoría de arriba enumera las clases A MANO, y una lista a mano se queda corta: añadir una
     // clase de error nueva y no añadir su fila la dejaría sin comprobar, y el síntoma sería un
     // `NotSupportedException` desde dentro del manejador de errores —o sea, un 500 justo cuando ya

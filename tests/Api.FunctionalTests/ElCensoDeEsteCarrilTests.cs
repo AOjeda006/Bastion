@@ -70,6 +70,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "CadaIndiceTraducidoSeJustificaTests.Ningun_indice_se_traduce_sin_estar_en_esta_lista",
         "CadaIndiceTraducidoSeJustificaTests.Todo_indice_declarado_existe_en_el_modelo_y_es_unico",
 
+        "CadaRestriccionTraducidaSeJustificaTests.Ningun_nombre_es_a_la_vez_regla_y_carrera_perdida",
         "CadaRestriccionTraducidaSeJustificaTests.Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista",
         "CadaRestriccionTraducidaSeJustificaTests.Toda_restriccion_declarada_existe_en_el_modelo",
 
@@ -257,11 +258,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "PoliticaDeErroresTests.CadaClaseDeError_SeTraduceASuCodigoDeEstadoYASuTypeEstable",
         "PoliticaDeErroresTests.ElDetalleInterno_ViveEnElRegistroYNoEnLaRespuesta",
         "PoliticaDeErroresTests.ElTraceIdDeLaRespuesta_EsElMismoQueElArrobaTrDelRegistro",
+        "PoliticaDeErroresTests.El_nombre_declarado_con_la_otra_clase_sigue_siendo_500",
         "PoliticaDeErroresTests.LaTeoriaDeArriba_TieneUnaFilaPorClaseDeError",
         "PoliticaDeErroresTests.TodaClaseDeError_TieneCodigoDeEstadoYTitulo",
         "PoliticaDeErroresTests.UnErrorDeNegocio_LlevaLosCamposDelRfc9457",
         "PoliticaDeErroresTests.UnaExcepcionNoControlada_RespondeQuinientosSinNadaDelInterior",
         "PoliticaDeErroresTests.UnaPeticionMalFormada_RespondeCuatrocientosSinNadaDelInterior",
+        "PoliticaDeErroresTests.Un_indice_declarado_como_regla_sale_con_su_error_y_no_412_ni_500",
         "PoliticaDeErroresTests.Una_carrera_que_impidio_un_indice_declarado_sale_412_y_no_500",
         "PoliticaDeErroresTests.Una_restriccion_declarada_sale_con_su_error_y_no_500",
         "PoliticaDeErroresTests.Una_restriccion_sin_declarar_sigue_siendo_500",
