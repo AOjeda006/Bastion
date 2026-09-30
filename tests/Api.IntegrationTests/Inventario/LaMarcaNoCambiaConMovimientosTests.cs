@@ -26,8 +26,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// </para>
 /// <para>
 /// <b>La carrera no está aquí.</b> Una confirmación en vuelo no se ve hasta su <c>COMMIT</c>, así
-/// que lo que la cierra es que la confirmación lea la marca con un cerrojo compartido, y eso es de
-/// Inventario y entra con el lote en la línea.
+/// que lo que la cierra es que la confirmación lea la marca con un cerrojo compartido. Está en
+/// <c>LaMarcaSeLeeConCerrojoTests</c>, en los dos órdenes, junto al borrador que se escribió con
+/// la marca de antes.
 /// </para>
 /// <para>
 /// <b>Semillas: el fichero entero es del 540 al 549.</b> Las empresas, del 540 al 542; los

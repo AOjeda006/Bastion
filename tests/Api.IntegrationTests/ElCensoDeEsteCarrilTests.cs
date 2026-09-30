@@ -400,6 +400,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaMarcaNoCambiaConMovimientosTests.Con_un_ajuste_confirmado_la_marca_no_cambia_y_se_contesta_409",
         "LaMarcaNoCambiaConMovimientosTests.Sin_movimientos_la_marca_cambia_y_se_lee_por_la_api",
         "LaMarcaNoCambiaConMovimientosTests.Un_borrador_no_es_un_movimiento",
+        "LaMarcaSeLeeConCerrojoTests.El_cambio_de_marca_espera_a_la_confirmacion_que_ya_estaba_dentro_y_la_ve",
+        "LaMarcaSeLeeConCerrojoTests.La_confirmacion_espera_al_cambio_de_marca_que_ya_estaba_dentro_y_lo_ve",
+        "LaMarcaSeLeeConCerrojoTests.Un_borrador_escrito_con_la_marca_de_antes_no_se_confirma",
 
         "LaMismaClaveDevuelveElMismoRecursoTests.De_dos_peticiones_simultaneas_con_la_misma_clave_solo_una_hace_el_trabajo",
         "LaMismaClaveDevuelveElMismoRecursoTests.El_recibo_y_el_almacen_llevan_el_mismo_xmin",

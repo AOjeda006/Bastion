@@ -7028,6 +7028,27 @@ cuadre.
   "FullyQualifiedName~ElCensoDeEsteCarrilTests"`.
 - **Un caso cambia de sitio:** el del borrador escrito con la marca de antes irá con las carreras
   de la marca, en `LaMarcaSeLeeConCerrojoTests`, porque completa `Un_borrador_no_es_un_movimiento`.
+- **Las dos carreras de la marca**, en el commit `test(inventario)` que sigue a `96630b6`. Son tres
+  casos en `LaMarcaSeLeeConCerrojoTests`, sobre `EscenaTrazable` con un artículo sin marca.
+  - **El borrador de antes:** la marca cambia a `PorLote` con un borrador dentro, y su confirmación
+    por la API es el `409` `ajuste-trazabilidad-no-casa`, sin libro y con el contador a cero.
+  - **Catálogo primero:** el doble toma la fila con el `CerrojoDeArticulos` de verdad y se para
+    sin escribir. La confirmación queda esperando, y `LaEspera` lo exige. Entonces el doble cambia
+    la marca con el dominio del artículo y confirma. La confirmación lee `PorLote` y se rechaza.
+    No es `ModificarArticulo`, porque el caso de uso toma su propia transacción y aquí hace falta
+    tenerla en la mano para parar en medio.
+  - **Inventario primero:** la confirmación se queda dentro sin su `COMMIT`, y el `PUT` de la ficha
+    queda esperando en la fila del artículo. Al confirmar, ve el movimiento y da el `409`
+    `articulo-trazabilidad-con-movimientos`. La marca sigue `Ninguna`.
+
+  Las semillas: las empresas del 581 al 583; los maestros de instalación, del 585 al 587. La
+  cabecera de `LaMarcaNoCambiaConMovimientosTests` ya no manda la carrera a un paso futuro: dice
+  dónde está.
+
+  **Verificado:** los seis de las dos clases de la marca en verde, `dotnet test
+  tests/Api.IntegrationTests --no-build --filter
+  "FullyQualifiedName~LaMarcaSeLeeConCerrojoTests|FullyQualifiedName~LaMarcaNoCambiaConMovimientosTests"`;
+  y el censo con los tres nuevos.
 
 **Lo que queda, por este orden:**
 
