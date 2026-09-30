@@ -7,6 +7,7 @@ import { en } from './i18n/en.ts';
 import { es, type Diccionario } from './i18n/es.ts';
 import { IDIOMAS, type Idioma } from './i18n/idioma.ts';
 import { FUNCIONALIDADES } from '@/features/funcionalidades.ts';
+import { PERMISOS } from '@/shared/sesion/permisos.ts';
 
 const DICCIONARIOS: Record<Idioma, Diccionario> = { es, en };
 
@@ -83,15 +84,23 @@ describe('El barrido de rutas', () => {
     expect(RUTAS).toHaveLength(11);
     expect(porClase.publica.map((r) => r.ruta)).toEqual(['/acceso', '*']);
     expect(porClase.sesion.map((r) => r.ruta)).toEqual(['/']);
-    expect(porClase.permiso.map((r) => r.ruta)).toEqual([
-      '/almacenes',
-      '/articulos',
-      '/articulos/:id/trazabilidad',
-      '/categorias',
-      '/empresas',
-      '/tarifas',
-      '/terceros',
-      '/terceros/importacion',
+    // Con EL PERMISO de cada una, y no solo la ruta: cambiarlo es decidir quién entra. La pantalla
+    // de la trazabilidad con el permiso de ver dejaría entrar a quien el servidor rechaza al
+    // guardar, y hasta el ítem 2.9 ese cambio no ponía nada rojo (la mutación 105).
+    expect(
+      porClase.permiso.map((r) => [
+        r.ruta,
+        r.exigencia.clase === 'permiso' ? r.exigencia.permiso : null,
+      ]),
+    ).toEqual([
+      ['/almacenes', PERMISOS.almacenVer],
+      ['/articulos', PERMISOS.articuloVer],
+      ['/articulos/:id/trazabilidad', PERMISOS.articuloModificar],
+      ['/categorias', PERMISOS.categoriaVer],
+      ['/empresas', PERMISOS.empresaVer],
+      ['/tarifas', PERMISOS.tarifaVer],
+      ['/terceros', PERMISOS.terceroVer],
+      ['/terceros/importacion', PERMISOS.terceroImportar],
     ]);
     expect(porClase.publica.length + porClase.sesion.length + porClase.permiso.length).toBe(
       RUTAS.length,
