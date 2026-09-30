@@ -79,7 +79,7 @@ public sealed class ArticulosController(
             nameof(Obtener),
             articulo => articulo.Id);
 
-    /// <summary>Cambia la descripción, el tipo, el impuesto propuesto o la categoría.</summary>
+    /// <summary>Cambia la descripción, el tipo, la trazabilidad, el impuesto propuesto o la categoría.</summary>
     /// <remarks>
     /// Ni el código ni la unidad base están entre lo que se puede cambiar, y no es el permiso
     /// quien lo impide: no están en el cuerpo ni en <c>Articulo.Modificar</c>.

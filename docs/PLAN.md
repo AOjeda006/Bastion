@@ -7090,6 +7090,11 @@ cuadre.
   el carril de integración entero, 84 de Organización y 455 de la API (los 451 de antes, los
   tres de la marca y este), `dotnet test Bastion.sln --no-build --filter "Category=Integracion"`; y
   `dotnet format Bastion.sln --verify-no-changes`.
+- **El resumen del `PUT` del artículo nombra la trazabilidad**, en el commit `docs(catalogo)` que
+  sigue a `ab7a1dd`. Decía «la descripción, el tipo, el impuesto propuesto o la categoría» desde
+  antes del 2.9, y ese texto va al contrato publicado y al cliente generado. Salió al preparar la
+  pantalla de la marca. Verificado con `bash scripts/generar-openapi.sh --comprobar` y con
+  `npm --prefix frontend run api`, que cambia solo esa línea.
 
 **Lo que queda, por este orden:**
 

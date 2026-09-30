@@ -39,7 +39,7 @@ export interface paths {
         /** Devuelve un artículo. */
         get: operations["Articulos_Obtener"];
         /**
-         * Cambia la descripción, el tipo, el impuesto propuesto o la categoría.
+         * Cambia la descripción, el tipo, la trazabilidad, el impuesto propuesto o la categoría.
          * @description Ni el código ni la unidad base están entre lo que se puede cambiar, y no es el permiso
          *     quien lo impide: no están en el cuerpo ni en `Articulo.Modificar`.
          */
