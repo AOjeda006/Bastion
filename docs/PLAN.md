@@ -7237,6 +7237,59 @@ comparar nada. Esa medida no cuenta. La buena les deja su alias. Sus ocho rojos 
 de existencias comparadas, antes de la afirmación de los seis descuadres. El caso del cuadre cae
 en la primera de todas, la del estado limpio (`limpio.ExistenciasComparadas`).
 
+**La batería, sobre `18451ee`**, en el orden de *Comandos del proyecto*, toda en verde:
+
+- **Lo de segundos.** El contrato: `npm --prefix frontend run api` deja `esquema.ts` sin cambios.
+  Las migraciones: 11 de Inventario y 4 de Catálogo, con el modelo al día. El OpenAPI, con 130
+  operaciones, y el catálogo de errores, con 133 tipos de 139 sitios.
+- **El frontal.** `typecheck`, `lint`, `format:check`, `test` con 113 casos en 17 ficheros y cero
+  avisos de `act()`, `build` y el presupuesto: 418/450 KiB de arranque y 616/900 en total, lo mismo
+  que con la pantalla. Los 17 avisos de Node de `--localstorage-file` son los de *Notas / riesgos*
+  (2026-09-02): Node 25 en esta máquina.
+- **El servidor.** `build`, `format` y los dos carriles. El recuento da 1057 casos en el rápido y
+  543 en el de integración (84 de Organización y 459 de la API), cada uno con los diez ensamblados
+  de su lista, con `bash scripts/ci/recuento-de-tests.sh` y las listas de *Comandos del proyecto*.
+- **Las dependencias.** `python scripts/dependencias-por-conjuntos.py 39faab2 HEAD` no mueve ningún
+  conjunto: 125 pares de NuGet, 35 `Project` y 440 entradas del frontal, antes y después.
+
+**La primera pasada de las migraciones salió roja en los seis módulos, y no era el código.** El
+guion decía «EF no encuentra NINGUNA migración» de cada uno. La causa era que `dotnet-ef` no estaba
+restaurado en esta máquina, y `dotnet ef … 2>/dev/null` se tragaba el «Ejecute `dotnet tool
+restore`». El manifiesto, `.config/dotnet-tools.json`, no ha cambiado desde el 0.4. Con `dotnet
+tool restore`, verde. Antes se descartó la otra hipótesis, que la clave del JWT empezara por `/`:
+con una clave que empieza por letra y otra por barra, las dos daban cero migraciones y el mismo
+mensaje. **Queda como propuesta, no como trabajo del ítem:** que el guion distinga «`dotnet ef` no
+arranca» de «no hay migraciones», porque hoy el mensaje manda a buscar un `<Compile Include>` que
+está bien.
+
+**El humo local**, en un proyecto de *compose* aparte, `bastion-humo-209`, con un entorno de
+valores aleatorios y los puertos en `45xxx`. El entorno y el testigo de la sesión se borraron al
+salir. Sobre `18451ee` salió **FALLOS: 0**:
+
+- las imágenes se construyen, y el migrador sale con código 0 y dice `EsquemaMigrado` para los seis
+  contextos;
+- **lo que el ítem cambia en el esquema, leído del catálogo del motor**:
+  - `ix_existencias_serie_en_un_sitio` es `CREATE UNIQUE INDEX … (empresa_id, articulo_id,
+    serie_id) WHERE ((fisico > (0)::numeric) AND (serie_id IS NOT NULL))`;
+  - `ck_existencias_serie_como_mucho_una` es `CHECK (((serie_id IS NULL) OR (fisico <=
+    (1)::numeric)))`;
+  - `inventario.lotes` e `inventario.numeros_de_serie` existen;
+  - `catalogo.articulos.trazabilidad` no admite nulos, con sus dos `CHECK`: el de los tres valores
+    y el del servicio sin marca;
+  - `LosLotesYLasSeries` y `LaTrazabilidadDelArticulo` están una vez cada una en su historial;
+- salud en verde, `401` sin credenciales, y la sesión de la cuenta sembrada con `200`. Con el
+  testigo, `200` en las empresas y en el listado de artículos;
+- el frontal carga, reenvía `/api` con `401`, y la `ETag` sale igual por los dos caminos (`"793"`);
+- y **el segundo arranque entero**, en 15 s:
+  - 95 permisos antes y después;
+  - el estado viejo, con `403`;
+  - la partición del libro borrada y vuelta a crear, con las 14 con su disparador;
+  - y `200` con la semilla fuera.
+
+  El índice de la serie sigue en pie después.
+
+El desmontaje deja `docker compose ls -a` con el proyecto `bastion`, parado como estaba, y nada más.
+
 **Lo que queda, por este orden:**
 
 1. ~~**Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo
@@ -7251,7 +7304,7 @@ en la primera de todas, la del estado limpio (`limpio.ExistenciasComparadas`).
 5. ~~**La tanda de mutaciones, desde la 82**, porque la 80 y la 81 son del arreglo del reloj. Antes
    de abrirla, se le pregunta al usuario si enciende `context-mode`.~~ Hecho: de la 82 a la 111,
    con los cuatro hallazgos cubiertos, cada uno en su commit.
-6. **La batería y los runs.**
+6. **La batería y los runs.** La batería y el humo, hechos, arriba. Los runs, en la casilla.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -15158,6 +15211,129 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **Inventario hacia Catálogo** —`Inventario.Contracts` publica y Catálogo consume—, declarado como
   **segundo cruce mutuo** del proyecto, con los dos `Contracts` sin verse entre sí y solo `Guid` y
   primitivos cruzando.
+
+  **Hecho el 2026-09-30**, en la rama `2.9-lotes-y-series`. El porqué está en el
+  [ADR-0048](adr/adr-0048-el-lote-y-la-serie-van-con-su-articulo-y-la-marca-se-lee-con-cerrojo.md), y el arreglo de nginx que salió
+  por el camino, en el [ADR-0049](adr/adr-0049-el-proxy-no-comprime-lo-que-lleva-version.md). Los
+  commits, las mutaciones de la 82 a la 111, la batería y el humo están en *Estado actual → El 2.9, en curso*.
+  Cada punto del criterio tiene su caso:
+
+  - la marca del artículo, con su migración, su DTO, su contrato y su pantalla: en el dominio,
+    `LaMarcaDeTrazabilidadTests.Un_articulo_nace_con_la_marca_que_se_le_da` y
+    `…Sin_decir_la_marca_el_alta_es_sin_trazabilidad`; por la API,
+    `LaMarcaNoCambiaConMovimientosTests.Sin_movimientos_la_marca_cambia_y_se_lee_por_la_api`. La
+    migración la comprueban `comprobar-migraciones.sh` y el humo, que lee del motor la columna sin
+    nulos y sus dos `CHECK`. El contrato lo comprueban `generar-openapi.sh --comprobar` y el cliente
+    generado. La pantalla, `LaTrazabilidadDelArticulo.test.tsx` y la columna del listado;
+  - la clave es (artículo, lote) o (artículo, serie), nunca el lote suelto:
+    `ElLoteVaConSuArticuloTests.El_mismo_codigo_es_el_mismo_lote_y_la_caja_distingue_dos` y
+    `LaLineaLlevaSuLoteOSuSerieTests.La_misma_serie_de_otro_articulo_y_el_mismo_lote_dos_veces_si_entran`;
+    y el cuadre la mira, `ElCuadreMiraElLoteYLaSerieTests.El_cuadre_ve_el_lote_y_la_serie_aunque_el_hueco_sume_lo_que_debe`;
+  - el artículo con lote exige su lote, y el que no lleva marca lo rechaza: las tres marcas por las
+    cuatro formas de una línea, en `CadaMarcaAdmiteSuLineaTests.Cada_marca_admite_su_linea_y_nombra_lo_que_le_falta_o_le_sobra_a_las_demas`;
+    y al confirmar, con la marca leída bajo cerrojo,
+    `LaMarcaSeLeeConCerrojoTests.Un_borrador_escrito_con_la_marca_de_antes_no_se_confirma`;
+  - un número de serie no está en dos sitios a la vez:
+    `UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_otro_hueco_la_para_el_indice_y_sale_422` y
+    `…La_misma_serie_en_dos_almacenes_a_la_vez_entra_en_uno_solo`. El humo lee del motor el índice
+    único y parcial que lo sostiene;
+  - la marca no cambia con movimientos:
+    `LaMarcaNoCambiaConMovimientosTests.Con_un_ajuste_confirmado_la_marca_no_cambia_y_se_contesta_409` y
+    `LaMarcaDeTrazabilidadTests.Con_movimientos_la_marca_no_cambia_y_se_contesta_con_un_conflicto`.
+    Se pregunta por `IMovimientosDeArticulos`, que publica `Inventario.Contracts`, y por la que cruzan
+    un `Guid` y un `bool`. El cruce está declarado como el segundo mutuo en
+    `tests/Arquitectura.Tests/Inventario.cs`, y lo vigilan
+    `LasFronterasEntreModulosTests.El_unico_cruce_entre_modulos_va_por_contratos`,
+    `…Las_puertas_publicas_de_los_contratos_son_las_declaradas` y
+    `…Las_referencias_de_proyecto_son_las_declaradas`, que es la que mantiene sin verse a los dos
+    `Contracts`.
+
+  Son **74** métodos nuevos en el servidor: **26** vistos en rojo por la tanda y **48** solo en
+  verde. Salen de `git diff 39faab2..HEAD -- tests`, buscando las firmas `public … Task|void`
+  añadidas, sin `Dispose`. No hay ninguno renombrado ni quitado. En el frontal hay **10** casos
+  nuevos: **7** vistos en rojo y **3** solo en verde, que son la carga de la pantalla, el artículo
+  que no está y el enlace del listado. Los dos de `ElBarridoDeRutas` se renombraron, al pasar de 10
+  a 11 rutas, y de ellos la 105 pone rojo el de la partición.
+
+  **Vistos en rojo** —entre paréntesis, la mutación que lo puso rojo—:
+
+  - `CadaMarcaAdmiteSuLineaTests.Cada_marca_admite_su_linea_y_nombra_lo_que_le_falta_o_le_sobra_a_las_demas` (89, 90, 108, 109, 110, 111)
+  - `CadaRestriccionTraducidaSeJustificaTests.Ningun_nombre_es_a_la_vez_regla_y_carrera_perdida` (94)
+  - `ElCuadreMiraElLoteYLaSerieTests.El_cuadre_ve_el_lote_y_la_serie_aunque_el_hueco_sume_lo_que_debe` (95)
+  - `ElLoteVaConSuArticuloTests.El_inverso_copia_el_lote_y_la_serie` (91)
+  - `ElLoteVaConSuArticuloTests.El_mismo_codigo_es_el_mismo_lote_y_la_caja_distingue_dos` (91, 95)
+  - `ElLoteVaConSuArticuloTests.El_primer_lote_en_dos_almacenes_a_la_vez_es_un_solo_lote` (91, 96)
+  - `LaFormaDeLosCodigosDeLaLineaTests.La_misma_serie_en_dos_lineas_no_abre_el_borrador_aunque_sea_para_moverla` (88)
+  - `LaFormaDeLosCodigosDeLaLineaTests.Un_lote_que_no_es_de_gs1_no_abre_el_borrador` (106)
+  - `LaFormaDeLosCodigosDeLaLineaTests.Un_numero_de_serie_que_no_es_de_gs1_no_abre_el_borrador` (107)
+  - `LaFormaDeLosCodigosDeLaLineaTests.Una_serie_que_mueve_dos_unidades_no_abre_el_borrador` (87)
+  - `LaMarcaDeTrazabilidadTests.El_alta_de_un_servicio_con_lote_se_rechaza_con_su_propio_codigo` (86)
+  - `LaMarcaDeTrazabilidadTests.Pasar_a_servicio_con_la_marca_puesta_se_rechaza_antes_de_preguntar` (86)
+  - `LaMarcaDeTrazabilidadTests.Si_la_marca_no_cambia_no_se_pregunta_aunque_haya_movimientos` (85)
+  - `LaMarcaDeTrazabilidadTests.Sin_movimientos_la_marca_cambia_y_se_pregunta_con_la_fila_ya_bloqueada` (84)
+  - `LaMarcaNoCambiaConMovimientosTests.Con_un_ajuste_confirmado_la_marca_no_cambia_y_se_contesta_409` (84, 85)
+  - `LaMarcaSeLeeConCerrojoTests.El_cambio_de_marca_espera_a_la_confirmacion_que_ya_estaba_dentro_y_la_ve` (82, 83, 84, 96)
+  - `LaMarcaSeLeeConCerrojoTests.La_confirmacion_espera_al_cambio_de_marca_que_ya_estaba_dentro_y_lo_ve` (82, 83, 89, 96)
+  - `LaMarcaSeLeeConCerrojoTests.Un_borrador_escrito_con_la_marca_de_antes_no_se_confirma` (89)
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.La_guarda_comparte_y_la_cortesia_no_bloquea` (83)
+  - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Es_el_cerrojo_del_UPDATE_y_no_otro` (82)
+  - `PoliticaDeErroresTests.El_nombre_declarado_con_la_otra_clase_sigue_siendo_500` (93, 94)
+  - `PoliticaDeErroresTests.Un_indice_declarado_como_regla_sale_con_su_error_y_no_412_ni_500` (94)
+  - `UnNumeroDeSerieEnUnSoloSitioTests.Anular_la_salida_de_una_serie_que_ya_esta_en_otro_hueco_es_422` (92, 94)
+  - `UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_dos_almacenes_a_la_vez_entra_en_uno_solo` (96)
+  - `UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_otro_hueco_la_para_el_indice_y_sale_422` (94)
+  - `UnNumeroDeSerieEnUnSoloSitioTests.Una_serie_que_salio_de_un_hueco_puede_entrar_en_otro` (92)
+
+  **Vistos solo en verde** —sostienen lo que dicen y nada más—:
+
+  - `CadaMarcaAdmiteSuLineaTests.La_tabla_cubre_cada_marca_con_las_cuatro_formas_de_una_linea`
+  - `ElCodigoEsElDeGs1Tests.Cada_caracter_ascii_imprimible_entra_si_y_solo_si_es_del_conjunto`
+  - `ElCodigoEsElDeGs1Tests.El_conjunto_escrito_aqui_tiene_ochenta_y_dos_caracteres_distintos`
+  - `ElCodigoEsElDeGs1Tests.La_caja_se_conserva`
+  - `ElCodigoEsElDeGs1Tests.Nada_fuera_del_ascii_entra`
+  - `ElCodigoEsElDeGs1Tests.Se_recortan_los_extremos_y_nada_mas`
+  - `ElCodigoEsElDeGs1Tests.Tiene_de_uno_a_veinte_caracteres`
+  - `ElLoteVaConSuArticuloTests.Una_salida_de_un_lote_que_no_hay_es_stock_insuficiente_y_no_deja_el_lote`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Confirmar_pone_en_cada_fila_el_lote_o_la_serie_que_se_resolvio`
+  - `LaLineaLlevaSuLoteOSuSerieTests.El_inverso_copia_el_lote_y_la_serie`
+  - `LaLineaLlevaSuLoteOSuSerieTests.La_misma_serie_de_otro_articulo_y_el_mismo_lote_dos_veces_si_entran`
+  - `LaLineaLlevaSuLoteOSuSerieTests.La_misma_serie_del_mismo_articulo_sale_una_sola_vez_por_documento`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Lo_que_el_documento_nombra_sale_sin_repetir_y_ordenado`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Lote_y_serie_a_la_vez_lanza`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Sin_resolver_un_codigo_no_se_confirma_y_el_documento_sigue_en_borrador`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Un_lote_que_no_es_de_gs1_lanza`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Una_fila_del_libro_con_serie_mueve_una_unidad_base`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Una_fila_del_libro_no_lleva_lote_y_serie_a_la_vez`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Una_linea_con_lote_lo_guarda_recortado_y_sin_serie`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Una_serie_mueve_una_unidad_base_arriba_o_abajo`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Una_serie_que_mueve_otra_cosa_lanza`
+  - `LaLineaLlevaSuLoteOSuSerieTests.Una_serie_que_no_es_de_gs1_lanza`
+  - `LaMarcaDeTrazabilidadTests.Al_modificar_una_marca_vacia_se_rechaza_sin_preguntar`
+  - `LaMarcaDeTrazabilidadTests.Con_movimientos_la_marca_no_cambia_y_se_contesta_con_un_conflicto`
+  - `LaMarcaDeTrazabilidadTests.El_alta_rechaza_lo_que_no_es_una_marca_escrita_como_tal`
+  - `LaMarcaDeTrazabilidadTests.El_enumerado_tiene_exactamente_las_tres_marcas`
+  - `LaMarcaDeTrazabilidadTests.Lo_que_no_se_puede_bloquear_no_existe_y_ni_se_lee`
+  - `LaMarcaDeTrazabilidadTests.Sin_decir_la_marca_el_alta_es_sin_trazabilidad`
+  - `LaMarcaDeTrazabilidadTests.Un_articulo_nace_con_la_marca_que_se_le_da`
+  - `LaMarcaDeTrazabilidadTests.Un_servicio_no_nace_ni_pasa_a_llevar_lote_o_serie`
+  - `LaMarcaDeTrazabilidadTests.Una_marca_fuera_del_enumerado_lanza_en_vez_de_guardarse`
+  - `LaMarcaNoCambiaConMovimientosTests.Sin_movimientos_la_marca_cambia_y_se_lee_por_la_api`
+  - `LaMarcaNoCambiaConMovimientosTests.Un_borrador_no_es_un_movimiento`
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla`
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa`
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio`
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.La_marca_se_guarda_como_texto_con_los_nombres_que_el_puerto_traduce`
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Las_cadenas_del_puerto_son_las_del_modelo`
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Las_dos_comparan_la_empresa_contra_el_segundo_parametro`
+  - `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Ninguna_de_las_dos_lleva_punto_y_coma_final`
+  - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Cada_columna_que_la_sentencia_nombra_existe_en_la_tabla`
+  - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Compara_la_empresa_contra_el_segundo_parametro`
+  - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa`
+  - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.El_valor_que_compara_sale_del_inquilino_y_va_en_su_sitio`
+  - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Las_cadenas_del_cerrojo_son_las_del_modelo`
+  - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.No_lleva_punto_y_coma_final`
+  - `UnNumeroDeSerieEnUnSoloSitioTests.Anular_la_entrada_de_una_serie_que_ya_salio_es_stock_insuficiente`
+  - `UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_dos_veces_en_el_mismo_hueco_la_para_el_check_y_sale_422`
 
 - [ ] **2.10 · El GTIN del artículo** — criterio de aceptación: **varios GTIN por artículo** con su
   nivel (base, caja, palé), en **columna de texto**, normalizados a **14 dígitos** al entrar y
