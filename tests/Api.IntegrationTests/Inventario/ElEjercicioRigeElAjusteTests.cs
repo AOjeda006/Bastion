@@ -864,45 +864,18 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
     /// Espera a que la operación en vuelo se quede parada detrás del proceso dado, o falla.
     /// </summary>
     /// <remarks>
-    /// <b>Es lo que hace que el caso ejerza la carrera y no dos operaciones seguidas.</b> Si la
-    /// anulación soltara antes de que la otra operación llegara a esperarla, ésta preguntaría con
-    /// el inverso ya a la vista y saldría bien con cerrojo o sin él. Así que no se suelta por
-    /// tiempo sino cuando el motor dice que hay alguien esperando, que es lo que contesta
-    /// <c>pg_blocking_pids</c>. Y si la operación termina sin haber esperado, eso ya es el fallo:
-    /// ha decidido sin pedir la fila del ejercicio.
+    /// El mecanismo, y por qué no se suelta por tiempo, están en <see cref="LaEspera"/>. Aquí solo
+    /// va a quién se espera y qué habría hecho mal la operación si no esperara.
     /// </remarks>
     /// <param name="procesoQueFrena">El proceso de PostgreSQL de la anulación en vuelo.</param>
     /// <param name="enVuelo">La operación que tiene que quedarse esperando.</param>
-    private async Task EsperarAQueLaFreneAsync(int procesoQueFrena, Task enVuelo)
-    {
-        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
-        await conexion.OpenAsync();
-
-        await using NpgsqlCommand quienEspera = new(
-            "SELECT count(*) FROM pg_stat_activity WHERE @frena = ANY(pg_blocking_pids(pid))",
-            conexion);
-
-        quienEspera.Parameters.AddWithValue("frena", procesoQueFrena);
-
-        DateTimeOffset limite = DateTimeOffset.UtcNow.AddSeconds(30);
-
-        while (DateTimeOffset.UtcNow < limite)
-        {
-            enVuelo.IsCompleted.ShouldBeFalse(
-                "la operación ha terminado sin esperar a la anulación: ha decidido sin pedir la " +
-                "fila del ejercicio que la anulación tiene cogida");
-
-            if ((long)(await quienEspera.ExecuteScalarAsync())! > 0)
-            {
-                return;
-            }
-
-            await Task.Delay(50);
-        }
-
-        throw new ShouldAssertException(
-            "en treinta segundos nadie se ha puesto a esperar a la anulación");
-    }
+    private Task EsperarAQueLaFreneAsync(int procesoQueFrena, Task enVuelo) =>
+        LaEspera.AQueLaFreneAsync(
+            postgres.CadenaDeConexion,
+            procesoQueFrena,
+            enVuelo,
+            "la anulación",
+            "ha decidido sin pedir la fila del ejercicio que la anulación tiene cogida");
 
     private async Task<(HttpClient Cliente, EmpresaDto Empresa)> EnUnaEmpresaNuevaAsync(int semilla)
     {

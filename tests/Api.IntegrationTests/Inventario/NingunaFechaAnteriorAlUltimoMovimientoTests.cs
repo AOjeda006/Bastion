@@ -526,38 +526,22 @@ public sealed class NingunaFechaAnteriorAlUltimoMovimientoTests(PostgresConTodos
         cuadre.Descuadres.ShouldBeEmpty();
     }
 
-    /// <summary>Espera a que la operación en vuelo se quede parada detrás del proceso dado, o falla.</summary>
-    /// <remarks>El mismo mecanismo que en <c>LaValoracionDelAjusteTests</c>, y por lo mismo.</remarks>
-    private async Task EsperarAQueLaFreneAsync(int procesoQueFrena, Task enVuelo)
-    {
-        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
-        await conexion.OpenAsync();
-
-        await using NpgsqlCommand quienEspera = new(
-            "SELECT count(*) FROM pg_stat_activity WHERE @frena = ANY(pg_blocking_pids(pid))",
-            conexion);
-
-        quienEspera.Parameters.AddWithValue("frena", procesoQueFrena);
-
-        DateTimeOffset limite = DateTimeOffset.UtcNow.AddSeconds(30);
-
-        while (DateTimeOffset.UtcNow < limite)
-        {
-            enVuelo.IsCompleted.ShouldBeFalse(
-                "la operación ha terminado sin esperar a la transacción en vuelo: ha leído la fecha " +
-                "de la clave sin ver lo que la otra estaba a punto de confirmar");
-
-            if ((long)(await quienEspera.ExecuteScalarAsync())! > 0)
-            {
-                return;
-            }
-
-            await Task.Delay(50);
-        }
-
-        throw new ShouldAssertException(
-            "en treinta segundos nadie se ha puesto a esperar a la transacción en vuelo");
-    }
+    /// <summary>
+    /// Espera a que la operación en vuelo se quede parada detrás del proceso dado, o falla.
+    /// </summary>
+    /// <remarks>
+    /// El mecanismo, y por qué no se suelta por tiempo, están en <see cref="LaEspera"/>. Aquí solo
+    /// va a quién se espera y qué habría hecho mal la operación si no esperara.
+    /// </remarks>
+    /// <param name="procesoQueFrena">El proceso de PostgreSQL de la transacción en vuelo.</param>
+    /// <param name="enVuelo">La operación que tiene que quedarse esperando.</param>
+    private Task EsperarAQueLaFreneAsync(int procesoQueFrena, Task enVuelo) =>
+        LaEspera.AQueLaFreneAsync(
+            postgres.CadenaDeConexion,
+            procesoQueFrena,
+            enVuelo,
+            "la transacción en vuelo",
+            "ha leído la fecha de la clave sin ver lo que la otra estaba a punto de confirmar");
 
     /// <summary>Una línea del caso.</summary>
     /// <param name="Articulo">Cuál de los artículos del caso, desde cero.</param>

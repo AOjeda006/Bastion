@@ -6979,6 +6979,16 @@ sigue a `1e476cd`.
   "Category!=Integracion"`; y el de integración entero, con 84 de Organización y 441 de la API,
   `dotnet test Bastion.sln --filter "Category=Integracion"`. El build y `dotnet format` sin cambios.
 
+**La espera al cerrojo, compartida**, en el commit `refactor(tests)` que sigue a `f8b681b`, antes de
+que el paso 3 hiciera la quinta copia. `LaEspera.AQueLaFreneAsync` sustituye a las cuatro copias de
+`EsperarAQueLaFreneAsync`, que solo se distinguían por el texto de sus dos fallos. Cada caso le pasa
+ese texto, y es el mismo de antes, letra a letra. El porqué del mecanismo vive en la clase. Los
+siete sitios que esperan siguen pasando por ella, y ninguna copia de la consulta queda fuera.
+
+- **Verificado:** las cuatro clases, 39 de 39, `dotnet test tests/Api.IntegrationTests --no-build
+  --filter "FullyQualifiedName~ElEjercicioRigeElAjusteTests|FullyQualifiedName~LasExistenciasSonLaSumaDelLibroTests|FullyQualifiedName~LaValoracionDelAjusteTests|FullyQualifiedName~NingunaFechaAnteriorAlUltimoMovimientoTests"`;
+  y `grep -rn "pg_blocking_pids" tests/ src/ --include=*.cs`, que solo la encuentra en `LaEspera.cs`.
+
 **Lo que queda, por este orden:**
 
 1. ~~**Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo
