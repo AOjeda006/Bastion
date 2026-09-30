@@ -43,6 +43,11 @@ public sealed class ElCensoDeEsteCarrilTests
     /// </summary>
     private static readonly string[] s_declarados =
     [
+        // Del ítem 2.9 (ADR-0048 §4): qué línea admite cada marca, las tres por las cuatro formas, en
+        // el carril rápido. Entraron por la mutación 90.
+        "CadaMarcaAdmiteSuLineaTests.Cada_marca_admite_su_linea_y_nombra_lo_que_le_falta_o_le_sobra_a_las_demas",
+        "CadaMarcaAdmiteSuLineaTests.La_tabla_cubre_cada_marca_con_las_cuatro_formas_de_una_linea",
+
         "ContratoDeCatalogoTests.Colgar_una_categoria_por_debajo_del_nivel_maximo_es_409_y_lo_dice",
         "ContratoDeCatalogoTests.Crear_un_articulo_devuelve_201_con_Location_que_lleva_al_recurso",
         "ContratoDeCatalogoTests.El_codigo_del_articulo_se_normaliza_y_el_duplicado_en_minusculas_es_409",
