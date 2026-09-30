@@ -7095,6 +7095,29 @@ cuadre.
   antes del 2.9, y ese texto va al contrato publicado y al cliente generado. Salió al preparar la
   pantalla de la marca. Verificado con `bash scripts/generar-openapi.sh --comprobar` y con
   `npm --prefix frontend run api`, que cambia solo esa línea.
+- **nginx no comprime la API**
+  ([ADR-0049](adr/adr-0049-el-proxy-no-comprime-lo-que-lleva-version.md)), en el commit
+  `fix(deploy)` que sigue a `f113f0d`. Salió al probar la pantalla de la marca contra la pila de
+  verdad (`-p bastion-humo-209`): el `PUT` por el puerto del frontal contestaba `400
+  if-match-no-valido`. nginx comprimía el JSON y debilitaba la `ETag` (`"797"` → `W/"797"`), y
+  `gzip_min_length` no lo impedía porque la API escribe sin `Content-Length`. Afectaba a todo
+  `If-Match` detrás de nginx desde la fase 1; no se veía porque ninguna pantalla escribía. El arreglo
+  es `gzip off` en `location /api/`, y lo estático sigue comprimido. El humo de la CI gana el paso
+  «El frontal no toca la versión de lo que reenvía». La lista de *Comandos del proyecto* de
+  `AGENTS.md` no cambia: el humo va en ella como un solo paso.
+  **Verificado**, en la misma pasada:
+  - con la sonda, por nginx, `GET` da `"825"` y el `PUT` con ella, `200`; el JavaScript sigue con
+    `Content-Encoding: gzip`;
+  - el paso, sacado del YAML con `yaml.safe_load` e idéntico al probado, corrido con `bash -e` desde
+    un `ubuntu:24.04` en la red del *compose*: verde con el nginx de ahora, y rojo con el frontal
+    inalcanzable (`[000], y no 200`), que es lo que impide un verde con las cabeceras de la otra
+    petición;
+  - el rojo contra el nginx de antes (`["793"] -> [W/"793"]`) se midió con la primera versión del
+    paso, que compara igual y no borraba las cabeceras.
+
+  La pila se bajó con `down -v`, y el entorno y el testigo de la pasada se borraron. Los puertos del
+  proyecto aparte van en `45xxx`: el `58080` cae en un intervalo que Windows reserva, y el primer
+  `up` murió en la API por eso.
 
 **Lo que queda, por este orden:**
 

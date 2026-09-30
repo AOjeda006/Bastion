@@ -806,6 +806,49 @@ jobs:
             exit 1
           fi
 
+      # La versión de un recurso viaja en `ETag` y vuelve en `If-Match`, que compara en FUERTE (RFC
+      # 9110): una etiqueta débil no casa nunca. nginx debilita la de toda respuesta que comprime
+      # —`"797"` sale como `W/"797"`— y la API contesta 400 `if-match-no-valido` a lo que vuelve.
+      # Pasó hasta el ítem 2.9 sin que nada lo viera, porque ninguna pantalla escribía (ADR-0049).
+      # Por el efecto y por el puerto del frontal, pidiendo compresión como la pide un navegador: la
+      # etiqueta que llega es la misma que da la API. Las dos URL se pueden cambiar para correr el
+      # paso desde un contenedor de la red del compose.
+      - name: El frontal no toca la versión de lo que reenvía
+        run: |
+          API=${API:-http://localhost:8080}
+          WEB=${WEB:-http://localhost:5173}
+          ID=$(jq -r '.elementos[0].id // empty' empresas.json 2>/dev/null || true)
+          test -n "$ID"
+          # Las cabeceras se borran antes de cada petición y se exige el 200: sin eso, si la segunda no
+          # llegara, se leerían las de la primera, y las dos etiquetas saldrían iguales.
+          etiqueta() {
+            rm -f cabeceras.txt
+            CODIGO=$(curl --silent --output /dev/null --dump-header cabeceras.txt --write-out '%{http_code}' \
+              --header "Authorization: Bearer $(cat testigo.txt)" \
+              --header 'Accept-Encoding: gzip, deflate, br' \
+              "$1/api/v1/organizacion/empresas/$ID" || true)
+            if [ "$CODIGO" != "200" ]; then
+              echo "::error title=Versión::GET $1/api/v1/organizacion/empresas/{id} -> [${CODIGO}], y no 200." >&2
+              return 1
+            fi
+            tr -d '\r' < cabeceras.txt | sed -n 's/^[Ee][Tt][Aa][Gg]: //p'
+          }
+          DIRECTA=$(etiqueta "$API")
+          POR_EL_FRONTAL=$(etiqueta "$WEB")
+          COMPRIMIDA=$(tr -d '\r' < cabeceras.txt | sed -n 's/^[Cc]ontent-[Ee]ncoding: //p')
+          echo "ETag de la API: [$DIRECTA] · por el frontal: [$POR_EL_FRONTAL] · Content-Encoding: [$COMPRIMIDA]"
+          case "$DIRECTA" in
+            \"*\") ;;
+            *)
+              echo "::error title=Versión::La API no ha dado una ETag fuerte a la lectura de una empresa ([${DIRECTA}]): sin ella no hay contra qué comparar."
+              exit 1
+              ;;
+          esac
+          if [ "$POR_EL_FRONTAL" != "$DIRECTA" ]; then
+            echo "::error title=Versión::El frontal cambia la ETag que reenvía ([${DIRECTA}] -> [${POR_EL_FRONTAL}]). Un If-Match con ella contesta 400 if-match-no-valido: nginx la debilita al comprimir."
+            exit 1
+          fi
+
       # Un mapa de fuentes es el código fuente. Se genera, se publica como artefacto de la CI, y
       # NO se sirve: la imagen los borra y nginx contesta 404 a cualquiera que quede.
       - name: La imagen del frontal no publica los mapas de fuentes
