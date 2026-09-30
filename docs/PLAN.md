@@ -6942,6 +6942,13 @@ la serie*.
 - **Verificado:** el rojo de control, dos veces; cinco rondas de las seis semillas en verde,
   `dotnet test tests/Api.IntegrationTests --no-build --filter
   "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests"`; y el carril rápido, con 1041.
+- **Las mutaciones del arreglo**, sobre `6924962` limpio y con la misma orden. Cada una se restauró
+  con `git restore --source=HEAD` y la fecha de ahora, y el proyecto se recompiló al final:
+
+  | # | Mutación | Qué se puso rojo |
+  |---|---|---|
+  | 80 | El reloj parado, un día después: el 2026-09-30. | 1 de 6, la 463, en `secuencia.Clases`, que echa en falta «rechazado por la fecha»: el mismo rojo que el de control. La fecha es lo que decide |
+  | 81 | El caso construye el módulo sin su reloj. | 6 de 6, en el libro: el modelo fecha el inverso con el reloj parado y el caso de uso, con el de verdad, un día después |
 
 **Lo que queda, por este orden:**
 
@@ -6954,8 +6961,8 @@ la serie*.
      restricciones de la serie a su error de negocio.
 3. **Las carreras, la propiedad y el cuadre.**
 4. **La pantalla de la marca.** Hoy el frontal del artículo es solo el listado.
-5. **La tanda de mutaciones, desde la 80.** Antes de abrirla, se le pregunta al usuario si enciende
-   `context-mode`.
+5. **La tanda de mutaciones, desde la 82**, porque la 80 y la 81 son del arreglo del reloj. Antes
+   de abrirla, se le pregunta al usuario si enciende `context-mode`.
 6. **La batería y los runs.**
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
