@@ -344,6 +344,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaFilaBloqueadaSigueEnLaBaseTests.Desbloquear_por_su_puerta_devuelve_la_MISMA_fila_y_no_una_copia",
         "LaFilaBloqueadaSigueEnLaBaseTests.Suprimir_por_la_API_deja_la_fila_entera_con_su_motivo_y_su_fecha",
 
+        // Del ítem 2.9 (ADR-0048 §2 y §3): la forma del lote y de la serie, dicha por el alta con su
+        // `type` antes de que la diga el dominio sin él. Entraron por las mutaciones 87 y 88.
+        "LaFormaDeLosCodigosDeLaLineaTests.La_misma_serie_en_dos_lineas_no_abre_el_borrador_aunque_sea_para_moverla",
+        "LaFormaDeLosCodigosDeLaLineaTests.Un_lote_que_no_es_de_gs1_no_abre_el_borrador",
+        "LaFormaDeLosCodigosDeLaLineaTests.Un_numero_de_serie_que_no_es_de_gs1_no_abre_el_borrador",
+        "LaFormaDeLosCodigosDeLaLineaTests.Una_serie_que_mueve_dos_unidades_no_abre_el_borrador",
+
         // Del ítem 1.11 (ADR-0034 §5): los ficheros que no son de Excel, con los cuatro criterios del
         // sondeo —contesta, no cuenta nada de dentro, no devuelve lo recibido y sigue atendiendo—.
         "LaImportacionAguantaFicherosHostilesTests.Ningun_fichero_hostil_tumba_la_importacion_ni_cuenta_nada_ni_devuelve_lo_que_le_mandaron",
