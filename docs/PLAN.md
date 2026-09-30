@@ -5558,6 +5558,9 @@ Reversibles, como las anteriores, y ninguna toca lo cerrado en A.4.
   más salida: se poda en origen, y el guion imprime solo las cifras y los nombres de los casos en
   rojo. Si aun así compensa encenderlo, se le pide al usuario antes de abrir esa sesión, sabiendo
   que bloquea `curl` y `wget`.
+  **Se encendió el 2026-09-30, antes de la tanda**: el agente lo propuso y el usuario lo instaló y
+  lo activó. El guion de la tanda sigue podando en origen; `context-mode` solo recoge lo que
+  imprime.
 - **Si una herramienta no responde**, se sigue por el camino manual y se anota.
 
 #### El método
@@ -7165,6 +7168,75 @@ cuadre.
     `400 articulo-servicio-con-trazabilidad`, el que se provoca sin movimientos. Al cambiar de
     idioma, sale en inglés sin volver a guardar.
 
+**La tanda de mutaciones, de la 82 a la 111.** La 80 y la 81 son del arreglo del reloj. Cada una
+se aplicó sobre el árbol limpio y se restauró con la fecha de ahora. El guion recompiló al final y
+dejó `src`, `db`, `tests` y `frontend/src` como en `HEAD`. Las del servidor corren los dos carriles
+de la batería, `dotnet test Bastion.sln --no-build --filter "Category!=Integracion"` y
+`"Category=Integracion"`, el segundo con `--blame-hang --blame-hang-timeout 4m`. Las del frontal
+corren `npm --prefix frontend run test`. Ningún carril se colgó ni se quedó sin contar casos, y cada
+base salió entera en verde:
+
+- sobre `f185e9d`, 1044 casos el rápido, 539 el de integración y 113 el frontal;
+- desde `25e73ad`, 543 el de integración;
+- desde `e8cda34`, 1057 el rápido.
+
+La tabla dice sobre qué commit se midió cada fila cuando no es `f185e9d`. Los casos que se repiten
+llevan `…` en vez del nombre de su clase.
+
+| # | Mutación | Qué se puso rojo |
+|---|---|---|
+| 82 | El cerrojo del artículo, sin `FOR NO KEY UPDATE`. | rápido 1: `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Es_el_cerrojo_del_UPDATE_y_no_otro`; integración 2, las dos carreras de la marca: `LaMarcaSeLeeConCerrojoTests.El_cambio_de_marca_espera_a_la_confirmacion_que_ya_estaba_dentro_y_la_ve` y `…La_confirmacion_espera_al_cambio_de_marca_que_ya_estaba_dentro_y_lo_ve` |
+| 83 | La marca, leída sin `FOR SHARE`. | rápido 1: `LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.La_guarda_comparte_y_la_cortesia_no_bloquea`; integración 2: las mismas dos carreras |
+| 84 | Catálogo pregunta a Inventario por otro artículo (`Guid.Empty`). | rápido 1: `LaMarcaDeTrazabilidadTests.Sin_movimientos_la_marca_cambia_y_se_pregunta_con_la_fila_ya_bloqueada`; integración 2: `LaMarcaNoCambiaConMovimientosTests.Con_un_ajuste_confirmado_la_marca_no_cambia_y_se_contesta_409` y `LaMarcaSeLeeConCerrojoTests.El_cambio_de_marca_espera…` |
+| 85 | Catálogo pregunta aunque la marca no cambie. | rápido 4: `LaMarcaDeTrazabilidadTests.Si_la_marca_no_cambia_no_se_pregunta_aunque_haya_movimientos`, y tres de `LaCasillaDeLaRetiradaTests`, cuyo doble contesta que hay movimientos: `El_articulo_que_YA_usa_una_unidad_retirada_se_sigue_pudiendo_corregir`, `El_impuesto_que_no_se_toca_no_se_vuelve_a_preguntar` y `Pero_cambiar_el_impuesto_a_uno_derogado_SI_se_rechaza`; integración 1: `LaMarcaNoCambiaConMovimientosTests.Con_un_ajuste_confirmado…` |
+| 86 | Un servicio admite trazabilidad. | rápido 2: `LaMarcaDeTrazabilidadTests.El_alta_de_un_servicio_con_lote_se_rechaza_con_su_propio_codigo` y `…Pasar_a_servicio_con_la_marca_puesta_se_rechaza_antes_de_preguntar`; integración 0 |
+| 87 | Una serie admite otra cantidad que la unidad (`!= 1m` pasa a `< 0m`). | **hallazgo**: 0 y 0. Sobre `25e73ad`, rápido 0; integración 1: `LaFormaDeLosCodigosDeLaLineaTests.Una_serie_que_mueve_dos_unidades_no_abre_el_borrador` |
+| 88 | Una serie repetida en el documento pasa. | **hallazgo**: 0 y 0. Sobre `25e73ad`, rápido 0; integración 1: `LaFormaDeLosCodigosDeLaLineaTests.La_misma_serie_en_dos_lineas_no_abre_el_borrador_aunque_sea_para_moverla` |
+| 89 | Un artículo por lote admite la línea sin lote. | rápido 0; integración 2: `LaMarcaSeLeeConCerrojoTests.La_confirmacion_espera_al_cambio_de_marca…` y `…Un_borrador_escrito_con_la_marca_de_antes_no_se_confirma`. Sobre `e8cda34`, la integración da los mismos dos, y el rápido 1: la fila de `PorLote` sin lote ni serie de `CadaMarcaAdmiteSuLineaTests.Cada_marca_admite_su_linea_y_nombra_lo_que_le_falta_o_le_sobra_a_las_demas` |
+| 90 | Un artículo sin marca admite la línea con lote. | **hallazgo**: sobre `25e73ad`, 0 y 0. Sobre `e8cda34`, rápido 2: las dos filas de `Ninguna` con lote, con serie y sin ella, de la tabla de la marca; integración 0 |
+| 91 | Los lotes se crean sin `ON CONFLICT … DO NOTHING`. | sobre `25e73ad`, rápido 0; integración 9: `ElLoteVaConSuArticuloTests.El_inverso_copia_el_lote_y_la_serie`, `…El_mismo_codigo_es_el_mismo_lote_y_la_caja_distingue_dos` y `…El_primer_lote_en_dos_almacenes_a_la_vez_es_un_solo_lote`, y las seis semillas de la propiedad, del 460 al 465 |
+| 92 | La migración del índice de la serie, sin `fisico > 0`. | sobre `25e73ad`, rápido 0; integración 8: `UnNumeroDeSerieEnUnSoloSitioTests.Una_serie_que_salio_de_un_hueco_puede_entrar_en_otro` y `…Anular_la_salida_de_una_serie_que_ya_esta_en_otro_hueco_es_422`, y las seis semillas de la propiedad |
+| 93 | El manejador de las reglas guardadas por la base no mira la clase de la restricción. | sobre `25e73ad`, rápido 1: `PoliticaDeErroresTests.El_nombre_declarado_con_la_otra_clase_sigue_siendo_500`; integración 0 |
+| 94 | El índice de la serie, declarado como `Comprobacion`. | sobre `25e73ad`, rápido 5: `CadaRestriccionTraducidaSeJustificaTests.Ningun_nombre_es_a_la_vez_regla_y_carrera_perdida`, `…Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista` y `…Toda_restriccion_declarada_existe_en_el_modelo`, y `PoliticaDeErroresTests.El_nombre_declarado_con_la_otra_clase_sigue_siendo_500` y `…Un_indice_declarado_como_regla_sale_con_su_error_y_no_412_ni_500`; integración 2: `UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_otro_hueco_la_para_el_indice_y_sale_422` y `…Anular_la_salida_de_una_serie_que_ya_esta_en_otro_hueco_es_422` |
+| 95 | El cuadre de las existencias, ciego al lote y a la serie (`NULL::uuid` en las dos ramas de la unión). | sobre `e8cda34`, rápido 0; integración 8, los ocho en la cuenta de existencias comparadas (`ExistenciasComparadas`): `ElCuadreMiraElLoteYLaSerieTests.El_cuadre_ve_el_lote_y_la_serie_aunque_el_hueco_sume_lo_que_debe`, `ElLoteVaConSuArticuloTests.El_mismo_codigo_es_el_mismo_lote_y_la_caja_distingue_dos` y las seis semillas de la propiedad |
+| 96 | **Arnés**: la espera al cerrojo mira otro proceso. | sobre `25e73ad`, rápido 0; integración 11, casos de carrera de los siete ficheros que esperan con `LaEspera`: los dos de `ElEjercicioRigeElAjusteTests` (`Borrar_el_ejercicio_espera…` y `Mover_el_ejercicio_espera…`), `ElLoteVaConSuArticuloTests.El_primer_lote_en_dos_almacenes_a_la_vez_es_un_solo_lote`, las dos de `LaMarcaSeLeeConCerrojoTests`, `LaValoracionDelAjusteTests.La_segunda_de_dos_confirmaciones_a_la_vez…`, tres de `LasExistenciasSonLaSumaDelLibroTests` (`Dos_confirmaciones_a_la_vez…`, `Dos_salidas_a_la_vez…` y `El_recalculo_espera…`), `NingunaFechaAnteriorAlUltimoMovimientoTests.Con_las_fechas_cruzadas…` y `UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_dos_almacenes_a_la_vez_entra_en_uno_solo` |
+| 97 | El `PUT` de la marca manda `If-Match: *` y no la versión leída. | frontal 2: `LaTrazabilidadDelArticulo.test.tsx`, «guarda la marca sobre la versión leída…» y «si otra persona ha guardado antes…» |
+| 98 | El cuerpo del `PUT` pierde la categoría. | frontal 1: «guarda la marca sobre la versión leída…» |
+| 99 | El `409` de los movimientos no va a su campo. | frontal 2: «si ya tiene movimientos, el rechazo va en su campo y en su idioma», en `es` y en `en` |
+| 100 | Guardar no invalida nada. | frontal 1: «guarda la marca sobre la versión leída…» |
+| 101 | El formulario no se rehace con la versión nueva (`key` fija). | frontal 1: «si otra persona ha guardado antes…» |
+| 102 | El enlace del listado, con el permiso de ver. | frontal 1: `ElListadoDeArticulos.test.tsx`, «la trazabilidad sale en su columna…» |
+| 103 | Una trazabilidad desconocida se lee como `ninguna`. | frontal 2: la columna del listado, y «una guardada que no reconoce se dice, no se marca…» |
+| 104 | Sin `ETag`, la ficha se carga igual. | frontal 1: «sin la versión de la ficha no enseña el formulario…» |
+| 105 | La ruta de la pantalla, con el permiso de ver. | **hallazgo**: 0 de 113. Sobre `3544d6e`, frontal 1: `ElBarridoDeRutas.test.ts`, «la partición cuadra…» |
+| 106 | El alta deja pasar un lote que no es de GS1. | sobre `25e73ad`, rápido 0; integración 1: `LaFormaDeLosCodigosDeLaLineaTests.Un_lote_que_no_es_de_gs1_no_abre_el_borrador` |
+| 107 | El alta deja pasar una serie que no es de GS1. | sobre `25e73ad`, rápido 0; integración 1: `LaFormaDeLosCodigosDeLaLineaTests.Un_numero_de_serie_que_no_es_de_gs1_no_abre_el_borrador` |
+| 108 | Un artículo sin marca admite la línea con serie. | sobre `e8cda34`, rápido 1: la fila de `Ninguna` con serie y sin lote de la tabla de la marca; integración 0 |
+| 109 | Un artículo por lote admite la línea con serie. | sobre `e8cda34`, rápido 2: las dos filas de `PorLote` con serie, con lote y sin él; integración 0 |
+| 110 | Un artículo por serie admite la línea con lote. | sobre `e8cda34`, rápido 2: las dos filas de `PorNumeroSerie` con lote, con serie y sin ella; integración 0 |
+| 111 | Un artículo por serie admite la línea sin serie. | sobre `e8cda34`, rápido 1: la fila de `PorNumeroSerie` sin lote ni serie; integración 0 |
+
+**Cuatro salieron verdes en todos sus carriles, y cada hallazgo tiene su commit.** Así se volvieron
+a medir:
+
+- **La 105**: la pantalla de la marca con el permiso de ver dejaría entrar a quien el servidor
+  rechaza al guardar. El barrido de rutas contaba cuántas había de cada clase, pero no qué permiso
+  pedía cada una. `3544d6e` lo compara ruta a ruta.
+- **La 87 y la 88**: la serie unitaria y la repetida, dichas por el alta. El dominio tiene sus casos,
+  y por eso nadie echaba de menos la comprobación del alta, que es la que pone el `type`. Sin ella,
+  el cuerpo mal escrito saldría como una excepción sin nombre. `25e73ad` pone un caso por regla de
+  forma. Con él entran la 106 y la 107, las otras dos reglas, que el caso ya ve.
+- **La 90**: un lote en un artículo sin marca. De las seis ramas de rechazo de
+  `LaTrazabilidadDeLasLineas.LoQueNoCasa`, solo una tenía caso, y por el camino de la carrera.
+  `e8cda34` pone la tabla entera en el carril rápido: las tres marcas por las cuatro formas de una
+  línea. La 108 a la 111 mutan las otras ramas.
+
+**La 95 se midió dos veces.** La primera estaba mal escrita: quitaba los nombres `lote_id` y
+`serie_id` de la primera rama de la unión, y la base contestaba `42703` en 33 casos sin llegar a
+comparar nada. Esa medida no cuenta. La buena les deja su alias. Sus ocho rojos caen en la cuenta
+de existencias comparadas, antes de la afirmación de los seis descuadres. El caso del cuadre cae
+en la primera de todas, la del estado limpio (`limpio.ExistenciasComparadas`).
+
 **Lo que queda, por este orden:**
 
 1. ~~**Catálogo:** la marca, con su dominio, su DTO, su migración y su contrato. El cambio va bajo
@@ -7176,8 +7248,9 @@ cuadre.
      dos restricciones de la serie a su error de negocio.~~ Hecho.
 3. ~~**Las carreras, la propiedad y el cuadre.**~~ Hecho.
 4. ~~**La pantalla de la marca.**~~ Hecho, y con ella el arreglo de nginx.
-5. **La tanda de mutaciones, desde la 82**, porque la 80 y la 81 son del arreglo del reloj. Antes
-   de abrirla, se le pregunta al usuario si enciende `context-mode`.
+5. ~~**La tanda de mutaciones, desde la 82**, porque la 80 y la 81 son del arreglo del reloj. Antes
+   de abrirla, se le pregunta al usuario si enciende `context-mode`.~~ Hecho: de la 82 a la 111,
+   con los cuatro hallazgos cubiertos, cada uno en su commit.
 6. **La batería y los runs.**
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
