@@ -5568,6 +5568,158 @@ Reversibles, como las anteriores, y ninguna toca lo cerrado en A.4.
 El de siempre: la mutación sobre la línea que decide, las dos listas por nombre, commits pequeños y
 firmados, y una rama propia por unidad.
 
+### Traídas por el encargo del 2026-10-02 — el epílogo del 2.9 y el 2.10
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **35** commits desde `ab09dc6`, con 35 firmas válidas;
+- los runs del 174 al 182, con el 180 rojo y arreglado;
+- las 74 listas del 2.9, iguales al *diff*;
+- las cifras del *runner*, iguales a las del agente.
+
+**El próximo informe cuenta desde `dca9b83`.** Son **dos unidades, cada una en su rama y en este
+orden**: el epílogo del 2.9 y el 2.10.
+
+#### El bloque del arnés, ya hecho
+
+El bloque de puesta al día del arnés pide cuatro cosas: importar `herramientas/arnes-de-agente.md`,
+comparar `.claude/settings.json` con la plantilla, el `/context` y su commit. **Ya se hizo en
+`dbf2664`.** El import está puesto y `settings.json` no cambia, así que no hay commit: nunca uno
+vacío.
+
+- **El `/context`** lo lanza el usuario cuando el agente se lo pide, y se compara con los **35,6k**
+  de entonces. Ahora `AGENTS.md` entra al arrancar.
+- **Los imports de la biblioteca siguen apagados.** `arnes-de-agente.md` se lee con `Read` al
+  empezar cada sesión, y la convención de cada tema, antes de tocarlo.
+
+#### El epílogo del 2.9, en su rama y cada tema en su commit
+
+**Proceso y arnés**
+
+1. **El run de `main` 36974258472, anotado.**
+2. **Un párrafo en `CLAUDE.md` §1, por decisión del usuario.** Los imports de la biblioteca están
+   apagados desde el 2026-09-29 porque cuestan unos 89k *tokens*, y no están en el contexto.
+   `arnes-de-agente.md` se lee al empezar cada sesión, y la convención de cada tema, antes de tocarlo.
+   Hoy `CLAUDE.md` dice que son fuente de verdad, y tras un `/compact` es lo único que se ve.
+3. **A *Reglas de oro propias*: `main` solo avanza a un commit que ya está en verde en su rama.** El
+   commit que anota el run de cierre va primero a la rama, espera su verde, y después avanza `main`.
+   Va junto a la regla del carril rápido, que se queda. `e6975ed` llegó a `main` sin ningún run.
+4. **La memoria local `bastion-estado-y-flujo`.** Se dice qué guarda. Si es estado o flujo del
+   proyecto, pasa al PLAN o a `AGENTS.md` y se borra. Y se dice si `context-mode` está apagado otra
+   vez tras la tanda.
+
+**El 2.9, rematado**
+
+5. **«Serie» nombra dos cosas en Inventario.** `Ajuste.SerieId` es la serie de numeración, y
+   `MovimientoStock.SerieId` y `Existencia.SerieId` son el número de serie.
+   - Los segundos pasan a `NumeroDeSerieId` / `numero_de_serie_id`, en el dominio, el cuadre, la
+     existencia y el libro.
+   - En el libro particionado es un `RENAME COLUMN`, que solo toca metadatos (precedente: ADR-0046
+     §7).
+   - El índice y el `CHECK` también se renombran, porque se traducen por su nombre: las listas
+     cerradas se actualizan, y el barrido lo ve.
+   - En el glosario, «Número de serie» va al lado de «Serie», diciendo en qué se distinguen.
+6. **El `CHECK` de la serie, en rojo.** Es la única guarda de que una serie no tenga dos unidades en
+   la misma ubicación, porque ahí el índice ve una sola fila. La mutación lo quita en la base, dentro
+   de una transacción que se deshace, como la 53 del epílogo del 2.7. El caso es
+   `La_misma_serie_dos_veces_en_el_mismo_hueco_la_para_el_check_y_sale_422`.
+7. **La exclusividad entre lote y serie, también en el motor:** `CHECK (num_nonnulls(lote_id,
+   numero_de_serie_id) <= 1)` en la existencia y en el libro.
+   - El 2.11 y el 2.12 traen más documentos que escriben en el libro.
+   - Quitarlo el día de la cuarta marca es una migración barata que no toca la clave (ADR-0048 §1).
+   - No se traduce: si salta, es un defecto, como los `CHECK` de la valoración.
+   - Caso y mutación.
+8. **El cuadre compara `ultima_fecha` con el máximo de la fecha del libro por clave.** Es una copia
+   que decide, y hay que afirmar contra ella. Caso y mutación.
+9. **El glosario:** el lote, el número de serie y la marca de trazabilidad.
+
+**Herramientas**
+
+10. **`comprobar-migraciones.sh` distingue «`dotnet ef` no arranca» de «no hay migraciones».** El
+    primero sale en rojo con su error a la vista, sin un `2>/dev/null` que se lo trague. Se ve en
+    rojo sin `dotnet tool restore`.
+11. **`undici` y `brace-expansion`**, subidos solo si sale sin `--force` y sin `overrides`. Si no, se
+    anota con su disparador (ADR-0045).
+
+#### El 2.10: el GTIN del artículo
+
+Antes de empezar se lee con `Read` `negocio/identificacion-articulos/convenciones.md`: es el import
+de la fase y no está en el contexto. La puerta de clarificación se pasa con lo que sigue. Las
+decisiones van a su ADR, y lo que siga sin especificar se pregunta todo junto antes del código.
+
+1. **El GTIN es un *value object* de Catálogo.**
+   - Normaliza al construirse: solo dígitos, de 8, 12, 13 o 14 de largo, rellenado a 14 por la
+     izquierda y con el dígito de control válido.
+   - Se guarda como texto de 14, nunca como clave primaria.
+   - El índice único `(empresa_id, gtin)` se traduce por su nombre a un `409` con su `type`.
+   - El caso: dos artículos dan de alta el mismo GTIN a la vez, con dos transacciones de verdad.
+   - La comprobación previa del caso de uso es cortesía; quien decide es el índice.
+   - Buscar por GTIN normaliza lo que entra.
+2. **Los casos dorados:**
+   - un GTIN-12 con ceros a la izquierda, que se conservan;
+   - un GTIN-8, un GTIN-13 y un GTIN-14;
+   - el mismo GTIN escrito con 12 y con 13 dígitos, que es el mismo y da `409`;
+   - un dígito de control mal;
+   - 11 dígitos;
+   - letras.
+3. **El nivel se declara; no se deduce del primer dígito.** El indicador de un GTIN-14 lo asigna el
+   dueño de la marca y no es un código de nivel. Además, una caja puede llevar un GTIN-13.
+   - **Recomendación del usuario:** la caja y el palé llevan las unidades base que contienen, y no
+     cambian. Según GS1, cambiar las unidades de una agrupación exige un GTIN nuevo, y lo dice la
+     convención. La base vale 1.
+   - **El motivo:** un nivel sin su cantidad no le sirve al lector que llegará con las recepciones de
+     la fase 3.
+4. **Lo que no es el GTIN de un artículo.** Con la tabla oficial de prefijos de las *GS1 General
+   Specifications*, citada como se citó el AI 10, se decide si se rechazan con su error:
+   - los números de circulación restringida;
+   - los de medida variable;
+   - los de cupón.
+
+   Su disparador: el primer artículo que se venda al peso con etiqueta de tienda.
+5. **Cómo se protege la escritura (R10/R11).** Dar de alta o quitar un GTIN cambia el artículo. Se
+   dice cómo se protege del reintento y de la actualización perdida, y la acción se declara en
+   `TodaEscrituraDiceComoSeProtegeTests`. Si usa el `If-Match` del artículo, escribir un GTIN tiene
+   que mover la versión del artículo. Si no la mueve, la ETag miente.
+6. **Quitar un GTIN.** Se borra, y la empresa puede volver a asignarlo. La regla de los 48 meses está
+   derogada y no se implementa. Se comprueba que ningún documento guarda el GTIN en lugar del
+   artículo.
+7. **Lo que no entra, con su disparador:**
+   - el analizador de GS1-128, como dice el criterio;
+   - la regla del contenido neto del *GTIN Management Standard*. El artículo no tiene ese campo, así
+     que su disparador es el primer campo de contenido neto.
+8. **La pantalla.**
+   - La lista de GTIN en la ficha del artículo, con alta y baja.
+   - Un esquema Zod que replica el dígito de control; la autoridad es el servidor.
+   - El `409` va a su campo, en los dos idiomas, con su test de Vitest y MSW.
+   - Se pasa por el nginx de verdad con `playwright-cli`: es una pantalla que escribe, y el ADR-0049
+     salió justo de ahí.
+9. **La tanda**, sobre las líneas que deciden: la normalización, el dígito de control, el índice y
+   su traducción.
+
+#### Los números de este encargo
+
+- **Las mutaciones llevan una sola numeración** (*Reglas de oro propias*). El encargo hace empezar la
+  tanda del 2.10 en la 112, pero el epílogo va antes y también muta: el `CHECK` de la serie, el de la
+  exclusividad y el cuadre. Así que el epílogo empieza en la **112**, y el 2.10, donde acabe el
+  epílogo.
+- **Los ADR, igual.** El encargo pone las decisiones del 2.10 en el ADR-0050. Pero el epílogo
+  enmienda el ADR-0048 (§1 y §3) y lo que el ADR-0047 dejó abierto, y un ADR aceptado se enmienda
+  desde uno nuevo. Así que el epílogo lleva el **ADR-0050**, y el 2.10, el **ADR-0051**.
+
+#### Las herramientas de la máquina, en este encargo
+
+- **Context7 (`ctx7`)**, para EF Core 10 y Npgsql cuando la versión importe, y solo con la pregunta
+  técnica. Lo que vaya a un ADR se contrasta con la fuente oficial, y se dice cuál.
+- **`playwright-cli`**, contra la pila local y con datos sintéticos. No sustituye al test.
+- **`context-mode`**, solo para la tanda si compensa, y apagado al terminar. Bloquea `curl` y `wget`.
+- **Si una herramienta no responde**, se sigue por el camino manual y se anota.
+
+#### El método
+
+El de siempre: la mutación sobre la línea que decide; las dos listas por nombre; commits pequeños y
+firmados; y una rama por unidad, borrada solo después de su run de `main`. El informe cuenta todos
+los commits desde `dca9b83`, con sus runs de rama y de `main`.
+
 
 ## Estado actual
 
@@ -7306,6 +7458,28 @@ El desmontaje deja `docker compose ls -a` con el proyecto `bastion`, parado como
    con los cuatro hallazgos cubiertos, cada uno en su commit.
 6. ~~**La batería y los runs.**~~ Hecho: la batería y el humo, arriba; el run de la rama, el
    36971562081, en la casilla; el de `main`, al abrir la rama siguiente.
+
+**El epílogo del 2.9, en curso**, en la rama `epilogo-2.9`, abierta desde `main` en `dca9b83`. Lo
+que pide está en *Decisiones tomadas → Traídas por el encargo del 2026-10-02*. Las mutaciones
+empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
+
+**Lo que queda, por este orden:**
+
+1. El run de `main` del 2.9, anotado.
+2. El párrafo de los imports apagados, en `CLAUDE.md` §1.
+3. La regla de `main`, que solo avanza a un commit ya verde en su rama, en `AGENTS.md`.
+4. La memoria `bastion-estado-y-flujo` y el estado de `context-mode`, dichos en el informe.
+5. El ADR-0050, antes del código.
+6. El número de serie, renombrado: el dominio, el cuadre, la existencia, el libro, el índice, el
+   `CHECK` y las listas cerradas.
+7. El glosario: el lote, el número de serie al lado de la serie, y la marca de trazabilidad.
+8. El `CHECK` de la serie, visto en rojo.
+9. La exclusividad entre lote y número de serie en el motor, con su caso y su mutación.
+10. El cuadre contra `ultima_fecha`, con su caso y su mutación.
+11. `comprobar-migraciones.sh`, que dice cuándo `dotnet ef` no arranca.
+12. `undici` y `brace-expansion`, o su anotación.
+13. La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
+    verde antes de que `main` avance.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
