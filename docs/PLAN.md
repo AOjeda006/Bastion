@@ -7491,6 +7491,16 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
 13. La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
     verde antes de que `main` avance.
 
+**Las mutaciones del epílogo**, desde la 112. Cada una se aplica sobre el árbol limpio, con el
+trabajo de su tema ya commiteado, y se corre sola con la clase del caso que la ve por diseño. Se
+revierte con `git restore --source=HEAD`, se toca la fecha del fichero y se recompila. El guion es
+`mutar.py` más `medir.sh`, en el *scratchpad* de la sesión.
+
+| # | Mutación | Qué se puso rojo |
+|---|---|---|
+| 112 | La migración del renombre no renombra las claves ajenas de las particiones (el `EXECUTE` del primer bucle, cambiado por `NULL`). | sobre `f1a1faa`, 1 de los 5 de `ElLibroEstaParticionadoTests`: `Cada_particion_nombra_sus_claves_ajenas_como_el_libro_y_sus_indices_por_su_columna`, con `clavesConOtroNombre` en 14, una por partición |
+| 113 | La migración del renombre no renombra los índices de las particiones (el `EXECUTE` del segundo bucle). | sobre `f1a1faa`, el mismo caso, ahora por `indicesConOtroNombre`, también en 14 |
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
