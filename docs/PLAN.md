@@ -15365,6 +15365,16 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   como el del 2.8. Con ese commit, `git rev-list --count main..HEAD` pasa de **20** a **21** antes
   del avance, y es el último del ítem.
 
+  **No fue el último: el run de `main` sobre `e6975ed`, el 36972547394, salió rojo, y lo puso rojo
+  ese mismo commit.** Marcar la casilla cambia la línea que el README tiene que decir, y
+  `ElEstadoDelReadmeEsElDelPlanTests.La_linea_de_estado_del_readme_es_la_del_checklist` lo vio: 1
+  de 1057 en el carril rápido, y la integración y el Humo no llegaron a correr. El commit solo tocaba
+  el PLAN y no pasó el carril rápido, pero el PLAN es entrada de un test. El cierre del 2.8 había
+  movido el README en el mismo commit que la casilla, `45822cb`, y este no. El arreglo va en la
+  rama `2.9-la-linea-del-readme`: el README pasa a **9 de 14** con lo que trajo el 2.9, y antes de
+  commitear, el caso salió rojo sobre `e6975ed` y verde con el arreglo, y el carril rápido entero dio
+  1057 de 1057 con sus diez ensamblados. El run de `main` que cierra el ítem es el de ese arreglo.
+
 - [ ] **2.10 · El GTIN del artículo** — criterio de aceptación: **varios GTIN por artículo** con su
   nivel (base, caja, palé), en **columna de texto**, normalizados a **14 dígitos** al entrar y
   comparados sobre esa forma, con el **dígito de control validado en la frontera** —no al consultar— y
