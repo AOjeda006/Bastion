@@ -7466,7 +7466,7 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
 **Lo que queda, por este orden:**
 
 1. ~~El run de `main` del 2.9, anotado.~~ Hecho: el 36974258472, en la casilla del 2.9.
-2. El párrafo de los imports apagados, en `CLAUDE.md` §1.
+2. ~~El párrafo de los imports apagados, en `CLAUDE.md` §1.~~ Hecho.
 3. La regla de `main`, que solo avanza a un commit ya verde en su rama, en `AGENTS.md`.
 4. La memoria `bastion-estado-y-flujo` y el estado de `context-mode`, dichos en el informe.
 5. El ADR-0050, antes del código.

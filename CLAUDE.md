@@ -14,6 +14,15 @@ trabajo**.
 
 Sigue estas convenciones como **fuente de verdad** de estilo y buenas prácticas. Son normativas.
 
+> **Los imports de la biblioteca están apagados desde el 2026-09-29, por decisión del usuario**,
+> porque cuestan unos 89k *tokens*. Las líneas `@` de abajo **no están en tu contexto**: siguen
+> siendo la fuente de verdad, pero hay que ir a leerlas. Por eso:
+>
+> - **al empezar cada sesión**, también tras un `/compact`, lee con `Read`
+>   `../BibliotecaDocumentacion/herramientas/arnes-de-agente.md`;
+> - **antes de tocar un tema**, lee con `Read` su convención de la lista: la de SQL antes de una
+>   migración, la de React antes de una pantalla, la de la fase antes de su primer ítem.
+
 @../BibliotecaDocumentacion/principios/naming-y-estilo.md
 @../BibliotecaDocumentacion/principios/solid.md
 @../BibliotecaDocumentacion/principios/ddd.md
