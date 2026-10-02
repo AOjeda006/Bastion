@@ -7878,8 +7878,53 @@ lo enmienda.
      tacto. Pasa lo mismo con el tipo y con la trazabilidad del listado;
    - «Volver a los artículos» pierde la página, la búsqueda y la categoría del listado, igual que
      en la trazabilidad.
-9. La tanda de mutaciones, desde la 119. Entre ellas, subir la pregunta del duplicado por encima del
-   nivel y las unidades, que tiene que ver `El_duplicado_se_pregunta_despues_de_lo_que_trae_la_peticion`.
+9. ~~La tanda de mutaciones, desde la 119.~~ Hecho: **33**, de la 119 a la 151, todas sobre
+   `aa83e57` con el árbol limpio. Cada una se corre con el carril que la ve por diseño, y se
+   revierte con `git restore --source=HEAD` y la fecha de ahora. Los carriles son tres, y los tres
+   salen en verde sin mutar:
+   - **el dominio y los casos de uso**: `dotnet test tests/Catalogo.UnitTests`, 248 casos;
+   - **la carrera**: `dotnet test tests/Api.IntegrationTests --filter
+     "FullyQualifiedName~ContratoDelCodigoDeBarrasTests" --blame-hang --blame-hang-timeout 4m`, 9;
+   - **el frontal**: `npx vitest run src/features/catalogo/articulos` desde `frontend/`, 82.
+
+   El guion es `mutar210.py`, en el *scratchpad* de la sesión. Los rojos se cuentan por nombre,
+   desde el `.trx` y desde el JSON de Vitest.
+
+   | # | Mutación | Qué se puso rojo |
+   |---|---|---|
+   | 119 | `Gtin.Leer` deja de rellenar a catorce (`string catorce = recortado;`). | 51 de 248: la forma de catorce de `ElGtinTests`, las filas de ocho y de doce de la tabla de prefijos, y en `CodigosBarrasDelArticuloTests` el alta en catorce, el choque del GTIN-12 con su forma de trece y la búsqueda escrita de otra forma |
+   | 120 | Los pesos del dígito de control empiezan en 1 y no en 3. | 103 de 248: todo número válido sale con el dígito mal, desde `ElGtinTests` hasta los casos de uso que dan de alta |
+   | 121 | El indicador de medida variable pasa de `9` a `8`. | 5: las tres filas `MedidaVariable`, su `type` en el caso de uso, y el vecino admitido `88412345678901`, que pasa a rechazarse |
+   | 122 | El GTIN-8 se reconoce por seis ceros y no por cinco. | 7: las filas de ocho cifras que no empiezan por cero (`20012342`, `29912346`, `97712343`, `99912345`), los dos GTIN-14 que llevan un GTIN-8 detrás del indicador y el GTIN-8 escrito en trece |
+   | 123 | Los LAC no se miran (`EsUnLac` cambiado por `EsUnRzsc`). | 2: las dos filas LAC, `001000000052` y `007999000097` |
+   | 124 | Los RZSC no se miran (al revés). | 2: las dos filas RZSC, `001000001004` y `005000009992` |
+   | 125 | `dos is 2 or 4` → `dos is 2`. | 2: las dos filas del 04 |
+   | 126 | `dos is 2 or 4` → `dos is 4`. | 3: las dos filas del 02 y el GTIN-14 que lo lleva detrás del indicador |
+   | 127 | El intervalo 20–29 encoge a 21–28. | 3: los dos extremos, `2012345678903` y `2912345678906`, y el `type` del primero en el caso de uso |
+   | 128 | `tres == 951` → `950`. | 3: la fila del 951 y su `type`, y el vecino `9501234567891`, que pasa a rechazarse |
+   | 129 | Los cupones 980–983 encogen a 981–982. | 4: los dos extremos, y el `type` y la búsqueda del 980 |
+   | 130 | Los sin asignar 984–989 encogen a 985–988. | 2: los dos extremos |
+   | 131 | El 99 deja de ser un cupón. | 2: las dos filas del 99 |
+   | 132 | El GTIN-8 restringido 000–099 encoge a 000–098. | 1: `09912342` |
+   | 133 | El GTIN-8 restringido 200–299 encoge a 201–298. | 2: los dos extremos |
+   | 134 | El GTIN-8 sin asignar empieza en 978 y no en 977. | 4: `97712343`, los dos GTIN-14 que lo llevan detrás del indicador y su forma de trece |
+   | 135 | **Equivalente**: los sin asignar empiezan en 983 y no en 984. | 0 de 248, y no puede ser otro: al 983 lo coge antes la fila de los cupones. Se deja escrita para que nadie la cuente como un hueco |
+   | 136 | La pregunta del duplicado sube por encima del nivel y las unidades. | 3: los tres de `El_duplicado_se_pregunta_despues_de_lo_que_trae_la_peticion`, y solo ellos |
+   | 137 | El índice sin `UNIQUE` (`unique: false` en la migración, que es la que crea la base de los tests). | 1 de 9: el caso de la carrera. `LaEspera` ve que la API «ha dado de alta el GTIN sin ver que la otra lo estaba dando de alta» (`enVuelo.IsCompleted` en `True`) |
+   | 138 | El índice fuera de `RestriccionesQueGuardanUnaRegla` (otro nombre en la declaración). | 1 de 9: el mismo, que recibe el `500` `error-interno` en vez del `409` |
+   | 139 | El dígito de control del frontal, con todos los pesos a 3. | 9 de 82: los GTIN-8 y GTIN-12 válidos del esquema, y los casos de pantalla que teclean uno. Los de 13 y 14 cifras de los ejemplos (`4006381333931`, `10012345678902`) **cuadran también con todos los pesos a 3, por casualidad**. Si los ejemplos fueran solo esos dos, la mutación saldría verde |
+   | 140 | Sin el tope de las unidades en el frontal. | 1: la fila `2147483648` del esquema |
+   | 141 | Los rechazos del GTIN que da el servidor dejan de ir al campo. | 6: los cuatro de la tabla de prefijos y el duplicado en los dos idiomas |
+   | 142 | Las unidades que rechaza el servidor dejan de ir a su campo. | 1: el suyo |
+   | 143 | El nivel que rechaza el servidor deja de ir al grupo. | 1: el suyo |
+   | 144 | Sin `setFocus('nivel')`. | 1: el mismo, solo por el foco |
+   | 145 | El formulario sin `key`: no se monta de nuevo tras un alta. | 2: el alta de la base, porque el campo no se vacía, y el de la clave |
+   | 146 | Sin el foco al montarse de nuevo (`enfocarAlMontar={false}`). | 1: el alta de la base |
+   | 147 | Un fallo al volver a leer la lista ocupa la pantalla entera (`codigos.isError \|\|`). | 1: el de la lectura que falla tras un alta |
+   | 148 | El foco va al aviso solo tras quitar, no tras no poder, como antes de la revisión. | 1: el de la fila que otro quitó antes |
+   | 149 | La región del aviso sin `role="status"`. | 7: todos los que leen el aviso por su papel |
+   | 150 | `nivelDe` con un registro y `??` en vez del `switch`. | 1: el nivel `constructor`, que deja de salir como «Sin reconocer» |
+   | 151 | **La del arnés**: el servidor simulado deja de rechazar el alta (`rechazoDelAlta === undefined`), sin tocar la pantalla. | 10: los diez casos que le piden un rechazo, y ninguno de los que no se lo piden |
 10. La batería, el humo y los runs. La casilla y la línea del README van en el mismo commit.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
