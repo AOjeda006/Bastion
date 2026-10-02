@@ -7497,7 +7497,7 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
    `ElLoteOElNumeroDeSerieNuncaLosDosTests`, que escriben en crudo una fila con las dos marcas, con
    su lote y su número de serie creados en la misma transacción, y reciben un `23514` con el nombre
    de su `CHECK`. La fila del glosario de la marca y el comentario de `Trazabilidad` dicen ya que el
-   motor tampoco las admite juntas.
+   motor tampoco las admite juntas. Vistos en rojo: la 115 y la 116, en la tabla de abajo.
 10. El cuadre contra `ultima_fecha`, con su caso y su mutación.
 11. `comprobar-migraciones.sh`, que dice cuándo `dotnet ef` no arranca.
 12. `undici` y `brace-expansion`, o su anotación.
@@ -7514,6 +7514,8 @@ revierte con `git restore --source=HEAD`, se toca la fecha del fichero y se reco
 | 112 | La migración del renombre no renombra las claves ajenas de las particiones (el `EXECUTE` del primer bucle, cambiado por `NULL`). | sobre `f1a1faa`, 1 de los 5 de `ElLibroEstaParticionadoTests`: `Cada_particion_nombra_sus_claves_ajenas_como_el_libro_y_sus_indices_por_su_columna`, con `clavesConOtroNombre` en 14, una por partición |
 | 113 | La migración del renombre no renombra los índices de las particiones (el `EXECUTE` del segundo bucle). | sobre `f1a1faa`, el mismo caso, ahora por `indicesConOtroNombre`, también en 14 |
 | 114 | El `CHECK` del número de serie, quitado **en la base** con `ALTER TABLE inventario.existencias DROP CONSTRAINT ck_existencias_numero_de_serie_como_mucho_una`, dentro de la transacción del caso, que se deshace. Como la 53 del epílogo del 2.7, muta el propio caso: la confirmación pasa a ir dentro de esa transacción, con un método temporal en `ElModuloDeInventario`. | sobre `298e529`, 1 de los 6 de `UnNumeroDeSerieEnUnSoloSitioTests`: `La_misma_serie_dos_veces_en_el_mismo_hueco_la_para_el_check_y_sale_422`, porque la confirmación «should throw Npgsql.PostgresException but did not». Nada más la para: el índice parcial no choca con la propia fila. **El control**, el mismo caso mutado sin el `DROP`, sale con los 6 en verde, así que el rojo es del `CHECK` y no del camino nuevo |
+| 115 | El `CHECK` de la exclusividad en la existencia, quitado **en la base**: `ALTER TABLE inventario.existencias DROP CONSTRAINT ck_existencias_lote_o_numero_de_serie`, antepuesto a la sentencia del caso, dentro de su transacción, que se deshace. | sobre `0a6c4aa`, 1 de los 2 de `ElLoteOElNumeroDeSerieNuncaLosDosTests`: `Una_existencia_con_lote_y_numero_de_serie_la_rechaza_el_motor`, porque la inserción «should throw Npgsql.PostgresException but did not». El del libro sigue verde: cada `CHECK` lo ve su caso, y solo el suyo |
+| 116 | El mismo, en el libro: `DROP CONSTRAINT ck_movimiento_stock_lote_o_numero_de_serie` sobre el padre, que se lo quita a todas las particiones. | sobre `0a6c4aa`, el otro: `Una_fila_del_libro_con_lote_y_numero_de_serie_la_rechaza_el_motor`, con el mismo mensaje; el de la existencia sigue verde |
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
