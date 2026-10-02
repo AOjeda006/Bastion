@@ -5723,7 +5723,7 @@ los commits desde `dca9b83`, con sus runs de rama y de `main`.
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 8 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 9 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -7465,7 +7465,7 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
 
 **Lo que queda, por este orden:**
 
-1. El run de `main` del 2.9, anotado.
+1. ~~El run de `main` del 2.9, anotado.~~ Hecho: el 36974258472, en la casilla del 2.9.
 2. El párrafo de los imports apagados, en `CLAUDE.md` §1.
 3. La regla de `main`, que solo avanza a un commit ya verde en su rama, en `AGENTS.md`.
 4. La memoria `bastion-estado-y-flujo` y el estado de `context-mode`, dichos en el informe.
@@ -15548,6 +15548,13 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   rama `2.9-la-linea-del-readme`: el README pasa a **9 de 14** con lo que trajo el 2.9, y antes de
   commitear, el caso salió rojo sobre `e6975ed` y verde con el arreglo, y el carril rápido entero dio
   1057 de 1057 con sus diez ensamblados. El run de `main` que cierra el ítem es el de ese arreglo.
+
+  **Es el 36974258472** sobre `dca9b83`, **success al primer intento**, con sus tres jobs —Backend
+  `110734552929`, Frontal `110734553080` y Humo `110736349807`— y **68 pasos: 67 en verde y 1
+  omitido**, *Diagnóstico*. Dice lo mismo que el de la rama: **1057** y **543** casos con **10
+  `.trx`** en cada artefacto, **130** operaciones, **133** tipos de error de **139** sitios, y
+  **418/450** y **616/900** KiB. Antes que él, el de su rama, `2.9-la-linea-del-readme`, el
+  **36973415099**, también en verde. Anotado al abrir el epílogo del 2.9.
 
 - [ ] **2.10 · El GTIN del artículo** — criterio de aceptación: **varios GTIN por artículo** con su
   nivel (base, caja, palé), en **columna de texto**, normalizados a **14 dígitos** al entrar y
