@@ -7527,8 +7527,16 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
     lo puso al día un `npm ci`, que es lo que hace la CI. Tras él, la batería del frontal en verde:
     el contrato sin cambios, los 113 casos de Vitest sin ningún aviso de `act()` —los 17 de Node de
     `--localstorage-file` son los de siempre—, y el arranque en 418/450 KiB.
-13. La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
-    verde antes de que `main` avance. **Hecha ya, la fila de la R3**, que seguía diciendo que el lote
+13. ~~La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
+    verde antes de que `main` avance.~~ Hecho: la batería y el humo, abajo; el run de la rama,
+    **el 36984466068** sobre `8d73677`, **success al primer intento**, con sus tres jobs —Frontal
+    `110766209155`, Backend `110766209472` y Humo `110768508846`— y **68 pasos: 67 en verde y 1
+    omitido**, *Diagnóstico*. Dice lo mismo que esta máquina: **1057** y **547** casos con **10
+    `.trx`** en cada artefacto, **130** operaciones y 77 rutas, **133** tipos de error de **139**
+    sitios, y **418/450** y **616/900** KiB. Este commit, que lo anota, espera su propio verde en la
+    rama antes de que `main` avance; el run de `main`, al abrir la rama del 2.10.
+
+    **Hecha ya, la fila de la R3**, que seguía diciendo que el lote
     era nulo en todas las claves hasta el 2.9. Ahora nombra el cuadre del lote y el número de serie,
     los dos casos de la exclusividad y el de la fecha del cuadre, y cuenta seis descuadres en el
     arnés de la valoración, no cinco.
