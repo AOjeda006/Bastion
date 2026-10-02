@@ -110,10 +110,10 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
   ya está a salvo, y durante un ítem largo casi nunca lo está.
 
 - **La rama de un ítem no sobrevive a su avance rápido.** Una rama por unidad de trabajo, verde ahí,
-  `--ff-only` a `main`, y **borrada en cuanto main la contiene** —local y remota—. Una rama vieja que
-  ya está dentro de `main` no guarda nada (sus commits viven en `main`) y sí engaña: al retomar
-  parece trabajo pendiente. `git for-each-ref refs/heads/` no debería devolver más que `main` y, si
-  hay ítem en curso, su rama.
+  `--ff-only` a `main`, y **borrada en cuanto main la contiene y su run de `main` sale en verde**
+  —local y remota—. Una rama vieja que ya está dentro de `main` no guarda nada (sus commits viven en
+  `main`) y sí engaña: al retomar parece trabajo pendiente. `git for-each-ref refs/heads/` no debería
+  devolver más que `main` y, si hay ítem en curso, su rama.
 
 - **Una cifra medida se acompaña del comando que la mide.** Un recuento sacado de un registro largo
   puede perder la cola —o la cabeza— sin decirlo: en el 1.4 los avisos de `act(...)` se contaron dos
@@ -191,6 +191,9 @@ en el PLAN. Lo que solo vale en esta máquina o en su *shell* se quedó fuera.
   README son entrada de `ElEstadoDelReadmeEsElDelPlanTests`, y marcar una casilla cambia la línea
   que el README tiene que decir. En el cierre del 2.9, `e6975ed` marcó la suya sin mover el README
   y puso `main` rojo (run 36972547394). La casilla y la línea del README van en el mismo commit.
+- **`main` solo avanza a un commit que ya está en verde en su rama.** El commit que anota el run de
+  cierre no es una excepción: va primero a la rama, espera su verde, y después avanza `main`. En el
+  cierre del 2.9, `e6975ed` llegó a `main` sin pasar por ningún run, y lo encontró rojo el de `main`.
 - **Parado no es ausente, y lo que no necesita la dependencia se ejerce sin ella.** «No se puede en
   local» se comprueba: en el 1.7 Docker solo estaba apagado, y 334 rojos pasaron a 334 verdes.
   Antes de empujar un test que no se puede correr, un canario temporal ejerce lo que no la necesita.
