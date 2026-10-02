@@ -5696,6 +5696,31 @@ decisiones van a su ADR, y lo que siga sin especificar se pregunta todo junto an
 9. **La tanda**, sobre las líneas que deciden: la normalización, el dígito de control, el índice y
    su traducción.
 
+#### La puerta del 2.10, contestada el 2026-10-02
+
+La convención de la fase, `negocio/identificacion-articulos/convenciones.md`, se leyó con `Read`
+antes de preguntar. Quedaban tres decisiones esenciales sin especificar y con más de una salida
+viable. Se preguntaron juntas, y el usuario eligió la recomendada en las tres:
+
+1. **El GTIN es un recurso hijo del artículo, como sus proveedores.** Tiene tabla propia, con su
+   fila y su versión.
+   - El alta es `POST /api/v1/catalogo/articulos/{id}/gtins`, con `Idempotency-Key`.
+   - La baja es `DELETE /api/v1/catalogo/articulos/gtins/{id}`, con el `If-Match` de la fila.
+   - No hay `PUT`: un GTIN no se edita, se quita y se da de alta.
+   - `ArticuloDto` no lleva los GTIN, así que la ETag del artículo no cambia, y no miente.
+2. **La caja y el palé llevan un entero de unidades base, de 2 en adelante, y puede haber varios
+   GTIN por nivel.**
+   - La base vale 1, y puede haber más de una: un EAN-13 y un UPC-12 del mismo producto.
+   - Las unidades no cambian: cambiarlas exige un GTIN nuevo.
+   - Puede haber varias cajas, de 6 y de 12, y no hay regla entre la caja y el palé.
+3. **La pantalla es una página propia, `/articulos/:id/gtin`**, enlazada desde el listado como la
+   de la trazabilidad. El encargo la pone «en la ficha del artículo», y esa ficha no existe todavía.
+   Cuando llegue, podrá reunir las dos.
+
+Lo que el encargo dejó al agente va al **ADR-0051**, con su fuente. Entre otras cosas, qué prefijos
+no son el GTIN de un artículo, leídos de la tabla 1-4 y la 1-5 de las *GS1 General Specifications*,
+Release 26.0.
+
 #### Los números de este encargo
 
 - **Las mutaciones llevan una sola numeración** (*Reglas de oro propias*). El encargo hace empezar la
@@ -7459,17 +7484,28 @@ El desmontaje deja `docker compose ls -a` con el proyecto `bastion`, parado como
 6. ~~**La batería y los runs.**~~ Hecho: la batería y el humo, arriba; el run de la rama, el
    36971562081, en la casilla; el de `main`, al abrir la rama siguiente.
 
-**El epílogo del 2.9, en curso**, en la rama `epilogo-2.9`, abierta desde `main` en `dca9b83`. Lo
-que pide está en *Decisiones tomadas → Traídas por el encargo del 2026-10-02*. Las mutaciones
-empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
+**El epílogo del 2.9, cerrado** el 2026-10-02. Fue en la rama `epilogo-2.9`, abierta desde `main`
+en `dca9b83` y ya borrada. Lo que pedía está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-02*. Sus mutaciones van de la **112** a la **118**, y su ADR es el **ADR-0050**.
 
-**Lo que queda, por este orden:**
+**Su run de `main` es el 36986444130** sobre `3cf9cea`, **success al primer intento**, con sus tres
+jobs —Backend `110772449763`, Frontal `110772449949` y Humo `110774053261`— y **68 pasos: 67 en
+verde y 1 omitido**, *Diagnóstico*. Dice lo mismo que el de la rama: **1057** y **547** casos con
+**10 `.trx`** en cada artefacto, **130** operaciones y 77 rutas, **133** tipos de error de **139**
+sitios, y **418/450** y **616/900** KiB. `main` avanzó a `3cf9cea` después de que el run de la
+rama sobre ese mismo commit, el **36985542487**, saliera en verde. Anotado al abrir el 2.10.
+
+**Lo que quedaba, por este orden:**
 
 1. ~~El run de `main` del 2.9, anotado.~~ Hecho: el 36974258472, en la casilla del 2.9.
 2. ~~El párrafo de los imports apagados, en `CLAUDE.md` §1.~~ Hecho.
 3. ~~La regla de `main`, que solo avanza a un commit ya verde en su rama, en `AGENTS.md`.~~
    Hecho, y la regla de la rama dice ya que se borra después de su run de `main`.
-4. La memoria `bastion-estado-y-flujo` y el estado de `context-mode`, dichos en el informe.
+4. ~~La memoria `bastion-estado-y-flujo` y el estado de `context-mode`, dichos en el informe.~~
+   Hecho. La memoria se queda: guarda dos hechos de esta máquina, no estado ni flujo del proyecto.
+   Uno es que el aviso de `SIGNING_KEY_B64` es de la nube, y otro, que `origin` va por SSH. En
+   otra máquina no valen, así que no van a `AGENTS.md`. `context-mode` seguía **encendido** al
+   cerrar el epílogo, y el informe le pide al usuario que lo apague.
 5. ~~El ADR-0050, antes del código.~~ Hecho, con las notas de enmienda en el ADR-0047 y el
    ADR-0048. Lo que la documentación de PostgreSQL 17 no dice del renombre en una tabla
    particionada se midió en un contenedor aparte, y está en su §2.
@@ -7591,6 +7627,33 @@ revierte con `git restore --source=HEAD`, se toca la fecha del fichero y se reco
 | 116 | El mismo, en el libro: `DROP CONSTRAINT ck_movimiento_stock_lote_o_numero_de_serie` sobre el padre, que se lo quita a todas las particiones. | sobre `0a6c4aa`, el otro: `Una_fila_del_libro_con_lote_y_numero_de_serie_la_rechaza_el_motor`, con el mismo mensaje; el de la existencia sigue verde |
 | 117 | El cuadre deja de mirar la fecha: el `WHERE` del descuadre `valoracion-fecha`, cambiado por `WHERE false`. | sobre `33abe32`, 2 de los 12 de `LaValoracionDelAjusteTests`. `El_cuadre_encuentra_cada_ultima_fecha_que_no_es_la_del_libro` echa en falta los tres descuadres, el adelantado, el atrasado y el nulo; y `El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro`, el de la valoración que falta |
 | 118 | El cuadre compara la fecha con `<>` en vez de con `IS DISTINCT FROM`. | sobre `33abe32`, los mismos 2, pero cada uno echa en falta **solo el nulo**: el de la clave sin fecha en el primero y el de la valoración que falta en el segundo. El adelantado y el atrasado siguen saliendo, y eso es lo que separa la 118 de la 117 |
+
+**El 2.10, en curso**, en la rama `2.10-el-gtin-del-articulo`, abierta desde `main` en `3cf9cea`. El
+encargo está en *Decisiones tomadas → El 2.10: el GTIN del artículo*, y la puerta, contestada justo
+debajo. Las mutaciones empiezan en la **119**, y el ADR es el **ADR-0051**.
+
+**Lo que queda, por este orden:**
+
+1. ~~La puerta de clarificación.~~ Hecho: tres preguntas, contestadas el 2026-10-02.
+2. El ADR-0051, antes del código.
+3. El dominio, con TDD:
+   - el *value object* `Gtin`, con su normalización, su dígito de control y sus prefijos;
+   - el GTIN del artículo, con su nivel y sus unidades.
+4. La persistencia: la tabla, el índice único `(empresa_id, gtin)`, su migración y su traducción a
+   `409`.
+5. Los casos de uso y la API:
+   - el alta, con `Idempotency-Key`, y la baja, con `If-Match`;
+   - la lista del artículo y la búsqueda por GTIN;
+   - los permisos y `TodaEscrituraDiceComoSeProtegeTests`;
+   - el catálogo de errores.
+6. La carrera: dos altas del mismo GTIN a la vez, con dos transacciones de verdad.
+7. La comprobación de que ningún documento guarda el GTIN en lugar del artículo.
+8. La pantalla:
+   - la página, y su esquema Zod con el dígito de control;
+   - el `409` en su campo, en los dos idiomas, con Vitest y MSW;
+   - el recorrido por el nginx de verdad con `playwright-cli`.
+9. La tanda de mutaciones, desde la 119.
+10. La batería, el humo y los runs. La casilla y la línea del README van en el mismo commit.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
