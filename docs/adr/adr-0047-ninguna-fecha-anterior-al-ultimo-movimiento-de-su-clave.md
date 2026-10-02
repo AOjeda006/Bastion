@@ -8,7 +8,9 @@ revisado: 2026-09-29
 
 # ADR-0047: Ninguna fecha anterior al último movimiento de su clave
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Lo que dejó abierto en sus *Consecuencias* lo cierra el ADR-0050 (§4).**
+  - El [ADR-0050](adr-0050-el-numero-de-serie-se-llama-asi-y-el-motor-guarda-la-marca.md) lleva `ultima_fecha` al cuadre: se compara con la fecha más alta
+    del libro por artículo y almacén.
 - **Fecha:** 2026-09-29
 - **Sale del addendum del 2.8**, que el usuario encargó el 2026-09-29 tras verificar el ítem. El
   criterio lo fijó el usuario; los medios, el agente.
@@ -144,7 +146,10 @@ existió. El 2.14 decide qué hace con eso.
 - **Los tests que atrasaban fechas sobre una clave movida después** se arreglan con otra clave u
   otra fecha, nunca aflojando la regla, y el PLAN los nombra.
 - **Los tests que comparan un saldo entero** comparan también su fecha, porque ahora es parte de él.
-- **Lo que se deja abierto**: el cuadre no compara `ultima_fecha` con el máximo del libro. La
+- > **Enmendado por el ADR-0050 (2026-10-02).** Ya no queda abierto: el cuadre compara
+  > `ultima_fecha` con el máximo del libro, en el descuadre `valoracion-fecha`.
+
+  **Lo que se deja abierto**: el cuadre no compara `ultima_fecha` con el máximo del libro. La
   propiedad sí lo hace. Llevarlo al cuadre es una línea más en su lectura, y se propone al usuario.
 
 ## Procedencia

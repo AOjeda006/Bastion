@@ -7470,7 +7470,9 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
 3. ~~La regla de `main`, que solo avanza a un commit ya verde en su rama, en `AGENTS.md`.~~
    Hecho, y la regla de la rama dice ya que se borra después de su run de `main`.
 4. La memoria `bastion-estado-y-flujo` y el estado de `context-mode`, dichos en el informe.
-5. El ADR-0050, antes del código.
+5. ~~El ADR-0050, antes del código.~~ Hecho, con las notas de enmienda en el ADR-0047 y el
+   ADR-0048. Lo que la documentación de PostgreSQL 17 no dice del renombre en una tabla
+   particionada se midió en un contenedor aparte, y está en su §2.
 6. El número de serie, renombrado: el dominio, el cuadre, la existencia, el libro, el índice, el
    `CHECK` y las listas cerradas.
 7. El glosario: el lote, el número de serie al lado de la serie, y la marca de trazabilidad.

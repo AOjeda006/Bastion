@@ -8,7 +8,10 @@ revisado: 2026-09-29
 
 # ADR-0048: El lote y la serie van con su artículo, y la marca se lee con cerrojo
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0050 (§1, última frase, y §3, los nombres).**
+  - El [ADR-0050](adr-0050-el-numero-de-serie-se-llama-asi-y-el-motor-guarda-la-marca.md) pone la exclusividad entre lote y número de serie también en el
+    motor, con un `CHECK` en la existencia y otro en el libro, y renombra `serie_id` a
+    `numero_de_serie_id`, con su índice y su `CHECK`.
 - **Fecha:** 2026-09-29
 - **Sale del 2.9**, con las seis decisiones que el usuario fijó en el encargo del 2026-09-29 (PLAN,
   *El 2.9: lotes y números de serie*). Los medios, y lo que el encargo dejó por decidir, son del
@@ -33,6 +36,11 @@ Tres cosas del ítem no se arreglan después sin rehacer datos:
 ## Decisión
 
 ### 1. Lote y serie van en dos columnas, aunque la marca sea excluyente
+
+> **Enmendado por el ADR-0050 (2026-10-02).** La última frase del segundo párrafo ya no es cierta:
+> desde el ADR-0050, el motor tampoco deja escribirlas juntas, con
+> `CHECK (num_nonnulls(lote_id, numero_de_serie_id) <= 1)` en la existencia y en el libro. El
+> esquema sigue pudiendo guardar las dos cosas, y el disparador no cambia.
 
 La marca tiene tres valores, y un artículo lleva lote **o** serie, nunca los dos. Lo acordó la
 puerta de la fase, y se queda así por decisión del usuario.
@@ -85,6 +93,11 @@ o un número de serie tiene de 1 a 20 caracteres del conjunto 82 de GS1. Es lo q
   *GS1 General Specifications*, figura 7.11-1, para el conjunto 82. Consultados el 2026-09-29.
 
 ### 3. «Un número de serie no está en dos sitios» lo sostiene el motor
+
+> **Enmendado por el ADR-0050 (2026-10-02).** Los nombres cambian, y nada más: la columna es
+> `numero_de_serie_id`, el `CHECK` es `ck_existencias_numero_de_serie_como_mucho_una` y el índice
+> es `ix_existencias_numero_de_serie_en_un_sitio`. Las expresiones, la traducción y el `type`
+> son los de abajo.
 
 Un `CHECK` de fila no ve las demás filas, así que hacen falta dos piezas sobre la existencia:
 
