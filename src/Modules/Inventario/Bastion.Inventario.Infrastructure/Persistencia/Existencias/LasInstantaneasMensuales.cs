@@ -59,33 +59,33 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
             WHERE c.empresa_id = {0}
         ),
         por_mes AS (
-            SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.serie_id,
+            SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.numero_de_serie_id,
                    date_trunc('month', m.fecha_de_operacion::timestamp)::date AS mes,
                    sum(m.cantidad_en_unidad_base) AS cantidad
             FROM inventario.movimiento_stock AS m
             CROSS JOIN corte
             WHERE m.empresa_id = {0}
                 AND m.fecha_de_operacion < corte.hasta_el_mes + interval '1 month'
-            GROUP BY m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.serie_id,
+            GROUP BY m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.numero_de_serie_id,
                      date_trunc('month', m.fecha_de_operacion::timestamp)
         ),
         rejilla AS (
-            SELECT p.articulo_id, p.almacen_id, p.ubicacion_id, p.lote_id, p.serie_id,
+            SELECT p.articulo_id, p.almacen_id, p.ubicacion_id, p.lote_id, p.numero_de_serie_id,
                    g.mes::date AS mes
             FROM (
-                SELECT pm.articulo_id, pm.almacen_id, pm.ubicacion_id, pm.lote_id, pm.serie_id,
+                SELECT pm.articulo_id, pm.almacen_id, pm.ubicacion_id, pm.lote_id, pm.numero_de_serie_id,
                        min(pm.mes) AS primero
                 FROM por_mes AS pm
-                GROUP BY pm.articulo_id, pm.almacen_id, pm.ubicacion_id, pm.lote_id, pm.serie_id
+                GROUP BY pm.articulo_id, pm.almacen_id, pm.ubicacion_id, pm.lote_id, pm.numero_de_serie_id
             ) AS p
             CROSS JOIN corte
             CROSS JOIN LATERAL generate_series(
                 p.primero::timestamp, corte.hasta_el_mes::timestamp, interval '1 month') AS g (mes)
         ),
         debidas AS (
-            SELECT r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.serie_id, r.mes,
+            SELECT r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.numero_de_serie_id, r.mes,
                    sum(coalesce(pm.cantidad, 0)) OVER (
-                       PARTITION BY r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.serie_id
+                       PARTITION BY r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.numero_de_serie_id
                        ORDER BY r.mes) AS fisico
             FROM rejilla AS r
             LEFT JOIN por_mes AS pm
@@ -93,7 +93,7 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
                 AND pm.almacen_id = r.almacen_id
                 AND pm.ubicacion_id = r.ubicacion_id
                 AND pm.lote_id IS NOT DISTINCT FROM r.lote_id
-                AND pm.serie_id IS NOT DISTINCT FROM r.serie_id
+                AND pm.numero_de_serie_id IS NOT DISTINCT FROM r.numero_de_serie_id
                 AND pm.mes = r.mes
         )
         """;
@@ -158,7 +158,7 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
             AND e.almacen_id = d.almacen_id
             AND e.ubicacion_id = d.ubicacion_id
             AND e.lote_id IS NOT DISTINCT FROM d.lote_id
-            AND e.serie_id IS NOT DISTINCT FROM d.serie_id
+            AND e.numero_de_serie_id IS NOT DISTINCT FROM d.numero_de_serie_id
         """;
 
     /// <summary>Recalcula las instantáneas de la empresa del inquilino hasta un mes.</summary>

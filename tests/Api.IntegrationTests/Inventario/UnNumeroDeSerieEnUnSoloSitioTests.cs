@@ -75,7 +75,7 @@ public sealed class UnNumeroDeSerieEnUnSoloSitioTests(PostgresConTodosLosModulos
 
         // EN EL MISMO HUECO ES LA MISMA FILA, que pasaría a tener dos: lo para el CHECK, y no el
         // índice, que no choca con la propia fila.
-        await ExigirQueElMotorLaParaAsync(escena, otraVez, "23514", "ck_existencias_serie_como_mucho_una");
+        await ExigirQueElMotorLaParaAsync(escena, otraVez, "23514", "ck_existencias_numero_de_serie_como_mucho_una");
 
         await ExigirElRechazoDeLaApiAsync(escena, otraVez, EnExistencias);
 
@@ -97,7 +97,7 @@ public sealed class UnNumeroDeSerieEnUnSoloSitioTests(PostgresConTodosLosModulos
             postgres, escena.AlmacenA, [escena.Entrada(escena.UbicacionA2, 1m, serie: Serie)]);
 
         // EN OTRO HUECO ES OTRA FILA, con una unidad, que el CHECK no ve mal: lo para el índice.
-        await ExigirQueElMotorLaParaAsync(escena, enOtroHueco, "23505", "ix_existencias_serie_en_un_sitio");
+        await ExigirQueElMotorLaParaAsync(escena, enOtroHueco, "23505", "ix_existencias_numero_de_serie_en_un_sitio");
 
         await ExigirElRechazoDeLaApiAsync(escena, enOtroHueco, EnExistencias);
 
@@ -125,7 +125,7 @@ public sealed class UnNumeroDeSerieEnUnSoloSitioTests(PostgresConTodosLosModulos
         IReadOnlyList<Existencia> vivas = await LasExistencias.VivasAsync(postgres, escena.EmpresaId);
 
         vivas.Count.ShouldBe(2);
-        vivas.Select(fila => fila.SerieId).Distinct().ShouldHaveSingleItem().ShouldNotBeNull();
+        vivas.Select(fila => fila.NumeroDeSerieId).Distinct().ShouldHaveSingleItem().ShouldNotBeNull();
         vivas.Single(fila => fila.UbicacionId == escena.UbicacionA1).Fisico.ShouldBe(0m);
         vivas.Single(fila => fila.UbicacionId == escena.UbicacionA2).Fisico.ShouldBe(1m);
 
@@ -241,7 +241,7 @@ public sealed class UnNumeroDeSerieEnUnSoloSitioTests(PostgresConTodosLosModulos
 
             choque.SqlState.ShouldBe("23505", choque.MessageText);
             choque.ConstraintName.ShouldBe(
-                "ix_existencias_serie_en_un_sitio",
+                "ix_existencias_numero_de_serie_en_un_sitio",
                 "es el nombre que el borde traduce a 422: con otro, la segunda entrada saldría 500 o 412");
         }
 

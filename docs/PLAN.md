@@ -7473,8 +7473,15 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
 5. ~~El ADR-0050, antes del código.~~ Hecho, con las notas de enmienda en el ADR-0047 y el
    ADR-0048. Lo que la documentación de PostgreSQL 17 no dice del renombre en una tabla
    particionada se midió en un contenedor aparte, y está en su §2.
-6. El número de serie, renombrado: el dominio, el cuadre, la existencia, el libro, el índice, el
-   `CHECK` y las listas cerradas.
+6. ~~El número de serie, renombrado: el dominio, el cuadre, la existencia, el libro, el índice, el
+   `CHECK` y las listas cerradas.~~ Hecho. La migración `ElNumeroDeSerieSeLlamaAsi` solo renombra:
+   las dos columnas, sus dos índices, el índice parcial, el `CHECK` y las dos claves ajenas. Y
+   recorre las particiones del libro, que no reciben el renombre del padre. Lo ve un caso nuevo,
+   `ElLibroEstaParticionadoTests.Cada_particion_nombra_sus_claves_ajenas_como_el_libro_y_sus_indices_por_su_columna`,
+   con su mutación en la tabla del epílogo. El `Down` no lo ejerce ningún carril, así que se
+   ejerció a mano, en un `postgres:17.6-alpine` aparte: subir, bajar a `LosLotesYLasSeries` y volver
+   a subir. En las tres paradas, los catorce clones de la clave ajena y los catorce índices de
+   partición llevaban el nombre de la columna de ese momento.
 7. El glosario: el lote, el número de serie al lado de la serie, y la marca de trazabilidad.
 8. El `CHECK` de la serie, visto en rojo.
 9. La exclusividad entre lote y número de serie en el motor, con su caso y su mutación.

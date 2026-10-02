@@ -100,8 +100,8 @@ public sealed class ElCuadreMiraElLoteYLaSerieTests(PostgresConTodosLosModulos p
         Existencia[] vivas = await contexto.Existencias.AsNoTracking().ToArrayAsync();
         Guid filaDeL1 = vivas.Single(viva => viva.LoteId == l1).Id;
         Guid filaDeL2 = vivas.Single(viva => viva.LoteId == l2).Id;
-        Guid filaDeS1 = vivas.Single(viva => viva.SerieId == s1).Id;
-        Guid filaDeS2 = vivas.Single(viva => viva.SerieId == s2).Id;
+        Guid filaDeS1 = vivas.Single(viva => viva.NumeroDeSerieId == s1).Id;
+        Guid filaDeS2 = vivas.Single(viva => viva.NumeroDeSerieId == s2).Id;
 
         // LAS COPIAS SE ESTROPEAN EN UNA TRANSACCIÓN QUE SE DESHACE, y el cuadre corre dentro de ella.
         await using IDbContextTransaction estropeando = await contexto.Database.BeginTransactionAsync();
@@ -152,7 +152,7 @@ public sealed class ElCuadreMiraElLoteYLaSerieTests(PostgresConTodosLosModulos p
                 descuadre.ArticuloId,
                 descuadre.UbicacionId,
                 descuadre.LoteId,
-                descuadre.SerieId,
+                descuadre.NumeroDeSerieId,
                 descuadre.Mes,
                 descuadre.Esperado,
                 descuadre.Guardado,
@@ -212,7 +212,7 @@ public sealed class ElCuadreMiraElLoteYLaSerieTests(PostgresConTodosLosModulos p
         Guid ArticuloId,
         Guid? UbicacionId,
         Guid? LoteId,
-        Guid? SerieId,
+        Guid? NumeroDeSerieId,
         DateOnly? Mes,
         decimal Esperado,
         decimal Guardado,

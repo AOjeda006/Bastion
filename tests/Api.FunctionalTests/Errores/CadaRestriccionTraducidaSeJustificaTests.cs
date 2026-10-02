@@ -108,8 +108,8 @@ public sealed class CadaRestriccionTraducidaSeJustificaTests : IDisposable
 
             // Ítem 2.9: una serie no está dos veces en su ubicación, ni en dos sitios. Las dos, al
             // mismo error, porque para quien confirma son lo mismo (ADR-0048 §3).
-            "ck_existencias_serie_como_mucho_una (Comprobacion) → numero-de-serie-en-existencias",
-            "ix_existencias_serie_en_un_sitio (Unicidad) → numero-de-serie-en-existencias",
+            "ck_existencias_numero_de_serie_como_mucho_una (Comprobacion) → numero-de-serie-en-existencias",
+            "ix_existencias_numero_de_serie_en_un_sitio (Unicidad) → numero-de-serie-en-existencias",
         ];
 
         Declaradas()

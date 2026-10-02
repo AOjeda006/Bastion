@@ -16,9 +16,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <param name="AlmacenId">El almacén.</param>
 /// <param name="UbicacionId">La ubicación.</param>
 /// <param name="LoteId">El lote, o nada.</param>
-/// <param name="SerieId">El número de serie, o nada.</param>
+/// <param name="NumeroDeSerieId">El número de serie, o nada.</param>
 internal readonly record struct ClaveDeExistencia(
-    Guid ArticuloId, Guid AlmacenId, Guid UbicacionId, Guid? LoteId = null, Guid? SerieId = null);
+    Guid ArticuloId, Guid AlmacenId, Guid UbicacionId, Guid? LoteId = null, Guid? NumeroDeSerieId = null);
 
 /// <summary>Una fila del libro, reducida a lo que la proyección suma.</summary>
 /// <param name="Clave">De qué existencia es.</param>
@@ -120,7 +120,7 @@ internal static class LasExistencias
                     existencia.AlmacenId,
                     existencia.UbicacionId,
                     existencia.LoteId,
-                    existencia.SerieId,
+                    existencia.NumeroDeSerieId,
                     instantanea.Mes,
                     instantanea.Fisico,
                 })
@@ -128,7 +128,7 @@ internal static class LasExistencias
 
         return Ordenadas(leidas.Select(fila => new FotoDelMes(
             new ClaveDeExistencia(
-                fila.ArticuloId, fila.AlmacenId, fila.UbicacionId, fila.LoteId, fila.SerieId),
+                fila.ArticuloId, fila.AlmacenId, fila.UbicacionId, fila.LoteId, fila.NumeroDeSerieId),
             fila.Mes,
             fila.Fisico)));
     }
@@ -146,7 +146,7 @@ internal static class LasExistencias
 
         return [.. filas.Select(fila => new ApunteDelLibro(
             new ClaveDeExistencia(
-                fila.ArticuloId, fila.AlmacenId, fila.UbicacionId, fila.LoteId, fila.SerieId),
+                fila.ArticuloId, fila.AlmacenId, fila.UbicacionId, fila.LoteId, fila.NumeroDeSerieId),
             fila.FechaDeOperacion,
             fila.CantidadEnUnidadBase))];
     }
@@ -218,7 +218,7 @@ internal static class LasExistencias
             existencia.AlmacenId,
             existencia.UbicacionId,
             existencia.LoteId,
-            existencia.SerieId);
+            existencia.NumeroDeSerieId);
 
     /// <summary>El primer día del mes de una fecha.</summary>
     /// <param name="fecha">La fecha.</param>
@@ -260,7 +260,7 @@ internal static class LasExistencias
 
             int porLote = Nullable.Compare(x.LoteId, y.LoteId);
 
-            return porLote != 0 ? porLote : Nullable.Compare(x.SerieId, y.SerieId);
+            return porLote != 0 ? porLote : Nullable.Compare(x.NumeroDeSerieId, y.NumeroDeSerieId);
         }
     }
 }

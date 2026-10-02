@@ -134,10 +134,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string FisicoNoNegativo = "ck_existencias_fisico_no_negativo";
 
     /// <summary>La que no deja dos unidades de una serie en una fila (ADR-0048 §3).</summary>
-    private const string SerieComoMuchoUna = "ck_existencias_serie_como_mucho_una";
+    private const string NumeroDeSerieComoMuchoUna = "ck_existencias_numero_de_serie_como_mucho_una";
 
     /// <summary>La que no deja una serie en dos filas con unidades (ADR-0048 §3).</summary>
-    private const string SerieEnUnSitio = "ix_existencias_serie_en_un_sitio";
+    private const string NumeroDeSerieEnUnSitio = "ix_existencias_numero_de_serie_en_un_sitio";
 
     private const string PorLote = "PorLote";
     private const string PorNumeroSerie = "PorNumeroSerie";
@@ -493,17 +493,17 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             {
                 rotas.Add(FisicoNoNegativo);
             }
-            else if (clave.Key.SerieId is not null && despues > 1m)
+            else if (clave.Key.NumeroDeSerieId is not null && despues > 1m)
             {
-                rotas.Add(SerieComoMuchoUna);
+                rotas.Add(NumeroDeSerieComoMuchoUna);
             }
-            else if (clave.Key.SerieId is { } serie && despues > 0m && saldos.Any(otra =>
+            else if (clave.Key.NumeroDeSerieId is { } serie && despues > 0m && saldos.Any(otra =>
                 otra.Key != clave.Key
                 && otra.Key.ArticuloId == clave.Key.ArticuloId
-                && otra.Key.SerieId == serie
+                && otra.Key.NumeroDeSerieId == serie
                 && otra.Value > 0m))
             {
-                rotas.Add(SerieEnUnSitio);
+                rotas.Add(NumeroDeSerieEnUnSitio);
             }
         }
 
@@ -544,7 +544,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             await Should.ThrowAsync<PostgresException>(operacion, secuencia.Relato());
 
         rechazo.ConstraintName.ShouldBeOneOf([.. rotas], secuencia.Relato());
-        rechazo.SqlState.ShouldBe(rechazo.ConstraintName == SerieEnUnSitio ? "23505" : "23514", secuencia.Relato());
+        rechazo.SqlState.ShouldBe(rechazo.ConstraintName == NumeroDeSerieEnUnSitio ? "23505" : "23514", secuencia.Relato());
     }
 
     /// <summary>Un documento con fecha futura, que tiene que rechazarse sin mover nada.</summary>
@@ -780,25 +780,25 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         await using NpgsqlCommand orden = new(
             """
             WITH fechas AS (
-                SELECT DISTINCT m.articulo_id, m.serie_id, m.fecha_de_operacion AS fecha
+                SELECT DISTINCT m.articulo_id, m.numero_de_serie_id, m.fecha_de_operacion AS fecha
                   FROM inventario.movimiento_stock AS m
-                 WHERE m.empresa_id = @empresa AND m.serie_id IS NOT NULL
+                 WHERE m.empresa_id = @empresa AND m.numero_de_serie_id IS NOT NULL
             ),
             sitios AS (
-                SELECT f.articulo_id, f.serie_id, f.fecha, sum(m.cantidad_en_unidad_base) AS cantidad
+                SELECT f.articulo_id, f.numero_de_serie_id, f.fecha, sum(m.cantidad_en_unidad_base) AS cantidad
                   FROM fechas AS f
                   JOIN inventario.movimiento_stock AS m
                     ON m.empresa_id = @empresa
                    AND m.articulo_id = f.articulo_id
-                   AND m.serie_id = f.serie_id
+                   AND m.numero_de_serie_id = f.numero_de_serie_id
                    AND m.fecha_de_operacion <= f.fecha
-                 GROUP BY f.articulo_id, f.serie_id, f.fecha, m.almacen_id, m.ubicacion_id
+                 GROUP BY f.articulo_id, f.numero_de_serie_id, f.fecha, m.almacen_id, m.ubicacion_id
             )
             SELECT (SELECT count(*) FROM fechas),
                    (SELECT count(*) FROM sitios WHERE cantidad < 0 OR cantidad > 1),
                    (SELECT count(*)
                       FROM (SELECT 1 FROM sitios WHERE cantidad > 0
-                             GROUP BY articulo_id, serie_id, fecha HAVING count(*) > 1) AS en_dos)
+                             GROUP BY articulo_id, numero_de_serie_id, fecha HAVING count(*) > 1) AS en_dos)
             """,
             conexion);
 
@@ -848,7 +848,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         traduccion.Values.ShouldBe(
             secuencia.Libro
-                .SelectMany(apunte => new[] { apunte.Clave.LoteId, apunte.Clave.SerieId })
+                .SelectMany(apunte => new[] { apunte.Clave.LoteId, apunte.Clave.NumeroDeSerieId })
                 .OfType<Guid>()
                 .Distinct(),
             ignoreOrder: true,
@@ -862,7 +862,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         clave with
         {
             LoteId = clave.LoteId is { } lote ? traduccion[lote] : null,
-            SerieId = clave.SerieId is { } serie ? traduccion[serie] : null,
+            NumeroDeSerieId = clave.NumeroDeSerieId is { } serie ? traduccion[serie] : null,
         };
 
     /// <summary>El valor y el precio medio de cada fila del libro de la empresa.</summary>
@@ -990,7 +990,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         LineaAlAzar[] conExistencias =
         [
             .. LasExistencias.SaldosDelLibro(secuencia.Libro)
-                .Where(par => par.Value > 0m && (par.Key.LoteId is not null || par.Key.SerieId is not null))
+                .Where(par => par.Value > 0m && (par.Key.LoteId is not null || par.Key.NumeroDeSerieId is not null))
                 .Select(par => secuencia.LineaEn(empresa, par.Key))
                 .OrderBy(donde => donde.Clave)
                 .ThenBy(donde => donde.Lote, StringComparer.Ordinal)
@@ -1139,7 +1139,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             .ThenBy(apunte => apunte.Clave.AlmacenId)
             .ThenBy(apunte => apunte.Clave.UbicacionId)
             .ThenBy(apunte => apunte.Clave.LoteId)
-            .ThenBy(apunte => apunte.Clave.SerieId)
+            .ThenBy(apunte => apunte.Clave.NumeroDeSerieId)
             .ThenBy(apunte => apunte.Fecha)
             .ThenBy(apunte => apunte.Cantidad)];
 
@@ -1256,7 +1256,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         /// <summary>Cuál de las seis claves es esta, sin su lote ni su serie.</summary>
         internal int IndiceDe(ClaveDeExistencia clave)
         {
-            ClaveDeExistencia sinCodigos = clave with { LoteId = null, SerieId = null };
+            ClaveDeExistencia sinCodigos = clave with { LoteId = null, NumeroDeSerieId = null };
 
             return Enumerable.Range(0, Claves.Count).Single(indice => Claves[indice] == sinCodigos);
         }
@@ -1318,7 +1318,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             return clave with
             {
                 LoteId = linea.Lote is { } lote ? LoteDe(clave.ArticuloId, lote) : null,
-                SerieId = linea.Serie is { } serie ? SerieDe(clave.ArticuloId, serie) : null,
+                NumeroDeSerieId = linea.Serie is { } serie ? SerieDe(clave.ArticuloId, serie) : null,
             };
         }
 
@@ -1328,7 +1328,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             0m,
             1m,
             Lote: clave.LoteId is { } lote ? _codigos[lote] : null,
-            Serie: clave.SerieId is { } serie ? _codigos[serie] : null);
+            Serie: clave.NumeroDeSerieId is { } serie ? _codigos[serie] : null);
 
         internal void Anotar(string clase, DateOnly fecha, IReadOnlyList<LineaAlAzar> lineas) =>
             Anotar(clase, string.Create(

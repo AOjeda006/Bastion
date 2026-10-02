@@ -10,8 +10,9 @@ namespace Bastion.Inventario.Domain.LotesYSeries;
 /// </para>
 /// <para>
 /// <b>Lo que hace de él una unidad no está en esta fila</b>, sino en la existencia: como mucho una
-/// unidad base por fila, y como mucho una fila con existencias por serie (ADR-0048 §3). Esta tabla
-/// solo le da identidad, y la identidad de una serie no cambia cuando la unidad se vende.
+/// unidad base por fila, y como mucho una fila con existencias por número de serie (ADR-0048 §3).
+/// Esta tabla solo le da identidad, y la identidad de un número de serie no cambia cuando la unidad
+/// se vende.
 /// </para>
 /// </remarks>
 public sealed class NumeroDeSerie : IDeInquilino
@@ -21,13 +22,15 @@ public sealed class NumeroDeSerie : IDeInquilino
     {
     }
 
-    /// <summary>Identificador de la serie. Es lo que apuntan la existencia y el libro.</summary>
+    /// <summary>
+    /// Identificador del número de serie. Es lo que apuntan la existencia y el libro.
+    /// </summary>
     public Guid Id { get; private set; }
 
     /// <inheritdoc/>
     public Guid EmpresaId { get; private set; }
 
-    /// <summary>El artículo de la serie. Vive en el esquema de Catálogo.</summary>
+    /// <summary>El artículo del número de serie. Vive en el esquema de Catálogo.</summary>
     public Guid ArticuloId { get; private set; }
 
     /// <summary>El número de la etiqueta, en la forma de <see cref="CodigoGs1"/>.</summary>

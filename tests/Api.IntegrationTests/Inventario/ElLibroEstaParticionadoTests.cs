@@ -141,6 +141,83 @@ public sealed class ElLibroEstaParticionadoTests(PostgresConTodosLosModulos post
     }
 
     /// <summary>
+    /// Cada partición llama a sus claves ajenas como el libro, y a sus índices de una columna, por
+    /// la columna que tienen hoy.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Porque renombrar en el padre no llega a las particiones que ya existen</b> (ADR-0050 §2,
+    /// medido en PostgreSQL 17.6): la clave ajena se queda con el nombre viejo, y el índice, con el
+    /// que le puso el motor con la columna vieja. Las particiones que nacen después ya traen los
+    /// nuevos, así que, sin la migración que las recorre, el libro tendría dos nombres para la
+    /// misma clave según el mes.
+    /// </para>
+    /// <para>
+    /// <b>Las dos listas de discrepancias, vacías, y sus universos, no</b>, y con el número de
+    /// serie dentro: una consulta que no encontrara ninguna clave ajena o ningún índice de una
+    /// columna saldría vacía por no mirar nada.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Cada_particion_nombra_sus_claves_ajenas_como_el_libro_y_sus_indices_por_su_columna()
+    {
+        IReadOnlyList<string> clavesConClon = await ElLibro.TextosAsync(
+            postgres,
+            """
+            SELECT DISTINCT padre.conname
+            FROM pg_catalog.pg_constraint AS padre
+            JOIN pg_catalog.pg_constraint AS clon ON clon.conparentid = padre.oid
+            WHERE padre.conrelid = 'inventario.movimiento_stock'::regclass AND padre.contype = 'f'
+            """);
+
+        clavesConClon.ShouldContain("fk_movimiento_stock_numeros_de_serie_numero_de_serie_id");
+
+        IReadOnlyList<string> clavesConOtroNombre = await ElLibro.TextosAsync(
+            postgres,
+            """
+            SELECT particion.relname || ': ' || clon.conname || ' y no ' || padre.conname
+            FROM pg_catalog.pg_constraint AS padre
+            JOIN pg_catalog.pg_constraint AS clon ON clon.conparentid = padre.oid
+            JOIN pg_catalog.pg_class AS particion ON particion.oid = clon.conrelid
+            WHERE padre.conrelid = 'inventario.movimiento_stock'::regclass AND padre.contype = 'f'
+              AND clon.conname <> padre.conname
+            ORDER BY 1
+            """);
+
+        clavesConOtroNombre.ShouldBeEmpty();
+
+        IReadOnlyList<string> indicesDeUnaColumna = await ElLibro.TextosAsync(
+            postgres,
+            """
+            SELECT DISTINCT indice.relname
+            FROM pg_catalog.pg_index AS padre
+            JOIN pg_catalog.pg_class AS indice ON indice.oid = padre.indexrelid
+            JOIN pg_catalog.pg_inherits AS herencia ON herencia.inhparent = padre.indexrelid
+            WHERE padre.indrelid = 'inventario.movimiento_stock'::regclass AND padre.indnatts = 1
+            """);
+
+        indicesDeUnaColumna.ShouldContain("ix_movimiento_stock_numero_de_serie_id");
+
+        IReadOnlyList<string> indicesConOtroNombre = await ElLibro.TextosAsync(
+            postgres,
+            """
+            SELECT indice.relname || ' y no ' || particion.relname || '_' || columna.attname || '_idx'
+            FROM pg_catalog.pg_index AS padre
+            JOIN pg_catalog.pg_inherits AS herencia ON herencia.inhparent = padre.indexrelid
+            JOIN pg_catalog.pg_class AS indice ON indice.oid = herencia.inhrelid
+            JOIN pg_catalog.pg_index AS hijo ON hijo.indexrelid = indice.oid
+            JOIN pg_catalog.pg_class AS particion ON particion.oid = hijo.indrelid
+            JOIN pg_catalog.pg_attribute AS columna
+              ON columna.attrelid = hijo.indrelid AND columna.attnum = hijo.indkey[0]
+            WHERE padre.indrelid = 'inventario.movimiento_stock'::regclass AND padre.indnatts = 1
+              AND indice.relname <> particion.relname || '_' || columna.attname || '_idx'
+            ORDER BY 1
+            """);
+
+        indicesConOtroNombre.ShouldBeEmpty();
+    }
+
+    /// <summary>
     /// Las filas de un ajuste caen en la partición de SU mes, y ninguna de ellas en la de por
     /// defecto.
     /// </summary>

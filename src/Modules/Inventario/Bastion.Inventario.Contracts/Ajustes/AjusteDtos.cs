@@ -136,7 +136,7 @@ public sealed record AnulacionDto(AjusteDto Original, AjusteDto Inverso);
 /// <param name="UbicacionId">Hueco del almacén.</param>
 /// <param name="ArticuloId">Artículo.</param>
 /// <param name="LoteId">El lote que movió, o nada.</param>
-/// <param name="SerieId">El número de serie que movió, o nada. Nunca con lote.</param>
+/// <param name="NumeroDeSerieId">El número de serie que movió, o nada. Nunca con lote.</param>
 /// <param name="CantidadEnUnidadBase">Cantidad con signo, en la unidad en la que se suma.</param>
 /// <param name="CantidadIntroducida">Cantidad tal como se escribió.</param>
 /// <param name="UnidadIntroducidaId">Unidad en la que se escribió.</param>
@@ -160,7 +160,7 @@ public sealed record MovimientoDto(
     Guid UbicacionId,
     Guid ArticuloId,
     Guid? LoteId,
-    Guid? SerieId,
+    Guid? NumeroDeSerieId,
     decimal CantidadEnUnidadBase,
     decimal CantidadIntroducida,
     Guid UnidadIntroducidaId,

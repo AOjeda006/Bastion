@@ -85,6 +85,10 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_cortes_de_la_instantanea_mes_es_primer_dia"] =
             new([], [("hasta_el_mes", "date_trunc('month', current_date)::date")]),
         ["ck_existencias_fisico_no_negativo"] = Relleno.Ninguno,
+        ["ck_existencias_numero_de_serie_como_mucho_una"] = Relleno.Ninguno,
+
+        // El mismo, con el nombre de antes del ADR-0050: el recorrido lo encuentra entre la
+        // migración del 2.9 y la del renombre.
         ["ck_existencias_serie_como_mucho_una"] = Relleno.Ninguno,
         ["ck_instantaneas_mensuales_mes_es_primer_dia"] =
             new([], [("mes", "date_trunc('month', current_date)::date")]),

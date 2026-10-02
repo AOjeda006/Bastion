@@ -58,7 +58,7 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         Guid ubicacionId,
         Guid articuloId,
         Guid? loteId,
-        Guid? serieId,
+        Guid? numeroDeSerieId,
         decimal cantidadIntroducida,
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
@@ -78,7 +78,7 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         UbicacionId = ubicacionId;
         ArticuloId = articuloId;
         LoteId = loteId;
-        SerieId = serieId;
+        NumeroDeSerieId = numeroDeSerieId;
         CantidadIntroducida = cantidadIntroducida;
         UnidadIntroducidaId = unidadIntroducidaId;
         FactorAUnidadBase = factorAUnidadBase;
@@ -133,7 +133,7 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     public Guid? LoteId { get; private set; }
 
     /// <summary>El número de serie que se movió, o <see langword="null"/>. Nunca con lote.</summary>
-    public Guid? SerieId { get; private set; }
+    public Guid? NumeroDeSerieId { get; private set; }
 
     /// <summary>Cantidad <b>con signo</b>, en la unidad base del artículo: lo que se suma.</summary>
     /// <remarks>
@@ -256,7 +256,7 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// <param name="ubicacionId">Ubicación dentro del almacén.</param>
     /// <param name="articuloId">Artículo movido.</param>
     /// <param name="loteId">El lote, o <c>null</c>.</param>
-    /// <param name="serieId">El número de serie, o <c>null</c>. Nunca con lote.</param>
+    /// <param name="numeroDeSerieId">El número de serie, o <c>null</c>. Nunca con lote.</param>
     /// <param name="cantidadIntroducida">Cantidad tal como se escribió, con signo.</param>
     /// <param name="unidadIntroducidaId">Unidad en la que se escribió.</param>
     /// <param name="factorAUnidadBase">Factor hacia la unidad base del artículo.</param>
@@ -273,8 +273,8 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
     /// </exception>
     /// <exception cref="ArgumentException">
     /// Algún importe va en otra divisa que la fila, el valor no lleva el signo de la cantidad o el
-    /// precio medio es negativo. O la fila lleva lote y serie, o una serie que no mueve una unidad
-    /// base.
+    /// precio medio es negativo. O la fila lleva lote y número de serie, o un número de serie
+    /// que no mueve una unidad base.
     /// </exception>
     public static MovimientoStock Registrar(
         Guid empresaId,
@@ -283,7 +283,7 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
         Guid ubicacionId,
         Guid articuloId,
         Guid? loteId,
-        Guid? serieId,
+        Guid? numeroDeSerieId,
         decimal cantidadIntroducida,
         Guid unidadIntroducidaId,
         decimal factorAUnidadBase,
@@ -351,19 +351,19 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
 
         // LO MISMO QUE LA LÍNEA, OTRA VEZ: el libro lo escribirán cinco documentos, y no todos
         // tendrán líneas de ajuste delante.
-        if (loteId is not null && serieId is not null)
+        if (loteId is not null && numeroDeSerieId is not null)
         {
             throw new ArgumentException(
                 "Una fila del libro lleva lote o número de serie, no los dos (ADR-0048 §1).",
-                nameof(serieId));
+                nameof(numeroDeSerieId));
         }
 
-        if (serieId is not null
+        if (numeroDeSerieId is not null
             && Math.Abs(EnUnidadBase(cantidadIntroducida, factorAUnidadBase)) != 1m)
         {
             throw new ArgumentException(
                 "Una fila con número de serie mueve una unidad base, arriba o abajo (ADR-0048 §3).",
-                nameof(serieId));
+                nameof(numeroDeSerieId));
         }
 
         return new MovimientoStock(
@@ -374,7 +374,7 @@ public sealed class MovimientoStock : EntidadBase, IDeInquilino
             ubicacionId,
             articuloId,
             loteId,
-            serieId,
+            numeroDeSerieId,
             cantidadIntroducida,
             unidadIntroducidaId,
             factorAUnidadBase,

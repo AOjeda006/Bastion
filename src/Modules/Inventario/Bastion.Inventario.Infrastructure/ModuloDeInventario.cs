@@ -139,8 +139,8 @@ public static class ModuloDeInventario
         // aquí por lo mismo que el índice: que un físico por debajo de cero sea «no hay bastante
         // stock» y no un defecto es una afirmación sobre la existencia, y es de este módulo.
         //
-        // Y LAS DOS DE LA SERIE, al mismo error (ADR-0048 §3): el CHECK salta cuando la serie entra
-        // otra vez en la misma ubicación, y el índice, cuando entra en otra. El índice es un 23505,
+        // Y LAS DOS DEL NÚMERO DE SERIE, al mismo error (ADR-0048 §3): el CHECK salta cuando la
+        // unidad entra otra vez en la misma ubicación, y el índice, cuando entra en otra. El índice es un 23505,
         // y NO va a la lista de la carrera perdida: quien llega segundo no tiene nada que recargar.
         servicios.Configure<RestriccionesQueGuardanUnaRegla>(restricciones => restricciones
             .Declarar(
@@ -153,7 +153,7 @@ public static class ModuloDeInventario
                 "y lo único que puede significar que salte es que no había bastante stock " +
                 "(ADR-0046 §4)")
             .Declarar(
-                ConfiguracionDeExistencia.SerieComoMuchoUna,
+                ConfiguracionDeExistencia.NumeroDeSerieComoMuchoUna,
                 ClaseDeRestriccion.Comprobacion,
                 ErroresDeExistencias.NumeroDeSerieEnExistencias(),
                 "una serie que entra otra vez en la ubicación donde ya está deja su fila en dos. " +
@@ -162,7 +162,7 @@ public static class ModuloDeInventario
                 "cantidad ya sumada, y lo único que puede significar que salte es que esa unidad ya " +
                 "estaba dentro (ADR-0048 §3)")
             .Declarar(
-                ConfiguracionDeExistencia.SerieEnUnSitio,
+                ConfiguracionDeExistencia.NumeroDeSerieEnUnSitio,
                 ClaseDeRestriccion.Unicidad,
                 ErroresDeExistencias.NumeroDeSerieEnExistencias(),
                 "una serie que entra en otra ubicación, o en otro almacén, mientras sigue en la " +

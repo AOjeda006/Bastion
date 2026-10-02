@@ -64,11 +64,11 @@ public sealed class Existencia : IDeInquilino
 
     /// <summary>El número de serie, o <see langword="null"/> si el artículo no lo lleva.</summary>
     /// <remarks>
-    /// <b>Una fila con serie tiene como mucho una unidad</b>, y una serie tiene existencias en una
-    /// sola fila. Las dos cosas las sostiene el motor, con un <c>CHECK</c> y un índice único parcial
+    /// <b>Una fila con número de serie tiene como mucho una unidad</b>, y un número de serie tiene
+    /// existencias en una sola fila. Las dos cosas las sostiene el motor, con un <c>CHECK</c> y un índice único parcial
     /// (ADR-0048 §3), porque dos confirmaciones simultáneas no se ven la una a la otra.
     /// </remarks>
-    public Guid? SerieId { get; private set; }
+    public Guid? NumeroDeSerieId { get; private set; }
 
     /// <summary>Lo que hay, en la unidad base del artículo: la suma del libro.</summary>
     public decimal Fisico { get; private set; }

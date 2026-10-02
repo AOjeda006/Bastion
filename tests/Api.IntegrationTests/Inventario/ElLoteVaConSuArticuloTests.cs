@@ -142,8 +142,8 @@ public sealed class ElLoteVaConSuArticuloTests(PostgresConTodosLosModulos postgr
         ClaveDeExistencia deLaSerie = claves.Single(clave => clave.Key.ArticuloId == articuloDeSerie).Key;
 
         delLote.LoteId.ShouldNotBeNull();
-        delLote.SerieId.ShouldBeNull();
-        deLaSerie.SerieId.ShouldNotBeNull();
+        delLote.NumeroDeSerieId.ShouldBeNull();
+        deLaSerie.NumeroDeSerieId.ShouldNotBeNull();
         deLaSerie.LoteId.ShouldBeNull();
 
         foreach (IGrouping<ClaveDeExistencia, ApunteDelLibro> clave in claves)

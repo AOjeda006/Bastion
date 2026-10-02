@@ -790,15 +790,6 @@ internal static class Inventario
                 "la sentencia que anota el libro la escribe con el valor de IInquilinoActual, y " +
                 "antes comprueba que cada fila del libro sea de esa misma empresa."),
 
-            ["Existencia.SerieId"] = new(
-                "NumeroDeSerie",
-                "",
-                "el nombre engaña: por nombre casaría con `Serie`, que es la serie de NUMERACIÓN de " +
-                "Organización, y esto es el número de serie de una unidad, que vive en este mismo " +
-                "módulo (ADR-0048 §2). Por eso se declara, y con el puerto vacío: es clave ajena " +
-                "de verdad, dentro del esquema. El lote no necesita línea: `LoteId` casa con " +
-                "`Lote`, que es de aquí."),
-
             ["Existencia.UbicacionId"] = new(
                 "Ubicacion",
                 Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
@@ -901,13 +892,6 @@ internal static class Inventario
                 "almacén y por algo más: el filtro de la R8 se evalúa sobre las columnas de la " +
                 "fila, y sin esta columna una consulta que empezara por el libro sumaría las " +
                 "existencias de dos empresas de la misma instalación en un mismo saldo."),
-
-            ["MovimientoStock.SerieId"] = new(
-                "NumeroDeSerie",
-                "",
-                "gemelo del de la existencia, y engaña igual: no es la serie de numeración del " +
-                "documento —esa la lleva el ajuste—, sino el número de serie de la unidad que se " +
-                "mueve, con clave ajena dentro del esquema."),
 
             ["MovimientoStock.UbicacionId"] = new(
                 "Ubicacion",

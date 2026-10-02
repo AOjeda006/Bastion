@@ -75,7 +75,7 @@ internal sealed class RutasQueFallan : IStartupFilter
 
     /// <summary>El índice único que Inventario declara como regla, con su nombre real (ADR-0048 §3).</summary>
     /// <remarks>Escrito a mano por lo mismo que el índice declarado.</remarks>
-    internal const string IndiceDeclaradoComoRegla = "ix_existencias_serie_en_un_sitio";
+    internal const string IndiceDeclaradoComoRegla = "ix_existencias_numero_de_serie_en_un_sitio";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => aplicacion =>
     {

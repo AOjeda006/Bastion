@@ -75,7 +75,7 @@ internal sealed class ConfiguracionDeMovimientoStock : IEntityTypeConfiguration<
         // tabla, particionada y de solo añadido, no. Con clave ajena, dentro del esquema: el lote y la
         // serie no se borran nunca. Nulas en todas las filas de antes del 2.9, que es lo que eran.
         movimiento.Property(fila => fila.LoteId);
-        movimiento.Property(fila => fila.SerieId);
+        movimiento.Property(fila => fila.NumeroDeSerieId);
 
         movimiento.HasOne<Lote>()
             .WithMany()
@@ -84,7 +84,7 @@ internal sealed class ConfiguracionDeMovimientoStock : IEntityTypeConfiguration<
 
         movimiento.HasOne<NumeroDeSerie>()
             .WithMany()
-            .HasForeignKey(fila => fila.SerieId)
+            .HasForeignKey(fila => fila.NumeroDeSerieId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Las tres cantidades a la misma escala. `numeric(18,6)`: nunca coma flotante —0,1 kg tres

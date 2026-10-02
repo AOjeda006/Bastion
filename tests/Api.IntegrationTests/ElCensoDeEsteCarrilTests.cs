@@ -222,6 +222,7 @@ public sealed class ElCensoDeEsteCarrilTests
         // Del ítem 2.3, el libro de movimientos. Son los únicos casos del carril que le
         // hablan a una tabla particionada por su nombre, y los únicos que escriben con el
         // dominio de un módulo sin borde: Inventario no tiene endpoints hasta el 2.4.
+        "ElLibroEstaParticionadoTests.Cada_particion_nombra_sus_claves_ajenas_como_el_libro_y_sus_indices_por_su_columna",
         "ElLibroEstaParticionadoTests.El_conjunto_de_particiones_es_el_mes_en_curso_los_doce_siguientes_y_la_de_por_defecto",
         "ElLibroEstaParticionadoTests.La_clave_primaria_del_libro_incluye_la_clave_de_particion",
         "ElLibroEstaParticionadoTests.La_tabla_del_libro_esta_particionada_por_RANGO_sobre_la_fecha_de_operacion",

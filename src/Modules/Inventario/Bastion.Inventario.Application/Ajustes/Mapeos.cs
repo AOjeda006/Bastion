@@ -33,7 +33,7 @@ internal static class Mapeos
         movimiento.UbicacionId,
         movimiento.ArticuloId,
         movimiento.LoteId,
-        movimiento.SerieId,
+        movimiento.NumeroDeSerieId,
         movimiento.CantidadEnUnidadBase,
         movimiento.CantidadIntroducida,
         movimiento.UnidadIntroducidaId,

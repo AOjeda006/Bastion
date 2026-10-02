@@ -169,7 +169,7 @@ public sealed class LaLineaLlevaSuLoteOSuSerieTests
                 new Dictionary<CodigoDeUnArticulo, Guid> { [new(conSerie, "SN-1")] = serie }),
             s_momento);
 
-        filas.Select(fila => (fila.LoteId, fila.SerieId)).ShouldBe(
+        filas.Select(fila => (fila.LoteId, fila.NumeroDeSerieId)).ShouldBe(
         [
             (lote, (Guid?)null),
             (null, serie),
@@ -233,10 +233,10 @@ public sealed class LaLineaLlevaSuLoteOSuSerieTests
         Should.Throw<ArgumentException>(() => UnaFila(2m, loteId: null, Guid.CreateVersion7()));
 
         UnaFila(-1m, loteId: null, Guid.CreateVersion7()).CantidadEnUnidadBase.ShouldBe(-1m);
-        UnaFila(7m, Guid.CreateVersion7(), serieId: null).CantidadEnUnidadBase.ShouldBe(7m);
+        UnaFila(7m, Guid.CreateVersion7(), numeroDeSerieId: null).CantidadEnUnidadBase.ShouldBe(7m);
     }
 
-    private static MovimientoStock UnaFila(decimal cantidad, Guid? loteId, Guid? serieId) =>
+    private static MovimientoStock UnaFila(decimal cantidad, Guid? loteId, Guid? numeroDeSerieId) =>
         MovimientoStock.Registrar(
             Guid.CreateVersion7(),
             s_dia,
@@ -244,7 +244,7 @@ public sealed class LaLineaLlevaSuLoteOSuSerieTests
             Guid.CreateVersion7(),
             Guid.CreateVersion7(),
             loteId,
-            serieId,
+            numeroDeSerieId,
             cantidad,
             Guid.CreateVersion7(),
             1m,
