@@ -7488,7 +7488,7 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
    dominio compilado y solo admite tipos del tipo base. Así que va en la sección de Inventario,
    con el lote y la marca, y dice que no es la serie. La marca dice que hoy la exclusividad es
    cosa del dominio, y el commit del `CHECK` lo pondrá al día.
-8. El `CHECK` de la serie, visto en rojo.
+8. ~~El `CHECK` de la serie, visto en rojo.~~ Hecho: la 114, con su control, en la tabla de abajo.
 9. La exclusividad entre lote y número de serie en el motor, con su caso y su mutación.
 10. El cuadre contra `ultima_fecha`, con su caso y su mutación.
 11. `comprobar-migraciones.sh`, que dice cuándo `dotnet ef` no arranca.
@@ -7505,6 +7505,7 @@ revierte con `git restore --source=HEAD`, se toca la fecha del fichero y se reco
 |---|---|---|
 | 112 | La migración del renombre no renombra las claves ajenas de las particiones (el `EXECUTE` del primer bucle, cambiado por `NULL`). | sobre `f1a1faa`, 1 de los 5 de `ElLibroEstaParticionadoTests`: `Cada_particion_nombra_sus_claves_ajenas_como_el_libro_y_sus_indices_por_su_columna`, con `clavesConOtroNombre` en 14, una por partición |
 | 113 | La migración del renombre no renombra los índices de las particiones (el `EXECUTE` del segundo bucle). | sobre `f1a1faa`, el mismo caso, ahora por `indicesConOtroNombre`, también en 14 |
+| 114 | El `CHECK` del número de serie, quitado **en la base** con `ALTER TABLE inventario.existencias DROP CONSTRAINT ck_existencias_numero_de_serie_como_mucho_una`, dentro de la transacción del caso, que se deshace. Como la 53 del epílogo del 2.7, muta el propio caso: la confirmación pasa a ir dentro de esa transacción, con un método temporal en `ElModuloDeInventario`. | sobre `298e529`, 1 de los 6 de `UnNumeroDeSerieEnUnSoloSitioTests`: `La_misma_serie_dos_veces_en_el_mismo_hueco_la_para_el_check_y_sale_422`, porque la confirmación «should throw Npgsql.PostgresException but did not». Nada más la para: el índice parcial no choca con la propia fila. **El control**, el mismo caso mutado sin el `DROP`, sale con los 6 en verde, así que el rojo es del `CHECK` y no del camino nuevo |
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
