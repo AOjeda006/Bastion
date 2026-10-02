@@ -90,6 +90,7 @@ public sealed class ElCensoDeEsteCarrilTests
 
         // Del ítem 2.10 (ADR-0051): los códigos de barras del artículo, por la API.
         "ContratoDelCodigoDeBarrasTests.Cada_rechazo_es_un_400_con_su_type_y_no_deja_fila",
+        "ContratoDelCodigoDeBarrasTests.Dos_altas_del_mismo_gtin_a_la_vez_dejan_una_y_la_otra_es_un_409",
         "ContratoDelCodigoDeBarrasTests.El_gtin12_y_su_forma_de_13_chocan_en_otro_articulo_y_la_busqueda_los_iguala",
         "ContratoDelCodigoDeBarrasTests.El_reintento_con_la_misma_clave_repite_el_201_y_no_es_un_409",
         "ContratoDelCodigoDeBarrasTests.La_baja_exige_su_version_borra_la_fila_y_la_segunda_es_404",

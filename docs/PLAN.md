@@ -7744,7 +7744,18 @@ lo enmienda.
 
    Batería entera en verde: rápido **1212** en diez ensamblados e integración **555** (471 + 84),
    según `recuento-de-tests.sh`; el frontal, 17 ficheros y 113 casos, sin avisos de `act()`.
-6. La carrera: dos altas del mismo GTIN a la vez, con dos transacciones de verdad.
+6. ~~La carrera: dos altas del mismo GTIN a la vez, con dos transacciones de verdad.~~ Hecho, como
+   noveno caso de `ContratoDelCodigoDeBarrasTests` (semilla 639), que es el único que choca contra
+   el índice:
+   - la primera alta la escribe un contexto con la transacción abierta, y la segunda va por la API,
+     en otro artículo y escrita como GTIN-12;
+   - `LaEspera` comprueba que la API espera a ese proceso, y eso solo puede ser en el índice,
+     porque la comprobación previa es una lectura;
+   - al confirmar la primera, la segunda recibe el `409` `codigo-barras-duplicado` que el borde saca
+     del nombre del índice, y no deja fila.
+
+   Cinco rondas seguidas en verde. Las mutaciones que lo tienen que ver (el índice sin `UNIQUE`, el
+   nombre fuera de `RestriccionesQueGuardanUnaRegla`) van en la tanda del paso 9.
 7. La comprobación de que ningún documento guarda el GTIN en lugar del artículo.
 8. La pantalla:
    - la página, y su esquema Zod con el dígito de control;

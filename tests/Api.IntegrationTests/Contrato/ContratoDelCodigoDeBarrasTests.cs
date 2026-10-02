@@ -3,12 +3,18 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Inventario;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Catalogo.Domain.Catalogo;
+using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Impuestos;
 using Bastion.Organizacion.Contracts.Unidades;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Contrato;
@@ -25,9 +31,9 @@ namespace Bastion.Api.IntegrationTests.Contrato;
 /// la misma clave no se convierta en un <c>409</c> de sí mismo.
 /// </para>
 /// <para>
-/// <b>Ningún caso de aquí choca contra el índice único.</b> Las altas van de una en una, así que el
-/// <c>409</c> lo da siempre la comprobación previa del caso de uso. El índice y la traducción de su
-/// nombre solo se alcanzan con dos altas a la vez, y eso es un caso de carrera, no de contrato.
+/// <b>Solo el último caso choca contra el índice único</b>, porque es el único con dos altas a la
+/// vez. En los demás las altas van de una en una, así que el <c>409</c> lo da la comprobación previa
+/// del caso de uso. El índice y la traducción de su nombre necesitan una carrera de verdad.
 /// </para>
 /// <para>
 /// <b>Lo que decide el caso de uso sin conexión</b> —el orden de las preguntas, el nivel por nombre,
@@ -363,12 +369,78 @@ public sealed class ContratoDelCodigoDeBarrasTests(PostgresConTodosLosModulos po
         (await ListadoAsync(cliente, articulo.Id)).ShouldHaveSingleItem();
     }
 
-    private async Task<HttpClient> EnUnaEmpresaNuevaAsync(int semilla)
+    /// <summary>
+    /// Dos altas del mismo GTIN a la vez, con dos transacciones de verdad: la segunda pasa la
+    /// comprobación previa, espera en el índice único y recibe el <c>409</c> que el borde saca de su
+    /// nombre (ADR-0051 §5).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>La primera la escribe un contexto con la transacción abierta, y la segunda va por la
+    /// API.</b> La comprobación previa lee lo confirmado, así que la segunda no ve la fila en vuelo y
+    /// llega al <c>INSERT</c>. Que la API está esperando a ESE proceso lo dice el motor
+    /// (<c>LaEspera</c>), y solo puede ser en el índice: la comprobación previa es una lectura, y
+    /// una lectura no espera a nadie.
+    /// </para>
+    /// <para>
+    /// <b>En otro artículo, y escrito como GTIN-12</b>: el índice es por <c>(empresa_id, gtin)</c>
+    /// sobre la forma de catorce, así que ni el artículo ni la grafía lo esquivan. Sin el índice, las
+    /// dos altas salen <c>201</c>; sin su nombre en <c>RestriccionesQueGuardanUnaRegla</c>, la segunda
+    /// es un <c>500</c>.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Dos_altas_del_mismo_gtin_a_la_vez_dejan_una_y_la_otra_es_un_409()
     {
-        (HttpClient cliente, EmpresaDto _) = await _api.EnUnaEmpresaNuevaAsync(Escenario.NifInventado(semilla));
+        (HttpClient cliente, EmpresaDto empresa) = await LaEmpresaNuevaAsync(639);
+        ArticuloDto uno = await ArticuloAsync(cliente, 639, "A");
+        ArticuloDto otro = await ArticuloAsync(cliente, 639, "B");
+
+        var enVuelo = CodigoBarras.Nuevo(
+            empresa.Id,
+            uno.Id,
+            Gtin.De("036000291452"),
+            NivelDeGtin.Base,
+            CodigoBarras.UnidadesDeLaBase,
+            DateTimeOffset.UtcNow);
+
+        await using CatalogoDbContext contexto = postgres.AbrirCatalogo(empresa.Id);
+
+        await using (IDbContextTransaction transaccion = await contexto.Database.BeginTransactionAsync())
+        {
+            contexto.CodigosBarras.Add(enVuelo);
+            await contexto.SaveChangesAsync();
+
+            Task<HttpResponseMessage> laOtra = AgregarAsync(cliente, otro.Id, "0036000291452", "Base");
+
+            await LaEspera.AQueLaFreneAsync(
+                postgres.CadenaDeConexion,
+                ((NpgsqlConnection)contexto.Database.GetDbConnection()).ProcessID,
+                laOtra,
+                "el alta en vuelo",
+                "ha dado de alta el GTIN sin ver que la otra lo estaba dando de alta");
+
+            await transaccion.CommitAsync();
+
+            using HttpResponseMessage segunda = await laOtra.WaitAsync(TimeSpan.FromSeconds(30));
+
+            segunda.StatusCode.ShouldBe(HttpStatusCode.Conflict, await Escenario.Detalle(segunda));
+            (await TypeDe(segunda)).ShouldBe(Duplicado);
+        }
+
+        (await BuscarAsync(cliente, "036000291452")).ShouldHaveSingleItem().Id.ShouldBe(enVuelo.Id);
+        (await ListadoAsync(cliente, otro.Id)).ShouldBeEmpty("la que perdió no dejó fila");
+    }
+
+    private async Task<HttpClient> EnUnaEmpresaNuevaAsync(int semilla) =>
+        (await LaEmpresaNuevaAsync(semilla)).Cliente;
+
+    private async Task<(HttpClient Cliente, EmpresaDto Empresa)> LaEmpresaNuevaAsync(int semilla)
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync(Escenario.NifInventado(semilla));
         _clientes.Add(cliente);
 
-        return cliente;
+        return (cliente, empresa);
     }
 
     /// <summary>Un artículo con su unidad y su tramo de impuesto, propios del caso y de la letra.</summary>

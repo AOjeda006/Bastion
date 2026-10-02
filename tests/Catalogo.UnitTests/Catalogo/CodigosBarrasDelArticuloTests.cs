@@ -24,8 +24,8 @@ namespace Bastion.Catalogo.UnitTests.Catalogo;
 /// <b>Ninguno abre una conexión.</b> Lo que solo da PostgreSQL —la forma de catorce comparada por el
 /// índice, el filtro de empresa, el <c>412</c> de la baja— lo ejerce
 /// <c>ContratoDelCodigoDeBarrasTests</c>. El índice único y el <c>409</c> que el borde saca de su
-/// nombre solo se alcanzan con dos altas a la vez: la segunda que llega después la para la
-/// comprobación previa, como aquí.
+/// nombre solo se alcanzan con dos altas a la vez, y los ejerce su último caso: una segunda alta que
+/// llega después la para la comprobación previa, como aquí.
 /// </para>
 /// </remarks>
 public sealed class CodigosBarrasDelArticuloTests
