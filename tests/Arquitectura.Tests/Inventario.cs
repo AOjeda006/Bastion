@@ -741,6 +741,14 @@ internal static class Inventario
                 "no puede ver —un ciclo de dos o más eslabones— lo comprueba " +
                 "ElArbolSigueSiendoUnArbol, en el alta y en la modificación."),
 
+            ["CodigoBarras.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del del suministro: el código de barras lleva la empresa aunque su " +
+                "artículo ya la lleve, porque el filtro de la R8 se evalúa sobre las columnas de " +
+                "la fila y el índice único va por empresa (ADR-0051 §5). Sale del claim en el " +
+                "alta, que es donde se comprueba la empresa activa."),
+
             ["ConversionUM.UnidadDestinoId"] = new(
                 "UnidadMedida",
                 "",

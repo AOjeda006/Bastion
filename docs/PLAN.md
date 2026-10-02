@@ -7630,7 +7630,8 @@ revierte con `git restore --source=HEAD`, se toca la fecha del fichero y se reco
 
 **El 2.10, en curso**, en la rama `2.10-el-gtin-del-articulo`, abierta desde `main` en `3cf9cea`. El
 encargo está en *Decisiones tomadas → El 2.10: el GTIN del artículo*, y la puerta, contestada justo
-debajo. Las mutaciones empiezan en la **119**, y el ADR es el **ADR-0051**.
+debajo. Las mutaciones empiezan en la **119**, y los ADR son el **ADR-0051** y el **ADR-0052**, que
+lo enmienda.
 
 **Lo que queda, por este orden:**
 
@@ -7638,11 +7639,25 @@ debajo. Las mutaciones empiezan en la **119**, y el ADR es el **ADR-0051**.
 2. ~~El ADR-0051, antes del código.~~ Hecho. Fija la tabla de prefijos que no son de un
    artículo, leída de las *GS1 General Specifications*, Release 26.0, y lo que el encargo dejó
    al agente: los nombres, la búsqueda en el recurso del GTIN y el recorte de los extremos.
-3. El dominio, con TDD:
-   - el *value object* `Gtin`, con su normalización, su dígito de control y sus prefijos;
-   - el GTIN del artículo, con su nivel y sus unidades.
-4. La persistencia: la tabla, el índice único `(empresa_id, gtin)`, su migración y su traducción a
-   `409`.
+3. ~~El dominio, con TDD.~~ Hecho:
+   - el *value object* `Gtin`, con su normalización, su dígito de control y sus prefijos, y su
+     lectura (`LecturaDeGtin`), que dice el motivo de un rechazo sin devolver un nulo;
+   - el agregado `CodigoBarras`, con su nivel y sus unidades.
+
+   Dos revisores lo contrastaron antes del commit, uno con el texto de la especificación y otro con
+   mutaciones. De ahí sale el **ADR-0052**:
+   - el agregado se llama `CodigoBarras`, como en el §7.3 del plan maestro, y no `ArticuloGtin`;
+   - la tabla de prefijos rechaza también las RCN-12 de la §2.1.11.3 (los LAC y los RZSC).
+
+   La revisión también añadió casos: el nivel inventado, el Intro del lector, los largos de un
+   GS1-128 sin analizar y el indicador 9 por delante del prefijo. Son 114 casos de `ElGtinTests` y
+   `ElCodigoDeBarrasTests`, con `dotnet test tests/Catalogo.UnitTests --filter
+   "FullyQualifiedName~ElGtinTests|FullyQualifiedName~ElCodigoDeBarrasTests"`. El carril rápido
+   entero da 1171 en verde en los diez ensamblados. El glosario lleva su fila, y
+   `LosIdentificadoresAjenosTests`, el `EmpresaId` del código de barras con su puerto: el alta
+   tendrá que comprobar la empresa activa.
+4. La persistencia: la tabla `catalogo.codigos_barras`, el índice único `(empresa_id, gtin)`, su
+   migración y su traducción a `409`.
 5. Los casos de uso y la API:
    - el alta, con `Idempotency-Key`, y la baja, con `If-Match`;
    - la lista del artículo y la búsqueda por GTIN;
