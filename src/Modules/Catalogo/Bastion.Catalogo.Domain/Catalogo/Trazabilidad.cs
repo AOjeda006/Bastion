@@ -9,7 +9,8 @@ namespace Bastion.Catalogo.Domain.Catalogo;
 /// <b>Excluyente, por decisión del usuario en la puerta de la fase 2.</b> Un artículo lleva lote o
 /// número de serie, nunca los dos. El esquema de Inventario guarda las dos cosas por separado, así
 /// que el día que un artículo necesite las dos será un cuarto valor aquí y no un cambio de la clave
-/// del libro (ADR-0048 §1).
+/// del libro (ADR-0048 §1). Lo que sí cambiará es el motor, que hoy tampoco las admite juntas: la
+/// migración borrará los dos <c>CHECK</c> que lo impiden (ADR-0050 §3).
 /// </para>
 /// <para>
 /// <b>No cambia en cuanto hay un movimiento.</b> Un libro con filas sin lote no se puede leer por

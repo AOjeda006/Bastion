@@ -238,6 +238,8 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElLibroNoSePuedeLimpiarTests.Modificar_una_fila_por_la_tabla_padre_lo_rechaza_el_motor",
         "ElLibroNoSePuedeLimpiarTests.Vaciar_LA_PARTICION_lo_rechaza_el_motor_y_este_es_el_que_se_vio_abierto",
         "ElLibroNoSePuedeLimpiarTests.Vaciar_la_tabla_padre_lo_rechaza_el_motor",
+        "ElLoteOElNumeroDeSerieNuncaLosDosTests.Una_existencia_con_lote_y_numero_de_serie_la_rechaza_el_motor",
+        "ElLoteOElNumeroDeSerieNuncaLosDosTests.Una_fila_del_libro_con_lote_y_numero_de_serie_la_rechaza_el_motor",
         "ElLoteVaConSuArticuloTests.El_inverso_copia_el_lote_y_la_serie",
         "ElLoteVaConSuArticuloTests.El_mismo_codigo_es_el_mismo_lote_y_la_caja_distingue_dos",
         "ElLoteVaConSuArticuloTests.El_primer_lote_en_dos_almacenes_a_la_vez_es_un_solo_lote",

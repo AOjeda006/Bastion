@@ -7489,7 +7489,15 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
    con el lote y la marca, y dice que no es la serie. La marca dice que hoy la exclusividad es
    cosa del dominio, y el commit del `CHECK` lo pondrá al día.
 8. ~~El `CHECK` de la serie, visto en rojo.~~ Hecho: la 114, con su control, en la tabla de abajo.
-9. La exclusividad entre lote y número de serie en el motor, con su caso y su mutación.
+9. ~~La exclusividad entre lote y número de serie en el motor, con su caso y su mutación.~~ Hecho.
+   La migración `ElLoteOElNumeroDeSerie` añade, validando, un
+   `CHECK (num_nonnulls(lote_id, numero_de_serie_id) <= 1)` a la existencia y otro al libro. No se
+   traducen: si saltan, es un defecto y sale un `500`. El recorrido de las migraciones sobre tablas
+   con filas los nombra en su lista cerrada. Los ven los dos casos de
+   `ElLoteOElNumeroDeSerieNuncaLosDosTests`, que escriben en crudo una fila con las dos marcas, con
+   su lote y su número de serie creados en la misma transacción, y reciben un `23514` con el nombre
+   de su `CHECK`. La fila del glosario de la marca y el comentario de `Trazabilidad` dicen ya que el
+   motor tampoco las admite juntas.
 10. El cuadre contra `ultima_fecha`, con su caso y su mutación.
 11. `comprobar-migraciones.sh`, que dice cuándo `dotnet ef` no arranca.
 12. `undici` y `brace-expansion`, o su anotación.

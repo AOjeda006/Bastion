@@ -24,23 +24,32 @@ internal sealed class ConfiguracionDeMovimientoStock : IEntityTypeConfiguration<
     internal const string CantidadNoNula =
         "cantidad_introducida <> 0 AND cantidad_en_unidad_base <> 0";
 
+    /// <summary>
+    /// El lote o el número de serie, nunca los dos, dicho en SQL: el mismo en el libro y en la
+    /// existencia (ADR-0050 §3).
+    /// </summary>
+    internal const string LoteONumeroDeSerie = "num_nonnulls(lote_id, numero_de_serie_id) <= 1";
+
     public void Configure(EntityTypeBuilder<MovimientoStock> movimiento)
     {
         ArgumentNullException.ThrowIfNull(movimiento);
 
-        // LAS DOS RESTRICCIONES DEL LIBRO, EN EL MOTOR.
+        // LAS TRES RESTRICCIONES DEL LIBRO, EN EL MOTOR.
         //
         // La primera es la regla que une las tres cantidades. Está también en el dominio, y las
         // dos hacen falta: el dominio protege lo que pasa por su fábrica, y a esta tabla se llega
         // además desde una restauración de copia y desde cualquier `INSERT` a mano. La segunda
         // rechaza la fila que no mueve nada: una línea de cero deja constancia de un movimiento
-        // que no ocurrió y la suma no la distingue de no haberla escrito.
+        // que no ocurrió y la suma no la distingue de no haberla escrito. La tercera es la del
+        // lote o el número de serie, como en la existencia (ADR-0050 §3), y por lo mismo: el 2.11
+        // y el 2.12 traen más documentos que escriben aquí.
         movimiento.ToTable(
             "movimiento_stock",
             tabla =>
             {
                 tabla.HasCheckConstraint("ck_movimiento_stock_cantidad_por_factor", CantidadPorFactor);
                 tabla.HasCheckConstraint("ck_movimiento_stock_cantidad_no_nula", CantidadNoNula);
+                tabla.HasCheckConstraint("ck_movimiento_stock_lote_o_numero_de_serie", LoteONumeroDeSerie);
             });
 
         // EL LIBRO NO SE AUDITA, Y ESTE ES EL SITIO DONDE HAY QUE DECIRLO.
@@ -70,10 +79,11 @@ internal sealed class ConfiguracionDeMovimientoStock : IEntityTypeConfiguration<
         movimiento.Property(fila => fila.ArticuloId).IsRequired();
         movimiento.Property(fila => fila.UnidadIntroducidaId).IsRequired();
 
-        // EL LOTE Y LA SERIE, COMO EN LA EXISTENCIA (ADR-0048 §1): dos columnas, aunque el dominio no
-        // deje escribir las dos a la vez. Esa regla es del dominio y puede cambiar; la forma de esta
-        // tabla, particionada y de solo añadido, no. Con clave ajena, dentro del esquema: el lote y la
-        // serie no se borran nunca. Nulas en todas las filas de antes del 2.9, que es lo que eran.
+        // EL LOTE Y EL NÚMERO DE SERIE, COMO EN LA EXISTENCIA (ADR-0048 §1): dos columnas, aunque
+        // el dominio y el `CHECK` de arriba no dejen escribir las dos a la vez. Esa regla puede
+        // cambiar, y cambiarla es borrar un `CHECK`; la forma de esta tabla, particionada y de solo
+        // añadido, no. Con clave ajena, dentro del esquema: el lote y el número de serie no se
+        // borran nunca. Nulas en todas las filas de antes del 2.9, que es lo que eran.
         movimiento.Property(fila => fila.LoteId);
         movimiento.Property(fila => fila.NumeroDeSerieId);
 

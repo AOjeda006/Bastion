@@ -25,6 +25,11 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
     /// </summary>
     internal const string NumeroDeSerieComoMuchoUna = "ck_existencias_numero_de_serie_como_mucho_una";
 
+    /// <summary>
+    /// El lote o el número de serie, nunca los dos: el <c>CHECK</c> del ADR-0050 §3. No se traduce.
+    /// </summary>
+    internal const string LoteONumeroDeSerie = "ck_existencias_lote_o_numero_de_serie";
+
     /// <summary>La resta del disponible, dicha en SQL.</summary>
     internal const string Disponible = "fisico - reservado";
 
@@ -49,6 +54,13 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
         // por arriba: el límite de abajo ya lo pone la del stock, y repetirlo haría saltar las dos con
         // un −1. PostgreSQL las comprueba en orden alfabético de nombre, así que el error que recibe
         // el usuario dependería de cómo se llaman.
+        //
+        // EL LOTE O EL NÚMERO DE SERIE, NUNCA LOS DOS, y en el libro igual (ADR-0050 §3). Lo decide
+        // el dominio, y esto guarda los caminos que no pasan por él: una restauración, un `INSERT`
+        // a mano, un documento nuevo que se olvide de preguntar. No se traduce: si salta, es un
+        // defecto, y sale un `500`. Va entre las otras dos por orden alfabético y no cambia ningún
+        // error, porque la fila nace a cero antes de sumarle nada. El día que un artículo necesite
+        // las dos marcas, la migración borra este `CHECK`, que no toca la clave.
         existencia.ToTable(
             Tabla,
             tabla =>
@@ -56,6 +68,8 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
                 tabla.HasCheckConstraint(FisicoNoNegativo, "fisico >= 0");
                 tabla.HasCheckConstraint(
                     NumeroDeSerieComoMuchoUna, "numero_de_serie_id IS NULL OR fisico <= 1");
+                tabla.HasCheckConstraint(
+                    LoteONumeroDeSerie, ConfiguracionDeMovimientoStock.LoteONumeroDeSerie);
             });
 
         // NO SE AUDITA, y por el mismo motivo que el contador de una serie: la escribe una sentencia

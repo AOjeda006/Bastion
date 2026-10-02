@@ -85,6 +85,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_cortes_de_la_instantanea_mes_es_primer_dia"] =
             new([], [("hasta_el_mes", "date_trunc('month', current_date)::date")]),
         ["ck_existencias_fisico_no_negativo"] = Relleno.Ninguno,
+        ["ck_existencias_lote_o_numero_de_serie"] = Relleno.Ninguno,
         ["ck_existencias_numero_de_serie_como_mucho_una"] = Relleno.Ninguno,
 
         // El mismo, con el nombre de antes del ADR-0050: el recorrido lo encuentra entre la
@@ -101,6 +102,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_lineas_tarifa_precio_o_descuento"] = new(["precio"], []),
         ["ck_movimiento_stock_cantidad_no_nula"] = Relleno.Ninguno,
         ["ck_movimiento_stock_cantidad_por_factor"] = Relleno.Ninguno,
+        ["ck_movimiento_stock_lote_o_numero_de_serie"] = Relleno.Ninguno,
         ["ck_registros_empresa_o_motivo"] = new(["empresa_id"], []),
         ["ck_tarifas_vigencia_no_invertida"] = Relleno.Ninguno,
         ["ck_terceros_limite_credito_completo"] = Relleno.Ninguno,
