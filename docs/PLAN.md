@@ -7528,7 +7528,10 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
     el contrato sin cambios, los 113 casos de Vitest sin ningún aviso de `act()` —los 17 de Node de
     `--localstorage-file` son los de siempre—, y el arranque en 418/450 KiB.
 13. La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
-    verde antes de que `main` avance.
+    verde antes de que `main` avance. **Hecha ya, la fila de la R3**, que seguía diciendo que el lote
+    era nulo en todas las claves hasta el 2.9. Ahora nombra el cuadre del lote y el número de serie,
+    los dos casos de la exclusividad y el de la fecha del cuadre, y cuenta seis descuadres en el
+    arnés de la valoración, no cinco.
 
 **Las mutaciones del epílogo**, desde la 112. Cada una se aplica sobre el árbol limpio, con el
 trabajo de su tema ya commiteado, y se corre sola con la clase del caso que la ve por diseño. Se
