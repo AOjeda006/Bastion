@@ -7517,7 +7517,16 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
     `Ejecute "dotnet tool restore"…` a la vista y ningún «NINGUNA». **Y en Linux**, en un
     `ubuntu:24.04` con un `dotnet` de mentira, las cuatro salidas —bien, no arranca, sin
     migraciones y cambios pendientes— cinco veces cada una, con el código y el mensaje de cada una.
-12. `undici` y `brace-expansion`, o su anotación.
+12. ~~`undici` y `brace-expansion`, o su anotación.~~ Hecho, subidos: `npm audit fix` a secas, sin
+    `--force` y sin `overrides`, solo toca `package-lock.json`, y dentro de los rangos que ya se
+    declaraban. `undici` pasa de 7.29.0 a 7.30.0 (por `jsdom`) y el `brace-expansion` de
+    `@redocly/openapi-core` de 2.1.4 a 2.1.7 (por `openapi-typescript`); las dos, MIT como antes, y
+    las dos de la herramienta. `package.json` no cambia. `npm audit` queda en las dos moderadas de
+    `vitest`, que el ADR-0045 ya anota con su disparador, y la puerta `--omit=dev --audit-level=high`
+    sigue en 0. **En esta máquina** `audit fix` dejó el `lock` nuevo y el `undici` viejo en disco, y
+    lo puso al día un `npm ci`, que es lo que hace la CI. Tras él, la batería del frontal en verde:
+    el contrato sin cambios, los 113 casos de Vitest sin ningún aviso de `act()` —los 17 de Node de
+    `--localstorage-file` son los de siempre—, y el arranque en 418/450 KiB.
 13. La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
     verde antes de que `main` avance.
 
