@@ -211,6 +211,9 @@ export function PaginaDeArticulos(): React.JSX.Element {
             <th scope="col" className="py-2 pr-4 font-medium">
               {t('catalogo.articulos.trazabilidad')}
             </th>
+            <th scope="col" className="py-2 pr-4 font-medium">
+              {t('catalogo.articulos.codigosDeBarras')}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -238,6 +241,19 @@ export function PaginaDeArticulos(): React.JSX.Element {
                     </Link>
                   </>
                 )}
+              </td>
+              <td className="py-2 pr-4">
+                {/* Para todos los que ven el listado: la pantalla de los códigos pide lo mismo, y
+                    dentro esconde lo que el permiso no da. */}
+                <Link
+                  to={`/articulos/${articulo.id}/gtin`}
+                  aria-label={t('catalogo.articulos.verCodigosDeBarrasDe', {
+                    codigo: articulo.codigo,
+                  })}
+                  className="text-xs underline"
+                >
+                  {t('catalogo.articulos.verCodigosDeBarras')}
+                </Link>
               </td>
             </tr>
           ))}

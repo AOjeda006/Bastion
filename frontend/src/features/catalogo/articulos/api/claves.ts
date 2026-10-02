@@ -15,4 +15,6 @@ export const clavesDeArticulos = {
   lista: (listado: ListadoDeArticulos) => [...clavesDeArticulos.listas(), listado] as const,
   /** La ficha de uno, con su versión: la que lee la pantalla de la trazabilidad. */
   una: (id: string) => [...clavesDeArticulos.todo, 'una', id] as const,
+  /** Los códigos de barras de uno. Aparte de la ficha: no la cambian ni cambian su versión. */
+  codigosDeBarras: (id: string) => [...clavesDeArticulos.todo, 'codigosDeBarras', id] as const,
 };

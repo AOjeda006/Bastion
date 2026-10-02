@@ -5771,6 +5771,47 @@ Lo que el ADR-0051 dejó abierto al llegar a los casos de uso y a la API. Ningun
 > categoría, de la tarifa, de su línea y ahora del código de barras. Se decide con el usuario si se
 > añade la comprobación o se corrige la frase.
 
+#### Tomadas por el agente en el paso 8 del 2.10 (2026-10-02)
+
+Lo que el encargo dejó abierto al llegar a la pantalla. La puerta ya había decidido que es una
+página propia, como la de la trazabilidad.
+
+1. **La ruta es `/articulos/:id/gtin` y pide `catalogo.articulo.ver`**, que es lo que pide la lista
+   de los códigos. El formulario de alta solo sale con `catalogo.codigo-barras.agregar`, y los
+   botones de quitar, con `catalogo.codigo-barras.quitar`. El listado enlaza la pantalla en una
+   columna nueva, «Códigos de barras», con un «Ver» por fila que todo el que ve el listado ve, y
+   cuyo nombre accesible dice de qué artículo es.
+2. **Quitar se confirma en la misma fila, no en una ventana modal.** La baja borra de verdad, y el
+   proyecto no tiene un diálogo propio que reutilizar, y ux-ipo prohíbe rehacer uno a mano. La
+   pregunta sale en el sitio de los botones, con el foco en «Cancelar». Escape la cierra y devuelve
+   el foco al «Quitar» de la fila. Tras quitar, el foco va al aviso, porque la fila desaparece; y
+   tras no poder, al aviso del fallo, porque lo más probable es que también vaya a desaparecer.
+3. **La baja lee la versión de la fila justo antes del `DELETE`.** El listado no la trae, y la fila
+   no cambia nunca después del alta. El `If-Match` sigue parando el borrado de una fila que ya no es
+   la que se vio. Si alguien la quitó antes, esa lectura da el `404` `codigo-barras-no-encontrado`,
+   que se dice arriba, y la lista se vuelve a leer.
+4. **Los mensajes del esquema Zod son los `type` de la API**, y su texto sale de `errores.tipos`. El
+   formulario dice el largo, las cifras y el dígito de control sin ir a la red. La tabla de prefijos
+   y el duplicado los dice solo el servidor. Lo diga quien lo diga, el rechazo va en el campo del
+   GTIN, de las unidades o del nivel, y lo que no es de un campo va arriba.
+5. **La clave de idempotencia va con el intento**, como en la importación de terceros. Repetir el
+   mismo cuerpo repite la clave, cambiarlo la estrena, y tras un alta que sale bien se olvida
+   (`model/intentoDeAlta.ts`).
+6. **Los GTIN se enseñan en catorce cifras**, como los guarda y los compara el servidor.
+7. **El nivel empieza en la base, y las unidades solo se preguntan para una caja o un palé.** La
+   base no las manda: lleva una, y la pone el servidor. El grupo se llama «Nivel», como la columna,
+   y «Dónde va impreso» es su pista.
+8. **Tras un alta, el formulario se monta de nuevo** (una `key` que cuenta las altas), y no se
+   vacía con `reset()`. `handleSubmit` marca el formulario como enviado **después** de que vuelva
+   el manejador, así que un `reset()` dentro de él deja el siguiente validando desde la primera
+   cifra. Montado de nuevo, sale vacío, con un intento por estrenar y con el foco en el GTIN.
+9. **Lo ya enseñado no se retira si volver a leer falla.** Tras un alta o una baja la lista se lee
+   otra vez. Si esa lectura falla, la tabla y el aviso se quedan, con el fallo y su «Volver a
+   intentarlo» encima. La pantalla entera es el fallo solo cuando no hay nada que enseñar.
+10. **La región del aviso está siempre montada**, y lo que cambia es su contenido. Un lector de
+    pantalla no anuncia de forma fiable una región que nace ya con el texto dentro. Cada aviso
+    monta su párrafo de nuevo, así que uno que repite el texto del anterior también se anuncia.
+
 #### Los números de este encargo
 
 - **Las mutaciones llevan una sola numeración** (*Reglas de oro propias*). El encargo hace empezar la
@@ -7780,10 +7821,63 @@ lo enmienda.
    Es un barrido de hoy y no una regla permanente, como dice el §8. Volver a pasarlo toca con el
    primer documento de compra o de venta (fase 3), que es el primero que podría guardar lo que leyó
    el lector.
-8. La pantalla:
-   - la página, y su esquema Zod con el dígito de control;
-   - el `409` en su campo, en los dos idiomas, con Vitest y MSW;
-   - el recorrido por el nginx de verdad con `playwright-cli`.
+8. ~~La pantalla.~~ Hecho, con las decisiones en *Tomadas por el agente en el paso 8 del 2.10*:
+   - la página `ui/PaginaDeCodigosDeBarras.tsx`, en `/articulos/:id/gtin`, y su columna en el
+     listado;
+   - el esquema `model/esquemaDeAltaDeGtin.ts`, con el largo, las cifras, el dígito de control y
+     las unidades hasta el `int` del contrato;
+   - el intento de alta (`model/intentoDeAlta.ts`) y el cliente (`api/codigosDeBarras.ts`), que
+     traduce un nivel que no conoce a «desconocido» con un `switch`: un registro consultado con
+     `??` daría por bueno `constructor`.
+
+   Los casos:
+   - **28** en `LosCodigosDeBarrasDelArticulo.test.tsx`. Entre ellos está el `409` del duplicado en
+     su campo y en los dos idiomas. Cada rechazo del servidor llega al campo que le toca: los cuatro
+     de la tabla de prefijos al GTIN, las unidades a las suyas y el nivel a la descripción del
+     grupo. También están la clave por intento, la baja con su `If-Match`, la fila que otro quitó
+     antes y la lectura que falla después de un alta;
+   - **32** en `esquemaDeAltaDeGtin.test.ts`, con los números de `ElGtinTests`;
+   - uno más en `ElListadoDeArticulos.test.tsx` (14);
+   - y el barrido de rutas en **12**: 2 + 1 + 9, con 5 del catálogo.
+
+   Por fichero, `npx vitest run src/features/catalogo/articulos src/app/ElBarridoDeRutas.test.ts
+   --reporter=verbose` desde `frontend/`. El frontal entero da **19 ficheros y 174 casos**
+   (`npm --prefix frontend run test`), sin avisos de `act()`. El presupuesto queda en arranque
+   **421/450 KiB** y total **635/900 KiB**. El contrato no cambia.
+
+   **El recorrido, dos veces, por el nginx de una pila aparte** (`-p bastion-humo-210p`, en 45xxx)
+   y con `playwright-cli`. La sesión se cargó como estado del navegador, sin teclear la contraseña.
+   - **El primero:**
+     - la columna y su «Ver»;
+     - el vacío;
+     - el dígito de control en el campo, con el foco;
+     - una base, que sale en catorce cifras;
+     - una caja sin unidades y luego con doce;
+     - `2012345678903`, que lo para el servidor, en el campo;
+     - el duplicado como `409` en el campo, que se traduce al cambiar de idioma;
+     - la pregunta de quitar, con Escape y con «Sí, quitarlo».
+   - **El segundo**, tras la revisión, con la imagen del frontal rehecha:
+     - tras un alta, el foco en el GTIN, y una cifra tecleada sin error;
+     - quitar, con el foco en el aviso;
+     - una fila que otro quitó por la API con la pregunta abierta: el fallo arriba, con el foco, y
+       la lista vacía.
+
+   **Una revisión de tres agentes antes del commit** dejó estos cambios:
+   - el formulario montado de nuevo;
+   - la región del aviso siempre montada, y el foco en el fallo;
+   - el fallo de volver a leer, encima de la tabla y no en su lugar;
+   - el foco en el grupo cuando el servidor rechaza el nivel;
+   - el tope de las unidades;
+   - el `when` de Zod quitado, que sobraba porque un `addIssue` es continuable;
+   - el `switch` del nivel;
+   - y en el servidor simulado, la lista ordenada como la API, el `404` de otro artículo y los
+     rechazos con el estado de verdad (`400`, no `422`).
+
+   **Dos propuestas que no se aplican**, porque tocan más pantallas que esta:
+   - el detalle de «Sin reconocer» vive solo en un `title`, que no llega a todos los lectores ni al
+     tacto. Pasa lo mismo con el tipo y con la trazabilidad del listado;
+   - «Volver a los artículos» pierde la página, la búsqueda y la categoría del listado, igual que
+     en la trazabilidad.
 9. La tanda de mutaciones, desde la 119. Entre ellas, subir la pregunta del duplicado por encima del
    nivel y las unidades, que tiene que ver `El_duplicado_se_pregunta_despues_de_lo_que_trae_la_peticion`.
 10. La batería, el humo y los runs. La casilla y la línea del README van en el mismo commit.

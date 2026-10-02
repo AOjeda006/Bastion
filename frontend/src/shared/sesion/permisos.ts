@@ -15,6 +15,8 @@ export const PERMISOS = {
   articuloVer: 'catalogo.articulo.ver',
   articuloModificar: 'catalogo.articulo.modificar',
   categoriaVer: 'catalogo.categoria.ver',
+  codigoBarrasAgregar: 'catalogo.codigo-barras.agregar',
+  codigoBarrasQuitar: 'catalogo.codigo-barras.quitar',
   empresaVer: 'organizacion.empresa.ver',
   tarifaVer: 'catalogo.tarifa.ver',
   terceroVer: 'terceros.tercero.ver',

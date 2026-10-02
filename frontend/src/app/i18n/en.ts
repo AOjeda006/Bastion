@@ -41,6 +41,7 @@ export const en: Diccionario = {
     terceros: 'Business partners',
     importarTerceros: 'Import business partners',
     trazabilidadDelArticulo: 'Item traceability',
+    codigosDeBarrasDelArticulo: 'Item barcodes',
     noEncontrada: 'Page not found',
   },
 
@@ -176,7 +177,8 @@ export const en: Diccionario = {
       'codigo-barras-duplicado':
         'An item at this company already carries that GTIN. If it now belongs to another one, remove it from the first.',
       'codigo-barras-nivel-no-valido': 'A barcode goes on the base unit, on a case or on a pallet.',
-      'codigo-barras-no-encontrado': 'That barcode is no longer on this item. Refresh the screen.',
+      'codigo-barras-no-encontrado':
+        'That barcode is no longer on this item: someone removed it first.',
       'codigo-barras-unidades-no-validas':
         'The base unit holds one unit. A case or a pallet holds the base units inside it, which ' +
         'are two or more.',
@@ -231,7 +233,7 @@ export const en: Diccionario = {
         'date. Open the adjustment with a series from the year of its date.',
       'gtin-circulacion-restringida':
         'That is a restricted circulation number: a shop or a country assigns it for internal ' +
-        'use, and outside there it does not identify an item.',
+        'use, and outside that scope it does not identify an item.',
       'gtin-cupon': 'That is the number of a coupon or a refund voucher, not of an item.',
       'gtin-digito-de-control':
         'The last digit does not match the others: the number was misread or mistyped.',
@@ -243,8 +245,8 @@ export const en: Diccionario = {
         'not identify an item.',
       'gtin-no-son-digitos': 'A GTIN is digits only: no letters, dashes or spaces inside.',
       'gtin-sin-asignar':
-        'That prefix is reserved, or belongs to something that is not an item, so it is no ' +
-        'item’s GTIN.',
+        'That prefix is reserved, or belongs to something that is not an item, so it is not ' +
+        'the GTIN of any item.',
       'idempotencia-clave-no-valida':
         'The application sent a retry key that is not valid. Please try again.',
       'idempotencia-cuerpo-distinto':
@@ -372,6 +374,9 @@ export const en: Diccionario = {
       trazabilidad: 'Traceability',
       cambiar: 'Change',
       cambiarLaDe: 'Change the traceability of {{codigo}}',
+      codigosDeBarras: 'Barcodes',
+      verCodigosDeBarras: 'View',
+      verCodigosDeBarrasDe: 'View the barcodes of {{codigo}}',
 
       filtro: 'Search by code or description',
       filtrar: 'Search',
@@ -417,6 +422,46 @@ export const en: Diccionario = {
         guardando: 'Saving…',
         guardada: 'Saved. The traceability is now “{{trazabilidad}}”.',
         recargar: 'Load the current version',
+        volver: 'Back to the items',
+      },
+
+      niveles: {
+        base: 'Base unit',
+        caja: 'Case',
+        palet: 'Pallet',
+        desconocido: 'Unrecognised',
+        desconocidoDetalle:
+          'This version of the screen does not know how to read the level that arrived. Tell ' +
+          'whoever administers Bastion.',
+      },
+
+      gestionDeCodigosDeBarras: {
+        cargando: 'the barcodes',
+        articulo: 'Item',
+        tabla: 'Barcodes of {{codigo}}',
+        gtin: 'GTIN',
+        nivel: 'Level',
+        unidades: 'Base units',
+        acciones: 'Actions',
+        ninguno: 'This item has no barcode yet.',
+        quitar: 'Remove',
+        quitarElDe: 'Remove GTIN {{gtin}}',
+        confirmar: 'Remove GTIN {{gtin}} from this item?',
+        siQuitar: 'Yes, remove it',
+        cancelar: 'Cancel',
+        quitando: 'Removing…',
+        quitado: 'GTIN {{gtin}} removed.',
+        alta: 'Add a barcode',
+        campoGtin: 'GTIN',
+        pistaGtin: 'The 8, 12, 13 or 14 digits under the bars.',
+        leyendaNivel: 'Level',
+        pistaNivel:
+          'Where it is printed: on the unit sold on its own, on the case or on the pallet.',
+        campoUnidades: 'Base units it contains',
+        pistaUnidades: 'Two or more. If they change, it is another GTIN.',
+        agregar: 'Add',
+        agregando: 'Adding…',
+        agregado: 'GTIN {{gtin}} added.',
         volver: 'Back to the items',
       },
     },

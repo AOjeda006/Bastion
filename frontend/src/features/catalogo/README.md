@@ -11,18 +11,22 @@ está filtrando—, que es exactamente lo que distingue «una funcionalidad» de
 
 ## `articulos` — los artículos de la empresa activa
 
-**Propósito.** Enseñar los artículos con los que se opera, paginados y filtrados, y cambiar la
-trazabilidad de uno mientras todavía se puede (ítem 2.9).
+**Propósito.** Enseñar los artículos con los que se opera, paginados y filtrados, cambiar la
+trazabilidad de uno mientras todavía se puede (ítem 2.9), y llevar los códigos de barras que lo
+identifican (ítem 2.10).
 
 ### Rutas
 
-| Ruta                          | Exigencia                             | Título                    |
-| ----------------------------- | ------------------------------------- | ------------------------- |
-| `/articulos`                  | permiso `catalogo.articulo.ver`       | Artículos                 |
-| `/articulos/:id/trazabilidad` | permiso `catalogo.articulo.modificar` | Trazabilidad del artículo |
+| Ruta                          | Exigencia                             | Título                         |
+| ----------------------------- | ------------------------------------- | ------------------------------ |
+| `/articulos`                  | permiso `catalogo.articulo.ver`       | Artículos                      |
+| `/articulos/:id/trazabilidad` | permiso `catalogo.articulo.modificar` | Trazabilidad del artículo      |
+| `/articulos/:id/gtin`         | permiso `catalogo.articulo.ver`       | Códigos de barras del artículo |
 
-La segunda no sale en la navegación: se llega desde la fila del artículo, con un enlace que solo ve
-quien puede modificar.
+Las dos últimas no salen en la navegación: se llega desde la fila del artículo. Al cambio de la
+trazabilidad, con un enlace que solo ve quien puede modificar; a los códigos de barras, con uno que
+ve todo el que ve el listado. Dentro, el formulario de alta pide `catalogo.codigo-barras.agregar` y
+los botones de quitar, `catalogo.codigo-barras.quitar`.
 
 Parámetros de URL: `?pagina=`, `?tamanio=`, `?busqueda=` y `?categoria=`. En la URL y no en un
 `useState` por lo de siempre: el listado acotado se puede pegar en un correo, la flecha de atrás
@@ -39,11 +43,13 @@ factura— y el otro es el identificador de una rama del árbol de la propia emp
 ['articulos', 'lista']                                           → clavesDeArticulos.listas()
 ['articulos', 'lista', { pagina, tamanio, busqueda, categoriaId }] → clavesDeArticulos.lista(listado)
 ['articulos', 'una', id]                                         → clavesDeArticulos.una(id)
+['articulos', 'codigosDeBarras', id]                             → clavesDeArticulos.codigosDeBarras(id)
 ```
 
 `staleTime` de cinco minutos en el listado: un artículo es dato maestro, se da de alta y se queda
 ahí. La ficha (`una`) no lo lleva: se lee para escribir sobre ella, y su versión tiene que ser la de
-ahora.
+ahora. Los códigos de barras van aparte de la ficha porque no la cambian ni cambian su versión: el
+alta y la baja invalidan solo los suyos.
 
 ## `categorias` — el árbol de clasificación
 
@@ -146,6 +152,20 @@ declarada de `NingunCriterioSensibleViajaEnLaUrlTests`.
 - **La trazabilidad tiene su `desconocida`**, por lo mismo que el tipo. En la pantalla de cambio, una
   guardada que no se reconoce no se marca: hay que elegir una, y guardar sin elegir lo para el
   esquema sin ir al servidor.
+- **El formulario de los códigos de barras replica la cuenta y deja la tabla al servidor.** Largo y
+  dígito de control se dicen sin ir a la red; la tabla de prefijos que no son de un artículo
+  (ADR-0051 §4) y el duplicado, solo allí, porque copiarla obligaría a seguir la del dominio línea a
+  línea. Los mensajes del esquema son los `type` de la API, así que el texto sale de
+  `errores.tipos` y es el mismo lo diga quien lo diga, en el campo del GTIN, de las unidades o del
+  nivel. Los GTIN se enseñan en catorce cifras, como los guarda y los compara el servidor.
+- **La clave de idempotencia del alta va con el intento**, como en la importación de terceros:
+  repetir el mismo cuerpo repite la clave, cambiarlo la estrena, y tras un alta que sale bien se
+  olvida (`model/intentoDeAlta.ts`).
+- **Quitar un código se confirma en la fila**, no en una ventana: la baja borra de verdad y el
+  proyecto no tiene un diálogo propio que reutilizar. La pregunta sale en el sitio de los botones,
+  con el foco en «Cancelar», y Escape la cierra. El listado no trae la versión de cada fila, así que
+  la baja la lee justo antes y la manda en el `If-Match`; si la fila ya no está, esa lectura da el
+  `404`, que se dice arriba, y la lista se vuelve a leer.
 - **La unidad y el impuesto de un artículo no se pintan.** Son identificadores de dos maestros de
   otro módulo, y esta funcionalidad no importa de aquélla: enseñar el `uuid` no le dice nada a
   nadie. Que existan, que estén vigentes y que una unidad retirada no valga para un alta lo decide

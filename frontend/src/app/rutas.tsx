@@ -137,6 +137,19 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
         .PaginaDeTrazabilidad,
   },
   {
+    // Fuera de la navegación, como la trazabilidad, y por el permiso de ver: lo que pide la lista
+    // de los códigos. Dar de alta y quitar tienen los suyos, y la pantalla esconde el formulario y
+    // los botones a quien no los tiene (ítem 2.10).
+    ruta: '/articulos/:id/gtin',
+    duenio: 'catalogo',
+    claveDeTitulo: 'codigosDeBarrasDelArticulo',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.articuloVer },
+    enLaNavegacion: false,
+    cargar: async () =>
+      (await import('@/features/catalogo/articulos/ui/PaginaDeCodigosDeBarras.tsx'))
+        .PaginaDeCodigosDeBarras,
+  },
+  {
     ruta: '/categorias',
     duenio: 'catalogo',
     claveDeTitulo: 'categorias',

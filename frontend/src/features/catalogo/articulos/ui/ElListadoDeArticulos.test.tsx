@@ -18,7 +18,7 @@ const TORNILLERIA = 'eeeeeee1-0000-0000-0000-000000000002';
  * que son de aquí: **el filtro por rama**, que se pone desde el árbol y se anuncia con su nombre, y
  * **el tipo del artículo**, que viaja como texto y por tanto puede llegar con un valor que esta
  * versión no conozca. Y desde el ítem 2.9, **la trazabilidad**, con el mismo cuidado y con el enlace
- * a su pantalla para quien puede cambiarla.
+ * a su pantalla para quien puede cambiarla. Desde el 2.10, el enlace a los códigos de barras.
  */
 describe('El listado de artículos', () => {
   it('mientras llegan, dice que está cargando', async () => {
@@ -286,5 +286,25 @@ describe('El listado de artículos', () => {
         .getAllByRole('link', { name: /^Cambiar la trazabilidad de / })
         .map((e) => e.textContent),
     ).toEqual(['Cambiar', 'Cambiar', 'Cambiar']);
+  });
+
+  it('a quien ve el listado, cada fila le enlaza sus códigos de barras y dice de qué artículo', async () => {
+    abrirSesionYaRecuperada(ALFA.id, PERMISOS_DE_LECTURA);
+
+    montarPantalla(<PaginaDeArticulos />, '/articulos');
+
+    const enlace = await screen.findByRole('link', {
+      name: 'Ver los códigos de barras de TOR-M6',
+    });
+    expect(enlace).toHaveTextContent('Ver');
+    expect(enlace).toHaveAttribute('href', '/articulos/fffffff1-0000-0000-0000-000000000001/gtin');
+    expect(screen.getByRole('columnheader', { name: 'Códigos de barras' })).toBeVisible();
+
+    // Con el permiso de ver basta: es el que pide la pantalla, que dentro esconde lo demás.
+    expect(
+      screen
+        .getAllByRole('link', { name: /^Ver los códigos de barras de / })
+        .map((e) => e.textContent),
+    ).toEqual(['Ver', 'Ver', 'Ver']);
   });
 });

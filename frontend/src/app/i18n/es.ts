@@ -54,6 +54,7 @@ export const es = {
     terceros: 'Terceros',
     importarTerceros: 'Importar terceros',
     trazabilidadDelArticulo: 'Trazabilidad del artículo',
+    codigosDeBarrasDelArticulo: 'Códigos de barras del artículo',
     noEncontrada: 'Página no encontrada',
   },
 
@@ -214,7 +215,7 @@ export const es = {
       'codigo-barras-nivel-no-valido':
         'Un código de barras va en la unidad base, en una caja o en un palé.',
       'codigo-barras-no-encontrado':
-        'Ese código de barras ya no está en este artículo. Actualiza la pantalla.',
+        'Ese código de barras ya no está en este artículo: alguien lo ha quitado antes.',
       'codigo-barras-unidades-no-validas':
         'La unidad base lleva una unidad. Una caja o un palé llevan las unidades base que ' +
         'contienen, que son dos o más.',
@@ -424,6 +425,10 @@ export const es = {
       // El nombre accesible del enlace lleva el código: en una tabla, veinte enlaces que se
       // llaman «Cambiar» no dicen cuál es cuál a quien los recorre con el lector de pantalla.
       cambiarLaDe: 'Cambiar la trazabilidad de {{codigo}}',
+      codigosDeBarras: 'Códigos de barras',
+      verCodigosDeBarras: 'Ver',
+      // Por lo mismo que «Cambiar»: veinte enlaces que se llaman «Ver» no dicen de qué artículo.
+      verCodigosDeBarrasDe: 'Ver los códigos de barras de {{codigo}}',
 
       // El filtro dice por dónde busca. Quien lee «Buscar» a secas prueba con la unidad o con el
       // impuesto —que ni se enseñan ni se filtran— y concluye que el artículo no está.
@@ -477,6 +482,49 @@ export const es = {
         guardando: 'Guardando…',
         guardada: 'Guardado. La trazabilidad es ahora «{{trazabilidad}}».',
         recargar: 'Cargar la versión actual',
+        volver: 'Volver a los artículos',
+      },
+
+      // `Palet` en el código y «palé» en la pantalla (ADR-0051 §11).
+      niveles: {
+        base: 'Unidad base',
+        caja: 'Caja',
+        palet: 'Palé',
+        desconocido: 'Sin reconocer',
+        desconocidoDetalle:
+          'Esta versión de la pantalla no sabe interpretar el nivel que ha llegado. Avisa a quien ' +
+          'administre Bastion.',
+      },
+
+      // La pantalla de los códigos de barras (ítem 2.10). Los rechazos no están aquí: son los
+      // `errores.tipos` de la API, los diga el formulario o el servidor.
+      gestionDeCodigosDeBarras: {
+        cargando: 'los códigos de barras',
+        articulo: 'Artículo',
+        tabla: 'Códigos de barras de {{codigo}}',
+        gtin: 'GTIN',
+        nivel: 'Nivel',
+        unidades: 'Unidades base',
+        acciones: 'Acciones',
+        ninguno: 'Este artículo todavía no tiene ningún código de barras.',
+        quitar: 'Quitar',
+        quitarElDe: 'Quitar el GTIN {{gtin}}',
+        // La baja borra de verdad: se confirma en la misma fila antes de mandarla.
+        confirmar: '¿Quitar el GTIN {{gtin}} de este artículo?',
+        siQuitar: 'Sí, quitarlo',
+        cancelar: 'Cancelar',
+        quitando: 'Quitando…',
+        quitado: 'Quitado el GTIN {{gtin}}.',
+        alta: 'Dar de alta un código de barras',
+        campoGtin: 'GTIN',
+        pistaGtin: 'Las 8, 12, 13 o 14 cifras que van bajo las barras.',
+        leyendaNivel: 'Nivel',
+        pistaNivel: 'Dónde va impreso: en la unidad que se vende suelta, en la caja o en el palé.',
+        campoUnidades: 'Unidades base que contiene',
+        pistaUnidades: 'Dos o más. Si cambian, es otro GTIN.',
+        agregar: 'Dar de alta',
+        agregando: 'Dando de alta…',
+        agregado: 'Dado de alta el GTIN {{gtin}}.',
         volver: 'Volver a los artículos',
       },
     },
