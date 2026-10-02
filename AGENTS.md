@@ -187,6 +187,10 @@ en el PLAN. Lo que solo vale en esta máquina o en su *shell* se quedó fuera.
   decide el desenlace y los generadores en modo `--comprobar`. En el 2.3 el run murió en el catálogo
   de errores con los dos carriles en verde. Si un generador cambia algo, se busca quién consume su
   salida: un `type` nuevo necesita su texto en todos los diccionarios.
+- **Un commit que solo toca documentos también pasa el carril rápido.** `docs/PLAN.md` y el
+  README son entrada de `ElEstadoDelReadmeEsElDelPlanTests`, y marcar una casilla cambia la línea
+  que el README tiene que decir. En el cierre del 2.9, `e6975ed` marcó la suya sin mover el README
+  y puso `main` rojo (run 36972547394). La casilla y la línea del README van en el mismo commit.
 - **Parado no es ausente, y lo que no necesita la dependencia se ejerce sin ella.** «No se puede en
   local» se comprueba: en el 1.7 Docker solo estaba apagado, y 334 rojos pasaron a 334 verdes.
   Antes de empujar un test que no se puede correr, un canario temporal ejerce lo que no la necesita.
