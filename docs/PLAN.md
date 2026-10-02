@@ -5839,7 +5839,7 @@ los commits desde `dca9b83`, con sus runs de rama y de `main`.
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 9 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 10 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -7719,7 +7719,7 @@ revierte con `git restore --source=HEAD`, se toca la fecha del fichero y se reco
 | 117 | El cuadre deja de mirar la fecha: el `WHERE` del descuadre `valoracion-fecha`, cambiado por `WHERE false`. | sobre `33abe32`, 2 de los 12 de `LaValoracionDelAjusteTests`. `El_cuadre_encuentra_cada_ultima_fecha_que_no_es_la_del_libro` echa en falta los tres descuadres, el adelantado, el atrasado y el nulo; y `El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro`, el de la valoración que falta |
 | 118 | El cuadre compara la fecha con `<>` en vez de con `IS DISTINCT FROM`. | sobre `33abe32`, los mismos 2, pero cada uno echa en falta **solo el nulo**: el de la clave sin fecha en el primero y el de la valoración que falta en el segundo. El adelantado y el atrasado siguen saliendo, y eso es lo que separa la 118 de la 117 |
 
-**El 2.10, en curso**, en la rama `2.10-el-gtin-del-articulo`, abierta desde `main` en `3cf9cea`. El
+**El 2.10, cerrado el 2026-10-03**, en la rama `2.10-el-gtin-del-articulo`, abierta desde `main` en `3cf9cea`. El
 encargo está en *Decisiones tomadas → El 2.10: el GTIN del artículo*, y la puerta, contestada justo
 debajo. Las mutaciones empiezan en la **119**, y los ADR son el **ADR-0051** y el **ADR-0052**, que
 lo enmienda.
@@ -7925,7 +7925,83 @@ lo enmienda.
    | 149 | La región del aviso sin `role="status"`. | 7: todos los que leen el aviso por su papel |
    | 150 | `nivelDe` con un registro y `??` en vez del `switch`. | 1: el nivel `constructor`, que deja de salir como «Sin reconocer» |
    | 151 | **La del arnés**: el servidor simulado deja de rechazar el alta (`rechazoDelAlta === undefined`), sin tocar la pantalla. | 10: los diez casos que le piden un rechazo, y ninguno de los que no se lo piden |
-10. La batería, el humo y los runs. La casilla y la línea del README van en el mismo commit.
+10. ~~La batería, el humo y los runs. La casilla y la línea del README van en el mismo commit.~~
+    Hecho: la batería y el humo, abajo, y la casilla con la línea del README, que pasa a **10 de
+    14**, en el mismo commit. El run de la rama lo anota el commit siguiente, que espera su propio
+    verde en la rama antes de que `main` avance.
+
+    **Los commits del ítem**, desde `3cf9cea`, con los runs de la rama. Son **seis**, todos en
+    verde al primer intento y ninguno cancelado (`GET …/actions/runs?branch=2.10-el-gtin-del-articulo`
+    da `total_count: 6`). Donde un empujón llevó varios commits, el run es el del último:
+
+    | Commit | Qué | Run |
+    |---|---|---|
+    | `4ca693b` | abre el 2.10, con su puerta contestada | con `8627c90` |
+    | `6c78c75` | el ADR-0051 | con `8627c90` |
+    | `4a4e1fe` | el ADR-0052 | con `8627c90` |
+    | `8627c90` | el `Gtin` y el `CodigoBarras`, con TDD | 37001171644 |
+    | `a4add98` | la tabla y su índice, que contesta `409` | 37002127307 |
+    | `1d3c1be` | los casos de uso y la API | 37033525518 |
+    | `9fff603` | la carrera | con `03ecdb2` |
+    | `03ecdb2` | el barrido del paso 7 | 37034709066 |
+    | `aa83e57` | la pantalla | 37068274195 |
+    | `1030a28` | las 33 mutaciones | 37069546723 |
+
+    **La batería**, sobre `1030a28`, es la de *Comandos del proyecto*, en su orden, y todos los
+    pasos salen con 0:
+    - el contrato sin cambios (`git status --porcelain -- frontend/src/shared/api/esquema.ts`,
+      vacío), y las migraciones, el OpenAPI (**135** operaciones) y el catálogo de errores (**144**
+      tipos), al día;
+    - el frontal: tipos, lint, formato, Vitest con **174** casos y **0** avisos de `act()` (`grep -c
+      'not wrapped in act'` sobre la salida de `npm --prefix frontend run test`), el build y el
+      presupuesto en **421/450** y **635/900** KiB;
+    - el backend: build y formato, y los dos recuentos, **1212** casos en 10 ensamblados y **556**
+      de integración (472 + 84), todos correctos;
+    - las dependencias, `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py 3cf9cea
+      HEAD`: ningún conjunto cambia. Son los 125 pares de los 45 `packages.lock.json`, los 35
+      `Project` y las 440 entradas del frontal sin la raíz. Sin la variable, el guion cae en esta
+      consola con un `UnicodeEncodeError`, porque la flecha `→` no cabe en `cp1252`; es de la
+      consola y no del árbol.
+
+    **El humo** va en su propio proyecto de *compose*, `bastion-humo-210`, con una copia del `.env`
+    en el *scratchpad* y los puertos en 45xxx. Sale con **0 fallos** y lee del catálogo del motor lo
+    que el ítem cambia:
+    - la tabla `catalogo.codigos_barras`, y el índice como `CREATE UNIQUE INDEX
+      ix_codigos_barras_gtin_uno_por_empresa … (empresa_id, gtin)`;
+    - los tres `CHECK` con su definición: el GTIN contra `'^[0-9]{14}$'`, el nivel entre sus tres
+      nombres, y una unidad para la base y dos o más para lo demás;
+    - `LosCodigosDeBarrasDelArticulo`, una vez en el historial, y el rol del sistema con **97**
+      permisos, los dos nuevos sembrados.
+
+    Después, de punta a punta:
+    - la salud, el `401` sin credenciales y la sesión;
+    - el alta de un artículo y la de su base `4006381333931`, que vuelve como `201` con
+      `04006381333931`, una unidad y su `Location`, y cuya lectura trae una ETag fuerte;
+    - el mismo número escrito en catorce, como caja: `409` `codigo-barras-duplicado`;
+    - `2012345678903`: `400` `gtin-circulacion-restringida`;
+    - la lista, y la búsqueda escrita en trece, que encuentra uno; en la base, `04006381333931 Base 1`;
+    - por el frontal, la carga, el `401` reenviado y la misma ETag que la API.
+
+    Tras el segundo arranque, el índice y la fila siguen. El desmontaje deja `docker compose ls -a`
+    con `bastion` y nada más, y borra la copia del `.env` y el testigo.
+
+    **La primera vuelta del humo dio 1 fallo, y era mío.** Esperaba una ETag en el `201` del alta, y
+    la casa no la da ahí: `ResponderCreado` contesta con `CreatedAtAction`, un `201` con su
+    `Location` y sin ETag, y la versión la trae la lectura de la fila (`ResponderConVersion`). El
+    guion pasó a comprobar el `Location` y a leer la fila por él. El servidor simulado de
+    `LosCodigosDeBarrasDelArticulo.test.tsx` tenía la misma idea equivocada —su `POST` devolvía una
+    ETag— y en este commit contesta como la API. La pantalla no la leía —la ETag que usa es la de la
+    lectura de la fila antes de quitarla—, así que ningún caso cambia de color: los 174 siguen en
+    verde y sin avisos.
+
+    **Dos propuestas que no se aplican**, porque no son trabajo de este ítem. Se suman a la de
+    `AgregarProveedorAlArticulo`, anotada en las decisiones del paso 5, y a las dos de la pantalla,
+    en el paso 8:
+    - el barrido del paso 7 podría ser una regla permanente sobre las instantáneas del modelo, en
+      vez de un barrido que se repite a mano en la fase 3;
+    - la 139 enseña que los ejemplos de 13 y 14 cifras cuadran también con todos los pesos a 3. Un
+      ejemplo de cada largo que no cuadre así haría que los casos del dígito de control no
+      dependieran de la suerte.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -16002,13 +16078,128 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **418/450** y **616/900** KiB. Antes que él, el de su rama, `2.9-la-linea-del-readme`, el
   **36973415099**, también en verde. Anotado al abrir el epílogo del 2.9.
 
-- [ ] **2.10 · El GTIN del artículo** — criterio de aceptación: **varios GTIN por artículo** con su
+- [x] **2.10 · El GTIN del artículo** — criterio de aceptación: **varios GTIN por artículo** con su
   nivel (base, caja, palé), en **columna de texto**, normalizados a **14 dígitos** al entrar y
   comparados sobre esa forma, con el **dígito de control validado en la frontera** —no al consultar— y
   sus casos dorados, incluidos los ceros a la izquierda de un GTIN-12, que se conservan; el GTIN **no
   es clave primaria** de nada; y un GTIN repetido dentro de la empresa contesta `409` con su `type`.
   El **analizador de GS1-128 no entra**, y su disparador queda escrito con nombre: la primera pantalla
   que reciba la lectura de un código compuesto.
+
+  **Hecho el 2026-10-03**, en la rama `2.10-el-gtin-del-articulo`. El porqué está en el
+  [ADR-0051](adr/adr-0051-el-gtin-es-un-hijo-del-articulo-normalizado-a-catorce.md) y en el
+  [ADR-0052](adr/adr-0052-se-llama-codigo-barras-y-las-rcn-12-se-rechazan.md), que lo enmienda: el
+  agregado se llama `CodigoBarras`, como en el §7.3, y la tabla de prefijos rechaza también las
+  RCN-12. Los commits, las mutaciones de la 119 a la 151, la batería y el humo están en *Estado
+  actual → El 2.10, cerrado*. Cada punto del criterio tiene su caso:
+
+  - varios GTIN por artículo, con su nivel: en el dominio,
+    `ElCodigoDeBarrasTests.La_base_lleva_una_unidad_y_la_caja_y_el_palet_dos_o_mas`; en el caso de
+    uso, `CodigosBarrasDelArticuloTests.Un_articulo_lleva_varios_gtin_del_mismo_nivel`; por la API,
+    `ContratoDelCodigoDeBarrasTests.Un_gtin_se_da_de_alta_con_201_en_catorce_cifras_y_el_listado_lo_trae`,
+    que da de alta dos bases y dos cajas. La pantalla, `LosCodigosDeBarrasDelArticulo.test.tsx`;
+  - en columna de texto: `varchar(14)` con el `CHECK` `ck_codigos_barras_gtin_catorce_cifras`, que
+    el humo lee del motor. La migración la comprueba `comprobar-migraciones.sh`;
+  - normalizados a catorce al entrar y comparados sobre esa forma:
+    `ElGtinTests.Cada_largo_admitido_se_guarda_en_catorce_con_ceros_a_la_izquierda` y
+    `…El_mismo_GTIN_con_doce_y_con_trece_digitos_da_la_misma_cadena`;
+    `CodigosBarrasDelArticuloTests.El_gtin12_y_su_forma_de_13_chocan_aunque_sea_otro_articulo` y
+    `…La_busqueda_encuentra_el_mismo_numero_escrito_de_otra_forma`; y por la API,
+    `ContratoDelCodigoDeBarrasTests.El_gtin12_y_su_forma_de_13_chocan_en_otro_articulo_y_la_busqueda_los_iguala`;
+  - el dígito de control, en la frontera: lo comprueba `Gtin.Leer` antes de que nada se guarde,
+    `ElGtinTests.Un_digito_de_control_que_no_cuadra_se_rechaza_en_cada_largo`; el caso de uso lo
+    convierte en su `400`, `CodigosBarrasDelArticuloTests.Un_gtin_que_no_sirve_da_el_type_de_su_motivo`;
+    y por la API, `ContratoDelCodigoDeBarrasTests.Cada_rechazo_es_un_400_con_su_type_y_no_deja_fila`.
+    El esquema del frontal lo adelanta, `esquemaDeAltaDeGtin.test.ts`, y no lo sustituye;
+  - los casos dorados, con los ceros de un GTIN-12: `036000291452` y `001234567895` se guardan como
+    `00036000291452` y `00001234567895` en
+    `ElGtinTests.Cada_largo_admitido_se_guarda_en_catorce_con_ceros_a_la_izquierda`, y el frontal los
+    admite con los mismos números;
+  - el GTIN no es clave de nada: la clave es el `id`, un `uuid` v7, y el GTIN lleva un índice único
+    con la empresa, no una clave. No tiene caso propio: lo dicen la migración, que comprueba
+    `comprobar-migraciones.sh`, y el barrido del paso 7, que es de hoy y no permanente;
+  - un GTIN repetido dentro de la empresa es un `409` `codigo-barras-duplicado`: la comprobación
+    previa, `CodigosBarrasDelArticuloTests.El_duplicado_previo_es_el_mismo_error_que_traduce_el_indice`;
+    el índice, con dos altas a la vez,
+    `ContratoDelCodigoDeBarrasTests.Dos_altas_del_mismo_gtin_a_la_vez_dejan_una_y_la_otra_es_un_409`;
+    y otra empresa sí puede llevarlo,
+    `ContratoDelCodigoDeBarrasTests.Otra_empresa_lleva_el_mismo_gtin_y_cada_una_ve_solo_el_suyo`.
+    En la pantalla, el duplicado va en su campo y en los dos idiomas;
+  - el analizador de GS1-128 no entra, y su disparador está escrito en el ADR-0051 §9: la primera
+    pantalla que reciba la lectura de un código compuesto.
+
+  Son **49** métodos nuevos en el servidor: **30** vistos en rojo por la tanda y **19** solo en
+  verde. Salen de `git diff 3cf9cea..HEAD -- tests`, buscando las firmas `public … Task|void`
+  añadidas, sin `Dispose` y sin las dos del doble `CodigosBarrasEnMemoria`. No hay ninguno
+  renombrado ni quitado. En el frontal hay **61** casos nuevos —28 de la pantalla, 32 del esquema y
+  1 del listado—: **22** vistos en rojo y **39** solo en verde. Los verdes son la carga, el vacío, el
+  nivel `Bandeja`, los cinco valores que para el formulario, cancelar, los permisos y el artículo
+  que no está; en el esquema, los largos, las cifras de otra escritura, los espacios, las unidades,
+  la clave, y los números de 13 y 14 cifras y el GTIN-12 con ceros, que cuadran también con todos
+  los pesos a 3 (el hallazgo de la 139), con los dígitos de control mal escritos sobre ellos; y el
+  enlace del listado. Los dos de `ElBarridoDeRutas` se renombraron, al pasar de 11
+  a 12 rutas, y ninguna mutación de esta tanda los toca.
+
+  **Vistos en rojo** —entre paréntesis, la mutación que lo puso rojo—:
+
+  - `CodigosBarrasDelArticuloTests.El_alta_de_la_base_guarda_el_gtin_en_catorce_y_una_unidad` (119, 120)
+  - `CodigosBarrasDelArticuloTests.El_duplicado_previo_es_el_mismo_error_que_traduce_el_indice` (120)
+  - `CodigosBarrasDelArticuloTests.El_duplicado_se_pregunta_despues_de_lo_que_trae_la_peticion` (120, 136)
+  - `CodigosBarrasDelArticuloTests.El_gtin12_y_su_forma_de_13_chocan_aunque_sea_otro_articulo` (119, 120)
+  - `CodigosBarrasDelArticuloTests.El_listado_devuelve_solo_los_del_articulo` (119, 120)
+  - `CodigosBarrasDelArticuloTests.La_busqueda_de_lo_que_no_es_un_gtin_es_un_400` (119, 120, 129)
+  - `CodigosBarrasDelArticuloTests.La_busqueda_de_un_gtin_que_nadie_lleva_es_una_lista_vacia` (120)
+  - `CodigosBarrasDelArticuloTests.La_busqueda_encuentra_el_mismo_numero_escrito_de_otra_forma` (119, 120)
+  - `CodigosBarrasDelArticuloTests.Las_unidades_que_no_cuadran_con_el_nivel_son_un_400` (120)
+  - `CodigosBarrasDelArticuloTests.Quitar_borra_la_fila_y_confirma` (120)
+  - `CodigosBarrasDelArticuloTests.Un_articulo_lleva_varios_gtin_del_mismo_nivel` (120)
+  - `CodigosBarrasDelArticuloTests.Un_gtin_que_no_sirve_da_el_type_de_su_motivo` (119, 120, 121, 127, 128, 129)
+  - `CodigosBarrasDelArticuloTests.Un_nivel_que_no_es_uno_de_los_tres_nombres_es_un_400` (120)
+  - `CodigosBarrasDelArticuloTests.Una_caja_guarda_las_unidades_que_dice` (120)
+  - `ContratoDelCodigoDeBarrasTests.Dos_altas_del_mismo_gtin_a_la_vez_dejan_una_y_la_otra_es_un_409` (137, 138)
+  - `ElCodigoDeBarrasTests.La_base_lleva_una_unidad_y_la_caja_y_el_palet_dos_o_mas` (120)
+  - `ElCodigoDeBarrasTests.Nace_con_lo_que_se_le_da_y_con_su_propio_identificador` (120)
+  - `ElCodigoDeBarrasTests.Sin_empresa_sin_articulo_o_sin_GTIN_lanza` (120)
+  - `ElCodigoDeBarrasTests.Un_nivel_inventado_lanza_por_el_nivel_aunque_sus_unidades_valgan_para_una_caja` (120)
+  - `ElCodigoDeBarrasTests.Unas_unidades_que_no_son_las_de_su_nivel_lanzan` (120)
+  - `ElGtinTests.Cada_fila_de_la_tabla_de_prefijos_rechaza_con_su_motivo` (de la 119 a la 134, las dieciséis)
+  - `ElGtinTests.Cada_largo_admitido_se_guarda_en_catorce_con_ceros_a_la_izquierda` (119, 120)
+  - `ElGtinTests.El_mismo_GTIN_con_doce_y_con_trece_digitos_da_la_misma_cadena` (119, 120)
+  - `ElGtinTests.El_prefijo_se_lee_detras_del_indicador_de_un_GTIN_14` (120, 122, 126, 134)
+  - `ElGtinTests.La_lectura_no_deja_pedir_lo_que_no_tiene` (120)
+  - `ElGtinTests.Los_vecinos_de_cada_fila_y_los_admitidos_a_proposito_son_GTIN_de_articulo` (119, 120, 121, 128)
+  - `ElGtinTests.Ningun_texto_hace_lanzar_a_la_lectura_y_lo_que_admite_cumple_lo_que_promete` (119, 120)
+  - `ElGtinTests.Se_recortan_los_espacios_de_los_extremos_y_nada_mas` (119, 120)
+  - `ElGtinTests.Un_GTIN_8_escrito_en_trece_se_lee_con_su_tabla` (119, 120, 122, 134)
+  - `ElGtinTests.Un_digito_de_control_que_no_cuadra_se_rechaza_en_cada_largo` (120)
+
+  **Vistos solo en verde** —sostienen lo que dicen y nada más—:
+
+  - `CodigosBarrasDelArticuloTests.Cada_motivo_tiene_su_type_y_todos_son_de_validacion`
+  - `CodigosBarrasDelArticuloTests.Con_la_empresa_inoperativa_no_se_llega_ni_al_articulo`
+  - `CodigosBarrasDelArticuloTests.El_articulo_que_no_existe_es_un_404_antes_que_el_gtin`
+  - `CodigosBarrasDelArticuloTests.El_listado_de_un_articulo_que_no_existe_es_un_404_y_no_una_lista_vacia`
+  - `CodigosBarrasDelArticuloTests.Quitar_lo_que_no_existe_es_un_404`
+  - `CodigosBarrasDelArticuloTests.Un_motivo_sin_su_rama_lanza_y_no_se_disfraza_de_otro`
+  - `ContratoDelCodigoDeBarrasTests.Cada_rechazo_es_un_400_con_su_type_y_no_deja_fila`
+  - `ContratoDelCodigoDeBarrasTests.El_gtin12_y_su_forma_de_13_chocan_en_otro_articulo_y_la_busqueda_los_iguala`
+  - `ContratoDelCodigoDeBarrasTests.El_reintento_con_la_misma_clave_repite_el_201_y_no_es_un_409`
+  - `ContratoDelCodigoDeBarrasTests.La_baja_exige_su_version_borra_la_fila_y_la_segunda_es_404`
+  - `ContratoDelCodigoDeBarrasTests.Las_lecturas_distinguen_lo_que_no_existe_de_lo_que_no_es_un_gtin`
+  - `ContratoDelCodigoDeBarrasTests.Otra_empresa_lleva_el_mismo_gtin_y_cada_una_ve_solo_el_suyo`
+  - `ContratoDelCodigoDeBarrasTests.Tras_la_baja_el_mismo_gtin_se_da_de_alta_en_otro_articulo`
+  - `ContratoDelCodigoDeBarrasTests.Un_gtin_se_da_de_alta_con_201_en_catorce_cifras_y_el_listado_lo_trae`
+  - `ElCodigoDeBarrasTests.El_enumerado_tiene_exactamente_los_tres_niveles`
+  - `ElGtinTests.De_un_texto_que_no_es_un_GTIN_lanza`
+  - `ElGtinTests.El_enumerado_tiene_exactamente_los_siete_motivos`
+  - `ElGtinTests.Lo_que_no_son_digitos_ASCII_se_rechaza_aunque_sean_cifras_de_otra_escritura`
+  - `ElGtinTests.Un_largo_que_no_es_8_12_13_ni_14_se_rechaza`
+
+  Los ocho de `ContratoDelCodigoDeBarrasTests` salen solo en verde porque la tanda corrió ese carril
+  únicamente con las dos mutaciones del índice, que son las de la carrera.
+
+  **El run de la rama** lo anota el commit siguiente, y el de `main`, el commit que abra la rama del
+  2.11.
 
 - [ ] **2.11 · La transferencia y el stock en tránsito** — criterio de aceptación: `Enviada →
   Recibida`, con **dos movimientos por línea** —salida del origen al enviar, entrada en el destino al

@@ -139,7 +139,11 @@ beforeEach(() => {
       servidorDeCodigos.siguiente += 1;
       servidorDeCodigos.codigos = [...servidorDeCodigos.codigos, nuevo];
 
-      return HttpResponse.json(nuevo, { status: 201, headers: { ETag: '"1"' } });
+      // Como la API: un 201 con su `Location` y sin ETag, que la da la lectura de la fila.
+      return HttpResponse.json(nuevo, {
+        status: 201,
+        headers: { Location: `/api/v1/catalogo/articulos/gtins/${nuevo.id}` },
+      });
     }),
 
     http.get('/api/v1/catalogo/articulos/gtins/:id', ({ params }) => {
