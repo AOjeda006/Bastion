@@ -7533,6 +7533,42 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
     los dos casos de la exclusividad y el de la fecha del cuadre, y cuenta seis descuadres en el
     arnés de la valoración, no cinco.
 
+    **Hechos ya, la batería y el humo**, sobre `88e265c`. La batería es la de *Comandos del
+    proyecto*, en su orden, con la integración bajo `--blame-hang --blame-hang-timeout 4m`, y todos
+    los pasos salen con 0:
+    - el contrato sin cambios (`git status --porcelain -- frontend/src/shared/api/esquema.ts`, vacío),
+      y las migraciones, el OpenAPI y el catálogo de errores, al día;
+    - el frontal: tipos, lint, formato, Vitest con **0** avisos de `act()` (`grep -c 'not wrapped in
+      act'` sobre la salida de `npm --prefix frontend run test`) y el presupuesto en **418/450** y
+      **616/900** KiB;
+    - el backend: build y formato, y los dos recuentos, **1057** casos en 10 ensamblados y **547** de
+      integración, todos correctos;
+    - las dependencias, `python scripts/dependencias-por-conjuntos.py dca9b83 HEAD`: los 45
+      `packages.lock.json` y los 35 `Project` no cambian, y en el frontal solo cambian `undici`
+      (7.29.0 → 7.30.0) y el `brace-expansion` de `@redocly/openapi-core` (2.1.4 → 2.1.7).
+
+    El humo va en su propio proyecto de *compose*, `bastion-humo-e29`, con una copia del `.env` en el
+    *scratchpad* y los puertos en 45xxx. Sale con **0 fallos** y lee del catálogo del motor lo que el
+    epílogo cambia:
+    - el índice parcial `ix_existencias_numero_de_serie_en_un_sitio`, con
+      `numero_de_serie_id IS NOT NULL`;
+    - ninguna columna `serie_id` ni índice con el nombre viejo en la existencia y el libro;
+    - ninguna clave ajena con el nombre viejo, ni en el padre ni en las particiones;
+    - los tres `CHECK` validados, y la exclusividad del libro heredada y validada en las 14
+      particiones;
+    - `ElNumeroDeSerieSeLlamaAsi` y `ElLoteOElNumeroDeSerie`, una vez cada una en el historial.
+
+    Después, la salud, el `401`, la sesión, las lecturas y la ETag igual por el frontal. Tras el
+    segundo arranque, el índice sigue en pie. El desmontaje deja `docker compose ls -a` con `bastion`
+    y nada más, y borra la copia del `.env` y el testigo.
+
+    **La primera vuelta del humo dio 2 fallos, y eran del guion.** Los selectores de «nombre viejo»
+    miraban todo el esquema `inventario`, y la serie de numeración del ajuste se sigue llamando así:
+    `ajustes.serie_id` e `ix_ajustes_serie_id_numero`. El segundo índice que contó, según el modelo,
+    es `ix_numeros_de_serie_empresa_id_articulo_id_numero`, que el patrón tampoco excluía. Ahora
+    miran solo la existencia y el libro, y cada uno lleva su pareja, que es la del ajuste, y tiene
+    que verse: 1 y 1.
+
 **Las mutaciones del epílogo**, desde la 112. Cada una se aplica sobre el árbol limpio, con el
 trabajo de su tema ya commiteado, y se corre sola con la clase del caso que la ve por diseño. Se
 revierte con `git restore --source=HEAD`, se toca la fecha del fichero y se recompila. El guion es
