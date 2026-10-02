@@ -7482,7 +7482,12 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
    ejerció a mano, en un `postgres:17.6-alpine` aparte: subir, bajar a `LosLotesYLasSeries` y volver
    a subir. En las tres paradas, los catorce clones de la clave ajena y los catorce índices de
    partición llevaban el nombre de la columna de ese momento.
-7. El glosario: el lote, el número de serie al lado de la serie, y la marca de trazabilidad.
+7. ~~El glosario: el lote, el número de serie al lado de la serie, y la marca de trazabilidad.~~
+   Hecho. La fila de la serie dice que no es el número de serie, y llegó con el renombre. El
+   número de serie no puede ser una fila de la tabla de agregados, que se compara contra el
+   dominio compilado y solo admite tipos del tipo base. Así que va en la sección de Inventario,
+   con el lote y la marca, y dice que no es la serie. La marca dice que hoy la exclusividad es
+   cosa del dominio, y el commit del `CHECK` lo pondrá al día.
 8. El `CHECK` de la serie, visto en rojo.
 9. La exclusividad entre lote y número de serie en el motor, con su caso y su mutación.
 10. El cuadre contra `ultima_fecha`, con su caso y su mutación.
