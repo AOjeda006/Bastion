@@ -48,6 +48,7 @@
     { "codigo": "categoria-duplicada", "type": "/errors/categoria-duplicada", "clase": "Conflicto" },
     { "codigo": "categoria-no-encontrada", "type": "/errors/categoria-no-encontrada", "clase": "NoEncontrado" },
     { "codigo": "categoria-padre-no-encontrado", "type": "/errors/categoria-padre-no-encontrado", "clase": "Validacion" },
+    { "codigo": "codigo-barras-duplicado", "type": "/errors/codigo-barras-duplicado", "clase": "Conflicto" },
     { "codigo": "codigo-de-rol-ya-usado", "type": "/errors/codigo-de-rol-ya-usado", "clase": "Conflicto" },
     { "codigo": "contrasena-actual-incorrecta", "type": "/errors/contrasena-actual-incorrecta", "clase": "Validacion" },
     { "codigo": "conversion-um-duplicada", "type": "/errors/conversion-um-duplicada", "clase": "Conflicto" },

@@ -110,6 +110,10 @@ public sealed class CadaRestriccionTraducidaSeJustificaTests : IDisposable
             // mismo error, porque para quien confirma son lo mismo (ADR-0048 §3).
             "ck_existencias_numero_de_serie_como_mucho_una (Comprobacion) → numero-de-serie-en-existencias",
             "ix_existencias_numero_de_serie_en_un_sitio (Unicidad) → numero-de-serie-en-existencias",
+
+            // Ítem 2.10: un GTIN es de un solo artículo en cada empresa. La comprobación previa del
+            // alta la cruzan dos altas simultáneas juntas; el índice no (ADR-0051 §5).
+            "ix_codigos_barras_gtin_uno_por_empresa (Unicidad) → codigo-barras-duplicado",
         ];
 
         Declaradas()

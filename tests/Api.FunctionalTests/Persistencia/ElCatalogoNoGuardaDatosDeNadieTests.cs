@@ -10,8 +10,8 @@ namespace Bastion.Api.FunctionalTests.Persistencia;
 
 /// <summary>
 /// La respuesta a la pregunta del artículo 32 para Catálogo, comprobada en vez de supuesta: no hay
-/// aquí un dato de nadie, y por eso no se bloquea ninguna de sus cinco entidades —el artículo, la
-/// categoría, la tarifa, su línea y el suministro—.
+/// aquí un dato de nadie, y por eso no se bloquea ninguna de sus seis entidades —el artículo, la
+/// categoría, la tarifa, su línea, el suministro y el código de barras—.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -194,9 +194,13 @@ public sealed class ElCatalogoNoGuardaDatosDeNadieTests : IDisposable
         // justo para lo que está —obligar a contestarle la pregunta a cada entidad nueva—. La
         // predicción señalaba al carril equivocado; el mecanismo funcionó, y el que lo hizo
         // funcionar fue este.
+        //
+        // LA DEL ÍTEM 2.10, contestada: `CodigoBarras` guarda un GTIN, su nivel y sus unidades. Un
+        // GTIN identifica un producto y no a quien lo fabrica ni a quien lo compra, así que no es un
+        // dato de nadie. Y su fila no apunta a ningún tercero, al revés que el suministro.
         deCatalogo.ShouldBe(
-            ["Articulo", "ArticuloProveedor", "Categoria", "LineaTarifa", "Tarifa"],
-            "las entidades propias de Catálogo son esas cinco. Si aparece una más, hay que " +
+            ["Articulo", "ArticuloProveedor", "Categoria", "CodigoBarras", "LineaTarifa", "Tarifa"],
+            "las entidades propias de Catálogo son esas seis. Si aparece una más, hay que " +
             "contestarle la pregunta del art. 32 también a ella; si falta alguna, el filtro por " +
             "esquema ha dejado de encontrarlas y las dos reglas de arriba están mirando al vacío");
 

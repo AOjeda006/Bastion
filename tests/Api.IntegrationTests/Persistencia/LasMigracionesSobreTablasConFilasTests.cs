@@ -81,6 +81,9 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_articulos_trazabilidad"] = new([], [("trazabilidad", "'Ninguna'")]),
         ["ck_bandeja_empresa_o_motivo"] = new(["empresa_id"], []),
         ["ck_categorias_padre_distinto_de_si_misma"] = Relleno.Ninguno,
+        ["ck_codigos_barras_gtin_catorce_cifras"] = new([], [("gtin", "'04006381333931'")]),
+        ["ck_codigos_barras_nivel"] = new([], [("nivel", "'Base'")]),
+        ["ck_codigos_barras_unidades_segun_el_nivel"] = new([], [("unidades", "1")]),
         ["ck_condiciones_pago_plazo_legal"] = new([], [("dias_de_plazo", "30")]),
         ["ck_cortes_de_la_instantanea_mes_es_primer_dia"] =
             new([], [("hasta_el_mes", "date_trunc('month', current_date)::date")]),

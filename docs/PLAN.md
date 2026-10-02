@@ -7656,8 +7656,20 @@ lo enmienda.
    entero da 1171 en verde en los diez ensamblados. El glosario lleva su fila, y
    `LosIdentificadoresAjenosTests`, el `EmpresaId` del código de barras con su puerto: el alta
    tendrá que comprobar la empresa activa.
-4. La persistencia: la tabla `catalogo.codigos_barras`, el índice único `(empresa_id, gtin)`, su
-   migración y su traducción a `409`.
+4. ~~La persistencia.~~ Hecho:
+   - la tabla `catalogo.codigos_barras`, con tres `CHECK`: catorce cifras ASCII, el nivel del
+     enumerado, y las unidades según el nivel;
+   - el índice único `ix_codigos_barras_gtin_uno_por_empresa`, sobre `(empresa_id, gtin)`;
+   - la migración `LosCodigosDeBarrasDelArticulo`, y el filtro de inquilinato;
+   - el repositorio, con la lista del artículo ordenada por unidades y la búsqueda por GTIN;
+   - la traducción del índice a `409` `codigo-barras-duplicado`, en `RestriccionesQueGuardanUnaRegla`.
+
+   El error tiene una sola fábrica, en Aplicación. Infrastructure la ve con un `InternalsVisibleTo`,
+   para que la comprobación previa y el índice den el mismo texto. Entraron en sus listas
+   `CadaRestriccionTraducidaSeJustificaTests`, `LasClavesSeConocenAntesDeGuardarTests`,
+   `ElCatalogoNoGuardaDatosDeNadieTests` (un GTIN no es un dato de nadie) y los `CHECK` de
+   `LasMigracionesSobreTablasConFilasTests`. El catálogo de errores y los dos diccionarios llevan su
+   texto.
 5. Los casos de uso y la API:
    - el alta, con `Idempotency-Key`, y la baja, con `If-Match`;
    - la lista del artículo y la búsqueda por GTIN;

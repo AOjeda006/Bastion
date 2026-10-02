@@ -73,6 +73,11 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         "ArticuloProveedor.Version",
         "Categoria.Version",
 
+        // La del ítem 2.10, por la regla uniforme y no por una carrera: la fila del código de
+        // barras no cambia nunca, pero su baja exige el `If-Match`, y nadie borra lo que no ha
+        // visto (ADR-0051 §6). Sin testigo, la ETag no tendría de dónde salir.
+        "CodigoBarras.Version",
+
         // La del ítem 2.4, y la primera que NO es un recurso de la API: la fila del contador
         // de una serie. Lleva testigo por una razón que no tiene ninguna de las demás -ninguna
         // ruta pide su `ETag`, porque no hay ruta-: es lo que sostiene la carrera

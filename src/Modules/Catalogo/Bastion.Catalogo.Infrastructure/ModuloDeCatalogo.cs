@@ -1,11 +1,13 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Catalogo.Application;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Infrastructure.Persistencia;
+using Bastion.Catalogo.Infrastructure.Persistencia.Configuraciones;
 using Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,6 +67,22 @@ public static class ModuloDeCatalogo
         servicios.AddScoped<IRepositorioDeTarifas, RepositorioDeTarifas>();
         servicios.AddScoped<IRepositorioDeLineasDeTarifa, RepositorioDeLineasDeTarifa>();
         servicios.AddScoped<IRepositorioDeProveedoresDeArticulo, RepositorioDeProveedoresDeArticulo>();
+        servicios.AddScoped<IRepositorioDeCodigosBarras, RepositorioDeCodigosBarras>();
+
+        // EL ÍNDICE DEL GTIN contesta con su regla, y no con un 500 (ADR-0051 §5). Se declara aquí
+        // porque que un GTIN sea de un solo artículo es una afirmación sobre el código de barras, y
+        // es de este módulo. NO va a la lista de la carrera perdida: quien llega segundo no tiene
+        // nada que recargar, y reintentar da lo mismo.
+        servicios.Configure<RestriccionesQueGuardanUnaRegla>(restricciones => restricciones
+            .Declarar(
+                ConfiguracionDeCodigoBarras.GtinUnoPorEmpresa,
+                ClaseDeRestriccion.Unicidad,
+                ErroresDeCodigoBarras.Duplicado(),
+                "dos altas del mismo GTIN, en el mismo artículo o en dos, pasan juntas la " +
+                "comprobación previa si llegan a la vez, porque entre leer y escribir cabe la otra " +
+                "transacción. El índice único se comprueba con cada fila que se escribe y espera a " +
+                "la transacción que tenga la otra, y lo único que puede significar que salte es " +
+                "que ese GTIN ya lo lleva un artículo de la empresa"));
 
         // LO QUE ESTE MÓDULO EXPONE A LOS DEMÁS, bajo el tipo de su `Contracts`, y la otra mitad
         // del primer cruce mutuo: Terceros pregunta por aquí en qué estado está la tarifa que

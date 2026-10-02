@@ -173,6 +173,8 @@ export const en: Diccionario = {
       'categoria-no-encontrada': 'That category no longer exists. Go back to the list and refresh.',
       'categoria-padre-no-encontrado':
         'The category you want to hang this one from does not exist.',
+      'codigo-barras-duplicado':
+        'An item at this company already carries that GTIN. If it now belongs to another one, remove it from the first.',
       'codigo-de-rol-ya-usado': 'There is already a role with that code. Pick another one.',
       'contrasena-actual-incorrecta': 'Your current password is not correct.',
       'conversion-um-duplicada': 'There is already a conversion between those two units.',

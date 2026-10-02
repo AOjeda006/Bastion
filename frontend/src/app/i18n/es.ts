@@ -209,6 +209,8 @@ export const es = {
       'categoria-duplicada': 'Ya hay una categoría con ese código en esta empresa.',
       'categoria-no-encontrada': 'Esa categoría ya no existe. Vuelve al listado y actualiza.',
       'categoria-padre-no-encontrado': 'La categoría de la que quieres colgar esta no existe.',
+      'codigo-barras-duplicado':
+        'Ese GTIN ya lo lleva un artículo de esta empresa. Si ahora es de otro, quítalo antes del que lo lleva.',
       'codigo-de-rol-ya-usado': 'Ya hay un rol con ese código. Elige otro.',
       'contrasena-actual-incorrecta': 'La contraseña actual no es correcta.',
       'conversion-um-duplicada': 'Ya hay una conversión entre esas dos unidades.',

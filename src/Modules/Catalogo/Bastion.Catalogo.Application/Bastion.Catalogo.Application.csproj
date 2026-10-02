@@ -71,4 +71,15 @@
     <InternalsVisibleTo Include="Bastion.Catalogo.UnitTests" />
   </ItemGroup>
 
+  <ItemGroup Label="Infraestructura del módulo">
+    <!--
+      Desde el ítem 2.10, para que el error del código de barras repetido tenga UNA sola fábrica.
+      Lo devuelve la comprobación previa del alta, y lo contesta el borde cuando el índice único
+      para a quien pierde la carrera; la declaración de la restricción vive en `ModuloDeCatalogo`,
+      que es Infrastructure. Infrastructure ya implementa los puertos de esta capa, así que la
+      apertura no cruza ninguna frontera: es el mismo módulo.
+    -->
+    <InternalsVisibleTo Include="Bastion.Catalogo.Infrastructure" />
+  </ItemGroup>
+
 </Project>

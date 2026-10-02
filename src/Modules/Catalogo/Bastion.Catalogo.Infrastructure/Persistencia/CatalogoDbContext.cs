@@ -62,6 +62,9 @@ public sealed class CatalogoDbContext(
     /// <summary>Quién suministra cada artículo, y con qué referencia lo llama él.</summary>
     public DbSet<ArticuloProveedor> ProveedoresDeArticulo => Set<ArticuloProveedor>();
 
+    /// <summary>Los códigos de barras de cada artículo: el GTIN, su nivel y sus unidades base.</summary>
+    public DbSet<CodigoBarras> CodigosBarras => Set<CodigoBarras>();
+
     /// <summary>
     /// Cablea el contexto contra PostgreSQL. Único sitio donde se dice el proveedor, dónde vive el
     /// historial de migraciones y qué convención de nombres se aplica.
@@ -122,6 +125,11 @@ public sealed class CatalogoDbContext(
         // Y el suministro, por la suya, que aquí importa el doble: lo que se escaparía de otra
         // empresa es con quién trabaja la competencia.
         modelBuilder.Entity<ArticuloProveedor>().HasQueryFilter(
+            "Inquilinato", fila => EmpresaDelFiltro == null || fila.EmpresaId == EmpresaDelFiltro);
+
+        // Y el código de barras, por la suya: sin ella, buscar un GTIN encontraría el artículo de
+        // otra empresa que lo tuviera, y el mismo GTIN puede estar en las dos.
+        modelBuilder.Entity<CodigoBarras>().HasQueryFilter(
             "Inquilinato", fila => EmpresaDelFiltro == null || fila.EmpresaId == EmpresaDelFiltro);
 
         modelBuilder.Entity<RegistroDeAuditoria>().HasQueryFilter(
