@@ -7506,7 +7506,8 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
     `LaValoracionDelAjusteTests.El_cuadre_encuentra_cada_ultima_fecha_que_no_es_la_del_libro`, que
     adelanta, atrasa y anula la fecha de tres claves en una transacción que se deshace y exige los
     tres descuadres y ninguno más. El caso del arnés de la valoración ve uno más, la fecha de la que
-    falta; la que sobra no, porque nace sin fecha y su clave no tiene libro.
+    falta; la que sobra no, porque nace sin fecha y su clave no tiene libro. Vistos en rojo: la 117
+    y la 118, en la tabla de abajo.
 11. `comprobar-migraciones.sh`, que dice cuándo `dotnet ef` no arranca.
 12. `undici` y `brace-expansion`, o su anotación.
 13. La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
@@ -7524,6 +7525,8 @@ revierte con `git restore --source=HEAD`, se toca la fecha del fichero y se reco
 | 114 | El `CHECK` del número de serie, quitado **en la base** con `ALTER TABLE inventario.existencias DROP CONSTRAINT ck_existencias_numero_de_serie_como_mucho_una`, dentro de la transacción del caso, que se deshace. Como la 53 del epílogo del 2.7, muta el propio caso: la confirmación pasa a ir dentro de esa transacción, con un método temporal en `ElModuloDeInventario`. | sobre `298e529`, 1 de los 6 de `UnNumeroDeSerieEnUnSoloSitioTests`: `La_misma_serie_dos_veces_en_el_mismo_hueco_la_para_el_check_y_sale_422`, porque la confirmación «should throw Npgsql.PostgresException but did not». Nada más la para: el índice parcial no choca con la propia fila. **El control**, el mismo caso mutado sin el `DROP`, sale con los 6 en verde, así que el rojo es del `CHECK` y no del camino nuevo |
 | 115 | El `CHECK` de la exclusividad en la existencia, quitado **en la base**: `ALTER TABLE inventario.existencias DROP CONSTRAINT ck_existencias_lote_o_numero_de_serie`, antepuesto a la sentencia del caso, dentro de su transacción, que se deshace. | sobre `0a6c4aa`, 1 de los 2 de `ElLoteOElNumeroDeSerieNuncaLosDosTests`: `Una_existencia_con_lote_y_numero_de_serie_la_rechaza_el_motor`, porque la inserción «should throw Npgsql.PostgresException but did not». El del libro sigue verde: cada `CHECK` lo ve su caso, y solo el suyo |
 | 116 | El mismo, en el libro: `DROP CONSTRAINT ck_movimiento_stock_lote_o_numero_de_serie` sobre el padre, que se lo quita a todas las particiones. | sobre `0a6c4aa`, el otro: `Una_fila_del_libro_con_lote_y_numero_de_serie_la_rechaza_el_motor`, con el mismo mensaje; el de la existencia sigue verde |
+| 117 | El cuadre deja de mirar la fecha: el `WHERE` del descuadre `valoracion-fecha`, cambiado por `WHERE false`. | sobre `33abe32`, 2 de los 12 de `LaValoracionDelAjusteTests`. `El_cuadre_encuentra_cada_ultima_fecha_que_no_es_la_del_libro` echa en falta los tres descuadres, el adelantado, el atrasado y el nulo; y `El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro`, el de la valoración que falta |
+| 118 | El cuadre compara la fecha con `<>` en vez de con `IS DISTINCT FROM`. | sobre `33abe32`, los mismos 2, pero cada uno echa en falta **solo el nulo**: el de la clave sin fecha en el primero y el de la valoración que falta en el segundo. El adelantado y el atrasado siguen saliendo, y eso es lo que separa la 118 de la 117 |
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
