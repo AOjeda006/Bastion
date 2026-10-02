@@ -6893,7 +6893,7 @@ tres horas.
   trabajos en verde.
 - **La rama se borró**, local y remota, en cuanto `main` la contuvo.
 
-**El 2.9, en curso**, en la rama `2.9-lotes-y-series`, abierta desde `main` en `39faab2`. El
+**El 2.9, cerrado el 2026-10-02**, en la rama `2.9-lotes-y-series`, abierta desde `main` en `39faab2`. El
 **[ADR-0048](adr/adr-0048-el-lote-y-la-serie-van-con-su-articulo-y-la-marca-se-lee-con-cerrojo.md)**
 va antes del código, en el commit `docs(adr)` que sigue a `4e9b930`. Recoge las seis decisiones del
 encargo y enmienda el orden de los cerrojos del ADR-0046 §2, que lo anota en su *Estado* y al
@@ -7304,7 +7304,8 @@ El desmontaje deja `docker compose ls -a` con el proyecto `bastion`, parado como
 5. ~~**La tanda de mutaciones, desde la 82**, porque la 80 y la 81 son del arreglo del reloj. Antes
    de abrirla, se le pregunta al usuario si enciende `context-mode`.~~ Hecho: de la 82 a la 111,
    con los cuatro hallazgos cubiertos, cada uno en su commit.
-6. **La batería y los runs.** La batería y el humo, hechos, arriba. Los runs, en la casilla.
+6. ~~**La batería y los runs.**~~ Hecho: la batería y el humo, arriba; el run de la rama, el
+   36971562081, en la casilla; el de `main`, al abrir la rama siguiente.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -15202,7 +15203,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   avance, y es el último del ítem. **Es el 36501859271** sobre `ab09dc6`, **success** al primer
   intento, anotado en *Estado actual* al abrir el addendum.
 
-- [ ] **2.9 · Lotes y números de serie, y la marca que los gobierna** — criterio de aceptación:
+- [x] **2.9 · Lotes y números de serie, y la marca que los gobierna** — criterio de aceptación:
   `Articulo` gana su trazabilidad (`Ninguna` / `PorLote` / `PorNumeroSerie`) con su migración, su DTO,
   su contrato y su pantalla; la clave del stock trazable es **(artículo, lote)** o **(artículo,
   serie)**, nunca el lote suelto; un movimiento de un artículo con lote **exige** su lote, uno sin
@@ -15215,7 +15216,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   **Hecho el 2026-09-30**, en la rama `2.9-lotes-y-series`. El porqué está en el
   [ADR-0048](adr/adr-0048-el-lote-y-la-serie-van-con-su-articulo-y-la-marca-se-lee-con-cerrojo.md), y el arreglo de nginx que salió
   por el camino, en el [ADR-0049](adr/adr-0049-el-proxy-no-comprime-lo-que-lleva-version.md). Los
-  commits, las mutaciones de la 82 a la 111, la batería y el humo están en *Estado actual → El 2.9, en curso*.
+  commits, las mutaciones de la 82 a la 111, la batería y el humo están en *Estado actual → El 2.9, cerrado*.
   Cada punto del criterio tiene su caso:
 
   - la marca del artículo, con su migración, su DTO, su contrato y su pantalla: en el dominio,
@@ -15334,6 +15335,35 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   - `LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.No_lleva_punto_y_coma_final`
   - `UnNumeroDeSerieEnUnSoloSitioTests.Anular_la_entrada_de_una_serie_que_ya_salio_es_stock_insuficiente`
   - `UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_dos_veces_en_el_mismo_hueco_la_para_el_check_y_sale_422`
+
+  **El 2.9 lo cierra el run 36971562081** sobre `0e131cb`, **success al primer intento**, con sus
+  tres jobs —Backend `110726414074`, Frontal `110726414362` y Humo `110728232966`—, los tres con
+  `labels: ['ubuntu-24.04']`, y **68 pasos: 67 en verde y 1 omitido**, que es *Diagnóstico* con su
+  `if: failure()`. Es uno más que en el 2.8: *El frontal no toca la versión de lo que reenvía*, que
+  entró con `e0f36da` (ADR-0049). Las cifras del *runner*, leídas de las anotaciones del run y no
+  dadas por buenas: **1057** y **543** casos con **10 `.trx`** en cada artefacto, las mismas que en
+  esta máquina; **130** operaciones sobre **77** rutas, **133** tipos de error de **139** sitios,
+  modelo y migraciones coincidiendo en todos los módulos y el presupuesto del frontal idéntico al de
+  esta máquina, **418/450** y **616/900** KiB. El segundo arranque del Humo dice lo mismo que en el
+  2.8: **95** permisos antes y después, `403` con el estado viejo, las **14** particiones con su
+  disparador y `200` con la semilla fuera. La rama lleva **dos** runs, este y el 36539040245 sobre
+  `4a4c7fe`, los dos en verde al primer intento —`GET …/actions/runs?branch=2.9-lotes-y-series` da
+  `total_count: 2`—, y ninguno se canceló.
+
+  **La auditoría de las dependencias del frontal sí cambió, y no por el ítem.** Da **0** críticas,
+  **2** altas y **2** moderadas —en `@vitest/mocker`, `brace-expansion`, `undici` y `vitest`—, donde
+  el run del 2.8 daba 0, 0 y 3. Ni `frontend/package.json` ni `frontend/package-lock.json` cambian
+  desde `39faab2` (`git diff --stat 39faab2 HEAD -- frontend/package.json
+  frontend/package-lock.json` sale vacío), así que lo que se movió es la base de avisos. Las dos
+  altas, leídas con `npm --prefix frontend audit --json` y `npm --prefix frontend ls brace-expansion
+  undici`, son `undici@7.29.0`, que trae `jsdom`, y `brace-expansion@2.1.4`, que trae `minimatch@5.1.9`
+  por `openapi-typescript` → `@redocly/openapi-core`. Las cuatro son de desarrollo:
+  `npm --prefix frontend audit --omit=dev` da **0** en todo. El paso informa y no decide
+  (ADR-0045). Subirlas queda como propuesta, porque no es trabajo de este ítem.
+
+  **El run de `main`** sale de empujar el commit que escribe éste, y va al abrir la rama siguiente,
+  como el del 2.8. Con ese commit, `git rev-list --count main..HEAD` pasa de **20** a **21** antes
+  del avance, y es el último del ítem.
 
 - [ ] **2.10 · El GTIN del artículo** — criterio de aceptación: **varios GTIN por artículo** con su
   nivel (base, caja, palé), en **columna de texto**, normalizados a **14 dígitos** al entrar y
