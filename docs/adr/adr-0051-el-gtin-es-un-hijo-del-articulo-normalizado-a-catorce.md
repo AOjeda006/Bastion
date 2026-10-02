@@ -8,7 +8,13 @@ revisado: 2026-10-02
 
 # ADR-0051: El GTIN es un hijo del artículo, normalizado a catorce y con su prefijo leído
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0052 (§2, §5, §6 y §11, los nombres; y §4, la
+  tabla de prefijos).**
+  - El [ADR-0052](adr-0052-se-llama-codigo-barras-y-las-rcn-12-se-rechazan.md) llama al agregado
+    `CodigoBarras`, como el §7.3 del plan maestro, y de ahí salen su tabla, su índice, su `type` y
+    sus permisos. Las rutas, la página, el *value object* `Gtin` y los motivos no cambian.
+  - Y completa la tabla del §4 con las RCN-12 de la §2.1.11.3, reconoce el GTIN-8 sin la excepción
+    del `0000000`, y corrige por qué se admite el `05` y por qué se rechaza el `951`.
 - **Fecha:** 2026-10-02
 - **Sale del 2.10**, que el usuario encargó el 2026-10-02 (PLAN, *El 2.10: el GTIN del artículo*).
   La puerta de clarificación se contestó ese día (PLAN, *La puerta del 2.10, contestada*). El
@@ -60,6 +66,9 @@ texto que no lo es lanza: si se llega ahí, es un defecto.
 
 ### 2. Vive en su propia fila, hija del artículo, como los proveedores
 
+> **Enmendado por el ADR-0052 (2026-10-02).** El agregado es `CodigoBarras` y su tabla
+> `catalogo.codigos_barras`, como nombra el §7.3. Lo demás de este punto sigue en pie.
+
 Lo eligió el usuario. Es un agregado propio, `ArticuloGtin`, en `catalogo.articulos_gtin`, con su
 `empresa_id` (R8), su artículo y su versión. Es lo mismo que el ADR-0010 decidió para el proveedor
 del artículo y la línea de tarifa: dar de alta un GTIN no carga los demás.
@@ -90,6 +99,13 @@ El motor también lo guarda: un `CHECK` sobre el nivel y otro sobre las unidades
 defecto, como los de la trazabilidad, porque el caso de uso ya lo comprobó.
 
 ### 4. Lo que tiene forma de GTIN y no es el GTIN de un artículo
+
+> **Enmendado por el ADR-0052 (2026-10-02).** La circulación restringida incluye también los LAC y
+> los RZSC de la §2.1.11.3, que las tablas no enseñan. Un GTIN-8 se reconoce porque los trece
+> empiezan por `00000`, sin excepción: la fila `0000000` la cubre la tabla 1-5 con el mismo motivo.
+> El `05` se admite porque la tabla 1-4 vigente lo da para empresas, no porque nadie lo haya
+> recibido: fue el de los cupones de Norteamérica hasta 2011. Y el `951` se dio para el EPC, no
+> para GTIN. Lo demás de este punto sigue en pie.
 
 La fuente es la tabla 1-4 (*GS1 Prefix*), la 1-5 (*GS1-8 Prefix*) y la 1-6 (*U.P.C. Prefix*) de las
 *GS1 General Specifications*, Release 26.0, Ratified, Jan 26, §1.2.3, páginas 26 a 28. Sobre la
@@ -122,6 +138,9 @@ de tienda**. Ese día, el `2x` y el `9` necesitan su medida, y eso es el analiza
 
 ### 5. Un GTIN, un artículo, en cada empresa
 
+> **Enmendado por el ADR-0052 (2026-10-02).** El índice es `ix_codigos_barras_gtin_uno_por_empresa`
+> y su `409`, `codigo-barras-duplicado`. Lo demás de este punto sigue en pie.
+
 El índice único `ix_articulos_gtin_uno_por_empresa`, sobre `(empresa_id, gtin)`, es quien decide.
 Se traduce por su nombre al `409` `articulo-gtin-duplicado`, en `RestriccionesQueGuardanUnaRegla`.
 La comprobación previa del caso de uso es cortesía: da el mismo `type` sin llegar al motor, y
@@ -132,6 +151,9 @@ la vez, en dos artículos distintos, con dos transacciones de verdad: una entra,
 En otra empresa, el mismo GTIN entra: el índice lleva `empresa_id` delante.
 
 ### 6. Cómo se protege la escritura (R10 y R11)
+
+> **Enmendado por el ADR-0052 (2026-10-02).** Los permisos son `catalogo.codigo-barras.agregar` y
+> `catalogo.codigo-barras.quitar`. Lo demás de este punto sigue en pie.
 
 - **El alta**, `POST /api/v1/catalogo/articulos/{id}/gtins`, admite `Idempotency-Key`. Un reintento
   con la misma clave devuelve la misma respuesta, sin una segunda fila y sin un `409` contra sí
@@ -190,6 +212,9 @@ En otra empresa, el mismo GTIN entra: el índice lleva `empresa_id` delante.
   línea de la tabla de prefijos, el índice y su traducción. Empieza en la 119.
 
 ### 11. Qué decidió el usuario y qué el agente
+
+> **Enmendado por el ADR-0052 (2026-10-02).** El nombre del agregado no era del agente: el §7.3 ya
+> lo había puesto. Los nombres que salen de él cambian con él.
 
 El usuario fijó el encargo entero y contestó la puerta: el GTIN como hijo del artículo, el entero de
 unidades con varios GTIN por nivel, y la página propia. El agente decidió:
