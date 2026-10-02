@@ -20,9 +20,10 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// puede aparecer en una y no en la otra.
 /// </para>
 /// <para>
-/// <b>La valoración es la tercera copia desde el 2.8</b>, y se cuadra en sus dos columnas: la
-/// cantidad contra la suma de las cantidades del libro, y el valor contra la suma de sus valores. El
-/// precio medio no se cuadra porque no se guarda: se deduce de las dos.
+/// <b>La valoración es la tercera copia desde el 2.8</b>, y se cuadra en sus tres columnas: la
+/// cantidad contra la suma de las cantidades del libro, el valor contra la suma de sus valores, y la
+/// última fecha contra la más alta de sus fechas de operación (ADR-0050 §4). El precio medio no se
+/// cuadra porque no se guarda: se deduce de las dos primeras.
 /// </para>
 /// <para>
 /// <b>En el 2.7 no tiene quien lo llame en producción</b>, igual que el recálculo: el trabajo
@@ -59,6 +60,12 @@ internal sealed class ElCuadreDeLasExistencias(
     /// divisa lo hace vacía, y vaciarla se lleva todo el valor (ADR-0046 §5), así que las filas de
     /// la divisa de antes suman cero y la suma de todas es la de la divisa de ahora. Una valoración
     /// sin filas en el libro cuadra solo si está a cero, igual que una fila viva.
+    /// </para>
+    /// <para>
+    /// <b>La fecha se compara con <c>IS DISTINCT FROM</c></b>, porque las dos pueden ser nulas: la
+    /// de una valoración que falta o que no la lleva, y la de una clave sin filas en el libro. Con
+    /// <c>&lt;&gt;</c>, una fecha contra un nulo no saldría, y es justo la de una valoración que
+    /// falta. Es una copia que decide: el caso de uso rechaza un documento anterior a ella.
     /// </para>
     /// </remarks>
     internal const string SqlDelCuadre =
@@ -100,15 +107,17 @@ internal sealed class ElCuadreDeLasExistencias(
                    sum(x.cantidad_esperada) AS cantidad_esperada,
                    sum(x.cantidad_guardada) AS cantidad_guardada,
                    sum(x.valor_esperado) AS valor_esperado, sum(x.valor_guardado) AS valor_guardado,
+                   max(x.fecha_esperada) AS fecha_esperada, max(x.fecha_guardada) AS fecha_guardada,
                    sum(x.filas) AS filas
             FROM (
                 SELECT m.articulo_id, m.almacen_id,
                        m.cantidad_en_unidad_base AS cantidad_esperada, 0::numeric AS cantidad_guardada,
-                       m.valor AS valor_esperado, 0::numeric AS valor_guardado, 0 AS filas
+                       m.valor AS valor_esperado, 0::numeric AS valor_guardado,
+                       m.fecha_de_operacion AS fecha_esperada, NULL::date AS fecha_guardada, 0 AS filas
                 FROM inventario.movimiento_stock AS m
                 WHERE m.empresa_id = {0} AND m.fecha_de_operacion <= {1}
                 UNION ALL
-                SELECT v.articulo_id, v.almacen_id, 0, v.cantidad, 0, v.valor, 1
+                SELECT v.articulo_id, v.almacen_id, 0, v.cantidad, 0, v.valor, NULL, v.ultima_fecha, 1
                 FROM inventario.valoraciones AS v
                 WHERE v.empresa_id = {0}
             ) AS x
@@ -117,34 +126,42 @@ internal sealed class ElCuadreDeLasExistencias(
         SELECT 'existencia' AS que, true AS es_resumen, count(*) AS comparadas,
                NULL::uuid AS articulo_id, NULL::uuid AS almacen_id, NULL::uuid AS ubicacion_id,
                NULL::uuid AS lote_id, NULL::uuid AS numero_de_serie_id, NULL::date AS mes,
-               NULL::numeric AS esperado, NULL::numeric AS guardado, NULL::bigint AS filas
+               NULL::numeric AS esperado, NULL::numeric AS guardado, NULL::bigint AS filas,
+               NULL::date AS fecha_esperada, NULL::date AS fecha_guardada
         FROM existencias_cuadradas
         UNION ALL
-        SELECT 'instantanea', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        SELECT 'instantanea', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+               NULL, NULL
         FROM instantaneas_cuadradas
         UNION ALL
-        SELECT 'valoracion', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        SELECT 'valoracion', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+               NULL, NULL
         FROM valoraciones_cuadradas
         UNION ALL
         SELECT 'existencia', false, 0, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id,
-               c.numero_de_serie_id, NULL, c.esperado, c.guardado, c.filas
+               c.numero_de_serie_id, NULL, c.esperado, c.guardado, c.filas, NULL, NULL
         FROM existencias_cuadradas AS c
         WHERE c.esperado <> c.guardado OR c.filas <> 1
         UNION ALL
         SELECT 'instantanea', false, 0, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id,
-               c.numero_de_serie_id, c.mes, c.esperado, c.guardado, c.filas
+               c.numero_de_serie_id, c.mes, c.esperado, c.guardado, c.filas, NULL, NULL
         FROM instantaneas_cuadradas AS c
         WHERE c.esperado <> c.guardado OR c.filas <> 1
         UNION ALL
         SELECT 'valoracion-cantidad', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL, NULL,
-               c.cantidad_esperada, c.cantidad_guardada, c.filas
+               c.cantidad_esperada, c.cantidad_guardada, c.filas, NULL, NULL
         FROM valoraciones_cuadradas AS c
         WHERE c.cantidad_esperada <> c.cantidad_guardada OR c.filas <> 1
         UNION ALL
         SELECT 'valoracion-valor', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL, NULL,
-               c.valor_esperado, c.valor_guardado, c.filas
+               c.valor_esperado, c.valor_guardado, c.filas, NULL, NULL
         FROM valoraciones_cuadradas AS c
         WHERE c.valor_esperado <> c.valor_guardado
+        UNION ALL
+        SELECT 'valoracion-fecha', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL, NULL,
+               NULL, NULL, c.filas, c.fecha_esperada, c.fecha_guardada
+        FROM valoraciones_cuadradas AS c
+        WHERE c.fecha_esperada IS DISTINCT FROM c.fecha_guardada
         """;
 
     /// <summary>Cuadra la empresa del inquilino.</summary>
@@ -178,9 +195,11 @@ internal sealed class ElCuadreDeLasExistencias(
                     fila.LoteId,
                     fila.NumeroDeSerieId,
                     fila.Mes,
-                    fila.Esperado!.Value,
-                    fila.Guardado!.Value,
-                    fila.Filas!.Value))]);
+                    fila.Esperado,
+                    fila.Guardado,
+                    fila.Filas!.Value,
+                    fila.FechaEsperada,
+                    fila.FechaGuardada))]);
     }
 
     private const string Existencia = "existencia";
@@ -201,8 +220,8 @@ internal sealed record CuadreDeLasExistencias(
 
 /// <summary>Una clave —o una clave y un mes— en la que la copia no dice lo que el libro.</summary>
 /// <param name="Que">
-/// «existencia», «instantanea», «valoracion-cantidad» o «valoracion-valor»; las dos últimas son las
-/// dos columnas de la valoración, cada una con su descuadre.
+/// «existencia», «instantanea», «valoracion-cantidad», «valoracion-valor» o «valoracion-fecha»; las
+/// tres últimas son las tres columnas de la valoración, cada una con su descuadre.
 /// </param>
 /// <param name="ArticuloId">El artículo de la clave.</param>
 /// <param name="AlmacenId">El almacén de la clave.</param>
@@ -212,9 +231,17 @@ internal sealed record CuadreDeLasExistencias(
 /// El número de serie de la clave, o nulo; nulo también en la valoración.
 /// </param>
 /// <param name="Mes">El mes, en las instantáneas.</param>
-/// <param name="Esperado">Lo que dice el libro.</param>
-/// <param name="Guardado">Lo que dice la copia.</param>
+/// <param name="Esperado">Lo que dice el libro; nulo en el de la fecha, que lleva fechas.</param>
+/// <param name="Guardado">Lo que dice la copia; nulo en el de la fecha.</param>
 /// <param name="Filas">Cuántas filas de la copia tiene la clave: tiene que ser una.</param>
+/// <param name="FechaEsperada">
+/// En el de la fecha, la fecha de operación más alta del libro hasta hoy, o nula si la clave no
+/// tiene filas en él; nula en los demás.
+/// </param>
+/// <param name="FechaGuardada">
+/// En el de la fecha, la <c>ultima_fecha</c> de la valoración, o nula si falta o no la lleva; nula
+/// en los demás.
+/// </param>
 internal sealed record Descuadre(
     string Que,
     Guid ArticuloId,
@@ -223,9 +250,11 @@ internal sealed record Descuadre(
     Guid? LoteId,
     Guid? NumeroDeSerieId,
     DateOnly? Mes,
-    decimal Esperado,
-    decimal Guardado,
-    long Filas);
+    decimal? Esperado,
+    decimal? Guardado,
+    long Filas,
+    DateOnly? FechaEsperada,
+    DateOnly? FechaGuardada);
 
 /// <summary>Una fila de la consulta del cuadre, tal como llega.</summary>
 /// <remarks>
@@ -257,4 +286,8 @@ internal sealed class FilaDelCuadre
     public decimal? Guardado { get; init; }
 
     public long? Filas { get; init; }
+
+    public DateOnly? FechaEsperada { get; init; }
+
+    public DateOnly? FechaGuardada { get; init; }
 }

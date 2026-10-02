@@ -474,6 +474,7 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "LaValoracionDelAjusteTests.Dos_empresas_con_la_misma_clave_no_comparten_valoracion",
         "LaValoracionDelAjusteTests.El_borrador_toma_la_divisa_base_de_la_empresa",
+        "LaValoracionDelAjusteTests.El_cuadre_encuentra_cada_ultima_fecha_que_no_es_la_del_libro",
         "LaValoracionDelAjusteTests.El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro",
         "LaValoracionDelAjusteTests.El_inverso_resta_el_valor_que_sumo_la_entrada_y_el_par_suma_cero",
         "LaValoracionDelAjusteTests.La_segunda_de_dos_confirmaciones_a_la_vez_se_valora_con_lo_que_dejo_la_primera",

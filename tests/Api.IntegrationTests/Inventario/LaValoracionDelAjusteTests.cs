@@ -40,8 +40,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// seis decimales, y 100 entre 300 tampoco, así que cada valor afirmado dice por dónde pasó.
 /// </para>
 /// <para>
-/// <b>Las confirmaciones van por el caso de uso</b>, con su cerrojo y su transacción, salvo en dos
-/// casos: el de las dos empresas y el del cuadre. Esos necesitan la MISMA clave en dos empresas, o
+/// <b>Las confirmaciones van por el caso de uso</b>, con su cerrojo y su transacción, salvo en tres
+/// casos: el de las dos empresas y los dos del cuadre. Esos necesitan la MISMA clave en dos empresas, o
 /// escribir por debajo del sistema, y los identificadores de la API no se pueden repetir; van por el
 /// repositorio de verdad, con identificadores inventados, igual que <see cref="ElLibro"/>.
 /// </para>
@@ -537,11 +537,20 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
         await ExigirQueCuadraAsync(deB, valoraciones: 1);
     }
 
-    /// <summary>El cuadre encuentra cada valoración que no dice lo que el libro, en sus dos columnas.</summary>
+    /// <summary>
+    /// El cuadre encuentra cada valoración que no dice lo que el libro, en su cantidad y en su valor.
+    /// </summary>
     /// <remarks>
+    /// <para>
     /// <b>El arnés del cuadre</b>: un cuadre que no mirara la valoración saldría limpio en todos los
     /// demás casos de este carril, igual que uno que sí. Las cuatro mentiras van en una transacción
     /// que se deshace, y el cuadre corre dentro de ella.
+    /// </para>
+    /// <para>
+    /// <b>La que falta descuadra también en la fecha</b>: el libro tiene una y la valoración, ninguna.
+    /// La que sobra no, porque nace sin fecha y el libro no tiene filas de su clave, y dos nulos no
+    /// son distintos. La fecha la estropea a propósito el caso siguiente.
+    /// </para>
     /// </remarks>
     [Fact]
     public async Task El_cuadre_encuentra_cada_valoracion_que_no_dice_lo_que_el_libro()
@@ -597,17 +606,105 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
             descuadre.AlmacenId == almacenId && descuadre.UbicacionId == null && descuadre.Mes == null);
 
         sucio.Descuadres
-            .Select(descuadre => (descuadre.Que, descuadre.ArticuloId, descuadre.Esperado, descuadre.Guardado, descuadre.Filas))
+            .Select(descuadre => (
+                descuadre.Que,
+                descuadre.ArticuloId,
+                descuadre.Esperado,
+                descuadre.Guardado,
+                descuadre.Filas,
+                descuadre.FechaEsperada,
+                descuadre.FechaGuardada))
             .ShouldBe(
                 [
-                    ("valoracion-valor", queVale, 7.5m, 8.5m, 1L),
-                    ("valoracion-cantidad", queCuenta, 4m, 6m, 1L),
-                    ("valoracion-cantidad", queFalta, 2m, 0m, 0L),
-                    ("valoracion-valor", queFalta, 6m, 0m, 0L),
-                    ("valoracion-cantidad", queSobra, 0m, 3m, 1L),
+                    ("valoracion-valor", queVale, 7.5m, 8.5m, 1L, null, null),
+                    ("valoracion-cantidad", queCuenta, 4m, 6m, 1L, null, null),
+                    ("valoracion-cantidad", queFalta, 2m, 0m, 0L, null, null),
+                    ("valoracion-valor", queFalta, 6m, 0m, 0L, null, null),
+                    ("valoracion-fecha", queFalta, null, null, 0L, Hoy, null),
+                    ("valoracion-cantidad", queSobra, 0m, 3m, 1L, null, null),
                 ],
                 ignoreOrder: true,
-                customMessage: "las cinco, y ninguna más: cada una dice qué esperaba y qué encontró");
+                customMessage: "las seis, y ninguna más: cada una dice qué esperaba y qué encontró");
+
+        await estropeando.RollbackAsync();
+
+        await ExigirQueCuadraAsync(empresaId, valoraciones: 3);
+    }
+
+    /// <summary>
+    /// El cuadre encuentra cada <c>ultima_fecha</c> que no es la del libro: adelantada, atrasada y
+    /// nula (ADR-0050 §4).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es una copia que decide.</b> El caso de uso rechaza un documento con fecha anterior a ella,
+    /// y la suma no toca una clave a la que llegue uno. Adelantada, deja fuera documentos que el libro
+    /// admite; atrasada, deja entrar los que reescriben el precio medio de días ya valorados; y nula,
+    /// los deja entrar todos.
+    /// </para>
+    /// <para>
+    /// <b>La nula es la que distingue <c>IS DISTINCT FROM</c> de <c>&lt;&gt;</c></b>: con el
+    /// segundo, una fecha contra un nulo no es ni verdad ni mentira, y la fila no sale. Las tres
+    /// mentiras van en una transacción que se deshace, y el cuadre corre dentro de ella.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task El_cuadre_encuentra_cada_ultima_fecha_que_no_es_la_del_libro()
+    {
+        var empresaId = Guid.CreateVersion7();
+        var almacenId = Guid.CreateVersion7();
+        var ubicacionId = Guid.CreateVersion7();
+        var adelantada = Guid.CreateVersion7();
+        var atrasada = Guid.CreateVersion7();
+        var sinFecha = Guid.CreateVersion7();
+
+        await ConfirmarSinLaApiAsync(empresaId, almacenId, ubicacionId, adelantada, 1m, 1m);
+        await ConfirmarSinLaApiAsync(empresaId, almacenId, ubicacionId, atrasada, 1m, 1m);
+        await ConfirmarSinLaApiAsync(empresaId, almacenId, ubicacionId, sinFecha, 1m, 1m);
+
+        await ExigirQueCuadraAsync(empresaId, valoraciones: 3);
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+        await using IDbContextTransaction estropeando = await contexto.Database.BeginTransactionAsync();
+
+        (await contexto.Database.ExecuteSqlRawAsync(
+            "UPDATE inventario.valoraciones SET ultima_fecha = ultima_fecha + 1 " +
+            "WHERE empresa_id = {0} AND articulo_id = {1}",
+            empresaId,
+            adelantada)).ShouldBe(1);
+
+        (await contexto.Database.ExecuteSqlRawAsync(
+            "UPDATE inventario.valoraciones SET ultima_fecha = ultima_fecha - 1 " +
+            "WHERE empresa_id = {0} AND articulo_id = {1}",
+            empresaId,
+            atrasada)).ShouldBe(1);
+
+        (await contexto.Database.ExecuteSqlRawAsync(
+            "UPDATE inventario.valoraciones SET ultima_fecha = NULL WHERE empresa_id = {0} AND articulo_id = {1}",
+            empresaId,
+            sinFecha)).ShouldBe(1);
+
+        CuadreDeLasExistencias sucio = await LasExistencias.CuadrarEnAsync(contexto, empresaId);
+
+        sucio.ValoracionesComparadas.ShouldBe(3);
+
+        sucio.Descuadres
+            .Select(descuadre => (
+                descuadre.Que,
+                descuadre.ArticuloId,
+                descuadre.Esperado,
+                descuadre.Guardado,
+                descuadre.Filas,
+                descuadre.FechaEsperada,
+                descuadre.FechaGuardada))
+            .ShouldBe(
+                [
+                    ("valoracion-fecha", adelantada, null, null, 1L, Hoy, Hoy.AddDays(1)),
+                    ("valoracion-fecha", atrasada, null, null, 1L, Hoy, Hoy.AddDays(-1)),
+                    ("valoracion-fecha", sinFecha, null, null, 1L, Hoy, null),
+                ],
+                ignoreOrder: true,
+                customMessage: "las tres, y ninguna más: la cantidad y el valor siguen cuadrando");
 
         await estropeando.RollbackAsync();
 

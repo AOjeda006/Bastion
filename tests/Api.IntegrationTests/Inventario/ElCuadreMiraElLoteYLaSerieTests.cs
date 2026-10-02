@@ -214,7 +214,7 @@ public sealed class ElCuadreMiraElLoteYLaSerieTests(PostgresConTodosLosModulos p
         Guid? LoteId,
         Guid? NumeroDeSerieId,
         DateOnly? Mes,
-        decimal Esperado,
-        decimal Guardado,
+        decimal? Esperado,
+        decimal? Guardado,
         long Filas);
 }

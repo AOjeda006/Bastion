@@ -938,7 +938,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
     /// <summary>Un descuadre, sin lo que todos comparten.</summary>
     private sealed record Hallado(
-        string Que, Guid? UbicacionId, DateOnly? Mes, decimal Esperado, decimal Guardado, long Filas);
+        string Que, Guid? UbicacionId, DateOnly? Mes, decimal? Esperado, decimal? Guardado, long Filas);
 
     /// <summary>Los maestros de un caso.</summary>
     /// <param name="EmpresaId">La empresa.</param>

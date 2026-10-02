@@ -7498,7 +7498,15 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
    su lote y su número de serie creados en la misma transacción, y reciben un `23514` con el nombre
    de su `CHECK`. La fila del glosario de la marca y el comentario de `Trazabilidad` dicen ya que el
    motor tampoco las admite juntas. Vistos en rojo: la 115 y la 116, en la tabla de abajo.
-10. El cuadre contra `ultima_fecha`, con su caso y su mutación.
+10. ~~El cuadre contra `ultima_fecha`, con su caso y su mutación.~~ Hecho. El cuadre gana el
+    descuadre `valoracion-fecha`, por artículo y almacén: la fecha de operación más alta del libro
+    hasta hoy contra la `ultima_fecha` de la valoración, con `IS DISTINCT FROM`. `Descuadre` gana
+    `FechaEsperada` y `FechaGuardada`, y su `Esperado` y su `Guardado` admiten nulo, que es lo que
+    valen en esa fila. Lo ve el caso nuevo
+    `LaValoracionDelAjusteTests.El_cuadre_encuentra_cada_ultima_fecha_que_no_es_la_del_libro`, que
+    adelanta, atrasa y anula la fecha de tres claves en una transacción que se deshace y exige los
+    tres descuadres y ninguno más. El caso del arnés de la valoración ve uno más, la fecha de la que
+    falta; la que sobra no, porque nace sin fecha y su clave no tiene libro.
 11. `comprobar-migraciones.sh`, que dice cuándo `dotnet ef` no arranca.
 12. `undici` y `brace-expansion`, o su anotación.
 13. La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
