@@ -7756,7 +7756,30 @@ lo enmienda.
 
    Cinco rondas seguidas en verde. Las mutaciones que lo tienen que ver (el índice sin `UNIQUE`, el
    nombre fuera de `RestriccionesQueGuardanUnaRegla`) van en la tanda del paso 9.
-7. La comprobación de que ningún documento guarda el GTIN en lugar del artículo.
+7. ~~La comprobación de que ningún documento guarda el GTIN en lugar del artículo.~~ Hecho, con un
+   barrido de las seis instantáneas del modelo, que son el esquema que dejan las migraciones
+   (ADR-0051 §8):
+
+   ```bash
+   grep -rniE 'HasColumnName\("[^"]*(gtin|ean|barra|barcode|upc)'      src/Modules/*/Bastion.*.Infrastructure/Migrations/*ModelSnapshot.cs
+   ```
+
+   - Devuelve **una** línea, `catalogo.codigos_barras.gtin`, que es el contraejemplo: el patrón
+     encuentra la columna que sí existe, así que también encontraría otra.
+   - Las columnas `jsonb` son dos, y ninguna es de un documento: `auditoria.registros.valores`,
+     la traza, que guarda el GTIN quitado a propósito (ADR-0012), y
+     `auditoria.bandeja_de_salida.cuerpo`. Salen doce veces porque cada contexto mapea las dos
+     (`grep -rhoE 'HasColumnType\("jsonb"\)' …ModelSnapshot.cs | wc -l`). El código de barras no
+     publica ningún evento.
+   - El único SQL crudo que crea tablas es el libro de Inventario, `movimiento_stock` y sus
+     particiones, y no lleva ninguna de esas columnas.
+   - Las seis tablas de Inventario que nombran un artículo lo hacen por `articulo_id`:
+     `lineas_ajuste`, `existencias`, `lotes`, `numeros_de_serie`, `movimiento_stock` y
+     `valoraciones`.
+
+   Es un barrido de hoy y no una regla permanente, como dice el §8. Volver a pasarlo toca con el
+   primer documento de compra o de venta (fase 3), que es el primero que podría guardar lo que leyó
+   el lector.
 8. La pantalla:
    - la página, y su esquema Zod con el dígito de control;
    - el `409` en su campo, en los dos idiomas, con Vitest y MSW;
