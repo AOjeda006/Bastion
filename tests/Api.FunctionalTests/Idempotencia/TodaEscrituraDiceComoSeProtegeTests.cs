@@ -375,8 +375,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(130, "acciones en total");
-        cambian.Count.ShouldBe(84, "acciones que cambian estado");
+        todas.Count.ShouldBe(135, "acciones en total");
+        cambian.Count.ShouldBe(86, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -569,14 +569,29 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // Y el único número que sube de verdad de categoría es el de abajo: las obligatorias
         // pasan de una a DOS. Es el momento en que una excepción se convierte en costumbre si
         // nadie escribe el criterio, y el criterio no se ha ampliado para que quepa la segunda.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(46, "operaciones que exigen If-Match");
+        //
+        // Ciento treinta y cinco desde el ítem 2.10, y el reparto es el de la parte de Catálogo del
+        // 1.10 con una lectura en el sitio de su modificación: +5 al total, +2 a las que cambian
+        // estado, +1 a If-Match, +1 a Idempotency-Key y cero a las exentas. Son los códigos de
+        // barras del artículo (ADR-0051): tres lecturas —los de un artículo, uno por id y la
+        // búsqueda por GTIN—, el alta con clave y el `DELETE` con If-Match.
+        //
+        // QUE NO HAYA `PUT` ES LA AFIRMACIÓN. Un código de barras no se corrige: un GTIN dice una
+        // presentación con sus unidades, y cambiarlas exige otro GTIN (ADR-0051 §3). Un nivel o
+        // unas unidades mal puestos se arreglan quitándolo y volviéndolo a dar de alta. Si este
+        // ítem hubiera subido dos a If-Match, habría entrado una modificación que cambia lo que un
+        // lector de caja ya ha leído.
+        //
+        // Y LA BÚSQUEDA SUBE SOLO EL TOTAL, como la resolución de precio del 1.9: es el camino
+        // caliente de quien escanea, y no guarda nada de lo que busca.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(47, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(21, "rutas que admiten Idempotency-Key");
+            .ShouldBe(22, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
-        // Y de esas veintiuna, DOS la exigen. Es un recuento aparte y no un reparto del anterior
+        // Y de esas veintidós, DOS la exigen. Es un recuento aparte y no un reparto del anterior
         // porque las obligatorias son un SUBCONJUNTO de las que admiten, no un cuarto cajón: la
-        // partición de abajo seguiría siendo exacta aunque las veintiuna fueran obligatorias, que
+        // partición de abajo seguiría siendo exacta aunque las veintidós fueran obligatorias, que
         // es justo lo que este número impide que pase sin que nadie lo vea. Las dos son del mismo
         // módulo y por el mismo argumento —número dentro de la transacción del documento—, y las
         // dos están nombradas con su motivo en `s_obligatorias`, que se compara entera en los dos
@@ -587,7 +602,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (46 + 21 + s_exentas.Count).ShouldBe(cambian.Count);
+        (47 + 22 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

@@ -870,8 +870,9 @@ Todo lo de abajo está razonado en
 
 `TodaEscrituraDiceComoSeProtegeTests` recorre la **tabla de enrutado del host** (desde el 1.3; hasta
 entonces eran dos `typeof` escritos a mano, y por eso el primer controlador de Terceros habría
-quedado fuera sin ponerse nada rojo). Hoy: **127 acciones**, de ellas **81** cambian estado — **46**
-exigen `If-Match`, **18** admiten `Idempotency-Key` y **17** están exentas con su motivo escrito.
+quedado fuera sin ponerse nada rojo). Hoy (2.10): **135 acciones**, de ellas **86** cambian estado —
+**47** exigen `If-Match`, **22** admiten `Idempotency-Key` y **17** están exentas con su motivo
+escrito.
 Los números están fijados en el propio test: un barrido cuya enumeración devuelva nada saldría verde
 por la peor de las razones.
 
@@ -902,7 +903,7 @@ por la peor de las razones.
 >
 > **Por eso desde el 1.10 no se copian a mano.** Las tres de aquí abajo salen de recorrer los
 > `*Controller.cs` buscando `[Http…]`, `[FromHeader(Name = "If-Match")]` y `[AdmiteIdempotencia]`, y
-> ese barrido devuelve hoy **129 · 83 · 46 · 20**, los mismos cuatro números que fija
+> ese barrido devuelve hoy **135 · 86 · 47 · 22**, los mismos cuatro números que fija
 > `El_barrido_encuentra_el_inventario_entero` **leyendo la tabla de enrutado del host**, que es otra
 > fuente. Dos fuentes que no se derivan una de otra dando el mismo número es lo más cerca que se
 > puede estar de una tabla comprobada sin escribir un test que compare prosa. El delta del 1.10,
@@ -911,15 +912,19 @@ por la peor de las razones.
 > y el del 1.9, que nunca se anotó: **+10, +5, +3, +2, cero**. El del 1.11: **+1, +1, cero, +1,
 > cero** —la importación de terceros, que es un alta sin recurso propio—. El del **2.4**: **+1,
 > +1, cero, +1, cero** —la confirmación del ajuste, primera y única acción del borde de
-> Inventario—.
+> Inventario—. El del **2.5**, que no se anotó y es la **cuarta vez**: **+1, +1, cero, +1, cero**
+> —la anulación del ajuste—, y la tabla de las claves siguió diciendo veinte hasta el 2.10, que la
+> rehízo al sumarle la suya. El del **2.10**: **+5, +2, +1, +1, cero** —los códigos de barras del
+> artículo: tres lecturas, el alta con clave y la baja con `If-Match`, sin `PUT`—.
 >
 > **Y desde el 2.4 los números son CINCO**, porque los cuatro de arriba se quedaron cortos: la
 > confirmación **exige** la clave, y el reparto no sabe distinguir admitirla de exigirla. El quinto
-> es **1**, lo fija `La_clave_obligatoria_es_la_excepcion_y_esta_declarada_entera` comparando la
-> lista entera en los dos sentidos, y no es un cajón aparte sino un **subconjunto** del cuarto: sin
-> él, las veinte podrían volverse obligatorias sin que ninguno de los otros cuatro se moviera.
+> es **2** desde el 2.5 (la confirmación y la anulación), lo fija
+> `La_clave_obligatoria_es_la_excepcion_y_esta_declarada_entera` comparando la lista entera en los
+> dos sentidos, y no es un cajón aparte sino un **subconjunto** del cuarto: sin él, las veintidós
+> podrían volverse obligatorias sin que ninguno de los otros cuatro se moviera.
 
-**Los dieciocho recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de
+**Los diecinueve recursos que emiten `ETag` en su lectura por identificador** — uno por raíz de
 agregado con `GET /{id}`, que es la misma lista de las altas de más abajo **menos la importación**
 del 1.11, que da de alta terceros pero no es un recurso ni devuelve uno:
 
@@ -943,12 +948,13 @@ del 1.11, que da de alta terceros pero no es un recurso ni devuelve uno:
 | Tarifa *(1.9)* | `GET /api/v1/catalogo/tarifas/{id}` |
 | Línea de tarifa *(1.9)* | `GET /api/v1/catalogo/tarifas/lineas/{id}` |
 | Suministro *(1.10)* | `GET /api/v1/catalogo/articulos/proveedores/{id}` |
+| Código de barras *(2.10)* | `GET /api/v1/catalogo/articulos/gtins/{id}` |
 
 Los listados **no** lo emiten: un `ETag` sobre una página sería el de la página, no el de cada
 elemento, y un cliente que lo devolviera en un `If-Match` estaría citando una versión que no es la
 del recurso que escribe.
 
-**Las cuarenta y seis operaciones que exigen `If-Match`** (las filas suman 46; si dejan de sumarlo,
+**Las cuarenta y siete operaciones que exigen `If-Match`** (las filas suman 47; si dejan de sumarlo,
 la tabla está mal aunque el titular cuadre con el test):
 
 | Recurso | Operaciones | |
@@ -971,6 +977,7 @@ la tabla está mal aunque el titular cuadre con el test):
 | Tarifa *(1.9)* | `PUT /{id}`, `PUT /{id}/cierre` | 2 |
 | Línea de tarifa *(1.9)* | `PUT /lineas/{id}` | 1 |
 | Artículo — sus proveedores *(1.10)* | `PUT /proveedores/{id}`, `DELETE /proveedores/{id}` | 2 |
+| Artículo — sus códigos de barras *(2.10)* | `DELETE /gtins/{id}` | 1 |
 | Tercero — lo que cuelga *(1.6, 1.10)* | `POST /{terceroId}/contactos`, `DELETE /{terceroId}/contactos/{contactoId}`, `POST /{terceroId}/cuentas-bancarias`, `DELETE /{terceroId}/cuentas-bancarias/{cuentaId}`, `POST /{terceroId}/cuentas-bancarias/{cuentaId}/preferente`, `PUT /{terceroId}/condiciones-pago/{rol}`, `PUT /{terceroId}/limite-credito`, `PUT /{terceroId}/tarifa-asignada` *(1.10)* | 8 |
 
 Las subrutas —el bloqueo, el cierre— citan la versión **del recurso**, no una suya: no son otro
@@ -991,9 +998,9 @@ proveedor a un artículo, en cambio, **sí** crea una fila con su identidad, su 
 su `DELETE`, y por eso está en la tabla de abajo y no en esta. La pregunta que separa las dos no es
 si el verbo suena a alta, es si lo que se escribe ya tenía `ETag`.
 
-**Las veinte rutas que admiten `Idempotency-Key`** — las dieciocho altas de un recurso, la
-importación del 1.11 y la confirmación del 2.4, y solo ellas. La última columna dice quién la
-atiende, y la marca **(exigida)** dice cuál de ellas no admite que falte:
+**Las veintidós rutas que admiten `Idempotency-Key`** — las diecinueve altas de un recurso, la
+importación del 1.11, la confirmación del 2.4 y la anulación del 2.5, y solo ellas. La última
+columna dice quién la atiende, y la marca **(exigida)** dice cuáles de ellas no admiten que falte:
 
 | Ruta | Módulo | Almacén que la atiende |
 |---|---|---|
@@ -1015,12 +1022,14 @@ atiende, y la marca **(exigida)** dice cuál de ellas no admite que falte:
 | `POST /api/v1/catalogo/tarifas` *(1.9)* | `catalogo` | ídem |
 | `POST /api/v1/catalogo/tarifas/{tarifaId}/lineas` *(1.9)* | `catalogo` | ídem |
 | `POST /api/v1/catalogo/articulos/{articuloId}/proveedores` *(1.10)* | `catalogo` | ídem |
+| `POST /api/v1/catalogo/articulos/{articuloId}/gtins` *(2.10)* | `catalogo` | ídem |
 | `POST /api/v1/terceros/terceros/importacion` *(1.11)* | `terceros` | `AlmacenDeIdempotenciaDeTerceros` |
 | `POST /api/v1/inventario/ajustes/{id}/confirmacion` **(exigida, 2.4)** | `inventario` | `AlmacenDeIdempotenciaDeInventario` |
+| `POST /api/v1/inventario/ajustes/{id}/anulacion` **(exigida, 2.5)** | `inventario` | ídem |
 
-> **La última es la excepción a la doctrina de este ítem**, escrita aquí para que no se lea como
-> una más: «la clave es una garantía que el cliente **pide**, no un peaje que se le cobra» vale
-> para las diecinueve de arriba y no para esta. Sin cabecera, el filtro se aparta en su primera
+> **Las dos últimas son la excepción a la doctrina de este ítem**, escrita aquí para que no se lean
+> como unas más: «la clave es una garantía que el cliente **pide**, no un peaje que se le cobra»
+> vale para las veinte de arriba y no para estas. Sin cabecera, el filtro se aparta en su primera
 > línea y no abre transacción; sin transacción, el `UPDATE` del contador se confirma solo y un
 > fallo posterior deja el número gastado sin documento que lo lleve —un hueco, que es lo que la R5
 > prohibe—. El criterio de la excepción **no es** «esto es importante»: es que sin la cabecera la
@@ -5721,6 +5730,47 @@ Lo que el encargo dejó al agente va al **ADR-0051**, con su fuente. Entre otras
 no son el GTIN de un artículo, leídos de la tabla 1-4 y la 1-5 de las *GS1 General Specifications*,
 Release 26.0.
 
+#### Tomadas por el agente en el paso 5 del 2.10 (2026-10-02)
+
+Lo que el ADR-0051 dejó abierto al llegar a los casos de uso y a la API. Ninguna lo enmienda: sus
+§6 y §7 dicen qué rutas, permisos y respuestas hay, y esto dice cómo.
+
+1. **Un controlador propio, `CodigosBarrasController`, bajo la ruta del artículo**
+   (`[Route(Prefijo + "/articulos")]`), como `LoQueCuelgaDelTerceroController` bajo la del tercero.
+   Las cinco acciones habrían llevado `ArticulosController` a catorce dependencias.
+2. **El GTIN no lleva `[Required]` en el contrato, y el nivel sí.** Un GTIN que falta recibe
+   `gtin-largo-no-admitido`, el `type` de su motivo, y no el `datos-no-validos` genérico. El nivel
+   que falta es un campo obligatorio vacío, y ese sí es el genérico.
+3. **Las unidades son opcionales solo en la base.** Sin ellas, la base lleva 1. Una caja o un palé
+   sin unidades es `400` `codigo-barras-unidades-no-validas`, porque no hay número que suponer. El
+   predicado sube al dominio, `CodigoBarras.CuadranLasUnidades`, para que el caso de uso pregunte
+   antes de construir: `CodigoBarras.Nuevo` lanza.
+4. **La búsqueda devuelve una lista, de uno o de ninguno.** El §7 dice qué devuelve cuando encuentra
+   y qué cuando lo que entra no es un GTIN, y no decía qué cuando nadie lo lleva. Una búsqueda sobre
+   la colección que no encuentra nada no es un recurso que no existe: `200` con la lista vacía.
+5. **El orden del alta**, de lo que cuesta menos decir antes:
+   - la empresa activa (`IConsultaDeEmpresas.EstaActivaAsync`), porque el `EmpresaId` sale del
+     claim y así lo declara `LosIdentificadoresAjenosTests`;
+   - el artículo, `404`;
+   - el GTIN, el nivel y las unidades, con un `400` cada uno;
+   - el duplicado, `409`, que es lo único que pregunta por otras filas.
+
+   Cada frontera la fija un caso que da el error de la pregunta anterior con la siguiente también
+   mal: la empresa inoperativa con un artículo que no existe y un GTIN que no sirve; el artículo
+   que no existe con un GTIN que no sirve; y un GTIN repetido con un nivel o unas unidades que no
+   sirven, que recibe su `400` y no el `409`.
+
+   Los motivos del GTIN salen por siete `type` `gtin-…`, uno por motivo y cada uno con su literal,
+   porque el catálogo de errores se genera leyendo literales.
+
+> **Hallazgo de este paso, fuera del alcance: se propone, no se arregla.**
+> `LosIdentificadoresAjenosTests` declara de `ArticuloProveedor.EmpresaId` que «sale del claim en
+> `AgregarProveedorAlArticulo`, que es donde se comprueba la empresa activa»
+> (`tests/Arquitectura.Tests/Inventario.cs`). Pero `AgregarProveedorAlArticulo` no recibe
+> `IConsultaDeEmpresas` ni llama a `EstaActivaAsync`, a diferencia del alta del artículo, de la
+> categoría, de la tarifa, de su línea y ahora del código de barras. Se decide con el usuario si se
+> añade la comprobación o se corrige la frase.
+
 #### Los números de este encargo
 
 - **Las mutaciones llevan una sola numeración** (*Reglas de oro propias*). El encargo hace empezar la
@@ -7670,18 +7720,38 @@ lo enmienda.
    `ElCatalogoNoGuardaDatosDeNadieTests` (un GTIN no es un dato de nadie) y los `CHECK` de
    `LasMigracionesSobreTablasConFilasTests`. El catálogo de errores y los dos diccionarios llevan su
    texto.
-5. Los casos de uso y la API:
-   - el alta, con `Idempotency-Key`, y la baja, con `If-Match`;
-   - la lista del artículo y la búsqueda por GTIN;
-   - los permisos y `TodaEscrituraDiceComoSeProtegeTests`;
-   - el catálogo de errores.
+5. ~~Los casos de uso y la API.~~ Hecho, con las decisiones en *Tomadas por el agente en el paso 5
+   del 2.10*:
+   - cinco acciones en `CodigosBarrasController`: la lista del artículo, la fila con su ETag, la
+     búsqueda por GTIN, el alta con `Idempotency-Key` y la baja con `If-Match`;
+   - dos permisos, `catalogo.codigo-barras.agregar` y `catalogo.codigo-barras.quitar`, así que el
+     rol del sistema pasa de 95 a **97**; leer es `catalogo.articulo.ver`;
+   - diez `type` nuevos, con su texto en los dos diccionarios: siete `gtin-…`, uno por motivo, y
+     `codigo-barras-no-encontrado`, `-nivel-no-valido` y `-unidades-no-validas`. El catálogo queda
+     en 144 tipos, de 150 sitios de llamada;
+   - `TodaEscrituraDiceComoSeProtegeTests` en **135 · 86 · 47 · 22 · 17**, y las tres tablas del
+     0.9 rehechas con sus filas. Ahí se vio que la del `Idempotency-Key` no tenía la anulación del
+     2.5: es la cuarta vez que esas tablas se quedan atrás, y está anotado en su sitio;
+   - 41 casos nuevos en `CodigosBarrasDelArticuloTests` (carril rápido) y 8 en
+     `ContratoDelCodigoDeBarrasTests` (integración, semillas 630-638), los ocho en el censo.
+
+   Una revisión del paso antes del commit dejó cuatro de esos 41 y una ampliación. El caso de la
+   empresa inoperativa no fijaba el orden, y faltaban el del duplicado después de la petición y el
+   de varios GTIN del mismo nivel en un artículo. El primer caso de integración da de alta dos bases
+   y dos cajas. Y tres comentarios decían que el índice único se ejercía. Ninguno de estos casos lo
+   alcanza: con las altas de una en una, el `409` lo da la comprobación previa, y el índice es del
+   caso de carrera (el paso 6).
+
+   Batería entera en verde: rápido **1212** en diez ensamblados e integración **555** (471 + 84),
+   según `recuento-de-tests.sh`; el frontal, 17 ficheros y 113 casos, sin avisos de `act()`.
 6. La carrera: dos altas del mismo GTIN a la vez, con dos transacciones de verdad.
 7. La comprobación de que ningún documento guarda el GTIN en lugar del artículo.
 8. La pantalla:
    - la página, y su esquema Zod con el dígito de control;
    - el `409` en su campo, en los dos idiomas, con Vitest y MSW;
    - el recorrido por el nginx de verdad con `playwright-cli`.
-9. La tanda de mutaciones, desde la 119.
+9. La tanda de mutaciones, desde la 119. Entre ellas, subir la pregunta del duplicado por encima del
+   nivel y las unidades, que tiene que ver `El_duplicado_se_pregunta_despues_de_lo_que_trae_la_peticion`.
 10. La batería, el humo y los runs. La casilla y la línea del README van en el mismo commit.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

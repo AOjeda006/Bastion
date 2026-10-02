@@ -211,6 +211,13 @@ export const es = {
       'categoria-padre-no-encontrado': 'La categoría de la que quieres colgar esta no existe.',
       'codigo-barras-duplicado':
         'Ese GTIN ya lo lleva un artículo de esta empresa. Si ahora es de otro, quítalo antes del que lo lleva.',
+      'codigo-barras-nivel-no-valido':
+        'Un código de barras va en la unidad base, en una caja o en un palé.',
+      'codigo-barras-no-encontrado':
+        'Ese código de barras ya no está en este artículo. Actualiza la pantalla.',
+      'codigo-barras-unidades-no-validas':
+        'La unidad base lleva una unidad. Una caja o un palé llevan las unidades base que ' +
+        'contienen, que son dos o más.',
       'codigo-de-rol-ya-usado': 'Ya hay un rol con ese código. Elige otro.',
       'contrasena-actual-incorrecta': 'La contraseña actual no es correcta.',
       'conversion-um-duplicada': 'Ya hay una conversión entre esas dos unidades.',
@@ -259,6 +266,23 @@ export const es = {
       'fecha-fuera-del-ejercicio-de-la-serie':
         'Esa serie es de otro ejercicio: no numera documentos con esta fecha. Abre el ajuste con ' +
         'una serie del ejercicio de su fecha.',
+      'gtin-circulacion-restringida':
+        'Es un número de circulación restringida: lo pone una tienda o un país para su uso ' +
+        'interno, y fuera de ahí no identifica un artículo.',
+      'gtin-cupon': 'Es el número de un cupón o de un vale de devolución, no el de un artículo.',
+      'gtin-digito-de-control':
+        'La última cifra no cuadra con las demás: el número está mal leído o mal tecleado.',
+      'gtin-largo-no-admitido':
+        'Un GTIN tiene 8, 12, 13 o 14 cifras. Si te salen otras, vuelve a mirar el código: falta ' +
+        'o sobra alguna.',
+      'gtin-medida-variable':
+        'Es un código de peso o medida variable: sin la medida no está entero, y no identifica ' +
+        'un artículo.',
+      'gtin-no-son-digitos':
+        'Un GTIN son solo cifras: sin letras, ni guiones, ni espacios por dentro.',
+      'gtin-sin-asignar':
+        'Ese prefijo está reservado, o es de algo que no es un artículo, así que no es el GTIN ' +
+        'de ninguno.',
       'idempotencia-clave-no-valida':
         'La aplicación ha enviado una clave de repetición que no vale. Inténtalo otra vez.',
       'idempotencia-cuerpo-distinto':

@@ -175,6 +175,11 @@ export const en: Diccionario = {
         'The category you want to hang this one from does not exist.',
       'codigo-barras-duplicado':
         'An item at this company already carries that GTIN. If it now belongs to another one, remove it from the first.',
+      'codigo-barras-nivel-no-valido': 'A barcode goes on the base unit, on a case or on a pallet.',
+      'codigo-barras-no-encontrado': 'That barcode is no longer on this item. Refresh the screen.',
+      'codigo-barras-unidades-no-validas':
+        'The base unit holds one unit. A case or a pallet holds the base units inside it, which ' +
+        'are two or more.',
       'codigo-de-rol-ya-usado': 'There is already a role with that code. Pick another one.',
       'contrasena-actual-incorrecta': 'Your current password is not correct.',
       'conversion-um-duplicada': 'There is already a conversion between those two units.',
@@ -224,6 +229,22 @@ export const en: Diccionario = {
       'fecha-fuera-del-ejercicio-de-la-serie':
         'That series belongs to another financial year: it does not number documents with this ' +
         'date. Open the adjustment with a series from the year of its date.',
+      'gtin-circulacion-restringida':
+        'That is a restricted circulation number: a shop or a country assigns it for internal ' +
+        'use, and outside there it does not identify an item.',
+      'gtin-cupon': 'That is the number of a coupon or a refund voucher, not of an item.',
+      'gtin-digito-de-control':
+        'The last digit does not match the others: the number was misread or mistyped.',
+      'gtin-largo-no-admitido':
+        'A GTIN has 8, 12, 13 or 14 digits. If you count a different number, look at the code ' +
+        'again: one is missing or extra.',
+      'gtin-medida-variable':
+        'That is a variable measure code: without the measure it is not complete, and it does ' +
+        'not identify an item.',
+      'gtin-no-son-digitos': 'A GTIN is digits only: no letters, dashes or spaces inside.',
+      'gtin-sin-asignar':
+        'That prefix is reserved, or belongs to something that is not an item, so it is no ' +
+        'item’s GTIN.',
       'idempotencia-clave-no-valida':
         'The application sent a retry key that is not valid. Please try again.',
       'idempotencia-cuerpo-distinto':

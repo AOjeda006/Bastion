@@ -64,6 +64,19 @@ internal static class Mapeos
             suministro.ReferenciaDelProveedor);
     }
 
+    internal static CodigoBarrasDto ADto(this CodigoBarras codigo)
+    {
+        ArgumentNullException.ThrowIfNull(codigo);
+
+        return new CodigoBarrasDto(
+            codigo.Id,
+            codigo.EmpresaId,
+            codigo.ArticuloId,
+            codigo.Gtin.Valor,
+            codigo.Nivel.ToString(),
+            codigo.Unidades);
+    }
+
     internal static TarifaDto ADto(this Tarifa tarifa)
     {
         ArgumentNullException.ThrowIfNull(tarifa);

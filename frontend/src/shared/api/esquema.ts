@@ -106,7 +106,7 @@ export interface paths {
         post?: never;
         /**
          * Quita un proveedor de este artículo.
-         * @description <b>El único `DELETE` del módulo, y borra de verdad.</b> Lo que desaparece no es la
+         * @description <b>Borra de verdad, como la baja de un código de barras.</b> Lo que desaparece no es la
          *             ficha de nadie: es un hecho entre dos que ha dejado de ser verdad. El rastro de que existió,
          *             y de quién lo quitó, está en la traza (ADR-0012).
          */
@@ -158,6 +158,75 @@ export interface paths {
          *             `categoria-padre-no-encontrado` y `categoria-demasiado-profunda`.
          */
         put: operations["Categorias_Modificar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/articulos/{articuloId}/gtins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve los códigos de barras de un artículo, de la base a las agrupaciones.
+         * @description Sin paginar: son los de UN artículo, que son unos pocos.
+         */
+        get: operations["CodigosBarras_Listar"];
+        put?: never;
+        /**
+         * Da de alta un código de barras en un artículo.
+         * @description El `400` dice por su `type` qué falla: el motivo del GTIN (`gtin-…`), el nivel
+         *     o las unidades. El `409``codigo-barras-duplicado` es el de un GTIN que ya lleva un
+         *     artículo de la empresa, lo diga la comprobación previa o el índice único (ADR-0051 §5).
+         */
+        post: operations["CodigosBarras_Agregar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/articulos/gtins/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve un código de barras, con la ETag que pide su baja. */
+        get: operations["CodigosBarras_Obtener"];
+        put?: never;
+        post?: never;
+        /**
+         * Quita un código de barras de su artículo.
+         * @description Borra de verdad, y la empresa puede volver a dar de alta ese GTIN enseguida (ADR-0051 §8). La
+         *     fila no cambia nunca, pero la baja exige su `If-Match`: nadie borra lo que no ha visto.
+         */
+        delete: operations["CodigosBarras_Quitar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/articulos/gtins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Busca qué artículo lleva un GTIN: una lista de uno, o vacía.
+         * @description <b>Lo que entra se normaliza</b>, así que el GTIN-12 y su forma de 13 encuentran lo mismo. Un
+         *             texto que no es un GTIN —o ninguno— recibe el `400` de su motivo, con su `type``gtin-…`, y no una lista vacía (ADR-0051 §7).
+         */
+        get: operations["CodigosBarras_Buscar"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1794,6 +1863,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Lo que hace falta para dar de alta un código de barras en un artículo. */
+        AgregarCodigoBarrasDto: {
+            /** @description El GTIN, de 8, 12, 13 o 14 cifras. Los espacios de los extremos no cuentan. */
+            gtin?: null | string;
+            /** @description Dónde va impreso: `Base`, `Caja` o `Palet`. */
+            nivel: string;
+            /**
+             * Format: int32
+             * @description Cuántas unidades base lleva. En la base es una, y si no se manda, es esa. En una caja o un
+             *     palé, dos o más, y hay que mandarlas.
+             */
+            unidades?: null | number | string;
+        };
         /** @description Lo que hace falta para declarar que un tercero suministra un artículo. */
         AgregarProveedorDto: {
             /**
@@ -2081,6 +2163,33 @@ export interface components {
              * @description Último día en que rige, incluido.
              */
             ultimoDia: string;
+        };
+        /** @description Un código de barras de un artículo, tal como sale de la API. */
+        CodigoBarrasDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la fila.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Empresa a la que pertenece (R8).
+             */
+            empresaId: string;
+            /**
+             * Format: uuid
+             * @description Artículo que lleva el código.
+             */
+            articuloId: string;
+            /** @description El GTIN, en catorce cifras. */
+            gtin: string;
+            /** @description Dónde va impreso, como texto: `Base`, `Caja` o `Palet`. */
+            nivel: string;
+            /**
+             * Format: int32
+             * @description Unidades base que lleva: una en la base, dos o más en una agrupación.
+             */
+            unidades: number | string;
         };
         /** @description A qué empresa se da de alta al usuario. */
         ConcederPertenenciaDto: {
@@ -4438,6 +4547,234 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CodigosBarras_Listar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del artículo. */
+                articuloId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CodigoBarrasDto"][];
+                    "application/json": components["schemas"]["CodigoBarrasDto"][];
+                    "text/json": components["schemas"]["CodigoBarrasDto"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CodigosBarras_Agregar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del artículo. */
+                articuloId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgregarCodigoBarrasDto"];
+                "text/json": components["schemas"]["AgregarCodigoBarrasDto"];
+                "application/*+json": components["schemas"]["AgregarCodigoBarrasDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CodigoBarrasDto"];
+                    "application/json": components["schemas"]["CodigoBarrasDto"];
+                    "text/json": components["schemas"]["CodigoBarrasDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CodigosBarras_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del código de barras. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CodigoBarrasDto"];
+                    "application/json": components["schemas"]["CodigoBarrasDto"];
+                    "text/json": components["schemas"]["CodigoBarrasDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CodigosBarras_Quitar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del código de barras. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CodigosBarras_Buscar: {
+        parameters: {
+            query?: {
+                /** @description El GTIN, de 8, 12, 13 o 14 cifras. */
+                gtin?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["CodigoBarrasDto"][];
+                    "application/json": components["schemas"]["CodigoBarrasDto"][];
+                    "text/json": components["schemas"]["CodigoBarrasDto"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

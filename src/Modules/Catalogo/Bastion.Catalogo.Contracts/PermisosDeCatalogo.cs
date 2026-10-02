@@ -17,7 +17,9 @@ namespace Bastion.Catalogo.Contracts;
 /// entero contra lo que las acciones exigen — así que declararlo pondría rojo el arranque. El
 /// <c>DELETE</c> que sí hay desde el ítem 1.10 es el de un <b>suministro</b>, y por eso
 /// <see cref="ArticuloProveedorQuitar"/> existe: lo que se borra ahí no es una ficha, es un hecho
-/// entre dos —«este tercero suministra esto»— que deja de ser verdad.
+/// entre dos —«este tercero suministra esto»— que deja de ser verdad. El del ítem 2.10 es el de un
+/// <b>código de barras</b>, <see cref="CodigoBarrasQuitar"/>, y tampoco es una ficha: es un GTIN que
+/// deja de identificar el artículo, y la empresa puede volver a darlo de alta.
 /// </para>
 /// <para>
 /// Son constantes y no un tipo, por lo mismo que en los otros dos módulos: <c>Contracts</c> no
@@ -129,11 +131,26 @@ public static class PermisosDeCatalogo
 
     /// <summary>Quitar un proveedor de un artículo.</summary>
     /// <remarks>
-    /// <b>El único borrado del módulo.</b> Aparte de agregar porque dejar de comprarle a alguien no
-    /// es la misma decisión que empezar a hacerlo: en muchos sitios la segunda la toma quien
-    /// negocia y la primera quien administra.
+    /// <b>Uno de los dos borrados del módulo</b>, con el del código de barras. Aparte de agregar
+    /// porque dejar de comprarle a alguien no es la misma decisión que empezar a hacerlo: en muchos
+    /// sitios la segunda la toma quien negocia y la primera quien administra.
     /// </remarks>
     public const string ArticuloProveedorQuitar = "catalogo.articulo-proveedor.quitar";
+
+    /// <summary>Dar de alta un código de barras en un artículo (ADR-0051 §6).</summary>
+    /// <remarks>
+    /// <b>Aparte de <see cref="ArticuloModificar"/></b>, como el suministro: el GTIN es lo que el
+    /// lector del almacén leerá en las recepciones, y quien lo da de alta suele ser quien recibe la
+    /// mercancía, no quien mantiene la ficha. Leerlos es <see cref="ArticuloVer"/>.
+    /// </remarks>
+    public const string CodigoBarrasAgregar = "catalogo.codigo-barras.agregar";
+
+    /// <summary>Quitar un código de barras de un artículo.</summary>
+    /// <remarks>
+    /// Aparte de agregar por lo mismo que en el suministro: quitar un GTIN deja de reconocer el
+    /// artículo en el lector, y no es la misma decisión que empezar a hacerlo.
+    /// </remarks>
+    public const string CodigoBarrasQuitar = "catalogo.codigo-barras.quitar";
 
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
@@ -160,5 +177,7 @@ public static class PermisosDeCatalogo
         ArticuloProveedorAgregar,
         ArticuloProveedorModificar,
         ArticuloProveedorQuitar,
+        CodigoBarrasAgregar,
+        CodigoBarrasQuitar,
     ];
 }

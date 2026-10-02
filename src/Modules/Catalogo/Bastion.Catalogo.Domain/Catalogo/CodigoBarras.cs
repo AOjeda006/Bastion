@@ -77,6 +77,19 @@ public sealed class CodigoBarras : EntidadBase, IDeInquilino
     /// <summary>Cuántas unidades base lleva: una la base, dos o más la caja y el palé.</summary>
     public int Unidades { get; private set; }
 
+    /// <summary>Si esas unidades son las de ese nivel: una en la base, dos o más en una agrupación.</summary>
+    /// <remarks>
+    /// Pública para que el caso de uso pregunte con la MISMA regla antes de construir, y conteste
+    /// un <c>400</c> con nombre en vez de dejar que <see cref="Nuevo"/> lance (ADR-0051 §3).
+    /// </remarks>
+    /// <param name="nivel">En qué agrupación va impreso.</param>
+    /// <param name="unidades">Unidades base que lleva.</param>
+    /// <returns>Si cuadran.</returns>
+    public static bool CuadranLasUnidades(NivelDeGtin nivel, int unidades) =>
+        nivel == NivelDeGtin.Base
+            ? unidades == UnidadesDeLaBase
+            : unidades >= UnidadesMinimasDeUnaAgrupacion;
+
     /// <summary>Declara un código de barras de un artículo.</summary>
     /// <param name="empresaId">Empresa a la que pertenece (R8), que sale del <i>claim</i>.</param>
     /// <param name="articuloId">Artículo al que identifica, ya comprobado.</param>
@@ -111,12 +124,9 @@ public sealed class CodigoBarras : EntidadBase, IDeInquilino
             throw new ArgumentOutOfRangeException(nameof(nivel), nivel, "El nivel es la base, la caja o el palé.");
         }
 
-        // El caso de uso ya lo comprobó y dio su error con nombre: llegar aquí es un defecto.
-        bool cuadran = nivel == NivelDeGtin.Base
-            ? unidades == UnidadesDeLaBase
-            : unidades >= UnidadesMinimasDeUnaAgrupacion;
-
-        if (!cuadran)
+        // El caso de uso ya lo comprobó con la misma regla y dio su error con nombre: llegar aquí
+        // es un defecto.
+        if (!CuadranLasUnidades(nivel, unidades))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(unidades),

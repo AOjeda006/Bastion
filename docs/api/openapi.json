@@ -868,7 +868,7 @@
           "Articulos"
         ],
         "summary": "Quita un proveedor de este artículo.",
-        "description": "<b>El único `DELETE` del módulo, y borra de verdad.</b> Lo que desaparece no es la\n        ficha de nadie: es un hecho entre dos que ha dejado de ser verdad. El rastro de que existió,\n        y de quién lo quitó, está en la traza (ADR-0012).",
+        "description": "<b>Borra de verdad, como la baja de un código de barras.</b> Lo que desaparece no es la\n        ficha de nadie: es un hecho entre dos que ha dejado de ser verdad. El rastro de que existió,\n        y de quién lo quitó, está en la traza (ADR-0012).",
         "operationId": "Articulos_QuitarProveedor",
         "parameters": [
           {
@@ -1366,6 +1366,442 @@
           },
           "428": {
             "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/articulos/{articuloId}/gtins": {
+      "get": {
+        "tags": [
+          "CodigosBarras"
+        ],
+        "summary": "Devuelve los códigos de barras de un artículo, de la base a las agrupaciones.",
+        "description": "Sin paginar: son los de UN artículo, que son unos pocos.",
+        "operationId": "CodigosBarras_Listar",
+        "parameters": [
+          {
+            "name": "articuloId",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CodigoBarrasDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CodigoBarrasDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CodigoBarrasDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "CodigosBarras"
+        ],
+        "summary": "Da de alta un código de barras en un artículo.",
+        "description": "El `400` dice por su `type` qué falla: el motivo del GTIN (`gtin-…`), el nivel\no las unidades. El `409``codigo-barras-duplicado` es el de un GTIN que ya lleva un\nartículo de la empresa, lo diga la comprobación previa o el índice único (ADR-0051 §5).",
+        "operationId": "CodigosBarras_Agregar",
+        "parameters": [
+          {
+            "name": "articuloId",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarCodigoBarrasDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarCodigoBarrasDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarCodigoBarrasDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigoBarrasDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigoBarrasDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigoBarrasDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/articulos/gtins/{id}": {
+      "get": {
+        "tags": [
+          "CodigosBarras"
+        ],
+        "summary": "Devuelve un código de barras, con la ETag que pide su baja.",
+        "operationId": "CodigosBarras_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del código de barras.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigoBarrasDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigoBarrasDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigoBarrasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "CodigosBarras"
+        ],
+        "summary": "Quita un código de barras de su artículo.",
+        "description": "Borra de verdad, y la empresa puede volver a dar de alta ese GTIN enseguida (ADR-0051 §8). La\nfila no cambia nunca, pero la baja exige su `If-Match`: nadie borra lo que no ha visto.",
+        "operationId": "CodigosBarras_Quitar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del código de barras.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/articulos/gtins": {
+      "get": {
+        "tags": [
+          "CodigosBarras"
+        ],
+        "summary": "Busca qué artículo lleva un GTIN: una lista de uno, o vacía.",
+        "description": "<b>Lo que entra se normaliza</b>, así que el GTIN-12 y su forma de 13 encuentran lo mismo. Un\n        texto que no es un GTIN —o ninguno— recibe el `400` de su motivo, con su `type``gtin-…`, y no una lista vacía (ADR-0051 §7).",
+        "operationId": "CodigosBarras_Buscar",
+        "parameters": [
+          {
+            "name": "gtin",
+            "in": "query",
+            "description": "El GTIN, de 8, 12, 13 o 14 cifras.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CodigoBarrasDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CodigoBarrasDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CodigoBarrasDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
             "content": {
               "text/plain": {
                 "schema": {
@@ -13077,6 +13513,36 @@
   },
   "components": {
     "schemas": {
+      "AgregarCodigoBarrasDto": {
+        "required": [
+          "nivel"
+        ],
+        "type": "object",
+        "properties": {
+          "gtin": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El GTIN, de 8, 12, 13 o 14 cifras. Los espacios de los extremos no cuentan."
+          },
+          "nivel": {
+            "type": "string",
+            "description": "Dónde va impreso: `Base`, `Caja` o `Palet`."
+          },
+          "unidades": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Cuántas unidades base lleva. En la base es una, y si no se manda, es esa. En una caja o un\npalé, dos o más, y hay que mandarlas.",
+            "format": "int32"
+          }
+        },
+        "description": "Lo que hace falta para dar de alta un código de barras en un artículo."
+      },
       "AgregarProveedorDto": {
         "required": [
           "terceroId"
@@ -13641,6 +14107,52 @@
           }
         },
         "description": "Lo que hace falta para cerrar un tramo de tarifa."
+      },
+      "CodigoBarrasDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "articuloId",
+          "gtin",
+          "nivel",
+          "unidades"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la fila.",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "description": "Empresa a la que pertenece (R8).",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "Artículo que lleva el código.",
+            "format": "uuid"
+          },
+          "gtin": {
+            "type": "string",
+            "description": "El GTIN, en catorce cifras."
+          },
+          "nivel": {
+            "type": "string",
+            "description": "Dónde va impreso, como texto: `Base`, `Caja` o `Palet`."
+          },
+          "unidades": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Unidades base que lleva: una en la base, dos o más en una agrupación.",
+            "format": "int32"
+          }
+        },
+        "description": "Un código de barras de un artículo, tal como sale de la API."
       },
       "ConcederPertenenciaDto": {
         "required": [
@@ -17333,6 +17845,9 @@
     },
     {
       "name": "Categorias"
+    },
+    {
+      "name": "CodigosBarras"
     },
     {
       "name": "Tarifas"

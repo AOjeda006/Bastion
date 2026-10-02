@@ -48,6 +48,7 @@ public sealed class ElCodigoDeBarrasTests
     [InlineData(NivelDeGtin.Palet, 960)]
     public void La_base_lleva_una_unidad_y_la_caja_y_el_palet_dos_o_mas(NivelDeGtin nivel, int unidades)
     {
+        CodigoBarras.CuadranLasUnidades(nivel, unidades).ShouldBeTrue("el caso de uso pregunta con esta");
         CodigoBarras.Nuevo(s_empresa, s_articulo, s_gtin, nivel, unidades, s_momento).Unidades.ShouldBe(unidades);
     }
 
@@ -61,6 +62,7 @@ public sealed class ElCodigoDeBarrasTests
     public void Unas_unidades_que_no_son_las_de_su_nivel_lanzan(NivelDeGtin nivel, int unidades)
     {
         // Una caja de una unidad es la unidad con otro código: o es la base, o está mal tecleada.
+        CodigoBarras.CuadranLasUnidades(nivel, unidades).ShouldBeFalse("el caso de uso pregunta con esta");
         Should.Throw<ArgumentOutOfRangeException>(
             () => CodigoBarras.Nuevo(s_empresa, s_articulo, s_gtin, nivel, unidades, s_momento));
     }

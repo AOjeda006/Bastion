@@ -38,6 +38,12 @@ public static class CasosDeUsoDeCatalogo
         servicios.AddScoped<IModificarProveedorDelArticulo, ModificarProveedorDelArticulo>();
         servicios.AddScoped<IQuitarProveedorDelArticulo, QuitarProveedorDelArticulo>();
 
+        servicios.AddScoped<IListarCodigosBarrasDelArticulo, ListarCodigosBarrasDelArticulo>();
+        servicios.AddScoped<IObtenerCodigoBarras, ObtenerCodigoBarras>();
+        servicios.AddScoped<IBuscarCodigoBarrasPorGtin, BuscarCodigoBarrasPorGtin>();
+        servicios.AddScoped<IAgregarCodigoBarrasAlArticulo, AgregarCodigoBarrasAlArticulo>();
+        servicios.AddScoped<IQuitarCodigoBarras, QuitarCodigoBarras>();
+
         servicios.AddScoped<ICrearCategoria, CrearCategoria>();
         servicios.AddScoped<IObtenerCategoria, ObtenerCategoria>();
         servicios.AddScoped<IListarCategorias, ListarCategorias>();

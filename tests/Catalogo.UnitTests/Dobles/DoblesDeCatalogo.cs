@@ -570,3 +570,49 @@ internal sealed class ProveedoresEnMemoria : IRepositorioDeProveedoresDeArticulo
         Guardados.Remove(suministro);
     }
 }
+
+/// <summary>Los códigos de barras, en memoria, con el GTIN comparado como lo compara el índice.</summary>
+/// <remarks>
+/// Por igualdad del <see cref="Gtin"/>, que ya va en su forma de catorce: así un alta en doce y otra
+/// en trece del mismo número chocan aquí igual que en PostgreSQL.
+/// </remarks>
+internal sealed class CodigosBarrasEnMemoria : IRepositorioDeCodigosBarras
+{
+    internal List<CodigoBarras> Guardados { get; } = [];
+
+    internal List<CodigoBarras> Eliminados { get; } = [];
+
+    /// <summary>Cuántas veces se ha preguntado por un GTIN, para ver que la empresa inactiva no llega.</summary>
+    internal int BusquedasDeGtin { get; private set; }
+
+    internal CodigosBarrasEnMemoria Con(CodigoBarras codigo)
+    {
+        Guardados.Add(codigo);
+
+        return this;
+    }
+
+    public Task<CodigoBarras?> ObtenerAsync(Guid id, CancellationToken cancelacion) =>
+        Task.FromResult(Guardados.Find(uno => uno.Id == id));
+
+    public Task<IReadOnlyList<CodigoBarras>> DeArticuloAsync(
+        Guid articuloId,
+        CancellationToken cancelacion) =>
+        Task.FromResult<IReadOnlyList<CodigoBarras>>(
+            [.. Guardados.Where(uno => uno.ArticuloId == articuloId)]);
+
+    public Task<CodigoBarras?> DelGtinAsync(Gtin gtin, CancellationToken cancelacion)
+    {
+        BusquedasDeGtin++;
+
+        return Task.FromResult(Guardados.Find(uno => uno.Gtin == gtin));
+    }
+
+    public void Agregar(CodigoBarras codigo) => Guardados.Add(codigo);
+
+    public void Eliminar(CodigoBarras codigo)
+    {
+        Eliminados.Add(codigo);
+        Guardados.Remove(codigo);
+    }
+}

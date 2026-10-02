@@ -200,7 +200,7 @@ public sealed class ArticulosController(
 
     /// <summary>Quita un proveedor de este artículo.</summary>
     /// <remarks>
-    /// <b>El único <c>DELETE</c> del módulo, y borra de verdad.</b> Lo que desaparece no es la
+    /// <b>Borra de verdad, como la baja de un código de barras.</b> Lo que desaparece no es la
     /// ficha de nadie: es un hecho entre dos que ha dejado de ser verdad. El rastro de que existió,
     /// y de quién lo quitó, está en la traza (ADR-0012).
     /// </remarks>

@@ -88,6 +88,16 @@ public sealed class ElCensoDeEsteCarrilTests
         "ContratoDeLosCrucesTests.Una_tarifa_que_ya_no_rige_y_una_que_aun_no_son_409_y_la_ficha_sigue_con_la_suya",
         "ContratoDeLosCrucesTests.Volver_a_anadir_a_un_bloqueado_que_ya_suministraba_es_el_MISMO_400_y_no_un_409",
 
+        // Del ítem 2.10 (ADR-0051): los códigos de barras del artículo, por la API.
+        "ContratoDelCodigoDeBarrasTests.Cada_rechazo_es_un_400_con_su_type_y_no_deja_fila",
+        "ContratoDelCodigoDeBarrasTests.El_gtin12_y_su_forma_de_13_chocan_en_otro_articulo_y_la_busqueda_los_iguala",
+        "ContratoDelCodigoDeBarrasTests.El_reintento_con_la_misma_clave_repite_el_201_y_no_es_un_409",
+        "ContratoDelCodigoDeBarrasTests.La_baja_exige_su_version_borra_la_fila_y_la_segunda_es_404",
+        "ContratoDelCodigoDeBarrasTests.Las_lecturas_distinguen_lo_que_no_existe_de_lo_que_no_es_un_gtin",
+        "ContratoDelCodigoDeBarrasTests.Otra_empresa_lleva_el_mismo_gtin_y_cada_una_ve_solo_el_suyo",
+        "ContratoDelCodigoDeBarrasTests.Tras_la_baja_el_mismo_gtin_se_da_de_alta_en_otro_articulo",
+        "ContratoDelCodigoDeBarrasTests.Un_gtin_se_da_de_alta_con_201_en_catorce_cifras_y_el_listado_lo_trae",
+
         "ContratoDeOrganizacionTests.Borrar_una_empresa_la_bloquea_pero_no_la_borra",
         "ContratoDeOrganizacionTests.Cerrar_lo_ya_cerrado_y_reabrir_lo_ya_abierto_son_409_y_no_un_204_mudo",
         "ContratoDeOrganizacionTests.Con_la_empresa_activa_bloqueada_no_se_puede_crear_nada_y_es_409",
