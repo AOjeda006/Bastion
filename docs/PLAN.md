@@ -7635,7 +7635,9 @@ debajo. Las mutaciones empiezan en la **119**, y el ADR es el **ADR-0051**.
 **Lo que queda, por este orden:**
 
 1. ~~La puerta de clarificación.~~ Hecho: tres preguntas, contestadas el 2026-10-02.
-2. El ADR-0051, antes del código.
+2. ~~El ADR-0051, antes del código.~~ Hecho. Fija la tabla de prefijos que no son de un
+   artículo, leída de las *GS1 General Specifications*, Release 26.0, y lo que el encargo dejó
+   al agente: los nombres, la búsqueda en el recurso del GTIN y el recorte de los extremos.
 3. El dominio, con TDD:
    - el *value object* `Gtin`, con su normalización, su dígito de control y sus prefijos;
    - el GTIN del artículo, con su nivel y sus unidades.
