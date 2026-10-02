@@ -62,11 +62,30 @@ comprobar() {
     return
   fi
 
+  # «`dotnet ef` NO ARRANCA» NO ES «NO HAY MIGRACIONES». Hasta el epílogo del 2.9 la salida de
+  # error iba a /dev/null y el código de salida se perdía en la tubería, así que una herramienta
+  # sin restaurar, un ensamblado sin compilar o un host que no se construye salían como «EF no
+  # encuentra NINGUNA migración»: el diagnóstico más caro de creer, porque manda a revisar el
+  # proyecto. Ahora la orden se ejecuta sola, con las dos salidas juntas, y se mira su código
+  # ANTES de contar nada. Si no es cero, el rojo lleva la salida entera a la vista.
+  if salida=$(dotnet ef migrations list --project "$proyecto" --startup-project "$STARTUP" \
+      --context "$contexto" --configuration "$CONFIGURACION" --no-build --no-connect 2>&1); then
+    codigo=0
+  else
+    codigo=$?
+  fi
+
+  if [ "$codigo" -ne 0 ]; then
+    echo "::error title=Migraciones::dotnet ef no arranca para ${modulo} (sale con ${codigo}): no se sabe si hay migraciones. Su salida, entera:"
+    printf '%s\n' "$salida"
+    FALLOS=$((FALLOS + 1))
+    return
+  fi
+
   # Los nombres de migración empiezan por la marca de tiempo de catorce dígitos que genera EF.
-  # Contar esas líneas descarta los avisos que el comando escribe por lo demás.
-  migraciones=$(dotnet ef migrations list --project "$proyecto" --startup-project "$STARTUP" \
-      --context "$contexto" --configuration "$CONFIGURACION" --no-build --no-connect 2>/dev/null \
-      | grep -c '^[0-9]\{14\}_' || true)
+  # Contar esas líneas descarta los avisos que el comando escribe por lo demás. Se cuenta sobre la
+  # variable, sin tubería: `grep -c` sale con 1 cuando cuenta cero, y eso no es un fallo.
+  migraciones=$(grep -c '^[0-9]\{14\}_' <<< "$salida" || true)
 
   if [ "${migraciones:-0}" -eq 0 ]; then
     echo "::error title=Migraciones::EF no encuentra NINGUNA migración de ${modulo} en el ensamblado. Viven en db/migraciones/${modulo} y hay que incluirlas explícitamente en ${proyecto}: <Compile Include=\"../../../../db/migraciones/${modulo}/**/*.cs\" />"
@@ -76,12 +95,17 @@ comprobar() {
 
   # `has-pending-model-changes` sale con 0 cuando NO hay cambios pendientes y con 1 cuando sí
   # los hay. Comprobado por el efecto —añadiendo una propiedad de sombra al modelo y viendo el
-  # código de salida pasar de 0 a 1—, no por lo que pareciera razonable.
-  if dotnet ef migrations has-pending-model-changes --project "$proyecto" --startup-project "$STARTUP" \
-      --context "$contexto" --configuration "$CONFIGURACION" --no-build >/dev/null 2>&1; then
+  # código de salida pasar de 0 a 1—, no por lo que pareciera razonable. La orden de arriba ya
+  # demostró que la herramienta arranca con estos mismos argumentos, así que un 1 aquí es, casi
+  # seguro, un modelo sin migrar. El «casi» es la razón de que su salida tampoco se tire: si
+  # fuera otra cosa, se lee en el registro.
+  if pendientes=$(dotnet ef migrations has-pending-model-changes --project "$proyecto" \
+      --startup-project "$STARTUP" --context "$contexto" --configuration "$CONFIGURACION" \
+      --no-build 2>&1); then
     echo "${modulo}: ${migraciones} migración(es) en el ensamblado, y el modelo coincide con ellas."
   else
     echo "::error title=Migraciones::El modelo de ${modulo} tiene cambios sin migrar. Genera la migración: dotnet ef migrations add <Nombre> --project ${proyecto} --startup-project ${STARTUP} --context ${contexto} --output-dir ../../../../db/migraciones/${modulo}"
+    printf '%s\n' "$pendientes"
     FALLOS=$((FALLOS + 1))
   fi
 }

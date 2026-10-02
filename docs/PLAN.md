@@ -7508,7 +7508,15 @@ empiezan en la **112**, y el ADR del epílogo es el **ADR-0050**.
     tres descuadres y ninguno más. El caso del arnés de la valoración ve uno más, la fecha de la que
     falta; la que sobra no, porque nace sin fecha y su clave no tiene libro. Vistos en rojo: la 117
     y la 118, en la tabla de abajo.
-11. `comprobar-migraciones.sh`, que dice cuándo `dotnet ef` no arranca.
+11. ~~`comprobar-migraciones.sh`, que dice cuándo `dotnet ef` no arranca.~~ Hecho. La lista de
+    migraciones se ejecuta sola, con las dos salidas juntas, y su código se mira antes de contar:
+    si no es cero, el rojo es «dotnet ef no arranca» con la salida entera debajo. La de
+    `has-pending-model-changes` tampoco se tira. **Visto en rojo** sin la herramienta restaurada,
+    con `DOTNET_CLI_HOME` y `NUGET_PACKAGES` apuntando a dos directorios vacíos: el guion viejo da
+    los seis «EF no encuentra NINGUNA migración», y el nuevo, los seis «dotnet ef no arranca» con
+    `Ejecute "dotnet tool restore"…` a la vista y ningún «NINGUNA». **Y en Linux**, en un
+    `ubuntu:24.04` con un `dotnet` de mentira, las cuatro salidas —bien, no arranca, sin
+    migraciones y cambios pendientes— cinco veces cada una, con el código y el mensaje de cada una.
 12. `undici` y `brace-expansion`, o su anotación.
 13. La batería, el humo y los runs. El commit que anota el run de la rama va a la rama y espera su
     verde antes de que `main` avance.
