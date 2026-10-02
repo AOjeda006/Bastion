@@ -7927,8 +7927,9 @@ lo enmienda.
    | 151 | **La del arnés**: el servidor simulado deja de rechazar el alta (`rechazoDelAlta === undefined`), sin tocar la pantalla. | 10: los diez casos que le piden un rechazo, y ninguno de los que no se lo piden |
 10. ~~La batería, el humo y los runs. La casilla y la línea del README van en el mismo commit.~~
     Hecho: la batería y el humo, abajo, y la casilla con la línea del README, que pasa a **10 de
-    14**, en el mismo commit. El run de la rama lo anota el commit siguiente, que espera su propio
-    verde en la rama antes de que `main` avance.
+    14**, en el mismo commit, `a770e48`. Su run de rama, el **37071531617**, sale en verde al primer
+    intento, y sus cifras están en la casilla. Este commit, que lo anota, espera su propio verde en
+    la rama antes de que `main` avance; el run de `main`, al abrir la rama del 2.11.
 
     **Los commits del ítem**, desde `3cf9cea`, con los runs de la rama. Son **seis**, todos en
     verde al primer intento y ninguno cancelado (`GET …/actions/runs?branch=2.10-el-gtin-del-articulo`
@@ -16198,8 +16199,24 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   Los ocho de `ContratoDelCodigoDeBarrasTests` salen solo en verde porque la tanda corrió ese carril
   únicamente con las dos mutaciones del índice, que son las de la carrera.
 
-  **El run de la rama** lo anota el commit siguiente, y el de `main`, el commit que abra la rama del
-  2.11.
+  **El 2.10 lo cierra el run 37071531617** sobre `a770e48`, **success al primer intento**, con sus
+  tres jobs —Frontal `111051858899`, Backend `111051859147` y Humo `111053333882`—, los tres con
+  `labels: ['ubuntu-24.04']`, y **68 pasos: 67 en verde y 1 omitido**, que es *Diagnóstico* con su
+  `if: failure()`. Las cifras del *runner*, leídas de las anotaciones del run y no dadas por buenas,
+  son las de esta máquina:
+  - **1212** y **556** casos, con **10 `.trx`** en cada artefacto;
+  - **135** operaciones sobre **80** rutas, y **144** tipos de error de **150** sitios;
+  - modelo y migraciones coincidiendo en todos los módulos;
+  - el presupuesto del frontal, **421/450** y **635/900** KiB.
+
+  El segundo arranque del Humo da **97** permisos antes y después, `403` con el estado viejo, las
+  **14** particiones con su disparador y `200` con la semilla fuera. La auditoría del frontal da
+  **0** críticas, **0** altas y **2** moderadas, en `@vitest/mocker` y `vitest`, las que anota el
+  ADR-0045. El paso informa y no decide. La rama lleva **siete** runs, este y los seis de *Estado
+  actual → El 2.10, cerrado*, todos en verde al primer intento.
+
+  **El run de `main`** sale de empujar el commit que escribe éste, y se anota al abrir la rama del
+  2.11, como el del 2.9.
 
 - [ ] **2.11 · La transferencia y el stock en tránsito** — criterio de aceptación: `Enviada →
   Recibida`, con **dos movimientos por línea** —salida del origen al enviar, entrada en el destino al
