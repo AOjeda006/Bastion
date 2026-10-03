@@ -8219,7 +8219,10 @@ empiezan en la **152**.
      datos sensibles, por lo mismo que ya decía `listado.ts` con el ADR-0025;
    - tres casos nuevos: el listado con los cuatro parámetros y uno ajeno, y cada pantalla del
      artículo con lo mismo. Cada uno compara el `href` entero, con la codificación del espacio de
-     la búsqueda. La vuelta de verdad, pulsando, es del recorrido con `playwright-cli`.
+     la búsqueda. La vuelta de verdad, pulsando, es del recorrido con `playwright-cli`;
+   - y uno sin pantalla, `model/listado.test.ts`, que salió de la tanda: la 178, que dejaba el `?`
+     siempre, quedó **verde** en las tres pantallas, porque el enrutador quita un `?` suelto antes
+     de pintar el `href`. Lo cubre en su commit, y la 178 se vuelve a medir.
 7. El recorrido con `playwright-cli` por las dos pantallas.
 8. La tanda de mutaciones, la batería y los runs.
 
