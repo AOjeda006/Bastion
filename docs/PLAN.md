@@ -8223,8 +8223,71 @@ empiezan en la **152**.
    - y uno sin pantalla, `model/listado.test.ts`, que salió de la tanda: la 178, que dejaba el `?`
      siempre, quedó **verde** en las tres pantallas, porque el enrutador quita un `?` suelto antes
      de pintar el `href`. Lo cubre en su commit, y la 178 se vuelve a medir.
-7. El recorrido con `playwright-cli` por las dos pantallas.
+7. ~~El recorrido con `playwright-cli` por las dos pantallas.~~ Hecho, contra la pila local en un
+   proyecto de *compose* aparte (`bastion-humo-210p`, puertos 45xxx), construida desde `23c82eb` y
+   con datos sintéticos: una rama, cinco artículos en ella, uno fuera y un GTIN. No sustituye a los
+   tests: los ve funcionar en un navegador de verdad.
+   - **La vuelta.** Se entra por `/articulos?ajeno=1&pagina=2&tamanio=2&busqueda=REC&categoria=…`.
+     Los enlaces de la fila llevan los cuatro del listado y no `ajeno`. Desde el GTIN, «Volver»
+     deja en la página 2, con `REC-3` y `REC-4`, «REC» en el buscador y el filtro de la rama a la
+     vista. Desde la trazabilidad, igual, después de **recargar** la pantalla y con **Intro**
+     sobre el enlace.
+   - **«Sin reconocer».** El backend de verdad no lo manda nunca, así que el recorrido reescribe
+     las respuestas con `page.route`: el tipo `Kit`, la trazabilidad `PorPeso` y el nivel
+     `Bandeja`. En las tres pantallas no queda ningún `title` dentro de `main`. Cada celda o `<dd>`
+     marcado señala su explicación, y la explicación se ve (`checkVisibility`).
+   - La consola, sin errores ni avisos. La pila se bajó con `down -v` sobre su proyecto, con el
+     `-p` en la misma orden, y el entorno y el estado del navegador se borraron.
 8. La tanda de mutaciones, la batería y los runs.
+
+   **La tanda, de la 152 a la 180**, y la 139 vuelta a medir. La numeración sigue a la 151 del
+   2.10, que era la mayor de todas las tablas (`grep -n "| # | Mutación" docs/PLAN.md`). Cada
+   una va sobre el árbol limpio, con el commit de su tema y su carril, y se revierte con
+   `git restore --source=HEAD` y la fecha de ahora:
+   - **el dominio**: `dotnet test tests/Catalogo.UnitTests`, 260 casos sobre `e07b1c7` y 261
+     sobre `56c5897`;
+   - **el barrido**: `dotnet test tests/Api.IntegrationTests --filter
+     "FullyQualifiedName~NingunDocumentoGuardaElGtinSinSuArticuloTests"`, 3 casos sobre `29a784c`;
+   - **el frontal**: `npx vitest run src/features/catalogo/articulos` desde `frontend`: 94 casos
+     sobre `e07b1c7`, 95 sobre `585b510`, 98 sobre `d6d3ef3` y 100 sobre `23c82eb`.
+
+   Los cuatro salen en verde sin mutar.
+
+   | # | Mutación | Rojos |
+   |---|---|---|
+   | 152 | El dígito de control del servidor, con todos los pesos a 3. | 72 de 260: entre ellos, los cuatro ejemplos por largo y las dos propiedades en los cuatro largos |
+   | 153 | La cuenta del servidor no mira la primera de las catorce (`posicion >= 1`). | 18 de 260: de los nuevos, solo los de 14 cifras, que son las dos propiedades y `18412345678902`. En 8, 12 y 13, la primera de las catorce es el cero del relleno, que no suma |
+   | 154 | **La del arnés del servidor**: la pareja del intercambio pasa a ser la diferencia de 4. | 4 de 260: los cuatro del intercambio, y nada más |
+   | 155 | **La del arnés del frontal**: lo mismo, en el test del esquema. | 4 de 94: los cuatro del intercambio |
+   | 139 | Vuelta a medir: el frontal con todos los pesos a 3. | 21 de 94, antes 9 de 82: los cuatro ejemplos nuevos y las dos propiedades **en los cuatro largos**, que es lo que pedía el encargo |
+   | 156 | El patrón del barrido sin `ean`. | 1 de 3: el canario |
+   | 157 | «Con el artículo» pasa a ser «con una columna `id`». | 1 de 3: el canario |
+   | 158 | El patrón por subcadena, sin anclas. | 1 de 3: el canario, por `oceano`. La regla sigue verde, porque en la base de verdad nada más lo contiene |
+   | 159 | **El sujeto**: la última migración de Inventario añade `inventario.ajustes.gtin` con `migrationBuilder.Sql`. | 1 de 3: la regla |
+   | 160 | **La del arnés**: la pareja busca `catalogo.codigos_barras.codigo`. | 1 de 3: la pareja |
+   | 161 | `AgregarProveedorAlArticulo` sin la comprobación (`&& articuloId == Guid.Empty`). | 1 de 261: `Con_la_empresa_inoperativa_no_se_llega_ni_al_articulo` |
+   | 162 | La comprobación, detrás del artículo. | 1 de 261: el mismo, que recibe el `404` del artículo |
+   | 163 | La celda del tipo, sin `aria-describedby`. | 2 de 95: los dos del listado con el tipo sin reconocer |
+   | 164 | La explicación del tipo, sin pintar. | 2 de 95: los mismos |
+   | 165 | La celda del tipo señala la explicación de la trazabilidad. | 2 de 95: los mismos |
+   | 166 | El `<dd>` de la trazabilidad guardada, sin `aria-describedby`. | 1 de 95: el de la guardada sin reconocer |
+   | 167 | La celda del nivel, sin `aria-describedby`. | 2 de 95: `Bandeja` y `constructor` |
+   | 168 | La explicación del tipo, siempre pintada. | 1 de 95: el listado sin nada que reconocer |
+   | 169 | El `id` en el párrafo entero y no en el detalle, así que la descripción se lleva también la marca. | 6 de 95: los seis que comparan la descripción |
+   | 170 | La celda de la trazabilidad, siempre descrita. | 1 de 95: el de la columna, por `TUE-M6` |
+   | 171 | **La del arnés**: el servidor simulado del caso de las dos marcas deja el tipo como estaba. | 1 de 95: ese caso |
+   | 172 | El enlace del GTIN del listado, sin la vuelta. | 1 de 98: el de los enlaces de la fila |
+   | 173 | El enlace de la trazabilidad del listado, sin la vuelta. | 1 de 98: el mismo |
+   | 174 | «Volver» del GTIN, a `/articulos` a secas. | 1 de 98: el suyo |
+   | 175 | «Volver» de la trazabilidad, a `/articulos` a secas. | 1 de 98: el suyo |
+   | 176 | `pagina` fuera de los parámetros del listado. | 3 de 98: los tres de la vuelta. Sobre `23c82eb`, 4 de 100 |
+   | 177 | Viaja todo, también lo ajeno. | 3 de 98. Sobre `23c82eb`, 5 de 100 |
+   | 178 | El `?` siempre, aunque no haya nada que llevar. | **0 de 98: verde**, porque el enrutador quita un `?` suelto antes de pintar el `href`. Se cubrió en `23c82eb` con `model/listado.test.ts`, y vuelta a medir: 1 de 100 |
+   | 179 | `categoria` fuera de los parámetros del listado. | 3 de 98: los tres de la vuelta |
+   | 180 | **La del arnés**: el caso de los enlaces se monta sin parámetros. | 1 de 98: ese caso |
+
+   Una sola verde, la 178, y se cubrió en su commit. Los rojos se compararon por nombre contra la
+   base de cada carril, que no tenía ninguno.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
