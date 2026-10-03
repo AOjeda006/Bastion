@@ -8147,9 +8147,21 @@ empiezan en la **152**.
 **Lo que queda, por este orden:**
 
 1. ~~El run de `main` del 2.10, anotado.~~ Hecho: el 37073246214, en la casilla del 2.10.
-2. El dígito de control, sin suerte: un ejemplo por largo que no cuadre con todos los pesos a 3, y
-   la propiedad de la cifra cambiada y del intercambio, en el servidor y en el frontal. La 139,
-   roja en los cuatro largos.
+2. ~~El dígito de control, sin suerte.~~ Hecho, en el servidor y en el frontal, con **12** casos
+   nuevos en cada lado:
+   - un ejemplo por largo que no cuadra con todos los pesos a 3: `96385074`, `036000291452`,
+     `8412345678905` y `18412345678902`. Cada uno comprueba primero que no coincide, y después
+     que el control de la cuenta con todos los pesos a 3 se rechaza;
+   - la propiedad de la cifra cambiada, sobre 1.000 GTIN al azar por largo: todas las posiciones
+     y todas las cifras, incluido el control;
+   - la del intercambio de dos contiguas, con su pareja: la diferencia de 5 no la ve la cuenta, y
+     tampoco se rechaza por el control.
+
+   Las semillas, **2108**, **2112**, **2113** y **2114**, van en el nombre de cada caso y en cada
+   mensaje. El servidor usa un `Random` con semilla; el frontal, un mulberry32 escrito en el test,
+   sin dependencia nueva. Las dos propiedades salen **en verde al primer intento**, en los dos
+   lados: es un resultado, y se anota. La 139 vuelta a medir y la nueva del servidor van en la
+   tanda.
 3. «Ningún documento guarda el GTIN», como caso permanente, con su pareja y con lo que todavía no
    existe.
 4. `AgregarProveedorAlArticulo` pregunta `EstaActivaAsync`, con caso, mutación y la frase de

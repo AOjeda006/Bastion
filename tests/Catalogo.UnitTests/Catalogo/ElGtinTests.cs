@@ -22,6 +22,10 @@ namespace Bastion.Catalogo.UnitTests.Catalogo;
 /// </remarks>
 public sealed class ElGtinTests
 {
+    // Cuántos GTIN al azar recorre cada caso de las propiedades del control. Con mil, el de catorce
+    // cifras lee 126.000 números cambiados y tarda menos de un segundo.
+    private const int GtinDePartida = 1_000;
+
     // ------------------------------------------------------------------------ la normalización
 
     [Theory]
@@ -114,6 +118,33 @@ public sealed class ElGtinTests
     {
         // El último es el 4006381333931 con dos cifras cambiadas de sitio.
         Gtin.Leer(texto).Motivo.ShouldBe(MotivoDeRechazoDelGtin.DigitoDeControl);
+    }
+
+    /// <summary>
+    /// Un ejemplo por largo que distingue los pesos de verdad de todos los pesos a 3.
+    /// </summary>
+    /// <remarks>
+    /// Con todos los pesos a 3, la suma se pasa en el doble de lo que suman las cifras de peso 1, así
+    /// que el control sale bien por casualidad cuando esas cifras suman un múltiplo de 5. Les pasa al
+    /// 4006381333931 y al 10012345678902 de la normalización, y por eso la mutación 139 del frontal
+    /// solo se vio en 8 y en 12 cifras. Cada ejemplo comprueba primero que no es uno de esos: si
+    /// alguien lo cambia por uno que coincide, el caso lo dice en vez de dejar de mirar.
+    /// </remarks>
+    [Theory]
+    [InlineData("96385074")]
+    [InlineData("036000291452")]
+    [InlineData("8412345678905")]
+    [InlineData("18412345678902")]
+    public void Un_ejemplo_por_largo_cuyo_control_no_sale_con_todos_los_pesos_a_3(string texto)
+    {
+        char conTodosA3 = ControlConTodosLosPesosA3(texto);
+
+        conTodosA3.ShouldNotBe(
+            texto[^1], $"«{texto}» cuadra también con todos los pesos a 3, y no distingue una cuenta de la otra");
+        Gtin.Leer(texto).EsGtin.ShouldBeTrue($"«{texto}» es un GTIN de artículo con su control bien");
+        Gtin.Leer(texto[..^1] + conTodosA3).Motivo.ShouldBe(
+            MotivoDeRechazoDelGtin.DigitoDeControl,
+            $"«{texto[..^1]}{conTodosA3}» es el control que daría la cuenta con todos los pesos a 3");
     }
 
     [Fact]
@@ -319,6 +350,150 @@ public sealed class ElGtinTests
             ["valido", .. Enum.GetNames<MotivoDeRechazoDelGtin>()],
             ignoreOrder: true,
             "el aleatorio tiene que haber pasado por todos los caminos, o no ha probado nada");
+    }
+
+    /// <summary>
+    /// Lo que el control promete: de un GTIN bueno, cualquier otra cifra en cualquier posición da un
+    /// número que no cuadra.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Una cifra cambiada en <c>d</c> mueve la suma <c>d</c> o <c>3d</c>, y ninguno de los dos es
+    /// múltiplo de 10 para un <c>d</c> del 1 al 9. Se prueban todas las posiciones y todas las
+    /// cifras, incluido el propio control, sobre GTIN al azar. La semilla va en el nombre del caso
+    /// y en cada mensaje, y el mensaje lleva el número de partida y el cambiado enteros.
+    /// </para>
+    /// <para>
+    /// Los GTIN de partida llevan un prefijo que la tabla admite y el control del oráculo, que es
+    /// otra cuenta. Lo primero que se exige es que la lectura los admita: si la cuenta del objeto de
+    /// valor se equivoca, se ve ahí, y no se llega a afirmar nada sobre un número que ya se rechazaba.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData(8, 2108)]
+    [InlineData(12, 2112)]
+    [InlineData(13, 2113)]
+    [InlineData(14, 2114)]
+    public void Cambiar_una_sola_cifra_lo_rechaza_siempre_el_control(int largo, int semilla)
+    {
+        var aleatorio = new Random(semilla);
+        int cambiados = 0;
+
+        for (int vuelta = 0; vuelta < GtinDePartida; vuelta++)
+        {
+            string bueno = UnGtinDeArticulo(aleatorio, largo);
+            Gtin.Leer(bueno).EsGtin.ShouldBeTrue($"semilla {semilla}: «{bueno}» es un GTIN de artículo");
+
+            for (int posicion = 0; posicion < largo; posicion++)
+            {
+                for (char cifra = '0'; cifra <= '9'; cifra++)
+                {
+                    if (cifra == bueno[posicion])
+                    {
+                        continue;
+                    }
+
+                    string cambiado = string.Concat(bueno[..posicion], cifra.ToString(), bueno[(posicion + 1)..]);
+                    Gtin.Leer(cambiado).Motivo.ShouldBe(
+                        MotivoDeRechazoDelGtin.DigitoDeControl,
+                        $"semilla {semilla}: «{bueno}» con un {cifra} en la posición {posicion} es «{cambiado}»");
+                    cambiados++;
+                }
+            }
+        }
+
+        cambiados.ShouldBe(GtinDePartida * largo * 9, "cada cifra de cada posición, o la propiedad no ha mirado");
+    }
+
+    /// <summary>
+    /// Y el error más corriente al teclear: dos cifras contiguas cambiadas de sitio. El control lo ve
+    /// siempre, salvo que las dos difieran en 5.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Dos posiciones contiguas llevan pesos 3 y 1, así que el intercambio mueve la suma
+    /// <c>2(a − b)</c>, y eso solo es múltiplo de 10 si <c>a − b</c> es 0 o ±5. Con todos los pesos a
+    /// 3, el intercambio no mueve la suma nunca: es lo que esta propiedad ve y la del cambio suelto no.
+    /// </para>
+    /// <para>
+    /// <b>Y lleva su pareja</b>: el intercambio de dos cifras que difieren en 5 no lo ve el control,
+    /// porque la cuenta no puede. Se exige que tampoco lo rechace por el control, para que la
+    /// propiedad no sea más estricta que GS1, y que se hayan visto los dos casos.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData(8, 2108)]
+    [InlineData(12, 2112)]
+    [InlineData(13, 2113)]
+    [InlineData(14, 2114)]
+    public void Intercambiar_dos_cifras_contiguas_lo_rechaza_el_control_salvo_si_difieren_en_5(int largo, int semilla)
+    {
+        var aleatorio = new Random(semilla);
+        int vistos = 0;
+        int queNoVe = 0;
+
+        for (int vuelta = 0; vuelta < GtinDePartida; vuelta++)
+        {
+            string bueno = UnGtinDeArticulo(aleatorio, largo);
+            Gtin.Leer(bueno).EsGtin.ShouldBeTrue($"semilla {semilla}: «{bueno}» es un GTIN de artículo");
+
+            for (int posicion = 0; posicion < largo - 1; posicion++)
+            {
+                int diferencia = Math.Abs(bueno[posicion] - bueno[posicion + 1]);
+
+                if (diferencia == 0)
+                {
+                    continue;
+                }
+
+                string cambiado = string.Concat(
+                    bueno[..posicion], bueno[posicion + 1].ToString(), bueno[posicion].ToString(), bueno[(posicion + 2)..]);
+                LecturaDeGtin lectura = Gtin.Leer(cambiado);
+                string contraejemplo =
+                    $"semilla {semilla}: «{bueno}» con las posiciones {posicion} y {posicion + 1} cambiadas es «{cambiado}»";
+
+                if (diferencia == 5)
+                {
+                    (lectura.EsGtin || lectura.Motivo != MotivoDeRechazoDelGtin.DigitoDeControl)
+                        .ShouldBeTrue($"{contraejemplo}: la cuenta no puede ver una diferencia de 5");
+                    queNoVe++;
+                    continue;
+                }
+
+                lectura.EsGtin.ShouldBeFalse(contraejemplo);
+                lectura.Motivo.ShouldBe(MotivoDeRechazoDelGtin.DigitoDeControl, contraejemplo);
+                vistos++;
+            }
+        }
+
+        vistos.ShouldBeGreaterThan(0, "sin un intercambio que el control vea, la propiedad no ha mirado");
+        queNoVe.ShouldBeGreaterThan(0, "sin una diferencia de 5, la pareja no ha mirado");
+    }
+
+    // Un GTIN de artículo al azar del largo pedido. El prefijo es uno que la tabla admite, para que
+    // lo que se cambie después solo pueda tropezar con el control: tres cifras del 300 al 899 en un
+    // GTIN-8, un U.P.C. del 6 al 9 en un GTIN-12, lejos de los LAC y los RZSC, y un 84 de España en
+    // los de trece y catorce, con un indicador del 1 al 8 en estos.
+    private static string UnGtinDeArticulo(Random aleatorio, int largo)
+    {
+        string prefijo = largo switch
+        {
+            8 => ((char)('3' + aleatorio.Next(6))).ToString(),
+            12 => ((char)('6' + aleatorio.Next(4))).ToString(),
+            13 => "84",
+            14 => (char)('1' + aleatorio.Next(8)) + "84",
+            _ => throw new ArgumentOutOfRangeException(nameof(largo), largo, "Un GTIN tiene 8, 12, 13 o 14 cifras."),
+        };
+
+        return ConControl(prefijo + Digitos(aleatorio, largo - prefijo.Length));
+    }
+
+    // El control que saldría con todos los pesos a 3: la cuenta que acierta por casualidad.
+    private static char ControlConTodosLosPesosA3(string texto)
+    {
+        int suma = texto[..^1].Sum(caracter => (caracter - '0') * 3);
+
+        return (char)('0' + ((10 - (suma % 10)) % 10));
     }
 
     private static bool CuadraElControl(string catorce) =>
