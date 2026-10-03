@@ -8189,7 +8189,23 @@ empiezan en la **152**.
      se mira antes. Y el puerto de Terceros no se llega a llamar;
    - la frase de `LosIdentificadoresAjenosTests` («sale del claim en `AgregarProveedorAlArticulo`,
      que es donde se comprueba la empresa activa») no se toca: ahora dice la verdad.
-5. Lo que solo vive en un `title`, en texto visible o asociado.
+5. ~~Lo que solo vive en un `title`, en texto visible o asociado.~~ Hecho, en las tres pantallas
+   del artículo: el tipo y la trazabilidad del listado, la trazabilidad de su pantalla y el nivel
+   de la del GTIN, que era donde se vio primero.
+   - La marca «Sin reconocer» se queda en su celda, sin `title`. La explicación va **escrita**
+     debajo de la tabla o de la ficha, una por clase de valor y solo si hay alguna marca, y la
+     celda o el `<dd>` la señala con `aria-describedby`. Las dos piezas son un componente,
+     `SinReconocer.tsx`, y los textos son los que ya había: no cambia ningún diccionario.
+   - Los tests preguntan por rol, nombre y descripción: `getByRole('cell', { name: 'Sin
+     reconocer', description: … })`, y `definition` en la pantalla de la trazabilidad. Y que la
+     explicación se ve. Un caso nuevo en el listado pone las dos marcas a la vez, y cada celda
+     tiene que señalar la suya; las celdas reconocidas, ninguna. Con todo reconocido, no se
+     explica nada.
+   - **Tres `title` más, fuera de este ítem, que se proponen y no se tocan**: `sueltaDetalle` en
+     `PaginaDeCategorias.tsx`, `rigeDetalle` en `PaginaDeTarifas.tsx` y el detalle de la
+     verificación en `PaginaDeTerceros.tsx`. Son el mismo defecto en otras pantallas, y el arreglo
+     sería el mismo. Lo que se encuentra con `grep -rn "title={" --include=*.tsx frontend/src`
+     sin los tests.
 6. «Volver a los artículos» conserva la página, la búsqueda y la categoría.
 7. El recorrido con `playwright-cli` por las dos pantallas.
 8. La tanda de mutaciones, la batería y los runs.

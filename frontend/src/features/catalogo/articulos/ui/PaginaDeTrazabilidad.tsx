@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
 import { NombreDeTrazabilidad } from './NombreDeTrazabilidad.tsx';
+import { ExplicacionDeSinReconocer } from './SinReconocer.tsx';
 import { clavesDeArticulos } from '../api/claves.ts';
 import { consultarFicha } from '../api/consultas.ts';
 import { cambiarTrazabilidad } from '../api/trazabilidad.ts';
@@ -51,6 +52,7 @@ export function PaginaDeTrazabilidad(): React.JSX.Element {
   const textoDeFallo = useTextoDeFallo();
   const { id = '' } = useParams();
   const [guardada, setGuardada] = useState<TrazabilidadElegible | null>(null);
+  const porQueLaActual = useId();
 
   const consulta = useQuery({
     queryKey: clavesDeArticulos.una(id),
@@ -89,6 +91,7 @@ export function PaginaDeTrazabilidad(): React.JSX.Element {
   }
 
   const { articulo } = consulta.data;
+  const actualSinReconocer = articulo.trazabilidad === 'desconocida';
 
   return (
     <>
@@ -98,10 +101,18 @@ export function PaginaDeTrazabilidad(): React.JSX.Element {
           <span className="font-mono">{articulo.codigo}</span> · {articulo.descripcion}
         </dd>
         <dt className="font-medium">{t('catalogo.articulos.cambioDeTrazabilidad.actual')}</dt>
-        <dd>
+        <dd aria-describedby={actualSinReconocer ? porQueLaActual : undefined}>
           <NombreDeTrazabilidad trazabilidad={articulo.trazabilidad} />
         </dd>
       </dl>
+
+      {actualSinReconocer && (
+        <ExplicacionDeSinReconocer
+          id={porQueLaActual}
+          marca={t('catalogo.articulos.trazabilidades.desconocida')}
+          detalle={t('catalogo.articulos.trazabilidades.desconocidaDetalle')}
+        />
+      )}
 
       {guardada !== null && (
         <p

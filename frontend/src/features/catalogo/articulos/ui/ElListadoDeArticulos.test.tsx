@@ -11,6 +11,14 @@ import { PaginaDeArticulos } from './PaginaDeArticulos.tsx';
 /** La rama «Tornillería», que en los datos de prueba tiene un artículo y cuelga de «Ferretería». */
 const TORNILLERIA = 'eeeeeee1-0000-0000-0000-000000000002';
 
+/** Por qué sale «Sin reconocer» en cada columna: escrito debajo de la tabla, y descripción de la celda. */
+const POR_QUE_EL_TIPO =
+  'Esta versión de la pantalla no sabe interpretar el tipo que ha llegado. Avisa a quien ' +
+  'administre Bastion.';
+const POR_QUE_LA_TRAZABILIDAD =
+  'Esta versión de la pantalla no sabe interpretar la trazabilidad que ha llegado. Avisa a quien ' +
+  'administre Bastion.';
+
 /**
  * La pantalla de artículos: sus tres estados, sus dos filtros y lo que este ítem estrena.
  *
@@ -35,6 +43,9 @@ describe('El listado de artículos', () => {
 
     expect(await screen.findByText('Cargando los artículos…')).toBeVisible();
     expect(await screen.findByText('Tornillo M6 zincado')).toBeVisible();
+
+    // Con todo reconocido, no se explica nada.
+    expect(screen.queryByText(/no sabe interpretar/)).not.toBeInTheDocument();
   });
 
   it('si el servidor falla, lo dice y deja volver a intentarlo', async () => {
@@ -226,8 +237,60 @@ describe('El listado de artículos', () => {
 
     const fila = (await screen.findByText('TOR-M6')).closest('tr');
 
-    expect(fila).toHaveTextContent('Sin reconocer');
     expect(fila).not.toHaveTextContent('Kit');
+
+    // La explicación no vive en un `title`, que no llega ni al teclado ni al tacto: está escrita
+    // debajo de la tabla, y es la descripción accesible de la celda.
+    expect(
+      within(fila!).getByRole('cell', { name: 'Sin reconocer', description: POR_QUE_EL_TIPO }),
+    ).toBeVisible();
+    expect(screen.getByText(POR_QUE_EL_TIPO)).toBeVisible();
+    expect(screen.queryByText(POR_QUE_LA_TRAZABILIDAD)).not.toBeInTheDocument();
+  });
+
+  it('el tipo y la trazabilidad sin reconocer: cada celda, con su explicación', async () => {
+    abrirSesionYaRecuperada();
+
+    servidor.use(
+      http.get('/api/v1/catalogo/articulos', () => {
+        const pagina = articulosDe(ALFA.id);
+        const [tornillo, tuerca, ...resto] = pagina.elementos;
+
+        return HttpResponse.json({
+          ...pagina,
+          elementos: [
+            { ...tornillo!, tipo: 'Kit' },
+            { ...tuerca!, trazabilidad: 'PorPeso' },
+            ...resto,
+          ],
+        });
+      }),
+    );
+
+    montarPantalla(<PaginaDeArticulos />, '/articulos');
+
+    const tornillo = (await screen.findByText('TOR-M6')).closest('tr')!;
+    const tuerca = screen.getByText('TUE-M6').closest('tr')!;
+
+    // Dos explicaciones, una por clase de valor, y cada celda señala la suya y no la otra.
+    expect(
+      within(tornillo).getByRole('cell', { name: 'Sin reconocer', description: POR_QUE_EL_TIPO }),
+    ).toBeVisible();
+    expect(
+      within(tuerca).getByRole('cell', {
+        name: 'Sin reconocer',
+        description: POR_QUE_LA_TRAZABILIDAD,
+      }),
+    ).toBeVisible();
+    expect(screen.getByText(POR_QUE_EL_TIPO)).toBeVisible();
+    expect(screen.getByText(POR_QUE_LA_TRAZABILIDAD)).toBeVisible();
+
+    // Las celdas reconocidas no llevan descripción.
+    for (const celda of within(tuerca).getAllByRole('cell')) {
+      if (celda.textContent !== 'Sin reconocer') {
+        expect(celda).not.toHaveAccessibleDescription();
+      }
+    }
   });
 
   it('la trazabilidad sale en su columna, también la que esta versión no conoce', async () => {
@@ -258,8 +321,12 @@ describe('El listado de artículos', () => {
 
     expect(celda('TUE-M6')).toHaveTextContent('Por lote');
     expect(celda('MO-TALLER')).toHaveTextContent('Ninguna');
-    expect(celda('TOR-M6')).toHaveTextContent('Sin reconocer');
     expect(celda('TOR-M6')).not.toHaveTextContent('PorPeso');
+    expect(celda('TOR-M6')).toBe(
+      screen.getByRole('cell', { name: 'Sin reconocer', description: POR_QUE_LA_TRAZABILIDAD }),
+    );
+    expect(screen.getByText(POR_QUE_LA_TRAZABILIDAD)).toBeVisible();
+    expect(celda('TUE-M6')).not.toHaveAccessibleDescription();
 
     // Sin el permiso de modificar, el enlace no está en ninguna fila.
     expect(screen.queryByRole('link', { name: /trazabilidad/ })).not.toBeInTheDocument();

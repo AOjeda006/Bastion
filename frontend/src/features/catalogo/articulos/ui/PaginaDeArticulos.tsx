@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
 import { NombreDeTrazabilidad } from './NombreDeTrazabilidad.tsx';
+import { ExplicacionDeSinReconocer, SinReconocer } from './SinReconocer.tsx';
 import { clavesDeArticulos } from '../api/claves.ts';
 import { consultarArticulos } from '../api/consultas.ts';
 import { PARAMETRO_DE_BUSQUEDA, PARAMETRO_DE_CATEGORIA, leerListado } from '../model/listado.ts';
@@ -40,6 +42,9 @@ export function PaginaDeArticulos(): React.JSX.Element {
   // La interfaz esconde, el servidor autoriza: quien no puede modificar no ve el enlace, y si llega
   // escribiendo la URL, es el `PUT` el que le dice que no.
   const puedeModificar = concede(sesion, PERMISOS.articuloModificar);
+  // Una explicación por clase de valor, y cada celda marcada señala la suya.
+  const porQueElTipo = useId();
+  const porQueLaTrazabilidad = useId();
 
   const consulta = useQuery({
     queryKey: clavesDeArticulos.lista(listado),
@@ -191,6 +196,12 @@ export function PaginaDeArticulos(): React.JSX.Element {
     );
   }
 
+  const { elementos } = consulta.data;
+  const hayTipoSinReconocer = elementos.some((articulo) => articulo.tipo === 'desconocido');
+  const hayTrazabilidadSinReconocer = elementos.some(
+    (articulo) => articulo.trazabilidad === 'desconocida',
+  );
+
   return (
     <>
       {cabecera}
@@ -217,14 +228,22 @@ export function PaginaDeArticulos(): React.JSX.Element {
           </tr>
         </thead>
         <tbody>
-          {consulta.data.elementos.map((articulo) => (
+          {elementos.map((articulo) => (
             <tr key={articulo.id} className="border-b border-neutral-200">
               <td className="py-2 pr-4 font-mono">{articulo.codigo}</td>
               <td className="py-2 pr-4">{articulo.descripcion}</td>
-              <td className="py-2 pr-4">
+              <td
+                className="py-2 pr-4"
+                aria-describedby={articulo.tipo === 'desconocido' ? porQueElTipo : undefined}
+              >
                 <Tipo tipo={articulo.tipo} />
               </td>
-              <td className="py-2 pr-4">
+              <td
+                className="py-2 pr-4"
+                aria-describedby={
+                  articulo.trazabilidad === 'desconocida' ? porQueLaTrazabilidad : undefined
+                }
+              >
                 <NombreDeTrazabilidad trazabilidad={articulo.trazabilidad} />
                 {puedeModificar && (
                   <>
@@ -260,31 +279,38 @@ export function PaginaDeArticulos(): React.JSX.Element {
         </tbody>
       </table>
 
+      {hayTipoSinReconocer && (
+        <ExplicacionDeSinReconocer
+          id={porQueElTipo}
+          marca={t('catalogo.articulos.tipos.desconocido')}
+          detalle={t('catalogo.articulos.tipos.desconocidoDetalle')}
+        />
+      )}
+      {hayTrazabilidadSinReconocer && (
+        <ExplicacionDeSinReconocer
+          id={porQueLaTrazabilidad}
+          marca={t('catalogo.articulos.trazabilidades.desconocida')}
+          detalle={t('catalogo.articulos.trazabilidades.desconocidaDetalle')}
+        />
+      )}
+
       <Paginador paginacion={listado} total={consulta.data.total} alCambiar={irA} />
     </>
   );
 }
 
 /**
- * Mercancía o prestación, y qué se dice cuando llega un tercer valor.
+ * Mercancía o prestación, y la marca cuando llega un tercer valor.
  *
  * `desconocido` no es defensa por si acaso: el tipo viaja como texto y el frontal se despliega
- * aparte del backend, así que un valor nuevo llega antes de que este fichero lo conozca. Lo que no
- * se puede interpretar se dice, con su explicación en el título; la alternativa —la celda en
- * blanco— es lo que se ve cuando algo está roto, y no distingue una cosa de la otra.
+ * aparte del backend, así que un valor nuevo llega antes de que este fichero lo conozca. La
+ * explicación va debajo de la tabla (`SinReconocer`).
  */
 function Tipo({ tipo }: { tipo: TipoDeArticulo }): React.JSX.Element {
   const { t } = useTranslation();
 
   if (tipo === 'desconocido') {
-    return (
-      <span
-        title={t('catalogo.articulos.tipos.desconocidoDetalle')}
-        className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs text-amber-900"
-      >
-        {t('catalogo.articulos.tipos.desconocido')}
-      </span>
-    );
+    return <SinReconocer texto={t('catalogo.articulos.tipos.desconocido')} />;
   }
 
   return (

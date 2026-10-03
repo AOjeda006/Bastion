@@ -262,12 +262,15 @@ describe('La trazabilidad del artículo', () => {
     ficha.articulo = { ...ficha.articulo, trazabilidad: 'PorPeso' };
     montar();
 
-    const desconocida = await screen.findByText('Sin reconocer');
-    expect(desconocida).toHaveAttribute(
-      'title',
+    // La explicación no vive en un `title`, que no llega ni al teclado ni al tacto: está escrita
+    // debajo de la ficha, y es la descripción accesible del valor.
+    const porQue =
       'Esta versión de la pantalla no sabe interpretar la trazabilidad que ha llegado. Avisa a ' +
-        'quien administre Bastion.',
-    );
+      'quien administre Bastion.';
+    const actual = await screen.findByRole('definition', { description: porQue });
+    expect(actual).toHaveTextContent('Sin reconocer');
+    expect(actual).not.toHaveTextContent('PorPeso');
+    expect(screen.getByText(porQue)).toBeVisible();
 
     const grupo = screen.getByRole('group', { name: 'Trazabilidad' });
     for (const opcion of within(grupo).getAllByRole('radio')) {

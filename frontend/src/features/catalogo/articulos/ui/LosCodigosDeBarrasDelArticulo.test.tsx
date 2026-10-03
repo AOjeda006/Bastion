@@ -237,12 +237,15 @@ describe('Los códigos de barras del artículo', () => {
       servidorDeCodigos.codigos = [codigo(1, '00036000291452', nivel, 6)];
       montar();
 
-      const desconocido = await screen.findByText('Sin reconocer');
-      expect(desconocido).toHaveAttribute(
-        'title',
+      // La explicación no vive en un `title`, que no llega ni al teclado ni al tacto: está
+      // escrita debajo de la tabla, y es la descripción accesible de la celda.
+      const porQue =
         'Esta versión de la pantalla no sabe interpretar el nivel que ha llegado. Avisa a quien ' +
-          'administre Bastion.',
-      );
+        'administre Bastion.';
+      expect(
+        await screen.findByRole('cell', { name: 'Sin reconocer', description: porQue }),
+      ).toBeVisible();
+      expect(screen.getByText(porQue)).toBeVisible();
       expect(screen.queryByText(nivel)).not.toBeInTheDocument();
     },
   );

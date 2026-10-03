@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
+import { ExplicacionDeSinReconocer, SinReconocer } from './SinReconocer.tsx';
 import { clavesDeArticulos } from '../api/claves.ts';
 import {
   agregarCodigoDeBarras,
@@ -69,6 +70,7 @@ export function PaginaDeCodigosDeBarras(): React.JSX.Element {
   // Cada alta que sale bien monta el formulario de nuevo: vacío, con su intento por estrenar y sin
   // el «ya se envió» que deja `handleSubmit`, que haría validar desde la primera cifra del siguiente.
   const [altas, setAltas] = useState(0);
+  const porQueElNivel = useId();
 
   const puedeAgregar = concede(sesion, PERMISOS.codigoBarrasAgregar);
   const puedeQuitar = concede(sesion, PERMISOS.codigoBarrasQuitar);
@@ -183,6 +185,7 @@ export function PaginaDeCodigosDeBarras(): React.JSX.Element {
               <Fila
                 key={codigo.id}
                 codigo={codigo}
+                porQueElNivel={porQueElNivel}
                 puedeQuitar={puedeQuitar}
                 // Se espera a la lista nueva: hasta que llega, la fila sigue en «Quitando…» y no
                 // ofrece quitarla otra vez.
@@ -200,6 +203,14 @@ export function PaginaDeCodigosDeBarras(): React.JSX.Element {
             ))}
           </tbody>
         </table>
+      )}
+
+      {codigos.data.some((codigo) => codigo.nivel === 'desconocido') && (
+        <ExplicacionDeSinReconocer
+          id={porQueElNivel}
+          marca={t('catalogo.articulos.niveles.desconocido')}
+          detalle={t('catalogo.articulos.niveles.desconocidoDetalle')}
+        />
       )}
 
       {puedeAgregar && (
@@ -288,11 +299,14 @@ function Avisos({
 
 function Fila({
   codigo,
+  porQueElNivel,
   puedeQuitar,
   alQuitar,
   alFallar,
 }: {
   codigo: CodigoDeBarras;
+  /** El `id` de la explicación de «Sin reconocer», que la celda del nivel señala si lo lleva. */
+  porQueElNivel: string;
   puedeQuitar: boolean;
   alQuitar: () => Promise<void>;
   alFallar: (error: unknown) => void;
@@ -344,7 +358,10 @@ function Fila({
   return (
     <tr className="border-b border-neutral-200 align-top">
       <td className="py-2 pr-4 font-mono">{codigo.gtin}</td>
-      <td className="py-2 pr-4">
+      <td
+        className="py-2 pr-4"
+        aria-describedby={codigo.nivel === 'desconocido' ? porQueElNivel : undefined}
+      >
         <Nivel nivel={codigo.nivel} />
       </td>
       <td className="py-2 pr-4">{codigo.unidades}</td>
@@ -405,19 +422,12 @@ function Fila({
   );
 }
 
-/** El nombre de un nivel, y qué se dice cuando llega uno que esta versión no conoce. */
+/** El nombre de un nivel, y la marca cuando llega uno que esta versión no conoce. */
 function Nivel({ nivel }: { nivel: NivelDeGtin }): React.JSX.Element {
   const { t } = useTranslation();
 
   if (nivel === 'desconocido') {
-    return (
-      <span
-        title={t('catalogo.articulos.niveles.desconocidoDetalle')}
-        className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs text-amber-900"
-      >
-        {t('catalogo.articulos.niveles.desconocido')}
-      </span>
-    );
+    return <SinReconocer texto={t('catalogo.articulos.niveles.desconocido')} />;
   }
 
   return <>{t(`catalogo.articulos.niveles.${nivel}`)}</>;
