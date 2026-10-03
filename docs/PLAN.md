@@ -5837,6 +5837,142 @@ firmados; y una rama por unidad, borrada solo después de su run de `main`. El i
 los commits desde `dca9b83`, con sus runs de rama y de `main`.
 
 
+### Traídas por el encargo del 2026-10-03 — el epílogo del 2.10 y el 2.11
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **30** commits desde `dca9b83`, con 30 firmas válidas;
+- **12** runs en verde al primer intento;
+- la regla de `main` cumplida las dos veces;
+- las cifras del *runner*, iguales a las del agente.
+
+Y corrige dos cosas del informe. El epílogo del 2.9 son **17** commits, no 18. Y subió de una sola
+vez, así que tiene **un** run de rama, el 183. **El próximo informe cuenta desde `c9883cd`.** Son
+**dos unidades, cada una en su rama y en este orden**: el epílogo del 2.10 y el 2.11.
+
+#### El bloque del arnés, otra vez ya hecho
+
+Vuelve el mismo bloque de puesta al día que en el encargo anterior, y sigue hecho desde `dbf2664`:
+el import está puesto y `settings.json` no cambia, así que no hay commit. El `/context` lo lanza el
+usuario cuando el agente se lo pide, y se compara con los **35,6k**. `arnes-de-agente.md` se lee
+con `Read` al empezar cada sesión.
+
+#### El epílogo del 2.10, en su rama y cada tema en su commit
+
+1. **El run de `main` 37073246214, anotado.**
+2. **El dígito de control deja de depender de la suerte.** Es la propuesta del cierre, más una
+   propiedad:
+   - un ejemplo por largo (8, 12, 13 y 14) que **no** cuadre con todos los pesos a 3;
+   - una propiedad sobre GTIN válidos de los cuatro largos, generados al azar: cambiar **una sola
+     cifra** se rechaza siempre, e **intercambiar dos cifras contiguas** que difieren en algo
+     distinto de 0 y de 5 se rechaza siempre. Con todos los pesos a 3, el intercambio no cambia la
+     suma;
+   - la 139 tiene que ponerse roja **en los cuatro largos**, y no solo en 8 y 12;
+   - la semilla va fija e impresa.
+3. **«Ningún documento guarda el GTIN», como test permanente.**
+   - Barre las columnas de todos los esquemas, y falla si aparece una que guarde un GTIN fuera de
+     `catalogo.codigos_barras` sin el artículo al lado.
+   - Lleva su pareja: tiene que encontrar la propia columna de `codigos_barras`. Si no la
+     encuentra, el barrido no mira nada.
+   - Lo que todavía no usa nadie se prueba igual: los documentos de la fase 3 llegarán sin avisar.
+4. **`AgregarProveedorAlArticulo` comprueba `EstaActivaAsync`, por decisión del usuario**, como las
+   demás altas. Lleva caso y mutación, y la frase de `LosIdentificadoresAjenosTests` pasa a decir la
+   verdad. Es la propuesta anotada en *Tomadas por el agente en el paso 5 del 2.10*.
+5. **Lo que solo vive en un `title`**: «Sin reconocer», el tipo y la trazabilidad del listado.
+   - Un `title` no llega al teclado ni al tacto, y tampoco de forma fiable al lector de pantalla.
+   - Lo que dice va en texto visible, o en un texto asociado con `aria-describedby`
+     (`ux-ipo/convenciones.md`, que se lee antes).
+   - El test lo comprueba por rol y por nombre o descripción accesibles.
+6. **«Volver a los artículos» conserva la página, la búsqueda y la categoría**, desde la pantalla
+   del GTIN y desde la de la trazabilidad. Son estado de la URL (`stacks/react/convenciones.md`).
+   Lleva su test.
+
+#### El 2.11: la transferencia y el stock en tránsito
+
+La puerta de clarificación se pasa con lo que sigue. Las decisiones van en el **ADR-0053**, y lo que
+siga abierto se pregunta todo junto antes del código. **Lo primero que se mira es el §7.4 del plan
+maestro**: si dice algo del tránsito, manda él, y si contradice lo que sigue, se pregunta.
+
+1. **Dónde vive el tránsito.**
+   - Con dos movimientos por línea, el tránsito no está en el libro. Sale de los documentos: las
+     líneas enviadas menos las recibidas.
+   - Así que la R3 se sigue cumpliendo clave a clave, y el tránsito necesita su propio cuadre contra
+     las transferencias, en cantidad y en valor.
+   - El valor de la empresa es la suma de las valoraciones más el valor en tránsito. La propiedad
+     gana ese invariante.
+   - Se decide dónde se ve en la proyección, y que el disponible del 2.13 no lo cuente.
+2. **El valor viaja con la línea** (ADR-0046 §3, ya decidido).
+   - La salida del origen se valora a su precio medio.
+   - La línea guarda ese importe exacto, y la entrada en el destino entra con él: sin coste y sin el
+     precio medio del destino, como `ValorQueCompensa`.
+   - Casos: el precio medio del destino se mezcla, y vaciar el origen se lleva todo el valor.
+3. **Dos momentos y dos fechas.** El envío y la recepción pueden caer en meses o ejercicios
+   distintos: enviar el 30/12 y recibir el 3/1.
+   - Cada movimiento mira su ejercicio y la `ultima_fecha` de su clave (ADR-0047) en su momento.
+   - La recepción no puede llevar una fecha anterior al envío.
+   - El número se da al enviar, en la serie del ejercicio de esa fecha.
+   - Casos: el cambio de año, y recibir en un ejercicio cerrado.
+4. **La recepción es entera**, por recomendación del usuario. Una diferencia se regulariza después
+   con un ajuste en el destino. Su disparador: la primera recepción con faltas.
+5. **Anular en cada estado (R2).**
+   - `Enviada`: el inverso devuelve al origen el valor exacto que salió, y el tránsito queda a cero.
+   - `Recibida`: el inverso deshace las dos patas en una sola transacción. La salida del destino,
+     con el valor que entró y como mucho el que queda: si las unidades ya se consumieron, es el
+     `422` de la excepción de la R2. Y la entrada en el origen, con el valor que salió.
+   - Cómo es el inverso —otra transferencia en sentido contrario, o el mismo documento con las
+     líneas negadas, como en el 2.5— se decide y se escribe, con el número y el ejercicio según el
+     2.4, el 2.6 y el ADR-0043.
+   - Casos: los dos estados, y la carrera de recibir y anular a la vez, con dos transacciones de
+     verdad.
+6. **Un número de serie en tránsito no está en ninguna existencia.** El índice parcial no lo ve, así
+   que un ajuste podría darlo de alta en otro sitio mientras viaja, y la recepción chocaría
+   después. La guarda de «un número de serie en un solo sitio» tiene que contar el tránsito. Caso
+   de carrera.
+7. **Misma empresa y dos almacenes distintos.** El origen no puede ser el destino. Los dos tienen que
+   ser de la empresa del documento, comprobado por el puerto, y un almacén de otra empresa contesta
+   lo mismo que uno que no existe: sin oráculo. Caso.
+8. **La superficie es la del ajuste.** Enviar, recibir y anular cambian el estado, y llevan
+   `Idempotency-Key` obligatoria. El alta, el listado y la ficha no tienen pantalla: la pregunta del
+   cierre de fase sobre las pantallas del inventario incluye ahora la transferencia, y se escribe
+   allí. **No hay pantalla en el 2.11.**
+9. **El orden de los cerrojos**, el del ADR-0046 §2 con el ADR-0048, para el envío y para la
+   recepción, cada uno en su transacción. Se escribe por qué dos transferencias cruzadas del mismo
+   artículo (A→B y B→A a la vez) no se interbloquean.
+10. **La propiedad y el cuadre.** El generador gana transferencias: enviar, recibir y anular en los
+    dos estados. Y se añaden el cuadre del tránsito y el invariante del valor de la empresa.
+
+El resto del criterio va como está en el *Checklist*.
+
+#### Los números de este encargo
+
+- **Las mutaciones llevan una sola numeración.** El encargo hace empezar la tanda del 2.11 en la
+  152, pero el epílogo va antes y también muta: el dígito de control, el barrido y la empresa
+  activa del proveedor. Así que el epílogo empieza en la **152**, y el 2.11, donde acabe el
+  epílogo, como pasó en el encargo anterior.
+- **El ADR-0053 es del 2.11.** El epílogo no cambia ninguna decisión escrita. El caso permanente
+  cumple el ADR-0051 §8, que ya dice que la ausencia «se comprueba con un barrido de los esquemas»,
+  y la pregunta del proveedor alinea un caso de uso con los demás. Si al hacerlo resultara que
+  enmienda un ADR, el epílogo tomaría el 0053 y el 2.11 el siguiente, y se diría aquí.
+
+#### Las herramientas de la máquina, en este encargo
+
+- **Context7 (`ctx7`)**, solo si una API de EF Core 10 o de Npgsql no cuadra. Solo con la pregunta
+  técnica, y contrastado con la fuente oficial antes de llevarlo a un ADR.
+- **`playwright-cli`**, para el epílogo: las pantallas del GTIN y de la trazabilidad, contra la pila
+  local. No sustituye al test.
+- **`context-mode`, apagado.** Si compensa para la tanda, se le pide al usuario que lo encienda
+  antes de esa sesión y que lo apague después. Bloquea `curl` y `wget`. Al abrir el epílogo seguía
+  encendido en la sesión del agente, y el informe lo dice.
+- **Si una herramienta no responde**, se sigue por el camino manual y se anota.
+
+#### El método
+
+El de siempre: la mutación sobre la línea que decide; las dos listas por nombre; commits pequeños y
+firmados; `main` solo avanza a un commit ya verde en su rama, y la rama se borra después de su run
+de `main`. El informe cuenta todos los commits desde `c9883cd`, con sus runs, y cada cifra va con la
+orden que la mide.
+
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 10 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -8003,6 +8139,25 @@ lo enmienda.
     - la 139 enseña que los ejemplos de 13 y 14 cifras cuadran también con todos los pesos a 3. Un
       ejemplo de cada largo que no cuadre así haría que los casos del dígito de control no
       dependieran de la suerte.
+
+**El epílogo del 2.10, en curso**, en la rama `epilogo-2.10`, abierta desde `main` en `c9883cd`. Lo
+que pide está en *Decisiones tomadas → Traídas por el encargo del 2026-10-03*. Sus mutaciones
+empiezan en la **152**.
+
+**Lo que queda, por este orden:**
+
+1. ~~El run de `main` del 2.10, anotado.~~ Hecho: el 37073246214, en la casilla del 2.10.
+2. El dígito de control, sin suerte: un ejemplo por largo que no cuadre con todos los pesos a 3, y
+   la propiedad de la cifra cambiada y del intercambio, en el servidor y en el frontal. La 139,
+   roja en los cuatro largos.
+3. «Ningún documento guarda el GTIN», como caso permanente, con su pareja y con lo que todavía no
+   existe.
+4. `AgregarProveedorAlArticulo` pregunta `EstaActivaAsync`, con caso, mutación y la frase de
+   `LosIdentificadoresAjenosTests`.
+5. Lo que solo vive en un `title`, en texto visible o asociado.
+6. «Volver a los artículos» conserva la página, la búsqueda y la categoría.
+7. El recorrido con `playwright-cli` por las dos pantallas.
+8. La tanda de mutaciones, la batería y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -16215,8 +16370,13 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   ADR-0045. El paso informa y no decide. La rama lleva **siete** runs, este y los seis de *Estado
   actual → El 2.10, cerrado*, todos en verde al primer intento.
 
-  **El run de `main`** sale de empujar el commit que escribe éste, y se anota al abrir la rama del
-  2.11, como el del 2.9.
+  **El run de `main` es el 37073246214** sobre `c9883cd`, **success al primer intento**, con sus
+  tres jobs —Backend `111057326355`, Frontal `111057326770` y Humo `111058891385`— y **68 pasos: 67
+  en verde y 1 omitido**, *Diagnóstico*. Dice lo mismo que el de la rama: **1212** y **556** casos
+  con **10 `.trx`** en cada artefacto, **135** operaciones y 80 rutas, **144** tipos de error de
+  **150** sitios, y **421/450** y **635/900** KiB. `main` avanzó a `c9883cd` después de que el run
+  de la rama sobre ese mismo commit, el **37072321679**, saliera en verde. Anotado al abrir el
+  epílogo del 2.10.
 
 - [ ] **2.11 · La transferencia y el stock en tránsito** — criterio de aceptación: `Enviada →
   Recibida`, con **dos movimientos por línea** —salida del origen al enviar, entrada en el destino al
