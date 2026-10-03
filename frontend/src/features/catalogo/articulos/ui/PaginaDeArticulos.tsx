@@ -7,7 +7,12 @@ import { NombreDeTrazabilidad } from './NombreDeTrazabilidad.tsx';
 import { ExplicacionDeSinReconocer, SinReconocer } from './SinReconocer.tsx';
 import { clavesDeArticulos } from '../api/claves.ts';
 import { consultarArticulos } from '../api/consultas.ts';
-import { PARAMETRO_DE_BUSQUEDA, PARAMETRO_DE_CATEGORIA, leerListado } from '../model/listado.ts';
+import {
+  PARAMETRO_DE_BUSQUEDA,
+  PARAMETRO_DE_CATEGORIA,
+  cadenaDelListado,
+  leerListado,
+} from '../model/listado.ts';
 import type { TipoDeArticulo } from '../model/articulo.ts';
 import { clavesDeCategorias } from '../../categorias/api/claves.ts';
 import { consultarCategoria } from '../../categorias/api/consultas.ts';
@@ -197,6 +202,9 @@ export function PaginaDeArticulos(): React.JSX.Element {
   }
 
   const { elementos } = consulta.data;
+  // Cada enlace se lleva cómo se está mirando el listado, y la pantalla del artículo lo devuelve al
+  // volver.
+  const delListado = cadenaDelListado(parametros);
   const hayTipoSinReconocer = elementos.some((articulo) => articulo.tipo === 'desconocido');
   const hayTrazabilidadSinReconocer = elementos.some(
     (articulo) => articulo.trazabilidad === 'desconocida',
@@ -252,7 +260,7 @@ export function PaginaDeArticulos(): React.JSX.Element {
                         qué artículo, que es lo que distingue un enlace de otro en la lista de
                         enlaces del lector de pantalla. */}
                     <Link
-                      to={`/articulos/${articulo.id}/trazabilidad`}
+                      to={`/articulos/${articulo.id}/trazabilidad${delListado}`}
                       aria-label={t('catalogo.articulos.cambiarLaDe', { codigo: articulo.codigo })}
                       className="ml-2 text-xs underline"
                     >
@@ -265,7 +273,7 @@ export function PaginaDeArticulos(): React.JSX.Element {
                 {/* Para todos los que ven el listado: la pantalla de los códigos pide lo mismo, y
                     dentro esconde lo que el permiso no da. */}
                 <Link
-                  to={`/articulos/${articulo.id}/gtin`}
+                  to={`/articulos/${articulo.id}/gtin${delListado}`}
                   aria-label={t('catalogo.articulos.verCodigosDeBarrasDe', {
                     codigo: articulo.codigo,
                   })}

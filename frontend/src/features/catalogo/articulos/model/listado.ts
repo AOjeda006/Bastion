@@ -32,6 +32,14 @@ export const PARAMETRO_DE_BUSQUEDA = 'busqueda';
  */
 export const PARAMETRO_DE_CATEGORIA = 'categoria';
 
+/** Los parámetros que dicen cómo se está mirando el listado: la página, su tamaño y los filtros. */
+const PARAMETROS_DEL_LISTADO: ReadonlySet<string> = new Set([
+  'pagina',
+  'tamanio',
+  PARAMETRO_DE_BUSQUEDA,
+  PARAMETRO_DE_CATEGORIA,
+]);
+
 /**
  * `z.guid()` y NO `z.uuid()`, que es la trampa de este fichero.
  *
@@ -60,4 +68,26 @@ export function leerListado(
     busqueda: (parametros.get(PARAMETRO_DE_BUSQUEDA) ?? '').trim(),
     categoriaId: categoria.success ? categoria.data : null,
   };
+}
+
+/**
+ * Cómo se estaba mirando el listado, para llevarlo a la pantalla de un artículo y traerlo de vuelta:
+ * la parte de la URL con su `?`, o nada.
+ *
+ * El listado la pone en los enlaces de cada fila, y las pantallas del artículo —sus códigos de
+ * barras, su trazabilidad— la devuelven en «Volver a los artículos». Así se vuelve a la misma
+ * página, con la misma búsqueda y en la misma rama. Viaja en la URL y no en el estado de la
+ * navegación por lo mismo que el listado: una recarga, o el enlace pegado en un correo, no la
+ * pierden.
+ *
+ * Solo los parámetros del listado, y tal como estaban. Se validan al leerlos, en el listado, y
+ * validarlos también aquí sería decidir dos veces qué es ruido. Lo que no es del listado no viaja.
+ */
+export function cadenaDelListado(parametros: URLSearchParams): string {
+  const delListado = new URLSearchParams(
+    [...parametros].filter(([nombre]) => PARAMETROS_DEL_LISTADO.has(nombre)),
+  );
+  const cadena = delListado.toString();
+
+  return cadena === '' ? '' : `?${cadena}`;
 }

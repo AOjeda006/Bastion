@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 
 import { ExplicacionDeSinReconocer, SinReconocer } from './SinReconocer.tsx';
 import { clavesDeArticulos } from '../api/claves.ts';
@@ -24,6 +24,7 @@ import {
   type DatosDeAltaDeGtin,
 } from '../model/esquemaDeAltaDeGtin.ts';
 import { intentoPara, type IntentoDeAlta } from '../model/intentoDeAlta.ts';
+import { cadenaDelListado } from '../model/listado.ts';
 import { tipoDeFallo } from '@/shared/api/errores.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
@@ -63,6 +64,8 @@ export function PaginaDeCodigosDeBarras(): React.JSX.Element {
   const sesion = useSesionAbierta();
   const cache = useQueryClient();
   const { id = '' } = useParams();
+  // Cómo se estaba mirando el listado, que trae el enlace de la fila y se devuelve al volver.
+  const [parametros] = useSearchParams();
   const [aviso, setAviso] = useState<Aviso | null>(null);
   // Cada aviso monta su párrafo de nuevo: el lector de pantalla lo anuncia aunque repita el texto
   // del anterior.
@@ -95,7 +98,7 @@ export function PaginaDeCodigosDeBarras(): React.JSX.Element {
 
   const volver = (
     <p className="mt-6 text-sm">
-      <Link to="/articulos" className="underline">
+      <Link to={`/articulos${cadenaDelListado(parametros)}`} className="underline">
         {t('catalogo.articulos.gestionDeCodigosDeBarras.volver')}
       </Link>
     </p>

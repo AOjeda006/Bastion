@@ -374,4 +374,25 @@ describe('El listado de artículos', () => {
         .map((e) => e.textContent),
     ).toEqual(['Ver', 'Ver', 'Ver']);
   });
+
+  it('cada enlace de la fila se lleva la página, la búsqueda y la categoría, y nada más', async () => {
+    abrirSesionYaRecuperada(ALFA.id, [...PERMISOS_DE_LECTURA, 'catalogo.articulo.modificar']);
+
+    // Los cuatro del listado, con un espacio en la búsqueda para que se vea la codificación, y uno
+    // que no es suyo y no tiene que viajar.
+    montarPantalla(
+      <PaginaDeArticulos />,
+      `/articulos?ajeno=1&pagina=2&tamanio=5&busqueda=tornillo+m6&categoria=${TORNILLERIA}`,
+    );
+
+    const delListado = `?pagina=2&tamanio=5&busqueda=tornillo+m6&categoria=${TORNILLERIA}`;
+
+    expect(
+      await screen.findByRole('link', { name: 'Ver los códigos de barras de TOR-M6' }),
+    ).toHaveAttribute('href', `/articulos/fffffff1-0000-0000-0000-000000000001/gtin${delListado}`);
+    expect(screen.getByRole('link', { name: 'Cambiar la trazabilidad de TOR-M6' })).toHaveAttribute(
+      'href',
+      `/articulos/fffffff1-0000-0000-0000-000000000001/trazabilidad${delListado}`,
+    );
+  });
 });

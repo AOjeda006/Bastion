@@ -8206,7 +8206,20 @@ empiezan en la **152**.
      verificación en `PaginaDeTerceros.tsx`. Son el mismo defecto en otras pantallas, y el arreglo
      sería el mismo. Lo que se encuentra con `grep -rn "title={" --include=*.tsx frontend/src`
      sin los tests.
-6. «Volver a los artículos» conserva la página, la búsqueda y la categoría.
+6. ~~«Volver a los artículos» conserva la página, la búsqueda y la categoría.~~ Hecho, por la
+   URL y de ida y vuelta:
+   - el listado pone en los enlaces de cada fila, el del GTIN y el de la trazabilidad, sus propios
+     parámetros: `pagina`, `tamanio`, `busqueda` y `categoria`, tal como estaban. Las dos pantallas
+     del artículo los leen de su URL y los devuelven en «Volver a los artículos». Lo hace una sola
+     función, `cadenaDelListado` en `model/listado.ts`, que deja fuera lo que no es del listado y no
+     pone un `?` suelto si no hay nada;
+   - no se validan al pasar: los valida el listado al leerlos, como hasta ahora. Una recarga o un
+     enlace pegado en un correo no pierden la vuelta, que es por lo que va en la URL y no en el
+     estado de la navegación (`stacks/react/convenciones.md`). La búsqueda y la categoría no son
+     datos sensibles, por lo mismo que ya decía `listado.ts` con el ADR-0025;
+   - tres casos nuevos: el listado con los cuatro parámetros y uno ajeno, y cada pantalla del
+     artículo con lo mismo. Cada uno compara el `href` entero, con la codificación del espacio de
+     la búsqueda. La vuelta de verdad, pulsando, es del recorrido con `playwright-cli`.
 7. El recorrido con `playwright-cli` por las dos pantallas.
 8. La tanda de mutaciones, la batería y los runs.
 

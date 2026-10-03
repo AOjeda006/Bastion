@@ -17,6 +17,9 @@ type ArticuloDto = components['schemas']['ArticuloDto'];
 
 const PATRON = '/articulos/:id/trazabilidad';
 
+/** Una rama del árbol, para el filtro que el listado manda a esta pantalla y que vuelve con ella. */
+const TORNILLERIA = 'eeeeeee1-0000-0000-0000-000000000002';
+
 /** El primero de Alfa: TOR-M6, un bien sin trazabilidad y con categoría. */
 function tornillo(): ArticuloDto {
   const [primero] = articulosDe(ALFA.id).elementos;
@@ -94,12 +97,12 @@ beforeEach(() => {
   );
 });
 
-function montar(idioma: Idioma = 'es'): ReturnType<typeof montarPantalla> {
+function montar(idioma: Idioma = 'es', delListado = ''): ReturnType<typeof montarPantalla> {
   abrirSesionYaRecuperada(ALFA.id, [...PERMISOS_DE_LECTURA, 'catalogo.articulo.modificar']);
 
   return montarPantalla(
     <PaginaDeTrazabilidad />,
-    `/articulos/${ficha.articulo.id}/trazabilidad`,
+    `/articulos/${ficha.articulo.id}/trazabilidad${delListado}`,
     idioma,
     PATRON,
   );
@@ -294,6 +297,16 @@ describe('La trazabilidad del artículo', () => {
     );
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument();
+  });
+
+  it('volver a los artículos devuelve la página, la búsqueda y la categoría de la que se vino', async () => {
+    // La que pone el enlace de la fila del listado, y uno que no es del listado y no vuelve.
+    montar('es', `?pagina=2&tamanio=5&busqueda=tornillo+m6&categoria=${TORNILLERIA}&ajeno=1`);
+
+    expect(await screen.findByRole('link', { name: 'Volver a los artículos' })).toHaveAttribute(
+      'href',
+      `/articulos?pagina=2&tamanio=5&busqueda=tornillo+m6&categoria=${TORNILLERIA}`,
+    );
   });
 
   it('un artículo que no está dice por qué, y deja volver al listado', async () => {

@@ -34,6 +34,9 @@ function tornillo(): ArticuloDto {
 
 const ARTICULO = tornillo();
 
+/** Una rama del árbol, para el filtro que el listado manda a esta pantalla y que vuelve con ella. */
+const TORNILLERIA = 'eeeeeee1-0000-0000-0000-000000000002';
+
 function codigo(
   numero: number,
   gtin: string,
@@ -172,12 +175,13 @@ beforeEach(() => {
 function montar(
   idioma: Idioma = 'es',
   permisos: readonly string[] = PUEDE_TODO,
+  delListado = '',
 ): ReturnType<typeof montarPantalla> {
   abrirSesionYaRecuperada(ALFA.id, [...permisos]);
 
   return montarPantalla(
     <PaginaDeCodigosDeBarras />,
-    `/articulos/${ARTICULO.id}/gtin`,
+    `/articulos/${ARTICULO.id}/gtin${delListado}`,
     idioma,
     PATRON,
   );
@@ -217,6 +221,20 @@ describe('Los códigos de barras del artículo', () => {
     expect(screen.getByRole('link', { name: 'Volver a los artículos' })).toHaveAttribute(
       'href',
       '/articulos',
+    );
+  });
+
+  it('volver a los artículos devuelve la página, la búsqueda y la categoría de la que se vino', async () => {
+    // La que pone el enlace de la fila del listado, y uno que no es del listado y no vuelve.
+    montar(
+      'es',
+      PUEDE_TODO,
+      `?pagina=2&tamanio=5&busqueda=tornillo+m6&categoria=${TORNILLERIA}&ajeno=1`,
+    );
+
+    expect(await screen.findByRole('link', { name: 'Volver a los artículos' })).toHaveAttribute(
+      'href',
+      `/articulos?pagina=2&tamanio=5&busqueda=tornillo+m6&categoria=${TORNILLERIA}`,
     );
   });
 

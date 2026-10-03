@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 
 import { NombreDeTrazabilidad } from './NombreDeTrazabilidad.tsx';
 import { ExplicacionDeSinReconocer } from './SinReconocer.tsx';
@@ -16,6 +16,7 @@ import {
   type TrazabilidadElegible,
 } from '../model/articulo.ts';
 import { esquemaDeTrazabilidad, type DatosDeTrazabilidad } from '../model/esquemaDeTrazabilidad.ts';
+import { cadenaDelListado } from '../model/listado.ts';
 import type { Diccionario } from '@/app/i18n/es.ts';
 import { tipoDeFallo } from '@/shared/api/errores.ts';
 import { Cargando, Fallo } from '@/shared/ui/Estados.tsx';
@@ -51,6 +52,8 @@ export function PaginaDeTrazabilidad(): React.JSX.Element {
   const { t } = useTranslation();
   const textoDeFallo = useTextoDeFallo();
   const { id = '' } = useParams();
+  // Cómo se estaba mirando el listado, que trae el enlace de la fila y se devuelve al volver.
+  const [parametros] = useSearchParams();
   const [guardada, setGuardada] = useState<TrazabilidadElegible | null>(null);
   const porQueLaActual = useId();
 
@@ -61,7 +64,7 @@ export function PaginaDeTrazabilidad(): React.JSX.Element {
 
   const volver = (
     <p className="mt-6 text-sm">
-      <Link to="/articulos" className="underline">
+      <Link to={`/articulos${cadenaDelListado(parametros)}`} className="underline">
         {t('catalogo.articulos.cambioDeTrazabilidad.volver')}
       </Link>
     </p>
