@@ -5975,6 +5975,34 @@ firmados; `main` solo avanza a un commit ya verde en su rama, y la rama se borra
 de `main`. El informe cuenta todos los commits desde `c9883cd`, con sus runs, y cada cifra va con la
 orden que la mide.
 
+#### La puerta del 2.11, contestada el 2026-10-03
+
+Lo primero fue el §7.4 del plan maestro. Pone «en tránsito» entre los campos de la existencia, y
+dice que la transferencia tiene «stock en tránsito mientras vuela». El §8.3 dibuja el ciclo: «enviar
+► SALIDA origen + stock EN TRÁNSITO ► recibir ► ENTRADA destino». Nada de eso contradice el encargo,
+y la primera respuesta lo sigue al pie de la letra.
+
+Tres cosas quedaban abiertas, y el usuario las contestó en una sola tanda, las tres con la opción
+recomendada:
+
+1. **El tránsito vive en el destino.** Una columna `en_transito` en la existencia del destino, con su
+   ubicación, su lote y su serie, y `en_transito` y `valor_en_transito` en su valoración. La línea
+   lleva la ubicación de destino desde el alta. El índice de la serie cuenta `fisico > 0 OR
+   en_transito > 0`. Las otras opciones eran una tabla aparte, que no se ve en la existencia, y
+   solo en la valoración, que pierde la serie.
+2. **El inverso es el mismo documento con las líneas negadas**, como en el 2.5: una transferencia
+   nueva con `AnulaAId`, el mismo origen y el mismo destino. Niega cada pata que el original
+   escribió, y nace cerrada, sin nada en vuelo. La otra opción era una transferencia en sentido
+   contrario, con dos envíos y dos recepciones que cuadrar.
+3. **Al anular una recibida, el origen recibe lo que salió del destino.** Si el tope corta, es menos
+   que lo que salió del origen, y la línea guarda las dos cifras. Así, una transferencia y su
+   inverso no crean ni destruyen valor: solo los ajustes mueven el valor de la empresa. La otra
+   opción devolvía al origen el valor original entero, aunque del destino saliera menos.
+
+El resto lo decidió el agente, y está en el punto 12 del **ADR-0053**: los estados, el inverso que
+nace `Recibida`, la fecha de recepción en el cuerpo, el motivo solo en el inverso, los nombres y lo
+que pregunta el cierre.
+
 
 ## Estado actual
 
@@ -8144,7 +8172,7 @@ lo enmienda.
       dependieran de la suerte.
 
 **El epílogo del 2.10, cerrado** el 2026-10-03, en la rama `epilogo-2.10`, abierta desde `main` en
-`c9883cd`. Lo que pedía está en *Decisiones tomadas → Traídas por el encargo del 2026-10-03*. Sus
+`c9883cd` y ya borrada. Lo que pedía está en *Decisiones tomadas → Traídas por el encargo del 2026-10-03*. Sus
 mutaciones van de la **152** a la **180**, con la 139 vuelta a medir, y no tiene ADR: no cambió
 ninguna decisión escrita. El ADR-0053 queda para el 2.11.
 
@@ -8250,6 +8278,16 @@ ninguna decisión escrita. El ADR-0053 queda para el 2.11.
    **Los commits del epílogo**, desde `c9883cd`, son **nueve** con `adedba0`, y subieron de una vez,
    así que tienen **un** run de rama, el de arriba. Con éste, diez.
 
+   **El run de rama de `ed7ab60`**, el que lo anota, es el **37142980834**: **success al primer
+   intento**, con las mismas cifras y los mismos 68 pasos. `main` avanzó a `ed7ab60` después.
+
+   **El run de `main` es el 37143613102** sobre `ed7ab60`, **success al primer intento**, con sus tres
+   jobs —Backend `111262968458`, Frontal `111262968301` y Humo `111264041506`— y **68 pasos: 67 en verde y 1
+   omitido**, *Diagnóstico*. Dice lo mismo que el de la rama: **1225** y **559** casos con **10
+   `.trx`** en cada artefacto, **135** operaciones y 80 rutas, **144** tipos de error de **150**
+   sitios, y **421/450** y **636/900** KiB. La rama `epilogo-2.10` se borró después, en local y en
+   el remoto. Anotado al abrir el 2.11.
+
    **La tanda, de la 152 a la 180**, y la 139 vuelta a medir. La numeración sigue a la 151 del
    2.10, que era la mayor de todas las tablas (`grep -n "| # | Mutación" docs/PLAN.md`). Cada
    una va sobre el árbol limpio, con el commit de su tema y su carril, y se revierte con
@@ -8331,6 +8369,23 @@ ninguna decisión escrita. El ADR-0053 queda para el 2.11.
 
    El árbol queda limpio al terminar. Los commits desde `c9883cd`, contados con `git log
    --format='%h %G? %s' c9883cd..HEAD`, son **8** antes de este, todos con firma `G`.
+
+**El 2.11, en curso** desde el 2026-10-03, en la rama `2.11-la-transferencia`, abierta desde `main`
+en `ed7ab60`. Lo que pide está en *Decisiones tomadas → El 2.11: la transferencia y el stock en
+tránsito*, y la puerta, contestada, justo debajo. Las decisiones van en el **ADR-0053**, que enmienda
+el ADR-0048 §3. Sus mutaciones empiezan en la **181**.
+
+**Lo que queda, por este orden:**
+
+1. ~~El run de `main` del epílogo, la puerta y el ADR-0053.~~ Hecho en el primer commit de la rama.
+2. El dominio, con TDD: la transferencia, su línea, sus cuatro estados y su inverso.
+3. El esquema: las dos tablas, las tres columnas del tránsito y las dos expresiones de la serie.
+4. La persistencia: las sentencias del tránsito y el orden de las patas.
+5. Los casos de uso y la superficie: abrir, enviar, recibir y anular, con sus permisos, sus `type`
+   y sus textos.
+6. Los casos de integración del encargo, cada uno con su censo.
+7. El cuadre del tránsito y la propiedad.
+8. La tanda de mutaciones, la batería y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 

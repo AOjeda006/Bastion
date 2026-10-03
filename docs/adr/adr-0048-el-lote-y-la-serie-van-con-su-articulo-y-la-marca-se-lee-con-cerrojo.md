@@ -8,10 +8,13 @@ revisado: 2026-09-29
 
 # ADR-0048: El lote y la serie van con su artículo, y la marca se lee con cerrojo
 
-- **Estado:** aceptado. **Enmendado por el ADR-0050 (§1, última frase, y §3, los nombres).**
+- **Estado:** aceptado. **Enmendado por el ADR-0050 (§1, última frase, y §3, los nombres) y por
+  el ADR-0053 (§3, las dos expresiones).**
   - El [ADR-0050](adr-0050-el-numero-de-serie-se-llama-asi-y-el-motor-guarda-la-marca.md) pone la exclusividad entre lote y número de serie también en el
     motor, con un `CHECK` en la existencia y otro en el libro, y renombra `serie_id` a
     `numero_de_serie_id`, con su índice y su `CHECK`.
+  - El [ADR-0053](adr-0053-el-transito-vive-en-el-destino-y-el-valor-viaja-con-la-linea.md) hace que las dos expresiones del §3 cuenten también
+    el tránsito, para que un número de serie que viaja siga estando en un solo sitio.
 - **Fecha:** 2026-09-29
 - **Sale del 2.9**, con las seis decisiones que el usuario fijó en el encargo del 2026-09-29 (PLAN,
   *El 2.9: lotes y números de serie*). Los medios, y lo que el encargo dejó por decidir, son del
@@ -98,6 +101,10 @@ o un número de serie tiene de 1 a 20 caracteres del conjunto 82 de GS1. Es lo q
 > `numero_de_serie_id`, el `CHECK` es `ck_existencias_numero_de_serie_como_mucho_una` y el índice
 > es `ix_existencias_numero_de_serie_en_un_sitio`. Las expresiones, la traducción y el `type`
 > son los de abajo.
+>
+> **Enmendado por el ADR-0053 (2026-10-03).** Las dos expresiones cuentan el tránsito. El índice
+> filtra por `(fisico > 0 OR en_transito > 0) AND numero_de_serie_id IS NOT NULL`, y el `CHECK` es
+> `numero_de_serie_id IS NULL OR fisico + en_transito <= 1`. La traducción y el `type` no cambian.
 
 Un `CHECK` de fila no ve las demás filas, así que hacen falta dos piezas sobre la existencia:
 
