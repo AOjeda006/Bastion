@@ -1,9 +1,11 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Comun;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
+using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Terceros.Contracts.Terceros;
 
 namespace Bastion.Catalogo.Application.Catalogo;
@@ -187,9 +189,16 @@ internal sealed class ObtenerProveedorDelArticulo(
 /// listado acaba de callar. Preguntando antes por el estado, al bloqueado le toca el mismo 400 que a
 /// uno inventado, y el 409 queda para quien el listado sí enseña.
 /// </para>
+/// <para>
+/// <b>Antes que todo eso, la empresa activa</b>, como en las demás altas del módulo. El
+/// <c>EmpresaId</c> del suministro sale del claim, y es aquí donde se comprueba que la empresa
+/// sigue operativa (lo declara <c>LosIdentificadoresAjenosTests</c>). Faltó hasta el epílogo del
+/// 2.10: se notó al escribir la misma frase para el código de barras.
+/// </para>
 /// </remarks>
 internal sealed class AgregarProveedorAlArticulo(
     IUsuarioActual usuarioActual,
+    IConsultaDeEmpresas empresas,
     IRepositorioDeArticulos articulos,
     IRepositorioDeProveedoresDeArticulo proveedores,
     IConsultaDeTerceros terceros,
@@ -202,6 +211,15 @@ internal sealed class AgregarProveedorAlArticulo(
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(peticion);
+
+        // La empresa sale del CLAIM y no de la petición (R8): `AgregarProveedorDto` no tiene el
+        // campo.
+        Guid empresaId = usuarioActual.EmpresaId;
+
+        if (!await empresas.EstaActivaAsync(empresaId, cancelacion).ConfigureAwait(false))
+        {
+            return Resultado.Fallo<ArticuloProveedorDto>(ErroresDeInquilinato.EmpresaActivaNoOperativa());
+        }
 
         Articulo? articulo = await articulos
             .ObtenerAsync(articuloId, cancelacion)
@@ -232,7 +250,7 @@ internal sealed class AgregarProveedorAlArticulo(
         }
 
         var suministro = ArticuloProveedor.Nuevo(
-            usuarioActual.EmpresaId,
+            empresaId,
             articuloId,
             peticion.TerceroId,
             peticion.ReferenciaDelProveedor,

@@ -5770,6 +5770,9 @@ Lo que el ADR-0051 dejó abierto al llegar a los casos de uso y a la API. Ningun
 > `IConsultaDeEmpresas` ni llama a `EstaActivaAsync`, a diferencia del alta del artículo, de la
 > categoría, de la tarifa, de su línea y ahora del código de barras. Se decide con el usuario si se
 > añade la comprobación o se corrige la frase.
+>
+> **Decidido por el usuario el 2026-10-03: se añade la comprobación**, y la frase pasa a ser
+> verdad sin tocarla. Hecho en el epílogo del 2.10, en el punto 4 de su *Estado actual*.
 
 #### Tomadas por el agente en el paso 8 del 2.10 (2026-10-02)
 
@@ -8178,8 +8181,14 @@ empiezan en la **152**.
 
    El patrón va por trozos del nombre y no por subcadena. Cumple el ADR-0051 §8, que ya decía
    que la ausencia «se comprueba con un barrido de los esquemas», así que no hay ADR nuevo.
-4. `AgregarProveedorAlArticulo` pregunta `EstaActivaAsync`, con caso, mutación y la frase de
-   `LosIdentificadoresAjenosTests`.
+4. ~~`AgregarProveedorAlArticulo` pregunta `EstaActivaAsync`.~~ Hecho:
+   - recibe `IConsultaDeEmpresas` y lo pregunta **lo primero**, antes que el artículo, como el
+     alta del código de barras. El `EmpresaId` del suministro sale de la misma variable;
+   - el caso nuevo, `Con_la_empresa_inoperativa_no_se_llega_ni_al_articulo`, va con un artículo
+     que no existe y un tercero que no está disponible, así que solo sale el `409` si la empresa
+     se mira antes. Y el puerto de Terceros no se llega a llamar;
+   - la frase de `LosIdentificadoresAjenosTests` («sale del claim en `AgregarProveedorAlArticulo`,
+     que es donde se comprueba la empresa activa») no se toca: ahora dice la verdad.
 5. Lo que solo vive en un `title`, en texto visible o asociado.
 6. «Volver a los artículos» conserva la página, la búsqueda y la categoría.
 7. El recorrido con `playwright-cli` por las dos pantallas.

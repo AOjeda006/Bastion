@@ -393,13 +393,46 @@ public sealed class ProveedoresDelArticuloTests
             "ser verdad, y su rastro está en la traza");
     }
 
+    /// <summary>
+    /// Con la empresa activa fuera de servicio no se pregunta nada más: ni el artículo, ni el
+    /// tercero, ni el duplicado.
+    /// </summary>
+    /// <remarks>
+    /// Con un artículo que no existe y un tercero que no está disponible: si la empresa se
+    /// comprobara después de cualquiera de los dos, saldría su <c>404</c> o su <c>400</c>, y no el
+    /// <c>409</c> que dice que lo que falla es la empresa. Y el puerto de Terceros no se llega a
+    /// llamar, que es lo que una empresa dada de baja no tiene por qué consultar.
+    /// </remarks>
+    [Fact]
+    public async Task Con_la_empresa_inoperativa_no_se_llega_ni_al_articulo()
+    {
+        var terceros = new TercerosEn(EstadoDelTercero.NoExiste);
+        var proveedores = new ProveedoresEnMemoria();
+        var confirmaciones = new ConfirmacionesContadas();
+
+        Resultado<ArticuloProveedorDto> resultado = await Agregar(
+                Alta(), terceros, proveedores, confirmaciones, empresaActiva: false)
+            .EjecutarAsync(
+                Guid.CreateVersion7(),
+                new AgregarProveedorDto { TerceroId = Guid.CreateVersion7() },
+                CancellationToken.None);
+
+        resultado.EsCorrecto.ShouldBeFalse();
+        resultado.Error!.Codigo.ShouldBe("empresa-activa-no-operativa");
+        terceros.Preguntados.ShouldBeEmpty("a una empresa inoperativa no se le contesta quién es proveedor");
+        proveedores.Guardados.ShouldBeEmpty();
+        confirmaciones.Veces.ShouldBe(0);
+    }
+
     private static AgregarProveedorAlArticulo Agregar(
         Articulo articulo,
         TercerosEn terceros,
         ProveedoresEnMemoria? proveedores = null,
-        ConfirmacionesContadas? confirmaciones = null) =>
+        ConfirmacionesContadas? confirmaciones = null,
+        bool empresaActiva = true) =>
         new(
             new UsuarioDe(s_empresaId),
+            new EmpresasQueContestan(empresaActiva),
             new ArticulosEnMemoria { Guardados = { articulo } },
             proveedores ?? new ProveedoresEnMemoria(),
             terceros,
