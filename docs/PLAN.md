@@ -8238,7 +8238,7 @@ empiezan en la **152**.
      marcado señala su explicación, y la explicación se ve (`checkVisibility`).
    - La consola, sin errores ni avisos. La pila se bajó con `down -v` sobre su proyecto, con el
      `-p` en la misma orden, y el entorno y el estado del navegador se borraron.
-8. La tanda de mutaciones, la batería y los runs.
+8. ~~La tanda de mutaciones y la batería.~~ Hechas; **los runs, pendientes**, y van en su commit.
 
    **La tanda, de la 152 a la 180**, y la 139 vuelta a medir. La numeración sigue a la 151 del
    2.10, que era la mayor de todas las tablas (`grep -n "| # | Mutación" docs/PLAN.md`). Cada
@@ -8288,6 +8288,39 @@ empiezan en la **152**.
 
    Una sola verde, la 178, y se cubrió en su commit. Los rojos se compararon por nombre contra la
    base de cada carril, que no tenía ninguno.
+
+   **La batería, entera y en el orden de `AGENTS.md`**, sobre el árbol limpio de `90f5c0a`. Cada
+   paso sale con 0:
+   - el contrato: `npm --prefix frontend run api` y `git status --porcelain --
+     frontend/src/shared/api/esquema.ts`, vacío;
+   - `bash scripts/comprobar-migraciones.sh`: Inventario sigue con **13** migraciones, y el modelo
+     coincide en todos los módulos;
+   - `bash scripts/generar-openapi.sh --comprobar`: **135** operaciones, las mismas que en el run de
+     `main` del 2.10;
+   - `bash scripts/generar-errores.sh --comprobar`: **144** tipos de **150** sitios, los mismos;
+   - el frontal: tipado, *lint* y formato a 0. `npm --prefix frontend run test` pasa **192** de
+     192 en 20 ficheros, con **0** avisos de `act()` (`grep -c 'not wrapped in act'` sobre su
+     salida);
+   - `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`: **421/450** de arranque
+     y **636/900** en total. El total sube 1 KiB sobre los 635 del run de `main` del 2.10: es la
+     vuelta al listado y la explicación de «Sin reconocer»;
+   - `dotnet build Bastion.sln`: **0** avisos y 0 errores, y `dotnet format Bastion.sln
+     --verify-no-changes` sale con 0;
+   - el carril rápido, `dotnet test Bastion.sln --filter "Category!=Integracion"`, y su recuento,
+     `bash scripts/ci/recuento-de-tests.sh` con la lista del *workflow*: **1225** casos en 10
+     ensamblados, todos correctos. Son los 1212 del run de `main` del 2.10 más 13: los 12 del dígito
+     de control y el de la empresa del proveedor, los dos en `Catalogo.UnitTests`, que pasa de 248
+     a **261**;
+   - el carril de integración, `--filter "Category=Integracion" --blame-hang --blame-hang-timeout
+     4m`, y su recuento: **559** casos, **475** en `Api.IntegrationTests` y 84 en
+     `Organizacion.IntegrationTests`. Son los 556 de antes más los 3 del barrido;
+   - las dependencias, `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py c9883cd
+     HEAD`: los seis conjuntos, vacíos. Ningún paquete entra ni sale. Sin la variable, el guion
+     se estrella en la consola de Windows al escribir la flecha de su cabecera, y no es un fallo
+     del guion: la CI corre en Linux, con UTF-8.
+
+   El árbol queda limpio al terminar. Los commits desde `c9883cd`, contados con `git log
+   --format='%h %G? %s' c9883cd..HEAD`, son **8** antes de este, todos con firma `G`.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
