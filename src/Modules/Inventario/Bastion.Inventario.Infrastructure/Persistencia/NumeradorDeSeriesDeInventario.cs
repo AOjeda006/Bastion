@@ -31,17 +31,22 @@ internal sealed class NumeradorDeSeriesDeInventario(
     /// <summary>El tipo de serie de los ajustes, con el nombre que le da Organización.</summary>
     internal const string SeriesDeAjustes = "AjusteDeInventario";
 
+    /// <summary>El tipo de serie de las transferencias, con el nombre que le da Organización.</summary>
+    internal const string SeriesDeTransferencias = "TransferenciaDeInventario";
+
     /// <summary>En qué series numera cada documento del módulo.</summary>
     /// <remarks>
-    /// <b>Lanza con un documento que no esté aquí</b>, y no numera en ninguna serie por defecto: la
-    /// transferencia y el recuento entran en el 2.11 y el 2.12, y el día que su valor exista sin su
-    /// línea aquí, el caso que recorre el enumerado entero se pone rojo antes que nada en la base.
+    /// <b>Lanza con un documento que no esté aquí</b>, y no numera en ninguna serie por defecto: el
+    /// recuento entra en el 2.12, y el día que su valor exista sin su línea aquí, el caso que recorre
+    /// el enumerado entero se pone rojo antes que nada en la base. Así entró la transferencia, en el
+    /// 2.11. Su inverso numera en la misma serie que ella, como el del ajuste (ADR-0053 §5).
     /// </remarks>
     /// <param name="documento">El documento que pide el número.</param>
     /// <returns>El valor de <c>tipo_de_documento</c> de sus series.</returns>
     internal static string SeriesDe(TipoDeDocumentoOrigen documento) => documento switch
     {
         TipoDeDocumentoOrigen.Ajuste => SeriesDeAjustes,
+        TipoDeDocumentoOrigen.Transferencia => SeriesDeTransferencias,
         _ => throw new ArgumentOutOfRangeException(
             nameof(documento),
             documento,

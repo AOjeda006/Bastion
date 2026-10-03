@@ -26,9 +26,24 @@ internal static class LaValoracion
     /// <returns>Una valoración por línea, en su orden.</returns>
     internal static IReadOnlyList<LineaValorada> Tras(
         IEnumerable<MovimientoStock> loQueHabia,
-        Ajuste documento)
+        Ajuste documento) =>
+        DeLasLineas(loQueHabia, documento.LineasAValorar(), documento.Divisa, documento.FechaDeOperacion);
+
+    /// <summary>
+    /// Valora unas líneas contra lo que dejaron unas filas del libro, en una divisa y una fecha: lo
+    /// que hace el caso de uso con cada pata de una transferencia.
+    /// </summary>
+    /// <param name="loQueHabia">Las filas de antes, todas en <paramref name="divisa"/>.</param>
+    /// <param name="lineas">Las líneas a valorar, en su orden.</param>
+    /// <param name="divisa">La divisa del documento.</param>
+    /// <param name="fecha">La fecha de la pata.</param>
+    /// <returns>Una valoración por línea, en su orden.</returns>
+    internal static IReadOnlyList<LineaValorada> DeLasLineas(
+        IEnumerable<MovimientoStock> loQueHabia,
+        IReadOnlyList<LineaAValorar> lineas,
+        string divisa,
+        DateOnly fecha)
     {
-        IReadOnlyList<LineaAValorar> lineas = documento.LineasAValorar();
         MovimientoStock[] anteriores = [.. loQueHabia];
 
         var saldos = lineas
@@ -43,10 +58,10 @@ internal static class LaValoracion
 
                     return new SaldoValorado(
                         suyas.Sum(fila => fila.CantidadEnUnidadBase),
-                        Importe.De(suyas.Sum(fila => fila.Valor.Cantidad), documento.Divisa),
+                        Importe.De(suyas.Sum(fila => fila.Valor.Cantidad), divisa),
                         suyas.Length == 0 ? null : suyas.Max(fila => fila.FechaDeOperacion));
                 });
 
-        return new ElPrecioMedioPonderado().Valorar(saldos, lineas, documento.Divisa, documento.FechaDeOperacion);
+        return new ElPrecioMedioPonderado().Valorar(saldos, lineas, divisa, fecha);
     }
 }

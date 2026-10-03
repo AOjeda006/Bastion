@@ -834,6 +834,34 @@ internal static class Inventario
                 "puerto: se valida por el ESTADO, porque una unidad retirada sigue explicando las " +
                 "líneas viejas y no se ofrece para una nueva (ADR-0023)."),
 
+            // LAS DEL ÍTEM 2.11. La línea de la transferencia nombra DOS ubicaciones, una por pata,
+            // y el papel va en el nombre, así que ninguna casa con el del tipo. Las pregunta el alta
+            // de la transferencia, cada una contra su almacén de la cabecera (ADR-0053 §8).
+            ["LineaDeTransferencia.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "gemelo del de la línea del ajuste, y por el mismo puerto: no basta con que el " +
+                "artículo exista, tiene que almacenarse."),
+
+            ["LineaDeTransferencia.UbicacionDestinoId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "el hueco del destino va desde el alta, porque el tránsito vive en la existencia " +
+                "del destino y esa fila necesita su ubicación al enviar (ADR-0053 §1). El puerto " +
+                "dice que cuelgue del almacén de destino de la cabecera, y en qué estado está."),
+
+            ["LineaDeTransferencia.UbicacionOrigenId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "la pareja de la de destino, contra el almacén de origen de la cabecera. Una " +
+                "ubicación del almacén equivocado es la transferencia que no existe."),
+
+            ["LineaDeTransferencia.UnidadIntroducidaId"] = new(
+                "UnidadMedida",
+                Raiz + ".Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida",
+                "gemela de la de la línea del ajuste, y por el mismo puerto y el mismo motivo: se " +
+                "valida por el ESTADO (ADR-0023)."),
+
             // LAS DEL ÍTEM 2.9. El lote y la serie los crea la sentencia que resuelve los códigos al
             // confirmar, con la empresa del inquilino y el artículo de la línea que los nombra.
             ["Lote.ArticuloId"] = new(
@@ -865,6 +893,25 @@ internal static class Inventario
                 "el nombre SÍ casa, y aun así se declara: lo que la lista aporta aquí no es " +
                 "descubrirlo, es decir POR DÓNDE se valida. Sin el puerto escrito, la regla sabría " +
                 "que hay un cruce y no podría exigir que alguien lo compruebe."),
+
+            // LAS DEL TRÁNSITO, del ítem 2.11, son COPIAS como las de la existencia: el tránsito
+            // solo recibe identificadores de la transferencia que lo mueve, y esos ya llegan
+            // preguntados por su alta.
+            ["MovimientoEnTransito.AlmacenId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "copia del almacén de destino de la transferencia, preguntado por su alta. El " +
+                "tránsito vive en el destino (ADR-0053 §1)."),
+
+            ["MovimientoEnTransito.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "copia del de la línea de la transferencia, y por el mismo puerto."),
+
+            ["MovimientoEnTransito.UbicacionId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "copia de la ubicación de destino de la línea, y por el mismo puerto."),
 
             ["MovimientoStock.AlmacenId"] = new(
                 "Almacen",
@@ -998,6 +1045,40 @@ internal static class Inventario
             // LAS DEL ÍTEM 2.8, copias como las de la existencia y por lo mismo: la valoración no
             // recibe identificadores de ningún sitio más que de las líneas del documento que la
             // mueve, que ya los traen preguntados por su alta.
+            ["Transferencia.AlmacenDestinoId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "el papel va en el nombre —a dónde llega— y por eso no casa con el del tipo. Lo " +
+                "pregunta el alta de la transferencia, por el ESTADO como el del ajuste, y con una " +
+                "pregunta más que no hace ningún otro documento: que sea de la misma empresa que " +
+                "el de origen, y otro almacén (ADR-0053 §8). El puerto filtra por la empresa del " +
+                "inquilino, así que uno de otra empresa contesta lo mismo que uno que no existe."),
+
+            ["Transferencia.AlmacenOrigenId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "la pareja del de destino: de dónde sale. Por el mismo puerto y en la misma " +
+                "pregunta del alta."),
+
+            ["Transferencia.AnulaAId"] = new(
+                "Transferencia",
+                "",
+                "gemelo del del ajuste: apunta a un documento del PROPIO módulo, con clave ajena " +
+                "de verdad e índice único, y lo que la clave no dice lo sostiene la doble flecha " +
+                "de la anulación (ADR-0053 §5)."),
+
+            ["Transferencia.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del del ajuste: sale del claim en el alta, nunca de la petición."),
+
+            ["Transferencia.SerieId"] = new(
+                "Serie",
+                Raiz + ".Organizacion.Contracts.Series.IConsultaDeSeries",
+                "gemelo del del ajuste, y con su misma diferencia: la R5 la sostiene el `WHERE` " +
+                "de la sentencia que toma el número al enviar, y el puerto está para que un " +
+                "borrador no nazca apuntando a una serie cerrada. Su inverso numera en ella."),
+
             ["Valoracion.AlmacenId"] = new(
                 "Almacen",
                 Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",

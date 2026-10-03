@@ -22,6 +22,11 @@ namespace Bastion.Inventario.Domain.Valoraciones;
 /// Leída aparte, dos documentos de la misma clave con las fechas cruzadas no se verían, y los dos
 /// pasarían.
 /// </para>
+/// <para>
+/// <b>Y el tránsito, por la divisa</b> (ADR-0053 §1). Lo que vuela hacia la clave está en su fila,
+/// fuera de la cantidad y del valor, y en la divisa de la valoración. Una clave con tránsito no está
+/// vacía, así que no empieza de nuevo en otra divisa.
+/// </para>
 /// </remarks>
 public sealed record SaldoValorado
 {
@@ -32,11 +37,13 @@ public sealed record SaldoValorado
     /// La fecha de operación más alta de esas filas, o <see langword="null"/> si la clave no se ha
     /// movido nunca.
     /// </param>
-    public SaldoValorado(decimal cantidad, Importe valor, DateOnly? ultimaFecha = null)
+    /// <param name="enTransito">Lo que vuela hacia la clave, en unidad base. No está en el libro.</param>
+    public SaldoValorado(decimal cantidad, Importe valor, DateOnly? ultimaFecha = null, decimal enTransito = 0m)
     {
         ArgumentNullException.ThrowIfNull(valor);
         ArgumentOutOfRangeException.ThrowIfNegative(cantidad);
         ArgumentOutOfRangeException.ThrowIfNegative(valor.Cantidad, nameof(valor));
+        ArgumentOutOfRangeException.ThrowIfNegative(enTransito);
 
         if (cantidad == 0m && valor.Cantidad != 0m)
         {
@@ -49,6 +56,7 @@ public sealed record SaldoValorado
         Cantidad = cantidad;
         Valor = valor;
         UltimaFecha = ultimaFecha;
+        EnTransito = enTransito;
     }
 
     /// <summary>La cantidad en unidad base.</summary>
@@ -62,6 +70,14 @@ public sealed record SaldoValorado
     /// (ADR-0047), y es <see langword="null"/> en una clave que no se ha movido nunca.
     /// </summary>
     public DateOnly? UltimaFecha { get; }
+
+    /// <summary>Lo que vuela hacia la clave, en unidad base: el tránsito de su valoración.</summary>
+    public decimal EnTransito { get; }
+
+    /// <summary>
+    /// Sin cantidad y sin tránsito: lo único que puede empezar de nuevo en otra divisa (ADR-0046 §7).
+    /// </summary>
+    public bool EstaVacio => Cantidad == 0m && EnTransito == 0m;
 
     /// <summary>
     /// El valor por unidad, redondeado a la escala de <see cref="PrecioUnitario"/>. Sin cantidad no

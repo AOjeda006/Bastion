@@ -6,8 +6,9 @@ namespace Bastion.Inventario.Domain.Movimientos;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Es una lista cerrada y hoy tiene un solo valor</b>, que es el único documento que existe.
-/// La transferencia entra en el 2.11 y el recuento en el 2.12; cada uno añade su valor y su caso.
+/// <b>Es una lista cerrada, con un valor por documento que escribe en el libro.</b> El ajuste
+/// entró en el 2.3, la transferencia en el 2.11, y el recuento entrará en el 2.12, cada uno con su
+/// valor y su caso.
 /// El 2.5 NO añade ninguno, y esa ausencia es la decisión: un ajuste inverso es un ajuste, así
 /// que sus filas salen con este mismo valor — que es lo que permite sumar el par entero de una
 /// vez, en vez de tener que unir dos clases de fila para comprobar que se compensan.
@@ -26,4 +27,10 @@ public enum TipoDeDocumentoOrigen
 {
     /// <summary>Un ajuste de inventario: la corrección de existencias del ítem 2.3.</summary>
     Ajuste = 1,
+
+    /// <summary>
+    /// Una transferencia entre almacenes, del ítem 2.11: escribe una fila al enviar y otra al
+    /// recibir, y su inverso es también una transferencia (ADR-0053 §5).
+    /// </summary>
+    Transferencia = 2,
 }

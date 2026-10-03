@@ -8,6 +8,7 @@ using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Movimientos;
+using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Configuraciones;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -94,12 +95,16 @@ public static class ModuloDeInventario
         // falla es modificar CUALQUIER artículo, porque el caso de uso lo recibe por constructor.
         servicios.AddScoped<IMovimientosDeArticulos, LosMovimientosDeUnArticulo>();
 
-        // LOS DOS EVENTOS DEL DOCUMENTO, con su nombre escrito a mano: el catálogo no lo saca del
+        // LOS EVENTOS DE LOS DOCUMENTOS, con su nombre escrito a mano: el catálogo no lo saca del
         // tipo a propósito, porque renombrar la clase rompería las filas que ya están en la cola.
-        // Uno POR DOCUMENTO y no por movimiento: uno por fila convertiría la bandeja en una segunda
-        // copia de la tabla que más crece del sistema.
+        // Uno POR DOCUMENTO y paso, y no por movimiento: uno por fila convertiría la bandeja en una
+        // segunda copia de la tabla que más crece del sistema. La transferencia tiene tres porque
+        // escribe en el libro en dos momentos (ADR-0053).
         servicios.DeclararEvento<AjusteConfirmado>(AjusteConfirmado.Nombre);
         servicios.DeclararEvento<AjusteAnulado>(AjusteAnulado.Nombre);
+        servicios.DeclararEvento<TransferenciaEnviada>(TransferenciaEnviada.Nombre);
+        servicios.DeclararEvento<TransferenciaRecibida>(TransferenciaRecibida.Nombre);
+        servicios.DeclararEvento<TransferenciaAnulada>(TransferenciaAnulada.Nombre);
 
         // El almacén de claves de idempotencia (R10), con la clave del módulo: el filtro del borde
         // resuelve el suyo por el segmento de la ruta, para que la clave y el trabajo caigan en la

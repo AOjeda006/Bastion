@@ -8378,7 +8378,16 @@ el ADR-0048 §3. Sus mutaciones empiezan en la **181**.
 **Lo que queda, por este orden:**
 
 1. ~~El run de `main` del epílogo, la puerta y el ADR-0053.~~ Hecho en el primer commit de la rama.
-2. El dominio, con TDD: la transferencia, su línea, sus cuatro estados y su inverso.
+2. ~~El dominio, con TDD: la transferencia, su línea, sus cuatro estados y su inverso.~~ Hecho en
+   el segundo commit, con **36** casos nuevos en el carril rápido: **35** en
+   `tests/Inventario.UnitTests/Transferencias/`, sobre un libro en memoria que valora cada pata
+   como el caso de uso, y **1** en `LoQueImpideValorarTests`, la clave sin existencias y con
+   tránsito en otra divisa. Lo medido con `dotnet test Bastion.sln --filter "Category!=Integracion"`:
+   **1261** casos, todos en verde, 36 más que los **1225** del run de `main`. Entran también la
+   serie del numerador, los tres eventos declarados, los doce identificadores con su puerto y las
+   dos filas del glosario, con el tránsito. **Lo que se queda para el esquema** son las columnas del
+   tránsito en la existencia y en la valoración: EF Core las mapea por convención, y sin su
+   migración el modelo deja de coincidir.
 3. El esquema: las dos tablas, las tres columnas del tránsito y las dos expresiones de la serie.
 4. La persistencia: las sentencias del tránsito y el orden de las patas.
 5. Los casos de uso y la superficie: abrir, enviar, recibir y anular, con sus permisos, sus `type`

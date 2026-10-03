@@ -194,6 +194,31 @@ public sealed class LoQueImpideValorarTests
             new LineaValorada(Importe.De(10m, "EUR"), PrecioUnitario.De(2m, "EUR")));
     }
 
+    /// <summary>
+    /// Pero una clave sin existencias con algo en vuelo hacia ella no está vacía: su tránsito va en
+    /// su divisa, y no empieza de nuevo (ADR-0053 §1).
+    /// </summary>
+    /// <remarks>
+    /// Si empezara en la del documento, la recepción sumaría dólares a una clave en euros. La pareja
+    /// es el caso de arriba, la misma clave sin tránsito.
+    /// </remarks>
+    [Fact]
+    public void Una_clave_sin_existencias_pero_con_transito_en_otra_divisa_no_se_valora()
+    {
+        Dictionary<ClaveDeValoracion, SaldoValorado> saldos = new()
+        {
+            [s_clave] = new SaldoValorado(0m, Importe.Cero("USD"), enTransito: 4m),
+        };
+        LineaAValorar[] lineas = [new(s_clave, 5m, PrecioUnitario.De(2m, "EUR"))];
+
+        saldos[s_clave].Cantidad.ShouldBe(0m, "sin existencias, que es lo que la distingue de la de arriba");
+
+        s_valoracion.LoQueImpide(saldos, lineas, "EUR", s_dia15).ShouldBe(
+            new ImpedimentoDeValoracion(MotivoDelImpedimento.ValoracionEnOtraDivisa, s_clave));
+
+        Should.Throw<InvalidOperationException>(() => s_valoracion.Valorar(saldos, lineas, "EUR", s_dia15));
+    }
+
     /// <summary>Una clave sin su saldo bloqueado es un defecto de quien llama, no un saldo nuevo.</summary>
     [Fact]
     public void Una_clave_sin_su_saldo_bloqueado_no_se_valora_desde_cero()

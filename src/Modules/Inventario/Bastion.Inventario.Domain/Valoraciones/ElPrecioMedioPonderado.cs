@@ -130,12 +130,13 @@ public sealed class ElPrecioMedioPonderado : IValoracionDeExistencias
             }
 
             // UNA CLAVE VACÍA EN OTRA DIVISA EMPIEZA DE NUEVO en la del documento: no hay nada que
-            // convertir. Con cantidad o con valor, sumarlos pediría un tipo de cambio con fecha.
+            // convertir. Con cantidad, con valor o con tránsito, sumarlos pediría un tipo de cambio con
+            // fecha (ADR-0053 §1).
             if (saldo.Valor.Divisa == laDelDocumento)
             {
                 vivos[linea.Clave] = (saldo.Cantidad, saldo.Valor);
             }
-            else if (saldo.Cantidad == 0m)
+            else if (saldo.EstaVacio)
             {
                 vivos[linea.Clave] = (0m, Importe.Cero(laDelDocumento));
             }
