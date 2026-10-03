@@ -541,6 +541,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LoQueCuelgaNaceComoAltaTests.Lo_que_se_cuelga_de_una_ficha_ya_guardada_sale_como_ALTA",
         "LosPermisosQueNombraElFrontalTests.Todo_permiso_que_el_frontal_teclea_lo_sirve_la_api",
 
+        // Del epílogo del 2.10 (ADR-0051 §8): ningún documento guarda el GTIN sin el artículo. Le
+        // pregunta a la base por toda columna con un GTIN, con su pareja y con lo que no existe.
+        "NingunDocumentoGuardaElGtinSinSuArticuloTests.El_barrido_encuentra_la_columna_del_propio_codigo_de_barras_con_su_articulo",
+        "NingunDocumentoGuardaElGtinSinSuArticuloTests.El_barrido_ve_un_documento_que_todavia_no_existe",
+        "NingunDocumentoGuardaElGtinSinSuArticuloTests.Ninguna_columna_guarda_un_gtin_sin_el_articulo_al_lado",
+
         // Del ítem 1.11: la regla que la mutación 8 del 1.10 encontró activa sin que nadie la
         // hubiera escrito. Le pregunta a la base por TODA clave ajena entre esquemas.
         "NingunaClaveAjenaCruzaDeEsquemaEnLaBaseTests.La_base_que_se_pregunta_tiene_claves_ajenas_en_mas_de_un_esquema",

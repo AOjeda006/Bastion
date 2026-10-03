@@ -8162,8 +8162,22 @@ empiezan en la **152**.
    sin dependencia nueva. Las dos propiedades salen **en verde al primer intento**, en los dos
    lados: es un resultado, y se anota. La 139 vuelta a medir y la nueva del servidor van en la
    tanda.
-3. «Ningún documento guarda el GTIN», como caso permanente, con su pareja y con lo que todavía no
-   existe.
+3. ~~«Ningún documento guarda el GTIN», como caso permanente.~~ Hecho:
+   `NingunDocumentoGuardaElGtinSinSuArticuloTests`, en el carril de integración y en su censo,
+   con tres casos:
+   - **la regla**: ninguna columna de ningún esquema que por su nombre lleve un GTIN está en una
+     tabla sin `articulo_id`. Se pregunta a `pg_catalog` después de migrar, así que ve también lo
+     que llegue por `migrationBuilder.Sql`;
+   - **la pareja**: el barrido encuentra `catalogo.codigos_barras.gtin`, con su artículo. Hoy es la
+     única columna que encuentra;
+   - **lo que todavía no existe**: un esquema de usar y tirar, dentro de una transacción que se
+     deshace, con una línea sin el artículo que lleva cada nombre que el patrón reconoce (`gtin`,
+     `ean13`, `upc_a`, `barcode`, `codigo_de_barras` y `codigo_barra`), otra línea con el artículo
+     al lado, y dos columnas que contienen los nombres sin serlo (`oceano` y `barrio`). Sale
+     exactamente lo que tiene que salir.
+
+   El patrón va por trozos del nombre y no por subcadena. Cumple el ADR-0051 §8, que ya decía
+   que la ausencia «se comprueba con un barrido de los esquemas», así que no hay ADR nuevo.
 4. `AgregarProveedorAlArticulo` pregunta `EstaActivaAsync`, con caso, mutación y la frase de
    `LosIdentificadoresAjenosTests`.
 5. Lo que solo vive en un `title`, en texto visible o asociado.
