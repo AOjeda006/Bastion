@@ -8143,11 +8143,12 @@ lo enmienda.
       ejemplo de cada largo que no cuadre así haría que los casos del dígito de control no
       dependieran de la suerte.
 
-**El epílogo del 2.10, en curso**, en la rama `epilogo-2.10`, abierta desde `main` en `c9883cd`. Lo
-que pide está en *Decisiones tomadas → Traídas por el encargo del 2026-10-03*. Sus mutaciones
-empiezan en la **152**.
+**El epílogo del 2.10, cerrado** el 2026-10-03, en la rama `epilogo-2.10`, abierta desde `main` en
+`c9883cd`. Lo que pedía está en *Decisiones tomadas → Traídas por el encargo del 2026-10-03*. Sus
+mutaciones van de la **152** a la **180**, con la 139 vuelta a medir, y no tiene ADR: no cambió
+ninguna decisión escrita. El ADR-0053 queda para el 2.11.
 
-**Lo que queda, por este orden:**
+**Lo que quedaba, por este orden:**
 
 1. ~~El run de `main` del 2.10, anotado.~~ Hecho: el 37073246214, en la casilla del 2.10.
 2. ~~El dígito de control, sin suerte.~~ Hecho, en el servidor y en el frontal, con **12** casos
@@ -8238,7 +8239,16 @@ empiezan en la **152**.
      marcado señala su explicación, y la explicación se ve (`checkVisibility`).
    - La consola, sin errores ni avisos. La pila se bajó con `down -v` sobre su proyecto, con el
      `-p` en la misma orden, y el entorno y el estado del navegador se borraron.
-8. ~~La tanda de mutaciones y la batería.~~ Hechas; **los runs, pendientes**, y van en su commit.
+8. ~~La tanda de mutaciones, la batería y los runs.~~ Hecho. La tanda y la batería, abajo, en
+   `adedba0`. Su run de rama, el **37139922984**, sale en verde al primer intento, con sus tres
+   jobs —Frontal `111252039115`, Backend `111252039232` y Humo `111253307735`— y **68 pasos: 67 en
+   verde y 1 omitido**, *Diagnóstico*. Dice lo mismo que la batería: **1225** y **559** casos con
+   **10 `.trx`** en cada artefacto, **135** operaciones y 80 rutas, **144** tipos de error de
+   **150** sitios, y **421/450** y **636/900** KiB. Este commit, que lo anota, espera su propio
+   verde en la rama antes de que `main` avance; el run de `main`, al abrir la rama del 2.11.
+
+   **Los commits del epílogo**, desde `c9883cd`, son **nueve** con `adedba0`, y subieron de una vez,
+   así que tienen **un** run de rama, el de arriba. Con éste, diez.
 
    **La tanda, de la 152 a la 180**, y la 139 vuelta a medir. La numeración sigue a la 151 del
    2.10, que era la mayor de todas las tablas (`grep -n "| # | Mutación" docs/PLAN.md`). Cada
