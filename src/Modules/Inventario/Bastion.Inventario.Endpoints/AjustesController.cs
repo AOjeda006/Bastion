@@ -39,8 +39,8 @@ public sealed class AjustesController(IConfirmarAjuste confirmar, IAnularAjuste 
     /// se crea, no un campo que se fija.
     /// </para>
     /// <para>
-    /// <b>La <c>Idempotency-Key</c> es OBLIGATORIA aquí</b>, que es la única acción de toda la API
-    /// que la exige. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el
+    /// <b>La <c>Idempotency-Key</c> es OBLIGATORIA aquí</b>, que fue la primera acción de toda la API
+    /// que la exigió. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el
     /// número y el documento se va con ella: el <c>UPDATE</c> del contador se confirmaría por su
     /// cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es
     /// exactamente lo que la R5 prohíbe. Sin cabecera son <c>428</c>.
@@ -77,12 +77,13 @@ public sealed class AjustesController(IConfirmarAjuste confirmar, IAnularAjuste 
     /// quita, y el verbo tiene que decirlo.
     /// </para>
     /// <para>
-    /// <b>La <c>Idempotency-Key</c> es OBLIGATORIA</b>, y con esta son <b>dos</b> las acciones de
-    /// toda la API que la exigen. El criterio no se amplía para que quepa: es el mismo de la
-    /// confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el inverso no
-    /// podría tomar su número sin dejar un hueco en la serie, que es lo que la R5 prohíbe—. Sin
-    /// cabecera son <c>428</c>, y el reintento con la misma clave devuelve el par de la primera
-    /// vez en vez de anular dos veces.
+    /// <b>La <c>Idempotency-Key</c> es OBLIGATORIA</b>, y con esta fueron <b>dos</b> las acciones de
+    /// toda la API que la exigían; la lista entera, con el motivo de cada una, la lleva
+    /// <c>TodaEscrituraDiceComoSeProtegeTests</c>. El criterio no se amplía para que quepa: es el
+    /// mismo de la confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el
+    /// inverso no podría tomar su número sin dejar un hueco en la serie, que es lo que la R5
+    /// prohíbe—. Sin cabecera son <c>428</c>, y el reintento con la misma clave devuelve el par de
+    /// la primera vez en vez de anular dos veces.
     /// </para>
     /// <para>
     /// <b>Y no exige <c>If-Match</c></b>, por lo mismo que la confirmación: de anular dos veces

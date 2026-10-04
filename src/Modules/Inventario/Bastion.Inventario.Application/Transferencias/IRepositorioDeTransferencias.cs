@@ -41,6 +41,28 @@ public interface IRepositorioDeTransferencias
         string divisa,
         CancellationToken cancelacion);
 
+    /// <summary>
+    /// Si la fila del documento sigue en la versión que se leyó, preguntado a la base y no al
+    /// rastreador.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Se pregunta con la valoración ya bloqueada</b>, que es donde espera quien pierde una carrera
+    /// sobre el mismo documento. Lo que se lee después de esperar es lo que la ganadora dejó, así que
+    /// la respuesta es la del <c>412</c> que promete el ADR-0053 §10.
+    /// </para>
+    /// <para>
+    /// <b>Hace falta en la recepción</b>, y no en el ajuste, porque su fecha viene en el cuerpo: dos
+    /// recepciones con fechas distintas valorarían con fechas distintas, y la que pierde podría
+    /// chocar con la guarda del ADR-0047 antes de llegar al testigo de su fila, con un <c>422</c> que
+    /// no le corresponde.
+    /// </para>
+    /// </remarks>
+    /// <param name="transferencia">La transferencia, tal como se leyó en esta petición.</param>
+    /// <param name="cancelacion">Cancelación de la operación en curso.</param>
+    /// <returns><see langword="false"/> si otra transacción la ha cambiado desde que se leyó.</returns>
+    Task<bool> SigueComoSeLeyoAsync(Transferencia transferencia, CancellationToken cancelacion);
+
     /// <summary>Resuelve cada lote y cada número de serie a su fila, creando los que falten.</summary>
     /// <param name="lotes">Los lotes que nombra el documento.</param>
     /// <param name="series">Los números de serie que nombra el documento.</param>

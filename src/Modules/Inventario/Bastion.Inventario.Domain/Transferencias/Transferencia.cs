@@ -487,8 +487,9 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
     /// el tránsito del destino baja lo mismo, hasta cero.
     /// </para>
     /// <para>
-    /// <b>De una recibida</b>, las dos patas. La salida del destino lleva el valor que entró, y como
-    /// mucho el que queda; la entrada en el origen lleva lo que esa salida se llevó (ADR-0053 §6).
+    /// <b>De una recibida</b>, las dos patas. La salida del destino lleva el valor que entró, como
+    /// mucho el que queda y todo el que quede si vacía la clave; la entrada en el origen lleva lo que
+    /// esa salida se llevó (ADR-0053 §6, ADR-0054).
     /// </para>
     /// </remarks>
     /// <param name="original">La transferencia que compensa, enviada o recibida.</param>

@@ -11,11 +11,11 @@ namespace Bastion.Inventario.Contracts;
 /// ítem 2.5 no borra un ajuste confirmado, le opone un contra-documento.
 /// </para>
 /// <para>
-/// <b>Hay DOS constantes porque hay DOS acciones, y eso no es una lista a medias.</b> El catálogo
-/// se compara entero contra lo que las acciones exigen, así que un permiso declarado sin acción
-/// que lo pida <b>tumba el arranque</b>. Declarar aquí el alta, el listado o la ficha del ajuste
-/// —que llegan con sus pantallas— sería repartir casillas que un administrador concede creyendo
-/// que abren algo.
+/// <b>Hay una constante por acción, y eso no es una lista a medias</b>: las dos del ajuste y, desde
+/// el 2.11, las tres de la transferencia. El catálogo se compara entero contra lo que las acciones
+/// exigen, así que un permiso declarado sin acción que lo pida <b>tumba el arranque</b>. Declarar
+/// aquí el alta, el listado o la ficha de cualquiera de los dos —que llegan con sus pantallas—
+/// sería repartir casillas que un administrador concede creyendo que abren algo.
 /// </para>
 /// <para>
 /// Son constantes y no un tipo, por lo mismo que en los otros tres módulos: <c>Contracts</c> no
@@ -44,6 +44,28 @@ public static class PermisosDeInventario
     /// </remarks>
     public const string AjusteAnular = "inventario.ajuste.anular";
 
+    /// <summary>Enviar una transferencia entre almacenes.</summary>
+    /// <remarks>
+    /// <b>Uno por acción, porque quien envía y quien recibe suelen ser personas distintas, en
+    /// almacenes distintos</b> (ADR-0053 §9). Enviar saca la mercancía del origen y gasta el
+    /// correlativo de su serie (R5).
+    /// </remarks>
+    public const string TransferenciaEnviar = "inventario.transferencia.enviar";
+
+    /// <summary>Recibir entera una transferencia enviada.</summary>
+    /// <remarks>
+    /// <b>Es lo que hace el almacén de destino</b>: mete lo que estaba en vuelo, con el valor que
+    /// salió del origen. No numera nada, pero escribe el libro (R13).
+    /// </remarks>
+    public const string TransferenciaRecibir = "inventario.transferencia.recibir";
+
+    /// <summary>Anular una transferencia enviada o recibida oponiéndole un inverso.</summary>
+    /// <remarks>
+    /// <b>Por lo mismo que en el ajuste</b>: anular gasta otro correlativo, escribe otra tanda de
+    /// filas del libro y deja sin efecto lo que otros dieron por bueno.
+    /// </remarks>
+    public const string TransferenciaAnular = "inventario.transferencia.anular";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -56,5 +78,8 @@ public static class PermisosDeInventario
     [
         AjusteConfirmar,
         AjusteAnular,
+        TransferenciaEnviar,
+        TransferenciaRecibir,
+        TransferenciaAnular,
     ];
 }

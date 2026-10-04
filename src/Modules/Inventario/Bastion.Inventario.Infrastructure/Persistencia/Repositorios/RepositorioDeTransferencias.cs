@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
@@ -9,6 +10,7 @@ using Bastion.Inventario.Infrastructure.Persistencia.LotesYSeries;
 using Bastion.Inventario.Infrastructure.Persistencia.Transferencias;
 using Bastion.Inventario.Infrastructure.Persistencia.Valoraciones;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 
@@ -35,6 +37,39 @@ internal sealed class RepositorioDeTransferencias(InventarioDbContext contexto, 
         ArgumentNullException.ThrowIfNull(claves);
 
         return LaValoracionDelLibro.BloquearYLeerAsync(contexto, LaEmpresa(), claves, divisa, cancelacion);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <b>La versión leída es el valor original del testigo</b>, el que el <c>UPDATE</c> llevará en su
+    /// <c>WHERE</c>, y la de ahora se proyecta sin rastreo: si se preguntara al rastreador, contestaría
+    /// lo mismo que se leyó, y adjuntar la fila daría un testigo a cero (lo cuenta
+    /// <c>Versiones</c>). En <c>READ COMMITTED</c>, cada sentencia ve lo confirmado antes de empezar,
+    /// así que esta ve lo que dejó quien tenía el cerrojo.
+    /// </remarks>
+    public async Task<bool> SigueComoSeLeyoAsync(Transferencia transferencia, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(transferencia);
+
+        EntityEntry<Transferencia> entrada = contexto.Entry(transferencia);
+
+        if (entrada.State == EntityState.Detached)
+        {
+            throw new InvalidOperationException(
+                "La transferencia no se leyó en este contexto, así que no hay versión leída con la que " +
+                "comparar: el testigo de una fila adjuntada ahora nace a cero.");
+        }
+
+        uint leida = (uint)entrada.Property(TestigoDeConcurrencia.Nombre).OriginalValue!;
+
+        uint ahora = await contexto.Transferencias
+            .AsNoTracking()
+            .Where(fila => fila.Id == transferencia.Id)
+            .Select(fila => EF.Property<uint>(fila, TestigoDeConcurrencia.Nombre))
+            .SingleAsync(cancelacion)
+            .ConfigureAwait(false);
+
+        return leida == ahora;
     }
 
     /// <inheritdoc/>

@@ -1,6 +1,8 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application.Ajustes;
+using Bastion.Inventario.Application.Transferencias;
+using Bastion.Inventario.Application.Trazabilidad;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Inventario;
@@ -15,6 +17,10 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// marca leída bajo cerrojo. Hasta el ítem 2.9 solo tenía caso una de sus seis ramas de rechazo, la
 /// del artículo por lote sin lote, y por el camino de la carrera: la mutación 90, que dejaba pasar
 /// un lote en un artículo sin marca, salió verde en los dos carriles.
+/// </para>
+/// <para>
+/// <b>Y desde el 2.11, en dos documentos</b>: el ajuste y la transferencia la comparten, y cada uno
+/// convierte el rechazo en su error, con su prefijo. Cada fila se mira con los dos.
 /// </para>
 /// <para>
 /// <b>En el carril rápido y en este ensamblado</b>, que es el que ve lo interno de la aplicación de
@@ -54,24 +60,38 @@ public sealed class CadaMarcaAdmiteSuLineaTests
     {
         var articuloId = Guid.NewGuid();
 
-        ErrorDeOperacion? error = LaTrazabilidadDeLasLineas.LoQueNoCasa(
+        LineaQueNoCasa? noCasa = LaTrazabilidadDeLasLineas.LoQueNoCasa(
             [new LineaConCodigos(3, articuloId, lote, serie)],
             new Dictionary<Guid, MarcaDeTrazabilidad> { [articuloId] = marca });
 
         if (queNoCasa is null)
         {
-            error.ShouldBeNull($"«{marca}» admite la línea con lote «{lote}» y serie «{serie}»");
+            noCasa.ShouldBeNull($"«{marca}» admite la línea con lote «{lote}» y serie «{serie}»");
 
             return;
         }
 
-        ErrorDeOperacion rechazo = error.ShouldNotBeNull(
+        LineaQueNoCasa rechazada = noCasa.ShouldNotBeNull(
             $"«{marca}» no admite la línea con lote «{lote}» y serie «{serie}»");
 
-        rechazo.Codigo.ShouldBe("ajuste-trazabilidad-no-casa");
-        rechazo.Tipo.ShouldBe(TipoDeError.Conflicto, "el cuerpo puede estar bien escrito: lo que falla es la ficha");
-        rechazo.Mensaje.ShouldContain("La línea 3 ", Case.Sensitive, "nombra la línea por su número");
-        rechazo.Mensaje.ShouldContain(queNoCasa);
+        rechazada.ArticuloId.ShouldBe(articuloId);
+        rechazada.Marca.ShouldBe(marca);
+
+        ErrorDeOperacion[] rechazos =
+        [
+            ErroresDeAjuste.TrazabilidadNoCasa(rechazada),
+            ErroresDeTransferencia.TrazabilidadNoCasa(rechazada),
+        ];
+
+        rechazos.Select(rechazo => rechazo.Codigo)
+            .ShouldBe(["ajuste-trazabilidad-no-casa", "transferencia-trazabilidad-no-casa"]);
+
+        foreach (ErrorDeOperacion rechazo in rechazos)
+        {
+            rechazo.Tipo.ShouldBe(TipoDeError.Conflicto, "el cuerpo puede estar bien escrito: lo que falla es la ficha");
+            rechazo.Mensaje.ShouldContain("La línea 3 ", Case.Sensitive, "nombra la línea por su número");
+            rechazo.Mensaje.ShouldContain(queNoCasa);
+        }
     }
 
     [Fact]

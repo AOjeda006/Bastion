@@ -339,6 +339,95 @@ export const en: Diccionario = {
         'it ran, but it cannot be assigned today. Choose one that is in force.',
       'tipo-cambio-duplicado': 'There is already an exchange rate for that currency on that date.',
       'tipo-cambio-no-encontrado': 'That exchange rate no longer exists.',
+      // Ver `es.ts`: las veintinueve de la transferencia, que dicen qué punta del viaje falla.
+      'transferencia-almacen-bloqueado':
+        'That warehouse is blocked: its earlier movements are still read and valued, but it does ' +
+        'not accept a new transfer, either out or in. Pick another warehouse or ask for it to be ' +
+        'unblocked.',
+      'transferencia-almacen-no-encontrado':
+        'That warehouse does not exist. Pick one from the warehouse list.',
+      'transferencia-articulo-no-encontrado':
+        'That item does not exist. Pick one from the item list.',
+      'transferencia-articulo-no-se-almacena':
+        'That item is a service: it has no stock to carry from one warehouse to another. Remove ' +
+        'that line or change the item.',
+      'transferencia-cantidad-no-valida':
+        'A line carries nothing from origin to destination: the quantity and the base-unit factor ' +
+        'must be positive, and their product cannot round to zero. Fix the quantity on that line.',
+      'transferencia-con-fecha-futura':
+        'That date is after today: the ledger only records what has already happened, and a ' +
+        'transfer is sent and received on the day it happens. Do it on that day or fix the date.',
+      'transferencia-en-ejercicio-cerrado':
+        'That date falls inside a closed financial year: the period is already final and takes ' +
+        'no new documents. Change the date or ask for the year to be reopened.',
+      'transferencia-fecha-anterior-al-ultimo-movimiento':
+        'An item in this document already has a later movement in one of the two warehouses, and ' +
+        'a document cannot be dated before the last movement of its item. Use that date or a ' +
+        'later one.',
+      'transferencia-lote-no-valido':
+        'That batch is not a code that fits on the label: 1 to 20 characters, no spaces, using ' +
+        'unaccented letters, digits and the symbols GS1 allows. Fix the batch on that line.',
+      'transferencia-mismo-almacen':
+        'The origin and the destination are the same warehouse, and that is not a transfer. ' +
+        'Moving goods to another slot inside a warehouse is a relocation, which is a different ' +
+        'document.',
+      'transferencia-motivo-no-valido':
+        'Write why you are reversing the transfer, in 300 characters or fewer. It is the only ' +
+        'thing left to explain the correction two years from now.',
+      'transferencia-no-encontrada':
+        'That transfer no longer exists. Go back to the list and refresh.',
+      'transferencia-no-esta-en-borrador':
+        'That transfer is no longer a draft: a sent one is not sent twice, because what left the ' +
+        'origin is already written in the ledger. Refresh the screen.',
+      'transferencia-no-esta-enviada':
+        'That transfer is not in transit: a draft has not left the origin yet, and a received or ' +
+        'reversed one is no longer on its way. Refresh the screen to see what state it is in.',
+      'transferencia-no-se-anula':
+        'That transfer cannot be reversed: a draft has not moved the ledger, a reversed one ' +
+        'already has its counter-document, and a counter-document is not undone with another. ' +
+        'Refresh the screen to see what state it is in.',
+      'transferencia-numero-de-serie-no-valido':
+        'That serial number is not a code that fits on the label: 1 to 20 characters, no spaces, ' +
+        'using unaccented letters, digits and the symbols GS1 allows. Fix the serial number on ' +
+        'that line.',
+      'transferencia-recepcion-antes-del-envio':
+        'The receipt date is earlier than the dispatch date, and nothing arrives before it ' +
+        'leaves. Use the dispatch date or a later one.',
+      'transferencia-serie-cerrada':
+        'That series is closed: it still resolves the documents it already numbered, but it hands ' +
+        'out no further numbers. Choose another series.',
+      'transferencia-serie-no-encontrada':
+        'That series does not exist. Pick one from the series list.',
+      'transferencia-serie-no-unitaria':
+        'A line with a serial number moves exactly one unit, because each number is one piece and ' +
+        'no two share it. Use one line per piece, with a quantity of 1 in the item’s base unit.',
+      'transferencia-serie-repetida':
+        'Two lines of the transfer name the same serial number, and each piece travels only once ' +
+        'per document. Remove one of the two lines.',
+      'transferencia-sin-ejercicio':
+        'That date falls outside every financial year: with no period to book it to, the ' +
+        'document would not reach any return. Open the missing year or fix the date.',
+      'transferencia-sin-lineas':
+        'A transfer needs at least one line: a document that moves nothing carries nothing from ' +
+        'one warehouse to another.',
+      'transferencia-trazabilidad-no-casa':
+        'A line does not match its item’s traceability: it lacks the batch or serial number the ' +
+        'item requires, or carries one the item does not track. Fix the line, or the item’s ' +
+        'traceability if it has not moved yet.',
+      'transferencia-ubicacion-bloqueada':
+        'That location is blocked: whatever is already assigned to it is still read, but nothing ' +
+        'new moves out of that slot or into it. Pick another location.',
+      'transferencia-ubicacion-no-encontrada':
+        'That location does not exist in that warehouse. Pick one of its own.',
+      'transferencia-unidad-no-encontrada':
+        'That unit of measure does not exist. Pick one from the unit list.',
+      'transferencia-unidad-retirada':
+        'That unit has been withdrawn: movements already written in it are still read, but a new ' +
+        'one is not written with it. Pick another unit.',
+      'transferencia-valoracion-en-otra-divisa':
+        'The stock of an item in this document is valued in another currency in one of the two ' +
+        'warehouses, and putting them together would need an exchange rate. The transfer cannot ' +
+        'be made while that warehouse values it that way.',
       'ubicacion-duplicada': 'There is already a location with that code in that warehouse.',
       'ubicacion-no-encontrada': 'That location no longer exists. Go back to the list and refresh.',
       'unidad-medida-duplicada': 'There is already a unit of measure with that code.',

@@ -293,6 +293,27 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "de no dejar un hueco (R5). Que sean dos y no una es la primera vez que esta lista " +
             "crece, y por eso conviene decir qué NO la hace crecer: no entra por ser importante " +
             "—todo lo es—, entra porque sin la cabecera la acción no puede cumplir lo que promete",
+
+        // Las tres de la transferencia, del 2.11 (ADR-0053 §9). Dos numeran, como las del ajuste; la
+        // tercera no, y entra por la otra mitad del mismo criterio: lo que promete no cabe en una
+        // sentencia suelta.
+        ["TransferenciasController.Enviar"] =
+            "el motivo de la confirmación del ajuste, entero: toma el número de su serie, y el " +
+            "número, la salida del origen y lo que queda en tránsito tienen que quedar escritos en " +
+            "la MISMA transacción. Sin ella el UPDATE del contador se confirmaría solo, y un fallo " +
+            "posterior dejaría un hueco en la serie (R5)",
+
+        ["TransferenciasController.Recibir"] =
+            "no numera, y por eso es la que necesita el argumento escrito: bloquea la valoración del " +
+            "destino y escribe el documento, el tránsito que baja, la existencia y el libro. Sin la " +
+            "transacción del filtro, cada sentencia se confirmaría por su cuenta: el cerrojo se " +
+            "soltaría al acabar la suya, y un fallo a mitad dejaría la mercancía fuera del tránsito " +
+            "y sin entrar en el destino, que es la ventana que la R3 no admite",
+
+        ["TransferenciasController.Anular"] =
+            "el de la anulación del ajuste: el inverso toma su propio número de la serie del " +
+            "original, y tiene que quedar escrito con él, con las patas que niega y con el original " +
+            "anulado en la MISMA transacción (R5, R2)",
     };
 
     // La clave que identifica una petición repetible lleva dentro la empresa y el usuario. Una
@@ -375,8 +396,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(135, "acciones en total");
-        cambian.Count.ShouldBe(86, "acciones que cambian estado");
+        todas.Count.ShouldBe(138, "acciones en total");
+        cambian.Count.ShouldBe(89, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -584,25 +605,38 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         //
         // Y LA BÚSQUEDA SUBE SOLO EL TOTAL, como la resolución de precio del 1.9: es el camino
         // caliente de quien escanea, y no guarda nada de lo que busca.
+        //
+        // Ciento treinta y ocho desde el ítem 2.11, y el reparto es tres veces el de la anulación
+        // del 2.5: +3 al total, +3 a las que cambian estado, +3 a Idempotency-Key, cero a If-Match y
+        // cero a las exentas. Son el envío, la recepción y la anulación de la transferencia
+        // (ADR-0053 §9). Ninguna lectura: el alta, el listado y la ficha llegan con sus pantallas, y
+        // que el total suba lo mismo que las escrituras es lo que lo dice.
+        //
+        // QUE NO SUBA IF-MATCH es la afirmación del 2.5 otra vez: la transferencia tampoco tiene un
+        // `GET` que publique su `ETag`. De la carrera entre dos personas la para la versión de la
+        // fila, que el caso de uso relee con las valoraciones ya bloqueadas, y sale por `412`.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(47, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(22, "rutas que admiten Idempotency-Key");
+            .ShouldBe(25, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
-        // Y de esas veintidós, DOS la exigen. Es un recuento aparte y no un reparto del anterior
+        // Y de esas veinticinco, CINCO la exigen. Es un recuento aparte y no un reparto del anterior
         // porque las obligatorias son un SUBCONJUNTO de las que admiten, no un cuarto cajón: la
-        // partición de abajo seguiría siendo exacta aunque las veintidós fueran obligatorias, que
-        // es justo lo que este número impide que pase sin que nadie lo vea. Las dos son del mismo
-        // módulo y por el mismo argumento —número dentro de la transacción del documento—, y las
-        // dos están nombradas con su motivo en `s_obligatorias`, que se compara entera en los dos
-        // sentidos: este número solo dice cuántas, no cuáles.
+        // partición de abajo seguiría siendo exacta aunque las veinticinco fueran obligatorias, que
+        // es justo lo que este número impide que pase sin que nadie lo vea. Las cinco son del mismo
+        // módulo. Cuatro por el argumento de la confirmación —número dentro de la transacción del
+        // documento—, y la recepción de la transferencia, que no numera, porque sin la transacción
+        // del filtro el cerrojo de la valoración no dura más que su sentencia, y el tránsito que
+        // baja y la existencia que sube dejarían de ir juntos. Las cinco están nombradas con su
+        // motivo en `s_obligatorias`, que se compara entera en los dos sentidos: este número solo
+        // dice cuántas, no cuáles.
         cambian.Count(accion => accion.ExigeIdempotencia)
-            .ShouldBe(2, "rutas que EXIGEN Idempotency-Key");
+            .ShouldBe(5, "rutas que EXIGEN Idempotency-Key");
 
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (47 + 22 + s_exentas.Count).ShouldBe(cambian.Count);
+        (47 + 25 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

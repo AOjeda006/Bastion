@@ -4805,7 +4805,7 @@
           "Ajustes"
         ],
         "summary": "Confirma un ajuste en borrador: le da su número y mueve el libro.",
-        "description": "Es un POST sobre un sub-recurso y no un PUT sobre el ajuste, porque lo que se pide no\n  es dejar el documento como dice el cuerpo: es que ocurra algo —se toma un correlativo, se\n  escriben los movimientos— y eso no tiene cuerpo que mandar. La confirmación es un hecho que\n  se crea, no un campo que se fija.\nLa Idempotency-Key es OBLIGATORIA aquí, que es la única acción de toda la API\n  que la exige. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el\n  número y el documento se va con ella: el UPDATE del contador se confirmaría por su\n  cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es\n  exactamente lo que la R5 prohíbe. Sin cabecera son 428.\nY no exige If-Match, ni le haría falta: lo que protege de confirmar dos veces\n  no es una versión, es la máquina de estados —el segundo intento se encuentra un ajuste que\n  ya no está en borrador y sale 409—, y lo que protege del reintento del mismo cliente\n  es la clave de arriba, que le devuelve la respuesta de la primera vez con su número dentro.",
+        "description": "Es un POST sobre un sub-recurso y no un PUT sobre el ajuste, porque lo que se pide no\n  es dejar el documento como dice el cuerpo: es que ocurra algo —se toma un correlativo, se\n  escriben los movimientos— y eso no tiene cuerpo que mandar. La confirmación es un hecho que\n  se crea, no un campo que se fija.\nLa Idempotency-Key es OBLIGATORIA aquí, que fue la primera acción de toda la API\n  que la exigió. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el\n  número y el documento se va con ella: el UPDATE del contador se confirmaría por su\n  cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es\n  exactamente lo que la R5 prohíbe. Sin cabecera son 428.\nY no exige If-Match, ni le haría falta: lo que protege de confirmar dos veces\n  no es una versión, es la máquina de estados —el segundo intento se encuentra un ajuste que\n  ya no está en borrador y sale 409—, y lo que protege del reintento del mismo cliente\n  es la clave de arriba, que le devuelve la respuesta de la primera vez con su número dentro.",
         "operationId": "Ajustes_Confirmar",
         "parameters": [
           {
@@ -4932,7 +4932,7 @@
           "Ajustes"
         ],
         "summary": "Anula un ajuste confirmado: crea el inverso que lo compensa, lo numera y lo confirma.",
-        "description": "Un POST sobre un sub-recurso, no un DELETE, y la diferencia es la regla entera: un\n  DELETE promete que el recurso deja de estar, y aquí no deja de estar nada. El\n  original se queda, sus filas del libro se quedan —es de solo añadido (R3)— y lo que se\n  crea es un documento nuevo. La anulación es un hecho que se añade, no una fila que se\n  quita, y el verbo tiene que decirlo.\nLa Idempotency-Key es OBLIGATORIA, y con esta son dos las acciones de\n  toda la API que la exigen. El criterio no se amplía para que quepa: es el mismo de la\n  confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el inverso no\n  podría tomar su número sin dejar un hueco en la serie, que es lo que la R5 prohíbe—. Sin\n  cabecera son 428, y el reintento con la misma clave devuelve el par de la primera\n  vez en vez de anular dos veces.\nY no exige If-Match, por lo mismo que la confirmación: de anular dos veces\n  seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya\n  no está confirmado y sale 409—, y de anular dos veces a la vez protegen dos\n  cosas que dicen lo mismo: el índice único de anula_a_id, que es el que llega primero,\n  y detrás el testigo de concurrencia de la fila (R11). Los dos salen por 412 —el\n  segundo con la versión de ahora dentro— y dejan sin efecto la transacción entera de quien\n  pierde: ni inverso, ni número gastado.",
+        "description": "Un POST sobre un sub-recurso, no un DELETE, y la diferencia es la regla entera: un\n  DELETE promete que el recurso deja de estar, y aquí no deja de estar nada. El\n  original se queda, sus filas del libro se quedan —es de solo añadido (R3)— y lo que se\n  crea es un documento nuevo. La anulación es un hecho que se añade, no una fila que se\n  quita, y el verbo tiene que decirlo.\nLa Idempotency-Key es OBLIGATORIA, y con esta fueron dos las acciones de\n  toda la API que la exigían; la lista entera, con el motivo de cada una, la lleva\n  TodaEscrituraDiceComoSeProtegeTests. El criterio no se amplía para que quepa: es el\n  mismo de la confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el\n  inverso no podría tomar su número sin dejar un hueco en la serie, que es lo que la R5\n  prohíbe—. Sin cabecera son 428, y el reintento con la misma clave devuelve el par de\n  la primera vez en vez de anular dos veces.\nY no exige If-Match, por lo mismo que la confirmación: de anular dos veces\n  seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya\n  no está confirmado y sale 409—, y de anular dos veces a la vez protegen dos\n  cosas que dicen lo mismo: el índice único de anula_a_id, que es el que llega primero,\n  y detrás el testigo de concurrencia de la fila (R11). Los dos salen por 412 —el\n  segundo con la versión de ahora dentro— y dejan sin efecto la transacción entera de quien\n  pierde: ni inverso, ni número gastado.",
         "operationId": "Ajustes_Anular",
         "parameters": [
           {
@@ -5049,6 +5049,547 @@
           },
           "412": {
             "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/transferencias/{id}/envio": {
+      "post": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Envía una transferencia en borrador: le da su número, y lo que sale queda en tránsito.",
+        "description": "Un POST sobre un sub-recurso, como la confirmación del ajuste: el envío es un hecho que\n  se crea, no un campo que se fija.\nLa Idempotency-Key es obligatoria por el motivo de la confirmación: toma un\n  número, y el número y el documento quedan escritos en la misma transacción o no quedan (R5).",
+        "operationId": "Transferencias_Enviar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la transferencia que se envía.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/transferencias/{id}/recepcion": {
+      "post": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Recibe entera una transferencia enviada: lo que vuela entra en el destino.",
+        "description": "El cuerpo solo trae la fecha, porque la recepción es entera (ADR-0053 §4).\nLa Idempotency-Key es obligatoria aunque no numere: la recepción bloquea la\n  valoración del destino y escribe el documento, el tránsito, las existencias y el libro, y sin\n  la transacción del filtro cada sentencia se confirmaría por su cuenta. El cerrojo se soltaría\n  al acabar la suya, y un fallo a mitad dejaría la mercancía fuera del tránsito y sin entrar.",
+        "operationId": "Transferencias_Recibir",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la transferencia que se recibe.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecibirTransferenciaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecibirTransferenciaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecibirTransferenciaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/transferencias/{id}/anulacion": {
+      "post": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Anula una transferencia enviada o recibida: crea el inverso que la compensa, lo numera y lo\nrecibe.",
+        "description": "Un POST, no un DELETE, por lo mismo que en el ajuste: no deja de estar nada, y lo que se\n  crea es un documento nuevo.\nLa Idempotency-Key es obligatoria, porque el inverso toma su número de la serie\n  del original. El reintento con la misma clave devuelve el par de la primera vez.",
+        "operationId": "Transferencias_Anular",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la transferencia que se anula.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularTransferenciaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularTransferenciaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularTransferenciaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnulacionDeTransferenciaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnulacionDeTransferenciaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnulacionDeTransferenciaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "text/plain": {
                 "schema": {
@@ -13690,6 +14231,24 @@
         },
         "description": "Un almacén, tal como sale de la API."
       },
+      "AnulacionDeTransferenciaDto": {
+        "required": [
+          "original",
+          "inverso"
+        ],
+        "type": "object",
+        "properties": {
+          "original": {
+            "description": "La transferencia que queda anulada.",
+            "$ref": "#/components/schemas/TransferenciaDto"
+          },
+          "inverso": {
+            "description": "El contra-documento, ya numerado y recibido.",
+            "$ref": "#/components/schemas/TransferenciaDto"
+          }
+        },
+        "description": "El par que deja una anulación: la transferencia anulada y la que la compensa."
+      },
       "AnulacionDto": {
         "required": [
           "original",
@@ -13720,6 +14279,19 @@
           }
         },
         "description": "Lo que hace falta para anular un ajuste confirmado."
+      },
+      "AnularTransferenciaDto": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se anula, escrito por quien lo hace."
+          }
+        },
+        "description": "Lo que hace falta para anular una transferencia enviada o recibida."
       },
       "ArticuloDto": {
         "required": [
@@ -17164,6 +17736,23 @@
         },
         "description": "Un motivo de rechazo en una columna, y las líneas del fichero en las que se da."
       },
+      "RecibirTransferenciaDto": {
+        "required": [
+          "fechaDeRecepcion"
+        ],
+        "type": "object",
+        "properties": {
+          "fechaDeRecepcion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Día en que llega. No futuro, y no anterior al envío (ADR-0053 §3).",
+            "format": "date"
+          }
+        },
+        "description": "Lo que hace falta para recibir una transferencia enviada."
+      },
       "RegimenFiscalDeAltaDto": {
         "type": "object",
         "properties": {
@@ -17688,6 +18277,101 @@
         },
         "description": "Un tramo de resultados de una <b>búsqueda</b>, con por dónde seguir."
       },
+      "TransferenciaDto": {
+        "required": [
+          "id",
+          "serieId",
+          "numero",
+          "almacenOrigenId",
+          "almacenDestinoId",
+          "fechaDeEnvio",
+          "fechaDeRecepcion",
+          "estado",
+          "lineas",
+          "anulaAId",
+          "motivo",
+          "divisa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "serieId": {
+            "type": "string",
+            "description": "Serie que la numera (R5).",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "El correlativo, o `null` si todavía es un borrador.",
+            "format": "int64"
+          },
+          "almacenOrigenId": {
+            "type": "string",
+            "description": "De dónde sale.",
+            "format": "uuid"
+          },
+          "almacenDestinoId": {
+            "type": "string",
+            "description": "A dónde llega.",
+            "format": "uuid"
+          },
+          "fechaDeEnvio": {
+            "type": "string",
+            "description": "Día al que se imputa la salida.",
+            "format": "date"
+          },
+          "fechaDeRecepcion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Día al que se imputa la entrada, o `null` si no ha llegado.",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "description": "En qué punto de su vida está."
+          },
+          "lineas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántas líneas tiene.",
+            "format": "int32"
+          },
+          "anulaAId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La transferencia que esta compensa, o `null` si no es un inverso.",
+            "format": "uuid"
+          },
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Por qué se anuló lo que compensa; solo lo lleva un inverso."
+          },
+          "divisa": {
+            "type": "string",
+            "description": "La de todos sus importes: la divisa base de la empresa al abrirla."
+          }
+        },
+        "description": "Una transferencia, como se enseña."
+      },
       "UbicacionDto": {
         "required": [
           "id",
@@ -17863,6 +18547,9 @@
     },
     {
       "name": "Ajustes"
+    },
+    {
+      "name": "Transferencias"
     },
     {
       "name": "Almacenes"

@@ -386,6 +386,98 @@ export const es = {
         'pero no se puede asignar hoy. Elige una que esté vigente.',
       'tipo-cambio-duplicado': 'Ya hay un tipo de cambio para esa divisa en esa fecha.',
       'tipo-cambio-no-encontrado': 'Ese tipo de cambio ya no existe.',
+      // Las veintinueve de la transferencia (ítem 2.11). Las de los maestros son las del ajuste
+      // con sus dos mitades; las propias dicen qué punta del viaje falla, porque quien envía y
+      // quien recibe suelen ser personas distintas, en almacenes distintos.
+      'transferencia-almacen-bloqueado':
+        'Ese almacén está bloqueado: sus movimientos anteriores se siguen leyendo y valorando, ' +
+        'pero no admite una transferencia nueva, ni de salida ni de llegada. Elige otro almacén o ' +
+        'pide que lo desbloqueen.',
+      'transferencia-almacen-no-encontrado':
+        'Ese almacén no existe. Elige uno del maestro de almacenes.',
+      'transferencia-articulo-no-encontrado':
+        'Ese artículo no existe. Elige uno del maestro de artículos.',
+      'transferencia-articulo-no-se-almacena':
+        'Ese artículo es un servicio: no tiene existencias que llevar de un almacén a otro. Quita ' +
+        'esa línea o cambia el artículo.',
+      'transferencia-cantidad-no-valida':
+        'Alguna línea no lleva nada del origen al destino: la cantidad y el factor a unidad base ' +
+        'tienen que ser positivos, y su producto no puede redondear a cero. Corrige la cantidad de ' +
+        'esa línea.',
+      'transferencia-con-fecha-futura':
+        'Esa fecha es posterior a hoy: el libro solo recoge lo que ya ha pasado, y una ' +
+        'transferencia se envía y se recibe el día en que ocurre. Hazlo ese día o corrige la fecha.',
+      'transferencia-en-ejercicio-cerrado':
+        'Esa fecha cae en un ejercicio cerrado: ese periodo ya es definitivo y no admite ' +
+        'documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
+      'transferencia-fecha-anterior-al-ultimo-movimiento':
+        'Algún artículo del documento ya tiene un movimiento posterior a esa fecha en uno de los ' +
+        'dos almacenes, y un documento no puede ir por detrás del último movimiento de su ' +
+        'artículo. Pon esa fecha o una posterior.',
+      'transferencia-lote-no-valido':
+        'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
+        'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote de esa ' +
+        'línea.',
+      'transferencia-mismo-almacen':
+        'El origen y el destino son el mismo almacén, y eso no es una transferencia. Cambiar la ' +
+        'mercancía de hueco dentro de un almacén es una reubicación, que es otro documento.',
+      'transferencia-motivo-no-valido':
+        'Escribe por qué anulas la transferencia, en 300 caracteres o menos. Es lo único que ' +
+        'quedará para entender la corrección dentro de dos años.',
+      'transferencia-no-encontrada':
+        'Esa transferencia ya no existe. Vuelve al listado y actualiza.',
+      'transferencia-no-esta-en-borrador':
+        'Esa transferencia ya no está en borrador: una enviada no se vuelve a enviar, porque lo ' +
+        'que salió del origen ya está escrito en el libro. Actualiza la pantalla.',
+      'transferencia-no-esta-enviada':
+        'Esa transferencia no está en tránsito: un borrador todavía no ha salido del origen, y una ' +
+        'recibida o anulada ya no vuela. Actualiza la pantalla para ver en qué estado está.',
+      'transferencia-no-se-anula':
+        'Esa transferencia no se puede anular: un borrador no ha movido el libro, una anulada ya ' +
+        'tiene su inverso, y un inverso no se deshace con otro. Actualiza la pantalla para ver en ' +
+        'qué estado está.',
+      'transferencia-numero-de-serie-no-valido':
+        'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
+        'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
+        'número de serie de esa línea.',
+      'transferencia-recepcion-antes-del-envio':
+        'La fecha de recepción es anterior a la del envío, y nada llega antes de salir. Pon la ' +
+        'fecha del envío o una posterior.',
+      'transferencia-serie-cerrada':
+        'Esa serie está cerrada: sigue resolviendo los documentos que ya numeró, pero no entrega ' +
+        'ni un número más. Elige otra serie.',
+      'transferencia-serie-no-encontrada': 'Esa serie no existe. Elige una del maestro de series.',
+      'transferencia-serie-no-unitaria':
+        'Una línea con número de serie mueve exactamente una unidad, porque cada número es una ' +
+        'pieza y no hay dos con el mismo. Pon una línea por pieza, con cantidad 1 en la unidad ' +
+        'base del artículo.',
+      'transferencia-serie-repetida':
+        'Dos líneas de la transferencia nombran el mismo número de serie, y cada pieza viaja una ' +
+        'sola vez por documento. Quita una de las dos líneas.',
+      'transferencia-sin-ejercicio':
+        'Esa fecha no cae en ningún ejercicio: sin periodo al que imputarlo, el documento no ' +
+        'entraría en ninguna declaración. Abre el ejercicio que falta o corrige la fecha.',
+      'transferencia-sin-lineas':
+        'Una transferencia necesita al menos una línea: un documento que no mueve nada no lleva ' +
+        'nada de un almacén a otro.',
+      'transferencia-trazabilidad-no-casa':
+        'Alguna línea no casa con la trazabilidad de su artículo: le falta el lote o el número de ' +
+        'serie que pide la ficha, o lleva uno que la ficha no pide. Corrige la línea, o la ' +
+        'trazabilidad del artículo si todavía no se ha movido.',
+      'transferencia-ubicacion-bloqueada':
+        'Esa ubicación está bloqueada: lo que ya hay apuntado a ella se sigue leyendo, pero no se ' +
+        'mueve nada nuevo desde ese hueco ni hacia él. Elige otra ubicación.',
+      'transferencia-ubicacion-no-encontrada':
+        'Esa ubicación no existe en ese almacén. Elige una de las suyas.',
+      'transferencia-unidad-no-encontrada':
+        'Esa unidad de medida no existe. Elige una del maestro de unidades.',
+      'transferencia-unidad-retirada':
+        'Esa unidad está retirada: los movimientos que ya se escribieron en ella se siguen ' +
+        'leyendo, pero no se escribe uno nuevo con ella. Elige otra unidad.',
+      'transferencia-valoracion-en-otra-divisa':
+        'Las existencias de algún artículo del documento están valoradas en otra divisa en uno de ' +
+        'los dos almacenes, y juntarlas pediría un tipo de cambio. La transferencia no se puede ' +
+        'hacer mientras ese almacén las tenga valoradas así.',
       'ubicacion-duplicada': 'Ya hay una ubicación con ese código en ese almacén.',
       'ubicacion-no-encontrada': 'Esa ubicación ya no existe. Vuelve al listado y actualiza.',
       'unidad-medida-duplicada': 'Ya hay una unidad de medida con ese código.',

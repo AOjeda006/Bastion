@@ -712,8 +712,8 @@ export interface paths {
          *       es dejar el documento como dice el cuerpo: es que ocurra algo —se toma un correlativo, se
          *       escriben los movimientos— y eso no tiene cuerpo que mandar. La confirmación es un hecho que
          *       se crea, no un campo que se fija.
-         *     La Idempotency-Key es OBLIGATORIA aquí, que es la única acción de toda la API
-         *       que la exige. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el
+         *     La Idempotency-Key es OBLIGATORIA aquí, que fue la primera acción de toda la API
+         *       que la exigió. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el
          *       número y el documento se va con ella: el UPDATE del contador se confirmaría por su
          *       cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es
          *       exactamente lo que la R5 prohíbe. Sin cabecera son 428.
@@ -745,12 +745,13 @@ export interface paths {
          *       original se queda, sus filas del libro se quedan —es de solo añadido (R3)— y lo que se
          *       crea es un documento nuevo. La anulación es un hecho que se añade, no una fila que se
          *       quita, y el verbo tiene que decirlo.
-         *     La Idempotency-Key es OBLIGATORIA, y con esta son dos las acciones de
-         *       toda la API que la exigen. El criterio no se amplía para que quepa: es el mismo de la
-         *       confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el inverso no
-         *       podría tomar su número sin dejar un hueco en la serie, que es lo que la R5 prohíbe—. Sin
-         *       cabecera son 428, y el reintento con la misma clave devuelve el par de la primera
-         *       vez en vez de anular dos veces.
+         *     La Idempotency-Key es OBLIGATORIA, y con esta fueron dos las acciones de
+         *       toda la API que la exigían; la lista entera, con el motivo de cada una, la lleva
+         *       TodaEscrituraDiceComoSeProtegeTests. El criterio no se amplía para que quepa: es el
+         *       mismo de la confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el
+         *       inverso no podría tomar su número sin dejar un hueco en la serie, que es lo que la R5
+         *       prohíbe—. Sin cabecera son 428, y el reintento con la misma clave devuelve el par de
+         *       la primera vez en vez de anular dos veces.
          *     Y no exige If-Match, por lo mismo que la confirmación: de anular dos veces
          *       seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya
          *       no está confirmado y sale 409—, y de anular dos veces a la vez protegen dos
@@ -760,6 +761,77 @@ export interface paths {
          *       pierde: ni inverso, ni número gastado.
          */
         post: operations["Ajustes_Anular"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/transferencias/{id}/envio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Envía una transferencia en borrador: le da su número, y lo que sale queda en tránsito.
+         * @description Un POST sobre un sub-recurso, como la confirmación del ajuste: el envío es un hecho que
+         *       se crea, no un campo que se fija.
+         *     La Idempotency-Key es obligatoria por el motivo de la confirmación: toma un
+         *       número, y el número y el documento quedan escritos en la misma transacción o no quedan (R5).
+         */
+        post: operations["Transferencias_Enviar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/transferencias/{id}/recepcion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recibe entera una transferencia enviada: lo que vuela entra en el destino.
+         * @description El cuerpo solo trae la fecha, porque la recepción es entera (ADR-0053 §4).
+         *     La Idempotency-Key es obligatoria aunque no numere: la recepción bloquea la
+         *       valoración del destino y escribe el documento, el tránsito, las existencias y el libro, y sin
+         *       la transacción del filtro cada sentencia se confirmaría por su cuenta. El cerrojo se soltaría
+         *       al acabar la suya, y un fallo a mitad dejaría la mercancía fuera del tránsito y sin entrar.
+         */
+        post: operations["Transferencias_Recibir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/transferencias/{id}/anulacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anula una transferencia enviada o recibida: crea el inverso que la compensa, lo numera y lo
+         *     recibe.
+         * @description Un POST, no un DELETE, por lo mismo que en el ajuste: no deja de estar nada, y lo que se
+         *       crea es un documento nuevo.
+         *     La Idempotency-Key es obligatoria, porque el inverso toma su número de la serie
+         *       del original. El reintento con la misma clave devuelve el par de la primera vez.
+         */
+        post: operations["Transferencias_Anular"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1950,6 +2022,13 @@ export interface components {
             /** @description Tipo de almacén, como texto. */
             tipo: string;
         };
+        /** @description El par que deja una anulación: la transferencia anulada y la que la compensa. */
+        AnulacionDeTransferenciaDto: {
+            /** @description La transferencia que queda anulada. */
+            original: components["schemas"]["TransferenciaDto"];
+            /** @description El contra-documento, ya numerado y recibido. */
+            inverso: components["schemas"]["TransferenciaDto"];
+        };
         /** @description El par que deja una anulación: el documento anulado y el que lo compensa. */
         AnulacionDto: {
             /** @description El ajuste que queda anulado. */
@@ -1959,6 +2038,11 @@ export interface components {
         };
         /** @description Lo que hace falta para anular un ajuste confirmado. */
         AnularAjusteDto: {
+            /** @description Por qué se anula, escrito por quien lo hace. */
+            motivo: string;
+        };
+        /** @description Lo que hace falta para anular una transferencia enviada o recibida. */
+        AnularTransferenciaDto: {
             /** @description Por qué se anula, escrito por quien lo hace. */
             motivo: string;
         };
@@ -3506,6 +3590,14 @@ export interface components {
              */
             lineas: (number | string)[];
         };
+        /** @description Lo que hace falta para recibir una transferencia enviada. */
+        RecibirTransferenciaDto: {
+            /**
+             * Format: date
+             * @description Día en que llega. No futuro, y no anterior al envío (ADR-0053 §3).
+             */
+            fechaDeRecepcion: null | string;
+        };
         /** @description Con qué régimen fiscal se da de alta o se modifica un tercero. */
         RegimenFiscalDeAltaDto: {
             /** @description Dónde tributa. Uno de los cinco del §7.2; si no se dice, península y Baleares. */
@@ -3780,6 +3872,60 @@ export interface components {
             tamanio: number | string;
             /** @description Con qué pedir el tramo siguiente, o nulo si no hay más. */
             cursorSiguiente: null | string;
+        };
+        /** @description Una transferencia, como se enseña. */
+        TransferenciaDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Serie que la numera (R5).
+             */
+            serieId: string;
+            /**
+             * Format: int64
+             * @description El correlativo, o `null` si todavía es un borrador.
+             */
+            numero: null | number | string;
+            /**
+             * Format: uuid
+             * @description De dónde sale.
+             */
+            almacenOrigenId: string;
+            /**
+             * Format: uuid
+             * @description A dónde llega.
+             */
+            almacenDestinoId: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa la salida.
+             */
+            fechaDeEnvio: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa la entrada, o `null` si no ha llegado.
+             */
+            fechaDeRecepcion: null | string;
+            /** @description En qué punto de su vida está. */
+            estado: string;
+            /**
+             * Format: int32
+             * @description Cuántas líneas tiene.
+             */
+            lineas: number | string;
+            /**
+             * Format: uuid
+             * @description La transferencia que esta compensa, o `null` si no es un inverso.
+             */
+            anulaAId: null | string;
+            /** @description Por qué se anuló lo que compensa; solo lo lleva un inverso. */
+            motivo: null | string;
+            /** @description La de todos sus importes: la divisa base de la empresa al abrirla. */
+            divisa: string;
         };
         /** @description Una ubicación dentro de un almacén, tal como sale de la API. */
         UbicacionDto: {
@@ -6443,6 +6589,291 @@ export interface operations {
             };
             /** @description Precondition Failed */
             412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Transferencias_Enviar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la transferencia que se envía. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TransferenciaDto"];
+                    "application/json": components["schemas"]["TransferenciaDto"];
+                    "text/json": components["schemas"]["TransferenciaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Transferencias_Recibir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la transferencia que se recibe. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecibirTransferenciaDto"];
+                "text/json": components["schemas"]["RecibirTransferenciaDto"];
+                "application/*+json": components["schemas"]["RecibirTransferenciaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TransferenciaDto"];
+                    "application/json": components["schemas"]["TransferenciaDto"];
+                    "text/json": components["schemas"]["TransferenciaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Transferencias_Anular: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la transferencia que se anula. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnularTransferenciaDto"];
+                "text/json": components["schemas"]["AnularTransferenciaDto"];
+                "application/*+json": components["schemas"]["AnularTransferenciaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["AnulacionDeTransferenciaDto"];
+                    "application/json": components["schemas"]["AnulacionDeTransferenciaDto"];
+                    "text/json": components["schemas"]["AnulacionDeTransferenciaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

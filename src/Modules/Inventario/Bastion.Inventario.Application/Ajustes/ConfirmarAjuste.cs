@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.LotesYSeries;
@@ -142,7 +143,7 @@ internal sealed class ConfirmarAjuste(
         if (LaTrazabilidadDeLasLineas.LoQueNoCasa(
                 LaTrazabilidadDeLasLineas.DelDocumento(ajuste), marcas) is { } noCasa)
         {
-            return Resultado.Fallo<AjusteDto>(noCasa);
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.TrazabilidadNoCasa(noCasa));
         }
 
         // EL NÚMERO, ANTES DE TOCAR EL DOCUMENTO. El orden no es estético: la sentencia toma el

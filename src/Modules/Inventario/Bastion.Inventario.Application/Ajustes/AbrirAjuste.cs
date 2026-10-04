@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Organizacion.Contracts.Almacenes;
@@ -102,9 +103,11 @@ internal sealed class AbrirAjuste(
             return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.CosteNoValido());
         }
 
-        if (LaTrazabilidadDeLasLineas.LoQueNoTieneForma(peticion.Lineas) is { } sinForma)
+        IReadOnlyList<LineaConForma> conForma = LaTrazabilidadDeLasLineas.DeLaPeticion(peticion.Lineas);
+
+        if (LaTrazabilidadDeLasLineas.LoQueNoTieneForma(conForma) is { } sinForma)
         {
-            return Resultado.Fallo<AjusteDto>(sinForma);
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.DeLaForma(sinForma));
         }
 
         EstadoDeMaestro estadoDelAlmacen = await almacenes
@@ -143,9 +146,9 @@ internal sealed class AbrirAjuste(
             .ConfigureAwait(false);
 
         if (LaTrazabilidadDeLasLineas.LoQueNoCasa(
-                LaTrazabilidadDeLasLineas.DeLaPeticion(peticion.Lineas), marcas) is { } noCasa)
+                LaTrazabilidadDeLasLineas.SusCodigos(conForma), marcas) is { } noCasa)
         {
-            return Resultado.Fallo<AjusteDto>(noCasa);
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.TrazabilidadNoCasa(noCasa));
         }
 
         DateTimeOffset momento = reloj.GetUtcNow();

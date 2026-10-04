@@ -1,5 +1,5 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
-using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Valoraciones;
 
@@ -160,6 +160,18 @@ internal static class ErroresDeAjuste
             $"El ajuste {ajusteId} está en estado «{estado}»: solo se anula lo que está " +
             "confirmado. Un borrador no ha movido nada, así que no hay nada que compensar.");
 
+    /// <summary>La línea que no tiene forma, con su código (ADR-0048 §2 y §3).</summary>
+    /// <param name="sinForma">Lo que contestó <c>LoQueNoTieneForma</c>.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion DeLaForma(LineaSinForma sinForma) => sinForma.Falta switch
+    {
+        FaltaDeForma.LoteNoValido => LoteNoValido(sinForma.Linea),
+        FaltaDeForma.NumeroDeSerieNoValido => NumeroDeSerieNoValido(sinForma.Linea),
+        FaltaDeForma.SerieNoUnitaria => SerieNoUnitaria(sinForma.Linea),
+        FaltaDeForma.SerieRepetida => SerieRepetida(sinForma.Linea, sinForma.Serie!),
+        _ => throw new ArgumentOutOfRangeException(nameof(sinForma), sinForma.Falta, null),
+    };
+
     /// <summary>El lote de una línea no es un código GS1 (ADR-0048 §2).</summary>
     /// <remarks>
     /// <b>No se devuelve lo que llegó</b>, como en el motivo: el valor es del llamante. Se dice la
@@ -215,23 +227,12 @@ internal static class ErroresDeAjuste
     /// <b>Dice qué línea y qué le falta o le sobra</b>, que es lo que hay que corregir.
     /// </para>
     /// </remarks>
-    /// <param name="linea">La línea, desde uno.</param>
-    /// <param name="articuloId">Su artículo.</param>
-    /// <param name="marca">La marca del artículo.</param>
-    /// <param name="discrepancia">Qué le falta o le sobra.</param>
+    /// <param name="noCasa">La línea, su artículo, su marca y lo que le falta o le sobra.</param>
     /// <returns>El error.</returns>
-    internal static ErrorDeOperacion TrazabilidadNoCasa(
-        int linea, Guid articuloId, MarcaDeTrazabilidad marca, DiscrepanciaDeTrazabilidad discrepancia) =>
+    internal static ErrorDeOperacion TrazabilidadNoCasa(LineaQueNoCasa noCasa) =>
         ErrorDeOperacion.Conflicto(
             CodigoTrazabilidadNoCasa,
-            $"La línea {linea} no casa con la marca del artículo {articuloId}, que es «{marca}»: " +
-            discrepancia switch
-            {
-                DiscrepanciaDeTrazabilidad.FaltaElLote => "le falta el lote.",
-                DiscrepanciaDeTrazabilidad.FaltaElNumeroDeSerie => "le falta el número de serie.",
-                DiscrepanciaDeTrazabilidad.SobraElLote => "le sobra el lote.",
-                DiscrepanciaDeTrazabilidad.SobraElNumeroDeSerie => "le sobra el número de serie.",
-                _ => throw new ArgumentOutOfRangeException(nameof(discrepancia), discrepancia, null),
-            } +
-            " Corrija la línea, o la marca si el artículo todavía no se ha movido (ADR-0048 §4).");
+            $"La línea {noCasa.Linea} no casa con la marca del artículo {noCasa.ArticuloId}, que es " +
+            $"«{noCasa.Marca}»: {LaTrazabilidadDeLasLineas.EnPalabras(noCasa.Discrepancia)} Corrija la " +
+            "línea, o la marca si el artículo todavía no se ha movido (ADR-0048 §4).");
 }

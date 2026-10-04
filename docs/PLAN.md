@@ -8444,8 +8444,54 @@ la clave (paso 4). Sus mutaciones empiezan en la **181**.
      `ck_valoraciones_sin_cantidad_no_hay_valor`. El valor de la empresa no cambia. Lo que estaba
      mal eran tres frases que solo pensaban en el tope. Las enmienda el **ADR-0054**, en el commit
      siguiente, con un caso del dominio que lo fija.
-5. Los casos de uso y la superficie: abrir, enviar, recibir y anular, con sus permisos, sus `type`
-   y sus textos.
+   El cuarto commit (`1c50ba2`) y el quinto, el del ADR-0054 (`a8c6cc8`), subieron en el mismo
+   *push*, así que comparten run, el
+   [37173648726](https://github.com/AOjeda006/Bastion/actions/runs/37173648726), en verde en los
+   tres trabajos. El quinto añade el caso del dominio que fija la enmienda, y el carril rápido pasa
+   a **1262**.
+5. ~~Los casos de uso y la superficie: abrir, enviar, recibir y anular, con sus permisos, sus `type`
+   y sus textos.~~ Hecho en el sexto commit. Son cuatro casos de uso en
+   `Application/Transferencias/`, y `TransferenciasController`, con tres `POST`: `{id}/envio`,
+   `{id}/recepcion` y `{id}/anulacion`. Los tres exigen la `Idempotency-Key`, y cada uno tiene su
+   permiso: `inventario.transferencia.enviar`, `.recibir` y `.anular`. `AbrirTransferencia` no tiene
+   borde, como el alta del ajuste: llega con su pantalla, y hasta entonces la usan los casos de
+   integración. Los cerrojos van en el orden del §10. Hay dos decisiones que el ADR no escribía y el
+   código sí:
+   - **La recepción y la anulación releen la versión del documento** con las valoraciones ya
+     bloqueadas (`SigueComoSeLeyoAsync`), y si cambió, `412` (`ObsoletaYSinRecurso`). Es el arreglo
+     del primer hallazgo de la revisión del paso 4. La anulación lo lleva también, para que las dos
+     carreras sobre la misma transferencia den el mismo `412`. Los casos van al paso 6.
+   - **El envío comprueba la divisa de la valoración del destino** antes de valorar. Si no está
+     vacía y está en otra divisa, sale el `422` `transferencia-valoracion-en-otra-divisa`. Sin esa
+     guarda, la sentencia de `ElTransito` no encuentra su fila, cuenta mal y lanza: un `500`.
+
+   La trazabilidad de las líneas pasa de `Ajustes/` a `Trazabilidad/`, y da resultados neutros que
+   cada documento traduce a su código. El generador del catálogo solo lee códigos literales o
+   constantes del mismo fichero que la llamada, así que un error compartido no podría tener dos
+   `type`. Entran **29** `type`: 19 en `ErroresDeTransferencia` y 10 en
+   `LosMaestrosDeLaTransferencia`, con sus 29 textos en `es.ts` y en `en.ts`. El catálogo queda en
+   **173 tipos de 179 sitios** (`bash scripts/generar-errores.sh --comprobar`), y OpenAPI en **138
+   operaciones** (`bash scripts/generar-openapi.sh --comprobar`). Las listas que lo nombran:
+   - `TodaEscrituraDiceComoSeProtegeTests` pasa a 138 acciones, 89 que cambian estado, 25 con
+     `Idempotency-Key` y **5 que la exigen**, las tres nuevas con su motivo en `s_obligatorias`. La
+     recepción no numera, y entra por la otra mitad del criterio: sin la transacción del filtro, el
+     cerrojo no dura más que su sentencia.
+   - `CadaMarcaAdmiteSuLineaTests` afirma las dos traducciones de cada discrepancia.
+
+   Va también una frase del dominio que el ADR-0054 no listaba entre sus consecuencias: el
+   comentario de `ConfirmarComoInverso` decía «como mucho el que queda», y ahora dice también «todo
+   el que quede si vacía la clave».
+
+   Lo medido sobre el árbol de este commit, todo en verde:
+   - `dotnet test Bastion.sln --filter "Category!=Integracion"` da **1262**, los mismos que el
+     quinto commit. Este paso no añade casos: los suyos son los del paso 6.
+   - `dotnet test Bastion.sln --filter "Category=Integracion"` da **475** y **84**.
+   - `npm --prefix frontend run test` da **192** casos en 20 ficheros, sin un solo aviso de
+     `act(...)`.
+   - `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` da un arranque de
+     **426/450 KiB** y un total de **646/900 KiB**.
+   - `python scripts/dependencias-por-conjuntos.py a8c6cc8 HEAD` no da ningún paquete que entre o
+     salga.
 6. Los casos de integración del encargo, cada uno con su censo.
 7. El cuadre del tránsito y la propiedad.
 8. La tanda de mutaciones, la batería y los runs.
