@@ -103,8 +103,8 @@ public sealed class LineaDeTransferencia : EntidadBase
     /// </para>
     /// <para>
     /// <b>En un inverso es lo que volvió</b>: de una enviada, el valor exacto que estaba en tránsito,
-    /// y de una recibida, lo que la salida del destino se llevó, que el tope puede dejar por debajo
-    /// de <see cref="ValorQueCompensa"/> (§6).
+    /// y de una recibida, lo que la salida del destino se llevó. El tope puede dejarlo por debajo
+    /// de <see cref="ValorQueCompensa"/>, y vaciar el destino, por encima (§6, ADR-0054).
     /// </para>
     /// </remarks>
     public decimal? Valor { get; private set; }

@@ -273,7 +273,8 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
     /// <remarks>
     /// <b>La pata del destino mueve la cantidad tal cual, y siempre con un valor que compensa.</b> Al
     /// recibir, el que viajó, entero: sin coste y sin el precio medio del destino. En el inverso de
-    /// una recibida, el que entró, negado, que el tope deja en lo que quede (ADR-0053 §2 y §5).
+    /// una recibida, el que entró, negado: como mucho lo que quede, y todo lo que quede si vacía la
+    /// clave (ADR-0053 §2 y §5, ADR-0054).
     /// </remarks>
     /// <returns>Las líneas a valorar, en el orden de <see cref="Lineas"/>.</returns>
     public IReadOnlyList<LineaAValorar> LineasAValorarEnElDestino() =>

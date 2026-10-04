@@ -15,8 +15,9 @@ namespace Bastion.Inventario.UnitTests.Transferencias;
 /// <remarks>
 /// <para>
 /// <b>De una enviada</b> vuelve al origen el valor exacto que salió, y el tránsito baja a cero. <b>De
-/// una recibida</b> sale del destino lo que entró, como mucho lo que quede, y el origen recibe eso:
-/// lo que salió del destino, no lo que salió del origen. Es la tercera respuesta de la puerta.
+/// una recibida</b> sale del destino lo que entró, como mucho lo que quede y todo lo que quede si
+/// lo vacía, y el origen recibe eso: lo que salió del destino, no lo que salió del origen. Es la
+/// tercera respuesta de la puerta (ADR-0054).
 /// </para>
 /// <para>
 /// <b>La afirmación que decide es la del valor de la empresa</b>, que es el mismo antes y después de
@@ -191,6 +192,56 @@ public sealed class ElInversoDeLaTransferenciaTests
         libro.ValorEn(ElLibroDeLaPrueba.Destino).ShouldBe(0m);
         libro.FisicoEn(ElLibroDeLaPrueba.Origen).ShouldBe(10m);
         libro.ValorEn(ElLibroDeLaPrueba.Origen).ShouldBe(15.5m);
+    }
+
+    /// <summary>
+    /// Si el inverso vacía el destino, se lleva todo lo que queda, que puede valer más de lo que
+    /// entró, y el origen recibe eso (ADR-0054).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// El origen tiene 5 unidades por 50 €, y el destino, 10 por 200 €. Salen las 5 del origen por
+    /// 50 €, y al recibir el destino tiene 15 por 250 €. Un ajuste saca 10 a su precio medio,
+    /// 16,666667, y el destino queda con 5 por 83,3333 €. El inverso vacía el destino y se lleva los
+    /// 83,3333 €, no los 50 que entraron: sin cantidad no hay valor.
+    /// </para>
+    /// <para>
+    /// <b>Y la empresa vale lo mismo antes y después de anular</b>, porque lo que sale del destino
+    /// de más entra entero en el origen.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void Si_el_inverso_vacia_el_destino_el_origen_recibe_mas_de_lo_que_salio()
+    {
+        ElLibroDeLaPrueba libro = new();
+        libro.Ajustar(ElLibroDeLaPrueba.Origen, ElLibroDeLaPrueba.UbicacionDelOrigen, 5m, 10m, s_diaDePartida);
+        libro.Ajustar(ElLibroDeLaPrueba.Destino, ElLibroDeLaPrueba.UbicacionDelDestino, 10m, 20m, s_diaDePartida);
+        Transferencia original = ElLibroDeLaPrueba.UnaTransferenciaDe(5m, s_diaDeEnvio);
+        libro.Enviar(original);
+        libro.Recibir(original, s_diaDeLlegada);
+        libro.Ajustar(
+            ElLibroDeLaPrueba.Destino, ElLibroDeLaPrueba.UbicacionDelDestino, -10m, null, s_diaDeLaSalidaDelDestino);
+        libro.ValorEn(ElLibroDeLaPrueba.Destino).ShouldBe(83.3333m, "la partida del destino tiene que ser la del caso");
+        libro.ValorEn(ElLibroDeLaPrueba.Origen).ShouldBe(0m, "el origen se vació al enviar");
+        decimal valorDeLaEmpresa = libro.ValorDeLaEmpresa();
+
+        (Transferencia inverso, LoQueMueveLaTransferencia movido) = libro.Anular(original, s_diaDeLaAnulacion);
+
+        MovimientoStock salidaDelDestino = movido.Movimientos.Single(fila => fila.AlmacenId == ElLibroDeLaPrueba.Destino);
+        MovimientoStock entradaEnElOrigen = movido.Movimientos.Single(fila => fila.AlmacenId == ElLibroDeLaPrueba.Origen);
+
+        salidaDelDestino.Valor.Cantidad.ShouldBe(-83.3333m, "vaciar la clave se lleva todo lo que queda");
+        entradaEnElOrigen.Valor.Cantidad.ShouldBe(83.3333m, "el origen recibe lo que salió del destino");
+
+        LineaDeTransferencia linea = inverso.Lineas.ShouldHaveSingleItem();
+        linea.ValorQueCompensa.ShouldBe(-50m, "lo que quería compensar");
+        linea.Valor.ShouldBe(-83.3333m, "y lo que viajó de vuelta, que es más");
+
+        libro.ValorDeLaEmpresa().ShouldBe(valorDeLaEmpresa, "anular no crea ni destruye valor");
+        libro.FisicoEn(ElLibroDeLaPrueba.Destino).ShouldBe(0m);
+        libro.ValorEn(ElLibroDeLaPrueba.Destino).ShouldBe(0m);
+        libro.FisicoEn(ElLibroDeLaPrueba.Origen).ShouldBe(5m);
+        libro.ValorEn(ElLibroDeLaPrueba.Origen).ShouldBe(83.3333m);
     }
 
     /// <summary>

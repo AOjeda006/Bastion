@@ -8373,7 +8373,8 @@ ninguna decisión escrita. El ADR-0053 queda para el 2.11.
 **El 2.11, en curso** desde el 2026-10-03, en la rama `2.11-la-transferencia`, abierta desde `main`
 en `ed7ab60`. Lo que pide está en *Decisiones tomadas → El 2.11: la transferencia y el stock en
 tránsito*, y la puerta, contestada, justo debajo. Las decisiones van en el **ADR-0053**, que enmienda
-el ADR-0048 §3. Sus mutaciones empiezan en la **181**.
+el ADR-0048 §3, y el **ADR-0054** corrige tres frases suyas y del ADR-0046 sobre el inverso que vacía
+la clave (paso 4). Sus mutaciones empiezan en la **181**.
 
 **Lo que queda, por este orden:**
 

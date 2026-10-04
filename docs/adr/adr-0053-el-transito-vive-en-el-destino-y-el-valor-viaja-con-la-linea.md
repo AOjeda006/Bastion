@@ -8,7 +8,11 @@ revisado: 2026-10-03
 
 # ADR-0053: El tránsito vive en el destino, y el valor viaja con la línea
 
-- **Estado:** aceptado.
+- **Estado:** aceptado. **Enmendado por el ADR-0054 (§5 y §6, lo que se lleva el inverso que vacía
+  el destino).**
+  - El [ADR-0054](adr-0054-vaciar-la-clave-se-lleva-todo-su-valor-tambien-en-el-inverso.md) dice lo que estas dos frases callaban:
+    si la salida del destino vacía la clave, se lleva todo lo que queda, que puede ser más de lo
+    que entró, y eso es lo que recibe el origen.
 - **Fecha:** 2026-10-03
 - **Sale del 2.11.** Los diez puntos los fijó el usuario en el encargo del 2026-10-03 (PLAN, *El
   2.11: la transferencia y el stock en tránsito*). Tres cosas quedaron abiertas, y el usuario las
@@ -102,6 +106,9 @@ un ajuste en el destino. **Disparador:** la primera recepción con faltas.
 
 ### 5. El inverso es otra transferencia, con las líneas negadas
 
+> **Enmendado por el ADR-0054 (2026-10-04).** La salida del destino se lleva el valor que entró,
+> como mucho el que queda, y **todo el que queda si vacía la clave**, aunque sea más.
+
 Lo eligió el usuario en la puerta. Es la forma del 2.5.
 
 - **Una transferencia nueva**, con `AnulaAId`, el mismo origen, destino, serie y divisa, y cada
@@ -128,6 +135,10 @@ Lo eligió el usuario en la puerta. Es la forma del 2.5.
 transacciones de verdad.
 
 ### 6. Una transferencia no crea ni destruye valor
+
+> **Enmendado por el ADR-0054 (2026-10-04).** Con tope, el origen recibe menos de lo que salió de
+> él. Si la salida del destino vacía la clave, puede recibir más. El invariante de abajo no
+> cambia.
 
 Lo eligió el usuario en la puerta. Al anular una `Recibida`, **el origen recibe lo que la salida del
 destino se llevó de verdad**. Sin tope, es exactamente lo que salió del origen. Con tope, es menos,

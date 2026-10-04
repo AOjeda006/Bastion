@@ -8,8 +8,8 @@ revisado: 2026-09-29
 
 # ADR-0046: El valor es la verdad y el precio medio se deduce, por artículo y almacén y bajo cerrojo
 
-- **Estado:** aceptado. **Enmendado por el ADR-0047 (§5, último punto) y por el ADR-0048 (§2, el
-  orden de los cerrojos).**
+- **Estado:** aceptado. **Enmendado por el ADR-0047 (§5, último punto), por el ADR-0048 (§2, el
+  orden de los cerrojos) y por el ADR-0054 (§6, primer punto).**
   - El [ADR-0047](adr-0047-ninguna-fecha-anterior-al-ultimo-movimiento-de-su-clave.md) prohíbe
     confirmar o anular con una fecha anterior al último movimiento de alguna clave del documento.
     El orden de valoración sigue siendo el de confirmación, y dentro de cada clave coincide con el
@@ -17,6 +17,8 @@ revisado: 2026-09-29
   - El [ADR-0048](adr-0048-el-lote-y-la-serie-van-con-su-articulo-y-la-marca-se-lee-con-cerrojo.md)
     mete dos eslabones en el orden de los cerrojos: la marca del artículo, después del ejercicio, y
     los lotes y las series, después de la valoración.
+  - El [ADR-0054](adr-0054-vaciar-la-clave-se-lleva-todo-su-valor-tambien-en-el-inverso.md) precisa cuándo suma cero el par: un
+    inverso que vacía la clave se lleva todo lo que queda, aunque sea más de lo que entró.
 - **Fecha:** 2026-09-28
 - **Sale del ítem 2.8** y de las cinco decisiones que el encargo del 2026-09-28 pidió tomar y
   escribir **antes del código**. Las toma el agente. Cada una lleva aquí su motivo, y en el PLAN la
@@ -309,6 +311,10 @@ medio vigente antes de la fila, y `V` el valor de la clave en ese momento:
 El cuadre compara lo mismo en una sola lectura, y dice cuántas valoraciones comparó.
 
 ### 6. El inverso compensa el valor de la línea del original
+
+> **Enmendado por el ADR-0054 (2026-10-04).** El par tampoco suma cero si el inverso vacía la
+> clave y lo que queda vale más de lo que entró: se lo lleva entero, como dice la tabla del §5, y
+> la línea guarda las dos cifras.
 
 La decisión 4 del 2.5 copiaba el **coste** en el inverso, para que el par sumara cero también en
 valor el día que hubiera valor. Ese día es hoy, y el coste no basta. `v` es el importe **redondeado**
