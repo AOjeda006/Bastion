@@ -8403,7 +8403,46 @@ el ADR-0048 §3. Sus mutaciones empiezan en la **181**.
    `CHECK` en `LasMigracionesSobreTablasConFilasTests`, la línea en las tres de los hijos sin
    filtro ni testigo, el testigo de la transferencia y sus dos fechas, que dejan el recuento de
    `LasFechasDicenDeQueTipoSonTests` en **14**.
-4. La persistencia: las sentencias del tránsito y el orden de las patas.
+4. ~~La persistencia: las sentencias del tránsito y el orden de las patas.~~ Hecho en el cuarto
+   commit. `IRepositorioDeTransferencias`, en Application, y `RepositorioDeTransferencias`, que
+   guarda el documento antes que las existencias (§10) y después mueve en el orden del §7: lo que
+   resta del libro, el tránsito que baja, el que sube y lo que suma. `ElTransito` son dos sentencias
+   que suman lo que vuela en la existencia y en la valoración del destino, sobre filas ya
+   bloqueadas, y cuentan las filas que tocan. Una valoración **vacía** pasa a ser «sin cantidad y sin
+   nada en vuelo» en la guarda de la divisa, y la lectura bajo cerrojo trae `en_transito`. La
+   sentencia que crea y bloquea las existencias vivas se comparte con la proyección del libro. El
+   cierre cuenta las transferencias como dice el §12, y `ix_transferencias_anula_a_id` se declara
+   como carrera perdida, con su línea en `CadaIndiceTraducidoSeJustificaTests`. `ElTransito` entra
+   en la lista justificada de `ElFiltroNoSeSaltaPorAhiTests`, porque usa `ExecuteSql`. Lo medido
+   sobre el árbol de este commit: `dotnet test Bastion.sln --filter "Category=Integracion"` da
+   **475** y **84**, todos en verde, y `dotnet test Bastion.sln --filter "Category!=Integracion"`
+   da **1261**, los mismos que el run del segundo commit: este paso no añade casos, solo líneas a
+   dos listas que ya existían. Los dos primeros commits
+   de la rama tienen su run en verde: `1672f25`, el
+   [37145346956](https://github.com/AOjeda006/Bastion/actions/runs/37145346956), y `fbb8611`, el
+   [37172370485](https://github.com/AOjeda006/Bastion/actions/runs/37172370485).
+
+   **La revisión antes del commit**, con tres lentes, dejó tres hallazgos. Cada uno se comprobó a
+   mano:
+   - **Dos recepciones a la vez, con fechas distintas: es real, y se arregla en el paso 5.** La que
+     pierde espera en la valoración del destino. Si su fecha es anterior a la de la ganadora, la
+     guarda del ADR-0047 le da un `422` de fecha antes de llegar al testigo del documento, y el §10
+     promete un `412`. En el ajuste no pasa, porque la fecha va en el documento y es la misma para
+     los dos. El caso de uso de la recepción comprobará, con la valoración ya bloqueada, que el
+     documento sigue en la versión que leyó, y si no, `412`. El caso va al paso 6.
+   - **Un interbloqueo `40P01` por el índice parcial de la serie: no se sostiene.** El escenario
+     pedía que el ajuste que da de alta la serie en un tercer almacén tuviera ya su entrada en el
+     índice mientras espera a la transferencia. Pero el árbol B comprueba la unicidad **antes** de
+     insertar la entrada, y es ahí donde espera. Si la fila del origen todavía tiene la serie, el
+     ajuste choca al momento (`23505`, el `422`). Si la transferencia ya la está sacando, el ajuste
+     espera sin entrada que la transferencia pueda encontrar. Así que no hay ciclo. Lo mide el caso
+     del §7 en el paso 6, con dos transacciones de verdad.
+   - **Vaciar el destino al anular una recibida se lleva todo su valor, que puede ser más del que
+     entró: es real, pero en la redacción, no en el código.** `ElPrecioMedioPonderado` aplica la
+     regla del ADR-0046 §5 («si deja la clave a cero, `−V` entero»), que sostiene
+     `ck_valoraciones_sin_cantidad_no_hay_valor`. El valor de la empresa no cambia. Lo que estaba
+     mal eran tres frases que solo pensaban en el tope. Las enmienda el **ADR-0054**, en el commit
+     siguiente, con un caso del dominio que lo fija.
 5. Los casos de uso y la superficie: abrir, enviar, recibir y anular, con sus permisos, sus `type`
    y sus textos.
 6. Los casos de integración del encargo, cada uno con su censo.

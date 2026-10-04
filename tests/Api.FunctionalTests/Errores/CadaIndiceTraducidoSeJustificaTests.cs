@@ -98,6 +98,10 @@ public sealed class CadaIndiceTraducidoSeJustificaTests : IDisposable
             // antes. Un `anula_a_id` repetido solo se escribe anulando dos veces el mismo
             // documento, así que no hay ningún otro desenlace posible que «otro llegó primero».
             "ix_ajustes_anula_a_id",
+
+            // Ítem 2.11: el mismo argumento con la transferencia, cuyo inverso también se inserta
+            // a la vez que el original cambia de estado.
+            "ix_transferencias_anula_a_id",
         ];
 
         Declarados().Keys.OrderBy(nombre => nombre, StringComparer.Ordinal)

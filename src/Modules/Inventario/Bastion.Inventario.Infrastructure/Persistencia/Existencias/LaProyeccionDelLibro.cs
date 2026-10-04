@@ -223,12 +223,6 @@ internal static class LaProyeccionDelLibro
             return;
         }
 
-        // Un identificador por CLAVE y no por fila: las filas de la misma clave tienen que caer en
-        // el mismo grupo, y el identificador es parte del grupo. Solo lo usa la sentencia que crea,
-        // si la clave es nueva; si ya tenía fila viva, el `ON CONFLICT` se queda con el suyo.
-        Dictionary<(Guid Articulo, Guid Almacen, Guid Ubicacion, Guid? Lote, Guid? NumeroDeSerie), Guid> identificadores = [];
-
-        var ids = new Guid[movimientos.Count];
         var articulos = new Guid[movimientos.Count];
         var almacenes = new Guid[movimientos.Count];
         var ubicaciones = new Guid[movimientos.Count];
@@ -241,20 +235,6 @@ internal static class LaProyeccionDelLibro
 
         foreach (MovimientoStock movimiento in movimientos)
         {
-            (Guid Articulo, Guid Almacen, Guid Ubicacion, Guid? Lote, Guid? NumeroDeSerie) clave = (
-                movimiento.ArticuloId,
-                movimiento.AlmacenId,
-                movimiento.UbicacionId,
-                movimiento.LoteId,
-                movimiento.NumeroDeSerieId);
-
-            if (!identificadores.TryGetValue(clave, out Guid id))
-            {
-                id = Guid.CreateVersion7();
-                identificadores[clave] = id;
-            }
-
-            ids[posicion] = id;
             articulos[posicion] = movimiento.ArticuloId;
             almacenes[posicion] = movimiento.AlmacenId;
             ubicaciones[posicion] = movimiento.UbicacionId;
@@ -266,17 +246,74 @@ internal static class LaProyeccionDelLibro
             posicion++;
         }
 
-        await contexto.Database
-            .ExecuteSqlRawAsync(
-                SqlQueCreaYBloqueaLasVivas,
-                [empresaId, ids, articulos, almacenes, ubicaciones, lotes, numerosDeSerie],
-                cancelacion)
+        await CrearYBloquearLasVivasAsync(
+                contexto, empresaId, articulos, almacenes, ubicaciones, lotes, numerosDeSerie, cancelacion)
             .ConfigureAwait(false);
 
         await contexto.Database
             .ExecuteSqlRawAsync(
                 SqlQueMueveLaProyeccion,
                 [empresaId, articulos, almacenes, ubicaciones, lotes, numerosDeSerie, meses, cantidades],
+                cancelacion)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Crea a cero la fila viva de cada clave que falte y bloquea la de todas, en orden de clave: la
+    /// mitad de <see cref="MoverAsync"/> que no mueve nada.
+    /// </summary>
+    /// <remarks>
+    /// Está aparte desde el 2.11 porque el tránsito necesita lo mismo antes de sumar lo que vuela
+    /// (ADR-0053 §1), y su clave es la misma. Los arrays van en paralelo, una posición por fila.
+    /// </remarks>
+    /// <param name="contexto">El contexto de Inventario, con la transacción abierta.</param>
+    /// <param name="empresaId">La empresa del inquilino.</param>
+    /// <param name="articulos">El artículo de cada fila.</param>
+    /// <param name="almacenes">El almacén de cada fila.</param>
+    /// <param name="ubicaciones">La ubicación de cada fila.</param>
+    /// <param name="lotes">El lote de cada fila, o nulo.</param>
+    /// <param name="numerosDeSerie">El número de serie de cada fila, o nulo.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>Una tarea que acaba cuando la sentencia ha corrido.</returns>
+    internal static async Task CrearYBloquearLasVivasAsync(
+        InventarioDbContext contexto,
+        Guid empresaId,
+        Guid[] articulos,
+        Guid[] almacenes,
+        Guid[] ubicaciones,
+        Guid?[] lotes,
+        Guid?[] numerosDeSerie,
+        CancellationToken cancelacion)
+    {
+        // Un identificador por CLAVE y no por fila: las filas de la misma clave tienen que caer en
+        // el mismo grupo, y el identificador es parte del grupo. Solo lo usa la sentencia que crea,
+        // si la clave es nueva; si ya tenía fila viva, el `ON CONFLICT` se queda con el suyo.
+        Dictionary<(Guid Articulo, Guid Almacen, Guid Ubicacion, Guid? Lote, Guid? NumeroDeSerie), Guid> identificadores = [];
+
+        var ids = new Guid[articulos.Length];
+
+        for (int posicion = 0; posicion < articulos.Length; posicion++)
+        {
+            (Guid Articulo, Guid Almacen, Guid Ubicacion, Guid? Lote, Guid? NumeroDeSerie) clave = (
+                articulos[posicion],
+                almacenes[posicion],
+                ubicaciones[posicion],
+                lotes[posicion],
+                numerosDeSerie[posicion]);
+
+            if (!identificadores.TryGetValue(clave, out Guid id))
+            {
+                id = Guid.CreateVersion7();
+                identificadores[clave] = id;
+            }
+
+            ids[posicion] = id;
+        }
+
+        await contexto.Database
+            .ExecuteSqlRawAsync(
+                SqlQueCreaYBloqueaLasVivas,
+                [empresaId, ids, articulos, almacenes, ubicaciones, lotes, numerosDeSerie],
                 cancelacion)
             .ConfigureAwait(false);
     }

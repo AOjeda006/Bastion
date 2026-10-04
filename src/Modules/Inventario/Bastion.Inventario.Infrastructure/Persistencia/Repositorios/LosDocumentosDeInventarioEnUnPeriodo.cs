@@ -1,4 +1,5 @@
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.Transferencias;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,15 +13,22 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 /// sabe que detrás hay un <c>DbContext</c> (§4, reglas de frontera 1 y 3).
 /// </para>
 /// <para>
-/// <b>Hoy el único documento de este módulo es el ajuste.</b> Cuando lleguen los albaranes y los
-/// recuentos, se suman <b>aquí</b>: el cierre no se entera y no hay que acordarse de tocarlo. Que
-/// este método se quede corto el día que aparezca un documento nuevo es el modo de fallo de esta
-/// clase, y contra eso está el barrido que compara los módulos registrados con los declarados.
+/// <b>Hoy los documentos de este módulo son el ajuste y la transferencia</b>, que llegó en el 2.11.
+/// Cuando lleguen los albaranes y los recuentos, se suman <b>aquí</b>: el cierre no se entera y no
+/// hay que acordarse de tocarlo. Que este método se quede corto el día que aparezca un documento
+/// nuevo es el modo de fallo de esta clase, y contra eso está el barrido que compara los módulos
+/// registrados con los declarados.
 /// </para>
 /// <para>
 /// <b>La fecha que decide es <c>FechaDeOperacion</c></b>, no <c>CreadoEn</c>: es la fecha del
 /// documento, la que la R9 llama «la fecha del movimiento» y la única que se compara contra el
 /// intervalo del ejercicio. <c>CreadoEn</c> es cuándo se tecleó, que es otra cosa y no decide nada.
+/// </para>
+/// <para>
+/// <b>La transferencia tiene dos</b>, y escribe una fila del libro en cada una (ADR-0053 §3). Un
+/// borrador cuenta por la de envío, que es la única que tiene; un documento cuenta si cualquiera de
+/// las dos cae dentro del intervalo (§12). Contar solo la de envío dejaría cerrar el ejercicio de una
+/// recepción del 3 de enero cuyo envío fue el 30 de diciembre.
 /// </para>
 /// </remarks>
 internal sealed class LosDocumentosDeInventarioEnUnPeriodo(InventarioDbContext contexto)
@@ -30,20 +38,30 @@ internal sealed class LosDocumentosDeInventarioEnUnPeriodo(InventarioDbContext c
     public string Modulo => "Inventario";
 
     /// <inheritdoc/>
-    public Task<bool> HayBorradoresEnAsync(
+    public async Task<bool> HayBorradoresEnAsync(
         Guid empresaId,
         DateOnly desde,
         DateOnly hasta,
         CancellationToken cancelacion) =>
-        contexto.Ajustes.AnyAsync(
-            ajuste => ajuste.EmpresaId == empresaId
-                && ajuste.Estado == EstadoDeAjuste.Borrador
-                && ajuste.FechaDeOperacion >= desde
-                && ajuste.FechaDeOperacion <= hasta,
-            cancelacion);
+        await contexto.Ajustes
+            .AnyAsync(
+                ajuste => ajuste.EmpresaId == empresaId
+                    && ajuste.Estado == EstadoDeAjuste.Borrador
+                    && ajuste.FechaDeOperacion >= desde
+                    && ajuste.FechaDeOperacion <= hasta,
+                cancelacion)
+            .ConfigureAwait(false)
+        || await contexto.Transferencias
+            .AnyAsync(
+                transferencia => transferencia.EmpresaId == empresaId
+                    && transferencia.Estado == EstadoDeTransferencia.Borrador
+                    && transferencia.FechaDeEnvio >= desde
+                    && transferencia.FechaDeEnvio <= hasta,
+                cancelacion)
+            .ConfigureAwait(false);
 
     /// <inheritdoc/>
-    public Task<bool> HayDocumentosEnAsync(
+    public async Task<bool> HayDocumentosEnAsync(
         Guid empresaId,
         DateOnly desde,
         DateOnly hasta,
@@ -51,9 +69,18 @@ internal sealed class LosDocumentosDeInventarioEnUnPeriodo(InventarioDbContext c
         // Sin filtrar por estado: los anulados también cuentan. Un ajuste anulado sigue siendo una
         // fila del libro —se corrige con un inverso, no se borra (R11)— y sacarlo del intervalo de
         // su ejercicio dejaría al inverso y al original en periodos distintos.
-        contexto.Ajustes.AnyAsync(
-            ajuste => ajuste.EmpresaId == empresaId
-                && ajuste.FechaDeOperacion >= desde
-                && ajuste.FechaDeOperacion <= hasta,
-            cancelacion);
+        await contexto.Ajustes
+            .AnyAsync(
+                ajuste => ajuste.EmpresaId == empresaId
+                    && ajuste.FechaDeOperacion >= desde
+                    && ajuste.FechaDeOperacion <= hasta,
+                cancelacion)
+            .ConfigureAwait(false)
+        || await contexto.Transferencias
+            .AnyAsync(
+                transferencia => transferencia.EmpresaId == empresaId
+                    && ((transferencia.FechaDeEnvio >= desde && transferencia.FechaDeEnvio <= hasta)
+                        || (transferencia.FechaDeRecepcion >= desde && transferencia.FechaDeRecepcion <= hasta)),
+                cancelacion)
+            .ConfigureAwait(false);
 }

@@ -369,6 +369,16 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             "lee la valoracion que la sentencia de al lado acaba de bloquear, en la misma "
             + "transaccion, para que el dominio valore contra un saldo que nadie puede cambiar "
             + "hasta el COMMIT. Compara la empresa con el valor de IInquilinoActual",
+
+        // LA DEL ITEM 2.11, con el criterio de las del 2.7 y del 2.8 y por lo mismo: lo que vuela
+        // se suma sobre lo que hay, en filas que esta transaccion tiene bloqueadas, y EF Core no
+        // traduce esa suma. No lee para decidir: el valor que vuela lo trae la linea del documento
+        // (ADR-0053 §2), y la fila de la existencia la crea y la bloquea la sentencia del libro.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Transferencias/" +
+         "ElTransito.cs usa .ExecuteSql"] =
+            "suma lo que vuela en la existencia y en la valoracion del destino, sobre filas que la "
+            + "misma transaccion ya tiene bloqueadas, y cuenta las filas que toca. Recibe la empresa "
+            + "con el valor de IInquilinoActual y la compara en cada fila que suma",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

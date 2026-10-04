@@ -6,6 +6,7 @@ using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
+using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Movimientos;
 using Bastion.Inventario.Contracts.Transferencias;
@@ -66,6 +67,10 @@ public static class ModuloDeInventario
         // se guardan en la misma transacción, así que dos repositorios con dos unidades de trabajo
         // sugerirían que pueden guardarse por separado.
         servicios.AddScoped<IRepositorioDeAjustes, RepositorioDeAjustes>();
+
+        // Y uno para la transferencia, por lo mismo: el documento, el libro y lo que vuela se
+        // guardan en la misma transacción (ADR-0053 §1).
+        servicios.AddScoped<IRepositorioDeTransferencias, RepositorioDeTransferencias>();
 
         // INVENTARIO TIENE DOCUMENTOS, y aquí es donde lo dice. Organización no sabe qué módulos
         // los tienen: pregunta a los que se hayan inscrito, y un módulo que no se inscriba
@@ -139,6 +144,16 @@ public static class ModuloDeInventario
             "significan exactamente lo mismo: otra anulación legítima llegó primero. No hay " +
             "ningún otro desenlace posible, porque un `anula_a_id` repetido solo se escribe " +
             "anulando dos veces el mismo documento"));
+
+        // Y EL DE LA TRANSFERENCIA, por lo mismo y con el mismo argumento (ADR-0053 §5): anular
+        // también inserta el inverso y cambia el original.
+        servicios.Configure<IndicesQueDelatanUnaCarreraPerdida>(indices => indices.Declarar(
+            ConfiguracionDeTransferencia.IndiceDelInverso,
+            "anular una transferencia escribe DOS filas —inserta el inverso y cambia el estado del " +
+            "original—, como anular un ajuste, y el ORM decide cuál va antes. Quien pierde la " +
+            "carrera choca contra este índice o contra el testigo del original, y las dos cosas " +
+            "significan lo mismo: otra anulación legítima llegó primero. Un `anula_a_id` repetido " +
+            "solo se escribe anulando dos veces la misma transferencia"));
 
         // Y LA RESTRICCIÓN QUE GUARDA EL STOCK contesta con su regla, y no con un 500. Se declara
         // aquí por lo mismo que el índice: que un físico por debajo de cero sea «no hay bastante

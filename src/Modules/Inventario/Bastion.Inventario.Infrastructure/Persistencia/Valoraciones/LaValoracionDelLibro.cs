@@ -68,7 +68,7 @@ internal static class LaValoracionDelLibro
     /// </remarks>
     internal const string SqlQueLeeLoBloqueado =
         """
-        SELECT v.articulo_id, v.almacen_id, v.cantidad, v.valor, v.divisa, v.ultima_fecha
+        SELECT v.articulo_id, v.almacen_id, v.cantidad, v.valor, v.divisa, v.ultima_fecha, v.en_transito
         FROM inventario.valoraciones AS v
         JOIN unnest({1}::uuid[], {2}::uuid[]) AS c (articulo_id, almacen_id)
             ON c.articulo_id = v.articulo_id
@@ -86,6 +86,11 @@ internal static class LaValoracionDelLibro
     /// había quedado sin cantidad: con cantidad en otra divisa, el caso de uso ya contestó
     /// <c>ajuste-valoracion-en-otra-divisa</c>. La condición del <c>WHERE</c> lo vuelve a exigir,
     /// y una clave que no la cumpla no se toca, así que el recuento lo denuncia.
+    /// </para>
+    /// <para>
+    /// <b>Vacía es sin cantidad y sin nada en vuelo</b> desde el 2.11 (ADR-0053 §1). Lo que vuela
+    /// hacia una clave lleva el valor en la divisa de su documento, y cambiarle la divisa a la clave
+    /// dejaría ese valor con otra moneda al aterrizar.
     /// </para>
     /// <para>
     /// <b>La fecha no va hacia atrás</b> (ADR-0047 §3). Una clave cuyo último movimiento sea
@@ -116,7 +121,7 @@ internal static class LaValoracionDelLibro
         WHERE v.empresa_id = {0}
             AND v.articulo_id = d.articulo_id
             AND v.almacen_id = d.almacen_id
-            AND (v.divisa = {1} OR v.cantidad = 0)
+            AND (v.divisa = {1} OR (v.cantidad = 0 AND v.en_transito = 0))
             AND (v.ultima_fecha IS NULL OR v.ultima_fecha <= d.primera)
         """;
 
@@ -170,7 +175,8 @@ internal static class LaValoracionDelLibro
 
         return filas.ToDictionary(
             fila => new ClaveDeValoracion(fila.ArticuloId, fila.AlmacenId),
-            fila => new SaldoValorado(fila.Cantidad, Importe.De(fila.Valor, fila.Divisa), fila.UltimaFecha));
+            fila => new SaldoValorado(
+                fila.Cantidad, Importe.De(fila.Valor, fila.Divisa), fila.UltimaFecha, fila.EnTransito));
     }
 
     /// <summary>Suma a cada valoración lo que traen las filas del libro que se van a anotar.</summary>
@@ -227,8 +233,8 @@ internal static class LaValoracionDelLibro
         {
             throw new InvalidOperationException(
                 $"El documento mueve {claves} valoraciones y la sentencia ha sumado {sumadas}: alguna " +
-                "no se bloqueó antes, está en otra divisa con cantidad o se movió después de la fecha " +
-                "del documento (ADR-0046 §2, ADR-0047 §3).");
+                "no se bloqueó antes, está en otra divisa con cantidad o con algo en vuelo, o se movió " +
+                "después de la fecha del documento (ADR-0046 §2, ADR-0047 §3, ADR-0053 §1).");
         }
     }
 
@@ -262,4 +268,6 @@ internal sealed class FilaDeValoracion
     public string Divisa { get; init; } = string.Empty;
 
     public DateOnly? UltimaFecha { get; init; }
+
+    public decimal EnTransito { get; init; }
 }
