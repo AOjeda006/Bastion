@@ -76,6 +76,17 @@ public sealed class Existencia : IDeInquilino
     /// <summary>Lo comprometido. Cero hasta que el ítem 2.13 traiga las reservas.</summary>
     public decimal Reservado { get; private set; }
 
+    /// <summary>
+    /// Lo que vuela hacia esta fila, en la unidad base: las líneas de las transferencias enviadas y
+    /// todavía no recibidas que llegan aquí (ADR-0053 §1).
+    /// </summary>
+    /// <remarks>
+    /// <b>No es del libro, y por eso no está en el físico ni en el disponible.</b> Lo cuadra su propio
+    /// cuadre contra los documentos. Una fila con número de serie cuenta su tránsito como una unidad
+    /// más, porque la serie sigue estando en un solo sitio mientras viaja (§7).
+    /// </remarks>
+    public decimal EnTransito { get; private set; }
+
     /// <summary>Lo que se puede comprometer: <see cref="Fisico"/> menos <see cref="Reservado"/>.</summary>
     /// <remarks>
     /// <b>Lo calcula el motor y no esta clase</b>, con una columna generada. Una resta escrita aquí

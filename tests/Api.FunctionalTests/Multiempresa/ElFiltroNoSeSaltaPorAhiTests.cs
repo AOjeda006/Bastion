@@ -98,6 +98,11 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         ["Set<LineaDeAjuste>"] =
             "LineaDeAjuste no filtra: lo hace el ajuste del que cuelga, y se carga siempre con él",
 
+        // La del ítem 2.11, y el mismo argumento con la transferencia.
+        ["Set<LineaDeTransferencia>"] =
+            "LineaDeTransferencia no filtra: lo hace la transferencia de la que cuelga, y se carga " +
+            "siempre con ella",
+
         // La del ítem 2.4, y el mismo argumento con un dueño más: la fila del contador no filtra
         // -lo hace la serie de la que cuelga- y además NO LLEVA `empresa_id`, así que una consulta
         // que empezara por ella no tendría por dónde filtrar aunque quisiera. Que no exista ninguna

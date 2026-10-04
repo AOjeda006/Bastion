@@ -82,6 +82,12 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
             "No lleva empresa_id porque no hay ninguna consulta que pueda empezar por ella: se " +
             "llega siempre desde el documento, que sí la lleva",
 
+        // La del ítem 2.11, con el mismo argumento que la del ajuste y otro documento.
+        ["LineaDeTransferencia"] =
+            "es parte del agregado de la transferencia, que sí filtra; no tiene DbSet ni consulta " +
+            "propia. No lleva empresa_id porque no hay ninguna consulta que pueda empezar por ella: " +
+            "se llega siempre desde el documento, que sí la lleva",
+
         // La del ítem 2.4, y de la misma familia: es la fila del contador de una serie, y quien
         // filtra es la SERIE de la que cuelga. No tiene `DbSet` ni consulta propia, y la sentencia
         // que la escribe -la única que la escribe- comprueba la empresa sobre la fila de `series`

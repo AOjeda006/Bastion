@@ -22,6 +22,16 @@ internal sealed class ConfiguracionDeValoracion : IEntityTypeConfiguration<Valor
     /// <summary>Sin cantidad no hay valor: vaciar la clave se lleva todo el valor.</summary>
     internal const string SinCantidadNoHayValor = "ck_valoraciones_sin_cantidad_no_hay_valor";
 
+    /// <summary>Lo que vuela no baja de cero (ADR-0053 §1).</summary>
+    internal const string EnTransitoNoNegativo = "ck_valoraciones_en_transito_no_negativo";
+
+    /// <summary>El valor de lo que vuela no baja de cero.</summary>
+    internal const string ValorEnTransitoNoNegativo = "ck_valoraciones_valor_en_transito_no_negativo";
+
+    /// <summary>Sin nada en vuelo no hay valor en vuelo: la última recepción se lleva todo.</summary>
+    internal const string SinTransitoNoHayValorEnTransito =
+        "ck_valoraciones_sin_transito_no_hay_valor_en_transito";
+
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Valoracion> valoracion)
     {
@@ -39,6 +49,13 @@ internal sealed class ConfiguracionDeValoracion : IEntityTypeConfiguration<Valor
                 tabla.HasCheckConstraint(CantidadNoNegativa, "cantidad >= 0");
                 tabla.HasCheckConstraint(ValorNoNegativo, "valor >= 0");
                 tabla.HasCheckConstraint(SinCantidadNoHayValor, "cantidad > 0 OR valor = 0");
+
+                // LAS MISMAS TRES PARA LO QUE VUELA (ADR-0053 §1), con la misma razón para no
+                // traducirlas: la recepción y el inverso restan exactamente lo que el envío sumó.
+                tabla.HasCheckConstraint(EnTransitoNoNegativo, "en_transito >= 0");
+                tabla.HasCheckConstraint(ValorEnTransitoNoNegativo, "valor_en_transito >= 0");
+                tabla.HasCheckConstraint(
+                    SinTransitoNoHayValorEnTransito, "en_transito > 0 OR valor_en_transito = 0");
             });
 
         // NO SE AUDITA, por lo mismo que la existencia: la escriben sentencias crudas, que no pasan
@@ -66,13 +83,25 @@ internal sealed class ConfiguracionDeValoracion : IEntityTypeConfiguration<Valor
         // `CHECK`, porque un `CHECK` no ve el valor de antes de la fila.
         valoracion.Property(fila => fila.UltimaFecha);
 
+        // LO QUE VUELA HACIA ESTE ALMACÉN (ADR-0053 §1), fuera de la cantidad, que es la suma del
+        // libro. Su valor es el que salió del origen, y el precio medio del destino no lo mira.
+        valoracion.Property(fila => fila.EnTransito)
+            .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
+            .IsRequired();
+
         valoracion.Ignore(fila => fila.Valor);
+        valoracion.Ignore(fila => fila.ValorEnTransito);
         valoracion.Ignore(fila => fila.Saldo);
 
         // LA ESCALA DEL IMPORTE (R6): el valor es la suma de importes ya redondeados, así que no
         // pierde nada. El precio medio no se guarda: se deduce de esto.
         valoracion.Property<decimal>("ValorSinDivisa")
             .HasColumnName("valor")
+            .HasPrecision(18, Importe.Decimales)
+            .IsRequired();
+
+        valoracion.Property<decimal>("ValorEnTransitoSinDivisa")
+            .HasColumnName("valor_en_transito")
             .HasPrecision(18, Importe.Decimales)
             .IsRequired();
     }

@@ -50,8 +50,8 @@ internal static class LaValoracionDelLibro
     internal const string SqlQueCreaYBloquea =
         """
         INSERT INTO inventario.valoraciones AS v
-            (empresa_id, articulo_id, almacen_id, cantidad, valor, divisa)
-        SELECT {0}, c.articulo_id, c.almacen_id, 0, 0, {1}
+            (empresa_id, articulo_id, almacen_id, cantidad, valor, divisa, en_transito, valor_en_transito)
+        SELECT {0}, c.articulo_id, c.almacen_id, 0, 0, {1}, 0, 0
         FROM unnest({2}::uuid[], {3}::uuid[]) AS c (articulo_id, almacen_id)
         GROUP BY c.articulo_id, c.almacen_id
         ORDER BY c.articulo_id, c.almacen_id

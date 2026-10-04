@@ -498,8 +498,8 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         // Una fila viva de una clave que el libro no ha movido nunca.
         (await contexto.Database.ExecuteSqlRawAsync(
             "INSERT INTO inventario.existencias " +
-            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, reservado) " +
-            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0)",
+            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, reservado, en_transito) " +
+            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0, 0)",
             Guid.CreateVersion7(),
             caso.EmpresaId,
             caso.ArticuloId,
@@ -528,8 +528,8 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
         (await contexto.Database.ExecuteSqlRawAsync(
             "INSERT INTO inventario.existencias " +
-            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, reservado) " +
-            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0)",
+            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, reservado, en_transito) " +
+            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0, 0)",
             laCopia,
             caso.EmpresaId,
             caso.ArticuloId,

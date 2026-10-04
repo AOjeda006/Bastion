@@ -62,9 +62,23 @@ public sealed class Valoracion : IDeInquilino
     /// <summary>El valor total, que es la verdad: el precio medio se deduce de él.</summary>
     public Importe Valor => Importe.De(ValorSinDivisa, Divisa);
 
-    /// <summary>La cantidad, el valor y el último movimiento juntos, con el precio medio deducido.</summary>
-    public SaldoValorado Saldo => new(Cantidad, Valor, UltimaFecha);
+    /// <summary>
+    /// Lo que vuela hacia este almacén, en la unidad base: las transferencias enviadas y no recibidas
+    /// (ADR-0053 §1). Fuera de <see cref="Cantidad"/>, que es la suma del libro.
+    /// </summary>
+    public decimal EnTransito { get; private set; }
+
+    /// <summary>
+    /// El valor de lo que vuela, el que salió del origen. El precio medio del destino no lo mira.
+    /// </summary>
+    public Importe ValorEnTransito => Importe.De(ValorEnTransitoSinDivisa, Divisa);
+
+    /// <summary>La cantidad, el valor, el último movimiento y el tránsito juntos.</summary>
+    public SaldoValorado Saldo => new(Cantidad, Valor, UltimaFecha, EnTransito);
 
     /// <summary>La columna del valor, sin divisa: lo que EF Core lee y escribe.</summary>
     private decimal ValorSinDivisa { get; set; }
+
+    /// <summary>La columna del valor en tránsito, sin divisa.</summary>
+    private decimal ValorEnTransitoSinDivisa { get; set; }
 }

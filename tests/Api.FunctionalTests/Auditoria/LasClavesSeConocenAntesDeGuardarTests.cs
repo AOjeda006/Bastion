@@ -105,6 +105,12 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         "Tarifa.Version",
         "Tercero.Version",
         "TipoCambio.Version",
+
+        // La del ítem 2.11, el segundo documento, y lleva testigo por lo mismo que el ajuste con
+        // una transición más: enviar, recibir y anular leen y luego escriben. Recibir y anular la
+        // misma transferencia a la vez leerían las dos `Enviada`, y sin testigo las dos restarían
+        // el tránsito.
+        "Transferencia.Version",
         "Ubicacion.Version",
         "UnidadMedida.Version",
         "Usuario.Version",
@@ -119,7 +125,8 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     //
     // Las dos del ítem 2.3 amplían la lista con un motivo distinto del de los tres hijos del
     // tercero, y por eso llevan el suyo. `LineaDeAjuste` sí es de esa familia: cuelga del ajuste,
-    // no tiene ruta propia y lo que gobierna su edición es el testigo del documento.
+    // no tiene ruta propia y lo que gobierna su edición es el testigo del documento. Y
+    // `LineaDeTransferencia`, del 2.11, por lo mismo con la transferencia.
     // `MovimientoStock` no: no lleva testigo porque NO SE MODIFICA NUNCA, ni por una ruta ni por
     // ninguna otra vía —la tabla rechaza `UPDATE` en el motor—, y un testigo de concurrencia
     // sobre una fila que nadie puede escribir dos veces no protege de nada. Es el caso que este
@@ -131,6 +138,7 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         "Contacto",
         "CuentaBancaria",
         "LineaDeAjuste",
+        "LineaDeTransferencia",
         "MovimientoStock",
     ];
 

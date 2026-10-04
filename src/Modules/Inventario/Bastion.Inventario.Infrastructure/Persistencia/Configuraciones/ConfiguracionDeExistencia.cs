@@ -36,6 +36,9 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
     /// <summary>La restricción que impide el stock negativo, que el borde traduce por su nombre.</summary>
     internal const string FisicoNoNegativo = "ck_existencias_fisico_no_negativo";
 
+    /// <summary>Lo que vuela no baja de cero (ADR-0053 §1). No se traduce: si salta, es un defecto.</summary>
+    internal const string EnTransitoNoNegativo = "ck_existencias_en_transito_no_negativo";
+
     public void Configure(EntityTypeBuilder<Existencia> existencia)
     {
         ArgumentNullException.ThrowIfNull(existencia);
@@ -61,13 +64,19 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
         // defecto, y sale un `500`. Va entre las otras dos por orden alfabético y no cambia ningún
         // error, porque la fila nace a cero antes de sumarle nada. El día que un artículo necesite
         // las dos marcas, la migración borra este `CHECK`, que no toca la clave.
+        //
+        // LO QUE VUELA TAMPOCO BAJA DE CERO (ADR-0053 §1), y no se traduce: una recepción o un
+        // inverso restan lo que el envío sumó, y el testigo del documento impide que lo resten dos.
+        // Y UNA SERIE QUE VUELA SIGUE CONTANDO COMO SU UNIDAD (§7): el `CHECK` de la serie suma el
+        // tránsito al físico, así que la misma fila no puede tenerla en la estantería y en camino.
         existencia.ToTable(
             Tabla,
             tabla =>
             {
                 tabla.HasCheckConstraint(FisicoNoNegativo, "fisico >= 0");
+                tabla.HasCheckConstraint(EnTransitoNoNegativo, "en_transito >= 0");
                 tabla.HasCheckConstraint(
-                    NumeroDeSerieComoMuchoUna, "numero_de_serie_id IS NULL OR fisico <= 1");
+                    NumeroDeSerieComoMuchoUna, "numero_de_serie_id IS NULL OR fisico + en_transito <= 1");
                 tabla.HasCheckConstraint(
                     LoteONumeroDeSerie, ConfiguracionDeMovimientoStock.LoteONumeroDeSerie);
             });
@@ -116,6 +125,13 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
             .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
             .IsRequired();
 
+        // LO QUE VUELA HACIA ESTA FILA (ADR-0053 §1), sin valor por omisión por lo mismo que lo
+        // reservado. Fuera del disponible, que sigue siendo lo que hay en la estantería: lo que no
+        // ha llegado no se puede comprometer.
+        existencia.Property(fila => fila.EnTransito)
+            .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
+            .IsRequired();
+
         // EL DISPONIBLE LO CALCULA EL MOTOR, guardado y no al vuelo. Así vale igual para el ORM, para
         // una consulta cruda y para un informe, y no se puede escribir por error: PostgreSQL rechaza
         // un `INSERT` o un `UPDATE` que lo nombre.
@@ -151,9 +167,14 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
         // Se comprueba fila a fila y no al final de la sentencia, y por eso una serie sale una sola
         // vez por documento: moverla de una estantería a otra en el mismo `UPDATE` chocaría o no
         // según el orden en que el motor recorriera las filas.
+        //
+        // LA FILA QUE LA ESPERA TAMBIÉN CUENTA (ADR-0053 §7): mientras vuela, la serie está en la
+        // existencia del destino, y un ajuste que la diera de alta en otro sitio chocaría aquí. Por
+        // eso las patas van de restar a sumar: la salida del origen deja su fila a cero antes de que
+        // el tránsito entre en el índice.
         existencia.HasIndex(fila => new { fila.EmpresaId, fila.ArticuloId, fila.NumeroDeSerieId })
             .IsUnique()
-            .HasFilter("fisico > 0 AND numero_de_serie_id IS NOT NULL")
+            .HasFilter("(fisico > 0 OR en_transito > 0) AND numero_de_serie_id IS NOT NULL")
             .HasDatabaseName(NumeroDeSerieEnUnSitio);
     }
 }

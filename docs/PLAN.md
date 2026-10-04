@@ -8388,7 +8388,21 @@ el ADR-0048 §3. Sus mutaciones empiezan en la **181**.
    dos filas del glosario, con el tránsito. **Lo que se queda para el esquema** son las columnas del
    tránsito en la existencia y en la valoración: EF Core las mapea por convención, y sin su
    migración el modelo deja de coincidir.
-3. El esquema: las dos tablas, las tres columnas del tránsito y las dos expresiones de la serie.
+3. ~~El esquema: las dos tablas, las tres columnas del tránsito y las dos expresiones de la
+   serie.~~ Hecho en el tercer commit, con la migración `LaTransferencia`: las tablas
+   `transferencias` y `lineas_transferencia`, con sus cuatro `CHECK` (origen distinto del destino,
+   recepción no antes del envío, y las dos de la línea del ajuste), los índices de las dos fechas,
+   el del inverso y el de la serie; `en_transito` en la existencia y `en_transito` y
+   `valor_en_transito` en la valoración, con sus cuatro `CHECK`; y el índice y el `CHECK` de la
+   serie, que cuentan el tránsito. Las tres columnas entran con valor por omisión de cero y lo
+   pierden en la misma migración, como las de la valoración, así que **las dos sentencias que crean
+   la existencia y la valoración escriben el cero ellas mismas**, y también las cuatro inserciones a
+   mano de los casos de integración. La quinta no, y la puso roja la primera tanda de integración
+   (`La_migracion_rellena_la_fecha_con_el_maximo_del_libro_de_cada_clave`): inserta en una base
+   migrada hasta antes de la fecha, donde la columna todavía no existe. Entran con el esquema las listas que lo nombran: las ocho
+   `CHECK` en `LasMigracionesSobreTablasConFilasTests`, la línea en las tres de los hijos sin
+   filtro ni testigo, el testigo de la transferencia y sus dos fechas, que dejan el recuento de
+   `LasFechasDicenDeQueTipoSonTests` en **14**.
 4. La persistencia: las sentencias del tránsito y el orden de las patas.
 5. Los casos de uso y la superficie: abrir, enviar, recibir y anular, con sus permisos, sus `type`
    y sus textos.

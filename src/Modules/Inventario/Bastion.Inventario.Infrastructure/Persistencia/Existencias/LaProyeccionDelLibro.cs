@@ -69,8 +69,9 @@ internal static class LaProyeccionDelLibro
     internal const string SqlQueCreaYBloqueaLasVivas =
         """
         INSERT INTO inventario.existencias AS e
-            (id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, numero_de_serie_id, fisico, reservado)
-        SELECT c.id, {0}, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id, c.numero_de_serie_id, 0, 0
+            (id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, numero_de_serie_id, fisico, reservado,
+             en_transito)
+        SELECT c.id, {0}, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id, c.numero_de_serie_id, 0, 0, 0
         FROM unnest({1}::uuid[], {2}::uuid[], {3}::uuid[], {4}::uuid[], {5}::uuid[], {6}::uuid[])
             AS c (id, articulo_id, almacen_id, ubicacion_id, lote_id, numero_de_serie_id)
         GROUP BY c.id, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id, c.numero_de_serie_id

@@ -592,8 +592,9 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
 
         // Y una que sobra: unidades que el libro no ha movido nunca.
         (await contexto.Database.ExecuteSqlRawAsync(
-            "INSERT INTO inventario.valoraciones (empresa_id, articulo_id, almacen_id, cantidad, valor, divisa) " +
-            "VALUES ({0}, {1}, {2}, 3, 0, 'EUR')",
+            "INSERT INTO inventario.valoraciones " +
+            "(empresa_id, articulo_id, almacen_id, cantidad, valor, divisa, en_transito, valor_en_transito) " +
+            "VALUES ({0}, {1}, {2}, 3, 0, 'EUR', 0, 0)",
             empresaId,
             queSobra,
             almacenId)).ShouldBe(1);
