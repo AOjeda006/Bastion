@@ -58,6 +58,13 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// de la que no hay nada más en la base. No es un recuento global disfrazado: es el universo
 /// entero de este caso, y ningún otro caso del carril puede meterle ni quitarle una fila.
 /// </para>
+/// <para>
+/// <b>Un par de casos por cada tabla de documentos</b>, desde el ítem 2.11. La transferencia
+/// tiene su propio enlace del par —<c>anula_a_id</c>, con su clave ajena a la misma tabla y su
+/// índice único filtrado, <c>ix_transferencias_anula_a_id</c>—, y su propio nombre para el estado:
+/// <c>Anulada</c>, y no <c>Anulado</c>. Un barrido escrito para los ajustes no miraría ninguna
+/// transferencia, así que cada tabla lleva el suyo, con el mismo arnés.
+/// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
 [Collection(ColeccionDeLaApi.Nombre)]
@@ -239,6 +246,169 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
             .ShouldBeEmpty();
     }
 
+    /// <summary>La ida, para la transferencia: todo inverso compensa a una transferencia anulada.</summary>
+    /// <remarks>
+    /// La misma costura que en el ajuste: el inverso se confirma antes de que el original pase a
+    /// <c>Anulada</c>, y una anulación partida por la mitad dejaría una enviada que sigue contando
+    /// su tránsito con un inverso que ya lo ha devuelto al origen.
+    /// </remarks>
+    [Fact]
+    public async Task Ninguna_transferencia_inversa_compensa_a_una_que_no_esta_anulada()
+    {
+        UnaTransferenciaAnulada original = await UnaTransferenciaAnuladaAsync();
+
+        long mirados = await ElLibro.EscalarAsync<long>(
+            postgres,
+            Consulta(
+                "SELECT count(*) FROM inventario.transferencias " +
+                "WHERE empresa_id = '{0}' AND anula_a_id IS NOT NULL",
+                original.EmpresaId));
+
+        mirados.ShouldBe(
+            1,
+            "sin ninguna transferencia inversa que mirar, «todas compensan a una anulada» sale " +
+            "verde por no haber mirado (ADR-0020)");
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(original.EmpresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
+
+        // El arnés: el original vuelve a `Enviada`, el estado que tenía antes de anularse, y su
+        // inverso se queda compensando a una transferencia viva.
+        await EjecutarAsync(
+            contexto,
+            transaccion,
+            Consulta(
+                "UPDATE inventario.transferencias SET estado = 'Enviada' WHERE id = '{0}'",
+                original.TransferenciaId));
+
+        IReadOnlyList<string> sueltos = await LeerAsync(
+            contexto, transaccion, TransferenciasInversasSinAnulada(original.EmpresaId));
+
+        sueltos.Count.ShouldBe(
+            1,
+            "el barrido tenía que ver el inverso que se quedó compensando a una transferencia viva: " +
+            "si no lo ve, su verde de abajo no significa nada");
+
+        await transaccion.RollbackAsync();
+
+        (await ElLibro.TextosAsync(postgres, TransferenciasInversasSinAnulada(original.EmpresaId)))
+            .ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// La vuelta, para la transferencia: toda transferencia anulada tiene exactamente un inverso
+    /// apuntándole.
+    /// </summary>
+    /// <remarks>
+    /// <b>El mismo arnés doble que en el ajuste</b>: el segundo inverso choca contra
+    /// <c>ix_transferencias_anula_a_id</c>, que es el nombre que traduce el borde; sin el índice, el
+    /// barrido lo ve; y una anulada sin inverso, que el índice no puede ver, la ve también.
+    /// </remarks>
+    [Fact]
+    public async Task Ninguna_transferencia_anulada_se_queda_sin_exactamente_un_inverso()
+    {
+        UnaTransferenciaAnulada original = await UnaTransferenciaAnuladaAsync();
+
+        long mirados = await ElLibro.EscalarAsync<long>(
+            postgres,
+            Consulta(
+                "SELECT count(*) FROM inventario.transferencias " +
+                "WHERE empresa_id = '{0}' AND estado = 'Anulada'",
+                original.EmpresaId));
+
+        mirados.ShouldBe(
+            1,
+            "sin ninguna transferencia anulada que mirar, «todas tienen su inverso» sale verde por " +
+            "no haber mirado (ADR-0020)");
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(original.EmpresaId);
+
+        // PRIMERA AVERÍA: un segundo inverso de la misma transferencia, recibido como nace el de
+        // verdad. Sin número, que el índice de `(serie_id, numero)` no mira.
+        string segundoInverso = Consulta(
+            """
+            INSERT INTO inventario.transferencias
+                (id, empresa_id, serie_id, almacen_origen_id, almacen_destino_id, fecha_de_envio,
+                 fecha_de_recepcion, divisa, creado_en, modificado_en, estado, anula_a_id)
+            VALUES ('{1}', '{0}', '{1}', '{2}', '{3}', current_date, current_date, 'EUR', now(), now(),
+                    'Recibida', '{4}')
+            """,
+            original.EmpresaId,
+            Guid.CreateVersion7(),
+            original.Claves.AlmacenOrigenId,
+            original.Claves.AlmacenDestinoId,
+            original.TransferenciaId);
+
+        PostgresException rechazo = await ElLibro.ElMotorRechazaAsync(postgres, segundoInverso);
+
+        rechazo.SqlState.ShouldBe(
+            InversoDuplicado,
+            "un segundo inverso de la misma transferencia tiene que chocar contra la unicidad");
+        rechazo.ConstraintName.ShouldBe("ix_transferencias_anula_a_id");
+
+        await using (IDbContextTransaction dosInversos =
+            await contexto.Database.BeginTransactionAsync())
+        {
+            await EjecutarAsync(
+                contexto, dosInversos, "DROP INDEX inventario.ix_transferencias_anula_a_id");
+
+            await EjecutarAsync(contexto, dosInversos, segundoInverso);
+
+            IReadOnlyList<string> mal = await LeerAsync(
+                contexto, dosInversos, TransferenciasAnuladasSinUnSoloInverso(original.EmpresaId));
+
+            mal.ShouldBe(
+                [original.TransferenciaId.ToString()],
+                "el barrido tenía que ver la transferencia con DOS inversos: sin esto, «al menos " +
+                "uno» y «exactamente uno» darían el mismo verde");
+
+            await dosInversos.RollbackAsync();
+        }
+
+        (await ElLibro.EscalarAsync<long>(
+            postgres,
+            "SELECT count(*) FROM pg_indexes WHERE schemaname = 'inventario' " +
+            "AND indexname = 'ix_transferencias_anula_a_id'"))
+            .ShouldBe(1, "el DROP iba dentro de una transacción que se deshace");
+
+        // SEGUNDA AVERÍA: una anulada sin nadie que le apunte, que el dominio no sabe construir:
+        // `Anular` exige el inverso por parámetro, ya confirmado.
+        await using (IDbContextTransaction sinInverso =
+            await contexto.Database.BeginTransactionAsync())
+        {
+            var anuladaAPelo = Guid.CreateVersion7();
+
+            await EjecutarAsync(
+                contexto,
+                sinInverso,
+                Consulta(
+                    """
+                    INSERT INTO inventario.transferencias
+                        (id, empresa_id, serie_id, almacen_origen_id, almacen_destino_id,
+                         fecha_de_envio, divisa, creado_en, modificado_en, estado)
+                    VALUES ('{1}', '{0}', '{1}', '{2}', '{3}', current_date, 'EUR', now(), now(),
+                            'Anulada')
+                    """,
+                    original.EmpresaId,
+                    anuladaAPelo,
+                    original.Claves.AlmacenOrigenId,
+                    original.Claves.AlmacenDestinoId));
+
+            IReadOnlyList<string> mal = await LeerAsync(
+                contexto, sinInverso, TransferenciasAnuladasSinUnSoloInverso(original.EmpresaId));
+
+            mal.ShouldBe(
+                [anuladaAPelo.ToString()],
+                "el barrido tenía que ver la anulada que no tiene quien la compense");
+
+            await sinInverso.RollbackAsync();
+        }
+
+        (await ElLibro.TextosAsync(postgres, TransferenciasAnuladasSinUnSoloInverso(original.EmpresaId)))
+            .ShouldBeEmpty();
+    }
+
     /// <summary>
     /// Un ajuste confirmado y anulado con su inverso, por el camino de producción, en una empresa
     /// recién inventada.
@@ -256,6 +426,34 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
         return original;
     }
 
+    /// <summary>
+    /// Una transferencia enviada y anulada con su inverso, por el camino de producción, en una
+    /// empresa recién inventada.
+    /// </summary>
+    /// <returns>La transferencia original, con sus claves.</returns>
+    private async Task<UnaTransferenciaAnulada> UnaTransferenciaAnuladaAsync()
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var empresaId = Guid.CreateVersion7();
+        var claves = ClavesDeUnaTransferencia.Inventadas();
+
+        await ElLibro.EntrarEnElOrigenAsync(postgres, empresaId, claves, 5m, 2m, hoy);
+
+        Guid transferenciaId = await ElLibro.EnviarSinLaApiAsync(postgres, empresaId, claves, 3m, hoy);
+
+        await ElLibro.AnularSinLaApiAsync(postgres, empresaId, transferenciaId, hoy);
+
+        return new UnaTransferenciaAnulada(empresaId, transferenciaId, claves);
+    }
+
+    /// <summary>El SQLSTATE de una violación de unicidad, <c>23505</c>.</summary>
+    /// <remarks>
+    /// Escrito y no calculado, como el <c>23001</c> del libro: el catálogo de códigos de
+    /// PostgreSQL es contrato suyo. Es el mismo que <c>ManejadorDeCarreraPerdidaEnLaBase</c>
+    /// reconoce para traducir la carrera perdida a <c>412</c>.
+    /// </remarks>
+    private const string InversoDuplicado = "23505";
+
     /// <summary>Inversos que compensan a un documento que no está anulado, o que no está.</summary>
     /// <remarks>
     /// Va con <c>LEFT JOIN</c> y no con el interno, aunque la clave ajena garantice la fila: con
@@ -265,14 +463,6 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
     /// </remarks>
     /// <param name="empresaId">La empresa del caso, que es su universo entero.</param>
     /// <returns>La consulta.</returns>
-    /// <summary>El SQLSTATE de una violación de unicidad, <c>23505</c>.</summary>
-    /// <remarks>
-    /// Escrito y no calculado, como el <c>23001</c> del libro: el catálogo de códigos de
-    /// PostgreSQL es contrato suyo. Es el mismo que <c>ManejadorDeCarreraPerdidaEnLaBase</c>
-    /// reconoce para traducir la carrera perdida a <c>412</c>.
-    /// </remarks>
-    private const string InversoDuplicado = "23505";
-
     private static string InversosSinAnulado(Guid empresaId) => Consulta(
         """
         SELECT inverso.id::text
@@ -294,6 +484,35 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
         WHERE original.empresa_id = '{0}'
           AND original.estado = 'Anulado'
           AND (SELECT count(*) FROM inventario.ajustes AS inverso
+               WHERE inverso.anula_a_id = original.id) <> 1
+        """,
+        empresaId);
+
+    /// <summary>Transferencias inversas que compensan a una que no está anulada, o que no está.</summary>
+    /// <remarks>Con <c>LEFT JOIN</c>, por lo mismo que en el ajuste.</remarks>
+    /// <param name="empresaId">La empresa del caso, que es su universo entero.</param>
+    /// <returns>La consulta.</returns>
+    private static string TransferenciasInversasSinAnulada(Guid empresaId) => Consulta(
+        """
+        SELECT inverso.id::text
+        FROM inventario.transferencias AS inverso
+        LEFT JOIN inventario.transferencias AS original ON original.id = inverso.anula_a_id
+        WHERE inverso.empresa_id = '{0}'
+          AND inverso.anula_a_id IS NOT NULL
+          AND (original.id IS NULL OR original.estado <> 'Anulada')
+        """,
+        empresaId);
+
+    /// <summary>Transferencias anuladas a las que no apunta exactamente un inverso.</summary>
+    /// <param name="empresaId">La empresa del caso, que es su universo entero.</param>
+    /// <returns>La consulta.</returns>
+    private static string TransferenciasAnuladasSinUnSoloInverso(Guid empresaId) => Consulta(
+        """
+        SELECT original.id::text
+        FROM inventario.transferencias AS original
+        WHERE original.empresa_id = '{0}'
+          AND original.estado = 'Anulada'
+          AND (SELECT count(*) FROM inventario.transferencias AS inverso
                WHERE inverso.anula_a_id = original.id) <> 1
         """,
         empresaId);
@@ -334,3 +553,12 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
         await orden.ExecuteNonQueryAsync();
     }
 }
+
+/// <summary>Una transferencia anulada sin la API, con lo que hace falta para ir a buscarla.</summary>
+/// <param name="EmpresaId">La empresa inventada del caso (R8).</param>
+/// <param name="TransferenciaId">La original, ya anulada.</param>
+/// <param name="Claves">Sus dos almacenes, sus huecos y su artículo.</param>
+internal sealed record UnaTransferenciaAnulada(
+    Guid EmpresaId,
+    Guid TransferenciaId,
+    ClavesDeUnaTransferencia Claves);

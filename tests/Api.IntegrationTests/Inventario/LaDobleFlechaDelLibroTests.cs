@@ -32,11 +32,17 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// </para>
 /// <para>
 /// <b>La fila rota se escribe a mano, y eso es parte de lo que se afirma.</b> El dominio no sabe
-/// producir ninguna de las dos: un movimiento nace únicamente de <c>Ajuste.Confirmar</c>, que le
-/// pone el documento del que sale, y un ajuste sin líneas no se confirma —lanza—. Que haya que
-/// bajar a SQL crudo para fabricar el defecto <b>es</b> la evidencia de que el camino de
-/// producción no lo produce; y que el barrido lo vea es la evidencia de que serviría si alguien
-/// abriera otro camino.
+/// producir ninguna de las dos: un movimiento nace únicamente de confirmar un documento —el ajuste,
+/// o el envío, la recepción y el inverso de la transferencia—, que le pone el documento del que
+/// sale, y un documento sin líneas no se confirma —lanza—. Que haya que bajar a SQL crudo para
+/// fabricar el defecto <b>es</b> la evidencia de que el camino de producción no lo produce; y que
+/// el barrido lo vea es la evidencia de que serviría si alguien abriera otro camino.
+/// </para>
+/// <para>
+/// <b>Un par de casos por cada tabla de documentos</b>, desde el ítem 2.11: el tipo de la flecha
+/// dice a qué tabla mira, y un barrido que solo uniera con <c>ajustes</c> daría por huérfana toda
+/// fila de una transferencia, o no la miraría nunca si filtrara por el tipo. Cada par filtra por el
+/// suyo.
 /// </para>
 /// <para>
 /// <b>Los barridos van acotados a la empresa del caso</b>, que es una empresa recién inventada y
@@ -199,8 +205,160 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
         despues.ShouldBeEmpty();
     }
 
+    /// <summary>La ida, para la transferencia: de toda fila suya se llega a una transferencia que existe.</summary>
+    [Fact]
+    public async Task Ninguna_fila_del_libro_apunta_a_una_transferencia_que_no_existe()
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var empresaId = Guid.CreateVersion7();
+        var claves = ClavesDeUnaTransferencia.Inventadas();
+
+        await ElLibro.EntrarEnElOrigenAsync(postgres, empresaId, claves, 5m, 2m, hoy);
+        await ElLibro.EnviarSinLaApiAsync(postgres, empresaId, claves, 3m, hoy);
+
+        long miradas = await ElLibro.EscalarAsync<long>(
+            postgres,
+            Consulta(
+                "SELECT count(*) FROM inventario.movimiento_stock " +
+                "WHERE empresa_id = '{0}' AND documento_origen_tipo = 'Transferencia'",
+                empresaId));
+
+        miradas.ShouldBe(
+            1,
+            "sin filas de una transferencia que mirar, «ninguna apunta a una que no existe» sale " +
+            "verde por no haber mirado (ADR-0020)");
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
+
+        // El arnés: una fila de transferencia con un documento inventado, en la transacción que se
+        // deshace, por lo mismo que en el ajuste.
+        var documentoQueNoExiste = Guid.CreateVersion7();
+
+        contexto.Movimientos.Add(MovimientoStock.Registrar(
+            empresaId,
+            hoy,
+            claves.AlmacenDestinoId,
+            claves.UbicacionDestinoId,
+            claves.ArticuloId,
+            null,
+            null,
+            1m,
+            claves.UnidadId,
+            1m,
+            "EUR",
+            Importe.De(1m, "EUR"),
+            Importe.De(1m, "EUR"),
+            PrecioUnitario.De(1m, "EUR"),
+            TipoDeDocumentoOrigen.Transferencia,
+            documentoQueNoExiste,
+            DateTimeOffset.UtcNow));
+
+        await contexto.SaveChangesAsync();
+
+        IReadOnlyList<string> huerfanas = await LeerAsync(
+            contexto, transaccion, Consulta(TransferenciasHuerfanas, empresaId));
+
+        huerfanas.ShouldBe(
+            [documentoQueNoExiste.ToString()],
+            "el barrido tenía que ver la fila huérfana que acaba de escribirse, y solo esa: la del " +
+            "envío apunta a su transferencia");
+
+        await transaccion.RollbackAsync();
+
+        (await ElLibro.TextosAsync(postgres, Consulta(TransferenciasHuerfanas, empresaId))).ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// La vuelta, para la transferencia: toda transferencia que ha salido de borrador dejó al menos
+    /// una fila del libro.
+    /// </summary>
+    /// <remarks>
+    /// <b>«Ha salido de borrador», y no «enviada»</b>: una recibida y una anulada también se
+    /// enviaron, y el inverso nace recibido. Todas movieron el origen; ninguna puede estar sin filas.
+    /// </remarks>
+    [Fact]
+    public async Task Ninguna_transferencia_fuera_de_borrador_se_queda_sin_una_sola_fila_del_libro()
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var empresaId = Guid.CreateVersion7();
+        var claves = ClavesDeUnaTransferencia.Inventadas();
+
+        await ElLibro.EntrarEnElOrigenAsync(postgres, empresaId, claves, 5m, 2m, hoy);
+        await ElLibro.EnviarSinLaApiAsync(postgres, empresaId, claves, 3m, hoy);
+
+        long mirados = await ElLibro.EscalarAsync<long>(
+            postgres,
+            Consulta(
+                "SELECT count(*) FROM inventario.transferencias " +
+                "WHERE empresa_id = '{0}' AND estado <> 'Borrador'",
+                empresaId));
+
+        mirados.ShouldBe(
+            1,
+            "sin ninguna transferencia enviada que mirar, «todas tienen su fila» sale verde por no " +
+            "haber mirado (ADR-0020)");
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
+
+        // El arnés: una transferencia enviada sin líneas, que el dominio no sabe construir —enviar
+        // un documento sin líneas lanza—, escrita a mano.
+        var enviadaSinFilas = Guid.CreateVersion7();
+
+        await EjecutarAsync(
+            contexto,
+            transaccion,
+            Consulta(
+                """
+                INSERT INTO inventario.transferencias
+                    (id, empresa_id, serie_id, almacen_origen_id, almacen_destino_id, fecha_de_envio,
+                     divisa, creado_en, modificado_en, estado)
+                VALUES ('{1}', '{0}', '{1}', '{2}', '{3}', current_date, 'EUR', now(), now(), 'Enviada')
+                """,
+                empresaId,
+                enviadaSinFilas,
+                claves.AlmacenOrigenId,
+                claves.AlmacenDestinoId));
+
+        IReadOnlyList<string> sinFilas = await LeerAsync(
+            contexto, transaccion, Consulta(TransferenciasSinMovimientos, empresaId));
+
+        sinFilas.ShouldBe(
+            [enviadaSinFilas.ToString()],
+            "el barrido tenía que ver la transferencia enviada que no movió el libro");
+
+        await transaccion.RollbackAsync();
+
+        (await ElLibro.TextosAsync(postgres, Consulta(TransferenciasSinMovimientos, empresaId))).ShouldBeEmpty();
+    }
+
     private static string Consulta(string plantilla, params object[] valores) =>
         string.Format(CultureInfo.InvariantCulture, plantilla, valores);
+
+    private const string TransferenciasHuerfanas =
+        """
+        SELECT fila.documento_origen_id::text
+        FROM inventario.movimiento_stock AS fila
+        LEFT JOIN inventario.transferencias AS documento ON documento.id = fila.documento_origen_id
+        WHERE fila.empresa_id = '{0}'
+          AND fila.documento_origen_tipo = 'Transferencia'
+          AND documento.id IS NULL
+        """;
+
+    private const string TransferenciasSinMovimientos =
+        """
+        SELECT documento.id::text
+        FROM inventario.transferencias AS documento
+        WHERE documento.empresa_id = '{0}'
+          AND documento.estado <> 'Borrador'
+          AND NOT EXISTS (
+              SELECT 1 FROM inventario.movimiento_stock AS fila
+              WHERE fila.documento_origen_tipo = 'Transferencia'
+                AND fila.documento_origen_id = documento.id)
+        """;
 
     private static Task<IReadOnlyList<string>> HuerfanasAsync(
         InventarioDbContext contexto,

@@ -3,9 +3,11 @@ using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Eventos;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
@@ -28,6 +30,35 @@ internal sealed record UnAjusteConfirmado(
     Guid AlmacenId,
     DateOnly FechaDeOperacion,
     IReadOnlyList<MovimientoStock> Movimientos);
+
+/// <summary>
+/// Las claves de una transferencia sin la API: dos almacenes con un hueco cada uno, un artículo y su
+/// unidad.
+/// </summary>
+/// <param name="AlmacenOrigenId">De dónde sale.</param>
+/// <param name="UbicacionOrigenId">De qué hueco.</param>
+/// <param name="AlmacenDestinoId">A dónde va.</param>
+/// <param name="UbicacionDestinoId">A qué hueco.</param>
+/// <param name="ArticuloId">Qué.</param>
+/// <param name="UnidadId">En qué unidad, que es la base.</param>
+internal sealed record ClavesDeUnaTransferencia(
+    Guid AlmacenOrigenId,
+    Guid UbicacionOrigenId,
+    Guid AlmacenDestinoId,
+    Guid UbicacionDestinoId,
+    Guid ArticuloId,
+    Guid UnidadId)
+{
+    /// <summary>Todas inventadas: ninguna clave ajena cruza de esquema, y la tabla no las mira.</summary>
+    /// <returns>Seis identificadores nuevos.</returns>
+    internal static ClavesDeUnaTransferencia Inventadas() => new(
+        Guid.CreateVersion7(),
+        Guid.CreateVersion7(),
+        Guid.CreateVersion7(),
+        Guid.CreateVersion7(),
+        Guid.CreateVersion7(),
+        Guid.CreateVersion7());
+}
 
 /// <summary>
 /// La puerta al libro de movimientos para los casos de integración: escribe con el dominio y
@@ -262,6 +293,199 @@ internal static class ElLibro
 
         return new UnAjusteConfirmado(
             original.EmpresaId, inverso.Id, inverso.AlmacenId, fechaDelInverso, movimientos);
+    }
+
+    /// <summary>Mete unidades en el origen de una transferencia sin la API, con un ajuste confirmado.</summary>
+    /// <remarks>
+    /// Por el camino de producción, como <see cref="ConfirmarUnAjusteAsync"/>, pero con las claves
+    /// que se le pasen: los casos que lo usan necesitan que la entrada y la transferencia hablen del
+    /// mismo almacén, del mismo hueco y del mismo artículo. Una serie inventada por documento, y su
+    /// primer número.
+    /// </remarks>
+    /// <param name="postgres">El contenedor con las migraciones puestas.</param>
+    /// <param name="empresaId">La empresa, inventada o no (R8).</param>
+    /// <param name="claves">Dónde entra: el almacén y el hueco del origen.</param>
+    /// <param name="cantidad">Cuánto, en unidad base.</param>
+    /// <param name="coste">El coste unitario.</param>
+    /// <param name="fecha">El día de la entrada.</param>
+    /// <returns>Una tarea que acaba con la entrada confirmada.</returns>
+    internal static async Task EntrarEnElOrigenAsync(
+        PostgresConTodosLosModulos postgres,
+        Guid empresaId,
+        ClavesDeUnaTransferencia claves,
+        decimal cantidad,
+        decimal coste,
+        DateOnly fecha)
+    {
+        ArgumentNullException.ThrowIfNull(claves);
+
+        DateTimeOffset momento = DateTimeOffset.UtcNow;
+
+        var ajuste = Ajuste.Abrir(
+            empresaId, Guid.CreateVersion7(), claves.AlmacenOrigenId, fecha, "Existencias que transferir", "EUR", momento);
+
+        ajuste.AnadirLinea(
+            claves.UbicacionOrigenId, claves.ArticuloId, cantidad, claves.UnidadId, 1m, coste, momento);
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
+
+        RepositorioDeAjustes repositorio = new(contexto, new InquilinoFijo(empresaId));
+
+        IReadOnlyList<MovimientoStock> movimientos = await ConfirmarBajoCerrojoAsync(
+            repositorio,
+            ajuste,
+            1,
+            new AjusteConfirmado(ajuste.Id, empresaId, claves.AlmacenOrigenId, fecha, 1),
+            momento);
+
+        repositorio.Agregar(ajuste);
+        await repositorio.AnotarEnElLibroAsync(movimientos, CancellationToken.None);
+
+        await new UnidadDeTrabajoDeInventario(contexto).ConfirmarAsync(CancellationToken.None);
+        await transaccion.CommitAsync();
+    }
+
+    /// <summary>Envía una transferencia de una línea sin la API, como lo hace el caso de uso.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Las dos puntas bajo cerrojo, la valoración del origen y el repositorio de verdad</b>: el
+    /// agregado decide, <c>MoverAsync</c> guarda el documento y mueve en el orden del ADR-0053 §7.
+    /// Lo que no pasa por aquí es lo que el caso de uso pregunta fuera del módulo de Inventario
+    /// —el ejercicio, la serie, la marca—, porque las claves son inventadas.
+    /// </para>
+    /// <para>
+    /// <b>El número es el primero de una serie inventada</b>, por lo mismo que en
+    /// <see cref="ConfirmarUnAjusteAsync"/>.
+    /// </para>
+    /// </remarks>
+    /// <param name="postgres">El contenedor con las migraciones puestas.</param>
+    /// <param name="empresaId">La empresa, inventada o no (R8).</param>
+    /// <param name="claves">De dónde sale, a dónde va y qué.</param>
+    /// <param name="cantidad">Cuánto, en unidad base.</param>
+    /// <param name="fecha">El día del envío.</param>
+    /// <returns>El identificador de la transferencia, ya enviada.</returns>
+    internal static async Task<Guid> EnviarSinLaApiAsync(
+        PostgresConTodosLosModulos postgres,
+        Guid empresaId,
+        ClavesDeUnaTransferencia claves,
+        decimal cantidad,
+        DateOnly fecha)
+    {
+        ArgumentNullException.ThrowIfNull(claves);
+
+        DateTimeOffset momento = DateTimeOffset.UtcNow;
+
+        var transferencia = Transferencia.Abrir(
+            empresaId, Guid.CreateVersion7(), claves.AlmacenOrigenId, claves.AlmacenDestinoId, fecha, "EUR", momento);
+
+        transferencia.AnadirLinea(
+            claves.UbicacionOrigenId,
+            claves.UbicacionDestinoId,
+            claves.ArticuloId,
+            cantidad,
+            claves.UnidadId,
+            1m,
+            momento);
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
+
+        RepositorioDeTransferencias repositorio = new(contexto, new InquilinoFijo(empresaId));
+
+        IReadOnlyList<LineaAValorar> lineas = transferencia.LineasAValorarEnElOrigen();
+
+        IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos = await repositorio.BloquearLasValoracionesAsync(
+            [new(claves.ArticuloId, claves.AlmacenOrigenId), new(claves.ArticuloId, claves.AlmacenDestinoId)],
+            "EUR",
+            CancellationToken.None);
+
+        LoQueMueveLaTransferencia movido = transferencia.Enviar(
+            1,
+            new TransferenciaEnviada(
+                transferencia.Id, empresaId, claves.AlmacenOrigenId, claves.AlmacenDestinoId, fecha, 1),
+            new ElPrecioMedioPonderado().Valorar(saldos, lineas, "EUR", fecha),
+            LotesYSeriesResueltos.Ninguno,
+            momento);
+
+        repositorio.Agregar(transferencia);
+        await repositorio.MoverAsync(movido, CancellationToken.None);
+
+        await new UnidadDeTrabajoDeInventario(contexto).ConfirmarAsync(CancellationToken.None);
+        await transaccion.CommitAsync();
+
+        return transferencia.Id;
+    }
+
+    /// <summary>Anula sin la API una transferencia enviada, como lo hace el caso de uso.</summary>
+    /// <remarks>
+    /// <b>Las dos puntas bajo cerrojo y el agregado decide</b>, como en
+    /// <see cref="EnviarSinLaApiAsync"/>: el inverso nace recibido y devuelve al origen lo que salió,
+    /// y el original pasa a anulado. El número del inverso es el segundo de la serie inventada del
+    /// original, por lo mismo que en <see cref="AnularUnAjusteAsync"/>.
+    /// </remarks>
+    /// <param name="postgres">El contenedor con las migraciones puestas.</param>
+    /// <param name="empresaId">La empresa de la transferencia (R8).</param>
+    /// <param name="transferenciaId">La transferencia enviada.</param>
+    /// <param name="hoy">El día del inverso, que no puede ser anterior al envío.</param>
+    /// <returns>El identificador del inverso.</returns>
+    internal static async Task<Guid> AnularSinLaApiAsync(
+        PostgresConTodosLosModulos postgres,
+        Guid empresaId,
+        Guid transferenciaId,
+        DateOnly hoy)
+    {
+        const long SegundoNumeroDeEsaSerie = 2;
+
+        DateTimeOffset momento = DateTimeOffset.UtcNow;
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
+
+        RepositorioDeTransferencias repositorio = new(contexto, new InquilinoFijo(empresaId));
+
+        Transferencia original = await repositorio.ObtenerAsync(transferenciaId, CancellationToken.None)
+            ?? throw new InvalidOperationException("La transferencia que se iba a anular no está.");
+
+        Transferencia inverso = original.CrearInverso(hoy, "Anulación del carril", momento);
+
+        IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos = await repositorio.BloquearLasValoracionesAsync(
+            [
+                .. inverso.Lineas
+                    .SelectMany(linea => (ClaveDeValoracion[])
+                    [
+                        new(linea.ArticuloId, inverso.AlmacenOrigenId),
+                        new(linea.ArticuloId, inverso.AlmacenDestinoId),
+                    ])
+                    .Distinct(),
+            ],
+            inverso.Divisa,
+            CancellationToken.None);
+
+        IReadOnlyList<LineaValorada> enElOrigen = new ElPrecioMedioPonderado().Valorar(
+            saldos, inverso.LineasAValorarEnElOrigen(), inverso.Divisa, hoy);
+
+        LoQueMueveLaTransferencia movido = inverso.ConfirmarComoInverso(
+            original,
+            SegundoNumeroDeEsaSerie,
+            new TransferenciaRecibida(inverso.Id, empresaId, inverso.AlmacenDestinoId, hoy, inverso.Lineas.Count),
+            null,
+            enElOrigen,
+            LotesYSeriesResueltos.Ninguno,
+            momento);
+
+        original.Anular(inverso, new TransferenciaAnulada(original.Id, empresaId));
+
+        repositorio.Agregar(inverso);
+        await repositorio.MoverAsync(movido, CancellationToken.None);
+
+        await new UnidadDeTrabajoDeInventario(contexto).ConfirmarAsync(CancellationToken.None);
+        await transaccion.CommitAsync();
+
+        return inverso.Id;
     }
 
     /// <summary>Un escalar de la base, sin EF Core por medio.</summary>

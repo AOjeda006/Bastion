@@ -7,7 +7,9 @@ using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
 using Bastion.Inventario.Application.Ajustes;
+using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
@@ -21,9 +23,16 @@ using Npgsql;
 namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
-/// Los cuatro casos de uso del ajuste con sus adaptadores REALES y los contextos que necesitan.
+/// Los cuatro casos de uso del ajuste y los cuatro de la transferencia, con sus adaptadores REALES y
+/// los contextos que necesitan.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>La transferencia entró en el ítem 2.11</b>, por lo mismo que el ajuste: su alta no tiene borde,
+/// y las carreras necesitan parar una operación a medias, cosa que una petición HTTP no deja hacer.
+/// Comparte con el ajuste el contexto, la unidad de trabajo, el numerador y los puertos, como en el
+/// contenedor de la API.
+/// </para>
 /// <para>
 /// <b>Vive en su propio fichero desde el ítem 2.4</b>, cuando dejó de tener un solo cliente: lo
 /// usan el caso del almacén bloqueado y el de la serie. Se cablea a mano y no se pide al
@@ -80,8 +89,14 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
 
         RepositorioDeAjustes ajustes = new(_inventario, new InquilinoFijo(empresaId));
         _ajustes = ajustes;
+        RepositorioDeTransferencias transferencias = new(_inventario, new InquilinoFijo(empresaId));
         UnidadDeTrabajoDeInventario unidadDeTrabajo = new(_inventario);
+        ConsultaDeEmpresas empresas = new(_organizacion);
         ConsultaDeAlmacenes almacenes = new(_organizacion, acceso);
+        ConsultaDeSeries series = new(_organizacion);
+        ConsultaDeUbicaciones ubicaciones = new(_organizacion, acceso);
+        ConsultaDeArticulos articulos = new(_catalogo);
+        ConsultaDeUnidadesDeMedida unidades = new(_organizacion);
 
         // La marca va sobre EL CONTEXTO DE INVENTARIO, como el ejercicio y por lo mismo: al
         // confirmar trae un cerrojo compartido sobre la fila del artículo (ADR-0048 §4).
@@ -90,13 +105,13 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         Alta = new AbrirAjuste(
             new ElUsuarioDeLaEmpresa(empresaId),
             ajustes,
-            new ConsultaDeEmpresas(_organizacion),
+            empresas,
             almacenes,
-            new ConsultaDeSeries(_organizacion),
-            new ConsultaDeUbicaciones(_organizacion, acceso),
-            new ConsultaDeArticulos(_catalogo),
+            series,
+            ubicaciones,
+            articulos,
             trazabilidad,
-            new ConsultaDeUnidadesDeMedida(_organizacion),
+            unidades,
             unidadDeTrabajo,
             elReloj);
 
@@ -125,6 +140,39 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             elReloj);
 
         Lectura = new MovimientosDelDocumento(ajustes, almacenes);
+
+        AltaDeTransferencia = new AbrirTransferencia(
+            new ElUsuarioDeLaEmpresa(empresaId),
+            transferencias,
+            empresas,
+            almacenes,
+            series,
+            ubicaciones,
+            articulos,
+            trazabilidad,
+            unidades,
+            unidadDeTrabajo,
+            elReloj);
+
+        Envio = new EnviarTransferencia(
+            transferencias,
+            new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
+            ejercicios,
+            trazabilidad,
+            new ElPrecioMedioPonderado(),
+            unidadDeTrabajo,
+            elReloj);
+
+        Recepcion = new RecibirTransferencia(
+            transferencias, ejercicios, new ElPrecioMedioPonderado(), unidadDeTrabajo, elReloj);
+
+        AnulacionDeTransferencia = new AnularTransferencia(
+            transferencias,
+            new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
+            ejercicios,
+            new ElPrecioMedioPonderado(),
+            unidadDeTrabajo,
+            elReloj);
     }
 
     internal AbrirAjuste Alta { get; }
@@ -134,6 +182,14 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal AnularAjuste Anulacion { get; }
 
     internal MovimientosDelDocumento Lectura { get; }
+
+    internal AbrirTransferencia AltaDeTransferencia { get; }
+
+    internal EnviarTransferencia Envio { get; }
+
+    internal RecibirTransferencia Recepcion { get; }
+
+    internal AnularTransferencia AnulacionDeTransferencia { get; }
 
     /// <summary>Confirma un ajuste con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>
@@ -153,27 +209,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     /// <param name="ajusteId">El documento que confirmar.</param>
     /// <returns>Lo que contestó el caso de uso.</returns>
     internal Task<Resultado<AjusteDto>> ConfirmarAsync(Guid ajusteId) =>
-        Lanzada(ConfirmarConSuTransaccionAsync(ajusteId));
-
-    private async Task<Resultado<AjusteDto>> ConfirmarConSuTransaccionAsync(Guid ajusteId)
-    {
-        await using IDbContextTransaction transaccion =
-            await _inventario.Database.BeginTransactionAsync();
-
-        Resultado<AjusteDto> confirmacion =
-            await OlvidandoSiFallaAsync(() => Confirmacion.EjecutarAsync(ajusteId, CancellationToken.None));
-
-        if (confirmacion.EsCorrecto)
-        {
-            await transaccion.CommitAsync();
-        }
-        else
-        {
-            await transaccion.RollbackAsync();
-        }
-
-        return confirmacion;
-    }
+        Lanzada(EnSuTransaccionAsync(() => Confirmacion.EjecutarAsync(ajusteId, CancellationToken.None)));
 
     /// <summary>
     /// Confirma <b>dentro</b> de una transacción y la deja abierta, con el cerrojo compartido
@@ -288,27 +324,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     /// <param name="motivo">Por qué se anula.</param>
     /// <returns>Lo que contestó el caso de uso.</returns>
     internal Task<Resultado<AnulacionDto>> AnularAsync(Guid ajusteId, string motivo) =>
-        Lanzada(AnularConSuTransaccionAsync(ajusteId, motivo));
-
-    private async Task<Resultado<AnulacionDto>> AnularConSuTransaccionAsync(Guid ajusteId, string motivo)
-    {
-        await using IDbContextTransaction transaccion =
-            await _inventario.Database.BeginTransactionAsync();
-
-        Resultado<AnulacionDto> anulacion =
-            await OlvidandoSiFallaAsync(() => AnularSinAbrirTransaccionAsync(ajusteId, motivo));
-
-        if (anulacion.EsCorrecto)
-        {
-            await transaccion.CommitAsync();
-        }
-        else
-        {
-            await transaccion.RollbackAsync();
-        }
-
-        return anulacion;
-    }
+        Lanzada(EnSuTransaccionAsync(() => AnularSinAbrirTransaccionAsync(ajusteId, motivo)));
 
     /// <summary>
     /// Abre la transacción de este módulo y lee el documento <b>dentro</b>, sin tocarlo, dejando
@@ -340,6 +356,95 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal Task<Resultado<AnulacionDto>> AnularSinAbrirTransaccionAsync(
         Guid ajusteId, string motivo) =>
         Anulacion.EjecutarAsync(ajusteId, new AnularAjusteDto(motivo), CancellationToken.None);
+
+    /// <summary>
+    /// Envía <b>dentro</b> de una transacción y la deja abierta, con todos los cerrojos del envío
+    /// puestos y lo que escribió sin publicar.
+    /// </summary>
+    /// <remarks>
+    /// Para la carrera de la serie en tránsito (ADR-0053 §7): la serie ya salió del origen y ya vuela
+    /// hacia el destino, y nadie más lo ve todavía. Quien llama decide cuándo suelta.
+    /// </remarks>
+    /// <param name="transferenciaId">El borrador que enviar.</param>
+    /// <returns>Lo que contestó el caso de uso, y la transacción todavía abierta.</returns>
+    internal async Task<(Resultado<TransferenciaDto> Envio, IDbContextTransaction Transaccion)>
+        EnviarYQuedarseDentroAsync(Guid transferenciaId)
+    {
+        IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<TransferenciaDto> envio = await Envio.EjecutarAsync(transferenciaId, CancellationToken.None);
+
+        return (envio, transaccion);
+    }
+
+    /// <summary>Recibe con una transacción abierta, como llegaría de verdad.</summary>
+    /// <remarks>
+    /// La recepción no numera, pero sin transacción cada sentencia se confirmaría por su cuenta y el
+    /// cerrojo de la valoración se soltaría al acabar la suya: la carrera que se quiere ver no
+    /// existiría.
+    /// </remarks>
+    /// <param name="transferenciaId">La transferencia enviada.</param>
+    /// <param name="fecha">El día en que llega.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal Task<Resultado<TransferenciaDto>> RecibirAsync(Guid transferenciaId, DateOnly fecha) =>
+        Lanzada(EnSuTransaccionAsync(() => Recepcion.EjecutarAsync(
+            transferenciaId, new RecibirTransferenciaDto { FechaDeRecepcion = fecha }, CancellationToken.None)));
+
+    /// <summary>
+    /// Recibe <b>dentro</b> de una transacción y la deja abierta, con la valoración del destino
+    /// bloqueada y la fila del documento ya cambiada.
+    /// </summary>
+    /// <remarks>
+    /// Es la ganadora de las dos carreras del ADR-0053 §10: la otra operación lee la transferencia
+    /// todavía enviada, porque esto no se ha publicado, y se para en la valoración del destino.
+    /// </remarks>
+    /// <param name="transferenciaId">La transferencia enviada.</param>
+    /// <param name="fecha">El día en que llega.</param>
+    /// <returns>Lo que contestó el caso de uso, y la transacción todavía abierta.</returns>
+    internal async Task<(Resultado<TransferenciaDto> Recepcion, IDbContextTransaction Transaccion)>
+        RecibirYQuedarseDentroAsync(Guid transferenciaId, DateOnly fecha)
+    {
+        IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<TransferenciaDto> recepcion = await Recepcion.EjecutarAsync(
+            transferenciaId, new RecibirTransferenciaDto { FechaDeRecepcion = fecha }, CancellationToken.None);
+
+        return (recepcion, transaccion);
+    }
+
+    /// <summary>Anula una transferencia con una transacción abierta, como llegaría de verdad.</summary>
+    /// <remarks>
+    /// Mismo motivo que en el ajuste: el inverso toma su correlativo de la serie del original, y el
+    /// mecanismo de numeración revienta sin transacción abierta.
+    /// </remarks>
+    /// <param name="transferenciaId">La transferencia enviada o recibida.</param>
+    /// <param name="motivo">Por qué se anula.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal Task<Resultado<AnulacionDeTransferenciaDto>> AnularLaTransferenciaAsync(
+        Guid transferenciaId, string motivo) =>
+        Lanzada(EnSuTransaccionAsync(() => AnulacionDeTransferencia.EjecutarAsync(
+            transferenciaId, new AnularTransferenciaDto(motivo), CancellationToken.None)));
+
+    // Lo que hace el filtro de idempotencia con una petición: abre la transacción, y solo confirma
+    // lo que sale bien. Lo que sale mal se deshace entero, número incluido.
+    private async Task<Resultado<T>> EnSuTransaccionAsync<T>(Func<Task<Resultado<T>>> operacion)
+    {
+        await using IDbContextTransaction transaccion =
+            await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<T> resultado = await OlvidandoSiFallaAsync(operacion);
+
+        if (resultado.EsCorrecto)
+        {
+            await transaccion.CommitAsync();
+        }
+        else
+        {
+            await transaccion.RollbackAsync();
+        }
+
+        return resultado;
+    }
 
     // Lo que haría el fin de la petición: si la operación revienta, el contexto suelta todo lo
     // que el caso de uso había cambiado en memoria, y la excepción sigue su camino.

@@ -8374,7 +8374,12 @@ ninguna decisión escrita. El ADR-0053 queda para el 2.11.
 en `ed7ab60`. Lo que pide está en *Decisiones tomadas → El 2.11: la transferencia y el stock en
 tránsito*, y la puerta, contestada, justo debajo. Las decisiones van en el **ADR-0053**, que enmienda
 el ADR-0048 §3, y el **ADR-0054** corrige tres frases suyas y del ADR-0046 sobre el inverso que vacía
-la clave (paso 4). Sus mutaciones empiezan en la **181**.
+la clave (paso 4). Sus mutaciones empiezan en la **181**, que ya está medida y va a la tabla del
+paso 8: en `ElPrecioMedioPonderado`, la salida que vacía la clave deja de llevarse todo el valor
+(fuera el `despues <= 0m ||` de la resta). Da **2** rojos de 142 en `Inventario.UnitTests`,
+`LosCasosDoradosDelPrecioMedioTests.Vaciar_la_clave_de_golpe_se_lleva_todo_el_valor_y_no_lo_que_dice_el_redondeo`
+y `ElInversoDeLaTransferenciaTests.Si_el_inverso_vacia_el_destino_el_origen_recibe_mas_de_lo_que_salio`.
+La tanda del paso 8 sigue en la **182**.
 
 **Lo que queda, por este orden:**
 
@@ -8492,7 +8497,86 @@ la clave (paso 4). Sus mutaciones empiezan en la **181**.
      **426/450 KiB** y un total de **646/900 KiB**.
    - `python scripts/dependencias-por-conjuntos.py a8c6cc8 HEAD` no da ningún paquete que entre o
      salga.
-6. Los casos de integración del encargo, cada uno con su censo.
+
+   El sexto commit (`8491bc7`) tiene su run en verde en los tres trabajos, el
+   [37175140459](https://github.com/AOjeda006/Bastion/actions/runs/37175140459), con **1262** y
+   **559** casos.
+6. ~~Los casos de integración del encargo, cada uno con su censo.~~ Hecho en el séptimo commit, con
+   **28** casos nuevos en el carril de integración, cada uno con su línea en
+   `ElCensoDeEsteCarrilTests`:
+   - **15** en `LaTransferenciaTests`, semillas del 700 al 712, el 719 y el 720. Son enviar y
+     recibir con el tránsito contado mientras viaja, vaciar el origen y el cambio de año. Después,
+     el ejercicio cerrado al enviar, al recibir y al anular. Luego anular una enviada, una recibida
+     y una que vacía el destino, y el destino que ya lo consumió. Siguen las dos empresas, por la API
+     y con claves inventadas, el `428` sin la clave y las fechas imposibles. Y los dos que pidió la
+     revisión: varias líneas al mismo destino, y una serie que va, vuelve, llega y vuelve.
+   - **6** en `LasGuardasDeLaTransferenciaTests`, del 713 al 718, todos de la revisión: los
+     maestros del alta, el día sin ejercicio, la fecha anterior al último movimiento de cada punta y
+     la divisa de las dos puntas. Y el ejercicio, que pregunta por la transferencia al cerrarse y al
+     encogerse.
+   - **3** en `LasCarrerasDeLaTransferenciaTests`, del 730 al 732, con dos transacciones de verdad:
+     recibir y anular a la vez, dos recepciones a la vez y la serie en tránsito contra un ajuste en
+     un tercer almacén. Las dos primeras afirman el `412` del §10, y la tercera, el `23505` del
+     índice de la serie.
+   - **2 + 2** en las dos dobles flechas, la del libro y la de la anulación. Cada una tiene ahora su
+     par de barridos para la tabla de transferencias, con su arnés. `ElLibro` gana
+     `EnviarSinLaApiAsync` y `AnularSinLaApiAsync`, por el camino de producción y con claves
+     inventadas.
+
+   **La revisión antes del commit**, con tres lentes, dejó **11** hallazgos. Dos son el mismo, así
+   que son **10** distintos, todos de cobertura y todos reales. Cada uno con su arreglo:
+   1. **El contador en uno del caso del ejercicio cerrado no dice el orden de las guardas**, y lo
+      vieron dos lentes. `FiltroDeIdempotencia` deshace todo lo que no es un 2xx, así que el número
+      vuelve a la serie se haya tomado o no. El orden lo dice ahora el cerrojo de la fila del
+      contador, preguntado con `FOR UPDATE NOWAIT` mientras la transacción sigue abierta
+      (`EscenaDeTransferencia.ElContadorEstaBloqueadoAsync`). Está libre en el envío que rechaza el
+      ejercicio cerrado. Y está tomado en la anulación que espera detrás de una recepción, porque esa
+      numera antes de bloquear las valoraciones. Son la pareja que pide «toda regla nace con la
+      afirmación que la pondría roja».
+   2. **Anular una enviada, y recibirla, daban las mismas cifras con la regla buena y con revalorar
+      al medio de hoy.** Ahora, entre el envío y la anulación —y entre el envío y la recepción—
+      entra en A una unidad a 10,00. El medio del origen pasa de 2,71428 a 3,928567, y revalorar las
+      dos unidades daría 7,8571 en vez de 5,4286.
+   3. **Los maestros del alta no tenían caso**: el mismo almacén, el hueco que no es de su punta, el
+      hueco y el almacén bloqueados. Los cubre el 713.
+   4. **Ningún caso hacía saltar `transferencia-sin-ejercicio`.** Lo hace el 714, al recibir y al
+      anular, y después crea el ejercicio y las dos pasan.
+   5. **El cierre y el encogido del ejercicio no preguntaban por ninguna transferencia.** Lo hacen
+      el 717, con un borrador que impide cerrar, y el 718, con una recepción que impide encoger. El
+      718 tiene en el ejercicio solo la recepción, así que una pregunta que mirara solo la fecha de
+      envío lo dejaría encoger.
+   6. **La última fecha de cada punta no tenía caso.** La cubre el 715, al enviar contra el origen y
+      al recibir contra el destino, y afirma además que el tránsito no mueve la del destino.
+   7. **Todas las transferencias tenían una sola línea**, así que nadie miraba el `GROUP BY` de
+      `ElTransito`. Lo mira el 719: tres líneas al mismo almacén, dos de ellas al mismo hueco.
+   8. **Que el original pase a `Anulada`, venga de una enviada o de una recibida, no lo vigilaba
+      nada**, aunque el test de arquitectura lo diera por vigilado. Los casos de anular leen ahora
+      el estado del original. Y la doble flecha de la anulación tiene su par para las
+      transferencias, que es lo que cita `Inventario.cs` al justificar `AnulaAId`.
+   9. **Ninguna serie se recibía ni se anulaba**, así que el orden de las patas del §7 frente al
+      `CHECK fisico + en_transito <= 1` no tenía caso. Lo tiene el 720, que comprueba que la serie
+      está en un solo sitio después de cada paso, contando lo que vuela.
+   10. **La guarda de la divisa del destino no tenía caso.** La cubre el 716, que mira también el
+       otro lado: desde un origen en la divisa vieja sale el mismo código.
+
+   **Una observación que no se arregla aquí:** `ElEjercicioRigeElAjusteTests` afirma el contador
+   tras un rechazo con la misma idea del hallazgo 1, y tiene la misma debilidad. Es del 2.6 y queda
+   fuera de este ítem, pero se anota para quien lo toque. De paso, en
+   `LaDobleFlechaDeLaAnulacionTests` el resumen de la consulta de los inversos estaba encima de la
+   constante del `23505`, y ahora cada uno está con lo suyo.
+
+   Lo medido sobre el árbol de este commit, con la batería de `AGENTS.md` entera y todo en verde:
+   - `dotnet test Bastion.sln --filter "Category=Integracion"` da **503** y **84**, 28 más que los
+     **475** del sexto commit. `bash scripts/ci/recuento-de-tests.sh` con la lista del *workflow*
+     los cuenta en sus 10 ensamblados.
+   - `dotnet test Bastion.sln --filter "Category!=Integracion"` da **1262**, los mismos: este paso
+     solo añade casos de integración.
+   - `npm --prefix frontend run test` da **192** casos, sin un solo aviso de `act(...)`, y el
+     presupuesto sigue en **426/450** y **646/900 KiB**.
+   - Los generadores, con `--comprobar`, siguen en **173** tipos de 179 sitios y **138**
+     operaciones, y el modelo coincide con las migraciones.
+   - `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py ed7ab60 HEAD` da los seis
+     conjuntos vacíos.
 7. El cuadre del tránsito y la propiedad.
 8. La tanda de mutaciones, la batería y los runs.
 

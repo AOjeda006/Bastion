@@ -346,16 +346,22 @@ public sealed class ElCensoDeEsteCarrilTests
         // Del ítem 2.5: la R2 en los DOS sentidos. La clave ajena garantiza que `anula_a_id`
         // señala una fila que existe y nada más: que esa fila esté anulada y que no haya DOS
         // inversos del mismo original son condiciones sobre el estado y sobre el número de filas
-        // que apuntan, y no caben en ninguna restricción de columna.
+        // que apuntan, y no caben en ninguna restricción de columna. Desde el 2.11, un par por
+        // tabla de documentos: el ajuste y la transferencia, cada uno con su índice.
         "LaDobleFlechaDeLaAnulacionTests.Ningun_anulado_se_queda_sin_exactamente_un_inverso",
         "LaDobleFlechaDeLaAnulacionTests.Ningun_inverso_compensa_a_un_documento_que_no_esta_anulado",
+        "LaDobleFlechaDeLaAnulacionTests.Ninguna_transferencia_anulada_se_queda_sin_exactamente_un_inverso",
+        "LaDobleFlechaDeLaAnulacionTests.Ninguna_transferencia_inversa_compensa_a_una_que_no_esta_anulada",
 
         // Del ítem 2.3: la R13 en los DOS sentidos, cada uno con su barrido y con su arnés.
         // Ninguna clave ajena puede expresar esta flecha —el origen es un par «tipo +
         // identificador»—, así que borrar una de estas dos líneas deja la mitad que quitara
-        // sin nadie que la vigile.
+        // sin nadie que la vigile. Desde el 2.11, un par por tabla de documentos: el ajuste y la
+        // transferencia, cada uno filtrado por su tipo.
         "LaDobleFlechaDelLibroTests.Ningun_ajuste_confirmado_se_queda_sin_una_sola_fila_del_libro",
         "LaDobleFlechaDelLibroTests.Ninguna_fila_del_libro_apunta_a_un_documento_que_no_existe",
+        "LaDobleFlechaDelLibroTests.Ninguna_fila_del_libro_apunta_a_una_transferencia_que_no_existe",
+        "LaDobleFlechaDelLibroTests.Ninguna_transferencia_fuera_de_borrador_se_queda_sin_una_sola_fila_del_libro",
 
         "LaEdadDelMasViejoSeMideTests.El_publicador_publica_la_edad_del_pendiente_mas_viejo",
         "LaEdadDelMasViejoSeMideTests.Y_con_la_cola_vacia_la_edad_vuelve_a_cero",
@@ -470,6 +476,24 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSerieDelAjusteTests.Una_serie_cerrada_no_deja_abrir_el_borrador",
         "LaSerieDelAjusteTests.Una_serie_que_no_existe_no_deja_abrir_el_borrador",
 
+        // Del ítem 2.11 (ADR-0053): la transferencia de punta a punta, por la API salvo el alta,
+        // que no tiene borde, y el caso de las dos empresas, que necesita claves inventadas.
+        "LaTransferenciaTests.Anular_la_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto",
+        "LaTransferenciaTests.Anular_una_enviada_deshace_el_transito_y_devuelve_al_origen_lo_que_salio",
+        "LaTransferenciaTests.Anular_una_recibida_que_vacia_el_destino_se_lleva_todo_lo_que_queda_en_el",
+        "LaTransferenciaTests.Anular_una_recibida_saca_del_destino_el_valor_que_entro_y_lo_devuelve_al_origen",
+        "LaTransferenciaTests.Dos_empresas_con_las_mismas_claves_no_se_mezclan_el_transito",
+        "LaTransferenciaTests.El_cambio_de_anio_numera_en_el_del_envio_y_recibe_en_el_siguiente",
+        "LaTransferenciaTests.Enviada_y_recibida_mueve_dos_veces_y_el_transito_cuenta_mientras_viaja",
+        "LaTransferenciaTests.Las_fechas_imposibles_son_422_y_no_mueven_nada",
+        "LaTransferenciaTests.Si_el_destino_ya_lo_consumio_la_anulacion_es_stock_insuficiente_y_no_escribe_nada",
+        "LaTransferenciaTests.Sin_la_clave_las_tres_acciones_son_428_y_no_tocan_nada",
+        "LaTransferenciaTests.Un_ejercicio_cerrado_no_admite_ni_el_envio_ni_la_recepcion",
+        "LaTransferenciaTests.Una_serie_va_vuelve_llega_y_vuelve_sin_estar_nunca_en_dos_sitios",
+        "LaTransferenciaTests.Una_transferencia_entre_dos_empresas_no_existe",
+        "LaTransferenciaTests.Vaciar_el_origen_se_lleva_todo_su_valor_sin_dejar_un_resto",
+        "LaTransferenciaTests.Varias_lineas_al_mismo_destino_mueven_dos_veces_cada_una_y_su_transito_se_suma",
+
         "LaTrazaEsDeSoloAnadidoTests.Un_DELETE_sobre_una_fila_de_traza_lo_rechaza_el_motor",
         "LaTrazaEsDeSoloAnadidoTests.Un_INSERT_sin_empresa_y_sin_motivo_lo_rechaza_la_tabla",
         "LaTrazaEsDeSoloAnadidoTests.Un_TRUNCATE_de_la_tabla_lo_rechaza_el_motor",
@@ -504,6 +528,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Una_cabecera_que_no_es_una_version_concreta_es_400",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Una_version_obsoleta_es_412_y_trae_la_actual",
 
+        // Del ítem 2.11 (ADR-0053 §7 y §10): las tres carreras de la transferencia, con dos
+        // transacciones de verdad. Las dos primeras afirman el 412 de la relectura del documento;
+        // la tercera, el 23505 del índice de la serie, que cuenta el tránsito.
+        "LasCarrerasDeLaTransferenciaTests.Dos_recepciones_a_la_vez_la_segunda_sale_con_412_y_no_con_el_422_de_la_fecha",
+        "LasCarrerasDeLaTransferenciaTests.Recibir_y_anular_a_la_vez_la_que_llega_segunda_sale_con_412",
+        "LasCarrerasDeLaTransferenciaTests.Una_serie_en_transito_no_entra_a_la_vez_en_un_tercer_almacen",
+
         // Del ítem 2.7: la R3 entera. La fila viva se mueve con el libro —sola, a la vez que otra
         // confirmación y nunca con una fecha futura—; la instantánea se borra, se recalcula y dice
         // lo mismo; el cuadre encuentra cada copia que miente y dice cuántas comparó; el
@@ -519,6 +550,17 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExistenciasSonLaSumaDelLibroTests.Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan",
         "LasExistenciasSonLaSumaDelLibroTests.Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor",
         "LasExistenciasSonLaSumaDelLibroTests.Una_fecha_futura_no_se_confirma_y_no_deja_nada_en_el_libro_ni_en_la_existencia",
+
+        // Del ítem 2.11 (revisión del paso 5): las guardas de la transferencia que no tenían un
+        // caso de punta a punta. Los maestros del alta, el día sin ejercicio, la fecha anterior al
+        // último movimiento de cada punta, la divisa de las dos puntas, y el cierre y el encogido
+        // del ejercicio preguntando por la transferencia.
+        "LasGuardasDeLaTransferenciaTests.El_alta_pregunta_cada_hueco_a_su_almacen_y_no_toca_lo_bloqueado",
+        "LasGuardasDeLaTransferenciaTests.Encoger_el_ejercicio_por_encima_de_una_recepcion_es_409_y_por_el_otro_lado_no",
+        "LasGuardasDeLaTransferenciaTests.Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula",
+        "LasGuardasDeLaTransferenciaTests.Una_fecha_anterior_al_ultimo_movimiento_de_su_punta_es_422",
+        "LasGuardasDeLaTransferenciaTests.Una_punta_valorada_en_otra_divisa_para_el_envio_por_los_dos_lados",
+        "LasGuardasDeLaTransferenciaTests.Una_transferencia_en_borrador_impide_cerrar_el_ejercicio_y_enviada_no",
 
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.El_alta_no_pasa_por_el_interceptor_y_por_eso_lleva_la_hora_del_dominio",
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.La_hora_del_cambio_sale_del_reloj_inyectado_y_no_del_de_la_base",
