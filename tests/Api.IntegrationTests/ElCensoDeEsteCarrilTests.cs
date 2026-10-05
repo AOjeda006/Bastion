@@ -537,9 +537,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Una_cabecera_que_no_es_una_version_concreta_es_400",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Una_version_obsoleta_es_412_y_trae_la_actual",
 
-        // Del ítem 2.11 (ADR-0053 §7 y §10): las tres carreras de la transferencia, con dos
-        // transacciones de verdad. Las dos primeras afirman el 412 de la relectura del documento;
-        // la tercera, el 23505 del índice de la serie, que cuenta el tránsito.
+        // Del ítem 2.11 (ADR-0053 §7 y §10): las cuatro carreras de la transferencia, con dos
+        // transacciones de verdad. Las de la recepción y la anulación afirman el 412 de la relectura
+        // del documento; la de dos envíos, el 412 del orden de escritura (paso 8); y la de la serie,
+        // el 23505 de su índice, que cuenta el tránsito.
+        "LasCarrerasDeLaTransferenciaTests.Dos_envios_a_la_vez_el_segundo_sale_con_412_y_no_con_el_422_del_stock",
         "LasCarrerasDeLaTransferenciaTests.Dos_recepciones_a_la_vez_la_segunda_sale_con_412_y_no_con_el_422_de_la_fecha",
         "LasCarrerasDeLaTransferenciaTests.Recibir_y_anular_a_la_vez_la_que_llega_segunda_sale_con_412",
         "LasCarrerasDeLaTransferenciaTests.Una_serie_en_transito_no_entra_a_la_vez_en_un_tercer_almacen",
@@ -563,10 +565,17 @@ public sealed class ElCensoDeEsteCarrilTests
         // Del ítem 2.11 (revisión del paso 5): las guardas de la transferencia que no tenían un
         // caso de punta a punta. Los maestros del alta, el día sin ejercicio, la fecha anterior al
         // último movimiento de cada punta, la divisa de las dos puntas, y el cierre y el encogido
-        // del ejercicio preguntando por la transferencia.
+        // del ejercicio preguntando por la transferencia. Y de la tanda del paso 8: cada acción fuera
+        // de su estado, el motivo y el ejercicio de la anulación, cada rechazo del alta con su
+        // código, la marca releída en el envío y la clave vaciada en la divisa de antes.
+        "LasGuardasDeLaTransferenciaTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa",
         "LasGuardasDeLaTransferenciaTests.El_alta_pregunta_cada_hueco_a_su_almacen_y_no_toca_lo_bloqueado",
+        "LasGuardasDeLaTransferenciaTests.El_alta_rechaza_cada_cosa_que_no_se_mueve_con_su_codigo",
+        "LasGuardasDeLaTransferenciaTests.El_envio_vuelve_a_leer_la_marca_y_no_saca_un_borrador_que_ya_no_casa",
         "LasGuardasDeLaTransferenciaTests.Encoger_el_ejercicio_por_encima_de_una_recepcion_es_409_y_por_el_otro_lado_no",
+        "LasGuardasDeLaTransferenciaTests.La_anulacion_pide_motivo_y_el_ejercicio_de_hoy_abierto",
         "LasGuardasDeLaTransferenciaTests.Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula",
+        "LasGuardasDeLaTransferenciaTests.Una_clave_vaciada_en_la_divisa_de_antes_recibe_el_transito_en_la_nueva",
         "LasGuardasDeLaTransferenciaTests.Una_fecha_anterior_al_ultimo_movimiento_de_su_punta_es_422",
         "LasGuardasDeLaTransferenciaTests.Una_punta_valorada_en_otra_divisa_para_el_envio_por_los_dos_lados",
         "LasGuardasDeLaTransferenciaTests.Una_transferencia_en_borrador_impide_cerrar_el_ejercicio_y_enviada_no",

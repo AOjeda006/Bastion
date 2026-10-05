@@ -16,8 +16,9 @@ using Shouldly;
 namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
-/// Las tres carreras de la transferencia, con dos transacciones de verdad cada una: dos operaciones
-/// sobre la misma transferencia, y una serie en tránsito contra un ajuste en un tercer almacén.
+/// Las cuatro carreras de la transferencia, con dos transacciones de verdad cada una: tres de dos
+/// operaciones sobre la misma transferencia, y una serie en tránsito contra un ajuste en un tercer
+/// almacén.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -34,8 +35,13 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// del ADR-0047—, y así el caso distingue las dos causas.
 /// </para>
 /// <para>
-/// <b>Semillas: del 730 al 732</b>, empresas y maestros de instalación con el mismo número. El
-/// reparto del bloque está en la cabecera de <c>LaTransferenciaTests</c>.
+/// <b>La de dos envíos del mismo borrador entró con la tanda del paso 8</b>, y también afirma el
+/// <c>412</c>, pero por otra causa: el envío no relee el documento, y lo que lo da es el orden en
+/// que se escribe, la cabecera antes que las filas del libro.
+/// </para>
+/// <para>
+/// <b>Semillas: del 730 al 732 y el 735</b>, empresas y maestros de instalación con el mismo número.
+/// El reparto del bloque está en la cabecera de <c>LaTransferenciaTests</c>.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -193,6 +199,68 @@ public sealed class LasCarrerasDeLaTransferenciaTests(PostgresConTodosLosModulos
         (await escena.FilasDelLibroAsync(postgres, enviada.Id)).Count.ShouldBe(2, "una salida y una sola entrada");
 
         await ExigirQueCuadraAsync(escena);
+    }
+
+    /// <summary>
+    /// Dos envíos del mismo borrador a la vez: el segundo sale con el <c>412</c>, y no con el
+    /// <c>422</c> del stock que el primero ya se llevó.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El envío no relee el documento</b>, como hacen la recepción y la anulación. Quien lo para
+    /// es el guardado de la cabecera, que va antes que las filas del libro (ADR-0053 §10). El segundo
+    /// espera detrás del primero, y cuando entra en el origen solo quedan dos unidades de las seis, y
+    /// él quiere sacar cuatro. Si escribiera las filas antes que la cabecera, chocaría con el stock y
+    /// saldría con el <c>422</c>. Guardando primero, choca con el testigo de la fila. La mutación 248
+    /// cambiaba ese orden y salió verde en los dos carriles: las otras dos carreras no la ven, porque
+    /// a ellas las para la relectura antes de llegar a escribir.
+    /// </para>
+    /// <para>
+    /// <b>El segundo va por la API</b>, porque el <c>412</c> y el <c>422</c> los pone el borde. El
+    /// caso de uso no traduce ninguno de los dos: los dos suben como excepción.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Dos_envios_a_la_vez_el_segundo_sale_con_412_y_no_con_el_422_del_stock()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(735, "TRC-D");
+
+        await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 6m, 2m);
+
+        Guid borrador = await escena.AbrirAsync(postgres, 4m);
+
+        await using ElModuloDeInventario unos = new(postgres, escena.EmpresaId);
+
+        (Resultado<TransferenciaDto> envio, IDbContextTransaction enVuelo) =
+            await unos.EnviarYQuedarseDentroAsync(borrador);
+
+        await using (enVuelo)
+        {
+            envio.EsCorrecto.ShouldBeTrue($"«{envio.Error?.Codigo}»");
+
+            Task<HttpResponseMessage> elOtro = escena.EnviarPorLaApiAsync(borrador);
+
+            await LaEspera.AQueLaFreneAsync(
+                postgres.CadenaDeConexion,
+                unos.ProcesoDeLaBase,
+                elOtro,
+                "el envío en vuelo",
+                "ha enviado dos veces el mismo borrador");
+
+            await enVuelo.CommitAsync();
+
+            using HttpResponseMessage segundo = await elOtro.WaitAsync(s_plazo);
+
+            segundo.StatusCode.ShouldBe(HttpStatusCode.PreconditionFailed, await Escenario.Detalle(segundo));
+            (await EscenaDeTransferencia.TipoDelProblemaAsync(segundo))
+                .ShouldBe("/errors/" + ErroresDeConcurrencia.CodigoDeVersionObsoleta);
+        }
+
+        (await escena.ContadorAsync()).ShouldBe(1, "el número que tomó el segundo volvió a la serie");
+        (await escena.FilasDelLibroAsync(postgres, borrador)).Count.ShouldBe(1, "una sola salida");
+        (await escena.LaValoracionDeAsync(postgres, escena.AlmacenB)).EnTransito.ShouldBe(4m);
+
+        await ExigirQueCuadraAsync(escena, enTransito: 1, valoracionesEnTransito: 1);
     }
 
     /// <summary>

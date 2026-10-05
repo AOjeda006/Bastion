@@ -42,9 +42,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// ninguna, ni por literal ni por cálculo: la más alta calculada es la de
 /// <c>ElSaldoEsLaSumaDelLibroPorPropiedadTests</c>, <c>465 + 130 = 595</c>, y el 750 de
 /// <c>ElCerrojoDeLaNumeracionTests</c> son milisegundos. Las guardas de la transferencia, en
-/// <c>LasGuardasDeLaTransferenciaTests</c>, van del 713 al 718, y las carreras, en
-/// <c>LasCarrerasDeLaTransferenciaTests</c>, del 730 al 732. El cuadre del tránsito, en
-/// <c>ElCuadreDelTransitoTests</c>, va del 721 al 725, y del 727 al 729 quedan libres.
+/// <c>LasGuardasDeLaTransferenciaTests</c>, van del 713 al 718, del 727 al 729, el 733 y el 734, y
+/// las carreras, en <c>LasCarrerasDeLaTransferenciaTests</c>, del 730 al 732 y el 735. El cuadre del
+/// tránsito, en <c>ElCuadreDelTransitoTests</c>, va del 721 al 725, y del 736 al 749 quedan libres.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

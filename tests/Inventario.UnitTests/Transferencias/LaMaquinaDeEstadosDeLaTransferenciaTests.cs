@@ -55,6 +55,20 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
             ElLibroDeLaPrueba.Momento));
     }
 
+    /// <summary>Una transferencia sin empresa no existe (R8): el filtro global no la vería nunca.</summary>
+    [Fact]
+    public void Una_transferencia_sin_empresa_no_existe()
+    {
+        Should.Throw<ArgumentException>(() => Transferencia.Abrir(
+            Guid.Empty,
+            ElLibroDeLaPrueba.Serie,
+            ElLibroDeLaPrueba.Origen,
+            ElLibroDeLaPrueba.Destino,
+            s_diaDeEnvio,
+            ElLibroDeLaPrueba.Divisa,
+            ElLibroDeLaPrueba.Momento)).ParamName.ShouldBe("empresaId");
+    }
+
     /// <summary>Una línea lleva cantidad positiva: la negativa es la del inverso.</summary>
     /// <param name="cantidad">Lo que no vale.</param>
     [Theory]
@@ -72,6 +86,30 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
             ElLibroDeLaPrueba.Unidad,
             1m,
             ElLibroDeLaPrueba.Momento));
+
+        transferencia.Lineas.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// El factor a unidad base es positivo: con uno negativo, la línea de una entrega sacaría
+    /// mercancía del destino y la metería en el origen.
+    /// </summary>
+    /// <param name="factor">Lo que no vale.</param>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void El_factor_a_unidad_base_es_positivo(int factor)
+    {
+        Transferencia transferencia = ElLibroDeLaPrueba.UnaTransferencia(s_diaDeEnvio);
+
+        Should.Throw<ArgumentOutOfRangeException>(() => transferencia.AnadirLinea(
+            ElLibroDeLaPrueba.UbicacionDelOrigen,
+            ElLibroDeLaPrueba.UbicacionDelDestino,
+            ElLibroDeLaPrueba.Articulo,
+            1m,
+            ElLibroDeLaPrueba.Unidad,
+            factor,
+            ElLibroDeLaPrueba.Momento)).ParamName.ShouldBe("factorAUnidadBase");
 
         transferencia.Lineas.ShouldBeEmpty();
     }
@@ -103,6 +141,40 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
 
         transferencia.Lineas.ShouldHaveSingleItem();
         transferencia.SeriesQueNombra().ShouldHaveSingleItem().Codigo.ShouldBe("SN-0001");
+    }
+
+    /// <summary>
+    /// El mismo código de serie en otro artículo es otra pieza, y va en su propia línea: la serie es
+    /// única por artículo, no en toda la empresa (ADR-0048 §3).
+    /// </summary>
+    [Fact]
+    public void La_misma_serie_de_otro_articulo_es_otra_pieza()
+    {
+        var otroArticulo = Guid.Parse("0f6a1c1e-0000-4000-8000-0000000000c2");
+        Transferencia transferencia = ElLibroDeLaPrueba.UnaTransferencia(s_diaDeEnvio);
+        transferencia.AnadirLinea(
+            ElLibroDeLaPrueba.UbicacionDelOrigen,
+            ElLibroDeLaPrueba.UbicacionDelDestino,
+            ElLibroDeLaPrueba.Articulo,
+            1m,
+            ElLibroDeLaPrueba.Unidad,
+            1m,
+            ElLibroDeLaPrueba.Momento,
+            numeroDeSerie: "SN-0001");
+
+        transferencia.AnadirLinea(
+            ElLibroDeLaPrueba.UbicacionDelOrigen,
+            ElLibroDeLaPrueba.UbicacionDelDestino,
+            otroArticulo,
+            1m,
+            ElLibroDeLaPrueba.Unidad,
+            1m,
+            ElLibroDeLaPrueba.Momento,
+            numeroDeSerie: "SN-0001");
+
+        transferencia.Lineas.Count.ShouldBe(2);
+        transferencia.SeriesQueNombra().Select(serie => serie.ArticuloId)
+            .ShouldBe([ElLibroDeLaPrueba.Articulo, otroArticulo], ignoreOrder: true);
     }
 
     /// <summary>Enviarla la pasa a enviada y le da número, y deja de admitir líneas.</summary>
@@ -345,6 +417,47 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
             inverso, new TransferenciaAnulada(original.Id, ElLibroDeLaPrueba.Empresa)));
 
         original.Estado.ShouldBe(EstadoDeTransferencia.Enviada);
+    }
+
+    /// <summary>
+    /// No se da por anulada contra el inverso de otra: ese inverso ya está confirmado, pero lo que
+    /// compensa en el libro es la otra, y esta seguiría con su mercancía en vuelo.
+    /// </summary>
+    [Fact]
+    public void No_se_anula_contra_el_inverso_de_otra()
+    {
+        ElLibroDeLaPrueba libro = UnLibroConExistenciasEnElOrigen();
+        Transferencia esta = ElLibroDeLaPrueba.UnaTransferenciaDe(4m, s_diaDeEnvio);
+        Transferencia otra = ElLibroDeLaPrueba.UnaTransferenciaDe(4m, s_diaDeEnvio);
+        libro.Enviar(esta);
+        libro.Enviar(otra);
+        (Transferencia inversoDeLaOtra, _) = libro.Anular(otra, s_diaDeLaAnulacion);
+
+        Should.Throw<InvalidOperationException>(() => esta.Anular(
+            inversoDeLaOtra, new TransferenciaAnulada(esta.Id, ElLibroDeLaPrueba.Empresa)));
+
+        esta.Estado.ShouldBe(EstadoDeTransferencia.Enviada);
+        otra.Estado.ShouldBe(EstadoDeTransferencia.Anulada, "la pareja: con el suyo, la otra sí se anula");
+    }
+
+    /// <summary>
+    /// Una anulada no se da por anulada otra vez, ni siquiera contra su propio inverso: contaría la
+    /// anulación dos veces.
+    /// </summary>
+    [Fact]
+    public void Una_anulada_no_se_da_por_anulada_otra_vez()
+    {
+        ElLibroDeLaPrueba libro = UnLibroConExistenciasEnElOrigen();
+        Transferencia original = ElLibroDeLaPrueba.UnaTransferenciaDe(4m, s_diaDeEnvio);
+        libro.Enviar(original);
+        (Transferencia inverso, _) = libro.Anular(original, s_diaDeLaAnulacion);
+        int eventos = original.EventosPendientes.Count;
+
+        Should.Throw<InvalidOperationException>(() => original.Anular(
+            inverso, new TransferenciaAnulada(original.Id, ElLibroDeLaPrueba.Empresa)));
+
+        original.Estado.ShouldBe(EstadoDeTransferencia.Anulada);
+        original.EventosPendientes.Count.ShouldBe(eventos, "la anulación se cuenta una sola vez");
     }
 
     private static ElLibroDeLaPrueba UnLibroConExistenciasEnElOrigen()
