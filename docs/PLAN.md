@@ -9180,7 +9180,100 @@ escrita. El ADR-0055 queda para el 2.12.
 
 1. ~~El run de `main` del 2.11, anotado.~~ Hecho en el primer commit de la rama: el 37293342638, en
    *El 2.11, cerrado* y en su casilla.
-2. La tanda de las guardas del ajuste, de la 264 en adelante.
+2. ~~La tanda de las guardas del ajuste, de la 264 en adelante.~~ Hecha: **de la 264 a la 301**,
+   escrita antes de medir en `tanda-e211.json` (un fichero del *scratchpad*, con la decisión, el
+   cambio y los casos que se esperaban rojos de cada una). La 301 es la del arnés.
+   - **Cómo se midió.** Un guion del *scratchpad*, `mutar-e211.py`, sobre un *worktree* aparte
+     en `dc6f220`, el commit que abrió la rama. Aplica cada mutación y compila. Corre tres
+     carriles: `tests/Inventario.UnitTests`, `tests/Api.FunctionalTests` y
+     `tests/Api.IntegrationTests` filtrado a los espacios `Inventario`, `Cruces` y `Numeracion`,
+     con `--blame-hang --blame-hang-timeout 4m`. Lee los rojos por nombre en el `.trx` y revierte
+     con `git restore --source=HEAD` y la fecha de ahora. La base da **0 rojos de 148, de 208 y de
+     191**, y el árbol restaurado compila con la porcelana vacía.
+   - **Dieciséis salen rojas** con todos sus casos esperados dentro, y **diecinueve verdes**, las
+     que se esperaban verdes porque el dominio las repite. **Tres salen verdes sin esperarlo**: la
+     274, la 284 y la 300.
+   - Cuatro rojas dan **más rojos de los esperados**, y se anotan por nombre:
+     - la 287, la 288 y la 292 rompen también la propiedad del saldo, porque su generador lleva
+       un paso con fecha futura, otro contra el año cerrado y documentos con fecha anterior al
+       último movimiento, que es uno de los motivos de la guarda de la 292;
+     - la 292 rompe además los dos casos de `NingunaFechaAnteriorAlUltimoMovimientoTests`, porque
+       la fecha anterior es uno de los tres motivos de la misma guarda;
+     - la 298 rompe además las dos esperas de `ElEjercicioRigeElAjusteTests`, porque las dos acaban
+       en «sin ejercicio para hoy».
+
+     | # | Lo que quita o cambia | Rojos de integración (la base: 191) |
+     |---|---|---|
+     | 264 | La empresa sin divisa base, tomada por euros | verde → `2b0f427` |
+     | 265 | El alta sin líneas | verde → `2b0f427` |
+     | 266 | La salida con coste | 1: `LaValoracionDelAjusteTests.Una_salida_con_coste_o_un_coste_negativo_no_abren_el_borrador` |
+     | 267 | El coste negativo | 1: el mismo |
+     | 268 | Los códigos de la línea sin forma | 4: los de `LaFormaDeLosCodigosDeLaLineaTests` |
+     | 269 | El almacén bloqueado | 2: los de `UnAlmacenBloqueadoNoAdmiteAjustesTests` |
+     | 270 | El almacén que no existe | 1: `…Un_almacen_bloqueado_y_uno_inventado_no_contestan_lo_mismo` |
+     | 271 | Ese almacén, `409` en vez de `400` | 1: el mismo |
+     | 272 | La serie cerrada | 1: `LaSerieDelAjusteTests.Una_serie_cerrada_no_deja_abrir_el_borrador` |
+     | 273 | La serie que no existe | 1: `LaSerieDelAjusteTests.Una_serie_que_no_existe_no_deja_abrir_el_borrador` |
+     | 274 | Esa serie, `409` en vez de `400` | **verde sin esperarlo** → `1feb1b6` |
+     | 275 | La ubicación bloqueada | verde → `2b0f427` |
+     | 276 | La ubicación de otro almacén | verde → `2b0f427` |
+     | 277 | La ubicación que no existe, `409` en vez de `400` | verde → `2b0f427` |
+     | 278 | La unidad retirada | verde → `2b0f427` |
+     | 279 | La unidad que no existe | verde → `2b0f427` |
+     | 280 | Esa unidad, `409` en vez de `400` | verde → `2b0f427` |
+     | 281 | El artículo que no se almacena | verde → `2b0f427` |
+     | 282 | El artículo que no existe | verde → `2b0f427` |
+     | 283 | Ese artículo, `409` en vez de `400` | verde → `2b0f427` |
+     | 284 | La marca al dar de alta, la de cortesía | **verde sin esperarlo** → `1e3e6ba` |
+     | 285 | Confirmar lo que no existe | verde → `2b0f427` |
+     | 286 | Confirmar lo que no es un borrador | verde → `2b0f427` |
+     | 287 | La fecha futura | 2: `LasExistenciasSonLaSumaDelLibroTests.Una_fecha_futura_…` y la propiedad |
+     | 288 | El ejercicio cerrado al confirmar | 2: `ElEjercicioRigeElAjusteTests.Cerrado_el_ejercicio_…` y la propiedad |
+     | 289 | Sin ejercicio, con el código del cerrado | 1: `…Una_fecha_fuera_de_todo_ejercicio_no_se_confirma_y_lo_dice_con_otro_codigo` |
+     | 290 | La marca releída bajo cerrojo | 2: los de `LaMarcaSeLeeConCerrojoTests` |
+     | 291 | La serie que no numera, al confirmar | 3: los tres de `LaSerieDelAjusteTests` que confirman |
+     | 292 | Lo que impide valorar, al confirmar | 5: dos de `LaValoracionDelAjusteTests`, dos de `NingunaFechaAnteriorAlUltimoMovimientoTests` y la propiedad |
+     | 293 | La anulación sin motivo | verde → `2b0f427` |
+     | 294 | El motivo más largo que su columna | verde → `2b0f427` |
+     | 295 | Anular lo que no existe | verde → `2b0f427` |
+     | 296 | Anular lo que no está confirmado | verde → `2b0f427` |
+     | 297 | Anular con el ejercicio de hoy cerrado | verde → `2b0f427` |
+     | 298 | Sin ejercicio para hoy, con el código del cerrado | 3: `…Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso` y las dos esperas |
+     | 299 | La serie del original que no numera el inverso | verde → `2b0f427` |
+     | 300 | Lo que impide valorar el inverso | **verde sin esperarlo** → `4d0e34f` |
+     | 301 | **Arnés**: el caso bloquea otro almacén, no el del ajuste | 1: `UnAlmacenBloqueadoNoAdmiteAjustesTests.Bloquear_el_almacen_cierra_el_alta_…` |
+
+   - **Las tres que no se esperaban verdes**, cada una cubierta en su commit:
+     - **274** (`1feb1b6`). `LaSerieDelAjusteTests` decía «es un 400» y solo miraba el código. Ahora
+       mira también el tipo, en la serie cerrada y en la que no existe.
+     - **284** (`1e3e6ba`). La tabla de `CadaMarcaAdmiteSuLineaTests` prueba la regla como función
+       pura, y no que el alta la pregunte. Sin la guarda, el borrador se abría y el rechazo llegaba
+       al confirmar. El caso de los maestros del alta pasa el artículo a ir por lote: la línea sin
+       lote es un `409`, y con lote abre.
+     - **300** (`4d0e34f`). **La predicción estaba mal**: el `422` `stock-insuficiente` de «lo que
+       ya salió» lo da la proyección del libro, no esta guarda. Lo que la guarda dice en una
+       anulación es la divisa, porque el inverso habla la de su original.
+       `…Un_documento_en_otra_divisa_…` anula ahora la entrada en euros de la clave que ya vale en
+       dólares, con unidades de sobra, y es un `422` `ajuste-valoracion-en-otra-divisa`.
+   - **Las otras diecinueve verdes las cubre `2b0f427`**, que trae `LasGuardasDelAjusteTests` con
+     tres casos, las semillas 736 a 738. Las acciones fuera de su estado y el documento que no
+     existe están en un caso. En otro, el motivo, la serie del original y el ejercicio de hoy de la
+     anulación. En el tercero, cada maestro del alta, con su código y su tipo. Los métodos que las
+     guardas de la transferencia tenían para sí pasaron a `EscenaDeTransferencia`.
+   - **Se volvieron a medir sobre `4d0e34f`** las veintidós verdes y la base, con el mismo guion y
+     los mismos tres carriles. La base da **0 de 148, de 208 y de 194**, que son los 191 de antes
+     más los tres casos nuevos. **Las veintidós salen rojas, y cada una con un solo caso**, el que
+     se escribió para ella: la 274, en `LaSerieDelAjusteTests`; la 300, en
+     `LaValoracionDelAjusteTests`; y las otras veinte, en el caso de `LasGuardasDelAjusteTests` que
+     les toca. Las dos tandas acaban con el árbol restaurado compilando y la porcelana vacía.
+   - **Un hallazgo, que no se arregla aquí: el inverso de un ajuste se puede anular.**
+     `Ajuste.CrearInverso` solo pregunta si el ajuste está `Confirmado`, y un inverso nace
+     confirmado. Se midió: anular un inverso contestó `200`, y el inverso del inverso tomó el número
+     3. La transferencia sí lo impide, con `transferencia-no-se-anula` y la excepción de
+     `Transferencia` «un inverso no se anula». No hay ningún ADR que lo decida para el ajuste, en un
+     sentido ni en otro. Cambiarlo es cambiar lo que hace hoy la anulación, así que **va a la puerta
+     del 2.12**, junto a «el ajuste de un recuento no se anula por separado», que es la misma
+     pregunta.
 3. ~~Los tres `title`: las categorías, las tarifas y los terceros.~~ Hecho en su commit, mientras
    corría la tanda, con el arreglo de `585b510`:
    - La marca se queda en su celda, sin `title`, y su porqué va **escrito** debajo de la tabla: uno
