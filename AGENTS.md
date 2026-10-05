@@ -232,6 +232,18 @@ en el PLAN. Lo que solo vale en esta máquina o en su *shell* se quedó fuera.
   Si la primera ya escribió, la segunda espera por otra razón: un `INSERT … ON CONFLICT` espera en el
   índice único. Así, la mutación que quitaba el cerrojo dio 0 rojos de 432. Se mide con esa
   mutación, sola.
+
+  **La primera puede haber escrito cuando la carrera es sobre lo que escribe** (precisado en el
+  epílogo del 2.11). Las carreras de la transferencia afirman el `412` de un documento que la
+  primera ya cambió: si la primera no hubiera escrito, la segunda no tendría nada que ver. Se admite
+  con dos condiciones, y el caso las dice:
+  - **el código distingue la causa**: el `412` frente al `422` que daría la segunda si llegara a
+    otra guarda, la de la fecha o la del stock;
+  - **la mutación que quita o adelanta el cerrojo, sola, pone el caso rojo**: la 219 y la 223, y la
+    248 en la de los dos envíos, que cambia el orden en que se escribe.
+
+  Sin las dos, vale lo de arriba. Y cuando lo que se prueba es justo la espera en el índice, como
+  la serie en tránsito contra un ajuste, esa espera es el sujeto, no «otra razón».
 - **La tanda lleva plazo de cuelgue, y un caso no cierra un contexto con algo en vuelo** (addendum
   del 2.8). Sin plazo, la 73 tuvo la tanda parada tres horas y media: un caso de carrera falló a
   medias y el `await using` cerró el contexto de la operación que seguía esperando. Con

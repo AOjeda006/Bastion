@@ -9217,7 +9217,21 @@ escrita. El ADR-0055 queda para el 2.12.
      | 310 | Se explican las tres clases de sello, salgan o no. | 1: `el sello se pinta SIEMPRE…` |
      | 311 | El `id` en el párrafo entero, con la marca delante del porqué. | 8, en los cuatro ficheros: los tres de este commit y el listado del artículo, que la usa por `ExplicacionDeSinReconocer` |
      | 312 | **Arnés**: el caso de la rama suelta no quita al padre de la página. | 1: `una categoría cuyo padre se quedó en otra página…` |
-4. La regla de las carreras, escrita como se ha aplicado.
+4. ~~La regla de las carreras, escrita como se ha aplicado.~~ Hecho en su commit, **precisando la
+   regla en `AGENTS.md`**, porque los casos no pueden cumplirla tal como estaba:
+   - La regla del 2.8 para a la primera transacción **antes de escribir**. Las carreras de la
+     transferencia afirman el `412` de un documento que la primera **ya cambió**: si la primera no
+     hubiera escrito, la segunda vería la misma versión y pasaría, y no habría carrera que probar.
+     La cabecera de `LasCarrerasDeLaTransferenciaTests` decía «nada escrito por la segunda», que
+     no es lo que pide la regla, y tampoco era del todo cierto: en la primera carrera la anulación
+     ya ha tomado su número cuando se para.
+   - `AGENTS.md` admite ahora que la primera haya escrito cuando la carrera es sobre lo que escribe,
+     con las dos condiciones del encargo: **el código distingue la causa** (el `412` frente al `422`
+     de la fecha o del stock) y **la mutación que quita o adelanta el cerrojo, sola, pone el caso
+     rojo** (la 219 y la 223, y la 248 de los dos envíos). Y deja dicho que, cuando lo que se prueba
+     es la espera en el índice —la serie en tránsito—, esa espera es el sujeto.
+   - La cabecera del fichero dice lo mismo, con la mutación de cada caso: la 223, la 219, la 248 y
+     la 202, que son las que el PLAN del 2.11 anota con ese caso en rojo.
 5. La zona horaria de la transferencia, en la pregunta abierta del cierre de fase.
 6. La batería, el humo y los runs.
 

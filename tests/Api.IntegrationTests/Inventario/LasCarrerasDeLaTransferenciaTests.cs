@@ -22,11 +22,19 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Cada caso para a la primera transacción con el cerrojo tomado y nada escrito por la segunda</b>
-/// (método del 2.8): la ganadora se queda dentro con su trabajo hecho, la perdedora sale lanzada,
-/// <c>LaEspera</c> comprueba que está parada detrás de la ganadora y no en otra parte, y solo
-/// entonces la ganadora confirma. Sin esa comprobación, una perdedora que llegara tarde por azar
-/// daría el mismo verde que una que esperó en el cerrojo.
+/// <b>Cada caso para a la primera transacción con su trabajo hecho y sin confirmar</b>: la ganadora
+/// se queda dentro, la perdedora sale lanzada, <c>LaEspera</c> comprueba que está parada detrás de
+/// la ganadora y no en otra parte, y solo entonces la ganadora confirma. Sin esa comprobación, una
+/// perdedora que llegara tarde por azar daría el mismo verde que una que esperó en el cerrojo.
+/// </para>
+/// <para>
+/// <b>No es la forma del 2.8, que para a la primera antes de escribir, y no puede serlo</b>: la
+/// carrera es sobre lo que la primera escribe, y sin el documento cambiado la segunda no tendría nada
+/// que ver. <c>AGENTS.md</c> lo admite desde el epílogo del 2.11 con dos condiciones, y los cuatro
+/// casos las cumplen. El código distingue la causa: el <c>412</c> frente al <c>422</c> de la fecha o
+/// del stock, y en la de la serie, el <c>23505</c> del índice, que es justo la espera que se prueba.
+/// Y la mutación que quita o adelanta el cerrojo, o cambia el orden en que se escribe, pone el caso
+/// rojo ella sola: la 223, la 219, la 248 y la 202, por este orden.
 /// </para>
 /// <para>
 /// <b>Las dos primeras afirman el <c>412</c> del ADR-0053 §10</b>, que no sale de ningún índice: la
