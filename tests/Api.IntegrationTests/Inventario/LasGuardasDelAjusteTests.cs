@@ -207,14 +207,24 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
     /// <summary>
     /// El alta rechaza, cada cosa con su código y su tipo, lo que no se puede ajustar: nada, una
     /// empresa que no opera, un hueco de otro almacén o inventado, un artículo o una unidad
-    /// inventados, un hueco bloqueado, una unidad retirada y un artículo que no se almacena.
+    /// inventados, un hueco bloqueado, una línea que no casa con la marca del artículo, una unidad
+    /// retirada y un artículo que no se almacena.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>La primera alta pasa</b>, con la misma línea que llevan los rechazos, y al final sigue
-    /// siendo el único ajuste: cada rechazo para por lo que dice y no deja un borrador a medias.
-    /// Salen de las mutaciones 264, 265 y de la 275 a la 283. Las que cambian el tipo, de
+    /// <b>La primera alta pasa</b>, con la misma línea que llevan los rechazos, y al final solo hay
+    /// dos ajustes, ella y la del lote: cada rechazo para por lo que dice y no deja un borrador a
+    /// medias. Salen de las mutaciones 264, 265 y de la 275 a la 284. Las que cambian el tipo, de
     /// <c>Validacion</c> a <c>Conflicto</c>, solo las ve la aserción del tipo.
+    /// </para>
+    /// <para>
+    /// <b>La marca, entre el hueco bloqueado y la unidad</b>, y con su propia pareja: el artículo
+    /// pasa a ir por lote, la línea sin lote no abre y la misma línea con lote sí. Esa comprobación
+    /// del alta es de cortesía, porque la confirmación vuelve a leer la marca con cerrojo; sin ella
+    /// el borrador se abría y el rechazo llegaba después, al confirmar. La tabla de
+    /// <c>CadaMarcaAdmiteSuLineaTests</c> no lo ve, porque prueba la regla y no que el alta la
+    /// pregunte (la 284). La marca vuelve a <c>Ninguna</c> antes de la unidad, para que lo que sigue
+    /// no dependa del orden de esas dos preguntas.
     /// </para>
     /// <para>
     /// <b>Los dos últimos van en ese orden porque el alta pregunta por el artículo antes que por la
@@ -282,6 +292,23 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
             "ajuste-ubicacion-bloqueada",
             TipoDeError.Conflicto);
 
+        using (HttpResponseMessage porLote = await escena.CambiarElArticuloAsync("Bien", "PorLote"))
+        {
+            porLote.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(porLote));
+        }
+
+        ExigirElError(
+            await IntentarAbrirAsync(escena, modulo, [linea]), "ajuste-trazabilidad-no-casa", TipoDeError.Conflicto);
+
+        Resultado<AjusteDto> conLote = await IntentarAbrirAsync(escena, modulo, [linea with { CodigoDeLote = "L-01" }]);
+
+        conLote.EsCorrecto.ShouldBeTrue($"«{conLote.Error?.Codigo}»");
+
+        using (HttpResponseMessage sinMarca = await escena.CambiarElArticuloAsync("Bien", "Ninguna"))
+        {
+            sinMarca.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(sinMarca));
+        }
+
         string unidad = $"{LosMaestrosPorLaApi.Unidades}/{escena.UnidadId}";
 
         using (HttpResponseMessage retirada = await escena.Cliente.AccionarAsync(
@@ -303,7 +330,8 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
 
         await using InventarioDbContext contexto = postgres.AbrirInventario(escena.EmpresaId);
 
-        (await contexto.Ajustes.CountAsync()).ShouldBe(1, "un alta rechazada no deja un borrador a medias");
+        (await contexto.Ajustes.CountAsync())
+            .ShouldBe(2, "las dos altas buenas, y un alta rechazada no deja un borrador a medias");
     }
 
     private static LineaDeAjusteDto Entrada(EscenaDeTransferencia escena, decimal cantidad) =>
