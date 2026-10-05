@@ -8994,6 +8994,15 @@ del paso 8 sigue en la **190**.
    éste, y su run lo anota el commit siguiente, que espera su propio verde en la rama antes de que
    `main` avance. El run de `main`, al abrir el 2.12.
 
+   **El run de rama de `7616d26`**, el del cierre, es el
+   [37290727224](https://github.com/AOjeda006/Bastion/actions/runs/37290727224): **success al
+   primer intento**, con sus tres jobs —Backend `111700230090`, Frontal `111700230389` y Humo
+   `111703165815`— y **68 pasos: 67 en verde y 1 omitido**, *Diagnóstico*. Dice lo mismo que la
+   batería: **1268** y **597** casos con **10 `.trx`** en cada artefacto, **138** operaciones y 83
+   rutas, **173** tipos de error de **179** sitios, y **426/450** y **646/900** KiB. Subió con
+   `f13306f` y `a1530b7`, así que su verde es también el suyo. Este commit, que lo anota, es el
+   decimotercero de la rama y espera su propio verde antes de que `main` avance.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
@@ -17249,6 +17258,9 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     cuadrando la diferencia: el estado intermedio de `…Enviada_y_recibida_mueve_dos_veces_y_el_transito_cuenta_mientras_viaja`,
     con el valor de la empresa intacto, y el cuadre, que compara lo que vuela con las líneas de las
     transferencias `Enviada` (`ElCuadreDelTransitoTests`, tres casos).
+
+  El run de rama del cierre, el **37290727224** sobre `7616d26`, sale en verde al primer intento,
+  con **1268** y **597** casos; el de `main`, al abrir el 2.12.
 
 - [ ] **2.12 · El recuento** — criterio de aceptación: cabecera con estado y líneas con **cantidad
   contada frente a teórica**; al confirmar **genera sus ajustes** —documentos del 2.3, con su número y
