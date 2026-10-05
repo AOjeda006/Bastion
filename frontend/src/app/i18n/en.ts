@@ -89,6 +89,10 @@ export const en: Diccionario = {
       'ajuste-fecha-anterior-al-ultimo-movimiento':
         'An item in this document already has a later movement in that warehouse, and a document ' +
         'cannot be dated before the last movement of its item. Use that date or a later one.',
+      'ajuste-inverso-no-se-anula':
+        'That adjustment is the counter-document of another, and a counter-document is not ' +
+        'undone with another: undoing it would be making the adjustment again. If needed, make a ' +
+        'new adjustment.',
       'ajuste-lote-no-valido':
         'That batch is not a code that fits on the label: 1 to 20 characters, no spaces, using ' +
         'unaccented letters, digits and the symbols GS1 allows. Fix the batch on that line.',

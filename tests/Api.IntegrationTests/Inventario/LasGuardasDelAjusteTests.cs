@@ -32,7 +32,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// </para>
 /// <para>
 /// <b>Semillas: del 736 al 738</b>, empresas y maestros de instalación con el mismo número. El
-/// reparto del bloque está en la cabecera de <c>LaTransferenciaTests</c>.
+/// reparto del bloque está en la cabecera de <c>LaTransferenciaTests</c>. <b>Y el 763</b>, del
+/// bloque del 2.12, que está en la cabecera de <c>ElPuertoDelArticuloContraLaBaseTests</c>.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -122,6 +123,56 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
         (await InversosDeAsync(escena, ajusteId)).ShouldBe(1);
         (await escena.FilasDelLibroAsync(postgres, ajusteId)).Count.ShouldBe(1);
         (await escena.FilasDelLibroAsync(postgres, par.Inverso.Id)).Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Anular un inverso es <c>409</c> <c>ajuste-inverso-no-se-anula</c>, y su original se anuló
+    /// por el mismo camino (ADR-0055 §9).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>La pareja es la anulación del original</b>, por la misma API y justo antes: una guarda que
+    /// contestara siempre que no la habría parado.
+    /// </para>
+    /// <para>
+    /// <b>Sin la guarda, el dominio lanza</b> al construir el inverso del inverso, y el borde contesta
+    /// un <c>500</c>. Por eso se mira el código, y que no se gastó número ni nació otro documento.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Anular_un_inverso_es_409_y_su_original_si_se_anulo()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(763, "AJG-I");
+
+        Guid ajusteId;
+
+        await using (ElModuloDeInventario modulo = new(postgres, escena.EmpresaId))
+        {
+            ajusteId = await escena.AbrirUnAjusteAsync(modulo, escena.AlmacenA, Entrada(escena, 3m));
+        }
+
+        using (HttpResponseMessage confirmacion = await escena.ConfirmarElAjustePorLaApiAsync(ajusteId))
+        {
+            confirmacion.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(confirmacion));
+        }
+
+        AnulacionDto par;
+
+        using (HttpResponseMessage anulacion = await escena.AnularElAjustePorLaApiAsync(ajusteId))
+        {
+            par = await EscenaDeTransferencia.LeerAsync<AnulacionDto>(anulacion);
+        }
+
+        par.Original.Estado.ShouldBe(nameof(EstadoDeAjuste.Anulado));
+        par.Inverso.Estado.ShouldBe(nameof(EstadoDeAjuste.Confirmado));
+
+        await ExigirElProblemaAsync(
+            escena.AnularElAjustePorLaApiAsync(par.Inverso.Id), HttpStatusCode.Conflict, "ajuste-inverso-no-se-anula");
+
+        (await ElEstadoDeAsync(escena, par.Inverso.Id)).ShouldBe(EstadoDeAjuste.Confirmado);
+        (await InversosDeAsync(escena, par.Inverso.Id)).ShouldBe(0, "nadie compensa al inverso");
+        (await escena.ContadorAsync(escena.SerieDeAjustes.Id))
+            .ShouldBe(2, "el original y su inverso: el rechazo no gastó número");
     }
 
     /// <summary>

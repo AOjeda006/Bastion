@@ -133,6 +133,14 @@ internal sealed class AnularAjuste(
                 ErroresDeAjuste.NoEstaConfirmado(ajusteId, original.Estado.ToString()));
         }
 
+        // UN INVERSO NO SE ANULA (ADR-0055 §9). Está confirmado, así que la guarda del estado no lo
+        // para, y el dominio lanzaría al construir su inverso: un 500 donde va un 409 con su
+        // motivo, que es la regla que la transferencia ya tenía.
+        if (original.AnulaAId is { } compensado)
+        {
+            return Resultado.Fallo<AnulacionDto>(ErroresDeAjuste.InversoNoSeAnula(ajusteId, compensado));
+        }
+
         DateTimeOffset ahora = reloj.GetUtcNow();
         var hoy = DateOnly.FromDateTime(ahora.UtcDateTime);
 

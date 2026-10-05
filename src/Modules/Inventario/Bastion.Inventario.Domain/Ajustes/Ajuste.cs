@@ -484,6 +484,13 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
                 "tiene su inverso (R2).");
         }
 
+        if (AnulaAId is not null)
+        {
+            throw new InvalidOperationException(
+                $"El ajuste {Id} es el inverso de {AnulaAId}, y un inverso no se anula: deshacerlo " +
+                "sería volver a hacer el ajuste, y eso es otro ajuste (ADR-0055 §9).");
+        }
+
         Ajuste inverso = Abrir(
             EmpresaId, SerieId, AlmacenId, fechaDeOperacion, motivo, Divisa, momento);
         inverso.AnulaAId = Id;

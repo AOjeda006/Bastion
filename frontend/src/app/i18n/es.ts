@@ -114,6 +114,9 @@ export const es = {
         'Algún artículo del documento ya tiene un movimiento posterior a esa fecha en ese almacén, ' +
         'y un documento no puede ir por detrás del último movimiento de su artículo. Pon esa fecha ' +
         'o una posterior.',
+      'ajuste-inverso-no-se-anula':
+        'Ese ajuste es el inverso de otro, y un inverso no se deshace con otro: deshacerlo sería ' +
+        'volver a hacer el ajuste. Si hace falta, se hace con un ajuste nuevo.',
       'ajuste-lote-no-valido':
         'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
         'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote de esa ' +

@@ -12,6 +12,7 @@ internal static class ErroresDeAjuste
     internal const string CodigoSinLineas = "ajuste-sin-lineas";
     internal const string CodigoNoEstaEnBorrador = "ajuste-no-esta-en-borrador";
     internal const string CodigoNoEstaConfirmado = "ajuste-no-esta-confirmado";
+    internal const string CodigoInversoNoSeAnula = "ajuste-inverso-no-se-anula";
     internal const string CodigoMotivoNoValido = "ajuste-motivo-no-valido";
     internal const string CodigoSinEjercicio = "ajuste-sin-ejercicio";
     internal const string CodigoEnEjercicioCerrado = "ajuste-en-ejercicio-cerrado";
@@ -159,6 +160,16 @@ internal static class ErroresDeAjuste
             CodigoNoEstaConfirmado,
             $"El ajuste {ajusteId} está en estado «{estado}»: solo se anula lo que está " +
             "confirmado. Un borrador no ha movido nada, así que no hay nada que compensar.");
+
+    /// <summary>Un inverso no se anula (ADR-0055 §9), como en la transferencia.</summary>
+    /// <param name="ajusteId">El inverso.</param>
+    /// <param name="originalId">El ajuste que compensa.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion InversoNoSeAnula(Guid ajusteId, Guid originalId) =>
+        ErrorDeOperacion.Conflicto(
+            CodigoInversoNoSeAnula,
+            $"El ajuste {ajusteId} es el inverso de {originalId}: deshacerlo sería volver a hacer " +
+            "el ajuste, y eso es otro ajuste (R2).");
 
     /// <summary>La línea que no tiene forma, con su código (ADR-0048 §2 y §3).</summary>
     /// <param name="sinForma">Lo que contestó <c>LoQueNoTieneForma</c>.</param>

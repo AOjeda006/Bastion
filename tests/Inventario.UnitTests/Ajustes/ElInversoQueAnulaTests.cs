@@ -224,6 +224,28 @@ public sealed class ElInversoQueAnulaTests
         original.Estado.ShouldBe(EstadoDeAjuste.Anulado);
     }
 
+    /// <summary>Un inverso no da su propio inverso, y su original sí lo dio.</summary>
+    /// <remarks>
+    /// <b>Deshacer un inverso sería volver a hacer el ajuste</b>, y eso es otro ajuste (ADR-0055
+    /// §9). Es la regla que la transferencia ya tenía. El caso de uso contesta antes un <c>409</c>;
+    /// esto es la invariante que queda debajo, por si un camino nuevo se salta la guarda.
+    /// </remarks>
+    [Fact]
+    public void Un_inverso_no_da_su_propio_inverso()
+    {
+        (Ajuste original, _) = UnAjusteConfirmadoDeDosLineas();
+
+        Ajuste inverso = original.CrearInverso(s_diaDeLaAnulacion, "Me equivoqué", s_momento);
+        inverso.Confirmar(NumeroDelInverso, Confirmado(inverso), LaValoracion.DesdeCero(inverso), LotesYSeriesResueltos.Ninguno, s_momento);
+        original.Anular(inverso, Anulado(original));
+
+        inverso.Estado.ShouldBe(
+            EstadoDeAjuste.Confirmado, "el inverso está confirmado, así que el estado no lo para");
+
+        Should.Throw<InvalidOperationException>(
+            () => inverso.CrearInverso(s_diaDeLaAnulacion, "Deshacer la anulación", s_momento));
+    }
+
     /// <summary>Anular con el inverso de otro documento no cuela.</summary>
     /// <remarks>
     /// <b>Sin esta guarda el par quedaría cruzado</b>: dos originales anulados y un solo inverso.

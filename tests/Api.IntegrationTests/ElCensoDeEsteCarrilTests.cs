@@ -584,6 +584,7 @@ public sealed class ElCensoDeEsteCarrilTests
         // Del epílogo del 2.11 (la tanda de la 264 a la 301): las guardas del ajuste que el dominio
         // repetía. Cada acción fuera de su estado y el documento que no existe, el motivo, la serie y
         // el ejercicio de la anulación, y cada maestro del alta con su código y su tipo.
+        "LasGuardasDelAjusteTests.Anular_un_inverso_es_409_y_su_original_si_se_anulo",
         "LasGuardasDelAjusteTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa",
         "LasGuardasDelAjusteTests.El_alta_rechaza_cada_maestro_que_no_se_mueve_con_su_codigo",
         "LasGuardasDelAjusteTests.La_anulacion_pide_motivo_una_serie_que_numere_y_el_ejercicio_de_hoy_abierto",
