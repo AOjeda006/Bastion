@@ -6006,7 +6006,7 @@ que pregunta el cierre.
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 10 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 11 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -8370,7 +8370,7 @@ ninguna decisión escrita. El ADR-0053 queda para el 2.11.
    El árbol queda limpio al terminar. Los commits desde `c9883cd`, contados con `git log
    --format='%h %G? %s' c9883cd..HEAD`, son **8** antes de este, todos con firma `G`.
 
-**El 2.11, en curso** desde el 2026-10-03, en la rama `2.11-la-transferencia`, abierta desde `main`
+**El 2.11, cerrado el 2026-10-05**, en la rama `2.11-la-transferencia`, abierta desde `main`
 en `ed7ab60`. Lo que pide está en *Decisiones tomadas → El 2.11: la transferencia y el stock en
 tránsito*, y la puerta, contestada, justo debajo. Las decisiones van en el **ADR-0053**, que enmienda
 el ADR-0048 §3, y el **ADR-0054** corrige tres frases suyas y del ADR-0046 sobre el inverso que vacía
@@ -8756,7 +8756,243 @@ del paso 8 sigue en la **190**.
    - `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py $(git merge-base main
      HEAD) HEAD` da los seis conjuntos vacíos. El árbol de este commit solo cambia ficheros `.cs`
      de tests y este PLAN.
-8. La tanda de mutaciones, la batería y los runs.
+
+   El noveno commit (`28297c2`) tiene su run en verde en los tres trabajos, el
+   [37261721477](https://github.com/AOjeda006/Bastion/actions/runs/37261721477).
+8. ~~La tanda de mutaciones, la batería y los runs.~~ Hecho: la tanda, que dejó **25** verdes; los
+   casos que las cubren, en el décimo commit (`f13306f`) y en el undécimo (`a1530b7`); la nueva medida, la
+   batería y el humo, abajo; y la casilla con la línea del README, que pasa a **11 de 14**, en el
+   mismo commit que este texto.
+
+   **La tanda, de la 190 a la 263**, son **74** mutaciones sobre el árbol de `28297c2`. Se
+   escribieron en una lista antes de medir ninguna, cada una con la decisión que rompe y su zona: el
+   dominio, la aplicación, las guardas propias de cada caso de uso, la persistencia y el arnés, que
+   lleva doce. Cada una se aplica sobre el árbol limpio, se compila la solución una vez y se
+   ejecutan sin compilar los tres carriles que la pueden ver:
+   - `dotnet test tests/Inventario.UnitTests --no-build`, que sin mutar da **142** casos;
+   - `dotnet test tests/Api.FunctionalTests --no-build`, **208**;
+   - `dotnet test tests/Api.IntegrationTests --no-build --blame-hang --blame-hang-timeout 4m
+     --filter "…"`, con las ocho clases que tocan la transferencia —`CadaMarcaAdmiteSuLineaTests`,
+     `ElCuadreDelTransitoTests`, `ElSaldoEsLaSumaDelLibroPorPropiedadTests`, las dos dobles flechas,
+     `LasCarrerasDeLaTransferenciaTests`, `LasGuardasDeLaTransferenciaTests` y
+     `LaTransferenciaTests`—, **55**.
+
+   Los rojos se leen por nombre del `.trx` de cada carril. Se revierte con `git restore
+   --source=HEAD` y la fecha de ahora, y al terminar el árbol restaurado compila y `git status
+   --porcelain` sale vacío. Con el árbol sin mutar, los tres carriles salen enteros en verde. En la
+   tabla, un número solo es de integración, y «la propiedad» es
+   `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`.
+   La 181 se midió con el ADR-0054, en el paso 4, y de la 182 a la 189 en el paso 7; van aquí para que la numeración se lea
+   seguida.
+
+   | # | Mutación | Rojos |
+   |---|---|---|
+   | 181 | `ElPrecioMedioPonderado`: la salida que vacía la clave deja de llevarse todo el valor (fuera el `despues <= 0m \|\|`). Medida sobre el árbol del paso 4. | dominio, 2 de 142: `LosCasosDoradosDelPrecioMedioTests.Vaciar_la_clave_de_golpe_se_lleva_todo_el_valor_y_no_lo_que_dice_el_redondeo` y `ElInversoDeLaTransferenciaTests.Si_el_inverso_vacia_el_destino_el_origen_recibe_mas_de_lo_que_salio` |
+   | 182–189 | La revisión del cuadre. | En la tabla del paso 7: cada una, 1 de 27, el caso que la revisión pidió para ella |
+   | 190 | El `CHECK` de la serie sin `+ en_transito`. | 1: `LaTransferenciaTests.Un_ajuste_no_mete_una_serie_en_el_hueco_al_que_vuela_y_la_recepcion_si` |
+   | 191 | La línea guarda el código tecleado, sin recortar. | 1: la propiedad |
+   | 192 | El índice de la serie, solo con `fisico > 0`. | 2: la propiedad y `LasCarrerasDeLaTransferenciaTests.Una_serie_en_transito_no_entra_a_la_vez_en_un_tercer_almacen` |
+   | 193 | Anular una recibida valora el origen sin lo que salió del destino. | 3: la propiedad, `Anular_una_recibida_que_vacia_el_destino_se_lleva_todo_lo_que_queda_en_el` y `Si_el_destino_ya_lo_consumio_la_anulacion_es_stock_insuficiente_y_no_escribe_nada` |
+   | 194 | La recepción del mismo día que el envío, rechazada (`<=`). | dominio, 1: `LaMaquinaDeEstadosDeLaTransferenciaTests.La_recepcion_no_va_antes_que_el_envio`; integración, 10: la propiedad, ocho de `LaTransferenciaTests` y `Recibir_y_anular_a_la_vez_la_que_llega_segunda_sale_con_412` |
+   | 195 | La entrada del destino, con la fecha del envío. | dominio, 1: `ElValorViajaConLaLineaTests.Al_recibir_el_destino_suma_lo_que_salio_del_origen_y_su_precio_medio_mezcla`; integración, 2: `El_cambio_de_anio_numera_en_el_del_envio_y_recibe_en_el_siguiente` y `Una_fecha_anterior_al_ultimo_movimiento_de_su_punta_es_422` |
+   | 196 | El inverso nace con la fecha de envío del original. | dominio, 3: `De_una_enviada_vuelve_al_origen_el_valor_exacto_y_el_transito_se_vacia`, `Anularla_deja_el_inverso_recibido_y_el_original_anulado` y `El_inverso_no_va_antes_que_la_llegada_que_compensa`; integración, 3: la propiedad, `Anular_la_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto` y `Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula` |
+   | 197 | El inverso de una recibida, comparado solo con el envío. | dominio, 1: `El_inverso_no_va_antes_que_la_llegada_que_compensa` |
+   | 198 | `CrearInverso` admite una anulada. | dominio, 1: `Ni_una_anulada_ni_un_inverso_se_vuelven_a_anular` |
+   | 199 | La línea del inverso guarda el valor que compensa y no el que volvió. | dominio, 2: `De_una_recibida_el_origen_recibe_lo_que_salio_del_destino` y `Si_el_inverso_vacia_el_destino_el_origen_recibe_mas_de_lo_que_salio`; integración, 2: la propiedad y `Anular_una_recibida_que_vacia_el_destino_se_lleva_todo_lo_que_queda_en_el` |
+   | 200 | El inverso de una enviada, con el tránsito de signo `-1`. | dominio, 1: `De_una_enviada_vuelve_al_origen_el_valor_exacto_y_el_transito_se_vacia`; integración, 4: la propiedad, `Anular_la_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto`, `Anular_una_enviada_deshace_el_transito_y_devuelve_al_origen_lo_que_salio` y `Una_serie_va_vuelve_llega_y_vuelve_sin_estar_nunca_en_dos_sitios` |
+   | 201 | El tránsito, en la cantidad introducida. | dominio, 1: `ElValorViajaConLaLineaTests.El_transito_se_cuenta_en_unidad_base`; integración, 1: `ElCuadreDelTransitoTests.Lo_que_vuela_cuadra_redondeado_y_sin_valor_y_un_borrador_no_vuela` |
+   | 202 | El tránsito, sin su serie. | 5: el cuadre de la serie en vuelo, la propiedad, `Un_ajuste_no_mete_una_serie_en_el_hueco_al_que_vuela_y_la_recepcion_si`, `Una_serie_va_vuelve_llega_y_vuelve_sin_estar_nunca_en_dos_sitios` y la carrera de la serie |
+   | 203 | La línea con serie, `!= 1m` sin el valor absoluto. | 2: la propiedad y `Una_serie_va_vuelve_llega_y_vuelve_sin_estar_nunca_en_dos_sitios` |
+   | 204 | El valor que viaja, `<= 0m`: rechaza el cero. | 2: `Lo_que_vuela_cuadra_redondeado_y_sin_valor_y_un_borrador_no_vuela` y la propiedad |
+   | 205 | Lo que viaja, cantidad por precio medio. | 1: `Vaciar_el_origen_se_lleva_todo_su_valor_sin_dejar_un_resto` |
+   | 206 | Un inverso se envía. | dominio, 1: `Un_inverso_no_se_envia` |
+   | 207 | Se anula contra cualquier inverso (`AnulaAId is null`). | **0** |
+   | 208 | Anular parte del estado que tenga. | **0** |
+   | 209 | La serie repetida, sin mirar el artículo. | **0** |
+   | 210 | El factor, solo distinto de cero. | **0** |
+   | 211 | Sin la guarda de la empresa vacía. | **0** |
+   | 212 | El hueco visto, sin su almacén. | 1: `El_alta_pregunta_cada_hueco_a_su_almacen_y_no_toca_lo_bloqueado` |
+   | 213 | Solo el origen se pregunta como almacén. | 2: `Una_transferencia_entre_dos_empresas_no_existe` y `El_alta_pregunta_cada_hueco_a_su_almacen_y_no_toca_lo_bloqueado` |
+   | 214 | El envío pregunta por el ejercicio antes que por la fecha futura. | 1: `Las_fechas_imposibles_son_422_y_no_mueven_nada` |
+   | 215 | El envío numera antes de preguntar por el ejercicio. | 1: `Un_ejercicio_cerrado_no_admite_ni_el_envio_ni_la_recepcion` |
+   | 216 | La divisa, mirada en las claves del origen. | 1: `Una_punta_valorada_en_otra_divisa_para_el_envio_por_los_dos_lados` |
+   | 217 | La recepción un día antes del envío pasa. | 1: `Las_fechas_imposibles_son_422_y_no_mueven_nada` |
+   | 218 | La recepción solo se rechaza sin ejercicio. | 1: `Un_ejercicio_cerrado_no_admite_ni_el_envio_ni_la_recepcion` |
+   | 219 | La recepción relee el documento antes de bloquear. | 1: `Dos_recepciones_a_la_vez_la_segunda_sale_con_412_y_no_con_el_422_de_la_fecha` |
+   | 220 | La guarda del ADR-0047 en la recepción, con la fecha del envío. | 1: `Una_fecha_anterior_al_ultimo_movimiento_de_su_punta_es_422` |
+   | 221 | La anulación pregunta por el ejercicio del envío. | 2: `Anular_la_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto` y `Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula` |
+   | 222 | El inverso se numera con la fecha de hoy. | 2: los mismos |
+   | 223 | Anular una enviada bloquea el origen y no el destino. | 1: `Recibir_y_anular_a_la_vez_la_que_llega_segunda_sale_con_412` |
+   | 224 | El envío solo rechaza una anulada. | **0** |
+   | 225 | La recepción solo rechaza una anulada. | **0** |
+   | 226 | La anulación, sin la guarda del inverso. | **0** |
+   | 227 | La anulación solo rechaza una anulada. | **0** |
+   | 228 | El motivo vacío pasa. | **0** |
+   | 229 | El motivo más largo que su columna pasa. | **0** |
+   | 230 | La lista vacía pasa. | **0** |
+   | 231 | La cantidad que no es positiva pasa. | **0** |
+   | 232 | Sin divisa base, `"EUR"`. | **0** |
+   | 233 | El envío no relee la marca. | **0** |
+   | 234 | El alta sin la cortesía de la marca. | **0** |
+   | 235 | La anulación solo se rechaza sin ejercicio. | **0** |
+   | 236 | El almacén que no existe, un conflicto. | **0** |
+   | 237 | La serie de documentos cerrada pasa. | **0** |
+   | 238 | La unidad retirada pasa. | **0** |
+   | 239 | El artículo que no se almacena pasa. | **0** |
+   | 240 | `max` y no `sum` en la cantidad de `ElTransito`. | 2: la propiedad y `Varias_lineas_al_mismo_destino_mueven_dos_veces_cada_una_y_su_transito_se_suma` |
+   | 241 | `max` en el valor. | 3: el cuadre del lote en vuelo, la propiedad y `Varias_lineas_al_mismo_destino_mueven_dos_veces_cada_una_y_su_transito_se_suma` |
+   | 242 | `ElTransito` sin la empresa en el `WHERE`. | 1: `Dos_empresas_con_las_mismas_claves_no_se_mezclan_el_transito` |
+   | 243 | `ElTransito` sin el lote en la unión. | 2: el cuadre del lote en vuelo y la propiedad |
+   | 244 | La valoración del destino no pasa a la divisa del documento. | **0** |
+   | 245 | El envío sube el tránsito antes de restar el origen. | 5: el cuadre de la serie en vuelo, la propiedad, `Un_ajuste_no_mete_una_serie_en_el_hueco_al_que_vuela_y_la_recepcion_si`, `Una_serie_va_vuelve_llega_y_vuelve_sin_estar_nunca_en_dos_sitios` y la carrera de la serie |
+   | 246 | La recepción suma antes de bajar el tránsito. | 3: la propiedad, `Un_ajuste_no_mete_una_serie_en_el_hueco_al_que_vuela_y_la_recepcion_si` y `Una_serie_va_vuelve_llega_y_vuelve_sin_estar_nunca_en_dos_sitios` |
+   | 247 | El inverso de una recibida entra en el origen antes de salir del destino. | 2: la propiedad y `Una_serie_va_vuelve_llega_y_vuelve_sin_estar_nunca_en_dos_sitios` |
+   | 248 | El documento se guarda después de mover. | **0** |
+   | 249 | `leida <= ahora` en la relectura. | 2: `Dos_recepciones_a_la_vez_la_segunda_sale_con_412_y_no_con_el_422_de_la_fecha` y `Recibir_y_anular_a_la_vez_la_que_llega_segunda_sale_con_412` |
+   | 250 | `ix_transferencias_anula_a_id` sin `unique`. | 1: `LaDobleFlechaDeLaAnulacionTests.Ninguna_transferencia_anulada_se_queda_sin_exactamente_un_inverso` |
+   | 251 | La recepción, con la clave optativa. | funcionales, 2: `TodaEscrituraDiceComoSeProtegeTests.El_barrido_encuentra_el_inventario_entero` y `…La_clave_obligatoria_es_la_excepcion_y_esta_declarada_entera`; integración, 1: `Sin_la_clave_las_tres_acciones_son_428_y_no_tocan_nada` |
+   | 252 | Arnés: el modelo calcula el tránsito de después sobre el suyo, sin copia. | 1: la propiedad |
+   | 253 | Arnés: el valor que deja de volar se suma. | 1: la propiedad |
+   | 254 | Arnés: el valor en tránsito, leído de la columna de la cantidad. | 1: la propiedad |
+   | 255 | Arnés: la fecha del envío, contra el destino. | 1: la propiedad |
+   | 256 | Arnés: la recepción, al precio medio del destino. | 1: la propiedad |
+   | 257 | Arnés: la anulación de una recibida, al precio medio. | 1: la propiedad |
+   | 258 | Arnés: el choque al anular una enviada, sin el tránsito de después. | 1: la propiedad |
+   | 259 | Arnés: la recepción, fuera de su transacción. | 2: la propiedad y `Dos_recepciones_a_la_vez_la_segunda_sale_con_412_y_no_con_el_422_de_la_fecha` |
+   | 260 | Arnés: el valor de la empresa, sin lo que vuela. | 1: `Enviada_y_recibida_mueve_dos_veces_y_el_transito_cuenta_mientras_viaja` |
+   | 261 | Arnés: el cuadre estropeado, mirado desde fuera de su transacción. | 1: `El_cuadre_ve_el_lote_en_vuelo_aunque_el_destino_sume_lo_que_debe` |
+   | 262 | Arnés: ninguna línea del envío pide de más. | **0** |
+   | 263 | Arnés: el modelo del `CHECK` de la serie, sin lo que vuela. | **0** |
+
+   **Veinticinco salieron verdes en los tres carriles**, y cada una es un hallazgo:
+   - **cinco del dominio, de la 207 a la 211**. Son guardas de `Transferencia` y de su línea que
+     ningún caso del dominio hacía saltar: anular contra el inverso de otra transferencia, anular
+     una que ya está anulada, la misma serie en dos artículos, el factor negativo y la empresa vacía.
+     Las cubren cinco casos de `LaMaquinaDeEstadosDeLaTransferenciaTests`, seis resultados con las
+     dos filas del factor, y el carril del dominio pasa de 142 a 148;
+   - **dieciséis de las guardas propias de los casos de uso, de la 224 a la 239**. El paso 6 probó
+     cada guarda que la revisión pidió, pero no cada `Resultado.Fallo` de cada caso de uso: la
+     acción fuera de su estado, el motivo, el ejercicio de hoy en la anulación, cada rechazo del
+     alta y la marca releída en el envío. Las cubren cuatro casos de
+     `LasGuardasDeLaTransferenciaTests`, con las semillas 727, 728, 729 y 733;
+   - **dos de la persistencia**:
+     - la **244**, la valoración que pasa a la divisa del documento. Solo cambia algo en una clave
+       vacía de otra divisa, y ningún caso la tenía. La cubre el 734, que vacía la clave del destino
+       en euros, pasa la empresa a dólares y envía: la clave recibe el tránsito en dólares;
+     - la **248**, el documento guardado antes de mover. Las dos carreras del paso 6 dan el `412` por
+       la relectura del documento (`SigueComoSeLeyoAsync`), que el envío no tiene, así que el orden
+       de escritura no lo miraba nadie. Lo mira el 735, en `LasCarrerasDeLaTransferenciaTests`: dos
+       envíos del mismo borrador, el segundo frenado detrás del primero. Sin el orden, el segundo
+       resta del origen lo que ya no hay y sale con el `422` del stock;
+   - **dos del arnés, la 262 y la 263**, que son huecos de la propiedad y se cuentan abajo.
+
+   **Las 23 cubiertas, medidas de nuevo** sobre `f13306f`, con la misma orden y los mismos tres
+   carriles, que sin mutar dan **148**, **208** y **61**. Cada una pone rojo justo el caso escrito
+   para ella:
+
+   | # | Rojo sobre `f13306f` |
+   |---|---|
+   | 207 | dominio, 1 de 148: `LaMaquinaDeEstadosDeLaTransferenciaTests.No_se_anula_contra_el_inverso_de_otra` |
+   | 208 | dominio, 1: `…Una_anulada_no_se_da_por_anulada_otra_vez` |
+   | 209 | dominio, 1: `…La_misma_serie_de_otro_articulo_es_otra_pieza` |
+   | 210 | dominio, 1: `…El_factor_a_unidad_base_es_positivo`, la fila de `-1`; la de `0`, su pareja, sigue verde |
+   | 211 | dominio, 1: `…Una_transferencia_sin_empresa_no_existe` |
+   | 224–227 | integración, 1 de 61: `LasGuardasDeLaTransferenciaTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa` |
+   | 228, 229, 235 | 1: `…La_anulacion_pide_motivo_y_el_ejercicio_de_hoy_abierto` |
+   | 230–232, 234, 236–239 | 1: `…El_alta_rechaza_cada_cosa_que_no_se_mueve_con_su_codigo` |
+   | 233 | 1: `…El_envio_vuelve_a_leer_la_marca_y_no_saca_un_borrador_que_ya_no_casa` |
+   | 244 | 1: `…Una_clave_vaciada_en_la_divisa_de_antes_recibe_el_transito_en_la_nueva` |
+   | 248 | 1: `LasCarrerasDeLaTransferenciaTests.Dos_envios_a_la_vez_el_segundo_sale_con_412_y_no_con_el_422_del_stock` |
+
+   **La 262 y la 263 son de la propiedad, y solo una tenía arreglo aquí:**
+   - **La 262** quita la unidad de más que pide una de cada ocho líneas del envío. Sin ella el motor
+     ya no rechaza ningún envío por el stock, y la propiedad seguía en verde: que un rechazo no deje
+     tránsito ni consuma número dejaba de mirarse sin que nada lo dijera. Se cubre en el undécimo
+     commit, `a1530b7`: el envío rechazado solo por el stock pasa a ser una clase de paso
+     (`EnvioSinStock`), y cada semilla tiene que pasar por ella. Las seis pasan sin tocar el
+     generador: `dotnet test tests/Api.IntegrationTests --filter
+     "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests" --blame-hang --blame-hang-timeout
+     4m` da 6 de 6 en 53 s. Medida de nuevo sobre `a1530b7`, con los carriles en 148, 208 y 61 sin
+     mutar, da **1 de 61**: la propiedad, roja en las seis semillas y en la aserción de las clases.
+   - **La 263 se queda como hueco del arnés.** El modelo del `CHECK` de la serie suma lo que vuela
+     hacia la clave, pero ninguna semilla llega a esa rama: haría falta que un ajuste metiera en A
+     una serie que vuela hacia ese mismo hueco de A. Forzarlo pide otro dado en el generador de los
+     ajustes, y eso cambia la secuencia de las seis semillas, que habría que volver a ver una a una.
+     Lo que la rama modela, el `CHECK` del motor con `+ en_transito`, sí lo fija un caso: el 726,
+     `LaTransferenciaTests.Un_ajuste_no_mete_una_serie_en_el_hueco_al_que_vuela_y_la_recepcion_si`,
+     que la 190 pone rojo. Y si una semilla llegara algún día a esa rama con el modelo roto, la
+     propiedad saldría roja y no verde: el modelo diría que el ajuste pasa, y el motor lo rechazaría.
+     Medida de nuevo sobre `a1530b7`, sigue en **0 de 61**.
+
+   **Una observación que no se arregla aquí:** las guardas del ajuste son del mismo molde que las de
+   la 224 a la 239 —el estado, el motivo, cada rechazo del alta— y esta tanda no las ha mutado. Si
+   tienen el mismo hueco no se sabe. Se anota para el ítem que toque el ajuste.
+
+   **La batería, entera y en el orden de `AGENTS.md`**, sobre el árbol limpio de `a1530b7`. Cada
+   paso sale con 0:
+   - el contrato: `npm --prefix frontend run api` y `git status --porcelain --
+     frontend/src/shared/api/esquema.ts`, vacío;
+   - `bash scripts/comprobar-migraciones.sh`: Inventario tiene **14** migraciones, una más que en el
+     2.10, `LaTransferencia`, y el modelo coincide en todos los módulos;
+   - `bash scripts/generar-openapi.sh --comprobar`: **138** operaciones, las 135 del run de `main`
+     del 2.10 y las tres acciones de la transferencia, el envío, la recepción y la anulación;
+   - `bash scripts/generar-errores.sh --comprobar`: **173** tipos de **179** sitios;
+   - el frontal: tipado, *lint* y formato a 0. `npm --prefix frontend run test` pasa **192** de
+     192 en 20 ficheros, con **0** avisos de `act()` (`grep -c 'not wrapped in act'` sobre su
+     salida);
+   - `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`: **426/450** de arranque
+     y **646/900** en total, lo mismo que en el paso 7;
+   - `dotnet build Bastion.sln`: **0** avisos y 0 errores, y `dotnet format Bastion.sln
+     --verify-no-changes` sale con 0;
+   - el carril rápido, `dotnet test Bastion.sln --filter "Category!=Integracion"`, y su recuento,
+     `bash scripts/ci/recuento-de-tests.sh` con la lista del *workflow*: **1268** casos en 10
+     ensamblados, todos correctos. Son los 1262 del paso 7 más los seis resultados del décimo
+     commit, y `Inventario.UnitTests` pasa de 142 a **148**;
+   - el carril de integración, `--filter "Category=Integracion" --blame-hang --blame-hang-timeout
+     4m`, y su recuento: **597** casos, **513** en `Api.IntegrationTests` y 84 en
+     `Organizacion.IntegrationTests`. Son los 507 del paso 7 más los seis del décimo commit, del 727
+     al 729 y del 733 al 735. El undécimo no suma casos: cambia lo que la propiedad exige;
+   - las dependencias, `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py ed7ab60
+     HEAD`: los seis conjuntos, vacíos. Ningún paquete entra ni sale en todo el ítem.
+
+   El árbol queda limpio al terminar.
+
+   **El humo** va en su propio proyecto de *compose*, `bastion-humo-211`, con un entorno generado en
+   el *scratchpad* y los puertos en 45xxx. Sale con **0 fallos** y lee del catálogo del motor lo que
+   el ítem cambia:
+   - las tablas `inventario.transferencias` y `inventario.lineas_transferencia`;
+   - las tres columnas del tránsito, `numeric(18,6)` las cantidades y `numeric(18,4)` el valor, las
+     tres `NOT NULL` y sin valor por omisión;
+   - los nueve `CHECK` con su definición, y entre ellos el de la serie, que suma `fisico +
+     en_transito`;
+   - el índice de la serie como `CREATE UNIQUE INDEX … (empresa_id, articulo_id, numero_de_serie_id)
+     WHERE (((fisico > 0) OR (en_transito > 0)) …)`, y el del inverso, único sobre `anula_a_id`;
+   - `LaTransferencia`, una vez en el historial, y el rol del sistema con **100** permisos, los tres
+     nuevos sembrados.
+
+   Después, de punta a punta:
+   - la salud, el `401` sin credenciales y la sesión;
+   - las tres acciones, por la API y por el frontal: sin `Idempotency-Key`, `428`
+     `/errors/idempotencia-obligatoria`; con ella y una transferencia que no existe, `404`
+     `/errors/transferencia-no-encontrada`; y en la base, ninguna transferencia;
+   - la carga del frontal y el `401` reenviado.
+
+   Tras el segundo arranque, el rol sigue con sus 100 permisos, y el índice de la serie y los nueve
+   `CHECK` siguen. El desmontaje deja `docker compose ls -a` con `bastion` y nada más, y borra el
+   entorno y el testigo.
+
+   **La primera vuelta del humo dio 1 fallo, y era del guion.** Esperaba el índice de la serie sobre
+   `(numero_de_serie_id)` a secas, y el índice es de `(empresa_id, articulo_id,
+   numero_de_serie_id)`, como lo crea la migración. El patrón pasó a las tres columnas. Se probó
+   contra la definición buena y contra dos rotas, una sin `en_transito` y otra sin `UNIQUE`, que
+   fallan las dos, y la segunda vuelta salió limpia.
+
+   **Los commits del 2.11**, desde `ed7ab60`, contados con `git log --format='%h %G? %s'
+   ed7ab60..HEAD`, son **11** antes de éste, todos con firma `G` y sin una línea de *trailer*
+   (`git log --format='%(trailers)' ed7ab60..HEAD`, vacío). Los nueve primeros tienen su run de
+   rama en verde, anotado en su paso. El décimo (`f13306f`) y el undécimo (`a1530b7`) suben con
+   éste, y su run lo anota el commit siguiente, que espera su propio verde en la rama antes de que
+   `main` avance. El run de `main`, al abrir el 2.12.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -16977,12 +17213,42 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   de la rama sobre ese mismo commit, el **37072321679**, saliera en verde. Anotado al abrir el
   epílogo del 2.10.
 
-- [ ] **2.11 · La transferencia y el stock en tránsito** — criterio de aceptación: `Enviada →
+- [x] **2.11 · La transferencia y el stock en tránsito** — criterio de aceptación: `Enviada →
   Recibida`, con **dos movimientos por línea** —salida del origen al enviar, entrada en el destino al
   recibir—, el stock **en tránsito** contado mientras vuela y visible en la proyección, y una
   transferencia entre almacenes de **distinta empresa** que no existe. Su documento se numera (2.4),
   se anula con su inverso (2.5) y respeta el ejercicio (2.6); y una transferencia enviada y no
   recibida deja el origen descontado y el destino sin sumar, con el tránsito cuadrando la diferencia.
+
+  **Hecho el 2026-10-05**, en la rama `2.11-la-transferencia`. El porqué está en el
+  [ADR-0053](adr/adr-0053-el-transito-vive-en-el-destino-y-el-valor-viaja-con-la-linea.md), que enmienda el
+  ADR-0048 §3, y en el
+  [ADR-0054](adr/adr-0054-vaciar-la-clave-se-lleva-todo-su-valor-tambien-en-el-inverso.md), que corrige
+  tres frases suyas y del ADR-0046. Los commits, las mutaciones de la 181 a la 263, la batería y el
+  humo están en *Estado actual → El 2.11, cerrado*. Cada punto del criterio tiene su caso:
+
+  - `Enviada → Recibida`, con dos movimientos por línea: en el dominio,
+    `LaMaquinaDeEstadosDeLaTransferenciaTests.Enviarla_la_numera_y_la_cierra_a_lineas_nuevas` y
+    `…Recibirla_la_pasa_a_recibida_con_su_fecha`, y `ElValorViajaConLaLineaTests.Las_dos_patas_de_una_linea_suman_cero`;
+    de punta a punta, `LaTransferenciaTests.Enviada_y_recibida_mueve_dos_veces_y_el_transito_cuenta_mientras_viaja`
+    y `…Varias_lineas_al_mismo_destino_mueven_dos_veces_cada_una_y_su_transito_se_suma`;
+  - el tránsito contado mientras vuela y visible en la proyección: los mismos dos casos leen
+    `en_transito` en la existencia del destino y `en_transito` y `valor_en_transito` en su
+    valoración, y la propiedad lo compara tras cada paso con lo que el modelo tiene en vuelo;
+  - entre empresas no existe: `LaTransferenciaTests.Una_transferencia_entre_dos_empresas_no_existe`,
+    por la API y con claves inventadas, y `…Dos_empresas_con_las_mismas_claves_no_se_mezclan_el_transito`;
+  - se numera como en el 2.4: `…El_cambio_de_anio_numera_en_el_del_envio_y_recibe_en_el_siguiente`,
+    y los casos de guardas cuentan el contador tras cada rechazo;
+  - se anula con su inverso como en el 2.5: `…Anular_una_enviada_deshace_el_transito_y_devuelve_al_origen_lo_que_salio`,
+    `…Anular_una_recibida_saca_del_destino_el_valor_que_entro_y_lo_devuelve_al_origen` y
+    `LaDobleFlechaDeLaAnulacionTests`, con su par para las transferencias;
+  - respeta el ejercicio como en el 2.6: `…Un_ejercicio_cerrado_no_admite_ni_el_envio_ni_la_recepcion`,
+    `…Anular_la_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto` y
+    `LasGuardasDeLaTransferenciaTests.Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula`;
+  - una enviada y no recibida deja el origen descontado, el destino sin sumar y el tránsito
+    cuadrando la diferencia: el estado intermedio de `…Enviada_y_recibida_mueve_dos_veces_y_el_transito_cuenta_mientras_viaja`,
+    con el valor de la empresa intacto, y el cuadre, que compara lo que vuela con las líneas de las
+    transferencias `Enviada` (`ElCuadreDelTransitoTests`, tres casos).
 
 - [ ] **2.12 · El recuento** — criterio de aceptación: cabecera con estado y líneas con **cantidad
   contada frente a teórica**; al confirmar **genera sus ajustes** —documentos del 2.3, con su número y
