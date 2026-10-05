@@ -45,6 +45,12 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// artículo en el código de una unidad y un tramo, también únicos pero en otra tabla. Mezclarlos en
 /// una sola serie haría que reservar un número para lo uno lo gastara para lo otro.
 /// </para>
+/// <para>
+/// <b>La unidad base, del 2.12, va del 760 al 762</b>, empresas y maestros con el mismo número,
+/// como en los ficheros del inventario. El bloque del 760 al 799 es del 2.12: del 750 al 799 no
+/// había ninguna, ni por literal ni por cálculo, y el 750 y el 756 que aparecen son milisegundos y
+/// una versión.
+/// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]
 [Trait("Category", "Integracion")]
@@ -148,6 +154,60 @@ public sealed class ElPuertoDelArticuloContraLaBaseTests(PostgresConTodosLosModu
         (await new ConsultaDeArticulos(enSuEmpresa).AptitudDeAsync(deLaOtra.Id, CancellationToken.None))
             .ShouldBe(
                 AptitudParaMoverExistencias.SeOfreceParaLoNuevo, "en su propia empresa sí se ofrece");
+    }
+
+    /// <summary>
+    /// La unidad base sale por lotes, cada una la suya, y uno de otra empresa contesta lo mismo que
+    /// uno inventado: no vuelve.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Dos artículos con dos unidades distintas</b>, porque una consulta que devolviera la misma
+    /// unidad para todos pasaría con uno solo.
+    /// </para>
+    /// <para>
+    /// <b>La contraria, al final</b>: en su propia empresa, el ajeno sí vuelve. Sin ella, una consulta
+    /// que no devolviera nada pasaría las dos ausencias (ADR-0055 §1).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task La_unidad_base_sale_por_lotes_y_la_de_otra_empresa_no_vuelve_como_la_inventada()
+    {
+        (HttpClient cliente, EmpresaDto propia) = await EnUnaEmpresaNuevaAsync(760);
+        (HttpClient enLaAjena, EmpresaDto ajena) = await EnUnaEmpresaNuevaAsync(762);
+
+        ArticuloDto uno = await ArticuloAsync(cliente, 760, "Bien");
+        ArticuloDto otro = await ArticuloAsync(cliente, 761, "Bien");
+        ArticuloDto deLaOtra = await ArticuloAsync(enLaAjena, 762, "Bien");
+        var inventado = Guid.CreateVersion7();
+
+        uno.UnidadBaseId.ShouldNotBe(otro.UnidadBaseId, "el caso necesita dos unidades distintas");
+
+        await using (CatalogoDbContext contexto = postgres.AbrirCatalogo(propia.Id))
+        {
+            IReadOnlyDictionary<Guid, Guid> unidades = await new ConsultaDeArticulos(contexto)
+                .UnidadesBaseDeAsync([uno.Id, otro.Id, deLaOtra.Id, inventado], CancellationToken.None);
+
+            unidades.ShouldBe(
+                new Dictionary<Guid, Guid>
+                {
+                    [uno.Id] = uno.UnidadBaseId,
+                    [otro.Id] = otro.UnidadBaseId,
+                },
+                ignoreOrder: true,
+                "cada artículo de la empresa con su unidad, y ni el de otra empresa ni el inventado: " +
+                "si el ajeno volviera, un recuento podría contar contra un artículo de la empresa de al " +
+                "lado");
+        }
+
+        await using CatalogoDbContext enSuEmpresa = postgres.AbrirCatalogo(ajena.Id);
+
+        (await new ConsultaDeArticulos(enSuEmpresa)
+            .UnidadesBaseDeAsync([deLaOtra.Id], CancellationToken.None))
+            .ShouldBe(
+                new Dictionary<Guid, Guid> { [deLaOtra.Id] = deLaOtra.UnidadBaseId },
+                ignoreOrder: true,
+                "en su propia empresa sí vuelve");
     }
 
     private async Task<(HttpClient Cliente, EmpresaDto Empresa)> EnUnaEmpresaNuevaAsync(int semilla)

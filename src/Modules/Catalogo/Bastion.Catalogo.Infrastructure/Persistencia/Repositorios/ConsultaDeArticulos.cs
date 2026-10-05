@@ -44,4 +44,29 @@ internal sealed class ConsultaDeArticulos(CatalogoDbContext contexto) : IConsult
             _ => AptitudParaMoverExistencias.SeOfreceParaLoNuevo,
         };
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// El filtro de empresa es el que deja fuera el artículo de otra empresa, como en
+    /// <see cref="AptitudDeAsync"/>. Sin cerrojo: la unidad base de un artículo no cambia.
+    /// </remarks>
+    /// <param name="articulos">Los artículos por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public async Task<IReadOnlyDictionary<Guid, Guid>> UnidadesBaseDeAsync(
+        IReadOnlyCollection<Guid> articulos, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(articulos);
+
+        if (articulos.Count == 0)
+        {
+            return new Dictionary<Guid, Guid>();
+        }
+
+        return await contexto.Articulos
+            .AsNoTracking()
+            .Where(articulo => articulos.Contains(articulo.Id))
+            .Select(articulo => new { articulo.Id, articulo.UnidadBaseId })
+            .ToDictionaryAsync(fila => fila.Id, fila => fila.UnidadBaseId, cancelacion)
+            .ConfigureAwait(false);
+    }
 }

@@ -273,6 +273,7 @@ public sealed class ElCensoDeEsteCarrilTests
         // cuatro. Si algún día el artículo recibe su final de vida, la casilla que entre
         // necesita su línea aquí y su caso allá.
         "ElPuertoDelArticuloContraLaBaseTests.El_bien_se_ofrece_y_el_servicio_no_se_almacena",
+        "ElPuertoDelArticuloContraLaBaseTests.La_unidad_base_sale_por_lotes_y_la_de_otra_empresa_no_vuelve_como_la_inventada",
         "ElPuertoDelArticuloContraLaBaseTests.Uno_inventado_y_uno_de_otra_empresa_NoExisten_y_el_ajeno_si_en_la_suya",
 
         "ElPuertoDeTercerosContraLaBaseTests.De_un_conjunto_se_tratan_los_de_aqui_no_bloqueados_hagan_el_papel_que_hagan",

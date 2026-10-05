@@ -84,6 +84,10 @@ public enum AptitudParaMoverExistencias
 /// obliga a que exista el puerto que lo valida (ADR-0024), y un puerto que no existe no se puede
 /// exigir.
 /// </para>
+/// <para>
+/// <b>Desde el 2.12 publica también la unidad base</b>, que es un identificador y no la ficha: el
+/// recuento cuenta en ella, y el ajuste que genera mueve en ella con factor 1 (ADR-0055 §1).
+/// </para>
 /// </remarks>
 public interface IConsultaDeArticulos
 {
@@ -92,4 +96,16 @@ public interface IConsultaDeArticulos
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<AptitudParaMoverExistencias> AptitudDeAsync(
         Guid articuloId, CancellationToken cancelacion);
+
+    /// <summary>La unidad base de cada artículo, en una sola consulta.</summary>
+    /// <remarks>
+    /// <b>Va por lotes</b>, como la marca de trazabilidad: un recuento pregunta por todos los
+    /// artículos de un almacén a la vez. Un artículo que no está en la empresa no vuelve, y uno de
+    /// otra empresa tampoco: desde fuera de Catálogo, las dos cosas son la misma.
+    /// </remarks>
+    /// <param name="articulos">Los artículos por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>La unidad base de cada artículo que existe en la empresa.</returns>
+    Task<IReadOnlyDictionary<Guid, Guid>> UnidadesBaseDeAsync(
+        IReadOnlyCollection<Guid> articulos, CancellationToken cancelacion);
 }
