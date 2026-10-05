@@ -86,6 +86,7 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
             "ajuste-serie-cerrada",
             "es un 409 y no un 400: el identificador que se envió es válido y la serie existe, " +
             "lo que pasa es que está en un estado que no admite un documento nuevo");
+        alta.Error!.Tipo.ShouldBe(TipoDeError.Conflicto);
     }
 
     [Fact]
@@ -106,6 +107,7 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
             "ajuste-serie-no-encontrada",
             "y este SÍ es un 400: lo que se envió no corresponde a ninguna fila, que es la " +
             "cuarta vía del ADR-0024 — sin este puerto el borrador se guardaría apuntando a nada");
+        alta.Error!.Tipo.ShouldBe(TipoDeError.Validacion);
     }
 
     [Fact]
