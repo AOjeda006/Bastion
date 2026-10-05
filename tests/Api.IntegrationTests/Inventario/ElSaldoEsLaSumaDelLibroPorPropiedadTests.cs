@@ -144,6 +144,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string RechazadoPorLaFecha = "rechazado por la fecha";
     private const string RechazadoPorLaSerie = "rechazado por la serie";
     private const string Envio = "transferencia enviada";
+    private const string EnvioSinStock = "envío rechazado sin stock";
     private const string Recepcion = "transferencia recibida";
     private const string AnulacionDeUnaEnviada = "transferencia enviada anulada";
     private const string AnulacionDeUnaRecibida = "transferencia recibida anulada";
@@ -182,7 +183,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     [
         "entrada", "salida", "ajuste", Anulacion, Futuro, Recalculo, Cierre, Reapertura,
         RechazadoPorElCierre, RechazadoSinStock, RechazadoPorLaFecha, RechazadoPorLaSerie,
-        Envio, Recepcion, AnulacionDeUnaEnviada, AnulacionDeUnaRecibida,
+        Envio, EnvioSinStock, Recepcion, AnulacionDeUnaEnviada, AnulacionDeUnaRecibida,
     ];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
@@ -692,9 +693,14 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         ApunteDelLibro[] salen =
             [.. lineas.Select(linea => new ApunteDelLibro(linea.Origen, fecha, -linea.Cantidad))];
 
+        // EL RECHAZO SIN STOCK ES UNA CLASE DE PASO (tanda del paso 8 del 2.11): sin ella, que las
+        // líneas dejaran de pedir de más no lo veía nadie, y el rechazo que no deja tránsito ni
+        // consume número se quedaba sin mirar.
         if (LoQueRomperia(secuencia, salen, secuencia.TransitoTras(lineas, 1)) is { Count: > 0 } rotas)
         {
-            secuencia.Anotar("envío rechazado por el motor", detalle);
+            secuencia.Anotar(
+                ClaseDelRechazo(rotas) == RechazadoSinStock ? EnvioSinStock : "envío rechazado por el motor",
+                detalle);
 
             await ExigirElRechazoDelMotorAsync(() => modulo.EnviarAsync(alta.Valor.Id), rotas, secuencia);
 
