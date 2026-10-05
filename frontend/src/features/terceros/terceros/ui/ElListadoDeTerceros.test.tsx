@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, delay, http } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -8,6 +8,15 @@ import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/s
 import { montarPantalla } from '@/pruebas/montar.tsx';
 import { PaginaDeTerceros } from './PaginaDeTerceros.tsx';
 import type { components } from '@/shared/api/esquema.ts';
+
+/** Por qué dice cada sello lo que dice: escrito debajo de la tabla, y descripción de la celda. */
+const POR_QUE_COMPROBADO = 'El carácter de control del identificador cuadra.';
+const POR_QUE_SIN_COMPROBAR =
+  'Este identificador no se puede comprobar por su forma —es extranjero, o no sigue el formato ' +
+  'español—, así que puede estar mal tecleado. Revísalo antes de facturar.';
+const POR_QUE_SIN_INTERPRETAR =
+  'Esta versión de la pantalla no sabe interpretar el estado de comprobación que ha llegado. ' +
+  'Trátalo como no comprobado y avisa a quien administre Bastion.';
 
 /**
  * La pantalla de terceros, por sus cuatro situaciones y por lo que este ítem estrena.
@@ -169,6 +178,24 @@ describe('El listado de terceros', () => {
     expect(conNif).toHaveTextContent('Comprobado');
     expect(extranjero).toHaveTextContent('Sin comprobar');
 
+    // El porqué de cada sello va escrito debajo de la tabla, no en un `title`, que no llega ni al
+    // teclado ni al tacto. Una explicación por clase de sello, y cada celda señala la suya.
+    expect(
+      within(conNif!).getByRole('cell', {
+        name: 'ES 00000001R Comprobado',
+        description: POR_QUE_COMPROBADO,
+      }),
+    ).toBeVisible();
+    expect(
+      within(extranjero!).getByRole('cell', {
+        name: 'FR PRUEBAFR0001 Sin comprobar',
+        description: POR_QUE_SIN_COMPROBAR,
+      }),
+    ).toBeVisible();
+    expect(screen.getByText(POR_QUE_COMPROBADO)).toBeVisible();
+    expect(screen.getByText(POR_QUE_SIN_COMPROBAR)).toBeVisible();
+    expect(screen.queryByText(POR_QUE_SIN_INTERPRETAR)).not.toBeInTheDocument();
+
     // Y el papel: cliente, proveedor, o las dos cosas. Las dos cosas es UNA ficha, no dos, y por eso
     // la columna no puede ser un booleano pintado.
     expect(conNif).toHaveTextContent('Cliente');
@@ -212,6 +239,15 @@ describe('El listado de terceros', () => {
     // blanco, ni el texto crudo que llegó— y no se cuela como comprobado.
     expect(fila).toHaveTextContent('Sin comprobar');
     expect(fila).not.toHaveTextContent('Comprobado');
+
+    // Y su porqué es el suyo, no el del extranjero, aunque los dos sellos digan «Sin comprobar».
+    expect(
+      within(fila!).getByRole('cell', {
+        name: 'ES 00000001R Sin comprobar',
+        description: POR_QUE_SIN_INTERPRETAR,
+      }),
+    ).toBeVisible();
+    expect(screen.getByText(POR_QUE_SIN_INTERPRETAR)).toBeVisible();
   });
 });
 

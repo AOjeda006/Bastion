@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, delay, http } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -15,6 +15,12 @@ type CategoriaDto = components['schemas']['CategoriaDto'];
 function pagina(elementos: CategoriaDto[]): components['schemas']['PaginaDeCategoriaDto'] {
   return { elementos, pagina: 1, tamanio: 20, total: elementos.length };
 }
+
+/** Por qué una rama sale «Sin su sitio»: escrito debajo del árbol, y descripción de la celda. */
+const SIN_SU_SITIO =
+  'La categoría de la que cuelga no está en esta página, o el árbol guardado tiene un ciclo. Se ' +
+  'muestra igualmente: una categoría que existe y no sale es una que alguien da de alta por ' +
+  'segunda vez.';
 
 /**
  * La pantalla del árbol de categorías.
@@ -93,6 +99,9 @@ describe('El árbol de categorías', () => {
     // Y la profundidad va en su columna, no solo en la sangría: un lector de pantalla no ve el
     // relleno de la izquierda, así que sin esta columna el árbol solo existiría para quien mira.
     expect(filas.map((fila) => fila.cells[2]?.textContent)).toEqual(['0', '1', '2', '0']);
+
+    // Con todas en su sitio, no se explica nada.
+    expect(screen.queryByText(SIN_SU_SITIO)).not.toBeInTheDocument();
   });
 
   it('cada rama enlaza a SUS artículos, con el filtro ya puesto en la dirección', async () => {
@@ -130,15 +139,26 @@ describe('El árbol de categorías', () => {
 
     montarPantalla(<PaginaDeCategorias />, '/categorias');
 
-    const tornilleria = (await screen.findByText('Tornillería')).closest('tr');
-    const tuercas = screen.getByText('Tuercas').closest('tr');
+    const tornilleria = (await screen.findByText('Tornillería')).closest('tr')!;
+    const tuercas = screen.getByText('Tuercas').closest('tr')!;
 
-    expect(tornilleria).toHaveTextContent('Sin su sitio');
+    // La marca va en la celda del nombre, y su porqué, escrito debajo del árbol. No en un `title`,
+    // que no llega ni al teclado ni al tacto: es la descripción accesible de la celda.
+    expect(
+      within(tornilleria).getByRole('cell', {
+        name: 'Tornillería Sin su sitio',
+        description: SIN_SU_SITIO,
+      }),
+    ).toBeVisible();
+    expect(screen.getByText(SIN_SU_SITIO)).toBeVisible();
 
     // Y solo la que ha perdido el padre: lo que cuelga de ella sigue colgando, y marcarlo también
-    // convertiría la marca en decoración.
+    // convertiría la marca en decoración. Ninguna de sus celdas señala la explicación.
     expect(tuercas).not.toHaveTextContent('Sin su sitio');
-    expect(tuercas?.cells[2]).toHaveTextContent('1');
+    expect(tuercas.cells[2]).toHaveTextContent('1');
+    for (const celda of within(tuercas).getAllByRole('cell')) {
+      expect(celda).not.toHaveAccessibleDescription();
+    }
   });
 
   it('un ciclo YA GUARDADO no cuelga la pantalla: la cadena se rompe por un sitio y se dice', async () => {
@@ -185,5 +205,9 @@ describe('El árbol de categorías', () => {
     // debajo de nada— y se marca; «Otra» sí cuelga de quien dice colgar, ahí mismo encima, así que
     // marcarla también convertiría la marca en decoración.
     expect(filas.map((fila) => fila.cells[2]?.textContent)).toEqual(['0', '1']);
+
+    // La rota señala su porqué, y la otra no.
+    expect(filas[0]?.cells[1]).toHaveAccessibleDescription(SIN_SU_SITIO);
+    expect(filas[1]?.cells[1]).not.toHaveAccessibleDescription();
   });
 });

@@ -1,3 +1,5 @@
+import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
+
 /**
  * Lo que esta versión de la pantalla no sabe interpretar: la marca en su sitio, y la explicación
  * escrita aparte.
@@ -19,10 +21,7 @@ export function SinReconocer({ texto }: { texto: string }): React.JSX.Element {
   );
 }
 
-/**
- * Por qué sale la marca. Solo el detalle lleva el `id`, porque es la descripción de la celda, y el
- * nombre de la celda ya es la marca.
- */
+/** Por qué sale la marca, con la forma que tienen todas las explicaciones (`ExplicacionDeMarca`). */
 export function ExplicacionDeSinReconocer({
   id,
   marca,
@@ -32,9 +31,5 @@ export function ExplicacionDeSinReconocer({
   marca: string;
   detalle: string;
 }): React.JSX.Element {
-  return (
-    <p className="mt-3 text-xs text-neutral-700">
-      <SinReconocer texto={marca} /> <span id={id}>{detalle}</span>
-    </p>
-  );
+  return <ExplicacionDeMarca id={id} marca={<SinReconocer texto={marca} />} detalle={detalle} />;
 }

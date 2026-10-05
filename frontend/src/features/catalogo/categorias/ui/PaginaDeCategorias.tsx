@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
@@ -7,6 +8,7 @@ import { consultarCategorias } from '../api/consultas.ts';
 import { componerElArbol } from '../model/arbol.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
+import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 
@@ -27,6 +29,9 @@ export function PaginaDeCategorias(): React.JSX.Element {
   const textoDeFallo = useTextoDeFallo();
   const [parametros, setParametros] = useSearchParams();
   const paginacion = leerPaginacion(parametros);
+  // Por qué una rama sale «sin su sitio»: escrito una vez debajo del árbol, y cada celda marcada
+  // lo señala.
+  const porQueSinSuSitio = useId();
 
   const consulta = useQuery({
     queryKey: clavesDeCategorias.lista(paginacion),
@@ -97,16 +102,12 @@ export function PaginaDeCategorias(): React.JSX.Element {
           {filas.map((fila) => (
             <tr key={fila.categoria.id} className="border-b border-neutral-200">
               <td className="py-2 pr-4 font-mono">{fila.categoria.codigo}</td>
-              <td className="py-2 pr-4" style={{ paddingLeft: `${String(fila.profundidad)}rem` }}>
-                {fila.categoria.nombre}{' '}
-                {fila.huerfana && (
-                  <span
-                    title={t('catalogo.categorias.sueltaDetalle')}
-                    className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs text-amber-900"
-                  >
-                    {t('catalogo.categorias.suelta')}
-                  </span>
-                )}
+              <td
+                className="py-2 pr-4"
+                style={{ paddingLeft: `${String(fila.profundidad)}rem` }}
+                aria-describedby={fila.huerfana ? porQueSinSuSitio : undefined}
+              >
+                {fila.categoria.nombre} {fila.huerfana && <SinSuSitio />}
               </td>
               <td className="py-2 pr-4 text-neutral-600">{fila.profundidad}</td>
               <td className="py-2 pr-4">
@@ -122,7 +123,29 @@ export function PaginaDeCategorias(): React.JSX.Element {
         </tbody>
       </table>
 
+      {filas.some((fila) => fila.huerfana) && (
+        <ExplicacionDeMarca
+          id={porQueSinSuSitio}
+          marca={<SinSuSitio />}
+          detalle={t('catalogo.categorias.sueltaDetalle')}
+        />
+      )}
+
       <Paginador paginacion={paginacion} total={consulta.data.total} alCambiar={irA} />
     </>
+  );
+}
+
+/**
+ * La marca de la rama que no cuelga de quien dice colgar: su padre se quedó en otra página, o el
+ * árbol guardado tiene un ciclo. Se pinta igual, y el porqué va escrito debajo (`ExplicacionDeMarca`).
+ */
+function SinSuSitio(): React.JSX.Element {
+  const { t } = useTranslation();
+
+  return (
+    <span className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs text-amber-900">
+      {t('catalogo.categorias.suelta')}
+    </span>
   );
 }

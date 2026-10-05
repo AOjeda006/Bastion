@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
@@ -11,6 +12,7 @@ import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
+import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 
@@ -34,6 +36,13 @@ export function PaginaDeTerceros(): React.JSX.Element {
   const sesion = useSesionAbierta();
   const [parametros, setParametros] = useSearchParams();
   const listado = leerListado(parametros, leerPaginacion(parametros));
+  // Por qué dice cada sello lo que dice: una explicación por clase de sello, escrita debajo de la
+  // tabla, y cada celda señala la suya.
+  const porQue: Record<Verificacion, string> = {
+    verificado: useId(),
+    sinVerificar: useId(),
+    desconocida: useId(),
+  };
 
   const consulta = useQuery({
     queryKey: clavesDeTerceros.lista(listado),
@@ -174,7 +183,7 @@ export function PaginaDeTerceros(): React.JSX.Element {
         <tbody>
           {consulta.data.elementos.map((tercero) => (
             <tr key={tercero.id} className="border-b border-neutral-200">
-              <td className="py-2 pr-4">
+              <td className="py-2 pr-4" aria-describedby={porQue[tercero.verificacion]}>
                 <span className="font-mono">
                   {tercero.pais} {tercero.numero}
                 </span>{' '}
@@ -195,19 +204,41 @@ export function PaginaDeTerceros(): React.JSX.Element {
         </tbody>
       </table>
 
+      {VERIFICACIONES.filter((verificacion) =>
+        consulta.data.elementos.some((tercero) => tercero.verificacion === verificacion),
+      ).map((verificacion) => (
+        <ExplicacionDeMarca
+          key={verificacion}
+          id={porQue[verificacion]}
+          marca={<Sello verificacion={verificacion} />}
+          detalle={t(DETALLES[verificacion])}
+        />
+      ))}
+
       <Paginador paginacion={listado} total={consulta.data.total} alCambiar={irA} />
     </>
   );
 }
+
+/** Las clases de sello, en el orden en que se explican debajo de la tabla cuando salen. */
+const VERIFICACIONES: readonly Verificacion[] = ['verificado', 'sinVerificar', 'desconocida'];
+
+/** Por qué dice cada sello lo que dice. Se escribe debajo de la tabla, no en un `title`. */
+const DETALLES = {
+  verificado: 'terceros.terceros.verificacion.verificadoDetalle',
+  sinVerificar: 'terceros.terceros.verificacion.sinVerificarDetalle',
+  desconocida: 'terceros.terceros.verificacion.desconocidaDetalle',
+} as const satisfies Record<Verificacion, string>;
 
 /**
  * Si el identificador está comprobado, y qué significa que no lo esté.
  *
  * **Se pinta siempre, también cuando está verificado.** Enseñarlo solo cuando algo va mal deja a
  * quien mira sin saber si la ausencia de sello quiere decir «comprobado» o «esta versión todavía
- * no lo enseñaba», y esa duda vale lo mismo que no decir nada. El título explica la consecuencia,
+ * no lo enseñaba», y esa duda vale lo mismo que no decir nada. La explicación dice la consecuencia,
  * que es lo que hace falta para decidir: un identificador sin comprobar puede estar mal tecleado y
- * acaba impreso en una factura.
+ * acaba impreso en una factura. Va escrita debajo de la tabla y la celda la señala
+ * (`ExplicacionDeMarca`), no en un `title`, que no llega ni al teclado ni al tacto.
  *
  * `desconocida` no es defensa por si acaso: el enumerado viaja como texto y el frontal se despliega
  * aparte del backend, así que un valor nuevo llega antes de que este fichero lo conozca.
@@ -223,15 +254,8 @@ function Sello({ verificacion }: { verificacion: Verificacion }): React.JSX.Elem
       ? t('terceros.terceros.verificacion.sinVerificar')
       : t('terceros.terceros.verificacion.desconocida');
 
-  const detalle = verificado
-    ? t('terceros.terceros.verificacion.verificadoDetalle')
-    : verificacion === 'sinVerificar'
-      ? t('terceros.terceros.verificacion.sinVerificarDetalle')
-      : t('terceros.terceros.verificacion.desconocidaDetalle');
-
   return (
     <span
-      title={detalle}
       className={
         'rounded border px-1.5 py-0.5 text-xs ' +
         (verificado

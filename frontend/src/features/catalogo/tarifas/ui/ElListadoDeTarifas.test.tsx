@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, delay, http } from 'msw';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -51,6 +51,11 @@ async function filaCon(texto: string): Promise<HTMLElement> {
 
   return fila as HTMLElement;
 }
+
+/** Por qué rige hoy el tramo que acaba hoy: escrito debajo de la tabla, y descripción de la celda. */
+const POR_QUE_RIGE =
+  'El último día de vigencia está incluido: un tramo que acaba hoy sigue poniendo precio hoy, y ' +
+  'deja de hacerlo mañana.';
 
 describe('El listado de tarifas', () => {
   it('mientras llegan, dice que está cargando', async () => {
@@ -231,6 +236,51 @@ describe('El listado de tarifas', () => {
     expect(await filaCon('Mayorista, a partir de octubre')).toHaveTextContent('Todavía no rige');
     expect(await filaCon('Precio de venta al público 2025')).toHaveTextContent('Ya no rige');
     expect(await filaCon('Precio de venta al público 2026')).toHaveTextContent('Rige hoy');
+
+    // El porqué del caso frontera va escrito debajo de la tabla, no en un `title`, que no llega ni
+    // al teclado ni al tacto. Cada celda que dice «Rige hoy» lo señala como su descripción, y las
+    // de los otros dos estados no señalan nada.
+    expect(screen.getByText(POR_QUE_RIGE)).toBeVisible();
+    expect(
+      within(await filaCon('Promoción de septiembre')).getByRole('cell', {
+        name: 'Rige hoy',
+        description: POR_QUE_RIGE,
+      }),
+    ).toBeVisible();
+    expect(
+      within(await filaCon('Mayorista, a partir de octubre')).getByRole('cell', {
+        name: 'Todavía no rige',
+      }),
+    ).not.toHaveAccessibleDescription();
+    expect(
+      within(await filaCon('Precio de venta al público 2025')).getByRole('cell', {
+        name: 'Ya no rige',
+      }),
+    ).not.toHaveAccessibleDescription();
+  });
+
+  it('sin ningún tramo que rija hoy, no se explica por qué rige', async () => {
+    abrirSesionYaRecuperada();
+
+    // Los dos tramos que rigen hoy, fuera: quedan uno caducado y uno futuro.
+    servidor.use(
+      http.get('/api/v1/catalogo/tarifas', () => {
+        const pagina = tarifasDe(ALFA.id);
+        const sinRegir = pagina.elementos.filter(
+          (tarifa) =>
+            tarifa.nombre !== 'Promoción de septiembre' &&
+            tarifa.nombre !== 'Precio de venta al público 2026',
+        );
+
+        return HttpResponse.json({ ...pagina, elementos: sinRegir, total: sinRegir.length });
+      }),
+    );
+
+    montarPantalla(<PaginaDeTarifas />, '/tarifas');
+
+    expect(await filaCon('Mayorista, a partir de octubre')).toHaveTextContent('Todavía no rige');
+    expect(await filaCon('Precio de venta al público 2025')).toHaveTextContent('Ya no rige');
+    expect(screen.queryByText(POR_QUE_RIGE)).not.toBeInTheDocument();
   });
 
   it('el periodo se pinta con sus dos formas: cerrado por los dos lados, o abierto por el final', async () => {

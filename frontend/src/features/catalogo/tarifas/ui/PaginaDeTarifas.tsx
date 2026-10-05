@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
@@ -14,6 +15,7 @@ import {
 } from '../model/tarifa.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
+import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 
@@ -57,6 +59,9 @@ export function PaginaDeTarifas(): React.JSX.Element {
   // justo a medianoche no puede salir mitad de un día y mitad del siguiente— y la regla se puede
   // ejercer en la frontera, que es el único sitio donde esto se equivoca.
   const hoy = hoyEnElCalendarioLocal();
+  // Por qué rige hoy el tramo que acaba hoy: escrito una vez debajo de la tabla, y cada celda que
+  // dice «rige» lo señala.
+  const porQueRige = useId();
 
   const irA = (pagina: number): void => {
     const siguientes = new URLSearchParams(parametros);
@@ -213,35 +218,50 @@ export function PaginaDeTarifas(): React.JSX.Element {
           </tr>
         </thead>
         <tbody>
-          {consulta.data.elementos.map((tarifa) => (
-            <tr key={tarifa.id} className="border-b border-neutral-200">
-              <td className="py-2 pr-4 font-mono">{tarifa.codigo}</td>
-              <td className="py-2 pr-4">{tarifa.nombre}</td>
-              <td className="py-2 pr-4">
-                <Vigencia tarifa={tarifa} idioma={i18n.language} />
-              </td>
-              <td className="py-2 pr-4">
-                <Estado estado={estadoDeVigencia(tarifa, hoy)} />
-              </td>
-              <td className="py-2 pr-4">
-                {listado.codigo === null && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      cambiarFiltro((siguientes) => {
-                        siguientes.set(PARAMETRO_DE_CODIGO, tarifa.codigo);
-                      });
-                    }}
-                    className="rounded border border-neutral-300 px-2 py-1 text-xs"
-                  >
-                    {t('catalogo.tarifas.verSusTramos', { codigo: tarifa.codigo })}
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {consulta.data.elementos.map((tarifa) => {
+            const estado = estadoDeVigencia(tarifa, hoy);
+
+            return (
+              <tr key={tarifa.id} className="border-b border-neutral-200">
+                <td className="py-2 pr-4 font-mono">{tarifa.codigo}</td>
+                <td className="py-2 pr-4">{tarifa.nombre}</td>
+                <td className="py-2 pr-4">
+                  <Vigencia tarifa={tarifa} idioma={i18n.language} />
+                </td>
+                <td
+                  className="py-2 pr-4"
+                  aria-describedby={estado === 'rige' ? porQueRige : undefined}
+                >
+                  <Estado estado={estado} />
+                </td>
+                <td className="py-2 pr-4">
+                  {listado.codigo === null && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        cambiarFiltro((siguientes) => {
+                          siguientes.set(PARAMETRO_DE_CODIGO, tarifa.codigo);
+                        });
+                      }}
+                      className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                    >
+                      {t('catalogo.tarifas.verSusTramos', { codigo: tarifa.codigo })}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+
+      {consulta.data.elementos.some((tarifa) => estadoDeVigencia(tarifa, hoy) === 'rige') && (
+        <ExplicacionDeMarca
+          id={porQueRige}
+          marca={<Estado estado="rige" />}
+          detalle={t('catalogo.tarifas.estados.rigeDetalle')}
+        />
+      )}
 
       <Paginador paginacion={listado} total={consulta.data.total} alCambiar={irA} />
     </>
@@ -272,8 +292,9 @@ function Vigencia({ tarifa, idioma }: { tarifa: Tarifa; idioma: string }): React
  * Si el tramo rige hoy, si todavía no, o si ya no.
  *
  * Es un dato y no un color: quien no distinga el verde del gris tiene que poder leerlo igual, así
- * que va escrito y el color solo acompaña. Y el que rige lleva su explicación en el título, porque
- * el caso que confunde es el del tramo que acaba HOY: sigue rigiendo, con el último día incluido.
+ * que va escrito y el color solo acompaña. Y el que rige lleva su explicación, porque el caso que
+ * confunde es el del tramo que acaba HOY: sigue rigiendo, con el último día incluido. La explicación
+ * va escrita debajo de la tabla y la celda la señala (`ExplicacionDeMarca`), no en un `title`.
  */
 function Estado({ estado }: { estado: EstadoDeVigencia }): React.JSX.Element {
   const { t } = useTranslation();
@@ -291,10 +312,7 @@ function Estado({ estado }: { estado: EstadoDeVigencia }): React.JSX.Element {
   };
 
   return (
-    <span
-      title={estado === 'rige' ? t('catalogo.tarifas.estados.rigeDetalle') : undefined}
-      className={`rounded border px-1.5 py-0.5 text-xs ${pinta[estado]}`}
-    >
+    <span className={`rounded border px-1.5 py-0.5 text-xs ${pinta[estado]}`}>
       {rotulo[estado]}
     </span>
   );

@@ -8393,7 +8393,7 @@ ninguna decisión escrita. El ADR-0053 queda para el 2.11.
      `PaginaDeCategorias.tsx`, `rigeDetalle` en `PaginaDeTarifas.tsx` y el detalle de la
      verificación en `PaginaDeTerceros.tsx`. Son el mismo defecto en otras pantallas, y el arreglo
      sería el mismo. Lo que se encuentra con `grep -rn "title={" --include=*.tsx frontend/src`
-     sin los tests.
+     sin los tests. **Hechos en el epílogo del 2.11**, con el mismo arreglo (ver allí).
 6. ~~«Volver a los artículos» conserva la página, la búsqueda y la categoría.~~ Hecho, por la
    URL y de ida y vuelta:
    - el listado pone en los enlaces de cada fila, el del GTIN y el de la trazabilidad, sus propios
@@ -9181,7 +9181,23 @@ escrita. El ADR-0055 queda para el 2.12.
 1. ~~El run de `main` del 2.11, anotado.~~ Hecho en el primer commit de la rama: el 37293342638, en
    *El 2.11, cerrado* y en su casilla.
 2. La tanda de las guardas del ajuste, de la 264 en adelante.
-3. Los tres `title`: las categorías, las tarifas y los terceros.
+3. ~~Los tres `title`: las categorías, las tarifas y los terceros.~~ Hecho en su commit, mientras
+   corría la tanda, con el arreglo de `585b510`:
+   - La marca se queda en su celda, sin `title`, y su porqué va **escrito** debajo de la tabla: uno
+     por clase de marca, y solo si alguna fila la lleva. La celda lo señala con `aria-describedby`.
+     Los textos son los que ya había, así que no cambia ningún diccionario.
+   - En las categorías, la celda del nombre de la rama «Sin su sitio». En las tarifas, la del
+     estado que dice «Rige hoy»; los otros dos estados no tenían explicación y siguen sin ella. En
+     los terceros, la del identificador, con **una explicación por clase de sello** —comprobado,
+     sin comprobar y sin interpretar—, porque los dos últimos dicen los dos «Sin comprobar» y su
+     porqué no es el mismo.
+   - El párrafo es una pieza compartida, `shared/ui/Explicacion.tsx` (`ExplicacionDeMarca`), y la
+     de `585b510` (`ExplicacionDeSinReconocer`) pasa a usarla, con la misma salida.
+   - Los tests preguntan por rol, nombre y descripción: `getByRole('cell', { name, description })`.
+     Cada celda marcada señala la suya, y las demás, ninguna (`not.toHaveAccessibleDescription`).
+     Con ninguna marca en la página, no se explica nada; en las tarifas es un caso nuevo, sin
+     ningún tramo que rija hoy.
+   - `grep -rn "title={" --include=*.tsx frontend/src | grep -v "\.test\.tsx"` sale vacío.
 4. La regla de las carreras, escrita como se ha aplicado.
 5. La zona horaria de la transferencia, en la pregunta abierta del cierre de fase.
 6. La batería, el humo y los runs.
