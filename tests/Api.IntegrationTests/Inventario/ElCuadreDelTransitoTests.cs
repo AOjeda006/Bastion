@@ -47,7 +47,7 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <b>Semillas.</b> La 721, la empresa del lote y, con el mismo número, la unidad y el tramo de
 /// impuesto de su artículo; la 722, los del otro artículo con lote. La 723, la empresa y el artículo
 /// del redondeo. La 724, la empresa y el artículo de la serie; la 725, los del otro artículo con
-/// serie. Del 726 al 729 quedan libres.
+/// serie. La 726 es de <c>LaTransferenciaTests</c>, y del 727 al 729 quedan libres.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

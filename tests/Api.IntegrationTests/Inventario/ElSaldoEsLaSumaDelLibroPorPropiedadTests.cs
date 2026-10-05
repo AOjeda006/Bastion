@@ -6,6 +6,7 @@ using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -13,6 +14,7 @@ using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
+using Bastion.Organizacion.Domain.Series;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Shouldly;
@@ -21,7 +23,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
 /// La R3 como propiedad: después de cualquier secuencia de entradas, salidas, ajustes, anulaciones,
-/// recálculos, cierres y fechas prohibidas, el saldo es la suma del libro (ítem 2.7).
+/// recálculos, cierres, fechas prohibidas y transferencias, el saldo es la suma del libro (ítem 2.7),
+/// y lo que vuela, la suma de lo enviado sin recibir (ítem 2.11).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -34,8 +37,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <b>Y con el reloj parado</b> (ítem 2.9). La secuencia sale de la semilla y de «hoy»: las fechas
 /// de este año se sortean hasta el día del año, y la paridad del día decide qué documento toma la
 /// fecha del último movimiento. Con el reloj de verdad cada día corría otra secuencia, y el
-/// 2026-09-30 la semilla 463 no pasó por ningún rechazo por la fecha. El reloj va a los tres casos
-/// de uso, que deciden con él qué fecha es futura y cuál lleva el inverso. El cuadre sigue con el de
+/// 2026-09-30 la semilla 463 no pasó por ningún rechazo por la fecha. El reloj va a todos los casos
+/// de uso, los del ajuste y los de la transferencia, que deciden con él qué fecha es futura y cuál
+/// lleva el inverso. El cuadre sigue con el de
 /// verdad: mira el libro hasta hoy, y el hoy de verdad nunca va por detrás de este.
 /// </para>
 /// <para>
@@ -85,6 +89,22 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// un sitio ni está en dos.
 /// </para>
 /// <para>
+/// <b>Y las transferencias entre dos almacenes</b> (ítem 2.11, ADR-0053). Los ajustes siguen en el
+/// primero, A; el segundo, B, con un hueco, solo recibe y envía. Un tercer generador, con su propia
+/// semilla, decide tras cada paso si viene uno de transferencia: enviar de donde hay, recibir una
+/// enviada o anular una enviada o una recibida. Así el primero no tira un dado más por ellas, y
+/// hasta la primera la secuencia es la de antes paso a paso; después, lo que una transferencia
+/// cambia en A cambia lo que encuentran los pasos que vienen.
+/// El modelo lleva lo que vuela por clave del destino y por artículo y almacén, en cantidad y en
+/// valor, y valora cada pata como la tabla del ADR: la salida del origen se lleva su valor, la
+/// llegada compensa el de la línea, y anular una recibida saca del destino lo que entró —o todo, si
+/// lo vacía— y lo devuelve al origen. Tras cada paso compara lo que vuela con las filas vivas y con
+/// la valoración, exige que el valor de la empresa sea el que han metido y sacado los ajustes
+/// (ADR-0053 §6), y cuadra por el camino de producción, que tiene que comparar lo que el modelo
+/// tiene en vuelo y no encontrar nada. Las transferencias van con fechas de este año: el ejercicio
+/// de las suyas lo miran los casos de integración del 2.11.
+/// </para>
+/// <para>
 /// <b>El modelo no conoce los identificadores del sistema.</b> Para el modelo, cada lote y cada
 /// serie es su código, y les da un identificador propio. Lo que se lee de la base se traduce con las
 /// tablas de los lotes y de las series, y esas tablas tienen que tener exactamente lo que el libro
@@ -123,12 +143,28 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string RechazadoSinStock = "rechazado sin stock";
     private const string RechazadoPorLaFecha = "rechazado por la fecha";
     private const string RechazadoPorLaSerie = "rechazado por la serie";
+    private const string Envio = "transferencia enviada";
+    private const string Recepcion = "transferencia recibida";
+    private const string AnulacionDeUnaEnviada = "transferencia enviada anulada";
+    private const string AnulacionDeUnaRecibida = "transferencia recibida anulada";
 
-    /// <summary>Las claves de la empresa: dos ubicaciones por cada uno de los tres artículos.</summary>
-    private const int ClavesPorEmpresa = 6;
+    /// <summary>
+    /// Las claves de los ajustes: dos ubicaciones de A por cada uno de los tres artículos. Las tres
+    /// de B van detrás, una por artículo, y solo las tocan las transferencias.
+    /// </summary>
+    private const int ClavesDeLosAjustes = 6;
+
+    /// <summary>
+    /// De cada cien pasos, cuántos traen detrás uno de transferencia (ítem 2.11). Con uno de cada
+    /// cuatro, unos cuarenta por semilla.
+    /// </summary>
+    private const int PorcentajeDeTransferencias = 25;
 
     /// <summary>El código del documento que va por detrás de su clave (ADR-0047).</summary>
     private const string FechaAnterior = "ajuste-fecha-anterior-al-ultimo-movimiento";
+
+    /// <summary>El mismo, en la transferencia: el envío mira el origen y la recepción, el destino.</summary>
+    private const string FechaAnteriorDeLaTransferencia = "transferencia-fecha-anterior-al-ultimo-movimiento";
 
     /// <summary>La restricción que guarda el stock, escrita a mano como en el borde.</summary>
     private const string FisicoNoNegativo = "ck_existencias_fisico_no_negativo";
@@ -146,6 +182,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     [
         "entrada", "salida", "ajuste", Anulacion, Futuro, Recalculo, Cierre, Reapertura,
         RechazadoPorElCierre, RechazadoSinStock, RechazadoPorLaFecha, RechazadoPorLaSerie,
+        Envio, Recepcion, AnulacionDeUnaEnviada, AnulacionDeUnaRecibida,
     ];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
@@ -184,6 +221,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     {
         Random azar = new(semilla);
         Random codigos = new(semilla + 1_000);
+        Random traslados = new(semilla + 2_000);
         Secuencia secuencia = new(semilla);
 
         UnaEmpresa empresa = await UnaEmpresaAsync(semilla);
@@ -216,6 +254,14 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             }
 
             await ComprobarAsync(empresa, secuencia);
+
+            // LA TRANSFERENCIA, DETRÁS Y CON SUS PROPIOS DADOS (ítem 2.11): el primer generador no
+            // sabe de ella, y hasta la primera, la secuencia es la de antes paso a paso.
+            if (traslados.Next(100) < PorcentajeDeTransferencias)
+            {
+                await UnaTransferenciaAsync(traslados, modulo, empresa, secuencia);
+                await ComprobarAsync(empresa, secuencia);
+            }
         }
 
         // AL FINAL, EL CORTE EN ESTE MES, que es el que da instantánea a todas las claves —el libro
@@ -231,17 +277,27 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, empresa.EmpresaId);
 
-        int claves = secuencia.Libro.Select(apunte => apunte.Clave).Distinct().Count();
+        // CON FILA VIVA, LAS CLAVES DEL LIBRO Y LAS QUE ALGO HA IDO A BUSCAR (ítem 2.11): el envío
+        // crea la del destino aunque nada llegue nunca, y la anulación no la borra.
+        int claves = secuencia.ClavesConFila().Count;
 
         claves.ShouldBeGreaterThan(0, secuencia.Relato());
         debidas.Count.ShouldBeGreaterThan(0, secuencia.Relato());
 
         cuadre.ExistenciasComparadas.ShouldBe(claves, secuencia.Relato());
         cuadre.InstantaneasComparadas.ShouldBe(debidas.Count, secuencia.Relato());
-        cuadre.ValoracionesComparadas.ShouldBe(secuencia.Valoracion.Count, secuencia.Relato());
+        cuadre.ValoracionesComparadas.ShouldBe(secuencia.ClavesDeValoracion().Count, secuencia.Relato());
         cuadre.Descuadres.ShouldBeEmpty(secuencia.Relato());
 
         secuencia.Valoracion.Count.ShouldBeGreaterThan(0, secuencia.Relato());
+
+        // EL CUADRE DEL TRÁNSITO, AFIRMADO: tras algún paso comparó claves y valoraciones en vuelo.
+        // Sin eso, «ningún descuadre» en cada paso saldría verde por no tener nada que mirar.
+        secuencia.MasExistenciasEnVuelo.ShouldBeGreaterThan(
+            0L, "el cuadre no ha comparado nunca una existencia en vuelo\n" + secuencia.Relato());
+
+        secuencia.MasValoracionesEnVuelo.ShouldBeGreaterThan(
+            0L, "el cuadre no ha comparado nunca una valoración en vuelo\n" + secuencia.Relato());
 
         (await LosEstadosDelLibroAsync(empresa.EmpresaId)).Fechas.ShouldBeGreaterThan(
             0, "sin fechas que sumar, «ningún estado imposible» sale verde por no mirar\n" + secuencia.Relato());
@@ -256,6 +312,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         (await LasSeriesDelLibroAsync(empresa.EmpresaId)).Fechas.ShouldBeGreaterThan(
             0, "sin series en el libro, «ninguna en dos sitios» sale verde por no mirar\n" + secuencia.Relato());
+
+        // LA SERIE EN VUELO Y EL CÓDIGO CON ESPACIOS EN LA TRANSFERENCIA, AFIRMADOS (revisión del
+        // paso 7 del 2.11): sin una serie que vuele, el índice y el CHECK con lo que vuela no se
+        // miran; sin un código tecleado con espacios, nada mira que la línea lo recorte.
+        secuencia.SeriesQueHanVolado.ShouldBeGreaterThan(
+            0, "ninguna serie ha salido en un envío\n" + secuencia.Relato());
+
+        secuencia.CodigosConEspacios.ShouldBeGreaterThan(
+            0, "ningún envío ha llevado un código con espacios\n" + secuencia.Relato());
 
         secuencia.Clases.ShouldBe(s_clasesDePaso, ignoreOrder: true, customMessage: secuencia.Relato());
     }
@@ -393,8 +458,13 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         FilaValorada[] valoradas = secuencia.Valorar(
             [.. lineas.Select(linea => new LineaQueSeValora(
-                empresa.Claves[linea.Clave].ArticuloId, linea.Cantidad * linea.Factor, linea.Coste, null))]);
+                empresa.Claves[linea.Clave].ArticuloId,
+                empresa.AlmacenId,
+                linea.Cantidad * linea.Factor,
+                linea.Coste,
+                null))]);
 
+        secuencia.ValorDeLaEmpresa += valoradas.Sum(fila => fila.Valor);
         secuencia.AlPrecioMedio += lineas.Count(linea => linea.Cantidad > 0m && linea.Coste is null);
         secuencia.Anulables.Add((ajusteId, apuntes, valoradas));
     }
@@ -452,8 +522,408 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         // EL INVERSO COMPENSA LO QUE CADA LÍNEA MOVIÓ, y no lo que valen hoy sus unidades
         // (ADR-0046 §6): cada línea lleva el valor de la suya con el signo cambiado.
+        FilaValorada[] inversas = secuencia.Valorar(
+            [.. valoradas.Select(fila => new LineaQueSeValora(
+                fila.ArticuloId, fila.AlmacenId, -fila.Cantidad, null, -fila.Valor))]);
+
+        secuencia.ValorDeLaEmpresa += inversas.Sum(fila => fila.Valor);
+    }
+
+    /// <summary>
+    /// Un paso de transferencia (ítem 2.11): recibir una enviada, anular una enviada o una recibida,
+    /// o enviar de donde hay.
+    /// </summary>
+    /// <remarks>
+    /// Recibir, si hay alguna enviada; anular, si hay alguna enviada o recibida; y si no, se envía. Así
+    /// que el dado de recibir, sin enviadas, anula una recibida si la hay. Todo con el tercer
+    /// generador: el primero no tira un dado más por las transferencias.
+    /// </remarks>
+    private static async Task UnaTransferenciaAsync(
+        Random traslados, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        int dado = traslados.Next(100);
+
+        if (dado < 35 && secuencia.Enviadas.Count > 0)
+        {
+            await UnaRecepcionAsync(traslados, modulo, empresa, secuencia);
+        }
+        else if (dado < 60 && secuencia.Enviadas.Count + secuencia.Recibidas.Count > 0)
+        {
+            await UnaAnulacionDeTransferenciaAsync(traslados, modulo, empresa, secuencia);
+        }
+        else
+        {
+            await UnEnvioAsync(traslados, modulo, empresa, secuencia);
+        }
+    }
+
+    /// <summary>Un envío de una o dos claves con existencias de un almacén al otro.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>De A a B, y una de cada tres veces de B a A si B tiene algo.</b> Lo que llega a B solo sale
+    /// de allí por otra transferencia, y si no volviera nunca, A se iría vaciando.
+    /// </para>
+    /// <para>
+    /// <b>Cada línea, de una clave con existencias</b>, como la salida. Una serie lleva su unidad; lo
+    /// demás, todo lo que hay en la clave —que, si es lo último del artículo en el almacén, se lleva
+    /// todo su valor—, una parte, o una unidad más de lo que hay, que el motor rechaza. A B va a su
+    /// único hueco, y a A, a cualquiera de los dos.
+    /// </para>
+    /// <para>
+    /// <b>La primera línea es una serie la mitad de las veces que el origen la tiene</b>, un empujón
+    /// de la revisión del paso: sin él, dos de las seis semillas no hacían volar ninguna, y el índice
+    /// y el <c>CHECK</c> con lo que vuela no se miraban en ellas.
+    /// </para>
+    /// <para>
+    /// <b>Los códigos, una de cada cuatro veces con espacios</b>, como en el ajuste: la línea de la
+    /// transferencia también guarda el código recortado (ADR-0048 §2).
+    /// </para>
+    /// <para>
+    /// <b>La fecha, hoy o un día de este año.</b> Si va por detrás del último movimiento del origen,
+    /// la mitad de las veces toma esa fecha y la otra mitad se rechaza (ADR-0047). El destino no
+    /// cuenta: lo que vuela no mueve su fecha (ADR-0053 §3).
+    /// </para>
+    /// </remarks>
+    private static async Task UnEnvioAsync(
+        Random traslados, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+
+        bool deB = saldos.Any(par => par.Key.AlmacenId == empresa.AlmacenB && par.Value > 0m)
+            && traslados.Next(3) == 0;
+
+        Guid origen = deB ? empresa.AlmacenB : empresa.AlmacenId;
+        Guid destino = deB ? empresa.AlmacenId : empresa.AlmacenB;
+
+        // EN UN ORDEN QUE NO DEPENDE DE LOS IDENTIFICADORES, como en la salida.
+        List<(ClaveDeExistencia Clave, decimal Saldo)> conExistencias =
+        [
+            .. saldos
+                .Where(par => par.Key.AlmacenId == origen && par.Value > 0m)
+                .Select(par => (Clave: par.Key, Saldo: par.Value, Donde: secuencia.LineaEn(empresa, par.Key)))
+                .OrderBy(par => par.Donde.Clave)
+                .ThenBy(par => par.Donde.Lote, StringComparer.Ordinal)
+                .ThenBy(par => par.Donde.Serie, StringComparer.Ordinal)
+                .Select(par => (par.Clave, par.Saldo)),
+        ];
+
+        if (conExistencias.Count == 0)
+        {
+            secuencia.Anotar("envío que se salta: el origen no tiene existencias");
+
+            return;
+        }
+
+        int cuantas = Math.Min(conExistencias.Count, 1 + traslados.Next(2));
+        List<LineaEnVuelo> lineas = [];
+
+        while (lineas.Count < cuantas)
+        {
+            int cual = UnaClaveDelEnvio(traslados, conExistencias, primera: lineas.Count == 0);
+            (ClaveDeExistencia clave, decimal saldo) = conExistencias[cual];
+
+            conExistencias.RemoveAt(cual);
+
+            decimal cantidad = clave.NumeroDeSerieId is not null
+                ? 1m
+                : traslados.Next(8) switch
+                {
+                    0 => saldo + 1m,
+                    1 or 2 => saldo,
+                    _ => Math.Min(saldo, 1 + traslados.Next((int)decimal.Ceiling(saldo))),
+                };
+
+            lineas.Add(new LineaEnVuelo(clave, empresa.DestinoDe(clave, traslados), cantidad, 0m));
+        }
+
+        DateOnly fecha = traslados.Next(2) == 0
+            ? Hoy
+            : new DateOnly(Hoy.Year, 1, 1).AddDays(traslados.Next(Hoy.DayOfYear));
+
+        DateOnly? ultima = LaUltimaFechaDeSusClaves(secuencia, lineas.Select(linea => linea.Origen));
+
+        if (fecha < ultima && fecha.DayNumber % 2 == 1)
+        {
+            fecha = ultima.Value;
+        }
+
+        (string? Lote, string? Serie)[] tecleados =
+        [
+            .. lineas.Select(linea => (
+                linea.Origen.LoteId is { } lote ? Tecleado(traslados, secuencia.CodigoDe(lote)) : null,
+                linea.Origen.NumeroDeSerieId is { } serie ? Tecleado(traslados, secuencia.CodigoDe(serie)) : null)),
+        ];
+
+        Resultado<TransferenciaDto> alta = await modulo.AltaDeTransferencia.EjecutarAsync(
+            new AbrirTransferenciaDto(
+                empresa.SerieDeTransferencias.Id,
+                origen,
+                destino,
+                fecha,
+                [.. lineas.Select((linea, indice) => new LineaDeTransferenciaDto(
+                    linea.Origen.UbicacionId,
+                    linea.Destino.UbicacionId,
+                    linea.Origen.ArticuloId,
+                    linea.Cantidad,
+                    empresa.UnidadDe[linea.Origen.ArticuloId],
+                    1m,
+                    tecleados[indice].Lote,
+                    tecleados[indice].Serie))]),
+            CancellationToken.None);
+
+        alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        string detalle = DescribirElTraslado(empresa, secuencia, fecha, lineas);
+
+        // LA FECHA SE MIRA ANTES QUE EL STOCK, como en el ajuste: el caso de uso valora el origen
+        // antes de tocar la existencia.
+        if (fecha < ultima)
+        {
+            Resultado<TransferenciaDto> rechazado = await modulo.EnviarAsync(alta.Valor.Id);
+
+            secuencia.Anotar("envío rechazado por la fecha", detalle);
+
+            rechazado.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+            rechazado.Error!.Codigo.ShouldBe(FechaAnteriorDeLaTransferencia, secuencia.Relato());
+
+            return;
+        }
+
+        ApunteDelLibro[] salen =
+            [.. lineas.Select(linea => new ApunteDelLibro(linea.Origen, fecha, -linea.Cantidad))];
+
+        if (LoQueRomperia(secuencia, salen, secuencia.TransitoTras(lineas, 1)) is { Count: > 0 } rotas)
+        {
+            secuencia.Anotar("envío rechazado por el motor", detalle);
+
+            await ExigirElRechazoDelMotorAsync(() => modulo.EnviarAsync(alta.Valor.Id), rotas, secuencia);
+
+            return;
+        }
+
+        Resultado<TransferenciaDto> envio = await modulo.EnviarAsync(alta.Valor.Id);
+
+        secuencia.Anotar(Envio, detalle);
+
+        envio.EsCorrecto.ShouldBeTrue($"«{envio.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        secuencia.SeriesQueHanVolado += lineas.Count(linea => linea.Origen.NumeroDeSerieId is not null);
+        secuencia.CodigosConEspacios += tecleados.Count(
+            codigos => codigos.Lote != codigos.Lote?.Trim() || codigos.Serie != codigos.Serie?.Trim());
+
+        secuencia.Libro.AddRange(salen);
+
+        // LO QUE SALE DEL ORIGEN SE LLEVA SU VALOR, y ese valor es el que vuela (ADR-0053 §2).
+        FilaValorada[] valoradas = secuencia.Valorar(
+            [.. lineas.Select(linea => new LineaQueSeValora(
+                linea.Origen.ArticuloId, origen, -linea.Cantidad, null, null))]);
+
+        LineaEnVuelo[] enVuelo =
+            [.. lineas.Select((linea, indice) => linea with { Valor = -valoradas[indice].Valor })];
+
+        secuencia.Volar(enVuelo, 1);
+        secuencia.Enviadas.Add(new TransferenciaDelModelo(alta.Valor.Id, origen, destino, fecha, enVuelo));
+    }
+
+    /// <summary>La recepción de una enviada, un día entre el de su envío y hoy.</summary>
+    /// <remarks>
+    /// Si va por detrás del último movimiento del destino, la mitad de las veces toma esa fecha y la
+    /// otra mitad se rechaza (ADR-0047), como el envío con el origen. Contra el motor no choca nunca:
+    /// lo que suma en cada clave del destino es lo que ya volaba hacia ella, y una serie en vuelo no
+    /// está en ningún otro sitio (ADR-0053 §7).
+    /// </remarks>
+    private static async Task UnaRecepcionAsync(
+        Random traslados, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        int cual = traslados.Next(secuencia.Enviadas.Count);
+        TransferenciaDelModelo enviada = secuencia.Enviadas[cual];
+
+        DateOnly fecha = enviada.FechaDeEnvio.AddDays(
+            traslados.Next(Hoy.DayNumber - enviada.FechaDeEnvio.DayNumber + 1));
+
+        DateOnly? ultima = LaUltimaFechaDeSusClaves(secuencia, enviada.Lineas.Select(linea => linea.Destino));
+
+        if (fecha < ultima && fecha.DayNumber % 2 == 1)
+        {
+            fecha = ultima.Value;
+        }
+
+        string detalle = DescribirElTraslado(empresa, secuencia, fecha, enviada.Lineas);
+
+        Resultado<TransferenciaDto> recepcion = await modulo.RecibirAsync(enviada.Id, fecha);
+
+        if (fecha < ultima)
+        {
+            secuencia.Anotar("recepción rechazada por la fecha", detalle);
+
+            recepcion.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+            recepcion.Error!.Codigo.ShouldBe(FechaAnteriorDeLaTransferencia, secuencia.Relato());
+
+            return;
+        }
+
+        secuencia.Anotar(Recepcion, detalle);
+
+        recepcion.EsCorrecto.ShouldBeTrue($"«{recepcion.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        secuencia.Enviadas.RemoveAt(cual);
+        secuencia.Libro.AddRange(
+            enviada.Lineas.Select(linea => new ApunteDelLibro(linea.Destino, fecha, linea.Cantidad)));
+        secuencia.Volar(enviada.Lineas, -1);
+
+        // LA LLEGADA COMPENSA EL VALOR DE LA LÍNEA, y no el precio medio del destino (ADR-0053 §2).
         secuencia.Valorar(
-            [.. valoradas.Select(fila => new LineaQueSeValora(fila.ArticuloId, -fila.Cantidad, null, -fila.Valor))]);
+            [.. enviada.Lineas.Select(linea => new LineaQueSeValora(
+                linea.Destino.ArticuloId, enviada.Destino, linea.Cantidad, null, linea.Valor))]);
+
+        secuencia.Recibidas.Add(enviada);
+    }
+
+    /// <summary>La anulación de una enviada o de una recibida, con su inverso de hoy (ADR-0053 §5).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>La de una enviada devuelve al origen lo que salió</b>, con su valor, y lo que volaba deja de
+    /// volar. No choca nunca: la serie en vuelo no está en ningún otro sitio.
+    /// </para>
+    /// <para>
+    /// <b>La de una recibida saca del destino lo que entró y lo devuelve al origen</b>, con el valor
+    /// que sale del destino: el de la línea, o todo el que queda si lo vacía o si vale menos. Si lo que
+    /// entró ya no está —salió en otra transferencia—, el motor la rechaza, y la recibida se puede
+    /// anular más adelante.
+    /// </para>
+    /// <para>
+    /// <b>La mitad de las veces que la hay, se anula una recibida que deja a cero un artículo del
+    /// destino</b>, otro empujón de la revisión del paso: es el borde del ADR-0054, el único sitio
+    /// donde el origen puede recibir otra cosa que el valor de la línea, y al azar ninguna semilla
+    /// llegaba a él. Con el empujón tampoco llegan todas, así que no se afirma por semilla: el borde
+    /// lo fija el caso de <c>LaTransferenciaTests</c> en el que anular una recibida vacía el destino.
+    /// </para>
+    /// </remarks>
+    private static async Task UnaAnulacionDeTransferenciaAsync(
+        Random traslados, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        int cual = UnaTransferenciaQueAnular(traslados, secuencia);
+        bool recibida = cual >= secuencia.Enviadas.Count;
+
+        List<TransferenciaDelModelo> deDonde = recibida ? secuencia.Recibidas : secuencia.Enviadas;
+        int dondeEsta = recibida ? cual - secuencia.Enviadas.Count : cual;
+        TransferenciaDelModelo original = deDonde[dondeEsta];
+
+        string detalle = DescribirElTraslado(empresa, secuencia, original.FechaDeEnvio, original.Lineas);
+
+        ApunteDelLibro[] vuelven =
+            [.. original.Lineas.Select(linea => new ApunteDelLibro(linea.Origen, Hoy, linea.Cantidad))];
+
+        ApunteDelLibro[] inverso = recibida
+            ? [.. original.Lineas.Select(linea => new ApunteDelLibro(linea.Destino, Hoy, -linea.Cantidad)), .. vuelven]
+            : vuelven;
+
+        if (LoQueRomperia(secuencia, inverso, recibida ? null : secuencia.TransitoTras(original.Lineas, -1))
+            is { Count: > 0 } rotas)
+        {
+            secuencia.Anotar("anulación de una transferencia rechazada por el motor", detalle);
+
+            await ExigirElRechazoDelMotorAsync(
+                () => modulo.AnularLaTransferenciaAsync(original.Id, "Anulación del generador"), rotas, secuencia);
+
+            return;
+        }
+
+        Resultado<AnulacionDeTransferenciaDto> anulacion =
+            await modulo.AnularLaTransferenciaAsync(original.Id, "Anulación del generador");
+
+        secuencia.Anotar(recibida ? AnulacionDeUnaRecibida : AnulacionDeUnaEnviada, detalle);
+
+        anulacion.EsCorrecto.ShouldBeTrue($"«{anulacion.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        deDonde.RemoveAt(dondeEsta);
+        secuencia.Libro.AddRange(inverso);
+
+        if (!recibida)
+        {
+            secuencia.Volar(original.Lineas, -1);
+
+            secuencia.Valorar(
+                [.. original.Lineas.Select(linea => new LineaQueSeValora(
+                    linea.Origen.ArticuloId, original.Origen, linea.Cantidad, null, linea.Valor))]);
+
+            return;
+        }
+
+        // EL DESTINO PRIMERO, y el origen recibe lo que salió de él (ADR-0053 §5).
+        FilaValorada[] salen = secuencia.Valorar(
+            [.. original.Lineas.Select(linea => new LineaQueSeValora(
+                linea.Destino.ArticuloId, original.Destino, -linea.Cantidad, null, -linea.Valor))]);
+
+        secuencia.Valorar(
+            [.. original.Lineas.Select((linea, indice) => new LineaQueSeValora(
+                linea.Origen.ArticuloId, original.Origen, linea.Cantidad, null, -salen[indice].Valor))]);
+    }
+
+    /// <summary>
+    /// Qué clave del origen lleva la siguiente línea del envío: la primera, la mitad de las veces una
+    /// serie si el origen tiene alguna; las demás, cualquiera.
+    /// </summary>
+    private static int UnaClaveDelEnvio(
+        Random traslados, List<(ClaveDeExistencia Clave, decimal Saldo)> conExistencias, bool primera)
+    {
+        int[] deSerie =
+        [
+            .. Enumerable.Range(0, conExistencias.Count)
+                .Where(indice => conExistencias[indice].Clave.NumeroDeSerieId is not null),
+        ];
+
+        return primera && deSerie.Length > 0 && traslados.Next(2) == 0
+            ? deSerie[traslados.Next(deSerie.Length)]
+            : traslados.Next(conExistencias.Count);
+    }
+
+    /// <summary>
+    /// Qué transferencia se anula, contando primero las enviadas y después las recibidas: la mitad de
+    /// las veces, una recibida que dejaría a cero alguna clave del destino, si la hay; si no,
+    /// cualquiera.
+    /// </summary>
+    private static int UnaTransferenciaQueAnular(Random traslados, Secuencia secuencia)
+    {
+        var porArticulo = LasExistencias
+            .SaldosDelLibro(secuencia.Libro)
+            .GroupBy(par => (par.Key.ArticuloId, par.Key.AlmacenId))
+            .ToDictionary(grupo => grupo.Key, grupo => grupo.Sum(par => par.Value));
+
+        int[] queVaciarian =
+        [
+            .. Enumerable.Range(0, secuencia.Recibidas.Count)
+                .Where(indice => secuencia.Recibidas[indice].Lineas
+                    .GroupBy(linea => linea.Destino.ArticuloId)
+                    .Any(lineas => porArticulo.GetValueOrDefault((lineas.Key, secuencia.Recibidas[indice].Destino))
+                        == lineas.Sum(linea => linea.Cantidad))),
+        ];
+
+        return queVaciarian.Length > 0 && traslados.Next(2) == 0
+            ? secuencia.Enviadas.Count + queVaciarian[traslados.Next(queVaciarian.Length)]
+            : traslados.Next(secuencia.Enviadas.Count + secuencia.Recibidas.Count);
+    }
+
+    /// <summary>El código como lo teclearía alguien: una de cada cuatro veces, con espacios alrededor.</summary>
+    private static string Tecleado(Random traslados, string codigo) =>
+        traslados.Next(4) == 0 ? " " + codigo + " " : codigo;
+
+    /// <summary>Una transferencia para el relato: su fecha y, por línea, de qué clave a cuál y cuánto.</summary>
+    private static string DescribirElTraslado(
+        UnaEmpresa empresa, Secuencia secuencia, DateOnly fecha, IEnumerable<LineaEnVuelo> lineas) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"{fecha:yyyy-MM-dd} [{string.Join(", ", lineas.Select(linea => DescribirLaLinea(empresa, secuencia, linea)))}]");
+
+    private static string DescribirLaLinea(UnaEmpresa empresa, Secuencia secuencia, LineaEnVuelo linea)
+    {
+        LineaAlAzar donde = secuencia.LineaEn(empresa, linea.Origen);
+
+        return string.Create(
+                CultureInfo.InvariantCulture,
+                $"clave {donde.Clave} a {empresa.IndiceDe(linea.Destino)}: {linea.Cantidad}")
+            + (donde.Lote is { } lote ? " lote «" + lote + "»" : string.Empty)
+            + (donde.Serie is { } serie ? " serie «" + serie + "»" : string.Empty);
     }
 
     /// <summary>
@@ -472,36 +942,54 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// también se salga del <c>BETWEEN 0 AND 1</c>: los <c>CHECK</c> se comprueban en orden
     /// alfabético de nombre (ADR-0048 §3), y el del stock va antes. Una serie con dos unidades en
     /// una fila rompe el <c>CHECK</c> de la serie; y con una, en una fila distinta de otra que ya la
-    /// tiene, el índice. La otra fila no la toca el documento, porque una serie va una sola vez en
-    /// cada uno.
+    /// tiene, el índice. En un ajuste, la otra fila no la toca el documento, porque una serie va una
+    /// sola vez en cada uno; la anulación de una recibida sí, y por eso se mira como queda (abajo).
     /// </para>
     /// <para>
     /// <b>Con varias rotas, cualquiera puede ser la que salta</b>: la sentencia recorre las filas en
     /// el orden que quiere, y para en la primera.
     /// </para>
+    /// <para>
+    /// <b>Y con lo que vuela dentro</b> (ítem 2.11, ADR-0053 §7). El <c>CHECK</c> de la serie suma el
+    /// físico y el tránsito de la fila, y el índice cuenta en un sitio la fila que tiene la serie en
+    /// vuelo. El otro sitio se mira como queda <b>después</b> del documento, con su tránsito: anular
+    /// una recibida saca la serie del destino antes de devolverla al origen, y el envío o la anulación
+    /// de una enviada mueven el tránsito antes que lo que suma. <paramref name="transito"/> es lo que
+    /// el documento deja en vuelo, y si no se dice, lo que ya vuela.
+    /// </para>
     /// </remarks>
-    private static HashSet<string> LoQueRomperia(Secuencia secuencia, IEnumerable<ApunteDelLibro> filas)
+    private static HashSet<string> LoQueRomperia(
+        Secuencia secuencia,
+        IEnumerable<ApunteDelLibro> filas,
+        IReadOnlyDictionary<ClaveDeExistencia, decimal>? transito = null)
     {
         IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+        IReadOnlyDictionary<ClaveDeExistencia, decimal> enVuelo = transito ?? secuencia.Transito;
+
+        var despues = filas
+            .GroupBy(fila => fila.Clave)
+            .ToDictionary(
+                clave => clave.Key,
+                clave => saldos.GetValueOrDefault(clave.Key) + clave.Sum(fila => fila.Cantidad));
+
         HashSet<string> rotas = [];
 
-        foreach (IGrouping<ClaveDeExistencia, ApunteDelLibro> clave in filas.GroupBy(fila => fila.Clave))
+        foreach ((ClaveDeExistencia clave, decimal fisico) in despues)
         {
-            decimal despues = saldos.GetValueOrDefault(clave.Key) + clave.Sum(fila => fila.Cantidad);
-
-            if (despues < 0m)
+            if (fisico < 0m)
             {
                 rotas.Add(FisicoNoNegativo);
             }
-            else if (clave.Key.NumeroDeSerieId is not null && despues > 1m)
+            else if (clave.NumeroDeSerieId is not null && fisico + enVuelo.GetValueOrDefault(clave) > 1m)
             {
                 rotas.Add(NumeroDeSerieComoMuchoUna);
             }
-            else if (clave.Key.NumeroDeSerieId is { } serie && despues > 0m && saldos.Any(otra =>
-                otra.Key != clave.Key
-                && otra.Key.ArticuloId == clave.Key.ArticuloId
-                && otra.Key.NumeroDeSerieId == serie
-                && otra.Value > 0m))
+            else if (clave.NumeroDeSerieId is { } serie && fisico > 0m && saldos.Keys.Union(enVuelo.Keys).Any(otra =>
+                otra != clave
+                && otra.ArticuloId == clave.ArticuloId
+                && otra.NumeroDeSerieId == serie
+                && (despues.GetValueOrDefault(otra, saldos.GetValueOrDefault(otra)) > 0m
+                    || enVuelo.GetValueOrDefault(otra) > 0m)))
             {
                 rotas.Add(NumeroDeSerieEnUnSitio);
             }
@@ -521,17 +1009,17 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             : RechazadoPorLaSerie;
 
     /// <summary>
-    /// La fecha más alta del libro del modelo entre los artículos de estas claves, o nada si ninguno
-    /// se ha movido.
+    /// La fecha más alta del libro del modelo entre los artículos de estas claves, cada uno en su
+    /// almacén, o nada si ninguno se ha movido allí.
     /// </summary>
     /// <remarks>
     /// Un documento lleva una sola fecha, así que va por detrás de alguna de sus claves si y solo si
     /// va por detrás de la más alta. La misma fecha no va por detrás: la regla es «anterior»
     /// (ADR-0047 §4). Comparada con nada, una fecha no es menor, y un artículo sin movimientos no
-    /// rechaza ninguna.
+    /// rechaza ninguna. Lo que vuela no cuenta: no está en el libro (ADR-0053 §1).
     /// </remarks>
     private static DateOnly? LaUltimaFechaDeSusClaves(Secuencia secuencia, IEnumerable<ClaveDeExistencia> claves) =>
-        claves.Select(clave => secuencia.UltimaFechaDe(clave.ArticuloId)).Max();
+        claves.Select(clave => secuencia.UltimaFechaDe(clave.ArticuloId, clave.AlmacenId)).Max();
 
     /// <summary>
     /// Exige que el motor rechace la operación por una de las restricciones que el modelo sabe
@@ -643,16 +1131,38 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         IReadOnlyList<Existencia> vivas = await LasExistencias.VivasAsync(postgres, empresa.EmpresaId);
 
-        vivas.Count.ShouldBe(saldos.Count, "una fila viva por clave\n" + secuencia.Relato());
+        // UNA FILA VIVA POR CLAVE DEL LIBRO, Y POR CLAVE A LA QUE ALGO HA VOLADO (ítem 2.11), aunque
+        // no haya llegado nunca: el envío crea la fila del destino.
+        vivas.Select(viva => EnElModelo(LasExistencias.ClaveDe(viva), traduccion)).ShouldBe(
+            secuencia.ClavesConFila(),
+            ignoreOrder: true,
+            customMessage: "una fila viva por clave\n" + secuencia.Relato());
 
         foreach (Existencia viva in vivas)
         {
-            viva.Fisico.ShouldBe(
-                saldos[EnElModelo(LasExistencias.ClaveDe(viva), traduccion)],
-                "el saldo no es la suma del libro\n" + secuencia.Relato());
+            ClaveDeExistencia clave = EnElModelo(LasExistencias.ClaveDe(viva), traduccion);
 
+            viva.Fisico.ShouldBe(
+                saldos.GetValueOrDefault(clave), "el saldo no es la suma del libro\n" + secuencia.Relato());
+
+            viva.EnTransito.ShouldBe(
+                secuencia.Transito.GetValueOrDefault(clave),
+                "lo que vuela no es lo enviado sin recibir\n" + secuencia.Relato());
+
+            // LO DISPONIBLE NO CUENTA LO QUE VUELA (ADR-0053 §1): es del destino, pero no está.
             viva.Disponible.ShouldBe(viva.Fisico, secuencia.Relato());
         }
+
+        // UNA SERIE, EN UN SOLO SITIO Y CON UNA UNIDAD COMO MUCHO, CONTANDO LO QUE VUELA (ADR-0053
+        // §7), en las filas vivas que acaban de cuadrar con el modelo.
+        Existencia[] deSerie = [.. vivas.Where(viva => viva.NumeroDeSerieId is not null)];
+
+        deSerie.ShouldAllBe(viva => viva.Fisico + viva.EnTransito <= 1m, secuencia.Relato());
+
+        deSerie
+            .Where(viva => viva.Fisico > 0m || viva.EnTransito > 0m)
+            .GroupBy(viva => (viva.ArticuloId, viva.NumeroDeSerieId))
+            .ShouldAllBe(sitios => sitios.Count() == 1, "una serie en dos sitios\n" + secuencia.Relato());
 
         // SIN EL ORDEN DE LA LECTURA: se ordena por los identificadores del sistema, y traducidos
         // a los del modelo ya no van en orden.
@@ -670,49 +1180,88 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             "el libro sumado hasta alguna fecha deja una serie con más de una unidad en un sitio, " +
             "o en dos\n" + secuencia.Relato());
 
-        (await ValoracionesAsync(empresa.EmpresaId)).ShouldBe(
-            [.. secuencia.Valoracion
-                .OrderBy(par => par.Key)
-                .Select(par => (par.Key, par.Value.Cantidad, par.Value.Valor, "EUR", secuencia.UltimaFechaDe(par.Key)))],
+        ValoracionLeida[] valoraciones = await ValoracionesAsync(empresa.EmpresaId);
+
+        valoraciones.ShouldBe(
+            [.. secuencia.ClavesDeValoracion()
+                .OrderBy(clave => clave.ArticuloId)
+                .ThenBy(clave => clave.AlmacenId)
+                .Select(clave => new ValoracionLeida(
+                    clave.ArticuloId,
+                    clave.AlmacenId,
+                    secuencia.Valoracion.GetValueOrDefault(clave).Cantidad,
+                    secuencia.Valoracion.GetValueOrDefault(clave).Valor,
+                    secuencia.ValoracionEnTransito.GetValueOrDefault(clave).Cantidad,
+                    secuencia.ValoracionEnTransito.GetValueOrDefault(clave).Valor,
+                    "EUR",
+                    secuencia.UltimaFechaDe(clave.ArticuloId, clave.AlmacenId)))],
             "la valoración no es la del modelo\n" + secuencia.Relato());
+
+        // EL VALOR DE LA EMPRESA SOLO LO MUEVEN LOS AJUSTES (ADR-0053 §6): la transferencia lo pasa
+        // del origen al vuelo y del vuelo al destino, sin crearlo ni perderlo por el camino.
+        valoraciones.Sum(fila => fila.Valor + fila.ValorEnTransito).ShouldBe(
+            secuencia.ValorDeLaEmpresa,
+            "el valor de la empresa no es el que han metido y sacado los ajustes\n" + secuencia.Relato());
 
         (await LosEstadosDelLibroAsync(empresa.EmpresaId)).Imposibles.ShouldBe(
             0, "el libro sumado hasta alguna fecha deja un estado que no existió nunca\n" + secuencia.Relato());
 
         Ordenado(await FilasValoradasAsync(empresa.EmpresaId)).ShouldBe(
             Ordenado(secuencia.Valorado), "el libro no vale lo que dice el modelo\n" + secuencia.Relato());
+
+        // EL CUADRE DE PRODUCCIÓN, EN CADA PASO (ítem 2.11): compara lo que vuela con las líneas
+        // enviadas, que el modelo no ve. Tiene que comparar lo mismo que el modelo tiene en vuelo, y
+        // no encontrar nada.
+        CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, empresa.EmpresaId);
+
+        cuadre.Descuadres.ShouldBeEmpty("el cuadre encuentra lo que el modelo no\n" + secuencia.Relato());
+
+        cuadre.ExistenciasEnTransitoComparadas.ShouldBe(
+            secuencia.Transito.Count(par => par.Value != 0m), secuencia.Relato());
+
+        cuadre.ValoracionesEnTransitoComparadas.ShouldBe(
+            secuencia.ValoracionEnTransito.Count(par => par.Value.Cantidad != 0m || par.Value.Valor != 0m),
+            secuencia.Relato());
+
+        secuencia.MasExistenciasEnVuelo =
+            Math.Max(secuencia.MasExistenciasEnVuelo, cuadre.ExistenciasEnTransitoComparadas);
+
+        secuencia.MasValoracionesEnVuelo =
+            Math.Max(secuencia.MasValoracionesEnVuelo, cuadre.ValoracionesEnTransitoComparadas);
     }
 
     /// <summary>La tabla de la valoración de la empresa, leída sin el filtro y sin el mapeo.</summary>
-    private async Task<(Guid ArticuloId, decimal Cantidad, decimal Valor, string Divisa, DateOnly? UltimaFecha)[]>
-        ValoracionesAsync(Guid empresaId)
+    private async Task<ValoracionLeida[]> ValoracionesAsync(Guid empresaId)
     {
         await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
         await conexion.OpenAsync();
 
         await using NpgsqlCommand orden = new(
-            "SELECT articulo_id, cantidad, valor, divisa, ultima_fecha FROM inventario.valoraciones "
-            + "WHERE empresa_id = @empresa",
+            "SELECT articulo_id, almacen_id, cantidad, valor, en_transito, valor_en_transito, divisa, ultima_fecha "
+            + "FROM inventario.valoraciones WHERE empresa_id = @empresa",
             conexion);
 
         orden.Parameters.AddWithValue("empresa", empresaId);
 
-        List<(Guid, decimal, decimal, string, DateOnly?)> filas = [];
+        List<ValoracionLeida> filas = [];
 
         await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
 
         while (await lector.ReadAsync())
         {
-            filas.Add((
+            filas.Add(new ValoracionLeida(
                 lector.GetGuid(0),
-                lector.GetDecimal(1),
+                lector.GetGuid(1),
                 lector.GetDecimal(2),
-                lector.GetString(3),
-                lector.IsDBNull(4) ? null : lector.GetFieldValue<DateOnly>(4)));
+                lector.GetDecimal(3),
+                lector.GetDecimal(4),
+                lector.GetDecimal(5),
+                lector.GetString(6),
+                lector.IsDBNull(7) ? null : lector.GetFieldValue<DateOnly>(7)));
         }
 
         // EN C#, Y NO CON UN ORDER BY: el motor y .NET no ordenan los uuid igual.
-        return [.. filas.OrderBy(fila => fila.Item1)];
+        return [.. filas.OrderBy(fila => fila.ArticuloId).ThenBy(fila => fila.AlmacenId)];
     }
 
     /// <summary>
@@ -765,12 +1314,19 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// serie con una cantidad que no es cero ni uno en un sitio, o con unidades en dos (ADR-0048 §6).
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Contra el libro de verdad, como <see cref="LosEstadosDelLibroAsync"/>, y por la misma razón:
-    /// ninguna fecha va por detrás del último movimiento de su artículo en su almacén (ADR-0047), así
-    /// que las filas hasta cada fecha son las de las confirmaciones hasta una de ellas. Vale porque
-    /// la empresa tiene un solo almacén: con dos, la fecha de uno no ordena la del otro. Y con todas
-    /// las filas de la misma fecha sumadas, porque la regla deja confirmar con la misma fecha en
-    /// cualquier orden.
+    /// las filas de una serie hasta cada fecha son las de las confirmaciones que la movieron hasta una
+    /// de ellas. Y con todas las filas de la misma fecha sumadas, porque la regla deja confirmar con
+    /// la misma fecha en cualquier orden.
+    /// </para>
+    /// <para>
+    /// <b>Con dos almacenes también</b> (ítem 2.11), aunque la fecha de uno no ordena la del otro. Lo
+    /// que se ordena es la serie: dentro de un almacén, ningún documento va por detrás de su último
+    /// movimiento (ADR-0047); de uno a otro, solo la mueve una transferencia, que no se recibe antes
+    /// de enviarse; y los inversos van con la fecha de hoy. Mientras vuela no está en el libro de
+    /// ninguno, y eso no rompe nada de lo que se cuenta aquí.
+    /// </para>
     /// </remarks>
     private async Task<(long Fechas, long FueraDeRango, long EnDosSitios)> LasSeriesDelLibroAsync(Guid empresaId)
     {
@@ -872,7 +1428,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         await conexion.OpenAsync();
 
         await using NpgsqlCommand orden = new(
-            "SELECT articulo_id, cantidad_en_unidad_base, valor, precio_medio "
+            "SELECT articulo_id, almacen_id, cantidad_en_unidad_base, valor, precio_medio "
             + "FROM inventario.movimiento_stock WHERE empresa_id = @empresa",
             conexion);
 
@@ -885,7 +1441,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         while (await lector.ReadAsync())
         {
             filas.Add(new FilaValorada(
-                lector.GetGuid(0), lector.GetDecimal(1), lector.GetDecimal(2), lector.GetDecimal(3)));
+                lector.GetGuid(0),
+                lector.GetGuid(1),
+                lector.GetDecimal(2),
+                lector.GetDecimal(3),
+                lector.GetDecimal(4)));
         }
 
         return filas;
@@ -906,13 +1466,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         return lineas;
     }
 
-    /// <summary>Una salida de una línea, que saca de donde hay si hay en algún sitio.</summary>
+    /// <summary>Una salida de una línea, que saca de donde hay si hay en algún sitio de A.</summary>
     /// <remarks>
     /// <para>
-    /// <b>De una clave con existencias, si alguna tiene</b> (ítem 2.8). Con la clave al azar, la
+    /// <b>De una clave de A con existencias, si alguna tiene</b> (ítem 2.8). Con la clave al azar, la
     /// mitad de las salidas iban a una clave vacía, chocaban con el cero y había semillas que no
     /// confirmaban ninguna. Si no hay existencias en ninguna, la clave es cualquiera y choca. Desde
-    /// el ítem 2.9 la clave lleva su lote o su serie, y la salida se los lleva.
+    /// el ítem 2.9 la clave lleva su lote o su serie, y la salida se los lleva. Desde el 2.11 hay
+    /// otro almacén, B, pero los ajustes son de A, así que lo que haya en B no cuenta: si A se queda
+    /// vacío, la salida choca aunque B tenga.
     /// </para>
     /// <para>
     /// <b>Y si no cabe, la mitad de las veces se queda en lo que cabe.</b> La otra mitad se intenta
@@ -931,7 +1493,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         (LineaAlAzar Donde, decimal Saldo)[] conExistencias =
         [
             .. saldos
-                .Where(par => par.Value > 0m)
+                .Where(par => par.Value > 0m && par.Key.AlmacenId == empresa.AlmacenId)
                 .Select(par => (Donde: secuencia.LineaEn(empresa, par.Key), Saldo: par.Value))
                 .OrderBy(par => par.Donde.Clave)
                 .ThenBy(par => par.Donde.Lote, StringComparer.Ordinal)
@@ -955,7 +1517,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     }
 
     private static LineaAlAzar UnaLineaAlAzar(Random azar, int signo) => new(
-        azar.Next(ClavesPorEmpresa), signo * azar.Next(1, 10), s_factores[azar.Next(s_factores.Length)]);
+        azar.Next(ClavesDeLosAjustes), signo * azar.Next(1, 10), s_factores[azar.Next(s_factores.Length)]);
 
     /// <summary>
     /// Las líneas con el lote o la serie que pide la marca de su artículo, sorteados con su propio
@@ -1078,7 +1640,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// </remarks>
     private static LineaAlAzar ConCoste(LineaAlAzar linea, UnaEmpresa empresa, Secuencia secuencia) =>
         linea.Cantidad % 2m == 0m
-            && secuencia.Valoracion.GetValueOrDefault(empresa.Claves[linea.Clave].ArticuloId).Cantidad > 0m
+            && secuencia.Valoracion.GetValueOrDefault((empresa.Claves[linea.Clave].ArticuloId, empresa.AlmacenId))
+                .Cantidad > 0m
             ? linea
             : ConSuCoste(linea);
 
@@ -1146,6 +1709,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private static FilaValorada[] Ordenado(IEnumerable<FilaValorada> filas) =>
         [.. filas
             .OrderBy(fila => fila.ArticuloId)
+            .ThenBy(fila => fila.AlmacenId)
             .ThenBy(fila => fila.Cantidad)
             .ThenBy(fila => fila.Valor)
             .ThenBy(fila => fila.PrecioMedio)];
@@ -1154,8 +1718,9 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private static DateOnly Hoy => DateOnly.FromDateTime(s_reloj.GetUtcNow().UtcDateTime);
 
     /// <summary>
-    /// Una empresa con un almacén de dos ubicaciones, tres artículos —uno por marca, seis claves— y
-    /// los ejercicios de este año y del pasado, cada uno con su serie.
+    /// Una empresa con un almacén de dos ubicaciones y otro de una, tres artículos —uno por marca,
+    /// seis claves en el primero y tres en el segundo— y los ejercicios de este año y del pasado,
+    /// cada uno con su serie; el de este año, también con la de las transferencias.
     /// </summary>
     private async Task<UnaEmpresa> UnaEmpresaAsync(int semilla)
     {
@@ -1172,14 +1737,19 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         SerieDto serie = await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, esteAnio.Id, codigo);
         SerieDto delAnioPasado =
             await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, anioPasado.Id, codigo + "-P");
+        SerieDto deTransferencias = await LosMaestrosPorLaApi.CrearSerieEnAsync(
+            cliente, esteAnio.Id, codigo + "-TR", TipoDeDocumento.TransferenciaDeInventario);
 
         AlmacenDto almacen = await LosMaestrosPorLaApi.CrearAlmacenAsync(cliente, codigo);
+        AlmacenDto almacenB = await LosMaestrosPorLaApi.CrearAlmacenAsync(cliente, codigo + "-B");
 
         Guid[] ubicaciones =
         [
             (await LosMaestrosPorLaApi.CrearUbicacionAsync(cliente, almacen.Id, codigo + "-01")).Id,
             (await LosMaestrosPorLaApi.CrearUbicacionAsync(cliente, almacen.Id, codigo + "-02")).Id,
         ];
+
+        Guid b1 = (await LosMaestrosPorLaApi.CrearUbicacionAsync(cliente, almacenB.Id, codigo + "-B1")).Id;
 
         (Guid primero, Guid unidadDelPrimero) =
             await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, semilla + 10);
@@ -1194,6 +1764,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             cliente,
             empresa.Id,
             almacen.Id,
+            almacenB.Id,
             [
                 new ClaveDeExistencia(primero, almacen.Id, ubicaciones[0]),
                 new ClaveDeExistencia(primero, almacen.Id, ubicaciones[1]),
@@ -1201,6 +1772,9 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                 new ClaveDeExistencia(segundo, almacen.Id, ubicaciones[1]),
                 new ClaveDeExistencia(tercero, almacen.Id, ubicaciones[0]),
                 new ClaveDeExistencia(tercero, almacen.Id, ubicaciones[1]),
+                new ClaveDeExistencia(primero, almacenB.Id, b1),
+                new ClaveDeExistencia(segundo, almacenB.Id, b1),
+                new ClaveDeExistencia(tercero, almacenB.Id, b1),
             ],
             new Dictionary<Guid, Guid>
             {
@@ -1211,11 +1785,14 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             new Dictionary<Guid, string> { [primero] = "Ninguna", [segundo] = PorLote, [tercero] = PorNumeroSerie },
             serie,
             delAnioPasado,
-            anioPasado);
+            anioPasado,
+            deTransferencias);
     }
 
     /// <summary>Una línea tal como la saca el generador.</summary>
-    /// <param name="Clave">Cuál de las seis claves de la empresa.</param>
+    /// <param name="Clave">
+    /// Cuál de las nueve claves de la empresa: de la 0 a la 5, las de A; de la 6 a la 8, las de B.
+    /// </param>
     /// <param name="Cantidad">La cantidad tecleada, con signo.</param>
     /// <param name="Factor">El factor a unidad base.</param>
     /// <param name="Coste">El coste por unidad base, o nada si resta o va al precio medio.</param>
@@ -1225,40 +1802,98 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         int Clave, decimal Cantidad, decimal Factor, decimal? Coste = null, string? Lote = null, string? Serie = null);
 
     /// <summary>Una línea tal como la valora el modelo.</summary>
-    /// <param name="ArticuloId">El artículo; el almacén es uno solo.</param>
+    /// <param name="ArticuloId">El artículo.</param>
+    /// <param name="AlmacenId">El almacén: la valoración es del artículo en cada uno.</param>
     /// <param name="Cantidad">La cantidad en unidad base, con signo.</param>
     /// <param name="Coste">El coste por unidad base, o nada.</param>
-    /// <param name="Compensa">Lo que compensa si es la de un inverso, o nada.</param>
-    private sealed record LineaQueSeValora(Guid ArticuloId, decimal Cantidad, decimal? Coste, decimal? Compensa);
+    /// <param name="Compensa">Lo que compensa si es la de un inverso o la de una transferencia, o nada.</param>
+    private sealed record LineaQueSeValora(
+        Guid ArticuloId, Guid AlmacenId, decimal Cantidad, decimal? Coste, decimal? Compensa);
 
     /// <summary>Una fila del libro con lo que vale.</summary>
     /// <param name="ArticuloId">El artículo.</param>
+    /// <param name="AlmacenId">El almacén.</param>
     /// <param name="Cantidad">La cantidad en unidad base, con signo.</param>
     /// <param name="Valor">Lo que movió, con signo.</param>
     /// <param name="PrecioMedio">El precio medio que congeló.</param>
-    private sealed record FilaValorada(Guid ArticuloId, decimal Cantidad, decimal Valor, decimal PrecioMedio);
+    private sealed record FilaValorada(
+        Guid ArticuloId, Guid AlmacenId, decimal Cantidad, decimal Valor, decimal PrecioMedio);
+
+    /// <summary>Una línea de una transferencia, tal como la lleva el modelo.</summary>
+    /// <param name="Origen">La clave de donde sale, con su lote o su serie.</param>
+    /// <param name="Destino">La clave a donde va, con el mismo lote o la misma serie.</param>
+    /// <param name="Cantidad">Cuánto, en unidad base.</param>
+    /// <param name="Valor">Lo que vuela con ella: lo que se llevó del origen.</param>
+    private sealed record LineaEnVuelo(
+        ClaveDeExistencia Origen, ClaveDeExistencia Destino, decimal Cantidad, decimal Valor);
+
+    /// <summary>Una transferencia enviada o recibida, tal como la lleva el modelo.</summary>
+    /// <param name="Id">Su identificador en el sistema.</param>
+    /// <param name="Origen">El almacén de donde sale.</param>
+    /// <param name="Destino">El almacén a donde va.</param>
+    /// <param name="FechaDeEnvio">El día en que salió.</param>
+    /// <param name="Lineas">Lo que lleva, con su valor.</param>
+    private sealed record TransferenciaDelModelo(
+        Guid Id, Guid Origen, Guid Destino, DateOnly FechaDeEnvio, LineaEnVuelo[] Lineas);
+
+    /// <summary>Una fila de la valoración, tal como se lee de la tabla.</summary>
+    /// <param name="ArticuloId">El artículo.</param>
+    /// <param name="AlmacenId">El almacén.</param>
+    /// <param name="Cantidad">Lo que hay.</param>
+    /// <param name="Valor">Lo que vale lo que hay.</param>
+    /// <param name="EnTransito">Lo que vuela hacia el almacén.</param>
+    /// <param name="ValorEnTransito">Lo que vale lo que vuela.</param>
+    /// <param name="Divisa">La divisa.</param>
+    /// <param name="UltimaFecha">La fecha de su último movimiento, o nada.</param>
+    private sealed record ValoracionLeida(
+        Guid ArticuloId,
+        Guid AlmacenId,
+        decimal Cantidad,
+        decimal Valor,
+        decimal EnTransito,
+        decimal ValorEnTransito,
+        string Divisa,
+        DateOnly? UltimaFecha);
 
     /// <summary>Los maestros de la empresa del caso.</summary>
     private sealed record UnaEmpresa(
         HttpClient Cliente,
         Guid EmpresaId,
         Guid AlmacenId,
+        Guid AlmacenB,
         IReadOnlyList<ClaveDeExistencia> Claves,
         IReadOnlyDictionary<Guid, Guid> UnidadDe,
         IReadOnlyDictionary<Guid, string> Marcas,
         SerieDto Serie,
         SerieDto SerieDelAnioPasado,
-        EjercicioDto AnioPasado)
+        EjercicioDto AnioPasado,
+        SerieDto SerieDeTransferencias)
     {
-        /// <summary>La marca del artículo de una de las seis claves.</summary>
+        /// <summary>La marca del artículo de una de las claves.</summary>
         internal string MarcaDe(int clave) => Marcas[Claves[clave].ArticuloId];
 
-        /// <summary>Cuál de las seis claves es esta, sin su lote ni su serie.</summary>
+        /// <summary>Cuál de las nueve claves es esta, sin su lote ni su serie.</summary>
         internal int IndiceDe(ClaveDeExistencia clave)
         {
             ClaveDeExistencia sinCodigos = clave with { LoteId = null, NumeroDeSerieId = null };
 
             return Enumerable.Range(0, Claves.Count).Single(indice => Claves[indice] == sinCodigos);
+        }
+
+        /// <summary>
+        /// A qué clave del otro almacén llega lo que sale de esta, con su lote o su serie: al único
+        /// hueco de B, o a uno de los dos de A.
+        /// </summary>
+        internal ClaveDeExistencia DestinoDe(ClaveDeExistencia origen, Random traslados)
+        {
+            int indice = IndiceDe(origen);
+            int articulo = indice < ClavesDeLosAjustes ? indice / 2 : indice - ClavesDeLosAjustes;
+
+            ClaveDeExistencia hueco = origen.AlmacenId == AlmacenId
+                ? Claves[ClavesDeLosAjustes + articulo]
+                : Claves[(2 * articulo) + traslados.Next(2)];
+
+            return hueco with { LoteId = origen.LoteId, NumeroDeSerieId = origen.NumeroDeSerieId };
         }
     }
 
@@ -1276,11 +1911,46 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         internal List<(Guid AjusteId, ApunteDelLibro[] Apuntes, FilaValorada[] Valoradas)> Anulables { get; } = [];
 
-        /// <summary>La valoración de cada artículo que se ha movido: su cantidad y su valor.</summary>
-        internal Dictionary<Guid, (decimal Cantidad, decimal Valor)> Valoracion { get; } = [];
+        /// <summary>
+        /// La valoración de cada artículo en cada almacén donde se ha movido: su cantidad y su valor.
+        /// </summary>
+        internal Dictionary<(Guid ArticuloId, Guid AlmacenId), (decimal Cantidad, decimal Valor)> Valoracion { get; } = [];
 
         /// <summary>Cada fila del libro con lo que vale.</summary>
         internal List<FilaValorada> Valorado { get; } = [];
+
+        /// <summary>
+        /// Lo que vuela hacia cada clave del destino (ADR-0053 §1). Una clave a la que algo ha volado
+        /// se queda aunque baje a cero: su fila viva tampoco se borra.
+        /// </summary>
+        internal Dictionary<ClaveDeExistencia, decimal> Transito { get; } = [];
+
+        /// <summary>Lo que vuela hacia cada artículo en cada almacén: su cantidad y su valor.</summary>
+        internal Dictionary<(Guid ArticuloId, Guid AlmacenId), (decimal Cantidad, decimal Valor)> ValoracionEnTransito { get; } = [];
+
+        /// <summary>Las transferencias enviadas que no han llegado ni se han anulado.</summary>
+        internal List<TransferenciaDelModelo> Enviadas { get; } = [];
+
+        /// <summary>Las recibidas que no se han anulado.</summary>
+        internal List<TransferenciaDelModelo> Recibidas { get; } = [];
+
+        /// <summary>
+        /// El valor que han metido y sacado los ajustes y sus anulaciones: el de la empresa, porque la
+        /// transferencia no lo crea ni lo pierde (ADR-0053 §6).
+        /// </summary>
+        internal decimal ValorDeLaEmpresa { get; set; }
+
+        /// <summary>Las más claves en vuelo que ha comparado el cuadre tras un paso.</summary>
+        internal long MasExistenciasEnVuelo { get; set; }
+
+        /// <summary>Las más valoraciones en vuelo que ha comparado el cuadre tras un paso.</summary>
+        internal long MasValoracionesEnVuelo { get; set; }
+
+        /// <summary>Las líneas de serie que han salido en un envío confirmado.</summary>
+        internal int SeriesQueHanVolado { get; set; }
+
+        /// <summary>Las líneas de un envío confirmado con su código tecleado con espacios.</summary>
+        internal int CodigosConEspacios { get; set; }
 
         internal int AlPrecioMedio { get; set; }
 
@@ -1293,13 +1963,60 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         internal int BorradoresEnElPasado { get; set; }
 
         /// <summary>
-        /// La fecha más alta del libro del modelo para el artículo, o nada si no se ha movido: es la
-        /// que guarda su valoración (ADR-0047 §1). El almacén es uno solo.
+        /// La fecha más alta del libro del modelo para el artículo en el almacén, o nada si no se ha
+        /// movido allí: es la que guarda su valoración (ADR-0047 §1). Lo que vuela no la mueve
+        /// (ADR-0053 §3).
         /// </summary>
-        internal DateOnly? UltimaFechaDe(Guid articuloId) =>
-            Libro.Where(apunte => apunte.Clave.ArticuloId == articuloId)
+        internal DateOnly? UltimaFechaDe(Guid articuloId, Guid almacenId) =>
+            Libro.Where(apunte => apunte.Clave.ArticuloId == articuloId && apunte.Clave.AlmacenId == almacenId)
                 .Select(apunte => (DateOnly?)apunte.Fecha)
                 .Max();
+
+        /// <summary>
+        /// Las claves que tienen fila viva: las del libro y las que algo ha ido a buscar, aunque no
+        /// haya llegado nunca. El envío crea la del destino, y nada la borra.
+        /// </summary>
+        internal HashSet<ClaveDeExistencia> ClavesConFila() =>
+            [.. Libro.Select(apunte => apunte.Clave), .. Transito.Keys];
+
+        /// <summary>
+        /// Los pares de artículo y almacén que tienen fila en la valoración: los que se han valorado y
+        /// los destinos de un envío, que los crea al bloquearlos.
+        /// </summary>
+        internal HashSet<(Guid ArticuloId, Guid AlmacenId)> ClavesDeValoracion() =>
+            [.. Valoracion.Keys, .. ValoracionEnTransito.Keys];
+
+        /// <summary>El código que el modelo dio a un lote o a una serie.</summary>
+        internal string CodigoDe(Guid id) => _codigos[id];
+
+        /// <summary>Lo que volaría si estas líneas despegaran (1) o dejaran de volar (−1).</summary>
+        internal Dictionary<ClaveDeExistencia, decimal> TransitoTras(IEnumerable<LineaEnVuelo> lineas, int signo)
+        {
+            Dictionary<ClaveDeExistencia, decimal> tras = new(Transito);
+
+            foreach (LineaEnVuelo linea in lineas)
+            {
+                tras[linea.Destino] = tras.GetValueOrDefault(linea.Destino) + (signo * linea.Cantidad);
+            }
+
+            return tras;
+        }
+
+        /// <summary>
+        /// Las líneas despegan (1) o dejan de volar (−1), porque llegan o porque se anulan: en la
+        /// clave del destino y en su valoración, con su cantidad y su valor.
+        /// </summary>
+        internal void Volar(IEnumerable<LineaEnVuelo> lineas, int signo)
+        {
+            foreach (LineaEnVuelo linea in lineas)
+            {
+                (Guid, Guid) donde = (linea.Destino.ArticuloId, linea.Destino.AlmacenId);
+                (decimal cantidad, decimal valor) = ValoracionEnTransito.GetValueOrDefault(donde);
+
+                Transito[linea.Destino] = Transito.GetValueOrDefault(linea.Destino) + (signo * linea.Cantidad);
+                ValoracionEnTransito[donde] = (cantidad + (signo * linea.Cantidad), valor + (signo * linea.Valor));
+            }
+        }
 
         /// <summary>
         /// El identificador que el modelo da a un lote: uno por artículo y código, recortado como
@@ -1376,7 +2093,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             foreach (int indice in enOrden)
             {
                 LineaQueSeValora linea = lineas[indice];
-                (decimal cantidad, decimal valor) = Valoracion.GetValueOrDefault(linea.ArticuloId);
+                (Guid, Guid) donde = (linea.ArticuloId, linea.AlmacenId);
+                (decimal cantidad, decimal valor) = Valoracion.GetValueOrDefault(donde);
                 decimal? antes = cantidad > 0m ? Redondear(valor / cantidad, 6) : null;
                 decimal despues = cantidad + linea.Cantidad;
 
@@ -1388,7 +2106,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                         4);
 
                     filas[indice] = new FilaValorada(
-                        linea.ArticuloId, linea.Cantidad, suma, Redondear((valor + suma) / despues, 6));
+                        linea.ArticuloId,
+                        linea.AlmacenId,
+                        linea.Cantidad,
+                        suma,
+                        Redondear((valor + suma) / despues, 6));
                 }
                 else
                 {
@@ -1398,10 +2120,14 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                         : Redondear(congelado * -linea.Cantidad, 4);
 
                     filas[indice] = new FilaValorada(
-                        linea.ArticuloId, linea.Cantidad, despues <= 0m || dice > valor ? -valor : -dice, congelado);
+                        linea.ArticuloId,
+                        linea.AlmacenId,
+                        linea.Cantidad,
+                        despues <= 0m || dice > valor ? -valor : -dice,
+                        congelado);
                 }
 
-                Valoracion[linea.ArticuloId] = (despues, valor + filas[indice].Valor);
+                Valoracion[donde] = (despues, valor + filas[indice].Valor);
             }
 
             Valorado.AddRange(filas);

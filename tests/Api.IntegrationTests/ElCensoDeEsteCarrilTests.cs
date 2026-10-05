@@ -496,6 +496,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaTransferenciaTests.Las_fechas_imposibles_son_422_y_no_mueven_nada",
         "LaTransferenciaTests.Si_el_destino_ya_lo_consumio_la_anulacion_es_stock_insuficiente_y_no_escribe_nada",
         "LaTransferenciaTests.Sin_la_clave_las_tres_acciones_son_428_y_no_tocan_nada",
+        "LaTransferenciaTests.Un_ajuste_no_mete_una_serie_en_el_hueco_al_que_vuela_y_la_recepcion_si",
         "LaTransferenciaTests.Un_ejercicio_cerrado_no_admite_ni_el_envio_ni_la_recepcion",
         "LaTransferenciaTests.Una_serie_va_vuelve_llega_y_vuelve_sin_estar_nunca_en_dos_sitios",
         "LaTransferenciaTests.Una_transferencia_entre_dos_empresas_no_existe",

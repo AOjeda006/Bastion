@@ -64,8 +64,9 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     // con algo todavía dentro. Ver `DisposeAsync`.
     private readonly List<Task> _lanzadas = [];
 
-    // EL RELOJ ES EL DE VERDAD, SALVO QUE EL CASO FIJE EL SUYO (ítem 2.9). Los tres casos de uso
-    // deciden con él qué fecha es futura y con qué fecha va el inverso, y un caso cuya secuencia
+    // EL RELOJ ES EL DE VERDAD, SALVO QUE EL CASO FIJE EL SUYO (ítem 2.9). Los casos de uso del
+    // ajuste y de la transferencia deciden con él qué fecha es futura y con qué fecha va el
+    // inverso, y un caso cuya secuencia
     // sale de «hoy» —el de la propiedad— tiene que repetirla igual cualquier otro día.
     internal ElModuloDeInventario(
         PostgresConTodosLosModulos postgres, Guid empresaId, TimeProvider? reloj = null)
@@ -356,6 +357,17 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal Task<Resultado<AnulacionDto>> AnularSinAbrirTransaccionAsync(
         Guid ajusteId, string motivo) =>
         Anulacion.EjecutarAsync(ajusteId, new AnularAjusteDto(motivo), CancellationToken.None);
+
+    /// <summary>Envía con una transacción abierta, como llegaría de verdad.</summary>
+    /// <remarks>
+    /// Mismo motivo que en la confirmación: el envío numera, y el mecanismo de numeración revienta
+    /// sin transacción abierta. Si el motor lo rechaza, el contexto olvida lo que el caso de uso
+    /// había cambiado.
+    /// </remarks>
+    /// <param name="transferenciaId">El borrador que enviar.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal Task<Resultado<TransferenciaDto>> EnviarAsync(Guid transferenciaId) =>
+        Lanzada(EnSuTransaccionAsync(() => Envio.EjecutarAsync(transferenciaId, CancellationToken.None)));
 
     /// <summary>
     /// Envía <b>dentro</b> de una transacción y la deja abierta, con todos los cerrojos del envío

@@ -4,6 +4,7 @@ using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Idempotencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.Movimientos;
@@ -13,6 +14,7 @@ using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Inventario;
@@ -35,14 +37,14 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// cerraría el valor de la empresa en 39,00.
 /// </para>
 /// <para>
-/// <b>Semillas: del 700 al 712, el 719 y el 720</b>, las empresas y, con el mismo número, la unidad y
+/// <b>Semillas: del 700 al 712, el 719, el 720 y el 726</b>, las empresas y, con el mismo número, la unidad y
 /// el tramo de impuesto de cada artículo, que son maestros de instalación. Del 640 al 749 no había
 /// ninguna, ni por literal ni por cálculo: la más alta calculada es la de
 /// <c>ElSaldoEsLaSumaDelLibroPorPropiedadTests</c>, <c>465 + 130 = 595</c>, y el 750 de
 /// <c>ElCerrojoDeLaNumeracionTests</c> son milisegundos. Las guardas de la transferencia, en
 /// <c>LasGuardasDeLaTransferenciaTests</c>, van del 713 al 718, y las carreras, en
 /// <c>LasCarrerasDeLaTransferenciaTests</c>, del 730 al 732. El cuadre del tránsito, en
-/// <c>ElCuadreDelTransitoTests</c>, va del 721 al 725.
+/// <c>ElCuadreDelTransitoTests</c>, va del 721 al 725, y del 727 al 729 quedan libres.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -873,6 +875,61 @@ public sealed class LaTransferenciaTests(PostgresConTodosLosModulos postgres) : 
         }
 
         await ExigirDondeEstaLaSerieAsync(escena, escena.AlmacenA, fisico: 1m, enTransito: 0m);
+
+        (await escena.ElValorDeLaEmpresaAsync(postgres)).ShouldBe(50m);
+
+        await ExigirQueCuadraAsync(escena, existencias: 2);
+    }
+
+    /// <summary>
+    /// Una serie en vuelo ya ocupa la fila que la espera: un ajuste que la mete en ese mismo hueco lo
+    /// para el <c>CHECK</c>, y la recepción, que suma la misma unidad en la misma fila, pasa.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el sumando del tránsito en el <c>CHECK</c></b> (ADR-0053 §7): la fila del destino se
+    /// quedaría con una unidad en la estantería y otra en vuelo. El índice no lo ve, porque es una
+    /// sola fila y el origen se quedó a cero al enviar. Sin <c>+ en_transito</c>, el ajuste pasaría y
+    /// la serie estaría a la vez en el hueco y de camino a él. Lo encontró la revisión del paso 7 del
+    /// 2.11: la propiedad no llega nunca a este estado, y ningún otro caso lo pedía.
+    /// </para>
+    /// <para>
+    /// <b>La pareja es la recepción</b>: baja el tránsito antes de sumar (§7), así que la fila nunca
+    /// tiene las dos unidades, y pasa.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Un_ajuste_no_mete_una_serie_en_el_hueco_al_que_vuela_y_la_recepcion_si()
+    {
+        const string Serie = "SN-VUELO-1";
+
+        EscenaDeTransferencia escena = await MontarAsync(726, "TRF-P", trazabilidad: "PorNumeroSerie");
+
+        await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 1m, 50m, serie: Serie);
+
+        TransferenciaDto enviada = await escena.EnviarAsync(postgres, 1m, serie: Serie);
+
+        await using (ElModuloDeInventario modulo = new(postgres, escena.EmpresaId))
+        {
+            Guid ajusteId = await escena.AbrirUnAjusteAsync(
+                modulo,
+                escena.AlmacenB,
+                new LineaDeAjusteDto(escena.UbicacionB, escena.ArticuloId, 1m, escena.UnidadId, 1m, 50m, null, Serie));
+
+            PostgresException choque = await Should.ThrowAsync<PostgresException>(() => modulo.ConfirmarAsync(ajusteId));
+
+            choque.SqlState.ShouldBe("23514", choque.MessageText);
+            choque.ConstraintName.ShouldBe("ck_existencias_numero_de_serie_como_mucho_una");
+        }
+
+        await ExigirDondeEstaLaSerieAsync(escena, escena.AlmacenB, fisico: 0m, enTransito: 1m);
+
+        using (HttpResponseMessage llegada = await escena.RecibirPorLaApiAsync(enviada.Id, Hoy))
+        {
+            await EscenaDeTransferencia.LeerAsync<TransferenciaDto>(llegada);
+        }
+
+        await ExigirDondeEstaLaSerieAsync(escena, escena.AlmacenB, fisico: 1m, enTransito: 0m);
 
         (await escena.ElValorDeLaEmpresaAsync(postgres)).ShouldBe(50m);
 

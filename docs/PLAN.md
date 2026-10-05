@@ -8379,7 +8379,8 @@ paso 8: en `ElPrecioMedioPonderado`, la salida que vacía la clave deja de lleva
 (fuera el `despues <= 0m ||` de la resta). Da **2** rojos de 142 en `Inventario.UnitTests`,
 `LosCasosDoradosDelPrecioMedioTests.Vaciar_la_clave_de_golpe_se_lleva_todo_el_valor_y_no_lo_que_dice_el_redondeo`
 y `ElInversoDeLaTransferenciaTests.Si_el_inverso_vacia_el_destino_el_origen_recibe_mas_de_lo_que_salio`.
-La tanda del paso 8 sigue en la **182**.
+De la **182** a la **189** son las de la revisión del cuadre (paso 7), también medidas, y la tanda
+del paso 8 sigue en la **190**.
 
 **Lo que queda, por este orden:**
 
@@ -8580,7 +8581,8 @@ La tanda del paso 8 sigue en la **182**.
 
    El séptimo commit (`52263fb`) tiene su run en verde en los tres trabajos, el
    [37226858671](https://github.com/AOjeda006/Bastion/actions/runs/37226858671).
-7. ~~El cuadre del tránsito~~, hecho en el octavo commit; **la propiedad, pendiente**.
+7. ~~El cuadre del tránsito y la propiedad.~~ El cuadre, hecho en el octavo commit, y la propiedad,
+   en el noveno.
 
    **El cuadre** compara ahora también lo que vuela, contra otra verdad que el libro: las líneas de
    las transferencias `Enviada` (ADR-0053 §1 y §11). Lo hace en la existencia del destino, por la
@@ -8629,8 +8631,131 @@ La tanda del paso 8 sigue en la **182**.
    - `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py ed7ab60 HEAD` da los seis
      conjuntos vacíos.
 
+   El octavo commit (`0a0e6a1`) tiene su run en verde en los tres trabajos, el
+   [37249605310](https://github.com/AOjeda006/Bastion/actions/runs/37249605310).
+
+   **Las ocho mutaciones de la revisión del cuadre**, de la 182 a la 189, van a la tabla del paso 8.
+   Se midieron sobre el árbol de `0a0e6a1`: cada una, aplicada sobre el árbol limpio, ejecutada y
+   revertida con `git restore --source=HEAD` y la fecha de ahora. La orden es `dotnet test
+   tests/Api.IntegrationTests --filter
+   "FullyQualifiedName~ElCuadreDelTransitoTests|FullyQualifiedName~LaTransferenciaTests|FullyQualifiedName~LasCarrerasDeLaTransferenciaTests"
+   --blame-hang --blame-hang-timeout 4m`, que sin mutar da **27** casos, todos en verde. Las ocho
+   tocan `ElCuadreDeLasExistencias`:
+
+   | # | Mutación | Rojos |
+   |---|---|---|
+   | 182 | La cantidad en vuelo, sin el `round(…, 6)`. | 1 de 27: `Lo_que_vuela_cuadra_redondeado_y_sin_valor_y_un_borrador_no_vuela` |
+   | 183 | `trunc(…, 6)` en vez de `round`. | 1 de 27: el mismo |
+   | 184 | `round(…, 4)`. | 1 de 27: el mismo |
+   | 185 | El estado, `NOT IN ('Recibida', 'Anulada')` en vez de `= 'Enviada'`: entra el borrador. | 1 de 27: el mismo |
+   | 186 | La unión con los lotes, sin el artículo. | 1 de 27: `El_cuadre_ve_el_lote_en_vuelo_aunque_el_destino_sume_lo_que_debe` |
+   | 187 | La unión con las series, sin el artículo. | 1 de 27: `El_cuadre_ve_la_serie_en_vuelo_aunque_el_destino_sume_lo_que_debe` |
+   | 188 | La serie, fuera de la clave del tránsito, en sus dos ramas. | 1 de 27: el de la serie |
+   | 189 | Las valoraciones en vuelo, solo las que tienen valor. | 1 de 27: el del redondeo y sin valor |
+
+   Cada una pone rojo justo el caso que la revisión pidió para ella, y ninguna sale verde. El árbol
+   restaurado compila y queda limpio.
+
    **La propiedad** (`ElSaldoEsLaSumaDelLibroPorPropiedadTests`) gana transferencias entre dos
-   almacenes, con su modelo del tránsito, y el cuadre de producción en cada paso.
+   almacenes en el noveno commit. Los ajustes siguen en A, con sus seis claves. B tiene un hueco y
+   una clave por artículo, y solo lo tocan las transferencias. Uno de cada cuatro pasos trae detrás
+   uno de transferencia, con un tercer generador (`semilla + 2000`) para que el primero no tire un
+   dado más: recibir una enviada, anular una enviada o una recibida, o enviar de donde hay, de A a B
+   y una de cada tres veces de B a A. El modelo:
+   - lleva lo que vuela por clave del destino y por artículo y almacén, en cantidad y en valor;
+   - valora cada pata como la tabla del ADR-0053. La salida del origen se lleva su valor, y la
+     llegada compensa el de la línea. La anulación de una enviada devuelve al origen lo que salió. La
+     de una recibida saca del destino lo que entró —o todo, si lo vacía o vale menos (ADR-0054)— y
+     lo devuelve al origen;
+   - predice los rechazos: la fecha anterior al último movimiento del origen al enviar y del destino
+     al recibir (ADR-0047), y el motor, con lo que vuela dentro del `CHECK` y del índice de la serie;
+   - y tras cada paso compara lo que vuela con las filas vivas y con la valoración. Exige que el
+     valor de la empresa sea el que han metido y sacado los ajustes (§6), y cuadra por el camino de
+     producción, que tiene que comparar lo que el modelo tiene en vuelo y no encontrar nada.
+
+   `ElModuloDeInventario` gana `EnviarAsync`, con su transacción, como la confirmación.
+
+   **La revisión antes del commit**, con tres lentes —el modelo contra el código, la fuerza del
+   oráculo y el texto—, dejó **12** hallazgos. La del modelo no encontró nada. Cada uno se comprobó
+   a mano, y **11** son reales:
+   1. **El sumando del tránsito en el `CHECK` de la serie no lo vigilaba nada.** Ninguna semilla
+      llega a meter una serie en el hueco al que vuela, y ningún caso lo pedía: sin
+      `+ en_transito`, todo seguía en verde. Lo fija un caso nuevo de `LaTransferenciaTests`, con la
+      semilla 726, `Un_ajuste_no_mete_una_serie_en_el_hueco_al_que_vuela_y_la_recepcion_si`. El
+      ajuste choca con el `23514` del `CHECK`, y la recepción, que baja el tránsito antes de sumar,
+      pasa.
+   2. **Dos de las seis semillas no hacían volar ninguna serie**, la 461 y la 462, y nada lo
+      afirmaba. Ahora la primera línea del envío es una serie la mitad de las veces que el origen la
+      tiene, y cada semilla afirma `SeriesQueHanVolado > 0`.
+   3. **La línea de la transferencia recorta el código, y la propiedad solo le daba códigos ya
+      recortados.** Ahora uno de cada cuatro va con espacios, como en el ajuste, y cada semilla
+      afirma `CodigosConEspacios > 0`.
+   4. **Ninguna anulación de una recibida sacaba del destino otra cosa que el valor de su línea**,
+      así que la propiedad no veía el borde del ADR-0054. Ahora, la mitad de las veces que la hay,
+      se anula una recibida que deja a cero un artículo del destino. **Con eso llega una semilla de
+      seis**, la 462, así que no se afirma por semilla. El borde lo fija el caso del 712,
+      `Anular_una_recibida_que_vacia_el_destino_se_lleva_todo_lo_que_queda_en_el`, y la mutación
+      que lo comprueba va a la tanda del paso 8.
+   5. a 11. **Seis frases que no decían lo que hace el código, y un nombre:**
+      - el reloj va a todos los casos de uso, no a «los tres», y lo mismo en `ElModuloDeInventario`;
+      - «el primero tira los mismos dados» solo es verdad hasta la primera transferencia;
+      - el dado de recibir, sin enviadas, anula una recibida si la hay, y no envía;
+      - «vaciar la clave se lleva todo su valor» solo pasa si es lo último del artículo en el
+        almacén;
+      - la salida solo busca existencias en A;
+      - una frase de `LoQueRomperia` ya no valía para la anulación de una recibida;
+      - y la constante `ClavesPorEmpresa`, que contaba seis de nueve, es ahora `ClavesDeLosAjustes`,
+        y el parámetro de `LineaAlAzar` dice nueve claves.
+
+   **El que no se aplicó** pedía un tipo explícito en una variable de `LoQueRomperia`, por el
+   `.editorconfig`. Pero `dotnet format --verify-no-changes` exige ahí `var` (`IDE0007`): el
+   analizador da el tipo por evidente con `ToDictionary`, y manda el formato.
+
+   **Lo que la propiedad ejerce**, ya con la revisión dentro. Se midió con un volcado temporal que
+   no se commitea, tres líneas: el relato y los contadores a un fichero por semilla, y un contador
+   de los inversos que sacan del destino otro valor que el de su línea. Se aplicó sobre una copia
+   del fichero, y el fichero se restauró copiándolo, con la fecha de ahora. La orden es `dotnet test
+   tests/Api.IntegrationTests --filter "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests"
+   --blame-hang --blame-hang-timeout 4m`, que da los **6** casos en verde en **54 s**:
+
+   | Semilla | 460 | 461 | 462 | 463 | 464 | 465 |
+   |---|---|---|---|---|---|---|
+   | Líneas de serie que vuelan | 6 | 4 | 4 | 8 | 4 | 7 |
+   | Códigos tecleados con espacios | 3 | 2 | 4 | 8 | 5 | 4 |
+   | Inversos que sacan otro valor que el de su línea (ADR-0054) | 0 | 0 | 2 | 0 | 0 | 0 |
+   | Más claves en vuelo comparadas tras un paso | 5 | 3 | 3 | 6 | 6 | 5 |
+   | Más valoraciones en vuelo comparadas tras un paso | 3 | 3 | 3 | 4 | 3 | 4 |
+
+   Entre las seis, sumando las clases del relato: **84** envíos confirmados, **48** recepciones,
+   **23** anulaciones de una enviada y **29** de una recibida. Se rechazan **25** envíos por la
+   fecha y **17** por el motor, y **8** anulaciones de una recibida por el motor. **14** envíos se
+   saltan porque el origen no tiene nada.
+
+   **El límite que queda son las fechas.** De los 84 envíos, **83** van con fecha de hoy, y las 48
+   recepciones también. «Recepción rechazada por la fecha» no sale ninguna vez. Lo causa el propio
+   modelo: el inverso va con fecha de hoy (ADR-0053), y deja el último movimiento de sus claves en
+   hoy. Una fecha de atrás cae casi siempre antes de ese movimiento, y o se rechaza (los 25 envíos)
+   o se empuja a él, que es hoy. Antes de la revisión eran 82 de 83, así que la revisión no lo ha
+   movido. Las fechas las fijan los casos explícitos:
+   - `LasGuardasDeLaTransferenciaTests.Una_fecha_anterior_al_ultimo_movimiento_de_su_punta_es_422`,
+     con la semilla 715, rechaza el envío y la recepción por el ADR-0047, cada uno en su punta;
+   - y `LaTransferenciaTests.El_cambio_de_anio_numera_en_el_del_envio_y_recibe_en_el_siguiente`,
+     con la 702, recibe en otro año.
+
+   Lo medido sobre el árbol de este commit, con la batería de `AGENTS.md` entera y todo en verde:
+   - `dotnet test Bastion.sln --filter "Category=Integracion"` da **507** y **84**: los **506** del
+     octavo commit y el caso nuevo de la serie que vuela. La propiedad no suma casos, porque sus
+     seis semillas ya estaban. `bash scripts/ci/recuento-de-tests.sh` con la lista del *workflow*
+     los cuenta en sus 10 ensamblados.
+   - `dotnet test Bastion.sln --filter "Category!=Integracion"` da **1262**, los mismos: este paso
+     solo toca casos de integración.
+   - `npm --prefix frontend run test` da **192** casos, sin un solo aviso de `act(...)`, y el
+     presupuesto sigue en **426/450** y **646/900 KiB**.
+   - Los generadores, con `--comprobar`, siguen en **173** tipos de 179 sitios y **138**
+     operaciones, y el modelo coincide con las migraciones.
+   - `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py $(git merge-base main
+     HEAD) HEAD` da los seis conjuntos vacíos. El árbol de este commit solo cambia ficheros `.cs`
+     de tests y este PLAN.
 8. La tanda de mutaciones, la batería y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
