@@ -5,7 +5,6 @@ using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
-using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
@@ -15,7 +14,6 @@ using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Bastion.Organizacion.Domain.Series;
-using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 
@@ -650,7 +648,7 @@ public sealed class LasGuardasDeLaTransferenciaTests(PostgresConTodosLosModulos 
         SerieDto cerrada = await LosMaestrosPorLaApi.CrearSerieEnAsync(
             escena.Cliente, escena.Ejercicio.Id, "TRG-I-T2", TipoDeDocumento.TransferenciaDeInventario);
 
-        await CerrarLaSerieAsync(escena.EmpresaId, cerrada.Id);
+        await escena.CerrarLaSerieAsync(postgres, cerrada.Id);
 
         ExigirElError(
             await modulo.AltaDeTransferencia.EjecutarAsync(
@@ -684,7 +682,7 @@ public sealed class LasGuardasDeLaTransferenciaTests(PostgresConTodosLosModulos 
             "transferencia-unidad-retirada",
             TipoDeError.Conflicto);
 
-        using (HttpResponseMessage servicio = await CambiarElArticuloAsync(escena, "Servicio", "Ninguna"))
+        using (HttpResponseMessage servicio = await escena.CambiarElArticuloAsync("Servicio", "Ninguna"))
         {
             servicio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(servicio));
         }
@@ -727,7 +725,7 @@ public sealed class LasGuardasDeLaTransferenciaTests(PostgresConTodosLosModulos 
 
         Guid borrador = await escena.AbrirAsync(postgres, 1m);
 
-        using (HttpResponseMessage cambio = await CambiarElArticuloAsync(escena, "Bien", "PorLote"))
+        using (HttpResponseMessage cambio = await escena.CambiarElArticuloAsync("Bien", "PorLote"))
         {
             cambio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cambio));
         }
@@ -737,7 +735,7 @@ public sealed class LasGuardasDeLaTransferenciaTests(PostgresConTodosLosModulos 
         (await escena.LaTransferenciaAsync(postgres, borrador)).Estado.ShouldBe(EstadoDeTransferencia.Borrador);
         (await escena.ContadorAsync()).ShouldBe(0, "el rechazo no gastó número");
 
-        using (HttpResponseMessage vuelta = await CambiarElArticuloAsync(escena, "Bien", "Ninguna"))
+        using (HttpResponseMessage vuelta = await escena.CambiarElArticuloAsync("Bien", "Ninguna"))
         {
             vuelta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(vuelta));
         }
@@ -829,34 +827,6 @@ public sealed class LasGuardasDeLaTransferenciaTests(PostgresConTodosLosModulos 
         alta.EsCorrecto.ShouldBeFalse($"tenía que salir «{codigo}»");
         alta.Error!.Codigo.ShouldBe(codigo);
         alta.Error!.Tipo.ShouldBe(tipo);
-    }
-
-    private static async Task<HttpResponseMessage> CambiarElArticuloAsync(
-        EscenaDeTransferencia escena, string tipo, string marca)
-    {
-        string ruta = $"{LosMaestrosPorLaApi.Articulos}/{escena.ArticuloId}";
-        ArticuloDto articulo = (await escena.Cliente.GetFromJsonAsync<ArticuloDto>(ruta))!;
-
-        return await escena.Cliente.ModificarAsync(
-            ruta,
-            new ModificarArticuloDto
-            {
-                Descripcion = articulo.Descripcion,
-                Tipo = tipo,
-                Trazabilidad = marca,
-                ImpuestoPorDefectoId = articulo.ImpuestoPorDefectoId,
-                CategoriaId = articulo.CategoriaId,
-            });
-    }
-
-    private async Task CerrarLaSerieAsync(Guid empresaId, Guid serieId)
-    {
-        await using OrganizacionDbContext contexto = postgres.AbrirOrganizacion(empresaId);
-
-        Serie serie = await contexto.Series.SingleAsync(fila => fila.Id == serieId);
-        serie.Cerrar();
-
-        await contexto.SaveChangesAsync();
     }
 
     private static async Task ExigirElRechazoAsync(

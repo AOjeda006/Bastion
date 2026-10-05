@@ -44,7 +44,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <c>ElCerrojoDeLaNumeracionTests</c> son milisegundos. Las guardas de la transferencia, en
 /// <c>LasGuardasDeLaTransferenciaTests</c>, van del 713 al 718, del 727 al 729, el 733 y el 734, y
 /// las carreras, en <c>LasCarrerasDeLaTransferenciaTests</c>, del 730 al 732 y el 735. El cuadre del
-/// tránsito, en <c>ElCuadreDelTransitoTests</c>, va del 721 al 725, y del 736 al 749 quedan libres.
+/// tránsito, en <c>ElCuadreDelTransitoTests</c>, va del 721 al 725. Las guardas del ajuste, en
+/// <c>LasGuardasDelAjusteTests</c>, van del 736 al 738, y del 739 al 749 quedan libres.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

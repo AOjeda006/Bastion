@@ -5,6 +5,7 @@ using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Numeracion;
+using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Movimientos;
@@ -17,6 +18,7 @@ using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Bastion.Organizacion.Domain.Series;
+using Bastion.Organizacion.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Shouldly;
@@ -44,6 +46,10 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <b>El alta va por el caso de uso cableado a mano, y el resto por la API</b>, como en el ajuste:
 /// el alta no tiene borde (ADR-0053 §9), y lo que se envía, se recibe o se anula por HTTP pasa por
 /// el filtro de idempotencia, que es el dueño de la transacción.
+/// </para>
+/// <para>
+/// <b>Las guardas del ajuste la usan también</b> (epílogo del 2.11, <c>LasGuardasDelAjusteTests</c>):
+/// tiene todo lo que un ajuste necesita, y un segundo almacén cuyo hueco no es del primero.
 /// </para>
 /// </remarks>
 /// <param name="Cliente">Cliente autenticado en la empresa de la escena.</param>
@@ -460,6 +466,51 @@ internal sealed record EscenaDeTransferencia(
     /// <returns>La respuesta cruda.</returns>
     internal Task<HttpResponseMessage> ConfirmarElAjustePorLaApiAsync(Guid ajusteId) =>
         ConClaveAsync(new HttpRequestMessage(HttpMethod.Post, $"/api/v1/inventario/ajustes/{ajusteId}/confirmacion"));
+
+    /// <summary>La anulación de un ajuste por HTTP, con su clave, tal como salga.</summary>
+    /// <param name="ajusteId">El ajuste confirmado.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal Task<HttpResponseMessage> AnularElAjustePorLaApiAsync(Guid ajusteId) =>
+        ConClaveAsync(new HttpRequestMessage(HttpMethod.Post, $"/api/v1/inventario/ajustes/{ajusteId}/anulacion")
+        {
+            Content = JsonContent.Create(new AnularAjusteDto("Se contó dos veces la misma caja")),
+        });
+
+    /// <summary>Cambia el tipo y la marca del artículo de la escena por la API, tal como salga.</summary>
+    /// <param name="tipo">El tipo nuevo.</param>
+    /// <param name="marca">La marca nueva.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal async Task<HttpResponseMessage> CambiarElArticuloAsync(string tipo, string marca)
+    {
+        string ruta = $"{LosMaestrosPorLaApi.Articulos}/{ArticuloId}";
+        ArticuloDto articulo = (await Cliente.GetFromJsonAsync<ArticuloDto>(ruta))!;
+
+        return await Cliente.ModificarAsync(
+            ruta,
+            new ModificarArticuloDto
+            {
+                Descripcion = articulo.Descripcion,
+                Tipo = tipo,
+                Trazabilidad = marca,
+                ImpuestoPorDefectoId = articulo.ImpuestoPorDefectoId,
+                CategoriaId = articulo.CategoriaId,
+            });
+    }
+
+    /// <summary>Cierra una serie de la empresa de la escena con el método del dominio.</summary>
+    /// <remarks>La serie no tiene borde para cerrarse, y por eso no va por la API.</remarks>
+    /// <param name="postgres">El contenedor.</param>
+    /// <param name="serieId">La serie.</param>
+    /// <returns>La tarea.</returns>
+    internal async Task CerrarLaSerieAsync(PostgresConTodosLosModulos postgres, Guid serieId)
+    {
+        await using OrganizacionDbContext contexto = postgres.AbrirOrganizacion(EmpresaId);
+
+        Serie serie = await contexto.Series.SingleAsync(fila => fila.Id == serieId);
+        serie.Cerrar();
+
+        await contexto.SaveChangesAsync();
+    }
 
     private async Task<Guid> AjustarAsync(
         PostgresConTodosLosModulos postgres, Guid almacenId, LineaDeAjusteDto linea, DateOnly? fecha)

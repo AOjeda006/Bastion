@@ -580,6 +580,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasGuardasDeLaTransferenciaTests.Una_punta_valorada_en_otra_divisa_para_el_envio_por_los_dos_lados",
         "LasGuardasDeLaTransferenciaTests.Una_transferencia_en_borrador_impide_cerrar_el_ejercicio_y_enviada_no",
 
+        // Del epílogo del 2.11 (la tanda de la 264 a la 301): las guardas del ajuste que el dominio
+        // repetía. Cada acción fuera de su estado y el documento que no existe, el motivo, la serie y
+        // el ejercicio de la anulación, y cada maestro del alta con su código y su tipo.
+        "LasGuardasDelAjusteTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa",
+        "LasGuardasDelAjusteTests.El_alta_rechaza_cada_maestro_que_no_se_mueve_con_su_codigo",
+        "LasGuardasDelAjusteTests.La_anulacion_pide_motivo_una_serie_que_numere_y_el_ejercicio_de_hoy_abierto",
+
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.El_alta_no_pasa_por_el_interceptor_y_por_eso_lleva_la_hora_del_dominio",
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.La_hora_del_cambio_sale_del_reloj_inyectado_y_no_del_de_la_base",
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.Un_cambio_por_la_API_mueve_una_marca_y_deja_la_otra_donde_estaba",
