@@ -9232,7 +9232,11 @@ escrita. El ADR-0055 queda para el 2.12.
      es la espera en el índice —la serie en tránsito—, esa espera es el sujeto.
    - La cabecera del fichero dice lo mismo, con la mutación de cada caso: la 223, la 219, la 248 y
      la 202, que son las que el PLAN del 2.11 anota con ese caso en rojo.
-5. La zona horaria de la transferencia, en la pregunta abierta del cierre de fase.
+5. ~~La zona horaria de la transferencia, en la pregunta abierta del cierre de fase.~~ Hecho en su
+   commit: un párrafo en la nota abierta de *Notas / riesgos* («hoy» es el día UTC), con el envío
+   desde Madrid a las 00:30 y la recepción en Las Palmas a las 23:45 del día anterior. Es esa nota
+   la que lleva la pregunta del cierre de la fase; la lista de las tres preguntas, en *Decisiones
+   tomadas*, es el registro de aquel encargo y no se toca. No es código y no decide nada.
 6. La batería, el humo y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
@@ -17611,6 +17615,16 @@ cuando hace falta el porqué.
   en los dos sitios. Un ajuste de un almacén de Las Palmas a las 23:30 es de hoy allí y ya de mañana
   en Madrid. Es una de las tres preguntas que el usuario deja para el **cierre de la fase**, y sigue
   sin decidir: qué «sitio» es (el almacén, el centro o el terminal) y dónde vive su zona.
+
+  **Añadido el 2026-10-05 (epílogo del 2.11, encargo del usuario): la transferencia es el primer
+  documento con dos sitios**, y la respuesta tendrá que decidir también esto. Si cada movimiento
+  llevara la fecha de su sitio, un envío desde Madrid a las 00:30 del día 11 (22:30 UTC del 10, en
+  verano) y una recepción en Las Palmas a las 23:45 del día 10 (22:45 UTC), un cuarto de hora
+  después, chocarían con «la recepción no es anterior al envío»: el `422`
+  `transferencia-recepcion-antes-del-envio` rechazaría una llegada que ocurrió después de la
+  salida. Con «hoy» en UTC no pasa, porque las dos fechas salen del mismo reloj. Lo que haya que
+  decidir —comparar las dos puntas en una sola zona, o comparar instantes y no días— va con la
+  pregunta del cierre de la fase, no aquí.
 
 - **ABIERTA (2026-09-27, ítem 2.7) · nadie avanza el corte de la instantánea hasta el 2.14.** En el
   2.7 el recálculo y el cuadre (`LasInstantaneasMensuales`, `ElCuadreDeLasExistencias`) no tienen
