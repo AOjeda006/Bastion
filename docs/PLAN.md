@@ -9171,12 +9171,12 @@ del paso 8 sigue en la **190**.
    `2.11-la-transferencia` se borró después, en local y en el remoto. Anotado al abrir el epílogo
    del 2.11.
 
-**El epílogo del 2.11, en curso** desde el 2026-10-05, en la rama `epilogo-2.11`, abierta desde
-`main` en `a68641c`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+**El epílogo del 2.11, cerrado** el 2026-10-05, en la rama `epilogo-2.11`, abierta desde `main`
+en `a68641c`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
 2026-10-05*. Sus mutaciones empiezan en la **264**, y no tiene ADR: no cambia ninguna decisión
 escrita. El ADR-0055 queda para el 2.12.
 
-**Lo que queda, por este orden:**
+**Lo que quedaba, por este orden:**
 
 1. ~~El run de `main` del 2.11, anotado.~~ Hecho en el primer commit de la rama: el 37293342638, en
    *El 2.11, cerrado* y en su casilla.
@@ -9330,7 +9330,36 @@ escrita. El ADR-0055 queda para el 2.12.
    desde Madrid a las 00:30 y la recepción en Las Palmas a las 23:45 del día anterior. Es esa nota
    la que lleva la pregunta del cierre de la fase; la lista de las tres preguntas, en *Decisiones
    tomadas*, es el registro de aquel encargo y no se toca. No es código y no decide nada.
-6. La batería, el humo y los runs.
+6. ~~La batería, el humo y los runs.~~ Hecho, sobre `72ba1c0`:
+   - **La batería** de `AGENTS.md`, entera y en su orden, con `bash bateriaE211.sh`, un guion del
+     *scratchpad* que corre cada paso de la lista y anota su código de salida:
+     - los diecisiete pasos salen con código 0, y la porcelana queda vacía al final;
+     - **0** avisos de `act()`, con `grep -c 'not wrapped in act'` sobre el registro del paso;
+     - el frontal, **193** casos en 20 ficheros;
+     - el recuento de la CI, **1268** casos en el carril rápido y **600** en el de integración,
+       los dos en 10 ensamblados. Son tres más en integración que en el cierre del 2.11, los de
+       `LasGuardasDelAjusteTests`;
+     - el presupuesto, **426/450** y **647/900** KiB;
+     - las dependencias, con `python scripts/dependencias-por-conjuntos.py a68641c HEAD`: no entra
+       ni sale ningún par, ningún proyecto y ninguna entrada del frontal.
+   - **El humo**, con `bash humoE211.sh`, en su propio proyecto de *compose*, `bastion-humo-e211`,
+     con el entorno generado en el *scratchpad* y borrado al salir: **0 fallos**.
+     - Lo que añade el epílogo va en el paso 10: confirmar y anular un ajuste que no existe dan
+       `404` `/errors/ajuste-no-encontrado`, por la API y por el frontal. La base se queda sin
+       ajustes.
+     - El segundo arranque sale en verde.
+     - El `down -v`, con su `-p` en la misma orden. El proyecto `bastion` no se tocó.
+   - **El run de rama**, el **37376828544** sobre `72ba1c0`, sale en verde al primer intento.
+     - Sus tres jobs: Frontal `111987929305`, Backend `111987929798` y Humo `111991491000`.
+     - **68 pasos: 67 en verde y 1 omitido**, *Diagnóstico*, que tiene `if: failure()`.
+     - Dice lo mismo que la batería: **1268** y **600** casos con **10 `.trx`** en cada artefacto,
+       **138** operaciones y **83** rutas `/api/v1/`, **173** tipos de error de **179** sitios, y
+       **426/450** y **647/900** KiB.
+     - Leído con `python leer-run27.py 37376828544`, un guion del *scratchpad*.
+   - **Los commits del epílogo**, desde `a68641c`, son **diez** con `72ba1c0`. Subieron de una vez,
+     así que tienen **un** run de rama, el de arriba. Con este, once. Este commit espera su propio
+     verde en la rama antes de que `main` avance. El run de `main` se anota al abrir la rama del
+     2.12.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
