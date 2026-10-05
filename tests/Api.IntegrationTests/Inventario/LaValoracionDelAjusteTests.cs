@@ -324,23 +324,33 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
 
     /// <summary>
     /// Con existencias valoradas en euros, un documento en dólares de la misma clave es un
-    /// <c>422</c>; la clave que se había vaciado empieza de nuevo en dólares.
+    /// <c>422</c>; la clave que se había vaciado empieza de nuevo en dólares, y anular lo que entró
+    /// en ella en euros también es un <c>422</c>.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// <b>La divisa cambia porque cambia la de la empresa</b>, que es la única forma de que un
     /// documento hable otra: su divisa es la base de la empresa al abrirlo. Las filas en euros de la
     /// clave que vuelve suman cero en cantidad y en valor, así que el cuadre las junta con las de
     /// dólares sin convertir nada.
+    /// </para>
+    /// <para>
+    /// <b>El inverso habla la divisa de su original</b>, no la de hoy, así que anular la entrada en
+    /// euros de la clave que ya vale en dólares choca con lo mismo. Hay unidades de sobra, así que el
+    /// rechazo es el de la divisa y no el del stock. Lo pidió la mutación 300, que quitaba esa guarda
+    /// de <c>AnularAjuste</c> y salió verde (epílogo del 2.11).
+    /// </para>
     /// </remarks>
     [Fact]
     public async Task Un_documento_en_otra_divisa_que_la_de_la_valoracion_es_422_salvo_en_una_clave_vacia()
     {
         ElCaso caso = await UnCasoAsync(506, "V28-D", 515, 516);
+        Guid laDeEuros;
 
         await using (ElModuloDeInventario enEuros = new(postgres, caso.EmpresaId))
         {
             await ConfirmarAsync(enEuros, caso, new Linea(0, 5m, 1m));
-            await ConfirmarAsync(enEuros, caso, new Linea(1, 2m, 1m));
+            laDeEuros = await ConfirmarAsync(enEuros, caso, new Linea(1, 2m, 1m));
             await ConfirmarAsync(enEuros, caso, new Linea(1, -2m, null));
         }
 
@@ -370,6 +380,19 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
         (await FilasDeAsync(caso.EmpresaId, laQueNo)).ShouldBeEmpty();
         (await FilasDeAsync(caso.EmpresaId, laQueVuelve)).ShouldHaveSingleItem().Valor
             .ShouldBe(Importe.De(6m, "USD"));
+
+        Resultado<AnulacionDto> anulacion = await enDolares.AnularAsync(laDeEuros, "Se contó dos veces");
+
+        anulacion.Error.ShouldNotBeNull("el inverso sacaría euros de una clave que ya vale en dólares");
+        anulacion.Error.Codigo.ShouldBe("ajuste-valoracion-en-otra-divisa");
+        anulacion.Error.Tipo.ShouldBe(TipoDeError.ReglaDeNegocio);
+
+        await using (InventarioDbContext inventario = postgres.AbrirInventario(caso.EmpresaId))
+        {
+            (await inventario.Ajustes.SingleAsync(fila => fila.Id == laDeEuros)).Estado
+                .ShouldBe(EstadoDeAjuste.Confirmado);
+            (await inventario.Ajustes.CountAsync(fila => fila.AnulaAId == laDeEuros)).ShouldBe(0);
+        }
 
         IReadOnlyList<Valoracion> valoraciones = await LasValoracionesAsync(caso.EmpresaId);
 
