@@ -6004,6 +6004,165 @@ nace `Recibida`, la fecha de recepción en el cuerpo, el motivo solo en el inver
 que pregunta el cierre.
 
 
+### Traídas por el encargo del 2026-10-05 — el epílogo del 2.11 y el 2.12
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **23** commits desde `c9883cd`, con 23 firmas válidas y sin *trailers*;
+- **13** runs en verde al primer intento;
+- `main` solo avanzó en verde, las dos veces;
+- las cifras, iguales a las anotaciones del *runner*, y Vitest con 192 casos sin avisos.
+
+Esta vez el informe no tenía ningún error. **El próximo informe cuenta desde `a68641c`.** La
+siguiente mutación es la **264**, y el siguiente ADR, el **0055**. Son **dos unidades, cada una en su
+rama y en este orden**: el epílogo del 2.11 y el 2.12.
+
+#### El bloque del arnés, otra vez ya hecho
+
+Vuelve el bloque de puesta al día, y sigue hecho desde `dbf2664`: el import está puesto y
+`settings.json` no cambia, así que no hay commit. El `/context` lo lanza el usuario cuando el agente
+se lo pide. `arnes-de-agente.md` se lee con `Read` al empezar cada sesión.
+
+#### El epílogo del 2.11, en su rama y cada tema en su commit
+
+1. **El run de `main` 37293342638, anotado.**
+2. **La tanda de las guardas del ajuste**, la que el 2.11 dejó «para el ítem que toque el ajuste». El
+   2.12 genera ajustes, así que toca ahora.
+   - Se muta cada `Resultado.Fallo` de `AbrirAjuste`, `ConfirmarAjuste` y `AnularAjuste`: el estado,
+     el motivo, el ejercicio de hoy en la anulación, cada rechazo del alta y la marca releída. Es el
+     molde de la 224 a la 239.
+   - Como en el 2.11: la lista se escribe antes de medir y lleva una mutación que rompe el arnés; los
+     rojos se leen por nombre en el `.trx`; y cada verde se cubre en su commit y se vuelve a medir.
+   - La numeración empieza en la **264**.
+3. **Los tres `title` que propuso el epílogo del 2.10**: `sueltaDetalle` en `PaginaDeCategorias.tsx`,
+   `rigeDetalle` en `PaginaDeTarifas.tsx` y el detalle de la verificación en `PaginaDeTerceros.tsx`.
+   - El arreglo es el de `585b510`: texto visible, o asociado con `aria-describedby`.
+   - El test busca por rol y por descripción accesible.
+   - Antes se lee `ux-ipo/convenciones.md`.
+4. **La regla de las carreras, escrita como se ha aplicado.** La cabecera de
+   `LasCarrerasDeLaTransferenciaTests` dice «nada escrito por la segunda», y `AGENTS.md` dice que la
+   primera no ha escrito nada. No pueden decir las dos cosas.
+   - Si se puede, el caso cumple la regla tal como está.
+   - Si no, la regla se precisa en `AGENTS.md`, citando el 2.11. La primera puede haber escrito si el
+     caso distingue la causa por el código (el `412` frente al `422` de la fecha) y si la mutación
+     que quita o adelanta el cerrojo, sola, lo pone rojo (la 219 y la 223).
+5. **La zona horaria, en la pregunta abierta del cierre de fase.** La transferencia es el primer
+   documento con dos sitios. Si cada movimiento llevara la fecha de su sitio, un envío desde Madrid a
+   las 00:30 y una recepción en Las Palmas a las 23:45 del día anterior chocarían con «la recepción
+   no es anterior al envío». Con «hoy» en UTC no pasa, pero la respuesta tendrá que decidirlo. Es una
+   línea en el PLAN, no código.
+
+#### El 2.12: el recuento
+
+La puerta de clarificación se pasa con lo que sigue. Las decisiones van en el **ADR-0055**, y lo que
+siga abierto se pregunta todo junto antes del código. **Lo primero que se mira es lo que diga el plan
+maestro del recuento** (§7.4, §8 y §15): si dice algo, manda él, y si contradice lo que sigue, se
+pregunta.
+
+1. **Qué se cuenta.**
+   - Un recuento cubre un almacén.
+   - Las líneas van por la clave de la existencia: artículo, ubicación, lote y serie.
+   - Al abrir, se precargan las claves con físico mayor que cero. Se decide si se puede acotar por
+     ubicación.
+   - **Se pueden añadir claves que el sistema no tiene, por decisión del usuario.** El sobrante entra
+     al precio medio de su clave. Si la clave no tiene precio medio, la línea pide coste, con
+     `ajuste-entrada-sin-coste-ni-precio-medio`, que ya existe.
+   - Se decide en qué unidad se cuenta: la base, o la del ajuste con su factor.
+   - **Una línea sin contar no es un cero.** Donde el hueco importa, el defecto es el error: tomar una
+     línea vacía por cero vaciaría el stock de esa clave sin avisar. Confirmar con líneas sin contar
+     es un `422` que las enumera, y una línea que no se cuenta se quita a propósito. Lleva caso y
+     mutación.
+2. **El teórico.**
+   - La línea guarda el teórico del momento en que se cuenta, que es informativo.
+   - La confirmación congela el que decide. Lo lee con las valoraciones ya bloqueadas, en la misma
+     transacción que genera el ajuste.
+   - La pantalla enseña lo contado, el teórico de ahora y, si ha cambiado desde que se contó, cuánto.
+   - **Recomendación del usuario:** la confirmación lleva el teórico que vio el usuario en cada línea.
+     Si ha cambiado, contesta `409` con el actual, como pide `herramientas/api-rest.md` («devuelve el
+     estado actual en el conflicto»). Sin esto, un recuento contado antes de una salida y confirmado
+     después crea stock que no existe.
+3. **El ajuste que genera.**
+   - Un ajuste por recuento, solo con las líneas que difieren. Es un documento del 2.3, con su número,
+     su serie (se decide de dónde sale), su motivo y la fecha de la confirmación.
+   - Se confirma en la misma transacción que el recuento, así que no queda ningún borrador suelto.
+   - Si todas las líneas cuadran, se confirma sin ajuste y el libro no se mueve.
+   - La doble flecha (R13): el ajuste apunta a su recuento, y cada línea del recuento a la del ajuste.
+4. **Fechas, número y ejercicio.**
+   - Se decide cuándo se numera el recuento: al abrir, o al confirmar, como el ajuste. Su tipo,
+     `RecuentoDeInventario`, ya está en Organización desde el 2.4.
+   - La R9 se aplica al ejercicio de la fecha de confirmación.
+   - Se decide si un recuento `EnCurso` cuenta para encoger o cerrar el ejercicio, como el borrador
+     de la transferencia.
+   - Lleva caso del cambio de año.
+5. **Anular (R2), por decisión del usuario.**
+   - El recuento no escribe en el libro: lo hace su ajuste. Anular el recuento es anular su ajuste, en
+     la misma transacción.
+   - El ajuste de un recuento no se anula por separado (`409`). Así el recuento nunca dice algo que su
+     ajuste ya no hace.
+   - Si las unidades ya se consumieron, es la excepción de la R2.
+   - Se decide cómo se descarta un recuento `EnCurso`.
+6. **El tránsito hacia el almacén contado, por recomendación del usuario.** El recuento compara con
+   el físico, no con el tránsito. Si la mercancía ya llegó y no se ha recibido, contarla y después
+   recibirla la suma dos veces. Con número de serie lo frena el motor (caso); con lote o sin
+   trazabilidad, nada.
+   - Por eso la pantalla enseña el tránsito de cada clave.
+   - Y la confirmación rechaza una línea que sube en una clave con tránsito hacia ella, hasta que se
+     reciba la transferencia. Lleva caso.
+7. **Concurrencia.**
+   - El caso del criterio: mover stock mientras el recuento está `EnCurso`. Lleva su ajuste, y el
+     cuadre sigue limpio.
+   - La carrera: confirmar el recuento a la vez que un ajuste o una transferencia sobre la misma
+     clave, con dos transacciones de verdad. Lleva el orden de cerrojos del ADR-0046 §2 con el
+     ADR-0048. La mutación que lee el teórico antes de bloquear tiene que ponerse roja.
+   - Dos confirmaciones del mismo recuento: la segunda recibe el `412`.
+   - Dos recuentos sobre las mismas claves: se decide y se escribe qué pasa. Con el punto 2, el
+     segundo ve que el teórico cambió.
+8. **La superficie y la pantalla.** El criterio nombra pantalla, y es la primera del inventario en el
+   frontal, en `features/inventario`.
+   - El borde: el alta, con `Idempotency-Key`; la ficha, con ETag y el teórico de ahora; contar, con
+     `If-Match`; confirmar y anular, con `Idempotency-Key` e `If-Match`; un permiso por acción.
+   - La pantalla: el listado, paginado en el servidor y con el estado en la URL; la ficha, con sus
+     tres estados (cargando, error y vacío); los tests, por rol y nombre accesible, con MSW; el
+     anuncio y el foco en cada navegación; los textos en `es` y en `en`.
+   - El presupuesto: el arranque está en 426/450 KiB, así que la ruta va diferida (*lazy*). Si aun
+     así no cabe, se pregunta; el límite no se sube.
+   - Lo que el criterio no pide —el alta, el listado y la ficha del ajuste— sigue en la pregunta del
+     cierre de fase.
+   - Antes se leen `stacks/react/convenciones.md` y `ux-ipo/convenciones.md`.
+9. **La propiedad y el cuadre.** El generador gana recuentos: abrir, contar, mover entre medias,
+   confirmar y anular. Y el invariante gana dos cosas: tras confirmar, el físico de cada clave
+   contada es lo contado; y el valor de la empresa solo lo mueven los ajustes, también los del
+   recuento.
+
+El resto del criterio va como está en el *Checklist*.
+
+#### Los números de este encargo
+
+- **Las mutaciones llevan una sola numeración.** El epílogo empieza en la **264**, y el 2.12 sigue
+  donde acabe el epílogo.
+- **El ADR-0055 es del 2.12.** El epílogo no cambia ninguna decisión escrita: la tanda cubre guardas
+  que ya existen, los `title` cumplen `ux-ipo/convenciones.md`, la regla de las carreras vive en
+  `AGENTS.md` y la zona horaria es una pregunta abierta. Si al hacerlo resultara que enmienda un ADR,
+  el epílogo tomaría el 0055 y el 2.12 el siguiente, y se diría aquí.
+
+#### Las herramientas de la máquina, en este encargo
+
+- **`playwright-cli`**, para el recorrido de la pantalla del recuento contra la pila local, con datos
+  sintéticos: contar, mover stock entre medias, ver la diferencia y confirmar. No sustituye al test.
+- **Context7 (`ctx7`)**, solo si una API de React Router, TanStack Query o EF Core 10 no cuadra. Solo
+  con la pregunta técnica, y contrastado con la fuente oficial antes de llevarlo a un ADR.
+- **`context-mode`, apagado.** Si compensa para la tanda, se le pide al usuario que lo encienda antes
+  de esa sesión y que lo apague después. Bloquea `curl` y `wget`.
+- **Si una herramienta no responde**, se sigue por el camino manual y se anota.
+
+#### El método
+
+El de siempre: la mutación sobre la línea que decide; las dos listas por nombre; la tanda escrita
+antes de medir; commits pequeños y firmados; `main` solo avanza a un commit ya verde en su rama, y la
+rama se borra después de su run de `main`. **El humo es obligatorio**, porque hay migración y
+pantalla. El informe cuenta todos los commits desde `a68641c`, con sus runs, y cada cifra va con la
+orden que la mide.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 11 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -9002,6 +9161,30 @@ del paso 8 sigue en la **190**.
    rutas, **173** tipos de error de **179** sitios, y **426/450** y **646/900** KiB. Subió con
    `f13306f` y `a1530b7`, así que su verde es también el suyo. Este commit, que lo anota, es el
    decimotercero de la rama y espera su propio verde antes de que `main` avance.
+
+   **El run de `main` es el 37293342638** sobre `a68641c`, **success al primer intento**, con sus
+   tres jobs —Frontal `111708700760`, Backend `111708701106` y Humo `111711574498`— y **68 pasos: 67
+   en verde y 1 omitido**, *Diagnóstico*. Dice lo mismo que el de la rama: **1268** y **597** casos
+   con **10 `.trx`** en cada artefacto, **138** operaciones y 83 rutas, **173** tipos de error de
+   **179** sitios, y **426/450** y **646/900** KiB. `main` avanzó a `a68641c` después de que el run
+   de la rama sobre ese mismo commit, el **37292114539**, saliera en verde, y la rama
+   `2.11-la-transferencia` se borró después, en local y en el remoto. Anotado al abrir el epílogo
+   del 2.11.
+
+**El epílogo del 2.11, en curso** desde el 2026-10-05, en la rama `epilogo-2.11`, abierta desde
+`main` en `a68641c`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-05*. Sus mutaciones empiezan en la **264**, y no tiene ADR: no cambia ninguna decisión
+escrita. El ADR-0055 queda para el 2.12.
+
+**Lo que queda, por este orden:**
+
+1. ~~El run de `main` del 2.11, anotado.~~ Hecho en el primer commit de la rama: el 37293342638, en
+   *El 2.11, cerrado* y en su casilla.
+2. La tanda de las guardas del ajuste, de la 264 en adelante.
+3. Los tres `title`: las categorías, las tarifas y los terceros.
+4. La regla de las carreras, escrita como se ha aplicado.
+5. La zona horaria de la transferencia, en la pregunta abierta del cierre de fase.
+6. La batería, el humo y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -17260,7 +17443,9 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     transferencias `Enviada` (`ElCuadreDelTransitoTests`, tres casos).
 
   El run de rama del cierre, el **37290727224** sobre `7616d26`, sale en verde al primer intento,
-  con **1268** y **597** casos; el de `main`, al abrir el 2.12.
+  con **1268** y **597** casos. `main` avanzó a `a68641c` después de que el run de la rama sobre ese
+  mismo commit, el **37292114539**, saliera en verde, y el de `main`, el **37293342638**, sale en
+  verde al primer intento con las mismas cifras. Anotado al abrir el epílogo del 2.11.
 
 - [ ] **2.12 · El recuento** — criterio de aceptación: cabecera con estado y líneas con **cantidad
   contada frente a teórica**; al confirmar **genera sus ajustes** —documentos del 2.3, con su número y
