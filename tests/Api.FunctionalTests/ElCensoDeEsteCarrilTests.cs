@@ -258,6 +258,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "PoliticaDeErroresTests.CadaClaseDeError_SeTraduceASuCodigoDeEstadoYASuTypeEstable",
         "PoliticaDeErroresTests.ElDetalleInterno_ViveEnElRegistroYNoEnLaRespuesta",
         "PoliticaDeErroresTests.ElTraceIdDeLaRespuesta_EsElMismoQueElArrobaTrDelRegistro",
+        "PoliticaDeErroresTests.El_estado_actual_viaja_en_su_extension_y_sin_el_no_hay_extension",
         "PoliticaDeErroresTests.El_nombre_declarado_con_la_otra_clase_sigue_siendo_500",
         "PoliticaDeErroresTests.LaTeoriaDeArriba_TieneUnaFilaPorClaseDeError",
         "PoliticaDeErroresTests.TodaClaseDeError_TieneCodigoDeEstadoYTitulo",

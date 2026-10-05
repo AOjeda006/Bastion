@@ -42,6 +42,7 @@ internal sealed class RutasQueFallan : IStartupFilter
     internal const string ReglaDeNegocio = "/pruebas/errores/regla-de-negocio";
     internal const string NoEncontrado = "/pruebas/errores/no-encontrado";
     internal const string Conflicto = "/pruebas/errores/conflicto";
+    internal const string ConflictoConElEstadoActual = "/pruebas/errores/conflicto-con-el-estado-actual";
     internal const string Permiso = "/pruebas/errores/permiso";
     internal const string Validacion = "/pruebas/errores/validacion";
     internal const string NoAutenticado = "/pruebas/errores/no-autenticado";
@@ -121,6 +122,9 @@ internal sealed class RutasQueFallan : IStartupFilter
                 "articulo-no-encontrado", "No existe el artículo indicado.")),
             Conflicto => Responder(contexto, ErrorDeOperacion.Conflicto(
                 "pedido-ya-confirmado", "El pedido ya estaba confirmado.")),
+            ConflictoConElEstadoActual => Responder(contexto, ErrorDeOperacion
+                .Conflicto("pedido-ya-confirmado", "El pedido ya estaba confirmado.")
+                .ConElEstadoActual(new EstadoDePrueba("Confirmado", 3))),
             Permiso => Responder(contexto, ErrorDeOperacion.PermisoDenegado(
                 "sin-permiso-de-facturacion", "Su perfil no permite emitir facturas.")),
             Validacion => Responder(contexto, ErrorDeOperacion.Validacion(
@@ -172,6 +176,11 @@ internal sealed class RutasQueFallan : IStartupFilter
 
     private static Task Responder(HttpContext contexto, ErrorDeOperacion error) =>
         error.ARespuesta().ExecuteAsync(contexto);
+
+    /// <summary>El estado que cuenta el conflicto de prueba, con dos campos de dos tipos.</summary>
+    /// <param name="Estado">Un texto.</param>
+    /// <param name="LineasPendientes">Un número.</param>
+    internal sealed record EstadoDePrueba(string Estado, int LineasPendientes);
 
     // El `23505` tal como lo levanta Npgsql, con el nombre del índice dentro: es lo único por lo
     // que el borde puede distinguir una carrera perdida de un defecto.

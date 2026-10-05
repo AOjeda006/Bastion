@@ -54,6 +54,13 @@ public static class RespuestasDeError
             problema.Extensions["errors"] = error.Campos;
         }
 
+        // El estado actual del recurso, en la extensión `actual` (ADR-0055 §11). Como `errors`, se
+        // omite cuando no lo hay.
+        if (error.Actual is not null)
+        {
+            problema.Extensions["actual"] = error.Actual;
+        }
+
         return problema;
     }
 

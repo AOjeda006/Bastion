@@ -253,6 +253,41 @@ public sealed class PoliticaDeErroresTests(ApiConRutasQueFallan api) : IClassFix
         problema.GetProperty("traceId").GetString().ShouldNotBeNullOrWhiteSpace();
     }
 
+    /// <summary>
+    /// El estado actual viaja en la extensión <c>actual</c>, con los nombres del contrato, y un
+    /// conflicto sin él no la lleva (ADR-0055 §11).
+    /// </summary>
+    /// <remarks>
+    /// <b>Las dos rutas en el mismo caso</b>: un borde que publicara <c>actual</c> siempre, vacío o
+    /// nulo, pasaría la primera mitad, y uno que no la publicara nunca, la segunda.
+    /// </remarks>
+    [Fact]
+    public async Task El_estado_actual_viaja_en_su_extension_y_sin_el_no_hay_extension()
+    {
+        using HttpResponseMessage conEstado = await api.CreateClient()
+            .GetAsync(new Uri(RutasQueFallan.ConflictoConElEstadoActual, UriKind.Relative));
+
+        conEstado.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+
+        using (var cuerpo = JsonDocument.Parse(await conEstado.Content.ReadAsStringAsync()))
+        {
+            JsonElement actual = cuerpo.RootElement.GetProperty("actual");
+
+            actual.GetProperty("estado").GetString().ShouldBe("Confirmado");
+            actual.GetProperty("lineasPendientes").GetInt32().ShouldBe(3);
+            cuerpo.RootElement.GetProperty("type").GetString().ShouldBe("/errors/pedido-ya-confirmado");
+        }
+
+        using HttpResponseMessage sinEstado = await api.CreateClient()
+            .GetAsync(new Uri(RutasQueFallan.Conflicto, UriKind.Relative));
+
+        using var sinElCuerpo = JsonDocument.Parse(await sinEstado.Content.ReadAsStringAsync());
+
+        sinElCuerpo.RootElement.TryGetProperty("actual", out _).ShouldBeFalse(
+            "un conflicto sin estado actual publica la extensión igualmente, y el cliente tendría " +
+            "que distinguir «vacío» de «no lo sé»");
+    }
+
     // Entrada hostil de verdad: se manda basura por la cadena de consulta, esa basura acaba
     // dentro del mensaje de la excepción, y se lee lo que vuelve. Esto no se detecta leyendo
     // el código de la política; se detecta mirando la respuesta.

@@ -48,6 +48,24 @@ public sealed record ErrorDeOperacion
     /// </remarks>
     public IReadOnlyDictionary<string, IReadOnlyList<string>> Campos { get; }
 
+    /// <summary>
+    /// El estado del recurso que impidió la operación, cuando quien la pidió lo necesita para
+    /// decidir. Nulo en cualquier otro caso.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// El borde lo publica como la extensión <c>actual</c> del MISMO <c>ProblemDetails</c>, por lo
+    /// mismo que <see cref="Campos"/> va en <c>errors</c>. Lo pide <c>api-rest.md</c>: un conflicto
+    /// devuelve el estado actual. Lo estrena el recuento, cuyo <c>409</c> lleva el teórico de
+    /// ahora (ADR-0055 §11).
+    /// </para>
+    /// <para>
+    /// Es un <see cref="object"/> porque su forma es la de cada operación, y la escribe la capa de
+    /// aplicación: el dominio no sabe de contratos.
+    /// </para>
+    /// </remarks>
+    public object? Actual { get; private init; }
+
     /// <summary>Los datos recibidos no cumplen el contrato de entrada.</summary>
     public static ErrorDeOperacion Validacion(string codigo, string mensaje) =>
         Crear(codigo, mensaje, TipoDeError.Validacion, s_sinCampos);
@@ -106,6 +124,29 @@ public sealed record ErrorDeOperacion
     /// <summary>La entrada supera lo que la operación admite.</summary>
     public static ErrorDeOperacion DemasiadoGrande(string codigo, string mensaje) =>
         Crear(codigo, mensaje, TipoDeError.DemasiadoGrande, s_sinCampos);
+
+    /// <summary>El mismo error, con el estado actual del recurso que lo provocó.</summary>
+    /// <remarks>
+    /// Solo lo admiten el conflicto y la regla de negocio, que son los errores del estado del
+    /// recurso. Una validación tiene sus campos, y un 404 no tiene estado que contar.
+    /// </remarks>
+    /// <param name="actual">Lo que necesita saber quien pidió la operación para decidir.</param>
+    /// <returns>Una copia del error con <see cref="Actual"/> puesto.</returns>
+    public ErrorDeOperacion ConElEstadoActual(object actual)
+    {
+        ArgumentNullException.ThrowIfNull(actual);
+
+        // Lanza, como las guardas de `Crear`: contar el estado de un 404 no es un desenlace de
+        // negocio, es código mal escrito (ADR-0004).
+        if (Tipo is not (TipoDeError.Conflicto or TipoDeError.ReglaDeNegocio))
+        {
+            throw new InvalidOperationException(
+                $"El error {Codigo} es de la clase {Tipo}, y solo un conflicto o una regla de " +
+                "negocio cuentan el estado actual del recurso.");
+        }
+
+        return this with { Actual = actual };
+    }
 
     private static ErrorDeOperacion Crear(
         string codigo,
