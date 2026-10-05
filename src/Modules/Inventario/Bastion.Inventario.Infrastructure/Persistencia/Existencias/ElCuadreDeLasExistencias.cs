@@ -26,6 +26,14 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// cuadra porque no se guarda: se deduce de las dos primeras.
 /// </para>
 /// <para>
+/// <b>El tránsito, desde el 2.11, se cuadra contra otra verdad</b> (ADR-0053 §1 y §11). No está en
+/// el libro: es lo que sigue en vuelo, las líneas de las transferencias <c>Enviada</c>. Se compara
+/// en la existencia del destino, por la clave entera, y en su valoración, en cantidad y en valor.
+/// Dice cuántas claves comparó en cada una, y solo cuenta las que tienen algo en vuelo por un lado
+/// o por el otro: con todo cuadrado y nada viajando, la cifra es cero, y quien llama sabe cuántas
+/// tenía que ver.
+/// </para>
+/// <para>
 /// <b>En el 2.7 no tiene quien lo llame en producción</b>, igual que el recálculo: el trabajo
 /// periódico que avanza el corte y cuadra llega con el ítem 2.14.
 /// </para>
@@ -66,6 +74,19 @@ internal sealed class ElCuadreDeLasExistencias(
     /// de una valoración que falta o que no la lleva, y la de una clave sin filas en el libro. Con
     /// <c>&lt;&gt;</c>, una fecha contra un nulo no saldría, y es justo la de una valoración que
     /// falta. Es una copia que decide: el caso de uso rechaza un documento anterior a ella.
+    /// </para>
+    /// <para>
+    /// <b>Lo que vuela se lee de las líneas</b>, que no llevan la clave entera: llevan el código del
+    /// lote o de la serie, y la cantidad tecleada con su factor. El identificador sale de las tablas
+    /// de los lotes y de las series, por empresa, artículo y código, y la cantidad en unidad base se
+    /// redondea a seis decimales alejándose del cero, como <c>MovimientoStock.EnUnidadBase</c>. La
+    /// línea no tiene empresa propia: es de la de su transferencia, y es esa la que se compara.
+    /// </para>
+    /// <para>
+    /// <b>El valor en vuelo se compara con <c>IS DISTINCT FROM</c></b>: si ninguna línea en vuelo de
+    /// la clave lleva valor y la valoración no tiene fila en tránsito, la suma esperada es nula, y con
+    /// <c>&lt;&gt;</c> no saldría. Las filas sin nada en vuelo no entran en ninguno de los dos lados,
+    /// así que una clave que no viaja no cuenta como comparada.
     /// </para>
     /// </remarks>
     internal const string SqlDelCuadre =
@@ -122,6 +143,51 @@ internal sealed class ElCuadreDeLasExistencias(
                 WHERE v.empresa_id = {0}
             ) AS x
             GROUP BY x.articulo_id, x.almacen_id
+        ),
+        en_vuelo AS (
+            SELECT l.articulo_id, t.almacen_destino_id AS almacen_id, l.ubicacion_destino_id AS ubicacion_id,
+                   lo.id AS lote_id, ns.id AS numero_de_serie_id,
+                   round(l.cantidad_introducida * l.factor_a_unidad_base, 6) AS cantidad, l.valor
+            FROM inventario.transferencias AS t
+            JOIN inventario.lineas_transferencia AS l ON l.transferencia_id = t.id
+            LEFT JOIN inventario.lotes AS lo
+                   ON lo.empresa_id = {0} AND lo.articulo_id = l.articulo_id AND lo.codigo = l.codigo_de_lote
+            LEFT JOIN inventario.numeros_de_serie AS ns
+                   ON ns.empresa_id = {0} AND ns.articulo_id = l.articulo_id AND ns.numero = l.numero_de_serie
+            WHERE t.empresa_id = {0} AND t.estado = 'Enviada'
+        ),
+        existencias_en_transito AS (
+            SELECT x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.numero_de_serie_id,
+                   sum(x.esperado) AS esperado, sum(x.guardado) AS guardado, sum(x.filas) AS filas
+            FROM (
+                SELECT v.articulo_id, v.almacen_id, v.ubicacion_id, v.lote_id, v.numero_de_serie_id,
+                       v.cantidad AS esperado, 0::numeric AS guardado, 0 AS filas
+                FROM en_vuelo AS v
+                UNION ALL
+                SELECT e.articulo_id, e.almacen_id, e.ubicacion_id, e.lote_id, e.numero_de_serie_id, 0,
+                       e.en_transito, 1
+                FROM inventario.existencias AS e
+                WHERE e.empresa_id = {0} AND e.en_transito <> 0
+            ) AS x
+            GROUP BY x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.numero_de_serie_id
+        ),
+        valoraciones_en_transito AS (
+            SELECT x.articulo_id, x.almacen_id,
+                   sum(x.cantidad_esperada) AS cantidad_esperada,
+                   sum(x.cantidad_guardada) AS cantidad_guardada,
+                   sum(x.valor_esperado) AS valor_esperado, sum(x.valor_guardado) AS valor_guardado,
+                   sum(x.filas) AS filas
+            FROM (
+                SELECT v.articulo_id, v.almacen_id,
+                       v.cantidad AS cantidad_esperada, 0::numeric AS cantidad_guardada,
+                       v.valor AS valor_esperado, 0::numeric AS valor_guardado, 0 AS filas
+                FROM en_vuelo AS v
+                UNION ALL
+                SELECT w.articulo_id, w.almacen_id, 0, w.en_transito, 0, w.valor_en_transito, 1
+                FROM inventario.valoraciones AS w
+                WHERE w.empresa_id = {0} AND (w.en_transito <> 0 OR w.valor_en_transito <> 0)
+            ) AS x
+            GROUP BY x.articulo_id, x.almacen_id
         )
         SELECT 'existencia' AS que, true AS es_resumen, count(*) AS comparadas,
                NULL::uuid AS articulo_id, NULL::uuid AS almacen_id, NULL::uuid AS ubicacion_id,
@@ -137,6 +203,14 @@ internal sealed class ElCuadreDeLasExistencias(
         SELECT 'valoracion', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                NULL, NULL
         FROM valoraciones_cuadradas
+        UNION ALL
+        SELECT 'existencia-en-transito', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+               NULL, NULL, NULL
+        FROM existencias_en_transito
+        UNION ALL
+        SELECT 'valoracion-en-transito', true, count(*), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+               NULL, NULL, NULL
+        FROM valoraciones_en_transito
         UNION ALL
         SELECT 'existencia', false, 0, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id,
                c.numero_de_serie_id, NULL, c.esperado, c.guardado, c.filas, NULL, NULL
@@ -162,6 +236,21 @@ internal sealed class ElCuadreDeLasExistencias(
                NULL, NULL, c.filas, c.fecha_esperada, c.fecha_guardada
         FROM valoraciones_cuadradas AS c
         WHERE c.fecha_esperada IS DISTINCT FROM c.fecha_guardada
+        UNION ALL
+        SELECT 'existencia-en-transito', false, 0, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id,
+               c.numero_de_serie_id, NULL, c.esperado, c.guardado, c.filas, NULL, NULL
+        FROM existencias_en_transito AS c
+        WHERE c.esperado <> c.guardado
+        UNION ALL
+        SELECT 'valoracion-en-transito-cantidad', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL,
+               NULL, c.cantidad_esperada, c.cantidad_guardada, c.filas, NULL, NULL
+        FROM valoraciones_en_transito AS c
+        WHERE c.cantidad_esperada <> c.cantidad_guardada
+        UNION ALL
+        SELECT 'valoracion-en-transito-valor', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL,
+               NULL, c.valor_esperado, c.valor_guardado, c.filas, NULL, NULL
+        FROM valoraciones_en_transito AS c
+        WHERE c.valor_esperado IS DISTINCT FROM c.valor_guardado
         """;
 
     /// <summary>Cuadra la empresa del inquilino.</summary>
@@ -185,6 +274,8 @@ internal sealed class ElCuadreDeLasExistencias(
             filas.Single(fila => fila.EsResumen && fila.Que == Existencia).Comparadas,
             filas.Single(fila => fila.EsResumen && fila.Que == Instantanea).Comparadas,
             filas.Single(fila => fila.EsResumen && fila.Que == Valoracion).Comparadas,
+            filas.Single(fila => fila.EsResumen && fila.Que == ExistenciaEnTransito).Comparadas,
+            filas.Single(fila => fila.EsResumen && fila.Que == ValoracionEnTransito).Comparadas,
             [.. filas
                 .Where(fila => !fila.EsResumen)
                 .Select(fila => new Descuadre(
@@ -205,23 +296,39 @@ internal sealed class ElCuadreDeLasExistencias(
     private const string Existencia = "existencia";
     private const string Instantanea = "instantanea";
     private const string Valoracion = "valoracion";
+    private const string ExistenciaEnTransito = "existencia-en-transito";
+    private const string ValoracionEnTransito = "valoracion-en-transito";
 }
 
 /// <summary>Lo que devuelve el cuadre.</summary>
 /// <param name="ExistenciasComparadas">Cuántas claves ha comparado entre el libro y las filas vivas.</param>
 /// <param name="InstantaneasComparadas">Cuántos pares de clave y mes ha comparado.</param>
 /// <param name="ValoracionesComparadas">Cuántos pares de artículo y almacén ha comparado.</param>
+/// <param name="ExistenciasEnTransitoComparadas">
+/// Cuántas claves con algo en vuelo, en las líneas enviadas o en la fila viva, ha comparado.
+/// </param>
+/// <param name="ValoracionesEnTransitoComparadas">
+/// Cuántos pares de artículo y almacén con algo en vuelo, en las líneas enviadas o en la
+/// valoración, ha comparado.
+/// </param>
 /// <param name="Descuadres">Lo que no cuadra; vacía si todo cuadra.</param>
 internal sealed record CuadreDeLasExistencias(
     long ExistenciasComparadas,
     long InstantaneasComparadas,
     long ValoracionesComparadas,
+    long ExistenciasEnTransitoComparadas,
+    long ValoracionesEnTransitoComparadas,
     IReadOnlyList<Descuadre> Descuadres);
 
-/// <summary>Una clave —o una clave y un mes— en la que la copia no dice lo que el libro.</summary>
+/// <summary>
+/// Una clave —o una clave y un mes— en la que la copia no dice lo que el libro; o, en las del
+/// tránsito, lo que las líneas de las transferencias enviadas.
+/// </summary>
 /// <param name="Que">
 /// «existencia», «instantanea», «valoracion-cantidad», «valoracion-valor» o «valoracion-fecha»; las
-/// tres últimas son las tres columnas de la valoración, cada una con su descuadre.
+/// tres últimas son las tres columnas de la valoración, cada una con su descuadre. Desde el 2.11,
+/// también «existencia-en-transito», «valoracion-en-transito-cantidad» y
+/// «valoracion-en-transito-valor», que comparan lo que vuela con las líneas enviadas.
 /// </param>
 /// <param name="ArticuloId">El artículo de la clave.</param>
 /// <param name="AlmacenId">El almacén de la clave.</param>
@@ -231,9 +338,15 @@ internal sealed record CuadreDeLasExistencias(
 /// El número de serie de la clave, o nulo; nulo también en la valoración.
 /// </param>
 /// <param name="Mes">El mes, en las instantáneas.</param>
-/// <param name="Esperado">Lo que dice el libro; nulo en el de la fecha, que lleva fechas.</param>
+/// <param name="Esperado">
+/// Lo que dice el libro; nulo en el de la fecha, que lleva fechas. En los del tránsito, la suma de
+/// las líneas en vuelo, y en el del valor puede ser nula: ninguna de ellas lleva valor.
+/// </param>
 /// <param name="Guardado">Lo que dice la copia; nulo en el de la fecha.</param>
-/// <param name="Filas">Cuántas filas de la copia tiene la clave: tiene que ser una.</param>
+/// <param name="Filas">
+/// Cuántas filas de la copia tiene la clave: tiene que ser una. En los del tránsito, cuántas tienen
+/// algo en vuelo, que puede ser ninguna.
+/// </param>
 /// <param name="FechaEsperada">
 /// En el de la fecha, la fecha de operación más alta del libro hasta hoy, o nula si la clave no
 /// tiene filas en él; nula en los demás.

@@ -276,7 +276,7 @@ public sealed class LasCarrerasDeLaTransferenciaTests(PostgresConTodosLosModulos
         sinCarrera.StatusCode.ShouldBe(HttpStatusCode.UnprocessableContent, await Escenario.Detalle(sinCarrera));
         (await sinCarrera.Content.ReadAsStringAsync()).ShouldContain("/errors/numero-de-serie-en-existencias");
 
-        await ExigirQueCuadraAsync(escena);
+        await ExigirQueCuadraAsync(escena, enTransito: 1, valoracionesEnTransito: 1);
     }
 
     private async Task<EscenaDeTransferencia> MontarAsync(
@@ -290,11 +290,16 @@ public sealed class LasCarrerasDeLaTransferenciaTests(PostgresConTodosLosModulos
         return escena;
     }
 
-    private async Task ExigirQueCuadraAsync(EscenaDeTransferencia escena)
+    // LO QUE VUELA, CONTADO: con la serie todavía en el aire, un cuadre que no comparara ninguna
+    // clave en tránsito saldría limpio por no mirar.
+    private async Task ExigirQueCuadraAsync(
+        EscenaDeTransferencia escena, long enTransito = 0, long valoracionesEnTransito = 0)
     {
         CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, escena.EmpresaId);
 
         cuadre.ExistenciasComparadas.ShouldBeGreaterThan(0, "sin claves que comparar, el cuadre sale limpio por no mirar");
+        cuadre.ExistenciasEnTransitoComparadas.ShouldBe(enTransito);
+        cuadre.ValoracionesEnTransitoComparadas.ShouldBe(valoracionesEnTransito);
         cuadre.Descuadres.ShouldBeEmpty();
     }
 }

@@ -282,8 +282,10 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
          "ElCuadreDeLasExistencias.cs usa .SqlQuery"] =
             "compara el libro con las filas vivas, con las instantaneas y, desde el item 2.8, con "
             + "la valoracion, en una sola lectura, que es lo que impide que una confirmacion a "
-            + "medias aparezca en una y no en otra. Solo lee, y compara la empresa con el valor de "
-            + "IInquilinoActual en cada tabla que toca",
+            + "medias aparezca en una y no en otra. Desde el 2.11 compara tambien el transito con "
+            + "las lineas de las transferencias enviadas. Solo lee, y compara la empresa con el "
+            + "valor de IInquilinoActual en cada tabla que toca; la linea, que no tiene empresa, "
+            + "por la de su transferencia",
 
         ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/" +
          "CerrojoDeEjercicios.cs usa .SqlQuery"] =

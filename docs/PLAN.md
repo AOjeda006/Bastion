@@ -8577,7 +8577,60 @@ La tanda del paso 8 sigue en la **182**.
      operaciones, y el modelo coincide con las migraciones.
    - `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py ed7ab60 HEAD` da los seis
      conjuntos vacíos.
-7. El cuadre del tránsito y la propiedad.
+
+   El séptimo commit (`52263fb`) tiene su run en verde en los tres trabajos, el
+   [37226858671](https://github.com/AOjeda006/Bastion/actions/runs/37226858671).
+7. ~~El cuadre del tránsito~~, hecho en el octavo commit; **la propiedad, pendiente**.
+
+   **El cuadre** compara ahora también lo que vuela, contra otra verdad que el libro: las líneas de
+   las transferencias `Enviada` (ADR-0053 §1 y §11). Lo hace en la existencia del destino, por la
+   clave entera, y en su valoración, en cantidad y en valor. Las líneas llevan el código del lote o
+   de la serie, no su identificador, así que la sentencia lo busca por empresa, artículo y código. La
+   cantidad en unidad base se redondea como `MovimientoStock.EnUnidadBase`, y la empresa de la línea
+   es la de su transferencia. `CuadreDeLasExistencias` gana dos cifras,
+   `ExistenciasEnTransitoComparadas` y `ValoracionesEnTransitoComparadas`, que solo cuentan las
+   claves con algo en vuelo por un lado o por el otro. Y `Descuadre` gana tres valores de `Que`:
+   `existencia-en-transito`, `valoracion-en-transito-cantidad` y `valoracion-en-transito-valor`.
+   - Los casos de `LaTransferenciaTests` que cuadran con algo en vuelo afirman las dos cifras: el
+     de enviar y recibir, el de varias líneas, el de la serie a mitad de viaje y el de las dos
+     empresas, que cuadra cada una por su lado y es la pareja del filtro de la empresa.
+   - **`ElCuadreDelTransitoTests`, semillas del 721 al 725**, tres casos. Los dos primeros
+     estropean el tránsito en una transacción que se deshace. En el del lote, una unidad en vuelo
+     pasa del L-1 al L-2 en el destino, y la valoración gana una unidad y un euro que ninguna línea
+     lleva; en el de la serie, la fila en vuelo pasa a ser de una serie que no ha salido. Antes de
+     mirar el cuadre afirman su pareja: sumado por hueco, el destino espera lo mismo. Y después, que
+     salen justo los descuadres puestos, cada existencia con su lote o su serie. En los dos, otro
+     artículo de la empresa tiene el mismo código, «L-1» o «S-1», sin nada en vuelo: sin el
+     artículo en la unión con los lotes y las series, el cuadre recién enviado ya no saldría limpio.
+     El tercero cuadra con 2,5 × 0,333333 en vuelo, que el libro guarda como 0,833333, a coste
+     cero, y con un borrador de A a B que no ha salido.
+     `EscenaDeTransferencia` gana el lote en `EntrarAsync` y en `Linea`.
+   - `ElFiltroNoSeSaltaPorAhiTests` dice por qué la línea, que no tiene empresa, se filtra por la de
+     su transferencia, y el cuadre de `LasCarrerasDeLaTransferenciaTests` afirma también las dos
+     cifras del tránsito: la carrera de la serie cuadra con la serie todavía en el aire.
+   - **Los tres casos de más salen de la revisión del paso**, con tres lentes —SQL, tests y
+     documentación— sobre el cuadre antes de commitearlo. La de SQL no encontró nada. La de tests
+     encontró cinco cosas del cuadre que ningún caso veía: el redondeo; el artículo en la unión con
+     los lotes y en la de las series; el estado `Enviada` frente a un borrador; la serie dentro de
+     la clave del tránsito; y la valoración con cantidad en vuelo y sin valor. La de documentación
+     encontró tres: el `Esperado` de `Descuadre`, que solo hablaba del libro; el cuadre de las
+     carreras, que no contaba lo que vuela; y el censo, que dejaba el caso bajo el bloque del 2.4.
+
+   Lo medido sobre el árbol de este commit, con la batería de `AGENTS.md` entera y todo en verde:
+   - `dotnet test Bastion.sln --filter "Category=Integracion"` da **506** y **84**: los **503** del
+     séptimo commit y los tres de `ElCuadreDelTransitoTests`. `bash scripts/ci/recuento-de-tests.sh`
+     con la lista del *workflow* los cuenta en sus 10 ensamblados.
+   - `dotnet test Bastion.sln --filter "Category!=Integracion"` da **1262**, los mismos: este paso
+     solo añade casos de integración.
+   - `npm --prefix frontend run test` da **192** casos, sin un solo aviso de `act(...)`, y el
+     presupuesto sigue en **426/450** y **646/900 KiB**.
+   - Los generadores, con `--comprobar`, siguen en **173** tipos de 179 sitios y **138**
+     operaciones, y el modelo coincide con las migraciones.
+   - `PYTHONIOENCODING=utf-8 python scripts/dependencias-por-conjuntos.py ed7ab60 HEAD` da los seis
+     conjuntos vacíos.
+
+   **La propiedad** (`ElSaldoEsLaSumaDelLibroPorPropiedadTests`) gana transferencias entre dos
+   almacenes, con su modelo del tránsito, y el cuadre de producción en cada paso.
 8. La tanda de mutaciones, la batería y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

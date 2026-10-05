@@ -184,6 +184,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElCerrojoDeLaNumeracionTests.Una_serie_de_otro_documento_no_numera_y_lo_dice_con_su_codigo",
         "ElCerrojoDeLaNumeracionTests.Una_serie_numera_sin_huecos_sea_cual_sea_el_documento_que_numera",
         "ElCerrojoDeLaNumeracionTests.Una_serie_que_no_existe_da_el_MISMO_error_que_una_ajena",
+
+        // Del ítem 2.9 (ADR-0048 §6) y del 2.11 (ADR-0053 §11): el cuadre con la clave trazable, en el
+        // libro y en lo que vuela. Cada uno estropea la copia sin cambiar lo que suma el hueco, que es
+        // lo único que vería un cuadre por hueco; el tercero del tránsito cuenta lo que vuela como el
+        // libro, sin valor y sin los borradores.
+        "ElCuadreDelTransitoTests.El_cuadre_ve_el_lote_en_vuelo_aunque_el_destino_sume_lo_que_debe",
+        "ElCuadreDelTransitoTests.El_cuadre_ve_la_serie_en_vuelo_aunque_el_destino_sume_lo_que_debe",
+        "ElCuadreDelTransitoTests.Lo_que_vuela_cuadra_redondeado_y_sin_valor_y_un_borrador_no_vuela",
         "ElCuadreMiraElLoteYLaSerieTests.El_cuadre_ve_el_lote_y_la_serie_aunque_el_hueco_sume_lo_que_debe",
 
         // Del ítem 2.6: R9 sobre el documento. Los cuatro primeros bajan al motor porque el

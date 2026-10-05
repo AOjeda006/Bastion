@@ -41,7 +41,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <c>ElSaldoEsLaSumaDelLibroPorPropiedadTests</c>, <c>465 + 130 = 595</c>, y el 750 de
 /// <c>ElCerrojoDeLaNumeracionTests</c> son milisegundos. Las guardas de la transferencia, en
 /// <c>LasGuardasDeLaTransferenciaTests</c>, van del 713 al 718, y las carreras, en
-/// <c>LasCarrerasDeLaTransferenciaTests</c>, del 730 al 732.
+/// <c>LasCarrerasDeLaTransferenciaTests</c>, del 730 al 732. El cuadre del tránsito, en
+/// <c>ElCuadreDelTransitoTests</c>, va del 721 al 725.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -122,7 +123,7 @@ public sealed class LaTransferenciaTests(PostgresConTodosLosModulos postgres) : 
         (await escena.ElValorDeLaEmpresaAsync(postgres)).ShouldBe(
             39m, "lo que salió de A está en vuelo hacia B, y la empresa no ha perdido nada (§6)");
 
-        await ExigirQueCuadraAsync(escena, existencias: 2);
+        await ExigirQueCuadraAsync(escena, existencias: 2, enTransito: 1, valoracionesEnTransito: 1);
 
         await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 1m, 10m);
 
@@ -787,7 +788,8 @@ public sealed class LaTransferenciaTests(PostgresConTodosLosModulos postgres) : 
             5m, "las dos líneas al mismo hueco, sumadas en su fila");
         (await LaExistenciaEnAsync(escena, otroHuecoDeB)).EnTransito.ShouldBe(1m);
 
-        await ExigirQueCuadraAsync(escena, existencias: 3);
+        // DOS CLAVES EN VUELO Y UNA VALORACIÓN: el cuadre agrupa las líneas como la sentencia.
+        await ExigirQueCuadraAsync(escena, existencias: 3, enTransito: 2, valoracionesEnTransito: 1);
 
         using (HttpResponseMessage recepcion = await escena.RecibirPorLaApiAsync(transferenciaId, Hoy))
         {
@@ -845,6 +847,9 @@ public sealed class LaTransferenciaTests(PostgresConTodosLosModulos postgres) : 
         TransferenciaDto primera = await escena.EnviarAsync(postgres, 1m, serie: Serie);
 
         await ExigirDondeEstaLaSerieAsync(escena, escena.AlmacenB, fisico: 0m, enTransito: 1m);
+
+        // LA SERIE EN VUELO, CUADRADA: la línea lleva el número, y el cuadre lo traduce a la fila.
+        await ExigirQueCuadraAsync(escena, existencias: 2, enTransito: 1, valoracionesEnTransito: 1);
 
         using (HttpResponseMessage vuelta = await escena.AnularPorLaApiAsync(primera.Id))
         {
@@ -923,6 +928,13 @@ public sealed class LaTransferenciaTests(PostgresConTodosLosModulos postgres) : 
                 .SingleAsync(fila => fila.AlmacenId == claves.AlmacenDestinoId);
 
             enElDestino.EnTransito.ShouldBe(cantidades[indice]);
+
+            // Y EL CUADRE DE CADA UNA, con las mismas claves en la otra: si leyera las líneas de
+            // las dos, la clave esperaría lo que vuela en las dos y no lo de la suya.
+            CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, empresas[indice]);
+
+            (cuadre.ExistenciasEnTransitoComparadas, cuadre.ValoracionesEnTransitoComparadas).ShouldBe((1L, 1L));
+            cuadre.Descuadres.ShouldBeEmpty($"la empresa {indice + 1} cuadra su tránsito con sus líneas");
         }
     }
 
@@ -1035,11 +1047,22 @@ public sealed class LaTransferenciaTests(PostgresConTodosLosModulos postgres) : 
         (donde.Fisico, donde.EnTransito).ShouldBe((fisico, enTransito));
     }
 
-    private async Task ExigirQueCuadraAsync(EscenaDeTransferencia escena, long existencias)
+    /// <summary>
+    /// Cuadra la empresa y exige cuántas claves comparó: las del libro, y las que tienen algo en
+    /// vuelo, en la existencia y en la valoración (ADR-0053 §11).
+    /// </summary>
+    /// <remarks>
+    /// Lo que vuela es cero en casi todos los casos, porque casi todos cuadran con la transferencia
+    /// ya recibida o anulada. Los que cuadran con algo en vuelo lo dicen.
+    /// </remarks>
+    private async Task ExigirQueCuadraAsync(
+        EscenaDeTransferencia escena, long existencias, long enTransito = 0, long valoracionesEnTransito = 0)
     {
         CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, escena.EmpresaId);
 
         cuadre.ExistenciasComparadas.ShouldBe(existencias, "sin claves que comparar, el cuadre sale limpio por no mirar");
+        cuadre.ExistenciasEnTransitoComparadas.ShouldBe(enTransito);
+        cuadre.ValoracionesEnTransitoComparadas.ShouldBe(valoracionesEnTransito);
         cuadre.Descuadres.ShouldBeEmpty();
     }
 }

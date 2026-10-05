@@ -142,6 +142,7 @@ internal sealed record EscenaDeTransferencia(
     /// <param name="coste">El coste unitario.</param>
     /// <param name="fecha">El día; hoy si no se dice.</param>
     /// <param name="serie">El número de serie, o nada.</param>
+    /// <param name="lote">El código del lote, o nada.</param>
     /// <returns>El ajuste, ya confirmado.</returns>
     internal Task<Guid> EntrarAsync(
         PostgresConTodosLosModulos postgres,
@@ -150,11 +151,12 @@ internal sealed record EscenaDeTransferencia(
         decimal cantidad,
         decimal coste,
         DateOnly? fecha = null,
-        string? serie = null) =>
+        string? serie = null,
+        string? lote = null) =>
         AjustarAsync(
             postgres,
             almacenId,
-            new LineaDeAjusteDto(ubicacionId, ArticuloId, cantidad, UnidadId, 1m, coste, null, serie),
+            new LineaDeAjusteDto(ubicacionId, ArticuloId, cantidad, UnidadId, 1m, coste, lote, serie),
             fecha);
 
     /// <summary>Saca unidades de un almacén con un ajuste confirmado por la API, al precio medio.</summary>
@@ -243,10 +245,11 @@ internal sealed record EscenaDeTransferencia(
     /// <param name="ubicacionDestino">El hueco a donde va.</param>
     /// <param name="cantidad">Cuánto.</param>
     /// <param name="serie">El número de serie, o nada.</param>
+    /// <param name="lote">El código del lote, o nada.</param>
     /// <returns>La línea.</returns>
     internal LineaDeTransferenciaDto Linea(
-        Guid ubicacionOrigen, Guid ubicacionDestino, decimal cantidad, string? serie = null) =>
-        new(ubicacionOrigen, ubicacionDestino, ArticuloId, cantidad, UnidadId, 1m, null, serie);
+        Guid ubicacionOrigen, Guid ubicacionDestino, decimal cantidad, string? serie = null, string? lote = null) =>
+        new(ubicacionOrigen, ubicacionDestino, ArticuloId, cantidad, UnidadId, 1m, lote, serie);
 
     /// <summary>Una transferencia en borrador, abierta con un módulo propio que se cierra al volver.</summary>
     /// <param name="postgres">El contenedor.</param>
