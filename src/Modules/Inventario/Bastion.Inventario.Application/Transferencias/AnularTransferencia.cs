@@ -113,7 +113,7 @@ internal sealed class AnularTransferencia(
         // fecha (ADR-0053 §5, ADR-0043 §4).
         Resultado<long> numero = await numerador
             .TomarNumeroAsync(
-                inverso.SerieId, TipoDeDocumentoOrigen.Transferencia, original.FechaDeEnvio, cancelacion)
+                inverso.SerieId, DocumentoQueNumera.Transferencia, original.FechaDeEnvio, cancelacion)
             .ConfigureAwait(false);
 
         if (!numero.EsCorrecto)

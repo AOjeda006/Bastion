@@ -1,5 +1,4 @@
 using Bastion.BuildingBlocks.Application.Numeracion;
-using Bastion.Inventario.Domain.Movimientos;
 
 namespace Bastion.Inventario.Application;
 
@@ -12,9 +11,10 @@ namespace Bastion.Inventario.Application;
 /// número tomado en una transacción distinta de la del documento que lo lleva.
 /// </para>
 /// <para>
-/// <b>Los documentos se nombran con <see cref="TipoDeDocumentoOrigen"/></b>, el mismo enumerado
-/// que dice qué documento escribió una fila del libro: son la misma lista, y cada documento que
-/// entre en ella tendrá que decir en qué series numera o el numerador lanzará.
+/// <b>Los documentos se nombran con <see cref="DocumentoQueNumera"/></b>, y no con el enumerado que
+/// dice qué documento escribió una fila del libro: hasta el 2.11 eran la misma lista, y el recuento
+/// las separó, porque numera y no escribe (ADR-0055 §10). Cada documento que entre en la lista
+/// tendrá que decir en qué series numera, o el numerador lanzará.
 /// </para>
 /// </remarks>
-public interface INumeradorDeSeriesDeInventario : INumeradorDeSerie<TipoDeDocumentoOrigen>;
+public interface INumeradorDeSeriesDeInventario : INumeradorDeSerie<DocumentoQueNumera>;

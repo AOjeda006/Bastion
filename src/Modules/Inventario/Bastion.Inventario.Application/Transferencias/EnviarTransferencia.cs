@@ -110,7 +110,7 @@ internal sealed class EnviarTransferencia(
 
         // EL NÚMERO, EN LA SERIE DEL EJERCICIO DE LA FECHA DE ENVÍO (ADR-0053 §3, ADR-0043).
         Resultado<long> numero = await numerador
-            .TomarNumeroAsync(transferencia.SerieId, TipoDeDocumentoOrigen.Transferencia, fecha, cancelacion)
+            .TomarNumeroAsync(transferencia.SerieId, DocumentoQueNumera.Transferencia, fecha, cancelacion)
             .ConfigureAwait(false);
 
         if (!numero.EsCorrecto)

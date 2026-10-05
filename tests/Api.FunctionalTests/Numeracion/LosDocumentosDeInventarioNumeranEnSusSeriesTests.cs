@@ -1,4 +1,4 @@
-using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Application;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Domain.Series;
 using Shouldly;
@@ -28,16 +28,16 @@ public sealed class LosDocumentosDeInventarioNumeranEnSusSeriesTests
 {
     [Fact]
     public void Un_ajuste_numera_en_las_series_de_ajustes_de_inventario() =>
-        NumeradorDeSeriesDeInventario.SeriesDe(TipoDeDocumentoOrigen.Ajuste)
+        NumeradorDeSeriesDeInventario.SeriesDe(DocumentoQueNumera.Ajuste)
             .ShouldBe(nameof(TipoDeDocumento.AjusteDeInventario));
 
     [Fact]
     public void Cada_documento_del_modulo_numera_en_un_tipo_de_serie_que_existe()
     {
-        // Se RECORRE el enumerado, no se enumera a mano: el documento que entre en el 2.11 o el
-        // 2.12 sin su línea en el mapa pone esto rojo antes de llegar a ninguna base, con la
-        // excepción que el mapa lanza a propósito.
-        TipoDeDocumentoOrigen[] documentos = Enum.GetValues<TipoDeDocumentoOrigen>();
+        // Se RECORRE el enumerado, no se enumera a mano: el documento que entre sin su línea en el
+        // mapa pone esto rojo antes de llegar a ninguna base, con la excepción que el mapa lanza a
+        // propósito.
+        DocumentoQueNumera[] documentos = Enum.GetValues<DocumentoQueNumera>();
 
         // El barrido se afirma primero (ADR-0020): un enumerado vacío dejaría el bucle sin vueltas.
         documentos.ShouldNotBeEmpty();
@@ -57,7 +57,7 @@ public sealed class LosDocumentosDeInventarioNumeranEnSusSeriesTests
     {
         // SIN RAMA POR DEFECTO, y queda afirmado: un documento nuevo que numerara en las series de
         // ajustes «porque sí» sería el agujero que el ADR-0043 cierra, abierto desde dentro.
-        const TipoDeDocumentoOrigen QueNoExiste = (TipoDeDocumentoOrigen)0;
+        const DocumentoQueNumera QueNoExiste = (DocumentoQueNumera)0;
 
         Enum.IsDefined(QueNoExiste).ShouldBeFalse();
         Should.Throw<ArgumentOutOfRangeException>(

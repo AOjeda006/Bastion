@@ -157,7 +157,7 @@ internal sealed class ConfirmarAjuste(
         // ese ejercicio sea el de la serie. Son dos preguntas distintas y ninguna implica la otra.
         Resultado<long> numero = await numerador
             .TomarNumeroAsync(
-                ajuste.SerieId, TipoDeDocumentoOrigen.Ajuste, ajuste.FechaDeOperacion, cancelacion)
+                ajuste.SerieId, DocumentoQueNumera.Ajuste, ajuste.FechaDeOperacion, cancelacion)
             .ConfigureAwait(false);
 
         if (!numero.EsCorrecto)

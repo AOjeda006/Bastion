@@ -1,7 +1,6 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Numeracion;
 using Bastion.Inventario.Application;
-using Bastion.Inventario.Domain.Movimientos;
 
 namespace Bastion.Inventario.Infrastructure.Persistencia;
 
@@ -26,7 +25,7 @@ namespace Bastion.Inventario.Infrastructure.Persistencia;
 /// <param name="inquilino">De donde sale la empresa que condiciona el incremento.</param>
 internal sealed class NumeradorDeSeriesDeInventario(
     InventarioDbContext contexto, IInquilinoActual inquilino)
-    : NumeradorDeSerie<TipoDeDocumentoOrigen>(contexto, inquilino), INumeradorDeSeriesDeInventario
+    : NumeradorDeSerie<DocumentoQueNumera>(contexto, inquilino), INumeradorDeSeriesDeInventario
 {
     /// <summary>El tipo de serie de los ajustes, con el nombre que le da Organización.</summary>
     internal const string SeriesDeAjustes = "AjusteDeInventario";
@@ -37,16 +36,16 @@ internal sealed class NumeradorDeSeriesDeInventario(
     /// <summary>En qué series numera cada documento del módulo.</summary>
     /// <remarks>
     /// <b>Lanza con un documento que no esté aquí</b>, y no numera en ninguna serie por defecto: el
-    /// recuento entra en el 2.12, y el día que su valor exista sin su línea aquí, el caso que recorre
-    /// el enumerado entero se pone rojo antes que nada en la base. Así entró la transferencia, en el
-    /// 2.11. Su inverso numera en la misma serie que ella, como el del ajuste (ADR-0053 §5).
+    /// día que un valor exista sin su línea aquí, el caso que recorre el enumerado entero se pone
+    /// rojo antes que nada en la base. Así entró la transferencia, en el 2.11. Su inverso numera en
+    /// la misma serie que ella, como el del ajuste (ADR-0053 §5).
     /// </remarks>
     /// <param name="documento">El documento que pide el número.</param>
     /// <returns>El valor de <c>tipo_de_documento</c> de sus series.</returns>
-    internal static string SeriesDe(TipoDeDocumentoOrigen documento) => documento switch
+    internal static string SeriesDe(DocumentoQueNumera documento) => documento switch
     {
-        TipoDeDocumentoOrigen.Ajuste => SeriesDeAjustes,
-        TipoDeDocumentoOrigen.Transferencia => SeriesDeTransferencias,
+        DocumentoQueNumera.Ajuste => SeriesDeAjustes,
+        DocumentoQueNumera.Transferencia => SeriesDeTransferencias,
         _ => throw new ArgumentOutOfRangeException(
             nameof(documento),
             documento,
@@ -54,6 +53,6 @@ internal sealed class NumeradorDeSeriesDeInventario(
     };
 
     /// <inheritdoc />
-    protected override string TipoDeSerieQueNumera(TipoDeDocumentoOrigen documento) =>
+    protected override string TipoDeSerieQueNumera(DocumentoQueNumera documento) =>
         SeriesDe(documento);
 }

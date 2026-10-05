@@ -174,7 +174,7 @@ internal sealed class AnularAjuste(
         // al abrir la fase 5), y quien la numere elegirá esa serie y le pasará su propia fecha.
         Resultado<long> numero = await numerador
             .TomarNumeroAsync(
-                inverso.SerieId, TipoDeDocumentoOrigen.Ajuste, original.FechaDeOperacion, cancelacion)
+                inverso.SerieId, DocumentoQueNumera.Ajuste, original.FechaDeOperacion, cancelacion)
             .ConfigureAwait(false);
 
         if (!numero.EsCorrecto)

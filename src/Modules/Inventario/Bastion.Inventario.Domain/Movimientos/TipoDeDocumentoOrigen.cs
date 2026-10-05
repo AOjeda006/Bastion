@@ -7,8 +7,9 @@ namespace Bastion.Inventario.Domain.Movimientos;
 /// <remarks>
 /// <para>
 /// <b>Es una lista cerrada, con un valor por documento que escribe en el libro.</b> El ajuste
-/// entró en el 2.3, la transferencia en el 2.11, y el recuento entrará en el 2.12, cada uno con su
-/// valor y su caso.
+/// entró en el 2.3 y la transferencia en el 2.11, cada uno con su valor y su caso. El recuento del
+/// 2.12 no tiene valor, porque no escribe: lo que mueve es el ajuste que genera, y sus filas salen
+/// con el valor del ajuste (ADR-0055 §10). Por eso el numerador tiene su propia lista.
 /// El 2.5 NO añade ninguno, y esa ausencia es la decisión: un ajuste inverso es un ajuste, así
 /// que sus filas salen con este mismo valor — que es lo que permite sumar el par entero de una
 /// vez, en vez de tener que unir dos clases de fila para comprobar que se compensan.
