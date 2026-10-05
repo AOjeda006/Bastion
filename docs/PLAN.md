@@ -9198,6 +9198,25 @@ escrita. El ADR-0055 queda para el 2.12.
      Con ninguna marca en la página, no se explica nada; en las tarifas es un caso nuevo, sin
      ningún tramo que rija hoy.
    - `grep -rn "title={" --include=*.tsx frontend/src | grep -v "\.test\.tsx"` sale vacío.
+   - **Su tanda, de la 302 a la 312**, escrita antes de medir y medida sobre `d82fe41` con
+     `python mutar-e211-web.py base 302 … 312` (un guion del *scratchpad*: aplica, ejecuta
+     `npx vitest run` sobre los cuatro ficheros que la pueden ver con `--reporter=json`, lee los
+     rojos por nombre y revierte con `git restore --source=HEAD` y la fecha de ahora). La base da
+     **0 rojos de 47** y ningún aviso de `act()`. **Las once salen rojas**, y ninguna con un aviso:
+
+     | # | Mutación | Rojos, de 47 |
+     |---|---|---|
+     | 302 | La celda de la rama sin su sitio no señala nada. | 2: `una categoría cuyo padre se quedó en otra página…` y `un ciclo YA GUARDADO no cuelga la pantalla…` |
+     | 303 | El porqué de «Sin su sitio», escrito siempre. | 1: `se pinta como ÁRBOL…` |
+     | 304 | El porqué de «Sin su sitio», nunca. | 2: los mismos que la 302 |
+     | 305 | Toda celda de estado señala el porqué de «Rige hoy». | 1: `EL TRAMO QUE ACABA HOY TODAVÍA RIGE…` |
+     | 306 | El porqué de «Rige hoy», escrito siempre. | 1: `sin ningún tramo que rija hoy, no se explica por qué rige` |
+     | 307 | Lo señala la celda del tramo futuro, y no la del que rige. | 1: `EL TRAMO QUE ACABA HOY TODAVÍA RIGE…` |
+     | 308 | Toda celda señala el porqué del comprobado. | 2: `el sello se pinta SIEMPRE…` y `un estado de verificación que esta versión no conoce…` |
+     | 309 | «Sin comprobar» se explica con el texto de «sin interpretar». | 2: los mismos |
+     | 310 | Se explican las tres clases de sello, salgan o no. | 1: `el sello se pinta SIEMPRE…` |
+     | 311 | El `id` en el párrafo entero, con la marca delante del porqué. | 8, en los cuatro ficheros: los tres de este commit y el listado del artículo, que la usa por `ExplicacionDeSinReconocer` |
+     | 312 | **Arnés**: el caso de la rama suelta no quita al padre de la página. | 1: `una categoría cuyo padre se quedó en otra página…` |
 4. La regla de las carreras, escrita como se ha aplicado.
 5. La zona horaria de la transferencia, en la pregunta abierta del cierre de fase.
 6. La batería, el humo y los runs.
