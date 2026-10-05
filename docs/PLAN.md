@@ -6163,7 +6163,7 @@ rama se borra después de su run de `main`. **El humo es obligatorio**, porque h
 pantalla. El informe cuenta todos los commits desde `a68641c`, con sus runs, y cada cifra va con la
 orden que la mide.
 
-#### La puerta del 2.12, preguntada el 2026-10-06 (sin contestar)
+#### La puerta del 2.12, preguntada el 2026-10-06 (contestada el mismo día, en el encargo siguiente)
 
 Aquí van los puntos del encargo que dicen «se decide» y admiten más de una opción viable, más dos
 que salieron al mirar el código: la unidad base y el inverso. **El plan maestro no contradice el
@@ -6235,6 +6235,117 @@ Cada pregunta lleva su recomendación, marcada con **(R)**.
 - **El teórico que vio el usuario** viaja en la confirmación, y si ha cambiado se contesta un
   `409` con el actual. Es la recomendación del usuario en el punto 2 del encargo, y se adopta tal
   cual.
+
+### Traídas por el encargo del 2026-10-06 — la puerta del 2.12, contestada
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **12** commits desde `a68641c`, con 12 firmas válidas y sin *trailers*;
+- los runs **208 a 211** en verde al primer intento;
+- `main` avanzó a `5ca301f` solo después del verde de su rama;
+- las cifras, iguales a las del *runner*, y Vitest con **193** casos sin avisos.
+
+El informe no tenía ningún error. **El próximo cuenta desde `39ec98e`, incluido.** Las mutaciones
+empiezan en la **313**, y el ADR es el **0055**.
+
+#### El arnés
+
+- Está al día desde `dbf2664`, así que este encargo no lleva el bloque de puesta al día.
+- `arnes-de-agente.md` se lee al empezar cada sesión, como dice `CLAUDE.md`.
+- **Si `.claude/settings.json` deja de coincidir con `plantillas/settings.json`, se avisa al
+  usuario.** Comprobado al abrir la sesión del 2026-10-06: coinciden en contenido, y solo cambia el
+  fin de línea, LF en el repositorio y CRLF en la plantilla. `cmp` dice que los bytes son distintos;
+  `diff <(tr -d '\r' < .claude/settings.json) <(tr -d '\r' <
+  ../BibliotecaDocumentacion/plantillas/settings.json)` no da ninguna diferencia.
+- **El `/context` ya está hecho**: el informe no vuelve a pedirlo.
+
+#### La puerta del 2.12, contestada: todas (R), con cuatro precisiones
+
+Va aquí y en el ADR-0055 tal como la dio el usuario.
+
+1. **(R) El almacén entero.** El recuento por ubicación, el recuento cíclico, va a la pregunta del
+   cierre de fase, con su disparador: el primer almacén que no se pueda contar de una vez.
+2. **(R) La unidad base.**
+   - La consulta nueva va en el `Contracts` de Catálogo, por lotes, como `MarcasDeAsync`.
+   - Lleva su caso: un artículo de otra empresa contesta lo mismo que uno que no existe.
+   - Los tests de fronteras siguen en verde sin tocarlos.
+   - La línea del ajuste que genera va en la base, con factor 1, y la pantalla dice en qué unidad
+     se cuenta.
+3. **(R) Las dos series en el alta**, validadas al abrir y otra vez al confirmar.
+4. **(R) Se numera al confirmar.** Mientras está en curso, la pantalla lo nombra por su almacén y su
+   fecha de apertura: con la 1 y la 7, no hay otro.
+5. **(R) Un recuento en curso no cuenta para el ejercicio.** El ADR-0055 escribe la consecuencia:
+   - el ajuste lleva la fecha de la confirmación;
+   - así que un recuento de fin de año confirmado en enero deja su ajuste en el año nuevo;
+   - y no se puede fechar el 31/12, porque el teórico es el de la confirmación y el ADR-0047 lo
+     rechaza en cuanto haya un movimiento posterior;
+   - por eso el recuento de cierre se confirma antes del primer movimiento del año nuevo.
+6. **(R) `Descartado`**, con su motivo, sin número y con el almacén libre. La acción es
+   `/descarte`, con `Idempotency-Key` e `If-Match`.
+7. **(R) Uno en curso por almacén**, con un índice único parcial traducido por su nombre a `409`.
+   - Lleva la carrera de dos altas a la vez, con dos transacciones de verdad. Aquí la espera en el
+     índice es lo que se prueba, como dice ahora `AGENTS.md`.
+   - Lleva la mutación del índice sin su `WHERE`.
+8. **(R) El inverso de un ajuste no se anula: `409`.** Va junto con «el ajuste de un recuento no se
+   anula por separado», en `AnularAjuste`.
+   - Si el ADR de la anulación del 2.5 dice algo de esto, el 0055 lo enmienda, con la nota en el
+     *Estado* y en el punto, como pide la regla. Si no dice nada, el 0055 lo deja escrito.
+   - La anulación del recuento es el único camino que anula el ajuste de un recuento. Se prueban los
+     dos caminos: el público, que da `409`, y el del recuento, que pasa. Cada uno con su mutación.
+   - Los casos que hoy anulan un inverso, si hay alguno, cambian en el mismo commit que la regla.
+
+Las tres cosas que el ADR-0055 decide sin preguntar quedan como se propusieron.
+
+**Comprobado antes de escribir el ADR:** el 2.5 no tiene ADR propio. Sus seis decisiones están en
+este PLAN (*Tomadas por el agente de desarrollo — ítem 2.5*), y ninguna dice nada de anular un
+inverso. Tampoco lo dicen el ADR-0043, que numera el inverso, ni el ADR-0046, que lo valora (`grep
+-n -i "inverso de un inverso\|inverso del inverso\|anular el inverso\|anular un inverso\|no se anula"
+docs/adr/*.md` solo encuentra la línea del ADR-0053 sobre el stock que ya salió). **Así que el 0055
+lo deja escrito y no enmienda ninguno.**
+
+#### El 2.12, a partir de aquí
+
+Lo demás va como en el encargo del 2026-10-05 (*Traídas por el encargo del 2026-10-05 → El 2.12: el
+recuento*):
+
+- la línea sin contar, que no es un cero;
+- el teórico que vio el usuario, y el `409` si ha cambiado;
+- el tránsito en la pantalla y en la confirmación;
+- el ajuste en la misma transacción, con su doble flecha;
+- anular por el ajuste;
+- la carrera con la mutación que lee el teórico antes de bloquear;
+- la propiedad: tras confirmar, el físico de cada clave contada es lo contado.
+
+Y dos cosas más:
+
+- **Las líneas de la ficha van paginadas en el servidor.** Un almacén entero son miles de claves
+  (`herramientas/api-rest.md`). Si van paginadas, el teórico que vio el usuario no puede ser «el de
+  la página». Se decide cómo viaja, línea a línea o con una huella del teórico de todas, y se
+  escribe en el ADR-0055.
+- **La pantalla es la primera del inventario.** Su ruta va diferida, porque el arranque está en
+  426/450 KiB. Si no cabe, se pregunta; el límite no se sube. Antes del primer componente se leen
+  `stacks/react/convenciones.md` y `ux-ipo/convenciones.md`.
+
+#### Las herramientas de la máquina, en este encargo
+
+- **`playwright-cli`**, para el recorrido de la pantalla contra la pila local, con datos
+  sintéticos: abrir, contar, mover stock entre medias, recibir el `409` del teórico, volver a
+  confirmar y anular. No sustituye al test.
+- **Context7 (`ctx7`)**, solo si una API de React Router, TanStack Query o EF Core 10 no cuadra.
+  Solo con la pregunta técnica, y contrastado con la fuente oficial antes de llevarlo a un ADR.
+- **`context-mode`**: si sigue encendido, no se usan sus herramientas, y si compensa para la tanda,
+  se pide.
+- **El vigilante de la CI cabe en el cupo.** Sin autenticar son 60 consultas por hora, así que se
+  espacia para no llegar. Si en la máquina hay un cliente de GitHub con sesión iniciada, se usa.
+  Ningún testigo va a un fichero. (En esta máquina no hay `gh`: `where.exe gh` no encuentra nada.)
+
+#### El método
+
+El de siempre: la tanda escrita antes de medir, con una mutación sobre el arnés; las dos listas por
+nombre; commits pequeños y firmados, uno por tema; el humo, obligatorio, porque hay migración y
+pantalla; `main` solo avanza a un commit ya verde en su rama, y la rama se borra después de su run de
+`main`. El informe cuenta todos los commits desde `39ec98e`, con sus runs, y cada cifra va con la
+orden que la mide.
 
 ## Estado actual
 
@@ -9444,11 +9555,29 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 
      La rama `epilogo-2.11` se borró después, en local y en el remoto. Anotado al abrir el 2.12.
 
-**El 2.12, en su puerta** desde el 2026-10-06, en la rama `2.12-el-recuento`, abierta desde `main`
-en `5ca301f`. Las preguntas que quedan abiertas están en *Decisiones tomadas → La puerta del 2.12,
-preguntada el 2026-10-06*, cada una con su recomendación. **No se escribe código hasta tener la
-respuesta.** Cuando llegue, va allí, y sus decisiones, al ADR-0055. Las mutaciones empiezan en la
-**313**.
+**El 2.12, en curso** desde el 2026-10-06, en la rama `2.12-el-recuento`, abierta desde `main` en
+`5ca301f`.
+
+- **La puerta se contestó el mismo día**: todas (R), con cuatro precisiones. Las respuestas están en
+  *Decisiones tomadas → Traídas por el encargo del 2026-10-06*, y el diseño entero, en el
+  **ADR-0055**. Las mutaciones empiezan en la **313**.
+- **El run de rama de `39ec98e`**, el commit que anotó la puerta, es el **37380846390**. Sale en
+  verde al primer intento, con sus jobs Frontal `112002128582`, Backend `112002129065` y Humo
+  `112004791821`.
+- **El orden de trabajo**, un commit por tema:
+  1. el ADR-0055;
+  2. la unidad base en el puerto de Catálogo;
+  3. la extensión `actual` del conflicto;
+  4. las dos guardas de `AnularAjuste`;
+  5. el numerador con su propia lista;
+  6. el dominio del recuento;
+  7. la persistencia y su migración;
+  8. los casos de uso y la API;
+  9. la pantalla.
+
+  Después vienen la tanda de mutaciones, la batería, el humo y el recorrido con `playwright-cli`.
+- **Dónde retomar:** el primer punto de esa lista que no tenga commit en la rama (`git log
+  main..2.12-el-recuento --oneline`).
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
