@@ -6163,6 +6163,79 @@ rama se borra después de su run de `main`. **El humo es obligatorio**, porque h
 pantalla. El informe cuenta todos los commits desde `a68641c`, con sus runs, y cada cifra va con la
 orden que la mide.
 
+#### La puerta del 2.12, preguntada el 2026-10-06 (sin contestar)
+
+Aquí van los puntos del encargo que dicen «se decide» y admiten más de una opción viable, más dos
+que salieron al mirar el código: la unidad base y el inverso. **El plan maestro no contradice el
+encargo.**
+- El §7.4 pide cabecera con estado, contado frente a teórico y movimientos al confirmar.
+- El §8.3 pide que el ajuste genere el evento hacia el asiento.
+- El §15 pide «ajustes trazables».
+
+Cada pregunta lleva su recomendación, marcada con **(R)**.
+
+1. **El ámbito.** El encargo fija que un recuento cubre un almacén. Queda por decidir si se puede
+   acotar a una ubicación.
+   - a) **(R)** El almacén entero, sin acotar. Así la exclusión del punto 7 cabe en un índice único
+     parcial, que es el patrón de la casa. El recuento por hueco iría a la pregunta del cierre de
+     fase.
+   - b) Una ubicación opcional, que es el recuento cíclico. La exclusión entre un recuento del
+     almacén entero y otro de una ubicación ya no cabe en un índice, y habría que comprobarla bajo
+     cerrojo.
+2. **La unidad en la que se cuenta.**
+   - a) **(R)** La unidad base del artículo. El teórico ya está en unidad base, y la línea del
+     ajuste que genera iría en la base con factor 1.
+     - **Pero hoy Inventario no sabe cuál es la unidad base de un artículo**: el puerto de Catálogo,
+       `IConsultaDeArticulos`, solo contesta la aptitud para moverse.
+     - Habría que añadir una consulta a ese puerto, en `Contracts` y por lotes, como
+       `MarcasDeAsync`.
+   - b) La unidad que elija quien cuenta, con su factor, como en el ajuste. No toca Catálogo.
+     - Pero la diferencia no se puede escribir exacta en esa unidad: una unidad suelta en cajas de
+       12 son 0,083333 cajas, que vuelven a dar 0,999996 unidades.
+     - Así que la línea del ajuste tendría que ir en la base de todos modos, y su identificador
+       llegaría sin validar.
+3. **La serie del ajuste que genera.** No hay serie por defecto para cada tipo de documento.
+   - a) **(R)** El alta del recuento lleva las dos series: la suya (`RecuentoDeInventario`) y la de
+     su ajuste (`AjusteDeInventario`). Las dos se validan al abrir y otra vez al confirmar, como hoy
+     la del ajuste.
+   - b) La serie del ajuste se elige al confirmar.
+4. **Cuándo se numera el recuento.**
+   - a) **(R)** Al confirmar, como el ajuste. Así un recuento descartado no gasta número y la R5 no
+     deja huecos.
+   - b) Al abrir, para que se pueda nombrar en el almacén mientras se cuenta. Un descarte dejaría un
+     hueco en la serie.
+5. **Un recuento `EnCurso` frente al ejercicio.**
+   - a) **(R)** No cuenta para encoger ni para cerrar el ejercicio. No tiene fecha en el libro hasta
+     que se confirma, y entonces su fecha es la de la confirmación y la R9 se le aplica.
+   - b) Cuenta por la fecha en que se abrió, como el borrador de la transferencia cuenta por su
+     fecha de envío.
+6. **Cómo se descarta un recuento `EnCurso`.**
+   - a) **(R)** Con un estado terminal, `Descartado`, con su motivo y sin número. Lo contado queda
+     como constancia, y el almacén queda libre para otro recuento.
+   - b) Con borrado lógico, que el plan admite para los borradores.
+7. **Dos recuentos sobre las mismas claves.**
+   - a) **(R)** No pueden estar los dos `EnCurso`. Abrir el segundo es un `409`, y lo garantiza el
+     índice del punto 1: con 1a, uno por almacén.
+   - b) Se permiten. El segundo que confirma ve, por el punto 2 del encargo, que el teórico cambió.
+8. **El inverso de un ajuste, el hallazgo del epílogo.** Hoy se puede anular: contesta `200`, y el
+   inverso del inverso toma número. La transferencia no lo permite.
+   - a) **(R)** Prohibirlo, con un `409` como el de la transferencia. Es la misma regla que «el
+     ajuste de un recuento no se anula por separado», y las dos irían juntas en `AnularAjuste`.
+     Cambia lo que hace hoy la anulación, y por eso se pregunta.
+   - b) Dejarlo como está.
+
+**Lo que el ADR-0055 decide sin preguntar**, porque ya tiene costumbre en la casa:
+- **Las acciones se nombran con un sustantivo**, como en el ajuste y en la transferencia:
+  `POST /api/v1/inventario/recuentos/{id}/confirmacion`, `/anulacion` y, con 6a, `/descarte`.
+  - El `/cerrar` del §9 ilustra la forma, «acciones de dominio como subrecursos», y no fija un
+    nombre.
+  - `herramientas/api-rest.md` prohíbe los verbos en la URL.
+- **El evento hacia el asiento de regularización** del §8.3 es el `AjusteConfirmado` del ajuste que
+  genera, como el de cualquier otro ajuste. El recuento no publica uno propio.
+- **El teórico que vio el usuario** viaja en la confirmación, y si ha cambiado se contesta un
+  `409` con el actual. Es la recomendación del usuario en el punto 2 del encargo, y se adopta tal
+  cual.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 11 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -9172,9 +9245,9 @@ del paso 8 sigue en la **190**.
    del 2.11.
 
 **El epílogo del 2.11, cerrado** el 2026-10-05, en la rama `epilogo-2.11`, abierta desde `main`
-en `a68641c`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
-2026-10-05*. Sus mutaciones empiezan en la **264**, y no tiene ADR: no cambia ninguna decisión
-escrita. El ADR-0055 queda para el 2.12.
+en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-05*. Sus mutaciones van de la **264** a la **312**, así que las del 2.12 empiezan en la
+**313**. No tiene ADR, porque no cambia ninguna decisión escrita. El ADR-0055 queda para el 2.12.
 
 **Lo que quedaba, por este orden:**
 
@@ -9360,6 +9433,22 @@ escrita. El ADR-0055 queda para el 2.12.
      así que tienen **un** run de rama, el de arriba. Con este, once. Este commit espera su propio
      verde en la rama antes de que `main` avance. El run de `main` se anota al abrir la rama del
      2.12.
+   - **El run de rama de `5ca301f`**, el commit que lo anota, es el **37378265235**. Sale en verde
+     al primer intento, con 68 pasos, 67 en verde y 1 omitido, y **1268** y **600** casos.
+     `main` avanzó a `5ca301f` con `--ff-only` después de ese verde. **El run de `main`**, el
+     **37379187287**, sale en verde al primer intento:
+     - sus jobs, Backend `111996369082`, Frontal `111996369336` y Humo `111999599221`;
+     - 68 pasos, 67 en verde y 1 omitido, *Diagnóstico*;
+     - las mismas cifras: **1268** y **600**, **138** operaciones y **83** rutas, **173** tipos de
+       **179** sitios, y **426/450** y **647/900** KiB.
+
+     La rama `epilogo-2.11` se borró después, en local y en el remoto. Anotado al abrir el 2.12.
+
+**El 2.12, en su puerta** desde el 2026-10-06, en la rama `2.12-el-recuento`, abierta desde `main`
+en `5ca301f`. Las preguntas que quedan abiertas están en *Decisiones tomadas → La puerta del 2.12,
+preguntada el 2026-10-06*, cada una con su recomendación. **No se escribe código hasta tener la
+respuesta.** Cuando llegue, va allí, y sus decisiones, al ADR-0055. Las mutaciones empiezan en la
+**313**.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
