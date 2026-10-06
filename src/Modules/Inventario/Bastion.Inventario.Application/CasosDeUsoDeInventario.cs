@@ -1,4 +1,5 @@
 using Bastion.Inventario.Application.Ajustes;
+using Bastion.Inventario.Application.Recuentos;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,11 @@ public static class CasosDeUsoDeInventario
         servicios.AddScoped<IEnviarTransferencia, EnviarTransferencia>();
         servicios.AddScoped<IRecibirTransferencia, RecibirTransferencia>();
         servicios.AddScoped<IAnularTransferencia, AnularTransferencia>();
+        servicios.AddScoped<IAbrirRecuento, AbrirRecuento>();
+        servicios.AddScoped<IObtenerRecuento, ObtenerRecuento>();
+        servicios.AddScoped<IListarRecuentos, ListarRecuentos>();
+        servicios.AddScoped<IListarLineasDeRecuento, ListarLineasDeRecuento>();
+        servicios.AddScoped<IObtenerLineaDeRecuento, ObtenerLineaDeRecuento>();
 
         // SIN ESTADO, así que una para todo el proceso. Es la costura para FIFO (ADR-0046 §10):
         // cambiar de método es cambiar esta línea.

@@ -5093,6 +5093,497 @@
         ]
       }
     },
+    "/api/v1/inventario/recuentos": {
+      "get": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Devuelve una página de recuentos.",
+        "operationId": "Recuentos_Listar",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "pattern": "^(EnCurso|Confirmado|Anulado|Descartado)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "almacen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeRecuentoResumenDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeRecuentoResumenDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeRecuentoResumenDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Abre el recuento de un almacén entero, con sus claves precargadas y sin contar.",
+        "description": "    El 409 puede venir de tres sitios, y el type los separa: el almacén ya tiene uno\nen curso (recuento-ya-hay-uno-en-curso), el almacén está bloqueado\n(recuento-almacen-bloqueado) o una de las dos series está cerrada\n(recuento-serie-cerrada).\n    La Idempotency-Key se admite y no se exige, como en las altas de los maestros: el\n      alta no numera, así que no hay hueco que evitar, y el reintento sin clave lo para el índice\n      de uno en curso por almacén.",
+        "operationId": "Recuentos_Abrir",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirRecuentoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirRecuentoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirRecuentoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/recuentos/{id}": {
+      "get": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Devuelve la ficha de un recuento, con su `ETag`.",
+        "description": "Lleva siempre cuántas líneas quedan sin contar. Mientras está en curso lleva además las dos\ncuentas del teórico de ahora —con el teórico cambiado y con tránsito— y la huella del teórico,\nque es la que pide la confirmación (ADR-0055 §2).",
+        "operationId": "Recuentos_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/recuentos/{id}/lineas": {
+      "get": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Devuelve una página de las líneas de un recuento, con su teórico.",
+        "operationId": "Recuentos_ListarLineas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "solo",
+            "in": "query",
+            "schema": {
+              "pattern": "^(sin-contar|teorico-cambiado)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeLineaDeRecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeLineaDeRecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeLineaDeRecuentoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/recuentos/{id}/lineas/{lineaId}": {
+      "get": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Devuelve una línea de un recuento, con su `ETag`.",
+        "description": "La versión es la de la línea, que es la que pide contarla o quitarla (ADR-0055 §4).",
+        "operationId": "Recuentos_ObtenerLinea",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "description": "Identificador de la línea.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/transferencias/{id}/envio": {
       "post": {
         "tags": [
@@ -14054,6 +14545,37 @@
   },
   "components": {
     "schemas": {
+      "AbrirRecuentoDto": {
+        "required": [
+          "serieId",
+          "serieDelAjusteId",
+          "almacenId",
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "serieId": {
+            "type": "string",
+            "description": "Serie que numerará el recuento al confirmarlo (R5).",
+            "format": "uuid"
+          },
+          "serieDelAjusteId": {
+            "type": "string",
+            "description": "Serie que numerará su ajuste.",
+            "format": "uuid"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "El almacén que se cuenta, entero.",
+            "format": "uuid"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se cuenta. Es el motivo que llevará su ajuste."
+          }
+        },
+        "description": "Lo que hace falta para abrir un recuento de un almacén."
+      },
       "AgregarCodigoBarrasDto": {
         "required": [
           "nivel"
@@ -16174,6 +16696,149 @@
         },
         "description": "El límite de crédito de un tercero, tal como sale de la API."
       },
+      "LineaDeRecuentoDto": {
+        "required": [
+          "id",
+          "numero",
+          "ubicacionId",
+          "articuloId",
+          "codigoDeLote",
+          "numeroDeSerie",
+          "unidadBaseId",
+          "origen",
+          "costeUnitario",
+          "contado",
+          "teoricoAlContar",
+          "teorico",
+          "enTransito",
+          "diferencia",
+          "teoricoCambiado",
+          "lineaDeAjusteId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Su orden en el recuento, desde uno.",
+            "format": "int32"
+          },
+          "ubicacionId": {
+            "type": "string",
+            "description": "El hueco del almacén.",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "El artículo.",
+            "format": "uuid"
+          },
+          "codigoDeLote": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El lote, si el artículo va por lote."
+          },
+          "numeroDeSerie": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El número de serie, si el artículo va por serie."
+          },
+          "unidadBaseId": {
+            "type": "string",
+            "description": "La unidad en la que se cuenta: la base de su artículo.",
+            "format": "uuid"
+          },
+          "origen": {
+            "type": "string",
+            "description": "Si la trajo la precarga o se añadió a mano."
+          },
+          "costeUnitario": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "El coste de una unidad base; solo en una añadida, y si se dijo.",
+            "format": "double"
+          },
+          "contado": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Lo contado, o `null` si nadie lo ha contado todavía.",
+            "format": "double"
+          },
+          "teoricoAlContar": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "El físico de la clave cuando se contó, o `null`.",
+            "format": "double"
+          },
+          "teorico": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "El teórico de ahora, o el que quedó al confirmar; `null` si se descartó.",
+            "format": "double"
+          },
+          "enTransito": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Lo que vuela hacia la clave, o `null` si ya no está en curso.",
+            "format": "double"
+          },
+          "diferencia": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Lo contado menos el teórico, o `null` si falta alguno de los dos.",
+            "format": "double"
+          },
+          "teoricoCambiado": {
+            "type": "boolean",
+            "description": "Si el teórico de ahora ya no es el de cuando se contó."
+          },
+          "lineaDeAjusteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La línea del ajuste que la movió, o `null`.",
+            "format": "uuid"
+          }
+        },
+        "description": "Una línea del recuento: una clave del almacén, en su unidad base."
+      },
       "LineaTarifaDto": {
         "required": [
           "id",
@@ -17136,6 +17801,52 @@
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
+      "PaginaDeLineaDeRecuentoDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaDeRecuentoDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
       "PaginaDeLineaTarifaDto": {
         "required": [
           "elementos",
@@ -17149,6 +17860,52 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/LineaTarifaDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
+      "PaginaDeRecuentoResumenDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecuentoResumenDto"
             },
             "description": "Los de esta página, en el orden pedido."
           },
@@ -17752,6 +18509,210 @@
           }
         },
         "description": "Lo que hace falta para recibir una transferencia enviada."
+      },
+      "RecuentoDto": {
+        "required": [
+          "id",
+          "serieId",
+          "serieDelAjusteId",
+          "numero",
+          "almacenId",
+          "fechaDeApertura",
+          "fechaDeConfirmacion",
+          "estado",
+          "motivo",
+          "divisa",
+          "motivoDelDescarte",
+          "motivoDeLaAnulacion",
+          "ajusteId",
+          "lineas",
+          "lineasSinContar",
+          "lineasConElTeoricoCambiado",
+          "lineasConTransito",
+          "huellaDelTeorico"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "serieId": {
+            "type": "string",
+            "description": "Serie que lo numera.",
+            "format": "uuid"
+          },
+          "serieDelAjusteId": {
+            "type": "string",
+            "description": "Serie que numera su ajuste.",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "El correlativo, o `null` mientras no se haya confirmado.",
+            "format": "int64"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "El almacén que se cuenta.",
+            "format": "uuid"
+          },
+          "fechaDeApertura": {
+            "type": "string",
+            "description": "Día del alta.",
+            "format": "date"
+          },
+          "fechaDeConfirmacion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Día de la confirmación, que es el de su ajuste, o `null`.",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "description": "En qué punto de su vida está."
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se cuenta."
+          },
+          "divisa": {
+            "type": "string",
+            "description": "La de su ajuste: la divisa base de la empresa al abrirlo."
+          },
+          "motivoDelDescarte": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Por qué se descartó, si se descartó."
+          },
+          "motivoDeLaAnulacion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Por qué se anuló, si se anuló."
+          },
+          "ajusteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El ajuste que movió la diferencia, o `null`.",
+            "format": "uuid"
+          },
+          "lineas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántas claves lleva.",
+            "format": "int32"
+          },
+          "lineasSinContar": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántas no se han contado todavía.",
+            "format": "int32"
+          },
+          "lineasConElTeoricoCambiado": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Cuántas tienen un teórico distinto del de cuando se contaron, o `null` si ya no está en curso.",
+            "format": "int32"
+          },
+          "lineasConTransito": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Cuántas tienen mercancía en tránsito hacia su clave, o `null` si ya no está en curso.",
+            "format": "int32"
+          },
+          "huellaDelTeorico": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La huella del teórico de todas las líneas, la que lleva la confirmación, o `null` si ya no\nestá en curso."
+          }
+        },
+        "description": "Un recuento, como se enseña en su ficha."
+      },
+      "RecuentoResumenDto": {
+        "required": [
+          "id",
+          "numero",
+          "almacenId",
+          "fechaDeApertura",
+          "fechaDeConfirmacion",
+          "estado",
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "El correlativo, o `null` mientras no se haya confirmado.",
+            "format": "int64"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "El almacén que se cuenta.",
+            "format": "uuid"
+          },
+          "fechaDeApertura": {
+            "type": "string",
+            "description": "Día del alta.",
+            "format": "date"
+          },
+          "fechaDeConfirmacion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Día de la confirmación, o `null`.",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "description": "En qué punto de su vida está."
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se cuenta."
+          }
+        },
+        "description": "Un recuento, como sale en el listado: sin líneas y sin teórico."
       },
       "RegimenFiscalDeAltaDto": {
         "type": "object",
@@ -18547,6 +19508,9 @@
     },
     {
       "name": "Ajustes"
+    },
+    {
+      "name": "Recuentos"
     },
     {
       "name": "Transferencias"

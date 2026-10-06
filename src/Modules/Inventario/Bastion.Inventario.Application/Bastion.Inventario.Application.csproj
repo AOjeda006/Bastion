@@ -49,4 +49,16 @@
     <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
   </ItemGroup>
 
+  <ItemGroup Label="Infraestructura del módulo">
+    <!--
+      Desde el ítem 2.12, para que el error del recuento repetido tenga UNA sola fábrica, como el
+      código de barras en Catálogo (2.10). Lo devuelve la comprobación previa del alta, y lo
+      contesta el borde cuando el índice único parcial para a quien pierde la carrera; la
+      declaración de la restricción vive en `ModuloDeInventario`, que es Infrastructure.
+      Infrastructure ya implementa los puertos de esta capa, así que la apertura no cruza ninguna
+      frontera: es el mismo módulo.
+    -->
+    <InternalsVisibleTo Include="Bastion.Inventario.Infrastructure" />
+  </ItemGroup>
+
 </Project>

@@ -49,7 +49,9 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// <b>La unidad base, del 2.12, va del 760 al 762</b>, empresas y maestros con el mismo número,
 /// como en los ficheros del inventario. El bloque del 760 al 799 es del 2.12: del 750 al 799 no
 /// había ninguna, ni por literal ni por cálculo, y el 750 y el 756 que aparecen son milisegundos y
-/// una versión.
+/// una versión. Del resto del bloque, el 763 es de <c>LasGuardasDelAjusteTests</c>, del 764 al 772
+/// y el 777 de <c>ElAltaDelRecuentoTests</c> y del 773 al 776 de
+/// <c>UnRecuentoEnCursoPorAlmacenTests</c>; del 778 al 799 quedan libres.
 /// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]

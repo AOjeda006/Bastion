@@ -162,6 +162,17 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElAltaDeUnaEmpresaSePublicaTests.Dar_de_alta_una_empresa_deja_su_evento_en_la_cola_y_el_host_lo_publica",
         "ElAltaDeUnaEmpresaSePublicaTests.El_alta_que_hace_la_semilla_se_publica_igual_y_dice_por_que_no_tiene_empresa",
 
+        // Del ítem 2.12: el alta del recuento y su lectura por la API.
+        "ElAltaDelRecuentoTests.Abrir_con_numeros_de_serie_precarga_una_linea_por_unidad",
+        "ElAltaDelRecuentoTests.Abrir_precarga_las_claves_con_fisico_del_almacen_en_su_unidad_base_y_sin_contar",
+        "ElAltaDelRecuentoTests.El_alta_rechaza_lo_que_no_puede_contar_y_no_escribe_nada",
+        "ElAltaDelRecuentoTests.La_ficha_lleva_su_version_y_el_teorico_de_ahora_sin_el_transito",
+        "ElAltaDelRecuentoTests.La_lista_acota_por_estado_por_almacen_y_por_motivo",
+        "ElAltaDelRecuentoTests.Las_lineas_se_paginan_se_ordenan_y_se_acotan_en_el_servidor",
+        "ElAltaDelRecuentoTests.Otra_empresa_no_ve_el_recuento",
+        "ElAltaDelRecuentoTests.Una_clave_que_solo_tiene_transito_no_se_precarga",
+        "ElAltaDelRecuentoTests.Una_linea_se_lee_con_su_propia_version",
+
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
         "ElCierreLePreguntaALosModulosTests.Encoger_el_ejercicio_por_encima_de_un_documento_es_409_y_por_el_otro_lado_no",
@@ -673,6 +684,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_dos_almacenes_a_la_vez_entra_en_uno_solo",
         "UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_otro_hueco_la_para_el_indice_y_sale_422",
         "UnNumeroDeSerieEnUnSoloSitioTests.Una_serie_que_salio_de_un_hueco_puede_entrar_en_otro",
+
+        // Del ítem 2.12: uno en curso por almacén, con la carrera de dos altas.
+        "UnRecuentoEnCursoPorAlmacenTests.Dos_altas_a_la_vez_del_mismo_almacen_dejan_una_y_la_otra_es_un_409",
+        "UnRecuentoEnCursoPorAlmacenTests.La_comprobacion_previa_contesta_sola_sin_el_borde_que_traduce_el_indice",
+        "UnRecuentoEnCursoPorAlmacenTests.Si_la_primera_alta_se_deshace_la_segunda_abre",
+        "UnRecuentoEnCursoPorAlmacenTests.Un_almacen_con_un_recuento_en_curso_no_admite_otro_y_otro_almacen_si",
     ];
 
     [Fact]

@@ -6,6 +6,7 @@ using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
+using Bastion.Inventario.Application.Recuentos;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Movimientos;
@@ -64,6 +65,10 @@ public static class ModuloDeInventario
         // devuelve cero sin excepción y sin rastro.
         servicios.AddScoped<IUnidadTrabajoDeInventario, UnidadDeTrabajoDeInventario>();
 
+        // Y las versiones, bajo el tipo del módulo por lo mismo (ADR-0055 §4): pedir la de un
+        // recuento al contexto de otro módulo contestaría con un testigo que nadie rastrea.
+        servicios.AddScoped<IVersionesDeInventario, VersionesDeInventario>();
+
         // UNO para los dos agregados —el documento y el libro—, y el porqué está en su interfaz:
         // se guardan en la misma transacción, así que dos repositorios con dos unidades de trabajo
         // sugerirían que pueden guardarse por separado.
@@ -72,6 +77,9 @@ public static class ModuloDeInventario
         // Y uno para la transferencia, por lo mismo: el documento, el libro y lo que vuela se
         // guardan en la misma transacción (ADR-0053 §1).
         servicios.AddScoped<IRepositorioDeTransferencias, RepositorioDeTransferencias>();
+
+        // Y uno para el recuento: el documento, y las existencias contra las que se cuenta.
+        servicios.AddScoped<IRepositorioDeRecuentos, RepositorioDeRecuentos>();
 
         // INVENTARIO TIENE DOCUMENTOS, y aquí es donde lo dice. Organización no sabe qué módulos
         // los tienen: pregunta a los que se hayan inscrito, y un módulo que no se inscriba
@@ -198,7 +206,16 @@ public static class ModuloDeInventario
                 "cruzan dos confirmaciones a la vez. El índice único parcial se comprueba con cada " +
                 "fila que se escribe y espera a la transacción que tenga la otra, y lo único que " +
                 "puede significar que salte es que esa unidad ya está en otro sitio. Reintentar da " +
-                "lo mismo, así que no es una carrera perdida (ADR-0048 §3)"));
+                "lo mismo, así que no es una carrera perdida (ADR-0048 §3)")
+            .Declarar(
+                ConfiguracionDeRecuento.UnoEnCursoPorAlmacen,
+                ClaseDeRestriccion.Unicidad,
+                ErroresDeRecuento.YaHayUnoEnCurso(),
+                "dos altas a la vez sobre el mismo almacén pasan juntas la comprobación previa, que " +
+                "solo es una cortesía: las dos leen que no hay ninguno en curso. El índice único " +
+                "parcial se comprueba con la fila que se escribe y espera a la transacción que tenga " +
+                "la otra, y lo único que puede significar que salte es que ese almacén ya se está " +
+                "contando. Reintentar da lo mismo, así que no es una carrera perdida (ADR-0055 §1.7)"));
 
         servicios.AgregarCasosDeUsoDeInventario();
 

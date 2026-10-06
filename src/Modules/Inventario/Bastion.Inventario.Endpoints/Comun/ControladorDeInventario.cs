@@ -1,5 +1,10 @@
+using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bastion.Inventario.Endpoints.Comun;
@@ -16,11 +21,12 @@ namespace Bastion.Inventario.Endpoints.Comun;
 /// ramificara mal.
 /// </para>
 /// <para>
-/// <b>Trae UN ayudante y no los seis de los otros módulos.</b> Inventario estrena su borde en el
-/// ítem 2.4 con una sola acción, y los ayudantes que faltan —listado, creación con
-/// <c>Location</c>, lectura con <c>ETag</c>, escritura exigiendo versión— no son ayudantes
-/// heredables sin más: cada uno fija una forma de respuesta, y copiarlos antes de tener la acción
-/// que la use decidiría por adelantado cómo se publica algo que todavía no se ha diseñado.
+/// <b>Cada ayudante entra con la primera acción que lo usa.</b> Inventario estrenó su borde en el
+/// ítem 2.4 con una sola acción y un solo ayudante, porque cada uno fija una forma de respuesta, y
+/// copiarlos antes de tener la acción que la use decidiría por adelantado cómo se publica algo que
+/// todavía no se ha diseñado. El recuento (2.12) trae la primera superficie de lectura del módulo,
+/// y con ella los listados, la creación con <c>Location</c> y la lectura con <c>ETag</c>, iguales
+/// que en los otros módulos. La escritura que exige versión sigue sin estar.
 /// </para>
 /// <para>
 /// Deriva de <see cref="ControllerBase"/> y no de <c>Controller</c>: esto es una API, no un sitio
@@ -45,6 +51,39 @@ public abstract class ControladorDeInventario : ControllerBase
     /// <summary>Ruta base del módulo: el prefijo más el nombre del controlador.</summary>
     public const string RutaBase = Prefijo + "/[controller]";
 
+    /// <summary>
+    /// Atiende un listado con un criterio propio: valida el orden pedido contra lo que el listado
+    /// admite y responde con la página, o con un <c>400</c> que dice qué campos valen.
+    /// </summary>
+    /// <typeparam name="TDto">Lo que se publica de cada elemento.</typeparam>
+    /// <param name="consulta">Los parámetros tal como han llegado en la URL.</param>
+    /// <param name="ordenables">Quien dice por qué campos deja ordenar este listado.</param>
+    /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    protected Task<IActionResult> ResponderListadoAsync<TDto>(
+        ConsultaPaginada consulta,
+        IOrdenaPor ordenables,
+        Func<Paginacion, CancellationToken, Task<PaginaDe<TDto>>> ejecutar,
+        CancellationToken cancelacion) =>
+        RespuestasDeListado.ResponderAsync(this, consulta, ordenables, ejecutar, cancelacion);
+
+    /// <summary>
+    /// Lo mismo, para un listado que cuelga de otro recurso y por tanto puede no llegar a haber
+    /// página: si el padre no existe, <c>404</c> y no una página vacía con un <c>200</c>.
+    /// </summary>
+    /// <typeparam name="TDto">Lo que se publica de cada elemento.</typeparam>
+    /// <param name="consulta">Los parámetros tal como han llegado en la URL.</param>
+    /// <param name="ordenables">Quien dice por qué campos deja ordenar este listado.</param>
+    /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    protected Task<IActionResult> ResponderListadoDeResultadoAsync<TDto>(
+        ConsultaPaginada consulta,
+        IOrdenaPor ordenables,
+        Func<Paginacion, CancellationToken, Task<Resultado<PaginaDe<TDto>>>> ejecutar,
+        CancellationToken cancelacion) =>
+        RespuestasDeListado.ResponderResultadoAsync(
+            this, consulta, ordenables, ejecutar, cancelacion);
+
     /// <summary>Convierte el desenlace de un caso de uso que devuelve valor en respuesta.</summary>
     /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>
     /// <param name="resultado">Desenlace del caso de uso.</param>
@@ -54,4 +93,33 @@ public abstract class ControladorDeInventario : ControllerBase
 
         return resultado.EsCorrecto ? Ok(resultado.Valor) : resultado.Error!.AResultadoDeAccion();
     }
+
+    /// <summary>
+    /// Convierte el desenlace de una creación en respuesta: <c>201</c> con <c>Location</c>.
+    /// </summary>
+    /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>
+    /// <param name="resultado">Desenlace del caso de uso.</param>
+    /// <param name="accionDeConsulta">Nombre de la acción que devuelve el recurso creado.</param>
+    /// <param name="id">Identificador del recurso creado.</param>
+    protected IActionResult ResponderCreado<T>(
+        Resultado<T> resultado,
+        string accionDeConsulta,
+        Func<T, Guid> id)
+    {
+        ArgumentNullException.ThrowIfNull(resultado);
+        ArgumentNullException.ThrowIfNull(id);
+
+        return resultado.EsCorrecto
+            ? CreatedAtAction(accionDeConsulta, new { id = id(resultado.Valor) }, resultado.Valor)
+            : resultado.Error!.AResultadoDeAccion();
+    }
+
+    /// <summary>
+    /// Publica un recurso leído con su <c>ETag</c>, que es lo que el cliente devolverá en
+    /// <c>If-Match</c> cuando lo escriba.
+    /// </summary>
+    /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>
+    /// <param name="resultado">Desenlace de la lectura.</param>
+    protected IActionResult ResponderConVersion<T>(Resultado<ConVersion<T>> resultado) =>
+        RespuestasConVersion.ConEtiqueta(this, resultado);
 }

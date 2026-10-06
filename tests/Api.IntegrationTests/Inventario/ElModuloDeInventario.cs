@@ -7,6 +7,7 @@ using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
 using Bastion.Inventario.Application.Ajustes;
+using Bastion.Inventario.Application.Recuentos;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Transferencias;
@@ -23,10 +24,16 @@ using Npgsql;
 namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
-/// Los cuatro casos de uso del ajuste y los cuatro de la transferencia, con sus adaptadores REALES y
-/// los contextos que necesitan.
+/// Los cuatro casos de uso del ajuste, los cuatro de la transferencia y el alta del recuento, con sus
+/// adaptadores REALES y los contextos que necesitan.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>El alta del recuento entró en el ítem 2.12</b>, aunque tiene borde: la carrera de dos altas
+/// necesita parar la primera con su fila escrita y sin publicar, y una petición HTTP no deja hacerlo.
+/// Y el caso de uso solo, sin el borde que traduce el índice, es como se ve que la comprobación previa
+/// contesta por sí misma.
+/// </para>
 /// <para>
 /// <b>La transferencia entró en el ítem 2.11</b>, por lo mismo que el ajuste: su alta no tiene borde,
 /// y las carreras necesitan parar una operación a medias, cosa que una petición HTTP no deja hacer.
@@ -91,6 +98,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         RepositorioDeAjustes ajustes = new(_inventario, new InquilinoFijo(empresaId));
         _ajustes = ajustes;
         RepositorioDeTransferencias transferencias = new(_inventario, new InquilinoFijo(empresaId));
+        RepositorioDeRecuentos recuentos = new(_inventario);
         UnidadDeTrabajoDeInventario unidadDeTrabajo = new(_inventario);
         ConsultaDeEmpresas empresas = new(_organizacion);
         ConsultaDeAlmacenes almacenes = new(_organizacion, acceso);
@@ -174,6 +182,16 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
             elReloj);
+
+        AltaDeRecuento = new AbrirRecuento(
+            new ElUsuarioDeLaEmpresa(empresaId),
+            recuentos,
+            empresas,
+            almacenes,
+            series,
+            articulos,
+            unidadDeTrabajo,
+            elReloj);
     }
 
     internal AbrirAjuste Alta { get; }
@@ -191,6 +209,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal RecibirTransferencia Recepcion { get; }
 
     internal AnularTransferencia AnulacionDeTransferencia { get; }
+
+    internal AbrirRecuento AltaDeRecuento { get; }
 
     /// <summary>Confirma un ajuste con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>

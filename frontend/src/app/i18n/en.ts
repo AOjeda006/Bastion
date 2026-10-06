@@ -288,6 +288,23 @@ export const en: Diccionario = {
       'permisos-de-rol-del-sistema':
         'The permissions of the system role are set by every update. You can rename it; to grant fewer permissions, create a role of your own.',
       'pertenencia-no-encontrada': 'That person does not belong to the company you named.',
+      'recuento-almacen-bloqueado':
+        'That warehouse is blocked: its stock can still be read, but it does not accept a new ' +
+        'stock count. Ask for it to be unblocked.',
+      'recuento-almacen-no-encontrado':
+        'That warehouse does not exist. Pick one from the warehouse master.',
+      'recuento-linea-no-encontrada':
+        'That line is no longer in the stock count: someone removed it first. Go back to the count and refresh.',
+      'recuento-motivo-no-valido':
+        'Write why you are counting, in 300 characters or fewer. It is the reason the adjustment will carry.',
+      'recuento-no-encontrado':
+        'That stock count no longer exists. Go back to the list and refresh.',
+      'recuento-serie-cerrada':
+        'One of the two series is closed: the count series or the adjustment series. Pick another.',
+      'recuento-serie-no-encontrada':
+        'One of the two series does not exist: the count series or the adjustment series. Pick one from the series master.',
+      'recuento-ya-hay-uno-en-curso':
+        'That warehouse is already being counted. Confirm or discard the count in progress before opening another.',
       'rol-no-encontrado': 'That role no longer exists. Go back to the list and refresh.',
       'serie-cerrada': 'The document series is closed and cannot be changed.',
       'serie-de-otro-documento':

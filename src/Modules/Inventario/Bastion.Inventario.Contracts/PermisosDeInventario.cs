@@ -11,11 +11,12 @@ namespace Bastion.Inventario.Contracts;
 /// ítem 2.5 no borra un ajuste confirmado, le opone un contra-documento.
 /// </para>
 /// <para>
-/// <b>Hay una constante por acción, y eso no es una lista a medias</b>: las dos del ajuste y, desde
-/// el 2.11, las tres de la transferencia. El catálogo se compara entero contra lo que las acciones
-/// exigen, así que un permiso declarado sin acción que lo pida <b>tumba el arranque</b>. Declarar
-/// aquí el alta, el listado o la ficha de cualquiera de los dos —que llegan con sus pantallas—
-/// sería repartir casillas que un administrador concede creyendo que abren algo.
+/// <b>Hay una constante por acción, y eso no es una lista a medias</b>: las dos del ajuste, desde
+/// el 2.11 las tres de la transferencia, y desde el 2.12 las del recuento, que entran con la acción
+/// que las pide. El catálogo se compara entero contra lo que las acciones exigen, así que un permiso
+/// declarado sin acción que lo pida <b>tumba el arranque</b>. Declarar aquí el alta, el listado o la
+/// ficha del ajuste o de la transferencia —que llegan con sus pantallas— sería repartir casillas
+/// que un administrador concede creyendo que abren algo.
 /// </para>
 /// <para>
 /// Son constantes y no un tipo, por lo mismo que en los otros tres módulos: <c>Contracts</c> no
@@ -66,6 +67,21 @@ public static class PermisosDeInventario
     /// </remarks>
     public const string TransferenciaAnular = "inventario.transferencia.anular";
 
+    /// <summary>Ver los recuentos: el listado, la ficha y sus líneas.</summary>
+    /// <remarks>
+    /// <b>Es el primer permiso de lectura del módulo</b>, porque el recuento es su primera pantalla
+    /// (ADR-0055 §12). Ver lo que dice el libro de un almacén entero no es contar: hay perfiles que
+    /// revisan un recuento y no lo tocan.
+    /// </remarks>
+    public const string RecuentoVer = "inventario.recuento.ver";
+
+    /// <summary>Abrir el recuento de un almacén.</summary>
+    /// <remarks>
+    /// <b>Abrir no es confirmar</b>: el alta no mueve nada ni gasta ningún número, pero deja el
+    /// almacén con un recuento en curso, y solo puede haber uno (ADR-0055 §1.7).
+    /// </remarks>
+    public const string RecuentoAbrir = "inventario.recuento.abrir";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -81,5 +97,7 @@ public static class PermisosDeInventario
         TransferenciaEnviar,
         TransferenciaRecibir,
         TransferenciaAnular,
+        RecuentoVer,
+        RecuentoAbrir,
     ];
 }

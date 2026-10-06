@@ -166,10 +166,19 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
         // no aparece en esta lista y no es un olvido: no devuelve una página, así que no es un
         // listado. Su `?articulo=` es un `Guid` de catálogo y su `?cantidad=` un número, y ninguno
         // de los dos dice de quién es la compra: quién pregunta el precio no está en la URL.
+        //
+        // `estado`, `almacen` y `solo` entraron en el ítem 2.12, con los dos listados del recuento,
+        // que son los primeros del inventario. `estado` acota la lista por uno de cuatro nombres
+        // fijos —EnCurso, Confirmado, Anulado, Descartado— y `almacen` por el `Guid` de un almacén
+        // de la propia empresa, opaco como el de `categoria`. `solo` acota la página de líneas de un
+        // recuento a una de dos palabras fijas, las sin contar o las de teórico cambiado. Ninguno
+        // identifica a nadie ni acota por nadie: lo que deja escrito el registro de acceso es
+        // «alguien listó los recuentos en curso de tal almacén», que es lo que un ERP tiene que
+        // poder decir en voz alta.
         parametros.ShouldBe(
             new SortedSet<string>(StringComparer.Ordinal)
             {
-                "categoria", "codigo", "page", "q", "retiradas", "size", "sort",
+                "almacen", "categoria", "codigo", "estado", "page", "q", "retiradas", "size", "solo", "sort",
             },
             customMessage: "los parámetros de consulta de los listados no son los del contrato: " +
             string.Join(", ", parametros));

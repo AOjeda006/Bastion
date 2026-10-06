@@ -326,6 +326,22 @@ export const es = {
       'permisos-de-rol-del-sistema':
         'Los permisos del rol del sistema los fija cada actualización. Puedes cambiarle el nombre; para dar menos permisos, crea un rol propio.',
       'pertenencia-no-encontrada': 'Esa persona no pertenece a la empresa indicada.',
+      'recuento-almacen-bloqueado':
+        'Ese almacén está bloqueado: sus existencias se siguen leyendo, pero no admite un recuento ' +
+        'nuevo. Pide que lo desbloqueen.',
+      'recuento-almacen-no-encontrado':
+        'Ese almacén no existe. Elige uno del maestro de almacenes.',
+      'recuento-linea-no-encontrada':
+        'Esa línea ya no está en el recuento: alguien la ha quitado antes. Vuelve a la ficha y actualiza.',
+      'recuento-motivo-no-valido':
+        'Escribe por qué cuentas, en 300 caracteres o menos. Es el motivo que llevará el ajuste.',
+      'recuento-no-encontrado': 'Ese recuento ya no existe. Vuelve al listado y actualiza.',
+      'recuento-serie-cerrada':
+        'Una de las dos series está cerrada: la del recuento o la del ajuste. Elige otra.',
+      'recuento-serie-no-encontrada':
+        'Una de las dos series no existe: la del recuento o la del ajuste. Elige una del maestro de series.',
+      'recuento-ya-hay-uno-en-curso':
+        'Ese almacén ya se está contando. Confirma o descarta el recuento en curso antes de abrir otro.',
       'rol-no-encontrado': 'Ese rol ya no existe. Vuelve al listado y actualiza.',
       'serie-cerrada': 'La serie está cerrada y no admite cambios.',
       'serie-de-otro-documento':

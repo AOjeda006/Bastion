@@ -767,6 +767,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/recuentos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de recuentos. */
+        get: operations["Recuentos_Listar"];
+        put?: never;
+        /**
+         * Abre el recuento de un almacén entero, con sus claves precargadas y sin contar.
+         * @description El 409 puede venir de tres sitios, y el type los separa: el almacén ya tiene uno
+         *     en curso (recuento-ya-hay-uno-en-curso), el almacén está bloqueado
+         *     (recuento-almacen-bloqueado) o una de las dos series está cerrada
+         *     (recuento-serie-cerrada).
+         *         La Idempotency-Key se admite y no se exige, como en las altas de los maestros: el
+         *           alta no numera, así que no hay hueco que evitar, y el reintento sin clave lo para el índice
+         *           de uno en curso por almacén.
+         */
+        post: operations["Recuentos_Abrir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/recuentos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve la ficha de un recuento, con su `ETag`.
+         * @description Lleva siempre cuántas líneas quedan sin contar. Mientras está en curso lleva además las dos
+         *     cuentas del teórico de ahora —con el teórico cambiado y con tránsito— y la huella del teórico,
+         *     que es la que pide la confirmación (ADR-0055 §2).
+         */
+        get: operations["Recuentos_Obtener"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/recuentos/{id}/lineas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una página de las líneas de un recuento, con su teórico. */
+        get: operations["Recuentos_ListarLineas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/recuentos/{id}/lineas/{lineaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve una línea de un recuento, con su `ETag`.
+         * @description La versión es la de la línea, que es la que pide contarla o quitarla (ADR-0055 §4).
+         */
+        get: operations["Recuentos_ObtenerLinea"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/transferencias/{id}/envio": {
         parameters: {
             query?: never;
@@ -1935,6 +2021,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Lo que hace falta para abrir un recuento de un almacén. */
+        AbrirRecuentoDto: {
+            /**
+             * Format: uuid
+             * @description Serie que numerará el recuento al confirmarlo (R5).
+             */
+            serieId: string;
+            /**
+             * Format: uuid
+             * @description Serie que numerará su ajuste.
+             */
+            serieDelAjusteId: string;
+            /**
+             * Format: uuid
+             * @description El almacén que se cuenta, entero.
+             */
+            almacenId: string;
+            /** @description Por qué se cuenta. Es el motivo que llevará su ajuste. */
+            motivo: string;
+        };
         /** @description Lo que hace falta para dar de alta un código de barras en un artículo. */
         AgregarCodigoBarrasDto: {
             /** @description El GTIN, de 8, 12, 13 o 14 cifras. Los espacios de los extremos no cuentan. */
@@ -2921,6 +3027,77 @@ export interface components {
             /** @description La divisa del importe, en ISO 4217. Nula si no se le fía. */
             divisa: null | string;
         };
+        /** @description Una línea del recuento: una clave del almacén, en su unidad base. */
+        LineaDeRecuentoDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: int32
+             * @description Su orden en el recuento, desde uno.
+             */
+            numero: number | string;
+            /**
+             * Format: uuid
+             * @description El hueco del almacén.
+             */
+            ubicacionId: string;
+            /**
+             * Format: uuid
+             * @description El artículo.
+             */
+            articuloId: string;
+            /** @description El lote, si el artículo va por lote. */
+            codigoDeLote: null | string;
+            /** @description El número de serie, si el artículo va por serie. */
+            numeroDeSerie: null | string;
+            /**
+             * Format: uuid
+             * @description La unidad en la que se cuenta: la base de su artículo.
+             */
+            unidadBaseId: string;
+            /** @description Si la trajo la precarga o se añadió a mano. */
+            origen: string;
+            /**
+             * Format: double
+             * @description El coste de una unidad base; solo en una añadida, y si se dijo.
+             */
+            costeUnitario: null | number | string;
+            /**
+             * Format: double
+             * @description Lo contado, o `null` si nadie lo ha contado todavía.
+             */
+            contado: null | number | string;
+            /**
+             * Format: double
+             * @description El físico de la clave cuando se contó, o `null`.
+             */
+            teoricoAlContar: null | number | string;
+            /**
+             * Format: double
+             * @description El teórico de ahora, o el que quedó al confirmar; `null` si se descartó.
+             */
+            teorico: null | number | string;
+            /**
+             * Format: double
+             * @description Lo que vuela hacia la clave, o `null` si ya no está en curso.
+             */
+            enTransito: null | number | string;
+            /**
+             * Format: double
+             * @description Lo contado menos el teórico, o `null` si falta alguno de los dos.
+             */
+            diferencia: null | number | string;
+            /** @description Si el teórico de ahora ya no es el de cuando se contó. */
+            teoricoCambiado: boolean;
+            /**
+             * Format: uuid
+             * @description La línea del ajuste que la movió, o `null`.
+             */
+            lineaDeAjusteId: null | string;
+        };
         /** @description Una línea de tarifa, tal como sale de la API. */
         LineaTarifaDto: {
             /**
@@ -3326,9 +3503,49 @@ export interface components {
             total: number | string;
         };
         /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeLineaDeRecuentoDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["LineaDeRecuentoDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
         PaginaDeLineaTarifaDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["LineaTarifaDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeRecuentoResumenDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["RecuentoResumenDto"][];
             /**
              * Format: int32
              * @description Número de página, empezando en 1.
@@ -3597,6 +3814,116 @@ export interface components {
              * @description Día en que llega. No futuro, y no anterior al envío (ADR-0053 §3).
              */
             fechaDeRecepcion: null | string;
+        };
+        /** @description Un recuento, como se enseña en su ficha. */
+        RecuentoDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Serie que lo numera.
+             */
+            serieId: string;
+            /**
+             * Format: uuid
+             * @description Serie que numera su ajuste.
+             */
+            serieDelAjusteId: string;
+            /**
+             * Format: int64
+             * @description El correlativo, o `null` mientras no se haya confirmado.
+             */
+            numero: null | number | string;
+            /**
+             * Format: uuid
+             * @description El almacén que se cuenta.
+             */
+            almacenId: string;
+            /**
+             * Format: date
+             * @description Día del alta.
+             */
+            fechaDeApertura: string;
+            /**
+             * Format: date
+             * @description Día de la confirmación, que es el de su ajuste, o `null`.
+             */
+            fechaDeConfirmacion: null | string;
+            /** @description En qué punto de su vida está. */
+            estado: string;
+            /** @description Por qué se cuenta. */
+            motivo: string;
+            /** @description La de su ajuste: la divisa base de la empresa al abrirlo. */
+            divisa: string;
+            /** @description Por qué se descartó, si se descartó. */
+            motivoDelDescarte: null | string;
+            /** @description Por qué se anuló, si se anuló. */
+            motivoDeLaAnulacion: null | string;
+            /**
+             * Format: uuid
+             * @description El ajuste que movió la diferencia, o `null`.
+             */
+            ajusteId: null | string;
+            /**
+             * Format: int32
+             * @description Cuántas claves lleva.
+             */
+            lineas: number | string;
+            /**
+             * Format: int32
+             * @description Cuántas no se han contado todavía.
+             */
+            lineasSinContar: number | string;
+            /**
+             * Format: int32
+             * @description Cuántas tienen un teórico distinto del de cuando se contaron, o `null` si ya no está en curso.
+             */
+            lineasConElTeoricoCambiado: null | number | string;
+            /**
+             * Format: int32
+             * @description Cuántas tienen mercancía en tránsito hacia su clave, o `null` si ya no está en curso.
+             */
+            lineasConTransito: null | number | string;
+            /**
+             * @description La huella del teórico de todas las líneas, la que lleva la confirmación, o `null` si ya no
+             *     está en curso.
+             */
+            huellaDelTeorico: null | string;
+        };
+        /** @description Un recuento, como sale en el listado: sin líneas y sin teórico. */
+        RecuentoResumenDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: int64
+             * @description El correlativo, o `null` mientras no se haya confirmado.
+             */
+            numero: null | number | string;
+            /**
+             * Format: uuid
+             * @description El almacén que se cuenta.
+             */
+            almacenId: string;
+            /**
+             * Format: date
+             * @description Día del alta.
+             */
+            fechaDeApertura: string;
+            /**
+             * Format: date
+             * @description Día de la confirmación, o `null`.
+             */
+            fechaDeConfirmacion: null | string;
+            /** @description En qué punto de su vida está. */
+            estado: string;
+            /** @description Por qué se cuenta. */
+            motivo: string;
         };
         /** @description Con qué régimen fiscal se da de alta o se modifica un tercero. */
         RegimenFiscalDeAltaDto: {
@@ -6600,6 +6927,223 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_Listar: {
+        parameters: {
+            query?: {
+                estado?: string;
+                almacen?: string;
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeRecuentoResumenDto"];
+                    "application/json": components["schemas"]["PaginaDeRecuentoResumenDto"];
+                    "text/json": components["schemas"]["PaginaDeRecuentoResumenDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_Abrir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AbrirRecuentoDto"];
+                "text/json": components["schemas"]["AbrirRecuentoDto"];
+                "application/*+json": components["schemas"]["AbrirRecuentoDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["RecuentoDto"];
+                    "application/json": components["schemas"]["RecuentoDto"];
+                    "text/json": components["schemas"]["RecuentoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["RecuentoDto"];
+                    "application/json": components["schemas"]["RecuentoDto"];
+                    "text/json": components["schemas"]["RecuentoDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_ListarLineas: {
+        parameters: {
+            query?: {
+                solo?: string;
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeLineaDeRecuentoDto"];
+                    "application/json": components["schemas"]["PaginaDeLineaDeRecuentoDto"];
+                    "text/json": components["schemas"]["PaginaDeLineaDeRecuentoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_ObtenerLinea: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+                /** @description Identificador de la línea. */
+                lineaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["LineaDeRecuentoDto"];
+                    "application/json": components["schemas"]["LineaDeRecuentoDto"];
+                    "text/json": components["schemas"]["LineaDeRecuentoDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -114,6 +114,10 @@ public sealed class CadaRestriccionTraducidaSeJustificaTests : IDisposable
             // Ítem 2.10: un GTIN es de un solo artículo en cada empresa. La comprobación previa del
             // alta la cruzan dos altas simultáneas juntas; el índice no (ADR-0051 §5).
             "ix_codigos_barras_gtin_uno_por_empresa (Unicidad) → codigo-barras-duplicado",
+
+            // Ítem 2.12: un almacén tiene como mucho un recuento en curso. La comprobación previa
+            // del alta la cruzan dos altas simultáneas juntas; el índice parcial no (ADR-0055 §1.7).
+            "ix_recuentos_uno_en_curso_por_almacen (Unicidad) → recuento-ya-hay-uno-en-curso",
         ];
 
         Declaradas()
