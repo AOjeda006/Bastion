@@ -103,6 +103,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             "LineaDeTransferencia no filtra: lo hace la transferencia de la que cuelga, y se carga " +
             "siempre con ella",
 
+        // La del ítem 2.12, y el mismo argumento con el recuento. Pesa más que en los otros dos,
+        // porque esta línea sí tiene ruta propia y la tentación de leerla suelta es real.
+        ["Set<LineaDeRecuento>"] =
+            "LineaDeRecuento no filtra: lo hace el recuento del que cuelga, y se carga siempre con " +
+            "él aunque se escriba por su propia ruta",
+
         // La del ítem 2.4, y el mismo argumento con un dueño más: la fila del contador no filtra
         // -lo hace la serie de la que cuelga- y además NO LLEVA `empresa_id`, así que una consulta
         // que empezara por ella no tendría por dónde filtrar aunque quisiera. Que no exista ninguna

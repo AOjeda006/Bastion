@@ -88,6 +88,13 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
             "propia. No lleva empresa_id porque no hay ninguna consulta que pueda empezar por ella: " +
             "se llega siempre desde el documento, que sí la lleva",
 
+        // La del ítem 2.12, con el mismo argumento y otro documento. Que tenga su propia ruta no
+        // cambia nada: la ruta empieza por el recuento, y se llega a la línea cargándolo.
+        ["LineaDeRecuento"] =
+            "es parte del agregado del recuento, que sí filtra; no tiene DbSet ni consulta propia. " +
+            "Su ruta empieza por el recuento, y se llega a ella cargándolo: no lleva empresa_id " +
+            "porque no hay ninguna consulta que pueda empezar por ella",
+
         // La del ítem 2.4, y de la misma familia: es la fila del contador de una serie, y quien
         // filtra es la SERIE de la que cuelga. No tiene `DbSet` ni consulta propia, y la sentencia
         // que la escribe -la única que la escribe- comprueba la empresa sobre la fila de `series`

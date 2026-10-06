@@ -131,6 +131,22 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// </remarks>
     public Guid? AnulaAId { get; private set; }
 
+    /// <summary>El recuento que generó este ajuste, o <c>null</c> si lo escribió una persona.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es la mitad de la doble flecha que va del ajuste al recuento</b> (ADR-0055 §8). La otra la
+    /// lleva cada línea del recuento, que apunta a la del ajuste que la mueve. El recuento no apunta
+    /// a su ajuste: se encuentra por esta, y así no hay un ciclo de claves ajenas entre las dos
+    /// tablas.
+    /// </para>
+    /// <para>
+    /// <b>Solo la pone el recuento</b>, que es el único que abre un ajuste con ella, y el inverso no
+    /// la hereda: la flecha es única, y el inverso ya apunta a su original con
+    /// <see cref="AnulaAId"/>.
+    /// </para>
+    /// </remarks>
+    public Guid? RecuentoId { get; private set; }
+
     /// <summary>Las líneas del documento, en el orden en que se escribieron.</summary>
     /// <remarks>
     /// <b>Por su número, y no por cómo estén en la colección</b>: EF Core la llena en el orden en
@@ -476,6 +492,56 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// <param name="momento">Ahora.</param>
     /// <returns>El inverso en borrador, con sus líneas y sin número.</returns>
     public Ajuste CrearInverso(DateOnly fechaDeOperacion, string motivo, DateTimeOffset momento)
+    {
+        if (RecuentoId is not null)
+        {
+            throw new InvalidOperationException(
+                $"El ajuste {Id} es el del recuento {RecuentoId}, y no se anula por separado: su " +
+                "recuento seguiría confirmado con la diferencia deshecha. Se anula el recuento " +
+                "(ADR-0055 §9).");
+        }
+
+        return Inverso(fechaDeOperacion, motivo, momento);
+    }
+
+    /// <summary>Abre el ajuste que mueve la diferencia de un recuento (ADR-0055 §8).</summary>
+    /// <remarks>
+    /// <b>Interno, y es la guarda</b>: solo el recuento abre un ajuste con <see cref="RecuentoId"/>,
+    /// así que no hay otra forma de que un ajuste diga que es de un recuento.
+    /// </remarks>
+    internal static Ajuste AbrirParaUnRecuento(
+        Guid recuentoId,
+        Guid empresaId,
+        Guid serieId,
+        Guid almacenId,
+        DateOnly fechaDeOperacion,
+        string motivo,
+        string divisa,
+        DateTimeOffset momento)
+    {
+        Ajuste ajuste = Abrir(empresaId, serieId, almacenId, fechaDeOperacion, motivo, divisa, momento);
+        ajuste.RecuentoId = recuentoId;
+
+        return ajuste;
+    }
+
+    /// <summary>El inverso del ajuste de un recuento, para la anulación de ese recuento.</summary>
+    /// <remarks>
+    /// <b>Interno, y es el único camino que anula el ajuste de un recuento</b> (ADR-0055 §9): lo llama
+    /// el recuento, que comprueba antes que el ajuste es el suyo.
+    /// </remarks>
+    internal Ajuste CrearInversoDeSuRecuento(DateOnly fechaDeOperacion, string motivo, DateTimeOffset momento)
+    {
+        if (RecuentoId is null)
+        {
+            throw new InvalidOperationException(
+                $"El ajuste {Id} no es de ningún recuento: se anula por el camino de cualquier ajuste.");
+        }
+
+        return Inverso(fechaDeOperacion, motivo, momento);
+    }
+
+    private Ajuste Inverso(DateOnly fechaDeOperacion, string motivo, DateTimeOffset momento)
     {
         if (Estado != EstadoDeAjuste.Confirmado)
         {

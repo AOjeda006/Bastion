@@ -9,6 +9,7 @@ using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Movimientos;
+using Bastion.Inventario.Contracts.Recuentos;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Configuraciones;
@@ -110,6 +111,13 @@ public static class ModuloDeInventario
         servicios.DeclararEvento<TransferenciaEnviada>(TransferenciaEnviada.Nombre);
         servicios.DeclararEvento<TransferenciaRecibida>(TransferenciaRecibida.Nombre);
         servicios.DeclararEvento<TransferenciaAnulada>(TransferenciaAnulada.Nombre);
+
+        // LOS TRES DEL RECUENTO, que no escribe en el libro: cuentan sus transiciones, porque la R1
+        // no deja transitar sin evento, y ninguno lleva importes. El que va al asiento es el
+        // `AjusteConfirmado` de su ajuste (ADR-0055 §1).
+        servicios.DeclararEvento<RecuentoConfirmado>(RecuentoConfirmado.Nombre);
+        servicios.DeclararEvento<RecuentoAnulado>(RecuentoAnulado.Nombre);
+        servicios.DeclararEvento<RecuentoDescartado>(RecuentoDescartado.Nombre);
 
         // El almacén de claves de idempotencia (R10), con la clave del módulo: el filtro del borde
         // resuelve el suyo por el segmento de la ruta, para que la clave y el trabajo caigan en la

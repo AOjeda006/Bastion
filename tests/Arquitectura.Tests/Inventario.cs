@@ -1079,6 +1079,73 @@ internal static class Inventario
                 "de la sentencia que toma el número al enviar, y el puerto está para que un " +
                 "borrador no nazca apuntando a una serie cerrada. Su inverso numera en ella."),
 
+            // LAS DEL ÍTEM 2.12. La clave de una línea añadida la pregunta el caso de uso que la
+            // añade, como el alta del ajuste; la de una precargada sale de las existencias, que ya la
+            // traen preguntada por el documento que las movió. La unidad base es una copia de la del
+            // artículo (ADR-0055 §1.2).
+            ["ClaveDelRecuento.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "gemelo del de la línea del ajuste, y por el mismo puerto: la clave que se añade " +
+                "tiene que ser de un artículo que se almacena (ADR-0055 §6). La de la precarga es " +
+                "una copia de la existencia."),
+
+            ["ClaveDelRecuento.UbicacionId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "la ubicación de una clave añadida tiene que colgar del almacén del recuento, y el " +
+                "puerto contesta las dos cosas a la vez, como en el ajuste (ADR-0037)."),
+
+            ["LineaAPrecargar.UnidadBaseId"] = new(
+                "UnidadMedida",
+                Raiz + ".Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida",
+                "el papel va en el nombre —la base de su artículo— y por eso no casa con el del " +
+                "tipo. Es una copia: llega de Catálogo por UnidadesBaseDeAsync, y la preguntó por " +
+                "este puerto el alta del artículo. El recuento no la vuelve a preguntar, porque " +
+                "una unidad retirada sigue explicando las existencias que ya cuenta (ADR-0023)."),
+
+            ["LineaDeRecuento.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "copia del de su clave, y por el mismo puerto."),
+
+            ["LineaDeRecuento.UbicacionId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "copia del de su clave, y por el mismo puerto."),
+
+            ["LineaDeRecuento.UnidadBaseId"] = new(
+                "UnidadMedida",
+                Raiz + ".Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida",
+                "gemela de la de la precarga: la base del artículo, copiada al añadir o al abrir, " +
+                "y la del ajuste que mueve su diferencia."),
+
+            ["Recuento.AlmacenId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "gemelo del del ajuste: lo pregunta el alta, por el ESTADO, y uno de otra empresa " +
+                "contesta lo mismo que uno que no existe. Se cuenta entero (ADR-0055 §1.1)."),
+
+            ["Recuento.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del del ajuste: sale del claim en el alta, nunca de la petición."),
+
+            ["Recuento.SerieDelAjusteId"] = new(
+                "Serie",
+                Raiz + ".Organizacion.Contracts.Series.IConsultaDeSeries",
+                "el papel va en el nombre —la que numerará su ajuste— y por eso no casa con el del " +
+                "tipo. Las dos series van en el alta y se validan al abrir y otra vez al confirmar " +
+                "(ADR-0055 §1.3). Como en el ajuste, la R5 la sostiene el `WHERE` del numerador, y " +
+                "solo se le pide número si hay diferencia."),
+
+            ["Recuento.SerieId"] = new(
+                "Serie",
+                Raiz + ".Organizacion.Contracts.Series.IConsultaDeSeries",
+                "gemelo del del ajuste, en las series de recuentos: el puerto en el alta, para que " +
+                "nadie cuente horas contra una serie que no sirve, y el `WHERE` del numerador al " +
+                "confirmar, que es la guarda (ADR-0055 §1.3)."),
+
             ["Valoracion.AlmacenId"] = new(
                 "Almacen",
                 Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",

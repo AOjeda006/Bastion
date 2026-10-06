@@ -8,6 +8,7 @@ using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Recuentos;
 using Bastion.Inventario.Domain.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +65,10 @@ public sealed class InventarioDbContext(
     /// <summary>Las transferencias entre almacenes de una empresa (ADR-0053).</summary>
     /// <remarks>Sin <c>DbSet</c> de sus líneas, por lo mismo que el ajuste.</remarks>
     public DbSet<Transferencia> Transferencias => Set<Transferencia>();
+
+    /// <summary>Los recuentos de inventario, que no escriben en el libro: lo mueve su ajuste (ADR-0055).</summary>
+    /// <remarks>Sin <c>DbSet</c> de sus líneas, por lo mismo que el ajuste.</remarks>
+    public DbSet<Recuento> Recuentos => Set<Recuento>();
 
     /// <summary>La fila viva de cada existencia: la suma del libro, guardada (ADR-0044).</summary>
     /// <remarks>
@@ -138,6 +143,9 @@ public sealed class InventarioDbContext(
         modelBuilder.Entity<Transferencia>().HasQueryFilter(
             "Inquilinato",
             transferencia => EmpresaDelFiltro == null || transferencia.EmpresaId == EmpresaDelFiltro);
+
+        modelBuilder.Entity<Recuento>().HasQueryFilter(
+            "Inquilinato", recuento => EmpresaDelFiltro == null || recuento.EmpresaId == EmpresaDelFiltro);
 
         // La proyección del libro, con el filtro del libro: las existencias de otra empresa no se
         // leen, igual que sus movimientos. Las sentencias crudas que la escriben no pasan por aquí,

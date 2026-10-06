@@ -99,6 +99,16 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             new([], [("mes", "date_trunc('month', current_date)::date")]),
         ["ck_lineas_ajuste_cantidad_y_factor"] = Relleno.Ninguno,
         ["ck_lineas_ajuste_numero_desde_uno"] = new([], [("numero", "1")]),
+
+        // Las seis de la línea de recuento, del 2.12, sin relleno: el contado, su teórico, el coste,
+        // el lote y la serie admiten nulo y se quedan en nulo, que es una línea sin contar; y el
+        // número sale del contador del recorrido, que empieza en uno.
+        ["ck_lineas_recuento_coste_solo_al_anadir"] = Relleno.Ninguno,
+        ["ck_lineas_recuento_contado_con_su_teorico"] = Relleno.Ninguno,
+        ["ck_lineas_recuento_contado_no_negativo"] = Relleno.Ninguno,
+        ["ck_lineas_recuento_lote_o_serie"] = Relleno.Ninguno,
+        ["ck_lineas_recuento_numero_desde_uno"] = Relleno.Ninguno,
+        ["ck_lineas_recuento_serie_en_cero_o_uno"] = Relleno.Ninguno,
         ["ck_lineas_tarifa_articulo_o_categoria"] = new(["articulo_id"], []),
         ["ck_lineas_tarifa_cantidad_desde_no_negativa"] = Relleno.Ninguno,
         ["ck_lineas_tarifa_descuento_en_rango"] = Relleno.Ninguno,
@@ -109,6 +119,12 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_movimiento_stock_cantidad_no_nula"] = Relleno.Ninguno,
         ["ck_movimiento_stock_cantidad_por_factor"] = Relleno.Ninguno,
         ["ck_movimiento_stock_lote_o_numero_de_serie"] = Relleno.Ninguno,
+        ["ck_recuentos_confirmacion_no_antes_de_la_apertura"] = Relleno.Ninguno,
+
+        // Un recuento en curso, que es el único estado sin número ni fecha de confirmación: con
+        // letras inventadas también cumpliría, pero por no ser ningún estado. Los almacenes los
+        // inventa `gen_random_uuid()`, así que el índice de uno en curso por almacén no se pisa.
+        ["ck_recuentos_numerado_si_se_confirmo"] = new([], [("estado", "'EnCurso'")]),
         ["ck_registros_empresa_o_motivo"] = new(["empresa_id"], []),
         ["ck_tarifas_vigencia_no_invertida"] = Relleno.Ninguno,
         ["ck_terceros_limite_credito_completo"] = Relleno.Ninguno,

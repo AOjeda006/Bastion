@@ -92,6 +92,11 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         "Empresa.Version",
         "Impuesto.Version",
 
+        // La del ítem 2.12, y la primera línea de un DOCUMENTO que lleva testigo: se cuenta sola,
+        // por su ruta y con su `If-Match`, por el argumento de la línea de tarifa. Dos personas que
+        // cuentan dos estanterías del mismo almacén no se están pisando (ADR-0055 §4).
+        "LineaDeRecuento.Version",
+
         // Las dos del ítem 1.9, y las dos llevan testigo a propósito: la línea de tarifa NO es un
         // hijo del agregado como lo son el contacto o la cuenta bancaria. Tiene su propia ruta,
         // su propio `PUT` y su propio ETag, porque una tabla de precios se mantiene línea a línea
@@ -100,6 +105,10 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         // por tocar otra fila. Es la decisión contraria a la de los tres hijos del tercero, y lo
         // que la invierte es que allí el agregado entero es una ficha que se edita de una vez.
         "LineaTarifa.Version",
+
+        // La del ítem 2.12, por lo mismo que los otros dos documentos, y con un trabajo más: toda
+        // escritura en una de sus líneas la toca, así que resume el documento entero.
+        "Recuento.Version",
         "Rol.Version",
         "Serie.Version",
         "Tarifa.Version",

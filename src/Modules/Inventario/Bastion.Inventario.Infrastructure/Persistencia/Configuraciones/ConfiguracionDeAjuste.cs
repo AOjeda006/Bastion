@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Inventario.Domain.Ajustes;
+using Bastion.Inventario.Domain.Recuentos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,6 +10,9 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Configuraciones;
 
 internal sealed class ConfiguracionDeAjuste : IEntityTypeConfiguration<Ajuste>
 {
+    /// <summary>El índice que impide un segundo ajuste del mismo recuento, por su nombre.</summary>
+    internal const string IndiceDelRecuento = "ix_ajustes_recuento_id";
+
     public void Configure(EntityTypeBuilder<Ajuste> ajuste)
     {
         ArgumentNullException.ThrowIfNull(ajuste);
@@ -122,6 +126,23 @@ internal sealed class ConfiguracionDeAjuste : IEntityTypeConfiguration<Ajuste>
         ajuste.HasIndex(documento => documento.AnulaAId)
             .IsUnique()
             .HasFilter("anula_a_id IS NOT NULL");
+
+        // LA OTRA MITAD DE LA DOBLE FLECHA DEL RECUENTO (ADR-0055 §8): el recuento que lo generó, o
+        // nulo si lo dio de alta una persona. Clave ajena a la misma tabla del mismo esquema, con
+        // `Restrict`, como la del par. Y única entre los que apuntan: un recuento genera un solo
+        // ajuste. El inverso no la hereda —apunta a su original, que es el que apunta al recuento—,
+        // así que el índice no choca con la anulación.
+        ajuste.Property(documento => documento.RecuentoId).SeAudita();
+
+        ajuste.HasOne<Recuento>()
+            .WithMany()
+            .HasForeignKey(documento => documento.RecuentoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        ajuste.HasIndex(documento => documento.RecuentoId)
+            .IsUnique()
+            .HasFilter("recuento_id IS NOT NULL")
+            .HasDatabaseName(IndiceDelRecuento);
 
         ajuste.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeOperacion });
 
