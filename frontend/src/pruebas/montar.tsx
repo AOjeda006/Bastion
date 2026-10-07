@@ -1,5 +1,5 @@
 import { render, type RenderResult } from '@testing-library/react';
-import { RouterProvider, createMemoryRouter } from 'react-router';
+import { RouterProvider, createMemoryRouter, type RouteObject } from 'react-router';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClientProvider } from '@tanstack/react-query';
 
@@ -93,12 +93,17 @@ export interface PantallaMontada extends RenderResult {
  * **`patron`, para la pantalla que lee un parámetro de la ruta** (`/articulos/:id/trazabilidad`).
  * Sin él, la ruta es el camino de la entrada inicial, que no declara parámetros, y `useParams` no
  * devolvería nada.
+ *
+ * **`vecinas`, para la pantalla que lleva a otra** (el alta de un recuento, que acaba en su ficha).
+ * Son rutas de pega, con un texto y nada más: el test comprueba que se llega, no lo que hay allí.
+ * Sin ellas, la navegación acabaría en el error de «ninguna ruta coincide» del enrutador.
  */
 export function montarPantalla(
   pantalla: React.JSX.Element,
   rutaInicial: string,
   idioma: Idioma = 'es',
   patron?: string,
+  vecinas: readonly RouteObject[] = [],
 ): PantallaMontada {
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -109,7 +114,7 @@ export function montarPantalla(
   // sus parámetros, y no puede montar una ruta distinta de la que dice estar visitando.
   const camino = patron ?? rutaInicial.split('?')[0] ?? rutaInicial;
 
-  const enrutador = createMemoryRouter([{ path: camino, element: pantalla }], {
+  const enrutador = createMemoryRouter([{ path: camino, element: pantalla }, ...vecinas], {
     initialEntries: [rutaInicial],
   });
 
