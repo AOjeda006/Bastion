@@ -13,6 +13,7 @@ internal static class ErroresDeAjuste
     internal const string CodigoNoEstaEnBorrador = "ajuste-no-esta-en-borrador";
     internal const string CodigoNoEstaConfirmado = "ajuste-no-esta-confirmado";
     internal const string CodigoInversoNoSeAnula = "ajuste-inverso-no-se-anula";
+    internal const string CodigoDeUnRecuentoNoSeAnula = "ajuste-de-un-recuento-no-se-anula";
     internal const string CodigoMotivoNoValido = "ajuste-motivo-no-valido";
     internal const string CodigoSinEjercicio = "ajuste-sin-ejercicio";
     internal const string CodigoEnEjercicioCerrado = "ajuste-en-ejercicio-cerrado";
@@ -170,6 +171,19 @@ internal static class ErroresDeAjuste
             CodigoInversoNoSeAnula,
             $"El ajuste {ajusteId} es el inverso de {originalId}: deshacerlo sería volver a hacer " +
             "el ajuste, y eso es otro ajuste (R2).");
+
+    /// <summary>
+    /// El ajuste es el de la diferencia de un recuento, y no se anula por separado (ADR-0055 §9).
+    /// </summary>
+    /// <param name="ajusteId">El ajuste que se quería anular.</param>
+    /// <param name="recuentoId">Su recuento, que es lo que se anula.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion DeUnRecuentoNoSeAnula(Guid ajusteId, Guid recuentoId) =>
+        ErrorDeOperacion.Conflicto(
+            CodigoDeUnRecuentoNoSeAnula,
+            $"El ajuste {ajusteId} es el de la diferencia del recuento {recuentoId}: anularlo solo " +
+            "dejaría el recuento confirmado con su diferencia deshecha. Se anula el recuento, y su " +
+            "ajuste se anula con él.");
 
     /// <summary>La línea que no tiene forma, con su código (ADR-0048 §2 y §3).</summary>
     /// <param name="sinForma">Lo que contestó <c>LoQueNoTieneForma</c>.</param>

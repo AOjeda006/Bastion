@@ -34,6 +34,11 @@ public interface IAnularAjuste
 /// de la misma serie (R5), escribe sus movimientos (R13) y se lee como cualquier otro.
 /// </para>
 /// <para>
+/// <b>Las guardas viven aquí, y el núcleo en <see cref="ElInversoQueCompensa"/></b> (ADR-0055 §9):
+/// un inverso no se anula, y el ajuste de un recuento solo se anula con su recuento, que comparte
+/// el núcleo. El número, el valor y el libro del inverso son los mismos por los dos caminos.
+/// </para>
+/// <para>
 /// <b>El orden de los cuatro pasos es la regla, no una preferencia.</b> El número se pide después
 /// de construir el inverso y antes de confirmarlo, por lo mismo que en la confirmación: dentro de
 /// la transacción que abre el filtro de idempotencia, lo más tarde posible —el cerrojo del
@@ -136,9 +141,17 @@ internal sealed class AnularAjuste(
         // UN INVERSO NO SE ANULA (ADR-0055 §9). Está confirmado, así que la guarda del estado no lo
         // para, y el dominio lanzaría al construir su inverso: un 500 donde va un 409 con su
         // motivo, que es la regla que la transferencia ya tenía.
-        if (original.AnulaAId is { } compensado)
+        if (original.AnulaAId is { } delOriginal)
         {
-            return Resultado.Fallo<AnulacionDto>(ErroresDeAjuste.InversoNoSeAnula(ajusteId, compensado));
+            return Resultado.Fallo<AnulacionDto>(ErroresDeAjuste.InversoNoSeAnula(ajusteId, delOriginal));
+        }
+
+        // EL AJUSTE DE UN RECUENTO TAMPOCO, por este camino (ADR-0055 §9): su recuento seguiría
+        // confirmado con la diferencia deshecha. Se anula el recuento, que anula su ajuste con el
+        // mismo núcleo. El dominio también lanzaría, y lo que va aquí es el 409 con su motivo.
+        if (original.RecuentoId is { } recuentoId)
+        {
+            return Resultado.Fallo<AnulacionDto>(ErroresDeAjuste.DeUnRecuentoNoSeAnula(ajusteId, recuentoId));
         }
 
         DateTimeOffset ahora = reloj.GetUtcNow();
@@ -162,65 +175,17 @@ internal sealed class AnularAjuste(
 
         Ajuste inverso = original.CrearInverso(hoy, motivo, ahora);
 
-        // LA EXCEPCIÓN DE LA NUMERACIÓN, ESCRITA: el inverso lleva la fecha de hoy pero numera en la
-        // serie de su original, y por eso la fecha que se le pasa al numerador es LA DEL ORIGINAL,
-        // que es la que cae en el ejercicio de esa serie. Pasarle `hoy` obligaría a numerar en una
-        // serie del ejercicio de hoy, y anular fallaría cada vez que esa serie no existiera —o
-        // sea, siempre que el original fuera de otro año—, cuando la R2 promete que anular se puede
-        // siempre. El inverso pertenece a su original, no a su fecha.
-        //
-        // Vale para los ajustes y NO es regla para todos. Una factura rectificativa exige serie
-        // propia (Reglamento de facturación, RD 1619/2012, art. 6; se contrasta con la biblioteca
-        // al abrir la fase 5), y quien la numere elegirá esa serie y le pasará su propia fecha.
-        Resultado<long> numero = await numerador
-            .TomarNumeroAsync(
-                inverso.SerieId, DocumentoQueNumera.Ajuste, original.FechaDeOperacion, cancelacion)
+        // EL NÚCLEO, el mismo que usa la anulación del recuento (ADR-0055 §9): el número del inverso
+        // en la serie del original, su valor, su libro y el original anulado.
+        Resultado<Ajuste> compensado = await ElInversoQueCompensa
+            .CompensarAsync(ajustes, numerador, valoracion, original, inverso, ahora, cancelacion)
             .ConfigureAwait(false);
 
-        if (!numero.EsCorrecto)
+        if (!compensado.EsCorrecto)
         {
-            return Resultado.Fallo<AnulacionDto>(numero.Error!);
+            return Resultado.Fallo<AnulacionDto>(compensado.Error!);
         }
 
-        // LA VALORACIÓN DEL INVERSO, en el mismo sitio que al confirmar (ADR-0046 §2). Cada línea
-        // trae el valor de la del original como valor que compensa, así que el par suma cero
-        // también en valor, salvo que otras salidas se hayan llevado parte de él entretanto
-        // (ADR-0046 §6).
-        IReadOnlyList<LineaAValorar> lineas = inverso.LineasAValorar();
-
-        IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos = await ajustes
-            .BloquearLasValoracionesAsync(
-                [.. lineas.Select(linea => linea.Clave).Distinct()], inverso.Divisa, cancelacion)
-            .ConfigureAwait(false);
-
-        if (valoracion.LoQueImpide(saldos, lineas, inverso.Divisa, inverso.FechaDeOperacion) is { } impedimento)
-        {
-            return Resultado.Fallo<AnulacionDto>(ErroresDeAjuste.NoSeValora(impedimento, inverso.Divisa));
-        }
-
-        IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, inverso.Divisa, inverso.FechaDeOperacion);
-
-        // LOS LOTES Y LAS SERIES DEL ORIGINAL, que el inverso copia (ADR-0048 §5): resuelven a las
-        // mismas filas, porque la clave es la misma. Y la marca no se lee: el original tiene
-        // movimientos, así que su marca ya no puede cambiar.
-        LotesYSeriesResueltos resueltos = await ajustes
-            .ResolverLotesYSeriesAsync(inverso.LotesQueNombra(), inverso.SeriesQueNombra(), cancelacion)
-            .ConfigureAwait(false);
-
-        var confirmado = new AjusteConfirmado(
-            inverso.Id,
-            inverso.EmpresaId,
-            inverso.AlmacenId,
-            inverso.FechaDeOperacion,
-            inverso.Lineas.Count);
-
-        IReadOnlyList<MovimientoStock> movimientos =
-            inverso.Confirmar(numero.Valor, confirmado, valoradas, resueltos, ahora);
-
-        original.Anular(inverso, new AjusteAnulado(original.Id, original.EmpresaId));
-
-        ajustes.Agregar(inverso);
-        await ajustes.AnotarEnElLibroAsync(movimientos, cancelacion).ConfigureAwait(false);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto(new AnulacionDto(original.ADto(), inverso.ADto()));

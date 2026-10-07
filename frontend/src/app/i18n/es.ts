@@ -104,6 +104,10 @@ export const es = {
       'ajuste-coste-no-valido':
         'Una línea que saca existencias no lleva coste: se valora al precio medio. Y ningún ' +
         'coste puede ser negativo; una muestra o un regalo entran a cero.',
+      'ajuste-de-un-recuento-no-se-anula':
+        'Ese ajuste es el de la diferencia de un recuento, y no se anula por separado: el recuento ' +
+        'seguiría confirmado con su diferencia deshecha. Anula el recuento, y su ajuste se anulará ' +
+        'con él.',
       'ajuste-en-ejercicio-cerrado':
         'La fecha de ese ajuste cae en un ejercicio cerrado: ese periodo ya es definitivo y no ' +
         'admite documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
@@ -349,16 +353,22 @@ export const es = {
         'El coste de una unidad no puede ser negativo ni pasar de catorce cifras enteras. ' +
         'Corrígelo, o déjalo vacío si no lo sabes.',
       'recuento-en-ejercicio-cerrado':
-        'Hoy cae en un ejercicio cerrado, y el recuento se confirma con la fecha de hoy: ese periodo ' +
-        'ya es definitivo y no admite documentos nuevos. Pide que se reabra el ejercicio.',
+        'Hoy cae en un ejercicio cerrado, y lo que el recuento escribe lleva la fecha de hoy: su ' +
+        'ajuste al confirmarlo y el inverso al anularlo. Ese periodo ya es definitivo y no admite ' +
+        'documentos nuevos. Pide que se reabra el ejercicio.',
       'recuento-linea-no-encontrada':
         'Esa línea ya no está en el recuento: alguien la ha quitado antes. Vuelve a la ficha y actualiza.',
       'recuento-lote-no-valido':
         'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
         'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote.',
       'recuento-motivo-no-valido':
-        'Escribe por qué cuentas, en 300 caracteres o menos. Es el motivo que llevará el ajuste.',
+        'Escribe el motivo, en 300 caracteres o menos. Es lo único que quedará para entender por ' +
+        'qué se contó, se anuló o se descartó.',
       'recuento-no-encontrado': 'Ese recuento ya no existe. Vuelve al listado y actualiza.',
+      'recuento-no-esta-confirmado':
+        'Ese recuento no está confirmado, y solo se anula uno confirmado: uno en curso no ha movido ' +
+        'nada y se descarta, y uno anulado o descartado ya está cerrado. Actualiza la pantalla para ' +
+        'ver en qué estado está.',
       'recuento-no-esta-en-curso':
         'Ese recuento ya no está en curso: se confirmó, se anuló o se descartó, y lo contado ya no ' +
         'cambia. Actualiza la pantalla para ver en qué estado está.',
@@ -374,8 +384,9 @@ export const es = {
         'Ese número de serie ya está en el recuento, en otra ubicación, y cada pieza se cuenta una ' +
         'sola vez. Cuéntala en la línea que ya la lleva, o quita esa línea antes.',
       'recuento-sin-ejercicio':
-        'Hoy no cae en ningún ejercicio, y el recuento se confirma con la fecha de hoy. Abre el ' +
-        'ejercicio que falta antes de confirmar.',
+        'Hoy no cae en ningún ejercicio, y lo que el recuento escribe lleva la fecha de hoy: su ' +
+        'ajuste al confirmarlo y el inverso al anularlo. Abre el ejercicio que falta y vuelve a ' +
+        'intentarlo.',
       'recuento-sube-con-transito':
         'Hay líneas contadas por encima de lo que dice el sistema en huecos con mercancía en ' +
         'tránsito hacia ellos: si ya ha llegado y no se ha recibido, se sumaría dos veces. Recibe ' +

@@ -37,6 +37,8 @@ public static class CasosDeUsoDeInventario
         servicios.AddScoped<IAnadirLineaDeRecuento, AnadirLineaDeRecuento>();
         servicios.AddScoped<IQuitarLineaDeRecuento, QuitarLineaDeRecuento>();
         servicios.AddScoped<IConfirmarRecuento, ConfirmarRecuento>();
+        servicios.AddScoped<IAnularRecuento, AnularRecuento>();
+        servicios.AddScoped<IDescartarRecuento, DescartarRecuento>();
 
         // SIN ESTADO, así que una para todo el proceso. Es la costura para FIFO (ADR-0046 §10):
         // cambiar de método es cambiar esta línea.

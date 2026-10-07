@@ -6387,6 +6387,32 @@ orden que la mide.
    2.12 se alarga hasta el 829, que estaba libre por literal y por cálculo (`semilla + 130` del
    saldo por propiedad llega al 595), y del 809 al 829 quedan libres. El reparto, en la cabecera de
    `ElPuertoDelArticuloContraLaBaseTests`.
+9. **La anulación y el descarte piden los dos mecanismos, como la confirmación** (ADR-0057,
+   *Consecuencias*): responden sin `ETag`, y su `412` sale con la cabecera bloqueada y antes de
+   escribir. Las dos entran en `s_conLosDos` con su motivo. **La anulación exige la clave**, porque
+   su inverso numera en la serie del ajuste, y entra también en `s_obligatorias`; **el descarte la
+   admite y no la exige**, porque no numera. Las cuentas del barrido, con
+   `dotnet test tests/Api.FunctionalTests --filter "FullyQualifiedName~TodaEscrituraDiceComoSeProtegeTests"`:
+   **149** acciones, **96** que cambian estado, **52** con `If-Match`, **30** con `Idempotency-Key`,
+   **7** que la exigen y **3** con los dos.
+10. **Un permiso por acción**: `inventario.recuento.anular` e `inventario.recuento.descartar`. Quien
+    confirma no tiene por qué poder deshacer lo confirmado, y descartar tira lo que han contado otros.
+11. **Anular uno sin ajuste no pregunta por el ejercicio** (ADR-0055 §9: «solo cambia de estado»).
+    Lo que lleva la fecha de hoy es el inverso, y sin ajuste no hay inverso: con el ejercicio de hoy
+    cerrado, el que no movió el libro se anula, y el que lo movió es un `409`
+    `recuento-en-ejercicio-cerrado`. Lo afirma el caso
+    `Sin_ejercicio_para_hoy_o_con_el_de_hoy_cerrado_solo_se_anula_el_que_no_movio_el_libro`.
+12. **El núcleo del inverso es uno, y las guardas son del camino público** (ADR-0055 §9).
+    `ElInversoQueCompensa.CompensarAsync` numera, valora, confirma el inverso, anula el original y
+    escribe el libro, y no guarda: lo llaman `AnularAjuste` y `AnularRecuento`. `AnularAjuste` gana
+    la guarda `ajuste-de-un-recuento-no-se-anula`, un `409` antes de tocar nada; el recuento llega al
+    núcleo por `Recuento.CrearInversoDeSuAjuste`, que el dominio solo deja hacer al recuento
+    confirmado de ese ajuste. Los textos de `recuento-sin-ejercicio`, `recuento-en-ejercicio-cerrado`
+    y `recuento-motivo-no-valido` se generalizan en vez de abrir `type` nuevos: dicen lo mismo al
+    confirmar, al anular y al descartar.
+13. **Las semillas de la anulación y el descarte**: del 809 al 818,
+    `LaAnulacionYElDescarteDelRecuentoTests` (el 813 y el 817 son las otras empresas). Del 819 al 829
+    quedan libres; el reparto, en la cabecera de `ElPuertoDelArticuloContraLaBaseTests`.
 
 ## Estado actual
 
@@ -9619,9 +9645,10 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
   Después vienen la tanda de mutaciones, la batería, el humo y el recorrido con `playwright-cli`.
 - **Dónde retomar:** el primer punto de esa lista que no tenga commit en la rama (`git log
   main..2.12-el-recuento --oneline`). El punto 8 va en cuatro commits: el alta y la lectura, las
-  líneas, la confirmación (ADR-0057), y la anulación con el descarte. Lo que falta de él es el
-  último: `ajuste-de-un-recuento-no-se-anula` en `AnularAjuste`, con los dos caminos probados y una
-  mutación cada uno, y el `/descarte` con su motivo, que deja el almacén libre.
+  líneas, la confirmación (ADR-0057), y la anulación con el descarte, y los cuatro están. Lo que
+  queda es el punto 9, la pantalla; y después, la tanda de mutaciones desde la **313**, con la de
+  cada camino de la anulación del ajuste (*Decisiones tomadas → ítem 2.12, al escribir su código*,
+  punto 12), la batería, el humo y el recorrido.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 

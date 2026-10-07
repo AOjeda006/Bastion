@@ -40,6 +40,12 @@ internal sealed record EscenaDeRecuento(EscenaDeTransferencia Escena, SerieDto S
     /// <summary>El motivo de los recuentos de los casos, que es el que llevará el ajuste.</summary>
     internal const string Motivo = "Recuento anual del almacén";
 
+    /// <summary>El motivo de las anulaciones de los casos, que es también el del inverso.</summary>
+    internal const string MotivoDeLaAnulacion = "Se contó el almacén equivocado";
+
+    /// <summary>El motivo de los descartes de los casos.</summary>
+    internal const string MotivoDelDescarte = "Se abrió con las series del año pasado";
+
     /// <summary>El cliente de la empresa de la escena.</summary>
     internal HttpClient Cliente => Escena.Cliente;
 
@@ -229,25 +235,52 @@ internal sealed record EscenaDeRecuento(EscenaDeTransferencia Escena, SerieDto S
     /// <param name="clave">La <c>Idempotency-Key</c>, o <c>null</c> para no mandarla.</param>
     /// <returns>La respuesta cruda.</returns>
     internal static Task<HttpResponseMessage> ConfirmarAsync(
-        HttpClient cliente, Guid recuentoId, string? etiqueta, string? huella, string? clave)
-    {
-        HttpRequestMessage confirmacion = new(HttpMethod.Post, $"{Recuentos}/{recuentoId}/confirmacion")
-        {
-            Content = JsonContent.Create(new ConfirmarRecuentoDto { HuellaDelTeorico = huella! }),
-        };
+        HttpClient cliente, Guid recuentoId, string? etiqueta, string? huella, string? clave) =>
+        EnLaCabeceraAsync(
+            cliente,
+            recuentoId,
+            "confirmacion",
+            JsonContent.Create(new ConfirmarRecuentoDto { HuellaDelTeorico = huella! }),
+            etiqueta,
+            clave);
 
-        if (etiqueta is not null)
-        {
-            confirmacion.Headers.TryAddWithoutValidation("If-Match", etiqueta);
-        }
+    /// <summary>La anulación por la API, tal como salga.</summary>
+    /// <param name="cliente">El cliente, que puede ser el de otra empresa.</param>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>, o <c>null</c> para no mandarlo.</param>
+    /// <param name="motivo">Por qué se anula, tal cual.</param>
+    /// <param name="clave">La <c>Idempotency-Key</c>, o <c>null</c> para no mandarla.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal static Task<HttpResponseMessage> AnularAsync(
+        HttpClient cliente, Guid recuentoId, string? etiqueta, string motivo, string? clave) =>
+        EnLaCabeceraAsync(
+            cliente, recuentoId, "anulacion", JsonContent.Create(new AnularRecuentoDto(motivo)), etiqueta, clave);
 
-        if (clave is not null)
-        {
-            confirmacion.Headers.TryAddWithoutValidation(CabeceraDeIdempotencia, clave);
-        }
+    /// <summary>La anulación por la API con una clave nueva, tal como salga.</summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal Task<HttpResponseMessage> AnularAsync(Guid recuentoId, string etiqueta) =>
+        AnularAsync(Cliente, recuentoId, etiqueta, MotivoDeLaAnulacion, Guid.NewGuid().ToString());
 
-        return cliente.SendAsync(confirmacion);
-    }
+    /// <summary>El descarte por la API, tal como salga.</summary>
+    /// <param name="cliente">El cliente, que puede ser el de otra empresa.</param>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>, o <c>null</c> para no mandarlo.</param>
+    /// <param name="motivo">Por qué se descarta, tal cual.</param>
+    /// <param name="clave">La <c>Idempotency-Key</c>, o <c>null</c> para no mandarla, que se admite.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal static Task<HttpResponseMessage> DescartarAsync(
+        HttpClient cliente, Guid recuentoId, string? etiqueta, string motivo, string? clave) =>
+        EnLaCabeceraAsync(
+            cliente, recuentoId, "descarte", JsonContent.Create(new DescartarRecuentoDto(motivo)), etiqueta, clave);
+
+    /// <summary>El descarte por la API sin clave, tal como salga.</summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal Task<HttpResponseMessage> DescartarAsync(Guid recuentoId, string etiqueta) =>
+        DescartarAsync(Cliente, recuentoId, etiqueta, MotivoDelDescarte, clave: null);
 
     /// <summary>La confirmación por la API con una clave nueva, tal como salga.</summary>
     /// <param name="recuentoId">El recuento.</param>
@@ -296,6 +329,25 @@ internal sealed record EscenaDeRecuento(EscenaDeTransferencia Escena, SerieDto S
     {
         respuesta.StatusCode.ShouldBe(estado, $"{cual}: {await Escenario.Detalle(respuesta)}");
         (await EscenaDeTransferencia.TipoDelProblemaAsync(respuesta)).ShouldBe($"/errors/{codigo}", cual);
+    }
+
+    /// <summary>Una acción de la cabecera por la API, con sus dos cabeceras si las hay.</summary>
+    private static Task<HttpResponseMessage> EnLaCabeceraAsync(
+        HttpClient cliente, Guid recuentoId, string accion, HttpContent cuerpo, string? etiqueta, string? clave)
+    {
+        HttpRequestMessage peticion = new(HttpMethod.Post, $"{Recuentos}/{recuentoId}/{accion}") { Content = cuerpo };
+
+        if (etiqueta is not null)
+        {
+            peticion.Headers.TryAddWithoutValidation("If-Match", etiqueta);
+        }
+
+        if (clave is not null)
+        {
+            peticion.Headers.TryAddWithoutValidation(CabeceraDeIdempotencia, clave);
+        }
+
+        return cliente.SendAsync(peticion);
     }
 
     /// <summary>Mete unidades en un hueco con un ajuste confirmado por la API.</summary>

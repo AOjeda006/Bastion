@@ -209,6 +209,22 @@ public sealed record ConfirmarRecuentoDto
     public string HuellaDelTeorico { get; init; } = string.Empty;
 }
 
+/// <summary>Por qué se anula un recuento confirmado (ADR-0055 §9).</summary>
+/// <remarks>
+/// <b>Va con el <c>If-Match</c> de la cabecera y con la <c>Idempotency-Key</c>, obligatoria</b>, porque
+/// el inverso de su ajuste gasta un correlativo (ADR-0057). El motivo es también el del inverso.
+/// </remarks>
+/// <param name="Motivo">Por qué se anula.</param>
+public sealed record AnularRecuentoDto(string Motivo);
+
+/// <summary>Por qué se descarta un recuento en curso (ADR-0055 §1.6).</summary>
+/// <remarks>
+/// <b>Va con el <c>If-Match</c> de la cabecera</b>, que dice que quien descarta ha visto lo último que
+/// se contó. La <c>Idempotency-Key</c> se admite y no se exige: descartar no numera.
+/// </remarks>
+/// <param name="Motivo">Por qué se descarta.</param>
+public sealed record DescartarRecuentoDto(string Motivo);
+
 /// <summary>
 /// El estado actual de un conflicto de la confirmación, en la extensión <c>actual</c> del problema
 /// (ADR-0055 §11).

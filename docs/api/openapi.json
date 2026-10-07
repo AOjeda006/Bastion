@@ -6210,6 +6210,354 @@
         ]
       }
     },
+    "/api/v1/inventario/recuentos/{id}/anulacion": {
+      "post": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Anula el recuento confirmado y, si movió el libro, su ajuste, con un inverso de hoy.",
+        "description": "    Es el único camino que anula el ajuste de un recuento (ADR-0055 §9): la anulación del\n      ajuste lo rechaza con 409 (ajuste-de-un-recuento-no-se-anula). El inverso numera\n      en la serie del ajuste, con la fecha de hoy.\n    El 409 puede ser un recuento que no está confirmado (recuento-no-esta-confirmado),\nel ejercicio de hoy, una serie cerrada o una clave que no se valora. La Idempotency-Key\nes obligatoria, porque el inverso gasta un correlativo, y la respuesta va sin ETag\n(ADR-0057).",
+        "operationId": "Recuentos_Anular",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularRecuentoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularRecuentoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnularRecuentoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/recuentos/{id}/descarte": {
+      "post": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Descarta el recuento en curso: lo contado se pierde, y el almacén queda libre.",
+        "description": "    No mueve nada ni numera (ADR-0055 §1.6): el recuento se queda sin número y con su motivo,\n      y el almacén admite otro recuento en curso.\n    El 409 es un recuento que ya no está en curso (recuento-no-esta-en-curso). La\nIdempotency-Key se admite y no se exige, y la respuesta va sin ETag (ADR-0057).",
+        "operationId": "Recuentos_Descartar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescartarRecuentoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescartarRecuentoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescartarRecuentoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/transferencias/{id}/envio": {
       "post": {
         "tags": [
@@ -15475,6 +15823,19 @@
         },
         "description": "Lo que hace falta para anular un ajuste confirmado."
       },
+      "AnularRecuentoDto": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se anula."
+          }
+        },
+        "description": "Por qué se anula un recuento confirmado (ADR-0055 §9)."
+      },
       "AnularTransferenciaDto": {
         "required": [
           "motivo"
@@ -16953,6 +17314,19 @@
           }
         },
         "description": "Una cuenta bancaria del tercero, tal como sale de la API."
+      },
+      "DescartarRecuentoDto": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se descarta."
+          }
+        },
+        "description": "Por qué se descarta un recuento en curso (ADR-0055 §1.6)."
       },
       "DireccionDto": {
         "required": [

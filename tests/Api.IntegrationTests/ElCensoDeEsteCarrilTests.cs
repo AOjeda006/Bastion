@@ -361,6 +361,18 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaAnulacionConContraDocumentoTests.El_reintento_con_la_misma_clave_devuelve_el_mismo_par_y_no_crea_otro_inverso",
         "LaAnulacionConContraDocumentoTests.Sin_la_cabecera_la_anulacion_es_428_y_no_toca_nada",
 
+        // Del ítem 2.12 (ADR-0055 §1.6 y §9, y ADR-0057): anular el recuento es anular su ajuste con
+        // el inverso de hoy, y el ajuste de un recuento no se anula por su camino; descartar no
+        // mueve nada y deja el almacén libre.
+        "LaAnulacionYElDescarteDelRecuentoTests.Anular_con_ajuste_lo_anula_con_un_inverso_de_hoy_en_su_serie_y_el_fisico_vuelve_al_de_antes",
+        "LaAnulacionYElDescarteDelRecuentoTests.Anular_exige_su_clave_su_version_y_un_motivo_y_otra_empresa_no_lo_encuentra",
+        "LaAnulacionYElDescarteDelRecuentoTests.Descartar_con_la_version_de_antes_es_un_412_y_uno_confirmado_no_se_descarta",
+        "LaAnulacionYElDescarteDelRecuentoTests.Descartar_lo_deja_sin_numero_con_su_motivo_y_el_almacen_libre_para_otro",
+        "LaAnulacionYElDescarteDelRecuentoTests.Dos_anulaciones_a_la_vez_la_segunda_espera_en_la_cabecera_y_es_el_412_de_la_version",
+        "LaAnulacionYElDescarteDelRecuentoTests.El_ajuste_de_un_recuento_no_se_anula_por_su_camino_y_por_el_del_recuento_si",
+        "LaAnulacionYElDescarteDelRecuentoTests.Sin_ejercicio_para_hoy_o_con_el_de_hoy_cerrado_solo_se_anula_el_que_no_movio_el_libro",
+        "LaAnulacionYElDescarteDelRecuentoTests.Uno_en_curso_no_se_anula_y_anular_dos_veces_es_un_412_con_la_misma_version_y_un_409_con_la_de_ahora",
+
         "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Una_fila_que_no_mueve_nada_la_rechaza_el_motor",
 
         // Del ítem 2.12 (ADR-0055 §3 y ADR-0057): la confirmación del recuento numera los dos, mueve

@@ -218,6 +218,16 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             new VersionesDeInventario(_inventario),
             unidadDeTrabajo,
             elReloj);
+
+        AnulacionDeRecuento = new AnularRecuento(
+            recuentos,
+            ajustes,
+            new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
+            ejercicios,
+            new ElPrecioMedioPonderado(),
+            new VersionesDeInventario(_inventario),
+            unidadDeTrabajo,
+            elReloj);
     }
 
     internal AbrirAjuste Alta { get; }
@@ -241,6 +251,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal ContarLineaDeRecuento ContarLinea { get; }
 
     internal ConfirmarRecuento ConfirmacionDeRecuento { get; }
+
+    internal AnularRecuento AnulacionDeRecuento { get; }
 
     /// <summary>Confirma un ajuste con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>
@@ -511,6 +523,48 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             recuentoId, version, new ConfirmarRecuentoDto { HuellaDelTeorico = huella }, CancellationToken.None);
 
         return (confirmacion, transaccion);
+    }
+
+    /// <summary>Anula un recuento con una transacción abierta, como llegaría de verdad.</summary>
+    /// <remarks>
+    /// Para el caso que necesita el reloj del módulo: el día sin ejercicio. La transacción la pone esto
+    /// por lo mismo que en la confirmación: el inverso numera.
+    /// </remarks>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>ETag</c> de la ficha, tal como lo dio la API.</param>
+    /// <param name="motivo">Por qué se anula.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal Task<Resultado<RecuentoDto>> AnularElRecuentoAsync(Guid recuentoId, string etiqueta, string motivo)
+    {
+        VersionDeRecurso version = LaVersion(etiqueta);
+
+        return Lanzada(EnSuTransaccionAsync(() => AnulacionDeRecuento.EjecutarAsync(
+            recuentoId, version, new AnularRecuentoDto(motivo), CancellationToken.None)));
+    }
+
+    /// <summary>
+    /// Anula un recuento <b>dentro</b> de una transacción y la deja abierta, con la cabecera bloqueada y
+    /// el inverso, su libro y los dos documentos anulados escritos sin publicar.
+    /// </summary>
+    /// <remarks>
+    /// Es la primera de la carrera de dos anulaciones (ADR-0057): la segunda se para en el cerrojo de la
+    /// cabecera, y cuando esta publica, lee la versión que dejó. Quien llama decide cuándo suelta.
+    /// </remarks>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>ETag</c> de la ficha, tal como lo dio la API.</param>
+    /// <param name="motivo">Por qué se anula.</param>
+    /// <returns>Lo que contestó el caso de uso, y la transacción todavía abierta.</returns>
+    internal async Task<(Resultado<RecuentoDto> Anulacion, IDbContextTransaction Transaccion)>
+        AnularElRecuentoYQuedarseDentroAsync(Guid recuentoId, string etiqueta, string motivo)
+    {
+        VersionDeRecurso version = LaVersion(etiqueta);
+
+        IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<RecuentoDto> anulacion = await AnulacionDeRecuento.EjecutarAsync(
+            recuentoId, version, new AnularRecuentoDto(motivo), CancellationToken.None);
+
+        return (anulacion, transaccion);
     }
 
     /// <summary>Recibe con una transacción abierta, como llegaría de verdad.</summary>

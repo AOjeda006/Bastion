@@ -112,6 +112,20 @@ public static class PermisosDeInventario
     /// </remarks>
     public const string RecuentoConfirmar = "inventario.recuento.confirmar";
 
+    /// <summary>Anular un recuento confirmado, con el ajuste de su diferencia.</summary>
+    /// <remarks>
+    /// <b>Mueve el libro al revés</b>: compensa el ajuste con su inverso, que gasta un correlativo. Es
+    /// el mismo motivo por el que el ajuste tiene su propio permiso de anular.
+    /// </remarks>
+    public const string RecuentoAnular = "inventario.recuento.anular";
+
+    /// <summary>Descartar un recuento en curso: lo contado se pierde y el almacén queda libre.</summary>
+    /// <remarks>
+    /// <b>No mueve nada, y aun así no va con contar</b>: tira el trabajo de quienes cuentan, y eso lo
+    /// decide quien responde del recuento.
+    /// </remarks>
+    public const string RecuentoDescartar = "inventario.recuento.descartar";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -133,5 +147,7 @@ public static class PermisosDeInventario
         RecuentoAgregarLinea,
         RecuentoQuitarLinea,
         RecuentoConfirmar,
+        RecuentoAnular,
+        RecuentoDescartar,
     ];
 }

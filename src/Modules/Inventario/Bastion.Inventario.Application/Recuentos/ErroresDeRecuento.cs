@@ -18,6 +18,7 @@ internal static class ErroresDeRecuento
     internal const string CodigoMotivoNoValido = "recuento-motivo-no-valido";
     internal const string CodigoYaHayUnoEnCurso = "recuento-ya-hay-uno-en-curso";
     internal const string CodigoNoEstaEnCurso = "recuento-no-esta-en-curso";
+    internal const string CodigoNoEstaConfirmado = "recuento-no-esta-confirmado";
     internal const string CodigoContadoNoValido = "recuento-contado-no-valido";
     internal const string CodigoCosteNoValido = "recuento-coste-no-valido";
     internal const string CodigoLoteNoValido = "recuento-lote-no-valido";
@@ -70,6 +71,17 @@ internal static class ErroresDeRecuento
         $"El motivo no puede estar vacío ni pasar de {Recuento.LargoDelMotivo} caracteres: es el que " +
         "llevará el ajuste de la diferencia, y lo único que queda para entenderla dentro de dos años.");
 
+    /// <summary>El motivo de la anulación o del descarte, con el mismo código que el del alta.</summary>
+    /// <remarks>
+    /// <b>El mismo <c>type</c> y otro mensaje</b>: lo que falla es lo mismo, un motivo vacío o
+    /// demasiado largo, y lo que se dice no. El de la anulación lo lleva además el inverso del ajuste.
+    /// </remarks>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion MotivoDeAnularODescartarNoValido() => ErrorDeOperacion.Validacion(
+        CodigoMotivoNoValido,
+        $"El motivo no puede estar vacío ni pasar de {Recuento.LargoDelMotivo} caracteres: es lo único " +
+        "que queda para entender por qué se anuló o se descartó un recuento.");
+
     /// <summary>El almacén ya tiene un recuento en curso (ADR-0055 §1.7).</summary>
     /// <remarks>
     /// <para>
@@ -106,8 +118,22 @@ internal static class ErroresDeRecuento
         ErrorDeOperacion.Conflicto(
             CodigoNoEstaEnCurso,
             $"El recuento {recuentoId} está en estado «{estado}»: solo se cuenta, se añade o se quita " +
-            "una línea, y se confirma, mientras está en curso. Lo que se contó en uno cerrado es lo que " +
-            "quedó.");
+            "una línea, se confirma y se descarta mientras está en curso. Lo que se contó en uno cerrado " +
+            "es lo que quedó.");
+
+    /// <summary>El recuento no está confirmado, y solo uno confirmado se anula (ADR-0055 §9).</summary>
+    /// <remarks>
+    /// <b>Un <c>409</c> con el estado en el mensaje</b>: uno en curso no ha movido nada y se descarta, y
+    /// uno anulado o descartado ya está cerrado.
+    /// </remarks>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="estado">En el que está.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion NoEstaConfirmado(Guid recuentoId, string estado) =>
+        ErrorDeOperacion.Conflicto(
+            CodigoNoEstaConfirmado,
+            $"El recuento {recuentoId} está en estado «{estado}»: solo se anula uno confirmado. Uno en " +
+            "curso no ha movido nada y se descarta, y uno anulado o descartado ya está cerrado.");
 
     /// <summary>Se confirma con líneas sin contar (ADR-0055 §5).</summary>
     /// <remarks>
@@ -147,23 +173,28 @@ internal static class ErroresDeRecuento
         "si ya llegó y no se ha recibido, se sumaría dos veces. Reciba las transferencias y vuelva a " +
         "confirmar (ADR-0055 §7).");
 
-    /// <summary>Hoy no cae en ningún ejercicio, y el recuento se confirma con la fecha de hoy.</summary>
-    /// <param name="fecha">La fecha de la confirmación.</param>
+    /// <summary>Hoy no cae en ningún ejercicio, y lo que el recuento escribe lleva la fecha de hoy.</summary>
+    /// <remarks>
+    /// <b>Lo dan la confirmación y la anulación</b>: el recuento y su ajuste llevan la fecha de la
+    /// confirmación (ADR-0055 §1.5), y el inverso de su ajuste, la de la anulación.
+    /// </remarks>
+    /// <param name="fecha">Hoy.</param>
     /// <returns>El error.</returns>
     internal static ErrorDeOperacion SinEjercicio(DateOnly fecha) => ErrorDeOperacion.Conflicto(
         CodigoSinEjercicio,
-        $"El {fecha:yyyy-MM-dd} no cae en ningún ejercicio de esta empresa, y el recuento y su ajuste " +
-        "llevan la fecha de la confirmación (ADR-0055 §1.5). Abra el ejercicio que falta antes de " +
-        "confirmar.");
+        $"El {fecha:yyyy-MM-dd} no cae en ningún ejercicio de esta empresa, y lo que el recuento escribe " +
+        "lleva la fecha de hoy: el recuento y su ajuste al confirmarlo, y el inverso de su ajuste al " +
+        "anularlo (ADR-0055 §1.5 y §9). Abra el ejercicio que falta y vuelva a intentarlo.");
 
     /// <summary>El ejercicio de hoy está cerrado (R9).</summary>
-    /// <param name="fecha">La fecha de la confirmación.</param>
+    /// <remarks><b>Lo dan la confirmación y la anulación</b>, como el anterior.</remarks>
+    /// <param name="fecha">Hoy.</param>
     /// <returns>El error.</returns>
     internal static ErrorDeOperacion EnEjercicioCerrado(DateOnly fecha) => ErrorDeOperacion.Conflicto(
         CodigoEnEjercicioCerrado,
-        $"El ejercicio del {fecha:yyyy-MM-dd} está cerrado, y el recuento y su ajuste llevan la fecha " +
-        "de la confirmación (ADR-0055 §1.5): ese periodo ya es definitivo y no admite documentos " +
-        "nuevos (R9).");
+        $"El ejercicio del {fecha:yyyy-MM-dd} está cerrado, y lo que el recuento escribe lleva la fecha " +
+        "de hoy: el recuento y su ajuste al confirmarlo, y el inverso de su ajuste al anularlo " +
+        "(ADR-0055 §1.5 y §9). Ese periodo ya es definitivo y no admite documentos nuevos (R9).");
 
     /// <summary>Lo contado no cabe en la línea (ADR-0055 §6).</summary>
     /// <remarks>

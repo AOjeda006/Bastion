@@ -910,6 +910,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/recuentos/{id}/anulacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Anula el recuento confirmado y, si movió el libro, su ajuste, con un inverso de hoy.
+         * @description Es el único camino que anula el ajuste de un recuento (ADR-0055 §9): la anulación del
+         *           ajuste lo rechaza con 409 (ajuste-de-un-recuento-no-se-anula). El inverso numera
+         *           en la serie del ajuste, con la fecha de hoy.
+         *         El 409 puede ser un recuento que no está confirmado (recuento-no-esta-confirmado),
+         *     el ejercicio de hoy, una serie cerrada o una clave que no se valora. La Idempotency-Key
+         *     es obligatoria, porque el inverso gasta un correlativo, y la respuesta va sin ETag
+         *     (ADR-0057).
+         */
+        post: operations["Recuentos_Anular"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/recuentos/{id}/descarte": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Descarta el recuento en curso: lo contado se pierde, y el almacén queda libre.
+         * @description No mueve nada ni numera (ADR-0055 §1.6): el recuento se queda sin número y con su motivo,
+         *           y el almacén admite otro recuento en curso.
+         *         El 409 es un recuento que ya no está en curso (recuento-no-esta-en-curso). La
+         *     Idempotency-Key se admite y no se exige, y la respuesta va sin ETag (ADR-0057).
+         */
+        post: operations["Recuentos_Descartar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/transferencias/{id}/envio": {
         parameters: {
             query?: never;
@@ -2227,6 +2276,11 @@ export interface components {
             /** @description Por qué se anula, escrito por quien lo hace. */
             motivo: string;
         };
+        /** @description Por qué se anula un recuento confirmado (ADR-0055 §9). */
+        AnularRecuentoDto: {
+            /** @description Por qué se anula. */
+            motivo: string;
+        };
         /** @description Lo que hace falta para anular una transferencia enviada o recibida. */
         AnularTransferenciaDto: {
             /** @description Por qué se anula, escrito por quien lo hace. */
@@ -2910,6 +2964,11 @@ export interface components {
             alias: null | string;
             /** @description Si es la que se usa cuando nadie dice otra cosa. */
             esPreferente: boolean;
+        };
+        /** @description Por qué se descarta un recuento en curso (ADR-0055 §1.6). */
+        DescartarRecuentoDto: {
+            /** @description Por qué se descarta. */
+            motivo: string;
         };
         /** @description Una dirección estructurada, en los seis campos que exige R17. */
         DireccionDto: {
@@ -7548,6 +7607,182 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_Anular: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnularRecuentoDto"];
+                "text/json": components["schemas"]["AnularRecuentoDto"];
+                "application/*+json": components["schemas"]["AnularRecuentoDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["RecuentoDto"];
+                    "application/json": components["schemas"]["RecuentoDto"];
+                    "text/json": components["schemas"]["RecuentoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_Descartar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescartarRecuentoDto"];
+                "text/json": components["schemas"]["DescartarRecuentoDto"];
+                "application/*+json": components["schemas"]["DescartarRecuentoDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["RecuentoDto"];
+                    "application/json": components["schemas"]["RecuentoDto"];
+                    "text/json": components["schemas"]["RecuentoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
                 headers: {
                     [name: string]: unknown;
                 };

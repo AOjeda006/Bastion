@@ -80,6 +80,10 @@ export const en: Diccionario = {
       'ajuste-coste-no-valido':
         'A line that takes stock out carries no cost: it is valued at the average cost. And no ' +
         'cost can be negative; a sample or a gift comes in at zero.',
+      'ajuste-de-un-recuento-no-se-anula':
+        'That adjustment is the difference of a stock count, and it is not reversed on its own: ' +
+        'the count would stay confirmed with its difference undone. Reverse the stock count, and ' +
+        'its adjustment will be reversed with it.',
       'ajuste-en-ejercicio-cerrado':
         'That adjustment is dated inside a closed financial year: the period is already final ' +
         'and takes no new documents. Change the date or ask for the year to be reopened.',
@@ -309,17 +313,23 @@ export const en: Diccionario = {
         'The cost of one unit cannot be negative or have more than fourteen integer digits. Fix ' +
         'it, or leave it empty if you do not know it.',
       'recuento-en-ejercicio-cerrado':
-        'Today falls inside a closed financial year, and the stock count is confirmed with today’s ' +
-        'date: the period is already final and takes no new documents. Ask for the year to be reopened.',
+        'Today falls inside a closed financial year, and what the stock count writes carries ' +
+        'today’s date: its adjustment when confirming and the counter-document when reversing. The ' +
+        'period is already final and takes no new documents. Ask for the year to be reopened.',
       'recuento-linea-no-encontrada':
         'That line is no longer in the stock count: someone removed it first. Go back to the count and refresh.',
       'recuento-lote-no-valido':
         'That batch is not a code that fits on the label: 1 to 20 characters, no spaces, using ' +
         'unaccented letters, digits and the symbols GS1 allows. Fix the batch.',
       'recuento-motivo-no-valido':
-        'Write why you are counting, in 300 characters or fewer. It is the reason the adjustment will carry.',
+        'Write the reason, in 300 characters or fewer. It is all that will be left to understand ' +
+        'why the stock was counted, reversed or discarded.',
       'recuento-no-encontrado':
         'That stock count no longer exists. Go back to the list and refresh.',
+      'recuento-no-esta-confirmado':
+        'That stock count is not confirmed, and only a confirmed one can be reversed: one in ' +
+        'progress has moved nothing and is discarded, and one reversed or discarded is already ' +
+        'closed. Refresh the screen to see its state.',
       'recuento-no-esta-en-curso':
         'That stock count is no longer in progress: it was confirmed, reversed or discarded, and ' +
         'what was counted no longer changes. Refresh the screen to see its state.',
@@ -334,8 +344,9 @@ export const en: Diccionario = {
         'That serial number is already in the stock count, in another location, and each piece is ' +
         'counted only once. Count it on the line that already has it, or remove that line first.',
       'recuento-sin-ejercicio':
-        'Today falls outside every financial year, and the stock count is confirmed with today’s ' +
-        'date. Open the missing year before confirming.',
+        'Today falls outside every financial year, and what the stock count writes carries ' +
+        'today’s date: its adjustment when confirming and the counter-document when reversing. ' +
+        'Open the missing year and try again.',
       'recuento-sube-con-transito':
         'Some lines were counted above the system figure in locations with goods in transit ' +
         'towards them: if those goods have arrived but were not received, they would be added ' +

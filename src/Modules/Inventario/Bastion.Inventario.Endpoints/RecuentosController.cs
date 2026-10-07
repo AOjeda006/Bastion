@@ -42,6 +42,8 @@ namespace Bastion.Inventario.Endpoints;
 /// <param name="anadir">Añade una clave que la precarga no traía.</param>
 /// <param name="quitar">Quita una línea que no se va a contar.</param>
 /// <param name="confirmar">Confirma el recuento, con el ajuste de su diferencia.</param>
+/// <param name="anular">Anula el recuento confirmado, con el ajuste de su diferencia.</param>
+/// <param name="descartar">Descarta el recuento en curso.</param>
 public sealed class RecuentosController(
     IAbrirRecuento abrir,
     IObtenerRecuento obtener,
@@ -51,7 +53,9 @@ public sealed class RecuentosController(
     IContarLineaDeRecuento contar,
     IAnadirLineaDeRecuento anadir,
     IQuitarLineaDeRecuento quitar,
-    IConfirmarRecuento confirmar) : ControladorDeInventario
+    IConfirmarRecuento confirmar,
+    IAnularRecuento anular,
+    IDescartarRecuento descartar) : ControladorDeInventario
 {
     /// <summary>Devuelve una página de recuentos.</summary>
     /// <param name="consulta">
@@ -308,4 +312,73 @@ public sealed class RecuentosController(
         ResponderExigiendoVersionAsync(
             ifMatch,
             version => confirmar.EjecutarAsync(id, version, peticion, cancelacion));
+
+    /// <summary>Anula el recuento confirmado y, si movió el libro, su ajuste, con un inverso de hoy.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el único camino que anula el ajuste de un recuento</b> (ADR-0055 §9): la anulación del
+    /// ajuste lo rechaza con <c>409</c> (<c>ajuste-de-un-recuento-no-se-anula</c>). El inverso numera
+    /// en la serie del ajuste, con la fecha de hoy.
+    /// </para>
+    /// <para>
+    /// El <c>409</c> puede ser un recuento que no está confirmado (<c>recuento-no-esta-confirmado</c>),
+    /// el ejercicio de hoy, una serie cerrada o una clave que no se valora. La <c>Idempotency-Key</c>
+    /// es obligatoria, porque el inverso gasta un correlativo, y la respuesta va sin <c>ETag</c>
+    /// (ADR-0057).
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Identificador del recuento.</param>
+    /// <param name="ifMatch">Versión de la cabecera, tal como la devolvió el ETag de la ficha.</param>
+    /// <param name="peticion">Por qué se anula.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("{id:guid}/anulacion")]
+    [AdmiteIdempotencia(Obligatoria = true)]
+    [ExigePermiso(PermisosDeInventario.RecuentoAnular)]
+    [ProducesResponseType(typeof(RecuentoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Anular(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        [FromBody] AnularRecuentoDto peticion,
+        CancellationToken cancelacion) =>
+        ResponderExigiendoVersionAsync(
+            ifMatch,
+            version => anular.EjecutarAsync(id, version, peticion, cancelacion));
+
+    /// <summary>Descarta el recuento en curso: lo contado se pierde, y el almacén queda libre.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>No mueve nada ni numera</b> (ADR-0055 §1.6): el recuento se queda sin número y con su motivo,
+    /// y el almacén admite otro recuento en curso.
+    /// </para>
+    /// <para>
+    /// El <c>409</c> es un recuento que ya no está en curso (<c>recuento-no-esta-en-curso</c>). La
+    /// <c>Idempotency-Key</c> se admite y no se exige, y la respuesta va sin <c>ETag</c> (ADR-0057).
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Identificador del recuento.</param>
+    /// <param name="ifMatch">Versión de la cabecera, tal como la devolvió el ETag de la ficha.</param>
+    /// <param name="peticion">Por qué se descarta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("{id:guid}/descarte")]
+    [AdmiteIdempotencia]
+    [ExigePermiso(PermisosDeInventario.RecuentoDescartar)]
+    [ProducesResponseType(typeof(RecuentoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Descartar(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        [FromBody] DescartarRecuentoDto peticion,
+        CancellationToken cancelacion) =>
+        ResponderExigiendoVersionAsync(
+            ifMatch,
+            version => descartar.EjecutarAsync(id, version, peticion, cancelacion));
 }

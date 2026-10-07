@@ -53,8 +53,9 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// y el 777 de <c>ElAltaDelRecuentoTests</c>, del 773 al 776 de
 /// <c>UnRecuentoEnCursoPorAlmacenTests</c>, del 778 al 787 de <c>LasLineasDelRecuentoTests</c>, del
 /// 788 al 792 de <c>LasCarrerasDeLasLineasDelRecuentoTests</c>, del 793 al 806 de
-/// <c>LaConfirmacionDelRecuentoTests</c> y el 807 y el 808 de
-/// <c>LasCarrerasDeLaConfirmacionDelRecuentoTests</c>; del 809 al 829 quedan libres.
+/// <c>LaConfirmacionDelRecuentoTests</c>, el 807 y el 808 de
+/// <c>LasCarrerasDeLaConfirmacionDelRecuentoTests</c> y del 809 al 818 de
+/// <c>LaAnulacionYElDescarteDelRecuentoTests</c>; del 819 al 829 quedan libres.
 /// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]
