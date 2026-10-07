@@ -244,10 +244,11 @@ beforeEach(() => {
       const solo = consulta.get('solo');
       const pagina = Number(consulta.get('page') ?? 1);
       const tamanio = Number(consulta.get('size') ?? 20);
+      // Como la API: acota sobre lo que se lee, así que cerrado ningún teórico ha cambiado.
       const todas = s.lineas
+        .map(comoSeLee)
         .filter((l) => solo !== 'sin-contar' || l.contado === null)
-        .filter((l) => solo !== 'teorico-cambiado' || l.teoricoCambiado)
-        .map(comoSeLee);
+        .filter((l) => solo !== 'teorico-cambiado' || l.teoricoCambiado);
 
       return HttpResponse.json({
         elementos: todas.slice((pagina - 1) * tamanio, pagina * tamanio),
@@ -736,6 +737,25 @@ describe('La ficha del recuento', () => {
     });
     expect(screen.getByText('Se descartó sin mover nada.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Contar/ })).not.toBeInTheDocument();
+  });
+
+  it('cerrado, un enlace viejo a una vista enseña todas sus líneas y no ofrece las vistas', async () => {
+    Object.assign(servidorDelRecuento, {
+      estado: 'Confirmado',
+      numero: 12,
+      fechaDeConfirmacion: '2026-11-06',
+      lineas: todasContadas(),
+    });
+    montar('es', PUEDE_TODO, `/recuentos/${RECUENTO}?solo=teorico-cambiado`);
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Recuento 12' }),
+    ).toBeInTheDocument();
+    // La API acotaría a ninguna: cerrado, el teórico ya no cambia.
+    await waitFor(() => {
+      expect(filas().map((fila) => fila[0])).toEqual(['1', '2', '3']);
+    });
+    expect(screen.queryByRole('navigation', { name: 'Qué líneas' })).not.toBeInTheDocument();
   });
 
   it('quien solo ve lee la ficha entera y no encuentra ni un botón', async () => {
