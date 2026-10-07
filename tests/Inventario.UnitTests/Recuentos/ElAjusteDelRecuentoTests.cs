@@ -226,4 +226,23 @@ public sealed class ElAjusteDelRecuentoTests
         Should.Throw<ArgumentException>(
             () => recuento.Confirmar(31, Confirmacion, teoricos, ajeno, Confirmado(recuento, ajeno)));
     }
+
+    [Fact]
+    public void Confirmar_con_el_ajuste_de_otro_dia_no_se_puede()
+    {
+        Recuento recuento = Abrir(Precargada(Estanteria, Tornillos));
+        Dictionary<Guid, decimal> teoricos = TodasA(recuento, 5m);
+        recuento.Contar(recuento.Lineas[0].Id, 3m, 5m);
+
+        // Generado para el día de la apertura: la diferencia entraría en el libro un día antes de que
+        // el recuento la diera por buena.
+        Ajuste deOtroDia = recuento.AjusteDeLaDiferencia(teoricos, Apertura, Momento).ShouldNotBeNull();
+        ConfirmarSuAjuste(deOtroDia);
+
+        Should.Throw<ArgumentException>(
+            () => recuento.Confirmar(31, Confirmacion, teoricos, deOtroDia, Confirmado(recuento, deOtroDia)));
+
+        recuento.Estado.ShouldBe(EstadoDeRecuento.EnCurso);
+        recuento.Lineas.ShouldAllBe(linea => linea.LineaDeAjusteId == null);
+    }
 }
