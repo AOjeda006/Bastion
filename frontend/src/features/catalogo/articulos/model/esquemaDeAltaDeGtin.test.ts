@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { esquemaDeAltaDeGtin, motivoDelGtin } from './esquemaDeAltaDeGtin.ts';
-import { intentoPara } from './intentoDeAlta.ts';
+import { intentoPara } from '@/shared/api/intento.ts';
 
 /**
  * La regla del formulario de alta, sin pantalla: la cuenta del dígito de control en los cuatro

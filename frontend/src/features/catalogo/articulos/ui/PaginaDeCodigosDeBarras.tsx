@@ -23,9 +23,9 @@ import {
   esquemaDeAltaDeGtin,
   type DatosDeAltaDeGtin,
 } from '../model/esquemaDeAltaDeGtin.ts';
-import { intentoPara, type IntentoDeAlta } from '../model/intentoDeAlta.ts';
 import { cadenaDelListado } from '../model/listado.ts';
 import { tipoDeFallo } from '@/shared/api/errores.ts';
+import { intentoPara, type Intento } from '@/shared/api/intento.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
@@ -452,7 +452,7 @@ function FormularioDeAlta({
   const [rechazo, setRechazo] = useState<unknown>(null);
   // En una referencia y no en el estado: no se pinta, y el doble clic tiene que verla ya. Tras un
   // alta que sale bien no hace falta olvidarla: el formulario se monta de nuevo, con una vacía.
-  const intento = useRef<IntentoDeAlta | null>(null);
+  const intento = useRef<Intento | null>(null);
 
   const {
     register,

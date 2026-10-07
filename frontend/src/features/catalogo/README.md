@@ -160,7 +160,7 @@ declarada de `NingunCriterioSensibleViajaEnLaUrlTests`.
   nivel. Los GTIN se enseñan en catorce cifras, como los guarda y los compara el servidor.
 - **La clave de idempotencia del alta va con el intento**, como en la importación de terceros:
   repetir el mismo cuerpo repite la clave, cambiarlo la estrena, y tras un alta que sale bien se
-  olvida (`model/intentoDeAlta.ts`).
+  olvida (`shared/api/intento.ts`, que comparte con el recuento del inventario).
 - **Quitar un código se confirma en la fila**, no en una ventana: la baja borra de verdad y el
   proyecto no tiene un diálogo propio que reutilizar. La pregunta sale en el sitio de los botones,
   con el foco en «Cancelar», y Escape la cierra. El listado no trae la versión de cada fila, así que
