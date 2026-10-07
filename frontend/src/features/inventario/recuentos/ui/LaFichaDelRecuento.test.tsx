@@ -488,6 +488,24 @@ describe('La ficha del recuento', () => {
       });
     });
 
+    it('en la vista de las que faltan, la fila contada se va y el foco va al aviso', async () => {
+      montar('es', PUEDE_TODO, `/recuentos/${RECUENTO}?solo=sin-contar`);
+      const usuario = userEvent.setup();
+
+      await usuario.click(await screen.findByRole('button', { name: 'Contar la línea 1' }));
+      await usuario.type(screen.getByRole('textbox', { name: /^Contado en la línea 1/ }), '10');
+      await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      // El botón de la fila no puede recibirlo: la fila sale de la vista al volver a leerla.
+      const aviso = await screen.findByText('Línea 1 contada.');
+      await waitFor(() => {
+        expect(filas().map((fila) => fila[0])).toEqual(['3']);
+      });
+      await waitFor(() => {
+        expect(aviso).toHaveFocus();
+      });
+    });
+
     it('lo que no vale lo para el formulario, en el campo y sin ir al servidor', async () => {
       montar();
       const usuario = userEvent.setup();
