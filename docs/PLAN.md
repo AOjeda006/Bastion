@@ -6364,6 +6364,29 @@ orden que la mide.
    empresa); del 788 al 792, `LasCarrerasDeLasLineasDelRecuentoTests` (el 792 es la otra empresa).
    Del 793 al 799 quedan libres, y el reparto va en la cabecera de
    `ElPuertoDelArticuloContraLaBaseTests`.
+4. **La confirmación pide los dos mecanismos, y contesta a los dos motivos del ADR-0014** (ADR-0057,
+   que enmienda el ADR-0014 §4 y §9). Responde sin `ETag`, y su `412` sale como un resultado, con la
+   fila del recuento ya bloqueada y antes de escribir nada. La regla funcional
+   `Ninguna_accion_pide_los_dos_mecanismos_a_la_vez` pasa a
+   `Solo_piden_los_dos_mecanismos_las_acciones_que_dicen_por_que`: `s_conLosDos` nombra cada acción
+   con su motivo, se compara en los dos sentidos y no puede salir vacía. Las cuentas del barrido,
+   con `dotnet test tests/Api.FunctionalTests --filter "FullyQualifiedName~TodaEscrituraDiceComoSeProtegeTests"`:
+   **147** acciones, **94** que cambian estado, **50** con `If-Match`, **28** con `Idempotency-Key`,
+   **6** que la exigen y **1** con los dos.
+5. **El permiso es `inventario.recuento.confirmar`**, el que nombró el ADR-0055 §13, con su motivo:
+   quien cuenta no tiene por qué poder dar lo contado por bueno.
+6. **`ix_ajustes_recuento_id` no se declara como carrera perdida** (ADR-0057 §4). Solo lo escribe la
+   confirmación, con la fila del recuento bloqueada y después de mirar que sigue en curso; un
+   `23505` ahí sería un defecto, y el `500` es la respuesta honrada.
+7. **Un recuento sin líneas se confirma**, con su número y sin ajuste (ADR-0057 §6). **Y uno abierto
+   con las series de este año no se confirma el año que viene**: el numerador contesta
+   `fecha-fuera-del-ejercicio-de-la-serie` (ADR-0057 §5). Cambiar las series de un recuento en curso
+   queda abierto, con su disparador: el primer recuento que haya que descartar solo por eso.
+8. **Las semillas de la confirmación**: del 793 al 806, `LaConfirmacionDelRecuentoTests` (el 800 es
+   la otra empresa); el 807 y el 808, `LasCarrerasDeLaConfirmacionDelRecuentoTests`. El bloque del
+   2.12 se alarga hasta el 829, que estaba libre por literal y por cálculo (`semilla + 130` del
+   saldo por propiedad llega al 595), y del 809 al 829 quedan libres. El reparto, en la cabecera de
+   `ElPuertoDelArticuloContraLaBaseTests`.
 
 ## Estado actual
 
@@ -9595,7 +9618,10 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 
   Después vienen la tanda de mutaciones, la batería, el humo y el recorrido con `playwright-cli`.
 - **Dónde retomar:** el primer punto de esa lista que no tenga commit en la rama (`git log
-  main..2.12-el-recuento --oneline`).
+  main..2.12-el-recuento --oneline`). El punto 8 va en cuatro commits: el alta y la lectura, las
+  líneas, la confirmación (ADR-0057), y la anulación con el descarte. Lo que falta de él es el
+  último: `ajuste-de-un-recuento-no-se-anula` en `AnularAjuste`, con los dos caminos probados y una
+  mutación cada uno, y el `/descarte` con su motivo, que deja el almacén libre.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 

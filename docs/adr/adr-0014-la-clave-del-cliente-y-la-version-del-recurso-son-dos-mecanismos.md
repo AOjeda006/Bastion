@@ -8,7 +8,7 @@ revisado: 2026-08-31
 
 # ADR-0014: La clave del cliente y la versión del recurso son dos mecanismos, no dos niveles de uno
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0057 (§4 y §9, los dos mecanismos a la vez).**
 - **Fecha:** 2026-08-31
 
 ## Contexto
@@ -93,6 +93,11 @@ Es el mismo listón que el cerrojo consultivo del 0.8, y por eso `LaClaveDeIdemp
 existe: comprueba que la sentencia sigue diciendo lo que su excepción dice que dice.
 
 ## 4. El recibo cae en la misma transacción que el trabajo, y la transacción va sin puntos de guardado
+
+> **Enmendado por el ADR-0057 (2026-10-07).** Cambia su último párrafo. Una acción puede pedir los
+> dos mecanismos si contesta a los dos motivos: responde sin `ETag`, y su `412` sale como un
+> resultado, con la fila ya bloqueada y antes de escribir nada. La primera es la confirmación del
+> recuento.
 
 **Decisión.** El filtro es el **dueño de la transacción** de la petición: la abre antes de reclamar
 la clave, deja pasar el trabajo, guarda la respuesta y confirma. La invariante de la tabla es
@@ -232,6 +237,7 @@ tenerla.
 - **Ningún estado intermedio en la fila.** No hay columna de «en curso» porque no hay un estado
   intermedio que representar: la fila se reclama dentro de la transacción del trabajo.
 - **La combinación de los dos mecanismos en una misma acción**, por lo dicho en el §4.
+  **Enmendado por el ADR-0057 (2026-10-07):** la trae la acción que contesta a los dos motivos.
 
 ## Consecuencias
 
