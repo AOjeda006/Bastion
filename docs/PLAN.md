@@ -9831,11 +9831,24 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
   | `751efa3` | 37581957982 |
   | `5190029` | 37614994806 |
 
-  Los cuatro últimos, `4d28adc`, `1a867b7`, `335c8a1` y `98b95a0`, suben con este. Su run se anota
-  en el commit siguiente, que espera su propio verde en la rama antes de que `main` avance. El run
-  de `main` se anota al abrir el 2.13.
-- **Dónde retomar:** el run de rama de este commit, el commit que lo anota, `main` con `--ff-only`
-  y su run, y la rama borrada después. Luego, el 2.13.
+  Los cuatro últimos, `4d28adc`, `1a867b7`, `335c8a1` y `98b95a0`, subieron con el del cierre,
+  `1ae90d9`. **Su run de rama, el 37633250996**, sale en verde al primer intento:
+  - sus jobs, Backend `112832700448`, Frontal `112832700601` y Humo `112837229364`;
+  - **68 pasos: 67 en verde y 1 omitido**, *Diagnóstico*, que tiene `if: failure()`;
+  - dice lo mismo que la batería: **1356** y **651** casos con **10 `.trx`** en cada artefacto,
+    **149** operaciones y **90** rutas `/api/v1/`, **201** tipos de error de **208** sitios, y
+    **436/450** y **698/900** KiB;
+  - leído con `python leer-run27.py 37633250996`, un guion del *scratchpad*.
+
+  La auditoría del frontal avisa de **2 críticas, 1 alta y 1 moderada** en `@vitest/mocker`,
+  `source-map-js`, `tinypool` y `vitest`. Informa y no decide (ADR-0045). Ningún paquete entró ni
+  salió en el 2.12, así que el aviso sale de la base de avisos, no del ítem. Se anota aquí y en el
+  informe: tocar las dependencias del frontal no es de este ítem.
+
+  Este commit, el que anota ese run, es el **veintidós**. Espera su propio verde en la rama antes de
+  que `main` avance, y el run de `main` se anota al abrir el 2.13.
+- **Dónde retomar:** el run de rama de este commit; después, `main` con `--ff-only` y su run, y la
+  rama borrada en local y en el remoto. Luego, el 2.13.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -18144,6 +18157,9 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     nueve») y el físico queda en 9. Sin movimientos entre medias,
     `…Tras_confirmar_el_fisico_de_cada_clave_es_lo_contado` lo afirma clave a clave, con tres
     semillas: un recuento nuevo precarga justo lo contado, y el cuadre no encuentra nada.
+
+  El run de rama del cierre, el **37633250996** sobre `1ae90d9`, sale en verde al primer intento,
+  con **1356** y **651** casos. El de `main` se anota al abrir el 2.13.
 
 - [ ] **2.13 · Las reservas, y el disponible** — criterio de aceptación: `Reserva` con
   `Activa`/`Consumida`/`Liberada` y su caducidad; `Disponible = Físico − Reservado` respondiendo de
