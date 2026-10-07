@@ -82,6 +82,29 @@ public static class PermisosDeInventario
     /// </remarks>
     public const string RecuentoAbrir = "inventario.recuento.abrir";
 
+    /// <summary>Contar las líneas de un recuento en curso.</summary>
+    /// <remarks>
+    /// <b>Es lo que hace quien está en el almacén</b>, y no mueve el libro: lo contado se queda en el
+    /// recuento hasta que alguien con el permiso de confirmar lo convierte en un ajuste.
+    /// </remarks>
+    public const string RecuentoContar = "inventario.recuento.contar";
+
+    /// <summary>Añadir a un recuento en curso una clave que la precarga no traía.</summary>
+    /// <remarks>
+    /// <b>No va con contar, porque cambia qué se cuenta y no cuánto</b> (ADR-0056): una clave nueva
+    /// entra en el ajuste con su coste, y hay perfiles que cuentan lo que se les pone delante y no
+    /// deciden qué entra en el recuento. Con un solo permiso, conceder lo primero regalaría lo
+    /// segundo.
+    /// </remarks>
+    public const string RecuentoAgregarLinea = "inventario.recuento.agregar-linea";
+
+    /// <summary>Quitar de un recuento en curso una línea que no se va a contar.</summary>
+    /// <remarks>
+    /// <b>Por lo mismo que añadir, y aparte de él</b> (ADR-0056): quitar una línea deja su clave como
+    /// está (ADR-0055 §5), que es decidir que el recuento no dice nada de ella.
+    /// </remarks>
+    public const string RecuentoQuitarLinea = "inventario.recuento.quitar-linea";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -99,5 +122,8 @@ public static class PermisosDeInventario
         TransferenciaAnular,
         RecuentoVer,
         RecuentoAbrir,
+        RecuentoContar,
+        RecuentoAgregarLinea,
+        RecuentoQuitarLinea,
     ];
 }

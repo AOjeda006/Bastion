@@ -5505,6 +5505,131 @@
         "security": [
           { }
         ]
+      },
+      "post": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Añade una clave que la precarga no traía, sin contar.",
+        "description": "    La ubicación tiene que ser del almacén del recuento, el artículo tiene que almacenarse, y el\nlote o el número de serie tienen que casar con su marca (ADR-0055 §6). El 409 puede ser\nla clave repetida (recuento-clave-repetida), el mismo número de serie en otra ubicación\n(recuento-serie-repetida), la marca (recuento-trazabilidad-no-casa), un maestro\nbloqueado o un recuento que ya no está en curso.\n    La Idempotency-Key se admite y no se exige: añadir no numera, y el reintento sin\n      clave lo para la clave repetida.",
+        "operationId": "Recuentos_AnadirLinea",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnadirLineaDeRecuentoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnadirLineaDeRecuentoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnadirLineaDeRecuentoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/v1/inventario/recuentos/{id}/lineas/{lineaId}": {
@@ -5560,6 +5685,313 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Anota lo contado en una línea, con el `If-Match` de la línea.",
+        "description": "    La versión que se exige es la de la línea, y cambia además la de la cabecera (ADR-0055\n      §4): dos personas que cuentan líneas distintas a la vez se esperan un instante en la cabecera, y\n      ninguna recibe un 412 por lo que hizo la otra.\n    El 409recuento-no-esta-en-curso es el de un recuento ya confirmado, anulado o\ndescartado. La respuesta no lleva ETag: la versión nueva de la línea se lee con ella.",
+        "operationId": "Recuentos_Contar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "description": "Identificador de la línea.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContarLineaDeRecuentoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContarLineaDeRecuentoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContarLineaDeRecuentoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDeRecuentoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Quita una línea que no se va a contar, con el `If-Match` de la línea.",
+        "description": "<b>Su clave queda como está</b> (ADR-0055 §5): el recuento solo dice algo de las claves que\n        lleva. Quitarla es la manera de confirmar sin contarla, porque una línea sin contar no es un\n        cero.",
+        "operationId": "Recuentos_QuitarLinea",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "description": "Identificador de la línea.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
             "content": {
               "text/plain": {
                 "schema": {
@@ -14753,6 +15185,53 @@
         },
         "description": "Un almacén, tal como sale de la API."
       },
+      "AnadirLineaDeRecuentoDto": {
+        "required": [
+          "ubicacionId",
+          "articuloId",
+          "codigoDeLote",
+          "numeroDeSerie",
+          "costeUnitario"
+        ],
+        "type": "object",
+        "properties": {
+          "ubicacionId": {
+            "type": "string",
+            "description": "El hueco del almacén del recuento.",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "El artículo.",
+            "format": "uuid"
+          },
+          "codigoDeLote": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El lote, si el artículo va por lote."
+          },
+          "numeroDeSerie": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El número de serie, si el artículo va por serie."
+          },
+          "costeUnitario": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "El coste de una unidad base, o nada. Solo se usa si la línea sube; sin él, entra al precio medio\nde su clave.",
+            "format": "double"
+          }
+        },
+        "description": "Una clave que la precarga no traía, para contarla (ADR-0055 §6)."
+      },
       "AnulacionDeTransferenciaDto": {
         "required": [
           "original",
@@ -15450,6 +15929,25 @@
           }
         },
         "description": "Un contacto del tercero, tal como sale de la API."
+      },
+      "ContarLineaDeRecuentoDto": {
+        "required": [
+          "contado"
+        ],
+        "type": "object",
+        "properties": {
+          "contado": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Lo contado: no negativo, con seis decimales como mucho, y cero o uno en una serie.",
+            "format": "double"
+          }
+        },
+        "description": "Lo contado en una línea, en la unidad base de su artículo."
       },
       "ConversionUmDto": {
         "required": [

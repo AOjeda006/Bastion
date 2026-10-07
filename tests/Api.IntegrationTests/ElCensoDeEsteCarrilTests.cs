@@ -558,6 +558,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasCarrerasDeLaTransferenciaTests.Recibir_y_anular_a_la_vez_la_que_llega_segunda_sale_con_412",
         "LasCarrerasDeLaTransferenciaTests.Una_serie_en_transito_no_entra_a_la_vez_en_un_tercer_almacen",
 
+        // Del ítem 2.12 (ADR-0055 §4 y §13): dos conteos de líneas distintas se esperan en la cabecera
+        // y ninguno es un 412; la clave y la serie que llegan sin cerrojo las paran sus índices con el
+        // mismo 409; y otra empresa no espera al cerrojo de un recuento que no es suyo.
+        "LasCarrerasDeLasLineasDelRecuentoTests.Dos_conteos_de_lineas_distintas_a_la_vez_se_esperan_y_ninguno_es_un_412",
+        "LasCarrerasDeLasLineasDelRecuentoTests.La_misma_clave_llegada_sin_cerrojo_la_para_el_indice_con_el_mismo_409",
+        "LasCarrerasDeLasLineasDelRecuentoTests.La_misma_serie_llegada_sin_cerrojo_a_otra_ubicacion_la_para_el_indice_con_el_mismo_409",
+        "LasCarrerasDeLasLineasDelRecuentoTests.Otra_empresa_no_espera_al_cerrojo_de_un_recuento_que_no_es_suyo",
+
         // Del ítem 2.7: la R3 entera. La fila viva se mueve con el libro —sola, a la vez que otra
         // confirmación y nunca con una fecha futura—; la instantánea se borra, se recalcula y dice
         // lo mismo; el cuadre encuentra cada copia que miente y dice cuántas comparó; el
@@ -599,6 +607,18 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasGuardasDelAjusteTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa",
         "LasGuardasDelAjusteTests.El_alta_rechaza_cada_maestro_que_no_se_mueve_con_su_codigo",
         "LasGuardasDelAjusteTests.La_anulacion_pide_motivo_una_serie_que_numere_y_el_ejercicio_de_hoy_abierto",
+
+        // Del ítem 2.12: contar, añadir y quitar una línea del recuento por la API, con la versión de
+        // la línea, sus rechazos sin escribir nada, sus 404 y la clave de idempotencia del alta.
+        "LasLineasDelRecuentoTests.Anadir_con_la_misma_clave_de_idempotencia_devuelve_la_misma_linea_y_escribe_una",
+        "LasLineasDelRecuentoTests.Anadir_rechaza_lo_que_no_puede_contar_y_no_escribe_nada",
+        "LasLineasDelRecuentoTests.Anadir_una_clave_la_deja_sin_contar_con_su_teorico_y_el_numero_siguiente",
+        "LasLineasDelRecuentoTests.Contar_anota_lo_contado_con_su_teorico_y_mueve_la_version_de_la_linea_y_la_de_la_cabecera",
+        "LasLineasDelRecuentoTests.Contar_rechaza_lo_que_no_se_puede_contar_y_no_escribe_nada",
+        "LasLineasDelRecuentoTests.Lo_que_no_existe_y_lo_de_otra_empresa_es_un_404_en_las_tres_escrituras",
+        "LasLineasDelRecuentoTests.Quitar_una_linea_exige_su_version_y_despues_ya_no_existe",
+        "LasLineasDelRecuentoTests.Un_recuento_que_no_esta_en_curso_no_admite_escrituras_en_sus_lineas",
+        "LasLineasDelRecuentoTests.Una_serie_se_cuenta_con_cero_o_uno_y_no_entra_dos_veces_ni_en_otra_ubicacion",
 
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.El_alta_no_pasa_por_el_interceptor_y_por_eso_lleva_la_hora_del_dominio",
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.La_hora_del_cambio_sale_del_reloj_inyectado_y_no_del_de_la_base",

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Bastion.Inventario.Contracts.Recuentos;
 
 /// <summary>Lo que hace falta para abrir un recuento de un almacén.</summary>
@@ -148,3 +150,45 @@ public sealed record LineaDeRecuentoDto(
     decimal? Diferencia,
     bool TeoricoCambiado,
     Guid? LineaDeAjusteId);
+
+/// <summary>Lo contado en una línea, en la unidad base de su artículo.</summary>
+/// <remarks>
+/// <b>Va con el <c>If-Match</c> de la línea</b> (ADR-0055 §4): quien cuenta la ha leído, y si otro la
+/// ha contado después, su cifra no pisa la del otro sin verla.
+/// </remarks>
+public sealed record ContarLineaDeRecuentoDto
+{
+    /// <summary>Lo contado: no negativo, con seis decimales como mucho, y cero o uno en una serie.</summary>
+    /// <remarks>
+    /// <b>Anulable en el tipo para que el <c>[Required]</c> muerda</b>: con un <c>decimal</c> a secas,
+    /// un cuerpo sin la cifra llegaría como un cero, y una línea sin contar no es un cero
+    /// (ADR-0055 §5).
+    /// </remarks>
+    [Required(ErrorMessage = "Lo contado es obligatorio.")]
+    public decimal? Contado { get; init; }
+}
+
+/// <summary>Una clave que la precarga no traía, para contarla (ADR-0055 §6).</summary>
+/// <remarks>
+/// <para>
+/// <b>Sin almacén</b>: es el del recuento. La ubicación tiene que ser suya, y el artículo, de los que
+/// se almacenan.
+/// </para>
+/// <para>
+/// <b>Sin unidad</b>: la línea se cuenta en la unidad base de su artículo, que dice Catálogo.
+/// </para>
+/// </remarks>
+/// <param name="UbicacionId">El hueco del almacén del recuento.</param>
+/// <param name="ArticuloId">El artículo.</param>
+/// <param name="CodigoDeLote">El lote, si el artículo va por lote.</param>
+/// <param name="NumeroDeSerie">El número de serie, si el artículo va por serie.</param>
+/// <param name="CosteUnitario">
+/// El coste de una unidad base, o nada. Solo se usa si la línea sube; sin él, entra al precio medio
+/// de su clave.
+/// </param>
+public sealed record AnadirLineaDeRecuentoDto(
+    Guid UbicacionId,
+    Guid ArticuloId,
+    string? CodigoDeLote,
+    string? NumeroDeSerie,
+    decimal? CosteUnitario);

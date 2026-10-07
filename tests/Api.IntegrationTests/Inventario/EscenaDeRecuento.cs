@@ -34,6 +34,8 @@ internal sealed record EscenaDeRecuento(EscenaDeTransferencia Escena, SerieDto S
     /// <summary>La ruta del recurso.</summary>
     internal const string Recuentos = "/api/v1/inventario/recuentos";
 
+    private const string CabeceraDeIdempotencia = "Idempotency-Key";
+
     /// <summary>El motivo de los recuentos de los casos, que es el que llevará el ajuste.</summary>
     internal const string Motivo = "Recuento anual del almacén";
 
@@ -114,6 +116,93 @@ internal sealed record EscenaDeRecuento(EscenaDeTransferencia Escena, SerieDto S
         pagina.Total.ShouldBeLessThanOrEqualTo(Paginacion.TamanioMaximo, "una página no las trae todas");
 
         return pagina.Elementos;
+    }
+
+    /// <summary>La ruta de una línea, que es también la de su versión.</summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="lineaId">La línea.</param>
+    /// <returns>La ruta.</returns>
+    internal static string RutaDeLaLinea(Guid recuentoId, Guid lineaId) =>
+        $"{Recuentos}/{recuentoId}/lineas/{lineaId}";
+
+    /// <summary>Una línea por la API, que tiene que salir bien.</summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="lineaId">La línea.</param>
+    /// <returns>La línea.</returns>
+    internal async Task<LineaDeRecuentoDto> LineaAsync(Guid recuentoId, Guid lineaId)
+    {
+        using HttpResponseMessage lectura = await Cliente.GetAsync(RutaDeLaLinea(recuentoId, lineaId));
+
+        return await EscenaDeTransferencia.LeerAsync<LineaDeRecuentoDto>(lectura);
+    }
+
+    /// <summary>Cuenta una línea por la API con el cliente de la escena, tal como salga.</summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="lineaId">La línea.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>, o <c>null</c> para no mandarlo.</param>
+    /// <param name="contado">Lo contado, o <c>null</c> para mandarlo vacío.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal Task<HttpResponseMessage> ContarAsync(Guid recuentoId, Guid lineaId, string? etiqueta, decimal? contado) =>
+        ContarAsync(Cliente, recuentoId, lineaId, etiqueta, contado);
+
+    /// <summary>Cuenta una línea por la API con el cliente que se diga, tal como salga.</summary>
+    /// <param name="cliente">El cliente, que puede ser el de otra empresa.</param>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="lineaId">La línea.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>, o <c>null</c> para no mandarlo.</param>
+    /// <param name="contado">Lo contado, o <c>null</c> para mandarlo vacío.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal static Task<HttpResponseMessage> ContarAsync(
+        HttpClient cliente, Guid recuentoId, Guid lineaId, string? etiqueta, decimal? contado) =>
+        cliente.EnviarConVersionAsync(
+            HttpMethod.Put,
+            RutaDeLaLinea(recuentoId, lineaId),
+            etiqueta,
+            JsonContent.Create(new ContarLineaDeRecuentoDto { Contado = contado }));
+
+    /// <summary>Quita una línea por la API, tal como salga.</summary>
+    /// <param name="cliente">El cliente, que puede ser el de otra empresa.</param>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="lineaId">La línea.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>, o <c>null</c> para no mandarlo.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal static Task<HttpResponseMessage> QuitarAsync(
+        HttpClient cliente, Guid recuentoId, Guid lineaId, string? etiqueta) =>
+        cliente.EnviarConVersionAsync(HttpMethod.Delete, RutaDeLaLinea(recuentoId, lineaId), etiqueta);
+
+    /// <summary>Añade una clave por la API, tal como salga.</summary>
+    /// <param name="cliente">El cliente, que puede ser el de otra empresa.</param>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="peticion">La clave.</param>
+    /// <param name="clave">La <c>Idempotency-Key</c>, o <c>null</c> para no mandarla.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal static Task<HttpResponseMessage> AnadirAsync(
+        HttpClient cliente, Guid recuentoId, AnadirLineaDeRecuentoDto peticion, string? clave = null)
+    {
+        HttpRequestMessage alta = new(HttpMethod.Post, $"{Recuentos}/{recuentoId}/lineas")
+        {
+            Content = JsonContent.Create(peticion),
+        };
+
+        if (clave is not null)
+        {
+            alta.Headers.TryAddWithoutValidation(CabeceraDeIdempotencia, clave);
+        }
+
+        return cliente.SendAsync(alta);
+    }
+
+    /// <summary>Que la respuesta sea el problema que se espera, con su estado y su <c>type</c>.</summary>
+    /// <param name="respuesta">La respuesta.</param>
+    /// <param name="estado">El estado.</param>
+    /// <param name="codigo">El código, sin el <c>/errors/</c> delante.</param>
+    /// <param name="cual">Qué petición era, para el mensaje.</param>
+    /// <returns>La tarea.</returns>
+    internal static async Task ExigirElProblemaAsync(
+        HttpResponseMessage respuesta, HttpStatusCode estado, string codigo, string cual)
+    {
+        respuesta.StatusCode.ShouldBe(estado, $"{cual}: {await Escenario.Detalle(respuesta)}");
+        (await EscenaDeTransferencia.TipoDelProblemaAsync(respuesta)).ShouldBe($"/errors/{codigo}", cual);
     }
 
     /// <summary>Mete unidades en un hueco con un ajuste confirmado por la API.</summary>

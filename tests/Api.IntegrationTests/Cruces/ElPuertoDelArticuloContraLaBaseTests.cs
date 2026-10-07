@@ -50,8 +50,9 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// como en los ficheros del inventario. El bloque del 760 al 799 es del 2.12: del 750 al 799 no
 /// había ninguna, ni por literal ni por cálculo, y el 750 y el 756 que aparecen son milisegundos y
 /// una versión. Del resto del bloque, el 763 es de <c>LasGuardasDelAjusteTests</c>, del 764 al 772
-/// y el 777 de <c>ElAltaDelRecuentoTests</c> y del 773 al 776 de
-/// <c>UnRecuentoEnCursoPorAlmacenTests</c>; del 778 al 799 quedan libres.
+/// y el 777 de <c>ElAltaDelRecuentoTests</c>, del 773 al 776 de
+/// <c>UnRecuentoEnCursoPorAlmacenTests</c>, del 778 al 787 de <c>LasLineasDelRecuentoTests</c> y del
+/// 788 al 792 de <c>LasCarrerasDeLasLineasDelRecuentoTests</c>; del 793 al 799 quedan libres.
 /// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]

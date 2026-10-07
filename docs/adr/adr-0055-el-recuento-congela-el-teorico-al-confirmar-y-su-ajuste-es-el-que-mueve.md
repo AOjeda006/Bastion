@@ -8,7 +8,7 @@ revisado: 2026-10-06
 
 # ADR-0055: El recuento congela el teórico al confirmar, y su ajuste es el que mueve
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0056 (§13, los permisos).**
 - **Fecha:** 2026-10-06
 - **Sale del 2.12.** El encargo del 2026-10-05 fijó el recuento en nueve puntos (PLAN, *El 2.12: el
   recuento*). La puerta del 2.12 preguntó ocho cosas, y el usuario contestó el 2026-10-06: «todas
@@ -237,6 +237,10 @@ líneas sin contar.
 - **La ruta va diferida**, como todas las del frontal.
 
 ### 13. Qué decidió el agente
+
+> **Enmendado por el ADR-0056 (2026-10-07).** A los permisos del último punto se suman
+> `inventario.recuento.agregar-linea` e `inventario.recuento.quitar-linea`: añadir y quitar una línea
+> no van con contar.
 
 - **los estados**: `EnCurso`, `Confirmado`, `Anulado` y `Descartado`, en un enumerado propio;
 - **el índice**: `ix_recuentos_uno_en_curso_por_almacen`, sobre la empresa y el almacén, con

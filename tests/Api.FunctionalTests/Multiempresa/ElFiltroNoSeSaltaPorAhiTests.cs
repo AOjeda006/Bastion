@@ -387,6 +387,19 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             "suma lo que vuela en la existencia y en la valoracion del destino, sobre filas que la "
             + "misma transaccion ya tiene bloqueadas, y cuenta las filas que toca. Recibe la empresa "
             + "con el valor de IInquilinoActual y la compara en cada fila que suma",
+
+        // LA DEL ITEM 2.12, la cuarta sentencia de cerrojo, con el criterio de la del articulo y
+        // sobre el esquema del propio modulo. Bloquea la fila del recuento antes de escribir en
+        // una de sus lineas, para que dos escrituras en lineas distintas se esperen en la cabecera
+        // y ninguna reciba un 412 por la otra (ADR-0055 §4). Compara la empresa ella misma, y lo
+        // comprueban LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests y, con dos empresas de
+        // verdad, LasCarrerasDeLasLineasDelRecuentoTests.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Repositorios/" +
+         "RepositorioDeRecuentos.cs usa .SqlQuery"] =
+            "toma el cerrojo del UPDATE (FOR NO KEY UPDATE) sobre la fila del recuento y devuelve "
+            + "solo si la fila existe: ni un dato de la cabecera, que se lee despues por el ORM con "
+            + "el filtro puesto. El identificador viene de la ruta y el filtro no alcanza al SQL "
+            + "crudo, asi que compara la empresa ella misma con el valor de IInquilinoActual",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

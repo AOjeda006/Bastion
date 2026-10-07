@@ -396,8 +396,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(143, "acciones en total");
-        cambian.Count.ShouldBe(90, "acciones que cambian estado");
+        todas.Count.ShouldBe(146, "acciones en total");
+        cambian.Count.ShouldBe(93, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -625,14 +625,24 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // hueco que evitar, y dos altas sobre el mismo almacén las para el índice de uno en curso.
         // Las escrituras que llegan después en el mismo ítem —contar, confirmar, anular, descartar—
         // mueven este número en su propio commit, con su reparto.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(47, "operaciones que exigen If-Match");
+        //
+        // Ciento cuarenta y seis con las tres escrituras en las líneas: +3 al total, +3 a las que
+        // cambian estado, +2 a If-Match, +1 a Idempotency-Key y cero a las exentas. Contar y quitar
+        // exigen la versión de la LÍNEA, que publica su `GET` (ADR-0055 §4); añadir admite la clave
+        // y no la exige, como el alta, porque no numera y el reintento sin clave lo para la clave
+        // repetida.
+        //
+        // QUE SUBA IF-MATCH Y NO LO HAGA EN EL AJUSTE NI EN LA TRANSFERENCIA es lo que separa a esta
+        // pantalla de aquellos documentos: aquí dos personas escriben a la vez en el mismo papel, y
+        // lo que una ve tiene que ser la versión de lo que la otra acaba de contar.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(49, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(26, "rutas que admiten Idempotency-Key");
+            .ShouldBe(27, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
-        // Y de esas veintiséis, CINCO la exigen. Es un recuento aparte y no un reparto del anterior
+        // Y de esas veintisiete, CINCO la exigen. Es un recuento aparte y no un reparto del anterior
         // porque las obligatorias son un SUBCONJUNTO de las que admiten, no un cuarto cajón: la
-        // partición de abajo seguiría siendo exacta aunque las veintiséis fueran obligatorias, que
+        // partición de abajo seguiría siendo exacta aunque las veintisiete fueran obligatorias, que
         // es justo lo que este número impide que pase sin que nadie lo vea. Las cinco son del mismo
         // módulo. Cuatro por el argumento de la confirmación —número dentro de la transacción del
         // documento—, y la recepción de la transferencia, que no numera, porque sin la transacción
@@ -646,7 +656,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
         // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
         // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (47 + 26 + s_exentas.Count).ShouldBe(cambian.Count);
+        (49 + 27 + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>

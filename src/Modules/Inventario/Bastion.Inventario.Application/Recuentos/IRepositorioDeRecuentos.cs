@@ -27,6 +27,29 @@ public interface IRepositorioDeRecuentos : IOrdenaPor
     /// <returns>El recuento, o <see langword="null"/>.</returns>
     Task<Recuento?> ObtenerAsync(Guid id, CancellationToken cancelacion);
 
+    /// <summary>Bloquea la fila del recuento hasta el <c>COMMIT</c>, antes de leerlo.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es lo primero que hace toda escritura en el recuento</b> (ADR-0055 §3 y §4). Contar una
+    /// línea toca la cabecera, y dos personas que cuentan líneas distintas a la vez chocarían en su
+    /// versión: la segunda recibiría un <c>412</c> por lo que hizo la primera. Con el cerrojo, la
+    /// segunda espera aquí un instante, lee la cabecera que dejó la primera, y sigue.
+    /// </para>
+    /// <para>
+    /// <b><c>FOR NO KEY UPDATE</c></b>, que es el cerrojo que toma el propio <c>UPDATE</c> de la
+    /// cabecera: choca con otro igual y no con el <c>FOR KEY SHARE</c> con el que una línea nueva
+    /// mira que su recuento existe.
+    /// </para>
+    /// <para>
+    /// Quien lo implementa <b>revienta</b> si no hay transacción abierta: sin ella, el cerrojo se
+    /// soltaría al acabar la lectura y no guardaría nada.
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Identificador del recuento.</param>
+    /// <param name="cancelacion">Cancelación de la operación en curso.</param>
+    /// <returns>Falso si no hay tal recuento en esta empresa.</returns>
+    Task<bool> BloquearAsync(Guid id, CancellationToken cancelacion);
+
     /// <summary>Añade un recuento nuevo, que se escribe al confirmar la unidad de trabajo.</summary>
     /// <param name="recuento">El recuento en curso, con su precarga.</param>
     void Agregar(Recuento recuento);

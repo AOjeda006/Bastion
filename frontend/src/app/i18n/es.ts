@@ -331,15 +331,50 @@ export const es = {
         'nuevo. Pide que lo desbloqueen.',
       'recuento-almacen-no-encontrado':
         'Ese almacén no existe. Elige uno del maestro de almacenes.',
+      'recuento-articulo-no-encontrado':
+        'Ese artículo no existe. Elige uno del maestro de artículos.',
+      'recuento-articulo-no-se-almacena':
+        'Ese artículo es un servicio: no tiene existencias que contar. Elige un artículo que se ' +
+        'almacene.',
+      'recuento-clave-repetida':
+        'El recuento ya lleva esa clave: la misma ubicación, el mismo artículo y el mismo lote o ' +
+        'número de serie. Búscala en las líneas y cuéntala ahí.',
+      'recuento-contado-no-valido':
+        'Lo contado va en la unidad base del artículo: no es negativo, lleva seis decimales como ' +
+        'mucho y, en un número de serie, es 0 o 1. Corrige la cifra.',
+      'recuento-coste-no-valido':
+        'El coste de una unidad no puede ser negativo ni pasar de catorce cifras enteras. ' +
+        'Corrígelo, o déjalo vacío si no lo sabes.',
       'recuento-linea-no-encontrada':
         'Esa línea ya no está en el recuento: alguien la ha quitado antes. Vuelve a la ficha y actualiza.',
+      'recuento-lote-no-valido':
+        'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
+        'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote.',
       'recuento-motivo-no-valido':
         'Escribe por qué cuentas, en 300 caracteres o menos. Es el motivo que llevará el ajuste.',
       'recuento-no-encontrado': 'Ese recuento ya no existe. Vuelve al listado y actualiza.',
+      'recuento-no-esta-en-curso':
+        'Ese recuento ya no está en curso: se confirmó, se anuló o se descartó, y lo contado ya no ' +
+        'cambia. Actualiza la pantalla para ver en qué estado está.',
+      'recuento-numero-de-serie-no-valido':
+        'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
+        'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
+        'número de serie.',
       'recuento-serie-cerrada':
         'Una de las dos series está cerrada: la del recuento o la del ajuste. Elige otra.',
       'recuento-serie-no-encontrada':
         'Una de las dos series no existe: la del recuento o la del ajuste. Elige una del maestro de series.',
+      'recuento-serie-repetida':
+        'Ese número de serie ya está en el recuento, en otra ubicación, y cada pieza se cuenta una ' +
+        'sola vez. Cuéntala en la línea que ya la lleva, o quita esa línea antes.',
+      'recuento-trazabilidad-no-casa':
+        'Esa clave no casa con la trazabilidad del artículo: le falta el lote o el número de serie ' +
+        'que pide la ficha, o lleva uno que la ficha no pide. Corrige la clave.',
+      'recuento-ubicacion-bloqueada':
+        'Esa ubicación está bloqueada: lo que ya hay apuntado a ella se sigue leyendo, pero no se ' +
+        'añade nada nuevo en ese hueco. Elige otra ubicación.',
+      'recuento-ubicacion-no-encontrada':
+        'Esa ubicación no existe en el almacén del recuento. Elige una de las suyas.',
       'recuento-ya-hay-uno-en-curso':
         'Ese almacén ya se está contando. Confirma o descarta el recuento en curso antes de abrir otro.',
       'rol-no-encontrado': 'Ese rol ya no existe. Vuelve al listado y actualiza.',

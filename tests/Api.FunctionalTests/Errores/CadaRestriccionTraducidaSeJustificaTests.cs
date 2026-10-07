@@ -118,6 +118,12 @@ public sealed class CadaRestriccionTraducidaSeJustificaTests : IDisposable
             // Ítem 2.12: un almacén tiene como mucho un recuento en curso. La comprobación previa
             // del alta la cruzan dos altas simultáneas juntas; el índice parcial no (ADR-0055 §1.7).
             "ix_recuentos_uno_en_curso_por_almacen (Unicidad) → recuento-ya-hay-uno-en-curso",
+
+            // Ítem 2.12: una clave, y un número de serie, una sola vez por recuento. Añadir lo mira
+            // con la cabecera bloqueada; el índice es la red de lo que llegara sin cerrojo
+            // (ADR-0055 §13, ADR-0048 §3).
+            "ix_lineas_recuento_una_por_clave (Unicidad) → recuento-clave-repetida",
+            "ix_lineas_recuento_una_por_serie (Unicidad) → recuento-serie-repetida",
         ];
 
         Declaradas()

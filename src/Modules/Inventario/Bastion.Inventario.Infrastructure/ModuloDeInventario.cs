@@ -215,7 +215,24 @@ public static class ModuloDeInventario
                 "solo es una cortesía: las dos leen que no hay ninguno en curso. El índice único " +
                 "parcial se comprueba con la fila que se escribe y espera a la transacción que tenga " +
                 "la otra, y lo único que puede significar que salte es que ese almacén ya se está " +
-                "contando. Reintentar da lo mismo, así que no es una carrera perdida (ADR-0055 §1.7)"));
+                "contando. Reintentar da lo mismo, así que no es una carrera perdida (ADR-0055 §1.7)")
+            .Declarar(
+                ConfiguracionDeLineaDeRecuento.UnaPorClave,
+                ClaseDeRestriccion.Unicidad,
+                ErroresDeRecuento.ClaveRepetida(),
+                "añadir una clave mira antes, con la cabecera del recuento bloqueada, que no la lleve " +
+                "ya, así que dos altas de la misma clave se ponen en fila. El índice es la red de " +
+                "debajo: si una escritura llegara sin ese cerrojo, el índice la para esperando a la " +
+                "otra transacción, y lo único que puede significar que salte es que el recuento ya " +
+                "lleva esa clave. Reintentar da lo mismo (ADR-0055 §13)")
+            .Declarar(
+                ConfiguracionDeLineaDeRecuento.UnaPorSerie,
+                ClaseDeRestriccion.Unicidad,
+                ErroresDeRecuento.SerieRepetida(),
+                "por lo mismo que la clave: el caso de uso mira la serie con la cabecera bloqueada, y " +
+                "el índice para lo que llegara sin el cerrojo. Lo único que puede significar que " +
+                "salte es que el recuento ya lleva ese número de serie de ese artículo, en otra " +
+                "ubicación. Reintentar da lo mismo (ADR-0048 §3)"));
 
         servicios.AgregarCasosDeUsoDeInventario();
 

@@ -1,5 +1,6 @@
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -10,6 +11,7 @@ using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Application.Recuentos;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Recuentos;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia;
@@ -24,10 +26,15 @@ using Npgsql;
 namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
-/// Los cuatro casos de uso del ajuste, los cuatro de la transferencia y el alta del recuento, con sus
-/// adaptadores REALES y los contextos que necesitan.
+/// Los cuatro casos de uso del ajuste, los cuatro de la transferencia, y el alta y el conteo de una
+/// línea del recuento, con sus adaptadores REALES y los contextos que necesitan.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>El conteo de una línea entró después, en el mismo ítem</b>: la carrera de dos personas que
+/// cuentan líneas distintas necesita parar la primera con la cabecera bloqueada y su escritura sin
+/// publicar, y eso tampoco lo deja hacer una petición HTTP.
+/// </para>
 /// <para>
 /// <b>El alta del recuento entró en el ítem 2.12</b>, aunque tiene borde: la carrera de dos altas
 /// necesita parar la primera con su fila escrita y sin publicar, y una petición HTTP no deja hacerlo.
@@ -98,7 +105,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         RepositorioDeAjustes ajustes = new(_inventario, new InquilinoFijo(empresaId));
         _ajustes = ajustes;
         RepositorioDeTransferencias transferencias = new(_inventario, new InquilinoFijo(empresaId));
-        RepositorioDeRecuentos recuentos = new(_inventario);
+        RepositorioDeRecuentos recuentos = new(_inventario, new InquilinoFijo(empresaId));
         UnidadDeTrabajoDeInventario unidadDeTrabajo = new(_inventario);
         ConsultaDeEmpresas empresas = new(_organizacion);
         ConsultaDeAlmacenes almacenes = new(_organizacion, acceso);
@@ -192,6 +199,9 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             articulos,
             unidadDeTrabajo,
             elReloj);
+
+        ContarLinea = new ContarLineaDeRecuento(
+            recuentos, new VersionesDeInventario(_inventario), unidadDeTrabajo);
     }
 
     internal AbrirAjuste Alta { get; }
@@ -211,6 +221,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal AnularTransferencia AnulacionDeTransferencia { get; }
 
     internal AbrirRecuento AltaDeRecuento { get; }
+
+    internal ContarLineaDeRecuento ContarLinea { get; }
 
     /// <summary>Confirma un ajuste con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>
@@ -407,6 +419,42 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         Resultado<TransferenciaDto> envio = await Envio.EjecutarAsync(transferenciaId, CancellationToken.None);
 
         return (envio, transaccion);
+    }
+
+    /// <summary>
+    /// Cuenta una línea <b>dentro</b> de una transacción y la deja abierta, con la cabecera del
+    /// recuento bloqueada y las dos filas ya escritas.
+    /// </summary>
+    /// <remarks>
+    /// Es la primera de la carrera de dos conteos (ADR-0055 §4): quien cuenta otra línea a la vez se
+    /// para en el cerrojo de la cabecera, y no en el testigo de su línea. Quien llama decide cuándo
+    /// suelta.
+    /// </remarks>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="lineaId">La línea.</param>
+    /// <param name="etiqueta">El <c>ETag</c> de la línea, tal como lo dio la API.</param>
+    /// <param name="contado">Lo contado.</param>
+    /// <returns>Lo que contestó el caso de uso, y la transacción todavía abierta.</returns>
+    internal async Task<(Resultado<LineaDeRecuentoDto> Conteo, IDbContextTransaction Transaccion)>
+        ContarYQuedarseDentroAsync(Guid recuentoId, Guid lineaId, string etiqueta, decimal contado)
+    {
+        Resultado<VersionDeRecurso> version = VersionDeRecurso.DeLaCabecera(etiqueta);
+
+        if (!version.EsCorrecto)
+        {
+            throw new InvalidOperationException($"«{etiqueta}» no es la etiqueta de una versión.");
+        }
+
+        IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<LineaDeRecuentoDto> conteo = await ContarLinea.EjecutarAsync(
+            recuentoId,
+            lineaId,
+            version.Valor,
+            new ContarLineaDeRecuentoDto { Contado = contado },
+            CancellationToken.None);
+
+        return (conteo, transaccion);
     }
 
     /// <summary>Recibe con una transacción abierta, como llegaría de verdad.</summary>

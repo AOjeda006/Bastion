@@ -6347,6 +6347,24 @@ pantalla; `main` solo avanza a un commit ya verde en su rama, y la rama se borra
 `main`. El informe cuenta todos los commits desde `39ec98e`, con sus runs, y cada cifra va con la
 orden que la mide.
 
+### Tomadas por el agente de desarrollo — ítem 2.12, al escribir su código (2026-10-07)
+
+1. **Añadir y quitar una línea del recuento tienen su permiso, aparte del de contar** (ADR-0056, que
+   enmienda el ADR-0055 §13). El primer código las puso bajo `inventario.recuento.contar`, y el
+   carril funcional lo paró: `CadaAccionDeclaraSuPermisoTests.Escribir_y_modificar_no_comparten_permiso_aunque_los_escriba_el_mismo_codigo`.
+   El encargo pide lo mismo: «un permiso por acción». Los nombres son
+   `inventario.recuento.agregar-linea` e `inventario.recuento.quitar-linea`, bajo el prefijo del
+   recuento y con la forma de `identidad.pertenencia.asignar-rol`.
+2. **El cerrojo de la cabecera vive en `RepositorioDeRecuentos`, y no en un fichero propio** como
+   `CerrojoDeArticulos`. Lo pide el repositorio que lee el recuento, y solo lo usan las escrituras
+   del propio módulo. Lleva su entrada con motivo en `ElFiltroNoSeSaltaPorAhiTests`, y la cadena la
+   lee `LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests`, como la del artículo. La tabla la saca
+   de la propia sentencia, no de una constante.
+3. **Las semillas de las líneas**: del 778 al 787, `LasLineasDelRecuentoTests` (el 782 es la otra
+   empresa); del 788 al 792, `LasCarrerasDeLasLineasDelRecuentoTests` (el 792 es la otra empresa).
+   Del 793 al 799 quedan libres, y el reparto va en la cabecera de
+   `ElPuertoDelArticuloContraLaBaseTests`.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 11 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece

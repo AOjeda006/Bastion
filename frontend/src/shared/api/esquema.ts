@@ -826,7 +826,17 @@ export interface paths {
         /** Devuelve una página de las líneas de un recuento, con su teórico. */
         get: operations["Recuentos_ListarLineas"];
         put?: never;
-        post?: never;
+        /**
+         * Añade una clave que la precarga no traía, sin contar.
+         * @description La ubicación tiene que ser del almacén del recuento, el artículo tiene que almacenarse, y el
+         *     lote o el número de serie tienen que casar con su marca (ADR-0055 §6). El 409 puede ser
+         *     la clave repetida (recuento-clave-repetida), el mismo número de serie en otra ubicación
+         *     (recuento-serie-repetida), la marca (recuento-trazabilidad-no-casa), un maestro
+         *     bloqueado o un recuento que ya no está en curso.
+         *         La Idempotency-Key se admite y no se exige: añadir no numera, y el reintento sin
+         *           clave lo para la clave repetida.
+         */
+        post: operations["Recuentos_AnadirLinea"];
         delete?: never;
         options?: never;
         head?: never;
@@ -845,9 +855,23 @@ export interface paths {
          * @description La versión es la de la línea, que es la que pide contarla o quitarla (ADR-0055 §4).
          */
         get: operations["Recuentos_ObtenerLinea"];
-        put?: never;
+        /**
+         * Anota lo contado en una línea, con el `If-Match` de la línea.
+         * @description La versión que se exige es la de la línea, y cambia además la de la cabecera (ADR-0055
+         *           §4): dos personas que cuentan líneas distintas a la vez se esperan un instante en la cabecera, y
+         *           ninguna recibe un 412 por lo que hizo la otra.
+         *         El 409recuento-no-esta-en-curso es el de un recuento ya confirmado, anulado o
+         *     descartado. La respuesta no lleva ETag: la versión nueva de la línea se lee con ella.
+         */
+        put: operations["Recuentos_Contar"];
         post?: never;
-        delete?: never;
+        /**
+         * Quita una línea que no se va a contar, con el `If-Match` de la línea.
+         * @description <b>Su clave queda como está</b> (ADR-0055 §5): el recuento solo dice algo de las claves que
+         *             lleva. Quitarla es la manera de confirmar sin contarla, porque una línea sin contar no es un
+         *             cero.
+         */
+        delete: operations["Recuentos_QuitarLinea"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2128,6 +2152,29 @@ export interface components {
             /** @description Tipo de almacén, como texto. */
             tipo: string;
         };
+        /** @description Una clave que la precarga no traía, para contarla (ADR-0055 §6). */
+        AnadirLineaDeRecuentoDto: {
+            /**
+             * Format: uuid
+             * @description El hueco del almacén del recuento.
+             */
+            ubicacionId: string;
+            /**
+             * Format: uuid
+             * @description El artículo.
+             */
+            articuloId: string;
+            /** @description El lote, si el artículo va por lote. */
+            codigoDeLote: null | string;
+            /** @description El número de serie, si el artículo va por serie. */
+            numeroDeSerie: null | string;
+            /**
+             * Format: double
+             * @description El coste de una unidad base, o nada. Solo se usa si la línea sube; sin él, entra al precio medio
+             *     de su clave.
+             */
+            costeUnitario: null | number | string;
+        };
         /** @description El par que deja una anulación: la transferencia anulada y la que la compensa. */
         AnulacionDeTransferenciaDto: {
             /** @description La transferencia que queda anulada. */
@@ -2468,6 +2515,14 @@ export interface components {
             correo: null | string;
             /** @description Teléfono profesional. */
             telefono: null | string;
+        };
+        /** @description Lo contado en una línea, en la unidad base de su artículo. */
+        ContarLineaDeRecuentoDto: {
+            /**
+             * Format: double
+             * @description Lo contado: no negativo, con seis decimales como mucho, y cero o uno en una serie.
+             */
+            contado: null | number | string;
         };
         /** @description Una conversión entre dos unidades de medida, tal como sale de la API. */
         ConversionUmDto: {
@@ -7117,6 +7172,70 @@ export interface operations {
             };
         };
     };
+    Recuentos_AnadirLinea: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnadirLineaDeRecuentoDto"];
+                "text/json": components["schemas"]["AnadirLineaDeRecuentoDto"];
+                "application/*+json": components["schemas"]["AnadirLineaDeRecuentoDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["LineaDeRecuentoDto"];
+                    "application/json": components["schemas"]["LineaDeRecuentoDto"];
+                    "text/json": components["schemas"]["LineaDeRecuentoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     Recuentos_ObtenerLinea: {
         parameters: {
             query?: never;
@@ -7144,6 +7263,165 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_Contar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+                /** @description Identificador de la línea. */
+                lineaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContarLineaDeRecuentoDto"];
+                "text/json": components["schemas"]["ContarLineaDeRecuentoDto"];
+                "application/*+json": components["schemas"]["ContarLineaDeRecuentoDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["LineaDeRecuentoDto"];
+                    "application/json": components["schemas"]["LineaDeRecuentoDto"];
+                    "text/json": components["schemas"]["LineaDeRecuentoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_QuitarLinea: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+                /** @description Identificador de la línea. */
+                lineaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

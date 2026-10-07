@@ -293,16 +293,48 @@ export const en: Diccionario = {
         'stock count. Ask for it to be unblocked.',
       'recuento-almacen-no-encontrado':
         'That warehouse does not exist. Pick one from the warehouse master.',
+      'recuento-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
+      'recuento-articulo-no-se-almacena':
+        'That item is a service: it has no stock to count. Pick an item that is kept in stock.',
+      'recuento-clave-repetida':
+        'The stock count already has that key: the same location, the same item and the same ' +
+        'batch or serial number. Find it among the lines and count it there.',
+      'recuento-contado-no-valido':
+        'The counted quantity is in the item’s base unit: it is not negative, has at most six ' +
+        'decimals and, for a serial number, is 0 or 1. Fix the figure.',
+      'recuento-coste-no-valido':
+        'The cost of one unit cannot be negative or have more than fourteen integer digits. Fix ' +
+        'it, or leave it empty if you do not know it.',
       'recuento-linea-no-encontrada':
         'That line is no longer in the stock count: someone removed it first. Go back to the count and refresh.',
+      'recuento-lote-no-valido':
+        'That batch is not a code that fits on the label: 1 to 20 characters, no spaces, using ' +
+        'unaccented letters, digits and the symbols GS1 allows. Fix the batch.',
       'recuento-motivo-no-valido':
         'Write why you are counting, in 300 characters or fewer. It is the reason the adjustment will carry.',
       'recuento-no-encontrado':
         'That stock count no longer exists. Go back to the list and refresh.',
+      'recuento-no-esta-en-curso':
+        'That stock count is no longer in progress: it was confirmed, reversed or discarded, and ' +
+        'what was counted no longer changes. Refresh the screen to see its state.',
+      'recuento-numero-de-serie-no-valido':
+        'That serial number is not a code that fits on the label: 1 to 20 characters, no spaces, ' +
+        'using unaccented letters, digits and the symbols GS1 allows. Fix the serial number.',
       'recuento-serie-cerrada':
         'One of the two series is closed: the count series or the adjustment series. Pick another.',
       'recuento-serie-no-encontrada':
         'One of the two series does not exist: the count series or the adjustment series. Pick one from the series master.',
+      'recuento-serie-repetida':
+        'That serial number is already in the stock count, in another location, and each piece is ' +
+        'counted only once. Count it on the line that already has it, or remove that line first.',
+      'recuento-trazabilidad-no-casa':
+        'That key does not match the item’s traceability: it lacks the batch or serial number the ' +
+        'item requires, or carries one the item does not track. Fix the key.',
+      'recuento-ubicacion-bloqueada':
+        'That location is blocked: whatever is already assigned to it is still read, but nothing ' +
+        'new is added in that slot. Pick another location.',
+      'recuento-ubicacion-no-encontrada':
+        'That location does not exist in the stock count’s warehouse. Pick one of its own.',
       'recuento-ya-hay-uno-en-curso':
         'That warehouse is already being counted. Confirm or discard the count in progress before opening another.',
       'rol-no-encontrado': 'That role no longer exists. Go back to the list and refresh.',

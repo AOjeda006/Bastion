@@ -173,6 +173,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.Las_cadenas_del_cerrojo_son_las_del_modelo",
         "LaSentenciaDelArticuloNombraLaTablaYLaEmpresaTests.No_lleva_punto_y_coma_final",
 
+        "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.Cada_columna_que_la_sentencia_nombra_existe_en_la_tabla",
+        "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.Compara_el_recuento_contra_el_primer_parametro_y_la_empresa_contra_el_segundo",
+        "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa",
+        "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.El_valor_que_compara_sale_del_inquilino_y_va_en_su_sitio",
+        "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.Es_el_cerrojo_del_UPDATE_y_no_otro",
+        "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.La_tabla_que_la_sentencia_bloquea_es_la_del_modelo",
+        "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.No_lleva_punto_y_coma_final",
+
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla",
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa",
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio",
