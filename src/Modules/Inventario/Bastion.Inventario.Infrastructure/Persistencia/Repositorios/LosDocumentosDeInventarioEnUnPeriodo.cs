@@ -13,9 +13,9 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 /// sabe que detrás hay un <c>DbContext</c> (§4, reglas de frontera 1 y 3).
 /// </para>
 /// <para>
-/// <b>Hoy los documentos de este módulo son el ajuste y la transferencia</b>, que llegó en el 2.11.
-/// Cuando lleguen los albaranes y los recuentos, se suman <b>aquí</b>: el cierre no se entera y no
-/// hay que acordarse de tocarlo. Que este método se quede corto el día que aparezca un documento
+/// <b>Hoy los documentos de este módulo son el ajuste, la transferencia, que llegó en el 2.11, y el
+/// recuento, que llegó en el 2.12.</b> Cuando lleguen los albaranes, se suman <b>aquí</b>: el cierre
+/// no se entera y no hay que acordarse de tocarlo. Que este método se quede corto el día que aparezca un documento
 /// nuevo es el modo de fallo de esta clase, y contra eso está el barrido que compara los módulos
 /// registrados con los declarados.
 /// </para>
@@ -29,6 +29,13 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 /// borrador cuenta por la de envío, que es la única que tiene; un documento cuenta si cualquiera de
 /// las dos cae dentro del intervalo (§12). Contar solo la de envío dejaría cerrar el ejercicio de una
 /// recepción del 3 de enero cuyo envío fue el 30 de diciembre.
+/// </para>
+/// <para>
+/// <b>El recuento solo cuenta confirmado o anulado, y por su fecha de confirmación</b> (ADR-0055
+/// §1.5). Uno en curso no tiene fecha de documento: la tendrá el día que se confirme, y su ajuste
+/// llevará la misma. Por eso no es un borrador del ejercicio en el que se abrió, y no impide
+/// cerrarlo. Uno confirmado sin diferencias no tiene ajuste que hable por él, y por eso no basta con
+/// mirar los ajustes.
 /// </para>
 /// </remarks>
 internal sealed class LosDocumentosDeInventarioEnUnPeriodo(InventarioDbContext contexto)
@@ -81,6 +88,15 @@ internal sealed class LosDocumentosDeInventarioEnUnPeriodo(InventarioDbContext c
                 transferencia => transferencia.EmpresaId == empresaId
                     && ((transferencia.FechaDeEnvio >= desde && transferencia.FechaDeEnvio <= hasta)
                         || (transferencia.FechaDeRecepcion >= desde && transferencia.FechaDeRecepcion <= hasta)),
+                cancelacion)
+            .ConfigureAwait(false)
+        // Sin filtrar por estado, por lo mismo que el ajuste: el anulado sigue numerado. Uno en
+        // curso o descartado no tiene fecha de confirmación, y el `NULL` no cae en ningún intervalo.
+        || await contexto.Recuentos
+            .AnyAsync(
+                recuento => recuento.EmpresaId == empresaId
+                    && recuento.FechaDeConfirmacion >= desde
+                    && recuento.FechaDeConfirmacion <= hasta,
                 cancelacion)
             .ConfigureAwait(false);
 }

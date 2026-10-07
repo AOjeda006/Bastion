@@ -27,6 +27,11 @@ namespace Bastion.Inventario.Endpoints;
 /// <b>Las escrituras en una línea llevan la versión de la línea</b>, y no la de la cabecera
 /// (ADR-0055 §4).
 /// </para>
+/// <para>
+/// <b>Las acciones de la cabecera piden los dos mecanismos</b>, el <c>If-Match</c> y la
+/// <c>Idempotency-Key</c>, y responden sin <c>ETag</c> (ADR-0057): una respuesta repetida desde la
+/// caché llevaría una versión que ya no es la de la fila.
+/// </para>
 /// </remarks>
 /// <param name="abrir">El alta, con sus líneas precargadas.</param>
 /// <param name="obtener">La ficha, con su versión.</param>
@@ -36,6 +41,7 @@ namespace Bastion.Inventario.Endpoints;
 /// <param name="contar">Anota lo contado en una línea.</param>
 /// <param name="anadir">Añade una clave que la precarga no traía.</param>
 /// <param name="quitar">Quita una línea que no se va a contar.</param>
+/// <param name="confirmar">Confirma el recuento, con el ajuste de su diferencia.</param>
 public sealed class RecuentosController(
     IAbrirRecuento abrir,
     IObtenerRecuento obtener,
@@ -44,7 +50,8 @@ public sealed class RecuentosController(
     IObtenerLineaDeRecuento obtenerLinea,
     IContarLineaDeRecuento contar,
     IAnadirLineaDeRecuento anadir,
-    IQuitarLineaDeRecuento quitar) : ControladorDeInventario
+    IQuitarLineaDeRecuento quitar,
+    IConfirmarRecuento confirmar) : ControladorDeInventario
 {
     /// <summary>Devuelve una página de recuentos.</summary>
     /// <param name="consulta">
@@ -162,8 +169,9 @@ public sealed class RecuentosController(
     /// ninguna recibe un <c>412</c> por lo que hizo la otra.
     /// </para>
     /// <para>
-    /// El <c>409</c> <c>recuento-no-esta-en-curso</c> es el de un recuento ya confirmado, anulado o
-    /// descartado. La respuesta no lleva <c>ETag</c>: la versión nueva de la línea se lee con ella.
+    /// Un recuento ya confirmado, anulado o descartado da un <c>409</c>
+    /// (<c>recuento-no-esta-en-curso</c>). La respuesta no lleva <c>ETag</c>: la versión nueva de la
+    /// línea se lee con ella.
     /// </para>
     /// </remarks>
     /// <param name="id">Identificador del recuento.</param>
@@ -253,4 +261,51 @@ public sealed class RecuentosController(
         ResponderSinContenidoExigiendoVersionAsync(
             ifMatch,
             version => quitar.EjecutarAsync(id, lineaId, version, cancelacion));
+
+    /// <summary>
+    /// Confirma el recuento con la fecha de hoy: lo numera y mueve su diferencia con un ajuste, en la
+    /// misma transacción.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Lleva dos comprobaciones, y cada una dice una cosa</b> (ADR-0055 §2): el <c>If-Match</c> de la
+    /// cabecera, si el documento cambió desde que se leyó, y la huella del cuerpo, si cambió el
+    /// almacén. Lo primero es un <c>412</c>. Lo segundo es un <c>409</c>
+    /// (<c>recuento-teorico-cambiado</c>) con la huella de ahora y las líneas cambiadas en
+    /// <c>actual</c>.
+    /// </para>
+    /// <para>
+    /// Las líneas sin contar dan un <c>422</c> (<c>recuento-con-lineas-sin-contar</c>), con las
+    /// primeras en <c>actual</c>. El <c>409</c> puede ser además el tránsito
+    /// (<c>recuento-sube-con-transito</c>), un recuento que ya no está en curso, el ejercicio de hoy,
+    /// una serie cerrada o una fecha fuera del ejercicio de su serie, un maestro bloqueado, la marca de
+    /// un artículo o una clave que no se valora.
+    /// </para>
+    /// <para>
+    /// <b>La <c>Idempotency-Key</c> es obligatoria</b>, porque confirmar gasta dos correlativos. La
+    /// respuesta no lleva <c>ETag</c> (ADR-0057): la versión nueva se lee con la ficha.
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Identificador del recuento.</param>
+    /// <param name="ifMatch">Versión de la cabecera, tal como la devolvió el ETag de la ficha.</param>
+    /// <param name="peticion">La huella del teórico que se vio en la ficha.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("{id:guid}/confirmacion")]
+    [AdmiteIdempotencia(Obligatoria = true)]
+    [ExigePermiso(PermisosDeInventario.RecuentoConfirmar)]
+    [ProducesResponseType(typeof(RecuentoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Confirmar(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        [FromBody] ConfirmarRecuentoDto peticion,
+        CancellationToken cancelacion) =>
+        ResponderExigiendoVersionAsync(
+            ifMatch,
+            version => confirmar.EjecutarAsync(id, version, peticion, cancelacion));
 }

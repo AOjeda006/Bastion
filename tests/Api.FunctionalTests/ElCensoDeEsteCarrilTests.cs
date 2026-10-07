@@ -239,6 +239,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LosDocumentosDeInventarioNumeranEnSusSeriesTests.Cada_documento_del_modulo_numera_en_un_tipo_de_serie_que_existe",
         "LosDocumentosDeInventarioNumeranEnSusSeriesTests.Un_ajuste_numera_en_las_series_de_ajustes_de_inventario",
         "LosDocumentosDeInventarioNumeranEnSusSeriesTests.Un_documento_que_el_mapa_no_nombra_no_numera_en_ninguna_serie_por_defecto",
+        "LosDocumentosDeInventarioNumeranEnSusSeriesTests.Un_recuento_numera_en_las_series_de_recuentos_de_inventario",
 
         "LosLimitesSeLeenEnCulturaInvarianteTests.Ningun_atributo_de_validacion_revienta_al_validar_en_la_cultura_de_la_aplicacion",
         "LosLimitesSeLeenEnCulturaInvarianteTests.Todo_limite_escrito_como_texto_se_lee_en_cultura_invariante",
@@ -294,8 +295,8 @@ public sealed class ElCensoDeEsteCarrilTests
         "TodaEscrituraDiceComoSeProtegeTests.El_universo_cubre_a_todos_los_modulos_montados",
         "TodaEscrituraDiceComoSeProtegeTests.La_clave_obligatoria_es_la_excepcion_y_esta_declarada_entera",
         "TodaEscrituraDiceComoSeProtegeTests.La_lista_de_exentas_no_nombra_acciones_que_ya_no_lo_estan",
-        "TodaEscrituraDiceComoSeProtegeTests.Ninguna_accion_pide_los_dos_mecanismos_a_la_vez",
         "TodaEscrituraDiceComoSeProtegeTests.Ninguna_accion_que_admite_idempotencia_es_anonima",
+        "TodaEscrituraDiceComoSeProtegeTests.Solo_piden_los_dos_mecanismos_las_acciones_que_dicen_por_que",
         "TodaEscrituraDiceComoSeProtegeTests.Toda_accion_que_cambia_estado_dice_como_se_protege",
 
         "UnidadDeTrabajoPorModuloTests.CadaModulo_DeclaraSuPropiaUnidadDeTrabajo",

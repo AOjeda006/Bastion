@@ -26,10 +26,15 @@ using Npgsql;
 namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
-/// Los cuatro casos de uso del ajuste, los cuatro de la transferencia, y el alta y el conteo de una
-/// línea del recuento, con sus adaptadores REALES y los contextos que necesitan.
+/// Los cuatro casos de uso del ajuste, los cuatro de la transferencia, y el alta, el conteo de una
+/// línea y la confirmación del recuento, con sus adaptadores REALES y los contextos que necesitan.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>La confirmación del recuento entró la última</b>, por lo mismo que el conteo: la carrera de dos
+/// confirmaciones necesita parar la primera con la cabecera bloqueada y su ajuste escrito sin
+/// publicar. Y el cambio de año necesita un reloj que no sea el de hoy, que la API no deja poner.
+/// </para>
 /// <para>
 /// <b>El conteo de una línea entró después, en el mismo ítem</b>: la carrera de dos personas que
 /// cuentan líneas distintas necesita parar la primera con la cabecera bloqueada y su escritura sin
@@ -202,6 +207,17 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
 
         ContarLinea = new ContarLineaDeRecuento(
             recuentos, new VersionesDeInventario(_inventario), unidadDeTrabajo);
+
+        ConfirmacionDeRecuento = new ConfirmarRecuento(
+            recuentos,
+            ajustes,
+            new NumeradorDeSeriesDeInventario(_inventario, new InquilinoFijo(empresaId)),
+            ejercicios,
+            trazabilidad,
+            new ElPrecioMedioPonderado(),
+            new VersionesDeInventario(_inventario),
+            unidadDeTrabajo,
+            elReloj);
     }
 
     internal AbrirAjuste Alta { get; }
@@ -223,6 +239,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal AbrirRecuento AltaDeRecuento { get; }
 
     internal ContarLineaDeRecuento ContarLinea { get; }
+
+    internal ConfirmarRecuento ConfirmacionDeRecuento { get; }
 
     /// <summary>Confirma un ajuste con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>
@@ -438,23 +456,61 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal async Task<(Resultado<LineaDeRecuentoDto> Conteo, IDbContextTransaction Transaccion)>
         ContarYQuedarseDentroAsync(Guid recuentoId, Guid lineaId, string etiqueta, decimal contado)
     {
-        Resultado<VersionDeRecurso> version = VersionDeRecurso.DeLaCabecera(etiqueta);
-
-        if (!version.EsCorrecto)
-        {
-            throw new InvalidOperationException($"«{etiqueta}» no es la etiqueta de una versión.");
-        }
+        VersionDeRecurso version = LaVersion(etiqueta);
 
         IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
 
         Resultado<LineaDeRecuentoDto> conteo = await ContarLinea.EjecutarAsync(
             recuentoId,
             lineaId,
-            version.Valor,
+            version,
             new ContarLineaDeRecuentoDto { Contado = contado },
             CancellationToken.None);
 
         return (conteo, transaccion);
+    }
+
+    /// <summary>Confirma un recuento con una transacción abierta, como llegaría de verdad.</summary>
+    /// <remarks>
+    /// Para los casos que necesitan el reloj del módulo, que la API no deja fijar: el cambio de año y
+    /// el día sin ejercicio. La transacción la pone esto por lo mismo que en el ajuste: el mecanismo de
+    /// numeración revienta sin ella.
+    /// </remarks>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>ETag</c> de la ficha, tal como lo dio la API.</param>
+    /// <param name="huella">La huella del teórico que trae la ficha.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal Task<Resultado<RecuentoDto>> ConfirmarElRecuentoAsync(Guid recuentoId, string etiqueta, string huella)
+    {
+        VersionDeRecurso version = LaVersion(etiqueta);
+
+        return Lanzada(EnSuTransaccionAsync(() => ConfirmacionDeRecuento.EjecutarAsync(
+            recuentoId, version, new ConfirmarRecuentoDto { HuellaDelTeorico = huella }, CancellationToken.None)));
+    }
+
+    /// <summary>
+    /// Confirma un recuento <b>dentro</b> de una transacción y la deja abierta, con la cabecera y las
+    /// valoraciones bloqueadas y el ajuste y su libro escritos sin publicar.
+    /// </summary>
+    /// <remarks>
+    /// Es la primera de la carrera de dos confirmaciones (ADR-0057): la segunda se para en el cerrojo de
+    /// la cabecera, y cuando esta publica, lee la versión que dejó. Quien llama decide cuándo suelta.
+    /// </remarks>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>ETag</c> de la ficha, tal como lo dio la API.</param>
+    /// <param name="huella">La huella del teórico que trae la ficha.</param>
+    /// <returns>Lo que contestó el caso de uso, y la transacción todavía abierta.</returns>
+    internal async Task<(Resultado<RecuentoDto> Confirmacion, IDbContextTransaction Transaccion)>
+        ConfirmarElRecuentoYQuedarseDentroAsync(Guid recuentoId, string etiqueta, string huella)
+    {
+        VersionDeRecurso version = LaVersion(etiqueta);
+
+        IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<RecuentoDto> confirmacion = await ConfirmacionDeRecuento.EjecutarAsync(
+            recuentoId, version, new ConfirmarRecuentoDto { HuellaDelTeorico = huella }, CancellationToken.None);
+
+        return (confirmacion, transaccion);
     }
 
     /// <summary>Recibe con una transacción abierta, como llegaría de verdad.</summary>
@@ -539,6 +595,17 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             _inventario.ChangeTracker.Clear();
             throw;
         }
+    }
+
+    // La etiqueta tal como la dio la API, leída como la lee el borde. Si no se lee, es el caso el que
+    // está mal escrito, y eso no es un desenlace que afirmar.
+    private static VersionDeRecurso LaVersion(string etiqueta)
+    {
+        Resultado<VersionDeRecurso> version = VersionDeRecurso.DeLaCabecera(etiqueta);
+
+        return version.EsCorrecto
+            ? version.Valor
+            : throw new InvalidOperationException($"«{etiqueta}» no es la etiqueta de una versión.");
     }
 
     private Task<T> Lanzada<T>(Task<T> operacion)

@@ -299,12 +299,18 @@ export const en: Diccionario = {
       'recuento-clave-repetida':
         'The stock count already has that key: the same location, the same item and the same ' +
         'batch or serial number. Find it among the lines and count it there.',
+      'recuento-con-lineas-sin-contar':
+        'Some lines are still uncounted, and an uncounted line is not a zero. Count them, or ' +
+        'remove the ones you will not count: their stock will stay as it is.',
       'recuento-contado-no-valido':
         'The counted quantity is in the item’s base unit: it is not negative, has at most six ' +
         'decimals and, for a serial number, is 0 or 1. Fix the figure.',
       'recuento-coste-no-valido':
         'The cost of one unit cannot be negative or have more than fourteen integer digits. Fix ' +
         'it, or leave it empty if you do not know it.',
+      'recuento-en-ejercicio-cerrado':
+        'Today falls inside a closed financial year, and the stock count is confirmed with today’s ' +
+        'date: the period is already final and takes no new documents. Ask for the year to be reopened.',
       'recuento-linea-no-encontrada':
         'That line is no longer in the stock count: someone removed it first. Go back to the count and refresh.',
       'recuento-lote-no-valido':
@@ -327,6 +333,16 @@ export const en: Diccionario = {
       'recuento-serie-repetida':
         'That serial number is already in the stock count, in another location, and each piece is ' +
         'counted only once. Count it on the line that already has it, or remove that line first.',
+      'recuento-sin-ejercicio':
+        'Today falls outside every financial year, and the stock count is confirmed with today’s ' +
+        'date. Open the missing year before confirming.',
+      'recuento-sube-con-transito':
+        'Some lines were counted above the system figure in locations with goods in transit ' +
+        'towards them: if those goods have arrived but were not received, they would be added ' +
+        'twice. Receive the transfers and confirm again.',
+      'recuento-teorico-cambiado':
+        'The warehouse has changed since you opened the stock count: someone moved goods on the ' +
+        'highlighted lines. Review them, recount them if needed and confirm again.',
       'recuento-trazabilidad-no-casa':
         'That key does not match the item’s traceability: it lacks the batch or serial number the ' +
         'item requires, or carries one the item does not track. Fix the key.',

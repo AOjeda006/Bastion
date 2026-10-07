@@ -31,6 +31,13 @@ public sealed class LosDocumentosDeInventarioNumeranEnSusSeriesTests
         NumeradorDeSeriesDeInventario.SeriesDe(DocumentoQueNumera.Ajuste)
             .ShouldBe(nameof(TipoDeDocumento.AjusteDeInventario));
 
+    // EL BARRIDO DE ABAJO NO LO VE: que el recuento numerara en las series de ajustes sería un tipo
+    // que existe. Lo vería el primer recuento confirmado, con «esta serie es de otro documento».
+    [Fact]
+    public void Un_recuento_numera_en_las_series_de_recuentos_de_inventario() =>
+        NumeradorDeSeriesDeInventario.SeriesDe(DocumentoQueNumera.Recuento)
+            .ShouldBe(nameof(TipoDeDocumento.RecuentoDeInventario));
+
     [Fact]
     public void Cada_documento_del_modulo_numera_en_un_tipo_de_serie_que_existe()
     {

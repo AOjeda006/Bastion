@@ -5713,7 +5713,7 @@
           "Recuentos"
         ],
         "summary": "Anota lo contado en una línea, con el `If-Match` de la línea.",
-        "description": "    La versión que se exige es la de la línea, y cambia además la de la cabecera (ADR-0055\n      §4): dos personas que cuentan líneas distintas a la vez se esperan un instante en la cabecera, y\n      ninguna recibe un 412 por lo que hizo la otra.\n    El 409recuento-no-esta-en-curso es el de un recuento ya confirmado, anulado o\ndescartado. La respuesta no lleva ETag: la versión nueva de la línea se lee con ella.",
+        "description": "    La versión que se exige es la de la línea, y cambia además la de la cabecera (ADR-0055\n      §4): dos personas que cuentan líneas distintas a la vez se esperan un instante en la cabecera, y\n      ninguna recibe un 412 por lo que hizo la otra.\n    Un recuento ya confirmado, anulado o descartado da un 409\n(recuento-no-esta-en-curso). La respuesta no lleva ETag: la versión nueva de la\nlínea se lee con ella.",
         "operationId": "Recuentos_Contar",
         "parameters": [
           {
@@ -5972,6 +5972,200 @@
           },
           "412": {
             "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/recuentos/{id}/confirmacion": {
+      "post": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Confirma el recuento con la fecha de hoy: lo numera y mueve su diferencia con un ajuste, en la\nmisma transacción.",
+        "description": "    Lleva dos comprobaciones, y cada una dice una cosa (ADR-0055 §2): el If-Match de la\n      cabecera, si el documento cambió desde que se leyó, y la huella del cuerpo, si cambió el\n      almacén. Lo primero es un 412. Lo segundo es un 409\n      (recuento-teorico-cambiado) con la huella de ahora y las líneas cambiadas en\n      actual.\n    Las líneas sin contar dan un 422 (recuento-con-lineas-sin-contar), con las\nprimeras en actual. El 409 puede ser además el tránsito\n(recuento-sube-con-transito), un recuento que ya no está en curso, el ejercicio de hoy,\nuna serie cerrada o una fecha fuera del ejercicio de su serie, un maestro bloqueado, la marca de\nun artículo o una clave que no se valora.\n    La Idempotency-Key es obligatoria, porque confirmar gasta dos correlativos. La\n      respuesta no lleva ETag (ADR-0057): la versión nueva se lee con la ficha.",
+        "operationId": "Recuentos_Confirmar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarRecuentoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarRecuentoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarRecuentoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuentoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "text/plain": {
                 "schema": {
@@ -15838,6 +16032,20 @@
           }
         },
         "description": "Una condición de pago del tercero, tal como sale de la API."
+      },
+      "ConfirmarRecuentoDto": {
+        "required": [
+          "huellaDelTeorico"
+        ],
+        "type": "object",
+        "properties": {
+          "huellaDelTeorico": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string",
+            "description": "La huella del teórico, tal como la dio la ficha: 64 cifras hexadecimales en minúsculas."
+          }
+        },
+        "description": "Lo que lleva la confirmación: la huella del teórico que vio quien confirma (ADR-0055 §2)."
       },
       "ContactoDeAltaDto": {
         "required": [

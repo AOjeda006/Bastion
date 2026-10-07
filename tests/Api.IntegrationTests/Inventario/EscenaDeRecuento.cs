@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
@@ -190,6 +191,98 @@ internal sealed record EscenaDeRecuento(EscenaDeTransferencia Escena, SerieDto S
         }
 
         return cliente.SendAsync(alta);
+    }
+
+    /// <summary>La ficha y su <c>ETag</c>, de una sola lectura: lo que ve quien va a confirmar.</summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <returns>La ficha, con su huella, y la versión de la cabecera.</returns>
+    internal async Task<(RecuentoDto Ficha, string Etiqueta)> LoQueVeQuienConfirmaAsync(Guid recuentoId)
+    {
+        using HttpResponseMessage lectura = await Cliente.GetAsync($"{Recuentos}/{recuentoId}");
+
+        RecuentoDto ficha = await EscenaDeTransferencia.LeerAsync<RecuentoDto>(lectura);
+
+        lectura.Headers.ETag.ShouldNotBeNull("la ficha no emite ETag, así que no hay versión que citar");
+
+        return (ficha, lectura.Headers.ETag.ToString());
+    }
+
+    /// <summary>Cuenta una línea con la versión que tiene ahora, y tiene que salir bien.</summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="lineaId">La línea.</param>
+    /// <param name="contado">Lo contado.</param>
+    /// <returns>La tarea.</returns>
+    internal async Task ContarConSuVersionAsync(Guid recuentoId, Guid lineaId, decimal contado)
+    {
+        string etiqueta = await Cliente.EtiquetaDeAsync(RutaDeLaLinea(recuentoId, lineaId));
+
+        using HttpResponseMessage conteo = await ContarAsync(recuentoId, lineaId, etiqueta, contado);
+
+        conteo.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(conteo));
+    }
+
+    /// <summary>La confirmación por la API, tal como salga.</summary>
+    /// <param name="cliente">El cliente, que puede ser el de otra empresa.</param>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>, o <c>null</c> para no mandarlo.</param>
+    /// <param name="huella">La huella del cuerpo, tal cual, o <c>null</c> para mandarla vacía.</param>
+    /// <param name="clave">La <c>Idempotency-Key</c>, o <c>null</c> para no mandarla.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal static Task<HttpResponseMessage> ConfirmarAsync(
+        HttpClient cliente, Guid recuentoId, string? etiqueta, string? huella, string? clave)
+    {
+        HttpRequestMessage confirmacion = new(HttpMethod.Post, $"{Recuentos}/{recuentoId}/confirmacion")
+        {
+            Content = JsonContent.Create(new ConfirmarRecuentoDto { HuellaDelTeorico = huella! }),
+        };
+
+        if (etiqueta is not null)
+        {
+            confirmacion.Headers.TryAddWithoutValidation("If-Match", etiqueta);
+        }
+
+        if (clave is not null)
+        {
+            confirmacion.Headers.TryAddWithoutValidation(CabeceraDeIdempotencia, clave);
+        }
+
+        return cliente.SendAsync(confirmacion);
+    }
+
+    /// <summary>La confirmación por la API con una clave nueva, tal como salga.</summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <param name="etiqueta">El <c>If-Match</c>.</param>
+    /// <param name="huella">La huella del teórico.</param>
+    /// <returns>La respuesta cruda.</returns>
+    internal Task<HttpResponseMessage> ConfirmarAsync(Guid recuentoId, string etiqueta, string huella) =>
+        ConfirmarAsync(Cliente, recuentoId, etiqueta, huella, Guid.NewGuid().ToString());
+
+    /// <summary>
+    /// Confirma con lo que enseña la ficha en este instante, su versión y su huella, y tiene que salir
+    /// bien.
+    /// </summary>
+    /// <param name="recuentoId">El recuento.</param>
+    /// <returns>El recuento confirmado, tal como lo devolvió la confirmación.</returns>
+    internal async Task<RecuentoDto> ConfirmarConLaFichaDeAhoraAsync(Guid recuentoId)
+    {
+        (RecuentoDto ficha, string etiqueta) = await LoQueVeQuienConfirmaAsync(recuentoId);
+
+        using HttpResponseMessage confirmacion = await ConfirmarAsync(recuentoId, etiqueta, ficha.HuellaDelTeorico!);
+
+        return await EscenaDeTransferencia.LeerAsync<RecuentoDto>(confirmacion);
+    }
+
+    /// <summary>Las líneas que el problema trae en <c>actual</c>.</summary>
+    /// <param name="respuesta">La respuesta, que es un problema.</param>
+    /// <returns>Lo que trae, leído como lo lee el frontal.</returns>
+    internal static async Task<LineasEnConflictoDto> LasLineasEnConflictoAsync(HttpResponseMessage respuesta)
+    {
+        using var problema = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
+
+        problema.RootElement.TryGetProperty("actual", out JsonElement actual)
+            .ShouldBeTrue("el problema no trae las líneas en «actual»");
+
+        return actual.Deserialize<LineasEnConflictoDto>(JsonSerializerOptions.Web)!;
     }
 
     /// <summary>Que la respuesta sea el problema que se espera, con su estado y su <c>type</c>.</summary>

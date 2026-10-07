@@ -860,8 +860,9 @@ export interface paths {
          * @description La versión que se exige es la de la línea, y cambia además la de la cabecera (ADR-0055
          *           §4): dos personas que cuentan líneas distintas a la vez se esperan un instante en la cabecera, y
          *           ninguna recibe un 412 por lo que hizo la otra.
-         *         El 409recuento-no-esta-en-curso es el de un recuento ya confirmado, anulado o
-         *     descartado. La respuesta no lleva ETag: la versión nueva de la línea se lee con ella.
+         *         Un recuento ya confirmado, anulado o descartado da un 409
+         *     (recuento-no-esta-en-curso). La respuesta no lleva ETag: la versión nueva de la
+         *     línea se lee con ella.
          */
         put: operations["Recuentos_Contar"];
         post?: never;
@@ -872,6 +873,38 @@ export interface paths {
          *             cero.
          */
         delete: operations["Recuentos_QuitarLinea"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/recuentos/{id}/confirmacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirma el recuento con la fecha de hoy: lo numera y mueve su diferencia con un ajuste, en la
+         *     misma transacción.
+         * @description Lleva dos comprobaciones, y cada una dice una cosa (ADR-0055 §2): el If-Match de la
+         *           cabecera, si el documento cambió desde que se leyó, y la huella del cuerpo, si cambió el
+         *           almacén. Lo primero es un 412. Lo segundo es un 409
+         *           (recuento-teorico-cambiado) con la huella de ahora y las líneas cambiadas en
+         *           actual.
+         *         Las líneas sin contar dan un 422 (recuento-con-lineas-sin-contar), con las
+         *     primeras en actual. El 409 puede ser además el tránsito
+         *     (recuento-sube-con-transito), un recuento que ya no está en curso, el ejercicio de hoy,
+         *     una serie cerrada o una fecha fuera del ejercicio de su serie, un maestro bloqueado, la marca de
+         *     un artículo o una clave que no se valora.
+         *         La Idempotency-Key es obligatoria, porque confirmar gasta dos correlativos. La
+         *           respuesta no lleva ETag (ADR-0057): la versión nueva se lee con la ficha.
+         */
+        post: operations["Recuentos_Confirmar"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2483,6 +2516,11 @@ export interface components {
              * @description Porcentaje de descuento por pagar antes, si lo hay.
              */
             descuentoPorProntoPago: null | number | string;
+        };
+        /** @description Lo que lleva la confirmación: la huella del teórico que vio quien confirma (ADR-0055 §2). */
+        ConfirmarRecuentoDto: {
+            /** @description La huella del teórico, tal como la dio la ficha: 64 cifras hexadecimales en minúsculas. */
+            huellaDelTeorico: string;
         };
         /** @description Lo que hace falta para colgar o cambiar un contacto. */
         ContactoDeAltaDto: {
@@ -7411,6 +7449,105 @@ export interface operations {
             };
             /** @description Precondition Failed */
             412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_Confirmar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmarRecuentoDto"];
+                "text/json": components["schemas"]["ConfirmarRecuentoDto"];
+                "application/*+json": components["schemas"]["ConfirmarRecuentoDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["RecuentoDto"];
+                    "application/json": components["schemas"]["RecuentoDto"];
+                    "text/json": components["schemas"]["RecuentoDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

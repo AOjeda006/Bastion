@@ -339,12 +339,18 @@ export const es = {
       'recuento-clave-repetida':
         'El recuento ya lleva esa clave: la misma ubicación, el mismo artículo y el mismo lote o ' +
         'número de serie. Búscala en las líneas y cuéntala ahí.',
+      'recuento-con-lineas-sin-contar':
+        'Quedan líneas sin contar, y una línea sin contar no es un cero. Cuéntalas, o quita las que ' +
+        'no vayas a contar: su existencia quedará como está.',
       'recuento-contado-no-valido':
         'Lo contado va en la unidad base del artículo: no es negativo, lleva seis decimales como ' +
         'mucho y, en un número de serie, es 0 o 1. Corrige la cifra.',
       'recuento-coste-no-valido':
         'El coste de una unidad no puede ser negativo ni pasar de catorce cifras enteras. ' +
         'Corrígelo, o déjalo vacío si no lo sabes.',
+      'recuento-en-ejercicio-cerrado':
+        'Hoy cae en un ejercicio cerrado, y el recuento se confirma con la fecha de hoy: ese periodo ' +
+        'ya es definitivo y no admite documentos nuevos. Pide que se reabra el ejercicio.',
       'recuento-linea-no-encontrada':
         'Esa línea ya no está en el recuento: alguien la ha quitado antes. Vuelve a la ficha y actualiza.',
       'recuento-lote-no-valido':
@@ -367,6 +373,16 @@ export const es = {
       'recuento-serie-repetida':
         'Ese número de serie ya está en el recuento, en otra ubicación, y cada pieza se cuenta una ' +
         'sola vez. Cuéntala en la línea que ya la lleva, o quita esa línea antes.',
+      'recuento-sin-ejercicio':
+        'Hoy no cae en ningún ejercicio, y el recuento se confirma con la fecha de hoy. Abre el ' +
+        'ejercicio que falta antes de confirmar.',
+      'recuento-sube-con-transito':
+        'Hay líneas contadas por encima de lo que dice el sistema en huecos con mercancía en ' +
+        'tránsito hacia ellos: si ya ha llegado y no se ha recibido, se sumaría dos veces. Recibe ' +
+        'las transferencias y vuelve a confirmar.',
+      'recuento-teorico-cambiado':
+        'El almacén ha cambiado desde que abriste la ficha: alguien ha movido mercancía de las ' +
+        'líneas marcadas. Revísalas, vuelve a contarlas si hace falta y confirma otra vez.',
       'recuento-trazabilidad-no-casa':
         'Esa clave no casa con la trazabilidad del artículo: le falta el lote o el número de serie ' +
         'que pide la ficha, o lleva uno que la ficha no pide. Corrige la clave.',

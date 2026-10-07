@@ -21,4 +21,10 @@ public enum DocumentoQueNumera
 
     /// <summary>La transferencia, y su inverso, que numera en la misma serie (ADR-0053 §5).</summary>
     Transferencia = 2,
+
+    /// <summary>
+    /// El recuento, que numera al confirmarse (ADR-0055 §1.4) aunque no escriba en el libro: lo
+    /// escribe su ajuste, que numera en las series de ajustes.
+    /// </summary>
+    Recuento = 3,
 }

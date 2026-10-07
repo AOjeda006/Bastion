@@ -363,6 +363,20 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "LaCantidadBaseEsLaIntroducidaPorElFactorTests.Una_fila_que_no_mueve_nada_la_rechaza_el_motor",
 
+        // Del ítem 2.12 (ADR-0055 §3 y ADR-0057): la confirmación del recuento numera los dos, mueve
+        // justo la diferencia y no gasta nada cuando dice que no.
+        "LaConfirmacionDelRecuentoTests.Al_cambiar_de_anio_confirma_el_abierto_con_las_series_del_nuevo_y_no_el_de_las_del_viejo",
+        "LaConfirmacionDelRecuentoTests.Confirmar_con_diferencias_numera_los_dos_y_el_ajuste_mueve_justo_la_diferencia",
+        "LaConfirmacionDelRecuentoTests.Confirmar_dos_veces_con_la_misma_version_es_un_412_y_con_la_de_ahora_un_409",
+        "LaConfirmacionDelRecuentoTests.Confirmar_exige_su_clave_su_version_y_una_huella_y_otra_empresa_no_lo_encuentra",
+        "LaConfirmacionDelRecuentoTests.Lo_que_sube_con_transito_hacia_su_clave_es_un_409_y_lo_que_baja_se_confirma",
+        "LaConfirmacionDelRecuentoTests.Si_el_stock_se_mueve_mientras_se_cuenta_es_un_409_con_la_huella_de_ahora_y_con_ella_confirma",
+        "LaConfirmacionDelRecuentoTests.Sin_diferencias_se_numera_el_recuento_y_no_hay_ajuste_ni_se_toca_su_serie",
+        "LaConfirmacionDelRecuentoTests.Sin_ejercicio_para_hoy_o_con_el_de_hoy_cerrado_no_se_confirma_y_no_se_gasta_nada",
+        "LaConfirmacionDelRecuentoTests.Tras_confirmar_el_fisico_de_cada_clave_es_lo_contado",
+        "LaConfirmacionDelRecuentoTests.Un_recuento_vacio_se_confirma_con_su_numero_y_cuenta_para_su_ejercicio_por_la_fecha_de_confirmacion",
+        "LaConfirmacionDelRecuentoTests.Una_linea_sin_contar_no_es_un_cero_y_la_confirmacion_es_un_422_con_las_que_faltan",
+
         // Del ítem 2.5: la R2 en los DOS sentidos. La clave ajena garantiza que `anula_a_id`
         // señala una fila que existe y nada más: que esa fila esté anulada y que no haya DOS
         // inversos del mismo original son condiciones sobre el estado y sobre el número de filas
@@ -548,6 +562,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Tras_un_412_ni_traza_ni_evento",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Una_cabecera_que_no_es_una_version_concreta_es_400",
         "LaVersionViajaDeLaLecturaALaEscrituraTests.Una_version_obsoleta_es_412_y_trae_la_actual",
+
+        // Del ítem 2.12 (ADR-0057): la segunda confirmación espera en la cabecera y es un 412, y la que
+        // llega con un ajuste en vuelo espera en la valoración y es un 409 del teórico.
+        "LasCarrerasDeLaConfirmacionDelRecuentoTests.Dos_confirmaciones_a_la_vez_la_segunda_espera_en_la_cabecera_y_es_un_412",
+        "LasCarrerasDeLaConfirmacionDelRecuentoTests.Un_ajuste_en_vuelo_sobre_su_clave_frena_la_confirmacion_en_la_valoracion_y_es_un_409_del_teorico",
 
         // Del ítem 2.11 (ADR-0053 §7 y §10): las cuatro carreras de la transferencia, con dos
         // transacciones de verdad. Las de la recepción y la anulación afirman el 412 de la relectura

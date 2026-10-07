@@ -25,6 +25,17 @@ internal static class ErroresDeRecuento
     internal const string CodigoTrazabilidadNoCasa = "recuento-trazabilidad-no-casa";
     internal const string CodigoClaveRepetida = "recuento-clave-repetida";
     internal const string CodigoSerieRepetida = "recuento-serie-repetida";
+    internal const string CodigoConLineasSinContar = "recuento-con-lineas-sin-contar";
+    internal const string CodigoTeoricoCambiado = "recuento-teorico-cambiado";
+    internal const string CodigoSubeConTransito = "recuento-sube-con-transito";
+    internal const string CodigoSinEjercicio = "recuento-sin-ejercicio";
+    internal const string CodigoEnEjercicioCerrado = "recuento-en-ejercicio-cerrado";
+
+    /// <summary>
+    /// Cuántas líneas lleva como mucho el estado actual de un conflicto (ADR-0055 §2, §5 y §7). El
+    /// total va siempre, y la pantalla pide el resto filtrando sus líneas.
+    /// </summary>
+    internal const int LineasEnElConflicto = 50;
 
     /// <summary>
     /// Lo que cabe en el coste de una línea: <c>numeric(18,4)</c> deja catorce cifras enteras.
@@ -79,7 +90,10 @@ internal static class ErroresDeRecuento
         "Ese almacén ya tiene un recuento en curso, y dos a la vez se pisarían: cada uno movería la " +
         "diferencia contra el teórico que deja el otro. Confírmelo o descártelo antes de abrir otro.");
 
-    /// <summary>Se escribe en las líneas de un recuento que ya no está en curso (ADR-0055 §4).</summary>
+    /// <summary>
+    /// Se escribe en las líneas de un recuento que ya no está en curso (ADR-0055 §4), o se confirma
+    /// (§3).
+    /// </summary>
     /// <remarks>
     /// <b>Un <c>409</c> con el estado en el mensaje</b>: la petición está bien escrita, y lo que falla
     /// es que el recuento ya se confirmó, se anuló o se descartó. Lo que se contó entonces es lo que
@@ -92,7 +106,64 @@ internal static class ErroresDeRecuento
         ErrorDeOperacion.Conflicto(
             CodigoNoEstaEnCurso,
             $"El recuento {recuentoId} está en estado «{estado}»: solo se cuenta, se añade o se quita " +
-            "una línea mientras está en curso, y lo que se contó en uno cerrado es lo que quedó.");
+            "una línea, y se confirma, mientras está en curso. Lo que se contó en uno cerrado es lo que " +
+            "quedó.");
+
+    /// <summary>Se confirma con líneas sin contar (ADR-0055 §5).</summary>
+    /// <remarks>
+    /// <b>Un <c>422</c> y no un <c>409</c></b>: no ha cambiado nada que quien confirma no supiera, y
+    /// repetir la petición no lo arregla. Falta trabajo: contar esas líneas, o quitarlas a propósito.
+    /// Las primeras van en <c>actual</c>, con el total.
+    /// </remarks>
+    /// <param name="sinContar">Cuántas faltan.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion ConLineasSinContar(int sinContar) => ErrorDeOperacion.ReglaDeNegocio(
+        CodigoConLineasSinContar,
+        $"Al recuento le faltan {sinContar} líneas por contar, y una línea sin contar no es un cero. " +
+        "Cuéntelas, o quite las que no se vayan a contar: su clave quedará como está (ADR-0055 §5).");
+
+    /// <summary>El teórico no es el que vio quien confirma (ADR-0055 §2).</summary>
+    /// <remarks>
+    /// <b>Un <c>409</c> con el estado de ahora en <c>actual</c></b>: la huella de ahora y las líneas cuyo
+    /// teórico ya no es el de cuando se contaron. Algo ha movido el almacén desde que se leyó la ficha,
+    /// y quien confirma tiene que verlo antes de dar lo contado por bueno.
+    /// </remarks>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion TeoricoCambiado() => ErrorDeOperacion.Conflicto(
+        CodigoTeoricoCambiado,
+        "El teórico del recuento ya no es el que se vio al leerlo: algo ha movido el almacén desde " +
+        "entonces. Revise las líneas marcadas, vuelva a contarlas si hace falta y confirme con la " +
+        "huella de ahora (ADR-0055 §2).");
+
+    /// <summary>Una línea sube en una clave con tránsito hacia ella (ADR-0055 §7).</summary>
+    /// <remarks>
+    /// <b>Un <c>409</c> con esas líneas en <c>actual</c></b>: si la mercancía en vuelo ya llegó y no se
+    /// ha recibido, contarla y después recibirla la sumaría dos veces. Se confirma después de recibir.
+    /// </remarks>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion SubeConTransito() => ErrorDeOperacion.Conflicto(
+        CodigoSubeConTransito,
+        "Hay líneas contadas por encima del teórico en claves con mercancía en tránsito hacia ellas: " +
+        "si ya llegó y no se ha recibido, se sumaría dos veces. Reciba las transferencias y vuelva a " +
+        "confirmar (ADR-0055 §7).");
+
+    /// <summary>Hoy no cae en ningún ejercicio, y el recuento se confirma con la fecha de hoy.</summary>
+    /// <param name="fecha">La fecha de la confirmación.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion SinEjercicio(DateOnly fecha) => ErrorDeOperacion.Conflicto(
+        CodigoSinEjercicio,
+        $"El {fecha:yyyy-MM-dd} no cae en ningún ejercicio de esta empresa, y el recuento y su ajuste " +
+        "llevan la fecha de la confirmación (ADR-0055 §1.5). Abra el ejercicio que falta antes de " +
+        "confirmar.");
+
+    /// <summary>El ejercicio de hoy está cerrado (R9).</summary>
+    /// <param name="fecha">La fecha de la confirmación.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion EnEjercicioCerrado(DateOnly fecha) => ErrorDeOperacion.Conflicto(
+        CodigoEnEjercicioCerrado,
+        $"El ejercicio del {fecha:yyyy-MM-dd} está cerrado, y el recuento y su ajuste llevan la fecha " +
+        "de la confirmación (ADR-0055 §1.5): ese periodo ya es definitivo y no admite documentos " +
+        "nuevos (R9).");
 
     /// <summary>Lo contado no cabe en la línea (ADR-0055 §6).</summary>
     /// <remarks>

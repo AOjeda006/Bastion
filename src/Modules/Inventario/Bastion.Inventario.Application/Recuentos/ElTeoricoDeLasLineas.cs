@@ -149,8 +149,14 @@ internal sealed class ElTeoricoDeLasLineas
         return _transitos is not null && _transitos.TryGetValue(linea.Id, out decimal transito) ? transito : null;
     }
 
-    private static ElTeoricoDeLasLineas AlConfirmar(Recuento recuento, Ajuste? ajuste)
+    /// <summary>El teórico que quedó al confirmar, desde su ajuste ya leído o recién confirmado.</summary>
+    /// <param name="recuento">El recuento, confirmado o anulado.</param>
+    /// <param name="ajuste">Su ajuste, o <see langword="null"/> si no movió el libro.</param>
+    /// <returns>El teórico de cada línea.</returns>
+    internal static ElTeoricoDeLasLineas AlConfirmar(Recuento recuento, Ajuste? ajuste)
     {
+        ArgumentNullException.ThrowIfNull(recuento);
+
         Dictionary<Guid, decimal> movido = ajuste?.Lineas.ToDictionary(
             linea => linea.Id, linea => linea.CantidadIntroducida) ?? [];
 

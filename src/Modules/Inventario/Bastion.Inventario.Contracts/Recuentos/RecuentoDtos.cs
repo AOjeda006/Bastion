@@ -192,3 +192,36 @@ public sealed record AnadirLineaDeRecuentoDto(
     string? CodigoDeLote,
     string? NumeroDeSerie,
     decimal? CosteUnitario);
+
+/// <summary>Lo que lleva la confirmación: la huella del teórico que vio quien confirma (ADR-0055 §2).</summary>
+/// <remarks>
+/// <b>Va con el <c>If-Match</c> de la cabecera, y cada uno dice una cosa</b>: la versión, si el
+/// documento cambió desde que se leyó, y la huella, si cambió el almacén. Y con la
+/// <c>Idempotency-Key</c>, obligatoria, porque confirmar gasta dos correlativos (ADR-0057).
+/// </remarks>
+public sealed record ConfirmarRecuentoDto
+{
+    /// <summary>La huella del teórico, tal como la dio la ficha: 64 cifras hexadecimales en minúsculas.</summary>
+    [Required(ErrorMessage = "La huella del teórico es obligatoria.")]
+    [RegularExpression(
+        "^[0-9a-f]{64}$",
+        ErrorMessage = "La huella del teórico son 64 cifras hexadecimales en minúsculas, tal como las da la ficha.")]
+    public string HuellaDelTeorico { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// El estado actual de un conflicto de la confirmación, en la extensión <c>actual</c> del problema
+/// (ADR-0055 §11).
+/// </summary>
+/// <remarks>
+/// <b>Lo llevan tres respuestas</b>: el <c>422</c> de las líneas sin contar, el <c>409</c> del teórico,
+/// que es el único con la huella de ahora, y el <c>409</c> del tránsito. Las líneas van como las enseña
+/// la ficha, las primeras cincuenta por su número, y el total dice cuántas son.
+/// </remarks>
+/// <param name="Total">Cuántas líneas están en el conflicto.</param>
+/// <param name="Lineas">Las primeras, por su número.</param>
+/// <param name="HuellaDelTeorico">La huella de ahora, solo en el conflicto del teórico.</param>
+public sealed record LineasEnConflictoDto(
+    int Total,
+    IReadOnlyList<LineaDeRecuentoDto> Lineas,
+    string? HuellaDelTeorico);

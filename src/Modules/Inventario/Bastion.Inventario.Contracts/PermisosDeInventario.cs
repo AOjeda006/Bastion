@@ -105,6 +105,13 @@ public static class PermisosDeInventario
     /// </remarks>
     public const string RecuentoQuitarLinea = "inventario.recuento.quitar-linea";
 
+    /// <summary>Confirmar un recuento en curso: numerarlo y mover su diferencia con un ajuste.</summary>
+    /// <remarks>
+    /// <b>Es el que mueve el libro</b>: gasta dos correlativos y deja el físico de cada clave contada
+    /// en lo contado. Quien cuenta no tiene por qué poder dar lo contado por bueno.
+    /// </remarks>
+    public const string RecuentoConfirmar = "inventario.recuento.confirmar";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -125,5 +132,6 @@ public static class PermisosDeInventario
         RecuentoContar,
         RecuentoAgregarLinea,
         RecuentoQuitarLinea,
+        RecuentoConfirmar,
     ];
 }

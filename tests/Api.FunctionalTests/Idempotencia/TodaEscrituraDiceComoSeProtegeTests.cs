@@ -314,6 +314,39 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             "el de la anulación del ajuste: el inverso toma su propio número de la serie del " +
             "original, y tiene que quedar escrito con él, con las patas que niega y con el original " +
             "anulado en la MISMA transacción (R5, R2)",
+
+        // La del recuento, del 2.12 (ADR-0055 §3): el argumento de la confirmación, dos veces.
+        ["RecuentosController.Confirmar"] =
+            "toma DOS números, el del recuento y el de su ajuste si hay diferencias, y los dos, el " +
+            "ajuste, su libro y el recuento confirmado tienen que quedar escritos en la MISMA " +
+            "transacción. Sin ella, cada contador se confirmaría por su cuenta y un fallo posterior " +
+            "dejaría dos huecos (R5)",
+    };
+
+    // Las que piden los DOS mecanismos, con el motivo de cada una (ADR-0057). Hasta el 2.12 no había
+    // ninguna, y la regla las prohibía por dos razones:
+    //
+    // 1. La repetición devolvería una respuesta con el ETag de entonces, que ya no sería el actual.
+    // 2. La transacción de la idempotencia va SIN puntos de guardado (ver AlmacenDeIdempotencia), y
+    //    un choque de concurrencia la dejaría abortada: el manejador del 412 consulta la versión
+    //    actual de la fila para ponerla en la respuesta, y esa consulta fallaría. El cliente
+    //    recibiría un 500 donde tocaba un 412, y lo reintentaría, que es lo contrario de lo que
+    //    hay que hacer con un choque.
+    //
+    // Una acción entra aquí solo si contesta a las dos. A la primera, respondiendo SIN ETag: la
+    // versión nueva se lee con la ficha. A la segunda, comparando la versión con la fila ya
+    // bloqueada y devolviendo el 412 como un resultado, antes de escribir nada, así que el testigo
+    // de EF Core no llega a chocar. Lo afirman sus casos de integración: la respuesta y su
+    // repetición sin ETag, el If-Match viejo y las dos confirmaciones a la vez, que dan 412 y no 500.
+    private static readonly Dictionary<string, string> s_conLosDos = new(StringComparer.Ordinal)
+    {
+        ["RecuentosController.Confirmar"] =
+            "numera, así que la clave es obligatoria por el motivo de s_obligatorias; y lo que " +
+            "confirma es lo que se contó en un papel que varias personas escriben a la vez, así que " +
+            "quien confirma tiene que citar la versión que vio (ADR-0055 §2). Ni la máquina de " +
+            "estados ni el testigo bastan: un conteo de otra persona deja el recuento en curso y " +
+            "con otra cifra, y confirmar sin haberla visto daría por buena una diferencia que nadie " +
+            "ha mirado",
     };
 
     // La clave que identifica una petición repetible lleva dentro la empresa y el usuario. Una
@@ -357,19 +390,12 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
             string.Join(", ", huerfanas));
     }
 
-    // Hoy no hay ninguna que necesite los dos, y la combinación no está probada. Dos motivos, y el
-    // segundo es el duro:
-    //
-    // 1. La repetición devolvería una respuesta con el ETag de entonces, que ya no sería el actual.
-    // 2. La transacción de la idempotencia va SIN puntos de guardado (ver AlmacenDeIdempotencia), y
-    //    un choque de concurrencia la dejaría abortada: el manejador del 412 consulta la versión
-    //    actual de la fila para ponerla en la respuesta, y esa consulta fallaría. El cliente
-    //    recibiría un 500 donde tocaba un 412 — y lo reintentaría, que es lo contrario de lo que
-    //    hay que hacer con un choque.
-    //
-    // El día que haga falta, este rojo obliga a decidir las dos cosas antes de escribirlo.
+    // Los dos mecanismos a la vez solo los pide una acción que contesta a los dos motivos de
+    // `s_conLosDos`, y la lista se compara entera en los dos sentidos. Una que falte es una
+    // combinación colada sin haber decidido qué hace la repetición con su ETag ni dónde sale su
+    // 412; una que sobre es un motivo escrito sobre una acción que ya no lo necesita.
     [Fact]
-    public void Ninguna_accion_pide_los_dos_mecanismos_a_la_vez()
+    public void Solo_piden_los_dos_mecanismos_las_acciones_que_dicen_por_que()
     {
         List<string> ambas =
         [
@@ -378,9 +404,19 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
                 .Select(accion => accion.Nombre),
         ];
 
-        ambas.ShouldBeEmpty(
-            "estas acciones exigen If-Match y admiten Idempotency-Key a la vez: " +
-            string.Join(", ", ambas));
+        ambas.ShouldNotBeEmpty("el contraejemplo: la confirmación del recuento pide los dos");
+
+        List<string> sinMotivo = [.. ambas.Where(nombre => !s_conLosDos.ContainsKey(nombre))];
+
+        sinMotivo.ShouldBeEmpty(
+            "estas acciones exigen If-Match y admiten Idempotency-Key a la vez, y no dicen por qué: " +
+            string.Join(", ", sinMotivo));
+
+        List<string> sobran = [.. s_conLosDos.Keys.Where(nombre => !ambas.Contains(nombre))];
+
+        sobran.ShouldBeEmpty(
+            "estas acciones están declaradas con los dos mecanismos y ya no los piden (o ya no " +
+            "existen): " + string.Join(", ", sobran));
     }
 
     // Un barrido que no encuentra nada sale verde por la peor de las razones: las cinco
@@ -396,8 +432,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(146, "acciones en total");
-        cambian.Count.ShouldBe(93, "acciones que cambian estado");
+        todas.Count.ShouldBe(147, "acciones en total");
+        cambian.Count.ShouldBe(94, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -435,8 +471,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // que cuelga —contactos, cuentas, condiciones y límite—. Que Idempotency-Key no se mueva
         // es la afirmación importante: colgar un contacto o una cuenta PARECE un alta, y si lo
         // fuera llevaría clave; no lo es, porque lo que se modifica es el agregado, que sí tiene
-        // versión previa que citar. Los dos mecanismos a la vez están prohibidos por el test de
-        // arriba, así que la única manera de que ese número hubiera subido sería quitando el
+        // versión previa que citar. Los dos mecanismos a la vez solo los pide la lista cerrada del
+        // test de arriba, así que la única manera de que ese número hubiera subido sería quitando el
         // If-Match — y entonces dos peticiones simultáneas sobre la misma ficha se pisarían.
         //
         // Ciento dos desde el ítem 1.7, y el reparto separa las nueve nuevas en dos clases. Ocho
@@ -565,7 +601,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // QUE NO SUBA IF-MATCH ES LA AFIRMACIÓN, y no es que se le haya olvidado: confirmar dos
         // veces no lo para una versión, lo para la máquina de estados —el segundo intento se
         // encuentra un ajuste que ya no está en borrador—. Si este número hubiera subido,
-        // además, habría chocado con `Ninguna_accion_pide_los_dos_mecanismos_a_la_vez`: un
+        // además, habría chocado con la regla que entonces prohibía los dos mecanismos a la vez: un
         // documento en borrador NO tiene `GET` por el que sacar su `ETag`, porque el borde no
         // publica ninguno, así que la precondición no tendría llave —el mismo argumento del
         // ADR-0017 que mandó tres desbloqueos al cajón de las exentas en el 0.10—.
@@ -635,28 +671,38 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // QUE SUBA IF-MATCH Y NO LO HAGA EN EL AJUSTE NI EN LA TRANSFERENCIA es lo que separa a esta
         // pantalla de aquellos documentos: aquí dos personas escriben a la vez en el mismo papel, y
         // lo que una ve tiene que ser la versión de lo que la otra acaba de contar.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(49, "operaciones que exigen If-Match");
+        //
+        // Ciento cuarenta y siete con la confirmación, y es la primera acción que sube A LA VEZ
+        // If-Match e Idempotency-Key: +1 al total, +1 a las que cambian estado, +1 a If-Match, +1 a
+        // Idempotency-Key, +1 a las obligatorias y +1 a las que piden los dos (ADR-0057). Por eso
+        // la partición de abajo resta las de los dos: sin esa resta, la confirmación caería en dos
+        // cajones y la cuenta saldría una de más.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(50, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
-            .ShouldBe(27, "rutas que admiten Idempotency-Key");
+            .ShouldBe(28, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
 
-        // Y de esas veintisiete, CINCO la exigen. Es un recuento aparte y no un reparto del anterior
+        // Y de esas veintiocho, SEIS la exigen. Es un recuento aparte y no un reparto del anterior
         // porque las obligatorias son un SUBCONJUNTO de las que admiten, no un cuarto cajón: la
-        // partición de abajo seguiría siendo exacta aunque las veintisiete fueran obligatorias, que
-        // es justo lo que este número impide que pase sin que nadie lo vea. Las cinco son del mismo
-        // módulo. Cuatro por el argumento de la confirmación —número dentro de la transacción del
+        // partición de abajo seguiría siendo exacta aunque las veintiocho fueran obligatorias, que
+        // es justo lo que este número impide que pase sin que nadie lo vea. Las seis son del mismo
+        // módulo. Cinco por el argumento de la confirmación —número dentro de la transacción del
         // documento—, y la recepción de la transferencia, que no numera, porque sin la transacción
         // del filtro el cerrojo de la valoración no dura más que su sentencia, y el tránsito que
-        // baja y la existencia que sube dejarían de ir juntos. Las cinco están nombradas con su
+        // baja y la existencia que sube dejarían de ir juntos. Las seis están nombradas con su
         // motivo en `s_obligatorias`, que se compara entera en los dos sentidos: este número solo
         // dice cuántas, no cuáles.
         cambian.Count(accion => accion.ExigeIdempotencia)
-            .ShouldBe(5, "rutas que EXIGEN Idempotency-Key");
+            .ShouldBe(6, "rutas que EXIGEN Idempotency-Key");
 
-        // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones y en
-        // ninguno cae dos veces. Los dos primeros tests lo comprueban por nombre; esto lo comprueba
-        // por cuenta, que es lo que se rompe si alguien añade una acción y una exención a la vez.
-        (49 + 27 + s_exentas.Count).ShouldBe(cambian.Count);
+        cambian.Count(accion => accion.ExigeVersion && accion.AdmiteIdempotencia)
+            .ShouldBe(s_conLosDos.Count, "rutas que piden los dos mecanismos");
+
+        // La partición es exacta: cada acción que cambia estado cae en uno de los tres cajones, y
+        // solo las de `s_conLosDos` caen en dos. Los dos primeros tests lo comprueban por nombre;
+        // esto lo comprueba por cuenta, que es lo que se rompe si alguien añade una acción y una
+        // exención a la vez.
+        (50 + 28 - s_conLosDos.Count + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>
