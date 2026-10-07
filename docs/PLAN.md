@@ -9644,8 +9644,8 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 
      La rama `epilogo-2.11` se borró después, en local y en el remoto. Anotado al abrir el 2.12.
 
-**El 2.12, en curso** desde el 2026-10-06, en la rama `2.12-el-recuento`, abierta desde `main` en
-`5ca301f`.
+**El 2.12, cerrado el 2026-10-07**, en la rama `2.12-el-recuento`, abierta el 2026-10-06 desde
+`main` en `5ca301f`.
 
 - **La puerta se contestó el mismo día**: todas (R), con cuatro precisiones. Las respuestas están en
   *Decisiones tomadas → Traídas por el encargo del 2026-10-06*, y el diseño entero, en el
@@ -9766,7 +9766,76 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
     | 357 | Cerrado, la vista de la URL acota las líneas | **verde sin esperarlo** → `1a867b7`; medida otra vez, 1: `cerrado, un enlace viejo a una vista enseña todas sus líneas y no ofrece las vistas` |
     | 358 | **Arnés**: el servidor de pega no compara la huella al confirmar | 1: el de la 348 |
 
-- **Dónde retomar:** la batería, el humo y el recorrido con `playwright-cli`, por ese orden.
+- **La batería** de `AGENTS.md`, entera y en su orden sobre `98b95a0`, con `bash bateria212.sh`, un
+  guion del *scratchpad* que corre cada paso de la lista y anota su código de salida:
+  - los diecisiete pasos salen con código 0, y la porcelana queda vacía al final;
+  - **0** avisos de `act()`, con `grep -c 'not wrapped in act'` sobre el registro del paso;
+  - el frontal, **249** casos en 24 ficheros;
+  - el recuento de la CI, **1356** casos en el carril rápido y **651** en el de integración, los
+    dos en 10 ensamblados. `Bastion.Inventario.UnitTests` da 216, `Bastion.Api.FunctionalTests` 217
+    y `Bastion.Api.IntegrationTests` 567;
+  - el presupuesto, **436/450** y **698/900** KiB, el mismo que dejó la pantalla (punto 18 de
+    *Decisiones tomadas → ítem 2.12, al escribir su código*);
+  - las dependencias, con `python scripts/dependencias-por-conjuntos.py 5ca301f HEAD`: no entra ni
+    sale ningún par, ningún proyecto y ninguna entrada del frontal.
+- **El humo**, con `bash humo212.sh montar` y `bash humo212.sh rematar`, en su propio proyecto de
+  *compose*, `bastion-humo-212`, con el entorno generado en el *scratchpad*, los puertos en 45xxx y
+  el entorno borrado al salir: **0 fallos**.
+  - El esquema, leído del catálogo del motor: las dos tablas, `ajustes.recuento_id` como `uuid`
+    nulable, las ocho comprobaciones, los siete índices con su forma —`NULLS NOT DISTINCT` en el de
+    una línea por clave— y la migración `ElRecuento` una vez en el historial. El rol del sistema
+    concede **108** permisos, y los ocho del recuento están sembrados.
+  - Los rechazos, por la API y por el frontal, sobre identificadores inventados: la ficha, la
+    confirmación, la anulación, el descarte y contar dan `404` `recuento-no-encontrado`; confirmar
+    sin la clave, `428` `idempotencia-obligatoria`, y sin el `If-Match`, `428` `falta-if-match`; y
+    abrir en un almacén que no existe, `400` `recuento-almacen-no-encontrado`. La base se queda sin
+    recuentos y sin ajustes.
+  - Los datos del recorrido, por la API: un almacén, un artículo, las dos series y dos recuentos
+    confirmados. El primero añade la clave con su coste y cuenta 10; el segundo la precarga con 10
+    y cuenta 15. Quedan dos ajustes confirmados y un físico de 15.
+  - El segundo arranque sale en verde. Después, las ocho comprobaciones y el índice de uno en curso
+    siguen, y los recuentos del recorrido también.
+  - El `down -v`, con su `-p` en la misma orden. El proyecto `bastion` no se tocó.
+- **El recorrido con `playwright-cli`**, contra esa pila y entre `montar` y `rematar`, con
+  `python pwc.py`, un guion del *scratchpad* que pone el correo y la contraseña desde el entorno y
+  la tapa en la salida. Las capturas van a `pw212/`, en el *scratchpad*, y ninguna lleva un secreto.
+  1. Se entra, y el alta de `/recuentos` abre el recuento sobre `ALM-HUMO` con `RC` y `AJ`. La
+     ficha precarga una línea con teórico 15.
+  2. Se cuenta 15, y la fila dice diferencia 0.
+  3. **El stock se mueve entre medias**: `python humo212api.py … anular … segundo` anula por la API
+     el segundo recuento, y su inverso deja el físico en 10.
+  4. Confirmar desde la ficha, que aún enseña el 15, es el **`409` del teórico**. La pantalla lo
+     dice arriba, pasa a `?solo=teorico-cambiado` y la línea enseña «10 · Al contar era 15 (-5)»,
+     con diferencia +5.
+  5. Confirmar otra vez numera el **recuento 3**, y su ajuste, el 4, lleva el físico a 15. La ficha
+     vuelve a la vista entera.
+  6. Anular desde la ficha, con su motivo, deja el recuento `Anulado`. El inverso, el ajuste 5,
+     devuelve el físico a 10.
+
+  La consola del navegador solo anota el `401` de la renovación, antes de entrar, y el `409`
+  provocado. Es una comprobación a mano; lo que prueba el comportamiento son los casos de
+  `LaFichaDelRecuento.test.tsx`.
+- **Los commits del 2.12**, desde `39ec98e`, son **veinte** con `98b95a0`, y con el de este cierre,
+  veintiuno. Subieron en diez veces, y cada subida tiene su run de rama, en verde al primer intento:
+
+  | Subida, hasta | Run |
+  |---|---|
+  | `39ec98e` | 37380846390 |
+  | `45ba42a` | 37389487745 |
+  | `540265e` | 37391134793 |
+  | `482fff7` | 37392300591 |
+  | `31081ed` | 37394719734 |
+  | `45db791` | 37416343320 |
+  | `7dfe60f` | 37574381085 |
+  | `0fd1d52` | 37580011264 |
+  | `751efa3` | 37581957982 |
+  | `5190029` | 37614994806 |
+
+  Los cuatro últimos, `4d28adc`, `1a867b7`, `335c8a1` y `98b95a0`, suben con este. Su run se anota
+  en el commit siguiente, que espera su propio verde en la rama antes de que `main` avance. El run
+  de `main` se anota al abrir el 2.13.
+- **Dónde retomar:** el run de rama de este commit, el commit que lo anota, `main` con `--ff-only`
+  y su run, y la rama borrada después. Luego, el 2.13.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -18029,13 +18098,52 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   mismo commit, el **37292114539**, saliera en verde, y el de `main`, el **37293342638**, sale en
   verde al primer intento con las mismas cifras. Anotado al abrir el epílogo del 2.11.
 
-- [ ] **2.12 · El recuento** — criterio de aceptación: cabecera con estado y líneas con **cantidad
+- [x] **2.12 · El recuento** — criterio de aceptación: cabecera con estado y líneas con **cantidad
   contada frente a teórica**; al confirmar **genera sus ajustes** —documentos del 2.3, con su número y
   su doble flecha, que es lo que el §15 llama «ajustes trazables»—, y una línea que cuenta **lo mismo
   que la teórica no genera nada**; el teórico que se congela es el del instante en que se **confirma**
   y no el del instante en que se contó, con la diferencia dicha en la pantalla; y un recuento sobre un
   almacén con movimientos entre medias sigue cuadrando, con un caso que mueve stock mientras el
   recuento está `EnCurso`.
+
+  **Hecho el 2026-10-07**, en la rama `2.12-el-recuento`. El porqué está en el
+  [ADR-0055](adr/adr-0055-el-recuento-congela-el-teorico-al-confirmar-y-su-ajuste-es-el-que-mueve.md),
+  enmendado por el
+  [ADR-0056](adr/adr-0056-anadir-y-quitar-una-linea-del-recuento-tienen-su-permiso.md) en sus
+  permisos, y en el
+  [ADR-0057](adr/adr-0057-la-confirmacion-del-recuento-lleva-la-clave-y-la-version-y-su-412-sale-antes-de-escribir.md),
+  que enmienda el ADR-0014 §4 y §9. Los commits, las mutaciones de la 313 a la 358, la batería, el
+  humo y el recorrido están en *Estado actual → El 2.12, cerrado*. Cada punto del criterio tiene su
+  caso:
+
+  - la cabecera con su estado: los quince casos de `LaMaquinaDeEstadosDelRecuentoTests`, desde
+    `Un_recuento_nace_en_curso_sin_numero_y_sin_haber_contado_nada`;
+  - las líneas con lo contado frente al teórico: `LasLineasDelRecuentoTests.Contar_anota_lo_contado_con_su_teorico_y_mueve_la_version_de_la_linea_y_la_de_la_cabecera`,
+    `ElAltaDelRecuentoTests.Abrir_precarga_las_claves_con_fisico_del_almacen_en_su_unidad_base_y_sin_contar`
+    y, en la pantalla, `dice la cabecera y cada línea: el teórico, lo contado, la diferencia y la unidad`;
+  - confirmar genera su ajuste, con su número y su doble flecha:
+    `LaConfirmacionDelRecuentoTests.Confirmar_con_diferencias_numera_los_dos_y_el_ajuste_mueve_justo_la_diferencia`
+    y `ElAjusteDelRecuentoTests.Al_confirmar_cada_linea_que_difiere_apunta_a_la_del_ajuste_que_la_mueve`;
+    el ajuste se anula solo por el camino del recuento,
+    `LaAnulacionYElDescarteDelRecuentoTests.El_ajuste_de_un_recuento_no_se_anula_por_su_camino_y_por_el_del_recuento_si`;
+  - lo que cuadra no genera nada:
+    `ElAjusteDelRecuentoTests.Lleva_solo_las_lineas_que_difieren_con_lo_contado_menos_el_teorico_en_la_unidad_base`,
+    `…Si_todo_cuadra_no_hay_ajuste_y_el_recuento_se_confirma_igual` y
+    `LaConfirmacionDelRecuentoTests.Sin_diferencias_se_numera_el_recuento_y_no_hay_ajuste_ni_se_toca_su_serie`;
+  - el teórico que se congela es el de la confirmación: la confirmación lleva la huella del teórico
+    que vio el usuario, y si ya no es el de ahora es un `409`
+    (`…Si_el_stock_se_mueve_mientras_se_cuenta_es_un_409_con_la_huella_de_ahora_y_con_ella_confirma`).
+    La carrera la cierra
+    `LasCarrerasDeLaConfirmacionDelRecuentoTests.Un_ajuste_en_vuelo_sobre_su_clave_frena_la_confirmacion_en_la_valoracion_y_es_un_409_del_teorico`,
+    que la mutación 318, la que lee el teórico antes de bloquear, pone roja sola;
+  - la diferencia, dicha en la pantalla: `si el stock se mueve, lleva a lo que cambió; la segunda
+    manda la huella nueva con otra clave; y anular lo deshace`, y el recorrido con `playwright-cli`;
+  - un recuento con movimientos entre medias sigue cuadrando, con un caso que mueve stock mientras
+    está `EnCurso`: el del `409` de arriba mete dos unidades después de contar 9 sobre un teórico
+    de 5. Confirma con la huella de ahora, el ajuste mueve 2 («de siete a nueve, no de cinco a
+    nueve») y el físico queda en 9. Sin movimientos entre medias,
+    `…Tras_confirmar_el_fisico_de_cada_clave_es_lo_contado` lo afirma clave a clave, con tres
+    semillas: un recuento nuevo precarga justo lo contado, y el cuadre no encuentra nada.
 
 - [ ] **2.13 · Las reservas, y el disponible** — criterio de aceptación: `Reserva` con
   `Activa`/`Consumida`/`Liberada` y su caducidad; `Disponible = Físico − Reservado` respondiendo de

@@ -10,8 +10,8 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 2 (Inventario), en curso: 11 de 14 ítems.** La fase 1 se cerró con catorce ítems y
-> la fase 2 lleva once: el frontal arranca con un solo diccionario; los tres puertos que el libro de
+> **Estado: fase 2 (Inventario), en curso: 12 de 14 ítems.** La fase 1 se cerró con catorce ítems y
+> la fase 2 lleva doce: el frontal arranca con un solo diccionario; los tres puertos que el libro de
 > movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado contesta
 > que sigue resolviendo lo viejo, no que no existe—; el libro ya existe, particionado por mes y
 > de solo añadido en el motor, con el ajuste como primer documento; el ajuste se numera al
@@ -25,13 +25,16 @@ de datos, su contrato público y su comunicación por eventos.
 > no cambia en cuanto el artículo tiene movimientos, y un número de serie no está en dos sitios a
 > la vez; el artículo lleva sus códigos de barras: varios por nivel —la unidad, la caja y el
 > palé—, guardados en catorce cifras con el dígito de control comprobado al entrar, y uno repetido
-> en la empresa es un `409`; y una transferencia mueve stock entre dos almacenes de la misma
+> en la empresa es un `409`; una transferencia mueve stock entre dos almacenes de la misma
 > empresa en dos tiempos: sale del origen al enviarse, entra en el destino al recibirse, y
-> mientras viaja se cuenta en tránsito, cuadrado contra lo enviado. Qué se hizo en cada ítem,
-> con el run de la CI que lo certifica, y qué
-> queda está en **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del
-> trabajo. Esta línea se compara con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una
-> casilla cambia y la línea no, la CI sale roja.
+> mientras viaja se cuenta en tránsito, cuadrado contra lo enviado; y un recuento cuenta el
+> almacén entero contra el teórico del instante en que se confirma, no del que se contó —si el
+> stock se movió entre medias, confirmar es un `409` que dice qué líneas cambiaron—, y la
+> diferencia entra en el libro como un ajuste numerado, que es lo que se anula para deshacerlo.
+> Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
+> **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo. Esta
+> línea se compara con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia
+> y la línea no, la CI sale roja.
 
 ---
 
