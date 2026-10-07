@@ -168,6 +168,28 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
       (await import('@/features/organizacion/empresas/ui/PaginaDeEmpresas.tsx')).PaginaDeEmpresas,
   },
   {
+    // La primera pantalla del inventario (ítem 2.12). Abrir tiene su permiso, y la pantalla
+    // esconde el formulario a quien no lo tiene.
+    ruta: '/recuentos',
+    duenio: 'inventario',
+    claveDeTitulo: 'recuentos',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.recuentoVer },
+    enLaNavegacion: true,
+    cargar: async () =>
+      (await import('@/features/inventario/recuentos/ui/PaginaDeRecuentos.tsx')).PaginaDeRecuentos,
+  },
+  {
+    // Fuera de la navegación: se llega desde el listado y al abrir uno. Por el permiso de ver, que
+    // es el de la ficha y sus líneas; contar, confirmar, anular y descartar tienen los suyos.
+    ruta: '/recuentos/:id',
+    duenio: 'inventario',
+    claveDeTitulo: 'recuento',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.recuentoVer },
+    enLaNavegacion: false,
+    cargar: async () =>
+      (await import('@/features/inventario/recuentos/ui/PaginaDelRecuento.tsx')).PaginaDelRecuento,
+  },
+  {
     ruta: '/tarifas',
     duenio: 'catalogo',
     claveDeTitulo: 'tarifas',

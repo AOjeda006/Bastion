@@ -50,6 +50,8 @@ export const es = {
     articulos: 'Artículos',
     categorias: 'Categorías',
     empresas: 'Empresas',
+    recuentos: 'Recuentos',
+    recuento: 'Ficha del recuento',
     tarifas: 'Tarifas',
     terceros: 'Terceros',
     importarTerceros: 'Importar terceros',
@@ -782,6 +784,132 @@ export const es = {
       correoConFormatoMalo: 'Eso no parece un correo electrónico.',
       escribeTuContrasena: 'Escribe tu contraseña.',
       contrasenaDemasiadoLarga: 'La contraseña no puede pasar de 128 caracteres.',
+    },
+  },
+
+  // La primera pantalla del inventario (ítem 2.12, ADR-0055). Las cantidades van en la unidad
+  // base de cada artículo, y la pantalla lo dice: un recuento contado en cajas cuadraría mal.
+  inventario: {
+    recuentos: {
+      cargando: 'los recuentos',
+      tabla: 'Recuentos de la empresa activa',
+      recuento: 'Recuento',
+      almacen: 'Almacén',
+      abierto: 'Abierto el',
+      confirmado: 'Confirmado el',
+      estado: 'Estado',
+      motivo: 'Motivo',
+
+      // Se numera al confirmar (ADR-0055 §1.4). Hasta entonces se nombra por su almacén y su día:
+      // con un solo recuento en curso por almacén, no hay otro que se llame igual.
+      numerado: 'Recuento {{numero}}',
+      sinNumero: 'Recuento de {{almacen}} del {{dia}}',
+
+      todos: 'Todos',
+      filtrar: 'Filtrar',
+      paginaVacia: 'Esta página no tiene recuentos. Vuelve a la anterior.',
+      ningunoTodavia: 'Todavía no hay ningún recuento en esta empresa.',
+      ningunoConEsteFiltro: 'Ningún recuento coincide con el filtro.',
+
+      estados: {
+        enCurso: 'En curso',
+        confirmado: 'Confirmado',
+        anulado: 'Anulado',
+        descartado: 'Descartado',
+        desconocido: 'Sin reconocer',
+        desconocidoDetalle: 'Esta versión de la pantalla no conoce ese estado. Recarga la página.',
+      },
+
+      apertura: {
+        titulo: 'Abrir un recuento',
+        pista:
+          'Se cuenta el almacén entero, en la unidad base de cada artículo. El número lo recibe al ' +
+          'confirmarlo.',
+        serie: 'Serie del recuento',
+        serieDelAjuste: 'Serie del ajuste',
+        sinElegir: 'Sin elegir',
+        sinSeries:
+          'No hay ninguna serie activa de esta clase. Da una de alta en el maestro de series.',
+        eligeElAlmacen: 'Elige el almacén que se cuenta.',
+        eligeLaSerie: 'Elige una serie.',
+        abrir: 'Abrir el recuento',
+        abriendo: 'Abriendo…',
+        sinMaestros: 'Para abrir un recuento hace falta poder ver los almacenes y las series.',
+      },
+
+      ficha: {
+        cargando: 'el recuento',
+        volver: 'Volver a los recuentos',
+        lineas: 'Líneas',
+        cuentas: '{{lineas}} en total, {{sinContar}} sin contar',
+        cuentasEnCurso:
+          '{{lineas}} en total, {{sinContar}} sin contar, {{cambiadas}} con el teórico cambiado y ' +
+          '{{transito}} con mercancía en tránsito',
+        motivoDelDescarte: 'Motivo del descarte',
+        motivoDeLaAnulacion: 'Motivo de la anulación',
+        ajuste: 'Ajuste',
+        conAjuste: 'Movió la diferencia',
+        sinAjuste: 'Ninguno: lo contado cuadraba',
+        notaEnCurso:
+          'Cada línea se cuenta en la unidad base de su artículo. El teórico es el de ahora, y la ' +
+          'diferencia, lo que movería el ajuste al confirmar.',
+        notaCerrado:
+          'El teórico es el que quedó al confirmar, y la diferencia, lo que movió el ajuste.',
+        notaDescartado: 'Se descartó sin mover nada.',
+
+        vistas: 'Qué líneas',
+        todas: 'Todas',
+        sinContar: 'Sin contar',
+        teoricoCambiado: 'Con el teórico cambiado',
+
+        tabla: 'Líneas del recuento',
+        numero: 'Nº',
+        articulo: 'Artículo',
+        ubicacion: 'Ubicación',
+        loteOSerie: 'Lote o serie',
+        unidad: 'Unidad',
+        teorico: 'Teórico',
+        enTransito: 'En tránsito',
+        contado: 'Contado',
+        diferencia: 'Diferencia',
+        acciones: 'Acciones',
+        // El teórico de cuando se contó y cuánto ha cambiado desde entonces (ADR-0055 §2).
+        alContar: 'Al contar era {{antes}} ({{cambio}})',
+        ninguna: 'Este recuento no tiene líneas: el almacén no tenía existencias al abrirlo.',
+        ningunaEnLaVista: 'Ninguna línea en esta vista.',
+        paginaVacia: 'Esta página no tiene líneas. Vuelve a la anterior.',
+
+        contar: 'Contar',
+        corregir: 'Corregir',
+        contarLa: 'Contar la línea {{numero}}',
+        corregirLa: 'Corregir lo contado en la línea {{numero}}',
+        campoContado: 'Contado en la línea {{numero}}, en {{unidad}}',
+        // Una línea sin contar no es un cero (ADR-0055 §6): el cero se escribe.
+        escribeLoContado: 'Escribe lo contado; si no hay ninguno, un 0.',
+        guardar: 'Guardar',
+        guardando: 'Guardando…',
+        cancelar: 'Cancelar',
+        contada: 'Línea {{numero}} contada.',
+
+        confirmar: 'Confirmar el recuento',
+        preguntaConfirmar:
+          'Al confirmarlo se congela el teórico, se genera el ajuste de la diferencia y recibe su ' +
+          'número.',
+        siConfirmar: 'Sí, confirmar',
+        confirmando: 'Confirmando…',
+        confirmadoAviso: 'Recuento confirmado con el número {{numero}}.',
+        anular: 'Anular el recuento',
+        preguntaAnular: 'Anularlo deshace su ajuste con un inverso, con la fecha de hoy.',
+        siAnular: 'Sí, anular',
+        anulando: 'Anulando…',
+        anuladoAviso: 'Recuento anulado.',
+        descartar: 'Descartar el recuento',
+        preguntaDescartar:
+          'Descartarlo lo cierra sin mover nada, y el almacén queda libre para otro recuento.',
+        siDescartar: 'Sí, descartar',
+        descartando: 'Descartando…',
+        descartadoAviso: 'Recuento descartado.',
+      },
     },
   },
 

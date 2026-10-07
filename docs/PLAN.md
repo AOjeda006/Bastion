@@ -6413,6 +6413,28 @@ orden que la mide.
 13. **Las semillas de la anulación y el descarte**: del 809 al 818,
     `LaAnulacionYElDescarteDelRecuentoTests` (el 813 y el 817 son las otras empresas). Del 819 al 829
     quedan libres; el reparto, en la cabecera de `ElPuertoDelArticuloContraLaBaseTests`.
+14. **La pantalla nombra los maestros preguntando a su dueño, uno a uno y con caché** (ADR-0055
+    §12). La clave es de la funcionalidad (`['recuentos', 'maestro', clase, id]`), con cinco minutos
+    de vida. Sin el permiso de ver ese maestro no se pregunta y se pinta su identificador. Por eso
+    `PERMISOS` gana `serie.ver`, `ubicacion.ver` y `unidad-medida.ver`, además de los seis del
+    recuento.
+15. **Lo que la pantalla deja fuera, con su disparador**, en el README de la funcionalidad
+    (`frontend/src/features/inventario/README.md` → *Límites conocidos*):
+    - los desplegables del alta piden una página de 200, el tope del servidor;
+    - dos series activas con el mismo código en ejercicios distintos salen iguales, porque cerrar un
+      ejercicio no cierra sus series;
+    - añadir y quitar líneas solo se hacen por la API.
+16. **Las vistas parciales de las líneas son de un recuento en curso.** Cerrado, un `?solo=` viejo
+    enseña todas las líneas, y confirmar, anular o descartar vuelve a la vista entera.
+17. **Lo que comparten las pantallas sube a `shared` en su propio commit, antes de la pantalla**:
+    el intento con su clave, del alta de códigos de barras a `shared/api/intento.ts` (`31ad5b9`), y
+    `diaLegible`, del modelo de las tarifas a `shared/lib/dias.ts` (`df1ca35`). Una funcionalidad no
+    importa de otra. Y `montarPantalla` admite rutas vecinas, para afirmar adónde lleva el alta sin
+    montar la ficha.
+18. **El arranque del frontal, con la pantalla**: **436/450 KiB** en 4 ficheros, y 698/900 KiB
+    servidos, con `npm --prefix frontend run build && bash scripts/ci/presupuesto-del-frontal.sh
+    frontend/dist 450 900`. Las dos rutas van diferidas; lo que sube el arranque son los dos
+    diccionarios y la tabla de rutas.
 
 ## Estado actual
 
@@ -9645,10 +9667,11 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
   Después vienen la tanda de mutaciones, la batería, el humo y el recorrido con `playwright-cli`.
 - **Dónde retomar:** el primer punto de esa lista que no tenga commit en la rama (`git log
   main..2.12-el-recuento --oneline`). El punto 8 va en cuatro commits: el alta y la lectura, las
-  líneas, la confirmación (ADR-0057), y la anulación con el descarte, y los cuatro están. Lo que
-  queda es el punto 9, la pantalla; y después, la tanda de mutaciones desde la **313**, con la de
-  cada camino de la anulación del ajuste (*Decisiones tomadas → ítem 2.12, al escribir su código*,
-  punto 12), la batería, el humo y el recorrido.
+  líneas, la confirmación (ADR-0057), y la anulación con el descarte, y los cuatro están. El punto 9,
+  la pantalla, va en tres: los dos que suben a `shared` lo que comparte y el de la pantalla, y los
+  tres están. Lo que queda es la tanda de mutaciones desde la **313**, con la de cada camino de la
+  anulación del ajuste (*Decisiones tomadas → ítem 2.12, al escribir su código*, punto 12), la
+  batería, el humo y el recorrido con `playwright-cli`.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 

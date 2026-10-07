@@ -37,6 +37,8 @@ export const en: Diccionario = {
     articulos: 'Items',
     categorias: 'Categories',
     empresas: 'Companies',
+    recuentos: 'Stock counts',
+    recuento: 'Stock count record',
     tarifas: 'Price lists',
     terceros: 'Business partners',
     importarTerceros: 'Import business partners',
@@ -705,6 +707,128 @@ export const en: Diccionario = {
       correoConFormatoMalo: 'That does not look like an email address.',
       escribeTuContrasena: 'Enter your password.',
       contrasenaDemasiadoLarga: 'The password cannot be longer than 128 characters.',
+    },
+  },
+
+  inventario: {
+    recuentos: {
+      cargando: 'the stock counts',
+      tabla: 'Stock counts of the active company',
+      recuento: 'Stock count',
+      almacen: 'Warehouse',
+      abierto: 'Opened on',
+      confirmado: 'Confirmed on',
+      estado: 'Status',
+      motivo: 'Reason',
+
+      numerado: 'Stock count {{numero}}',
+      sinNumero: 'Stock count of {{almacen}} on {{dia}}',
+
+      todos: 'All',
+      filtrar: 'Filter',
+      paginaVacia: 'This page has no stock counts. Go back to the previous one.',
+      ningunoTodavia: 'There are no stock counts at this company yet.',
+      ningunoConEsteFiltro: 'No stock count matches the filter.',
+
+      estados: {
+        enCurso: 'In progress',
+        confirmado: 'Confirmed',
+        anulado: 'Reversed',
+        descartado: 'Discarded',
+        desconocido: 'Unrecognised',
+        desconocidoDetalle:
+          'This version of the screen does not know that status. Reload the page.',
+      },
+
+      apertura: {
+        titulo: 'Open a stock count',
+        pista:
+          'The whole warehouse is counted, in the base unit of each item. It gets its number when ' +
+          'it is confirmed.',
+        serie: 'Stock count series',
+        serieDelAjuste: 'Adjustment series',
+        sinElegir: 'Not chosen',
+        sinSeries: 'There is no active series of this kind. Create one in the series master data.',
+        eligeElAlmacen: 'Choose the warehouse to count.',
+        eligeLaSerie: 'Choose a series.',
+        abrir: 'Open the stock count',
+        abriendo: 'Opening…',
+        sinMaestros: 'To open a stock count you need to be able to see warehouses and series.',
+      },
+
+      ficha: {
+        cargando: 'the stock count',
+        volver: 'Back to stock counts',
+        lineas: 'Lines',
+        cuentas: '{{lineas}} in total, {{sinContar}} not counted',
+        cuentasEnCurso:
+          '{{lineas}} in total, {{sinContar}} not counted, {{cambiadas}} with a changed book ' +
+          'quantity and {{transito}} with goods in transit',
+        motivoDelDescarte: 'Reason for discarding',
+        motivoDeLaAnulacion: 'Reason for reversing',
+        ajuste: 'Adjustment',
+        conAjuste: 'It posted the difference',
+        sinAjuste: 'None: the count matched',
+        notaEnCurso:
+          'Each line is counted in the base unit of its item. The book quantity is the current ' +
+          'one, and the difference is what the adjustment would post on confirming.',
+        notaCerrado:
+          'The book quantity is the one frozen on confirming, and the difference is what the ' +
+          'adjustment posted.',
+        notaDescartado: 'It was discarded without moving anything.',
+
+        vistas: 'Which lines',
+        todas: 'All lines',
+        sinContar: 'Not counted',
+        teoricoCambiado: 'With a changed book quantity',
+
+        tabla: 'Stock count lines',
+        numero: 'No.',
+        articulo: 'Item',
+        ubicacion: 'Location',
+        loteOSerie: 'Batch or serial',
+        unidad: 'Unit',
+        teorico: 'Book quantity',
+        enTransito: 'In transit',
+        contado: 'Counted',
+        diferencia: 'Difference',
+        acciones: 'Actions',
+        alContar: 'When counted it was {{antes}} ({{cambio}})',
+        ninguna: 'This stock count has no lines: the warehouse had no stock when it was opened.',
+        ningunaEnLaVista: 'No lines in this view.',
+        paginaVacia: 'This page has no lines. Go back to the previous one.',
+
+        contar: 'Count',
+        corregir: 'Correct',
+        contarLa: 'Count line {{numero}}',
+        corregirLa: 'Correct the count of line {{numero}}',
+        campoContado: 'Counted on line {{numero}}, in {{unidad}}',
+        escribeLoContado: 'Enter the count; if there is none, a 0.',
+        guardar: 'Save',
+        guardando: 'Saving…',
+        cancelar: 'Cancel',
+        contada: 'Line {{numero}} counted.',
+
+        confirmar: 'Confirm the stock count',
+        preguntaConfirmar:
+          'Confirming freezes the book quantity, posts the adjustment for the difference and ' +
+          'gives it its number.',
+        siConfirmar: 'Yes, confirm',
+        confirmando: 'Confirming…',
+        confirmadoAviso: 'Stock count confirmed with number {{numero}}.',
+        anular: 'Reverse the stock count',
+        preguntaAnular: 'Reversing it undoes its adjustment with an inverse one, dated today.',
+        siAnular: 'Yes, reverse it',
+        anulando: 'Reversing…',
+        anuladoAviso: 'Stock count reversed.',
+        descartar: 'Discard the stock count',
+        preguntaDescartar:
+          'Discarding it closes it without moving anything, and frees the warehouse for another ' +
+          'stock count.',
+        siDescartar: 'Yes, discard',
+        descartando: 'Discarding…',
+        descartadoAviso: 'Stock count discarded.',
+      },
     },
   },
 

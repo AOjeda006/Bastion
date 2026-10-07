@@ -2,9 +2,9 @@
  * Los permisos que este frontal nombra.
  *
  * Son los MISMOS literales que declara el backend (`PermisosDeOrganizacion`,
- * `PermisosDeIdentidad`). No se generan: el catálogo se publica en tiempo de ejecución —
- * `GET /api/v1/identidad/roles/permisos`— pero no está en el documento OpenAPI como enumerado, así
- * que no hay de dónde generarlo. Es lo único del contrato que aquí se escribe a mano.
+ * `PermisosDeIdentidad`, `PermisosDeInventario`…). No se generan: el catálogo se publica en tiempo
+ * de ejecución —`GET /api/v1/identidad/roles/permisos`— pero no está en el documento OpenAPI como
+ * enumerado, así que no hay de dónde generarlo. Es lo único del contrato que aquí se escribe a mano.
  *
  * Si alguno se escribe mal, el fallo es HACIA EL LADO SEGURO: `concede()` devuelve `false`, la
  * opción no se pinta, y quien llegue a la ruta a mano se encuentra con que el servidor deniega
@@ -18,7 +18,16 @@ export const PERMISOS = {
   codigoBarrasAgregar: 'catalogo.codigo-barras.agregar',
   codigoBarrasQuitar: 'catalogo.codigo-barras.quitar',
   empresaVer: 'organizacion.empresa.ver',
+  recuentoVer: 'inventario.recuento.ver',
+  recuentoAbrir: 'inventario.recuento.abrir',
+  recuentoContar: 'inventario.recuento.contar',
+  recuentoConfirmar: 'inventario.recuento.confirmar',
+  recuentoAnular: 'inventario.recuento.anular',
+  recuentoDescartar: 'inventario.recuento.descartar',
+  serieVer: 'organizacion.serie.ver',
   tarifaVer: 'catalogo.tarifa.ver',
   terceroVer: 'terceros.tercero.ver',
   terceroImportar: 'terceros.tercero.importar',
+  ubicacionVer: 'organizacion.ubicacion.ver',
+  unidadMedidaVer: 'organizacion.unidad-medida.ver',
 } as const;
