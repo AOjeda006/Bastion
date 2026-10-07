@@ -9665,13 +9665,108 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
   9. la pantalla.
 
   Después vienen la tanda de mutaciones, la batería, el humo y el recorrido con `playwright-cli`.
-- **Dónde retomar:** el primer punto de esa lista que no tenga commit en la rama (`git log
-  main..2.12-el-recuento --oneline`). El punto 8 va en cuatro commits: el alta y la lectura, las
-  líneas, la confirmación (ADR-0057), y la anulación con el descarte, y los cuatro están. El punto 9,
-  la pantalla, va en tres: los dos que suben a `shared` lo que comparte y el de la pantalla, y los
-  tres están. Lo que queda es la tanda de mutaciones desde la **313**, con la de cada camino de la
-  anulación del ajuste (*Decisiones tomadas → ítem 2.12, al escribir su código*, punto 12), la
-  batería, el humo y el recorrido con `playwright-cli`.
+  Los nueve puntos tienen su commit. El punto 8 va en cuatro: el alta y la lectura, las líneas, la
+  confirmación (ADR-0057), y la anulación con el descarte. El punto 9, la pantalla, va en tres: los
+  dos que suben a `shared` lo que comparte y el de la pantalla.
+- **La tanda, de la 313 a la 358**, escrita antes de medir. La del servidor, de la 313 a la 347, en
+  `tanda212.json`, que arma `armar212.py`; la de la pantalla, de la 348 a la 358, dentro de
+  `mutar212-web.py`. Los tres son guiones del *scratchpad*. Lleva una mutación de cada camino de la
+  anulación del ajuste (*Decisiones tomadas → ítem 2.12, al escribir su código*, punto 12), la que
+  lee el teórico antes de bloquear (la 318) y una del arnés en cada lado (la 347 y la 358).
+  - **Cómo se midió el servidor.** `python mutar212.py tanda212.json <números>`, sobre un
+    *worktree* aparte. Aplica cada mutación, compila la solución y corre sin compilar tres carriles:
+    `tests/Inventario.UnitTests`, `tests/Api.FunctionalTests` y `tests/Api.IntegrationTests`
+    filtrado a los espacios `Inventario`, `Cruces` y `Numeracion`, con `--blame-hang
+    --blame-hang-timeout 4m`. Lee los rojos por nombre en el `.trx` y revierte con `git restore
+    --source=HEAD` y la fecha de ahora. Fueron tres pasadas:
+    - `base 313-324` y `316 317 319 322 325-335`, sobre `5190029`. La base da **0 rojos de 215,
+      de 217 y de 245**.
+    - `base 325 326 336-347 base`, sobre `335c8a1`. La base da **0 de 216, de 217 y de 245**, al
+      empezar y al acabar.
+    - Las tres acaban con el árbol restaurado compilando y la porcelana vacía.
+  - **Cinco no compilaban a la primera**, y se reescribieron con la misma intención:
+    - la 316, la 317, la 319 y la 322, por el `CS0162`. Un `if (false)` o un `if (true)` deja
+      código inaccesible, y los avisos son errores. Una guarda se apaga con `cond && false` y se
+      fuerza con `cond || true`, que no son constantes. Las 329 a 332 y 335 a 339 se escribieron así
+      antes de medirlas;
+    - la 325, por el `CS1718`, comparar una variable consigo misma. Pasó a
+      `par.Diferencia != 0m || par.Diferencia == 0m`.
+  - **Treinta y cuatro salen rojas a la primera, y una verde sin esperarlo: la 326.** Sin
+    `ajuste.FechaDeOperacion != fechaDeConfirmacion` en la guarda de `Recuento.Emparejar`, el
+    recuento se confirmaba con un ajuste de otro día. Por la API el ajuste nace siempre con la
+    fecha de la confirmación, así que solo el dominio la puede ver. **La cubre `335c8a1`**, con
+    `ElAjusteDelRecuentoTests.Confirmar_con_el_ajuste_de_otro_dia_no_se_puede`: el ajuste se genera
+    para el día de la apertura. Medida otra vez, sale roja con ese caso y ninguno más.
+
+    | # | Lo que quita o cambia | Rojos (la base: 215 o 216 de dominio, 217 funcionales y 245 de integración) |
+    |---|---|---|
+    | 313 | El cerrojo de la cabecera, sin `FOR NO KEY UPDATE` | 1 funcional, `LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.Es_el_cerrojo_del_UPDATE_y_no_otro`, y 3 de integración: las tres carreras que esperan en la cabecera, dos anulaciones, dos confirmaciones y dos conteos |
+    | 314 | La versión, sin comparar al bloquear la cabecera | 7 de integración: los `412` de confirmar, anular y descartar, y la carrera de dos confirmaciones |
+    | 315 | El cerrojo, sin mirar la empresa | 2 funcionales, `…Cada_columna_que_la_sentencia_nombra_existe_en_la_tabla` y `…Compara_el_recuento_contra_el_primer_parametro_y_la_empresa_contra_el_segundo`, y 5 de integración: la otra empresa al confirmar, al anular, al descartar y en las líneas, y `LasCarrerasDeLasLineasDelRecuentoTests.Otra_empresa_no_espera_al_cerrojo_de_un_recuento_que_no_es_suyo` |
+    | 316 | Confirmar fuera de curso pasa la guarda del caso de uso | 1: `LaConfirmacionDelRecuentoTests.Confirmar_dos_veces_con_la_misma_version_es_un_412_y_con_la_de_ahora_un_409` |
+    | 317 | Las líneas sin contar no paran la confirmación | 1: `…Una_linea_sin_contar_no_es_un_cero_y_la_confirmacion_es_un_422_con_las_que_faltan` |
+    | 318 | El teórico que decide, el leído antes de bloquear | 1: `LasCarrerasDeLaConfirmacionDelRecuentoTests.Un_ajuste_en_vuelo_sobre_su_clave_frena_la_confirmacion_en_la_valoracion_y_es_un_409_del_teorico` |
+    | 319 | La huella nunca difiere | 2: `…Si_el_stock_se_mueve_mientras_se_cuenta_es_un_409_con_la_huella_de_ahora_y_con_ella_confirma` y la carrera del ajuste en vuelo |
+    | 320 | El tránsito, mirado al revés | 1: `…Lo_que_sube_con_transito_hacia_su_clave_es_un_409_y_lo_que_baja_se_confirma` |
+    | 321 | Lo que sube es lo que baja | 1 de dominio, `LaHuellaDelTeoricoTests.Las_lineas_que_suben_son_las_contadas_por_encima_del_teorico`, y el de la 320 |
+    | 322 | Confirmar sin ejercicio para hoy, o con él cerrado | 1: `…Sin_ejercicio_para_hoy_o_con_el_de_hoy_cerrado_no_se_confirma_y_no_se_gasta_nada` |
+    | 323 | Sin ejercicio, con el código del cerrado, y al revés | 1: el mismo |
+    | 324 | El número del ajuste, tomado aunque todo cuadre | 3: `…Sin_diferencias_se_numera_el_recuento_y_no_hay_ajuste_ni_se_toca_su_serie`, `…Un_recuento_vacio_se_confirma_con_su_numero_…` y `LaAnulacionYElDescarteDelRecuentoTests.Sin_ejercicio_para_hoy_o_con_el_de_hoy_cerrado_solo_se_anula_el_que_no_movio_el_libro` |
+    | 325 | Las líneas que cuadran, también diferencias | 12 de dominio, en `ElAjusteDelRecuentoTests`, `LaMaquinaDeEstadosDelRecuentoTests` y `AnularElRecuentoEsAnularSuAjusteTests`, y 4 de integración: lo que confirma sin diferencias y el físico tras confirmar |
+    | 326 | El ajuste de la confirmación, con otra fecha | **verde sin esperarlo** → `335c8a1`; medida otra vez, 1 de dominio: `ElAjusteDelRecuentoTests.Confirmar_con_el_ajuste_de_otro_dia_no_se_puede` |
+    | 327 | Confirmar no anota en la línea la del ajuste | 3 de dominio, la doble flecha y la anulación por el ajuste, y 7 de integración: todo lo que anula con ajuste y lo que confirma con diferencias |
+    | 328 | El recuento se anula con su ajuste aún confirmado | 2 de dominio, `…El_recuento_da_el_inverso_de_su_ajuste_y_se_anula_con_el` y `…Un_recuento_que_movio_el_libro_no_se_anula_con_su_ajuste_sin_anular`, y 5 de integración |
+    | 329 | Anular no anula el ajuste del que movió el libro | 6 de integración, en `LaAnulacionYElDescarteDelRecuentoTests` |
+    | 330 | Anular fuera de confirmado pasa la guarda del caso de uso | 1: `…Uno_en_curso_no_se_anula_y_anular_dos_veces_es_un_412_con_la_misma_version_y_un_409_con_la_de_ahora` |
+    | 331 | Anular sin ejercicio para hoy, o con él cerrado | 1: `…Sin_ejercicio_para_hoy_o_con_el_de_hoy_cerrado_solo_se_anula_el_que_no_movio_el_libro` |
+    | 332 | Anular sin motivo o con uno largo | 1: `…Anular_exige_su_clave_su_version_y_un_motivo_y_otra_empresa_no_lo_encuentra` |
+    | 333 | El ajuste de un recuento, anulable por su camino | 1: `…El_ajuste_de_un_recuento_no_se_anula_por_su_camino_y_por_el_del_recuento_si` |
+    | 334 | El recuento hace el inverso por el camino público del ajuste | 2 de dominio, `…El_recuento_da_el_inverso_de_su_ajuste_y_se_anula_con_el` y `…Un_inverso_sigue_sin_anularse_tampoco_por_el_camino_del_recuento`, y 5 de integración |
+    | 335 | El dominio deja anular aparte el ajuste de un recuento | 1 de dominio: `AnularElRecuentoEsAnularSuAjusteTests.El_ajuste_de_un_recuento_no_da_su_inverso_por_el_camino_de_cualquier_ajuste` |
+    | 336 | El dominio deja anular un inverso | 2 de dominio: `ElInversoQueAnulaTests.Un_inverso_no_da_su_propio_inverso` y `…Un_inverso_sigue_sin_anularse_tampoco_por_el_camino_del_recuento` |
+    | 337 | Descartar fuera de curso pasa la guarda del caso de uso | 1: `…Descartar_con_la_version_de_antes_es_un_412_y_uno_confirmado_no_se_descarta` |
+    | 338 | Descartar sin motivo o con uno largo | 1: el mismo |
+    | 339 | El alta no mira antes si hay otro en curso | 1: `UnRecuentoEnCursoPorAlmacenTests.La_comprobacion_previa_contesta_sola_sin_el_borde_que_traduce_el_indice` |
+    | 340 | El alta precarga lo que solo tiene tránsito | 1: `ElAltaDelRecuentoTests.Una_clave_que_solo_tiene_transito_no_se_precarga` |
+    | 341 | Contar sin la versión de la línea | 1: `LasLineasDelRecuentoTests.Contar_anota_lo_contado_con_su_teorico_y_mueve_la_version_de_la_linea_y_la_de_la_cabecera` |
+    | 342 | Contar no mueve la versión de la cabecera | 3: el mismo, `…Confirmar_exige_su_clave_su_version_y_una_huella_y_otra_empresa_no_lo_encuentra` y `…Descartar_con_la_version_de_antes_…` |
+    | 343 | Contar anota un teórico de cero | 3: el de contar, `…Si_el_stock_se_mueve_…` y la carrera del ajuste en vuelo |
+    | 344 | Un número de serie se cuenta con cualquier cifra | 1 de dominio, `…Un_numero_de_serie_se_cuenta_en_cero_o_en_uno`, y 1 de integración, `…Una_serie_se_cuenta_con_cero_o_uno_y_no_entra_dos_veces_ni_en_otra_ubicacion` |
+    | 345 | La huella redondea el teórico a unidades | 2 de dominio: `LaHuellaDelTeoricoTests.Cambia_con_una_millonesima_del_teorico_de_una_sola_linea` y `…Es_el_sha_256_del_texto_que_dice_el_adr` |
+    | 346 | La huella depende del orden de las líneas | 2 de dominio: `…Es_el_sha_256_del_texto_que_dice_el_adr` y `…No_depende_del_orden_en_que_llegan_las_lineas` |
+    | 347 | **Arnés**: la transacción del ajuste en vuelo hace su `COMMIT` antes de lanzar la confirmación | 1: la carrera del ajuste en vuelo |
+
+  - **Cómo se midió la pantalla.** `python mutar212-web.py base 348 … 358 base`. Aplica cada
+    mutación y ejecuta `npx vitest run --reporter=json` sobre los cuatro ficheros de la
+    funcionalidad: los dos de `ui` y los dos de `model`. Lee los rojos por nombre, cuenta los avisos
+    de `act()` y revierte con `git restore --source=HEAD` y la fecha de ahora.
+    - Sobre `5190029` la base da **0 rojos de 54** y ningún aviso. Ocho salen rojas, y **tres
+      verdes sin esperarlo: la 352, la 353 y la 357**.
+    - La 352 y la 353 las cubre **`4d28adc`**. Que la fila no supiera que se va y que el aviso no
+      atendiera a `enfocar` no lo veía ningún caso, y las dos acaban igual: el foco, en un botón que
+      desaparece al volver a leer las líneas. El caso cuenta desde `?solo=sin-contar`.
+    - La 357 la cubre **`1a867b7`**. El servidor de pega acotaba sobre las líneas en bruto y no
+      sobre lo que se lee, así que tampoco habría podido verla: cerrado, la API no da ninguna por
+      teórico cambiado, y el de pega sí. Ahora acota como la API, y el caso abre un recuento
+      confirmado desde `?solo=teorico-cambiado`.
+    - **Medida otra vez entera sobre `1a867b7`**: la base da **0 de 56**, y **las once salen
+      rojas, ninguna con un aviso de `act()`**.
+
+    | # | Mutación | Rojos, de 56 |
+    |---|---|---|
+    | 348 | La segunda confirmación, con otra huella, no estrena clave | 1: `confirmar si el stock se mueve, lleva a lo que cambió; la segunda manda la huella nueva con otra clave; y anular lo deshace` |
+    | 349 | El `409` del teórico no lleva a su vista | 1: el mismo |
+    | 350 | Contar manda otra versión que la que acaba de leer | 1: `contar lee la versión de la línea y manda la cifra con punto; el foco vuelve a la fila` |
+    | 351 | Lo escrito con coma viaja tal cual | 1: el mismo |
+    | 352 | Contar en una vista parcial no saca la línea | **verde sin esperarlo** → `4d28adc`; medida otra vez, 1: `contar en la vista de las que faltan, la fila contada se va y el foco va al aviso` |
+    | 353 | El aviso de lo contado no se lleva el foco | **verde sin esperarlo** → `4d28adc`; medida otra vez, 1: el mismo |
+    | 354 | Cambiar un filtro no vuelve a la primera página | 1: `el estado y el almacén van a la URL y al servidor, y vuelven a la primera página` |
+    | 355 | El rechazo del almacén no va a su campo | 1: `el almacén que ya se está contando va en su campo, con el foco; repetir repite la clave` |
+    | 356 | El alta ofrece también las series cerradas | 1: `ofrece solo las series activas de cada clase` |
+    | 357 | Cerrado, la vista de la URL acota las líneas | **verde sin esperarlo** → `1a867b7`; medida otra vez, 1: `cerrado, un enlace viejo a una vista enseña todas sus líneas y no ofrece las vistas` |
+    | 358 | **Arnés**: el servidor de pega no compara la huella al confirmar | 1: el de la 348 |
+
+- **Dónde retomar:** la batería, el humo y el recorrido con `playwright-cli`, por ese orden.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
