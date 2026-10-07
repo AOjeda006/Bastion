@@ -7,12 +7,12 @@ import { clavesDeTarifas } from '../api/claves.ts';
 import { consultarTarifas } from '../api/consultas.ts';
 import { PARAMETRO_DE_BUSQUEDA, PARAMETRO_DE_CODIGO, leerListado } from '../model/listado.ts';
 import {
-  diaLegible,
   estadoDeVigencia,
   hoyEnElCalendarioLocal,
   type EstadoDeVigencia,
   type Tarifa,
 } from '../model/tarifa.ts';
+import { diaLegible } from '@/shared/lib/dias.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';

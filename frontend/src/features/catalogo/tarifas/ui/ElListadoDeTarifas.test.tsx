@@ -6,7 +6,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ALFA, HOY_SIMULADO, tarifasDe } from '@/pruebas/datos.ts';
 import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
-import { diaLegible, estadoDeVigencia, hoyEnElCalendarioLocal } from '../model/tarifa.ts';
+import { diaLegible } from '@/shared/lib/dias.ts';
+import { estadoDeVigencia, hoyEnElCalendarioLocal } from '../model/tarifa.ts';
 import type { Tarifa } from '../model/tarifa.ts';
 import { PaginaDeTarifas } from './PaginaDeTarifas.tsx';
 
