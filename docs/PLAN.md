@@ -10004,8 +10004,12 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 
 1. ~~El run de `main` del 2.12, anotado.~~ Hecho en el primer commit de la rama: el 37637032242, en
    *El 2.12, cerrado* y en su casilla.
-2. Contar no pisa lo que contó otra persona.
-3. La propiedad gana el recuento.
+2. ~~Contar no pisa lo que contó otra persona.~~ El código, en `48df530`, con su run de rama
+   37709935728 en verde. El recorrido con dos contextos de navegador y la reescritura de la 350 van
+   con la tanda (6).
+3. ~~La propiedad gana el recuento.~~ En el commit `test(inventario): la propiedad gana el
+   recuento`: las seis clases nuevas en las seis semillas, los dos invariantes y dos empujones
+   medidos, el del tránsito y el del descarte. Su tanda va con la del 6.
 4. La huella, segundo disparador del recuento cíclico.
 5. Los dos *workflows* cortados, y la revisión del diff del 2.12 con la del arnés.
 6. La tanda, la batería y los runs.

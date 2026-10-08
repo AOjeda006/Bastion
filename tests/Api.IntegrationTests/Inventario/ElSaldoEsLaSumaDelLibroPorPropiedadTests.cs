@@ -4,10 +4,13 @@ using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Recuentos;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Existencias;
+using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Bastion.Organizacion.Contracts.Almacenes;
@@ -23,8 +26,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
 /// La R3 como propiedad: después de cualquier secuencia de entradas, salidas, ajustes, anulaciones,
-/// recálculos, cierres, fechas prohibidas y transferencias, el saldo es la suma del libro (ítem 2.7),
-/// y lo que vuela, la suma de lo enviado sin recibir (ítem 2.11).
+/// recálculos, cierres, fechas prohibidas, transferencias y recuentos, el saldo es la suma del libro
+/// (ítem 2.7), lo que vuela, la suma de lo enviado sin recibir (ítem 2.11), y lo contado, lo que hay
+/// al confirmar (epílogo del 2.12).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -105,6 +109,25 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// de las suyas lo miran los casos de integración del 2.11.
 /// </para>
 /// <para>
+/// <b>Y el recuento</b> (epílogo del 2.12, ADR-0055 y ADR-0057). Un cuarto generador, con su semilla,
+/// decide tras cada paso si viene uno del recuento: abrirlo en A o en B, contar sus líneas,
+/// confirmarlo, descartarlo o anular uno confirmado. Hay uno en curso como mucho, y entre contar y
+/// confirmar pasan los pasos que el dado quiera, así que el almacén se mueve mientras tanto. Quien
+/// confirma manda la huella que vio al acabar de contar. Si el modelo sabe que el teórico de alguna
+/// línea ha cambiado desde entonces, exige el <c>409</c> del teórico, y confirma otra vez con la
+/// huella nueva, como la pantalla. Lo que vuela hacia el almacén que se cuenta ha llegado sin
+/// recibirse: si su clave no tiene línea, quien cuenta la añade, y la cuenta con lo que vuela. Si al
+/// confirmar sigue volando, el modelo exige el <c>409</c> del tránsito, y la línea se vuelve a
+/// contar. Al confirmar, el ajuste es la diferencia entre lo contado y el libro del modelo, y se
+/// valora como cualquier otro, al precio medio lo que sube.
+/// </para>
+/// <para>
+/// <b>Y dos invariantes más.</b> Tras confirmar, el físico de cada clave contada es lo contado, en
+/// las filas vivas. Y el valor de la empresa solo lo mueven los ajustes, también los de un recuento:
+/// además de la cuenta del modelo, la suma del valor de las filas del libro que vienen de un ajuste
+/// tiene que ser el de la empresa, y la de las que vienen de una transferencia, menos lo que vuela.
+/// </para>
+/// <para>
 /// <b>El modelo no conoce los identificadores del sistema.</b> Para el modelo, cada lote y cada
 /// serie es su código, y les da un identificador propio. Lo que se lee de la base se traduce con las
 /// tablas de los lotes y de las series, y esas tablas tienen que tener exactamente lo que el libro
@@ -148,6 +171,19 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string Recepcion = "transferencia recibida";
     private const string AnulacionDeUnaEnviada = "transferencia enviada anulada";
     private const string AnulacionDeUnaRecibida = "transferencia recibida anulada";
+    private const string RecuentoConfirmado = "recuento confirmado";
+    private const string RecuentoConLaHuellaNueva = "recuento confirmado con la huella nueva";
+    private const string RecuentoConElTeoricoCambiado = "recuento con el teórico cambiado";
+    private const string RecuentoQueSubeConTransito = "recuento que sube con tránsito";
+    private const string RecuentoAnulado = "recuento anulado";
+    private const string RecuentoDescartado = "recuento descartado";
+
+    /// <summary>
+    /// De cada cien pasos, cuántos traen detrás uno del recuento (epílogo del 2.12). Un recuento
+    /// necesita tres por lo menos —abrir, contar y confirmar—, y entre uno y otro pasan unos cuatro
+    /// pasos del almacén.
+    /// </summary>
+    private const int PorcentajeDeRecuentos = 25;
 
     /// <summary>
     /// Las claves de los ajustes: dos ubicaciones de A por cada uno de los tres artículos. Las tres
@@ -184,6 +220,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         "entrada", "salida", "ajuste", Anulacion, Futuro, Recalculo, Cierre, Reapertura,
         RechazadoPorElCierre, RechazadoSinStock, RechazadoPorLaFecha, RechazadoPorLaSerie,
         Envio, EnvioSinStock, Recepcion, AnulacionDeUnaEnviada, AnulacionDeUnaRecibida,
+        RecuentoConfirmado, RecuentoConLaHuellaNueva, RecuentoConElTeoricoCambiado, RecuentoQueSubeConTransito,
+        RecuentoAnulado, RecuentoDescartado,
     ];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
@@ -223,6 +261,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Random azar = new(semilla);
         Random codigos = new(semilla + 1_000);
         Random traslados = new(semilla + 2_000);
+        Random recuentos = new(semilla + 3_000);
         Secuencia secuencia = new(semilla);
 
         UnaEmpresa empresa = await UnaEmpresaAsync(semilla);
@@ -261,6 +300,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             if (traslados.Next(100) < PorcentajeDeTransferencias)
             {
                 await UnaTransferenciaAsync(traslados, modulo, empresa, secuencia);
+                await ComprobarAsync(empresa, secuencia);
+            }
+
+            // EL RECUENTO, DETRÁS DE TODO Y CON SUS PROPIOS DADOS (epílogo del 2.12): los otros tres
+            // generadores no saben de él, y hasta que un recuento mueve algo, la secuencia es la de
+            // antes paso a paso.
+            if (recuentos.Next(100) < PorcentajeDeRecuentos)
+            {
+                await UnPasoDeRecuentoAsync(recuentos, empresa, secuencia);
                 await ComprobarAsync(empresa, secuencia);
             }
         }
@@ -322,6 +370,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         secuencia.CodigosConEspacios.ShouldBeGreaterThan(
             0, "ningún envío ha llevado un código con espacios\n" + secuencia.Relato());
+
+        // LOS DOS INVARIANTES DEL RECUENTO, AFIRMADOS (epílogo del 2.12): sin una clave contada en
+        // un recuento confirmado, «el físico es lo contado» sale verde sin mirar; y sin un recuento
+        // que genere su ajuste, «solo los ajustes mueven el valor» no ha visto el de un recuento.
+        secuencia.ClavesContadasComprobadas.ShouldBeGreaterThan(
+            0, "ningún recuento confirmado ha dejado una clave que comprobar\n" + secuencia.Relato());
+
+        secuencia.AjustesDeRecuento.ShouldBeGreaterThan(
+            0, "ningún recuento confirmado ha generado su ajuste\n" + secuencia.Relato());
 
         secuencia.Clases.ShouldBe(s_clasesDePaso, ignoreOrder: true, customMessage: secuencia.Relato());
     }
@@ -933,6 +990,573 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     }
 
     /// <summary>
+    /// Un paso del recuento (epílogo del 2.12): abrir uno o anular uno confirmado si no hay ninguno en
+    /// curso; contar lo que falta si lo hay; y si está todo contado, confirmarlo o descartarlo.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Todo con el cuarto generador, que es el único que sabe del recuento. Uno de cada cinco que está
+    /// listo para confirmar se descarta —con uno de cada seis, la 460 no descartaba ninguno—, y tres de
+    /// cada diez pasos sin recuento en curso anulan uno confirmado, si lo hay. Hay que contar mientras
+    /// falte una línea por contar o por volver a contar, y mientras llegue algo sin línea.
+    /// </para>
+    /// <para>
+    /// <b>Cada llamada al caso de uso, con su contexto</b> (<see cref="UnaPeticion"/>), y no con el
+    /// módulo del caso: el recuento se cuenta por la API, y un contexto que siguiera con el recuento
+    /// del alta en memoria lo leería con la versión de antes de contar.
+    /// </para>
+    /// </remarks>
+    private async Task UnPasoDeRecuentoAsync(Random recuentos, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        if (secuencia.RecuentoEnCurso is not { } enCurso)
+        {
+            if (secuencia.RecuentosAnulables.Count > 0 && recuentos.Next(10) < 3)
+            {
+                await UnaAnulacionDeRecuentoAsync(recuentos, empresa, secuencia);
+            }
+            else
+            {
+                await UnaAperturaDeRecuentoAsync(recuentos, empresa, secuencia);
+            }
+
+            return;
+        }
+
+        if (enCurso.Lineas.Any(linea => linea.Contado is null || linea.PorRecontar)
+            || LoQueHaLlegadoSinLinea(secuencia, enCurso).Length > 0)
+        {
+            await UnConteoAsync(recuentos, empresa, secuencia, enCurso);
+        }
+        else if (recuentos.Next(5) == 0)
+        {
+            await UnDescarteAsync(empresa, secuencia, enCurso);
+        }
+        else
+        {
+            await UnaConfirmacionDeRecuentoAsync(empresa, secuencia, enCurso);
+        }
+    }
+
+    /// <summary>
+    /// Abre el recuento del almacén hacia el que vuela algo; si no lo hay, el de B la mitad de las
+    /// veces que B tiene algo, y si no, el de A. Y exige que traiga una línea por cada clave del
+    /// almacén con físico, ni una más (ADR-0055 §5).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El empujón del tránsito</b>: lo que vuela hacia el almacén que se cuenta es lo que el conteo
+    /// encuentra sin línea (<see cref="LoQueHaLlegadoSinLinea"/>), y lo que hace saltar el <c>409</c>
+    /// del tránsito. Sin él, la 461 y la 462 no lo veían nunca: una clave con físico y con algo en
+    /// vuelo hacia ella casi no se da, y la precarga solo trae las que tienen físico.
+    /// </para>
+    /// <para>
+    /// Por el caso de uso, y no por la API, porque la fecha de apertura sale del reloj y el del
+    /// generador está parado. Las lecturas van por la API: no dependen del reloj.
+    /// </para>
+    /// </remarks>
+    private async Task UnaAperturaDeRecuentoAsync(Random recuentos, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+
+        Guid? haciaDondeVuela = secuencia.Transito
+            .Where(par => par.Value > 0m)
+            .Select(par => (Guid?)par.Key.AlmacenId)
+            .FirstOrDefault();
+
+        Guid almacen = haciaDondeVuela
+            ?? (saldos.Any(par => par.Key.AlmacenId == empresa.AlmacenB && par.Value > 0m) && recuentos.Next(2) == 0
+                ? empresa.AlmacenB
+                : empresa.AlmacenId);
+
+        bool deB = almacen == empresa.AlmacenB;
+
+        Resultado<RecuentoDto> alta;
+
+        await using (ElModuloDeInventario peticion = UnaPeticion(empresa))
+        {
+            alta = await peticion.AltaDeRecuento.EjecutarAsync(
+                new AbrirRecuentoDto(empresa.SerieDeRecuentos.Id, empresa.Serie.Id, almacen, "Recuento del generador"),
+                CancellationToken.None);
+        }
+
+        alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        IReadOnlyList<LineaDelRecuento> lineas = await LasLineasAsync(empresa, secuencia, alta.Valor.Id, almacen);
+
+        secuencia.Anotar(
+            "recuento abierto",
+            string.Create(CultureInfo.InvariantCulture, $"en {(deB ? "B" : "A")} con {lineas.Count} líneas"));
+
+        lineas.Select(linea => linea.Clave).ShouldBe(
+            saldos.Where(par => par.Key.AlmacenId == almacen && par.Value > 0m).Select(par => par.Key),
+            ignoreOrder: true,
+            customMessage: "la precarga no es una línea por clave con físico\n" + secuencia.Relato());
+
+        RecuentoDelModelo recuento = new(alta.Valor.Id, almacen, lineas);
+
+        await VerLaFichaAsync(empresa, secuencia, recuento);
+
+        secuencia.RecuentoEnCurso = recuento;
+    }
+
+    /// <summary>
+    /// Añade una línea por cada clave a la que ha llegado algo sin línea, y cuenta las que faltan por
+    /// contar y las que hay que volver a contar, cada una con la versión que tiene; y lee después la
+    /// ficha: esa huella es la que verá quien confirme.
+    /// </summary>
+    /// <remarks>
+    /// Por la API, porque ni añadir ni contar miran el reloj. Lo que se cuenta lo dice
+    /// <see cref="LoQueSeCuenta"/>.
+    /// </remarks>
+    private static async Task UnConteoAsync(
+        Random recuentos, UnaEmpresa empresa, Secuencia secuencia, RecuentoDelModelo recuento)
+    {
+        IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+        List<string> contadas = [];
+
+        foreach (ClaveDeExistencia clave in LoQueHaLlegadoSinLinea(secuencia, recuento))
+        {
+            using HttpResponseMessage alta = await EscenaDeRecuento.AnadirAsync(
+                empresa.Cliente,
+                recuento.Id,
+                new AnadirLineaDeRecuentoDto(
+                    clave.UbicacionId,
+                    clave.ArticuloId,
+                    clave.LoteId is { } lote ? secuencia.CodigoDe(lote) : null,
+                    clave.NumeroDeSerieId is { } serie ? secuencia.CodigoDe(serie) : null,
+                    CosteUnitario: null));
+
+            alta.StatusCode.ShouldBe(HttpStatusCode.Created, $"{await Escenario.Detalle(alta)}\n{secuencia.Relato()}");
+
+            LineaDeRecuentoDto anadida = (await alta.Content.ReadFromJsonAsync<LineaDeRecuentoDto>())!;
+
+            anadida.Teorico.ShouldBe(saldos.GetValueOrDefault(clave), secuencia.Relato());
+            anadida.EnTransito.ShouldBe(secuencia.Transito[clave], secuencia.Relato());
+
+            recuento.Lineas.Add(new LineaDelRecuento(anadida.Id, anadida.Numero, clave));
+            contadas.Add(string.Create(CultureInfo.InvariantCulture, $"línea {anadida.Numero} añadida"));
+        }
+
+        foreach (LineaDelRecuento linea in recuento.Lineas.Where(linea => linea.Contado is null || linea.PorRecontar))
+        {
+            decimal teorico = saldos.GetValueOrDefault(linea.Clave);
+            decimal contado = LoQueSeCuenta(recuentos, linea, teorico, secuencia.Transito.GetValueOrDefault(linea.Clave));
+
+            string ruta = EscenaDeRecuento.RutaDeLaLinea(recuento.Id, linea.Id);
+            string etiqueta = await empresa.Cliente.EtiquetaDeAsync(ruta);
+
+            using HttpResponseMessage conteo =
+                await EscenaDeRecuento.ContarAsync(empresa.Cliente, recuento.Id, linea.Id, etiqueta, contado);
+
+            LineaDeRecuentoDto contada = await EscenaDeTransferencia.LeerAsync<LineaDeRecuentoDto>(conteo);
+
+            contadas.Add(string.Create(
+                CultureInfo.InvariantCulture,
+                $"línea {linea.Numero}: {contado} de {teorico}{(linea.PorRecontar ? " otra vez" : string.Empty)}"));
+
+            contada.Contado.ShouldBe(contado, secuencia.Relato());
+            contada.TeoricoAlContar.ShouldBe(teorico, secuencia.Relato());
+
+            linea.Contado = contado;
+            linea.PorRecontar = false;
+        }
+
+        secuencia.Anotar("recuento contado", "[" + string.Join(", ", contadas) + "]");
+
+        await VerLaFichaAsync(empresa, secuencia, recuento);
+    }
+
+    /// <summary>
+    /// Las claves del almacén del recuento hacia las que vuela algo y que no tienen línea: lo que quien
+    /// cuenta encuentra en la estantería sin que nadie lo haya recibido.
+    /// </summary>
+    /// <remarks>
+    /// Sin las series que ya tienen línea en otra ubicación: el recuento no admite una serie en dos
+    /// líneas (<c>recuento-serie-repetida</c>), y eso ya lo prueba su caso.
+    /// </remarks>
+    private static ClaveDeExistencia[] LoQueHaLlegadoSinLinea(Secuencia secuencia, RecuentoDelModelo recuento) =>
+    [
+        .. secuencia.Transito
+            .Where(par => par.Value > 0m && par.Key.AlmacenId == recuento.AlmacenId)
+            .Select(par => par.Key)
+            .Where(clave => recuento.Lineas.All(linea =>
+                linea.Clave != clave
+                && (clave.NumeroDeSerieId is null
+                    || linea.Clave.ArticuloId != clave.ArticuloId
+                    || linea.Clave.NumeroDeSerieId != clave.NumeroDeSerieId))),
+    ];
+
+    /// <summary>Lo que se cuenta en una línea, según lo que hay en su clave y lo que vuela hacia ella.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Si algo vuela hacia su clave, lo que hay más lo que vuela</b>: la mercancía ha llegado y
+    /// nadie la ha recibido, que es justo lo que el <c>409</c> del tránsito impide sumar dos veces
+    /// (ADR-0055 §7). Contada al azar, el <c>409</c> dependería de que la cifra saliera de más.
+    /// </para>
+    /// <para>
+    /// <b>La que se vuelve a contar tras un rechazo, lo que hay</b>: quien cuenta ha visto qué era lo
+    /// que sobraba. Las demás, la mitad de las veces lo que hay, y si no, de una a tres unidades de
+    /// más o de menos, sin bajar de cero. Una serie se cuenta en cero o en uno.
+    /// </para>
+    /// </remarks>
+    private static decimal LoQueSeCuenta(Random recuentos, LineaDelRecuento linea, decimal teorico, decimal transito)
+    {
+        if (linea.PorRecontar)
+        {
+            return teorico;
+        }
+
+        if (transito > 0m)
+        {
+            return teorico + transito;
+        }
+
+        decimal contado = recuentos.Next(4) switch
+        {
+            0 or 1 => teorico,
+            2 => teorico + recuentos.Next(1, 4),
+            _ => Math.Max(0m, teorico - recuentos.Next(1, 4)),
+        };
+
+        return linea.Clave.NumeroDeSerieId is null ? contado : Math.Min(contado, 1m);
+    }
+
+    /// <summary>
+    /// Confirma con la huella que se vio al contar; y si el modelo sabe que el teórico ha cambiado
+    /// desde entonces, exige el <c>409</c> y confirma con la huella nueva, como la pantalla.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>En el orden del caso de uso</b> (ADR-0055 §3): la huella, el tránsito de lo que sube, el
+    /// valor y, al escribir, las restricciones del motor. Lo que sube va al precio medio de su
+    /// artículo en el almacén, y si no lo hay, el <c>422</c> del ajuste. El único choque posible con
+    /// el motor es una serie contada donde ya no está y que está en otro sitio. Tras el tránsito o el
+    /// valor, se vuelven a contar las líneas que lo causan; tras el motor, todas las que difieren,
+    /// porque el motor no dice cuál.
+    /// </para>
+    /// <para>
+    /// <b>Confirmado, el invariante del recuento</b>: el físico de cada clave contada es lo contado,
+    /// leído de las filas vivas y no del modelo.
+    /// </para>
+    /// </remarks>
+    private async Task UnaConfirmacionDeRecuentoAsync(UnaEmpresa empresa, Secuencia secuencia, RecuentoDelModelo recuento)
+    {
+        (RecuentoDto ficha, string etiqueta) = await LaFichaAsync(empresa, recuento.Id);
+        IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+
+        bool haCambiado = recuento.Lineas.Any(
+            linea => saldos.GetValueOrDefault(linea.Clave) != recuento.TeoricoVisto[linea.Id]);
+
+        string detalle = DescribirElRecuento(recuento, saldos, secuencia);
+        string huella = recuento.HuellaVista!;
+        bool conLaHuellaNueva = false;
+
+        // LA HUELLA SE MUEVE SI Y SOLO SI SE MUEVE EL TEÓRICO DE ALGUNA LÍNEA (ADR-0055 §2), dicho por
+        // el modelo sin saber cómo se calcula.
+        (ficha.HuellaDelTeorico != huella).ShouldBe(
+            haCambiado, "la huella no se mueve con el teórico de las líneas\n" + secuencia.Relato());
+
+        if (haCambiado)
+        {
+            Resultado<RecuentoDto> rechazada = await ConfirmarElRecuentoAsync(empresa, recuento.Id, etiqueta, huella);
+
+            secuencia.Anotar(RecuentoConElTeoricoCambiado, detalle);
+
+            rechazada.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+            rechazada.Error!.Codigo.ShouldBe("recuento-teorico-cambiado", secuencia.Relato());
+
+            // CONFIRMAR OTRA VEZ MANDA LA HUELLA NUEVA: la de la ficha, que es la de ahora. El 409
+            // no ha escrito nada, así que la versión es la misma.
+            huella = ficha.HuellaDelTeorico!;
+            recuento.Ver(huella, saldos);
+            conLaHuellaNueva = true;
+        }
+
+        (LineaDelRecuento Linea, decimal Diferencia)[] difieren =
+        [
+            .. recuento.Lineas
+                .Select(linea => (Linea: linea, Diferencia: linea.Contado!.Value - saldos.GetValueOrDefault(linea.Clave)))
+                .Where(par => par.Diferencia != 0m),
+        ];
+
+        LineaDelRecuento[] conTransito =
+        [
+            .. difieren
+                .Where(par => par.Diferencia > 0m && secuencia.Transito.GetValueOrDefault(par.Linea.Clave) > 0m)
+                .Select(par => par.Linea),
+        ];
+
+        if (conTransito.Length > 0)
+        {
+            await ExigirElRechazoDelRecuentoAsync(
+                empresa, recuento, etiqueta, huella, "recuento-sube-con-transito", conTransito, secuencia);
+
+            secuencia.Anotar(RecuentoQueSubeConTransito, detalle);
+
+            return;
+        }
+
+        LineaDelRecuento[] sinPrecioMedio =
+        [
+            .. difieren
+                .Where(par => par.Diferencia > 0m && secuencia.Valoracion
+                    .GetValueOrDefault((par.Linea.Clave.ArticuloId, recuento.AlmacenId)).Cantidad <= 0m)
+                .Select(par => par.Linea),
+        ];
+
+        if (sinPrecioMedio.Length > 0)
+        {
+            await ExigirElRechazoDelRecuentoAsync(
+                empresa, recuento, etiqueta, huella, "ajuste-entrada-sin-coste-ni-precio-medio", sinPrecioMedio, secuencia);
+
+            secuencia.Anotar("recuento rechazado sin precio medio", detalle);
+
+            return;
+        }
+
+        ApunteDelLibro[] apuntes = [.. difieren.Select(par => new ApunteDelLibro(par.Linea.Clave, Hoy, par.Diferencia))];
+
+        if (LoQueRomperia(secuencia, apuntes) is { Count: > 0 } rotas)
+        {
+            secuencia.Anotar("recuento rechazado por el motor", detalle);
+
+            await ExigirElRechazoDelMotorAsync(
+                () => ConfirmarElRecuentoAsync(empresa, recuento.Id, etiqueta, huella), rotas, secuencia);
+
+            foreach ((LineaDelRecuento linea, _) in difieren)
+            {
+                linea.PorRecontar = true;
+            }
+
+            return;
+        }
+
+        Resultado<RecuentoDto> confirmacion = await ConfirmarElRecuentoAsync(empresa, recuento.Id, etiqueta, huella);
+
+        secuencia.Anotar(conLaHuellaNueva ? RecuentoConLaHuellaNueva : RecuentoConfirmado, detalle);
+
+        confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»\n{secuencia.Relato()}");
+        (confirmacion.Valor.AjusteId is not null).ShouldBe(apuntes.Length > 0, secuencia.Relato());
+
+        secuencia.RecuentoEnCurso = null;
+        secuencia.Libro.AddRange(apuntes);
+
+        // LO QUE SUBE, AL PRECIO MEDIO DE SU ARTÍCULO EN EL ALMACÉN; lo que baja, como cualquier
+        // salida (ADR-0055 §6 y §8). Es un ajuste más, y mueve el valor de la empresa.
+        FilaValorada[] valoradas = secuencia.Valorar(
+            [.. difieren.Select(par => new LineaQueSeValora(
+                par.Linea.Clave.ArticuloId, recuento.AlmacenId, par.Diferencia, null, null))]);
+
+        secuencia.ValorDeLaEmpresa += valoradas.Sum(fila => fila.Valor);
+        secuencia.AjustesDeRecuento += apuntes.Length > 0 ? 1 : 0;
+        secuencia.RecuentosAnulables.Add((recuento.Id, apuntes, valoradas));
+
+        // EL INVARIANTE DEL RECUENTO: el físico de cada clave contada es lo contado, en las filas
+        // vivas. El modelo ya lo dice con su libro; esto lo dice sin él.
+        IReadOnlyDictionary<Guid, Guid> traduccion = await LaTraduccionAsync(empresa.EmpresaId, secuencia);
+
+        var fisicos = (await LasExistencias.VivasAsync(postgres, empresa.EmpresaId))
+            .ToDictionary(viva => EnElModelo(LasExistencias.ClaveDe(viva), traduccion), viva => viva.Fisico);
+
+        foreach (LineaDelRecuento linea in recuento.Lineas)
+        {
+            fisicos.GetValueOrDefault(linea.Clave).ShouldBe(
+                linea.Contado!.Value,
+                string.Create(CultureInfo.InvariantCulture, $"la línea {linea.Numero} no ha dejado su clave en lo contado\n")
+                    + secuencia.Relato());
+        }
+
+        secuencia.ClavesContadasComprobadas += recuento.Lineas.Count;
+    }
+
+    /// <summary>
+    /// Exige que la confirmación se rechace con este código, y deja para volver a contar las líneas
+    /// que lo causan. El recuento sigue en curso, y nada se ha movido.
+    /// </summary>
+    private async Task ExigirElRechazoDelRecuentoAsync(
+        UnaEmpresa empresa,
+        RecuentoDelModelo recuento,
+        string etiqueta,
+        string huella,
+        string codigo,
+        IEnumerable<LineaDelRecuento> causantes,
+        Secuencia secuencia)
+    {
+        Resultado<RecuentoDto> rechazada = await ConfirmarElRecuentoAsync(empresa, recuento.Id, etiqueta, huella);
+
+        rechazada.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+        rechazada.Error!.Codigo.ShouldBe(codigo, secuencia.Relato());
+
+        foreach (LineaDelRecuento linea in causantes)
+        {
+            linea.PorRecontar = true;
+        }
+    }
+
+    /// <summary>Descarta el recuento en curso por la API: no mueve nada y deja libre el almacén.</summary>
+    /// <remarks>Por la API, porque descartar no mira el reloj.</remarks>
+    private static async Task UnDescarteAsync(UnaEmpresa empresa, Secuencia secuencia, RecuentoDelModelo recuento)
+    {
+        (_, string etiqueta) = await LaFichaAsync(empresa, recuento.Id);
+
+        using HttpResponseMessage descarte = await EscenaDeRecuento.DescartarAsync(
+            empresa.Cliente, recuento.Id, etiqueta, "Descarte del generador", clave: null);
+
+        RecuentoDto descartado = await EscenaDeTransferencia.LeerAsync<RecuentoDto>(descarte);
+
+        secuencia.Anotar(
+            RecuentoDescartado,
+            string.Create(CultureInfo.InvariantCulture, $"de {recuento.Lineas.Count} líneas"));
+
+        descartado.Estado.ShouldBe("Descartado", secuencia.Relato());
+
+        secuencia.RecuentoEnCurso = null;
+    }
+
+    /// <summary>
+    /// La anulación de un recuento confirmado: el inverso de su ajuste, con la fecha de hoy, o solo el
+    /// estado si no tuvo ajuste (ADR-0055 §9).
+    /// </summary>
+    /// <remarks>
+    /// Como la de un ajuste: si las unidades que entraron ya salieron, o si la serie que salió está en
+    /// otro sitio, el motor la rechaza, y el recuento se puede anular más adelante. Por el caso de uso,
+    /// porque el inverso lleva la fecha del reloj.
+    /// </remarks>
+    private async Task UnaAnulacionDeRecuentoAsync(Random recuentos, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        int cual = recuentos.Next(secuencia.RecuentosAnulables.Count);
+        (Guid recuentoId, ApunteDelLibro[] apuntes, FilaValorada[] valoradas) = secuencia.RecuentosAnulables[cual];
+
+        (_, string etiqueta) = await LaFichaAsync(empresa, recuentoId);
+
+        ApunteDelLibro[] inverso =
+            [.. apuntes.Select(apunte => apunte with { Fecha = Hoy, Cantidad = -apunte.Cantidad })];
+
+        string detalle = string.Create(CultureInfo.InvariantCulture, $"con {apuntes.Length} filas de ajuste");
+
+        if (LoQueRomperia(secuencia, inverso) is { Count: > 0 } rotas)
+        {
+            secuencia.Anotar("anulación de un recuento rechazada por el motor", detalle);
+
+            await ExigirElRechazoDelMotorAsync(() => AnularElRecuentoAsync(empresa, recuentoId, etiqueta), rotas, secuencia);
+
+            return;
+        }
+
+        secuencia.RecuentosAnulables.RemoveAt(cual);
+
+        Resultado<RecuentoDto> anulacion = await AnularElRecuentoAsync(empresa, recuentoId, etiqueta);
+
+        secuencia.Anotar(RecuentoAnulado, detalle);
+
+        anulacion.EsCorrecto.ShouldBeTrue($"«{anulacion.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        secuencia.Libro.AddRange(inverso);
+
+        // EL INVERSO COMPENSA LO QUE CADA LÍNEA MOVIÓ, como el de cualquier ajuste (ADR-0046 §6).
+        FilaValorada[] inversas = secuencia.Valorar(
+            [.. valoradas.Select(fila => new LineaQueSeValora(
+                fila.ArticuloId, fila.AlmacenId, -fila.Cantidad, null, -fila.Valor))]);
+
+        secuencia.ValorDeLaEmpresa += inversas.Sum(fila => fila.Valor);
+    }
+
+    /// <summary>
+    /// Un contexto nuevo del módulo con el reloj del generador: lo que tendría una petición de verdad.
+    /// </summary>
+    private ElModuloDeInventario UnaPeticion(UnaEmpresa empresa) => new(postgres, empresa.EmpresaId, s_reloj);
+
+    /// <summary>La confirmación de un recuento, en su petición.</summary>
+    private async Task<Resultado<RecuentoDto>> ConfirmarElRecuentoAsync(
+        UnaEmpresa empresa, Guid recuentoId, string etiqueta, string huella)
+    {
+        await using ElModuloDeInventario peticion = UnaPeticion(empresa);
+
+        return await peticion.ConfirmarElRecuentoAsync(recuentoId, etiqueta, huella);
+    }
+
+    /// <summary>La anulación de un recuento, en su petición.</summary>
+    private async Task<Resultado<RecuentoDto>> AnularElRecuentoAsync(UnaEmpresa empresa, Guid recuentoId, string etiqueta)
+    {
+        await using ElModuloDeInventario peticion = UnaPeticion(empresa);
+
+        return await peticion.AnularElRecuentoAsync(recuentoId, etiqueta, "Anulación del generador");
+    }
+
+    /// <summary>
+    /// Lee la ficha y guarda lo que ve quien va a confirmar: la huella y el teórico de cada línea, que
+    /// el modelo saca de su libro.
+    /// </summary>
+    private static async Task VerLaFichaAsync(UnaEmpresa empresa, Secuencia secuencia, RecuentoDelModelo recuento)
+    {
+        (RecuentoDto ficha, _) = await LaFichaAsync(empresa, recuento.Id);
+
+        ficha.HuellaDelTeorico.ShouldNotBeNull(secuencia.Relato());
+
+        recuento.Ver(ficha.HuellaDelTeorico, LasExistencias.SaldosDelLibro(secuencia.Libro));
+    }
+
+    /// <summary>La ficha de un recuento por la API, con su versión.</summary>
+    private static async Task<(RecuentoDto Ficha, string Etiqueta)> LaFichaAsync(UnaEmpresa empresa, Guid recuentoId)
+    {
+        using HttpResponseMessage lectura = await empresa.Cliente.GetAsync($"{EscenaDeRecuento.Recuentos}/{recuentoId}");
+
+        RecuentoDto ficha = await EscenaDeTransferencia.LeerAsync<RecuentoDto>(lectura);
+
+        lectura.Headers.ETag.ShouldNotBeNull("la ficha del recuento no emite ETag");
+
+        return (ficha, lectura.Headers.ETag.ToString());
+    }
+
+    /// <summary>
+    /// Las líneas de un recuento recién abierto por la API, con la clave del modelo; y exige que el
+    /// teórico y el tránsito de cada una sean los del modelo.
+    /// </summary>
+    private static async Task<IReadOnlyList<LineaDelRecuento>> LasLineasAsync(
+        UnaEmpresa empresa, Secuencia secuencia, Guid recuentoId, Guid almacenId)
+    {
+        using HttpResponseMessage lectura = await empresa.Cliente.GetAsync(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"{EscenaDeRecuento.Recuentos}/{recuentoId}/lineas?size={Paginacion.TamanioMaximo}"));
+
+        PaginaDe<LineaDeRecuentoDto> pagina = await EscenaDeTransferencia.LeerAsync<PaginaDe<LineaDeRecuentoDto>>(lectura);
+
+        pagina.Total.ShouldBeLessThanOrEqualTo(Paginacion.TamanioMaximo, "una página no las trae todas");
+
+        IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(secuencia.Libro);
+        List<LineaDelRecuento> lineas = [];
+
+        foreach (LineaDeRecuentoDto dto in pagina.Elementos)
+        {
+            ClaveDeExistencia clave = new(
+                dto.ArticuloId,
+                almacenId,
+                dto.UbicacionId,
+                dto.CodigoDeLote is { } lote ? secuencia.LoteDe(dto.ArticuloId, lote) : null,
+                dto.NumeroDeSerie is { } serie ? secuencia.SerieDe(dto.ArticuloId, serie) : null);
+
+            dto.Teorico.ShouldBe(saldos.GetValueOrDefault(clave), secuencia.Relato());
+            dto.EnTransito.ShouldBe(secuencia.Transito.GetValueOrDefault(clave), secuencia.Relato());
+
+            lineas.Add(new LineaDelRecuento(dto.Id, dto.Numero, clave));
+        }
+
+        return lineas;
+    }
+
+    /// <summary>Un recuento para el relato: por línea, lo contado y lo que hay ahora.</summary>
+    private static string DescribirElRecuento(
+        RecuentoDelModelo recuento, IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos, Secuencia secuencia) =>
+        "[" + string.Join(", ", recuento.Lineas.Select(linea =>
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"línea {linea.Numero}: {linea.Contado} de {saldos.GetValueOrDefault(linea.Clave)}")
+            + (secuencia.Transito.GetValueOrDefault(linea.Clave) is > 0m and var vuela
+                ? string.Create(CultureInfo.InvariantCulture, $" y {vuela} en vuelo")
+                : string.Empty))) + "]";
+
+    /// <summary>
     /// Qué restricciones de la existencia rompería sumar estas filas al libro del modelo; ninguna si
     /// el motor tiene que dejarlas pasar.
     /// </summary>
@@ -1203,11 +1827,27 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                     secuencia.UltimaFechaDe(clave.ArticuloId, clave.AlmacenId)))],
             "la valoración no es la del modelo\n" + secuencia.Relato());
 
-        // EL VALOR DE LA EMPRESA SOLO LO MUEVEN LOS AJUSTES (ADR-0053 §6): la transferencia lo pasa
-        // del origen al vuelo y del vuelo al destino, sin crearlo ni perderlo por el camino.
-        valoraciones.Sum(fila => fila.Valor + fila.ValorEnTransito).ShouldBe(
+        // EL VALOR DE LA EMPRESA SOLO LO MUEVEN LOS AJUSTES (ADR-0053 §6), los de un recuento
+        // también: la transferencia lo pasa del origen al vuelo y del vuelo al destino, sin crearlo
+        // ni perderlo por el camino.
+        decimal deLaEmpresa = valoraciones.Sum(fila => fila.Valor + fila.ValorEnTransito);
+
+        deLaEmpresa.ShouldBe(
             secuencia.ValorDeLaEmpresa,
             "el valor de la empresa no es el que han metido y sacado los ajustes\n" + secuencia.Relato());
+
+        // Y LO MISMO DICHO POR EL LIBRO, SIN EL MODELO (epílogo del 2.12): sus filas de ajuste, las de
+        // un recuento entre ellas, suman el valor de la empresa; las de transferencia, lo que vuela
+        // con el signo cambiado, porque lo que salió de un almacén y no ha llegado a otro no está en
+        // ninguno.
+        (decimal deAjustes, decimal deTransferencias) = await LoQueValeElLibroPorOrigenAsync(empresa.EmpresaId);
+
+        deAjustes.ShouldBe(
+            deLaEmpresa, "las filas de ajuste del libro no suman el valor de la empresa\n" + secuencia.Relato());
+
+        deTransferencias.ShouldBe(
+            -valoraciones.Sum(fila => fila.ValorEnTransito),
+            "las filas de transferencia del libro no suman lo que vuela\n" + secuencia.Relato());
 
         (await LosEstadosDelLibroAsync(empresa.EmpresaId)).Imposibles.ShouldBe(
             0, "el libro sumado hasta alguna fecha deja un estado que no existió nunca\n" + secuencia.Relato());
@@ -1426,6 +2066,33 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             LoteId = clave.LoteId is { } lote ? traduccion[lote] : null,
             NumeroDeSerieId = clave.NumeroDeSerieId is { } serie ? traduccion[serie] : null,
         };
+
+    /// <summary>Lo que suman las filas del libro de la empresa de cada clase de documento.</summary>
+    /// <remarks>
+    /// La clase va como texto, con el nombre del enumerado: así la guarda la conversión del contexto.
+    /// </remarks>
+    private async Task<(decimal DeAjustes, decimal DeTransferencias)> LoQueValeElLibroPorOrigenAsync(Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand orden = new(
+            "SELECT "
+            + "coalesce(sum(valor) FILTER (WHERE documento_origen_tipo = @ajuste), 0), "
+            + "coalesce(sum(valor) FILTER (WHERE documento_origen_tipo = @transferencia), 0) "
+            + "FROM inventario.movimiento_stock WHERE empresa_id = @empresa",
+            conexion);
+
+        orden.Parameters.AddWithValue("empresa", empresaId);
+        orden.Parameters.AddWithValue("ajuste", nameof(TipoDeDocumentoOrigen.Ajuste));
+        orden.Parameters.AddWithValue("transferencia", nameof(TipoDeDocumentoOrigen.Transferencia));
+
+        await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
+
+        (await lector.ReadAsync()).ShouldBeTrue();
+
+        return (lector.GetDecimal(0), lector.GetDecimal(1));
+    }
 
     /// <summary>El valor y el precio medio de cada fila del libro de la empresa.</summary>
     private async Task<List<FilaValorada>> FilasValoradasAsync(Guid empresaId)
@@ -1726,7 +2393,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// <summary>
     /// Una empresa con un almacén de dos ubicaciones y otro de una, tres artículos —uno por marca,
     /// seis claves en el primero y tres en el segundo— y los ejercicios de este año y del pasado,
-    /// cada uno con su serie; el de este año, también con la de las transferencias.
+    /// cada uno con su serie; el de este año, también con la de las transferencias y la de los
+    /// recuentos.
     /// </summary>
     private async Task<UnaEmpresa> UnaEmpresaAsync(int semilla)
     {
@@ -1745,6 +2413,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, anioPasado.Id, codigo + "-P");
         SerieDto deTransferencias = await LosMaestrosPorLaApi.CrearSerieEnAsync(
             cliente, esteAnio.Id, codigo + "-TR", TipoDeDocumento.TransferenciaDeInventario);
+        SerieDto deRecuentos = await LosMaestrosPorLaApi.CrearSerieEnAsync(
+            cliente, esteAnio.Id, codigo + "-RC", TipoDeDocumento.RecuentoDeInventario);
 
         AlmacenDto almacen = await LosMaestrosPorLaApi.CrearAlmacenAsync(cliente, codigo);
         AlmacenDto almacenB = await LosMaestrosPorLaApi.CrearAlmacenAsync(cliente, codigo + "-B");
@@ -1792,7 +2462,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             serie,
             delAnioPasado,
             anioPasado,
-            deTransferencias);
+            deTransferencias,
+            deRecuentos);
     }
 
     /// <summary>Una línea tal como la saca el generador.</summary>
@@ -1842,6 +2513,56 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private sealed record TransferenciaDelModelo(
         Guid Id, Guid Origen, Guid Destino, DateOnly FechaDeEnvio, LineaEnVuelo[] Lineas);
 
+    /// <summary>Un recuento en curso, tal como lo lleva el modelo.</summary>
+    /// <param name="id">Su identificador en el sistema.</param>
+    /// <param name="almacenId">El almacén que se cuenta.</param>
+    /// <param name="lineas">Las que trajo la precarga, en su orden.</param>
+    private sealed class RecuentoDelModelo(Guid id, Guid almacenId, IReadOnlyList<LineaDelRecuento> lineas)
+    {
+        internal Guid Id { get; } = id;
+
+        internal Guid AlmacenId { get; } = almacenId;
+
+        /// <summary>Las de la precarga, y detrás las que se añaden a mano.</summary>
+        internal List<LineaDelRecuento> Lineas { get; } = [.. lineas];
+
+        /// <summary>La huella de la última vez que se leyó la ficha: la que mandaría quien confirma.</summary>
+        internal string? HuellaVista { get; private set; }
+
+        /// <summary>El teórico de cada línea cuando se leyó esa huella, según el libro del modelo.</summary>
+        internal Dictionary<Guid, decimal> TeoricoVisto { get; } = [];
+
+        /// <summary>Lo que ve quien lee la ficha: su huella, y el teórico que tienen ahora sus líneas.</summary>
+        internal void Ver(string huella, IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos)
+        {
+            HuellaVista = huella;
+
+            foreach (LineaDelRecuento linea in Lineas)
+            {
+                TeoricoVisto[linea.Id] = saldos.GetValueOrDefault(linea.Clave);
+            }
+        }
+    }
+
+    /// <summary>Una línea de un recuento en curso, tal como la lleva el modelo.</summary>
+    /// <param name="id">Su identificador en el sistema.</param>
+    /// <param name="numero">Su orden en el recuento.</param>
+    /// <param name="clave">La clave del modelo que cuenta, con su lote o su serie.</param>
+    private sealed class LineaDelRecuento(Guid id, int numero, ClaveDeExistencia clave)
+    {
+        internal Guid Id { get; } = id;
+
+        internal int Numero { get; } = numero;
+
+        internal ClaveDeExistencia Clave { get; } = clave;
+
+        /// <summary>Lo contado, o nada si no se ha contado.</summary>
+        internal decimal? Contado { get; set; }
+
+        /// <summary>Si un rechazo de la confirmación pide volver a contarla.</summary>
+        internal bool PorRecontar { get; set; }
+    }
+
     /// <summary>Una fila de la valoración, tal como se lee de la tabla.</summary>
     /// <param name="ArticuloId">El artículo.</param>
     /// <param name="AlmacenId">El almacén.</param>
@@ -1873,7 +2594,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         SerieDto Serie,
         SerieDto SerieDelAnioPasado,
         EjercicioDto AnioPasado,
-        SerieDto SerieDeTransferencias)
+        SerieDto SerieDeTransferencias,
+        SerieDto SerieDeRecuentos)
     {
         /// <summary>La marca del artículo de una de las claves.</summary>
         internal string MarcaDe(int clave) => Marcas[Claves[clave].ArticuloId];
@@ -1940,9 +2662,24 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         /// <summary>Las recibidas que no se han anulado.</summary>
         internal List<TransferenciaDelModelo> Recibidas { get; } = [];
 
+        /// <summary>El recuento abierto y sin cerrar, o nada: el generador lleva uno a la vez.</summary>
+        internal RecuentoDelModelo? RecuentoEnCurso { get; set; }
+
         /// <summary>
-        /// El valor que han metido y sacado los ajustes y sus anulaciones: el de la empresa, porque la
-        /// transferencia no lo crea ni lo pierde (ADR-0053 §6).
+        /// Los recuentos confirmados que no se han anulado, con las filas de su ajuste y lo que valieron;
+        /// sin filas si todo cuadraba y no hubo ajuste.
+        /// </summary>
+        internal List<(Guid RecuentoId, ApunteDelLibro[] Apuntes, FilaValorada[] Valoradas)> RecuentosAnulables { get; } = [];
+
+        /// <summary>Las claves de un recuento confirmado cuyo físico se ha leído igual a lo contado.</summary>
+        internal int ClavesContadasComprobadas { get; set; }
+
+        /// <summary>Los recuentos confirmados que han generado su ajuste.</summary>
+        internal int AjustesDeRecuento { get; set; }
+
+        /// <summary>
+        /// El valor que han metido y sacado los ajustes y sus anulaciones, los de un recuento también:
+        /// el de la empresa, porque la transferencia no lo crea ni lo pierde (ADR-0053 §6).
         /// </summary>
         internal decimal ValorDeLaEmpresa { get; set; }
 
