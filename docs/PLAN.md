@@ -6436,9 +6436,148 @@ orden que la mide.
     frontend/dist 450 900`. Las dos rutas van diferidas; lo que sube el arranque son los dos
     diccionarios y la tabla de rutas.
 
+### Traídas por el encargo del 2026-10-08 — el epílogo del 2.12, la subida de vitest y la puerta del 2.13
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **22** commits desde `39ec98e`, con 22 firmas válidas y sin *trailers*;
+- los runs, en verde al primer intento;
+- `main` avanzó a `df1e44d` solo después del verde de su rama;
+- las cifras, iguales a las del *runner*, y Vitest con 249 casos sin avisos.
+
+El informe no tenía ningún error. **El próximo cuenta desde `df1e44d`.** La siguiente mutación es
+la **359**, y el siguiente ADR, el **0058**. Son **tres unidades, cada una en su rama y en este
+orden**: el epílogo del 2.12, la subida de vitest y la puerta del 2.13.
+
+#### El arnés
+
+- Está al día desde `dbf2664`, así que el encargo no trae el bloque de puesta al día.
+- `arnes-de-agente.md` se lee al empezar cada sesión. Cambió en el `3b45c6b` de la biblioteca:
+  context-mode está desinstalado, hay servidores de lenguaje de C# y TypeScript, y hay reglas nuevas
+  sobre la caché del *prompt*.
+- `.claude/settings.json` se compara con `../BibliotecaDocumentacion/plantillas/settings.json`, y
+  que solo cambie el fin de línea está bien así.
+- Dos reglas nuevas de la biblioteca: las ediciones de `CLAUDE.md`, si hay alguna, se agrupan al
+  principio o al final de la sesión; y cada unidad se cierra antes de una pausa larga.
+
+#### El epílogo del 2.12, en su rama y cada tema en su commit
+
+1. **El run de `main` 37637032242, anotado.**
+2. **Contar no pisa lo que contó otra persona.** `LineasDelRecuento.tsx` pide la versión de la línea
+   justo antes del `PUT`, así que el `If-Match` no protege lo que el usuario estaba viendo.
+   - La versión que viaja es la de lo que se ve. Puede venir en cada elemento del listado de líneas,
+     o leerse al abrir el campo, que entonces enseña lo que trae. Se decide y se escribe.
+   - El caso: dos personas abren la misma línea, la primera guarda y la segunda recibe el `412`. La
+     pantalla dice lo que contó la otra persona y cierra el campo.
+   - La 350 se reescribe, porque hoy fija el defecto. La mutación «leer la versión justo antes de
+     mandar» tiene que ponerse roja.
+   - Se corrigen el comentario de `consultarLinea` y la frase del README de la funcionalidad.
+   - Se busca el mismo patrón —leer y escribir seguidos, con la versión recién leída— en el resto
+     del frontal, y se dice aunque no aparezca.
+   - El recorrido con `playwright-cli`, con dos contextos de navegador a la vez.
+3. **El generador de la propiedad gana el recuento**, como pedía el encargo y como dice ya el
+   ADR-0055 en sus consecuencias.
+   - Los pasos: abrir, contar y confirmar; mover stock entre medias, con su `409` y la confirmación
+     con la huella nueva; anular y descartar; todo mezclado con los ajustes y las transferencias que
+     el generador ya tiene.
+   - El invariante gana dos cosas: tras confirmar, el físico de cada clave contada es lo contado; y
+     el valor de la empresa solo lo mueven los ajustes, también los de un recuento.
+   - Cada semilla tiene que pasar por un `409` del teórico y por el rechazo del tránsito, y el caso
+     lo afirma.
+   - Si de verdad no compensa, el ADR-0055 se corrige con su nota y se dice por qué. Pero lo primero
+     es hacerlo.
+4. **La huella, en la pregunta del recuento cíclico, como segundo disparador.** Con la huella de
+   todo el almacén, uno con movimiento continuo puede no llegar a confirmarse nunca. Es una línea en
+   el PLAN.
+5. **Los dos *workflows* cortados**, el del mapa y la revisión B2:
+   - qué son y de dónde salen;
+   - si son de terceros, pasan la pregunta cero de `principios/desarrollo-con-ia.md`;
+   - la revisión del diff del 2.12 se repite con la revisión de código que trae el arnés, y lo que
+     encuentre va a este epílogo.
+
+#### La subida de vitest, como unidad aparte
+
+El ADR-0045 lo dejó escrito: se sube «antes si la anotación la da como alta». La anotación ya da 2
+críticas y 1 alta.
+
+- `source-map-js` 1.2.2, sin versión mayor, con `npm update`, como se hizo con `js-yaml`. Va en su
+  propio commit.
+- `vitest`, desde la 3.2.7 hasta la versión que deje la auditoría sin críticas ni altas (`npm audit`
+  propone la 5.0.3). Va en su propio commit, sin `--force`.
+- Antes, la guía oficial de migración de cada versión mayor. Context7 vale para ir más deprisa, pero
+  lo que se escriba se contrasta con la guía.
+- Se comprueba que pida una versión de vite compatible con la que hay, y su licencia.
+- Lo que no puede cambiar: los 249 casos, los avisos de `act()` en cero y el presupuesto del
+  frontal. Si un test cambia de comportamiento, se explica en el commit.
+- Al ADR-0045 se le pone una nota en la cabecera: el disparador se cumplió, y con qué commits.
+
+#### El 2.13: las reservas y el disponible, hasta su puerta
+
+La puerta se pasa con esto. Las decisiones van en el **ADR-0058**, y lo que siga abierto se pregunta
+todo junto antes del código. **Lo primero que se mira es lo que diga el §7.4 del plan maestro sobre
+la reserva**: si dice algo, manda él.
+
+1. **A qué nivel se reserva, y dónde vive lo reservado.** Es esquema. Hoy `existencias.reservado`
+   va por fila: ubicación, lote y serie. Un pedido de venta reserva por artículo y almacén, y el
+   hueco se elige al preparar el pedido. Recomendación del usuario: por artículo y almacén, con lote
+   o serie solo si se piden. Si es así, se decide qué pasa con la columna de la fila: si se queda
+   para la asignación de la fase 4, con su significado escrito, o si se va.
+2. **Ninguna reserva por encima de lo disponible**, comprobado bajo el cerrojo de la clave en el
+   momento de reservar. El disponible no cuenta el tránsito (ADR-0053).
+3. **Las salidas frente a lo reservado**, con la recomendación del usuario:
+   - un ajuste o un recuento registran la realidad y no se frenan; si dejan el disponible en
+     negativo, se ve;
+   - una transferencia es una decisión y respeta el disponible (`422`);
+   - así que la regla no puede ser un `CHECK` de `reservado <= fisico`: se escribe dónde vive.
+4. **La caducidad**, un instante o una fecha. El disponible que se lee no puede contar una reserva
+   caducada, ni siquiera antes de que nadie la libere: donde el hueco importa, el defecto es el
+   error. Se decide el mecanismo —liberar bajo el cerrojo al reservar, un proceso periódico o
+   restar al leer— y se escribe qué hueco deja cada uno. Si trae el primer proceso periódico del
+   proyecto, el 2.14 lo heredará para el corte mensual, y se dice.
+5. **Consumir**, en la transacción de quien escribe la salida, que en la fase 4 será el albarán.
+   Si no va junto a la salida, el disponible sube antes de que salga la mercancía. Se decide si se
+   puede consumir solo una parte. El ítem dice cuál de las dos situaciones es, como pide el
+   criterio: el estado se sabe producir y lo que falta es quien lo llame. Los tests hacen de
+   llamante a través del puerto de `Contracts`.
+6. **Liberar**: a mano, con su motivo, y por caducidad. Se decide si se distinguen.
+7. **Idempotencia por el origen.** Un pedido que reintenta no reserva dos veces: un índice único
+   sobre el documento y la línea que reservan.
+8. **Concurrencia**: dos reservas a la vez por las últimas unidades, con dos transacciones de
+   verdad, donde una sale y la otra recibe el `422`; y una reserva a la vez que una salida. La
+   mutación que quita el cerrojo tiene que ponerse roja.
+9. **La superficie.** El criterio no nombra pantalla ni acción. Recomendación: el puerto en
+   `Contracts` y nada en HTTP. La lectura de las existencias sigue en la pregunta del cierre de fase.
+10. **La propiedad y el cuadre.** El generador gana reservar, consumir con su salida, liberar y
+    caducar, con el reloj congelado. El invariante gana dos cosas: lo reservado de cada clave es la
+    suma de sus reservas activas y vigentes, y ninguna se creó por encima del disponible. Si lo
+    reservado se guarda, lleva su propio cuadre contra las reservas, como el tránsito.
+
+El agente se para en la puerta, como en el 2.12, y pregunta lo que siga abierto.
+
+#### Las herramientas y el método
+
+- **Los servidores de lenguaje**: el símbolo se busca antes de leer un fichero; los diagnósticos
+  nuevos de cada edición se abren; el primero llega una llamada tarde; y un diagnóstico limpio no
+  sustituye al build ni a los tests.
+- **`playwright-cli`**, para el recorrido de los dos usuarios contando la misma línea. **Context7**,
+  para la migración de vitest, solo con la pregunta técnica y contrastado con la guía oficial.
+  context-mode está desinstalado: el análisis se programa en un guion que cuenta y devuelve la cifra,
+  con la salida filtrada en la propia orden, rangos de fichero y subagentes para las lecturas
+  grandes.
+- **El método de siempre**: la tanda escrita antes de medir, con una mutación sobre el arnés; las
+  dos listas por nombre; commits pequeños y firmados, uno por tema; el humo cuando haya migración o
+  imagen; `main` solo avanza a un commit ya verde en su rama, y la rama se borra después de su run de
+  `main`.
+- **El informe** cuenta todos los commits desde `df1e44d`, con sus runs, y cada cifra va con la orden
+  que la mide.
+
+**Lo que decidió el agente al abrirlo, y solo queda anotado**, porque es reversible: las ramas son
+`epilogo-2.12`, `subida-de-vitest` y `2.13-las-reservas`, cada una abierta desde `main` cuando la
+anterior ya está dentro y borrada.
+
 ## Estado actual
 
-**FASE 2 EN CURSO — 11 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 12 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -9847,8 +9986,31 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 
   Este commit, el que anota ese run, es el **veintidós**. Espera su propio verde en la rama antes de
   que `main` avance, y el run de `main` se anota al abrir el 2.13.
-- **Dónde retomar:** el run de rama de este commit; después, `main` con `--ff-only` y su run, y la
-  rama borrada en local y en el remoto. Luego, el 2.13.
+- **El run de `main` es el 37637032242** sobre `df1e44d`, **success al primer intento**, con sus
+  tres jobs —Backend `112845846322`, Frontal `112845846946` y Humo `112848920608`— y **68 pasos: 67
+  en verde y 1 omitido**, *Diagnóstico*. Dice lo mismo que el de la rama: **1356** y **651** casos
+  con **10 `.trx`** en cada artefacto, **149** operaciones y 90 rutas, **201** tipos de error de
+  **208** sitios, y **436/450** y **698/900** KiB, leído con `python leer-run27.py 37637032242`.
+  `main` avanzó a `df1e44d` después de que el run de la rama sobre ese mismo commit, el
+  **37635240516**, saliera en verde —Backend `112839596698`, Frontal `112839597380` y Humo
+  `112844278435`—, y la rama `2.12-el-recuento` se borró después, en local y en el remoto. Anotado
+  al abrir el epílogo del 2.12.
+
+**El epílogo del 2.12, en curso** desde el 2026-10-08, en la rama `epilogo-2.12`, abierta desde
+`main` en `df1e44d`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-08*. Sus mutaciones empiezan en la **359**.
+
+**Lo que queda, por este orden:**
+
+1. ~~El run de `main` del 2.12, anotado.~~ Hecho en el primer commit de la rama: el 37637032242, en
+   *El 2.12, cerrado* y en su casilla.
+2. Contar no pisa lo que contó otra persona.
+3. La propiedad gana el recuento.
+4. La huella, segundo disparador del recuento cíclico.
+5. Los dos *workflows* cortados, y la revisión del diff del 2.12 con la del arnés.
+6. La tanda, la batería y los runs.
+
+Después vienen la subida de vitest y la puerta del 2.13, cada una en su rama.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -18159,7 +18321,9 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     semillas: un recuento nuevo precarga justo lo contado, y el cuadre no encuentra nada.
 
   El run de rama del cierre, el **37633250996** sobre `1ae90d9`, sale en verde al primer intento,
-  con **1356** y **651** casos. El de `main` se anota al abrir el 2.13.
+  con **1356** y **651** casos. `main` avanzó a `df1e44d` después de que el run de la rama sobre ese
+  mismo commit, el **37635240516**, saliera en verde, y el de `main`, el **37637032242**, sale en
+  verde al primer intento con las mismas cifras. Anotado al abrir el epílogo del 2.12.
 
 - [ ] **2.13 · Las reservas, y el disponible** — criterio de aceptación: `Reserva` con
   `Activa`/`Consumida`/`Liberada` y su caducidad; `Disponible = Físico − Reservado` respondiendo de
