@@ -21,11 +21,14 @@ import {
 } from '../model/formularios.ts';
 import type { ListadoDeLineas } from '../model/listado.ts';
 import { RECHAZO_DE_LO_CONTADO } from '../model/rechazos.ts';
-import type { LineaDeRecuento, Recuento } from '../model/recuento.ts';
+import type { FichaDeLinea, LineaDeRecuento, Recuento } from '../model/recuento.ts';
 import { tipoDeFallo } from '@/shared/api/errores.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
+
+/** El `412` de contar: otra persona ha contado la línea desde que se abrió el campo. */
+const VERSION_OBSOLETA = 'version-obsoleta';
 
 /**
  * Las líneas de un recuento, página a página, y lo contado en cada una.
@@ -35,9 +38,10 @@ import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
  * teórico es el de ahora: si ha cambiado desde que se contó la línea, la celda dice cuánto era y
  * cuánto ha cambiado (ADR-0055 §2), y lo que viaja hacia la clave sale en su columna.
  *
- * <b>Contar es en la fila.</b> El campo sale en la celda de las acciones, con lo contado si ya lo
- * había. Antes de escribir se lee la versión de la línea, que es la que cita el `PUT`: el listado no
- * la trae.
+ * <b>Contar es en la fila, y la versión que viaja es la de lo que se ve.</b> El listado no trae la
+ * versión de cada línea, así que abrir el campo lee la línea, y mientras está abierto la fila y el
+ * campo enseñan lo que trajo esa lectura. Guardar cita su versión en el `If-Match`: si otra persona
+ * la ha contado entre medias, el `412` cierra el campo y el aviso dice lo que contó.
  */
 export function LineasDelRecuento({
   recuento,
@@ -45,6 +49,7 @@ export function LineasDelRecuento({
   puedeContar,
   alCambiarDePagina,
   alContar,
+  alContarOtraPersona,
   alFallar,
 }: {
   recuento: Recuento;
@@ -53,6 +58,8 @@ export function LineasDelRecuento({
   alCambiarDePagina: (pagina: number) => void;
   /** Tras contar una línea. `sale` dice si va a salir de la vista que se mira. */
   alContar: (numero: number, sale: boolean) => Promise<void>;
+  /** Si otra persona la contó con el campo abierto: lo que contó, en la unidad de la fila. */
+  alContarOtraPersona: (numero: number, contado: number, unidad: string) => void;
   alFallar: (error: unknown) => void;
 }): React.JSX.Element {
   const { t } = useTranslation();
@@ -144,6 +151,7 @@ export function LineasDelRecuento({
               conAcciones={conAcciones}
               sale={sale}
               alContar={alContar}
+              alContarOtraPersona={alContarOtraPersona}
               alFallar={alFallar}
             />
           ))}
@@ -162,6 +170,7 @@ function Fila({
   conAcciones,
   sale,
   alContar,
+  alContarOtraPersona,
   alFallar,
 }: {
   recuentoId: string;
@@ -170,76 +179,116 @@ function Fila({
   conAcciones: boolean;
   sale: boolean;
   alContar: (numero: number, sale: boolean) => Promise<void>;
+  alContarOtraPersona: (numero: number, contado: number, unidad: string) => void;
   alFallar: (error: unknown) => void;
 }): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const articulo = useNombre('articulo', linea.articuloId);
   const ubicacion = useNombre('ubicacion', linea.ubicacionId);
   const unidad = useNombre('unidad', linea.unidadBaseId);
-  const [editando, setEditando] = useState(false);
+  // La lectura de la línea al abrir el campo, con su versión; `null` con el campo cerrado.
+  const [abierta, setAbierta] = useState<FichaDeLinea | null>(null);
+  const [abriendo, setAbriendo] = useState(false);
   const boton = useRef<HTMLButtonElement>(null);
   // Al cerrar el campo, el foco vuelve al botón de la fila, que es de donde salió. Salvo que la
   // fila vaya a desaparecer, o que lo que se cierre sea un fallo: entonces va al aviso.
   const devolverElFoco = useRef(false);
 
   useEffect(() => {
-    if (!editando && devolverElFoco.current) {
+    if (abierta === null && devolverElFoco.current) {
       devolverElFoco.current = false;
       boton.current?.focus();
     }
-  }, [editando]);
+  }, [abierta]);
 
+  // Con el campo abierto, la fila es la de la lectura: lo que describe la versión que viajará.
+  const vista = abierta?.linea ?? linea;
   const legible = (valor: number | null): string =>
     valor === null ? '' : cantidadLegible(valor, i18n.language);
-  const cambio = cambioDelTeorico(linea);
+  const cambio = cambioDelTeorico(vista);
+
+  const abrir = async (): Promise<void> => {
+    setAbriendo(true);
+
+    try {
+      setAbierta(await consultarLinea(recuentoId, linea.id));
+    } catch (error) {
+      alFallar(error);
+    } finally {
+      setAbriendo(false);
+    }
+  };
+
+  // Otra persona la ha contado con el campo abierto. Se lee otra vez para decir qué contó; si no se
+  // puede, o si no hay nada contado que decir, el aviso es el del fallo.
+  const adelantada = async (rechazo: unknown): Promise<void> => {
+    let ahora: LineaDeRecuento;
+
+    try {
+      ({ linea: ahora } = await consultarLinea(recuentoId, linea.id));
+    } catch (error) {
+      setAbierta(null);
+      alFallar(error);
+      return;
+    }
+
+    setAbierta(null);
+
+    if (ahora.contado === null) {
+      alFallar(rechazo);
+    } else {
+      alContarOtraPersona(linea.numero, ahora.contado, unidad.corto);
+    }
+  };
 
   return (
     <tr className="border-b border-neutral-200 align-top">
-      <td className="py-2 pr-4">{linea.numero}</td>
+      <td className="py-2 pr-4">{vista.numero}</td>
       <td className="py-2 pr-4">{articulo.largo}</td>
       <td className="py-2 pr-4">{ubicacion.largo}</td>
-      <td className="py-2 pr-4 font-mono">{linea.numeroDeSerie ?? linea.codigoDeLote}</td>
+      <td className="py-2 pr-4 font-mono">{vista.numeroDeSerie ?? vista.codigoDeLote}</td>
       <td className="py-2 pr-4">{unidad.corto}</td>
       <td className="py-2 pr-4">
-        {legible(linea.teorico)}
+        {legible(vista.teorico)}
         {cambio !== null && (
           <span className="block text-xs text-amber-800">
             {t('inventario.recuentos.ficha.alContar', {
-              antes: legible(linea.teoricoAlContar),
+              antes: legible(vista.teoricoAlContar),
               cambio: diferenciaLegible(cambio, i18n.language),
             })}
           </span>
         )}
       </td>
-      {enCurso && <td className="py-2 pr-4">{legible(linea.enTransito)}</td>}
+      {enCurso && <td className="py-2 pr-4">{legible(vista.enTransito)}</td>}
       <td className="py-2 pr-4">
-        {linea.contado === null ? (
+        {vista.contado === null ? (
           <span className="text-neutral-500">{t('inventario.recuentos.ficha.sinContar')}</span>
         ) : (
-          legible(linea.contado)
+          legible(vista.contado)
         )}
       </td>
       <td className="py-2 pr-4">
-        {linea.diferencia !== null && diferenciaLegible(linea.diferencia, i18n.language)}
+        {vista.diferencia !== null && diferenciaLegible(vista.diferencia, i18n.language)}
       </td>
       {conAcciones && (
         <td className="py-2 pr-4">
-          {editando ? (
+          {abierta !== null ? (
             <EditorDeContado
               recuentoId={recuentoId}
-              linea={linea}
+              ficha={abierta}
               unidad={unidad.corto}
               alCancelar={() => {
                 devolverElFoco.current = true;
-                setEditando(false);
+                setAbierta(null);
               }}
               alGuardar={async () => {
                 devolverElFoco.current = !sale;
-                setEditando(false);
+                setAbierta(null);
                 await alContar(linea.numero, sale);
               }}
+              alAdelantarse={adelantada}
               alFallar={(error) => {
-                setEditando(false);
+                setAbierta(null);
                 alFallar(error);
               }}
             />
@@ -247,6 +296,7 @@ function Fila({
             <button
               type="button"
               ref={boton}
+              disabled={abriendo}
               // El texto visible es uno por fila; el nombre accesible dice cuál.
               aria-label={
                 linea.contado === null
@@ -254,13 +304,15 @@ function Fila({
                   : t('inventario.recuentos.ficha.corregirLa', { numero: linea.numero })
               }
               onClick={() => {
-                setEditando(true);
+                void abrir();
               }}
-              className="rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="rounded border border-neutral-300 px-2 py-1 text-xs disabled:opacity-50"
             >
-              {linea.contado === null
-                ? t('inventario.recuentos.ficha.contar')
-                : t('inventario.recuentos.ficha.corregir')}
+              {abriendo
+                ? t('inventario.recuentos.ficha.abriendo')
+                : linea.contado === null
+                  ? t('inventario.recuentos.ficha.contar')
+                  : t('inventario.recuentos.ficha.corregir')}
             </button>
           )}
         </td>
@@ -272,26 +324,35 @@ function Fila({
 /**
  * El campo de lo contado en una línea, con Guardar y Cancelar.
  *
- * El rechazo de la cifra va en el campo, lo diga el esquema o el servidor. Cualquier otro —la línea
- * que otro acaba de contar, el recuento que ya no está en curso— cierra el campo y va al aviso, y la
- * ficha se lee otra vez: lo que se estaba corrigiendo ya no es lo que hay.
+ * Nace con lo que trajo la lectura de la línea al abrirlo, y guarda con su versión. **No la vuelve
+ * a leer antes de mandar**: tomaría la de quien acabe de contar, y el `If-Match` dejaría pasar justo
+ * lo que tiene que parar.
+ *
+ * El rechazo de la cifra va en el campo, lo diga el esquema o el servidor. El `412`, la línea que
+ * otra persona contó mientras el campo estaba abierto, cierra el campo y el aviso dice lo que contó.
+ * Cualquier otro —el recuento que ya no está en curso, la línea que ya no está— cierra el campo y va
+ * al aviso. En los dos casos la ficha se lee otra vez: lo que se estaba corrigiendo ya no es lo que
+ * hay.
  */
 function EditorDeContado({
   recuentoId,
-  linea,
+  ficha,
   unidad,
   alCancelar,
   alGuardar,
+  alAdelantarse,
   alFallar,
 }: {
   recuentoId: string;
-  linea: LineaDeRecuento;
+  ficha: FichaDeLinea;
   unidad: string;
   alCancelar: () => void;
   alGuardar: () => Promise<void>;
+  alAdelantarse: (rechazo: unknown) => Promise<void>;
   alFallar: (error: unknown) => void;
 }): React.JSX.Element {
   const { t } = useTranslation();
+  const { linea, version } = ficha;
   const esUnaSerie = linea.numeroDeSerie !== null;
   const campo = `contado-${linea.id}`;
 
@@ -315,15 +376,18 @@ function EditorDeContado({
     const cifra = contadoEscrito(contado, esUnaSerie) ?? contado;
 
     try {
-      const { version } = await consultarLinea(recuentoId, linea.id);
       await contarLinea(recuentoId, linea.id, version, cifra);
     } catch (error) {
-      if (tipoDeFallo(error) === RECHAZO_DE_LO_CONTADO) {
+      const tipo = tipoDeFallo(error);
+
+      if (tipo === RECHAZO_DE_LO_CONTADO) {
         setError(
           'contado',
           { type: 'servidor', message: RECHAZO_DE_LO_CONTADO },
           { shouldFocus: true },
         );
+      } else if (tipo === VERSION_OBSOLETA) {
+        await alAdelantarse(error);
       } else {
         alFallar(error);
       }

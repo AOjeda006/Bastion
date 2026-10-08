@@ -165,6 +165,10 @@ export function PaginaDelRecuento(): React.JSX.Element {
           avisar({ clase: 'contada', numero, enfocar: sale });
           await releer();
         }}
+        alContarOtraPersona={(numero, contado, unidad) => {
+          avisar({ clase: 'contadaPorOtraPersona', numero, contado, unidad });
+          void releer();
+        }}
         alFallar={(error) => {
           avisar({ clase: 'fallo', error });
           void releer();

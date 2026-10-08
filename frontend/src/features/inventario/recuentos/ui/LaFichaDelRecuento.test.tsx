@@ -128,9 +128,10 @@ interface Escritura {
  * El recuento del lado del servidor: su estado, sus líneas, su versión y la huella de su teórico,
  * y lo que ha llegado a cada escritura.
  *
- * Responde como la API: la ficha lleva su `ETag` y las cuentas de sus líneas; cada línea, el suyo;
- * contar cambia la versión del recuento; confirmar compara la versión, después la huella y después
- * las líneas sin contar, en ese orden; y en curso cuenta el tránsito, cerrado no.
+ * Responde como la API: la ficha lleva su `ETag` y las cuentas de sus líneas; cada línea, el suyo,
+ * que contar compara y cambia, y cambia también la versión del recuento; confirmar compara la
+ * versión, después la huella y después las líneas sin contar, en ese orden; y en curso cuenta el
+ * tránsito, cerrado no.
  */
 const servidorDelRecuento = {
   estado: 'EnCurso',
@@ -142,6 +143,10 @@ const servidorDelRecuento = {
   version: 1,
   huella: HUELLA,
   rechazoDeContar: null as { estado: number; codigo: string } | null,
+  /** La versión de cada línea, por su identificador. Nace en 1 y sube al contarla. */
+  versionesDeLinea: {} as Record<string, number>,
+  /** Las lecturas de una línea sola, por su identificador. */
+  lecturasDeLinea: [] as string[],
   conteos: [] as (Escritura & { lineaId: string })[],
   confirmaciones: [] as Escritura[],
   anulaciones: [] as Escritura[],
@@ -183,6 +188,35 @@ function comoSeLee(l: LineaDeRecuentoDto): LineaDeRecuentoDto {
   return enCurso() ? l : { ...l, enTransito: null, teoricoCambiado: false };
 }
 
+/** El `ETag` de una línea: su número y su versión. */
+function etiquetaDeLinea(l: LineaDeRecuentoDto): string {
+  return `"L${String(l.numero)}.${String(servidorDelRecuento.versionesDeLinea[l.id] ?? 1)}"`;
+}
+
+/** Anota lo contado en una línea, como la API: con su teórico, y una versión más en los dos. */
+function anotarLoContado(lineaId: string, contado: number): void {
+  const s = servidorDelRecuento;
+  s.lineas = s.lineas.map((l) =>
+    l.id === lineaId
+      ? {
+          ...l,
+          contado,
+          teoricoAlContar: l.teorico,
+          diferencia: contado - Number(l.teorico),
+          teoricoCambiado: false,
+        }
+      : l,
+  );
+  s.versionesDeLinea[lineaId] = (s.versionesDeLinea[lineaId] ?? 1) + 1;
+  s.version += 1;
+}
+
+/** Otra persona, en otra pantalla, cuenta una línea: lo que haría su `PUT`. */
+function otraPersonaCuenta(numero: number, contado: number): void {
+  const una = servidorDelRecuento.lineas.find((l) => l.numero === numero);
+  anotarLoContado(una!.id, contado);
+}
+
 function rechazo(estado: number, codigo: string): Response {
   return HttpResponse.json({ type: `/errors/${codigo}`, status: estado }, { status: estado });
 }
@@ -222,6 +256,8 @@ beforeEach(() => {
     version: 1,
     huella: HUELLA,
     rechazoDeContar: null,
+    versionesDeLinea: {},
+    lecturasDeLinea: [],
     conteos: [],
     confirmaciones: [],
     anulaciones: [],
@@ -260,33 +296,33 @@ beforeEach(() => {
 
     http.get(`${base}/lineas/:lineaId`, ({ params }) => {
       const una = s.lineas.find((l) => l.id === params['lineaId']);
+      s.lecturasDeLinea.push(String(params['lineaId']));
 
       return una === undefined
         ? rechazo(404, 'recuento-linea-no-encontrada')
-        : HttpResponse.json(comoSeLee(una), { headers: { ETag: `"L${String(una.numero)}"` } });
+        : HttpResponse.json(comoSeLee(una), { headers: { ETag: etiquetaDeLinea(una) } });
     }),
 
     http.put(`${base}/lineas/:lineaId`, async ({ params, request }) => {
       const lineaId = String(params['lineaId']);
-      s.conteos.push({ lineaId, ...(await escritura(request)) });
+      const recibida = await escritura(request);
+      s.conteos.push({ lineaId, ...recibida });
 
       if (s.rechazoDeContar !== null) {
         return rechazo(s.rechazoDeContar.estado, s.rechazoDeContar.codigo);
       }
 
-      const contado = Number(s.conteos.at(-1)?.cuerpo['contado']);
-      s.lineas = s.lineas.map((l) =>
-        l.id === lineaId
-          ? {
-              ...l,
-              contado,
-              teoricoAlContar: l.teorico,
-              diferencia: contado - Number(l.teorico),
-              teoricoCambiado: false,
-            }
-          : l,
-      );
-      s.version += 1;
+      const una = s.lineas.find((l) => l.id === lineaId);
+
+      if (una === undefined) {
+        return rechazo(404, 'recuento-linea-no-encontrada');
+      }
+
+      if (recibida.ifMatch !== etiquetaDeLinea(una)) {
+        return rechazo(412, 'version-obsoleta');
+      }
+
+      anotarLoContado(lineaId, Number(recibida.cuerpo['contado']));
 
       return HttpResponse.json(s.lineas.find((l) => l.id === lineaId));
     }),
@@ -458,12 +494,12 @@ describe('La ficha del recuento', () => {
   });
 
   describe('contar', () => {
-    it('lee la versión de la línea y manda la cifra con punto; el foco vuelve a la fila', async () => {
+    it('abrir el campo lee la línea, y guardar manda esa versión y la cifra con punto; el foco vuelve a la fila', async () => {
       montar();
       const usuario = userEvent.setup();
 
       await usuario.click(await screen.findByRole('button', { name: 'Contar la línea 1' }));
-      const campo = screen.getByRole('textbox', { name: 'Contado en la línea 1, en UD' });
+      const campo = await screen.findByRole('textbox', { name: 'Contado en la línea 1, en UD' });
       await waitFor(() => {
         expect(campo).toHaveFocus();
       });
@@ -471,10 +507,12 @@ describe('La ficha del recuento', () => {
       await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
       expect(await screen.findByText('Línea 1 contada.')).toBeInTheDocument();
+      // Una lectura, al abrir, y ninguna más: guardar no vuelve a leer la versión.
+      expect(servidorDelRecuento.lecturasDeLinea).toEqual([lasDeSiempre()[0]!.id]);
       expect(servidorDelRecuento.conteos).toEqual([
         {
           lineaId: lasDeSiempre()[0]!.id,
-          ifMatch: '"L1"',
+          ifMatch: '"L1.1"',
           clave: null,
           cuerpo: { contado: '12.5' },
         },
@@ -494,7 +532,10 @@ describe('La ficha del recuento', () => {
       const usuario = userEvent.setup();
 
       await usuario.click(await screen.findByRole('button', { name: 'Contar la línea 1' }));
-      await usuario.type(screen.getByRole('textbox', { name: /^Contado en la línea 1/ }), '10');
+      await usuario.type(
+        await screen.findByRole('textbox', { name: /^Contado en la línea 1/ }),
+        '10',
+      );
       await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
       // El botón de la fila no puede recibirlo: la fila sale de la vista al volver a leerla.
@@ -512,8 +553,8 @@ describe('La ficha del recuento', () => {
       const usuario = userEvent.setup();
 
       await usuario.click(await screen.findByRole('button', { name: 'Contar la línea 1' }));
+      const campo = await screen.findByRole('textbox', { name: 'Contado en la línea 1, en UD' });
       await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
-      const campo = screen.getByRole('textbox', { name: 'Contado en la línea 1, en UD' });
       expect(campo).toHaveAccessibleDescription('Escribe lo contado; si no hay ninguno, un 0.');
 
       await usuario.type(campo, '1.234,5');
@@ -524,7 +565,7 @@ describe('La ficha del recuento', () => {
 
       // Un número de serie es una pieza: 0 o 1.
       await usuario.click(screen.getByRole('button', { name: 'Contar la línea 3' }));
-      const serie = screen.getByRole('textbox', { name: 'Contado en la línea 3, en UD' });
+      const serie = await screen.findByRole('textbox', { name: 'Contado en la línea 3, en UD' });
       await usuario.type(serie, '2');
       await usuario.keyboard('{Enter}');
       await waitFor(() => {
@@ -540,7 +581,7 @@ describe('La ficha del recuento', () => {
       const usuario = userEvent.setup();
 
       await usuario.click(await screen.findByRole('button', { name: 'Contar la línea 1' }));
-      const campo = screen.getByRole('textbox', { name: 'Contado en la línea 1, en UD' });
+      const campo = await screen.findByRole('textbox', { name: 'Contado en la línea 1, en UD' });
       await usuario.type(campo, '3');
       await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -550,17 +591,75 @@ describe('La ficha del recuento', () => {
       expect(campo).toHaveFocus();
     });
 
+    it('si otra persona la cuenta con el campo abierto, guardar es un 412 que dice lo que contó y cierra el campo', async () => {
+      montar();
+      const usuario = userEvent.setup();
+
+      // Las dos abren la misma línea, y la otra guarda primero.
+      await usuario.click(await screen.findByRole('button', { name: 'Contar la línea 1' }));
+      const campo = await screen.findByRole('textbox', { name: /^Contado en la línea 1/ });
+      otraPersonaCuenta(1, 7);
+      await usuario.type(campo, '3');
+      await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const aviso = await screen.findByRole('alert');
+      expect(aviso).toHaveTextContent(
+        'Otra persona ha contado la línea 1 mientras la tenías abierta: 7 UD. Lo que habías ' +
+          'escrito no se ha guardado.',
+      );
+      await waitFor(() => {
+        expect(aviso).toHaveFocus();
+      });
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      // El PUT llevaba la versión de lo que se veía, y lo de la otra persona sigue ahí.
+      expect(servidorDelRecuento.conteos.map((c) => [c.ifMatch, c.cuerpo['contado']])).toEqual([
+        ['"L1.1"', '3'],
+      ]);
+      expect(servidorDelRecuento.lineas[0]?.contado).toBe(7);
+      await waitFor(() => {
+        expect(filas()[0]?.slice(7, 9)).toEqual(['7', '-3']);
+      });
+    });
+
+    it('abrir el campo enseña lo que hay ahora, aunque la fila fuera de antes', async () => {
+      montar();
+      const usuario = userEvent.setup();
+
+      await waitFor(() => {
+        expect(filas()[1]?.slice(7, 9)).toEqual(['4', '-1']);
+      });
+      // Otra persona corrige la línea 2 después de que esta pantalla leyera el listado.
+      otraPersonaCuenta(2, 7);
+      await usuario.click(
+        screen.getByRole('button', { name: 'Corregir lo contado en la línea 2' }),
+      );
+
+      const campo = await screen.findByRole('textbox', { name: /^Contado en la línea 2/ });
+      expect(campo).toHaveValue('7');
+      expect(filas()[1]?.slice(7, 9)).toEqual(['7', '+2']);
+
+      await usuario.clear(campo);
+      await usuario.type(campo, '6');
+      await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      expect(await screen.findByText('Línea 2 contada.')).toBeInTheDocument();
+      expect(servidorDelRecuento.conteos.map((c) => c.ifMatch)).toEqual(['"L2.2"']);
+    });
+
     it('cualquier otro rechazo cierra el campo y lo dice arriba, con el foco', async () => {
-      servidorDelRecuento.rechazoDeContar = { estado: 412, codigo: 'version-obsoleta' };
+      servidorDelRecuento.rechazoDeContar = { estado: 409, codigo: 'recuento-no-esta-en-curso' };
       montar();
       const usuario = userEvent.setup();
 
       await usuario.click(await screen.findByRole('button', { name: 'Contar la línea 1' }));
-      await usuario.type(screen.getByRole('textbox', { name: /^Contado en la línea 1/ }), '3');
+      await usuario.type(
+        await screen.findByRole('textbox', { name: /^Contado en la línea 1/ }),
+        '3',
+      );
       await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const aviso = await screen.findByRole('alert');
-      expect(aviso).toHaveTextContent(/^Alguien ha guardado antes que tú/);
+      expect(aviso).toHaveTextContent(/^Ese recuento ya no está en curso/);
       await waitFor(() => {
         expect(aviso).toHaveFocus();
       });
@@ -572,7 +671,10 @@ describe('La ficha del recuento', () => {
       const usuario = userEvent.setup();
 
       await usuario.click(await screen.findByRole('button', { name: 'Contar la línea 1' }));
-      await usuario.type(screen.getByRole('textbox', { name: /^Contado en la línea 1/ }), '7');
+      await usuario.type(
+        await screen.findByRole('textbox', { name: /^Contado en la línea 1/ }),
+        '7',
+      );
       await usuario.keyboard('{Escape}');
 
       await waitFor(() => {

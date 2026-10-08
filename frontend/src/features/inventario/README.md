@@ -69,9 +69,12 @@ ahora. Los maestros, cinco minutos (`VIDA_DE_UN_MAESTRO`).
 - **Vacío no es cero.** El campo de lo contado vacío pide que se escriba algo; el cero se escribe.
   Una pieza con número de serie se cuenta 0 o 1. Lo escrito se valida con la misma regla que lo
   convierte en lo que viaja (`model/cantidad.ts`), con coma o con punto, y viaja con punto.
-- **Contar lee la versión de la línea justo antes.** El listado de líneas no trae el `ETag` de cada
-  una, así que guardar pide la línea y manda su versión en el `If-Match`. Si alguien la contó
-  entre medias, el `412` cierra el campo y lo dice arriba, y la ficha se vuelve a leer.
+- **La versión que viaja al contar es la de lo que se ve.** El listado de líneas no trae el `ETag`
+  de cada una, así que abrir el campo lee la línea, y mientras está abierto la fila y el campo
+  enseñan lo que trajo esa lectura. Guardar manda esa versión en el `If-Match`, sin volver a leerla:
+  leerla justo antes de mandar tomaría la de quien acabe de contar, y el `PUT` pisaría su cifra. Si
+  otra persona la contó con el campo abierto, el `412` cierra el campo, el aviso dice lo que contó, y
+  la ficha se vuelve a leer.
 - **La confirmación lleva la versión del recuento y la huella del teórico** (ADR-0057). Si el stock
   se ha movido desde que se leyó la ficha, el servidor contesta `409` y la pantalla lleva a la vista
   `?solo=teorico-cambiado`, que enseña, línea a línea, lo que había al contar, lo que hay ahora y el

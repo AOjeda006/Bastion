@@ -171,9 +171,11 @@ export async function consultarLineas(
 /**
  * Una línea sola, con su versión.
  *
- * **La versión se lee justo antes de contar.** El listado no la trae, y cada línea tiene la suya:
- * contar una no cambia la de las demás. Lo que el `If-Match` para es pisar lo que otra persona
- * acaba de contar en la misma línea.
+ * **Se lee al abrir el campo de lo contado, y su versión es la que viaja al guardar.** El listado
+ * no la trae, y cada línea tiene la suya: contar una no cambia la de las demás. Lo que el
+ * `If-Match` para es pisar lo que otra persona contó en la misma línea mientras el campo estaba
+ * abierto. Leerla otra vez justo antes de mandar daría la versión de esa otra persona, y el `PUT`
+ * pasaría.
  */
 export async function consultarLinea(id: string, lineaId: string): Promise<FichaDeLinea> {
   const { data, error, response } = await api.GET(

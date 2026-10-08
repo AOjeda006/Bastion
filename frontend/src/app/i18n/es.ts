@@ -881,6 +881,7 @@ export const es = {
 
         contar: 'Contar',
         corregir: 'Corregir',
+        abriendo: 'Abriendo…',
         contarLa: 'Contar la línea {{numero}}',
         corregirLa: 'Corregir lo contado en la línea {{numero}}',
         campoContado: 'Contado en la línea {{numero}}, en {{unidad}}',
@@ -890,6 +891,10 @@ export const es = {
         guardando: 'Guardando…',
         cancelar: 'Cancelar',
         contada: 'Línea {{numero}} contada.',
+        // El `412` de contar: el campo se abrió con una versión de la línea que ya no es la de ahora.
+        contadaPorOtraPersona:
+          'Otra persona ha contado la línea {{numero}} mientras la tenías abierta: ' +
+          '{{contado}} {{unidad}}. Lo que habías escrito no se ha guardado.',
 
         confirmar: 'Confirmar el recuento',
         preguntaConfirmar:

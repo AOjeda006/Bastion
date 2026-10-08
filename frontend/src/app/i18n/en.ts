@@ -800,6 +800,7 @@ export const en: Diccionario = {
 
         contar: 'Count',
         corregir: 'Correct',
+        abriendo: 'Opening…',
         contarLa: 'Count line {{numero}}',
         corregirLa: 'Correct the count of line {{numero}}',
         campoContado: 'Counted on line {{numero}}, in {{unidad}}',
@@ -808,6 +809,9 @@ export const en: Diccionario = {
         guardando: 'Saving…',
         cancelar: 'Cancel',
         contada: 'Line {{numero}} counted.',
+        contadaPorOtraPersona:
+          'Someone else counted line {{numero}} while you had it open: {{contado}} {{unidad}}. ' +
+          'What you entered has not been saved.',
 
         confirmar: 'Confirm the stock count',
         preguntaConfirmar:
