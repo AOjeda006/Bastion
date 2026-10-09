@@ -9895,7 +9895,7 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
     |---|---|---|
     | 348 | La segunda confirmación, con otra huella, no estrena clave | 1: `confirmar si el stock se mueve, lleva a lo que cambió; la segunda manda la huella nueva con otra clave; y anular lo deshace` |
     | 349 | El `409` del teórico no lleva a su vista | 1: el mismo |
-    | 350 | Contar manda otra versión que la que acaba de leer | 1: `contar lee la versión de la línea y manda la cifra con punto; el foco vuelve a la fila` |
+    | 350 | Contar manda otra versión que la que acaba de leer | 1: `contar lee la versión de la línea y manda la cifra con punto; el foco vuelve a la fila` · fijaba el defecto, y se reescribió en el epílogo como la **359** |
     | 351 | Lo escrito con coma viaja tal cual | 1: el mismo |
     | 352 | Contar en una vista parcial no saca la línea | **verde sin esperarlo** → `4d28adc`; medida otra vez, 1: `contar en la vista de las que faltan, la fila contada se va y el foco va al aviso` |
     | 353 | El aviso de lo contado no se lleva el foco | **verde sin esperarlo** → `4d28adc`; medida otra vez, 1: el mismo |
@@ -10055,7 +10055,132 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
      Las cifras del 9, con `dotnet test Bastion.sln --filter "Category!=Integracion"` y con
      `dotnet test Bastion.sln --filter "Category=Integracion"`, sumando los `Total` de cada
      ensamblado.
-6. La tanda, la batería y los runs.
+6. ~~La tanda, la batería y los runs.~~ Hecho, sobre `4e8117d`:
+   - **El patrón de contar, buscado en el resto del frontal**, como pedía el punto 2.
+     `grep -rln "If-Match" frontend/src --include=*.ts --include=*.tsx | grep -v "\.test\."` da
+     **ocho** ficheros:
+     - el contrato generado, `shared/api/esquema.ts`, que solo lo nombra;
+     - los cuatro del recuento, arreglados en `48df530`: la línea manda la versión de lo que se ve, y
+       las acciones de la cabecera citan la ficha que se ve;
+     - `trazabilidad.ts` y el modelo de la ficha del artículo, `articulo.ts`, que mandan
+       `ficha.version`, la de la lectura que se ve;
+     - y **uno que lee y escribe seguidos**: `quitarCodigoDeBarras`, en
+       `features/catalogo/articulos/api/codigosDeBarras.ts`, lee el GTIN y lo borra con la versión
+       recién leída. No pisa nada, porque la fila de un GTIN no cambia nunca (ADR-0051): la versión
+       que hay es la de su alta, la misma que se vio. Lo único que su `If-Match` puede parar es
+       borrar una fila que ya no está, y eso lo contesta antes el `404` de la lectura. Su comentario
+       lo dice, y se queda como está.
+   - **La tanda del frontal, de la 359 a la 365**, escrita antes de medir y medida sobre `941b8c8`
+     con `python mutarE212-web.py base 359 360 361 362 363 364 365 base`. Es un guion del
+     *scratchpad*: aplica cada mutación, ejecuta `npx vitest run` sobre los cuatro ficheros del
+     recuento con `--reporter=json`, lee los rojos por nombre y revierte con
+     `git restore --source=HEAD` y la fecha de ahora. La base da **0 rojos de 58** y ningún aviso de
+     `act()`, antes y después. **Las siete salen rojas**, con los casos esperados y ninguno más, y
+     ninguna con un aviso.
+
+     La **359** es la 350 reescrita. La 350 cambiaba la versión que se manda por otra que la recién
+     leída, y daba por bueno leerla justo antes de mandar, que era el defecto. La 359 es ese defecto,
+     y tiene que ponerse roja.
+
+     | # | Mutación | Rojos, de 58 |
+     |---|---|---|
+     | 359 | Guardar vuelve a leer la versión justo antes de mandar | 2: `abrir el campo lee la línea, y guardar manda esa versión y la cifra con punto; el foco vuelve a la fila` y `si otra persona la cuenta con el campo abierto, guardar es un 412 que dice lo que contó y cierra el campo` |
+     | 360 | El campo nace con lo del listado, no con lo de la lectura | 1: `abrir el campo enseña lo que hay ahora, aunque la fila fuera de antes` |
+     | 361 | Con el campo abierto, la fila enseña el listado | 1: el mismo |
+     | 362 | El `412` va al aviso de cualquier fallo | 1: el del `412` |
+     | 363 | El `412` no cierra el campo | 1: el mismo |
+     | 364 | El aviso del `412` dice lo que se veía, sin volver a leer la línea | 1: el mismo |
+     | 365 | **Arnés**: el servidor de pega no compara la versión de la línea | 1: el mismo |
+
+   - **La tanda del servidor, de la 366 a la 372**, escrita antes de medir en `tandaE212.json`, con
+     el cambio, los carriles y los casos esperados de cada una. Se midió con
+     `python mutarE212.py <ruta>/tandaE212.json base 366 367 368 369 370 base`, y después
+     `… base 371 372 base`, sobre un *worktree* aparte en `941b8c8`. Corre tres carriles:
+     `tests/Inventario.UnitTests`, `tests/Api.FunctionalTests` y `tests/Api.IntegrationTests`
+     filtrado a `Inventario`, `Cruces` y `Numeracion`, con `--blame-hang --blame-hang-timeout 4m`.
+     La base da **0 rojos de 216, de 217 y de 245**, antes y después de cada tanda, y el árbol
+     restaurado compila con la porcelana vacía. **Las siete salen rojas**, ninguna en el carril
+     funcional:
+
+     | # | Mutación | Dominio, de 216 | Integración, de 245 |
+     |---|---|---|---|
+     | 366 | El núcleo de la confirmación (`22ff831`) no pregunta el impedimento antes de valorar | 0 | 5: `LaValoracionDelAjusteTests.Una_entrada_sin_coste_en_una_clave_vacia_es_422_y_no_deja_nada`, `…Un_documento_en_otra_divisa_que_la_de_la_valoracion_es_422_salvo_en_una_clave_vacia`, los dos de `NingunaFechaAnteriorAlUltimoMovimientoTests` y la propiedad, en las seis semillas |
+     | 367 | Lo que sube con tránsito hacia su clave se confirma | 0 | 2: `LaConfirmacionDelRecuentoTests.Lo_que_sube_con_transito_hacia_su_clave_es_un_409_y_lo_que_baja_se_confirma` y la propiedad, en las seis, que no ve el rechazo del tránsito |
+     | 368 | La huella no lleva el teórico (`teorico * 0m`) | 4: `Es_el_sha_256_del_texto_que_dice_el_adr`, `Cambia_con_una_millonesima_del_teorico_de_una_sola_linea`, `Un_teorico_negativo_lleva_su_signo` y `Cambia_si_el_mismo_teorico_es_de_otra_linea`, de `LaHuellaDelTeoricoTests` | 5: `LaConfirmacionDelRecuentoTests.Si_el_stock_se_mueve_…`, `LasCarrerasDeLaConfirmacionDelRecuentoTests.Un_ajuste_en_vuelo_…`, dos de `ElAltaDelRecuentoTests` y la propiedad, en las seis |
+     | 369 | Lo que sube sin coste entra a un coste fijo, no al precio medio | 1: `ElAjusteDelRecuentoTests.Una_clave_anadida_que_sube_lleva_su_coste_y_una_precargada_no` | 1: la propiedad, en las seis |
+     | 370 | **Arnés**: el recuento no se abre donde vuela algo, sin el empujón del tránsito | — | 1: la propiedad, en la 461 y la 464 |
+     | 371 | El núcleo no pregunta el impedimento solo en el inverso de una anulación | — | 1: `LaValoracionDelAjusteTests.Un_documento_en_otra_divisa_…` |
+     | 372 | El núcleo no pregunta el impedimento solo en el ajuste de un recuento | — | 1: la propiedad, en la 460, la 461, la 462, la 463 y la 465 |
+
+     - **La 366 da más de lo esperado**, los dos de `NingunaFechaAnteriorAlUltimoMovimientoTests`:
+       la fecha anterior al último movimiento es uno de los tres motivos del mismo impedimento,
+       como pasó con la 292 del epílogo del 2.11.
+     - **La 366 no dice por cuál de los tres caminos pasa cada rojo.** Las pilas lo dicen: todos los
+       que no son la propiedad mueren en `ConfirmarAjuste`, el caso de la divisa también, antes de
+       llegar a su anulación, y las semillas de la propiedad mueren en `ConfirmarAjuste`, salvo la
+       462, que muere en `ConfirmarRecuento`. Por eso entran la **371** y la **372**, escritas antes
+       de medirlas, que quitan la pregunta en un solo camino cada una. La 371 la ve el caso de la
+       divisa, por su anulación, y la 372 la propiedad, en cinco semillas: la 464 no rechaza ningún
+       recuento por el precio medio. Los tres llamantes del núcleo tienen su caso.
+     - **La 368 da tres de más.** `Cambia_si_el_mismo_teorico_es_de_otra_linea`, porque sin el
+       teórico dos fichas con los mismos teóricos cambiados de línea dan la misma huella. Y los dos
+       de `ElAltaDelRecuentoTests`, porque afirman que la huella de la ficha cambia cuando sale
+       stock.
+     - **La 369, en la propiedad**: la 462, la 463 y la 464 mueren en la valoración; la 460 y la 461,
+       en `rechazada.EsCorrecto should be False`, porque el recuento que tenía que rechazarse se
+       confirma; y la 465, en un `23505` de `ix_existencias_numero_de_serie_en_un_sitio`.
+     - **La 370 contradijo el comentario del caso.** La tanda esperaba la 461 y la 462, que es lo que
+       decía el comentario del empujón. Lo medido es otra cosa: sin el empujón, la 461 se queda sin
+       `recuento que sube con tránsito`, y la 464 se queda sin `recuento anulado`, porque deja de
+       anular un recuento. La 462 no la necesita. El comentario era una medida tomada mientras se
+       escribía el generador, y se reescribió en `4e8117d` con lo medido. El mensaje de `b970493`
+       está publicado y no se toca.
+   - **El humo**, con `bash humoE212.sh`, en su propio proyecto de *compose*, `bastion-humo-e212`,
+     con el entorno generado en el *scratchpad* y borrado al salir: **0 fallos**. El segundo
+     arranque sale en verde, y el `down -v` lleva su `-p` en la misma orden. El proyecto `bastion`
+     no se tocó.
+   - **El recorrido con dos contextos de navegador a la vez**, con `playwright-cli` sobre ese humo y
+     datos sintéticos, antes del `down -v`. Son dos sesiones, `personaA` y `personaB`, y la segunda
+     llega al inicio de sesión sin la de la primera. El recuento tiene dos líneas sin contar.
+     1. Las dos personas abren la ficha.
+     2. A cuenta la línea 2: 21, «Línea 2 contada.», +1.
+     3. B, con el listado de antes («Sin contar»), abre la línea 2. El campo enseña 21, y la fila,
+        21 y +1: lo de ahora. Corrige a 19 y guarda, y la diferencia queda en −1.
+     4. Las dos abren el campo de la línea 1. A guarda 7. B guarda 3 y recibe el aviso: «Otra persona
+        ha contado la línea 1 mientras la tenías abierta: 7 UDH. Lo que habías escrito no se ha
+        guardado.». El foco está en el aviso, el campo se ha cerrado, y la fila dice 7 y −3.
+     5. La consola de B solo trae el `401` de la renovación antes de entrar y el `412` provocado.
+     6. Por la API, la ficha dice 7 y −3 en la línea 1, y 19 y −1 en la línea 2.
+   - **La batería** de `AGENTS.md`, entera y en su orden, con `bash bateriaE212.sh`, un guion del
+     *scratchpad* que corre cada paso y anota su código de salida:
+     - los diecisiete pasos salen con código 0, y la porcelana queda vacía al final;
+     - **0** avisos de `act()`, con `grep -c 'not wrapped in act'` sobre el registro del paso;
+     - el frontal, **251** casos en 24 ficheros, dos más que en el cierre del 2.12, los de
+       `48df530`;
+     - el recuento de la CI, **1356** casos en el carril rápido y **651** en el de integración,
+       los dos en 10 ensamblados, los mismos que en el cierre del 2.12;
+     - el presupuesto, **437/450** y **699/900** KiB, uno más en cada cifra que en el cierre del
+       2.12, de `48df530`;
+     - las dependencias, con `python scripts/dependencias-por-conjuntos.py df1e44d HEAD`: no entra ni sale ningún par, ningún proyecto y ninguna entrada del
+       frontal.
+   - **Los commits del epílogo**, desde `df1e44d`, contados con `git log --format='%h %G? %s'
+     df1e44d..HEAD`, son **ocho** con éste, todos con firma `G` y sin una línea de *trailer*
+     (`git log --format='%(trailers)' df1e44d..HEAD`, vacío):
+
+     | Commit | Qué | Run de rama |
+     |---|---|---|
+     | `baaf6b4` | el encargo del 2026-10-08 y el run de `main` del 2.12 | 37709935728, con `48df530` |
+     | `48df530` | contar no pisa lo que contó otra persona | 37709935728 |
+     | `b970493` | la propiedad gana el recuento | 37713964979 |
+     | `44262a8` | la huella, segundo disparador del recuento cíclico | 37907463062, con `941b8c8` |
+     | `22ff831` | el ajuste se valora y se confirma en un solo sitio | 37907463062, con `941b8c8` |
+     | `941b8c8` | los dos *workflows* cortados y la revisión del 2.12 | 37907463062 |
+     | `4e8117d` | el empujón del tránsito dice lo que se midió | sube con éste |
+     | éste | el cierre del epílogo | el siguiente commit lo anota |
+
+     Los tres runs anotados salieron en verde al primer intento. Este commit sube con `4e8117d`, y
+     su run lo anota el commit siguiente, que espera su propio verde en la rama antes de que `main`
+     avance. El run de `main`, al abrir la rama de la subida de vitest.
 
 Después vienen la subida de vitest y la puerta del 2.13, cada una en su rama.
 
