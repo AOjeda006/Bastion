@@ -9996,11 +9996,13 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
   `112844278435`—, y la rama `2.12-el-recuento` se borró después, en local y en el remoto. Anotado
   al abrir el epílogo del 2.12.
 
-**El epílogo del 2.12, en curso** desde el 2026-10-08, en la rama `epilogo-2.12`, abierta desde
-`main` en `df1e44d`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
-2026-10-08*. Sus mutaciones empiezan en la **359**.
+**El epílogo del 2.12, cerrado** el 2026-10-09, en la rama `epilogo-2.12`, abierta desde `main`
+en `df1e44d` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-08*. Sus mutaciones van de la **359** a la **372**, así que las siguientes empiezan en la
+**373**. No tiene ADR, porque no cambia ninguna decisión escrita: el siguiente sigue siendo el
+**0058**.
 
-**Lo que queda, por este orden:**
+**Lo que quedaba, por este orden:**
 
 1. ~~El run de `main` del 2.12, anotado.~~ Hecho en el primer commit de la rama: el 37637032242, en
    *El 2.12, cerrado* y en su casilla.
@@ -10194,8 +10196,35 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
      Subió con `4e8117d`, así que su verde es también el suyo. Este commit, que lo anota, es el
      noveno de la rama, y espera su propio verde antes de que `main` avance. El run de `main` se
      anota al abrir la rama de la subida de vitest.
+   - **El run de rama de `b2c5021`**, el commit que lo anota, es el **37914843618**. Sale en verde
+     al primer intento, con sus jobs Frontal `113768415924`, Backend `113768416381` y Humo
+     `113771589857`, 68 pasos, 67 en verde y 1 omitido, y **1356** y **651** casos. `main` avanzó a
+     `b2c5021` con `--ff-only` después de ese verde. **El run de `main`**, el
+     [37916215471](https://github.com/AOjeda006/Bastion/actions/runs/37916215471), sale en verde
+     al primer intento:
+     - sus jobs, Backend `113772917907`, Frontal `113772918033` y Humo `113776113269`;
+     - 68 pasos, 67 en verde y 1 omitido, *Diagnóstico*;
+     - las mismas cifras: **1356** y **651** casos con **10 `.trx`** en cada artefacto, **149**
+       operaciones y **90** rutas, **201** tipos de **208** sitios, y **437/450** y **699/900**
+       KiB. Leído con `python leer-run27.py 37916215471`.
 
-Después vienen la subida de vitest y la puerta del 2.13, cada una en su rama.
+     La rama `epilogo-2.12` se borró después, en local y en el remoto. Anotado al abrir la subida
+     de vitest.
+
+**La subida de vitest, en curso** desde el 2026-10-09, en la rama `subida-de-vitest`, abierta desde
+`main` en `b2c5021`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-08 → La subida de vitest, como unidad aparte*.
+
+**Lo que queda, por este orden:**
+
+1. ~~El run de `main` del epílogo del 2.12, anotado.~~ Hecho en el primer commit de la rama: el
+   37916215471, en *El epílogo del 2.12, cerrado*.
+2. `source-map-js` 1.2.2, con `npm update`, en su commit.
+3. `vitest`, hasta la versión que deje la auditoría sin críticas ni altas, en su commit y sin
+   `--force`.
+4. La nota en la cabecera del ADR-0045, la batería y los runs.
+
+Después viene la puerta del 2.13, en su rama.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
