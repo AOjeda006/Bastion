@@ -40,5 +40,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
     css: false,
+    // El informe, fijado, y no el que elija vitest según quién lo lance. Sin esta línea, vitest 4
+    // detecta un agente de IA por el entorno (`AI_AGENT`, `CLAUDECODE`…) y cambia al informe
+    // `agent`, que se calla la consola de los casos en verde: los avisos de `act()` dejan de salir
+    // en el registro, y el cero de la batería ya no mide nada. Medido con un canario que provoca
+    // uno: 1 con esta línea, 0 sin ella.
+    reporters: ['default'],
   },
 });
