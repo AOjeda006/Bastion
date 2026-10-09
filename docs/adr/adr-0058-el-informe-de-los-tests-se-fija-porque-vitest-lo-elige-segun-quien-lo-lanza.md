@@ -8,7 +8,8 @@ revisado: 2026-10-09
 
 # ADR-0058: El informe de los tests se fija, porque vitest lo elige según quién lo lanza
 
-- **Estado:** aceptado
+- **Estado:** aceptado. Enmendado por el ADR-0060 (2026-10-09) en *Lo que no cubre*: el canal
+  ya tiene centinela.
 - **Fecha:** 2026-10-09
 - **Sale de la subida de vitest** del encargo del 2026-10-08, que pedía que los avisos de `act()`
   siguieran en cero. Lo aplican `5edf198` y `5654fb9`.
@@ -81,7 +82,10 @@ haría en la CI sin configurar nada, así que no se apaga.
 - **Un `--reporter` en la línea de órdenes manda sobre la configuración.**
   `vitest run --reporter=dot` vuelve a callar la consola. Ni la CI ni la batería lo pasan; quien lo pase para leer menos, deja
   de ver el canal.
-- **No hay un centinela permanente del canal.** Si alguien borrara la línea, la CI no lo notaría,
+- > **Enmendado por el ADR-0060 (2026-10-09).** El centinela existe, y la CI lanza los tests
+  > con `AI_AGENT` puesto para que borrar la línea se vea también allí.
+
+  **No hay un centinela permanente del canal.** Si alguien borrara la línea, la CI no lo notaría,
   porque allí no hay agente, y la batería local daría cero sin medir nada. Un caso que escribiera
   una marca, y un paso que la buscara en el registro, lo cerraría. Es una propuesta del PLAN, no
   está hecho.

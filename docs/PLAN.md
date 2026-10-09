@@ -10629,7 +10629,8 @@ la siguiente sigue siendo la **373**. Su ADR es el **0058**, y el siguiente, el 
 **El 2.13, en curso** desde el 2026-10-09, en la rama `2.13-las-reservas`, abierta desde `main` en
 `5aedf60`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del 2026-10-08 → El
 2.13: las reservas y el disponible, hasta su puerta*, y la puerta contestada, en *Traídas por el
-encargo del 2026-10-09*. Sus mutaciones empiezan en la **373**, y su ADR es el **0059**.
+encargo del 2026-10-09*. Sus mutaciones empiezan en la **373**, y su ADR es el **0059**. El del
+centinela, que va antes, es el **0060**.
 
 **Lo que queda, por este orden:**
 
@@ -10656,16 +10657,81 @@ encargo del 2026-10-09*. Sus mutaciones empiezan en la **373**, y su ADR es el *
 
    Con ellos, el catálogo pasa a **203** tipos de **210** sitios (`bash scripts/generar-errores.sh
    --comprobar`), y el carril rápido, a **1364** casos (`bash scripts/ci/recuento-de-tests.sh`
-   sobre sus `.trx`, con la lista de la batería). Falta su tanda, desde la 373.
+   sobre sus `.trx`, con la lista de la batería).
+
+   **Y su tanda, de la 373 a la 382**, escrita antes de medir en `tanda-serie.json`, con el
+   cambio, los carriles y los casos esperados de cada una. Se midió con
+   `python -X utf8 mut213.py <ruta>/tanda-serie.json base 373-382`, sobre un *worktree* aparte en
+   `69b9774`, en tres carriles:
+   - el rápido, `LaSerieDelRecuentoSeMiraAlAbrirTests`, con 8 casos;
+   - el del puerto, `ElPuertoDeSeriesTests`, con 4;
+   - el del alta, `ElAltaDelRecuentoTests`, con 9 y `--blame-hang --blame-hang-timeout 4m`.
+
+   La base da 0 rojos en los tres, y el árbol restaurado compila con la porcelana vacía. **Las diez
+   salen rojas, y cada una donde se esperaba**:
+
+   | # | Mutación | Rápido, de 8 | Puerto, de 4 | Alta, de 9 |
+   |---|---|---|---|---|
+   | 373 | Sin la comprobación del tipo | 3 | 0 | 1 |
+   | 374 | `<` por `<=`: el ejercicio que acaba hoy, terminado | 1 | 0 | 0 |
+   | 375 | Sin la comprobación del fin del ejercicio | 1 | 0 | 1 |
+   | 376 | Rechaza también un ejercicio que no ha empezado | 1 | 0 | 0 |
+   | 377 | El alta no hace caso de la respuesta | 0 | 0 | 1 |
+   | 378 | La casilla del ajuste pide el tipo del recuento | 0 | 0 | 9 |
+   | 379 | El puerto contesta el inicio del ejercicio como su fin | 0 | 1 | 9 |
+   | 380 | El puerto se salta el filtro de la empresa | 0 | 1 | 0 |
+   | 381 | Una serie que dejó de verse pasa | 1 | 0 | 0 |
+   | 382 | **Arnés**: el ejercicio «pasado» del alta es el del año que viene | 0 | 0 | 1 |
+
+   - **Los del rápido son filas de la teoría**, nombradas por `(documento, desde, hasta)`: en la
+     373, `(Ajuste, -100, 100)`, `(Ajuste, -365, -1)` y `(Transferencia, -100, 100)`; en la 374,
+     `(Recuento, -364, 0)`; en la 375, `(Recuento, -365, -1)`; en la 376, `(Recuento, 1, 365)`.
+     El de la 381 es `Una_serie_que_dejo_de_verse_contesta_lo_que_una_que_no_existe`.
+   - **El del puerto**, en la 379 y la 380, es
+     `Lo_que_numera_una_serie_es_su_tipo_y_las_fechas_de_su_ejercicio`.
+   - **El 1 del alta es `El_alta_rechaza_lo_que_no_puede_contar_y_no_escribe_nada`**, con `201`
+     donde esperaba `409`, leído en su `.trx`: en la 373 y la 377, en la fila de
+     `recuento-serie-de-otro-documento`; en la 375 y la 382, en la de
+     `recuento-serie-de-un-ejercicio-terminado`.
+   - **La 378 y la 379 son en masa por diseño**: todos los casos del alta abren un recuento con
+     sus series buenas, y las dos mutaciones las rechazan.
+   - **Los verdes del alta, esperados.** En la 374 y la 376, el alta usa el reloj de verdad, que no
+     es el último día de un ejercicio, y no abre con una serie del año que viene: las ve el rápido.
+     En la 380, `EstadoDeAsync` contesta antes que no existe la serie de otra empresa.
 6. ~~El centinela del canal de `act()`, en la CI, con su mutación y la batería de `AGENTS.md`.~~
-   Hecho en `ci(frontal): el canal de la consola tiene centinela, y la CI lo mira`:
+   Hecho en `ci(frontal): el canal de la consola tiene centinela, y la CI lo mira` (`c112817`):
    - el caso de `ElCanalDeLaConsola.test.ts` escribe la marca, y el frontal pasa de 251 a **252**
      casos (`npm --prefix frontend run test`, su línea `Tests`);
    - el paso «Canal de la consola» (`scripts/ci/canal-de-la-consola.sh`) la busca en el registro,
      y falla sin ella o con un solo aviso de `act()`;
    - el paso «Tests» lleva `AI_AGENT: ci` y `pipefail`, y la batería de `AGENTS.md`, los dos pasos.
 
-   Faltan su tanda, desde la 383, y el ADR-0060.
+   Lo explica el **ADR-0060**, que enmienda el ADR-0058 donde decía que no había centinela.
+
+   **Y su tanda, de la 383 a la 386**, sobre el árbol limpio en `c112817`, con
+   `python -X utf8 tanda-canal.py`. Cada escenario lanza los tests con `canal.sh <etiqueta>
+   <entorno> [sin-pipefail]`, con el registro a un fichero como la CI, y pasa el guion del paso
+   sobre él. Los entornos:
+   - `ci`: `GITHUB_ACTIONS=true`, `CI=true` y `AI_AGENT=ci`, sin `CLAUDECODE` ni `CLAUDE_CODE`;
+   - `ci-sin-agente`: el mismo, sin `AI_AGENT`;
+   - `agente`: el del agente.
+
+   La base, en `ci`, da los tests y el paso en verde, con la marca y sin avisos:
+
+   | # | Mutación | Entorno | Tests | Paso |
+   |---|---|---|---|---|
+   | 383 | Sin la línea `reporters` de `vite.config.ts` | `ci` | 0 | **1**, mudo |
+   | 383 | La misma | `ci-sin-agente` | 0 | 0 |
+   | 383 | La misma | `agente` | 0 | **1**, mudo |
+   | 384 | **Arnés**: el centinela no escribe la marca | `ci` | 0 | **1**, mudo |
+   | 385 | Un canario temporal con un aviso de `act()` | `ci` | 0 | **1**, un aviso |
+   | 386 | Un caso rojo, con `pipefail` | `ci` | **1** | 0 |
+   | 386 | El mismo, sin `pipefail` | `ci` | 0 | 0 |
+
+   - **La fila `ci-sin-agente` de la 383 es la CI de antes**: la línea fuera, y el paso en verde.
+     Es la razón de `AI_AGENT: ci`.
+   - **La 386 sin `pipefail` es un rojo escondido**: vitest dice «1 failed» y el paso sale con 0.
+   - La porcelana sale vacía al terminar, y el detalle de cada fila está en el ADR-0060.
 7. El `tsconfig` de los tests, con su canario. El encargo pide que los casos sigan siendo 251, y
    desde el 6 son **252**: el que suma es el centinela. Lo que se afirma es que no cambian.
 8. El ADR-0059, con la puerta contestada y lo que decide sin preguntar.
