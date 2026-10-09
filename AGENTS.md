@@ -352,6 +352,11 @@ python scripts/dependencias-por-conjuntos.py <commit-base> HEAD
 > Se diagnostica —qué efecto se quedó fuera de un `act()`, o qué aserción se hizo sobre algo que
 > todavía no había ocurrido— y se arregla. No se cuenta, no se compara contra un fondo y no se
 > tolera «porque son pocos»: el día que se toleren dos, el canal vuelve a ser una cifra.
+>
+> **El canal existe porque `vite.config.ts` fija el informe** (ADR-0058). Sin esa línea, vitest 4
+> detecta al agente por el entorno y cambia a un informe que se calla la consola de los casos en
+> verde: el cero sale igual, y no mide nada. Un `--reporter` en la línea de órdenes manda sobre la
+> línea, así que la batería no lo pasa.
 
 Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:
 `docker compose -f deploy/docker-compose.yml up --build`, y **sobre ese mismo entorno ya en pie**

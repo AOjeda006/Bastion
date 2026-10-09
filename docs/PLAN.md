@@ -6517,6 +6517,9 @@ La puerta se pasa con esto. Las decisiones van en el **ADR-0058**, y lo que siga
 todo junto antes del código. **Lo primero que se mira es lo que diga el §7.4 del plan maestro sobre
 la reserva**: si dice algo, manda él.
 
+> **El número cambió el 2026-10-09: el ADR del 2.13 es el 0059.** El 0058 lo tomó la subida de
+> vitest, que va antes (*Tomadas por el agente de desarrollo — la subida de vitest*).
+
 1. **A qué nivel se reserva, y dónde vive lo reservado.** Es esquema. Hoy `existencias.reservado`
    va por fila: ubicación, lote y serie. Un pedido de venta reserva por artículo y almacén, y el
    hueco se elige al preparar el pedido. Recomendación del usuario: por artículo y almacén, con lote
@@ -6574,6 +6577,39 @@ El agente se para en la puerta, como en el 2.12, y pregunta lo que siga abierto.
 **Lo que decidió el agente al abrirlo, y solo queda anotado**, porque es reversible: las ramas son
 `epilogo-2.12`, `subida-de-vitest` y `2.13-las-reservas`, cada una abierta desde `main` cuando la
 anterior ya está dentro y borrada.
+
+### Tomadas por el agente de desarrollo — la subida de vitest (2026-10-09)
+
+- **`vitest` 4.1.11, y no la 5.0.3.** El encargo decía que `npm audit` proponía la 5.0.3. Aquí, con
+  npm 11.9.0 y Node 25.6.1, `npm --prefix frontend audit --json` da como arreglo `vitest` 4.1.11,
+  con salto de versión mayor, la misma que nombró el ADR-0045. Se queda en ella:
+  - deja la auditoría a cero, entera y con `--omit=dev`, con un salto de versión mayor y no dos;
+  - la 5.0.3 declara Node `^22.12.0 || ^24.0.0 || >=26.0.0`, que deja fuera el 25 de este equipo,
+    y la 4.1.11, `^20.0.0 || ^22.0.0 || >=24.0.0`;
+  - la 4.1.11 pide vite `^6.0.0 || ^7.0.0 || ^8.0.0`, así que la 7.3.6 se queda, y es MIT. Lo
+    dice `npm view vitest@4.1.11 license engines peerDependencies.vite`.
+
+  La 5 queda para cuando la auditoría la pida o la línea 4 deje de publicarse.
+- **La alta de la anotación era `source-map-js`**, y subió aparte, con `npm update`, en `4f0e055`.
+  Las dos críticas eran `tinypool`, que vitest 3 usaba para repartir los ficheros, y `vitest`, que
+  depende de él. La moderada, `@vitest/mocker`, es la que ya dejó abierta el ADR-0045.
+- **La guía oficial de migración a la 4** (v4.vitest.dev/guide/migration) no toca la configuración
+  del frontal: no hay cobertura, ni `workspace`, ni `poolOptions`, ni el informe `basic`, ni
+  espías. Lo que sí cambió va en `5edf198` y está explicado en su mensaje:
+  - **los tipos de Node**, que la 3 arrastraba sin pedirlos y la 4 no. `tsconfig.app.json` los pide
+    ahora, y el código de la aplicación los ve, como antes. Separarlos es una propuesta de *Notas /
+    riesgos*;
+  - **el informe**, que la 4 elige según quién la lanza. Es el ADR-0058.
+- **El informe de los tests, fijado: ADR-0058.** `5edf198` fijó `['default']`, y con eso apagó sin
+  querer `github-actions`, que vitest pone solo en la CI y que anota los casos rojos. Lo encontró
+  leer el código que resuelve el informe, antes de empujar, y lo arregló `5654fb9`, medido con un
+  canario que falla a propósito. `AGENTS.md` lo dice junto al canal de `act()`.
+- **El ADR-0058 es ese, y el del 2.13 pasa a ser el 0059.** El encargo daba el 0058 al 2.13, cuando
+  era el siguiente. Un aprendizaje de la herramienta va a un ADR (`AGENTS.md`, *Reglas de oro*), y
+  este es de esta unidad, que va antes. Es reversible mientras el del 2.13 no exista, así que se
+  anota en vez de preguntarse.
+- **Sin mutaciones numeradas.** Los canarios de esta unidad miden la herramienta, no una regla del
+  proyecto, y se borraron después de medir. La siguiente mutación sigue siendo la **373**.
 
 ## Estado actual
 
@@ -10219,10 +10255,12 @@ en `df1e44d` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 
 1. ~~El run de `main` del epílogo del 2.12, anotado.~~ Hecho en el primer commit de la rama: el
    37916215471, en *El epílogo del 2.12, cerrado*.
-2. `source-map-js` 1.2.2, con `npm update`, en su commit.
-3. `vitest`, hasta la versión que deje la auditoría sin críticas ni altas, en su commit y sin
-   `--force`.
-4. La nota en la cabecera del ADR-0045, la batería y los runs.
+2. ~~`source-map-js` 1.2.2, con `npm update`, en su commit.~~ Hecho en `4f0e055`.
+3. ~~`vitest`, hasta la versión que deje la auditoría sin críticas ni altas, en su commit y sin
+   `--force`.~~ Hecho en `5edf198`, la 4.1.11, con el informe de la CI devuelto en `5654fb9`. Lo
+   que se decidió, en *Tomadas por el agente de desarrollo — la subida de vitest*.
+4. La nota en la cabecera del ADR-0045, la batería, el humo y los runs. El ADR-0058, con la línea de
+   `AGENTS.md`, está hecho.
 
 Después viene la puerta del 2.13, en su rama.
 
@@ -18612,6 +18650,20 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-10-09, subida de vitest) · el código de la aplicación ve los tipos de Node.**
+  `tsconfig.app.json` compila a la vez la aplicación y sus tests, y los tests usan `node:fs`,
+  `node:path`, `node:url`, `node:util` y `process`. Con vitest 3 los tipos llegaban sin pedirlos, y
+  desde `5edf198` se piden. Así que un `process.env` en un componente compila, aunque en el navegador
+  no exista. No es nuevo: pasaba igual antes de la subida. **La propuesta**: un `tsconfig` para los
+  tests, con `node`, y el de la aplicación sin él y sin los ficheros `*.test.*`. No se hace sin
+  encargo, porque cambia lo que compila cada proyecto.
+
+- **ABIERTA (2026-10-09, subida de vitest) · el canal de `act()` no tiene centinela.** El cero de la
+  batería mide porque `vite.config.ts` fija el informe (ADR-0058). Si alguien borrara esa línea, la
+  CI no lo notaría, porque allí no hay agente, y la batería que lanza un agente daría cero sin medir.
+  **La propuesta**: un caso que escriba una marca en la consola, y un paso que la busque en el
+  registro y falle si no está. No se hace sin encargo.
 
 - **ABIERTA (2026-10-08, encargo del usuario) · el recuento cíclico tiene un segundo disparador, la
   huella.** El ADR-0055 deja el recuento por ubicación para el cierre de la fase con uno: el primer
