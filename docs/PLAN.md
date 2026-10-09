@@ -10010,11 +10010,51 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 3. ~~La propiedad gana el recuento.~~ En `b970493`, con su run de rama 37713964979 en verde: las
    seis clases nuevas en las seis semillas, los dos invariantes y dos empujones medidos, el del
    tránsito y el del descarte. Su tanda va con la del 6.
-4. ~~La huella, segundo disparador del recuento cíclico.~~ Hecho en su commit: una nota abierta en
+4. ~~La huella, segundo disparador del recuento cíclico.~~ En `44262a8`: una nota abierta en
    *Notas / riesgos*, con los dos disparadores. El ADR-0055, que deja abierto el recuento cíclico
    con el primero, no se toca: no cambia nada de lo que decide, y la nota dice de dónde sale el
    segundo.
-5. Los dos *workflows* cortados, y la revisión del diff del 2.12 con la del arnés.
+5. ~~Los dos *workflows* cortados, y la revisión del diff del 2.12 con la del arnés.~~ Hecho:
+   - **Qué eran y de dónde salían.** Los dos eran del agente, escritos con la herramienta
+     `Workflow` que Claude Code trae de serie: un guion de JavaScript que lanza subagentes y junta lo
+     que devuelven. No son de terceros ni se instalaron, así que la pregunta cero no los filtra como
+     pieza. Los guiones y sus registros están en el directorio de la sesión, fuera del repositorio:
+     - `mapa-del-recuento`, el 2026-10-06 a las 00:53, antes de escribir el ADR-0055. Eran cuatro
+       lectores en paralelo, uno por zona: el ajuste, el libro, los tests y el frontal. Los cuatro
+       murieron con «You've hit your session limit», el límite de uso del plan, y devolvieron
+       `null`;
+     - `revisar-b2-recuento`, el 2026-10-07 a las 03:22: una revisión adversaria del diff sin
+       commitear de las líneas del recuento, en tres dimensiones —contrato, pruebas y concurrencia—
+       y con un escéptico por hallazgo. Las tres murieron igual, y devolvió dos listas vacías.
+
+     El límite cortó también la sesión principal. Al volver, el mapa se leyó a mano, y las líneas se
+     commitearon en `7dfe60f` sin esa revisión.
+   - **Lo que tenía de malo la de B2, además de cortarse.** Era una revisión de código hecha a mano
+     sobre una capacidad que el arnés ya trae, `/code-review`, que es justo de lo que avisa la
+     pregunta cero. Y gastaba: 568k *tokens* en tres agentes que no devolvieron nada, y el mapa,
+     830k en cuatro. Leído del `totalTokens` de cada registro. Desde aquí, un diff se revisa con la
+     del arnés.
+   - **La revisión repetida**, con `/code-review` sobre `5ca301f..df1e44d`, dio doce hallazgos.
+     Cada uno se comprobó contra el código antes de tocar nada:
+
+     | # | Hallazgo | Veredicto |
+     |---|---|---|
+     | 1 | Guardar el conteo relee la línea justo antes de mandar, y pisa lo que contó otro | **Real**, y ya arreglado en `48df530` (el punto 2). La revisión lo encontró sola |
+     | 2 | `ClaveDelRecuento.De` lanza con un código de lote que no se normaliza, y tumba el almacén entero | No pasa. `CodigoGs1` y la tabla de lotes nacieron en el mismo commit, `b5a0c2f`. Los únicos que escriben un código son las líneas de los documentos, que lo normalizan al construirse, y normalizar solo recorta |
+     | 3 | `ToDictionary` choca con dos existencias que dan la misma clave | No pasa: `ix_existencias_una_por_clave` es único con los nulos iguales, y el lote es único por artículo y código |
+     | 4 | Abrir lanza si Catálogo no devuelve la unidad base de un artículo bloqueado o retirado | Hoy no pasa: el artículo no se bloquea ni se retira, y el contexto de Catálogo solo filtra por empresa. Va a la nota abierta del final de vida del artículo, en *Notas / riesgos* |
+     | 5 | Al abrir no se mira de qué documento es cada serie, ni que sean dos distintas | **Real, y es una decisión.** Lo dice `IConsultaDeSeries` desde el ADR-0043 («hoy no se hace»), y la puerta del 2.12 lo pidió «como hoy la del ajuste». Pero en el recuento cuesta más: se descubre al confirmar, tras horas contando, y la serie no se cambia. Va como pregunta, con la puerta del 2.13 |
+     | 6 | La confirmación lanza si las dos lecturas del teórico discrepan en si hay ajuste | No pasa: las cantidades son `numeric(18,6)` y la huella las escribe con seis decimales, así que la misma huella es el mismo teórico. El `throw` es la invariante, y lo dice |
+     | 7 | `AlConfirmar` indexa la línea del ajuste sin guarda | No pasa: la clave ajena `fk_lineas_recuento_lineas_ajuste_linea_de_ajuste_id`, y un ajuste no se borra |
+     | 8 | `Emparejar` lanza otra excepción si el ajuste repite clave | No pasa: las líneas son únicas por clave (`ix_lineas_recuento_una_por_clave`), y la guarda de encima exige una línea de ajuste por diferencia |
+     | 9 | El ajuste del recuento se confirma con una copia de la confirmación del ajuste | **Real**: con la del inverso, eran tres copias del mismo núcleo. Arreglado en `22ff831`, `refactor(inventario): el ajuste se valora y se confirma en un solo sitio`, con los dos carriles en verde: 1356 y 651 casos |
+     | 10 | Cada lectura del recuento lee el almacén entero | Decidido en el ADR-0055 §13. Su disparador es el primero del recuento cíclico |
+     | 11 | `ListarAsync` rastrea lo que lista | No pasa: `PaginarAsync` pone `AsNoTracking` (`Paginador.cs:64`) |
+     | 12 | La validación del motivo está copiada | No es un defecto: cada copia usa el largo y el código de su documento, y el modismo es anterior al 2.12 |
+
+     Las cifras del 9, con `dotnet test Bastion.sln --filter "Category!=Integracion"` y con
+     `dotnet test Bastion.sln --filter "Category=Integracion"`, sumando los `Total` de cada
+     ensamblado.
 6. La tanda, la batería y los runs.
 
 Después vienen la subida de vitest y la puerta del 2.13, cada una en su rama.
@@ -18580,6 +18620,14 @@ cuando hace falta el porqué.
   **Añadido el 2026-09-28 (encargo del usuario):** es una de las tres preguntas que el usuario deja
   escritas para el cierre de la fase, sin decidir. Las otras dos son las pantallas del ajuste y la
   zona de «hoy», en las notas de arriba.
+
+  **Añadido el 2026-10-08 (epílogo del 2.12, revisión de código):** el recuento es el primero que
+  la necesita contestada. `AbrirRecuento` pide a Catálogo la unidad base de cada artículo con
+  físico, y si falta una, lanza. Hoy no puede faltar, porque el artículo no se retira y el contexto
+  de Catálogo solo filtra por empresa. Pero si la respuesta trae una baja que lo saque de
+  `UnidadesBaseDeAsync`, un artículo retirado con existencias dejaría sin poder abrir ningún
+  recuento de su almacén, que es justo lo que hace falta para sacarlas. La baja tendría que seguir
+  contestando su unidad base.
 
 - **TRASLADADA A *DECISIONES* (2026-09-07, ítem 1.6) · el conflicto no revela, pero DOS respuestas
   juntas sí.** El hecho sigue siendo el que se anotó en el 1.5 y no ha cambiado: la búsqueda no
