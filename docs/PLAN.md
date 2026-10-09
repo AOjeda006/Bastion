@@ -10261,7 +10261,29 @@ en `df1e44d` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
    que se decidió, en *Tomadas por el agente de desarrollo — la subida de vitest*.
 4. ~~La nota en la cabecera del ADR-0045.~~ Hecha, con los tres commits de la subida. El ADR-0058,
    con la línea de `AGENTS.md`, también.
-5. La batería, el humo y los runs.
+5. ~~La batería y el humo.~~ Hechos sobre `02645cf`:
+   - **La batería** de `AGENTS.md`, entera y en su orden, con `bash bateriaVit.sh`, el guion del
+     *scratchpad* que corre cada paso y anota su código de salida:
+     - los diecisiete pasos salen con código 0, y la porcelana queda vacía al final;
+     - **0** avisos de `act()`, con `grep -c 'not wrapped in act'` sobre el registro del paso. Es el
+       primer cero medido con el canal comprobado: el informe está fijado (ADR-0058), y el registro
+       trae 0 líneas `stdout |` o `stderr |`, como con vitest 3;
+     - el frontal, **251** casos en 24 ficheros, los mismos de antes por nombre y estado;
+     - el recuento de la CI, **1356** casos en el carril rápido y **651** en el de integración,
+       los dos en 10 ensamblados, sin cambios;
+     - el presupuesto, **437/450** y **699/900** KiB, sin cambios;
+     - las dependencias, con `python scripts/dependencias-por-conjuntos.py b2c5021 HEAD`: ningún
+       paquete de .NET entra ni sale, y en el frontal entran 16 entradas y salen 24, de 440 a 432
+       sin la raíz. Salen `tinypool`, `vite-node`, `cac`, `tinyspy`, `loupe`, `pathval`,
+       `check-error`, `deep-eql` y `strip-literal`, con su `js-tokens`. Entran `obug` y
+       `@standard-schema/spec`. Las demás cambian de versión: `vitest` y los siete `@vitest/*`,
+       `chai`, `es-module-lexer`, `source-map-js`, `std-env`, `tinyexec` y `tinyrainbow`.
+   - **El humo**, porque la imagen del frontal se construye con `npm ci`. Va con `bash humoVit.sh
+     montar` y `rematar`, en su propio proyecto de *compose*, `bastion-humo-vit`, con el entorno
+     generado en el *scratchpad* y borrado al salir. Da **0 fallos**: las imágenes se construyen, el
+     migrador sale con 0, la API y el frontal quedan sanos, y el segundo arranque sale en verde. El `down -v` lleva su `-p`, y
+     el proyecto `bastion` no se tocó.
+6. Los runs.
 
 Después viene la puerta del 2.13, en su rama.
 
