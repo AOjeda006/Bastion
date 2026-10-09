@@ -6916,6 +6916,14 @@ mide.
   proyectos en su `project`, y un fichero que no esté en ninguno no se puede analizar con tipos, así
   que el lint debería fallar. Lo dice la tanda, no este punto.
 
+  **Y la tanda dijo que no basta.** ESLint falla con un fichero que no está en ningún programa,
+  pero lo que importan los tests entra en su programa aunque no esté en su `include`. Quitar de
+  `tsconfig.json` la referencia a los tests (394) o sacar `src/pruebas` del `include` (396) deja el
+  lint y el typecheck en verde. Lo vigila `ElRepartoEntreProyectos`, que le pregunta a TypeScript
+  las raíces de cada proyecto y las compara con el disco. Es el **ADR-0061**, que el agente escribe
+  porque la trampa sirve fuera de este proyecto (*Reglas de oro*). Lleva el 0061 porque el 0059
+  es de las reservas desde la puerta contestada.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 12 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -10638,7 +10646,7 @@ la siguiente sigue siendo la **373**. Su ADR es el **0058**, y el siguiente, el 
 `5aedf60`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del 2026-10-08 → El
 2.13: las reservas y el disponible, hasta su puerta*, y la puerta contestada, en *Traídas por el
 encargo del 2026-10-09*. Sus mutaciones empiezan en la **373**, y su ADR es el **0059**. El del
-centinela, que va antes, es el **0060**.
+centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **0061**.
 
 **Lo que queda, por este orden:**
 
@@ -10756,7 +10764,53 @@ centinela, que va antes, es el **0060**.
      900`), y `frontend/dist` sale idéntico byte a byte, 62 ficheros (`sha256sum` de cada uno,
      antes y después).
 
-   Falta su tanda, desde la 387.
+   **Y su tanda, de la 387 a la 395**, sobre el árbol limpio en `a68b3ea`, con
+   `python -X utf8 tanda-tsconfig.py`. Cada mutación se mide con `tsc -b --force` y `eslint .`, que
+   son el typecheck y el lint. `tsc -b` sale con **2** cuando hay errores. La base da 0 y 0:
+
+   | # | Mutación | Typecheck | Lint |
+   |---|---|---|---|
+   | 387 | Un componente con `process.env` | **2** | **1** |
+   | 388 | Un componente que importa `node:fs` | **2** | **1** |
+   | 389 | Pareja: el mismo `process.env` en un test | 0 | 0 |
+   | 390 | `tsconfig.test.json` sin los tipos de Node | **2** | **1** |
+   | 391 | `tsconfig.app.json` sin su `exclude` | **2** | **1** |
+   | 392 | `tsconfig.test.json` sin los `*.test.tsx` | 0 | **1** |
+   | 393 | El `project` de ESLint sin `tsconfig.test.json` | 0 | **1** |
+   | 394a | Base, con un error de tipos en un test | **2** | 0 |
+   | 394 | `tsconfig.json` sin la referencia a los tests, con el mismo error | 0 | 0 |
+   | 395 | **Arnés**: el canario de la 387, en `src/pruebas` | 0 | 0 |
+
+   **La 394 salió verde en todo, y la espera lo decía.** Es un hallazgo, así que se cubrió en
+   `test(frontal): el reparto de src entre los proyectos, contra el disco` (`157bc56`):
+   `ElRepartoEntreProyectos` le pregunta a TypeScript las raíces de cada proyecto y las compara con
+   el disco. Con sus 4 casos, el frontal pasa a **256** en 26 ficheros
+   (`npm --prefix frontend run test`, su línea `Tests`).
+
+   **La segunda tanda**, sobre `157bc56`, con `python -X utf8 tanda-reparto.py` y
+   `tanda-reparto.py 400`, mide además el caso nuevo solo
+   (`vitest run src/app/ElRepartoEntreProyectos.test.ts`). La base da 0 en los tres:
+
+   | # | Mutación | Reparto, de 4 | Typecheck | Lint |
+   |---|---|---|---|---|
+   | 394 | `tsconfig.json` sin la referencia a los tests, sin error plantado | **1** | 0 | 0 |
+   | 391 | `tsconfig.app.json` sin su `exclude` | **1** | **2** | **1** |
+   | 392 | `tsconfig.test.json` sin los `*.test.tsx` | **2** | 0 | **1** |
+   | 396 | `tsconfig.test.json` sin `src/pruebas` | **2** | 0 | 0 |
+   | 397 | `tsconfig.test.json` sin `src/setupTests.ts` | **2** | 0 | **1** |
+   | 398 | **Arnés**: el barrido del disco no encuentra nada | **1** | **2** | **1** |
+   | 399 | El patrón de `setupTests`, con una letra cambiada | **3** | 0 | 0 |
+   | 400 | `tsconfig.test.json` sin su `exclude` vacío | **2** | 0 | **1** |
+
+   - **Los rojos del reparto, por nombre**: en la 394, «todo fichero de src es raíz de algún
+     proyecto»; en la 391, «ningún test es raíz del proyecto de la aplicación»; en la 392, la 396,
+     la 397 y la 400, «todo fichero de src…» y «todo test es raíz del proyecto de los tests»; en la
+     398, «mira ficheros de verdad»; en la 399, los otros tres.
+   - **La 394 y la 396 solo las ve el reparto.**
+   - **El typecheck y el lint de la 398 son de la forma de la mutación**, que deja sin usar la
+     función que barre el disco.
+   - La porcelana sale vacía al terminar las dos. Lo explica el **ADR-0061**, y la siguiente
+     mutación es la **401**.
 8. El ADR-0059, con la puerta contestada y lo que decide sin preguntar.
 9. Las reservas: el esquema y su migración, el dominio, los casos de uso, la lectura del
    disponible en `Contracts`, la transferencia frente al disponible, las carreras, la propiedad y
