@@ -7,10 +7,11 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "useDefineForClassFields": true,
-    // `node` es por los tests y por `setupTests.ts`, que usan `node:fs`, `node:path`, `node:url`,
-    // `node:util` y `process`. Con vitest 3 llegaba sin pedirlo, colgado de `vitest/globals`, y
-    // vitest 4 dejó de arrastrarlo. Pedirlo aquí lo ve también el código de la aplicación, como antes.
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "node"],
+    // EL CÓDIGO DE LA APLICACIÓN CORRE EN EL NAVEGADOR, y solo ve los tipos del navegador y los de
+    // Vite. Los de Node, los de vitest y los de jest-dom son de los tests, y los pide
+    // `tsconfig.test.json`. Con todos aquí, un `process.env` en un componente compilaba, y en el
+    // navegador `process` no existe (ítem 2.13).
+    "types": ["vite/client"],
 
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
@@ -36,5 +37,8 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Lo que solo usan los tests. La lista es la de `tsconfig.test.json`, que lo compila con sus
+  // tipos; lo que no esté en ninguna de las dos, ESLint no lo puede analizar y el lint falla.
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/setupTests.ts", "src/pruebas"]
 }

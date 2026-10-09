@@ -1,0 +1,22 @@
+{
+  // LOS TESTS, CON LOS TIPOS DE NODE (ítem 2.13). Usan `node:fs`, `node:path`, `node:url`,
+  // `node:util` y `process`, y corren en Node con vitest y jsdom. Las opciones son las de la
+  // aplicación; cambian los tipos y los ficheros. Lo que importan de la aplicación lo vuelven a
+  // compilar aquí, con los tipos de Node, y eso no afloja nada: la aplicación se compila también
+  // en `tsconfig.app.json`, sin ellos.
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "node"]
+  },
+  // La lista es la del `exclude` de `tsconfig.app.json`, más la declaración de Vite. El `exclude`
+  // vacío hace falta: sin él se heredaría el de la aplicación, que deja fuera justo esto.
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/setupTests.ts",
+    "src/pruebas",
+    "src/vite-env.d.ts"
+  ],
+  "exclude": []
+}

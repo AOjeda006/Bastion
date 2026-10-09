@@ -6907,6 +6907,14 @@ mide.
   vitest pasaría por verde.
 - **El guion cuenta sobre el fichero, con `grep -c` y no con `grep -q` en una tubería**, por el
   SIGPIPE del 1.12.
+- **El `tsconfig` de los tests hereda el de la aplicación** y cambia sus tipos y sus ficheros. Así
+  las opciones estrictas no pueden divergir. Su `exclude` va vacío a propósito: con `extends`, el de
+  la aplicación se heredaría y dejaría fuera justo los tests.
+- **Fuera de la aplicación van también `setupTests.ts` y `src/pruebas`**, que importan
+  `@testing-library` y `node:`, y que nada de la aplicación importa.
+- **Lo que tiene que vigilar que ningún test se quede sin compilar es ESLint.** Lleva los tres
+  proyectos en su `project`, y un fichero que no esté en ninguno no se puede analizar con tipos, así
+  que el lint debería fallar. Lo dice la tanda, no este punto.
 
 ## Estado actual
 
@@ -10732,8 +10740,23 @@ centinela, que va antes, es el **0060**.
      Es la razón de `AI_AGENT: ci`.
    - **La 386 sin `pipefail` es un rojo escondido**: vitest dice «1 failed» y el paso sale con 0.
    - La porcelana sale vacía al terminar, y el detalle de cada fila está en el ADR-0060.
-7. El `tsconfig` de los tests, con su canario. El encargo pide que los casos sigan siendo 251, y
-   desde el 6 son **252**: el que suma es el centinela. Lo que se afirma es que no cambian.
+7. ~~El `tsconfig` de los tests, con su canario.~~ Hecho en `fix(frontal): los tipos de Node,
+   solo para los tests`. El encargo pide que los casos sigan siendo 251, y desde el 6 son **252**:
+   el que suma es el centinela. Lo que se afirma es que no cambian.
+   - `tsconfig.app.json` pide solo `vite/client`, y deja fuera los `*.test.*`, `setupTests.ts` y
+     `src/pruebas`. `tsconfig.test.json` los compila, con los tipos de Node, de vitest y de
+     jest-dom. `tsconfig.json` y el `project` de ESLint llevan los tres.
+   - **El canario**: un componente con `process.env['NODE_ENV']` compilaba antes (`tsc -b
+     --force`, salida 0).
+   - **Los ficheros**, contados con `tsc -p <proyecto> --listFilesOnly` contra el disco (guion
+     `proyectos-ts.py`): de 128 en `src`, 30 son de los tests. La aplicación compila 98 y ninguno de
+     los tests; los tests, 125, con sus 30. No queda ninguno fuera de los dos.
+   - **Los casos, 252**, en 25 ficheros (`npm --prefix frontend run test`). **El presupuesto no se
+     mueve**: 437/450 y 700/900 KiB (`bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450
+     900`), y `frontend/dist` sale idéntico byte a byte, 62 ficheros (`sha256sum` de cada uno,
+     antes y después).
+
+   Falta su tanda, desde la 387.
 8. El ADR-0059, con la puerta contestada y lo que decide sin preguntar.
 9. Las reservas: el esquema y su migración, el dominio, los casos de uso, la lectura del
    disponible en `Contracts`, la transferencia frente al disponible, las carreras, la propiedad y
@@ -19127,13 +19150,15 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
-- **ABIERTA (2026-10-09, subida de vitest) · el código de la aplicación ve los tipos de Node.**
+- **CERRADA (2026-10-09, ítem 2.13) · el código de la aplicación ve los tipos de Node.**
   `tsconfig.app.json` compila a la vez la aplicación y sus tests, y los tests usan `node:fs`,
   `node:path`, `node:url`, `node:util` y `process`. Con vitest 3 los tipos llegaban sin pedirlos, y
   desde `5edf198` se piden. Así que un `process.env` en un componente compila, aunque en el navegador
   no exista. No es nuevo: pasaba igual antes de la subida. **La propuesta**: un `tsconfig` para los
   tests, con `node`, y el de la aplicación sin él y sin los ficheros `*.test.*`. No se hace sin
-  encargo, porque cambia lo que compila cada proyecto.
+  encargo, porque cambia lo que compila cada proyecto. **La cerró el encargo del 2026-10-09** con
+  la propuesta, en `fix(frontal): los tipos de Node, solo para los tests`. Fuera de la
+  aplicación quedan también `setupTests.ts` y `src/pruebas`, que solo usan los tests.
 
 - **CERRADA (2026-10-09, ítem 2.13) · el canal de `act()` no tiene centinela.** El cero de la
   batería mide porque `vite.config.ts` fija el informe (ADR-0058). Si alguien borrara esa línea, la

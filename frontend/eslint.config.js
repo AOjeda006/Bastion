@@ -109,7 +109,9 @@ export default tseslint.config(
       ecmaVersion: 2022,
       globals: globals.browser,
       parserOptions: {
-        project: ['./tsconfig.app.json', './tsconfig.node.json'],
+        // Un fichero que no esté en ninguno de los tres no se puede analizar con tipos, y el lint
+        // falla. Es lo que avisa si un test se queda fuera de `tsconfig.test.json`.
+        project: ['./tsconfig.app.json', './tsconfig.test.json', './tsconfig.node.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
