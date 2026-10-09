@@ -3,7 +3,6 @@ using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
-using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Organizacion.Contracts.Ejercicios;
@@ -167,40 +166,22 @@ internal sealed class ConfirmarAjuste(
 
         // LA VALORACIÓN, DESPUÉS DEL NÚMERO Y ANTES DEL DOCUMENTO, que es el orden de los cerrojos
         // del ADR-0046 §2 y el mismo en confirmar y en anular. Lo que se lee aquí no se queda viejo:
-        // el cerrojo dura hasta el `COMMIT`. Y el impedimento se pregunta antes de valorar, porque el
-        // dominio lanza y el borde necesita un 422 con su código (ADR-0004). Si no se puede valorar,
-        // la transacción se deshace con el número y con las valoraciones que el cerrojo creó.
-        IReadOnlyList<LineaAValorar> lineas = ajuste.LineasAValorar();
-
+        // el cerrojo dura hasta el `COMMIT`. Lo demás, como en los otros dos caminos de un ajuste.
         IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos = await ajustes
             .BloquearLasValoracionesAsync(
-                [.. lineas.Select(linea => linea.Clave).Distinct()], ajuste.Divisa, cancelacion)
+                [.. ajuste.LineasAValorar().Select(linea => linea.Clave).Distinct()], ajuste.Divisa, cancelacion)
             .ConfigureAwait(false);
 
-        if (valoracion.LoQueImpide(saldos, lineas, ajuste.Divisa, ajuste.FechaDeOperacion) is { } impedimento)
+        Resultado<IReadOnlyList<MovimientoStock>> movimientos = await ElAjusteQueSeConfirma
+            .ConfirmarAsync(ajustes, valoracion, ajuste, numero.Valor, saldos, reloj.GetUtcNow(), cancelacion)
+            .ConfigureAwait(false);
+
+        if (!movimientos.EsCorrecto)
         {
-            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.NoSeValora(impedimento, ajuste.Divisa));
+            return Resultado.Fallo<AjusteDto>(movimientos.Error!);
         }
 
-        IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, ajuste.Divisa, ajuste.FechaDeOperacion);
-
-        // LOS LOTES Y LAS SERIES, DESPUÉS DE LA VALORACIÓN Y ANTES DEL DOCUMENTO (ADR-0048 §4): la
-        // existencia los necesita y la valoración no, porque el lote no entra en su clave.
-        LotesYSeriesResueltos resueltos = await ajustes
-            .ResolverLotesYSeriesAsync(ajuste.LotesQueNombra(), ajuste.SeriesQueNombra(), cancelacion)
-            .ConfigureAwait(false);
-
-        var evento = new AjusteConfirmado(
-            ajuste.Id,
-            ajuste.EmpresaId,
-            ajuste.AlmacenId,
-            ajuste.FechaDeOperacion,
-            ajuste.Lineas.Count);
-
-        IReadOnlyList<MovimientoStock> movimientos =
-            ajuste.Confirmar(numero.Valor, evento, valoradas, resueltos, reloj.GetUtcNow());
-
-        await ajustes.AnotarEnElLibroAsync(movimientos, cancelacion).ConfigureAwait(false);
+        await ajustes.AnotarEnElLibroAsync(movimientos.Valor, cancelacion).ConfigureAwait(false);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto(ajuste.ADto());

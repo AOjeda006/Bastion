@@ -3,10 +3,8 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Application.Trazabilidad;
-using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Recuentos;
 using Bastion.Inventario.Domain.Ajustes;
-using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Recuentos;
 using Bastion.Inventario.Domain.Valoraciones;
@@ -226,12 +224,20 @@ internal sealed class ConfirmarRecuento(
 
         if (ajuste is not null)
         {
-            // 13 y 14. EL VALOR, LOS LOTES Y LAS SERIES, Y EL LIBRO, como en cualquier ajuste.
-            if (await ConfirmarElAjusteAsync(ajuste, numeroDelAjuste!.Value, saldos, ahora, cancelacion)
-                    .ConfigureAwait(false) is { } impedimento)
+            // 13 y 14. EL VALOR, LOS LOTES Y LAS SERIES, Y EL LIBRO, como en cualquier ajuste. El
+            // impedimento que contesta es el del ajuste (ADR-0055 §6): una clave añadida que sube sin
+            // coste y sin precio medio es `ajuste-entrada-sin-coste-ni-precio-medio`.
+            Resultado<IReadOnlyList<MovimientoStock>> movimientos = await ElAjusteQueSeConfirma
+                .ConfirmarAsync(ajustes, valoracion, ajuste, numeroDelAjuste!.Value, saldos, ahora, cancelacion)
+                .ConfigureAwait(false);
+
+            if (!movimientos.EsCorrecto)
             {
-                return Resultado.Fallo<RecuentoDto>(impedimento);
+                return Resultado.Fallo<RecuentoDto>(movimientos.Error!);
             }
+
+            ajustes.Agregar(ajuste);
+            await ajustes.AnotarEnElLibroAsync(movimientos.Valor, cancelacion).ConfigureAwait(false);
         }
 
         recuento.Confirmar(
@@ -321,44 +327,5 @@ internal sealed class ConfirmarRecuento(
                     conTransito.Count,
                     [.. conTransito.Take(ErroresDeRecuento.LineasEnElConflicto).Select(linea => linea.ADto(teorico))],
                     HuellaDelTeorico: null));
-    }
-
-    /// <summary>Valora, resuelve y confirma el ajuste, y escribe su libro; o dice por qué no se valora.</summary>
-    private async Task<ErrorDeOperacion?> ConfirmarElAjusteAsync(
-        Ajuste ajuste,
-        long numeroDelAjuste,
-        IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos,
-        DateTimeOffset ahora,
-        CancellationToken cancelacion)
-    {
-        // 13. EL VALOR. El impedimento se pregunta antes de valorar, porque el dominio lanza, y el que
-        // contesta es el del ajuste (ADR-0055 §6): una clave añadida que sube sin coste y sin precio
-        // medio es `ajuste-entrada-sin-coste-ni-precio-medio`.
-        IReadOnlyList<LineaAValorar> lineas = ajuste.LineasAValorar();
-
-        if (valoracion.LoQueImpide(saldos, lineas, ajuste.Divisa, ajuste.FechaDeOperacion) is { } impedimento)
-        {
-            return ErroresDeAjuste.NoSeValora(impedimento, ajuste.Divisa);
-        }
-
-        IReadOnlyList<LineaValorada> valoradas =
-            valoracion.Valorar(saldos, lineas, ajuste.Divisa, ajuste.FechaDeOperacion);
-
-        // 14. LOS LOTES Y LAS SERIES, EL DOCUMENTO Y EL LIBRO.
-        LotesYSeriesResueltos resueltos = await ajustes
-            .ResolverLotesYSeriesAsync(ajuste.LotesQueNombra(), ajuste.SeriesQueNombra(), cancelacion)
-            .ConfigureAwait(false);
-
-        // EL EVENTO DEL AJUSTE ES EL QUE LLEGA AL ASIENTO (ADR-0055 §1): el de cualquier otro ajuste.
-        var confirmado = new AjusteConfirmado(
-            ajuste.Id, ajuste.EmpresaId, ajuste.AlmacenId, ajuste.FechaDeOperacion, ajuste.Lineas.Count);
-
-        IReadOnlyList<MovimientoStock> movimientos =
-            ajuste.Confirmar(numeroDelAjuste, confirmado, valoradas, resueltos, ahora);
-
-        ajustes.Agregar(ajuste);
-        await ajustes.AnotarEnElLibroAsync(movimientos, cancelacion).ConfigureAwait(false);
-
-        return null;
     }
 }

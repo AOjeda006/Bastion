@@ -1,7 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
-using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 
@@ -75,41 +74,27 @@ internal static class ElInversoQueCompensa
         // trae el valor de la del original como valor que compensa, así que el par suma cero
         // también en valor, salvo que otras salidas se hayan llevado parte de él entretanto
         // (ADR-0046 §6).
-        IReadOnlyList<LineaAValorar> lineas = inverso.LineasAValorar();
-
         IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos = await ajustes
             .BloquearLasValoracionesAsync(
-                [.. lineas.Select(linea => linea.Clave).Distinct()], inverso.Divisa, cancelacion)
+                [.. inverso.LineasAValorar().Select(linea => linea.Clave).Distinct()], inverso.Divisa, cancelacion)
             .ConfigureAwait(false);
-
-        if (valoracion.LoQueImpide(saldos, lineas, inverso.Divisa, inverso.FechaDeOperacion) is { } impedimento)
-        {
-            return Resultado.Fallo<Ajuste>(ErroresDeAjuste.NoSeValora(impedimento, inverso.Divisa));
-        }
-
-        IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, inverso.Divisa, inverso.FechaDeOperacion);
 
         // LOS LOTES Y LAS SERIES DEL ORIGINAL, que el inverso copia (ADR-0048 §5): resuelven a las
         // mismas filas, porque la clave es la misma. Y la marca no se lee: el original tiene
         // movimientos, así que su marca ya no puede cambiar.
-        LotesYSeriesResueltos resueltos = await ajustes
-            .ResolverLotesYSeriesAsync(inverso.LotesQueNombra(), inverso.SeriesQueNombra(), cancelacion)
+        Resultado<IReadOnlyList<MovimientoStock>> movimientos = await ElAjusteQueSeConfirma
+            .ConfirmarAsync(ajustes, valoracion, inverso, numero.Valor, saldos, ahora, cancelacion)
             .ConfigureAwait(false);
 
-        var confirmado = new AjusteConfirmado(
-            inverso.Id,
-            inverso.EmpresaId,
-            inverso.AlmacenId,
-            inverso.FechaDeOperacion,
-            inverso.Lineas.Count);
-
-        IReadOnlyList<MovimientoStock> movimientos =
-            inverso.Confirmar(numero.Valor, confirmado, valoradas, resueltos, ahora);
+        if (!movimientos.EsCorrecto)
+        {
+            return Resultado.Fallo<Ajuste>(movimientos.Error!);
+        }
 
         original.Anular(inverso, new AjusteAnulado(original.Id, original.EmpresaId));
 
         ajustes.Agregar(inverso);
-        await ajustes.AnotarEnElLibroAsync(movimientos, cancelacion).ConfigureAwait(false);
+        await ajustes.AnotarEnElLibroAsync(movimientos.Valor, cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto(inverso);
     }
