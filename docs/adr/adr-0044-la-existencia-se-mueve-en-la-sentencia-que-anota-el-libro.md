@@ -8,10 +8,14 @@ revisado: 2026-09-29
 
 # ADR-0044: La existencia se mueve en la sentencia que anota el libro, y la instantánea mensual se puede tirar
 
-- **Estado:** aceptado. **Enmendado por el ADR-0046 (§2 y §4); §5 corregido en `d9dd1e1`.**
+- **Estado:** aceptado. **Enmendado por el ADR-0046 (§2 y §4) y por el ADR-0059 (§8); §5 corregido
+  en `d9dd1e1`.**
   - El [ADR-0046](adr-0046-el-valor-es-la-verdad-y-el-precio-medio-se-deduce.md) enmienda, en sus
     puntos 2 y 4, el §2 de este: una proyección que necesita leer lo que suma lo lee con la fila
     bloqueada, y la sentencia de la existencia se parte en dos.
+  - El [ADR-0059](adr-0059-lo-reservado-se-suma-al-leer-bajo-el-cerrojo-de-la-valoracion.md)
+    enmienda el §8: lo reservado se suma al leer de las reservas, y `reservado` y `disponible`
+    salen de la fila de existencias.
   - El §5 no se enmendó desde un ADR nuevo, como pide `principios/git-workflow.md`, sino que se
     reescribió por dentro en `d9dd1e1` (2026-09-28), por encargo del usuario: el cerrojo del
     recálculo es de todas las empresas. No se deshace; esta línea lo declara, y el mensaje de ese
@@ -224,6 +228,10 @@ PostgreSQL 16, y aquí lo mide una mutación (en el PLAN).
 nulo. Cuando el 2.9 añada la columna al libro, las tres cambian a la vez.
 
 ### 8. Lo disponible lo calcula el motor
+
+> **Enmendado por el ADR-0059 (2026-10-09).** Las dos columnas se quitan: lo reservado se suma al
+> leer, de las reservas activas y vigentes de cada clave, y el disponible lo da la lectura de
+> `Contracts`. La lista de calculadas que abre este punto se queda vacía, y se queda.
 
 `disponible` es `GENERATED ALWAYS AS (fisico - reservado) STORED`. `reservado` no tiene valor por
 defecto: la sentencia lo escribe a cero, y lo moverá el 2.13. Escribir `disponible` es un error del

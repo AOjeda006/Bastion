@@ -6923,6 +6923,23 @@ mide.
   las raíces de cada proyecto y las compara con el disco. Es el **ADR-0061**, que el agente escribe
   porque la trampa sirve fuera de este proyecto (*Reglas de oro*). Lleva el 0061 porque el 0059
   es de las reservas desde la puerta contestada.
+- **La reserva no hereda de `DocumentoBase`**, y sí es una máquina de estados explícita
+  (ADR-0059 §10). El tipo base publica su estado, y la puerta dice que nadie lee «Activa» a secas;
+  y pide un evento por transición, cuando los de la reserva son los de vuelta de la fase 4. Hereda
+  de `EntidadBase`, se audita y lleva testigo.
+- **El cerrojo de reservar y liberar es `SELECT … FOR NO KEY UPDATE` sobre la valoración**, sin
+  crear la fila. Una clave sin fila no tiene nada que reservar, y el rechazo sale sin escribir. El
+  de consumir es el de cualquier salida, `BloquearYLeerAsync` (ADR-0059 §2).
+- **Consumir recibe el origen de la reserva, no su identificador**: el albarán sabe de qué línea de
+  pedido sale, y el origen es único en todos los estados (ADR-0059 §6).
+- **El físico de cada hueco se mira antes de escribir.** La unidad de trabajo confirma aunque el
+  caso diga que no, y la restricción de existencias solo se traduce a `422` en el borde HTTP, que el
+  consumo no tiene. Sin esto, un consumo sin stock llegaría como excepción.
+- **El disponible puede salir negativo** en la lectura: un ajuste no se frena, y si rompe lo
+  reservado, el negativo es lo que falta para servirlo.
+- **Dos reservas del mismo origen sobre claves distintas, a la vez**, no comparten cerrojo: la
+  segunda revienta en el índice único. Es una excepción, y la bandeja de salida la reintenta hasta
+  el `409`. Con la misma clave, la segunda espera y recibe la primera.
 
 ## Estado actual
 
@@ -10811,7 +10828,23 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      función que barre el disco.
    - La porcelana sale vacía al terminar las dos. Lo explica el **ADR-0061**, y la siguiente
      mutación es la **401**.
-8. El ADR-0059, con la puerta contestada y lo que decide sin preguntar.
+8. ~~El ADR-0059, con la puerta contestada y lo que decide sin preguntar.~~ Hecho en
+   `docs(adr): el 0059, las reservas y la puerta del 2.13 contestada`. Enmienda el §8 del ADR-0044,
+   y lo que decide el agente está en su punto 12 y en *Tomadas por el agente de desarrollo — ítem
+   2.13*.
+
+   **Y el run de rama de `27857db`**, que lleva los siete commits de `fb4c8c7` a `27857db`, es el
+   [37943832248](https://github.com/AOjeda006/Bastion/actions/runs/37943832248). Sale en verde al
+   primer intento:
+   - sus jobs, Backend `113864803291`, Frontal `113864803776` y Humo `113868064655`;
+   - 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*;
+   - **1364** y **652** casos con **10 `.trx`** en cada artefacto, **149** operaciones y **90**
+     rutas, **203** tipos de **210** sitios, y **437/450** y **700/900** KiB. La auditoría entera,
+     a cero;
+   - **el centinela habla en la CI**: «El canal está abierto, con la marca en el registro (1), y no
+     hay ningún aviso de act()».
+
+   Leído con `python leer-run27.py 37943832248`.
 9. Las reservas: el esquema y su migración, el dominio, los casos de uso, la lectura del
    disponible en `Contracts`, la transferencia frente al disponible, las carreras, la propiedad y
    la doble flecha.
