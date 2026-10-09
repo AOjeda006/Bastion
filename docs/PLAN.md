@@ -6895,6 +6895,18 @@ mide.
   la cortesía podría aceptar lo que la regla rechaza.
 - **Solo en el recuento**, como contestó la puerta (8 a). El ajuste y la transferencia lo siguen
   sabiendo al confirmar.
+- **El centinela es el ADR-0060, y se escribe antes que el 0059.** El encargo da el 0059 a las
+  reservas, y el centinela va antes en el orden. Darle el 0059 movería un número que la puerta
+  contestada ya tiene escrito.
+- **La CI lanza los tests con `AI_AGENT: ci`.** El encargo pide que borrar el informe fijado de
+  `vite.config.ts` ponga el paso en rojo. En la CI no hay agente, así que vitest elige allí el
+  informe que imprime la consola, con la línea o sin ella, y la mutación saldría verde. Con la
+  variable, la CI elige el informe como lo elige el agente.
+- **El paso «Tests» escribe `set -o pipefail`.** El `bash` por omisión de Actions es `bash -e {0}`,
+  sin `pipefail`, y con el registro saliendo por `tee` el paso daría el código de `tee`: un rojo de
+  vitest pasaría por verde.
+- **El guion cuenta sobre el fichero, con `grep -c` y no con `grep -q` en una tubería**, por el
+  SIGPIPE del 1.12.
 
 ## Estado actual
 
@@ -10645,8 +10657,17 @@ encargo del 2026-10-09*. Sus mutaciones empiezan en la **373**, y su ADR es el *
    Con ellos, el catálogo pasa a **203** tipos de **210** sitios (`bash scripts/generar-errores.sh
    --comprobar`), y el carril rápido, a **1364** casos (`bash scripts/ci/recuento-de-tests.sh`
    sobre sus `.trx`, con la lista de la batería). Falta su tanda, desde la 373.
-6. El centinela del canal de `act()`, en la CI, con su mutación y la batería de `AGENTS.md`.
-7. El `tsconfig` de los tests, con su canario.
+6. ~~El centinela del canal de `act()`, en la CI, con su mutación y la batería de `AGENTS.md`.~~
+   Hecho en `ci(frontal): el canal de la consola tiene centinela, y la CI lo mira`:
+   - el caso de `ElCanalDeLaConsola.test.ts` escribe la marca, y el frontal pasa de 251 a **252**
+     casos (`npm --prefix frontend run test`, su línea `Tests`);
+   - el paso «Canal de la consola» (`scripts/ci/canal-de-la-consola.sh`) la busca en el registro,
+     y falla sin ella o con un solo aviso de `act()`;
+   - el paso «Tests» lleva `AI_AGENT: ci` y `pipefail`, y la batería de `AGENTS.md`, los dos pasos.
+
+   Faltan su tanda, desde la 383, y el ADR-0060.
+7. El `tsconfig` de los tests, con su canario. El encargo pide que los casos sigan siendo 251, y
+   desde el 6 son **252**: el que suma es el centinela. Lo que se afirma es que no cambian.
 8. El ADR-0059, con la puerta contestada y lo que decide sin preguntar.
 9. Las reservas: el esquema y su migración, el dominio, los casos de uso, la lectura del
    disponible en `Contracts`, la transferencia frente al disponible, las carreras, la propiedad y
@@ -19048,11 +19069,13 @@ cuando hace falta el porqué.
   tests, con `node`, y el de la aplicación sin él y sin los ficheros `*.test.*`. No se hace sin
   encargo, porque cambia lo que compila cada proyecto.
 
-- **ABIERTA (2026-10-09, subida de vitest) · el canal de `act()` no tiene centinela.** El cero de la
+- **CERRADA (2026-10-09, ítem 2.13) · el canal de `act()` no tiene centinela.** El cero de la
   batería mide porque `vite.config.ts` fija el informe (ADR-0058). Si alguien borrara esa línea, la
   CI no lo notaría, porque allí no hay agente, y la batería que lanza un agente daría cero sin medir.
   **La propuesta**: un caso que escriba una marca en la consola, y un paso que la busque en el
-  registro y falle si no está. No se hace sin encargo.
+  registro y falle si no está. No se hace sin encargo. **La cerró el encargo del 2026-10-09** con
+  la propuesta, en `ci(frontal): el canal de la consola tiene centinela, y la CI lo mira`, y la CI
+  lanza los tests con `AI_AGENT` puesto para que borrar la línea se vea también allí (ADR-0060).
 
 - **ABIERTA (2026-10-08, encargo del usuario) · el recuento cíclico tiene un segundo disparador, la
   huella.** El ADR-0055 deja el recuento por ubicación para el cierre de la fase con uno: el primer

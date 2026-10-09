@@ -112,8 +112,29 @@ jobs:
       - name: Formato
         run: npm run format:check
 
+      # EL REGISTRO DE LOS TESTS VA A UN FICHERO, y el paso siguiente lo lee (ADR-0060). Los avisos
+      # de `act()` son un canal con el fondo a cero desde el 1.8, y hasta aquí solo lo miraba la
+      # batería del agente: la CI no los buscaba. `tee` deja el registro en el job como antes, y el
+      # `pipefail`, escrito porque el `bash` por omisión de Actions no lo pone, hace que el paso siga
+      # saliendo con el código de vitest y no con el de `tee`.
+      #
+      # `AI_AGENT` PUESTO A PROPÓSITO. Vitest 4, si no se le fija el informe, elige el `agent` cuando
+      # detecta un agente, y ese informe se calla la consola de los casos en verde (ADR-0058). En la
+      # CI no hay agente, así que sin esta variable quitar el informe fijado de `vite.config.ts` no
+      # cambiaría nada aquí y el centinela no lo vería nunca. Con ella, la CI corre los tests como los
+      # corre el agente, y lo único que mantiene el canal abierto es el informe fijado.
       - name: Tests
-        run: npm run test
+        env:
+          AI_AGENT: ci
+        run: |
+          set -o pipefail
+          mkdir -p ../artifacts
+          npm run test 2>&1 | tee ../artifacts/vitest.log
+
+      # EL CENTINELA: la marca del caso que la escribe tiene que estar en el registro, y no puede haber
+      # ni un aviso de `act()`. Sin la marca, el cero de los avisos no mide nada.
+      - name: Canal de la consola — la marca está y no hay avisos de act()
+        run: bash ../scripts/ci/canal-de-la-consola.sh ../artifacts/vitest.log
 
       - name: Construir
         run: npm run build

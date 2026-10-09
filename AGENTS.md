@@ -316,7 +316,11 @@ bash scripts/generar-errores.sh --comprobar
 npm --prefix frontend run typecheck
 npm --prefix frontend run lint
 npm --prefix frontend run format:check
-npm --prefix frontend run test
+# El registro va a un fichero y el centinela lo lee (ADR-0060): la marca tiene que estar, y
+# ningún aviso de act(). Aquí no hace falta poner `AI_AGENT`, porque el agente ya es agente.
+mkdir -p artifacts
+(set -o pipefail; npm --prefix frontend run test 2>&1 | tee artifacts/vitest.log)
+bash scripts/ci/canal-de-la-consola.sh artifacts/vitest.log
 npm --prefix frontend run build
 bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
 
@@ -357,6 +361,12 @@ python scripts/dependencias-por-conjuntos.py <commit-base> HEAD
 > detecta al agente por el entorno y cambia a un informe que se calla la consola de los casos en
 > verde: el cero sale igual, y no mide nada. Un `--reporter` en la línea de órdenes manda sobre la
 > línea, así que la batería no lo pasa.
+>
+> **Y desde el 2.13 el canal tiene centinela** (ADR-0060). Un caso escribe una marca por el mismo
+> camino que un aviso, y `scripts/ci/canal-de-la-consola.sh` falla si la marca no está en el
+> registro o si hay un solo aviso. La CI lanza los tests con `AI_AGENT` puesto, para que allí
+> también lo único que mantenga la marca sea el informe fijado: sin esa variable, la CI no es un
+> agente, vitest elige el informe que imprime la consola, y quitar la línea no se vería.
 
 Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:
 `docker compose -f deploy/docker-compose.yml up --build`, y **sobre ese mismo entorno ya en pie**
