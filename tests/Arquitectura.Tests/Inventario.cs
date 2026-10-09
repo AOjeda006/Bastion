@@ -582,7 +582,9 @@ internal static class Inventario
                 "LECTURA: en qué estado está una serie de numeración, para quien guarde su " +
                 "identificador — el ajuste de inventario, que desde el ítem 2.4 dice por qué serie " +
                 "se numerará (R5, §7.4). Una serie CERRADA contesta `SoloResuelveLoViejo`: sigue " +
-                "resolviendo los documentos que ya numeró y no entrega ni un número más. Es el " +
+                "resolviendo los documentos que ya numeró y no entrega ni un número más. Desde el " +
+                "2.13 contesta también qué documentos numera y entre qué fechas, que el alta del " +
+                "recuento pregunta antes de que nadie cuente (ADR-0055 §1.3). Es el " +
                 "único puerto cuya respuesta NO es la garantía que sostiene al consumidor: quien " +
                 "confirma vuelve a comprobar la serie entera dentro de la sentencia que toma el " +
                 "número, en su transacción y con la fila bloqueada. No escribe, y no publica ni " +

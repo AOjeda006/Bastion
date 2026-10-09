@@ -779,10 +779,12 @@ export interface paths {
         put?: never;
         /**
          * Abre el recuento de un almacén entero, con sus claves precargadas y sin contar.
-         * @description El 409 puede venir de tres sitios, y el type los separa: el almacén ya tiene uno
-         *     en curso (recuento-ya-hay-uno-en-curso), el almacén está bloqueado
-         *     (recuento-almacen-bloqueado) o una de las dos series está cerrada
-         *     (recuento-serie-cerrada).
+         * @description El 409 puede venir de cinco sitios, y el type los separa: el almacén ya tiene
+         *     uno en curso (recuento-ya-hay-uno-en-curso), el almacén está bloqueado
+         *     (recuento-almacen-bloqueado), o una de las dos series está cerrada
+         *     (recuento-serie-cerrada), es de otro documento (recuento-serie-de-otro-documento)
+         *     o es de un ejercicio que ya terminó (recuento-serie-de-un-ejercicio-terminado). Las dos
+         *     últimas las vuelve a mirar la confirmación al numerar; aquí se dicen antes de contar.
          *         La Idempotency-Key se admite y no se exige, como en las altas de los maestros: el
          *           alta no numera, así que no hay hueco que evitar, y el reintento sin clave lo para el índice
          *           de uno en curso por almacén.

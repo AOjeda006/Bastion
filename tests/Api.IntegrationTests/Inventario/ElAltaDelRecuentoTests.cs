@@ -5,6 +5,7 @@ using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Recuentos;
+using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Domain.Series;
@@ -406,10 +407,16 @@ public sealed class ElAltaDelRecuentoTests(PostgresConTodosLosModulos postgres) 
     }
 
     /// <summary>
-    /// El alta rechaza el almacén que no existe o está bloqueado, la serie que no existe o está
-    /// cerrada, en cualquiera de los dos sitios, el motivo vacío o largo y la empresa que no opera; y
-    /// no escribe nada.
+    /// El alta rechaza el almacén que no existe o está bloqueado; la serie que no existe, que está
+    /// cerrada, que es de otro documento o que es de un ejercicio terminado, en cualquiera de los dos
+    /// sitios; el motivo vacío o largo y la empresa que no opera; y no escribe nada.
     /// </summary>
+    /// <remarks>
+    /// <b>Las dos últimas de la serie, desde el ítem 2.13</b>: antes se descubrían al confirmar,
+    /// tras horas de conteo, con una serie que ya no se cambia. Dónde está la frontera del ejercicio
+    /// lo dice <c>LaSerieDelRecuentoSeMiraAlAbrirTests</c>, en el carril rápido; aquí, que el alta
+    /// pregunta, con las series de verdad.
+    /// </remarks>
     [Fact]
     public async Task El_alta_rechaza_lo_que_no_puede_contar_y_no_escribe_nada()
     {
@@ -422,6 +429,15 @@ public sealed class ElAltaDelRecuentoTests(PostgresConTodosLosModulos postgres) 
             await LosMaestrosPorLaApi.CrearSerieEnAsync(escena.Cliente, de.Ejercicio.Id, "RCA-G-AX");
         await de.CerrarLaSerieAsync(postgres, recuentosCerrada.Id);
         await de.CerrarLaSerieAsync(postgres, ajustesCerrada.Id);
+
+        // EL EJERCICIO DEL AÑO PASADO, ABIERTO: sus series están activas y son del documento que toca,
+        // así que lo único que las para es que su ejercicio terminó.
+        EjercicioDto pasado =
+            await LosMaestrosPorLaApi.CrearEjercicioAsync(escena.Cliente, EscenaDeTransferencia.Hoy.Year - 1);
+        SerieDto recuentosDelPasado = await LosMaestrosPorLaApi.CrearSerieEnAsync(
+            escena.Cliente, pasado.Id, "RCA-G-RP", TipoDeDocumento.RecuentoDeInventario);
+        SerieDto ajustesDelPasado =
+            await LosMaestrosPorLaApi.CrearSerieEnAsync(escena.Cliente, pasado.Id, "RCA-G-AP");
 
         using (HttpResponseMessage bloqueo =
             await escena.Cliente.SuprimirAsync($"{LosMaestrosPorLaApi.Almacenes}/{de.AlmacenC}"))
@@ -439,6 +455,11 @@ public sealed class ElAltaDelRecuentoTests(PostgresConTodosLosModulos postgres) 
             (bien with { SerieDelAjusteId = Guid.NewGuid() }, HttpStatusCode.BadRequest, "recuento-serie-no-encontrada"),
             (bien with { SerieId = recuentosCerrada.Id }, HttpStatusCode.Conflict, "recuento-serie-cerrada"),
             (bien with { SerieDelAjusteId = ajustesCerrada.Id }, HttpStatusCode.Conflict, "recuento-serie-cerrada"),
+            (bien with { SerieId = bien.SerieDelAjusteId }, HttpStatusCode.Conflict, "recuento-serie-de-otro-documento"),
+            (bien with { SerieDelAjusteId = bien.SerieId }, HttpStatusCode.Conflict, "recuento-serie-de-otro-documento"),
+            (bien with { SerieDelAjusteId = de.SerieDeTransferencias.Id }, HttpStatusCode.Conflict, "recuento-serie-de-otro-documento"),
+            (bien with { SerieId = recuentosDelPasado.Id }, HttpStatusCode.Conflict, "recuento-serie-de-un-ejercicio-terminado"),
+            (bien with { SerieDelAjusteId = ajustesDelPasado.Id }, HttpStatusCode.Conflict, "recuento-serie-de-un-ejercicio-terminado"),
             (bien with { Motivo = "   " }, HttpStatusCode.BadRequest, "recuento-motivo-no-valido"),
             (bien with { Motivo = new string('m', 301) }, HttpStatusCode.BadRequest, "recuento-motivo-no-valido"),
         ];

@@ -24,12 +24,13 @@ namespace Bastion.Organizacion.Contracts.Series;
 /// a nada, y que quien se equivoca de serie lo sepa al darlo de alta y no después de rellenarlo.
 /// </para>
 /// <para>
-/// <b>Y no contesta de qué documentos es la serie ni de qué ejercicio cuelga.</b> Las dos cosas las
-/// comprueba desde el ADR-0043 la sentencia que numera, que es donde está la garantía: una serie de
-/// facturas no le da número a un ajuste (<c>serie-de-otro-documento</c>) y una serie del año pasado
-/// no se lo da a un documento de este (<c>fecha-fuera-del-ejercicio-de-la-serie</c>). Quien abre un
-/// borrador contra la serie equivocada se entera al confirmarlo, y no antes; preguntarlo también
-/// aquí sería la cortesía, no la regla, y hoy no se hace.
+/// <b>Desde el ítem 2.13 contesta también de qué documentos es la serie y de qué ejercicio
+/// cuelga</b> (<see cref="LoQueNumeraAsync"/>). Las dos cosas las sigue comprobando la sentencia que
+/// numera, que es donde está la garantía desde el ADR-0043: una serie de facturas no le da número a
+/// un ajuste (<c>serie-de-otro-documento</c>) y una serie del año pasado no se lo da a un documento
+/// de este (<c>fecha-fuera-del-ejercicio-de-la-serie</c>). Preguntarlo aquí es la cortesía, y la
+/// pide el recuento: su error se descubría al confirmarlo, tras horas de conteo, con una serie que
+/// ya no se cambia.
 /// </para>
 /// </remarks>
 public interface IConsultaDeSeries
@@ -53,4 +54,22 @@ public interface IConsultaDeSeries
     /// <param name="serieId">Identificador de la serie.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<EstadoDeMaestro> EstadoDeAsync(Guid serieId, CancellationToken cancelacion);
+
+    /// <summary>Qué documentos numera esa serie y entre qué fechas.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Una serie que no existe y una de otra empresa contestan lo mismo, <c>null</c></b>, por el
+    /// mismo motivo que en <see cref="EstadoDeAsync"/>.
+    /// </para>
+    /// <para>
+    /// <b>No contesta si la serie está activa</b>: eso es <see cref="EstadoDeAsync"/>, con la
+    /// matriz de puertos y estados detrás. Son dos lecturas, y lo que esta contesta lo vuelve a
+    /// mirar la sentencia que numera, así que una serie que cambie entre las dos no se cuela en
+    /// ningún documento: como mucho, la cortesía no avisa y avisa la regla.
+    /// </para>
+    /// </remarks>
+    /// <param name="serieId">Identificador de la serie.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El tipo de sus documentos y las fechas de su ejercicio, o <c>null</c>.</returns>
+    Task<LoQueNumeraUnaSerie?> LoQueNumeraAsync(Guid serieId, CancellationToken cancelacion);
 }

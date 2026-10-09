@@ -30,6 +30,13 @@ public interface IAbrirRecuento
 /// lectura grande.
 /// </para>
 /// <para>
+/// <b>De cada serie se mira el estado, de qué documentos es y si su ejercicio ha terminado</b>
+/// (ADR-0055 §1.3), lo segundo y lo tercero desde el ítem 2.13. Las tres cosas las vuelve a mirar
+/// al confirmar la sentencia que numera, que es la garantía; aquí son la cortesía, y en el recuento
+/// importa más que en ninguna otra alta, porque el error se descubría al confirmar, tras horas de
+/// conteo, con una serie que el recuento ya no deja cambiar.
+/// </para>
+/// <para>
 /// <b>La precarga son las claves con físico mayor que cero</b>, sin contar (§5). Una clave con solo
 /// tránsito no se precarga: lo que vuela no está en el almacén, y se cuenta después de recibirlo.
 /// </para>
@@ -85,7 +92,12 @@ internal sealed class AbrirRecuento(
             return Resultado.Fallo<RecuentoDto>(ErroresDeRecuento.MotivoNoValido());
         }
 
-        Resultado losMaestros = await ComprobarLosMaestrosAsync(peticion, cancelacion).ConfigureAwait(false);
+        // Se lee una vez, antes de las series: el fin de su ejercicio se compara con el mismo «hoy»
+        // con el que se fecha la apertura.
+        DateTimeOffset momento = reloj.GetUtcNow();
+        var hoy = DateOnly.FromDateTime(momento.UtcDateTime);
+
+        Resultado losMaestros = await ComprobarLosMaestrosAsync(peticion, hoy, cancelacion).ConfigureAwait(false);
 
         if (!losMaestros.EsCorrecto)
         {
@@ -116,14 +128,12 @@ internal sealed class AbrirRecuento(
                     $"{existencia.Clave.ArticuloId}, y Catálogo no lo conoce en esta empresa: el libro " +
                     "apunta a un artículo que no existe.")))];
 
-        DateTimeOffset momento = reloj.GetUtcNow();
-
         var recuento = Recuento.Abrir(
             empresaId,
             peticion.SerieId,
             peticion.SerieDelAjusteId,
             peticion.AlmacenId,
-            DateOnly.FromDateTime(momento.UtcDateTime),
+            hoy,
             peticion.Motivo,
             divisa,
             precarga,
@@ -137,6 +147,7 @@ internal sealed class AbrirRecuento(
 
     private async Task<Resultado> ComprobarLosMaestrosAsync(
         AbrirRecuentoDto peticion,
+        DateOnly hoy,
         CancellationToken cancelacion)
     {
         EstadoDeMaestro estadoDelAlmacen = await almacenes
@@ -150,13 +161,15 @@ internal sealed class AbrirRecuento(
             return elAlmacen;
         }
 
-        (Guid SerieId, string Cual)[] lasDos =
+        // Cada serie con el documento que numerará, y así la misma serie en las dos casillas no
+        // pasa: no puede ser a la vez de recuentos y de ajustes.
+        (Guid SerieId, string Cual, DocumentoQueNumera Documento)[] lasDos =
         [
-            (peticion.SerieId, "del recuento"),
-            (peticion.SerieDelAjusteId, "del ajuste"),
+            (peticion.SerieId, "del recuento", DocumentoQueNumera.Recuento),
+            (peticion.SerieDelAjusteId, "del ajuste", DocumentoQueNumera.Ajuste),
         ];
 
-        foreach ((Guid serieId, string cual) in lasDos)
+        foreach ((Guid serieId, string cual, DocumentoQueNumera documento) in lasDos)
         {
             EstadoDeMaestro estado = await series.EstadoDeAsync(serieId, cancelacion).ConfigureAwait(false);
             Resultado laSerie = LosMaestrosDelRecuento.LaSerie(estado, serieId, cual);
@@ -164,6 +177,17 @@ internal sealed class AbrirRecuento(
             if (!laSerie.EsCorrecto)
             {
                 return laSerie;
+            }
+
+            LoQueNumeraUnaSerie? loQueNumera = await series
+                .LoQueNumeraAsync(serieId, cancelacion)
+                .ConfigureAwait(false);
+            Resultado loQueNumeraLaSerie = LosMaestrosDelRecuento.LoQueNumeraLaSerie(
+                loQueNumera, serieId, cual, SeriesDeInventario.De(documento), hoy);
+
+            if (!loQueNumeraLaSerie.EsCorrecto)
+            {
+                return loQueNumeraLaSerie;
             }
         }
 

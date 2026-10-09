@@ -98,10 +98,12 @@ public sealed class RecuentosController(
     /// <summary>Abre el recuento de un almacén entero, con sus claves precargadas y sin contar.</summary>
     /// <remarks>
     /// <para>
-    /// El <c>409</c> puede venir de tres sitios, y el <c>type</c> los separa: el almacén ya tiene uno
-    /// en curso (<c>recuento-ya-hay-uno-en-curso</c>), el almacén está bloqueado
-    /// (<c>recuento-almacen-bloqueado</c>) o una de las dos series está cerrada
-    /// (<c>recuento-serie-cerrada</c>).
+    /// El <c>409</c> puede venir de cinco sitios, y el <c>type</c> los separa: el almacén ya tiene
+    /// uno en curso (<c>recuento-ya-hay-uno-en-curso</c>), el almacén está bloqueado
+    /// (<c>recuento-almacen-bloqueado</c>), o una de las dos series está cerrada
+    /// (<c>recuento-serie-cerrada</c>), es de otro documento (<c>recuento-serie-de-otro-documento</c>)
+    /// o es de un ejercicio que ya terminó (<c>recuento-serie-de-un-ejercicio-terminado</c>). Las dos
+    /// últimas las vuelve a mirar la confirmación al numerar; aquí se dicen antes de contar.
     /// </para>
     /// <para>
     /// <b>La <c>Idempotency-Key</c> se admite y no se exige</b>, como en las altas de los maestros: el

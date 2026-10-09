@@ -48,6 +48,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "CadaMarcaAdmiteSuLineaTests.Cada_marca_admite_su_linea_y_nombra_lo_que_le_falta_o_le_sobra_a_las_demas",
         "CadaMarcaAdmiteSuLineaTests.La_tabla_cubre_cada_marca_con_las_cuatro_formas_de_una_linea",
 
+        // Del ítem 2.13 (ADR-0055 §1.3): la serie del recuento, por lo que numera, en el carril
+        // rápido. La frontera del ejercicio es aritmética, y por la API no se puede fijar.
+        "LaSerieDelRecuentoSeMiraAlAbrirTests.La_serie_del_recuento_se_admite_por_su_documento_y_por_el_fin_de_su_ejercicio",
+        "LaSerieDelRecuentoSeMiraAlAbrirTests.Una_serie_que_dejo_de_verse_contesta_lo_que_una_que_no_existe",
+
         "ContratoDeCatalogoTests.Colgar_una_categoria_por_debajo_del_nivel_maximo_es_409_y_lo_dice",
         "ContratoDeCatalogoTests.Crear_un_articulo_devuelve_201_con_Location_que_lleva_al_recurso",
         "ContratoDeCatalogoTests.El_codigo_del_articulo_se_normaliza_y_el_duplicado_en_minusculas_es_409",

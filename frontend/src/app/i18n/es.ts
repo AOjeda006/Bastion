@@ -380,6 +380,12 @@ export const es = {
         'número de serie.',
       'recuento-serie-cerrada':
         'Una de las dos series está cerrada: la del recuento o la del ajuste. Elige otra.',
+      'recuento-serie-de-otro-documento':
+        'Una de las dos series numera otro documento: la del recuento tiene que ser de recuentos, y ' +
+        'la del ajuste, de ajustes. Elige la que toca en cada casilla.',
+      'recuento-serie-de-un-ejercicio-terminado':
+        'Una de las dos series es de un ejercicio que ya terminó, y el recuento se numera con la ' +
+        'fecha en que se confirme. Elige una serie del ejercicio en curso.',
       'recuento-serie-no-encontrada':
         'Una de las dos series no existe: la del recuento o la del ajuste. Elige una del maestro de series.',
       'recuento-serie-repetida':

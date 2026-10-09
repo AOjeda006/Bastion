@@ -6872,6 +6872,30 @@ a un commit ya verde en su rama, y la rama se borra después de su run de `main`
 informe cuenta todos los commits desde `acf58e8`, con sus runs, y cada cifra va con la orden que la
 mide.
 
+### Tomadas por el agente de desarrollo — ítem 2.13, al escribir su código (2026-10-09)
+
+- **La serie del recuento, con una pregunta nueva en el puerto, y no con la ficha entera.**
+  `IConsultaDeSeries` gana `LoQueNumeraAsync`, que contesta el tipo de la serie y las fechas de su
+  ejercicio, o `null` si no existe o es de otra empresa. El estado se queda en `EstadoDeAsync`, con
+  la matriz de puertos y estados detrás: meterlo también en la pregunta nueva daría una segunda
+  traducción del estado que la matriz no ve. Son dos lecturas, y no importa: lo que contesta la
+  segunda lo vuelve a mirar la sentencia que numera.
+- **Del ejercicio se mira solo el fin.** El recuento se numera y se ajusta con la fecha de su
+  confirmación (ADR-0055 §1.5), que al abrir no se sabe y no es anterior a hoy:
+  - una serie de un ejercicio terminado no lo numerará nunca;
+  - una del ejercicio siguiente sí puede, si se confirma dentro.
+
+  La cortesía no rechaza lo que la regla aceptaría.
+- **Los dos códigos son `409`**, como los de la sentencia que numera (`serie-de-otro-documento` y
+  `fecha-fuera-del-ejercicio-de-la-serie`), y llevan el prefijo del recuento:
+  `recuento-serie-de-otro-documento` y `recuento-serie-de-un-ejercicio-terminado`. La misma serie
+  en las dos casillas cae en el primero sin comprobación propia, porque cada casilla pide su tipo.
+- **La lista de qué serie numera cada documento sube a `SeriesDeInventario`**, en Application. Hasta
+  ahora la leía solo el numerador; desde aquí la lee también el alta, y con una copia en cada sitio
+  la cortesía podría aceptar lo que la regla rechaza.
+- **Solo en el recuento**, como contestó la puerta (8 a). El ajuste y la transferencia lo siguen
+  sabiendo al confirmar.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 12 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -10611,8 +10635,16 @@ encargo del 2026-10-09*. Sus mutaciones empiezan en la **373**, y su ADR es el *
    - **1356** y **651** casos con **10 `.trx`** en cada artefacto, **149** operaciones y **90**
      rutas, **201** tipos de **208** sitios, y **437/450** y **699/900** KiB. La auditoría entera,
      a cero. Leído con `python leer-run27.py 37925166436`.
-5. La serie del recuento, comprobada al abrir: el defecto contra el ADR-0055 §1, con su caso y su
-   mutación.
+5. ~~La serie del recuento, comprobada al abrir.~~ Hecha en `feat(inventario): el alta del recuento
+   mira lo que numera cada serie`, y lo que decide está en *Tomadas por el agente de desarrollo —
+   ítem 2.13*. Lleva estos casos:
+   - siete filas y un caso en el carril rápido (`LaSerieDelRecuentoSeMiraAlAbrirTests`);
+   - cinco filas en el alta (`ElAltaDelRecuentoTests`);
+   - uno del puerto (`ElPuertoDeSeriesTests`).
+
+   Con ellos, el catálogo pasa a **203** tipos de **210** sitios (`bash scripts/generar-errores.sh
+   --comprobar`), y el carril rápido, a **1364** casos (`bash scripts/ci/recuento-de-tests.sh`
+   sobre sus `.trx`, con la lista de la batería). Falta su tanda, desde la 373.
 6. El centinela del canal de `act()`, en la CI, con su mutación y la batería de `AGENTS.md`.
 7. El `tsconfig` de los tests, con su canario.
 8. El ADR-0059, con la puerta contestada y lo que decide sin preguntar.

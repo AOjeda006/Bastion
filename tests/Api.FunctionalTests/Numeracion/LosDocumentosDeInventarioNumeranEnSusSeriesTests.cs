@@ -1,5 +1,4 @@
 using Bastion.Inventario.Application;
-using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Domain.Series;
 using Shouldly;
 
@@ -13,7 +12,7 @@ namespace Bastion.Api.FunctionalTests.Numeracion;
 /// <para>
 /// <b>El nombre va escrito a mano porque Inventario no ve el enumerado.</b>
 /// <c>TipoDeDocumento</c> es de <c>Organizacion.Domain</c>, y el ADR-0013 no deja que Inventario
-/// lo referencie: el numerador del módulo escribe <c>"AjusteDeInventario"</c> como cadena. Una
+/// lo referencie: <see cref="SeriesDeInventario"/> escribe <c>"AjusteDeInventario"</c> como cadena. Una
 /// cadena no se entera de que el valor cambie de nombre, y la sentencia no fallaría —dejaría de
 /// casar con todas las series y cada confirmación contestaría «esta serie es de otro documento»—.
 /// Desde aquí se ven los dos lados, y por eso la comparación vive aquí.
@@ -28,14 +27,14 @@ public sealed class LosDocumentosDeInventarioNumeranEnSusSeriesTests
 {
     [Fact]
     public void Un_ajuste_numera_en_las_series_de_ajustes_de_inventario() =>
-        NumeradorDeSeriesDeInventario.SeriesDe(DocumentoQueNumera.Ajuste)
+        SeriesDeInventario.De(DocumentoQueNumera.Ajuste)
             .ShouldBe(nameof(TipoDeDocumento.AjusteDeInventario));
 
     // EL BARRIDO DE ABAJO NO LO VE: que el recuento numerara en las series de ajustes sería un tipo
     // que existe. Lo vería el primer recuento confirmado, con «esta serie es de otro documento».
     [Fact]
     public void Un_recuento_numera_en_las_series_de_recuentos_de_inventario() =>
-        NumeradorDeSeriesDeInventario.SeriesDe(DocumentoQueNumera.Recuento)
+        SeriesDeInventario.De(DocumentoQueNumera.Recuento)
             .ShouldBe(nameof(TipoDeDocumento.RecuentoDeInventario));
 
     [Fact]
@@ -51,7 +50,7 @@ public sealed class LosDocumentosDeInventarioNumeranEnSusSeriesTests
 
         List<string> sinTipo = [.. documentos
             .Where(documento => !Enum.TryParse<TipoDeDocumento>(
-                NumeradorDeSeriesDeInventario.SeriesDe(documento), ignoreCase: false, out _))
+                SeriesDeInventario.De(documento), ignoreCase: false, out _))
             .Select(documento => documento.ToString())];
 
         sinTipo.ShouldBeEmpty(
@@ -68,6 +67,6 @@ public sealed class LosDocumentosDeInventarioNumeranEnSusSeriesTests
 
         Enum.IsDefined(QueNoExiste).ShouldBeFalse();
         Should.Throw<ArgumentOutOfRangeException>(
-            () => NumeradorDeSeriesDeInventario.SeriesDe(QueNoExiste));
+            () => SeriesDeInventario.De(QueNoExiste));
     }
 }

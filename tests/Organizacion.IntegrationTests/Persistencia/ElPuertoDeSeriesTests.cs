@@ -18,7 +18,8 @@ namespace Bastion.Organizacion.IntegrationTests.Persistencia;
 
 /// <summary>
 /// El puerto del ítem 2.4 contra PostgreSQL de verdad: qué contesta de una serie activa, de una
-/// cerrada, de una que no está y de una que es de otra empresa.
+/// cerrada, de una que no está y de una que es de otra empresa; y desde el 2.13, qué documentos
+/// numera y entre qué fechas.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -37,7 +38,7 @@ namespace Bastion.Organizacion.IntegrationTests.Persistencia;
 /// verde y contestaría <c>SeOfreceParaLoNuevo</c> sobre la serie de otra sociedad.
 /// </para>
 /// <para>
-/// <b>Las semillas de NIF van por el 620</b>, que es la banda libre de este carril: la del 600 al
+/// <b>Las semillas de NIF van del 620 al 625</b>, que es la banda libre de este carril: la del 600 al
 /// 607 la gasta <c>UnaEstanteriaBloqueadaSigueExistiendoTests</c>, y <c>empresas.nif</c> es único
 /// en un contenedor que toda la colección comparte.
 /// </para>
@@ -100,6 +101,40 @@ public sealed class ElPuertoDeSeriesTests(PostgresDeVerdad postgres)
             "sociedades de la misma instalación (R8)");
     }
 
+    [Fact]
+    public async Task Lo_que_numera_una_serie_es_su_tipo_y_las_fechas_de_su_ejercicio()
+    {
+        // De recuentos y no del tipo por omisión de `SerieAsync`: un puerto que contestara siempre
+        // «ajustes» saldría verde con la serie por omisión.
+        Guid propia = await EmpresaAsync(624);
+        Guid ajena = await EmpresaAsync(625);
+
+        Serie deRecuentos = await SerieAsync(propia, "PSE-NUM", cerrada: false, TipoDeDocumento.RecuentoDeInventario);
+        Serie deLaAjena = await SerieAsync(ajena, "PSE-NUM-AJ", cerrada: false);
+
+        (await LoQueNumeraAsync(propia, deRecuentos.Id)).ShouldBe(new LoQueNumeraUnaSerie(
+            nameof(TipoDeDocumento.RecuentoDeInventario),
+            new DateOnly(s_momento.Year, 1, 1),
+            new DateOnly(s_momento.Year, 12, 31)));
+
+        (await LoQueNumeraAsync(ajena, deLaAjena.Id)).ShouldNotBeNull(
+            "desde su propia empresa contesta; si no, el `null` de abajo no diría nada del filtro");
+
+        (await LoQueNumeraAsync(propia, deLaAjena.Id)).ShouldBeNull(
+            "y desde otra empresa contesta lo mismo que una inventada (R8)");
+
+        (await LoQueNumeraAsync(propia, Guid.CreateVersion7())).ShouldBeNull();
+    }
+
+    private async Task<LoQueNumeraUnaSerie?> LoQueNumeraAsync(Guid empresaId, Guid serieId)
+    {
+        await using OrganizacionDbContext contexto = AbrirContexto(empresaId);
+
+        ConsultaDeSeries puerto = new(contexto);
+
+        return await puerto.LoQueNumeraAsync(serieId, CancellationToken.None);
+    }
+
     private async Task<EstadoDeMaestro> EstadoAsync(Guid empresaId, Guid serieId)
     {
         await using OrganizacionDbContext contexto = AbrirContexto(empresaId);
@@ -131,8 +166,10 @@ public sealed class ElPuertoDeSeriesTests(PostgresDeVerdad postgres)
     /// <param name="empresaId">Empresa dueña de las dos filas.</param>
     /// <param name="codigo">Código de la serie, único dentro de empresa y ejercicio.</param>
     /// <param name="cerrada">Si se cierra nada más crearla.</param>
+    /// <param name="tipo">Qué documentos numera.</param>
     /// <returns>La serie guardada.</returns>
-    private async Task<Serie> SerieAsync(Guid empresaId, string codigo, bool cerrada)
+    private async Task<Serie> SerieAsync(
+        Guid empresaId, string codigo, bool cerrada, TipoDeDocumento tipo = TipoDeDocumento.AjusteDeInventario)
     {
         var ejercicio = Ejercicio.Crear(
             empresaId,
@@ -146,7 +183,7 @@ public sealed class ElPuertoDeSeriesTests(PostgresDeVerdad postgres)
         var serie = Serie.Crear(
             empresaId,
             ejercicio.Id,
-            TipoDeDocumento.AjusteDeInventario,
+            tipo,
             codigo,
             "{serie}-{numero:0000}",
             s_momento);

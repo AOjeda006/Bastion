@@ -340,6 +340,12 @@ export const en: Diccionario = {
         'using unaccented letters, digits and the symbols GS1 allows. Fix the serial number.',
       'recuento-serie-cerrada':
         'One of the two series is closed: the count series or the adjustment series. Pick another.',
+      'recuento-serie-de-otro-documento':
+        'One of the two series numbers another document: the count series must be for stock ' +
+        'counts, and the adjustment series for adjustments. Pick the right one for each.',
+      'recuento-serie-de-un-ejercicio-terminado':
+        'One of the two series belongs to a fiscal year that has already ended, and the stock ' +
+        'count is numbered with the date it is confirmed. Pick a series from the current year.',
       'recuento-serie-no-encontrada':
         'One of the two series does not exist: the count series or the adjustment series. Pick one from the series master.',
       'recuento-serie-repetida':

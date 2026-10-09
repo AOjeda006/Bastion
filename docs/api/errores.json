@@ -131,6 +131,8 @@
     { "codigo": "recuento-no-esta-en-curso", "type": "/errors/recuento-no-esta-en-curso", "clase": "Conflicto" },
     { "codigo": "recuento-numero-de-serie-no-valido", "type": "/errors/recuento-numero-de-serie-no-valido", "clase": "Validacion" },
     { "codigo": "recuento-serie-cerrada", "type": "/errors/recuento-serie-cerrada", "clase": "Conflicto" },
+    { "codigo": "recuento-serie-de-otro-documento", "type": "/errors/recuento-serie-de-otro-documento", "clase": "Conflicto" },
+    { "codigo": "recuento-serie-de-un-ejercicio-terminado", "type": "/errors/recuento-serie-de-un-ejercicio-terminado", "clase": "Conflicto" },
     { "codigo": "recuento-serie-no-encontrada", "type": "/errors/recuento-serie-no-encontrada", "clase": "Validacion" },
     { "codigo": "recuento-serie-repetida", "type": "/errors/recuento-serie-repetida", "clase": "Conflicto" },
     { "codigo": "recuento-sin-ejercicio", "type": "/errors/recuento-sin-ejercicio", "clase": "Conflicto" },

@@ -10,8 +10,8 @@ namespace Bastion.Inventario.Application;
 /// lista.
 /// </para>
 /// <para>
-/// <b>Cada valor dice en qué series numera</b> en <c>NumeradorDeSeriesDeInventario.SeriesDe</c>, y
-/// el que no lo diga lanza: un documento nuevo no numera por defecto en las series de otro.
+/// <b>Cada valor dice en qué series numera</b> en <see cref="SeriesDeInventario.De"/>, y el que no
+/// lo diga lanza: un documento nuevo no numera por defecto en las series de otro.
 /// </para>
 /// </remarks>
 public enum DocumentoQueNumera

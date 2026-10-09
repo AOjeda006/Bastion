@@ -52,4 +52,27 @@ internal sealed class ConsultaDeSeries(OrganizacionDbContext contexto) : IConsul
                 "La serie está en un estado que este puerto no sabe traducir a `EstadoDeMaestro`."),
         };
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <b>El tipo se proyecta como enumerado y se escribe por su nombre fuera de la consulta</b>:
+    /// la columna guarda el nombre, y así el texto que sale es el mismo que compara la sentencia que
+    /// numera, sin depender de cómo traduzca EF Core un <c>ToString()</c> sobre un valor convertido.
+    /// </remarks>
+    public async Task<LoQueNumeraUnaSerie?> LoQueNumeraAsync(Guid serieId, CancellationToken cancelacion)
+    {
+        // Las dos tablas llevan el filtro de la R8, así que una serie de otra empresa tampoco llega
+        // aquí: el mismo `null` que una inventada.
+        var fila = await (
+                from serie in contexto.Series
+                join ejercicio in contexto.Ejercicios on serie.EjercicioId equals ejercicio.Id
+                where serie.Id == serieId
+                select new { serie.TipoDeDocumento, ejercicio.FechaDeInicio, ejercicio.FechaDeFin })
+            .FirstOrDefaultAsync(cancelacion)
+            .ConfigureAwait(false);
+
+        return fila is null
+            ? null
+            : new LoQueNumeraUnaSerie(fila.TipoDeDocumento.ToString(), fila.FechaDeInicio, fila.FechaDeFin);
+    }
 }

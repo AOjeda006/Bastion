@@ -47,6 +47,7 @@ public sealed class ElCensoDeEsteCarrilTests
 
         // Del ítem 2.4: el puerto de series, que estrena el consumidor del ajuste.
         "ElPuertoDeSeriesTests.La_serie_activa_se_ofrece_y_la_que_no_esta_no_existe",
+        "ElPuertoDeSeriesTests.Lo_que_numera_una_serie_es_su_tipo_y_las_fechas_de_su_ejercicio",
         "ElPuertoDeSeriesTests.Una_serie_cerrada_sigue_resolviendo_lo_viejo_y_no_se_ofrece",
         "ElPuertoDeSeriesTests.Una_serie_de_otra_empresa_contesta_lo_mismo_que_una_que_no_existe",
 
