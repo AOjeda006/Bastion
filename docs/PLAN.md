@@ -10161,11 +10161,11 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
        los dos en 10 ensamblados, los mismos que en el cierre del 2.12;
      - el presupuesto, **437/450** y **699/900** KiB, uno más en cada cifra que en el cierre del
        2.12, de `48df530`;
-     - las dependencias, con `python scripts/dependencias-por-conjuntos.py df1e44d HEAD`: no entra ni sale ningún par, ningún proyecto y ninguna entrada del
-       frontal.
+     - las dependencias, con `python scripts/dependencias-por-conjuntos.py df1e44d HEAD`: no entra
+       ni sale ningún par, ningún proyecto y ninguna entrada del frontal.
    - **Los commits del epílogo**, desde `df1e44d`, contados con `git log --format='%h %G? %s'
-     df1e44d..HEAD`, son **ocho** con éste, todos con firma `G` y sin una línea de *trailer*
-     (`git log --format='%(trailers)' df1e44d..HEAD`, vacío):
+     df1e44d..HEAD`, son **ocho** con `97e0502`, el del cierre, todos con firma `G` y sin una
+     línea de *trailer* (`git log --format='%(trailers)' df1e44d..HEAD`, vacío):
 
      | Commit | Qué | Run de rama |
      |---|---|---|
@@ -10175,12 +10175,25 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
      | `44262a8` | la huella, segundo disparador del recuento cíclico | 37907463062, con `941b8c8` |
      | `22ff831` | el ajuste se valora y se confirma en un solo sitio | 37907463062, con `941b8c8` |
      | `941b8c8` | los dos *workflows* cortados y la revisión del 2.12 | 37907463062 |
-     | `4e8117d` | el empujón del tránsito dice lo que se midió | sube con éste |
-     | éste | el cierre del epílogo | el siguiente commit lo anota |
+     | `4e8117d` | el empujón del tránsito dice lo que se midió | 37913359228, con `97e0502` |
+     | `97e0502` | el cierre del epílogo | 37913359228 |
 
-     Los tres runs anotados salieron en verde al primer intento. Este commit sube con `4e8117d`, y
-     su run lo anota el commit siguiente, que espera su propio verde en la rama antes de que `main`
-     avance. El run de `main`, al abrir la rama de la subida de vitest.
+     Los cuatro runs salieron en verde al primer intento.
+   - **El run de rama de `97e0502`**, el del cierre, es el
+     [37913359228](https://github.com/AOjeda006/Bastion/actions/runs/37913359228): **success al
+     primer intento**.
+     - Sus tres jobs: Frontal `113763539171`, Backend `113763539583` y Humo `113767168997`.
+     - **68 pasos: 67 en verde y 1 omitido**, *Diagnóstico*, que tiene `if: failure()`.
+     - Dice lo mismo que la batería: **1356** y **651** casos con **10 `.trx`** en cada artefacto,
+       **149** operaciones y **90** rutas `/api/v1/`, **201** tipos de error de **208** sitios, y
+       **437/450** y **699/900** KiB. La anotación de la herramienta sigue diciendo 2 críticas, 1
+       alta y 1 moderada, en `@vitest/mocker`, `source-map-js`, `tinypool` y `vitest`: es lo que
+       arregla la subida de vitest.
+     - Leído con `python leer-run27.py 37913359228`, un guion del *scratchpad*.
+
+     Subió con `4e8117d`, así que su verde es también el suyo. Este commit, que lo anota, es el
+     noveno de la rama, y espera su propio verde antes de que `main` avance. El run de `main` se
+     anota al abrir la rama de la subida de vitest.
 
 Después vienen la subida de vitest y la puerta del 2.13, cada una en su rama.
 
