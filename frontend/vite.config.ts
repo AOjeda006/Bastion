@@ -44,7 +44,9 @@ export default defineConfig({
     // detecta un agente de IA por el entorno (`AI_AGENT`, `CLAUDECODE`…) y cambia al informe
     // `agent`, que se calla la consola de los casos en verde: los avisos de `act()` dejan de salir
     // en el registro, y el cero de la batería ya no mide nada. Medido con un canario que provoca
-    // uno: 1 con esta línea, 0 sin ella.
-    reporters: ['default'],
+    // uno: 1 con esta línea, 0 sin ella. Fijarlo apaga también lo otro que vitest pone cuando no se
+    // configura nada: `github-actions`, que en la CI anota los casos rojos y escribe el resumen del
+    // job. Por eso se pide aquí, con la misma condición con la que lo pide vitest.
+    reporters: process.env.GITHUB_ACTIONS === 'true' ? ['default', 'github-actions'] : ['default'],
   },
 });
