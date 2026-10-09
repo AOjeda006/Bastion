@@ -10848,6 +10848,12 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
 9. Las reservas: el esquema y su migración, el dominio, los casos de uso, la lectura del
    disponible en `Contracts`, la transferencia frente al disponible, las carreras, la propiedad y
    la doble flecha.
+   - **Hecho, el dominio**, en `feat(inventario): la reserva, su consumo y su caducidad, en el
+     dominio`: `Reserva`, `ConsumoDeReserva`, `LineaDeConsumo`, sus tres enumerados y `Albaran`
+     en `TipoDeDocumentoOrigen`, con 59 casos (`dotnet test tests/Inventario.UnitTests --filter
+     "FullyQualifiedName~Reservas"`). El glosario y los identificadores ajenos, en el mismo commit.
+   - **Lo siguiente**: el esquema y la migración, que quita `reservado` y `disponible` de
+     `existencias`.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

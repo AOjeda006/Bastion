@@ -1148,6 +1148,56 @@ internal static class Inventario
                 "nadie cuente horas contra una serie que no sirve, y el `WHERE` del numerador al " +
                 "confirmar, que es la guarda (ADR-0055 §1.3)."),
 
+            // LAS DEL ÍTEM 2.13. La reserva la pide una línea de un documento de Ventas, que todavía
+            // no existe: el origen no apunta a un tipo, y el consumo guarda el albarán que la consumió.
+            // La clave la pregunta reservar, por el estado, como el alta del ajuste (ADR-0059 §5).
+            ["ConsumoDeReserva.DocumentoId"] = new(
+                "",
+                "",
+                "NO APUNTA A UN TIPO, como el documento de origen de la fila del libro: cuál es lo " +
+                "dice DocumentoTipo, y en el 2.13 es un albarán, que vive en Ventas. Inventario no " +
+                "puede leer su tabla, así que la flecha no la sostiene un puerto: la cierra la " +
+                "doble flecha contra las filas del libro con ese mismo documento (ADR-0059 §8)."),
+
+            ["LineaDeConsumo.UbicacionId"] = new(
+                "Ubicacion",
+                Raiz + ".Organizacion.Contracts.Ubicaciones.IConsultaDeUbicaciones",
+                "no se pregunta al consumir: lo que dice si hay algo que sacar es el físico del " +
+                "hueco en el almacén de la reserva, que se mira con la clave bloqueada (ADR-0059 " +
+                "§6). Solo hay físico donde un documento lo metió, y ese preguntó por este puerto."),
+
+            ["Reserva.AlmacenId"] = new(
+                "Almacen",
+                Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
+                "gemelo del del ajuste: lo pregunta reservar, por el ESTADO, y un almacén que no " +
+                "está activo no admite una reserva nueva (ADR-0059 §5)."),
+
+            ["Reserva.ArticuloId"] = new(
+                "Articulo",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeArticulos",
+                "gemelo del de la línea del ajuste: reservar pregunta si el artículo se almacena, y " +
+                "después su unidad base, por el mismo puerto."),
+
+            ["Reserva.EmpresaId"] = new(
+                "Empresa",
+                Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
+                "gemelo del del ajuste: sale del inquilino de la operación, nunca de lo que se pide."),
+
+            ["Reserva.OrigenId"] = new(
+                "",
+                "",
+                "NO APUNTA A UN TIPO: cuál es lo dice OrigenTipo, y en el 2.13 es una línea de un " +
+                "pedido de venta, de la fase 4. Nadie lo valida aquí, porque Ventas todavía no " +
+                "contesta; lo que sí se sostiene es que un origen tiene una reserva como mucho, con " +
+                "el índice único del origen (ADR-0059 §12)."),
+
+            ["Reserva.UnidadBaseId"] = new(
+                "UnidadMedida",
+                Raiz + ".Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida",
+                "gemela de la de la línea del recuento: la base del artículo, copiada al reservar " +
+                "de lo que contesta Catálogo, que la preguntó por este puerto en el alta del " +
+                "artículo. La salida del consumo va en ella con factor uno (ADR-0059 §12)."),
+
             ["Valoracion.AlmacenId"] = new(
                 "Almacen",
                 Raiz + ".Organizacion.Contracts.Almacenes.IConsultaDeAlmacenes",
