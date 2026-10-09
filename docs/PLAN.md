@@ -10007,10 +10007,13 @@ en `a68641c` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 2. ~~Contar no pisa lo que contó otra persona.~~ El código, en `48df530`, con su run de rama
    37709935728 en verde. El recorrido con dos contextos de navegador y la reescritura de la 350 van
    con la tanda (6).
-3. ~~La propiedad gana el recuento.~~ En el commit `test(inventario): la propiedad gana el
-   recuento`: las seis clases nuevas en las seis semillas, los dos invariantes y dos empujones
-   medidos, el del tránsito y el del descarte. Su tanda va con la del 6.
-4. La huella, segundo disparador del recuento cíclico.
+3. ~~La propiedad gana el recuento.~~ En `b970493`, con su run de rama 37713964979 en verde: las
+   seis clases nuevas en las seis semillas, los dos invariantes y dos empujones medidos, el del
+   tránsito y el del descarte. Su tanda va con la del 6.
+4. ~~La huella, segundo disparador del recuento cíclico.~~ Hecho en su commit: una nota abierta en
+   *Notas / riesgos*, con los dos disparadores. El ADR-0055, que deja abierto el recuento cíclico
+   con el primero, no se toca: no cambia nada de lo que decide, y la nota dice de dónde sale el
+   segundo.
 5. Los dos *workflows* cortados, y la revisión del diff del 2.12 con la del arnés.
 6. La tanda, la batería y los runs.
 
@@ -18402,6 +18405,14 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-10-08, encargo del usuario) · el recuento cíclico tiene un segundo disparador, la
+  huella.** El ADR-0055 deja el recuento por ubicación para el cierre de la fase con uno: el primer
+  almacén que no se pueda contar de una vez. El segundo es la huella, que es la del teórico de todas
+  las líneas y, con la precarga, la del almacén entero: en uno con movimiento continuo, cualquier
+  entrada o salida de una clave contada entre leer la ficha y confirmar da el `409`
+  `recuento-teorico-cambiado`, y el recuento puede no llegar a confirmarse nunca. El primero de los
+  dos que se dé abre la pregunta, que no se decide aquí.
 
 - **ABIERTA (2026-09-28, encargo del usuario) · ¿trae algún ítem, hasta el 2.14, el alta, el
   listado y la ficha del ajuste, y la lectura de las existencias?** Es pregunta del **cierre de la
