@@ -10283,7 +10283,34 @@ en `df1e44d` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
      generado en el *scratchpad* y borrado al salir. Da **0 fallos**: las imágenes se construyen, el
      migrador sale con 0, la API y el frontal quedan sanos, y el segundo arranque sale en verde. El `down -v` lleva su `-p`, y
      el proyecto `bastion` no se tocó.
-6. Los runs.
+6. Los runs. **El run de rama**, el
+   [37920875785](https://github.com/AOjeda006/Bastion/actions/runs/37920875785), sobre `6b957e0`,
+   sale en verde al primer intento. Lo lee `python leer-run27.py 37920875785`:
+   - sus jobs, Frontal `113788223620`, Backend `113788223911` y Humo `113790819475`;
+   - 68 pasos, 67 en verde y 1 omitido, *Diagnóstico*;
+   - **1356** y **651** casos con **10 `.trx`** en cada artefacto, **149** operaciones y **90**
+     rutas, **201** tipos de **208** sitios, y **437/450** y **699/900** KiB, las mismas cifras que
+     en el run de `main` del epílogo;
+   - y la anotación de la auditoría entera, que en ese run decía 2 críticas, 1 alta y 1 moderada,
+     dice ahora «0 críticas, 0 altas, 0 moderadas y 0 bajas, en ninguno».
+
+   **Los commits de la subida**, contados con `git log --format='%h %G? %s' b2c5021..HEAD`, son
+   **siete** antes de éste, todos con firma `G` y sin una línea de *trailer*
+   (`git log --format='%(trailers)' b2c5021..HEAD`, vacío):
+
+   | Commit | Qué | Run de rama |
+   |---|---|---|
+   | `00c1912` | el run de `main` del epílogo del 2.12 y la apertura | 37920875785, con `6b957e0` |
+   | `4f0e055` | `source-map-js` 1.2.2 | 37920875785, con `6b957e0` |
+   | `5edf198` | `vitest` 4.1.11, con el informe fijado y los tipos de Node | 37920875785, con `6b957e0` |
+   | `5654fb9` | la CI vuelve a anotar los casos rojos | 37920875785, con `6b957e0` |
+   | `14603ab` | el ADR-0058 | 37920875785, con `6b957e0` |
+   | `02645cf` | la nota del ADR-0045 | 37920875785, con `6b957e0` |
+   | `6b957e0` | la batería y el humo | 37920875785 |
+   | éste | el run de rama | el siguiente commit lo anota |
+
+   Este commit, que lo anota, espera su propio verde en la rama antes de que `main` avance. El run
+   de `main` se anota al abrir la rama del 2.13.
 
 Después viene la puerta del 2.13, en su rama.
 
