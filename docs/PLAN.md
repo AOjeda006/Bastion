@@ -10247,11 +10247,13 @@ en `df1e44d` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
      La rama `epilogo-2.12` se borró después, en local y en el remoto. Anotado al abrir la subida
      de vitest.
 
-**La subida de vitest, en curso** desde el 2026-10-09, en la rama `subida-de-vitest`, abierta desde
-`main` en `b2c5021`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
-2026-10-08 → La subida de vitest, como unidad aparte*.
+**La subida de vitest, cerrada** el 2026-10-09, en la rama `subida-de-vitest`, abierta desde
+`main` en `b2c5021` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
+del 2026-10-08 → La subida de vitest, como unidad aparte*. No tiene mutaciones numeradas, así que
+la siguiente sigue siendo la **373**. Su ADR es el **0058**, y el siguiente, el **0059**, es el del
+2.13.
 
-**Lo que queda, por este orden:**
+**Lo que quedaba, por este orden:**
 
 1. ~~El run de `main` del epílogo del 2.12, anotado.~~ Hecho en el primer commit de la rama: el
    37916215471, en *El epílogo del 2.12, cerrado*.
@@ -10311,8 +10313,35 @@ en `df1e44d` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 
    Este commit, que lo anota, espera su propio verde en la rama antes de que `main` avance. El run
    de `main` se anota al abrir la rama del 2.13.
+   - **El run de rama de `5aedf60`**, el commit que lo anota, es el **37922112543**. Sale en verde
+     al primer intento, con sus jobs Backend `113792255868`, Frontal `113792256077` y Humo
+     `113794297651`, 68 pasos, 67 en verde y 1 omitido, y **1356** y **651** casos. `main` avanzó a
+     `5aedf60` con `--ff-only` después de ese verde. **El run de `main`**, el
+     [37923169866](https://github.com/AOjeda006/Bastion/actions/runs/37923169866), sale en verde
+     al primer intento:
+     - sus jobs, Frontal `113795739762`, Backend `113795740296` y Humo `113798882181`;
+     - 68 pasos, 67 en verde y 1 omitido, *Diagnóstico*;
+     - las mismas cifras: **1356** y **651** casos con **10 `.trx`** en cada artefacto, **149**
+       operaciones y **90** rutas, **201** tipos de **208** sitios, y **437/450** y **699/900**
+       KiB. La anotación de la auditoría entera dice «0 críticas, 0 altas, 0 moderadas y 0 bajas,
+       en ninguno». Leído con `python leer-run27.py 37923169866`.
 
-Después viene la puerta del 2.13, en su rama.
+     La rama `subida-de-vitest` se borró después, en local y en el remoto. Anotado al abrir el
+     2.13.
+
+**La puerta del 2.13, en curso** desde el 2026-10-09, en la rama `2.13-las-reservas`, abierta desde
+`main` en `5aedf60`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-08 → El 2.13: las reservas y el disponible, hasta su puerta*. Sus mutaciones empiezan en la
+**373**, y su ADR es el **0059**.
+
+**Lo que queda, por este orden:**
+
+1. ~~El run de `main` de la subida de vitest, anotado.~~ Hecho en el primer commit de la rama: el
+   37923169866, en *La subida de vitest, cerrada*.
+2. La puerta, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0059 decide sin
+   preguntar.
+3. Parar y preguntar, todo junto. El ADR-0059 y el código esperan a las respuestas, como en el
+   2.12.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
