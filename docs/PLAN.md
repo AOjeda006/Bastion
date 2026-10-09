@@ -10259,8 +10259,9 @@ en `df1e44d` y ya borrada. Lo que pide está en *Decisiones tomadas → Traídas
 3. ~~`vitest`, hasta la versión que deje la auditoría sin críticas ni altas, en su commit y sin
    `--force`.~~ Hecho en `5edf198`, la 4.1.11, con el informe de la CI devuelto en `5654fb9`. Lo
    que se decidió, en *Tomadas por el agente de desarrollo — la subida de vitest*.
-4. La nota en la cabecera del ADR-0045, la batería, el humo y los runs. El ADR-0058, con la línea de
-   `AGENTS.md`, está hecho.
+4. ~~La nota en la cabecera del ADR-0045.~~ Hecha, con los tres commits de la subida. El ADR-0058,
+   con la línea de `AGENTS.md`, también.
+5. La batería, el humo y los runs.
 
 Después viene la puerta del 2.13, en su rama.
 

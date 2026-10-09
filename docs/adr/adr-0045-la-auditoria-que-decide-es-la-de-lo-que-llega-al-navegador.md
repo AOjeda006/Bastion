@@ -8,7 +8,18 @@ revisado: 2026-09-28
 
 # ADR-0045: La auditoría que decide es la de lo que llega al navegador
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **El disparador de `vitest` se cumplió, y se subió en `4f0e055` y `5edf198`
+  (2026-10-09).** Es el de *Queda, con su disparador*, al final del §3. Lo demás de este ADR sigue
+  entero.
+  - La anotación de la auditoría entera pasó de dos moderadas a **2 críticas, 1 alta y 1
+    moderada**, en `@vitest/mocker`, `source-map-js`, `tinypool` y `vitest`. Es la del run de
+    `main` 37916215471, sobre `b2c5021`. Las críticas eran `tinypool`, que vitest 3 usaba para
+    repartir los ficheros, y `vitest`, que depende de él; la alta, `source-map-js`. El encargo del
+    2026-10-08 lo dio por cumplido.
+  - `4f0e055` lleva `source-map-js` a 1.2.2 con `npm update`, sin salir de los rangos que se
+    piden. `5edf198` lleva `vitest` a 4.1.11, la que nombraba este ADR, sin `--force`. Desde ahí,
+    `npm audit` da **0**, entera y con `--omit=dev`. `5654fb9` le devuelve a la CI el informe
+    `github-actions`, que el primero había apagado sin querer (ADR-0058).
 - **Fecha:** 2026-09-28
 - Sale del segundo de los cinco puntos pequeños del encargo del 2026-09-28, el epílogo del 2.7.
 
