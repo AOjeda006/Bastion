@@ -167,7 +167,7 @@ Ventas:
 
 - **El estado se lee con `Reserva.EstadoEn(ahora)`.** Una reserva guardada `Activa` cuyo
   `caduca_el` no es posterior a `ahora` se lee `Liberada`. El estado guardado no es público: el
-  único que lo lee es `EstadoEn`, y EF lo mapea por su campo.
+  único que lo lee es `EstadoEn`, y EF lo mapea por su nombre, como propiedad privada.
 - **Qué escrituras la liberan: solo las de reservas sobre su clave**, como recomendó el usuario.
   Reservar, consumir y liberar, con la valoración ya bloqueada, cargan las reservas `Activa` de la
   clave con `caduca_el` vencido y las pasan a `Liberada`, con la causa `Caducidad` y

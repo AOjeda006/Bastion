@@ -48,6 +48,11 @@ namespace Bastion.Api.FunctionalTests.Auditoria;
 /// ADR-0015: lo que genera el servidor son los testigos <b>y</b> las columnas calculadas, cada una
 /// en su lista y por su nombre, y cada una comprobada por lo que la hace ser lo que se declara.
 /// </para>
+/// <para>
+/// <b>Y esa columna se fue en el 2.13</b>, con su migración: lo reservado se suma al leer, de las
+/// reservas, y el disponible deja de guardarse (ADR-0059, que enmienda el §8 del ADR-0044). La
+/// lista de las calculadas se queda vacía, y se queda: la siguiente entra declarándose.
+/// </para>
 /// </remarks>
 public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
 {
@@ -109,6 +114,12 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
         // La del ítem 2.12, por lo mismo que los otros dos documentos, y con un trabajo más: toda
         // escritura en una de sus líneas la toca, así que resume el documento entero.
         "Recuento.Version",
+
+        // La del ítem 2.13, y no la pide ninguna carrera: toda escritura sobre una reserva bloquea
+        // antes la valoración de su clave, así que dos no se pisan (ADR-0059 §2). La lleva por lo
+        // mismo que cualquier cosa que se modifica, y es el seguro del día que alguien la escriba
+        // sin ese cerrojo (ADR-0059 §10).
+        "Reserva.Version",
         "Rol.Version",
         "Serie.Version",
         "Tarifa.Version",
@@ -135,7 +146,8 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     // Las dos del ítem 2.3 amplían la lista con un motivo distinto del de los tres hijos del
     // tercero, y por eso llevan el suyo. `LineaDeAjuste` sí es de esa familia: cuelga del ajuste,
     // no tiene ruta propia y lo que gobierna su edición es el testigo del documento. Y
-    // `LineaDeTransferencia`, del 2.11, por lo mismo con la transferencia.
+    // `LineaDeTransferencia`, del 2.11, por lo mismo con la transferencia. Y `ConsumoDeReserva`,
+    // del 2.13, por lo mismo con la reserva: nace al consumir y no cambia nunca (ADR-0059 §10).
     // `MovimientoStock` no: no lleva testigo porque NO SE MODIFICA NUNCA, ni por una ruta ni por
     // ninguna otra vía —la tabla rechaza `UPDATE` en el motor—, y un testigo de concurrencia
     // sobre una fila que nadie puede escribir dos veces no protege de nada. Es el caso que este
@@ -144,6 +156,7 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     private static readonly string[] s_delTipoBaseSinTestigo =
     [
         "CondicionPago",
+        "ConsumoDeReserva",
         "Contacto",
         "CuentaBancaria",
         "LineaDeAjuste",
@@ -171,15 +184,12 @@ public sealed class LasClavesSeConocenAntesDeGuardarTests : IDisposable
     // porque son otra cosa y se comprueban por otra cosa: una calculada no se mete en el `WHERE`
     // de nadie, y un testigo no se calcula de otras columnas.
     //
-    // `Existencia.Disponible` es la primera, del ítem 2.7: el físico menos lo reservado, guardado
-    // por el motor. Lo que la deja entrar sin reabrir la fase única del interceptor es que la
-    // premisa sigue en pie para ella: no es clave, la existencia no se audita, y ninguna escritura
-    // del rastreador la toca —la fila la mueven sentencias crudas, y el motor rechaza cualquier
-    // `INSERT` o `UPDATE` que la nombre—.
-    private static readonly string[] s_calculadasPorElMotor =
-    [
-        "Existencia.Disponible",
-    ];
+    // HOY ESTÁ VACÍA, y se queda (ADR-0059). La primera fue `Existencia.Disponible`, del ítem 2.7:
+    // el físico menos lo reservado, guardado por el motor. Se fue en el 2.13 con su columna,
+    // porque lo reservado pasó a sumarse al leer, de las reservas. La siguiente calculada entra
+    // aquí declarándose, sin reabrir el ADR-0015, si la premisa del interceptor sigue en pie para
+    // ella: que no sea clave, que no se audite, y que ninguna escritura del rastreador la toque.
+    private static readonly string[] s_calculadasPorElMotor = [];
 
     private readonly ApiSinDependencias _api = new();
 

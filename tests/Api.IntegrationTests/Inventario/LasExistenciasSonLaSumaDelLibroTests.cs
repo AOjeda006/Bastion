@@ -95,8 +95,6 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             "el saldo es la suma del libro: 8 - 2 + 4,5");
 
         viva.Fisico.ShouldBe(10.5m);
-        viva.Reservado.ShouldBe(0m, "nada reserva todavía: las reservas llegan con el ítem 2.13");
-        viva.Disponible.ShouldBe(viva.Fisico);
         viva.LoteId.ShouldBeNull("el libro todavía no lleva lote: lo trae el ítem 2.9");
 
         CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, caso.EmpresaId);
@@ -104,58 +102,6 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         cuadre.ExistenciasComparadas.ShouldBe(1, "ha comparado la única clave que hay");
         cuadre.InstantaneasComparadas.ShouldBe(0, "sin corte no hay instantáneas que comparar");
         cuadre.Descuadres.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public async Task Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor()
-    {
-        ElAlmacenDelCaso caso = await UnAlmacenAsync(441, "EXI-B", 451);
-
-        await using (ElModuloDeInventario modulo = new(postgres, caso.EmpresaId))
-        {
-            await ConfirmarAsync(modulo, caso, Hoy, new Linea(0, 5m));
-        }
-
-        // LA RESERVA SE ESCRIBE A MANO porque todavía no hay quien reserve —el ítem 2.13—, y con
-        // ella a cero la resta no se ve: disponible y físico dirían lo mismo tanto con la fórmula
-        // como sin ella. Dentro de una transacción que se deshace, para no dejar en la base una
-        // reserva que nada del sistema ha hecho.
-        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
-        await conexion.OpenAsync();
-        await using NpgsqlTransaction transaccion = await conexion.BeginTransactionAsync();
-
-        await using (NpgsqlCommand reservar = new(
-            "UPDATE inventario.existencias SET reservado = 2 WHERE empresa_id = @empresa " +
-            "RETURNING fisico, reservado, disponible",
-            conexion,
-            transaccion))
-        {
-            reservar.Parameters.AddWithValue("empresa", caso.EmpresaId);
-
-            await using NpgsqlDataReader lector = await reservar.ExecuteReaderAsync();
-
-            (await lector.ReadAsync()).ShouldBeTrue("la clave tiene su fila viva");
-            lector.GetDecimal(0).ShouldBe(5m);
-            lector.GetDecimal(1).ShouldBe(2m);
-            lector.GetDecimal(2).ShouldBe(3m, "disponible es físico menos reservado, y lo calcula el motor");
-        }
-
-        // Y NADIE MÁS LO ESCRIBE: es una columna generada, y el motor rechaza un valor a mano con su
-        // propio código. Sin eso, disponible sería una tercera cifra que alguien tendría que
-        // acordarse de mover a la vez que las otras dos.
-        await using NpgsqlCommand escribirlo = new(
-            "UPDATE inventario.existencias SET disponible = 1 WHERE empresa_id = @empresa",
-            conexion,
-            transaccion);
-
-        escribirlo.Parameters.AddWithValue("empresa", caso.EmpresaId);
-
-        PostgresException rechazo =
-            await Should.ThrowAsync<PostgresException>(() => escribirlo.ExecuteNonQueryAsync());
-
-        rechazo.SqlState.ShouldBe(SoloLaEscribeElMotor, rechazo.MessageText);
-
-        await transaccion.RollbackAsync();
     }
 
     [Fact]
@@ -498,8 +444,8 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         // Una fila viva de una clave que el libro no ha movido nunca.
         (await contexto.Database.ExecuteSqlRawAsync(
             "INSERT INTO inventario.existencias " +
-            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, reservado, en_transito) " +
-            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0, 0)",
+            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, en_transito) " +
+            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0)",
             Guid.CreateVersion7(),
             caso.EmpresaId,
             caso.ArticuloId,
@@ -528,8 +474,8 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
         (await contexto.Database.ExecuteSqlRawAsync(
             "INSERT INTO inventario.existencias " +
-            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, reservado, en_transito) " +
-            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0, 0)",
+            "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, en_transito) " +
+            "VALUES ({0}, {1}, {2}, {3}, {4}, NULL, 2, 0)",
             laCopia,
             caso.EmpresaId,
             caso.ArticuloId,
@@ -731,9 +677,6 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
         await transaccion.RollbackAsync();
     }
-
-    /// <summary>El código con el que PostgreSQL rechaza escribir una columna generada.</summary>
-    private const string SoloLaEscribeElMotor = "428C9";
 
     /// <summary>La fecha de hoy, en el mismo calendario que usa el caso de uso.</summary>
     private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);

@@ -141,12 +141,17 @@ public sealed class LasFechasDicenDeQueTipoSonTests : IDisposable
         // segunda es la que cuenta para el ejercicio y la que lleva su ajuste (ADR-0055 §1.5), así
         // que es de la clase de la de operación; la primera la acompaña para que «no se confirma
         // antes de abrirse» compare dos días y no un día con un instante.
+        //
+        // La del ítem 2.13 es la del consumo de una reserva: el día de la salida, el mismo de las
+        // filas del libro que escribe (ADR-0059 §6). La reserva no tiene ninguna: su caducidad y su
+        // liberación son instantes, porque no toca el libro y no cae en ninguna partición.
         cuantas.Fechas.ShouldBe(
-            16,
+            17,
             "las dos del ejercicio, las dos de la vigencia del impuesto, la del tipo de cambio, " +
             "las dos de la vigencia de la tarifa, las dos de operación del ítem 2.3, los dos " +
             "meses del ítem 2.7, la última de la valoración, del addendum del 2.8, las dos de " +
-            "la transferencia, del 2.11, y las dos del recuento, del 2.12");
+            "la transferencia, del 2.11, las dos del recuento, del 2.12, y la del consumo de una " +
+            "reserva, del 2.13");
     }
 
     private static bool EsDelTipo<T>(IReadOnlyProperty propiedad) =>

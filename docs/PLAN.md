@@ -10852,8 +10852,21 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      dominio`: `Reserva`, `ConsumoDeReserva`, `LineaDeConsumo`, sus tres enumerados y `Albaran`
      en `TipoDeDocumentoOrigen`, con 59 casos (`dotnet test tests/Inventario.UnitTests --filter
      "FullyQualifiedName~Reservas"`). El glosario y los identificadores ajenos, en el mismo commit.
-   - **Lo siguiente**: el esquema y la migración, que quita `reservado` y `disponible` de
-     `existencias`.
+   - **Hecho, el esquema**, en `feat(inventario): las tablas de las reservas, y lo reservado sale
+     de las existencias`. La migración `LasReservas` crea `reservas` y `consumos_de_reserva` y
+     quita las dos columnas, y la proyección deja de escribir `reservado`. El estado guardado es
+     una propiedad privada, porque EF no mapea un campo suelto que no se llame como la propiedad,
+     y el ADR-0059 §4 lo dice así. Se fueron con la columna:
+     - el caso `Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor`;
+     - `Existencia.Disponible` del censo de lo que genera el servidor, que se queda vacío;
+     - la frase de la R3 que lo citaba.
+
+     Entraron en los censos `Reserva.Version`, `ConsumoDeReserva` sin testigo y sin inquilinato,
+     la fecha 17 y las seis `CHECK` del recorrido de las migraciones. Los 21 casos de integración
+     que tocan las existencias y el recorrido, en verde (`dotnet test tests/Api.IntegrationTests
+     --filter` con sus cinco clases).
+   - **Lo siguiente**: los casos de uso —reservar, consumir y liberar—, con sus errores, y la
+     lectura del disponible en `Contracts`. El glosario dirá entonces quién lee el disponible.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

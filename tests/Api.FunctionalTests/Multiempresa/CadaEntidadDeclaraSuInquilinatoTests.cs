@@ -95,6 +95,14 @@ public sealed class CadaEntidadDeclaraSuInquilinatoTests : IDisposable
             "Su ruta empieza por el recuento, y se llega a ella cargándolo: no lleva empresa_id " +
             "porque no hay ninguna consulta que pueda empezar por ella",
 
+        // La del ítem 2.13, con el mismo argumento y otro agregado: el consumo cuelga de la
+        // reserva y se carga con ella. La suma de lo reservado, que lo lee en crudo, llega a él
+        // por la reserva, y compara la empresa en la reserva.
+        ["ConsumoDeReserva"] =
+            "es parte del agregado de la reserva, que sí filtra; no tiene DbSet ni consulta " +
+            "propia. No lleva empresa_id porque no hay ninguna consulta que pueda empezar por ella: " +
+            "se llega siempre desde la reserva, que sí la lleva",
+
         // La del ítem 2.4, y de la misma familia: es la fila del contador de una serie, y quien
         // filtra es la SERIE de la que cuelga. No tiene `DbSet` ni consulta propia, y la sentencia
         // que la escribe -la única que la escribe- comprueba la empresa sobre la fila de `series`

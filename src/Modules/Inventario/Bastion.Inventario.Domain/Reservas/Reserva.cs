@@ -32,8 +32,10 @@ public sealed class Reserva : EntidadBase, IDeInquilino
 
     private readonly List<ConsumoDeReserva> _consumos = [];
 
-    // EL ESTADO GUARDADO, que EF mapea por este campo y que solo lee EstadoEn (ADR-0059 §4).
-    private EstadoDeReserva _estado;
+    // EL ESTADO GUARDADO, privado: EF lo mapea por su nombre, y solo lo lee EstadoEn (ADR-0059 §4).
+    // Es una propiedad y no un campo porque EF solo mapea un campo suelto si se llama como la
+    // propiedad del modelo, y la traza de auditoría diría «Estado».
+    private EstadoDeReserva Estado { get; set; }
 
     private Reserva(
         Guid id,
@@ -59,7 +61,7 @@ public sealed class Reserva : EntidadBase, IDeInquilino
         Cantidad = cantidad;
         UnidadBaseId = unidadBaseId;
         CaducaEl = caducaEl;
-        _estado = EstadoDeReserva.Activa;
+        Estado = EstadoDeReserva.Activa;
     }
 
     private Reserva()
@@ -233,7 +235,7 @@ public sealed class Reserva : EntidadBase, IDeInquilino
     /// <param name="ahora">El instante, el del <c>TimeProvider</c>.</param>
     /// <returns>El estado.</returns>
     public EstadoDeReserva EstadoEn(DateTimeOffset ahora) =>
-        _estado == EstadoDeReserva.Activa && HaVencidoEn(ahora) ? EstadoDeReserva.Liberada : _estado;
+        Estado == EstadoDeReserva.Activa && HaVencidoEn(ahora) ? EstadoDeReserva.Liberada : Estado;
 
     /// <summary>
     /// Si en ese instante la reserva está liberada por su caducidad, se haya escrito ya o no. Es lo
@@ -242,8 +244,8 @@ public sealed class Reserva : EntidadBase, IDeInquilino
     /// <param name="ahora">El instante.</param>
     /// <returns><c>true</c> si caducó.</returns>
     public bool HaCaducadoEn(DateTimeOffset ahora) =>
-        (_estado == EstadoDeReserva.Activa && HaVencidoEn(ahora))
-        || (_estado == EstadoDeReserva.Liberada && Causa == CausaDeLiberacion.Caducidad);
+        (Estado == EstadoDeReserva.Activa && HaVencidoEn(ahora))
+        || (Estado == EstadoDeReserva.Liberada && Causa == CausaDeLiberacion.Caducidad);
 
     /// <summary>Lo que aparta en ese instante: lo pendiente si está activa, y nada si no.</summary>
     /// <param name="ahora">El instante.</param>
@@ -426,7 +428,7 @@ public sealed class Reserva : EntidadBase, IDeInquilino
 
         if (Pendiente == 0m)
         {
-            _estado = EstadoDeReserva.Consumida;
+            Estado = EstadoDeReserva.Consumida;
         }
 
         return filas;
@@ -458,7 +460,7 @@ public sealed class Reserva : EntidadBase, IDeInquilino
                 (HaCaducadoEn(momento) ? $", porque caducó el {CaducaEl:O}." : "."));
         }
 
-        _estado = EstadoDeReserva.Liberada;
+        Estado = EstadoDeReserva.Liberada;
         Causa = CausaDeLiberacion.AMano;
         Motivo = limpio;
         LiberadaEl = momento;
@@ -473,12 +475,12 @@ public sealed class Reserva : EntidadBase, IDeInquilino
     /// <returns><c>true</c> si la ha liberado ahora; <c>false</c> si no había nada que hacer.</returns>
     public bool LiberarSiHaCaducado(DateTimeOffset ahora)
     {
-        if (_estado != EstadoDeReserva.Activa || !HaVencidoEn(ahora))
+        if (Estado != EstadoDeReserva.Activa || !HaVencidoEn(ahora))
         {
             return false;
         }
 
-        _estado = EstadoDeReserva.Liberada;
+        Estado = EstadoDeReserva.Liberada;
         Causa = CausaDeLiberacion.Caducidad;
         LiberadaEl = CaducaEl;
 

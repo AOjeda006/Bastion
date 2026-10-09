@@ -1778,9 +1778,6 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             viva.EnTransito.ShouldBe(
                 secuencia.Transito.GetValueOrDefault(clave),
                 "lo que vuela no es lo enviado sin recibir\n" + secuencia.Relato());
-
-            // LO DISPONIBLE NO CUENTA LO QUE VUELA (ADR-0053 §1): es del destino, pero no está.
-            viva.Disponible.ShouldBe(viva.Fisico, secuencia.Relato());
         }
 
         // UNA SERIE, EN UN SOLO SITIO Y CON UNA UNIDAD COMO MUCHO, CONTANDO LO QUE VUELA (ADR-0053

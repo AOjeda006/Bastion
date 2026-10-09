@@ -47,9 +47,9 @@ public sealed class ElLoteOElNumeroDeSerieNuncaLosDosTests(PostgresConTodosLosMo
                 """
                 INSERT INTO inventario.existencias
                     (id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id,
-                     numero_de_serie_id, fisico, reservado, en_transito)
+                     numero_de_serie_id, fisico, en_transito)
                 VALUES (gen_random_uuid(), '{0}', '{1}', gen_random_uuid(), gen_random_uuid(),
-                        '{2}', '{3}', 1, 0, 0)
+                        '{2}', '{3}', 1, 0)
                 """));
 
         fallo.SqlState.ShouldBe(CheckIncumplido, fallo.MessageText);

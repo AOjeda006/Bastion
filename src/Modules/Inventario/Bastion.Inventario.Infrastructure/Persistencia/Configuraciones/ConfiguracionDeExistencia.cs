@@ -30,9 +30,6 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
     /// </summary>
     internal const string LoteONumeroDeSerie = "ck_existencias_lote_o_numero_de_serie";
 
-    /// <summary>La resta del disponible, dicha en SQL.</summary>
-    internal const string Disponible = "fisico - reservado";
-
     /// <summary>La restricción que impide el stock negativo, que el borde traduce por su nombre.</summary>
     internal const string FisicoNoNegativo = "ck_existencias_fisico_no_negativo";
 
@@ -118,26 +115,18 @@ internal sealed class ConfiguracionDeExistencia : IEntityTypeConfiguration<Exist
             .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
             .IsRequired();
 
-        // SIN valor por omisión: la sentencia que crea la fila escribe el cero ella misma. Un
-        // `DEFAULT` sería otra cosa que genera el servidor, y el censo de lo que genera el servidor
-        // lo cuenta todo.
-        existencia.Property(fila => fila.Reservado)
-            .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
-            .IsRequired();
-
-        // LO QUE VUELA HACIA ESTA FILA (ADR-0053 §1), sin valor por omisión por lo mismo que lo
-        // reservado. Fuera del disponible, que sigue siendo lo que hay en la estantería: lo que no
-        // ha llegado no se puede comprometer.
+        // LO QUE VUELA HACIA ESTA FILA (ADR-0053 §1), SIN valor por omisión: la sentencia que crea la
+        // fila escribe el cero ella misma. Un `DEFAULT` sería otra cosa que genera el servidor, y el
+        // censo de lo que genera el servidor lo cuenta todo. Fuera del disponible, que es lo que hay
+        // en la estantería: lo que no ha llegado no se puede comprometer.
+        //
+        // LO RESERVADO Y EL DISPONIBLE NO ESTÁN AQUÍ desde el 2.13 (ADR-0059 §3, que enmienda el
+        // ADR-0044 §8). Lo reservado es por almacén y no por hueco, y se suma al leer de las reservas
+        // de la clave, con la valoración bloqueada. Una columna por hueco no tendría a cuál de ellos
+        // imputar una reserva.
         existencia.Property(fila => fila.EnTransito)
             .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
             .IsRequired();
-
-        // EL DISPONIBLE LO CALCULA EL MOTOR, guardado y no al vuelo. Así vale igual para el ORM, para
-        // una consulta cruda y para un informe, y no se puede escribir por error: PostgreSQL rechaza
-        // un `INSERT` o un `UPDATE` que lo nombre.
-        existencia.Property(fila => fila.Disponible)
-            .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
-            .HasComputedColumnSql(Disponible, stored: true);
 
         // UNA FILA POR CLAVE, CON EL LOTE Y EL NÚMERO DE SERIE NULOS COMO UN VALOR MÁS. Sin `NULLS NOT
         // DISTINCT`, dos filas con el lote nulo no chocarían nunca, y el `ON CONFLICT` de la sentencia

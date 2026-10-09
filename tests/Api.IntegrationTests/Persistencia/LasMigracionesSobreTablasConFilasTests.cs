@@ -85,6 +85,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_codigos_barras_nivel"] = new([], [("nivel", "'Base'")]),
         ["ck_codigos_barras_unidades_segun_el_nivel"] = new([], [("unidades", "1")]),
         ["ck_condiciones_pago_plazo_legal"] = new([], [("dias_de_plazo", "30")]),
+        ["ck_consumos_de_reserva_cantidad_positiva"] = Relleno.Ninguno,
         ["ck_cortes_de_la_instantanea_mes_es_primer_dia"] =
             new([], [("hasta_el_mes", "date_trunc('month', current_date)::date")]),
         ["ck_existencias_en_transito_no_negativo"] = Relleno.Ninguno,
@@ -126,6 +127,16 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         // inventa `gen_random_uuid()`, así que el índice de uno en curso por almacén no se pisa.
         ["ck_recuentos_numerado_si_se_confirmo"] = new([], [("estado", "'EnCurso'")]),
         ["ck_registros_empresa_o_motivo"] = new(["empresa_id"], []),
+
+        // Las cinco de la reserva, del 2.13, con una activa: la causa, el motivo y la fecha de
+        // liberación admiten nulo y se quedan en nulo, que es lo que lleva una reserva activa. Con
+        // letras inventadas en el estado también cumpliría, pero por no ser ningún estado. La
+        // cantidad y la línea salen positivas del recorrido.
+        ["ck_reservas_caducidad_en_su_fecha"] = Relleno.Ninguno,
+        ["ck_reservas_cantidad_positiva"] = Relleno.Ninguno,
+        ["ck_reservas_liberada_con_causa_y_fecha"] = new([], [("estado", "'Activa'")]),
+        ["ck_reservas_motivo_solo_a_mano"] = Relleno.Ninguno,
+        ["ck_reservas_origen_linea_desde_uno"] = Relleno.Ninguno,
         ["ck_tarifas_vigencia_no_invertida"] = Relleno.Ninguno,
         ["ck_terceros_limite_credito_completo"] = Relleno.Ninguno,
         ["ck_terceros_territorio_fiscal"] = new([], [("territorio_fiscal", "'PeninsulaYBaleares'")]),
