@@ -6578,6 +6578,153 @@ El agente se para en la puerta, como en el 2.12, y pregunta lo que siga abierto.
 `epilogo-2.12`, `subida-de-vitest` y `2.13-las-reservas`, cada una abierta desde `main` cuando la
 anterior ya está dentro y borrada.
 
+#### La puerta del 2.13, preguntada el 2026-10-09
+
+Lo primero, como pide el encargo, es lo que dice el plan maestro. **Dice bastante, y en un punto
+contradice el encargo.**
+
+- **El §7.4 fija el nivel**: «**Reserva** — documento origen, artículo, almacén, cantidad, estado
+  (`Activa`/`Consumida`/`Liberada`), caducidad de la reserva». Es por artículo y almacén, sin lote
+  ni serie y con tres estados. «Caducada» no es un estado.
+- **El §7.4 pone lo reservado en la proyección**: «**Existencias** *(proyección)* — empresa,
+  almacén, artículo, lote: cantidad física, **reservada**, **disponible** (física − reservada)…».
+  Es el mismo texto que dejó la columna `reservado` en cada fila, pero la fila de hoy es más fina:
+  lleva ubicación, lote y serie (ADR-0048), y una reserva por artículo y almacén no cae en ninguna.
+- **El §4 y la R12 fijan el llamante, y aquí está la contradicción.** La regla de frontera 5 dice
+  «escrituras entre módulos, solo por eventos. Un módulo jamás llama a un caso de uso de otro para
+  modificar su estado». La R12 pone «confirmar una venta reserva stock» entre las consecuencias
+  diferidas por *outbox*, y el §7.6 lo repite: «Confirmar un pedido de venta reserva stock (R12:
+  por evento hacia Inventario)». El §8.4 añade un segundo llamante, la orden de fabricación. El
+  encargo recomienda **un puerto en `Contracts`**, y un puerto de escritura es la llamada que el
+  §4 prohíbe. El Anexo A.4 no deja reabrir el §4 sin preguntar, así que se pregunta (punto 7).
+- **El §7.4 dice que reservar más de lo disponible solo se puede con *backorder***, y el *backorder*
+  ya se decidió para la fase 4.
+- **El encargo da por hecho que el 2.13 podría traer el primer proceso periódico del proyecto.** No
+  sería el primero: ya hay dos `BackgroundService`, el publicador de la bandeja de salida y la
+  purga de recibos de Auditoría, cada hora. Sí sería el primero de Inventario.
+
+Cada pregunta lleva su recomendación, marcada con **(R)**.
+
+1. **Dónde vive lo reservado, si la reserva es por artículo y almacén.** Es esquema.
+   - a) **(R)** **No se guarda como cifra: se suma al leer**, de las reservas `Activa` y vigentes de
+     esa clave, con un índice parcial. Así una reserva caducada deja de contar en el instante en
+     que caduca, sin que nadie la libere (punto 4). Y no hay nada que cuadrar contra las reservas,
+     porque no hay copia. El cerrojo de la clave es **una fila por empresa, almacén y artículo**,
+     tomada con el `INSERT … ON CONFLICT DO UPDATE` de la sentencia que anota el libro, que bloquea
+     también la clave que todavía no existe. La columna `existencias.reservado` y el `disponible`
+     generado **se van**, y la migración es limpia, porque valen cero en todas las filas: nada
+     escribe la una ni lee el otro, y el censo de lo que genera el servidor pierde su primera
+     entrada, `Existencia.Disponible`. Si la fase 4 asigna huecos al preparar, lo decide con su
+     esquema.
+   - b) Se guarda en esa fila por clave (`reservado`), y la fila es a la vez el cerrojo. Leer
+     exige restarle lo caducado que nadie ha liberado todavía, y lleva su cuadre contra las
+     reservas, como el tránsito.
+   - c) Se queda en la fila de `existencias`, y la reserva se reparte entre los huecos al
+     reservar. Es elegir hueco al reservar, que el encargo deja para la preparación.
+
+   **Con 1a, el criterio se lee de otra manera.** Dice «`Disponible = Físico − Reservado`
+   respondiendo de verdad en la proyección». El disponible respondería en la lectura de las
+   existencias (punto 7), no en una columna de la proyección. Como el criterio es tuyo, el cambio
+   de lectura se pregunta aquí.
+2. **Las salidas frente a lo reservado.** Se adopta la recomendación del encargo, y queda una
+   precisión.
+   - a) **(R)** El ajuste y el recuento registran la realidad y no se frenan. La transferencia es
+     una decisión y respeta el disponible de su almacén de origen, con un `422` y bajo el cerrojo
+     del punto 1. **La anulación de cualquier documento tampoco se frena**: su inverso corrige un
+     error, no decide una salida nueva.
+   - b) La anulación de una entrada se frena si deja el disponible en negativo, como la
+     transferencia.
+3. **La caducidad.**
+   - a) **(R)** Un **instante** (`caduca_el`, `timestamptz`), **opcional**: la pone quien
+     reserva, y sin ella la reserva dura hasta que se consume o se libera.
+     - **El mecanismo, restar al leer**, con el «ahora» del `TimeProvider` y no el `now()` del
+       motor, para que el reloj congelado de los tests valga también en el SQL.
+     - **El estado se pone al día perezosamente**: quien escribe sobre la clave, bajo su cerrojo,
+       pasa a `Liberada` las caducadas que encuentre.
+     - **El hueco**: una reserva caducada sigue diciendo `Activa` hasta la siguiente escritura
+       sobre su clave. Su lectura la enseña como caducada, y el disponible ya no la cuenta.
+     - Sin proceso periódico. El del 2.14 sigue siendo suyo.
+   - b) Una **fecha**, que caduca al acabar el día. ¿En qué zona? Es la nota abierta de «hoy es el
+     día UTC».
+   - c) Además de restar al leer, un proceso periódico que las libera cada hora, como la purga de
+     recibos. Deja el estado al día, y es un trabajo más que vigilar.
+4. **Consumir, y con qué salida.** En el 2.13 no existe el albarán, y el tipo de documento del
+   libro solo conoce el ajuste y la transferencia.
+   - a) **(R)** **El consumo escribe su salida**, que es lo que dice el §15 de la fase 4: «el
+     albarán consume la reserva». Es un caso de uso de Inventario que recibe la reserva, el
+     documento que sale (tipo e id) y sus líneas con hueco, lote y serie. En una transacción anota
+     la salida en el libro y consume la reserva. En la fase 4 lo llamará quien atienda al albarán,
+     y en el 2.13, los tests. El tipo de documento gana `Albaran`, sin nada que lo cree.
+     - **Dobla la R12, como el ajuste del 2.3**: la reserva y sus filas del libro van en el mismo
+       `COMMIT`. En dos, habría un instante en que lo que sale cuenta dos veces, en el físico y en
+       lo reservado, o uno en que el disponible sube antes de que salga. La fila de la R12 de
+       `docs/dominio/reglas-duras.md` lo cuenta.
+     - **Se puede consumir una parte**, porque el §7.6 admite entregas parciales. La reserva sigue
+       `Activa` con lo que queda, y pasa a `Consumida` cuando se consume entera.
+     - **Una reserva caducada no se consume**: es un `409`. Quien sirve vuelve a reservar o sale
+       contra el disponible.
+   - b) El consumo es solo el cambio de estado, y la fase 4 lo junta con su salida. El 2.13 no
+      podría demostrar que van en la misma transacción.
+5. **Liberar.**
+   - a) **(R)** **Un solo estado, `Liberada`, con su causa**: a mano, con su motivo, o por
+     caducidad. Es lo que da el §7.4. Si se había consumido una parte, lo consumido se queda
+     escrito, y se libera solo el resto.
+   - b) Un cuarto estado, `Caducada`. Se aparta del §7.4.
+6. **El documento origen.** Es esquema.
+   - a) **(R)** **Tipo, identificador y línea**, con un índice único sobre los tres por empresa
+     (punto 7 del encargo). El tipo es un enumerado propio de la reserva, que en el 2.13 solo
+     conoce `PedidoDeVenta`, el valor que necesitan los tests; la orden de fabricación entra con su
+     fase. El índice vale en todos los estados: una línea reserva una vez en su vida. Repetir con
+     la misma cantidad devuelve la reserva que ya hay; con otra cantidad, `409`.
+   - b) El índice único solo sobre las reservas `Activa`, para que una línea liberada pueda volver
+     a reservar. Entonces un evento viejo que se reintentara tras la liberación reservaría otra
+     vez, y lo pararía solo el registro de eventos procesados.
+7. **La superficie y el llamante, la contradicción del §4.**
+   - a) **(R)** **Lo que manda el plan maestro.**
+     - Reservar, consumir y liberar son casos de uso de `Inventario.Application`. En la fase 4 los
+       llamará un manejador de eventos de Inventario, al recibir los del pedido y el albarán. En el
+       2.13 los llaman los tests, directamente.
+     - En `Contracts` entra solo **la lectura del disponible**, por almacén y por lotes de
+       artículos, que es lo que el §4 sí permite. Ahí es donde «responde de verdad».
+     - Nada en HTTP.
+     - **Una reserva rechazada es un resultado, no una excepción.** El publicador de la bandeja
+       reintenta todo evento cuyo manejador lanza, así que un rechazo que lanzara se reintentaría
+       para siempre.
+     - Los eventos de vuelta, como reserva hecha o rechazada, son de la fase 4, con su consumidor.
+   - b) **Lo que dice el encargo**: un puerto de escritura en `Contracts`, que Ventas llamaría en
+     proceso. Es reabrir la regla 5 del §4. El test de arquitectura tendría que admitirlo, y el
+     pedido y la reserva irían en dos transacciones de todos modos, porque cada módulo tiene su
+     contexto.
+8. **El hallazgo 5 de la revisión del 2.12**: al abrir un recuento no se mira de qué documento es
+   cada serie, ni que sean dos distintas. Lo dejó así el ADR-0043, porque la garantía está en la
+   sentencia que numera. Pero en el recuento el error se descubre al confirmar, tras horas de
+   conteo, y la serie no se cambia.
+   - a) **(R)** **Mirarlo al abrir el recuento.** Es la cortesía, y la regla sigue al confirmar.
+     `IConsultaDeSeries` gana la pregunta de qué documento es la serie y de qué ejercicio cuelga,
+     que es una lectura entre módulos. Va en su propio commit en la rama del 2.13, antes del código
+     de las reservas, con su caso.
+   - b) Lo mismo, y además en el alta del ajuste y en la de la transferencia, para que las tres
+     altas pregunten igual.
+   - c) Dejarlo como está.
+
+**Lo que el ADR-0059 decide sin preguntar**, porque lo fijó el encargo o ya es costumbre de la casa:
+- **El cerrojo** es el del punto 1. **Reservar comprueba el disponible bajo él**, y el disponible no
+  cuenta el tránsito (ADR-0053).
+- **La cantidad va en la unidad base del artículo**, que Catálogo publica desde el 2.12.
+- **Reservar exige un artículo apto para moverse y un almacén activo**, como el ajuste.
+- **Una reserva no toca el libro**, así que no tiene fecha contable ni se le aplica la R9.
+- **La concurrencia**, con dos transacciones de verdad:
+  - dos reservas a la vez por las últimas unidades: una sale y la otra recibe el rechazo;
+  - una reserva a la vez que una transferencia.
+
+  La mutación que quita el cerrojo tiene que ponerse roja, y el caso para en la primera transacción
+  con el cerrojo tomado y nada escrito.
+- **La propiedad gana reservar, consumir con su salida, liberar y caducar**, con el reloj
+  congelado. El invariante gana que ninguna reserva se creó por encima del disponible. Con 1a, lo
+  reservado no se guarda, y su cuadre no existe.
+- **El 2.13 dice cuál de las dos situaciones es**: el estado se sabe producir, y lo que falta es el
+  llamante. En la fase 4, el manejador de eventos.
+
 ### Tomadas por el agente de desarrollo — la subida de vitest (2026-10-09)
 
 - **`vitest` 4.1.11, y no la 5.0.3.** El encargo decía que `npm audit` proponía la 5.0.3. Aquí, con
@@ -10338,8 +10485,9 @@ la siguiente sigue siendo la **373**. Su ADR es el **0058**, y el siguiente, el 
 
 1. ~~El run de `main` de la subida de vitest, anotado.~~ Hecho en el primer commit de la rama: el
    37923169866, en *La subida de vitest, cerrada*.
-2. La puerta, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0059 decide sin
-   preguntar.
+2. ~~La puerta, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0059 decide sin
+   preguntar.~~ Hecha en el segundo commit de la rama: *Traídas por el encargo del 2026-10-08 → La
+   puerta del 2.13, preguntada el 2026-10-09*, con ocho preguntas.
 3. Parar y preguntar, todo junto. El ADR-0059 y el código esperan a las respuestas, como en el
    2.12.
 
