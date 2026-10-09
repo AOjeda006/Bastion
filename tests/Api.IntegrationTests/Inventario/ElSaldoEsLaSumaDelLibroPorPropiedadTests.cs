@@ -1046,8 +1046,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// <para>
     /// <b>El empujón del tránsito</b>: lo que vuela hacia el almacén que se cuenta es lo que el conteo
     /// encuentra sin línea (<see cref="LoQueHaLlegadoSinLinea"/>), y lo que hace saltar el <c>409</c>
-    /// del tránsito. Sin él, la 461 y la 462 no lo veían nunca: una clave con físico y con algo en
-    /// vuelo hacia ella casi no se da, y la precarga solo trae las que tienen físico.
+    /// del tránsito. Sin él, la 461 no lo ve nunca, medido con la mutación 370: una clave con físico
+    /// y con algo en vuelo hacia ella casi no se da, y la precarga solo trae las que tienen físico.
     /// </para>
     /// <para>
     /// Por el caso de uso, y no por la API, porque la fecha de apertura sale del reloj y el del
