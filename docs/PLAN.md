@@ -6758,6 +6758,120 @@ Cada pregunta lleva su recomendación, marcada con **(R)**.
 - **Sin mutaciones numeradas.** Los canarios de esta unidad miden la herramienta, no una regla del
   proyecto, y se borraron después de medir. La siguiente mutación sigue siendo la **373**.
 
+### Traídas por el encargo del 2026-10-09 — la puerta del 2.13, contestada
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **19** commits desde `df1e44d`, con 19 firmas válidas y sin *trailers*;
+- los runs **224 a 233** en verde al primer intento;
+- `main` avanzó las dos veces solo después del verde de su rama;
+- las cifras, iguales a las del *runner*: Vitest 4.1.11 da **251** casos sin avisos, y la auditoría
+  está en cero.
+
+El informe no tenía ningún error. **El próximo cuenta desde `acf58e8`, incluido.** Las mutaciones
+empiezan en la **373**, y el ADR es el **0059**.
+
+**El arnés** está al día desde `dbf2664`, así que este encargo no lleva el bloque de puesta al día.
+`arnes-de-agente.md` se lee al empezar cada sesión. La biblioteca no ha cambiado desde `3b45c6b`.
+
+**La regla 5 del §4, reconocida.** El puerto de escritura en `Contracts` que recomendaba el encargo
+del 2026-10-08 es la llamada que el plan maestro prohíbe, y el usuario retira esa recomendación.
+
+#### La puerta del 2.13, contestada: todas (R), con cinco precisiones
+
+Va aquí y en el ADR-0059 tal como la dio el usuario.
+
+1. **(R) Lo reservado se suma al leer**, de las reservas activas y vigentes.
+   - El ADR dice si la fila de cerrojo es la de la valoración. Tiene la misma clave —empresa,
+     artículo y almacén— y ya la bloquea cada movimiento con `INSERT … ON CONFLICT` (ADR-0046 §2).
+   - Si es una fila nueva, dice por qué, en qué eslabón del orden va (ADR-0046, 0048 y 0055 §3) y
+     por qué una reserva y un envío de la misma clave no se interbloquean.
+   - **La lectura de las existencias sigue dando «reservada» y «disponible»**, como pide el §7.4:
+     la proyección es esa lectura.
+   - Las columnas se quitan con su migración, y el censo de lo que genera el servidor pierde
+     `Existencia.Disponible`.
+2. **(R) El ajuste, el recuento y las anulaciones no se frenan.** La transferencia da `422` bajo el
+   cerrojo.
+3. **(R) `caduca_el` es un instante opcional, y no hay proceso periódico.**
+   - **El estado de una reserva se lee siempre con una función que aplica el reloj**: nadie lee
+     «Activa» a secas.
+   - **Una reserva caducada que se libera lleva como fecha de liberación `caduca_el`**, no el
+     momento en que se nota.
+   - El ADR dice qué escrituras la liberan. Recomendación del usuario: solo las de reservas
+     —reservar, consumir y liberar sobre la clave—, para no tocar la sentencia del libro.
+4. **(R) La salida y el consumo van en el mismo commit**: se puede consumir una parte, y una reserva
+   caducada da `409`. El ADR escribe dos cosas:
+   - por qué `Albaran` en `TipoDeDocumentoOrigen` no es la casilla sin productor del 1.10 que evita
+     el ADR-0055 §10: tiene productor, el caso de uso de consumir, y lo que falta es el llamante,
+     que es la situación que nombra el criterio;
+   - cómo se cierra la doble flecha (R13) cuando el documento origen vive en otro módulo.
+     `LaDobleFlechaDelLibroTests` lo nombra como caso propio, sin una excepción general que pueda
+     tapar otros.
+5. **(R) Un solo estado, `Liberada`, con su causa**: a mano con motivo, o por caducidad.
+6. **(R) Tipo, identificador y línea del origen, con índice único en todos los estados.** Volver a
+   reservar una línea liberada, o cambiar la cantidad, queda para la fase 4, con su disparador: el
+   primer pedido que lo necesite.
+7. **(R) Lo que manda el plan maestro.**
+   - Reservar, consumir y liberar son casos de uso de `Inventario.Application`, y un rechazo es un
+     resultado.
+   - En `Contracts`, solo la lectura del disponible, y nada por HTTP.
+   - Qué hace la venta con un rechazo —un evento de vuelta— es de la fase 4, con su disparador
+     escrito.
+8. **(R) La serie se comprueba al abrir el recuento**, en un commit propio antes de las reservas. Es
+   un defecto contra el ADR-0055 §1, que prometía validarla al abrir. Lleva caso y mutación.
+
+#### Antes de las reservas, en la rama del 2.13 y cada uno en su commit
+
+1. El run 37925166436, anotado.
+2. La serie del recuento, el punto 8 de arriba.
+3. **El centinela del canal de `act()`, en la CI y con las dos mitades:**
+   - un caso que escribe una marca en la consola, y un paso que la busca en el registro y falla si
+     no está;
+   - y el mismo paso falla si hay algún aviso de `act()`. Hoy `ci.yml` no los busca: el cero solo
+     lo mide la batería del agente.
+   - Lleva su mutación: borrar el informe fijado en `vite.config.ts` pone el paso en rojo.
+   - Al tocar el *workflow*, se toca la batería de `AGENTS.md`.
+4. **El `tsconfig` de los tests**: el de los tests, con los tipos de Node, y el de la aplicación,
+   sin ellos y sin los ficheros `*.test.*`.
+   - Lleva su canario: un `process.env` en un componente no compila.
+   - Los casos siguen siendo 251, y el presupuesto no se mueve.
+
+#### El 2.13, a partir de aquí
+
+Lo que no cambia la puerta va como en el encargo del 2026-10-08 (*El 2.13: las reservas y el
+disponible, hasta su puerta*):
+
+- ninguna reserva por encima del disponible, comprobado bajo el cerrojo;
+- las carreras: dos reservas por las últimas unidades, y una reserva a la vez que un envío, con dos
+  transacciones de verdad y la mutación que quita el cerrojo, sola, en rojo;
+- la idempotencia por el origen;
+- la propiedad gana reservar, consumir con su salida, liberar y caducar, con el reloj congelado. El
+  invariante gana dos cosas: lo reservado es la suma de las reservas activas y vigentes, y ninguna
+  se creó por encima del disponible.
+
+El ítem dice cuál de las dos situaciones es: el estado se sabe producir, y lo que falta es el
+llamante.
+
+#### Las herramientas de la máquina, en este encargo
+
+- **Los servidores de lenguaje**: el símbolo se busca antes de leer, los diagnósticos de cada
+  edición se abren, y un diagnóstico limpio no sustituye al build ni a los tests.
+- **`/code-review` sobre el diff de cada unidad antes de cerrarla.** Cada hallazgo se comprueba
+  contra el código, y el informe dice cuántos son reales.
+- **Context7 (`ctx7`)**, solo si una API de EF Core 10 o de Npgsql no cuadra, y contrastado con la
+  fuente oficial.
+- Sin pantalla en el 2.13, así que no hace falta `playwright-cli`.
+- `context-mode` está desinstalado: el análisis se programa en vez de leerse.
+
+#### El método
+
+El de siempre: la tanda escrita antes de medir, con una mutación sobre el arnés; las dos listas por
+nombre; commits pequeños y firmados, uno por tema; el humo, porque hay migración; `main` solo avanza
+a un commit ya verde en su rama, y la rama se borra después de su run de `main`; las ediciones de
+`CLAUDE.md`, al principio o al final de la sesión, y la unidad cerrada antes de una pausa larga. El
+informe cuenta todos los commits desde `acf58e8`, con sus runs, y cada cifra va con la orden que la
+mide.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 12 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -10476,10 +10590,10 @@ la siguiente sigue siendo la **373**. Su ADR es el **0058**, y el siguiente, el 
      La rama `subida-de-vitest` se borró después, en local y en el remoto. Anotado al abrir el
      2.13.
 
-**La puerta del 2.13, en curso** desde el 2026-10-09, en la rama `2.13-las-reservas`, abierta desde
-`main` en `5aedf60`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
-2026-10-08 → El 2.13: las reservas y el disponible, hasta su puerta*. Sus mutaciones empiezan en la
-**373**, y su ADR es el **0059**.
+**El 2.13, en curso** desde el 2026-10-09, en la rama `2.13-las-reservas`, abierta desde `main` en
+`5aedf60`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del 2026-10-08 → El
+2.13: las reservas y el disponible, hasta su puerta*, y la puerta contestada, en *Traídas por el
+encargo del 2026-10-09*. Sus mutaciones empiezan en la **373**, y su ADR es el **0059**.
 
 **Lo que queda, por este orden:**
 
@@ -10488,8 +10602,24 @@ la siguiente sigue siendo la **373**. Su ADR es el **0058**, y el siguiente, el 
 2. ~~La puerta, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0059 decide sin
    preguntar.~~ Hecha en el segundo commit de la rama: *Traídas por el encargo del 2026-10-08 → La
    puerta del 2.13, preguntada el 2026-10-09*, con ocho preguntas.
-3. Parar y preguntar, todo junto. El ADR-0059 y el código esperan a las respuestas, como en el
-   2.12.
+3. ~~Parar y preguntar, todo junto.~~ Contestada el 2026-10-09: todas (R), con cinco precisiones.
+4. ~~El run de rama de `acf58e8`, anotado.~~ Es el
+   [37925166436](https://github.com/AOjeda006/Bastion/actions/runs/37925166436), y anota también
+   `6c8efcf`, que subió con él. Sale en verde al primer intento:
+   - sus jobs, Backend `113802238586`, Frontal `113802238765` y Humo `113805474723`;
+   - 68 pasos, 67 en verde y 1 omitido, *Diagnóstico*;
+   - **1356** y **651** casos con **10 `.trx`** en cada artefacto, **149** operaciones y **90**
+     rutas, **201** tipos de **208** sitios, y **437/450** y **699/900** KiB. La auditoría entera,
+     a cero. Leído con `python leer-run27.py 37925166436`.
+5. La serie del recuento, comprobada al abrir: el defecto contra el ADR-0055 §1, con su caso y su
+   mutación.
+6. El centinela del canal de `act()`, en la CI, con su mutación y la batería de `AGENTS.md`.
+7. El `tsconfig` de los tests, con su canario.
+8. El ADR-0059, con la puerta contestada y lo que decide sin preguntar.
+9. Las reservas: el esquema y su migración, el dominio, los casos de uso, la lectura del
+   disponible en `Contracts`, la transferencia frente al disponible, las carreras, la propiedad y
+   la doble flecha.
+10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
