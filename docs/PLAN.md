@@ -10962,6 +10962,23 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      primera redacción: llevaba `COMMIT` entre comillas invertidas, y no es un tipo del repositorio.
    - **Lo siguiente**: el paso 10.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
+   - **La revisión**, con `/code-review high 2.13-las-reservas` sobre `9b4ba9a`, dio diez
+     hallazgos. Cada uno se comprobó contra el código antes de tocar nada, y **seis son reales**.
+     Cada arreglo va en su commit, con el caso que lo pone rojo, y la tanda se mide después, sobre
+     el código ya arreglado: la medida de antes no valía, porque corrió con Docker parado.
+
+     | # | Hallazgo | Veredicto |
+     |---|---|---|
+     | 1 | Consumir mira si la reserva está activa antes que si ese albarán ya la consumió: el reintento del albarán que la dejó consumida oye `reserva-no-esta-activa` | **Real.** Pendiente |
+     | 2 | La guarda del envío compara lo que sale de la clave con el físico de la clave, no con el del hueco: un envío que se queda corto en su hueco, con el resto apartado, oye el `422` del disponible y no `stock-insuficiente`, contra lo que dice el ADR-0059 §9 | **Real, en lo que dice el ADR.** Pendiente |
+     | 3 | Reservar no mira la marca del artículo, y acepta una cantidad con decimales de uno con número de serie, que no se puede consumir entera | **Real.** Pendiente |
+     | 4 | Consumir no mira si la ubicación de la línea está bloqueada, y el ajuste sí | **Real.** Pendiente |
+     | 5 | Las caducadas se liberan en el rastreador antes de decidir, y un rechazo las deja ahí: la siguiente confirmación del mismo ámbito las escribe sin el cerrojo de su clave | **Real.** Pendiente |
+     | 6 | `consumos_de_reserva` no lleva `empresa_id`, y tiene un índice para buscar por el documento | No pasa: la única lectura por el documento, la ida de la doble flecha, se une a la reserva y compara su empresa, y el agregado se carga siempre por la reserva, que lleva el filtro. El comentario del índice decía «la vuelta», y es la ida: corregido en este commit |
+     | 7 | Los maestros se preguntan con la valoración bloqueada | Es una decisión: el origen va detrás del cerrojo para que dos peticiones iguales se encuentren, y los maestros detrás del origen para que el reintento de una reserva que salió bien la encuentre aunque el artículo ya no sea apto (ADR-0059 §5) |
+     | 8 | `ObtenerPorOrigenAsync` rastrea, y si el contexto ya tenía la reserva la devuelve sin releerla | **Real.** Pendiente |
+     | 9 | La validación del motivo de la liberación copia la del dominio | No es un defecto: es el modismo de los otros documentos, como el 12 de la revisión del 2.12 |
+     | 10 | El envío lee el reloj tres veces | No pasa: lo único que depende del instante es lo reservado, y se lee una vez, con el cerrojo tomado. La fecha compara días, el envío no escribe ninguna reserva, y las otras dos lecturas son anteriores al 2.13 |
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 

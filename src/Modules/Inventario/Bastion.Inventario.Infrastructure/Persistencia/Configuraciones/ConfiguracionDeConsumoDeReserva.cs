@@ -58,7 +58,8 @@ internal sealed class ConfiguracionDeConsumoDeReserva : IEntityTypeConfiguration
             .IsUnique()
             .HasDatabaseName(UnoPorDocumento);
 
-        // LA VUELTA DE LA DOBLE FLECHA busca por el documento (ADR-0059 §8).
+        // LA IDA DE LA DOBLE FLECHA busca los consumos del documento de cada fila del libro, y los
+        // une a su reserva, que es la que lleva la empresa (ADR-0059 §8).
         consumo.HasIndex(fila => new { fila.DocumentoTipo, fila.DocumentoId });
     }
 }
