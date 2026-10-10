@@ -10982,6 +10982,118 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      | 9 | La validación del motivo de la liberación copia la del dominio | No es un defecto: es el modismo de los otros documentos, como el 12 de la revisión del 2.12 |
      | 10 | El envío lee el reloj tres veces | No pasa: lo único que depende del instante es lo reservado, y se lee una vez, con el cerrojo tomado. La fecha compara días, el envío no escribe ninguna reserva, y las otras dos lecturas son anteriores al 2.13 |
 
+   - **La tanda, de la 401 a la 443**, escrita antes de medir en `tanda-reservas.json`, con el
+     cambio, los carriles y los casos esperados de cada una. Se midió con
+     `python -X utf8 mut213r.py <ruta>/tanda-reservas.json comprobar base 401-440`, sobre un
+     *worktree* aparte en `988ff44`, con los arreglos de la revisión, en cinco carriles:
+     - el dominio, `tests/Inventario.UnitTests` con
+       `--filter "FullyQualifiedName~Bastion.Inventario.UnitTests.Reservas"`, con 79 casos;
+     - las sentencias crudas, `tests/Api.FunctionalTests` con `~LasSentenciasDeLaReserva`, con 8;
+     - las reservas, `LasReservasTests`, `ElConsumoDeLaReservaTests`,
+       `LaTransferenciaFrenteAlDisponibleTests` y `LaDobleFlechaDelLibroTests`, con 28;
+     - las carreras, `LasCarrerasDeLaReservaTests`, con 2;
+     - la propiedad, `ElSaldoEsLaSumaDelLibroPorPropiedadTests`, con sus seis semillas.
+
+     Los tres de integración van con `--blame-hang --blame-hang-timeout 4m`. Cada mutación compila
+     la solución una vez, corre sus carriles sin compilar y se revierte con
+     `git restore --source=HEAD` y la fecha de ahora. La base da 0 rojos en los cinco, y el árbol
+     restaurado compila con la porcelana vacía. Las celdas nombran los casos rojos, y las de la
+     propiedad, sus semillas. Una raya es un carril que no se midió:
+
+     | # | Mutación | Dominio, de 79 | Sentencias, de 8 | Reservas, de 28 | Carreras, de 2 | Propiedad, de 6 |
+     |---|---|---|---|---|---|---|
+     | 401 | Sin el FOR NO KEY UPDATE del cerrojo de la reserva | 0 | **1**: `LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.El_cerrojo_es_el_del_UPDATE_y_no_crea_la_fila` | 0 | **2**: `LasCarrerasDeLaReservaTests.Dos_reservas_a_la_vez_la_segunda_espera_y_ve_lo_que_aparto_la_primera`, `LasCarrerasDeLaReservaTests.Una_reserva_y_un_envio_a_la_vez_el_envio_espera_y_no_se_lleva_lo_apartado` | 0 |
+     | 402 | El cerrojo de la reserva, FOR SHARE | 0 | **1**: `LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.El_cerrojo_es_el_del_UPDATE_y_no_crea_la_fila` | 0 | **1**: `LasCarrerasDeLaReservaTests.Dos_reservas_a_la_vez_la_segunda_espera_y_ve_lo_que_aparto_la_primera` | 0 |
+     | 403 | La reserva lee lo reservado antes de su cerrojo | 0 | 0 | 0 | **1**: `LasCarrerasDeLaReservaTests.Dos_reservas_a_la_vez_la_segunda_espera_y_ve_lo_que_aparto_la_primera` | 0 |
+     | 404 | El envío lee lo reservado antes de su cerrojo | 0 | 0 | 0 | **1**: `LasCarrerasDeLaReservaTests.Una_reserva_y_un_envio_a_la_vez_el_envio_espera_y_no_se_lleva_lo_apartado` | 0 |
+     | 405 | La reserva no resta lo reservado: el disponible es el físico | 0 | 0 | **1**: `LasReservasTests.Reservar_aparta_del_disponible_y_no_pasa_de_el` | **1**: `LasCarrerasDeLaReservaTests.Dos_reservas_a_la_vez_la_segunda_espera_y_ve_lo_que_aparto_la_primera` | **5**: en la 460, la 461, la 462, la 464, la 465 |
+     | 406 | La reserva no aparta justo todo lo disponible (> por >=) | 0 | 0 | **8**: `ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir`, `ElConsumoDeLaReservaTests.Por_lote_saca_con_su_lote_y_no_crea_el_que_no_existe`, `ElConsumoDeLaReservaTests.Por_numero_de_serie_saca_pieza_a_pieza`, `LasReservasTests.El_disponible_no_cuenta_lo_que_vuela`, `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale`, `LasReservasTests.Los_maestros_de_la_reserva_contestan_cada_uno_con_su_codigo`, `LasReservasTests.Reservar_aparta_del_disponible_y_no_pasa_de_el`, `LasReservasTests.Sin_fisico_no_hay_nada_que_reservar_y_el_cerrojo_no_crea_la_fila` | 0 | **6**: en las seis |
+     | 407 | La reserva no libera las caducadas de su clave | 0 | 0 | **1**: `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | **6**: en las seis |
+     | 408 | Las caducadas de la clave, de cualquier almacén | 0 | 0 | **1**: `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | 0 |
+     | 409 | Lo reservado cuenta las caducadas guardadas activas | 0 | **1**: `LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Lo_que_cuentan_como_activo_es_lo_que_el_dominio_cuenta` | **2**: `LaTransferenciaFrenteAlDisponibleTests.Una_reserva_caducada_no_frena_el_envio`, `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | **6**: en las seis |
+     | 410 | Lo reservado no resta lo consumido | 0 | 0 | **1**: `ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva` | 0 | **6**: en las seis |
+     | 411 | Lo reservado cuenta también las liberadas | 0 | **1**: `LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Lo_que_cuentan_como_activo_es_lo_que_el_dominio_cuenta` | **2**: `ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva`, `LasReservasTests.Liberar_suelta_lo_que_queda_con_su_motivo` | 0 | **6**: en las seis |
+     | 412 | Lo reservado, de todas las empresas | 0 | **1**: `LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Cada_tabla_compara_la_empresa_contra_el_primer_parametro` | **1**: `LasReservasTests.El_disponible_es_de_la_empresa_que_pregunta_y_de_cada_articulo_pedido` | 0 | 0 |
+     | 413 | El disponible de Contracts no resta lo reservado | 0 | 0 | **5**: `ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva`, `LaTransferenciaFrenteAlDisponibleTests.El_envio_no_se_lleva_lo_reservado_y_lo_disponible_sale`, `LasReservasTests.El_disponible_es_de_la_empresa_que_pregunta_y_de_cada_articulo_pedido`, `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale`, `LasReservasTests.Reservar_aparta_del_disponible_y_no_pasa_de_el` | **2**: `LasCarrerasDeLaReservaTests.Dos_reservas_a_la_vez_la_segunda_espera_y_ve_lo_que_aparto_la_primera`, `LasCarrerasDeLaReservaTests.Una_reserva_y_un_envio_a_la_vez_el_envio_espera_y_no_se_lleva_lo_apartado` | **6**: en las seis |
+     | 414 | El disponible de Contracts lee con el reloj de anteayer | 0 | **1**: `LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio` | **1**: `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | **6**: en las seis |
+     | 415 | El envío, sin la frontera del físico | **1**: `ElDisponibleDeLaSalidaTests.Pasa_del_disponible_entre_el_disponible_y_el_fisico(sale: "10.000001", pasa: False)` | 0 | **1**: `LaTransferenciaFrenteAlDisponibleTests.Hasta_el_fisico_contesta_el_disponible_y_por_encima_el_hueco` | 0 | **6**: en las seis |
+     | 416 | El envío no deja salir justo lo disponible (> por >=) | **3**: `ElDisponibleDeLaSalidaTests.Cada_clave_mira_el_suyo_y_contesta_la_que_pasa`, `ElDisponibleDeLaSalidaTests.Pasa_del_disponible_entre_el_disponible_y_el_fisico(sale: "6", pasa: False)`, `ElDisponibleDeLaSalidaTests.Sin_reservas_sacar_todo_el_fisico_no_pasa` | 0 | **2**: `LaTransferenciaFrenteAlDisponibleTests.El_envio_no_se_lleva_lo_reservado_y_lo_disponible_sale`, `LaTransferenciaFrenteAlDisponibleTests.La_guarda_mira_el_fisico_de_la_clave_y_no_el_del_hueco` | 0 | **6**: en las seis |
+     | 417 | El envío deja que una entrada compense la salida | **1**: `ElDisponibleDeLaSalidaTests.Una_entrada_no_compensa_la_salida` | 0 | 0 | 0 | 0 |
+     | 418 | Consumida entera sigue activa | **4**: `ElConsumoDeLaReservaTests.Consumir_lo_que_queda_la_deja_consumida`, `ElConsumoDeLaReservaTests.Una_reserva_consumida_no_se_vuelve_a_consumir`, `LaCaducidadDeLaReservaTests.Una_consumida_o_liberada_a_mano_no_caduca`, `LaMaquinaDeEstadosDeLaReservaTests.Una_reserva_consumida_no_se_libera` | 0 | **4**: `ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva`, `ElConsumoDeLaReservaTests.La_reserva_se_lee_despues_del_cerrojo_aunque_el_modulo_ya_la_tuviera`, `ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir`, `ElConsumoDeLaReservaTests.Por_numero_de_serie_saca_pieza_a_pieza` | 0 | **6**: en las seis |
+     | 419 | El consumo no escribe en el libro | 0 | 0 | **6**: `ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva`, `ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir`, `ElConsumoDeLaReservaTests.Por_lote_saca_con_su_lote_y_no_crea_el_que_no_existe`, `ElConsumoDeLaReservaTests.Por_numero_de_serie_saca_pieza_a_pieza`, `LaDobleFlechaDelLibroTests.Ningun_consumo_de_reserva_se_queda_sin_su_fila_del_libro`, `LaDobleFlechaDelLibroTests.Ninguna_fila_de_un_albaran_se_queda_sin_el_consumo_que_la_saco` | 0 | **6**: en las seis |
+     | 420 | Las filas del consumo apuntan a otro documento | **1**: `ElConsumoDeLaReservaTests.Cada_linea_es_una_salida_del_albaran_en_la_unidad_base` | 0 | **4**: `ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva`, `ElConsumoDeLaReservaTests.Por_lote_saca_con_su_lote_y_no_crea_el_que_no_existe`, `LaDobleFlechaDelLibroTests.Ningun_consumo_de_reserva_se_queda_sin_su_fila_del_libro`, `LaDobleFlechaDelLibroTests.Ninguna_fila_de_un_albaran_se_queda_sin_el_consumo_que_la_saco` | 0 | 0 |
+     | 421 | El caso de uso del consumo no mira lo pendiente | 0 | 0 | **1**: `ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir` | 0 | 0 |
+     | 422 | El consumo no libera las caducadas de su clave | 0 | 0 | 0 | 0 | 0 |
+     | 423 | La caducada se libera con la fecha de ahora | **1**: `LaCaducidadDeLaReservaTests.Al_pasar_se_libera_con_la_fecha_de_su_caducidad` | 0 | 0 | 0 | **6**: en las seis |
+     | 424 | La misma petición con otra cantidad devuelve la reserva | **1**: `LaCaducidadDeLaReservaTests.Otra_peticion_no_es_la_misma_reserva(queCambia: "cantidad")` | 0 | **1**: `LasReservasTests.El_mismo_origen_devuelve_su_reserva_y_otra_peticion_es_un_conflicto` | 0 | 0 |
+     | 425 | **Arnés**: el barrido de la ida no mira el almacén | 0 | 0 | **1**: `LaDobleFlechaDelLibroTests.Ninguna_fila_de_un_albaran_se_queda_sin_el_consumo_que_la_saco` | 0 | 0 |
+     | 426 | **Arnés**: el generador no libera nunca una caducada a mano | 0 | 0 | 0 | 0 | **6**: en las seis |
+     | 427 | **Arnés**: el modelo no libera las caducadas al pasar | 0 | 0 | 0 | 0 | **6**: en las seis |
+     | 428 | Hallazgo 1: el consumo mira el estado antes que el documento | 0 | 0 | **1**: `ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir` | 0 | 0 |
+     | 429 | Hallazgo 1: el dominio mira el estado antes que el documento | **1**: `ElConsumoDeLaReservaTests.Una_reserva_consumida_no_se_vuelve_a_consumir` | 0 | 0 | 0 | 0 |
+     | 430 | Hallazgo 5: reservar libera las caducadas antes de mirar el disponible | 0 | 0 | **1**: `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | 0 |
+     | 431 | Hallazgo 5: consumir libera las caducadas antes de mirar la reserva | 0 | 0 | **1**: `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | 0 |
+     | 432 | Hallazgo 5: liberar libera las caducadas antes de mirar la reserva | 0 | 0 | **1**: `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | 0 |
+     | 433 | Hallazgo 8: el origen se lee sin soltar lo que el contexto ya tenía | 0 | 0 | **1**: `ElConsumoDeLaReservaTests.La_reserva_se_lee_despues_del_cerrojo_aunque_el_modulo_ya_la_tuviera` | 0 | 0 |
+     | 434 | Hallazgo 3: reservar no mira la marca | 0 | 0 | **1**: `ElConsumoDeLaReservaTests.Por_numero_de_serie_saca_pieza_a_pieza` | 0 | 0 |
+     | 435 | Hallazgo 3: la cantidad entera se pide a toda marca | 0 | 0 | **2**: `LasReservasTests.La_peticion_sin_forma_es_un_400_con_la_frontera_de_cada_campo`, `LasReservasTests.Reservar_aparta_del_disponible_y_no_pasa_de_el` | 0 | **5**: en la 460, la 461, la 462, la 463, la 465 |
+     | 436 | Hallazgo 4: el consumo no mira la ubicación | 0 | 0 | **1**: `ElConsumoDeLaReservaTests.Una_ubicacion_bloqueada_no_suelta_lo_reservado` | 0 | 0 |
+     | 437 | Hallazgo 4: el consumo mira solo la ubicación de la primera línea | 0 | 0 | **1**: `ElConsumoDeLaReservaTests.Una_ubicacion_bloqueada_no_suelta_lo_reservado` | 0 | 0 |
+     | 438 | Hallazgo 4: una ubicación de otro almacén se contesta como bloqueada | 0 | 0 | **1**: `ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir` | 0 | 0 |
+     | 439 | Hallazgo 5: liberar libera las caducadas antes de releer el origen | 0 | 0 | **1**: `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | 0 |
+     | 440 | Hallazgo 5: consumir libera las caducadas antes de releer el origen | 0 | 0 | **1**: `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` | 0 | 0 |
+     | 422, otra vez | El consumo no libera las caducadas de su clave | 0 | 0 | **1**: `LasReservasTests.Consumir_y_liberar_tambien_escriben_las_caducadas_de_su_clave` | 0 | 0 |
+     | 441 | Liberar no libera las caducadas de su clave | 0 | 0 | **1**: `LasReservasTests.Consumir_y_liberar_tambien_escriben_las_caducadas_de_su_clave` | 0 | 0 |
+     | 442 | **Arnés**: el modelo no pasa por la clave al consumir | — | — | — | — | 0 |
+     | 443 | **Arnés**: el modelo no pasa por la clave al liberar | — | — | — | — | 0 |
+
+     **De la «422, otra vez» en adelante, sobre `d44cc31`**, con el caso que cubre la 422: allí las
+     reservas son 29. La «422, otra vez» y la 441 van con `comprobar base 422 441 base`, y la base
+     da 0 en los cinco, antes y después. La 442 y la 443, solo en la propiedad, con
+     `comprobar 442 443`.
+
+     - **La 422 salió verde en los cinco carriles, y la espera decía que la propiedad la vería.**
+       Es un hallazgo. Las caducadas solo las miraba
+       `La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale`, y allí consumir y
+       liberar son rechazos: lo que escribe después es reservar. Se cubrió en `test(inventario):
+       consumir y liberar también escriben las caducadas de su clave` (`d44cc31`), con la semilla
+       857, y se volvió a medir: la «422, otra vez» sale roja en ese caso y en ninguno más, y la
+       441, la misma mutación en liberar, escrita antes de medirla, también.
+     - **La propiedad no la ve porque no pasa por ahí, y lo miden la 442 y la 443.** Quitan el paso
+       por la clave del modelo, al consumir y al liberar, y la propiedad sigue verde en las seis: si
+       un consumo o una liberación pasara por una clave con una caducada guardada activa, el modelo
+       la dejaría activa y la base, liberada. La clase de paso `CaducadaAlPasar` no distingue quién
+       escribe, así que la cobertura no lo pedía. Que consumir y liberar escriben las caducadas lo
+       afirma el caso nuevo, y no la propiedad.
+     - **La 408 la ve el caso de la caducidad, y no la propiedad**, al revés de lo esperado. La
+       escritura en el almacén B, detrás de cada rechazo, liberaría las caducadas del A si la clave
+       no mirara el almacén. En la propiedad, el verde dice que ninguna escritura pasa por un
+       almacén mientras el otro tiene una caducada del mismo artículo guardada activa.
+     - **La 412 y la 414 las ven también las sentencias**, que las esperaban verdes. En la 412,
+       `Cada_tabla_compara_la_empresa_contra_el_primer_parametro` busca la comparación de la
+       empresa por su forma, y entre paréntesis contesta «(ninguna)». En la 414,
+       `El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio` lee los argumentos de la
+       llamada, y la mutación cambia `reloj.GetUtcNow()`.
+     - **La 423 no la ve el caso de la caducidad**, que la esperaba: allí el reloj del módulo es
+       justo la caducidad, y las dos fechas coinciden. La ven el dominio y la propiedad.
+     - **La 413, en otros casos de los esperados.** La espera nombraba `El_mismo_origen…` y
+       `Liberar_suelta…`, que siguen verdes, y no `Consumir_saca…` ni `El_envio_no_se_lleva…`.
+     - **La 405 y la 435, en cinco semillas de seis**: la 463 no ve la 405, y la 464 no ve la 435.
+     - **Más rojos de los esperados, de casos que pasan por la misma línea**: los que apartan o
+       envían justo lo disponible, en la 406 y la 416; `Consumir_saca…`, que libera otra reserva y
+       lee el disponible después, en la 411; y los que consumen entera o miran las filas del
+       albarán, de la 418 a la 420.
+     - **Las del arnés.** La 425 rompe el barrido de la ida, la 426 el generador y la 427 el
+       modelo, y las tres salen rojas donde se esperaba. La 442 y la 443 se esperaban verdes, y lo
+       son: dicen lo que la propiedad no ejerce.
+     - **Los hallazgos de la revisión, de la 428 a la 440, cada uno donde se esperaba.** El 2 se
+       arregló en el ADR y no en el código, y no tiene mutación: su caso,
+       `La_guarda_mira_el_fisico_de_la_clave_y_no_el_del_hueco`, lo ve la 416. La 430, la 431, la
+       432, la 439 y la 440 se midieron antes con la prueba de antes, y eso la endureció: lo cuenta
+       el **ADR-0062**, con su tabla.
+     - La porcelana sale vacía al terminar cada medida, y la siguiente mutación es la **444**.
+   - **Lo siguiente**: el humo, la batería, los runs y el cierre.
+
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
 **En su propio commit, después de cerrar el 2.5 y antes de empezar el 2.6**, porque no es trabajo
