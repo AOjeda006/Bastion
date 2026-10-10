@@ -10927,7 +10927,33 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
        devuelve las dos;
      - **la vuelta**, todo consumo tiene su fila: el arnés lleva un consumo de la reserva de verdad
        cuya única fila está en el otro almacén, y el barrido lo devuelve.
-   - **Lo siguiente**: la propiedad, con las reservas.
+   - **Hecho, la propiedad**, en `test(inventario): la propiedad, con las reservas`. Un quinto
+     generador, con su semilla, trae detrás de uno de cada cuatro pasos uno de las reservas:
+     reservar, consumir con la salida de un albarán, liberar, o enviar todo lo que hay de un
+     artículo apartado. Una de cada cuatro reservas se pide con el reloj de ayer y caduca una hora
+     antes de hoy, sin mover el reloj. El modelo lleva el estado **guardado** de cada una, y el
+     invariante gana tres cosas, tras cada paso:
+     - las reservas guardadas son las del modelo, así que no hay ninguna por encima del disponible;
+     - lo reservado de cada artículo en cada almacén, por el puerto de `Contracts`, es lo pendiente
+       de las activas y vigentes del modelo;
+     - las filas de albarán suman lo que sacaron los consumos, y con las de ajuste, el valor de la
+       empresa.
+
+     Ocho clases de paso nuevas, 31 en total, y las seis semillas pasan por todas, en 20 a 28 s
+     cada una (`dotnet test tests/Api.IntegrationTests --filter
+     "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests"`).
+
+     **Los pasos suben de 160 a 260.** Sin reservas, la 464 anulaba su primer recuento en la vuelta
+     156; con ellas, en la 245, porque los consumos mueven el stock. Medido con una tanda temporal
+     de 400 vueltas, con la vuelta anotada en el relato y una clase que no existe, para que todas
+     las semillas lo impriman; la instrumentación no queda en el repositorio.
+
+     **Dos empujones, con su motivo en el caso.** El envío de todo lo apartado sale del quinto
+     generador: en la medida sin él, el envío del tercero que se llevaría lo apartado no llegaba
+     hasta la vuelta 328 de la 464, y apartar más para que llegara antes frenaba otros envíos. Y la
+     reserva va la mitad de las veces a la clave de una caducada que sigue guardada activa, que es
+     donde la escritura la libera.
+   - **Lo siguiente**: las filas R12 y R13 de `docs/dominio/reglas-duras.md`.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

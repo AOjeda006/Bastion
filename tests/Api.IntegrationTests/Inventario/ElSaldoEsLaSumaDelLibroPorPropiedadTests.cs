@@ -6,11 +6,14 @@ using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Inventario.Application.Reservas;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Existencias;
 using Bastion.Inventario.Contracts.Recuentos;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Reservas;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Bastion.Organizacion.Contracts.Almacenes;
@@ -26,9 +29,10 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
 /// La R3 como propiedad: después de cualquier secuencia de entradas, salidas, ajustes, anulaciones,
-/// recálculos, cierres, fechas prohibidas, transferencias y recuentos, el saldo es la suma del libro
-/// (ítem 2.7), lo que vuela, la suma de lo enviado sin recibir (ítem 2.11), y lo contado, lo que hay
-/// al confirmar (epílogo del 2.12).
+/// recálculos, cierres, fechas prohibidas, transferencias, recuentos y reservas, el saldo es la suma
+/// del libro (ítem 2.7), lo que vuela, la suma de lo enviado sin recibir (ítem 2.11), lo contado, lo
+/// que hay al confirmar (epílogo del 2.12), y lo reservado, la suma de las reservas activas y
+/// vigentes (ítem 2.13).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -128,6 +132,26 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// tiene que ser el de la empresa, y la de las que vienen de una transferencia, menos lo que vuela.
 /// </para>
 /// <para>
+/// <b>Y las reservas</b> (ítem 2.13, ADR-0059). Un quinto generador, con su semilla, decide tras cada
+/// paso si viene uno de las reservas: reservar de lo disponible de un artículo en un almacén —a
+/// veces más, que se rechaza—, consumir una parte o todo lo pendiente con la salida de un albarán, o
+/// liberar una. Una de cada cuatro se pide con el reloj de ayer y caduca una hora antes de hoy, así
+/// que caduca sin mover el reloj. El modelo lleva el estado <b>guardado</b> de cada una: la caducada
+/// sigue activa hasta que una escritura de reservas que sale pasa por su clave y la libera por su
+/// caducidad, y liberarla a mano contesta el <c>409</c> de la caducada. La salida del albarán se
+/// valora como la de un ajuste, y saca su valor de la empresa. El envío lee lo reservado de su
+/// origen, y el modelo exige el <c>422</c> del disponible cuando un artículo saca más que su
+/// disponible y no más que su físico (ADR-0059 §9). Para que eso llegue en todas las semillas, el
+/// quinto generador envía a veces todo lo que hay de un artículo apartado.
+/// </para>
+/// <para>
+/// <b>Y el invariante de las reservas</b>, tras cada paso: las guardadas son las del modelo, así que
+/// en la base no hay ninguna que el modelo rechazara por pasar del disponible; y lo reservado de cada
+/// artículo en cada almacén, leído por el puerto de <c>Contracts</c>, es lo pendiente de las activas y
+/// vigentes del modelo. Las filas de albarán del libro suman lo que sacaron los consumos, y con las
+/// de ajuste, el valor de la empresa.
+/// </para>
+/// <para>
 /// <b>El modelo no conoce los identificadores del sistema.</b> Para el modelo, cada lote y cada
 /// serie es su código, y les da un identificador propio. Lo que se lee de la base se traduce con las
 /// tablas de los lotes y de las series, y esas tablas tienen que tener exactamente lo que el libro
@@ -150,13 +174,15 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLosModulos postgres)
     : IDisposable
 {
-    // CIENTO SESENTA DESDE EL ÍTEM 2.9. En el 2.8 fueron ochenta: con el stock que no baja de cero,
-    // cuarenta dejaban semillas sin una salida confirmada —sus anulaciones vaciaban todas las
+    // DOSCIENTOS SESENTA DESDE EL ÍTEM 2.13. En el 2.8 fueron ochenta: con el stock que no baja de
+    // cero, cuarenta dejaban semillas sin una salida confirmada —sus anulaciones vaciaban todas las
     // claves— o sin un documento contra el año cerrado. Con tres artículos y seis claves, ochenta
     // dejaban cinco de las seis semillas sin ver a la serie parar un documento por sí sola, y ciento
-    // veinte, la 461 sin una entrada al precio medio. Alargar no cambia los primeros pasos: el
-    // generador sigue la misma serie.
-    private const int Pasos = 160;
+    // veinte, la 461 sin una entrada al precio medio. Con ciento sesenta, la 464 anulaba su primer
+    // recuento en la vuelta 156; los consumos de las reservas mueven el stock, y lo retrasan a la
+    // 245, y la 465 no consumía una reserva en parte hasta la 172. Alargar no cambia los primeros
+    // pasos: el generador sigue la misma serie.
+    private const int Pasos = 260;
     private const string Anulacion = "anulación";
     private const string Futuro = "futuro";
     private const string Recalculo = "recálculo";
@@ -177,6 +203,14 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string RecuentoQueSubeConTransito = "recuento que sube con tránsito";
     private const string RecuentoAnulado = "recuento anulado";
     private const string RecuentoDescartado = "recuento descartado";
+    private const string Reservada = "reserva";
+    private const string ReservaPorEncimaDelDisponible = "reserva rechazada por el disponible";
+    private const string ConsumidaEnParte = "reserva consumida en parte";
+    private const string ConsumidaEntera = "reserva consumida entera";
+    private const string ReservaLiberada = "reserva liberada";
+    private const string CaducadaAlPasar = "reserva caducada liberada al pasar";
+    private const string CaducadaQueYaNoSeLibera = "reserva caducada que ya no se libera";
+    private const string EnvioPorEncimaDelDisponible = "envío rechazado por el disponible";
 
     /// <summary>
     /// De cada cien pasos, cuántos traen detrás uno del recuento (epílogo del 2.12). Un recuento
@@ -193,9 +227,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
     /// <summary>
     /// De cada cien pasos, cuántos traen detrás uno de transferencia (ítem 2.11). Con uno de cada
-    /// cuatro, unos cuarenta por semilla.
+    /// cuatro, unos sesenta y cinco por semilla.
     /// </summary>
     private const int PorcentajeDeTransferencias = 25;
+
+    /// <summary>
+    /// De cada cien pasos, cuántos traen detrás uno de las reservas (ítem 2.13). Con uno de cada
+    /// cuatro, unos sesenta y cinco por semilla.
+    /// </summary>
+    private const int PorcentajeDeReservas = 25;
 
     /// <summary>El código del documento que va por detrás de su clave (ADR-0047).</summary>
     private const string FechaAnterior = "ajuste-fecha-anterior-al-ultimo-movimiento";
@@ -222,6 +262,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Envio, EnvioSinStock, Recepcion, AnulacionDeUnaEnviada, AnulacionDeUnaRecibida,
         RecuentoConfirmado, RecuentoConLaHuellaNueva, RecuentoConElTeoricoCambiado, RecuentoQueSubeConTransito,
         RecuentoAnulado, RecuentoDescartado,
+        Reservada, ReservaPorEncimaDelDisponible, ConsumidaEnParte, ConsumidaEntera, ReservaLiberada,
+        CaducadaAlPasar, CaducadaQueYaNoSeLibera, EnvioPorEncimaDelDisponible,
     ];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
@@ -234,6 +276,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     // EL DÍA EN QUE CORREN TODAS LAS SEMILLAS. Con este, las seis pasan por todas las clases de
     // paso; cambiarlo cambia la secuencia de todas, y hay que volver a verlo semilla a semilla.
     private static readonly RelojParado s_reloj = new(new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero));
+
+    // EL RELOJ DE AYER, SOLO PARA PEDIR LAS RESERVAS QUE CADUCAN (ítem 2.13): se piden ayer con una
+    // caducidad de una hora antes de hoy, y con el reloj de siempre ya han caducado.
+    private static readonly RelojParado s_relojDeAyer = new(s_reloj.GetUtcNow().AddDays(-1));
 
     private readonly ApiDeVerdad _api = new(postgres);
     private readonly List<HttpClient> _clientes = [];
@@ -262,6 +308,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Random codigos = new(semilla + 1_000);
         Random traslados = new(semilla + 2_000);
         Random recuentos = new(semilla + 3_000);
+        Random apartados = new(semilla + 4_000);
         Secuencia secuencia = new(semilla);
 
         UnaEmpresa empresa = await UnaEmpresaAsync(semilla);
@@ -309,6 +356,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             if (recuentos.Next(100) < PorcentajeDeRecuentos)
             {
                 await UnPasoDeRecuentoAsync(recuentos, empresa, secuencia);
+                await ComprobarAsync(empresa, secuencia);
+            }
+
+            // LAS RESERVAS, LAS ÚLTIMAS Y CON SUS PROPIOS DADOS (ítem 2.13): los otros cuatro
+            // generadores no saben de ellas, y hasta la primera, la secuencia es la de antes paso a
+            // paso. Después, lo apartado cambia lo que puede enviar una transferencia.
+            if (apartados.Next(100) < PorcentajeDeReservas)
+            {
+                await UnPasoDeReservaAsync(apartados, empresa, secuencia);
                 await ComprobarAsync(empresa, secuencia);
             }
         }
@@ -641,6 +697,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// la mitad de las veces toma esa fecha y la otra mitad se rechaza (ADR-0047). El destino no
     /// cuenta: lo que vuela no mueve su fecha (ADR-0053 §3).
     /// </para>
+    /// <para>
+    /// <b>Y lo apartado, desde el ítem 2.13</b>: el envío no saca el generador de su camino, pero
+    /// el modelo sabe, después de la fecha y antes que el motor, si algún artículo saca más que su
+    /// disponible y no más que su físico. Entonces exige el <c>422</c> del disponible (ADR-0059 §9).
+    /// </para>
     /// </remarks>
     private static async Task UnEnvioAsync(
         Random traslados, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
@@ -743,6 +804,21 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
             rechazado.EsCorrecto.ShouldBeFalse(secuencia.Relato());
             rechazado.Error!.Codigo.ShouldBe(FechaAnteriorDeLaTransferencia, secuencia.Relato());
+
+            return;
+        }
+
+        // LO APARTADO, DESPUÉS DE LA FECHA Y ANTES QUE EL MOTOR (ítem 2.13): el caso de uso lo mira
+        // con la valoración ya leída, como última guarda antes de escribir (ADR-0059 §9).
+        if (secuencia.PasaDelDisponible(
+            lineas.Select(linea => (linea.Origen.ArticuloId, linea.Cantidad)), origen, Ahora))
+        {
+            Resultado<TransferenciaDto> rechazado = await modulo.EnviarAsync(alta.Valor.Id);
+
+            secuencia.Anotar(EnvioPorEncimaDelDisponible, detalle);
+
+            rechazado.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+            rechazado.Error!.Codigo.ShouldBe("transferencia-por-encima-del-disponible", secuencia.Relato());
 
             return;
         }
@@ -1462,6 +1538,432 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     }
 
     /// <summary>
+    /// Un paso de las reservas (ítem 2.13): consumir una vigente con su salida, liberar una —a mano,
+    /// o una caducada, que ya no se libera—, enviar todo lo que hay de un artículo apartado, o
+    /// reservar.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Todo con el quinto generador, que es el único que sabe de ellas. Consumir pide una reserva
+    /// vigente; liberar, una caducada la mitad de las veces que la hay, y si no, una vigente; y el
+    /// envío, una vigente con físico en su clave. Si no hay a cuál, se reserva. Con la caducada
+    /// siempre que no hubiera vigentes, las semillas gastaban un tercio de sus pasos de reservas en
+    /// el mismo <c>409</c>.
+    /// </para>
+    /// <para>
+    /// <b>Cada llamada, con su contexto</b>, como el recuento: un contexto que siguiera con una reserva
+    /// en memoria la leería como estaba antes de que otra escritura pasara por su clave.
+    /// </para>
+    /// </remarks>
+    private async Task UnPasoDeReservaAsync(Random apartados, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        int dado = apartados.Next(100);
+
+        ReservaDelModelo[] vigentes = [.. secuencia.Reservas.Where(reserva => reserva.VigenteEn(Ahora))];
+        ReservaDelModelo[] caducadas = [.. secuencia.Reservas.Where(reserva => reserva.HaCaducadoEn(Ahora))];
+
+        ReservaDelModelo[] conFisico = [.. vigentes.Where(reserva => secuencia.FisicoDe(reserva.Clave) > 0m)];
+
+        bool aUnaCaducada = caducadas.Length > 0 && apartados.Next(2) == 0;
+
+        if (dado < 30 && vigentes.Length > 0)
+        {
+            await UnConsumoAsync(apartados, empresa, secuencia, vigentes[apartados.Next(vigentes.Length)]);
+        }
+        else if (dado < 55 && aUnaCaducada)
+        {
+            await UnaLiberacionAsync(empresa, secuencia, caducadas[apartados.Next(caducadas.Length)], caducada: true);
+        }
+        else if (dado < 55 && vigentes.Length > 0)
+        {
+            await UnaLiberacionAsync(empresa, secuencia, vigentes[apartados.Next(vigentes.Length)], caducada: false);
+        }
+        else if (dado >= 90 && conFisico.Length > 0)
+        {
+            await UnEnvioDeLoApartadoAsync(apartados, empresa, secuencia, conFisico[apartados.Next(conFisico.Length)]);
+        }
+        else
+        {
+            await UnaReservaAsync(apartados, empresa, secuencia);
+        }
+    }
+
+    /// <summary>
+    /// Una reserva de un artículo en un almacén: casi siempre de lo disponible, una de cada ocho veces
+    /// justo todo lo disponible, y otra de cada ocho de más, que se rechaza.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>De un artículo con físico en el almacén, si alguno tiene</b>, como la salida. Si no, de
+    /// cualquiera, y se rechaza: una clave sin valoración tiene el físico a cero (ADR-0059 §2). Y la
+    /// mitad de las veces que alguna caducada sigue guardada activa, de su clave, otro empujón: solo
+    /// la libera una escritura que pasa por ella, y al azar entre seis pares tardaba en pasar.
+    /// </para>
+    /// <para>
+    /// <b>De una a tres unidades</b>, salvo la que pide justo el disponible, que es el borde y tiene
+    /// que salir. Lo apartado frena los envíos, y con reservas grandes las transferencias dejarían de
+    /// salir.
+    /// </para>
+    /// <para>
+    /// <b>Una de cada cuatro, con el reloj de ayer</b> y una caducidad de una hora antes de hoy: caduca
+    /// sin mover el reloj. Al pedirla, lo vigente es lo de ayer, que cuenta también las que caducan
+    /// hoy y que nadie ha escrito todavía.
+    /// </para>
+    /// </remarks>
+    private async Task UnaReservaAsync(Random apartados, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        (Guid ArticuloId, Guid AlmacenId)[] conFisico =
+            [.. empresa.Pares.Where(par => secuencia.FisicoDe(par) > 0m)];
+
+        // EL EMPUJÓN DE LA CADUCADA: la mitad de las veces que alguna sigue guardada activa, a su
+        // clave, que es donde la escritura la libera.
+        (Guid ArticuloId, Guid AlmacenId)[] conCaducadas =
+        [
+            .. secuencia.Reservas
+                .Where(reserva => reserva.Estado == EstadoDeReserva.Activa && reserva.HaCaducadoEn(Ahora))
+                .Select(reserva => reserva.Clave)
+                .Distinct(),
+        ];
+
+        (Guid ArticuloId, Guid AlmacenId)[] candidatos =
+            conCaducadas.Length > 0 && apartados.Next(2) == 0 ? conCaducadas
+            : conFisico.Length > 0 ? conFisico
+            : empresa.Pares;
+        (Guid ArticuloId, Guid AlmacenId) clave = candidatos[apartados.Next(candidatos.Length)];
+
+        int caducidad = apartados.Next(4);
+        RelojParado reloj = caducidad == 0 ? s_relojDeAyer : s_reloj;
+        DateTimeOffset ahora = reloj.GetUtcNow();
+
+        DateTimeOffset? caducaEl = caducidad switch
+        {
+            0 => Ahora.AddHours(-1),
+            1 => Ahora.AddDays(1 + apartados.Next(30)),
+            _ => null,
+        };
+
+        decimal disponible = secuencia.FisicoDe(clave) - secuencia.ReservadoEn(clave, ahora);
+
+        decimal cantidad = apartados.Next(8) switch
+        {
+            0 => Math.Max(disponible, 0m) + 1 + apartados.Next(3),
+            1 when disponible > 0m => disponible,
+            _ => 1 + apartados.Next(3),
+        };
+
+        OrigenDeLaReserva origen = LasReservas.OrigenNuevo();
+        string detalle = DescribirLaReserva(empresa, clave, cantidad, caducaEl, disponible);
+
+        Resultado<ReservaDto> reserva;
+
+        await using (ElModuloDeInventario modulo = new(postgres, empresa.EmpresaId, reloj))
+        {
+            reserva = await modulo.Reserva.EjecutarAsync(
+                new ReservarDto(origen, clave.ArticuloId, clave.AlmacenId, cantidad, caducaEl), CancellationToken.None);
+        }
+
+        if (cantidad > disponible)
+        {
+            secuencia.Anotar(ReservaPorEncimaDelDisponible, detalle);
+
+            reserva.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+            reserva.Error!.Codigo.ShouldBe("reserva-por-encima-del-disponible", secuencia.Relato());
+
+            return;
+        }
+
+        secuencia.Anotar(Reservada, detalle);
+
+        reserva.EsCorrecto.ShouldBeTrue($"«{reserva.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        PasarPorLaClave(secuencia, clave, ahora);
+        secuencia.Reservas.Add(new ReservaDelModelo(reserva.Valor.Id, origen, clave, cantidad, caducaEl));
+    }
+
+    /// <summary>
+    /// El consumo de una reserva vigente, con su salida (ADR-0059 §6): de uno o dos huecos de su clave
+    /// con existencias, y sin pasar de lo pendiente.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Una serie sale en su unidad, y lo demás, lo que hay en el hueco hasta lo que falta.</b> Si
+    /// lo pendiente se acaba, la reserva queda consumida entera; si no —una de cada tres veces se
+    /// pide la mitad, y uno o dos huecos pueden no llegar—, en parte. Sin existencias en la clave
+    /// —un ajuste las sacó, que no se frena—, el consumo se salta.
+    /// </para>
+    /// <para>
+    /// <b>La fecha, hoy o un día de este año, y nunca por detrás del último movimiento de la
+    /// clave</b>: esa guarda la miran el ajuste y la transferencia, y aquí solo pararía el paso.
+    /// </para>
+    /// </remarks>
+    private async Task UnConsumoAsync(
+        Random apartados, UnaEmpresa empresa, Secuencia secuencia, ReservaDelModelo reserva)
+    {
+        // EN UN ORDEN QUE NO DEPENDE DE LOS IDENTIFICADORES, como en la salida.
+        List<(ClaveDeExistencia Clave, decimal Saldo)> conExistencias =
+        [
+            .. LasExistencias.SaldosDelLibro(secuencia.Libro)
+                .Where(par => (par.Key.ArticuloId, par.Key.AlmacenId) == reserva.Clave && par.Value > 0m)
+                .Select(par => (Clave: par.Key, Saldo: par.Value, Donde: secuencia.LineaEn(empresa, par.Key)))
+                .OrderBy(par => par.Donde.Clave)
+                .ThenBy(par => par.Donde.Lote, StringComparer.Ordinal)
+                .ThenBy(par => par.Donde.Serie, StringComparer.Ordinal)
+                .Select(par => (par.Clave, par.Saldo)),
+        ];
+
+        if (conExistencias.Count == 0)
+        {
+            secuencia.Anotar("consumo que se salta: la clave de la reserva no tiene existencias");
+
+            return;
+        }
+
+        // TODO LO PENDIENTE, Y UNA DE CADA TRES VECES SOLO SU MITAD, si llega a dos unidades. Al
+        // azar dentro de cada hueco, casi ninguna reserva de todo el disponible salía entera; y de
+        // las de una a tres unidades, casi ninguna en parte.
+        int cuantas = 1 + apartados.Next(2);
+        decimal queda = reserva.Pendiente >= 2m && apartados.Next(3) == 0
+            ? decimal.Floor(reserva.Pendiente / 2)
+            : reserva.Pendiente;
+        List<(ClaveDeExistencia Clave, decimal Cantidad)> lineas = [];
+
+        while (lineas.Count < cuantas && conExistencias.Count > 0 && queda > 0m)
+        {
+            int cual = apartados.Next(conExistencias.Count);
+            (ClaveDeExistencia clave, decimal saldo) = conExistencias[cual];
+
+            conExistencias.RemoveAt(cual);
+
+            decimal cantidad = Math.Min(queda, clave.NumeroDeSerieId is not null ? 1m : saldo);
+
+            lineas.Add((clave, cantidad));
+            queda -= cantidad;
+        }
+
+        DateOnly fecha = apartados.Next(2) == 0
+            ? Hoy
+            : new DateOnly(Hoy.Year, 1, 1).AddDays(apartados.Next(Hoy.DayOfYear));
+
+        if (secuencia.UltimaFechaDe(reserva.Clave.ArticuloId, reserva.Clave.AlmacenId) is { } ultima && fecha < ultima)
+        {
+            fecha = ultima;
+        }
+
+        decimal sale = lineas.Sum(linea => linea.Cantidad);
+        bool entera = sale == reserva.Pendiente;
+
+        string donde = DescribirLaClave(empresa, reserva.Clave);
+        string huecos = string.Join(
+            ", ", lineas.Select(linea => DescribirElHueco(empresa, secuencia, linea.Clave, linea.Cantidad)));
+        string detalle = string.Create(
+            CultureInfo.InvariantCulture,
+            $"{fecha:yyyy-MM-dd} {sale} de {reserva.Pendiente} pendientes de {donde} [{huecos}]");
+
+        Resultado<ReservaDto> consumo;
+
+        await using (ElModuloDeInventario modulo = UnaPeticion(empresa))
+        {
+            consumo = await modulo.ConsumoDeReserva.EjecutarAsync(
+                new ConsumirReservaDto(
+                    reserva.Origen,
+                    TipoDeDocumentoOrigen.Albaran,
+                    Guid.CreateVersion7(),
+                    fecha,
+                    [.. lineas.Select(linea => new LineaDeConsumoDto(
+                        linea.Clave.UbicacionId,
+                        linea.Cantidad,
+                        linea.Clave.LoteId is { } lote ? secuencia.CodigoDe(lote) : null,
+                        linea.Clave.NumeroDeSerieId is { } serie ? secuencia.CodigoDe(serie) : null))]),
+                CancellationToken.None);
+        }
+
+        secuencia.Anotar(entera ? ConsumidaEntera : ConsumidaEnParte, detalle);
+
+        consumo.EsCorrecto.ShouldBeTrue($"«{consumo.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        secuencia.Libro.AddRange(lineas.Select(linea => new ApunteDelLibro(linea.Clave, fecha, -linea.Cantidad)));
+
+        // LA SALIDA DEL ALBARÁN SE VALORA COMO LA DE UN AJUSTE, al precio medio, y saca su valor de
+        // la empresa (ADR-0059 §6).
+        FilaValorada[] valoradas = secuencia.Valorar(
+            [.. lineas.Select(linea => new LineaQueSeValora(
+                reserva.Clave.ArticuloId, reserva.Clave.AlmacenId, -linea.Cantidad, null, null))]);
+
+        secuencia.ValorDeLaEmpresa += valoradas.Sum(fila => fila.Valor);
+        secuencia.ValorDeLosAlbaranes += valoradas.Sum(fila => fila.Valor);
+
+        reserva.Consumir(sale);
+        PasarPorLaClave(secuencia, reserva.Clave, Ahora);
+    }
+
+    /// <summary>
+    /// La liberación a mano de una vigente, o el intento con una caducada, que contesta su <c>409</c>
+    /// y no escribe nada (ADR-0059 §4).
+    /// </summary>
+    /// <remarks>
+    /// Caducada es tanto la que sigue guardada activa como la que alguien ya escribió liberada: las
+    /// dos contestan lo mismo.
+    /// </remarks>
+    private async Task UnaLiberacionAsync(
+        UnaEmpresa empresa, Secuencia secuencia, ReservaDelModelo reserva, bool caducada)
+    {
+        string detalle = DescribirLaReserva(empresa, reserva.Clave, reserva.Pendiente, reserva.CaducaEl, null);
+
+        Resultado<ReservaDto> liberacion;
+
+        await using (ElModuloDeInventario modulo = UnaPeticion(empresa))
+        {
+            liberacion = await modulo.LiberacionDeReserva.EjecutarAsync(
+                new LiberarReservaDto(reserva.Origen, "Liberación del generador"), CancellationToken.None);
+        }
+
+        if (caducada)
+        {
+            secuencia.Anotar(CaducadaQueYaNoSeLibera, detalle);
+
+            liberacion.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+            liberacion.Error!.Codigo.ShouldBe("reserva-caducada", secuencia.Relato());
+
+            return;
+        }
+
+        secuencia.Anotar(ReservaLiberada, detalle);
+
+        liberacion.EsCorrecto.ShouldBeTrue($"«{liberacion.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        reserva.Liberar();
+        PasarPorLaClave(secuencia, reserva.Clave, Ahora);
+    }
+
+    /// <summary>
+    /// El envío de todo lo que hay de un artículo apartado: una línea por hueco con existencias de la
+    /// clave de una reserva vigente, que saca su físico entero y pasa del disponible por lo pendiente
+    /// (ADR-0059 §9).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El empujón del disponible</b>: al azar, el envío del generador de las transferencias que se
+    /// llevaría lo apartado no llegaba hasta la vuelta 328 de la 464, ni hasta la 162 de la 461; y
+    /// apartar más para que llegara antes frenaba otros envíos y dejaba semillas sin el recuento que
+    /// sube con tránsito. Este sale del quinto generador, así que no le quita ninguno al tercero. Lo
+    /// que el tercero mira en cada envío sigue mirándose.
+    /// </para>
+    /// <para>
+    /// <b>Con la fecha de hoy</b>, que no va por detrás de nada: la guarda del disponible va después
+    /// de la fecha y antes que el motor. Nada se escribe, y el borrador se queda como el de cualquier
+    /// otro rechazo.
+    /// </para>
+    /// </remarks>
+    private async Task UnEnvioDeLoApartadoAsync(
+        Random apartados, UnaEmpresa empresa, Secuencia secuencia, ReservaDelModelo reserva)
+    {
+        Guid origen = reserva.Clave.AlmacenId;
+        Guid destino = origen == empresa.AlmacenId ? empresa.AlmacenB : empresa.AlmacenId;
+
+        // EN UN ORDEN QUE NO DEPENDE DE LOS IDENTIFICADORES, como en la salida.
+        LineaEnVuelo[] lineas =
+        [
+            .. LasExistencias.SaldosDelLibro(secuencia.Libro)
+                .Where(par => (par.Key.ArticuloId, par.Key.AlmacenId) == reserva.Clave && par.Value > 0m)
+                .Select(par => (Clave: par.Key, Saldo: par.Value, Donde: secuencia.LineaEn(empresa, par.Key)))
+                .OrderBy(par => par.Donde.Clave)
+                .ThenBy(par => par.Donde.Lote, StringComparer.Ordinal)
+                .ThenBy(par => par.Donde.Serie, StringComparer.Ordinal)
+                .Select(par => new LineaEnVuelo(par.Clave, empresa.DestinoDe(par.Clave, apartados), par.Saldo, 0m)),
+        ];
+
+        // LO DICE EL MODELO, Y NO LA CONSTRUCCIÓN: si el libro y la valoración no dijeran el mismo
+        // físico, esto no pasaría del disponible, y el paso no se anotaría como si lo hiciera.
+        secuencia.PasaDelDisponible(lineas.Select(linea => (linea.Origen.ArticuloId, linea.Cantidad)), origen, Ahora)
+            .ShouldBeTrue("todo lo que hay de un artículo apartado no pasa de su disponible\n" + secuencia.Relato());
+
+        string detalle = "de todo lo apartado " + DescribirElTraslado(empresa, secuencia, Hoy, lineas);
+
+        Resultado<TransferenciaDto> rechazado;
+
+        await using (ElModuloDeInventario peticion = UnaPeticion(empresa))
+        {
+            Resultado<TransferenciaDto> alta = await peticion.AltaDeTransferencia.EjecutarAsync(
+                new AbrirTransferenciaDto(
+                    empresa.SerieDeTransferencias.Id,
+                    origen,
+                    destino,
+                    Hoy,
+                    [.. lineas.Select(linea => new LineaDeTransferenciaDto(
+                        linea.Origen.UbicacionId,
+                        linea.Destino.UbicacionId,
+                        linea.Origen.ArticuloId,
+                        linea.Cantidad,
+                        empresa.UnidadDe[linea.Origen.ArticuloId],
+                        1m,
+                        linea.Origen.LoteId is { } lote ? secuencia.CodigoDe(lote) : null,
+                        linea.Origen.NumeroDeSerieId is { } serie ? secuencia.CodigoDe(serie) : null))]),
+                CancellationToken.None);
+
+            alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»\n{secuencia.Relato()}");
+
+            rechazado = await peticion.EnviarAsync(alta.Valor.Id);
+        }
+
+        secuencia.Anotar(EnvioPorEncimaDelDisponible, detalle);
+
+        rechazado.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+        rechazado.Error!.Codigo.ShouldBe("transferencia-por-encima-del-disponible", secuencia.Relato());
+    }
+
+    /// <summary>
+    /// Lo que escribe en su clave una escritura de reservas que sale: las caducadas, liberadas por su
+    /// caducidad (ADR-0059 §4). Si hay alguna, es una clase de paso.
+    /// </summary>
+    private static void PasarPorLaClave(
+        Secuencia secuencia, (Guid ArticuloId, Guid AlmacenId) clave, DateTimeOffset ahora)
+    {
+        int liberadas = secuencia.LiberarLasCaducadas(clave, ahora);
+
+        if (liberadas > 0)
+        {
+            secuencia.Anotar(CaducadaAlPasar, string.Create(CultureInfo.InvariantCulture, $"{liberadas}"));
+        }
+    }
+
+    /// <summary>Una reserva para el relato: su clave, cuánto, su caducidad y, si se sabe, el disponible.</summary>
+    private static string DescribirLaReserva(
+        UnaEmpresa empresa,
+        (Guid ArticuloId, Guid AlmacenId) clave,
+        decimal cantidad,
+        DateTimeOffset? caducaEl,
+        decimal? disponible) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"{DescribirLaClave(empresa, clave)}: {cantidad}")
+        + (disponible is { } hay
+            ? string.Create(CultureInfo.InvariantCulture, $" con {hay} disponibles")
+            : string.Empty)
+        + (caducaEl is { } caduca
+            ? string.Create(CultureInfo.InvariantCulture, $", caduca {caduca:yyyy-MM-dd HH:mm}")
+            : ", sin caducidad");
+
+    /// <summary>Un hueco para el relato: cuál de las nueve claves, cuánto, y su lote o su serie.</summary>
+    private static string DescribirElHueco(
+        UnaEmpresa empresa, Secuencia secuencia, ClaveDeExistencia clave, decimal cantidad)
+    {
+        LineaAlAzar donde = secuencia.LineaEn(empresa, clave);
+
+        return string.Create(CultureInfo.InvariantCulture, $"clave {donde.Clave}: {cantidad}")
+            + (donde.Lote is { } lote ? " lote «" + lote + "»" : string.Empty)
+            + (donde.Serie is { } serie ? " serie «" + serie + "»" : string.Empty);
+    }
+
+    /// <summary>Un artículo en un almacén para el relato: su orden entre los tres, y A o B.</summary>
+    private static string DescribirLaClave(UnaEmpresa empresa, (Guid ArticuloId, Guid AlmacenId) clave)
+    {
+        int articulo = Array.IndexOf(empresa.Articulos, clave.ArticuloId);
+        string almacen = clave.AlmacenId == empresa.AlmacenId ? "A" : "B";
+
+        return string.Create(CultureInfo.InvariantCulture, $"artículo {articulo} en {almacen}");
+    }
+
+    /// <summary>
     /// Un contexto nuevo del módulo con el reloj del generador: lo que tendría una petición de verdad.
     /// </summary>
     private ElModuloDeInventario UnaPeticion(UnaEmpresa empresa) => new(postgres, empresa.EmpresaId, s_reloj);
@@ -1825,22 +2327,29 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             "la valoración no es la del modelo\n" + secuencia.Relato());
 
         // EL VALOR DE LA EMPRESA SOLO LO MUEVEN LOS AJUSTES (ADR-0053 §6), los de un recuento
-        // también: la transferencia lo pasa del origen al vuelo y del vuelo al destino, sin crearlo
-        // ni perderlo por el camino.
+        // también, y los albaranes que consumen una reserva (ítem 2.13): la transferencia lo pasa del
+        // origen al vuelo y del vuelo al destino, sin crearlo ni perderlo por el camino.
         decimal deLaEmpresa = valoraciones.Sum(fila => fila.Valor + fila.ValorEnTransito);
 
         deLaEmpresa.ShouldBe(
             secuencia.ValorDeLaEmpresa,
-            "el valor de la empresa no es el que han metido y sacado los ajustes\n" + secuencia.Relato());
+            "el valor de la empresa no es el que han metido y sacado los ajustes y los albaranes\n" +
+            secuencia.Relato());
 
         // Y LO MISMO DICHO POR EL LIBRO, SIN EL MODELO (epílogo del 2.12): sus filas de ajuste, las de
-        // un recuento entre ellas, suman el valor de la empresa; las de transferencia, lo que vuela
-        // con el signo cambiado, porque lo que salió de un almacén y no ha llegado a otro no está en
-        // ninguno.
-        (decimal deAjustes, decimal deTransferencias) = await LoQueValeElLibroPorOrigenAsync(empresa.EmpresaId);
+        // un recuento entre ellas, y las de albarán suman el valor de la empresa; las de albarán, lo
+        // que sacaron los consumos; y las de transferencia, lo que vuela con el signo cambiado,
+        // porque lo que salió de un almacén y no ha llegado a otro no está en ninguno.
+        (decimal deAjustes, decimal deAlbaranes, decimal deTransferencias) =
+            await LoQueValeElLibroPorOrigenAsync(empresa.EmpresaId);
 
-        deAjustes.ShouldBe(
-            deLaEmpresa, "las filas de ajuste del libro no suman el valor de la empresa\n" + secuencia.Relato());
+        deAlbaranes.ShouldBe(
+            secuencia.ValorDeLosAlbaranes,
+            "las filas de albarán del libro no suman lo que sacaron los consumos\n" + secuencia.Relato());
+
+        (deAjustes + deAlbaranes).ShouldBe(
+            deLaEmpresa,
+            "las filas de ajuste y de albarán del libro no suman el valor de la empresa\n" + secuencia.Relato());
 
         deTransferencias.ShouldBe(
             -valoraciones.Sum(fila => fila.ValorEnTransito),
@@ -1851,6 +2360,28 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         Ordenado(await FilasValoradasAsync(empresa.EmpresaId)).ShouldBe(
             Ordenado(secuencia.Valorado), "el libro no vale lo que dice el modelo\n" + secuencia.Relato());
+
+        // LAS RESERVAS (ítem 2.13, ADR-0059): las guardadas son las del modelo, con su estado
+        // guardado, así que en la base no hay ninguna que el modelo rechazara por pasar del
+        // disponible. Y lo reservado de cada artículo en cada almacén, por el puerto de Contracts,
+        // es lo pendiente de las activas y vigentes del modelo, con el disponible que queda.
+        (await LasReservasGuardadasAsync(empresa.EmpresaId)).ShouldBe(
+            [.. secuencia.Reservas.Select(reserva => reserva.ComoSeGuarda())],
+            ignoreOrder: true,
+            customMessage: "las reservas guardadas no son las del modelo\n" + secuencia.Relato());
+
+        await using (ElModuloDeInventario lectura = UnaPeticion(empresa))
+        {
+            foreach (Guid almacenId in new[] { empresa.AlmacenId, empresa.AlmacenB })
+            {
+                IReadOnlyDictionary<Guid, DisponibleDeUnArticulo> leido = await lectura.Disponible
+                    .DisponibleDeAsync(almacenId, empresa.Articulos, CancellationToken.None);
+
+                empresa.Articulos.Select(articuloId => leido[articuloId]).ShouldBe(
+                    [.. empresa.Articulos.Select(articuloId => secuencia.DisponibleDe((articuloId, almacenId), Ahora))],
+                    "lo reservado no es lo pendiente de las reservas activas y vigentes\n" + secuencia.Relato());
+            }
+        }
 
         // EL CUADRE DE PRODUCCIÓN, EN CADA PASO (ítem 2.11): compara lo que vuela con las líneas
         // enviadas, que el modelo no ve. Tiene que comparar lo mismo que el modelo tiene en vuelo, y
@@ -2068,7 +2599,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// <remarks>
     /// La clase va como texto, con el nombre del enumerado: así la guarda la conversión del contexto.
     /// </remarks>
-    private async Task<(decimal DeAjustes, decimal DeTransferencias)> LoQueValeElLibroPorOrigenAsync(Guid empresaId)
+    private async Task<(decimal DeAjustes, decimal DeAlbaranes, decimal DeTransferencias)>
+        LoQueValeElLibroPorOrigenAsync(Guid empresaId)
     {
         await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
         await conexion.OpenAsync();
@@ -2076,19 +2608,21 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         await using NpgsqlCommand orden = new(
             "SELECT "
             + "coalesce(sum(valor) FILTER (WHERE documento_origen_tipo = @ajuste), 0), "
+            + "coalesce(sum(valor) FILTER (WHERE documento_origen_tipo = @albaran), 0), "
             + "coalesce(sum(valor) FILTER (WHERE documento_origen_tipo = @transferencia), 0) "
             + "FROM inventario.movimiento_stock WHERE empresa_id = @empresa",
             conexion);
 
         orden.Parameters.AddWithValue("empresa", empresaId);
         orden.Parameters.AddWithValue("ajuste", nameof(TipoDeDocumentoOrigen.Ajuste));
+        orden.Parameters.AddWithValue("albaran", nameof(TipoDeDocumentoOrigen.Albaran));
         orden.Parameters.AddWithValue("transferencia", nameof(TipoDeDocumentoOrigen.Transferencia));
 
         await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
 
         (await lector.ReadAsync()).ShouldBeTrue();
 
-        return (lector.GetDecimal(0), lector.GetDecimal(1));
+        return (lector.GetDecimal(0), lector.GetDecimal(1), lector.GetDecimal(2));
     }
 
     /// <summary>El valor y el precio medio de cada fila del libro de la empresa.</summary>
@@ -2119,6 +2653,42 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         }
 
         return filas;
+    }
+
+    /// <summary>Las reservas de la empresa, leídas sin el filtro y sin el mapeo.</summary>
+    /// <remarks>
+    /// El estado es el guardado, que el dominio no publica: la caducada que nadie ha escrito se lee
+    /// activa, y eso es lo que el modelo tiene que saber (ADR-0059 §4).
+    /// </remarks>
+    private async Task<List<ReservaLeida>> LasReservasGuardadasAsync(Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand orden = new(
+            "SELECT reserva.id, reserva.estado, reserva.causa, reserva.cantidad, "
+            + "coalesce((SELECT sum(consumo.cantidad) FROM inventario.consumos_de_reserva AS consumo "
+            + "WHERE consumo.reserva_id = reserva.id), 0) "
+            + "FROM inventario.reservas AS reserva WHERE reserva.empresa_id = @empresa",
+            conexion);
+
+        orden.Parameters.AddWithValue("empresa", empresaId);
+
+        List<ReservaLeida> reservas = [];
+
+        await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
+
+        while (await lector.ReadAsync())
+        {
+            reservas.Add(new ReservaLeida(
+                lector.GetGuid(0),
+                lector.GetString(1),
+                lector.IsDBNull(2) ? null : lector.GetString(2),
+                lector.GetDecimal(3),
+                lector.GetDecimal(4)));
+        }
+
+        return reservas;
     }
 
     private static List<LineaAlAzar> LineasAlAzar(Random azar, int minimo = 1)
@@ -2387,6 +2957,9 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// <summary>La fecha de hoy, en el mismo calendario y con el mismo reloj que el caso de uso.</summary>
     private static DateOnly Hoy => DateOnly.FromDateTime(s_reloj.GetUtcNow().UtcDateTime);
 
+    /// <summary>El instante del reloj de los casos de uso, que es el que decide qué ha caducado.</summary>
+    private static DateTimeOffset Ahora => s_reloj.GetUtcNow();
+
     /// <summary>
     /// Una empresa con un almacén de dos ubicaciones y otro de una, tres artículos —uno por marca,
     /// seis claves en el primero y tres en el segundo— y los ejercicios de este año y del pasado,
@@ -2560,6 +3133,98 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         internal bool PorRecontar { get; set; }
     }
 
+    /// <summary>Una reserva, tal como se lee de la tabla: su estado guardado y lo que lleva consumido.</summary>
+    /// <param name="Id">Su identificador.</param>
+    /// <param name="Estado">El estado guardado, como texto.</param>
+    /// <param name="Causa">La causa de su liberación, como texto, o nada.</param>
+    /// <param name="Cantidad">Lo reservado.</param>
+    /// <param name="Consumida">La suma de sus consumos.</param>
+    private sealed record ReservaLeida(Guid Id, string Estado, string? Causa, decimal Cantidad, decimal Consumida);
+
+    /// <summary>Una reserva que salió, tal como la lleva el modelo, con su estado guardado.</summary>
+    /// <param name="id">Su identificador en el sistema.</param>
+    /// <param name="origen">La línea de pedido que la pidió.</param>
+    /// <param name="clave">El artículo y el almacén donde aparta.</param>
+    /// <param name="cantidad">Lo que apartó al salir.</param>
+    /// <param name="caducaEl">Su caducidad, o nada.</param>
+    private sealed class ReservaDelModelo(
+        Guid id,
+        OrigenDeLaReserva origen,
+        (Guid ArticuloId, Guid AlmacenId) clave,
+        decimal cantidad,
+        DateTimeOffset? caducaEl)
+    {
+        internal Guid Id { get; } = id;
+
+        internal OrigenDeLaReserva Origen { get; } = origen;
+
+        internal (Guid ArticuloId, Guid AlmacenId) Clave { get; } = clave;
+
+        internal DateTimeOffset? CaducaEl { get; } = caducaEl;
+
+        /// <summary>Lo que han sacado sus consumos.</summary>
+        internal decimal Consumida { get; private set; }
+
+        /// <summary>
+        /// El estado GUARDADO: una caducada sigue activa hasta que una escritura de reservas pasa por
+        /// su clave (ADR-0059 §4).
+        /// </summary>
+        internal EstadoDeReserva Estado { get; private set; } = EstadoDeReserva.Activa;
+
+        internal CausaDeLiberacion? Causa { get; private set; }
+
+        internal decimal Pendiente => cantidad - Consumida;
+
+        /// <summary>Si en ese instante aparta lo pendiente: guardada activa, y sin caducar.</summary>
+        internal bool VigenteEn(DateTimeOffset ahora) =>
+            Estado == EstadoDeReserva.Activa && (CaducaEl is null || CaducaEl > ahora);
+
+        /// <summary>
+        /// Si en ese instante ha caducado, se haya escrito ya o no: guardada activa con la caducidad
+        /// pasada, o guardada liberada por ella.
+        /// </summary>
+        internal bool HaCaducadoEn(DateTimeOffset ahora) =>
+            (Estado == EstadoDeReserva.Activa && CaducaEl <= ahora)
+            || (Estado == EstadoDeReserva.Liberada && Causa == CausaDeLiberacion.Caducidad);
+
+        /// <summary>Saca lo que lleva un albarán; si se acaba lo pendiente, queda consumida.</summary>
+        internal void Consumir(decimal sale)
+        {
+            Consumida += sale;
+
+            if (Pendiente == 0m)
+            {
+                Estado = EstadoDeReserva.Consumida;
+            }
+        }
+
+        /// <summary>La suelta a mano.</summary>
+        internal void Liberar()
+        {
+            Estado = EstadoDeReserva.Liberada;
+            Causa = CausaDeLiberacion.AMano;
+        }
+
+        /// <summary>La deja liberada por su caducidad si estaba guardada activa y ya caducó.</summary>
+        /// <returns><c>true</c> si la ha liberado ahora.</returns>
+        internal bool LiberarSiHaCaducado(DateTimeOffset ahora)
+        {
+            if (Estado != EstadoDeReserva.Activa || !(CaducaEl <= ahora))
+            {
+                return false;
+            }
+
+            Estado = EstadoDeReserva.Liberada;
+            Causa = CausaDeLiberacion.Caducidad;
+
+            return true;
+        }
+
+        /// <summary>Lo que tiene que leerse de la tabla.</summary>
+        internal ReservaLeida ComoSeGuarda() =>
+            new(Id, Estado.ToString(), Causa?.ToString(), cantidad, Consumida);
+    }
+
     /// <summary>Una fila de la valoración, tal como se lee de la tabla.</summary>
     /// <param name="ArticuloId">El artículo.</param>
     /// <param name="AlmacenId">El almacén.</param>
@@ -2594,6 +3259,16 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         SerieDto SerieDeTransferencias,
         SerieDto SerieDeRecuentos)
     {
+        /// <summary>Los tres artículos, en el orden de sus claves: sin trazabilidad, por lote y por serie.</summary>
+        internal Guid[] Articulos => [Claves[0].ArticuloId, Claves[2].ArticuloId, Claves[4].ArticuloId];
+
+        /// <summary>
+        /// Los seis pares de artículo y almacén donde puede apartar una reserva, en un orden que no
+        /// depende de los identificadores.
+        /// </summary>
+        internal (Guid ArticuloId, Guid AlmacenId)[] Pares =>
+            [.. Articulos.SelectMany(articuloId => new[] { (articuloId, AlmacenId), (articuloId, AlmacenB) })];
+
         /// <summary>La marca del artículo de una de las claves.</summary>
         internal string MarcaDe(int clave) => Marcas[Claves[clave].ArticuloId];
 
@@ -2675,10 +3350,17 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         internal int AjustesDeRecuento { get; set; }
 
         /// <summary>
-        /// El valor que han metido y sacado los ajustes y sus anulaciones, los de un recuento también:
-        /// el de la empresa, porque la transferencia no lo crea ni lo pierde (ADR-0053 §6).
+        /// El valor que han metido y sacado los ajustes y sus anulaciones, los de un recuento también,
+        /// y los albaranes que consumen una reserva: el de la empresa, porque la transferencia no lo
+        /// crea ni lo pierde (ADR-0053 §6).
         /// </summary>
         internal decimal ValorDeLaEmpresa { get; set; }
+
+        /// <summary>El valor que han sacado los albaranes al consumir sus reservas, con su signo.</summary>
+        internal decimal ValorDeLosAlbaranes { get; set; }
+
+        /// <summary>Las reservas que han salido, en el orden en que salieron.</summary>
+        internal List<ReservaDelModelo> Reservas { get; } = [];
 
         /// <summary>Las más claves en vuelo que ha comparado el cuadre tras un paso.</summary>
         internal long MasExistenciasEnVuelo { get; set; }
@@ -2728,6 +3410,57 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         /// <summary>El código que el modelo dio a un lote o a una serie.</summary>
         internal string CodigoDe(Guid id) => _codigos[id];
+
+        /// <summary>
+        /// El físico de un artículo en un almacén: el de su valoración, sin lo que vuela hacia él. Sin
+        /// valoración, cero (ADR-0059 §2).
+        /// </summary>
+        internal decimal FisicoDe((Guid ArticuloId, Guid AlmacenId) clave) =>
+            Valoracion.GetValueOrDefault(clave).Cantidad;
+
+        /// <summary>Lo pendiente de las reservas de la clave que en ese instante están activas y vigentes.</summary>
+        internal decimal ReservadoEn((Guid ArticuloId, Guid AlmacenId) clave, DateTimeOffset ahora) =>
+            Reservas
+                .Where(reserva => reserva.Clave == clave && reserva.VigenteEn(ahora))
+                .Sum(reserva => reserva.Pendiente);
+
+        /// <summary>Lo que tiene que leer el puerto de <c>Contracts</c> para la clave.</summary>
+        internal DisponibleDeUnArticulo DisponibleDe((Guid ArticuloId, Guid AlmacenId) clave, DateTimeOffset ahora) =>
+            new(FisicoDe(clave), ReservadoEn(clave, ahora), FisicoDe(clave) - ReservadoEn(clave, ahora));
+
+        /// <summary>
+        /// Si un envío desde el almacén se llevaría lo apartado: algún artículo saca más que su
+        /// disponible y no más que su físico (ADR-0059 §9).
+        /// </summary>
+        internal bool PasaDelDisponible(
+            IEnumerable<(Guid ArticuloId, decimal Cantidad)> salen, Guid almacenId, DateTimeOffset ahora) =>
+            salen.GroupBy(linea => linea.ArticuloId).Any(articulo =>
+            {
+                decimal sale = articulo.Sum(linea => linea.Cantidad);
+                decimal fisico = FisicoDe((articulo.Key, almacenId));
+
+                return sale > fisico - ReservadoEn((articulo.Key, almacenId), ahora) && sale <= fisico;
+            });
+
+        /// <summary>
+        /// Las caducadas de la clave que siguen guardadas activas, liberadas por su caducidad: lo que
+        /// escribe quien pasa por ella (ADR-0059 §4).
+        /// </summary>
+        /// <returns>Cuántas.</returns>
+        internal int LiberarLasCaducadas((Guid ArticuloId, Guid AlmacenId) clave, DateTimeOffset ahora)
+        {
+            int liberadas = 0;
+
+            foreach (ReservaDelModelo reserva in Reservas.Where(reserva => reserva.Clave == clave))
+            {
+                if (reserva.LiberarSiHaCaducado(ahora))
+                {
+                    liberadas++;
+                }
+            }
+
+            return liberadas;
+        }
 
         /// <summary>Lo que volaría si estas líneas despegaran (1) o dejaran de volar (−1).</summary>
         internal Dictionary<ClaveDeExistencia, decimal> TransitoTras(IEnumerable<LineaEnVuelo> lineas, int signo)
