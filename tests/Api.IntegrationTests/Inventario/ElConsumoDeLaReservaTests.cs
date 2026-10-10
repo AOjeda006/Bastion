@@ -29,7 +29,7 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// consumido ya, que esté activa y que no se saque más de lo que le queda.
 /// </para>
 /// <para>
-/// <b>Semillas: del 840 al 846</b>, del bloque del 2.13 que reparte la cabecera de
+/// <b>Semillas: del 840 al 846, y el 854</b>, del bloque del 2.13 que reparte la cabecera de
 /// <c>LasReservasTests</c>.
 /// </para>
 /// </remarks>
@@ -200,6 +200,70 @@ public sealed class ElConsumoDeLaReservaTests(PostgresConTodosLosModulos postgre
             "reserva-documento-ya-la-consumio",
             TipoDeError.Conflicto,
             "el reintento del albarán que la dejó consumida oye que ya salió, y no que no está activa");
+    }
+
+    /// <summary>
+    /// Lo que decide es la reserva de después del cerrojo, aunque el módulo ya la tuviera cargada: si
+    /// otro la cambia entre dos llamadas, consumir, liberar y reservar otra vez la ven como quedó.
+    /// </summary>
+    /// <remarks>
+    /// <b>Cada reserva la carga este módulo y la cambia otro</b>, que es lo que hace mirar algo a este
+    /// caso: el contexto del módulo la rastrea desde la primera llamada, y EF no pisa lo que rastrea
+    /// con lo que lee. Sin soltarla antes de leer, el módulo consumiría una reserva liberada, liberaría
+    /// una consumida y devolvería activa una liberada (hallazgo 8 de la revisión del 2.13).
+    /// </remarks>
+    [Fact]
+    public async Task La_reserva_se_lee_despues_del_cerrojo_aunque_el_modulo_ya_la_tuviera()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(854, "RCS-H");
+        await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 10m, 2m);
+
+        var ahora = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+        await using ElModuloDeInventario modulo = new(postgres, escena.EmpresaId, new RelojParado(ahora));
+        await using ElModuloDeInventario otro = new(postgres, escena.EmpresaId, new RelojParado(ahora));
+
+        OrigenDeLaReserva aConsumir = OrigenNuevo();
+        OrigenDeLaReserva aLiberar = OrigenNuevo();
+        OrigenDeLaReserva aReservar = OrigenNuevo();
+
+        ReservaDto laConsumida = await ReservadaAsync(modulo, escena, aConsumir, 5m);
+        ReservaDto laLiberada = await ReservadaAsync(modulo, escena, aLiberar, 3m);
+        _ = await ReservadaAsync(modulo, escena, aReservar, 1m);
+
+        _ = Exigir(await ConsumirAsync(
+            modulo, aConsumir, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 2m)));
+        _ = Exigir(await ConsumirAsync(
+            modulo, aLiberar, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 1m)));
+
+        _ = Exigir(await LiberarAsync(otro, aConsumir));
+        _ = Exigir(await ConsumirAsync(
+            otro, aLiberar, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 2m)));
+        _ = Exigir(await LiberarAsync(otro, aReservar));
+
+        int filasAntes = await FilasDelLibroAsync(postgres, escena.EmpresaId);
+
+        ExigirElRechazo(
+            await ConsumirAsync(
+                modulo, aConsumir, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 1m)),
+            "reserva-no-esta-activa",
+            TipoDeError.Conflicto,
+            "otro la liberó después de que este módulo la cargara");
+
+        ExigirElRechazo(
+            await LiberarAsync(modulo, aLiberar),
+            "reserva-no-esta-activa",
+            TipoDeError.Conflicto,
+            "otro la consumió entera después de que este módulo la cargara");
+
+        ReservaDto otraVez = Exigir(await ReservarAsync(modulo, escena, aReservar, 1m));
+
+        otraVez.Estado.ShouldBe(EstadoDeReserva.Liberada, "la misma petición devuelve la reserva como quedó");
+        (await FilasDelLibroAsync(postgres, escena.EmpresaId)).ShouldBe(filasAntes, "ningún rechazo escribe en el libro");
+        (await LaGuardadaAsync(postgres, escena.EmpresaId, laConsumida.Id))
+            .ShouldBe(new ReservaGuardada(EstadoDeReserva.Liberada, CausaDeLiberacion.AMano, ahora, 2m, 1));
+        (await LaGuardadaAsync(postgres, escena.EmpresaId, laLiberada.Id))
+            .ShouldBe(new ReservaGuardada(EstadoDeReserva.Consumida, null, null, 3m, 2));
     }
 
     /// <summary>

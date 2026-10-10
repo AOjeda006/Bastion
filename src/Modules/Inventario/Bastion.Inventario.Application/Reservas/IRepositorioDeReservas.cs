@@ -52,7 +52,10 @@ public interface IRepositorioDeReservas
     Task<ClaveDeValoracion?> ClaveDelOrigenAsync(
         TipoDeOrigenDeReserva tipo, Guid id, int linea, CancellationToken cancelacion);
 
-    /// <summary>La reserva de un origen, con sus consumos y rastreada, para cambiarla.</summary>
+    /// <summary>
+    /// La reserva de un origen, con sus consumos y rastreada, para cambiarla. Leída de la base
+    /// aunque el contexto ya la tuviera: es la lectura que decide, después del cerrojo.
+    /// </summary>
     /// <param name="tipo">La clase del documento.</param>
     /// <param name="id">El documento.</param>
     /// <param name="linea">Su línea.</param>

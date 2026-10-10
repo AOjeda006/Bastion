@@ -10,6 +10,7 @@ using Bastion.Inventario.Infrastructure.Persistencia.LotesYSeries;
 using Bastion.Inventario.Infrastructure.Persistencia.Reservas;
 using Bastion.Inventario.Infrastructure.Persistencia.Valoraciones;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 
@@ -85,12 +86,37 @@ internal sealed class RepositorioDeReservas(InventarioDbContext contexto, IInqui
     }
 
     /// <inheritdoc/>
-    /// <remarks>Los consumos vienen con la reserva: la navegación es <c>AutoInclude</c>.</remarks>
+    /// <remarks>
+    /// <para>Los consumos vienen con la reserva: la navegación es <c>AutoInclude</c>.</para>
+    /// <para>
+    /// <b>Es la lectura que decide, así que lee de verdad</b>: si el contexto ya rastreaba esta
+    /// reserva, EF la devolvería tal como la cargó, sin pisarla con lo que otra transacción cambió
+    /// después. Antes de leer se suelta, con sus consumos. Sin eso, un ámbito que consume dos veces
+    /// la misma línea, con una liberación de otro por medio, la consumiría liberada. Lo encontró la
+    /// revisión del 2.13, en su hallazgo 8.
+    /// </para>
+    /// </remarks>
     public Task<Reserva?> ObtenerPorOrigenAsync(
-        TipoDeOrigenDeReserva tipo, Guid id, int linea, CancellationToken cancelacion) =>
-        contexto.Reservas.FirstOrDefaultAsync(
+        TipoDeOrigenDeReserva tipo, Guid id, int linea, CancellationToken cancelacion)
+    {
+        foreach (EntityEntry<Reserva> cargada in contexto.ChangeTracker.Entries<Reserva>()
+            .Where(entrada => entrada.Entity.OrigenTipo == tipo
+                && entrada.Entity.OrigenId == id
+                && entrada.Entity.OrigenLinea == linea)
+            .ToList())
+        {
+            foreach (ConsumoDeReserva consumo in cargada.Entity.Consumos)
+            {
+                contexto.Entry(consumo).State = EntityState.Detached;
+            }
+
+            cargada.State = EntityState.Detached;
+        }
+
+        return contexto.Reservas.FirstOrDefaultAsync(
             reserva => reserva.OrigenTipo == tipo && reserva.OrigenId == id && reserva.OrigenLinea == linea,
             cancelacion);
+    }
 
     /// <inheritdoc/>
     /// <remarks>

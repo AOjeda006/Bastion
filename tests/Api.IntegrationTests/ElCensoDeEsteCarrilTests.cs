@@ -215,6 +215,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva",
         "ElConsumoDeLaReservaTests.La_fecha_del_albaran_pasa_las_guardas_de_cualquier_salida",
         "ElConsumoDeLaReservaTests.La_peticion_sin_forma_es_un_400_y_un_origen_sin_reserva_un_404",
+        "ElConsumoDeLaReservaTests.La_reserva_se_lee_despues_del_cerrojo_aunque_el_modulo_ya_la_tuviera",
         "ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir",
         "ElConsumoDeLaReservaTests.Por_lote_saca_con_su_lote_y_no_crea_el_que_no_existe",
         "ElConsumoDeLaReservaTests.Por_numero_de_serie_saca_pieza_a_pieza",
