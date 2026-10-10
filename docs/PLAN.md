@@ -10916,7 +10916,18 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      con dos condiciones. La primera, que el código distingue la causa, la cumplen los dos: sin
      cerrojo, la segunda saldría bien. La segunda la mide la tanda, con la mutación que quita el
      cerrojo de la reserva y la que adelanta la lectura de lo reservado del envío.
-   - **Lo siguiente**: la doble flecha del albarán.
+   - **Hecho, la doble flecha del albarán**, en `test(inventario): la doble flecha del albarán,
+     contra los consumos de reserva`: los dos casos con nombre propio del ADR-0059 §8, con las
+     semillas 852 y 853 (`dotnet test tests/Api.IntegrationTests --filter
+     "FullyQualifiedName~LaDobleFlechaDelLibroTests"`, 6 casos con los cuatro de antes). Cada uno
+     cuenta antes que hay algo que mirar, y su arnés, en la transacción que se deshace, lleva la
+     fila rota que solo ve un barrido que mira el almacén:
+     - **la ida**, toda fila de un albarán tiene el consumo que la sacó: el arnés lleva una fila
+       de un albarán inventado y otra del albarán de verdad en el otro almacén, y el barrido
+       devuelve las dos;
+     - **la vuelta**, todo consumo tiene su fila: el arnés lleva un consumo de la reserva de verdad
+       cuya única fila está en el otro almacén, y el barrido lo devuelve.
+   - **Lo siguiente**: la propiedad, con las reservas.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

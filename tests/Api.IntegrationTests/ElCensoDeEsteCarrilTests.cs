@@ -418,8 +418,11 @@ public sealed class ElCensoDeEsteCarrilTests
         // Ninguna clave ajena puede expresar esta flecha —el origen es un par «tipo +
         // identificador»—, así que borrar una de estas dos líneas deja la mitad que quitara
         // sin nadie que la vigile. Desde el 2.11, un par por tabla de documentos: el ajuste y la
-        // transferencia, cada uno filtrado por su tipo.
+        // transferencia, cada uno filtrado por su tipo. Desde el 2.13, el par del albarán, que se
+        // cierra contra los consumos de reserva (ADR-0059 §8).
         "LaDobleFlechaDelLibroTests.Ningun_ajuste_confirmado_se_queda_sin_una_sola_fila_del_libro",
+        "LaDobleFlechaDelLibroTests.Ningun_consumo_de_reserva_se_queda_sin_su_fila_del_libro",
+        "LaDobleFlechaDelLibroTests.Ninguna_fila_de_un_albaran_se_queda_sin_el_consumo_que_la_saco",
         "LaDobleFlechaDelLibroTests.Ninguna_fila_del_libro_apunta_a_un_documento_que_no_existe",
         "LaDobleFlechaDelLibroTests.Ninguna_fila_del_libro_apunta_a_una_transferencia_que_no_existe",
         "LaDobleFlechaDelLibroTests.Ninguna_transferencia_fuera_de_borrador_se_queda_sin_una_sola_fila_del_libro",

@@ -1,7 +1,9 @@
 using System.Data.Common;
 using System.Globalization;
+using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
+using Bastion.Inventario.Application.Reservas;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +45,12 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// dice a qué tabla mira, y un barrido que solo uniera con <c>ajustes</c> daría por huérfana toda
 /// fila de una transferencia, o no la miraría nunca si filtrara por el tipo. Cada par filtra por el
 /// suyo.
+/// </para>
+/// <para>
+/// <b>Y el par del albarán, desde el ítem 2.13</b>, que no tiene tabla en este módulo: ninguna
+/// consulta cruza esquemas, y su flecha se cierra contra <c>consumos_de_reserva</c>, que guarda el
+/// albarán que consumió cada reserva (ADR-0059 §8). Los dos casos montan su escena por la API, con
+/// las semillas 852 y 853 del bloque del 2.13 que cuenta la cabecera de <c>LasReservasTests</c>.
 /// </para>
 /// <para>
 /// <b>Los barridos van acotados a la empresa del caso</b>, que es una empresa recién inventada y
@@ -335,6 +343,124 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
         (await ElLibro.TextosAsync(postgres, Consulta(TransferenciasSinMovimientos, empresaId))).ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// La ida, para el albarán: de toda fila suya se llega a un consumo de reserva con ese
+    /// documento, de una reserva de su mismo artículo y almacén (ADR-0059 §8).
+    /// </summary>
+    /// <remarks>
+    /// <b>El arnés lleva dos filas rotas</b>: una con un albarán inventado, y otra con el albarán de
+    /// verdad pero en otro almacén. La segunda solo la ve un barrido que mira el almacén, y es la
+    /// mitad de la flecha que no da el documento solo.
+    /// </remarks>
+    [Fact]
+    public async Task Ninguna_fila_de_un_albaran_se_queda_sin_el_consumo_que_la_saco()
+    {
+        using ApiDeVerdad api = new(postgres);
+        (EscenaDeTransferencia escena, Guid albaranId, _) = await ConsumirUnaReservaAsync(api, 852, "DFA-A");
+
+        long miradas = await ElLibro.EscalarAsync<long>(
+            postgres,
+            Consulta(
+                "SELECT count(*) FROM inventario.movimiento_stock " +
+                "WHERE empresa_id = '{0}' AND documento_origen_tipo = 'Albaran'",
+                escena.EmpresaId));
+
+        miradas.ShouldBe(
+            1,
+            "sin filas de un albarán que mirar, «todas tienen su consumo» sale verde por no haber " +
+            "mirado (ADR-0020)");
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(escena.EmpresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
+
+        // El arnés, en la transacción que se deshace, por lo mismo que en el ajuste.
+        var albaranQueNoConsumio = Guid.CreateVersion7();
+
+        contexto.Movimientos.Add(UnaEntradaDeAlbaran(escena, escena.AlmacenA, escena.UbicacionA, albaranQueNoConsumio));
+        contexto.Movimientos.Add(UnaEntradaDeAlbaran(escena, escena.AlmacenB, escena.UbicacionB, albaranId));
+
+        await contexto.SaveChangesAsync();
+
+        IReadOnlyList<string> huerfanas = await LeerAsync(
+            contexto, transaccion, Consulta(AlbaranesSinConsumo, escena.EmpresaId));
+
+        huerfanas.ShouldBe(
+            [albaranQueNoConsumio.ToString(), albaranId.ToString()],
+            ignoreOrder: true,
+            "el barrido tenía que ver las dos filas rotas, y solo esas: la del consumo apunta a él");
+
+        await transaccion.RollbackAsync();
+
+        (await ElLibro.TextosAsync(postgres, Consulta(AlbaranesSinConsumo, escena.EmpresaId))).ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// La vuelta, para el albarán: todo consumo de reserva dejó al menos una fila del libro con su
+    /// documento, su artículo y su almacén (ADR-0059 §8).
+    /// </summary>
+    /// <remarks>
+    /// <b>El consumo roto tiene una fila con su documento, pero en otro almacén</b>: el dominio no
+    /// sabe producir ni eso ni un consumo sin filas, porque los dos caen en el mismo <c>COMMIT</c>
+    /// (ADR-0059 §6). Un barrido que solo mirara el documento lo daría por bueno.
+    /// </remarks>
+    [Fact]
+    public async Task Ningun_consumo_de_reserva_se_queda_sin_su_fila_del_libro()
+    {
+        using ApiDeVerdad api = new(postgres);
+        (EscenaDeTransferencia escena, _, Guid reservaId) = await ConsumirUnaReservaAsync(api, 853, "DFA-B");
+
+        long mirados = await ElLibro.EscalarAsync<long>(
+            postgres,
+            Consulta(
+                "SELECT count(*) FROM inventario.consumos_de_reserva AS consumo " +
+                "JOIN inventario.reservas AS reserva ON reserva.id = consumo.reserva_id " +
+                "WHERE reserva.empresa_id = '{0}'",
+                escena.EmpresaId));
+
+        mirados.ShouldBe(
+            1,
+            "sin ningún consumo que mirar, «todos tienen su fila» sale verde por no haber mirado " +
+            "(ADR-0020)");
+
+        await using InventarioDbContext contexto = postgres.AbrirInventario(escena.EmpresaId);
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync();
+
+        // El arnés: una fila del libro con un albarán inventado, en otro almacén, y un consumo de la
+        // reserva de verdad con ese mismo albarán, escrito a mano.
+        var albaranEnOtroAlmacen = Guid.CreateVersion7();
+
+        contexto.Movimientos.Add(UnaEntradaDeAlbaran(escena, escena.AlmacenB, escena.UbicacionB, albaranEnOtroAlmacen));
+
+        await contexto.SaveChangesAsync();
+
+        await EjecutarAsync(
+            contexto,
+            transaccion,
+            Consulta(
+                """
+                INSERT INTO inventario.consumos_de_reserva
+                    (id, reserva_id, documento_tipo, documento_id, fecha_de_operacion, cantidad,
+                     creado_en, modificado_en)
+                VALUES ('{0}', '{1}', 'Albaran', '{2}', current_date, 1, now(), now())
+                """,
+                Guid.CreateVersion7(),
+                reservaId,
+                albaranEnOtroAlmacen));
+
+        IReadOnlyList<string> sinFilas = await LeerAsync(
+            contexto, transaccion, Consulta(ConsumosSinMovimientos, escena.EmpresaId));
+
+        sinFilas.ShouldBe(
+            [albaranEnOtroAlmacen.ToString()],
+            "el barrido tenía que ver el consumo cuya fila está en otro almacén, y solo ese");
+
+        await transaccion.RollbackAsync();
+
+        (await ElLibro.TextosAsync(postgres, Consulta(ConsumosSinMovimientos, escena.EmpresaId))).ShouldBeEmpty();
+    }
+
     private static string Consulta(string plantilla, params object[] valores) =>
         string.Format(CultureInfo.InvariantCulture, plantilla, valores);
 
@@ -359,6 +485,80 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
               WHERE fila.documento_origen_tipo = 'Transferencia'
                 AND fila.documento_origen_id = documento.id)
         """;
+
+    private const string AlbaranesSinConsumo =
+        """
+        SELECT fila.documento_origen_id::text
+        FROM inventario.movimiento_stock AS fila
+        WHERE fila.empresa_id = '{0}'
+          AND fila.documento_origen_tipo = 'Albaran'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM inventario.consumos_de_reserva AS consumo
+              JOIN inventario.reservas AS reserva ON reserva.id = consumo.reserva_id
+              WHERE consumo.documento_tipo = fila.documento_origen_tipo
+                AND consumo.documento_id = fila.documento_origen_id
+                AND reserva.empresa_id = fila.empresa_id
+                AND reserva.articulo_id = fila.articulo_id
+                AND reserva.almacen_id = fila.almacen_id)
+        """;
+
+    private const string ConsumosSinMovimientos =
+        """
+        SELECT consumo.documento_id::text
+        FROM inventario.consumos_de_reserva AS consumo
+        JOIN inventario.reservas AS reserva ON reserva.id = consumo.reserva_id
+        WHERE reserva.empresa_id = '{0}'
+          AND NOT EXISTS (
+              SELECT 1 FROM inventario.movimiento_stock AS fila
+              WHERE fila.empresa_id = reserva.empresa_id
+                AND fila.documento_origen_tipo = consumo.documento_tipo
+                AND fila.documento_origen_id = consumo.documento_id
+                AND fila.articulo_id = reserva.articulo_id
+                AND fila.almacen_id = reserva.almacen_id)
+        """;
+
+    // Una fila de albarán que mete una unidad en el hueco que se diga, escrita a mano.
+    private static MovimientoStock UnaEntradaDeAlbaran(
+        EscenaDeTransferencia escena, Guid almacenId, Guid ubicacionId, Guid albaranId) =>
+        MovimientoStock.Registrar(
+            escena.EmpresaId,
+            EscenaDeTransferencia.Hoy,
+            almacenId,
+            ubicacionId,
+            escena.ArticuloId,
+            null,
+            null,
+            1m,
+            escena.UnidadId,
+            1m,
+            "EUR",
+            Importe.De(1m, "EUR"),
+            Importe.De(1m, "EUR"),
+            PrecioUnitario.De(1m, "EUR"),
+            TipoDeDocumentoOrigen.Albaran,
+            albaranId,
+            DateTimeOffset.UtcNow);
+
+    // Una reserva de 5 sobre 10 de físico, consumida en 2 por un albarán: una fila del libro y un
+    // consumo, que es lo que cada mitad de la flecha mira.
+    private async Task<(EscenaDeTransferencia Escena, Guid AlbaranId, Guid ReservaId)> ConsumirUnaReservaAsync(
+        ApiDeVerdad api, int semilla, string codigo)
+    {
+        EscenaDeTransferencia escena = await EscenaDeTransferencia.MontarAsync(api, semilla, codigo, semilla);
+        await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 10m, 2m);
+
+        await using ElModuloDeInventario modulo = new(postgres, escena.EmpresaId);
+
+        OrigenDeLaReserva origen = LasReservas.OrigenNuevo();
+        ReservaDto reservada = await LasReservas.ReservadaAsync(modulo, escena, origen, 5m);
+
+        var albaranId = Guid.CreateVersion7();
+        LasReservas.Exigir(await LasReservas.ConsumirAsync(
+            modulo, origen, albaranId, EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 2m)));
+
+        return (escena, albaranId, reservada.Id);
+    }
 
     private static Task<IReadOnlyList<string>> HuerfanasAsync(
         InventarioDbContext contexto,
