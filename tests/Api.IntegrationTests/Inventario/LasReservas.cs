@@ -26,8 +26,7 @@ internal sealed record ReservaGuardada(
 /// </summary>
 /// <remarks>
 /// <b>Lo guardado se lee con otro contexto</b>, y no con el del módulo: el del módulo recuerda lo que
-/// el caso de uso cambió en memoria —una caducada liberada por un rechazo, que no se guarda—, y leer
-/// ahí diría lo que pasó en memoria y no lo que llegó a la base.
+/// cargó, y leer ahí diría lo que tiene en memoria y no lo que llegó a la base.
 /// </remarks>
 internal static class LasReservas
 {

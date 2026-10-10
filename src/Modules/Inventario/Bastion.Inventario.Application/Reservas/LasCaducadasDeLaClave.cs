@@ -8,9 +8,17 @@ namespace Bastion.Inventario.Application.Reservas;
 /// clave ya bloqueada, dejan liberadas las reservas de la clave que caducaron (ADR-0059 §4).
 /// </summary>
 /// <remarks>
+/// <para>
 /// <b>Se guardan con lo demás, o no se guardan</b>: esto solo las cambia en el rastreador, y las
-/// escribe el <c>ConfirmarAsync</c> del caso de uso. Un camino de rechazo no lo llama, así que las
-/// deja como estaban, y no importa: el estado y el disponible ya no las cuentan.
+/// escribe el <c>ConfirmarAsync</c> del caso de uso. Un rechazo las deja como estaban, y no importa:
+/// el estado y el disponible ya no las cuentan.
+/// </para>
+/// <para>
+/// <b>Se llama después del último rechazo, justo antes de confirmar.</b> Llamado antes de decidir,
+/// un rechazo las dejaría liberadas en el rastreador, y la siguiente confirmación del mismo ámbito,
+/// sobre otra clave, las escribiría sin el cerrojo de la suya (ADR-0059 §2). Lo encontró la revisión
+/// del 2.13, en su hallazgo 5.
+/// </para>
 /// </remarks>
 internal static class LasCaducadasDeLaClave
 {

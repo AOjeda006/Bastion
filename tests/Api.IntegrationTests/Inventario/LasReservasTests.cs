@@ -345,18 +345,26 @@ public sealed class LasReservasTests(PostgresConTodosLosModulos postgres) : IDis
     /// <summary>
     /// Una reserva que caduca deja de apartar en el instante de su caducidad, sin que nadie la
     /// escriba; la escribe, liberada por caducidad y con esa fecha, la siguiente escritura de su clave
-    /// que sale bien, y un rechazo no la guarda.
+    /// que sale bien. Ni un rechazo ni una escritura de otra clave la guardan.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// <b>La frontera es la del dominio</b>: en el instante exacto de la caducidad ya no aparta, y un
     /// microsegundo antes, sí. El SQL del disponible y <c>HaCaducadoEn</c> tienen que decir lo mismo,
     /// porque uno decide lo que se lee y el otro lo que se escribe (ADR-0059 §4).
+    /// </para>
+    /// <para>
+    /// <b>La escritura de otra clave va por el mismo módulo que los rechazos</b>, que es lo que la
+    /// hace mirar algo: un rechazo que dejara la caducada liberada en el rastreador se la daría a esa
+    /// confirmación, que la escribiría sin el cerrojo de su clave.
+    /// </para>
     /// </remarks>
     [Fact]
     public async Task La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale()
     {
         EscenaDeTransferencia escena = await MontarAsync(836, "RSV-G");
         await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 10m, 2m);
+        await escena.EntrarAsync(postgres, escena.AlmacenB, escena.UbicacionB, 1m, 2m);
 
         var ahora = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         DateTimeOffset caducaEl = ahora.AddHours(1);
@@ -394,6 +402,11 @@ public sealed class LasReservasTests(PostgresConTodosLosModulos postgres) : IDis
 
         (await LaGuardadaAsync(postgres, escena.EmpresaId, reservada.Id)).Estado
             .ShouldBe(EstadoDeReserva.Activa, "un rechazo no guarda la caducada");
+
+        _ = Exigir(await ReservarAsync(despues, escena, OrigenNuevo(), 1m, escena.AlmacenB));
+
+        (await LaGuardadaAsync(postgres, escena.EmpresaId, reservada.Id)).Estado
+            .ShouldBe(EstadoDeReserva.Activa, "una escritura de otra clave no guarda lo que tocó un rechazo");
 
         _ = await ReservadaAsync(despues, escena, OrigenNuevo(), 10m);
 

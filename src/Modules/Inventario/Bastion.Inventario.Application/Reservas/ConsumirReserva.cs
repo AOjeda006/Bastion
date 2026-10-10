@@ -28,8 +28,8 @@ public interface IConsumirReserva
 /// <remarks>
 /// <para>
 /// <b>Es una salida del ajuste sin contador</b>, porque el albarán lo numera Ventas: el ejercicio de
-/// la fecha, la marca del artículo, la valoración de la clave como cualquier salida, las caducadas,
-/// la reserva, el físico de cada hueco, el valor, y la escritura.
+/// la fecha, la marca del artículo, la valoración de la clave como cualquier salida, la reserva, el
+/// físico de cada hueco, el valor, las caducadas de la clave y la escritura.
 /// </para>
 /// <para>
 /// <b>Dobla la R12</b>: la reserva, su consumo, las filas del libro, las existencias y la valoración
@@ -146,10 +146,7 @@ internal sealed class ConsumirReserva(
                 $"La reserva del origen {origen} estaba antes del cerrojo y no está después: una " +
                 "reserva no se borra, así que la lectura no ha visto lo que debía.");
 
-        // 4. LAS CADUCADAS DE LA CLAVE, entre ellas esta si caducó: se escriben si el consumo sale.
-        await LasCaducadasDeLaClave.LiberarAsync(reservas, clave, ahora, cancelacion).ConfigureAwait(false);
-
-        // 5. LA RESERVA: sin este documento, activa ahora y con bastante pendiente. El documento va
+        // 4. LA RESERVA: sin este documento, activa ahora y con bastante pendiente. El documento va
         // antes que el estado: el reintento del albarán que la dejó consumida tiene que oír que ese
         // albarán ya salió, y no que la reserva no está activa (ADR-0059 §6).
         if (reserva.Consumos.Any(consumo =>
@@ -171,7 +168,7 @@ internal sealed class ConsumirReserva(
                 ErroresDeReserva.ConsumoPorEncimaDeLoPendiente(reserva.Id, sale, reserva.Pendiente));
         }
 
-        // 6. EL FÍSICO DE CADA HUECO, buscando los lotes y las series sin crearlos.
+        // 5. EL FÍSICO DE CADA HUECO, buscando los lotes y las series sin crearlos.
         LotesYSeriesResueltos resueltos = await reservas
             .BuscarLotesYSeriesAsync(
                 [.. CodigosDe(peticion.Lineas, clave.ArticuloId, linea => linea.CodigoDeLote)],
@@ -185,7 +182,7 @@ internal sealed class ConsumirReserva(
             return Resultado.Fallo<ReservaDto>(sinStock);
         }
 
-        // 7. EL VALOR, contra el saldo bloqueado.
+        // 6. EL VALOR, contra el saldo bloqueado.
         LineaDeConsumo[] lineas =
         [
             .. peticion.Lineas.Select(linea =>
@@ -200,6 +197,10 @@ internal sealed class ConsumirReserva(
         }
 
         IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, aValorar, divisa, fecha);
+
+        // 7. LAS CADUCADAS DE LA CLAVE, ya sin ningún rechazo por delante (ADR-0059 §4). Esta no está
+        // entre ellas: la reserva está activa ahora, o no habría llegado aquí.
+        await LasCaducadasDeLaClave.LiberarAsync(reservas, clave, ahora, cancelacion).ConfigureAwait(false);
 
         // 8. LAS EXISTENCIAS, LA VALORACIÓN Y EL LIBRO, con la reserva y su consumo, en un COMMIT.
         IReadOnlyList<MovimientoStock> filas = reserva.Consumir(

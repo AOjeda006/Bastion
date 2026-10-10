@@ -20,7 +20,7 @@ public interface IReservar
 
 /// <summary>
 /// Reservar, en el orden del ADR-0059 §5: la petición, el cerrojo de la clave, el origen, la
-/// caducidad, los maestros, las caducadas, el disponible y la reserva.
+/// caducidad, los maestros, el disponible, las caducadas y la reserva.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -134,10 +134,7 @@ internal sealed class Reservar(
             return Resultado.Fallo<ReservaDto>(LosMaestrosDeLaReserva.ArticuloNoEncontrado(peticion.ArticuloId));
         }
 
-        // 6. LAS CADUCADAS DE LA CLAVE, que se escriben si la reserva sale (ADR-0059 §4).
-        await LasCaducadasDeLaClave.LiberarAsync(reservas, clave, ahora, cancelacion).ConfigureAwait(false);
-
-        // 7. EL DISPONIBLE, con la valoración bloqueada: lo reservado no puede cambiar mientras se lee.
+        // 6. EL DISPONIBLE, con la valoración bloqueada: lo reservado no puede cambiar mientras se lee.
         IReadOnlyDictionary<ClaveDeValoracion, decimal> reservado = await reservas
             .ReservadoDeAsync([clave], ahora, cancelacion)
             .ConfigureAwait(false);
@@ -149,6 +146,9 @@ internal sealed class Reservar(
             return Resultado.Fallo<ReservaDto>(
                 ErroresDeReserva.PorEncimaDelDisponible(clave, peticion.Cantidad, disponible));
         }
+
+        // 7. LAS CADUCADAS DE LA CLAVE, ya sin ningún rechazo por delante (ADR-0059 §4).
+        await LasCaducadasDeLaClave.LiberarAsync(reservas, clave, ahora, cancelacion).ConfigureAwait(false);
 
         // 8. LA RESERVA.
         var reserva = Reserva.Reservar(

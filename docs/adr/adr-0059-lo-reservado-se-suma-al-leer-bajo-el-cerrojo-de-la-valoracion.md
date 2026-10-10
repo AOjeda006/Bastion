@@ -172,9 +172,11 @@ Ventas:
   Reservar, consumir y liberar, con la valoración ya bloqueada, cargan las reservas `Activa` de la
   clave con `caduca_el` vencido y las pasan a `Liberada`, con la causa `Caducidad` y
   `liberada_el = caduca_el`. La sentencia del libro no las toca.
-- **Un rechazo no guarda lo que liberó.** Un camino de fallo no llama a `ConfirmarAsync`, así que
-  las caducadas que encontró se quedan como estaban hasta la siguiente escritura que salga bien. No
-  importa: el disponible y el estado ya no las cuentan.
+- **Las liberan después del último rechazo, justo antes de confirmar.** Un rechazo no las toca: se
+  quedan como estaban hasta la siguiente escritura de su clave que salga bien. No importa: el
+  disponible y el estado ya no las cuentan. Si se liberaran antes de decidir, un rechazo las dejaría
+  liberadas en el rastreador, y la siguiente confirmación del mismo ámbito, sobre otra clave, las
+  escribiría sin el cerrojo de la suya. Así estaba hasta la revisión del 2.13, que lo encontró.
 - **El hueco, dicho**: entre que caduca y la siguiente escritura sobre su clave, una reserva sigue
   guardada `Activa`. Quien la lee la ve `Liberada`, y el disponible ya no la cuenta.
 
@@ -187,8 +189,8 @@ Ventas:
 | 3. El origen | la reserva que ya tenga | `409` |
 | 4. La caducidad | posterior a ahora | `400` |
 | 5. Los maestros | artículo apto, almacén activo, unidad base | `400` · `409` |
-| 6. Las caducadas de la clave | a `Liberada` | — |
-| 7. El disponible | con la valoración bloqueada | `422` |
+| 6. El disponible | con la valoración bloqueada | `422` |
+| 7. Las caducadas de la clave | a `Liberada` | — |
 | 8. La reserva | `INSERT` | — |
 
 - **La idempotencia por el origen** (precisión 6). Si el origen ya tiene reserva, con el mismo

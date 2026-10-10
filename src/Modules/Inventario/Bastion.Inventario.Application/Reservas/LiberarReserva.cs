@@ -78,12 +78,13 @@ internal sealed class LiberarReserva(
                 $"La reserva del origen {origen} estaba antes del cerrojo y no está después: una " +
                 "reserva no se borra, así que la lectura no ha visto lo que debía.");
 
-        await LasCaducadasDeLaClave.LiberarAsync(reservas, clave, ahora, cancelacion).ConfigureAwait(false);
-
         if (LoQueSeLePideALaReserva.SiNoEstaActiva(reserva, ahora) is { } noEstaActiva)
         {
             return Resultado.Fallo<ReservaDto>(noEstaActiva);
         }
+
+        // LAS CADUCADAS DE LA CLAVE, ya sin ningún rechazo por delante (ADR-0059 §4).
+        await LasCaducadasDeLaClave.LiberarAsync(reservas, clave, ahora, cancelacion).ConfigureAwait(false);
 
         reserva.Liberar(peticion.Motivo, ahora);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
