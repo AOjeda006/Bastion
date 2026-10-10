@@ -11,8 +11,8 @@ namespace Bastion.Inventario.UnitTests.Reservas;
 /// </summary>
 /// <remarks>
 /// <b>Lo que pasa del físico no es asunto de esta guarda</b>: lo contesta la del hueco, que es el
-/// <c>422</c> <c>stock-insuficiente</c> de siempre. Así un envío que ya se rechazaba se sigue
-/// rechazando con el mismo código, y el nuevo solo aparece donde antes salía bien.
+/// <c>422</c> <c>stock-insuficiente</c> de siempre. El físico es el de la clave: el hueco no llega
+/// aquí, y lo que pasa con él lo cuenta <c>LaTransferenciaFrenteAlDisponibleTests</c>.
 /// </remarks>
 public sealed class ElDisponibleDeLaSalidaTests
 {

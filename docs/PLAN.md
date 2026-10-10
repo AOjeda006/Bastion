@@ -10890,7 +10890,9 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      el puerto de la reserva, y contesta `422` `transferencia-por-encima-del-disponible` cuando
      una clave saca más que su disponible **y no más que su físico**. Por encima del físico sigue
      el `stock-insuficiente` del hueco, y la guarda va la última antes de escribir: lo que ya se
-     rechazaba se rechaza igual. El ADR-0059 §9 lo dice ya así. La regla es de dominio,
+     rechazaba se rechaza igual. El ADR-0059 §9 lo dice ya así. (No siempre: la guarda mira el
+     físico de la clave y no el del hueco, y lo corrige el hallazgo 2 de la revisión, en el paso
+     10.) La regla es de dominio,
      `ElDisponibleDeLaSalida`. Los casos:
      - 9 del dominio (`dotnet test tests/Inventario.UnitTests --filter
        "FullyQualifiedName~ElDisponibleDeLaSalidaTests"`), con las dos fronteras, la del
@@ -10970,7 +10972,7 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      | # | Hallazgo | Veredicto |
      |---|---|---|
      | 1 | Consumir mira si la reserva está activa antes que si ese albarán ya la consumió: el reintento del albarán que la dejó consumida oye `reserva-no-esta-activa` | **Real.** Arreglado en `fix(inventario): el albarán que ya consumió la reserva lo oye aunque la dejara consumida`: el documento se mira antes que el estado, en el caso de uso y en el dominio, y el ADR-0059 §6 lo dice. Lo ven `Las_guardas_del_consumo_contestan_antes_de_escribir` y `Una_reserva_consumida_no_se_vuelve_a_consumir` |
-     | 2 | La guarda del envío compara lo que sale de la clave con el físico de la clave, no con el del hueco: un envío que se queda corto en su hueco, con el resto apartado, oye el `422` del disponible y no `stock-insuficiente`, contra lo que dice el ADR-0059 §9 | **Real, en lo que dice el ADR.** Pendiente |
+     | 2 | La guarda del envío compara lo que sale de la clave con el físico de la clave, no con el del hueco: un envío que se queda corto en su hueco, con el resto apartado, oye el `422` del disponible y no `stock-insuficiente`, contra lo que dice el ADR-0059 §9 | **Real, en lo que dice el ADR.** Arreglado en `docs(inventario): la guarda del envío mira la clave, y el ADR ya no dice que no`: con 5 reservados las dos respuestas son verdad, y contesta la que no se arregla moviendo mercancía entre huecos. El ADR-0059 §9, la regla y el envío lo dicen, y `La_guarda_mira_el_fisico_de_la_clave_y_no_el_del_hueco`, con la semilla 855, lo fija |
      | 3 | Reservar no mira la marca del artículo, y acepta una cantidad con decimales de uno con número de serie, que no se puede consumir entera | **Real.** Pendiente |
      | 4 | Consumir no mira si la ubicación de la línea está bloqueada, y el ajuste sí | **Real.** Pendiente |
      | 5 | Las caducadas se liberan en el rastreador antes de decidir, y un rechazo las deja ahí: la siguiente confirmación del mismo ámbito las escribe sin el cerrojo de su clave | **Real.** Arreglado en `fix(inventario): las caducadas se liberan después del último rechazo`: reservar, consumir y liberar las tocan justo antes de confirmar, y el ADR-0059 §4 y §5 lo dicen. Lo ve `La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale`, que ahora escribe en otra clave con el mismo módulo de los rechazos; sin el arreglo, la caducada sale guardada `Liberada` |

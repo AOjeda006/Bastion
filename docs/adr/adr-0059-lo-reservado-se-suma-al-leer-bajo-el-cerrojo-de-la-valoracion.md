@@ -274,11 +274,18 @@ también con esa otra salida.
   unidad base, pasa del disponible de esa clave, es un `422`
   `transferencia-por-encima-del-disponible`. La suma de las reservas se lee después del cerrojo, y
   por eso no puede cambiar.
-- **Solo entre el disponible y el físico.** Lo que pasa del físico sigue siendo el `422`
-  `stock-insuficiente` del hueco, que es más preciso: dice que no hay, y no que está apartado. Y la
-  guarda va la última antes de escribir, detrás de la valoración: lo que ya se rechazaba se rechaza
-  con el mismo código, y el nuevo solo contesta donde antes el envío salía. La regla es de dominio,
+- **Solo entre el disponible y el físico de la clave.** Lo que pasa del físico de la clave sigue
+  siendo el `422` `stock-insuficiente` del hueco, que es más preciso: dice que no hay, y no que está
+  apartado. La guarda va la última antes de escribir, detrás de la valoración, así que lo que
+  rechaza la valoración se sigue rechazando con su código. La regla es de dominio,
   `ElDisponibleDeLaSalida`, y el envío lee lo reservado con el mismo puerto que la reserva.
+- **La guarda mira la clave, no el hueco.** Con 8 en un hueco, 2 en otro y 5 reservados, enviar 9
+  del primero es `transferencia-por-encima-del-disponible`; sin las reservas era
+  `stock-insuficiente`. Las dos cosas son verdad, y contesta la que no se arregla moviendo
+  mercancía de un hueco a otro. Mirar cada hueco pediría leer sus existencias en el envío, que hoy
+  las mueve la sentencia del libro sin leerlas (ADR-0044). Este punto decía que lo que ya se
+  rechazaba se seguía rechazando con el mismo código, y aquí no es así: lo encontró la revisión del
+  2.13.
 - **Recibir no mira nada**: suma.
 - **El ajuste, el recuento y las anulaciones no se frenan** (precisión 2). Registran la realidad o
   corrigen un error.

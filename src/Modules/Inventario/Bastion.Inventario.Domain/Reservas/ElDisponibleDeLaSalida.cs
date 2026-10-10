@@ -16,8 +16,12 @@ public sealed record SalidaPorEncimaDelDisponible(ClaveDeValoracion Clave, decim
 /// <para>
 /// <b>Pasa del disponible la clave que saca más que el físico menos lo reservado, y no más que el
 /// físico.</b> Lo que pasa del físico lo contesta la guarda del hueco, el <c>422</c>
-/// <c>stock-insuficiente</c>, que es más precisa: dice que no hay, y no que está apartado. Así lo que
-/// ya se rechazaba se sigue rechazando con el mismo código.
+/// <c>stock-insuficiente</c>, que es más precisa: dice que no hay, y no que está apartado.
+/// </para>
+/// <para>
+/// <b>El físico es el de la clave, no el del hueco.</b> Una línea que se queda corta en su hueco,
+/// con el resto de la clave apartado, pasa de las dos cosas, y contesta esta, que es la que no se
+/// arregla moviendo mercancía de un hueco a otro (ADR-0059 §9).
 /// </para>
 /// <para>
 /// <b>El físico es la cantidad del saldo</b>, que no cuenta lo que vuela: el tránsito de la clave no

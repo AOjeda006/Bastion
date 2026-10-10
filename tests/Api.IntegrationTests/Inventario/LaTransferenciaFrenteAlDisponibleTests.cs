@@ -22,8 +22,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// Las reservas van por el caso de uso cableado a mano, que no tiene borde (ADR-0059 §12).
 /// </para>
 /// <para>
-/// <b>Semillas: del 847 al 849</b>, empresas y maestros con el mismo número, del bloque del 2.13 que
-/// cuenta la cabecera de <c>LasReservasTests</c>.
+/// <b>Semillas: del 847 al 849, y el 855</b>, empresas y maestros con el mismo número, del bloque
+/// del 2.13 que cuenta la cabecera de <c>LasReservasTests</c>.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -101,6 +101,50 @@ public sealed class LaTransferenciaFrenteAlDisponibleTests(PostgresConTodosLosMo
 
             rechazo.StatusCode.ShouldBe(HttpStatusCode.UnprocessableContent, await Escenario.Detalle(rechazo));
             (await EscenaDeTransferencia.TipoDelProblemaAsync(rechazo)).ShouldBe(tipo, $"enviando {cantidad}");
+        }
+
+        (await escena.ContadorAsync()).ShouldBe(0);
+    }
+
+    /// <summary>
+    /// La guarda mira el físico de la clave y no el de su hueco: con 8 en un hueco y 2 en otro,
+    /// enviar 9 del primero es el <c>stock-insuficiente</c> del hueco mientras quepa en el disponible
+    /// de la clave, y el <c>422</c> del disponible en cuanto no cabe.
+    /// </summary>
+    /// <remarks>
+    /// <b>Con 5 reservados, las dos respuestas son verdad</b>: el hueco no tiene 9, y la clave no tiene
+    /// 9 libres. Contesta la del disponible, que no se arregla moviendo mercancía de un hueco a otro
+    /// (ADR-0059 §9). El ADR decía que lo que ya se rechazaba se seguía rechazando con el mismo
+    /// código; lo encontró la revisión del 2.13, en su hallazgo 2, y este caso lo fija.
+    /// </remarks>
+    [Fact]
+    public async Task La_guarda_mira_el_fisico_de_la_clave_y_no_el_del_hueco()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(855, "RTD-D");
+        Guid otroHueco = (await LosMaestrosPorLaApi.CrearUbicacionAsync(escena.Cliente, escena.AlmacenA, "RTD-D-A2")).Id;
+
+        await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 8m, 2m);
+        await escena.EntrarAsync(postgres, escena.AlmacenA, otroHueco, 2m, 2m);
+
+        await using ElModuloDeInventario modulo = new(postgres, escena.EmpresaId);
+        _ = await ReservadaAsync(modulo, escena, OrigenNuevo(), 1m);
+
+        Guid borrador = await escena.AbrirAsync(postgres, 9m);
+
+        using (HttpResponseMessage rechazo = await escena.EnviarPorLaApiAsync(borrador))
+        {
+            rechazo.StatusCode.ShouldBe(HttpStatusCode.UnprocessableContent, await Escenario.Detalle(rechazo));
+            (await EscenaDeTransferencia.TipoDelProblemaAsync(rechazo))
+                .ShouldBe("/errors/stock-insuficiente", "9 caben en los 9 disponibles de la clave, y el hueco tiene 8");
+        }
+
+        _ = await ReservadaAsync(modulo, escena, OrigenNuevo(), 4m);
+
+        using (HttpResponseMessage rechazo = await escena.EnviarPorLaApiAsync(borrador))
+        {
+            rechazo.StatusCode.ShouldBe(HttpStatusCode.UnprocessableContent, await Escenario.Detalle(rechazo));
+            (await EscenaDeTransferencia.TipoDelProblemaAsync(rechazo))
+                .ShouldBe(PorEncimaDelDisponible, "con 5 reservados, 9 ya no caben en la clave, aunque el hueco siga teniendo 8");
         }
 
         (await escena.ContadorAsync()).ShouldBe(0);

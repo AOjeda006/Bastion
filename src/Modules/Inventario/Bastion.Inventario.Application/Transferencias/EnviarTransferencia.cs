@@ -162,8 +162,8 @@ internal sealed class EnviarTransferencia(
                 ErroresDeTransferencia.NoSeValora(impedimento, transferencia.Divisa));
         }
 
-        // EL DISPONIBLE DEL ORIGEN, la última guarda antes de escribir: lo que ya se rechazaba se
-        // sigue rechazando con su código, y esta solo contesta donde antes el envío salía.
+        // EL DISPONIBLE DEL ORIGEN, la última guarda antes de escribir: lo que rechaza la valoración
+        // se sigue rechazando con su código. Mira la clave y no el hueco (ADR-0059 §9).
         IReadOnlyDictionary<ClaveDeValoracion, decimal> reservado = await reservas
             .ReservadoDeAsync([.. lineas.Select(linea => linea.Clave).Distinct()], reloj.GetUtcNow(), cancelacion)
             .ConfigureAwait(false);
