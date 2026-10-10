@@ -149,16 +149,18 @@ internal sealed class ConsumirReserva(
         // 4. LAS CADUCADAS DE LA CLAVE, entre ellas esta si caducó: se escriben si el consumo sale.
         await LasCaducadasDeLaClave.LiberarAsync(reservas, clave, ahora, cancelacion).ConfigureAwait(false);
 
-        // 5. LA RESERVA: activa ahora, sin este documento, y con bastante pendiente.
-        if (LoQueSeLePideALaReserva.SiNoEstaActiva(reserva, ahora) is { } noEstaActiva)
-        {
-            return Resultado.Fallo<ReservaDto>(noEstaActiva);
-        }
-
+        // 5. LA RESERVA: sin este documento, activa ahora y con bastante pendiente. El documento va
+        // antes que el estado: el reintento del albarán que la dejó consumida tiene que oír que ese
+        // albarán ya salió, y no que la reserva no está activa (ADR-0059 §6).
         if (reserva.Consumos.Any(consumo =>
             consumo.DocumentoTipo == peticion.DocumentoTipo && consumo.DocumentoId == peticion.DocumentoId))
         {
             return Resultado.Fallo<ReservaDto>(ErroresDeReserva.DocumentoYaLaConsumio(reserva.Id, peticion.DocumentoId));
+        }
+
+        if (LoQueSeLePideALaReserva.SiNoEstaActiva(reserva, ahora) is { } noEstaActiva)
+        {
+            return Resultado.Fallo<ReservaDto>(noEstaActiva);
         }
 
         decimal sale = peticion.Lineas.Sum(linea => linea.Cantidad);

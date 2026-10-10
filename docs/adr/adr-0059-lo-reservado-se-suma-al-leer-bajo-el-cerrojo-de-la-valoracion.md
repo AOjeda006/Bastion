@@ -215,9 +215,11 @@ Ventas:
 - **La fecha** no puede ser futura (`422`, como la transferencia), cae en un ejercicio abierto (R9,
   `409`) y no es anterior al último movimiento de la clave (ADR-0047, `422`).
 - **Lo que se mira de la reserva, con su clave bloqueada:**
+  - si ese documento ya la consumió, `409` `reserva-documento-ya-la-consumio`. Va antes que el
+    estado: el reintento del albarán que la dejó consumida oye que ese albarán ya salió, y no
+    que la reserva no está activa;
   - si no está `Activa` ahora, `409`: `reserva-caducada` si es porque caducó, y
     `reserva-no-esta-activa` si se consumió o se liberó;
-  - si ese documento ya la consumió, `409`;
   - si las líneas suman más de lo pendiente, `422`.
 - **El físico de cada hueco se mira antes de escribir**, con la clave bloqueada: si una línea saca
   más de lo que hay, `422` `reserva-consumo-sin-stock`. Hace falta porque la unidad de trabajo

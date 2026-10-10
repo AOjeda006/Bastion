@@ -25,8 +25,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <remarks>
 /// <para>
 /// <b>Las guardas del libro son las de cualquier salida</b>: la fecha, el ejercicio, la marca, el
-/// físico de cada hueco y la valoración. Las de la reserva van delante: que esté activa, que este
-/// albarán no la haya consumido ya y que no se saque más de lo que le queda.
+/// físico de cada hueco y la valoración. Las de la reserva van delante: que este albarán no la haya
+/// consumido ya, que esté activa y que no se saque más de lo que le queda.
 /// </para>
 /// <para>
 /// <b>Semillas: del 840 al 846</b>, del bloque del 2.13 que reparte la cabecera de
@@ -121,7 +121,8 @@ public sealed class ElConsumoDeLaReservaTests(PostgresConTodosLosModulos postgre
     /// <summary>
     /// Las guardas de la reserva y las del físico contestan antes de escribir: el mismo albarán dos
     /// veces, más de lo pendiente, y más de lo que hay en un hueco, sumando las líneas que lo
-    /// comparten. Justo lo pendiente, repartido en dos huecos que lo tienen, sale.
+    /// comparten. Justo lo pendiente, repartido en dos huecos que lo tienen, sale; y si ese albarán
+    /// vuelve, oye que ya la consumió, aunque la haya dejado consumida.
     /// </summary>
     [Fact]
     public async Task Las_guardas_del_consumo_contestan_antes_de_escribir()
@@ -192,6 +193,13 @@ public sealed class ElConsumoDeLaReservaTests(PostgresConTodosLosModulos postgre
         consumida.Estado.ShouldBe(EstadoDeReserva.Consumida);
         (await FilasDelLibroAsync(postgres, escena.EmpresaId)).ShouldBe(filasAntes + 2);
         (await LaGuardadaAsync(postgres, escena.EmpresaId, reservada.Id)).Consumos.ShouldBe(2);
+
+        ExigirElRechazo(
+            await ConsumirAsync(
+                modulo, origen, segundo, EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 1m)),
+            "reserva-documento-ya-la-consumio",
+            TipoDeError.Conflicto,
+            "el reintento del albarán que la dejó consumida oye que ya salió, y no que no está activa");
     }
 
     /// <summary>

@@ -167,7 +167,10 @@ public sealed class ElConsumoDeLaReservaTests
         reserva.Consumida.ShouldBe(4m);
     }
 
-    /// <summary>Una reserva consumida entera no se vuelve a consumir.</summary>
+    /// <summary>
+    /// Una reserva consumida entera no se vuelve a consumir. El albarán que la dejó así, si vuelve,
+    /// oye que ya la consumió: el documento se mira antes que el estado.
+    /// </summary>
     [Fact]
     public void Una_reserva_consumida_no_se_vuelve_a_consumir()
     {
@@ -176,7 +179,12 @@ public sealed class ElConsumoDeLaReservaTests
             reserva, LaReservaDeLaPrueba.Albaran, LaReservaDeLaPrueba.Momento, LaReservaDeLaPrueba.UnaLinea(10m));
 
         Should.Throw<InvalidOperationException>(() => LaReservaDeLaPrueba.Consumir(
-            reserva, LaReservaDeLaPrueba.OtroAlbaran, LaReservaDeLaPrueba.Momento, LaReservaDeLaPrueba.UnaLinea(1m)));
+            reserva, LaReservaDeLaPrueba.OtroAlbaran, LaReservaDeLaPrueba.Momento, LaReservaDeLaPrueba.UnaLinea(1m)))
+            .Message.ShouldContain("no está activa");
+
+        Should.Throw<InvalidOperationException>(() => LaReservaDeLaPrueba.Consumir(
+            reserva, LaReservaDeLaPrueba.Albaran, LaReservaDeLaPrueba.Momento, LaReservaDeLaPrueba.UnaLinea(1m)))
+            .Message.ShouldContain("ya consumió");
 
         reserva.Consumos.Count.ShouldBe(1);
     }

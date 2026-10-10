@@ -375,17 +375,19 @@ public sealed class Reserva : EntidadBase, IDeInquilino
                 "Un número de serie sale una sola vez por documento (ADR-0048 §3).", nameof(lineas));
         }
 
+        // EL DOCUMENTO ANTES QUE EL ESTADO: el reintento del que la dejó consumida es eso, un
+        // reintento, y no una reserva que dejó de estar activa (ADR-0059 §6).
+        if (_consumos.Any(consumo => consumo.DocumentoTipo == documentoTipo && consumo.DocumentoId == documentoId))
+        {
+            throw new InvalidOperationException(
+                $"El documento {documentoId} ya consumió la reserva {Id}: un documento la consume una vez.");
+        }
+
         if (EstadoEn(momento) != EstadoDeReserva.Activa)
         {
             throw new InvalidOperationException(
                 $"La reserva {Id} no está activa: está {EstadoEn(momento)}" +
                 (HaCaducadoEn(momento) ? $", porque caducó el {CaducaEl:O}." : "."));
-        }
-
-        if (_consumos.Any(consumo => consumo.DocumentoTipo == documentoTipo && consumo.DocumentoId == documentoId))
-        {
-            throw new InvalidOperationException(
-                $"El documento {documentoId} ya consumió la reserva {Id}: un documento la consume una vez.");
         }
 
         decimal sale = lineas.Sum(linea => linea.Cantidad);
