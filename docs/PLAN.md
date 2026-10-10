@@ -10865,8 +10865,28 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      la fecha 17 y las seis `CHECK` del recorrido de las migraciones. Los 21 casos de integración
      que tocan las existencias y el recorrido, en verde (`dotnet test tests/Api.IntegrationTests
      --filter` con sus cinco clases).
-   - **Lo siguiente**: los casos de uso —reservar, consumir y liberar—, con sus errores, y la
-     lectura del disponible en `Contracts`. El glosario dirá entonces quién lee el disponible.
+   - **Hecho, los casos de uso**, en `feat(inventario): reservar, consumir y liberar, y el
+     disponible en Contracts`: `Reservar`, `ConsumirReserva` y `LiberarReserva` en Application,
+     sin borde, con 28 códigos en el catálogo y en los dos diccionarios, y
+     `IConsultaDeExistencias` en `Contracts`, la segunda puerta pública del módulo. Los casos:
+     - 16 de integración, por el caso de uso cableado a mano (`dotnet test
+       tests/Api.IntegrationTests --filter
+       "FullyQualifiedName~LasReservasTests|FullyQualifiedName~ElConsumoDeLaReservaTests"`);
+     - 8 de las tres sentencias crudas en el carril rápido (`--filter
+       "FullyQualifiedName~LasSentenciasDeLaReserva"` en `tests/Api.FunctionalTests`), que
+       entran con ellas en la lista de `ElFiltroNoSeSaltaPorAhiTests`;
+     - 70 del dominio, con los del commit anterior (`dotnet test tests/Inventario.UnitTests
+       --filter "FullyQualifiedName~Reservas"`).
+
+     **La caducidad pasó del paso 1 al 4 del ADR-0059 §5**, detrás del origen: el caso de la
+     caducidad, la primera vez que corrió, encontró que el reintento de una petición que salió
+     bien contestaba `400` cuando su caducidad ya había pasado. El ADR aún no está en `main`, y
+     el punto se reescribe aquí. El glosario dice ya quién lee el disponible.
+
+     **Las 28 frases suben el arranque del frontal de 437 a 442 KiB, de 450**, porque los
+     diccionarios van en él (`bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`).
+   - **Lo siguiente**: la transferencia frente al disponible de su origen (ADR-0059 §9), con su
+     `422` y su caso.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

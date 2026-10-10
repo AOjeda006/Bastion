@@ -1,5 +1,6 @@
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Application.Recuentos;
+using Bastion.Inventario.Application.Reservas;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +40,12 @@ public static class CasosDeUsoDeInventario
         servicios.AddScoped<IConfirmarRecuento, ConfirmarRecuento>();
         servicios.AddScoped<IAnularRecuento, AnularRecuento>();
         servicios.AddScoped<IDescartarRecuento, DescartarRecuento>();
+
+        // LOS TRES DE LA RESERVA, sin borde: los llama Ventas en la fase 4, en proceso, y hasta
+        // entonces solo los tests (ADR-0059 §12).
+        servicios.AddScoped<IReservar, Reservar>();
+        servicios.AddScoped<IConsumirReserva, ConsumirReserva>();
+        servicios.AddScoped<ILiberarReserva, LiberarReserva>();
 
         // SIN ESTADO, así que una para todo el proceso. Es la costura para FIFO (ADR-0046 §10):
         // cambiar de método es cambiar esta línea.

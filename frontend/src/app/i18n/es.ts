@@ -412,6 +412,93 @@ export const es = {
         'Esa ubicación no existe en el almacén del recuento. Elige una de las suyas.',
       'recuento-ya-hay-uno-en-curso':
         'Ese almacén ya se está contando. Confirma o descarta el recuento en curso antes de abrir otro.',
+      // Las veintiocho de la reserva (ítem 2.13). Ninguna pantalla las enseña todavía: las leerá
+      // quien reserve desde un pedido en la fase 4. Y aun así llevan texto desde hoy, porque un
+      // `type` que la API emite sin su frase es rojo el día que se escribe (ADR-0030). Las del
+      // libro son las de la transferencia, con la salida del albarán en lugar del viaje.
+      'reserva-almacen-bloqueado':
+        'Ese almacén está bloqueado: sus existencias se siguen leyendo, pero no admite una reserva ' +
+        'nueva. Elige otro almacén o pide que lo desbloqueen.',
+      'reserva-almacen-no-encontrado': 'Ese almacén no existe. Elige uno del maestro de almacenes.',
+      'reserva-articulo-no-encontrado':
+        'Ese artículo no existe. Elige uno del maestro de artículos.',
+      'reserva-articulo-no-se-almacena':
+        'Ese artículo es un servicio: no tiene existencias que apartar. Quita esa línea o cambia el ' +
+        'artículo.',
+      'reserva-caducada':
+        'Esa reserva caducó, y lo que apartaba ha vuelto al disponible: ya no se consume ni se ' +
+        'libera. Revisa el documento que la pidió.',
+      'reserva-caducidad-no-valida':
+        'La caducidad tiene que ser posterior a ahora: una reserva que caduca al nacer no aparta ' +
+        'nada. Pon una fecha posterior, o déjala sin caducidad.',
+      'reserva-cantidad-no-valida':
+        'La cantidad va en la unidad base del artículo: positiva y con seis decimales como mucho. ' +
+        'Corrige la cifra.',
+      'reserva-con-fecha-futura':
+        'Esa fecha es posterior a hoy: el libro solo recoge lo que ya ha pasado, y la mercancía sale ' +
+        'el día en que sale. Hazlo ese día o corrige la fecha.',
+      'reserva-consumo-por-encima-de-lo-pendiente':
+        'Las líneas sacan más de lo que le queda a la reserva, y lo que pasa de ahí no está ' +
+        'apartado para este documento. Saca como mucho lo pendiente.',
+      'reserva-consumo-sin-stock':
+        'Alguna línea saca de un hueco más de lo que hay en él con ese lote o ese número de serie. ' +
+        'Elige otro hueco u otro lote, o saca menos.',
+      'reserva-documento-no-valido':
+        'Lo que consume una reserva es un albarán, y tiene que decir cuál. Indica el albarán.',
+      'reserva-documento-ya-la-consumio':
+        'Ese albarán ya consumió esta reserva, y un albarán la consume una sola vez. Si queda algo ' +
+        'pendiente, sácalo con otro albarán.',
+      'reserva-en-ejercicio-cerrado':
+        'Esa fecha cae en un ejercicio cerrado: ese periodo ya es definitivo y no admite ' +
+        'documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
+      'reserva-fecha-anterior-al-ultimo-movimiento':
+        'El artículo ya tiene un movimiento posterior a esa fecha en ese almacén, y una salida no ' +
+        'puede ir por detrás del último movimiento de su artículo. Pon esa fecha o una posterior.',
+      'reserva-lote-no-valido':
+        'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
+        'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote de esa ' +
+        'línea.',
+      'reserva-motivo-no-valido':
+        'Escribe por qué liberas la reserva, en 300 caracteres o menos. Es lo único que quedará ' +
+        'para entender por qué se soltó lo que apartaba.',
+      'reserva-no-encontrada':
+        'Esa línea no tiene ninguna reserva. Vuelve al documento y actualiza.',
+      'reserva-no-esta-activa':
+        'Esa reserva ya no está activa: se consumió entera o se liberó, y no aparta nada. ' +
+        'Actualiza la pantalla para ver en qué estado está.',
+      'reserva-numero-de-serie-no-valido':
+        'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
+        'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
+        'número de serie de esa línea.',
+      'reserva-origen-con-otra-reserva':
+        'Esa línea ya tiene su reserva, y pides otra cosa: otro artículo, otro almacén, otra ' +
+        'cantidad u otra caducidad. Una línea reserva una sola vez, así que vale la que tiene.',
+      'reserva-origen-no-valido':
+        'La reserva tiene que decir de qué documento y de qué línea sale: sin eso, un reintento no ' +
+        'la reconocería y apartaría dos veces.',
+      'reserva-por-encima-del-disponible':
+        'No hay tanto disponible: lo que queda en ese almacén, quitado lo que ya está reservado, no ' +
+        'llega a lo que pides. Reserva menos, o en otro almacén.',
+      'reserva-serie-no-unitaria':
+        'Una línea con número de serie saca exactamente una unidad, porque cada número es una ' +
+        'pieza y no hay dos con el mismo. Pon una línea por pieza, con cantidad 1 en la unidad ' +
+        'base del artículo.',
+      'reserva-serie-repetida':
+        'Dos líneas del albarán nombran el mismo número de serie, y cada pieza sale una sola vez ' +
+        'por documento. Quita una de las dos líneas.',
+      'reserva-sin-ejercicio':
+        'Esa fecha no cae en ningún ejercicio: sin periodo al que imputarlo, la salida no entraría ' +
+        'en ninguna declaración. Abre el ejercicio que falta o corrige la fecha.',
+      'reserva-sin-lineas':
+        'Consumir una reserva necesita al menos una línea: un albarán que no saca nada no sirve ' +
+        'nada de ella.',
+      'reserva-trazabilidad-no-casa':
+        'Alguna línea no casa con la trazabilidad del artículo: le falta el lote o el número de ' +
+        'serie que pide la ficha, o lleva uno que la ficha no pide. Corrige la línea.',
+      'reserva-valoracion-en-otra-divisa':
+        'Las existencias del artículo están valoradas en ese almacén en otra divisa, y sacarlas ' +
+        'pediría un tipo de cambio. La salida no se puede hacer mientras el almacén las tenga ' +
+        'valoradas así.',
       'rol-no-encontrado': 'Ese rol ya no existe. Vuelve al listado y actualiza.',
       'serie-cerrada': 'La serie está cerrada y no admite cambios.',
       'serie-de-otro-documento':

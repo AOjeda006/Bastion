@@ -9,13 +9,16 @@ using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Application.Recuentos;
+using Bastion.Inventario.Application.Reservas;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Existencias;
 using Bastion.Inventario.Contracts.Recuentos;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
+using Bastion.Inventario.Infrastructure.Persistencia.Reservas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
@@ -26,10 +29,16 @@ using Npgsql;
 namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
-/// Los cuatro casos de uso del ajuste, los cuatro de la transferencia, y el alta, el conteo de una
-/// línea y la confirmación del recuento, con sus adaptadores REALES y los contextos que necesitan.
+/// Los cuatro casos de uso del ajuste, los cuatro de la transferencia, el alta, el conteo de una
+/// línea y la confirmación del recuento, los tres de la reserva y la lectura del disponible, con sus
+/// adaptadores REALES y los contextos que necesitan.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>La reserva entró en el ítem 2.13</b>, y aquí no hay otro sitio: no tiene borde, porque la llama
+/// Ventas en proceso desde la fase 4 (ADR-0059 §12). Abre su propia transacción, así que se llama tal
+/// cual, sin la de este módulo.
+/// </para>
 /// <para>
 /// <b>La confirmación del recuento entró la última</b>, por lo mismo que el conteo: la carrera de dos
 /// confirmaciones necesita parar la primera con la cabecera bloqueada y su ajuste escrito sin
@@ -111,6 +120,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         _ajustes = ajustes;
         RepositorioDeTransferencias transferencias = new(_inventario, new InquilinoFijo(empresaId));
         RepositorioDeRecuentos recuentos = new(_inventario, new InquilinoFijo(empresaId));
+        RepositorioDeReservas reservas = new(_inventario, new InquilinoFijo(empresaId));
         UnidadDeTrabajoDeInventario unidadDeTrabajo = new(_inventario);
         ConsultaDeEmpresas empresas = new(_organizacion);
         ConsultaDeAlmacenes almacenes = new(_organizacion, acceso);
@@ -228,6 +238,23 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             new VersionesDeInventario(_inventario),
             unidadDeTrabajo,
             elReloj);
+
+        Reserva = new Reservar(
+            new ElUsuarioDeLaEmpresa(empresaId), reservas, articulos, almacenes, unidadDeTrabajo, elReloj);
+
+        ConsumoDeReserva = new ConsumirReserva(
+            new ElUsuarioDeLaEmpresa(empresaId),
+            reservas,
+            empresas,
+            ejercicios,
+            trazabilidad,
+            new ElPrecioMedioPonderado(),
+            unidadDeTrabajo,
+            elReloj);
+
+        LiberacionDeReserva = new LiberarReserva(reservas, unidadDeTrabajo, elReloj);
+
+        Disponible = new ElDisponibleDeLasExistencias(_inventario, new InquilinoFijo(empresaId), elReloj);
     }
 
     internal AbrirAjuste Alta { get; }
@@ -253,6 +280,14 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal ConfirmarRecuento ConfirmacionDeRecuento { get; }
 
     internal AnularRecuento AnulacionDeRecuento { get; }
+
+    internal Reservar Reserva { get; }
+
+    internal ConsumirReserva ConsumoDeReserva { get; }
+
+    internal LiberarReserva LiberacionDeReserva { get; }
+
+    internal IConsultaDeExistencias Disponible { get; }
 
     /// <summary>Confirma un ajuste con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>

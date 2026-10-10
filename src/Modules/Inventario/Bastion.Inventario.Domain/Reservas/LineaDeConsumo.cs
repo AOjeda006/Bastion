@@ -27,7 +27,7 @@ public sealed record LineaDeConsumo
 
         // SEIS DECIMALES, LOS DE LA FILA DEL LIBRO: con siete, la fila redondearía al registrarse y
         // el consumo guardaría una cantidad que no es la suma de sus filas.
-        if (cantidad <= 0m || decimal.Round(cantidad, MovimientoStock.DecimalesDeCantidad) != cantidad)
+        if (!Reserva.EsUnaCantidadValida(cantidad))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(cantidad),

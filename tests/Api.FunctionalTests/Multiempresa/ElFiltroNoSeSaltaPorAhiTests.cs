@@ -405,6 +405,25 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "solo si la fila existe: ni un dato de la cabecera, que se lee despues por el ORM con "
             + "el filtro puesto. El identificador viene de la ruta y el filtro no alcanza al SQL "
             + "crudo, asi que compara la empresa ella misma con el valor de IInquilinoActual",
+
+        // LAS DEL ITEM 2.13, el cerrojo de la reserva y lo reservado, con el criterio de la del
+        // recuento. El cerrojo es el de la valoracion de la clave, y lo reservado es una suma con la
+        // caducidad que EF Core no traduce en una sola sentencia (ADR-0059 §2 y §3). Comparan la
+        // empresa ellas mismas, y lo comprueban LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests
+        // y, con dos empresas de verdad, LasReservasTests.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Repositorios/" +
+         "RepositorioDeReservas.cs usa .SqlQuery"] =
+            "toma el cerrojo del UPDATE (FOR NO KEY UPDATE) sobre la valoracion de la clave sin "
+            + "crearla, y suma lo reservado de las claves bloqueadas, en la transaccion que va a "
+            + "reservar, consumir o liberar. Las dos comparan la empresa con el valor de "
+            + "IInquilinoActual",
+
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Reservas/" +
+         "ElDisponibleDeLasExistencias.cs usa .SqlQuery"] =
+            "lee el fisico, lo reservado y el disponible de unos articulos en un almacen, en una "
+            + "sola sentencia y sin cerrojo: quien decide con esas cifras reserva, y la reserva las "
+            + "vuelve a mirar bajo cerrojo. Compara la empresa con el valor de IInquilinoActual en la "
+            + "valoracion y en las reservas",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

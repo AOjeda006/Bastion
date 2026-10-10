@@ -186,6 +186,46 @@ public sealed class LaMaquinaDeEstadosDeLaReservaTests
     }
 
     /// <summary>
+    /// La pregunta de la cantidad contesta lo mismo que el alta: es la que hace el caso de uso para
+    /// devolver un <c>400</c> en vez de dejar que el dominio lance (ADR-0059 §5, precisión 7).
+    /// </summary>
+    /// <param name="cantidad">La cantidad, escrita como cadena para que el decimal sea exacto.</param>
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("1.0000001")]
+    [InlineData("1.000001")]
+    [InlineData("10")]
+    public void La_pregunta_de_la_cantidad_contesta_lo_mismo_que_el_alta(string cantidad)
+    {
+        decimal valor = decimal.Parse(cantidad, System.Globalization.CultureInfo.InvariantCulture);
+        bool nace = Nace(() => LaReservaDeLaPrueba.UnaReservaDe(valor));
+
+        Reserva.EsUnaCantidadValida(valor).ShouldBe(nace);
+    }
+
+    /// <summary>
+    /// La pregunta de la caducidad contesta lo mismo que el alta, y también medio microsegundo
+    /// después del momento, que el alta trunca al microsegundo y rechaza: comparar a secas lo
+    /// daría por bueno, y el caso de uso lanzaría en vez de contestar.
+    /// </summary>
+    /// <param name="ticks">Cuántos ticks después del momento caduca; <c>null</c>, sin caducidad.</param>
+    [Theory]
+    [InlineData(null)]
+    [InlineData(-10)]
+    [InlineData(0)]
+    [InlineData(5)]
+    [InlineData(10)]
+    [InlineData(15)]
+    public void La_pregunta_de_la_caducidad_contesta_lo_mismo_que_el_alta(int? ticks)
+    {
+        DateTimeOffset? caducaEl = ticks is { } cuantos ? LaReservaDeLaPrueba.Momento.AddTicks(cuantos) : null;
+        bool nace = Nace(() => LaReservaDeLaPrueba.UnaReservaDe(10m, caducaEl));
+
+        Reserva.CaducaDespuesDe(caducaEl, LaReservaDeLaPrueba.Momento).ShouldBe(nace);
+    }
+
+    /// <summary>
     /// Liberarla a mano la deja liberada con su causa, su motivo recortado y el momento, y deja de
     /// apartar nada.
     /// </summary>
@@ -313,5 +353,19 @@ public sealed class LaMaquinaDeEstadosDeLaReservaTests
 
         caducada.Causa.ShouldBeNull();
         vigente.Causa.ShouldBe(CausaDeLiberacion.AMano);
+    }
+
+    // NACE O NO: el alta lanza con su ParamName, y aquí solo importa si lanza.
+    private static bool Nace(Func<Reserva> alta)
+    {
+        try
+        {
+            alta();
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return false;
+        }
     }
 }

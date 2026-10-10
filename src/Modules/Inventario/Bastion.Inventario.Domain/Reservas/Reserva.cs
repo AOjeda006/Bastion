@@ -190,7 +190,7 @@ public sealed class Reserva : EntidadBase, IDeInquilino
             throw new ArgumentException("Una reserva aparta de un almacén.", nameof(almacenId));
         }
 
-        if (cantidad <= 0m || decimal.Round(cantidad, MovimientoStock.DecimalesDeCantidad) != cantidad)
+        if (!EsUnaCantidadValida(cantidad))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(cantidad),
@@ -204,9 +204,7 @@ public sealed class Reserva : EntidadBase, IDeInquilino
             throw new ArgumentException("Una reserva habla en la unidad base de su artículo.", nameof(unidadBaseId));
         }
 
-        DateTimeOffset? caducidad = ComoSeGuarda(caducaEl);
-
-        if (caducidad <= momento)
+        if (!CaducaDespuesDe(caducaEl, momento))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(caducaEl),
@@ -224,9 +222,30 @@ public sealed class Reserva : EntidadBase, IDeInquilino
             almacenId,
             cantidad,
             unidadBaseId,
-            caducidad,
+            ComoSeGuarda(caducaEl),
             momento);
     }
+
+    /// <summary>
+    /// Si una cantidad se puede reservar o sacar: positiva, y con los seis decimales de la fila del
+    /// libro como mucho. Es la pregunta que hace el caso de uso antes de construir, para contestar
+    /// un <c>400</c> donde el alta lanzaría (ADR-0059 §5, precisión 7).
+    /// </summary>
+    /// <param name="cantidad">La cantidad, en la unidad base.</param>
+    /// <returns><c>true</c> si vale.</returns>
+    public static bool EsUnaCantidadValida(decimal cantidad) =>
+        cantidad > 0m && decimal.Round(cantidad, MovimientoStock.DecimalesDeCantidad) == cantidad;
+
+    /// <summary>
+    /// Si una caducidad es posterior a un momento, comparada como se guarda: en UTC y truncada al
+    /// microsegundo. Sin caducidad, siempre. Medio microsegundo después del momento no vale, porque
+    /// al guardarse sería el momento mismo.
+    /// </summary>
+    /// <param name="caducaEl">La caducidad pedida, o <c>null</c>.</param>
+    /// <param name="momento">El momento de reservar.</param>
+    /// <returns><c>true</c> si la reserva nacería activa.</returns>
+    public static bool CaducaDespuesDe(DateTimeOffset? caducaEl, DateTimeOffset momento) =>
+        ComoSeGuarda(caducaEl) is not { } caducidad || caducidad > momento;
 
     /// <summary>
     /// El estado de la reserva en un instante: el guardado, salvo que esté guardada activa y su

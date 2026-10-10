@@ -372,6 +372,85 @@ export const en: Diccionario = {
         'That location does not exist in the stock count’s warehouse. Pick one of its own.',
       'recuento-ya-hay-uno-en-curso':
         'That warehouse is already being counted. Confirm or discard the count in progress before opening another.',
+      'reserva-almacen-bloqueado':
+        'That warehouse is blocked: its stock is still read, but it does not accept a new ' +
+        'reservation. Pick another warehouse or ask for it to be unblocked.',
+      'reserva-almacen-no-encontrado':
+        'That warehouse does not exist. Pick one from the warehouse list.',
+      'reserva-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
+      'reserva-articulo-no-se-almacena':
+        'That item is a service: it has no stock to set aside. Remove that line or change the item.',
+      'reserva-caducada':
+        'That reservation has expired, and what it set aside is available again: it can no ' +
+        'longer be consumed or released. Review the document that asked for it.',
+      'reserva-caducidad-no-valida':
+        'The expiry must be later than now: a reservation that expires as it is made sets nothing ' +
+        'aside. Use a later date, or leave it without an expiry.',
+      'reserva-cantidad-no-valida':
+        'The quantity is in the item’s base unit: positive and with at most six decimals. Fix ' +
+        'the figure.',
+      'reserva-con-fecha-futura':
+        'That date is after today: the ledger only records what has already happened, and goods ' +
+        'leave on the day they leave. Do it on that day or fix the date.',
+      'reserva-consumo-por-encima-de-lo-pendiente':
+        'The lines take out more than the reservation has left, and anything beyond that is not ' +
+        'set aside for this document. Take out at most what is pending.',
+      'reserva-consumo-sin-stock':
+        'A line takes more out of a location than it holds with that batch or serial number. ' +
+        'Pick another location or batch, or take out less.',
+      'reserva-documento-no-valido':
+        'What consumes a reservation is a delivery note, and it must say which one. Name the ' +
+        'delivery note.',
+      'reserva-documento-ya-la-consumio':
+        'That delivery note has already consumed this reservation, and a delivery note consumes ' +
+        'it only once. If something is still pending, take it out with another delivery note.',
+      'reserva-en-ejercicio-cerrado':
+        'That date falls inside a closed financial year: the period is already final and takes ' +
+        'no new documents. Change the date or ask for the year to be reopened.',
+      'reserva-fecha-anterior-al-ultimo-movimiento':
+        'The item already has a later movement in that warehouse, and an outgoing movement cannot ' +
+        'be dated before the last movement of its item. Use that date or a later one.',
+      'reserva-lote-no-valido':
+        'That batch is not a code that fits on the label: 1 to 20 characters, no spaces, using ' +
+        'unaccented letters, digits and the symbols GS1 allows. Fix the batch on that line.',
+      'reserva-motivo-no-valido':
+        'Write why you are releasing the reservation, in 300 characters or fewer. It is the only ' +
+        'thing left to explain why what it set aside was let go.',
+      'reserva-no-encontrada': 'That line has no reservation. Go back to the document and refresh.',
+      'reserva-no-esta-activa':
+        'That reservation is no longer active: it was fully consumed or released, and it sets ' +
+        'nothing aside. Refresh the screen to see what state it is in.',
+      'reserva-numero-de-serie-no-valido':
+        'That serial number is not a code that fits on the label: 1 to 20 characters, no spaces, ' +
+        'using unaccented letters, digits and the symbols GS1 allows. Fix the serial number on ' +
+        'that line.',
+      'reserva-origen-con-otra-reserva':
+        'That line already has its reservation, and you are asking for something else: another ' +
+        'item, warehouse, quantity or expiry. A line reserves only once, so the one it has stands.',
+      'reserva-origen-no-valido':
+        'The reservation must say which document and which line it comes from: without that, a ' +
+        'retry would not recognise it and would set stock aside twice.',
+      'reserva-por-encima-del-disponible':
+        'Not that much is available: what is left in that warehouse, minus what is already ' +
+        'reserved, does not reach what you ask for. Reserve less, or in another warehouse.',
+      'reserva-serie-no-unitaria':
+        'A line with a serial number takes out exactly one unit, because each number is one piece ' +
+        'and no two share it. Use one line per piece, with a quantity of 1 in the item’s base unit.',
+      'reserva-serie-repetida':
+        'Two lines of the delivery note name the same serial number, and each piece leaves only ' +
+        'once per document. Remove one of the two lines.',
+      'reserva-sin-ejercicio':
+        'That date falls outside every financial year: with no period to book it to, the ' +
+        'outgoing movement would not reach any return. Open the missing year or fix the date.',
+      'reserva-sin-lineas':
+        'Consuming a reservation needs at least one line: a delivery note that takes nothing out ' +
+        'serves none of it.',
+      'reserva-trazabilidad-no-casa':
+        'A line does not match the item’s traceability: it lacks the batch or serial number the ' +
+        'item requires, or carries one the item does not track. Fix the line.',
+      'reserva-valoracion-en-otra-divisa':
+        'The item’s stock in that warehouse is valued in another currency, and taking it out ' +
+        'would need an exchange rate. It cannot leave while the warehouse values it that way.',
       'rol-no-encontrado': 'That role no longer exists. Go back to the list and refresh.',
       'serie-cerrada': 'The document series is closed and cannot be changed.',
       'serie-de-otro-documento':

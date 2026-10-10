@@ -7,8 +7,10 @@ using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Application.Recuentos;
+using Bastion.Inventario.Application.Reservas;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Existencias;
 using Bastion.Inventario.Contracts.Movimientos;
 using Bastion.Inventario.Contracts.Recuentos;
 using Bastion.Inventario.Contracts.Transferencias;
@@ -16,6 +18,7 @@ using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Configuraciones;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
+using Bastion.Inventario.Infrastructure.Persistencia.Reservas;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -81,6 +84,10 @@ public static class ModuloDeInventario
         // Y uno para el recuento: el documento, y las existencias contra las que se cuenta.
         servicios.AddScoped<IRepositorioDeRecuentos, RepositorioDeRecuentos>();
 
+        // Y uno para la reserva: la reserva, su consumo, el cerrojo de la clave y el libro, en la
+        // misma transacción (ADR-0059 §2).
+        servicios.AddScoped<IRepositorioDeReservas, RepositorioDeReservas>();
+
         // INVENTARIO TIENE DOCUMENTOS, y aquí es donde lo dice. Organización no sabe qué módulos
         // los tienen: pregunta a los que se hayan inscrito, y un módulo que no se inscriba
         // sencillamente NO EXISTE para el cierre —por eso el caso de uso afirma antes que la
@@ -108,6 +115,10 @@ public static class ModuloDeInventario
         // tiene movimientos antes de cambiarle la marca. Sin esta línea todo compila, y lo que
         // falla es modificar CUALQUIER artículo, porque el caso de uso lo recibe por constructor.
         servicios.AddScoped<IMovimientosDeArticulos, LosMovimientosDeUnArticulo>();
+
+        // Y EL DISPONIBLE, la otra lectura que se publica (ADR-0059 §3). Nadie la consume todavía:
+        // la leerá Ventas en la fase 4, antes de reservar.
+        servicios.AddScoped<IConsultaDeExistencias, ElDisponibleDeLasExistencias>();
 
         // LOS EVENTOS DE LOS DOCUMENTOS, con su nombre escrito a mano: el catálogo no lo saca del
         // tipo a propósito, porque renombrar la clase rompería las filas que ya están en la cola.

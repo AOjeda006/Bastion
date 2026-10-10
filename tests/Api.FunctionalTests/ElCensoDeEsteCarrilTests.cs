@@ -181,6 +181,17 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.La_tabla_que_la_sentencia_bloquea_es_la_del_modelo",
         "LaSentenciaDelRecuentoNombraLaTablaYLaEmpresaTests.No_lleva_punto_y_coma_final",
 
+        // Del ítem 2.13 (ADR-0059 §2 y §3): las tres sentencias de la reserva, con el trato de la del
+        // recuento, y lo que cuentan como activo, que tiene que ser lo que cuenta el dominio.
+        "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Cada_columna_que_nombran_existe_en_su_tabla",
+        "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Cada_tabla_compara_la_empresa_contra_el_primer_parametro",
+        "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Cada_tabla_que_nombran_es_la_del_modelo",
+        "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.El_cerrojo_es_el_del_UPDATE_y_no_crea_la_fila",
+        "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio",
+        "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Lo_que_cuentan_como_activo_es_lo_que_el_dominio_cuenta",
+        "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Los_puertos_no_dejan_que_quien_llama_elija_la_empresa",
+        "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Ninguna_lleva_punto_y_coma",
+
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla",
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa",
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio",

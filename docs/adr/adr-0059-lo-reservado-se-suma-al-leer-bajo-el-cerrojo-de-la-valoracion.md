@@ -182,18 +182,24 @@ Ventas:
 
 | Paso | Qué hace | Si falla |
 |---|---|---|
-| 1. La petición | cantidad positiva, caducidad posterior a ahora, línea positiva | `400` |
+| 1. La petición | origen completo, cantidad positiva con seis decimales | `400` |
 | 2. La valoración de la clave | `FOR NO KEY UPDATE` | — |
 | 3. El origen | la reserva que ya tenga | `409` |
-| 4. Los maestros | artículo apto, almacén activo, unidad base | `400` · `409` |
-| 5. Las caducadas de la clave | a `Liberada` | — |
-| 6. El disponible | con la valoración bloqueada | `422` |
-| 7. La reserva | `INSERT` | — |
+| 4. La caducidad | posterior a ahora | `400` |
+| 5. Los maestros | artículo apto, almacén activo, unidad base | `400` · `409` |
+| 6. Las caducadas de la clave | a `Liberada` | — |
+| 7. El disponible | con la valoración bloqueada | `422` |
+| 8. La reserva | `INSERT` | — |
 
 - **La idempotencia por el origen** (precisión 6). Si el origen ya tiene reserva, con el mismo
   artículo, almacén, cantidad y caducidad se devuelve esa, esté como esté; con cualquier otra cosa,
   `409` `reserva-origen-con-otra-reserva`. Va después del cerrojo: dos peticiones iguales a la vez
   esperan en la misma valoración, y la segunda encuentra la primera.
+- **La caducidad va después del origen, y no con la forma de la petición**, porque depende de
+  «ahora». El reintento de una petición que salió bien, cuando su caducidad ya pasó, encuentra su
+  reserva, liberada por caducidad, y no un `400`. Con la caducidad en el paso 1, ese reintento
+  contestaba `reserva-caducidad-no-valida`: lo encontró el caso de la caducidad de
+  `LasReservasTests` la primera vez que corrió.
 - **Dos peticiones del mismo origen sobre claves distintas** no comparten cerrojo. La segunda
   espera en el índice único y revienta cuando la primera confirma. **Es una excepción, no un
   resultado**, y es lo que se quiere: la bandeja de salida reintenta, y el reintento encuentra la

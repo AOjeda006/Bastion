@@ -525,6 +525,14 @@ internal static class Inventario
                 "que no publica Organización, y la mitad de vuelta del primer cruce mutuo. No " +
                 "escribe.",
 
+            ["Bastion.Inventario.Contracts.Existencias.IConsultaDeExistencias"] =
+                "LECTURA: el físico, lo reservado y el disponible de unos artículos en un almacén, " +
+                "para quien vaya a comprometer mercancía — Ventas, antes de reservar, desde la fase " +
+                "4 (ADR-0059 §3). La SEGUNDA puerta que publica Inventario, y la primera que nadie " +
+                "consume todavía. Sin cerrojo y en una sola sentencia: es una foto, y quien decide " +
+                "con ella reserva por el caso de uso, que la vuelve a mirar bajo cerrojo. No " +
+                "escribe, y no publica ni los huecos, ni los lotes, ni las reservas de nadie.",
+
             ["Bastion.Inventario.Contracts.Movimientos.IMovimientosDeArticulos"] =
                 "LECTURA: si el libro tiene alguna fila de un artículo, para quien vaya a cambiar " +
                 "algo que el libro ya no admite que cambie — la marca de trazabilidad del " +
@@ -559,7 +567,7 @@ internal static class Inventario
                 "escribe, y no publica ni las fechas ni el año del ejercicio.",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IDocumentosDeUnPeriodo"] =
-                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras trece las implementa el módulo " +
+                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras catorce las implementa el módulo " +
                 "que las publica y las llaman los demás; ésta la publica Organización y la " +
                 "implementa cada módulo con documentos. Contesta si en un intervalo de fechas " +
                 "queda algún borrador —la pregunta del cierre— o algún documento en el estado " +

@@ -92,6 +92,44 @@ internal static class LosLotesYLasSeries
         await CrearAsync(contexto, SqlQueCreaLasSeries, empresaId, pedidosDeSerie, cancelacion)
             .ConfigureAwait(false);
 
+        LotesYSeriesResueltos leidos = await LeerAsync(contexto, pedidosDeLote, pedidosDeSerie, cancelacion)
+            .ConfigureAwait(false);
+
+        // TIENEN QUE ESTAR TODOS: la sentencia de antes los acababa de crear o ya estaban.
+        ExigirTodos(pedidosDeLote, leidos.Lotes);
+        ExigirTodos(pedidosDeSerie, leidos.Series);
+
+        return leidos;
+    }
+
+    /// <summary>
+    /// Busca la fila de cada lote y de cada serie <b>sin crear</b> los que falten, y devuelve solo
+    /// los que existen (ADR-0059 §6).
+    /// </summary>
+    /// <remarks>
+    /// Es la de quien saca sin haber entrado nada: un consumo de reserva. Un lote que no existe no
+    /// tiene nada que sacar, y crearlo dejaría una fila que nadie movió.
+    /// </remarks>
+    /// <param name="contexto">El contexto de Inventario.</param>
+    /// <param name="lotes">Los lotes que se nombran.</param>
+    /// <param name="series">Las series que se nombran.</param>
+    /// <param name="cancelacion">Cancelación de la operación en curso.</param>
+    /// <returns>La fila de cada uno que existe en la empresa.</returns>
+    internal static Task<LotesYSeriesResueltos> BuscarAsync(
+        InventarioDbContext contexto,
+        IReadOnlyList<CodigoDeUnArticulo> lotes,
+        IReadOnlyList<CodigoDeUnArticulo> series,
+        CancellationToken cancelacion) =>
+        lotes.Count == 0 && series.Count == 0
+            ? Task.FromResult(LotesYSeriesResueltos.Ninguno)
+            : LeerAsync(contexto, [.. lotes.Distinct()], [.. series.Distinct()], cancelacion);
+
+    private static async Task<LotesYSeriesResueltos> LeerAsync(
+        InventarioDbContext contexto,
+        CodigoDeUnArticulo[] pedidosDeLote,
+        CodigoDeUnArticulo[] pedidosDeSerie,
+        CancellationToken cancelacion)
+    {
         Dictionary<CodigoDeUnArticulo, Guid> filasDeLote = [];
 
         if (pedidosDeLote.Length > 0)
@@ -154,11 +192,10 @@ internal static class LosLotesYLasSeries
         [.. pedidos.Select(pedido => pedido.Codigo).Distinct(StringComparer.Ordinal)]
     );
 
-    /// <summary>Se queda con la fila de cada código pedido, y exige que estén todas.</summary>
+    /// <summary>Se queda con la fila de cada código pedido.</summary>
     /// <remarks>
     /// La lectura filtra por artículo y por texto por separado, así que puede traer un par que el
-    /// documento no nombra -el lote de un artículo con el texto de otro-, y se descarta. Lo que no
-    /// puede es faltar uno: la sentencia de antes lo acaba de crear o ya estaba.
+    /// documento no nombra -el lote de un artículo con el texto de otro-, y se descarta.
     /// </remarks>
     private static Dictionary<CodigoDeUnArticulo, Guid> Emparejar(
         CodigoDeUnArticulo[] pedidos, IEnumerable<(CodigoDeUnArticulo Codigo, Guid Id)> leidas)
@@ -174,14 +211,19 @@ internal static class LosLotesYLasSeries
             }
         }
 
-        if (resueltas.Count != buscados.Count)
+        return resueltas;
+    }
+
+    /// <summary>Exige que la lectura haya traído todos los códigos que se acaban de crear.</summary>
+    private static void ExigirTodos(
+        CodigoDeUnArticulo[] pedidos, IReadOnlyDictionary<CodigoDeUnArticulo, Guid> resueltas)
+    {
+        if (resueltas.Count != pedidos.Length)
         {
             throw new InvalidOperationException(
-                $"Se pidieron {buscados.Count} códigos y la lectura ha traído {resueltas.Count}: la " +
+                $"Se pidieron {pedidos.Length} códigos y la lectura ha traído {resueltas.Count}: la " +
                 "sentencia de antes los acababa de crear o ya estaban, así que falta alguno que el " +
                 "filtro de empresa no deja ver.");
         }
-
-        return resueltas;
     }
 }

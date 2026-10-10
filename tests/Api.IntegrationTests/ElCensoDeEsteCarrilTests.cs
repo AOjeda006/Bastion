@@ -210,6 +210,16 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElCuadreDelTransitoTests.Lo_que_vuela_cuadra_redondeado_y_sin_valor_y_un_borrador_no_vuela",
         "ElCuadreMiraElLoteYLaSerieTests.El_cuadre_ve_el_lote_y_la_serie_aunque_el_hueco_sume_lo_que_debe",
 
+        // Del ítem 2.13 (ADR-0059 §6): consumir una reserva, con la salida del albarán por el libro y
+        // el consumo en el mismo COMMIT. Cada guarda contesta antes de escribir, y su otra mitad pasa.
+        "ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva",
+        "ElConsumoDeLaReservaTests.La_fecha_del_albaran_pasa_las_guardas_de_cualquier_salida",
+        "ElConsumoDeLaReservaTests.La_peticion_sin_forma_es_un_400_y_un_origen_sin_reserva_un_404",
+        "ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir",
+        "ElConsumoDeLaReservaTests.Por_lote_saca_con_su_lote_y_no_crea_el_que_no_existe",
+        "ElConsumoDeLaReservaTests.Por_numero_de_serie_saca_pieza_a_pieza",
+        "ElConsumoDeLaReservaTests.Una_valoracion_en_otra_divisa_para_el_consumo",
+
         // Del ítem 2.6: R9 sobre el documento. Los cuatro primeros bajan al motor porque el
         // cerrojo compartido de la confirmación no existe fuera de él; los dos últimos, porque
         // una carrera entre dos transacciones de verdad no se imita con dobles.
@@ -664,6 +674,18 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasMigracionesSobreTablasConFilasTests.Recorre_todos_los_contextos_que_tienen_migraciones",
         "LasMigracionesSobreTablasConFilasTests.Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila",
         "LasMigracionesSobreTablasConFilasTests.Y_sobre_tablas_vacias_se_aplican_igual_que_en_la_base_de_los_tests",
+
+        // Del ítem 2.13 (ADR-0059 §3 a §5): reservar, liberar y leer el disponible, por el caso de uso,
+        // porque la reserva no tiene borde. El disponible de la empresa que pregunta, sin lo que vuela.
+        "LasReservasTests.El_disponible_es_de_la_empresa_que_pregunta_y_de_cada_articulo_pedido",
+        "LasReservasTests.El_disponible_no_cuenta_lo_que_vuela",
+        "LasReservasTests.El_mismo_origen_devuelve_su_reserva_y_otra_peticion_es_un_conflicto",
+        "LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale",
+        "LasReservasTests.La_peticion_sin_forma_es_un_400_con_la_frontera_de_cada_campo",
+        "LasReservasTests.Liberar_suelta_lo_que_queda_con_su_motivo",
+        "LasReservasTests.Los_maestros_de_la_reserva_contestan_cada_uno_con_su_codigo",
+        "LasReservasTests.Reservar_aparta_del_disponible_y_no_pasa_de_el",
+        "LasReservasTests.Sin_fisico_no_hay_nada_que_reservar_y_el_cerrojo_no_crea_la_fila",
 
         // Del ítem 1.12, la mitad de dentro del arreglo: lo que dice y deja en la traza el caso de uso
         // que llama el migrador, y la puerta que la API cierra al rol del sistema (ADR-0035).
