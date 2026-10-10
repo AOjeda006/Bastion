@@ -10902,7 +10902,21 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
 
      La frase nueva deja el arranque en 442 KiB y el total en 710, de 900
      (`bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`).
-   - **Lo siguiente**: las carreras, con transacciones de verdad.
+   - **Hecho, las carreras**, en `test(inventario): las dos carreras de la reserva, con dos
+     transacciones de verdad`, con las semillas 850 y 851 (`dotnet test tests/Api.IntegrationTests
+     --filter "FullyQualifiedName~LasCarrerasDeLaReservaTests"`). Cada caso para la primera con su
+     reserva escrita y sin confirmar, y `LaEspera` comprueba que la segunda está parada detrás de
+     ella:
+     - dos reservas de 6 sobre 10 de físico: la segunda contesta el `422` del disponible, y queda
+       una sola reserva;
+     - una reserva y un envío de 6 sobre 10: el envío contesta
+       `transferencia-por-encima-del-disponible`, y la transferencia sigue en borrador.
+
+     **La primera ha escrito, porque la carrera es sobre lo que escribe**, y `AGENTS.md` lo admite
+     con dos condiciones. La primera, que el código distingue la causa, la cumplen los dos: sin
+     cerrojo, la segunda saldría bien. La segunda la mide la tanda, con la mutación que quita el
+     cerrojo de la reserva y la que adelanta la lectura de lo reservado del envío.
+   - **Lo siguiente**: la doble flecha del albarán.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

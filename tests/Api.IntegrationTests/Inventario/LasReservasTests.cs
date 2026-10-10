@@ -35,7 +35,7 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// no había ninguna, ni por literal ni por cálculo —las del generador de la propiedad acaban en el
 /// 595, y las de la importación llevan delante 33 000 000—. Del resto del bloque, del 840 al 846 son de
 /// <c>ElConsumoDeLaReservaTests</c>, del 847 al 849 de <c>LaTransferenciaFrenteAlDisponibleTests</c>,
-/// y del 850 al 869 quedan libres.
+/// el 850 y el 851 de <c>LasCarrerasDeLaReservaTests</c>, y del 852 al 869 quedan libres.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

@@ -600,6 +600,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasCarrerasDeLaConfirmacionDelRecuentoTests.Dos_confirmaciones_a_la_vez_la_segunda_espera_en_la_cabecera_y_es_un_412",
         "LasCarrerasDeLaConfirmacionDelRecuentoTests.Un_ajuste_en_vuelo_sobre_su_clave_frena_la_confirmacion_en_la_valoracion_y_es_un_409_del_teorico",
 
+        // Del ítem 2.13 (ADR-0059 §2 y §9): las dos carreras de la reserva, con dos transacciones de
+        // verdad. La segunda espera en la valoración de la clave y ve lo que apartó la primera.
+        "LasCarrerasDeLaReservaTests.Dos_reservas_a_la_vez_la_segunda_espera_y_ve_lo_que_aparto_la_primera",
+        "LasCarrerasDeLaReservaTests.Una_reserva_y_un_envio_a_la_vez_el_envio_espera_y_no_se_lleva_lo_apartado",
+
         // Del ítem 2.11 (ADR-0053 §7 y §10): las cuatro carreras de la transferencia, con dos
         // transacciones de verdad. Las de la recepción y la anulación afirman el 412 de la relectura
         // del documento; la de dos envíos, el 412 del orden de escritura (paso 8); y la de la serie,

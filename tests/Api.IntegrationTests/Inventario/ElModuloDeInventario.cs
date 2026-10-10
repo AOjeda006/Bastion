@@ -651,6 +651,36 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         Lanzada(EnSuTransaccionAsync(() => AnulacionDeTransferencia.EjecutarAsync(
             transferenciaId, new AnularTransferenciaDto(motivo), CancellationToken.None)));
 
+    /// <summary>Reserva con la transacción del propio caso de uso, anotada como en vuelo.</summary>
+    /// <remarks>
+    /// La reserva no tiene borde ni filtro de idempotencia: abre su transacción ella misma con la
+    /// unidad de trabajo (ADR-0059 §12), así que aquí no se abre ninguna.
+    /// </remarks>
+    /// <param name="peticion">Lo que se pide.</param>
+    /// <returns>Lo que contestó el caso de uso.</returns>
+    internal Task<Resultado<ReservaDto>> ReservarAsync(ReservarDto peticion) =>
+        Lanzada(Reserva.EjecutarAsync(peticion, CancellationToken.None));
+
+    /// <summary>
+    /// Reserva <b>dentro</b> de una transacción y la deja abierta, con la valoración de la clave
+    /// bloqueada y la reserva ya escrita.
+    /// </summary>
+    /// <remarks>
+    /// Es la ganadora de las carreras de la reserva: la unidad de trabajo ve la transacción abierta y
+    /// no abre otra, así que el cerrojo sigue puesto al volver. Quien llama decide cuándo suelta.
+    /// </remarks>
+    /// <param name="peticion">Lo que se pide.</param>
+    /// <returns>Lo que contestó el caso de uso, y la transacción todavía abierta.</returns>
+    internal async Task<(Resultado<ReservaDto> Reserva, IDbContextTransaction Transaccion)>
+        ReservarYQuedarseDentroAsync(ReservarDto peticion)
+    {
+        IDbContextTransaction transaccion = await _inventario.Database.BeginTransactionAsync();
+
+        Resultado<ReservaDto> reserva = await Reserva.EjecutarAsync(peticion, CancellationToken.None);
+
+        return (reserva, transaccion);
+    }
+
     // Lo que hace el filtro de idempotencia con una petición: abre la transacción, y solo confirma
     // lo que sale bien. Lo que sale mal se deshace entero, número incluido.
     private async Task<Resultado<T>> EnSuTransaccionAsync<T>(Func<Task<Resultado<T>>> operacion)
