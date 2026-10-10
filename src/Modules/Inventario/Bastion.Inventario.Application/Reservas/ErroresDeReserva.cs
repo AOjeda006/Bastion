@@ -43,6 +43,7 @@ internal static class ErroresDeReserva
     internal const string CodigoSinEjercicio = "reserva-sin-ejercicio";
     internal const string CodigoEnEjercicioCerrado = "reserva-en-ejercicio-cerrado";
     internal const string CodigoTrazabilidadNoCasa = "reserva-trazabilidad-no-casa";
+    internal const string CodigoSerieNoEntera = "reserva-serie-no-entera";
     internal const string CodigoValoracionEnOtraDivisa = "reserva-valoracion-en-otra-divisa";
     internal const string CodigoFechaAnteriorAlUltimoMovimiento = "reserva-fecha-anterior-al-ultimo-movimiento";
 
@@ -232,6 +233,19 @@ internal static class ErroresDeReserva
         CodigoTrazabilidadNoCasa,
         $"La línea {noCasa.Linea} no casa con la marca del artículo {noCasa.ArticuloId}, que es " +
         $"«{noCasa.Marca}»: {LaTrazabilidadDeLasLineas.EnPalabras(noCasa.Discrepancia)} (ADR-0048 §4).");
+
+    /// <summary>
+    /// Una cantidad con decimales de un artículo por número de serie: no se podría consumir entera
+    /// (ADR-0059 §5).
+    /// </summary>
+    /// <param name="articuloId">El artículo.</param>
+    /// <param name="cantidad">Lo que se pidió apartar, en la unidad base.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion SerieNoEntera(Guid articuloId, decimal cantidad) => ErrorDeOperacion.Conflicto(
+        CodigoSerieNoEntera,
+        $"El artículo {articuloId} va por número de serie, y se piden {cantidad} unidades base: cada " +
+        "número es una pieza y el consumo saca una por línea, así que lo que sobrara de la última no " +
+        "saldría nunca. Se aparta un número entero de piezas (ADR-0059 §5).");
 
     /// <summary>Lo que impide valorar la salida, con su código (ADR-0046 §10).</summary>
     /// <remarks>

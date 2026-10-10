@@ -188,7 +188,7 @@ Ventas:
 | 2. La valoración de la clave | `FOR NO KEY UPDATE` | — |
 | 3. El origen | la reserva que ya tenga | `409` |
 | 4. La caducidad | posterior a ahora | `400` |
-| 5. Los maestros | artículo apto, almacén activo, unidad base | `400` · `409` |
+| 5. Los maestros | artículo apto, almacén activo, unidad base, cantidad entera si va por serie | `400` · `409` |
 | 6. El disponible | con la valoración bloqueada | `422` |
 | 7. Las caducadas de la clave | a `Liberada` | — |
 | 8. La reserva | `INSERT` | — |
@@ -206,6 +206,11 @@ Ventas:
   espera en el índice único y revienta cuando la primera confirma. **Es una excepción, no un
   resultado**, y es lo que se quiere: la bandeja de salida reintenta, y el reintento encuentra la
   reserva y contesta el `409`.
+- **De un artículo por número de serie se aparta un número entero de piezas**, `409`
+  `reserva-serie-no-entera`. Cada número es una unidad base y el consumo saca una por línea, así
+  que lo que sobrara de una cantidad con decimales no saldría nunca, y la reserva no llegaría a
+  `Consumida`. La marca se lee sin cerrojo: la reserva solo sale con físico, y un artículo con
+  movimientos ya no cambia de marca (ADR-0048). Lo encontró la revisión del 2.13, en su hallazgo 3.
 - **Los rechazos son resultados** (precisión 7): ningún camino de fallo lanza.
 
 ### 6. Consumir escribe su salida

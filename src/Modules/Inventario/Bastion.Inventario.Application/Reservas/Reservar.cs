@@ -44,6 +44,7 @@ public interface IReservar
 /// <param name="reservas">El cerrojo, el origen, lo reservado y la reserva.</param>
 /// <param name="articulos">Si el artículo se almacena, y su unidad base.</param>
 /// <param name="almacenes">Si el almacén admite operaciones nuevas.</param>
+/// <param name="trazabilidad">La marca del artículo: uno por número de serie se aparta entero.</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class Reservar(
@@ -51,6 +52,7 @@ internal sealed class Reservar(
     IRepositorioDeReservas reservas,
     IConsultaDeArticulos articulos,
     IConsultaDeAlmacenes almacenes,
+    IConsultaDeTrazabilidad trazabilidad,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IReservar
 {
@@ -102,7 +104,8 @@ internal sealed class Reservar(
             return Resultado.Fallo<ReservaDto>(ErroresDeReserva.CaducidadNoValida(peticion.CaducaEl!.Value));
         }
 
-        // 5. LOS MAESTROS: el artículo se almacena, el almacén admite lo nuevo y hay unidad base.
+        // 5. LOS MAESTROS: el artículo se almacena, el almacén admite lo nuevo, hay unidad base y la
+        // cantidad cabe en la marca.
         AptitudParaMoverExistencias aptitud = await articulos
             .AptitudDeAsync(peticion.ArticuloId, cancelacion)
             .ConfigureAwait(false);
@@ -132,6 +135,24 @@ internal sealed class Reservar(
         if (!unidadesBase.TryGetValue(peticion.ArticuloId, out Guid unidadBaseId))
         {
             return Resultado.Fallo<ReservaDto>(LosMaestrosDeLaReserva.ArticuloNoEncontrado(peticion.ArticuloId));
+        }
+
+        // LA MARCA, DESPUÉS DEL ARTÍCULO Y SIN CERROJO: cada número de serie es una pieza, y el
+        // consumo saca una por línea, así que de un artículo por serie solo se aparta un número
+        // entero de piezas. Sin cerrojo porque la reserva solo sale con físico, y un artículo con
+        // movimientos ya no cambia de marca (ADR-0048).
+        IReadOnlyDictionary<Guid, MarcaDeTrazabilidad> marcas = await trazabilidad
+            .MarcasDeAsync([peticion.ArticuloId], cancelacion)
+            .ConfigureAwait(false);
+
+        if (!marcas.TryGetValue(peticion.ArticuloId, out MarcaDeTrazabilidad marca))
+        {
+            return Resultado.Fallo<ReservaDto>(LosMaestrosDeLaReserva.ArticuloNoEncontrado(peticion.ArticuloId));
+        }
+
+        if (marca == MarcaDeTrazabilidad.PorNumeroSerie && peticion.Cantidad != decimal.Truncate(peticion.Cantidad))
+        {
+            return Resultado.Fallo<ReservaDto>(ErroresDeReserva.SerieNoEntera(peticion.ArticuloId, peticion.Cantidad));
         }
 
         // 6. EL DISPONIBLE, con la valoración bloqueada: lo reservado no puede cambiar mientras se lee.

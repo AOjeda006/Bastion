@@ -454,8 +454,9 @@ public sealed class ElConsumoDeLaReservaTests(PostgresConTodosLosModulos postgre
     }
 
     /// <summary>
-    /// Un artículo por número de serie saca pieza a pieza: una unidad por línea, cada número una vez
-    /// por albarán, y solo los que están en el hueco. El que ya salió no vuelve a salir.
+    /// Un artículo por número de serie se aparta en piezas enteras y saca pieza a pieza: una unidad
+    /// por línea, cada número una vez por albarán, y solo los que están en el hueco. El que ya salió
+    /// no vuelve a salir.
     /// </summary>
     [Fact]
     public async Task Por_numero_de_serie_saca_pieza_a_pieza()
@@ -468,6 +469,16 @@ public sealed class ElConsumoDeLaReservaTests(PostgresConTodosLosModulos postgre
         }
 
         await using ElModuloDeInventario modulo = new(postgres, escena.EmpresaId);
+
+        OrigenDeLaReserva conDecimales = OrigenNuevo();
+
+        ExigirElRechazo(
+            await ReservarAsync(modulo, escena, conDecimales, 1.5m),
+            "reserva-serie-no-entera",
+            TipoDeError.Conflicto,
+            "media pieza no sale nunca, aunque quepa en el disponible");
+
+        (await CuantasAsync(postgres, escena.EmpresaId)).ShouldBe(0, "el rechazo no aparta nada");
 
         OrigenDeLaReserva origen = OrigenNuevo();
         _ = await ReservadaAsync(modulo, escena, origen, 2m);

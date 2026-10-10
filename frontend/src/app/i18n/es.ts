@@ -479,6 +479,9 @@ export const es = {
       'reserva-por-encima-del-disponible':
         'No hay tanto disponible: lo que queda en ese almacén, quitado lo que ya está reservado, no ' +
         'llega a lo que pides. Reserva menos, o en otro almacén.',
+      'reserva-serie-no-entera':
+        'Ese artículo va por número de serie, y cada número es una pieza: se reservan piezas ' +
+        'enteras. Pide una cantidad sin decimales en la unidad base del artículo.',
       'reserva-serie-no-unitaria':
         'Una línea con número de serie saca exactamente una unidad, porque cada número es una ' +
         'pieza y no hay dos con el mismo. Pon una línea por pieza, con cantidad 1 en la unidad ' +

@@ -241,7 +241,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             elReloj);
 
         Reserva = new Reservar(
-            new ElUsuarioDeLaEmpresa(empresaId), reservas, articulos, almacenes, unidadDeTrabajo, elReloj);
+            new ElUsuarioDeLaEmpresa(empresaId), reservas, articulos, almacenes, trazabilidad, unidadDeTrabajo, elReloj);
 
         ConsumoDeReserva = new ConsumirReserva(
             new ElUsuarioDeLaEmpresa(empresaId),

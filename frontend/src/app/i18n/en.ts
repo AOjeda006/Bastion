@@ -433,6 +433,9 @@ export const en: Diccionario = {
       'reserva-por-encima-del-disponible':
         'Not that much is available: what is left in that warehouse, minus what is already ' +
         'reserved, does not reach what you ask for. Reserve less, or in another warehouse.',
+      'reserva-serie-no-entera':
+        'That item is tracked by serial number, and each number is one piece: only whole pieces ' +
+        'can be reserved. Ask for a quantity with no decimals in the item’s base unit.',
       'reserva-serie-no-unitaria':
         'A line with a serial number takes out exactly one unit, because each number is one piece ' +
         'and no two share it. Use one line per piece, with a quantity of 1 in the item’s base unit.',

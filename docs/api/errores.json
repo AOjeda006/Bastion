@@ -164,6 +164,7 @@
     { "codigo": "reserva-origen-con-otra-reserva", "type": "/errors/reserva-origen-con-otra-reserva", "clase": "Conflicto" },
     { "codigo": "reserva-origen-no-valido", "type": "/errors/reserva-origen-no-valido", "clase": "Validacion" },
     { "codigo": "reserva-por-encima-del-disponible", "type": "/errors/reserva-por-encima-del-disponible", "clase": "ReglaDeNegocio" },
+    { "codigo": "reserva-serie-no-entera", "type": "/errors/reserva-serie-no-entera", "clase": "Conflicto" },
     { "codigo": "reserva-serie-no-unitaria", "type": "/errors/reserva-serie-no-unitaria", "clase": "Validacion" },
     { "codigo": "reserva-serie-repetida", "type": "/errors/reserva-serie-repetida", "clase": "Validacion" },
     { "codigo": "reserva-sin-ejercicio", "type": "/errors/reserva-sin-ejercicio", "clase": "Conflicto" },
