@@ -6943,7 +6943,7 @@ mide.
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 12 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 13 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
@@ -10659,13 +10659,15 @@ la siguiente sigue siendo la **373**. Su ADR es el **0058**, y el siguiente, el 
      La rama `subida-de-vitest` se borró después, en local y en el remoto. Anotado al abrir el
      2.13.
 
-**El 2.13, en curso** desde el 2026-10-09, en la rama `2.13-las-reservas`, abierta desde `main` en
-`5aedf60`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del 2026-10-08 → El
-2.13: las reservas y el disponible, hasta su puerta*, y la puerta contestada, en *Traídas por el
-encargo del 2026-10-09*. Sus mutaciones empiezan en la **373**, y su ADR es el **0059**. El del
-centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **0061**.
+**El 2.13, cerrado el 2026-10-10**, en la rama `2.13-las-reservas`, abierta el 2026-10-09 desde
+`main` en `5aedf60`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-08 → El 2.13: las reservas y el disponible, hasta su puerta*, y la puerta contestada, en
+*Traídas por el encargo del 2026-10-09*. Sus mutaciones van de la **373** a la **443**, así que
+las siguientes empiezan en la **444**. Su ADR es el **0059**. El del centinela, que va antes, es
+el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que decide, el
+**0062**, así que el siguiente es el **0063**.
 
-**Lo que queda, por este orden:**
+**Lo que quedaba, por este orden:**
 
 1. ~~El run de `main` de la subida de vitest, anotado.~~ Hecho en el primer commit de la rama: el
    37923169866, en *La subida de vitest, cerrada*.
@@ -10845,9 +10847,9 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      hay ningún aviso de act()».
 
    Leído con `python leer-run27.py 37943832248`.
-9. Las reservas: el esquema y su migración, el dominio, los casos de uso, la lectura del
+9. ~~Las reservas: el esquema y su migración, el dominio, los casos de uso, la lectura del
    disponible en `Contracts`, la transferencia frente al disponible, las carreras, la propiedad y
-   la doble flecha.
+   la doble flecha.~~ Hecho en los ocho commits de `4c7cc8a` a `9b4ba9a`, uno por tema:
    - **Hecho, el dominio**, en `feat(inventario): la reserva, su consumo y su caducidad, en el
      dominio`: `Reserva`, `ConsumoDeReserva`, `LineaDeConsumo`, sus tres enumerados y `Albaran`
      en `TipoDeDocumentoOrigen`, con 59 casos (`dotnet test tests/Inventario.UnitTests --filter
@@ -10962,8 +10964,9 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      `LasDiecisieteReglasTests` busca lo que la tabla nombra (`dotnet test tests/Arquitectura.Tests
      --filter "FullyQualifiedName~LasDiecisieteReglasTests"`, 5 casos), y se vio rojo con la
      primera redacción: llevaba `COMMIT` entre comillas invertidas, y no es un tipo del repositorio.
-   - **Lo siguiente**: el paso 10.
-10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
+10. ~~La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.~~ La revisión y sus
+   arreglos van en los nueve commits de `d42036a` a `d44cc31`; el ADR-0062 y la tanda, en
+   `6fac10f` y `c3e9294`; y el humo, la batería y los runs, en el commit del cierre.
    - **La revisión**, con `/code-review high 2.13-las-reservas` sobre `9b4ba9a`, dio diez
      hallazgos. Cada uno se comprobó contra el código antes de tocar nada, y **seis son reales**.
      Cada arreglo va en su commit, con el caso que lo pone rojo, y la tanda se mide después, sobre
@@ -11092,7 +11095,84 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
        432, la 439 y la 440 se midieron antes con la prueba de antes, y eso la endureció: lo cuenta
        el **ADR-0062**, con su tabla.
      - La porcelana sale vacía al terminar cada medida, y la siguiente mutación es la **444**.
-   - **Lo siguiente**: el humo, la batería, los runs y el cierre.
+   - **El humo**, con `bash humo213.sh montar` y `bash humo213.sh rematar` sobre `c3e9294`, en su
+     propio proyecto de *compose*, `bastion-humo-213`, con el entorno generado en el *scratchpad*,
+     los puertos en 45xxx y el entorno borrado al salir: **0 fallos**.
+     - La construcción sale con 0 en 50 s, y el migrador, con 0 y un `EsquemaMigrado` por cada
+       uno de los seis contextos.
+     - El esquema, leído del catálogo del motor: las dos tablas, `reservas` y
+       `consumos_de_reserva`; `existencias.reservado` y `existencias.disponible`, fuera; las seis
+       comprobaciones, la clave del consumo a su reserva con `ON DELETE CASCADE`, los cuatro
+       índices con su forma —el de las activas por clave, parcial sobre `estado = 'Activa'`— y la
+       migración `LasReservas` una vez en el historial. El rol del sistema concede **108**
+       permisos, los mismos que en el 2.12: las reservas no traen ninguno, porque no tienen borde.
+     - Los rechazos, por la API y por el frontal, sobre identificadores inventados: enviar una
+       transferencia sin la clave es un `428` `idempotencia-obligatoria`, y una que no existe, un
+       `404` `transferencia-no-encontrada`; abrir un recuento en un almacén que no existe, un `400`
+       `recuento-almacen-no-encontrado`. Sin credenciales, `401`.
+     - **Lo que el 2.13 cambia y la API alcanza es el alta del recuento**, porque las reservas no
+       tienen superficie. Con datos sintéticos —un almacén, un artículo, las series `RC` y `AJ` de
+       este año y `RCP` del pasado— y por la API y por el frontal, las dos series cambiadas de
+       casilla son un `409` `recuento-serie-de-otro-documento`, y la del ejercicio pasado, un `409`
+       `recuento-serie-de-un-ejercicio-terminado`. Con las dos buenas, abre con `201`, cuenta 10
+       con su coste y confirma. Quedan un recuento, un físico de 10 y ninguna reserva.
+     - El segundo arranque sale con 0 en 16 s: 108 permisos antes y después, el `403` del estado
+       viejo, las 14 particiones con su disparador y el `200` con la semilla fuera. Después, el
+       esquema de las reservas sigue entero, y el recuento del humo también.
+     - El `down -v`, con su `-p` en la misma orden. Queda solo el proyecto `bastion`, que no se
+       tocó.
+   - **La batería** de `AGENTS.md`, entera y en su orden sobre `c3e9294`, con `bash bateria213.sh`,
+     un guion del *scratchpad* que corre cada paso de la lista y anota su código de salida:
+     - los dieciocho pasos salen con código 0 —el del canal es el que se suma a los diecisiete del
+       2.12—, el cliente generado no cambia y la porcelana queda vacía al final;
+     - el canal, con `bash scripts/ci/canal-de-la-consola.sh artifacts/vitest.log`: abierto, con la
+       marca en el registro (1) y ningún aviso de `act()`;
+     - el frontal, **256** casos en 26 ficheros (`npm --prefix frontend run test`, su línea
+       `Tests`);
+     - el recuento de la CI, **1451** casos en el carril rápido y **678** en el de integración, los
+       dos en 10 ensamblados (`bash scripts/ci/recuento-de-tests.sh` con las listas de la
+       batería). `Bastion.Inventario.UnitTests` da 295, `Bastion.Api.FunctionalTests` 225 y
+       `Bastion.Api.IntegrationTests` 593, en 6 min 38 s;
+     - **149** operaciones (`bash scripts/generar-openapi.sh --comprobar`), **234** tipos de error
+       de **241** sitios (`bash scripts/generar-errores.sh --comprobar`), y el modelo y las
+       migraciones coinciden en todos los módulos, con 16 en Inventario
+       (`bash scripts/comprobar-migraciones.sh`);
+     - el presupuesto, **442/450** y **711/900** KiB (`bash scripts/ci/presupuesto-del-frontal.sh
+       frontend/dist 450 900`): lo que suben las frases de los errores nuevos;
+     - las dependencias, con `python scripts/dependencias-por-conjuntos.py 5aedf60 HEAD`: no entra
+       ni sale ningún par, ningún proyecto y ninguna entrada del frontal.
+   - **Los commits del 2.13**, desde `acf58e8` incluido, son **veintiocho** hasta `c3e9294`, y con
+     el de este cierre, veintinueve. Los veintiocho están firmados y sin *trailers*:
+     `git log --format="%h %G? %s" acf58e8^..HEAD` da `G` en todos, y
+     `git log --format='%(trailers)' acf58e8^..HEAD | grep -c .` da 0. Subieron en once veces, y
+     cada subida tiene su run de rama, **en verde al primer intento y ninguno cancelado**. Las
+     cifras de cada uno, leídas con `python leer-run27.py <run>`, un guion del *scratchpad*:
+
+     | Subida, hasta | Commits | Run | Casos, rápido e integración | Tipos, de sitios | Arranque y total, KiB |
+     |---|---|---|---|---|---|
+     | `acf58e8` | `acf58e8` | 37925166436 | 1356 y 651 | 201 de 208 | 437 y 699 |
+     | `27857db` | siete, de `fb4c8c7` a `27857db` | 37943832248 | 1364 y 652 | 203 de 210 | 437 y 700 |
+     | `be8b0eb` | `b83b819`, `4c7cc8a` y `be8b0eb` | 37950518275 | 1423 y 651 | 203 de 210 | 437 y 700 |
+     | `dd74f6e` | `dd74f6e` | 38047078797 | 1442 y 667 | 231 de 238 | 442 y 709 |
+     | `42f696b` | `42f696b` | 38048303477 | 1451 y 670 | 232 de 239 | 442 y 710 |
+     | `ad4751c` | `efadca5` y `ad4751c` | 38049197877 | 1451 y 674 | 232 de 239 | 442 y 710 |
+     | `9b4ba9a` | `569d145` y `9b4ba9a` | 38051708331 | 1451 y 674 | 232 de 239 | 442 y 710 |
+     | `fdaf42f` | siete, de `d42036a` a `fdaf42f` | 38071744134 | 1451 y 677 | 234 de 241 | 442 y 711 |
+     | `988ff44` | `988ff44` | 38072821615 | 1451 y 677 | 234 de 241 | 442 y 711 |
+     | `d44cc31` | `d44cc31` | 38080337696 | 1451 y 678 | 234 de 241 | 442 y 711 |
+     | `c3e9294` | `6fac10f` y `c3e9294` | 38081916444 | 1451 y 678 | 234 de 241 | 442 y 711 |
+
+     Desde `27857db`, que trae el paso del canal, cada run tiene **69 pasos: 68 en verde y 1
+     omitido**, *Diagnóstico*, que tiene `if: failure()`; el de `acf58e8`, 68 y 67. Todos llevan
+     **10 `.trx`** en cada artefacto, **149** operaciones y **90** rutas `/api/v1/`, y la
+     auditoría entera a cero.
+
+     **El último, el 38081916444** sobre `c3e9294`, con sus jobs Frontal `114300425796`, Backend
+     `114300425978` y Humo `114301761862`, dice lo mismo que la batería, y el centinela habla: «El
+     canal está abierto, con la marca en el registro (1), y no hay ningún aviso de act()».
+
+     Este commit, el que anota esos runs, es el **veintinueve**. Espera su propio verde en la rama
+     antes de que `main` avance, y su run y el de `main` se anotan al abrir el 2.14.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -19407,13 +19487,65 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   mismo commit, el **37635240516**, saliera en verde, y el de `main`, el **37637032242**, sale en
   verde al primer intento con las mismas cifras. Anotado al abrir el epílogo del 2.12.
 
-- [ ] **2.13 · Las reservas, y el disponible** — criterio de aceptación: `Reserva` con
+- [x] **2.13 · Las reservas, y el disponible** — criterio de aceptación: `Reserva` con
   `Activa`/`Consumida`/`Liberada` y su caducidad; `Disponible = Físico − Reservado` respondiendo de
   verdad en la proyección; **ninguna reserva por encima de lo disponible**; y una reserva caducada
   libera lo que apartaba. Su llamante es el pedido de venta de la **fase 4**, así que aquí lo ejercen
   los tests, y el ítem dice **cuál de las dos situaciones es**: no la de `ContratoDeOrganizacionTests`
   —«probaría un estado que el sistema no sabe producir»—, sino la contraria, el estado se sabe
   producir y lo que falta es el llamante.
+
+  **Hecho el 2026-10-10**, en la rama `2.13-las-reservas`. El porqué está en el
+  [ADR-0059](adr/adr-0059-lo-reservado-se-suma-al-leer-bajo-el-cerrojo-de-la-valoracion.md), que
+  enmienda el §8 del ADR-0044, y en el
+  [ADR-0062](adr/adr-0062-la-lectura-que-decide-no-se-fia-del-rastreador.md), que dice por qué la
+  reserva del origen se lee de la base y cómo se endureció el caso de la caducidad. Los commits,
+  las mutaciones de la 373 a la 443, la revisión, la batería y el humo están en *Estado actual →
+  El 2.13, cerrado*. Cada punto del criterio tiene su caso:
+
+  - `Reserva` con `Activa`, `Consumida` y `Liberada`: los de
+    `LaMaquinaDeEstadosDeLaReservaTests`, desde `Nace_activa_sin_consumos_ni_liberacion`, con
+    `Liberar_a_mano_la_deja_liberada_con_su_motivo` y `Una_reserva_consumida_no_se_libera`, y
+    `ElConsumoDeLaReservaTests.Consumir_lo_que_queda_la_deja_consumida`. Por la base,
+    `ElConsumoDeLaReservaTests.Consumir_saca_por_el_libro_y_lo_anota_en_la_reserva` y
+    `LasReservasTests.Liberar_suelta_lo_que_queda_con_su_motivo`;
+  - y su caducidad, que se aplica al leer:
+    `LaCaducidadDeLaReservaTests.Caduca_en_el_instante_de_su_caducidad` y
+    `…Leerla_caducada_no_la_escribe`. Nadie lee «Activa» a secas: el estado guardado es privado,
+    y solo lo lee `Reserva.EstadoEn(ahora)` (ADR-0059 §4);
+  - `Disponible = Físico − Reservado`, respondiendo de verdad en la proyección. **La proyección es
+    la lectura**, como dijo la respuesta 1 de la puerta:
+    `IConsultaDeExistencias.DisponibleDeAsync`, en `Contracts`, da el físico, lo reservado y el
+    disponible de cada artículo en una sola sentencia, y las columnas que valían cero se fueron
+    con su migración (ADR-0059 §3). Lo afirman
+    `LasReservasTests.Reservar_aparta_del_disponible_y_no_pasa_de_el`,
+    `…El_disponible_es_de_la_empresa_que_pregunta_y_de_cada_articulo_pedido` y
+    `…El_disponible_no_cuenta_lo_que_vuela`, y la propiedad, que tras cada paso compara lo
+    reservado del puerto con lo pendiente de las reservas activas y vigentes del modelo, en las
+    seis semillas de `ElSaldoEsLaSumaDelLibroPorPropiedadTests`;
+  - **ninguna reserva por encima de lo disponible**, comprobado bajo el cerrojo de la valoración:
+    el mismo `Reservar_aparta…`, y las dos carreras de `LasCarrerasDeLaReservaTests`, con dos
+    transacciones de verdad:
+    `Dos_reservas_a_la_vez_la_segunda_espera_y_ve_lo_que_aparto_la_primera` y
+    `Una_reserva_y_un_envio_a_la_vez_el_envio_espera_y_no_se_lleva_lo_apartado`. La mutación que
+    quita el cerrojo, la 401, pone rojas las dos, sola; la 403 y la 404, que leen lo reservado
+    antes del cerrojo, una cada una. Y el envío no se lleva lo apartado:
+    `LaTransferenciaFrenteAlDisponibleTests`;
+  - una reserva caducada libera lo que apartaba:
+    `LaCaducidadDeLaReservaTests.Al_pasar_se_libera_con_la_fecha_de_su_caducidad` y, por la base,
+    `LasReservasTests.La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale` y
+    `…Consumir_y_liberar_tambien_escriben_las_caducadas_de_su_clave`, el que cubrió la 422. Deja
+    de contar en lo reservado en el instante de su caducidad, y se escribe `Liberada`, con
+    `liberada_el = caduca_el`, la siguiente vez que reservar, consumir o liberar pasan por su clave;
+  - **cuál de las dos situaciones es**: el estado se sabe producir —reservar, consumir y liberar
+    son casos de uso de `Inventario.Application`, y los tests los ejercen cableados a mano—, y lo
+    que falta es el llamante, el manejador de eventos de la fase 4, que reservará al confirmar un
+    pedido y consumirá al expedir su albarán. Por eso `Albaran` en `TipoDeDocumentoOrigen` no es
+    la casilla sin productor del ADR-0055 §10: su productor es consumir (ADR-0059).
+
+  El run de rama de `c3e9294`, el último con trabajo, es el **38081916444**, en verde al primer
+  intento con **1451** y **678** casos. El del commit de este cierre y el de `main` se anotan al
+  abrir el 2.14.
 
 - [ ] **2.14 · El stock a fecha pasada** — criterio de aceptación: la consulta contesta el saldo de
   cualquier día pasado desde la instantánea más el tramo, **coincide con la suma del libro hasta esa
