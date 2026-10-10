@@ -693,6 +693,7 @@ public sealed class ElCensoDeEsteCarrilTests
 
         // Del ítem 2.13 (ADR-0059 §3 a §5): reservar, liberar y leer el disponible, por el caso de uso,
         // porque la reserva no tiene borde. El disponible de la empresa que pregunta, sin lo que vuela.
+        "LasReservasTests.Consumir_y_liberar_tambien_escriben_las_caducadas_de_su_clave",
         "LasReservasTests.El_disponible_es_de_la_empresa_que_pregunta_y_de_cada_articulo_pedido",
         "LasReservasTests.El_disponible_no_cuenta_lo_que_vuela",
         "LasReservasTests.El_mismo_origen_devuelve_su_reserva_y_otra_peticion_es_un_conflicto",

@@ -30,13 +30,13 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// contestara siempre que no daría el mismo rojo que la buena.
 /// </para>
 /// <para>
-/// <b>Semillas: del 830 al 839</b>, empresas y maestros con el mismo número; el 838 es solo una
-/// empresa, la que pregunta por lo ajeno. <b>El bloque del 830 al 869 es del 2.13</b>: del 830 al 899
+/// <b>Semillas: del 830 al 839 y el 857</b>, empresas y maestros con el mismo número; el 838 es solo
+/// una empresa, la que pregunta por lo ajeno. <b>El bloque del 830 al 869 es del 2.13</b>: del 830 al 899
 /// no había ninguna, ni por literal ni por cálculo —las del generador de la propiedad acaban en el
 /// 595, y las de la importación llevan delante 33 000 000—. Del resto del bloque, del 840 al 846, el
 /// 854 y el 856 son de <c>ElConsumoDeLaReservaTests</c>, del 847 al 849 y el 855 de
 /// <c>LaTransferenciaFrenteAlDisponibleTests</c>, el 850 y el 851 de
-/// <c>LasCarrerasDeLaReservaTests</c>, el 852 y el 853 de <c>LaDobleFlechaDelLibroTests</c>, y del 857
+/// <c>LasCarrerasDeLaReservaTests</c>, el 852 y el 853 de <c>LaDobleFlechaDelLibroTests</c>, y del 858
 /// al 869 quedan libres.
 /// </para>
 /// </remarks>
@@ -446,6 +446,63 @@ public sealed class LasReservasTests(PostgresConTodosLosModulos postgres) : IDis
         otraVez.Estado.ShouldBe(EstadoDeReserva.Liberada);
         otraVez.Causa.ShouldBe(CausaDeLiberacion.Caducidad);
         otraVez.LiberadaEl.ShouldBe(caducaEl);
+    }
+
+    /// <summary>
+    /// Consumir y liberar también escriben las caducadas de su clave, como reservar: la primera
+    /// escritura que sale después de la caducidad la guarda liberada, con su fecha, y la que todavía no
+    /// ha caducado sigue activa.
+    /// </summary>
+    /// <remarks>
+    /// <b>Cada caducada tiene su escritura</b>: la primera caduca antes del consumo, y la segunda entre
+    /// el consumo y la liberación. Así cada una solo la puede haber guardado una escritura, y el caso
+    /// dice cuál falta. La de reservar la mira <c>La_caducidad_suelta_sola_y_la_escribe_la_siguiente_escritura_que_sale</c>.
+    /// </remarks>
+    [Fact]
+    public async Task Consumir_y_liberar_tambien_escriben_las_caducadas_de_su_clave()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(857, "RSV-J");
+        await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 10m, 2m);
+
+        var ahora = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        DateTimeOffset antesDelConsumo = ahora.AddMinutes(1);
+        DateTimeOffset antesDeLiberar = ahora.AddMinutes(2);
+
+        OrigenDeLaReserva aConsumir = OrigenNuevo();
+        OrigenDeLaReserva aLiberar = OrigenNuevo();
+        ReservaDto primera;
+        ReservaDto segunda;
+
+        await using (ElModuloDeInventario antes = new(postgres, escena.EmpresaId, new RelojParado(ahora)))
+        {
+            _ = await ReservadaAsync(antes, escena, aConsumir, 3m);
+            _ = await ReservadaAsync(antes, escena, aLiberar, 2m);
+            primera = await ReservadaAsync(antes, escena, OrigenNuevo(), 1m, antesDelConsumo);
+            segunda = await ReservadaAsync(antes, escena, OrigenNuevo(), 1m, antesDeLiberar);
+        }
+
+        await using (ElModuloDeInventario alConsumir = new(
+            postgres, escena.EmpresaId, new RelojParado(antesDelConsumo)))
+        {
+            _ = Exigir(await ConsumirAsync(
+                alConsumir, aConsumir, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 1m)));
+        }
+
+        (await LaGuardadaAsync(postgres, escena.EmpresaId, primera.Id)).ShouldBe(
+            new ReservaGuardada(EstadoDeReserva.Liberada, CausaDeLiberacion.Caducidad, antesDelConsumo, 0m, 0),
+            "el consumo escribe la que caducó en su clave");
+        (await LaGuardadaAsync(postgres, escena.EmpresaId, segunda.Id)).Estado
+            .ShouldBe(EstadoDeReserva.Activa, "la que todavía no ha caducado sigue activa");
+
+        await using (ElModuloDeInventario alLiberar = new(
+            postgres, escena.EmpresaId, new RelojParado(antesDeLiberar)))
+        {
+            _ = Exigir(await LiberarAsync(alLiberar, aLiberar));
+        }
+
+        (await LaGuardadaAsync(postgres, escena.EmpresaId, segunda.Id)).ShouldBe(
+            new ReservaGuardada(EstadoDeReserva.Liberada, CausaDeLiberacion.Caducidad, antesDeLiberar, 0m, 0),
+            "la liberación escribe la que caducó en su clave");
     }
 
     /// <summary>
