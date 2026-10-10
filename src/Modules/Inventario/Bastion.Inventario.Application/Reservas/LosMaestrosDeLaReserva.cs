@@ -4,10 +4,12 @@ using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Inventario.Application.Reservas;
 
-/// <summary>Qué contesta reservar a cada estado que le devuelven los puertos de maestros.</summary>
+/// <summary>
+/// Qué contestan reservar y consumir a cada estado que les devuelven los puertos de maestros.
+/// </summary>
 /// <remarks>
 /// <b>La misma tabla que la del ajuste, con su prefijo</b>: reservar solo admite
-/// <c>SeOfreceParaLoNuevo</c> (ADR-0059 §5, paso 4). Un almacén o un artículo de otra empresa
+/// <c>SeOfreceParaLoNuevo</c> (ADR-0059 §5, paso 5). Un almacén o un artículo de otra empresa
 /// contestan lo mismo que uno inventado, porque los puertos preguntan con el filtro de la empresa.
 /// </remarks>
 internal static class LosMaestrosDeLaReserva
@@ -16,6 +18,7 @@ internal static class LosMaestrosDeLaReserva
     internal const string CodigoDeAlmacenBloqueado = "reserva-almacen-bloqueado";
     internal const string CodigoDeArticuloNoEncontrado = "reserva-articulo-no-encontrado";
     internal const string CodigoDeArticuloNoSeAlmacena = "reserva-articulo-no-se-almacena";
+    internal const string CodigoDeUbicacionBloqueada = "reserva-ubicacion-bloqueada";
 
     internal static Resultado ElAlmacen(EstadoDeMaestro estado, Guid almacenId) => estado switch
     {
@@ -31,6 +34,34 @@ internal static class LosMaestrosDeLaReserva
             nameof(estado),
             estado,
             "El puerto de almacenes ha contestado un estado que este caso de uso no sabe traducir."),
+    };
+
+    /// <summary>La ubicación de una línea del consumo, preguntada con el almacén de la reserva.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Hereda el estado de su almacén</b> (ADR-0037): con el almacén bloqueado, sus ubicaciones
+    /// contestan lo mismo que una bloqueada, y el consumo no sale.
+    /// </para>
+    /// <para>
+    /// <b>Una ubicación que no es del almacén pasa</b>: no tiene nada que sacar, y la contesta el
+    /// físico del hueco, <c>reserva-consumo-sin-stock</c>, como un lote que no existe.
+    /// </para>
+    /// </remarks>
+    /// <param name="estado">Lo que contestó el puerto de ubicaciones.</param>
+    /// <param name="linea">La primera línea que sale de ella, desde uno.</param>
+    /// <param name="ubicacionId">Por cuál se preguntó.</param>
+    /// <returns>Correcto si de esa ubicación puede salir algo nuevo, o si no es del almacén.</returns>
+    internal static Resultado LaUbicacion(EstadoDeMaestro estado, int linea, Guid ubicacionId) => estado switch
+    {
+        EstadoDeMaestro.SeOfreceParaLoNuevo or EstadoDeMaestro.NoExiste => Resultado.Correcto(),
+        EstadoDeMaestro.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
+            CodigoDeUbicacionBloqueada,
+            $"La ubicación {ubicacionId} de la línea {linea} está bloqueada, o lo está su almacén: lo " +
+            "que ya hay apuntado a ella se sigue leyendo, pero no sale nada nuevo de ese hueco.")),
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(estado),
+            estado,
+            "El puerto de ubicaciones ha contestado un estado que este caso de uso no sabe traducir."),
     };
 
     internal static Resultado ElArticulo(AptitudParaMoverExistencias aptitud, Guid articuloId) =>

@@ -228,6 +228,12 @@ Ventas:
   - si no está `Activa` ahora, `409`: `reserva-caducada` si es porque caducó, y
     `reserva-no-esta-activa` si se consumió o se liberó;
   - si las líneas suman más de lo pendiente, `422`.
+- **La ubicación de cada línea se mira después de la reserva**, en el almacén de la reserva: si está
+  bloqueada, o lo está su almacén, `409` `reserva-ubicacion-bloqueada`. Lo bloqueado se lee y no
+  mueve nada nuevo (ADR-0037), como en el ajuste y en la transferencia, que lo miran al dar de alta;
+  el consumo no tiene alta, así que lo mira aquí. Va detrás de la reserva para que el reintento del
+  albarán que ya salió lo oiga aunque el hueco se bloqueara después. Una ubicación que no es del
+  almacén pasa, y la contesta el físico. Lo encontró la revisión del 2.13, en su hallazgo 4.
 - **El físico de cada hueco se mira antes de escribir**, con la clave bloqueada: si una línea saca
   más de lo que hay, `422` `reserva-consumo-sin-stock`. Hace falta porque la unidad de trabajo
   confirma aunque el caso diga que no (`UnidadDeTrabajoDeInventario`), y la restricción de

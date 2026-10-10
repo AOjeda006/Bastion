@@ -29,7 +29,7 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// consumido ya, que esté activa y que no se saque más de lo que le queda.
 /// </para>
 /// <para>
-/// <b>Semillas: del 840 al 846, y el 854</b>, del bloque del 2.13 que reparte la cabecera de
+/// <b>Semillas: del 840 al 846, el 854 y el 856</b>, del bloque del 2.13 que reparte la cabecera de
 /// <c>LasReservasTests</c>.
 /// </para>
 /// </remarks>
@@ -526,6 +526,67 @@ public sealed class ElConsumoDeLaReservaTests(PostgresConTodosLosModulos postgre
             "reserva-consumo-sin-stock",
             TipoDeError.ReglaDeNegocio,
             "una pieza que ya salió");
+    }
+
+    /// <summary>
+    /// Una ubicación bloqueada no suelta lo reservado, aunque tenga stock: el consumo es un
+    /// movimiento nuevo, y lo bloqueado solo se lee (ADR-0037). Se mira cada línea, no solo la
+    /// primera, y un almacén bloqueado bloquea sus ubicaciones.
+    /// </summary>
+    [Fact]
+    public async Task Una_ubicacion_bloqueada_no_suelta_lo_reservado()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(856, "RCS-I");
+        Guid otroHueco = (await LosMaestrosPorLaApi.CrearUbicacionAsync(escena.Cliente, escena.AlmacenA, "RCS-I-A2")).Id;
+
+        await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 3m, 2m);
+        await escena.EntrarAsync(postgres, escena.AlmacenA, otroHueco, 3m, 2m);
+
+        await using ElModuloDeInventario modulo = new(postgres, escena.EmpresaId);
+
+        OrigenDeLaReserva origen = OrigenNuevo();
+        ReservaDto reservada = await ReservadaAsync(modulo, escena, origen, 3m);
+
+        using (HttpResponseMessage bloqueo = await escena.Cliente.SuprimirAsync($"{LosMaestrosPorLaApi.Ubicaciones}/{otroHueco}"))
+        {
+            bloqueo.IsSuccessStatusCode.ShouldBeTrue(await Escenario.Detalle(bloqueo));
+        }
+
+        int filasAntes = await FilasDelLibroAsync(postgres, escena.EmpresaId);
+
+        ExigirElRechazo(
+            await ConsumirAsync(
+                modulo,
+                origen,
+                Guid.CreateVersion7(),
+                EscenaDeTransferencia.Hoy,
+                new LineaDeConsumoDto(escena.UbicacionA, 1m),
+                new LineaDeConsumoDto(otroHueco, 1m)),
+            "reserva-ubicacion-bloqueada",
+            TipoDeError.Conflicto,
+            "la segunda línea sale de un hueco bloqueado que tiene stock");
+
+        (await FilasDelLibroAsync(postgres, escena.EmpresaId)).ShouldBe(filasAntes);
+        (await LaGuardadaAsync(postgres, escena.EmpresaId, reservada.Id))
+            .ShouldBe(new ReservaGuardada(EstadoDeReserva.Activa, null, null, 0m, 0));
+
+        _ = Exigir(await ConsumirAsync(
+            modulo, origen, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 1m)));
+
+        using (HttpResponseMessage bloqueo = await escena.Cliente.SuprimirAsync($"{LosMaestrosPorLaApi.Almacenes}/{escena.AlmacenA}"))
+        {
+            bloqueo.IsSuccessStatusCode.ShouldBeTrue(await Escenario.Detalle(bloqueo));
+        }
+
+        ExigirElRechazo(
+            await ConsumirAsync(
+                modulo, origen, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 1m)),
+            "reserva-ubicacion-bloqueada",
+            TipoDeError.Conflicto,
+            "el almacén bloqueado bloquea la ubicación que sigue activa");
+
+        (await LaGuardadaAsync(postgres, escena.EmpresaId, reservada.Id))
+            .ShouldBe(new ReservaGuardada(EstadoDeReserva.Activa, null, null, 1m, 1));
     }
 
     private Task<EscenaDeTransferencia> MontarAsync(

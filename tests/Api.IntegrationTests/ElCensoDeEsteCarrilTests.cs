@@ -219,6 +219,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElConsumoDeLaReservaTests.Las_guardas_del_consumo_contestan_antes_de_escribir",
         "ElConsumoDeLaReservaTests.Por_lote_saca_con_su_lote_y_no_crea_el_que_no_existe",
         "ElConsumoDeLaReservaTests.Por_numero_de_serie_saca_pieza_a_pieza",
+        "ElConsumoDeLaReservaTests.Una_ubicacion_bloqueada_no_suelta_lo_reservado",
         "ElConsumoDeLaReservaTests.Una_valoracion_en_otra_divisa_para_el_consumo",
 
         // Del ítem 2.6: R9 sobre el documento. Los cuatro primeros bajan al motor porque el

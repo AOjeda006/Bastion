@@ -249,6 +249,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             empresas,
             ejercicios,
             trazabilidad,
+            ubicaciones,
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
             elReloj);

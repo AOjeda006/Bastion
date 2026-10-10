@@ -33,10 +33,10 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <b>Semillas: del 830 al 839</b>, empresas y maestros con el mismo número; el 838 es solo una
 /// empresa, la que pregunta por lo ajeno. <b>El bloque del 830 al 869 es del 2.13</b>: del 830 al 899
 /// no había ninguna, ni por literal ni por cálculo —las del generador de la propiedad acaban en el
-/// 595, y las de la importación llevan delante 33 000 000—. Del resto del bloque, del 840 al 846 y el
-/// 854 son de <c>ElConsumoDeLaReservaTests</c>, del 847 al 849 y el 855 de
+/// 595, y las de la importación llevan delante 33 000 000—. Del resto del bloque, del 840 al 846, el
+/// 854 y el 856 son de <c>ElConsumoDeLaReservaTests</c>, del 847 al 849 y el 855 de
 /// <c>LaTransferenciaFrenteAlDisponibleTests</c>, el 850 y el 851 de
-/// <c>LasCarrerasDeLaReservaTests</c>, el 852 y el 853 de <c>LaDobleFlechaDelLibroTests</c>, y del 856
+/// <c>LasCarrerasDeLaReservaTests</c>, el 852 y el 853 de <c>LaDobleFlechaDelLibroTests</c>, y del 857
 /// al 869 quedan libres.
 /// </para>
 /// </remarks>

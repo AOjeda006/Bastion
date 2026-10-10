@@ -498,6 +498,9 @@ export const es = {
       'reserva-trazabilidad-no-casa':
         'Alguna línea no casa con la trazabilidad del artículo: le falta el lote o el número de ' +
         'serie que pide la ficha, o lleva uno que la ficha no pide. Corrige la línea.',
+      'reserva-ubicacion-bloqueada':
+        'Esa ubicación está bloqueada, o lo está su almacén: lo que hay en ella se sigue viendo, ' +
+        'pero no sale nada nuevo de ahí. Saca la mercancía de otra ubicación, o desbloquéala.',
       'reserva-valoracion-en-otra-divisa':
         'Las existencias del artículo están valoradas en ese almacén en otra divisa, y sacarlas ' +
         'pediría un tipo de cambio. La salida no se puede hacer mientras el almacén las tenga ' +

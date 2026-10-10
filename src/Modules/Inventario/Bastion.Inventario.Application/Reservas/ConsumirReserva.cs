@@ -7,8 +7,10 @@ using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Reservas;
 using Bastion.Inventario.Domain.Valoraciones;
+using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
+using Bastion.Organizacion.Contracts.Ubicaciones;
 
 namespace Bastion.Inventario.Application.Reservas;
 
@@ -28,8 +30,9 @@ public interface IConsumirReserva
 /// <remarks>
 /// <para>
 /// <b>Es una salida del ajuste sin contador</b>, porque el albarán lo numera Ventas: el ejercicio de
-/// la fecha, la marca del artículo, la valoración de la clave como cualquier salida, la reserva, el
-/// físico de cada hueco, el valor, las caducadas de la clave y la escritura.
+/// la fecha, la marca del artículo, la valoración de la clave como cualquier salida, la reserva, las
+/// ubicaciones de las líneas, el físico de cada hueco, el valor, las caducadas de la clave y la
+/// escritura.
 /// </para>
 /// <para>
 /// <b>Dobla la R12</b>: la reserva, su consumo, las filas del libro, las existencias y la valoración
@@ -47,6 +50,7 @@ public interface IConsumirReserva
 /// <param name="empresas">La divisa base de la empresa, la de las filas del libro.</param>
 /// <param name="ejercicios">Si la fecha se puede escribir, con la fila bloqueada.</param>
 /// <param name="trazabilidad">La marca del artículo, con la fila bloqueada (ADR-0048 §4).</param>
+/// <param name="ubicaciones">Si de cada ubicación de las líneas puede salir algo nuevo.</param>
 /// <param name="valoracion">Quién valora la salida contra el saldo bloqueado (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
@@ -56,6 +60,7 @@ internal sealed class ConsumirReserva(
     IConsultaDeEmpresas empresas,
     IConsultaDeEjercicios ejercicios,
     IConsultaDeTrazabilidad trazabilidad,
+    IConsultaDeUbicaciones ubicaciones,
     IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IConsumirReserva
@@ -168,7 +173,16 @@ internal sealed class ConsumirReserva(
                 ErroresDeReserva.ConsumoPorEncimaDeLoPendiente(reserva.Id, sale, reserva.Pendiente));
         }
 
-        // 5. EL FÍSICO DE CADA HUECO, buscando los lotes y las series sin crearlos.
+        // 5. LAS UBICACIONES DE LAS LÍNEAS, después de la reserva: el reintento del albarán que ya
+        // salió oye eso aunque luego se bloqueara el hueco. Una bloqueada no suelta nada nuevo, como
+        // en el ajuste y en la transferencia (ADR-0037).
+        if (await LaUbicacionBloqueadaAsync(peticion.Lineas, clave.AlmacenId, cancelacion).ConfigureAwait(false)
+            is { } bloqueada)
+        {
+            return Resultado.Fallo<ReservaDto>(bloqueada);
+        }
+
+        // 6. EL FÍSICO DE CADA HUECO, buscando los lotes y las series sin crearlos.
         LotesYSeriesResueltos resueltos = await reservas
             .BuscarLotesYSeriesAsync(
                 [.. CodigosDe(peticion.Lineas, clave.ArticuloId, linea => linea.CodigoDeLote)],
@@ -182,7 +196,7 @@ internal sealed class ConsumirReserva(
             return Resultado.Fallo<ReservaDto>(sinStock);
         }
 
-        // 6. EL VALOR, contra el saldo bloqueado.
+        // 7. EL VALOR, contra el saldo bloqueado.
         LineaDeConsumo[] lineas =
         [
             .. peticion.Lineas.Select(linea =>
@@ -198,11 +212,11 @@ internal sealed class ConsumirReserva(
 
         IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, aValorar, divisa, fecha);
 
-        // 7. LAS CADUCADAS DE LA CLAVE, ya sin ningún rechazo por delante (ADR-0059 §4). Esta no está
+        // 8. LAS CADUCADAS DE LA CLAVE, ya sin ningún rechazo por delante (ADR-0059 §4). Esta no está
         // entre ellas: la reserva está activa ahora, o no habría llegado aquí.
         await LasCaducadasDeLaClave.LiberarAsync(reservas, clave, ahora, cancelacion).ConfigureAwait(false);
 
-        // 8. LAS EXISTENCIAS, LA VALORACIÓN Y EL LIBRO, con la reserva y su consumo, en un COMMIT.
+        // 9. LAS EXISTENCIAS, LA VALORACIÓN Y EL LIBRO, con la reserva y su consumo, en un COMMIT.
         IReadOnlyList<MovimientoStock> filas = reserva.Consumir(
             peticion.DocumentoTipo,
             peticion.DocumentoId,
@@ -269,6 +283,39 @@ internal sealed class ConsumirReserva(
             .OfType<string>()
             .Select(texto => new CodigoDeUnArticulo(articuloId, CodigoGs1.Normalizar(texto)!))
             .Distinct();
+
+    /// <summary>La primera línea que sale de una ubicación bloqueada, o de un almacén bloqueado.</summary>
+    /// <remarks>Cada ubicación se pregunta una vez, en el orden de su primera línea.</remarks>
+    /// <param name="lineas">Las líneas de la petición.</param>
+    /// <param name="almacenId">El almacén de la reserva.</param>
+    /// <param name="cancelacion">Cancelación de la operación en curso.</param>
+    /// <returns>El error de la primera que no puede salir, o <see langword="null"/>.</returns>
+    private async Task<ErrorDeOperacion?> LaUbicacionBloqueadaAsync(
+        IReadOnlyList<LineaDeConsumoDto> lineas, Guid almacenId, CancellationToken cancelacion)
+    {
+        HashSet<Guid> preguntadas = [];
+
+        for (int indice = 0; indice < lineas.Count; indice++)
+        {
+            Guid ubicacionId = lineas[indice].UbicacionId;
+
+            if (!preguntadas.Add(ubicacionId))
+            {
+                continue;
+            }
+
+            EstadoDeMaestro estado = await ubicaciones
+                .EstadoDeAsync(almacenId, ubicacionId, cancelacion)
+                .ConfigureAwait(false);
+
+            if (LosMaestrosDeLaReserva.LaUbicacion(estado, indice + 1, ubicacionId) is { EsCorrecto: false } noSale)
+            {
+                return noSale.Error!;
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// La primera línea que saca de su hueco más de lo que hay, sumando las que sacan del mismo

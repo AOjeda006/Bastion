@@ -170,6 +170,7 @@
     { "codigo": "reserva-sin-ejercicio", "type": "/errors/reserva-sin-ejercicio", "clase": "Conflicto" },
     { "codigo": "reserva-sin-lineas", "type": "/errors/reserva-sin-lineas", "clase": "Validacion" },
     { "codigo": "reserva-trazabilidad-no-casa", "type": "/errors/reserva-trazabilidad-no-casa", "clase": "Conflicto" },
+    { "codigo": "reserva-ubicacion-bloqueada", "type": "/errors/reserva-ubicacion-bloqueada", "clase": "Conflicto" },
     { "codigo": "reserva-valoracion-en-otra-divisa", "type": "/errors/reserva-valoracion-en-otra-divisa", "clase": "ReglaDeNegocio" },
     { "codigo": "rol-no-encontrado", "type": "/errors/rol-no-encontrado", "clase": "NoEncontrado" },
     { "codigo": "serie-cerrada", "type": "/errors/serie-cerrada", "clase": "Conflicto" },

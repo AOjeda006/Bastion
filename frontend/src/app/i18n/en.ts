@@ -451,6 +451,9 @@ export const en: Diccionario = {
       'reserva-trazabilidad-no-casa':
         'A line does not match the item’s traceability: it lacks the batch or serial number the ' +
         'item requires, or carries one the item does not track. Fix the line.',
+      'reserva-ubicacion-bloqueada':
+        'That location is blocked, or its warehouse is: what it holds can still be seen, but ' +
+        'nothing new leaves it. Take the goods from another location, or unblock it.',
       'reserva-valoracion-en-otra-divisa':
         'The item’s stock in that warehouse is valued in another currency, and taking it out ' +
         'would need an exchange rate. It cannot leave while the warehouse values it that way.',
