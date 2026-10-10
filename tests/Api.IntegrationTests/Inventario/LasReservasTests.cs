@@ -355,9 +355,16 @@ public sealed class LasReservasTests(PostgresConTodosLosModulos postgres) : IDis
     /// porque uno decide lo que se lee y el otro lo que se escribe (ADR-0059 §4).
     /// </para>
     /// <para>
-    /// <b>La escritura de otra clave va por el mismo módulo que los rechazos</b>, que es lo que la
-    /// hace mirar algo: un rechazo que dejara la caducada liberada en el rastreador se la daría a esa
-    /// confirmación, que la escribiría sin el cerrojo de su clave.
+    /// <b>Detrás de cada rechazo va una escritura de otra clave, por el mismo módulo</b>, que es lo
+    /// que la hace mirar algo: un rechazo que dejara las caducadas liberadas en el rastreador se las
+    /// daría a esa confirmación, que las escribiría sin el cerrojo de su clave. Los tres rechazos son
+    /// los tres casos de uso que las liberan: liberar, consumir y reservar.
+    /// </para>
+    /// <para>
+    /// <b>Hay dos caducadas en la clave</b>: la del origen y una vecina. Liberar y consumir vuelven a
+    /// leer la del origen de la base (hallazgo 8 de la revisión del 2.13), y eso tira lo que se le
+    /// hubiera hecho antes en el rastreador. Si las caducadas se liberaran antes de esa lectura, solo
+    /// lo delataría la vecina, que no la relee nadie. Cada aserción dice cuál de las dos mira.
     /// </para>
     /// </remarks>
     [Fact]
@@ -365,54 +372,74 @@ public sealed class LasReservasTests(PostgresConTodosLosModulos postgres) : IDis
     {
         EscenaDeTransferencia escena = await MontarAsync(836, "RSV-G");
         await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 10m, 2m);
-        await escena.EntrarAsync(postgres, escena.AlmacenB, escena.UbicacionB, 1m, 2m);
+        await escena.EntrarAsync(postgres, escena.AlmacenB, escena.UbicacionB, 3m, 2m);
 
         var ahora = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         DateTimeOffset caducaEl = ahora.AddHours(1);
 
         OrigenDeLaReserva origen = OrigenNuevo();
         ReservaDto reservada;
+        ReservaDto vecina;
 
         await using (ElModuloDeInventario antes = new(postgres, escena.EmpresaId, new RelojParado(ahora)))
         {
             reservada = await ReservadaAsync(antes, escena, origen, 4m, caducaEl);
+            vecina = await ReservadaAsync(antes, escena, OrigenNuevo(), 2m, caducaEl);
         }
+
+        (string Cual, Guid Id)[] caducadas = [("la del origen", reservada.Id), ("la vecina", vecina.Id)];
 
         await using (ElModuloDeInventario justoAntes = new(
             postgres, escena.EmpresaId, new RelojParado(caducaEl.AddTicks(-TimeSpan.TicksPerMicrosecond))))
         {
-            (await DisponibleAsync(justoAntes, escena)).ShouldBe(new DisponibleDeUnArticulo(10m, 4m, 6m));
+            (await DisponibleAsync(justoAntes, escena)).ShouldBe(new DisponibleDeUnArticulo(10m, 6m, 4m));
         }
 
         await using ElModuloDeInventario despues = new(postgres, escena.EmpresaId, new RelojParado(caducaEl));
 
         (await DisponibleAsync(despues, escena)).ShouldBe(new DisponibleDeUnArticulo(10m, 0m, 10m));
 
-        ExigirElRechazo(
-            await LiberarAsync(despues, origen),
-            "reserva-caducada",
-            TipoDeError.Conflicto,
-            "liberar a mano una que ya caducó");
+        foreach ((string porque, Func<Task<Resultado<ReservaDto>>> rechazar, string codigo, TipoDeError tipo) in
+            new (string, Func<Task<Resultado<ReservaDto>>>, string, TipoDeError)[]
+        {
+            ("liberar a mano una que ya caducó", () => LiberarAsync(despues, origen), "reserva-caducada", TipoDeError.Conflicto),
+            (
+                "consumir una que ya caducó",
+                () => ConsumirAsync(
+                    despues, origen, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 1m)),
+                "reserva-caducada",
+                TipoDeError.Conflicto),
+            (
+                "reservar en la clave más de lo disponible",
+                () => ReservarAsync(despues, escena, OrigenNuevo(), 11m),
+                "reserva-por-encima-del-disponible",
+                TipoDeError.ReglaDeNegocio),
+        })
+        {
+            ExigirElRechazo(await rechazar(), codigo, tipo, porque);
 
-        ExigirElRechazo(
-            await ConsumirAsync(
-                despues, origen, Guid.CreateVersion7(), EscenaDeTransferencia.Hoy, new LineaDeConsumoDto(escena.UbicacionA, 1m)),
-            "reserva-caducada",
-            TipoDeError.Conflicto,
-            "consumir una que ya caducó");
+            foreach ((string cual, Guid id) in caducadas)
+            {
+                (await LaGuardadaAsync(postgres, escena.EmpresaId, id)).Estado
+                    .ShouldBe(EstadoDeReserva.Activa, $"{porque}, {cual}: un rechazo no guarda la caducada");
+            }
 
-        (await LaGuardadaAsync(postgres, escena.EmpresaId, reservada.Id)).Estado
-            .ShouldBe(EstadoDeReserva.Activa, "un rechazo no guarda la caducada");
+            _ = Exigir(await ReservarAsync(despues, escena, OrigenNuevo(), 1m, escena.AlmacenB));
 
-        _ = Exigir(await ReservarAsync(despues, escena, OrigenNuevo(), 1m, escena.AlmacenB));
-
-        (await LaGuardadaAsync(postgres, escena.EmpresaId, reservada.Id)).Estado
-            .ShouldBe(EstadoDeReserva.Activa, "una escritura de otra clave no guarda lo que tocó un rechazo");
+            foreach ((string cual, Guid id) in caducadas)
+            {
+                (await LaGuardadaAsync(postgres, escena.EmpresaId, id)).Estado
+                    .ShouldBe(EstadoDeReserva.Activa, $"{porque}, {cual}: una escritura de otra clave no guarda lo que tocó un rechazo");
+            }
+        }
 
         _ = await ReservadaAsync(despues, escena, OrigenNuevo(), 10m);
 
-        (await LaGuardadaAsync(postgres, escena.EmpresaId, reservada.Id))
-            .ShouldBe(new ReservaGuardada(EstadoDeReserva.Liberada, CausaDeLiberacion.Caducidad, caducaEl, 0m, 0));
+        foreach ((string cual, Guid id) in caducadas)
+        {
+            (await LaGuardadaAsync(postgres, escena.EmpresaId, id))
+                .ShouldBe(new ReservaGuardada(EstadoDeReserva.Liberada, CausaDeLiberacion.Caducidad, caducaEl, 0m, 0), cual);
+        }
 
         ReservaDto otraVez = await ReservadaAsync(despues, escena, origen, 4m, caducaEl);
 
