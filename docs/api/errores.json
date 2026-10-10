@@ -213,6 +213,7 @@
     { "codigo": "transferencia-no-esta-enviada", "type": "/errors/transferencia-no-esta-enviada", "clase": "Conflicto" },
     { "codigo": "transferencia-no-se-anula", "type": "/errors/transferencia-no-se-anula", "clase": "Conflicto" },
     { "codigo": "transferencia-numero-de-serie-no-valido", "type": "/errors/transferencia-numero-de-serie-no-valido", "clase": "Validacion" },
+    { "codigo": "transferencia-por-encima-del-disponible", "type": "/errors/transferencia-por-encima-del-disponible", "clase": "ReglaDeNegocio" },
     { "codigo": "transferencia-recepcion-antes-del-envio", "type": "/errors/transferencia-recepcion-antes-del-envio", "clase": "ReglaDeNegocio" },
     { "codigo": "transferencia-serie-cerrada", "type": "/errors/transferencia-serie-cerrada", "clase": "Conflicto" },
     { "codigo": "transferencia-serie-no-encontrada", "type": "/errors/transferencia-serie-no-encontrada", "clase": "Validacion" },

@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Domain.LotesYSeries;
+using Bastion.Inventario.Domain.Reservas;
 using Bastion.Inventario.Domain.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 
@@ -8,8 +9,9 @@ namespace Bastion.Inventario.Application.Transferencias;
 
 /// <summary>Los desenlaces de negocio de la transferencia que no vienen de un puerto.</summary>
 /// <remarks>
-/// <b>Los mismos que los del ajuste, con su prefijo, y tres propios</b>: el mismo almacén en las dos
-/// puntas, la recepción antes del envío y lo que no está enviado. Cada documento lleva los suyos
+/// <b>Los mismos que los del ajuste, con su prefijo, y cuatro propios</b>: el mismo almacén en las
+/// dos puntas, la recepción antes del envío, lo que no está enviado y el envío que se llevaría lo
+/// reservado (ADR-0059 §9). Cada documento lleva los suyos
 /// porque el <c>type</c> dice qué documento falló, y el frontal los traduce por separado (ADR-0053
 /// §12).
 /// </remarks>
@@ -34,6 +36,7 @@ internal static class ErroresDeTransferencia
     internal const string CodigoSerieNoUnitaria = "transferencia-serie-no-unitaria";
     internal const string CodigoSerieRepetida = "transferencia-serie-repetida";
     internal const string CodigoTrazabilidadNoCasa = "transferencia-trazabilidad-no-casa";
+    internal const string CodigoPorEncimaDelDisponible = "transferencia-por-encima-del-disponible";
 
     internal static ErrorDeOperacion NoEncontrada(Guid transferenciaId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrada,
@@ -163,6 +166,22 @@ internal static class ErroresDeTransferencia
             $"Las existencias del artículo {clave.ArticuloId} en el almacén {clave.AlmacenId} están " +
             $"valoradas en otra divisa que la del documento, {divisa}, y sumarlas exigiría un tipo de " +
             "cambio (ADR-0046 §7).");
+
+    /// <summary>
+    /// El envío saca de una clave del origen más de lo que no está reservado (ADR-0059 §9).
+    /// </summary>
+    /// <remarks>
+    /// <b>Solo cuando no pasa del físico</b>: lo que pasa del físico es el <c>stock-insuficiente</c>
+    /// del hueco, que dice que no hay, y no que está apartado.
+    /// </remarks>
+    /// <param name="pasada">La clave que pasa, con lo que saca y su disponible.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion PorEncimaDelDisponible(SalidaPorEncimaDelDisponible pasada) =>
+        ErrorDeOperacion.ReglaDeNegocio(
+            CodigoPorEncimaDelDisponible,
+            $"La transferencia saca {pasada.Sale} del artículo {pasada.Clave.ArticuloId} del almacén " +
+            $"{pasada.Clave.AlmacenId}, y el disponible es {pasada.Disponible}: el resto está reservado " +
+            "para otras líneas, y una transferencia no se lleva lo apartado (ADR-0059 §9).");
 
     /// <summary>Lo que impide valorar una de las patas, con su código (ADR-0046 §10).</summary>
     /// <remarks>

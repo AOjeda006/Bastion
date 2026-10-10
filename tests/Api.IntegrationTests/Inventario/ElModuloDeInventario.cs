@@ -191,6 +191,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             ejercicios,
             trazabilidad,
             new ElPrecioMedioPonderado(),
+            reservas,
             unidadDeTrabajo,
             elReloj);
 

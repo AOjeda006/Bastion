@@ -616,6 +616,10 @@ export const es = {
         'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
         'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
         'número de serie de esa línea.',
+      'transferencia-por-encima-del-disponible':
+        'Parte de ese stock está reservado para otros pedidos, y una transferencia no se lo lleva: ' +
+        'lo que queda en el almacén de origen, quitado lo reservado, no llega a lo que envías. ' +
+        'Envía menos, o libera antes la reserva.',
       'transferencia-recepcion-antes-del-envio':
         'La fecha de recepción es anterior a la del envío, y nada llega antes de salir. Pon la ' +
         'fecha del envío o una posterior.',

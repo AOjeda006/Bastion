@@ -1,9 +1,11 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Inventario.Application.Reservas;
 using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Domain.Reservas;
 using Bastion.Inventario.Domain.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Organizacion.Contracts.Ejercicios;
@@ -37,12 +39,17 @@ public interface IEnviarTransferencia
 /// suma a ellas: así dos transferencias cruzadas, A→B y B→A, toman las mismas dos claves en el
 /// mismo orden y no se interbloquean.
 /// </para>
+/// <para>
+/// <b>Lo reservado del origen se lee después de ese cerrojo</b>, porque reservar, consumir y liberar
+/// toman la misma fila de valoración: mientras dura el envío, la suma no puede cambiar (ADR-0059 §9).
+/// </para>
 /// </remarks>
 /// <param name="transferencias">Dónde viven el documento y lo que mueve.</param>
 /// <param name="numerador">Quién entrega el correlativo, en esta misma transacción (R5).</param>
 /// <param name="ejercicios">Si la fecha de envío se puede escribir, con la fila bloqueada.</param>
 /// <param name="trazabilidad">La marca de los artículos, con la fila bloqueada (ADR-0048 §4).</param>
 /// <param name="valoracion">Quién valora la salida contra los saldos bloqueados (ADR-0046 §10).</param>
+/// <param name="reservas">Lo reservado de las claves del origen, ya bloqueadas (ADR-0059 §9).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class EnviarTransferencia(
@@ -51,6 +58,7 @@ internal sealed class EnviarTransferencia(
     IConsultaDeEjercicios ejercicios,
     IConsultaDeTrazabilidad trazabilidad,
     IValoracionDeExistencias valoracion,
+    IRepositorioDeReservas reservas,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IEnviarTransferencia
 {
@@ -152,6 +160,17 @@ internal sealed class EnviarTransferencia(
         {
             return Resultado.Fallo<TransferenciaDto>(
                 ErroresDeTransferencia.NoSeValora(impedimento, transferencia.Divisa));
+        }
+
+        // EL DISPONIBLE DEL ORIGEN, la última guarda antes de escribir: lo que ya se rechazaba se
+        // sigue rechazando con su código, y esta solo contesta donde antes el envío salía.
+        IReadOnlyDictionary<ClaveDeValoracion, decimal> reservado = await reservas
+            .ReservadoDeAsync([.. lineas.Select(linea => linea.Clave).Distinct()], reloj.GetUtcNow(), cancelacion)
+            .ConfigureAwait(false);
+
+        if (ElDisponibleDeLaSalida.LoQuePasa(lineas, saldos, reservado) is { } pasada)
+        {
+            return Resultado.Fallo<TransferenciaDto>(ErroresDeTransferencia.PorEncimaDelDisponible(pasada));
         }
 
         IReadOnlyList<LineaValorada> valoradas = valoracion.Valorar(saldos, lineas, transferencia.Divisa, fecha);

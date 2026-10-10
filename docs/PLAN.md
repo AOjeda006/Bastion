@@ -10885,8 +10885,24 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
 
      **Las 28 frases suben el arranque del frontal de 437 a 442 KiB, de 450**, porque los
      diccionarios van en él (`bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`).
-   - **Lo siguiente**: la transferencia frente al disponible de su origen (ADR-0059 §9), con su
-     `422` y su caso.
+   - **Hecho, la transferencia frente al disponible**, en `feat(inventario): el envío no se lleva
+     lo reservado`: el envío lee lo reservado de las claves del origen después de su cerrojo, con
+     el puerto de la reserva, y contesta `422` `transferencia-por-encima-del-disponible` cuando
+     una clave saca más que su disponible **y no más que su físico**. Por encima del físico sigue
+     el `stock-insuficiente` del hueco, y la guarda va la última antes de escribir: lo que ya se
+     rechazaba se rechaza igual. El ADR-0059 §9 lo dice ya así. La regla es de dominio,
+     `ElDisponibleDeLaSalida`. Los casos:
+     - 9 del dominio (`dotnet test tests/Inventario.UnitTests --filter
+       "FullyQualifiedName~ElDisponibleDeLaSalidaTests"`), con las dos fronteras, la del
+       disponible y la del físico, a una millonésima;
+     - 3 de integración, por la API (`dotnet test tests/Api.IntegrationTests --filter
+       "FullyQualifiedName~LaTransferenciaFrenteAlDisponibleTests"`), con las semillas del 847
+       al 849: el rechazo no escribe ni gasta número, lo justo sale, el físico entero contesta el
+       disponible y uno más el hueco, y una reserva caducada no frena el envío.
+
+     La frase nueva deja el arranque en 442 KiB y el total en 710, de 900
+     (`bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`).
+   - **Lo siguiente**: las carreras, con transacciones de verdad.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)

@@ -537,6 +537,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSerieDelAjusteTests.Una_serie_cerrada_no_deja_abrir_el_borrador",
         "LaSerieDelAjusteTests.Una_serie_que_no_existe_no_deja_abrir_el_borrador",
 
+        // Del ítem 2.13 (ADR-0059 §9): el envío frente al disponible de su origen, por la API.
+        "LaTransferenciaFrenteAlDisponibleTests.El_envio_no_se_lleva_lo_reservado_y_lo_disponible_sale",
+        "LaTransferenciaFrenteAlDisponibleTests.Hasta_el_fisico_contesta_el_disponible_y_por_encima_el_hueco",
+        "LaTransferenciaFrenteAlDisponibleTests.Una_reserva_caducada_no_frena_el_envio",
+
         // Del ítem 2.11 (ADR-0053): la transferencia de punta a punta, por la API salvo el alta,
         // que no tiene borde, y el caso de las dos empresas, que necesita claves inventadas.
         "LaTransferenciaTests.Anular_la_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto",

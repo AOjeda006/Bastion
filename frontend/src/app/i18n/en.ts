@@ -557,6 +557,10 @@ export const en: Diccionario = {
         'That serial number is not a code that fits on the label: 1 to 20 characters, no spaces, ' +
         'using unaccented letters, digits and the symbols GS1 allows. Fix the serial number on ' +
         'that line.',
+      'transferencia-por-encima-del-disponible':
+        'Part of that stock is reserved for other orders, and a transfer cannot take it: what is ' +
+        'left in the origin warehouse, minus what is reserved, does not reach what you send. Send ' +
+        'less, or release the reservation first.',
       'transferencia-recepcion-antes-del-envio':
         'The receipt date is earlier than the dispatch date, and nothing arrives before it ' +
         'leaves. Use the dispatch date or a later one.',

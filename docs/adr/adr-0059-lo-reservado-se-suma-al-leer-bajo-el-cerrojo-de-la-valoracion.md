@@ -270,6 +270,11 @@ también con esa otra salida.
   unidad base, pasa del disponible de esa clave, es un `422`
   `transferencia-por-encima-del-disponible`. La suma de las reservas se lee después del cerrojo, y
   por eso no puede cambiar.
+- **Solo entre el disponible y el físico.** Lo que pasa del físico sigue siendo el `422`
+  `stock-insuficiente` del hueco, que es más preciso: dice que no hay, y no que está apartado. Y la
+  guarda va la última antes de escribir, detrás de la valoración: lo que ya se rechazaba se rechaza
+  con el mismo código, y el nuevo solo contesta donde antes el envío salía. La regla es de dominio,
+  `ElDisponibleDeLaSalida`, y el envío lee lo reservado con el mismo puerto que la reserva.
 - **Recibir no mira nada**: suma.
 - **El ajuste, el recuento y las anulaciones no se frenan** (precisión 2). Registran la realidad o
   corrigen un error.
