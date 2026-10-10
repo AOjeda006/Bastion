@@ -10953,7 +10953,14 @@ centinela, que va antes, es el **0060**, y el del `tsconfig` de los tests, el **
      hasta la vuelta 328 de la 464, y apartar más para que llegara antes frenaba otros envíos. Y la
      reserva va la mitad de las veces a la clave de una caducada que sigue guardada activa, que es
      donde la escritura la libera.
-   - **Lo siguiente**: las filas R12 y R13 de `docs/dominio/reglas-duras.md`.
+   - **Hecho, las filas R12 y R13** de `docs/dominio/reglas-duras.md`, en `docs(inventario): el
+     consumo de reserva, en las filas de la R12 y la R13`. La R12 se rompe a sabiendas tres veces,
+     y la tercera es el consumo, que escribe la reserva, su consumo y las filas de su albarán en la
+     misma transacción (ADR-0059 §6). La R13 nombra los dos casos del albarán.
+     `LasDiecisieteReglasTests` busca lo que la tabla nombra (`dotnet test tests/Arquitectura.Tests
+     --filter "FullyQualifiedName~LasDiecisieteReglasTests"`, 5 casos), y se vio rojo con la
+     primera redacción: llevaba `COMMIT` entre comillas invertidas, y no es un tipo del repositorio.
+   - **Lo siguiente**: el paso 10.
 10. La tanda, el humo, la batería, `/code-review` sobre el diff y los runs.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
