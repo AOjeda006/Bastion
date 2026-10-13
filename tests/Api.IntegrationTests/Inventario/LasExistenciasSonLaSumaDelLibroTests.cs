@@ -724,7 +724,8 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
                 unos.ProcesoDeLaBase,
                 laOtra,
                 "otra confirmación de su empresa",
-                "el cerrojo de quien anota no es compartido, y las confirmaciones van de una en una");
+                "el cerrojo de quien anota no es compartido, y las confirmaciones van de una en una; "
+                + "o las dos comparten algo más que la empresa, como la clave o la serie");
 
             Resultado<AjusteDto> segundaConfirmacion = await laOtra;
 

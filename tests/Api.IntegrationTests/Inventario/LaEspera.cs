@@ -98,14 +98,17 @@ internal static class LaEspera
     /// operación.
     /// </param>
     /// <param name="enVuelo">La operación que tiene que terminar sin esperarla.</param>
-    /// <param name="aQuien">A quién no debe esperar: «el recálculo de la otra empresa».</param>
-    /// <param name="conEspera">Qué estaría mal si la esperara.</param>
+    /// <param name="quien">Quién no debe pararla: «el recálculo de otra empresa».</param>
+    /// <param name="conEspera">
+    /// Qué estaría mal si la parara. El motor dice que espera, no por qué: si el caso puede esperar
+    /// por más de una causa, las nombra.
+    /// </param>
     /// <returns>Cuando la operación ha terminado.</returns>
     internal static async Task SinQueLaFreneAsync(
         string cadenaDeConexion,
         int procesoQueNoFrena,
         Task enVuelo,
-        string aQuien,
+        string quien,
         string conEspera)
     {
         await using NpgsqlConnection conexion = new(cadenaDeConexion);
@@ -128,13 +131,13 @@ internal static class LaEspera
 
             ((long)(await quienEspera.ExecuteScalarAsync())!).ShouldBe(
                 0,
-                $"la operación se ha parado detrás de {aQuien}: {conEspera}");
+                $"{quien} ha parado la operación: {conEspera}");
 
             await Task.Delay(50);
         }
 
         throw new ShouldAssertException(
-            $"en treinta segundos la operación no ha terminado, y nadie espera a {aQuien}");
+            $"en treinta segundos la operación no ha terminado, y no la ha parado {quien}");
     }
 
     /// <summary>El proceso que está parado detrás de <paramref name="procesoQueFrena"/>, que es uno.</summary>
