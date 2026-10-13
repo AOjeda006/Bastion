@@ -11467,7 +11467,7 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
 **La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
 abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **560**. Su ADR es el
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **573**. Su ADR es el
 **0063**.
 
 **Lo que queda, por este orden:**
@@ -12100,8 +12100,94 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **560**. Su
       - los dos, con 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*; **1477** y **689** casos,
         **235** tipos de **242** sitios, **150** operaciones y **91** rutas; el centinela, con la
         marca y sin avisos; y el humo, con los **109** permisos.
-13. La propiedad, con tres clases de paso nuevas: el saldo a una fecha, el trabajo mensual y la
-    clave nueva antes del corte. Con lo que cuesta.
+13. ~~La propiedad, con tres clases de paso nuevas: el saldo a una fecha, el trabajo mensual y la
+    clave nueva antes del corte. Con lo que cuesta.~~ Hecho en `test(inventario): el saldo a una
+    fecha, el trabajo mensual y la clave nueva en la propiedad` (`d80ad69`).
+    - **Tres clases de paso nuevas en `ElSaldoEsLaSumaDelLibroPorPropiedadTests`**, las del
+      ADR-0063 §10, y la aserción final de cada semilla las pide las tres. Las sortea un sexto
+      generador, con la semilla más 5 000, para que añadirlas no cambie lo que sortean los otros.
+    - **El saldo a una fecha** se lee por el caso de uso, `ConsultarSaldos`, a un día de uno de
+      cuatro tramos: anterior al primer movimiento, de un mes ya cortado, posterior al corte, u hoy.
+      Tiene que ser la suma del modelo hasta ese día, en cantidad y en valor, con lo que vuela ese
+      día hacia cada par aparte; y el de mañana se rechaza con `saldo-con-fecha-futura`. Para eso
+      el modelo guarda la fecha de cada fila valorada y de cada despegue y aterrizaje. Cada semilla
+      tiene que leer los cuatro tramos, algún par con cantidad y alguno con algo en vuelo.
+    - **El trabajo mensual** avanza el corte hasta el mes anterior al de hoy por el contenedor del
+      anfitrión, con `IAvanceDelCorte`. Lo repuesto es lo que el modelo debe hasta el corte nuevo, y
+      su cuadre compara todas las existencias y todas las instantáneas sin un descuadre. Si el corte
+      ya llega, no hace nada, y esa vuelta no cuenta como su clase.
+    - **La clave nueva antes del corte** es una entrada fechada en un mes ya cortado que es la
+      primera fila de su clave: un lote o una serie nuevos, o la clave sin trazabilidad que nunca se
+      ha movido, de A o de B. Sin un corte posterior a su mes, el paso recalcula antes. Afirma sobre
+      el modelo que la clave debe una instantánea en cada mes del suyo al corte, dos por lo menos, y
+      la comprobación de después mira que la base las tenga.
+    - **Decidido sin preguntar, por trivial o reversible**:
+      - la clave nueva no entra en las anulables: el primer generador sortea la anulación entre
+        ellas, y una más cambiaría cuál anula durante el resto de la secuencia;
+      - el porcentaje de claves nuevas es el **12**, porque con él las seis semillas pasan por todas
+        las clases de paso. Con el 10, la 464 no enviaba nada sin stock; con el 5 perdía tres clases
+        de las reservas y del recuento, y con el 8 la 461 no liberaba a mano ninguna caducada. Se
+        midió con la propiedad entera a cada uno, el 8 y el 12 con `python -X utf8 buscar.py
+        busqueda 8 12`, y lo dice el comentario de la constante;
+      - el ajuste que abre la propiedad va al almacén de sus claves, y no siempre al A, porque la
+        clave nueva puede ser de B y un documento no mezcla almacenes;
+      - las tres clases no añaden casos: la propiedad sigue siendo una teoría de seis semillas, así
+        que el censo y el recuento no cambian.
+    - **Lo que cuesta**, con `dotnet test tests/Api.IntegrationTests --no-build --filter
+      "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests" --logger
+      "trx;LogFileName=coste.trx"` y las duraciones leídas del `.trx` con `python -X utf8
+      duraciones.py <trx>`:
+      - sobre `d80ad69`, **127,2 s** sumando las seis semillas, 2 min 7 s del informe y 141 s de
+        reloj: 19,8, 20,4, 19,9, 19,1, 28,0 y 20,0 s, de la 460 a la 465;
+      - sobre `4e52202`, en un árbol de trabajo aparte, **115,8 s**, 1 min 55 s y 139 s: 17,8,
+        17,9, 18,4, 17,9, 26,1 y 17,7 s;
+      - son **11,4 s más**, un 10 %. La duración del informe es la suma de las semillas, que corren
+        una detrás de otra.
+    - **La tanda, de la 560 a la 572**, con `python -X utf8 tanda.py tanda` y `python -X utf8
+      tanda-571.py tanda571 571 572`. Cada mutación, sola contra la propiedad, con `--blame-hang
+      --blame-hang-timeout 4m`, revertida con `git restore --source=HEAD` y la fecha de ahora. La
+      base, el coste de arriba: 0 rojos de 6. Al terminar, el proyecto compila y el árbol está
+      limpio.
+
+      | # | Mutación | Rojo en |
+      |---|---|---|
+      | 560 | La serie de meses de la proyección empieza en el corte (la del ADR-0063 §10) | 6 de 6, «las instantáneas no son las del libro». La primera comprobación que la ve es la de una anulación (460), una entrada (461), una clave nueva (462 y 464), un ajuste (463) o una recibida anulada (465) |
+      | 561 | Empieza en el corte solo la de la clave sin instantáneas | 6 de 6, la misma aserción: una clave nueva en la 460, la 462 y la 464; en las otras tres, antes, una clave que se mueve por primera vez después del corte |
+      | 562 | El mes de partida del saldo es el corte, sin `least` | 6 de 6, «el saldo a una fecha no es la suma del modelo hasta ese día», todas en el tramo anterior al primer movimiento |
+      | 563 | El saldo, sin el valor de la instantánea | 6 de 6, la misma, hoy (460, 462 y 463) o en un mes ya cortado (461, 464 y 465) |
+      | 564 | El tránsito, sin el `NOT EXISTS` del inverso recibido | 6 de 6, la misma, hoy |
+      | 565 | El avance no rehace nada | 6 de 6, `avance.Repuestas` en el trabajo mensual |
+      | 566 | El avance, sin su `WHERE`: puede mover el corte atrás | 6 de 6, «el corte ya llegaba, y el avance ha hecho algo» |
+      | 567 | **Arnés**: el modelo, sin la cantidad en tránsito | 6 de 6, «el saldo a una fecha no es la suma…», hoy |
+      | 568 | **Arnés**: el saldo no anota su tramo | 6 de 6, la aserción final de los tramos |
+      | 569 | **Arnés**: la clave nueva solo recalcula sin corte | 6 de 6, la del propio paso, `cuantos` |
+      | 570 | Mañana no es futuro | 6 de 6, `manana.EsCorrecto` |
+      | 571 | Empieza en el corte solo la de la clave sin instantáneas cuyo mes ya está cortado | 6 de 6, «las instantáneas no son las del libro»: la clave nueva en cinco, y en la 461, antes, una entrada del 2026-01-17 que estrena el lote «l-1» en un mes ya cortado |
+      | 572 | **Arnés**: la 571, con el paso de la clave nueva apagado | 6 de 6: en cinco, solo la aserción final de las clases, a la que le falta la clave nueva; en la 461, la misma entrada que ve la 571 |
+
+      - **La 571 y la 572 se añadieron después de medir la 561**, que no distinguía: la veía también
+        una clave que se mueve por primera vez después del corte, que nada tiene que ver con la
+        clave nueva. La 571 solo cambia la serie de la clave sin instantáneas cuyo mes ya está
+        cortado, y lo esperado se escribió antes de medir en la cabecera de `tanda-571.py`.
+      - **La 572 contradijo lo escrito en una semilla.** Se esperaba que, con el paso apagado,
+        ninguna comprobación viera la instantánea, y en la 461 la ve una entrada al azar, la que
+        estrena un lote en un mes cortado. En las otras cinco, sin el paso nadie la ve: es el paso
+        el que garantiza el caso en todas, y la aserción de las clases la que lo exige. No se cubre
+        nada más, porque no hay hueco: la mutación es roja en las seis.
+      - Los tiempos, de la 560 a la 572: 31, 23, 30, 42, 67, 38, 52, 61, 142, 27, 24, 27 y 119 s.
+        La 568 y la 572 son las más largas porque corren la secuencia entera hasta la aserción
+        final.
+      - La siguiente mutación es la **573**.
+    - **Los runs de rama, los dos en verde al primer intento**, leídos con `python leer-run27.py
+      <run>`:
+      - el de `677abc5`, que anota el 12, es el **38451818376**: Frontal `115484370439`, Backend
+        `115484371003` y Humo `115489538752`;
+      - el de `d80ad69`, el **38479416347**: Frontal `115578048981`, Backend `115578049264` y Humo
+        `115581210635`;
+      - los dos, con 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*; **1477** y **689** casos,
+        **235** tipos de **242** sitios, **150** operaciones y **91** rutas; **412/450** y
+        **720/900** KiB; el centinela, con la marca y sin avisos; y el humo, con los **109**
+        permisos.
 14. La tanda, desde la **448**; la batería; el humo en su propio proyecto; el cierre del 2.14 por el
     flujo de la rama.
 15. La revisión de la fase, preparada y sin cerrarla: cada criterio del 2.1 al 2.14 con su caso, y
