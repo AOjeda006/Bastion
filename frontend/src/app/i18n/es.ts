@@ -52,6 +52,7 @@ export const es = {
     empresas: 'Empresas',
     recuentos: 'Recuentos',
     recuento: 'Ficha del recuento',
+    saldos: 'Saldo de stock',
     tarifas: 'Tarifas',
     terceros: 'Terceros',
     importarTerceros: 'Importar terceros',
@@ -426,6 +427,27 @@ export const es = {
         descartando: 'Descartando…',
         descartadoAviso: 'Recuento descartado.',
       },
+    },
+
+    saldos: {
+      cargando: 'el saldo',
+      // El día lo dice la respuesta, no el campo: sin fecha, contesta el servidor con su hoy.
+      tabla: 'Saldo al final del {{dia}}, por artículo y almacén',
+      dia: 'Al final del día',
+      articulo: 'Artículo',
+      almacen: 'Almacén',
+      cantidad: 'Cantidad',
+      valor: 'Valor',
+      enTransito: 'En tránsito',
+      valorEnTransito: 'Valor en tránsito',
+      transitoAparte:
+        'Lo que está en tránsito salió de otro almacén hacia este y todavía no había llegado al ' +
+        'final del día. No está sumado ni en la cantidad ni en el valor.',
+      todos: 'Todos',
+      consultar: 'Consultar',
+      paginaVacia: 'Esta página no tiene saldos. Vuelve a la anterior.',
+      ningunoTodavia: 'Esta empresa todavía no ha movido stock.',
+      ningunoConEsteFiltro: 'Ningún saldo coincide con el filtro.',
     },
   },
 

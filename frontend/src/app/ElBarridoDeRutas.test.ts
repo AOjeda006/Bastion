@@ -72,7 +72,7 @@ describe('El barrido de rutas', () => {
     expect([...montadas].sort()).toEqual([...declaradas].sort());
   });
 
-  it('la partición cuadra: 14 rutas = 2 públicas + 1 de sesión + 11 de permiso', () => {
+  it('la partición cuadra: 15 rutas = 2 públicas + 1 de sesión + 12 de permiso', () => {
     const porClase = {
       publica: RUTAS.filter((r) => r.exigencia.clase === 'publica'),
       sesion: RUTAS.filter((r) => r.exigencia.clase === 'sesion'),
@@ -81,7 +81,7 @@ describe('El barrido de rutas', () => {
 
     // Contada, como las del backend: si mañana hay seis rutas, este número obliga a mirar en cuál
     // de las tres clases ha caído la nueva en vez de dejar que se cuele en la más cómoda.
-    expect(RUTAS).toHaveLength(14);
+    expect(RUTAS).toHaveLength(15);
     expect(porClase.publica.map((r) => r.ruta)).toEqual(['/acceso', '*']);
     expect(porClase.sesion.map((r) => r.ruta)).toEqual(['/']);
     // Con EL PERMISO de cada una, y no solo la ruta: cambiarlo es decidir quién entra. La pantalla
@@ -101,6 +101,7 @@ describe('El barrido de rutas', () => {
       ['/empresas', PERMISOS.empresaVer],
       ['/recuentos', PERMISOS.recuentoVer],
       ['/recuentos/:id', PERMISOS.recuentoVer],
+      ['/saldos', PERMISOS.saldoVer],
       ['/tarifas', PERMISOS.tarifaVer],
       ['/terceros', PERMISOS.terceroVer],
       ['/terceros/importacion', PERMISOS.terceroImportar],
@@ -110,7 +111,7 @@ describe('El barrido de rutas', () => {
     );
   });
 
-  it('la partición por dueño cuadra: 14 rutas = 2 del armazón + 1 de identidad + 5 de catalogo + 2 de inventario + 2 de organizacion + 2 de terceros', () => {
+  it('la partición por dueño cuadra: 15 rutas = 2 del armazón + 1 de identidad + 5 de catalogo + 3 de inventario + 2 de organizacion + 2 de terceros', () => {
     const porDuenio = {
       armazon: RUTAS.filter((r) => r.duenio === 'armazon'),
       catalogo: RUTAS.filter((r) => r.duenio === 'catalogo'),
@@ -129,7 +130,11 @@ describe('El barrido de rutas', () => {
       '/categorias',
       '/tarifas',
     ]);
-    expect(porDuenio.inventario.map((r) => r.ruta)).toEqual(['/recuentos', '/recuentos/:id']);
+    expect(porDuenio.inventario.map((r) => r.ruta)).toEqual([
+      '/recuentos',
+      '/recuentos/:id',
+      '/saldos',
+    ]);
     expect(porDuenio.organizacion.map((r) => r.ruta)).toEqual(['/almacenes', '/empresas']);
     expect(porDuenio.terceros.map((r) => r.ruta)).toEqual(['/terceros', '/terceros/importacion']);
     expect(
@@ -148,6 +153,23 @@ describe('El barrido de rutas', () => {
         (r) => r.ruta,
       ),
     ).toEqual([]);
+  });
+
+  it('la navegación ofrece estas, y ninguna ficha ni pantalla de paso', () => {
+    // Contada, como las particiones: una pantalla que se queda fuera de la navegación solo se
+    // encuentra escribiendo su dirección, y nada más lo notaría. Las fichas y la importación se
+    // quedan fuera a propósito: se llega a ellas desde su listado.
+    expect(RUTAS.filter((r) => r.enLaNavegacion).map((r) => r.ruta)).toEqual([
+      '/',
+      '/almacenes',
+      '/articulos',
+      '/categorias',
+      '/empresas',
+      '/recuentos',
+      '/saldos',
+      '/tarifas',
+      '/terceros',
+    ]);
   });
 
   it('el módulo que carga cada ruta vive donde dice su dueño', () => {

@@ -39,6 +39,7 @@ export const en: Diccionario = {
     empresas: 'Companies',
     recuentos: 'Stock counts',
     recuento: 'Stock count record',
+    saldos: 'Stock balance',
     tarifas: 'Price lists',
     terceros: 'Business partners',
     importarTerceros: 'Import business partners',
@@ -378,6 +379,26 @@ export const en: Diccionario = {
         descartando: 'Discarding…',
         descartadoAviso: 'Stock count discarded.',
       },
+    },
+
+    saldos: {
+      cargando: 'the stock balance',
+      tabla: 'Stock balance at the end of {{dia}}, by item and warehouse',
+      dia: 'At the end of',
+      articulo: 'Item',
+      almacen: 'Warehouse',
+      cantidad: 'Quantity',
+      valor: 'Value',
+      enTransito: 'In transit',
+      valorEnTransito: 'Value in transit',
+      transitoAparte:
+        'Stock in transit left another warehouse for this one and had not arrived by the end of ' +
+        'the day. It is not added to the quantity or to the value.',
+      todos: 'All',
+      consultar: 'Show',
+      paginaVacia: 'This page has no balances. Go back to the previous one.',
+      ningunoTodavia: 'This company has not moved any stock yet.',
+      ningunoConEsteFiltro: 'No balance matches the filter.',
     },
   },
 

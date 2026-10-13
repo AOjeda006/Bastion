@@ -190,6 +190,16 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
       (await import('@/features/inventario/recuentos/ui/PaginaDelRecuento.tsx')).PaginaDelRecuento,
   },
   {
+    // El stock al final de un día, con lo que viaja aparte (ítem 2.14, ADR-0063 §8). Solo lee.
+    ruta: '/saldos',
+    duenio: 'inventario',
+    claveDeTitulo: 'saldos',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.saldoVer },
+    enLaNavegacion: true,
+    cargar: async () =>
+      (await import('@/features/inventario/saldos/ui/PaginaDeSaldos.tsx')).PaginaDeSaldos,
+  },
+  {
     ruta: '/tarifas',
     duenio: 'catalogo',
     claveDeTitulo: 'tarifas',

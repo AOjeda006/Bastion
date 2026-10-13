@@ -24,6 +24,7 @@ export const PERMISOS = {
   recuentoConfirmar: 'inventario.recuento.confirmar',
   recuentoAnular: 'inventario.recuento.anular',
   recuentoDescartar: 'inventario.recuento.descartar',
+  saldoVer: 'inventario.saldo.ver',
   serieVer: 'organizacion.serie.ver',
   tarifaVer: 'catalogo.tarifa.ver',
   terceroVer: 'terceros.tercero.ver',

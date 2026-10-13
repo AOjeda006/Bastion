@@ -122,3 +122,62 @@ ahora. Los maestros, cinco minutos (`VIDA_DE_UN_MAESTRO`).
   modelo de vista en la capa `api`: los tipos del contrato no salen de ahí.
 - La empresa **no** forma parte de ninguna clave de consulta: va dentro del testigo y quien filtra es
   el servidor (R8). El cambio de empresa vacía la caché entera.
+
+## `saldos` — cuánto había al final de un día
+
+**Propósito.** Enseñar el stock de la empresa al final de un día, hoy o uno pasado, por artículo y
+almacén, con su valor y con lo que viajaba hacia cada almacén (ítem 2.14, `docs/adr/adr-0063`). Solo
+lee: no tiene ningún botón que esconder.
+
+### Rutas
+
+| Ruta      | Exigencia                      | Título         |
+| --------- | ------------------------------ | -------------- |
+| `/saldos` | permiso `inventario.saldo.ver` | Saldo de stock |
+
+Va **diferida**, como las del recuento. Parámetros de URL: `?fecha=` (`AAAA-MM-DD`), `?almacen=`,
+`?articulo=`, `?pagina=` y `?tamanio=`. Los tres primeros con los nombres de la API, y ninguno es
+sensible (`docs/adr/adr-0025`). Lo que no se reconoce se ignora; **un día futuro, no**: tiene forma
+de día, y quien dice que el saldo del futuro no existe es el servidor, con `saldo-con-fecha-futura`.
+
+### Claves de consulta
+
+`saldos/api/claves.ts`:
+
+```
+['saldos']                   → clavesDeSaldos.todo
+['saldos', 'lista']          → clavesDeSaldos.listas()
+['saldos', 'lista', listado] → clavesDeSaldos.lista(listado)
+['saldos', 'articulos']      → clavesDeSaldos.articulos()
+```
+
+Nada escribe, así que nada invalida: el saldo de un día pasado no cambia, y el de hoy se vuelve a
+pedir al volver a la pantalla. Los nombres del almacén y del artículo de cada fila, y la lista de
+almacenes del filtro, **no cuelgan de aquí**: salen por el camino del recuento, con sus claves
+(`clavesDeRecuentos.maestro` y `.almacenes()`), así que lo que nombró una pantalla no se vuelve a
+pedir en la otra.
+
+### Lo que no es evidente
+
+- **El día que se pinta es el que contesta el servidor**, no el del campo. Sin `?fecha=` no se manda
+  ninguno, el servidor contesta con su hoy y la respuesta lo dice: la tabla lleva ese día en su
+  título.
+- **Hoy es el día UTC** (ADR-0063 §3, nota abierta para el cierre de la fase). El campo no deja
+  elegir un día posterior al de hoy del servidor, y por omisión enseña ese día, no el del calendario
+  de quien mira: entre la medianoche de aquí y la de Greenwich, ofrecer el local sería ofrecer un
+  `400` seguro.
+- **Lo que viaja no está sumado.** Va en sus dos columnas, y las dos señalan la frase de debajo de la
+  tabla que lo dice. Es lo que salió de otro almacén hacia este y al final del día aún no había
+  llegado ni vuelto.
+- **Un día futuro no se reintenta.** El fallo lo dice con el texto del `type`, que dice qué día
+  elegir, y no ofrece «Volver a intentarlo»: daría el mismo `400`.
+- **Un importe lleva los decimales de su divisa y hasta cuatro**, los del libro. Una divisa que `Intl`
+  no admite se pinta con su código detrás, en vez de romper la pantalla.
+- **El almacén y el artículo se ofrecen solo a quien puede verlos.** Sin ese permiso no hay filtro ni
+  se pregunta su nombre, y la celda lleva el identificador.
+
+### Límites conocidos
+
+- **El filtro de artículos pide una página de 200**, como los desplegables del alta del recuento.
+  Una empresa con más artículos no verá los siguientes en la lista, aunque sí en la tabla. El
+  disparador es el mismo: la primera que se acerque a ese número, y entonces el artículo se busca.
