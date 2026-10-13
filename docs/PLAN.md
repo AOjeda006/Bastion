@@ -6941,6 +6941,116 @@ mide.
   segunda revienta en el índice único. Es una excepción, y la bandeja de salida la reintenta hasta
   el `409`. Con la misma clave, la segunda espera y recibe la primera.
 
+### Traídas por el encargo del 2026-10-13 — la propiedad por escritura, y la puerta del 2.14
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **29** commits desde `acf58e8`, con 29 firmas válidas y sin *trailers*;
+- los runs **233 a 245** en verde al primer intento;
+- `main` avanzó a `0638419` solo después del verde de su rama;
+- las cifras, iguales a las del *runner*: 69 pasos, Vitest con **256** casos y el canal anotado.
+
+El informe no tenía ningún error. **El próximo cuenta desde `0638419`.** La siguiente mutación es
+la **444**, y el siguiente ADR, el **0063**.
+
+**El arnés** está al día desde `dbf2664`, así que este encargo no lleva el bloque de puesta al día.
+`arnes-de-agente.md` se lee al empezar cada sesión. La biblioteca no ha cambiado desde `3b45c6b`.
+
+#### Antes del 2.14, en su rama y cada tema en su commit
+
+1. **Los runs 38083369049 y 38084319374, anotados.**
+2. **La cabecera del ADR-0059.** Su *Estado* declara que el §9 se corrigió por dentro en `514ab46`,
+   y el punto lleva la nota formal, como pide la regla de `AGENTS.md`.
+3. **La clase de paso `CaducadaAlPasar`, separada según qué escritura la produce**: reservar,
+   consumir o liberar. Era la propuesta del informe del 2.13, y la decisión es del usuario.
+   - Cada semilla tiene que pasar por las tres, y el caso lo afirma.
+   - La 422 y la 441 tienen que ponerse rojas también en la propiedad, no solo en el caso de
+     `d44cc31`.
+   - La 442 y la 443 se vuelven a medir.
+   - Lo que cueste, con la orden que lo mide.
+
+#### El 2.14: el stock a fecha pasada, hasta su puerta
+
+La puerta se pasa con esto. Las decisiones van en el **ADR-0063**, y lo que siga abierto se
+pregunta todo junto antes del código. **Lo primero es lo que digan el §7.4 y el §15 del plan
+maestro.** Después, las notas abiertas que señalan al 2.14: «nadie avanza el corte de la
+instantánea hasta el 2.14», y el tránsito a una fecha pasada, que el ADR-0053 §1 le deja.
+
+1. **Qué es «el saldo».** Se decide y se preguntan tres cosas:
+   - si es cantidad, o cantidad y valor;
+   - a qué nivel: la clave de la existencia (ubicación, lote y serie), o el artículo y el almacén;
+   - si entra el tránsito a esa fecha, que sale de los documentos y de sus dos fechas, con lo que
+     hace una anulación.
+
+   Recomendación del usuario: cantidad y valor por artículo y almacén, porque la valoración del
+   inventario a una fecha, el 31/12, es lo que pide la contabilidad. Y el tránsito, dicho aparte.
+2. **El trabajo mensual que avanza el corte**, el primer proceso periódico de Inventario:
+   - cada empresa por separado: el fallo de una no es el fallo de la vuelta;
+   - idempotente, y se pone al día si se saltó meses;
+   - con dos instancias de la API a la vez, decide quién lo hace, o dice por qué no importa;
+   - el reloj, por `TimeProvider`;
+   - el cuadre de después, a la vista: en el registro y en las métricas
+     (`herramientas/observabilidad.md`), y no en un registro que nadie lee.
+3. **Los cerrojos *advisory***, como fija el criterio: el compartido al anotar y el exclusivo al
+   recalcular, por empresa. Se escriben tres cosas:
+   - cómo se convierte el `Guid` de la empresa en la clave, `int4` o `int8`. Una colisión solo
+     serializa a dos empresas y no rompe nada, pero se dice;
+   - qué constante de espacio de nombres separa este cerrojo de cualquier otro;
+   - en qué eslabón del orden va.
+
+   Los casos son los del criterio: dos empresas, donde B no espera, y la misma empresa, donde sí
+   espera. Con sus mutaciones: el exclusivo al anotar pone rojo el de las dos empresas, y el
+   compartido al recalcular, el de la misma empresa.
+4. **Las fechas.**
+   - Una anterior al primer movimiento contesta cero.
+   - Una futura se rechaza, con el código de la casa.
+   - «Hoy» es el día UTC, como en todo el proyecto, y la pregunta de la zona sigue en el cierre de
+     fase.
+   - Un movimiento fechado antes del corte, la primera fila de una clave nueva, tiene que seguir
+     cuadrando: es la frontera que más fácil se rompe.
+5. **La superficie**: la consulta, paginada en el servidor y con su permiso, y la pantalla «con su
+   fecha», con la ruta diferida.
+6. **El presupuesto**, decisión del usuario en la puerta. El arranque está en 442/450 KiB, y los
+   textos de `errores.tipos` son unos 40 KB de los 66 KB de `es.ts`, y crecen con cada `type`.
+   - Se mide cuánto va a añadir el 2.14.
+   - Se propone cómo dejan de crecer en el arranque esos textos; por ejemplo, cargándolos con su
+     funcionalidad.
+   - El límite no se sube.
+7. **La propiedad.** El saldo a una fecha al azar es la suma del libro hasta esa fecha, sobre
+   historias con ajustes, anulaciones, transferencias y recuentos, con movimientos fechados antes
+   del corte. Y después de pasar el trabajo mensual, la instantánea cuadra con el libro.
+
+El agente se para en la puerta y pregunta lo que siga abierto.
+
+#### Cuando el 2.14 esté cerrado, la fase no se cierra
+
+Se prepara su repaso, y se para:
+
+- cada criterio, del 2.1 al 2.14, con su caso;
+- todas las notas **ABIERTA** que dicen «cierre de la fase», como preguntas en una sola tanda: las
+  pantallas del ajuste, de la transferencia y de las existencias; la zona horaria del sitio; el
+  recuento cíclico con sus dos disparadores; y lo que haya.
+
+#### Las herramientas de la máquina, en este encargo
+
+- **Los servidores de lenguaje**: el símbolo se busca antes de leer, los diagnósticos de cada
+  edición se abren, y un diagnóstico limpio no sustituye al build ni a los tests.
+- **`/code-review` sobre el diff de cada unidad antes de cerrarla**, con cada hallazgo comprobado
+  contra el código.
+- **`playwright-cli`**, para el recorrido de la pantalla del saldo contra la pila local, con datos
+  sintéticos.
+- **Context7 (`ctx7`)**, solo si una API de Npgsql (los cerrojos *advisory*) o de
+  `BackgroundService` no cuadra, y contrastado con la fuente oficial.
+
+#### El método
+
+El de siempre: la tanda escrita antes de medir, con una mutación sobre el arnés; las dos listas por
+nombre; commits pequeños y firmados, uno por tema; el humo, porque hay migración y pantalla; `main`
+solo avanza a un commit ya verde en su rama, y la rama se borra después de su run de `main`; las
+ediciones de `CLAUDE.md`, al principio o al final de la sesión, y la unidad cerrada antes de una
+pausa larga. **El informe cuenta todos los commits desde `0638419`, con sus runs**, y cada cifra va
+con la orden que la mide.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 13 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -11173,6 +11283,35 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
      Este commit, el que anota esos runs, es el **veintinueve**. Espera su propio verde en la rama
      antes de que `main` avance, y su run y el de `main` se anotan al abrir el 2.14.
+   - **El run de rama de `0638419`**, el commit del cierre, es el **38083369049**. Sale en verde
+     al primer intento, con sus jobs Backend `114304682854`, Frontal `114304682928` y Humo
+     `114306622742`, 69 pasos, 68 en verde y 1 omitido, y **1451** y **678** casos. `main` avanzó a
+     `0638419` con `--ff-only` después de ese verde. **El run de `main`**, el
+     [38084319374](https://github.com/AOjeda006/Bastion/actions/runs/38084319374), sale en verde
+     al primer intento:
+     - sus jobs, Frontal `114307494276`, Backend `114307494479` y Humo `114309545380`;
+     - 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*;
+     - las mismas cifras: **1451** y **678** casos con **10 `.trx`** en cada artefacto, **149**
+       operaciones y **90** rutas, **234** tipos de **241** sitios, y **442/450** y **711/900**
+       KiB. El centinela, con la marca y sin avisos, y la auditoría entera, a cero. Leídos con
+       `python leer-run27.py 38083369049` y `python leer-run27.py 38084319374`.
+
+     La rama `2.13-las-reservas` se borró después, en local y en el remoto, y el *worktree* de la
+     tanda también. Anotado al abrir el 2.14.
+
+**La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
+abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y su ADR es el **0063**.
+
+**Lo que queda, por este orden:**
+
+1. ~~Los runs del cierre del 2.13, anotados.~~ Hecho en el primer commit de la rama: el
+   38083369049 y el 38084319374, en *El 2.13, cerrado* y en su casilla.
+2. La cabecera del ADR-0059, con el §9 corregido por dentro en `514ab46`.
+3. La propiedad, por escritura: `CaducadaAlPasar` en tres clases, con su tanda y lo que cuesta.
+4. La puerta del 2.14, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0063
+   decide sin preguntar.
+5. Parar y preguntar, todo junto. El ADR-0063 y el código esperan a las respuestas.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
@@ -19544,8 +19683,9 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     la casilla sin productor del ADR-0055 §10: su productor es consumir (ADR-0059).
 
   El run de rama de `c3e9294`, el último con trabajo, es el **38081916444**, en verde al primer
-  intento con **1451** y **678** casos. El del commit de este cierre y el de `main` se anotan al
-  abrir el 2.14.
+  intento con **1451** y **678** casos. `main` avanzó a `0638419`, el commit del cierre, después
+  de que su run de rama, el **38083369049**, saliera en verde, y el de `main`, el **38084319374**,
+  sale en verde al primer intento con las mismas cifras. Anotado al abrir el 2.14.
 
 - [ ] **2.14 · El stock a fecha pasada** — criterio de aceptación: la consulta contesta el saldo de
   cualquier día pasado desde la instantánea más el tramo, **coincide con la suma del libro hasta esa
