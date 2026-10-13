@@ -7223,6 +7223,12 @@ Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
 
+> **Dónde se retoma (2026-10-14): en las respuestas a la tanda del repaso.** Los catorce ítems
+> están hechos, la casilla del 2.14 sigue sin marcar y el repaso de la fase está preparado, con
+> siete preguntas al final: *La fase 2, criterio por criterio*, después del 2.14. **No se trabaja
+> en nada más hasta que el usuario las conteste.** Las respuestas van a *Decisiones tomadas*, y el
+> cierre, o los addenda, salen de ellas.
+
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
 cambiar. Arranque medido: **426 → 391 KiB** por lo que `index.html` referencia y **426 → 409** por
@@ -12244,8 +12250,218 @@ queda sin marcar (ítem 14).
       38481210895`.
     - **Los árboles de trabajo de las medidas**, `wt-avance`, `wt-cerrojo`, `wt-saldo` y `wt-valor`,
       limpios, quitados con `git worktree remove`. `git worktree list` da solo el del repositorio.
-15. La revisión de la fase, preparada y sin cerrarla: cada criterio del 2.1 al 2.14 con su caso, y
-    las notas abiertas para el cierre de la fase, como una tanda de preguntas.
+    - **Los dos runs del cierre**, anotados en el primer commit del repaso, como se dijo. El de la
+      rama, sobre `1fb7fca`, es el **38483426568**, en verde al primer intento: Frontal
+      `115591212875`, Backend `115591213237` y Humo `115594843705`, con 69 pasos, 68 en verde y el
+      *Diagnóstico* omitido, y las mismas cifras. El de `main`, tras el `--ff-only`, es el
+      **38485015079**, en verde al primer intento: Frontal `115596442928`, Backend `115596443176`
+      y Humo `115599994829`, con los mismos 69 pasos y las mismas cifras. Leídos los dos con
+      `python leer-run27.py <run>`. Después, la rama se borró en local y en el remoto, y
+      `git for-each-ref refs/heads/` da `main` y la rama del repaso.
+15. ~~La revisión de la fase, preparada y sin cerrarla: cada criterio del 2.1 al 2.14 con su caso,
+    y las notas abiertas para el cierre de la fase, como una tanda de preguntas.~~ Hecha en
+    `docs(plan): el repaso de la fase 2, criterio por criterio, y sus siete preguntas`, en la
+    sección siguiente. **Y se para ahí**: lo que sigue sale de las respuestas.
+
+### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
+
+Lo pide el encargo del 2026-10-13: con el 2.14 hecho, la fase no se cierra. Se prepara su repaso, y
+se para. Este es el repaso, en la forma del de la fase 1: cada criterio, contra algo que se puede
+mirar hoy. **No se marca ninguna casilla**, y la del 2.14 sigue sin marcar. El cierre, con el
+veredicto de las notas y el traspaso a la fase 3, va después de que el usuario conteste la tanda
+del final, que son siete preguntas.
+
+Cada nombre es uno de los **2 166** casos que corrieron en los dos carriles de .NET en el run de
+`1fb7fca` (1 477 y 689, contados por `recuento-de-tests.sh`), un fichero de la suite del frontal o
+la salida de un paso del run. **Y cada nombre se buscó en el árbol de `1fb7fca`** con un guion del
+*scratchpad*, que no entra en el repositorio y dice así:
+
+- de `Clase.Metodo`, que exista `class Clase` y que el método esté en su fichero; de `.Metodo`, lo
+  mismo con la última clase nombrada antes; de una clase sola, que exista;
+- de un nombre recortado con «…», que sus trozos estén en un mismo fuente;
+- de un fichero de tests del frontal, que exista bajo `frontend/src`, y que los títulos que le
+  siguen en su fila, entre comillas angulares, estén dentro;
+- cada casilla se lee aparte, y sin los bloques de código.
+
+Sobre las catorce casillas de la fase encuentra **438** nombres, y le faltan **4**, que
+son tres nombres distintos: los tres que el código cambió después de escribir su casilla, y que se
+explican debajo de la tabla. Sobre esta sección, **100**, y le faltan los mismos tres, que
+se citan a propósito. Y la regla mira: en una copia de la sección, un método inventado y un título
+del frontal con una palabra cambiada salen como faltas, uno cada vez.
+
+| Ítem | Lo observable |
+|---|---|
+| **2.1** el arranque con un idioma | `ElArranqueConUnIdioma.test.tsx`: «la instancia del arranque trae el diccionario del idioma activo, y solo ese» y «mientras el diccionario nuevo viaja, la pantalla sigue ENTERA en el idioma anterior». Y el paso *Presupuesto de tamaño* del *job* Frontal, que cuenta lo que `index.html` referencia más los fragmentos que el arranque espera (ADR-0036): **412/450** KiB en el run de `1fb7fca`. |
+| **2.2** los tres puertos, y el bloqueo que no es el del art. 32 | `LaMatrizDeLosPuertosDeEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta`, con las tres casillas del artículo en `ElPuertoDelArticuloContraLaBaseTests`; y `LaMatrizDeLosPuertosDeEstadoTests.Cada_familia_delegada_tiene_su_matriz_en_el_otro_carril`, que manda las seis de almacén y ubicación a `LaMatrizDePuertoYEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta`. Las cuatro combinaciones del ADR-0037, en `UnaEstanteriaBloqueadaSigueExistiendoTests`, de `Ubicacion_activa_en_almacen_activo_se_ofrece_para_lo_nuevo` a `Ubicacion_bloqueada_en_almacen_bloqueado_solo_resuelve_lo_viejo`. |
+| **2.3** el libro y el ajuste | Particionado por rango y comprobado en el motor: `ElLibroEstaParticionadoTests.La_tabla_del_libro_esta_particionada_por_RANGO_sobre_la_fecha_de_operacion`, `.La_clave_primaria_del_libro_incluye_la_clave_de_particion` y `LaParticionPorDefectoSeDenunciaTests.Una_fila_de_un_mes_sin_particion_cae_en_la_de_por_defecto_y_denuncia_la_averia`. Solo-añadido: los seis de `ElLibroNoSePuedeLimpiarTests`. La regla del factor: `LaCantidadBaseEsLaIntroducidaPorElFactorTests.Cada_fila_de_un_ajuste_cumple_la_regla_del_factor_medida_en_la_base`. La máquina de estados: `LaMaquinaDeEstadosDelAjusteTests.El_estado_no_se_asigna_se_transita` y `.Sin_evento_no_hay_transicion`; la frontera, `ElTipoBaseDeDocumentoNoSabeQueEsUnMovimientoTests.El_bloque_comun_no_nombra_el_libro_de_existencias`. La doble flecha: `LaDobleFlechaDelLibroTests.Ninguna_fila_del_libro_apunta_a_un_documento_que_no_existe` y `.Ningun_ajuste_confirmado_se_queda_sin_una_sola_fila_del_libro`. Ni auditado ni bloqueable: `CadaEntidadDeclaraSuAuditoriaTests.Ninguna_entidad_del_modelo_se_queda_sin_decir_si_se_audita` y `LoBloqueadoSeVeEnteroTests.Todo_agregado_bloqueable_esta_en_la_lista_del_articulo_32`. Y el almacén bloqueado, por el efecto: `UnAlmacenBloqueadoNoAdmiteAjustesTests.Bloquear_el_almacen_cierra_el_alta_y_deja_en_pie_lo_ya_escrito`. |
+| **2.4** la numeración con cerrojo | `ElCerrojoDeLaNumeracionTests.Dos_numeraciones_simultaneas_se_llevan_numeros_distintos_y_consecutivos`, `.Deshacer_la_transaccion_devuelve_el_numero_y_el_siguiente_lo_reutiliza`, `.Una_serie_cerrada_no_numera`, `.Una_serie_de_otra_empresa_no_numera`, `.Suprimir_pierde_contra_una_numeracion_que_se_cuela_entre_la_lectura_y_el_borrado` y `.Una_serie_numera_sin_huecos_sea_cual_sea_el_documento_que_numera`. Sin transacción, revienta: `ElNumeradorExigeUnaTransaccionAbiertaTests.Numerar_sin_transaccion_abierta_revienta_en_vez_de_numerar`. No se enseña antes: `LaSerieDelAjusteTests.Confirmar_pone_el_numero_en_el_documento_y_lo_sube_en_la_serie`, con el borrador sin número en `ElNumeroEntraEnElReciboTests`. Nadie más sube el contador: `SerieTests.Nada_de_lo_que_se_ve_desde_fuera_de_ContadorDeSerie_sube_el_numero`. Y la sentencia, con la empresa: `LaSentenciaDeNumeracionMiraLaEmpresaTests.El_incremento_condiciona_por_la_empresa_de_la_serie_contra_un_parametro`. |
+| **2.5** la anulación con contra-documento | `LaAnulacionConContraDocumentoTests.El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion`, `.El_inverso_es_un_documento_confirmado_con_su_numero_y_su_flecha`, `.Anular_dos_veces_seguidas_no_crea_dos_inversos` y `.Dos_anulaciones_simultaneas_dejan_un_solo_inverso`. La segunda doble flecha, en los dos sentidos: `LaDobleFlechaDeLaAnulacionTests.Ningun_inverso_compensa_a_un_documento_que_no_esta_anulado` y `.Ningun_anulado_se_queda_sin_exactamente_un_inverso`. En el dominio, los de `ElInversoQueAnulaTests`. `Anulado` dice en su texto «anulado por un inverso, no borrado»: lo dice `EstadoDeAjuste.cs`, y eso se lee, no tiene caso. |
+| **2.6** el ejercicio rige | Cerrar con borradores: `ElCierreLePreguntaALosModulosTests.Un_borrador_de_inventario_dentro_del_ejercicio_impide_cerrarlo_y_el_error_lo_nombra`. Reabrir, con motivo y evento: `LaReaperturaSeAuditaTests.Reabrir_sin_motivo_es_400_y_deja_el_ejercicio_cerrado` y `.Reabrir_con_motivo_lo_abre_y_deja_el_evento_con_el_motivo_dentro`; con permiso propio, `PermisosDeOrganizacionTests.HacerYDeshacer_SonPermisosDistintos` y `LaPuertaDeCadaAccionTests.Con_un_permiso_que_no_es_el_suyo_toda_accion_protegida_responde_403`. El puerto, con sus tres casillas en la matriz: `ElEjercicioRigeElAjusteTests.Con_el_ejercicio_abierto_la_confirmacion_pasa_y_el_documento_queda_numerado`, `.Cerrado_el_ejercicio_el_borrador_ya_no_se_confirma_y_no_queda_nada_a_medias` y `.Una_fecha_fuera_de_todo_ejercicio_no_se_confirma_y_lo_dice_con_otro_codigo`, que produce `SinEjercicio`. El segundo es también el que intenta dejar un documento a caballo del cierre. |
+| **2.7** las existencias, proyección del libro | `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`, que compara tras cada paso y afirma que pasó por todas las clases; `LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero` y `.El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro`. El disponible ya no es una columna: lo es del 2.13. |
+| **2.8** la valoración PMP | `LosCasosDoradosDelPrecioMedioTests.La_secuencia_del_criterio_da_sus_cifras_fila_a_fila` y los otros nueve de la clase; `LaValoracionDelAjusteTests.Una_salida_congela_el_precio_medio_y_la_que_vacia_se_lleva_todo_el_valor` y `.Una_entrada_sin_coste_se_valora_al_precio_medio_de_la_clave`; el negativo, `LasExistenciasSonLaSumaDelLibroTests.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una`; y la propiedad, que compara el valor y el precio medio de cada fila tras cada paso. |
+| **2.9** lotes, series y la marca | `CadaMarcaAdmiteSuLineaTests.Cada_marca_admite_su_linea_y_nombra_lo_que_le_falta_o_le_sobra_a_las_demas`; `ElLoteVaConSuArticuloTests.El_mismo_codigo_es_el_mismo_lote_y_la_caja_distingue_dos`; `UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_en_otro_hueco_la_para_el_indice_y_sale_422`; `LaMarcaNoCambiaConMovimientosTests.Con_un_ajuste_confirmado_la_marca_no_cambia_y_se_contesta_409`; el cruce mutuo, en `LasFronterasEntreModulosTests.El_unico_cruce_entre_modulos_va_por_contratos`; y la pantalla, `LaTrazabilidadDelArticulo.test.tsx`. |
+| **2.10** el GTIN | `ElGtinTests.Cada_largo_admitido_se_guarda_en_catorce_con_ceros_a_la_izquierda` y `.Un_digito_de_control_que_no_cuadra_se_rechaza_en_cada_largo`; `ContratoDelCodigoDeBarrasTests.Un_gtin_se_da_de_alta_con_201_en_catorce_cifras_y_el_listado_lo_trae` y `.Dos_altas_del_mismo_gtin_a_la_vez_dejan_una_y_la_otra_es_un_409`; y la pantalla, `LosCodigosDeBarrasDelArticulo.test.tsx`. Que el GTIN no es clave de nada no tiene caso: lo dicen la migración y el índice único. |
+| **2.11** la transferencia y el tránsito | `LaTransferenciaTests.Enviada_y_recibida_mueve_dos_veces_y_el_transito_cuenta_mientras_viaja`, `.Una_transferencia_entre_dos_empresas_no_existe` y `.Anular_una_enviada_deshace_el_transito_y_devuelve_al_origen_lo_que_salio`; `LasGuardasDeLaTransferenciaTests.Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula`; y los tres de `ElCuadreDelTransitoTests`. |
+| **2.12** el recuento | `LaConfirmacionDelRecuentoTests.Confirmar_con_diferencias_numera_los_dos_y_el_ajuste_mueve_justo_la_diferencia` y `.Sin_diferencias_se_numera_el_recuento_y_no_hay_ajuste_ni_se_toca_su_serie`; `ElAjusteDelRecuentoTests.Al_confirmar_cada_linea_que_difiere_apunta_a_la_del_ajuste_que_la_mueve`; el teórico que se congela, `LasCarrerasDeLaConfirmacionDelRecuentoTests.Un_ajuste_en_vuelo_sobre_su_clave_frena_la_confirmacion_en_la_valoracion_y_es_un_409_del_teorico`; y la pantalla, `LaFichaDelRecuento.test.tsx`. |
+| **2.13** las reservas, y el disponible | `LaMaquinaDeEstadosDeLaReservaTests.Nace_activa_sin_consumos_ni_liberacion`; `LasReservasTests.Reservar_aparta_del_disponible_y_no_pasa_de_el`; `LasCarrerasDeLaReservaTests.Dos_reservas_a_la_vez_la_segunda_espera_y_ve_lo_que_aparto_la_primera`; y `LaCaducidadDeLaReservaTests.Al_pasar_se_libera_con_la_fecha_de_su_caducidad`. |
+| **2.14** el stock a fecha pasada | `ElSaldoAUnaFechaTests.El_saldo_de_cada_dia_es_el_libro_hasta_ese_dia_y_lo_que_vuela_lo_que_salio_sin_llegar_ni_volver`, `.El_saldo_lee_la_instantanea_del_mes_anterior_o_la_del_corte_y_el_libro_desde_el_mes_siguiente` y `.La_consulta_acota_por_almacen_y_articulo_pagina_y_dice_la_fecha_que_contesta`; `LasExistenciasSonLaSumaDelLibroTests.El_recalculo_de_una_empresa_no_frena_las_confirmaciones_de_otra`; los once de `ElTrabajoMensualAvanzaElCorteTests`; y la pantalla, `ElSaldoAUnaFecha.test.tsx`. |
+| **§15** el criterio de la fase | **El saldo proyectado siempre coincide con la suma del libro:** `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`, seis semillas. **Un recuento genera ajustes trazables:** `ElAjusteDelRecuentoTests.Al_confirmar_cada_linea_que_difiere_apunta_a_la_del_ajuste_que_la_mueve`. **La valoración PMP pasa los casos dorados:** `LosCasosDoradosDelPrecioMedioTests.La_secuencia_del_criterio_da_sus_cifras_fila_a_fila`. **Y el stock a fecha pasada:** `ElSaldoAUnaFechaTests.El_saldo_de_cada_dia_es_el_libro_hasta_ese_dia_y_lo_que_vuela_lo_que_salio_sin_llegar_ni_volver`, y la propiedad, que lee el saldo a un día de cuatro tramos. |
+
+**Las seis reglas que la fase 1 aplazó a esta están vivas**: R1, R2, R3, R5, R9 y R13 dicen `viva`
+en `docs/dominio/reglas-duras.md`. La R6, que ya lo estaba, la amplió el 2.8 con el precio medio.
+Lo vigilan `LasDiecisieteReglasTests.Cada_estado_es_uno_de_los_tres_y_dice_donde_o_por_que` y
+`.Lo_que_la_tabla_nombra_existe`.
+
+**Los tres nombres que ya no están así**, y las casillas no se reescriben:
+
+- en el 2.4, `Las_cuatro_cadenas_escritas_a_mano_son_las_del_modelo`, de
+  `LaSentenciaDeNumeracionNombraLaTablaDeVerdadTests`, se llama desde `d4272ab`
+  `Las_cinco_cadenas_escritas_a_mano_son_las_del_modelo`, porque la sentencia pasó a mirar también
+  el tipo y el ejercicio de la serie;
+- en el 2.7, `Anotar_el_libro_sin_transaccion_o_con_filas_de_otra_empresa_revienta` se llama desde
+  `1ba7b2b` `…sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta`;
+- y en el 2.7, `Lo_disponible_es_lo_fisico_menos_lo_reservado_y_solo_lo_escribe_el_motor` se fue
+  en `be8b0eb` con las dos columnas que miraba. El disponible pasó a sumarse al leer, por la
+  respuesta 1 de la puerta del 2.13 (ADR-0059 §3), y su caso es el de la fila del 2.13.
+
+El del 2.4 no lo vio la primera pasada del guion: un bloque de código de esa casilla le
+desemparejaba las comillas invertidas, y de sus ciento cincuenta líneas leyó tres nombres. Por eso
+el guion quita ahora los bloques y lee cada casilla aparte.
+
+#### Lo que el repaso encontró sin que estuviera anotado
+
+- **Una página enorme es un `500`.** `Paginacion.Salto` es `(Pagina - 1) * Tamanio`, en `int` y
+  sin `checked`, y `ConsultaPaginada` admite cualquier página hasta `int.MaxValue`. Con el tamaño
+  máximo, 200, el salto da la vuelta desde la página 10 737 420; con el de por defecto, 20, desde
+  la 107 374 184. **Medido el 2026-10-14 sobre `1fb7fca`**, con una fila más,
+  `"?page=2147483647&size=200"`, en el caso
+  `EntradaHostilTests.Una_paginacion_imposible_es_400_y_no_una_excepcion`:
+  - la orden, `dotnet test tests/Api.IntegrationTests --filter
+    "FullyQualifiedName~Una_paginacion_imposible_es_400_y_no_una_excepcion"`;
+  - el resultado, las cinco filas de siempre en verde y la nueva en rojo, con `InternalServerError`
+    donde el caso espera `BadRequest`;
+  - y la fila, quitada con `git restore --source=HEAD`, con el árbol limpio después.
+
+  El fallo es del 1.3, y la fase 2 le dio dos lectores más: el saldo, que pasa el salto a un
+  `OFFSET` en SQL, y las líneas del recuento, que lo pasan a un `Skip` en memoria. Un `Skip`
+  negativo no salta nada, así que esa página contestaría la primera con el número de otra. Eso
+  último se lee en el código y no se ha medido. Es la pregunta 6.
+- **Dos observaciones del recorrido del 2.14**, en su ítem 12: a 375 px la página mide 710 de ancho
+  en todas las pantallas, por la cabecera; y el `400` del día futuro se pide dos veces, por el
+  `retry: 1` de toda la aplicación, en `frontend/src/app/cache.ts`.
+- **El editor avisa de `baseUrl`** en `frontend/tsconfig.app.json` y `frontend/tsconfig.test.json`.
+  Su TypeScript, el 6, dice que dejará de funcionar en el 7. El proyecto usa la `^5.9.3`, y
+  `typecheck` sale limpio (ítem 14 del 2.14). Estas tres son la pregunta 7.
+
+#### Las notas de las fases 0 y 1: el veredicto que se propone
+
+Las cinco notas **ABIERTA** de la fase 2 son las preguntas 1 a 5 de la tanda. Las de las fases 0
+y 1 que siguen abiertas llevan aquí su veredicto propuesto. Se escribe en cada nota al cerrar,
+salvo que la respuesta diga otra cosa:
+
+| Nota | Veredicto propuesto |
+|---|---|
+| el bloqueo del art. 32 no tiene proceso de destrucción | **Abierta, y eso es la decisión.** La fase 2 le añade un hecho, la decisión 12 de su puerta: el libro no se borra y apunta a lo que mueve, así que la destrucción, cuando tenga fase, será anonimización. |
+| el frontal no puede abrir la ficha de lo bloqueado | **Abierta, con la decisión tomada** (ADR-0017). Ningún criterio de la fase 2 la nombra. |
+| la renovación de sesión asierta el cuerpo | **Abierta, con la decisión tomada** (ADR-0019). Los dos `as` sobre un cuerpo de respuesta son los mismos que al cerrar la fase 1: `cuerpo as SesionDto` en `traduccion.ts` y `problema as CuerpoDeProblema` en `errores.ts`. Contados con `grep -rn " as [A-Z]" frontend/src/shared/api frontend/src/shared/sesion`, sin los tests. |
+| el contrato describe los enteros como `integer \| string` | **Abierta, con la decisión tomada.** Hoy son **127** `integer \| string` y **18** `number \| string` en `docs/api/openapi.json`, contados con la expresión de la nota; al cerrar la fase 1 eran 106 y 14. |
+| en Node 25 el `localStorage` de los tests no es el de jsdom | **De vigilancia, no de arreglo.** La máquina sigue en Node **25.6.1** (`node --version`) y la CI en **22** (`node-version: '22'` en `ci.yml`). |
+
+Lo demás que la fase 1 dejó abierto en su traspaso no lo nombra ningún criterio de la fase 2: la
+importación de artículos, la exportación, la carrera de unicidad del alta, el `413` de nginx, la
+destrucción del art. 32 y la correlación buscar/alta. El arranque del frontal, que estaba a 4 KiB
+de su regla, sí: lo resolvió el 2.1, y hoy mide **412/450**.
+
+#### La tanda del cierre: siete preguntas, todas juntas
+
+Cada pregunta dice lo que hay hoy, las salidas y la que el agente recomienda, con su motivo. Las
+respuestas van a *Decisiones tomadas*, y el cierre sale de ellas.
+
+- **Si ninguna trae trabajo**, el cierre hace tres cosas: marca la casilla del 2.14, escribe el
+  veredicto de las notas y el traspaso a la fase 3, y el README pasa a «cerrada».
+- **Si alguna lo trae**, la casilla del 2.14 se marca igual, y el trabajo entra como addendum, del
+  2.15 en adelante, igual que en las fases 0 y 1. La fase se cierra al acabarlo.
+
+1. **Las pantallas del ajuste y de la transferencia, y las existencias de hoy** (nota del
+   2026-09-28). Por HTTP, el ajuste solo se confirma y se anula, y la transferencia se envía, se
+   recibe y se anula. **El alta de los dos no tiene borde**: hoy los crean los tests, y el ajuste
+   también el recuento. El frontal tiene el recuento y el saldo a una fecha. Sin día, el saldo
+   contesta el de hoy, con lo que vuela aparte: eso ya es leer las existencias de hoy por artículo
+   y almacén, aunque no por ubicación ni con lo disponible.
+   - (a) **Un addendum con el ajuste**: alta, listado y ficha, con su pantalla, y en el mismo
+     addendum el factor que resuelve el servidor (pregunta 5). La transferencia va en otro, o con
+     la fase 3.
+   - (b) Un addendum con el ajuste y la transferencia.
+   - (c) Ninguno: la fase se cierra así, y el disparador se escribe en los dos controladores.
+
+   **Recomendada: (a).** Un módulo cuyo documento básico solo se crea desde los tests es un módulo
+   que nadie puede usar, y el recuento ya demuestra que el camino de escritura existe. Es, con
+   todo, la pregunta que más trabajo trae.
+2. **La zona de «hoy»** (nota del 2026-09-27, corregida el 2026-09-28 y ampliada el 2026-10-05).
+   «Hoy» es el día UTC en toda la fase: en la guarda de la fecha futura, en el cuadre, en el
+   trabajo mensual y en el saldo a una fecha. Hay que decidir qué «sitio» es, dónde vive su zona y
+   cuándo se hace.
+   - (a) **El almacén**: cada almacén lleva su zona IANA, `Europe/Madrid` por defecto, y el «hoy»
+     de un documento es el de la zona de su almacén. Se hace **antes de la fase 5**, que es el
+     disparador que ya hay.
+   - (b) El almacén, pero en un addendum de esta fase.
+   - (c) El terminal: el cliente manda su zona en cada escritura.
+
+   Y la transferencia, que tiene dos sitios: (i) las dos fechas, en la zona del origen; o (ii)
+   **cada fecha en la zona de su almacén, y la guarda «la recepción no es anterior al envío»
+   compara instantes**, que es una columna más en el documento.
+
+   **Recomendada: (a) con (ii).** El almacén es el único sitio que el modelo ya tiene, la empresa
+   ya se descartó, y el terminal deja la fecha legal en manos del cliente. Con (i), un almacén de
+   Las Palmas anotaría en su libro el día de Madrid. Y lo de hoy son dos horas de madrugada que
+   nadie ha pedido todavía.
+3. **El recuento cíclico y sus dos disparadores** (ADR-0055 y nota del 2026-10-08). Hoy se cuenta
+   el almacén entero, y la huella del teórico es la del almacén entero. En uno con movimiento
+   continuo, cualquier entrada o salida de una clave contada entre leer la ficha y confirmar da el
+   `409`, y el recuento puede no confirmarse nunca. Los dos disparadores son el primer almacén que
+   no se pueda contar de una vez y el primer recuento que no llegue a confirmarse por la huella.
+   - (a) **Se queda como está**, con los dos disparadores escritos en el ADR-0055 y en la nota.
+   - (b) Un addendum: el recuento por ubicación, con la huella de lo que cuenta y no la del almacén.
+
+   **Recomendada: (a).** No se ha dado ninguno de los dos, ni puede darse sin un almacén con
+   movimiento real.
+4. **El final de vida del artículo** (nota del 2026-09-18). El artículo tiene existencias desde el
+   2.7, y ningún ítem le da una baja: `IConsultaDeArticulos` contesta tres estados, y el cuarto,
+   `SoloResuelveLoViejo`, no tiene quien lo produzca.
+   - (a) **No en esta fase.** El disparador se escribe en `IConsultaDeArticulos`: la primera línea
+     de un documento de compra que elija un artículo, en la fase 3. Va con la condición que dejó el
+     recuento: la baja sigue contestando la unidad base.
+   - (b) Un addendum con la retirada del artículo (ADR-0023), y lo que implica para el recuento y
+     la reserva.
+
+   **Recomendada: (a).** Retirar un artículo es dejar de elegirlo para lo nuevo, y lo nuevo, la
+   línea de un pedido, llega con la fase 3.
+5. **El factor a unidad base** (nota del 2026-09-19). `AbrirAjuste` y `AbrirTransferencia` toman
+   el factor del cliente, y nadie lo compara con `ConversionUM`. Hoy el agujero no está abierto,
+   porque ninguna de las dos altas tiene borde HTTP, y el recuento escribe en la unidad base.
+   - (a) **Lo resuelve el servidor el día que se abra un alta**, con un puerto de Catálogo que
+     conteste la conversión. Sin conversión, la línea se rechaza; una conversión retirada sigue
+     resolviendo lo viejo; y el inverso copia el factor del original sin volver a validarlo.
+   - (b) Se queda el factor del cliente, validado solo en su aritmética.
+
+   **Recomendada: (a)**, y va unida a la 1: si se abre el alta del ajuste, va en el mismo addendum.
+6. **Una página enorme es un `500`** (este repaso, arriba).
+   - (a) **Se arregla en su rama antes del cierre**: un tope a la página en `ConsultaPaginada`,
+     para que el salto quepa en un `int` con el tamaño máximo, y la fila nueva en el caso, con su
+     mutación.
+   - (b) Se anota como nota abierta, y se arregla con el siguiente listado que se toque.
+
+   **Recomendada: (a).** Cualquiera con permiso para un listado lo provoca con una URL, y el caso
+   que lo prueba ya existe, con cinco filas: le falta una.
+7. **Las tres observaciones pequeñas**: la cabecera a 375 px, el `retry: 1` sobre los `400` y el
+   aviso de `baseUrl`.
+   - (a) Tres notas abiertas, con su disparador: la cabecera, con la primera pantalla pensada para
+     el móvil; el `retry`, al tocar la caché de consultas; `baseUrl`, al subir a TypeScript 6.
+   - (b) **El `retry` se arregla ya**, para que no reintente un `4xx`, y las otras dos van a notas.
+   - (c) Las tres, arregladas en un epílogo.
+
+   **Recomendada: (b).** Reintentar un `400` es pedir dos veces lo que se sabe que va a fallar, y
+   el arreglo es pequeño y se prueba con un caso. Las otras dos no tienen hoy a nadie que las sufra.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
