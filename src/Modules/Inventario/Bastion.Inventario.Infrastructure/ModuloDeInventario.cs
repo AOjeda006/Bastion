@@ -14,6 +14,7 @@ using Bastion.Inventario.Contracts.Existencias;
 using Bastion.Inventario.Contracts.Movimientos;
 using Bastion.Inventario.Contracts.Recuentos;
 using Bastion.Inventario.Contracts.Transferencias;
+using Bastion.Inventario.Infrastructure.Corte;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Configuraciones;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -22,6 +23,7 @@ using Bastion.Inventario.Infrastructure.Persistencia.Reservas;
 using Bastion.Organizacion.Contracts.Ejercicios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bastion.Inventario.Infrastructure;
 
@@ -35,13 +37,27 @@ namespace Bastion.Inventario.Infrastructure;
 /// </remarks>
 public static class ModuloDeInventario
 {
+    /// <summary>
+    /// Nombre de la variable que apaga el trabajo mensual que avanza el corte: <c>apagado</c> o
+    /// <c>encendido</c>.
+    /// </summary>
+    public const string VariableDelAvanceDelCorte = "BASTION_AVANCE_DEL_CORTE";
+
+    /// <summary>Nombre del medidor del trabajo mensual. Es lo que hay que registrar en OpenTelemetry.</summary>
+    public const string MedidorDelCorte = MetricasDelCorte.Medidor;
+
     /// <summary>Registra el contexto, el repositorio y los casos de uso del módulo.</summary>
     /// <param name="servicios">Colección de servicios del <i>composition root</i>.</param>
     /// <param name="cadenaDeConexion">Cadena de conexión a PostgreSQL.</param>
+    /// <param name="avanceDelCorte">
+    /// Si se pone en marcha el trabajo de fondo que avanza el corte cada hora. El avance en sí se
+    /// registra siempre; lo que depende de esto es que alguien lo llame solo.
+    /// </param>
     /// <returns>La misma colección, para encadenar.</returns>
     public static IServiceCollection AgregarModuloDeInventario(
         this IServiceCollection servicios,
-        string cadenaDeConexion)
+        string cadenaDeConexion,
+        bool avanceDelCorte)
     {
         ArgumentNullException.ThrowIfNull(servicios);
 
@@ -247,6 +263,49 @@ public static class ModuloDeInventario
 
         servicios.AgregarCasosDeUsoDeInventario();
 
+        // EL TRABAJO MENSUAL, desde el 2.14 (ADR-0063 §7). El recálculo, el cuadre y el avance se
+        // registran siempre, para que se puedan llamar con una empresa elegida; el trabajo que los
+        // llama cada hora, solo si hay base y la configuración no lo apaga. Los anfitriones de los
+        // tests de integración comparten una base, y un trabajo que arrancara con cada uno avanzaría
+        // el corte de las empresas de otros casos a mitad de su caso.
+        servicios.AddScoped<LasInstantaneasMensuales>();
+        servicios.AddScoped<ElCuadreDeLasExistencias>();
+        servicios.AddScoped<IAvanceDelCorte, ElAvanceDelCorte>();
+        servicios.TryAddSingleton<MetricasDelCorte>();
+        servicios.TryAddSingleton(TimeProvider.System);
+
+        if (avanceDelCorte)
+        {
+            servicios.AddHostedService<AvanzadorDelCorte>();
+        }
+
         return servicios;
+    }
+
+    /// <summary>Lee el valor de <see cref="VariableDelAvanceDelCorte"/>.</summary>
+    /// <remarks>
+    /// Ausente o en blanco vale y significa encendido: es el trabajo que mantiene las instantáneas,
+    /// y una instalación que no dice nada lo quiere en marcha. Lo que no vale es un valor <b>puesto y
+    /// mal</b>, que es alguien intentando apagarlo y consiguiendo otra cosa: eso se para al
+    /// arrancar, como el plazo de supresión.
+    /// </remarks>
+    /// <param name="valor">El valor de la variable, o <c>null</c> si no está.</param>
+    /// <returns>Si el trabajo va encendido.</returns>
+    /// <exception cref="InvalidOperationException">Si está puesta y no es ninguna de las dos palabras.</exception>
+    public static bool ElAvanceDelCorteVaEncendido(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+        {
+            return true;
+        }
+
+        return valor.Trim().ToUpperInvariant() switch
+        {
+            "ENCENDIDO" => true,
+            "APAGADO" => false,
+            _ => throw new InvalidOperationException(
+                $"La variable {VariableDelAvanceDelCorte} tiene que ser «encendido» o «apagado». " +
+                "Sin ella, el trabajo que avanza el corte de las instantáneas va encendido."),
+        };
     }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -15,9 +16,10 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// recalcula y compara.
 /// </para>
 /// <para>
-/// <b>En el 2.7 no tiene quien la llame en producción, y es a propósito.</b> Quien avanza el corte
-/// cada mes —y cuadra después— llega con el primer lector de la instantánea, el ítem 2.14. Hasta
-/// entonces la llaman los casos, que es lo que el criterio del 2.7 pide.
+/// <b>En el 2.7 no tenía quien la llamara en producción, y era a propósito.</b> Quien avanza el
+/// corte cada mes —y cuadra después— llegó con el primer lector de la instantánea, en el 2.14: es
+/// <c>AvanzadorDelCorte</c>, por <see cref="AvanzarAsync"/>. Hasta entonces la llamaban los casos,
+/// que es lo que el criterio del 2.7 pedía.
 /// </para>
 /// <para>
 /// <b>La empresa la pone quien llama</b>, desde el 2.14 (ADR-0063 §7), y no el inquilino: el
@@ -148,6 +150,30 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
         ON CONFLICT (empresa_id) DO UPDATE SET hasta_el_mes = excluded.hasta_el_mes
         """;
 
+    /// <summary>
+    /// Pone el corte de la empresa <c>{0}</c> en el mes <c>{1}</c>, <b>solo si no llega ya</b>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Es la sentencia del corte con una condición en el <c>DO UPDATE</c>, y lo que contesta va en
+    /// cuántas filas toca: una si lo ha puesto, nuevo o movido hacia delante, y ninguna si el corte
+    /// guardado ya llegaba a ese mes. Así el avance lee el corte y lo mueve en un solo paso, con el
+    /// exclusivo de la empresa ya tomado, y el segundo avance del mismo mes no rehace nada
+    /// (ADR-0063 §7).
+    /// </para>
+    /// <para>
+    /// <b>Un mes anterior tampoco lo mueve hacia atrás.</b> Llevar el corte atrás es recalcular, y
+    /// eso lo decide quien recalcula, no un trabajo que se despierta cada hora.
+    /// </para>
+    /// </remarks>
+    internal const string SqlDelAvance =
+        """
+        INSERT INTO inventario.cortes_de_la_instantanea AS c (empresa_id, hasta_el_mes)
+        VALUES ({0}, {1})
+        ON CONFLICT (empresa_id) DO UPDATE SET hasta_el_mes = excluded.hasta_el_mes
+        WHERE c.hasta_el_mes < excluded.hasta_el_mes
+        """;
+
     /// <summary>Tira las instantáneas de la empresa <c>{0}</c>.</summary>
     internal const string SqlDelBorrado =
         "DELETE FROM inventario.instantaneas_mensuales AS i WHERE i.empresa_id = {0}";
@@ -187,6 +213,10 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
     /// <b>El corte va primero y el borrado después</b>, y el orden solo importa para que la
     /// reposición lea el corte nuevo de la tabla, con el mismo fragmento que el cuadre.
     /// </para>
+    /// <para>
+    /// <b>Pone el corte donde se le diga</b>, también hacia atrás. El que no lo mueve si ya llega
+    /// es <see cref="AvanzarAsync"/>.
+    /// </para>
     /// </remarks>
     /// <param name="empresaId">La empresa que se recalcula.</param>
     /// <param name="hastaElMes">El primer día del último mes con instantánea.</param>
@@ -196,7 +226,39 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
     /// <exception cref="ArgumentOutOfRangeException">El mes no es un primer día.</exception>
     /// <exception cref="InvalidOperationException">Ya hay una transacción abierta.</exception>
     internal async Task<int> RecalcularAsync(
-        Guid empresaId, DateOnly hastaElMes, CancellationToken cancelacion)
+        Guid empresaId, DateOnly hastaElMes, CancellationToken cancelacion) =>
+        await RehacerAsync(empresaId, hastaElMes, SqlDelCorte, cancelacion).ConfigureAwait(false)
+        ?? throw new UnreachableException(
+            "La sentencia del corte sin condición escribe siempre su fila, nueva o movida.");
+
+    /// <summary>
+    /// Avanza el corte de una empresa hasta un mes, si no llega ya, y rehace sus instantáneas.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el recálculo con otra sentencia del corte</b>, la que no hace nada si el corte guardado
+    /// ya llega (ADR-0063 §7). Lo mira con el exclusivo de la empresa tomado, así que dos avances a
+    /// la vez se ponen en fila: el primero avanza, y el segundo encuentra el corte puesto.
+    /// </para>
+    /// <para>
+    /// <b>Si avanza, rehace desde el libro entero</b>, y por eso se pone al día solo: los meses que
+    /// un trabajo parado se haya saltado salen de una vez.
+    /// </para>
+    /// </remarks>
+    /// <param name="empresaId">La empresa cuyo corte se avanza.</param>
+    /// <param name="hastaElMes">El primer día del mes al que tiene que llegar el corte.</param>
+    /// <param name="cancelacion">Cancelación de la operación en curso.</param>
+    /// <returns>
+    /// Cuántas instantáneas ha repuesto, o <c>null</c> si el corte ya llegaba y no ha tocado nada.
+    /// </returns>
+    /// <exception cref="ArgumentException">La empresa es el identificador vacío.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">El mes no es un primer día.</exception>
+    /// <exception cref="InvalidOperationException">Ya hay una transacción abierta.</exception>
+    internal Task<int?> AvanzarAsync(Guid empresaId, DateOnly hastaElMes, CancellationToken cancelacion) =>
+        RehacerAsync(empresaId, hastaElMes, SqlDelAvance, cancelacion);
+
+    private async Task<int?> RehacerAsync(
+        Guid empresaId, DateOnly hastaElMes, string sqlDelCorte, CancellationToken cancelacion)
     {
         if (empresaId == Guid.Empty)
         {
@@ -232,9 +294,18 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
                 cancelacion)
             .ConfigureAwait(false);
 
-        await contexto.Database
-            .ExecuteSqlRawAsync(SqlDelCorte, [empresaId, hastaElMes], cancelacion)
+        // Cero filas es la respuesta del avance cuando el corte ya llegaba: no hay nada que rehacer,
+        // y el COMMIT suelta el exclusivo sin haber escrito nada.
+        int cortes = await contexto.Database
+            .ExecuteSqlRawAsync(sqlDelCorte, [empresaId, hastaElMes], cancelacion)
             .ConfigureAwait(false);
+
+        if (cortes == 0)
+        {
+            await transaccion.CommitAsync(cancelacion).ConfigureAwait(false);
+
+            return null;
+        }
 
         await contexto.Database
             .ExecuteSqlRawAsync(SqlDelBorrado, [empresaId], cancelacion)

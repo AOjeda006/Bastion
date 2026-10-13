@@ -154,4 +154,16 @@ public enum MotivoSinInquilino
     /// amanece con un permiso de menos, la columna de la traza tiene que decir cuál de los dos pasó.
     /// </remarks>
     ActualizacionDeRolesDelSistema,
+
+    /// <summary>
+    /// El trabajo mensual de Inventario lee qué empresas tienen existencias, para avanzar el corte
+    /// de sus instantáneas una a una (ADR-0063 §7). <b>No hay petición</b>, y la lista de empresas
+    /// es justo lo que no puede leerse con una empresa activa.
+    /// </summary>
+    /// <remarks>
+    /// <b>Sin inquilino solo se lee la lista.</b> El avance de cada empresa recibe su identificador
+    /// de quien lo llama y no lee nada más sin filtro: el ámbito se abre para una consulta y se
+    /// cierra antes de tocar la primera empresa.
+    /// </remarks>
+    AvanceDelCorte,
 }

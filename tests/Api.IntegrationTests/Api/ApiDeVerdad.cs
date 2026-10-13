@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Bastion.Api.Arranque;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.Identidad.Infrastructure.Seguridad;
+using Bastion.Inventario.Infrastructure;
 using Bastion.Pruebas.Comun;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -95,6 +96,14 @@ public sealed class ApiDeVerdad(PostgresConTodosLosModulos postgres) : WebApplic
         // Apagado EXPLÍCITAMENTE y no heredado del entorno: en una máquina con el recolector
         // configurado, cada test intentaría exportar a un sitio que no está.
         builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
+
+        // El trabajo mensual de Inventario, APAGADO y por configuración, que es lo único que se
+        // inyecta aquí (ADR-0063 §7). Todos los anfitriones de este carril comparten la base, y con
+        // el trabajo en marcha cada uno avanzaría el corte de las empresas de los demás casos a
+        // mitad de su caso: un caso que recalcula hasta un mes encontraría el corte movido por otro.
+        // El avance se prueba llamándolo con su empresa, y que este anfitrión no lo arranque, mirando
+        // sus servicios.
+        builder.UseSetting(ModuloDeInventario.VariableDelAvanceDelCorte, "apagado");
 
         builder.UseSetting(OpcionesDeJwt.VariableDeEmisor, Emisor);
         builder.UseSetting(OpcionesDeJwt.VariableDeAudiencia, Audiencia);

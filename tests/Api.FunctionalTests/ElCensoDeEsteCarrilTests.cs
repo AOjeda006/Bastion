@@ -115,6 +115,20 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElResumenDeContrasenasTests.El_resumen_de_relleno_cuesta_lo_mismo_que_uno_de_verdad_y_no_lo_abre_nadie",
         "ElResumenDeContrasenasTests.El_resumen_lleva_dentro_los_parametros_que_declara_el_ADR_0008",
 
+        // Del 2.14: el trabajo mensual de Inventario sin base (ADR-0063 §7). El mes que toca, una
+        // empresa por ámbito, lo que cuenta y lo que anota, y cuándo se registra.
+        "ElTrabajoMensualAvanzaElCorteTests.El_fallo_de_una_empresa_se_anota_se_cuenta_y_no_para_a_las_demas",
+        "ElTrabajoMensualAvanzaElCorteTests.El_mes_que_toca_es_el_anterior_al_de_hoy_y_hoy_es_el_de_UTC",
+        "ElTrabajoMensualAvanzaElCorteTests.El_modulo_registra_siempre_el_avance_y_el_trabajo_solo_si_se_le_pide",
+        "ElTrabajoMensualAvanzaElCorteTests.La_variable_vale_encendido_o_apagado_y_sin_ella_va_encendido",
+        "ElTrabajoMensualAvanzaElCorteTests.Las_tres_cifras_van_a_su_propio_contador_y_ninguna_lleva_la_empresa",
+        "ElTrabajoMensualAvanzaElCorteTests.Parar_a_mitad_de_una_empresa_no_es_un_fallo_y_no_sigue_con_las_demas",
+        "ElTrabajoMensualAvanzaElCorteTests.Sin_base_de_datos_el_host_no_arranca_el_trabajo_mensual",
+        "ElTrabajoMensualAvanzaElCorteTests.Un_descuadre_es_un_aviso_con_sus_cifras_y_cuenta_cada_uno",
+        "ElTrabajoMensualAvanzaElCorteTests.Un_valor_mal_puesto_para_el_arranque_aunque_no_haya_base",
+        "ElTrabajoMensualAvanzaElCorteTests.Una_cancelacion_que_no_es_la_parada_es_un_fallo_de_su_empresa",
+        "ElTrabajoMensualAvanzaElCorteTests.Una_vuelta_avanza_cada_empresa_en_su_ambito_y_cuenta_las_que_avanzan",
+
         // Del ítem 1.11: el tope del cuerpo, medido en bytes pedidos a la corriente y no en la
         // respuesta, que es la misma para un tope de verdad y para uno comprobado tras el volcado.
         "ElTopeSeImponeAntesDelVolcadoTests.Con_un_Content_Length_mayor_que_el_tope_se_contesta_sin_leer_un_byte",

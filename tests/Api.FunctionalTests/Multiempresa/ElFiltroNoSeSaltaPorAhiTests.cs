@@ -469,6 +469,13 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // roles no llevan filtro, son de la instalación— sino para que la traza de cada permiso
         // concedido o retirado se pueda escribir sin empresa.
         ["src/Modules/Identidad/Bastion.Identidad.Application/Arranque/ActualizarRolesDelSistema.cs"] = 1,
+
+        // El quinto sin petición detrás, del 2.14: el trabajo mensual de Inventario lee qué empresas
+        // tienen existencias, para avanzar su corte una a una (ADR-0063 §7). Este SÍ está para leer
+        // sin filtro, y lee solo eso: la lista de empresas. El avance de cada una recibe su
+        // identificador y no abre ninguno, porque el recálculo y el cuadre comparan la empresa en
+        // cada tabla que tocan.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Corte/ElAvanceDelCorte.cs"] = 1,
     };
 
     // Lo mismo para el ámbito que ve lo bloqueado. Es una lista aparte y no una más en la de

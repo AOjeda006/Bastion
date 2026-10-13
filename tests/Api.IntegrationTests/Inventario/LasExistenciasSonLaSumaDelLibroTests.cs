@@ -9,6 +9,7 @@ using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
+using Bastion.Inventario.Infrastructure.Corte;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
@@ -18,6 +19,8 @@ using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Shouldly;
 
@@ -42,11 +45,12 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// van dentro de una transacción que se deshace.
 /// </para>
 /// <para>
-/// <b>Semillas: el fichero entero es del 440 al 459, y del 858 al 862.</b> Las empresas, del 440 al
+/// <b>Semillas: el fichero entero es del 440 al 459, y del 858 al 865.</b> Las empresas, del 440 al
 /// 449; los maestros de instalación, del 450 al 459. El caso de las dos empresas se lleva la 447 y la
 /// 448, y la 457 y la 458; el de las dos salidas del ítem 2.8, la 449 y la 459. Los tres del cerrojo
 /// de la empresa, del 2.14, del 858 al 862, empresa y maestros con el mismo número: el bloque estaba
-/// libre, y lo dice <c>LasReservasTests</c>.
+/// libre, y lo dice <c>LasReservasTests</c>. Los dos del avance del corte, también del 2.14, la 863 y
+/// la 864 del mismo modo, y la 865, una empresa sin existencias.
 /// </para>
 /// <para>
 /// <b>El cerrojo de las instantáneas es de la empresa desde el 2.14</b> (ADR-0063 §5 y §6), y tiene
@@ -61,6 +65,12 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// lo compara con una segunda cuenta en C# después de la sentencia del libro y después de
 /// recalcular, el del cuadre lo estropea con la cantidad bien, y el de la migración comprueba el
 /// relleno de las filas que ya hubiera, en una base propia y sin semilla.
+/// </para>
+/// <para>
+/// <b>Y quien la mantiene en producción, desde el 2.14</b> (ADR-0063 §7), es el trabajo mensual que
+/// avanza el corte. Su avance se prueba aquí llamándolo con su empresa, por el contenedor del
+/// anfitrión, y su bucle, sin base, en el carril rápido. Que este anfitrión no lo arranque se mira en
+/// sus servicios: si lo arrancara, movería el corte de los demás casos.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -1022,6 +1032,149 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     }
 
     [Fact]
+    public async Task El_avance_pone_el_corte_en_el_mes_que_toca_de_una_vez_y_no_rehace_lo_que_ya_llega()
+    {
+        ElAlmacenDelCaso caso =
+            await UnAlmacenAsync(863, "EXI-AV", 863, ubicaciones: 2, conElAnioPasado: true);
+
+        int pasado = Hoy.Year - 1;
+        DateOnly esteMes = LasExistencias.MesDe(Hoy);
+        DateOnly elQueToca = esteMes.AddMonths(-1);
+
+        await using (ElModuloDeInventario modulo = new(postgres, caso.EmpresaId))
+        {
+            await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 3, 10), new Linea(0, 5m));
+            await ConfirmarAsync(
+                modulo, caso, new DateOnly(pasado, 7, 20), new Linea(0, -2m), new Linea(1, 7m));
+            await ConfirmarAsync(modulo, caso, Hoy, new Linea(1, 1m));
+        }
+
+        (await CorteAsync(caso.EmpresaId)).ShouldBeNull("la empresa del caso empieza sin corte");
+
+        // SIN CORTE, EL AVANCE LO PONE EN EL MES QUE TOCA y saca de una vez todos los meses desde
+        // el primero del libro, que es lo que hace que un trabajo parado se ponga al día solo. Por
+        // el mismo camino que el trabajo: el contenedor del anfitrión, con su avance, su recálculo
+        // y su cuadre.
+        AvanceHecho hecho = (await AvanzarAsync(caso.EmpresaId, elQueToca)).ShouldNotBeNull(
+            "sin corte, el avance tiene que poner uno");
+
+        IReadOnlyList<FotoDelMes> debidas = LasExistencias.DebidasEnCSharp(
+            await LasExistencias.LibroAsync(postgres, caso.EmpresaId), elQueToca);
+
+        debidas.Select(foto => foto.Mes).Distinct().Count().ShouldBeGreaterThan(
+            1, "con un solo mes no se vería que los saltados salen de una vez");
+
+        (await CorteAsync(caso.EmpresaId)).ShouldBe(elQueToca);
+        hecho.Repuestas.ShouldBe(debidas.Count);
+        (await LasExistencias.InstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(debidas);
+
+        (await LasExistencias.ValoresDeLasInstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(
+            LasExistencias.ValoresDebidosEnCSharp(
+                await LasExistencias.LibroValoradoAsync(postgres, caso.EmpresaId), elQueToca));
+
+        // Y CUADRA DETRÁS, con sus cifras: las dos claves, y cada instantánea hasta el corte. La de
+        // hoy queda fuera de las instantáneas, porque su mes va después del corte.
+        hecho.Cuadre.ExistenciasComparadas.ShouldBe(2);
+        hecho.Cuadre.InstantaneasComparadas.ShouldBe(debidas.Count);
+        hecho.Cuadre.Descuadres.ShouldBeEmpty();
+        hecho.DuracionDelAvance.ShouldBeGreaterThan(TimeSpan.Zero);
+        hecho.DuracionDelCuadre.ShouldBeGreaterThan(TimeSpan.Zero);
+
+        // UN SEGUNDO AVANCE AL MISMO MES NO REHACE NADA. Para que se vea, el caso estropea antes una
+        // instantánea, a la vista y por debajo del sistema: un avance que rehiciera la arreglaría.
+        FotoDelMes estropeada = debidas[^1];
+
+        await using (NpgsqlConnection conexion = new(postgres.CadenaDeConexion))
+        {
+            await conexion.OpenAsync();
+
+            await EscribirAsync(
+                conexion,
+                "UPDATE inventario.instantaneas_mensuales AS i SET fisico = i.fisico + 10 "
+                + "FROM inventario.existencias AS e "
+                + "WHERE e.id = i.existencia_id AND e.empresa_id = $1 AND e.ubicacion_id = $2 "
+                + "AND i.mes = $3",
+                caso.EmpresaId,
+                estropeada.Clave.UbicacionId,
+                estropeada.Mes);
+        }
+
+        IReadOnlyList<FotoDelMes> conLaEstropeada =
+            [.. debidas.Select(foto => foto == estropeada ? foto with { Fisico = foto.Fisico + 10m } : foto)];
+
+        (await AvanzarAsync(caso.EmpresaId, elQueToca)).ShouldBeNull("el corte ya llega a ese mes");
+
+        // Y UN MES ANTERIOR TAMPOCO LO MUEVE: llevar el corte atrás es recalcular, y eso no lo
+        // decide un trabajo que se despierta cada hora.
+        (await AvanzarAsync(caso.EmpresaId, elQueToca.AddMonths(-1))).ShouldBeNull(
+            "un mes anterior no mueve el corte hacia atrás");
+
+        (await CorteAsync(caso.EmpresaId)).ShouldBe(elQueToca);
+        (await LasExistencias.InstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(
+            conLaEstropeada,
+            "ni el segundo avance ni el del mes anterior han tocado una instantánea");
+
+        // A UN MES POSTERIOR, SÍ AVANZA, y rehace desde el libro: la estropeada vuelve a decir lo
+        // que el libro, y aparece el mes de hoy, con la confirmación de hoy dentro.
+        AvanceHecho otro = (await AvanzarAsync(caso.EmpresaId, esteMes)).ShouldNotBeNull(
+            "a un mes posterior, el corte tiene que avanzar");
+
+        IReadOnlyList<FotoDelMes> hastaHoy = LasExistencias.DebidasEnCSharp(
+            await LasExistencias.LibroAsync(postgres, caso.EmpresaId), esteMes);
+
+        (await CorteAsync(caso.EmpresaId)).ShouldBe(esteMes);
+        otro.Repuestas.ShouldBe(hastaHoy.Count);
+        (await LasExistencias.InstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(hastaHoy);
+        otro.Cuadre.Descuadres.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Las_empresas_del_avance_son_las_que_tienen_existencias_cada_una_una_vez()
+    {
+        ElAlmacenDelCaso conExistencias = await UnAlmacenAsync(864, "EXI-AW", 864, ubicaciones: 2);
+        (_, EmpresaDto sinExistencias) = await EnUnaEmpresaNuevaAsync(865);
+
+        await using (ElModuloDeInventario modulo = new(postgres, conExistencias.EmpresaId))
+        {
+            await ConfirmarAsync(modulo, conExistencias, Hoy, new Linea(0, 2m), new Linea(1, 3m));
+        }
+
+        // Por el contenedor del anfitrión, con el inquilino de verdad y sin petición: sin el ámbito
+        // de su motivo, la primera consulta lanzaría porque no hay empresa por la que filtrar.
+        IReadOnlyList<Guid> empresas;
+
+        using (IServiceScope ambito = _api.Services.CreateScope())
+        {
+            empresas = await ambito.ServiceProvider
+                .GetRequiredService<IAvanceDelCorte>()
+                .EmpresasConExistenciasAsync(CancellationToken.None);
+        }
+
+        empresas.Count(empresaId => empresaId == conExistencias.EmpresaId).ShouldBe(
+            1, "tiene dos existencias y sale una vez");
+
+        empresas.ShouldNotContain(
+            sinExistencias.Id, "una empresa sin existencias no tiene instantáneas que avanzar");
+
+        empresas.ShouldBe([.. empresas.Order()], "en orden de identificador, y sin repetir");
+        empresas.Count.ShouldBe(empresas.Distinct().Count());
+    }
+
+    [Fact]
+    public void El_anfitrion_de_los_casos_no_arranca_el_trabajo_mensual_y_la_purga_si()
+    {
+        // La purga es la pareja: con base, los trabajos de fondo arrancan, y el único que falta es
+        // el que la configuración de este anfitrión apaga (ADR-0063 §7).
+        string[] trabajos = [.. _api.Services.GetServices<IHostedService>().Select(trabajo => trabajo.GetType().Name)];
+
+        trabajos.ShouldContain("PurgadorDeRecibos");
+        trabajos.ShouldNotContain(
+            nameof(AvanzadorDelCorte),
+            "los anfitriones de este carril comparten la base, y el trabajo avanzaría el corte de " +
+            "las empresas de los demás casos a mitad de su caso");
+    }
+
+    [Fact]
     public async Task Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta()
     {
         var empresaId = Guid.CreateVersion7();
@@ -1092,6 +1245,38 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             ElLibro.ValoracionDesdeCero(ajuste),
             LotesYSeriesResueltos.Ninguno,
             momento);
+    }
+
+    /// <summary>
+    /// Avanza el corte de una empresa por el contenedor del anfitrión, como lo hace el trabajo.
+    /// </summary>
+    /// <param name="empresaId">La empresa.</param>
+    /// <param name="hastaElMes">El mes al que tiene que llegar.</param>
+    /// <returns>Lo que ha hecho, o <c>null</c> si el corte ya llegaba.</returns>
+    private async Task<AvanceHecho?> AvanzarAsync(Guid empresaId, DateOnly hastaElMes)
+    {
+        using IServiceScope ambito = _api.Services.CreateScope();
+
+        return await ambito.ServiceProvider
+            .GetRequiredService<IAvanceDelCorte>()
+            .AvanzarAsync(empresaId, hastaElMes, CancellationToken.None);
+    }
+
+    /// <summary>El corte guardado de una empresa, leído por debajo del sistema.</summary>
+    /// <param name="empresaId">La empresa.</param>
+    /// <returns>El mes, o <c>null</c> si no tiene.</returns>
+    private async Task<DateOnly?> CorteAsync(Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand leer = new(
+            "SELECT c.hasta_el_mes FROM inventario.cortes_de_la_instantanea AS c WHERE c.empresa_id = @empresa",
+            conexion);
+
+        leer.Parameters.AddWithValue("empresa", empresaId);
+
+        return await leer.ExecuteScalarAsync() is DateOnly mes ? mes : null;
     }
 
     /// <summary>Tira a mano las instantáneas de la empresa, por debajo del sistema.</summary>

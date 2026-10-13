@@ -33,8 +33,8 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// tenía que ver.
 /// </para>
 /// <para>
-/// <b>En el 2.7 no tiene quien lo llame en producción</b>, igual que el recálculo: el trabajo
-/// periódico que avanza el corte y cuadra llega con el ítem 2.14.
+/// <b>En el 2.7 no tenía quien lo llamara en producción</b>, igual que el recálculo: el trabajo
+/// periódico que avanza el corte y cuadra llegó en el 2.14, y cuadra solo la empresa que avanza.
 /// </para>
 /// <para>
 /// <b>La empresa la pone quien llama</b>, desde el 2.14 (ADR-0063 §7), y no el inquilino: el

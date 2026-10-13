@@ -107,6 +107,11 @@ builder.Services.AddOpenTelemetry()
         // `MetricasDeLaBandeja`.
         metricas.AddMeter(MetricasDeLaBandeja.Medidor);
 
+        // Y el trabajo mensual de Inventario cuenta las empresas que avanza, los avances que fallan
+        // y los descuadres que encuentra (ADR-0063 §7). Sin la empresa como etiqueta: el porqué, en
+        // `MetricasDelCorte`.
+        metricas.AddMeter(ModuloDeInventario.MedidorDelCorte);
+
         if (hayRecolector)
         {
             metricas.AddOtlpExporter();
@@ -192,7 +197,16 @@ builder.Services.AgregarModuloDeOrganizacion(cadenaDeConexion, retencion);
 builder.Services.AgregarModuloDeIdentidad(cadenaDeConexion, opcionesDeJwt);
 builder.Services.AgregarModuloDeTerceros(cadenaDeConexion);
 builder.Services.AgregarModuloDeCatalogo(cadenaDeConexion);
-builder.Services.AgregarModuloDeInventario(cadenaDeConexion);
+
+// Y el trabajo mensual que avanza el corte de las instantáneas (ADR-0063 §7), con la condición de la
+// purga y una más: la configuración lo puede apagar. Los tests de integración lo apagan, porque
+// comparten una base y avanzaría el corte de las empresas de otros casos a mitad de su caso. Un
+// valor puesto y mal lanza aquí, antes de escuchar, y por eso se lee lo primero: también sin base.
+builder.Services.AgregarModuloDeInventario(
+    cadenaDeConexion,
+    avanceDelCorte: ModuloDeInventario.ElAvanceDelCorteVaEncendido(
+            builder.Configuration[ModuloDeInventario.VariableDelAvanceDelCorte])
+        && cadenaDeConexion.Length > 0);
 
 // --------------------------------------------------------------------- autenticación
 // Quién es quien llama, leído del token de acceso y de ningún otro sitio. Las cuatro
