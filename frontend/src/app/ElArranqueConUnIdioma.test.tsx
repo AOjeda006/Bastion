@@ -3,7 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type * as Diccionarios from './i18n/diccionarios.ts';
-import { crearI18nDelArranque } from './i18n/index.ts';
+import { en } from './i18n/en.ts';
+import {
+  cambiarIdioma,
+  completarConLosTipos,
+  crearI18n,
+  crearI18nDelArranque,
+  tiposCargados,
+} from './i18n/index.ts';
 import type { Idioma } from './i18n/idioma.ts';
 import { ALFA } from '@/pruebas/datos.ts';
 import { montarAplicacion } from '@/pruebas/montar.tsx';
@@ -23,6 +30,10 @@ import { abrirSesionSimulada } from '@/pruebas/servidor.ts';
  * ventana en la que se mira dura exactamente lo que el test quiera, y lo que se afirma es una
  * propiedad y no una suerte. Se sustituye el CARGADOR y no el diccionario: lo que se quiere
  * gobernar es cuándo llega, y el texto que llega es el de verdad.
+ *
+ * **Y desde el 2.14, los textos de los `type` tampoco están** (ADR-0063 §9): el arranque espera al
+ * diccionario y no a ellos, y llegan después de pintar. Lo que se ve mientras no han llegado se
+ * comprueba en `ElTextoDeUnFallo`; aquí, que no vienen con el arranque y que llegan sin pisar nada.
  */
 const cargaDelIngles = vi.hoisted(() => {
   let soltar: (() => void) | undefined;
@@ -66,6 +77,48 @@ describe('El arranque con un idioma', () => {
     // presupuesto ve desaparecer: si alguien devolviera el import estático, aquí saldría `true`
     // aunque la cifra de la CI tardara otra fase en delatarlo.
     expect(i18n.hasResourceBundle('en', 'traduccion')).toBe(false);
+  });
+
+  it('los textos de los `type` no vienen con el arranque, y llegan después sin pisar nada', async () => {
+    const i18n = await crearI18nDelArranque('es');
+
+    // La contrapartida en comportamiento del fragmento que el presupuesto exige aparte: si alguien
+    // los devolviera al diccionario, o el arranque los esperara, aquí saldría `true`.
+    expect(tiposCargados(i18n)).toBe(false);
+    expect(i18n.exists('errores.tipos.almacen-duplicado')).toBe(false);
+
+    await completarConLosTipos(i18n, 'es');
+
+    expect(tiposCargados(i18n)).toBe(true);
+    expect(i18n.t('errores.tipos.almacen-duplicado')).toBe(
+      'Ya hay un almacén con ese código en esta empresa.',
+    );
+    // La mezcla es profunda: sin ella, `errores` entero se habría sustituido por `{ tipos }` y los
+    // textos genéricos, que son los que se dicen mientras tanto, habrían desaparecido.
+    expect(i18n.t('errores.servidor')).toBe(
+      'El servidor no ha podido responder. Inténtalo de nuevo.',
+    );
+
+    // Y un idioma sin diccionario no recibe los suyos sueltos: quedaría un diccionario con solo
+    // `errores.tipos` que `hasResourceBundle` daría por cargado, y el cambio a ese idioma ya no lo
+    // descargaría.
+    await completarConLosTipos(i18n, 'en');
+
+    expect(i18n.hasResourceBundle('en', 'traduccion')).toBe(false);
+  });
+
+  it('cambiar de idioma trae su diccionario Y sus textos de los `type`, antes del cambio', async () => {
+    // Del inglés al castellano, que es el sentido cuya descarga no está retenida.
+    const i18n = crearI18n('en', en);
+
+    await cambiarIdioma(i18n, 'es');
+
+    expect(i18n.language).toBe('es');
+    expect(tiposCargados(i18n, 'es')).toBe(true);
+    expect(i18n.t('errores.tipos.almacen-duplicado')).toBe(
+      'Ya hay un almacén con ese código en esta empresa.',
+    );
+    expect(i18n.t('comun.salir')).toBe('Salir');
   });
 
   it('mientras el diccionario nuevo viaja, la pantalla sigue ENTERA en el idioma anterior', async () => {

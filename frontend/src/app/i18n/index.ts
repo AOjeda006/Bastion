@@ -1,12 +1,14 @@
 import i18next, { type i18n as InstanciaDeI18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import { cargarDiccionario } from './diccionarios.ts';
+import { cargarDiccionario, cargarTiposDeError } from './diccionarios.ts';
 import { idiomaInicial, marcarIdiomaDelDocumento, type Idioma } from './idioma.ts';
 // El TIPO del diccionario, en su propia línea y con `import type`: la emisión la borra. Junto al
 // valor —`import { es, type Diccionario }`— arrastraría `es.ts` entero al fragmento de entrada y
-// dejaría sin efecto la carga por idioma. El porqué entero, en `diccionarios.ts`.
+// dejaría sin efecto la carga por idioma. El porqué entero, en `diccionarios.ts`. Lo mismo con los
+// textos de los `type`.
 import type { Diccionario } from './es.ts';
+import type { TiposDeError } from './tiposDeError.es.ts';
 
 /** El único espacio de nombres. Se nombra una vez para que no haya dos cadenas que cuadrar. */
 const ESPACIO = 'traduccion';
@@ -39,8 +41,25 @@ const ESPACIO = 'traduccion';
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: 'traduccion';
-    resources: { traduccion: Diccionario };
+    resources: { traduccion: DiccionarioConLosTipos };
   }
+}
+
+/**
+ * El diccionario con los textos de los `type` ya dentro, que es la forma contra la que `t()` se
+ * comprueba.
+ *
+ * Los dos viajan por separado desde el 2.14 (ADR-0063 §9) y se juntan en el MISMO espacio de
+ * nombres, en `errores.tipos`, como estaban. No en un espacio propio: así `t('errores.tipos.…')`
+ * sigue siendo la misma clave en las cinco pantallas que la escriben, y no hay dos sitios donde
+ * buscar un texto. Lo que el espacio propio daría gratis —saber si ya han llegado— lo da
+ * `tiposCargados`.
+ */
+export type DiccionarioConLosTipos = Diccionario & { errores: { tipos: TiposDeError } };
+
+/** Junta el diccionario y los textos de los `type`, sin tocar ninguno de los dos. */
+export function conLosTipos(diccionario: Diccionario, tipos: TiposDeError): DiccionarioConLosTipos {
+  return { ...diccionario, errores: { ...diccionario.errores, tipos } };
 }
 
 /**
@@ -57,8 +76,15 @@ declare module 'i18next' {
  *
  * Se registra **un solo idioma**. El otro entra por `cambiarIdioma` cuando alguien lo pide, que es
  * justo lo que hace que su diccionario no esté en el arranque.
+ *
+ * Los textos de los `type` son opcionales: el arranque no los trae —llegan después, por
+ * `completarConLosTipos`— y los tests sí, para que montar siga siendo síncrono.
  */
-export function crearI18n(idioma: Idioma, diccionario: Diccionario): InstanciaDeI18n {
+export function crearI18n(
+  idioma: Idioma,
+  diccionario: Diccionario,
+  tipos?: TiposDeError,
+): InstanciaDeI18n {
   const instancia = i18next.createInstance();
 
   void instancia.use(initReactI18next).init({
@@ -66,11 +92,19 @@ export function crearI18n(idioma: Idioma, diccionario: Diccionario): InstanciaDe
     fallbackLng: false,
     defaultNS: ESPACIO,
     ns: [ESPACIO],
-    resources: { [idioma]: { [ESPACIO]: diccionario } },
+    resources: {
+      [idioma]: { [ESPACIO]: tipos === undefined ? diccionario : conLosTipos(diccionario, tipos) },
+    },
     // `false` porque React ya escapa todo lo que pinta. Dejarlo activado escaparía dos veces, y una
     // razón social con `&` saldría como `&amp;`.
     interpolation: { escapeValue: false },
-    react: { useSuspense: false },
+    // `bindI18nStore: 'added'`: cada componente que traduce se vuelve a pintar cuando entra un
+    // texto nuevo. Es lo que hace que los textos de los `type`, que llegan DESPUÉS de pintar, se
+    // vean en cuanto llegan: el fallo que se tradujo antes con el genérico pasa a decir el suyo, y
+    // el mensaje de un campo, el que le toca. Sin esto, se quedarían con lo de antes hasta el
+    // siguiente repintado, que puede no llegar. El precio es un repintado más al cambiar de idioma,
+    // el de añadir el diccionario nuevo, que todavía se pinta en el viejo.
+    react: { useSuspense: false, bindI18nStore: 'added' },
   });
 
   marcarIdiomaDelDocumento(idioma);
@@ -92,6 +126,10 @@ export function crearI18n(idioma: Idioma, diccionario: Diccionario): InstanciaDe
  * Es asíncrona porque el arranque de verdad lo es, y esconderlo detrás de una instancia vacía que
  * se rellena luego sería exactamente el parpadeo que se quiere evitar: la primera pantalla saldría
  * con las claves en crudo y se traduciría un instante después.
+ *
+ * Espera al diccionario y NO a los textos de los `type` (ADR-0063 §9): esos son el 68 % de lo que
+ * pesaba el fragmento y solo se leen cuando algo falla. Los trae `completarConLosTipos`, que el
+ * arranque llama después de montar el árbol.
  */
 export async function crearI18nDelArranque(
   idioma: Idioma = idiomaInicial(),
@@ -100,17 +138,66 @@ export async function crearI18nDelArranque(
 }
 
 /**
- * Cambia el idioma, trayendo su diccionario si es la primera vez.
+ * Si los textos de los `type` de un idioma ya están, que es lo que separa «este `type` no tiene
+ * texto» de «todavía no ha llegado». Por omisión, el idioma activo.
+ */
+export function tiposCargados(instancia: InstanciaDeI18n, idioma = instancia.language): boolean {
+  return instancia.getResource(idioma, ESPACIO, 'errores.tipos') !== undefined;
+}
+
+/**
+ * Los mete en el diccionario de su idioma. Con `deep` y no a lo ancho: un `addResourceBundle` sin
+ * mezcla profunda sustituye `errores` entero, y se llevaría los textos genéricos que ya estaban.
+ */
+function anadirLosTipos(instancia: InstanciaDeI18n, idioma: Idioma, tipos: TiposDeError): void {
+  instancia.addResourceBundle(idioma, ESPACIO, { errores: { tipos } }, true, true);
+}
+
+/**
+ * Trae los textos de los `type` de un idioma cuyo diccionario ya está, y los mete en él. Es lo que
+ * el arranque llama DESPUÉS de montar el árbol (ADR-0063 §9): el arranque espera al diccionario y
+ * no a ellos, y hasta que llegan quien traduce un `type` dice el genérico por código de estado.
+ *
+ * Si el idioma no tiene todavía su diccionario, no hace nada: sus textos entran con él, por
+ * `cambiarIdioma`. Meterlos antes dejaría un diccionario con solo `errores.tipos`, que
+ * `hasResourceBundle` daría por cargado.
+ */
+export async function completarConLosTipos(
+  instancia: InstanciaDeI18n,
+  idioma: Idioma,
+): Promise<void> {
+  if (!instancia.hasResourceBundle(idioma, ESPACIO) || tiposCargados(instancia, idioma)) {
+    return;
+  }
+
+  anadirLosTipos(instancia, idioma, await cargarTiposDeError(idioma));
+}
+
+/**
+ * Cambia el idioma, trayendo su diccionario y los textos de sus `type` si es la primera vez.
  *
  * El orden es la única parte que importa: **primero la descarga, después el cambio**. Al revés
  * —cambiar y que el diccionario llegue luego— la pantalla enseñaría sus claves en crudo mientras
  * tanto. Así, mientras se descarga, lo que se ve sigue siendo la pantalla anterior entera.
  *
- * Volver a un idioma ya traído no descarga nada: `hasResourceBundle` lo corta.
+ * Aquí los textos de los `type` SÍ se esperan, al contrario que en el arranque: la pantalla ya está
+ * pintada en el idioma viejo, así que esperar no retrasa ningún primer pintado, y el idioma nuevo
+ * llega entero. Las dos descargas van a la vez.
+ *
+ * Volver a un idioma ya traído no descarga nada: `hasResourceBundle` y `tiposCargados` lo cortan.
  */
 export async function cambiarIdioma(instancia: InstanciaDeI18n, idioma: Idioma): Promise<void> {
-  if (!instancia.hasResourceBundle(idioma, ESPACIO)) {
-    instancia.addResourceBundle(idioma, ESPACIO, await cargarDiccionario(idioma));
+  const [diccionario, tipos] = await Promise.all([
+    instancia.hasResourceBundle(idioma, ESPACIO) ? null : cargarDiccionario(idioma),
+    tiposCargados(instancia, idioma) ? null : cargarTiposDeError(idioma),
+  ]);
+
+  if (diccionario !== null) {
+    instancia.addResourceBundle(idioma, ESPACIO, diccionario, true, true);
+  }
+
+  if (tipos !== null) {
+    anadirLosTipos(instancia, idioma, tipos);
   }
 
   await instancia.changeLanguage(idioma);

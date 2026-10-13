@@ -331,7 +331,9 @@ describe('El barrido de las fronteras', () => {
       // funcionalidad, la regla estaría mal, no la estructura.
       for (const permitido of [
         `import '@/shared/sesion/sesion.ts';\n`,
-        `import '@/app/i18n/es.ts';\n`,
+        // Por su tipo: el valor de un diccionario no lo importa nadie más que `diccionarios.ts`,
+        // y eso lo vigila otra regla (`ElDiccionarioSeImportaPorSuTipo`).
+        `import type { Diccionario } from '@/app/i18n/es.ts';\n`,
         `import '@/features/${funcionalidad}/loQueSea.ts';\n`,
       ]) {
         const visto = await analizar(permitido, testigo!);

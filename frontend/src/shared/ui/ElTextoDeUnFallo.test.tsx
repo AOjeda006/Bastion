@@ -1,10 +1,12 @@
-import { renderHook } from '@testing-library/react';
+import { act, render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
 
 import { crearI18nDePrueba } from '@/pruebas/i18n.ts';
+import { es } from '@/app/i18n/es.ts';
 import type { Idioma } from '@/app/i18n/idioma.ts';
+import { completarConLosTipos, crearI18n } from '@/app/i18n/index.ts';
 import { FalloDeApi, fallo } from '@/shared/api/errores.ts';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 
@@ -16,9 +18,9 @@ import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
  * desconocido, que es lo que ocurre durante un despliegue escalonado o con una pestaña que lleva
  * abierta desde la versión anterior.
  *
- * Sin `act(...)` en ninguna parte y a propósito: esto no monta pantalla ni dispara efectos, es
- * una función y un diccionario. Los 109 avisos de `act()` que el frontal arrastra son deuda
- * anotada, y lo que un ítem nuevo no puede hacer es aumentarlos.
+ * Sin `act(...)` salvo en un caso, y a propósito: casi todo esto no monta pantalla ni dispara
+ * efectos, es una función y un diccionario. El caso que sí lo lleva es el de los textos que llegan
+ * después de pintar (ADR-0063 §9), porque lo que afirma es justo un repintado.
  */
 function conIdioma(idioma: Idioma) {
   const i18n = crearI18nDePrueba(idioma);
@@ -32,6 +34,17 @@ function texto(error: unknown, idioma: Idioma = 'es'): string {
   const { result } = renderHook(() => useTextoDeFallo(), { wrapper: conIdioma(idioma) });
 
   return result.current(error);
+}
+
+/**
+ * Un párrafo con el texto de un fallo. El gancho solo no sirve para ver un repintado: la función
+ * que devuelve lee el diccionario cuando se la llama, así que llamarla otra vez daría el texto
+ * nuevo aunque ningún componente se hubiera vuelto a pintar. Lo que se pinta, no.
+ */
+function Aviso({ error }: { error: unknown }): ReactNode {
+  const textoDeFallo = useTextoDeFallo();
+
+  return <p>{textoDeFallo(error)}</p>;
 }
 
 describe('El texto de un fallo', () => {
@@ -108,6 +121,34 @@ describe('El texto de un fallo', () => {
     // es de los nuestros.
     expect(fallo(409, { type: 'https://ejemplo.test/otra-cosa' }).tipo).toBeNull();
     expect(fallo(409, { type: '/errors/' }).tipo).toBeNull();
+  });
+
+  it('mientras los textos de los `type` no han llegado, el genérico por estado; al llegar, el suyo', async () => {
+    // ADR-0063 §9: el arranque no espera a estos textos. La instancia es la del arranque —el
+    // diccionario, sin ellos—, y no la de prueba, que los trae para que montar sea síncrono.
+    const i18n = crearI18n('es', es);
+    const conflicto = fallo(409, { type: '/errors/almacen-duplicado', traceId: 'tr-7' });
+
+    render(
+      <I18nextProvider i18n={i18n}>
+        <Aviso error={conflicto} />
+      </I18nextProvider>,
+    );
+
+    // Ni la clave cruda ni la traza: el `type` no es desconocido, solo está en camino, y la
+    // referencia mandaría a alguien a buscar en el registro un fallo que no existe.
+    expect(
+      screen.getByText('No se han podido cargar los datos. Inténtalo de nuevo.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/tr-7/)).toBeNull();
+
+    // Lo único que pasa es que llegan. Nadie vuelve a montar ni a pedir el texto: si el párrafo
+    // cambia, es porque el componente se ha repintado solo (`bindI18nStore: 'added'`).
+    await act(() => completarConLosTipos(i18n, 'es'));
+
+    expect(
+      screen.getByText('Ya hay un almacén con ese código en esta empresa.'),
+    ).toBeInTheDocument();
   });
 
   it('la traza solo se enseña cuando hace falta, y nunca con un `type` conocido', () => {

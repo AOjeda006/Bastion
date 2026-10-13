@@ -1,26 +1,31 @@
+import type { i18n as InstanciaDeI18n } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { es } from '@/app/i18n/es.ts';
+// Por su TIPO, y en su propia línea: un import de valor ataría el fragmento de los textos a cada
+// página que traduce un fallo, que es lo que hacía este fichero con `es.ts` hasta el 2.14
+// (ADR-0063 §9). El *linter* lo prohíbe.
+import type { TiposDeError } from '@/app/i18n/tiposDeError.es.ts';
 import { motivoDeFallo, tipoDeFallo, trazaDeFallo } from '@/shared/api/errores.ts';
 
 /** Un código de error de los que TIENEN texto escrito, ya estrechado a las claves del diccionario. */
-type CodigoConTexto = keyof typeof es.errores.tipos;
+type CodigoConTexto = keyof TiposDeError;
 
 /**
  * Si un código trae texto, y —de paso— estrechado al tipo que `t()` acepta.
  *
- * <b>Se pregunta al diccionario y no a `i18n.exists()`</b>, aunque lo segundo parezca más
- * dinámico. Dos razones, y la segunda es la que decide:
+ * <b>Se pregunta a `i18n.exists()` desde el 2.14</b>, y antes se preguntaba al diccionario
+ * castellano importado por su valor. Lo que aquel import compraba —que «tiene texto en castellano»
+ * equivale a «tiene texto en todos los idiomas»— lo sigue garantizando el compilador:
+ * `tiposDeError.en.ts` no compila si no cumple la forma del castellano. Lo que costaba era el
+ * diccionario entero dentro de once páginas. Y `exists` pregunta además lo que el import no podía
+ * saber: si los textos han llegado ya.
  *
- *   · `es` es LA FORMA: el tipo `Diccionario` es `typeof es`, y `en.ts` no compila si no la
- *     cumple. Así que «tiene texto en castellano» equivale a «tiene texto en todos los idiomas»,
- *     y lo garantiza el compilador, no una comprobación en ejecución.
- *   · `t()` está tipado contra las claves literales del diccionario. Una clave compuesta a mano
- *     no es asignable, y la salida sería un `as` — o sea, apagar al compilador justo en el sitio
- *     donde decide qué lee una persona. Con esta guarda de tipo, la clave se estrecha sola.
+ * La guarda de tipo se queda por lo mismo que antes: `t()` está tipado contra las claves
+ * literales, una clave compuesta a mano no es asignable, y la salida sería un `as` — apagar al
+ * compilador justo donde decide qué lee una persona.
  */
-function tieneTexto(codigo: string): codigo is CodigoConTexto {
-  return Object.hasOwn(es.errores.tipos, codigo);
+function tieneTexto(i18n: InstanciaDeI18n, codigo: string): codigo is CodigoConTexto {
+  return i18n.exists(`errores.tipos.${codigo}`);
 }
 
 /**
@@ -39,6 +44,10 @@ function tieneTexto(codigo: string): codigo is CodigoConTexto {
  *      es el MISMO valor que Serilog escribe como `@tr`.
  *   3. Si no traía `type` —un fallo de red, un 502 de un intermediario, una respuesta sin
  *      cuerpo—, el motivo de siempre por código de estado. No hay nada que mapear.
+ *   4. Si traía un `type` y **los textos todavía no han llegado** (ADR-0063 §9), también el motivo
+ *      por código de estado, y SIN la traza: el `type` no es desconocido, solo está en camino, y
+ *      decir otra cosa mandaría a alguien a buscar en el registro un fallo que no existe. Cuando
+ *      llegan, el componente se repinta (`bindI18nStore`) y pasa al caso 1.
  *
  * <b>Por qué el caso 2 no es teórico y por qué no basta con el barrido.</b> El barrido de
  * diccionarios de `ElCambioDeIdioma` compara el artefacto contra los textos y se pone rojo en
@@ -49,16 +58,16 @@ function tieneTexto(codigo: string): codigo is CodigoConTexto {
  * elegancia, que es lo que hace el caso 2.
  */
 export function useTextoDeFallo(): (error: unknown) => string {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (error: unknown): string => {
     const tipo = tipoDeFallo(error);
 
-    if (tipo === null) {
+    if (tipo === null || !i18n.exists('errores.tipos')) {
       return t(`errores.${motivoDeFallo(error)}`);
     }
 
-    if (tieneTexto(tipo)) {
+    if (tieneTexto(i18n, tipo)) {
       return t(`errores.tipos.${tipo}`);
     }
 

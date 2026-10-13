@@ -192,6 +192,46 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
     },
   },
+  {
+    // LOS DICCIONARIOS SE IMPORTAN POR SU TIPO (ADR-0063 §9). Por su valor solo los trae
+    // `diccionarios.ts`, con `import()`, que es lo que los deja en un fragmento por idioma. Un
+    // import estático de valor desde cualquier otro sitio ata ese fragmento a quien lo hace: si es
+    // algo del arranque, desaparece dentro del de entrada; si es una página, se descarga con ella
+    // y en el idioma que sea. Las dos cosas pasaron: la primera la midió el ADR-0036, y la segunda
+    // estuvo en `useTextoDeFallo` hasta el 2.14, con el diccionario castellano dentro de once
+    // páginas. El presupuesto ve la primera —el fragmento deja de existir—, pero no la segunda,
+    // que no cambia ningún tamaño: por eso la regla.
+    //
+    // Es la regla de `typescript-eslint` y no la del núcleo, por dos motivos: la del núcleo no
+    // sabe dejar pasar `import type`, y es la que llevan las fronteras entre funcionalidades, que
+    // van al final y le sustituirían las opciones a todo fichero de una funcionalidad. Con dos
+    // reglas, cada una tiene las suyas. `ElDiccionarioSeImportaPorSuTipo` comprueba que marca lo
+    // que tiene que marcar y deja pasar lo que no.
+    //
+    // Los tests y `src/pruebas/` quedan fuera: no se empaquetan, y el i18n de prueba necesita los
+    // diccionarios por valor para montar sin esperar.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/app/i18n/diccionarios.ts', '**/*.test.{ts,tsx}', 'src/pruebas/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              // `…/i18n/es.ts` con alias o con camino relativo, y `./es.ts` desde la propia
+              // carpeta del i18n. Lo mismo con `en` y con los textos de los `type`.
+              regex: '^(?:.*/i18n/|\\./)(?:tiposDeError\\.)?[a-z]{2}\\.ts$',
+              allowTypeImports: true,
+              message:
+                'Un diccionario se importa por su tipo (`import type`). Por su valor solo lo trae ' +
+                'src/app/i18n/diccionarios.ts, con import(): un import estático lo ata a este ' +
+                'fragmento y lo descarga en el idioma que sea (docs/adr/adr-0063, §9).',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Las fronteras van LAS ÚLTIMAS: así ningún bloque posterior las apaga sin querer. Y alcanzan
   // también a los tests que viven dentro de una funcionalidad, que son código de esa funcionalidad
   // y no un sitio donde la frontera se relaje.

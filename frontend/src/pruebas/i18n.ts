@@ -2,6 +2,8 @@ import { crearI18n } from '@/app/i18n/index.ts';
 import { en } from '@/app/i18n/en.ts';
 import { es } from '@/app/i18n/es.ts';
 import type { Idioma } from '@/app/i18n/idioma.ts';
+import { tiposDeError as tiposEn } from '@/app/i18n/tiposDeError.en.ts';
+import { tiposDeError as tiposEs } from '@/app/i18n/tiposDeError.es.ts';
 
 /**
  * El i18n de los tests: **síncrono**, con el diccionario traído por import estático.
@@ -13,14 +15,17 @@ import type { Idioma } from '@/app/i18n/idioma.ts';
  * es otra cosa —que el diccionario está antes de que haya árbol— y tiene sus propios casos.
  *
  * Los dos diccionarios entran por import estático a propósito: un test no se empaqueta, así que
- * aquí no cuesta nada tenerlos los dos, y tenerlos deja el montaje síncrono.
+ * aquí no cuesta nada tenerlos los dos, y tenerlos deja el montaje síncrono. Con los textos de los
+ * `type` dentro, por lo mismo: en la aplicación llegan después de pintar (ADR-0063 §9), y lo que
+ * pasa mientras no han llegado tiene su caso en `ElTextoDeUnFallo`, con su propia instancia.
  *
  * El idioma va SIEMPRE dicho a mano. Si se tomara el detectado, los tests dependerían del
  * `navigator.language` de la máquina que los corre, y el mismo test pasaría aquí y fallaría en la
  * CI.
  */
 const DICCIONARIOS = { es, en };
+const TIPOS = { es: tiposEs, en: tiposEn };
 
 export function crearI18nDePrueba(idioma: Idioma): ReturnType<typeof crearI18n> {
-  return crearI18n(idioma, DICCIONARIOS[idioma]);
+  return crearI18n(idioma, DICCIONARIOS[idioma], TIPOS[idioma]);
 }

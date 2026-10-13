@@ -63,6 +63,15 @@
 # vacía, si alguno de sus miembros no resuelve en EXACTAMENTE un fichero de `dist`, o si al terminar
 # no se ha resuelto ni uno.
 #
+# LO QUE SE EXIGE Y NO SE CUENTA
+# ------------------------------
+# Desde el 2.14 hay un segundo grupo declarado que va al revés: los textos de los `type` de error,
+# un fragmento por idioma que se pide DESPUÉS del primer pintado (ADR-0063 §9). No se suman al
+# arranque, porque no lo son. Pero se exige que existan, uno por idioma, y que el índice no los
+# anuncie: si vuelven al diccionario, o algo del arranque los importa por su valor, el fragmento
+# desaparece dentro de otro, el arranque crece unos 33 kB, y con el tope holgado solo lo diría
+# esto.
+#
 # Uso: presupuesto-del-frontal.sh <dist> [tope-arranque-KiB] [tope-total-KiB]
 
 set -euo pipefail
@@ -256,6 +265,45 @@ if [ -n "$fichero_del_grupo" ]; then
   tamanos_arranque+=("$mayor_del_grupo")
 fi
 
+# --- Los textos de los `type`: un fragmento por idioma, que tiene que existir y no se cuenta -----
+#
+# Los idiomas son los de arriba, ya comparados contra el código. El nombre lo pone Vite como en el
+# grupo de los diccionarios, `assets/tiposDeError.<idioma>-<hash>.js`, y no casa con el patrón de
+# aquel (`<idioma>-*.js`), que exige que el nombre EMPIECE por el idioma.
+tipos_resueltos=0
+detalle_de_tipos=""
+
+for idioma in "${IDIOMAS_DECLARADOS[@]}"; do
+  coincidencias=()
+  while IFS= read -r encontrado; do
+    [ -n "$encontrado" ] || continue
+    coincidencias+=("$encontrado")
+  done < <(find "$DIST" -type f -name "tiposDeError.${idioma}-*.js" ! -name '*.map' | sort)
+
+  if [ "${#coincidencias[@]}" -ne 1 ]; then
+    fallar "los textos de los type del idioma '$idioma' resuelven en ${#coincidencias[@]} ficheros dentro de '$DIST' y tienen que resolver en UNO. Si son cero, han vuelto al diccionario o se han quedado dentro de un fragmento que los importa por su valor, y el arranque vuelve a esperar unos 33 kB que solo se leen cuando algo falla (ADR-0063 §9). Si son varios, el nombre ha dejado de identificar al fragmento."
+  fi
+
+  camino="${coincidencias[0]}"
+  relativa="${camino#"$DIST"/}"
+
+  for contado in "${ficheros_arranque[@]}"; do
+    if [ "$contado" = "$relativa" ]; then
+      fallar "los textos de los type del idioma '$idioma' ($relativa) están en el índice: se descargan antes de pintar, que es justo lo que el ADR-0063 §9 sacó del arranque."
+    fi
+  done
+
+  tipos_resueltos=$((tipos_resueltos + 1))
+  if [ -n "$detalle_de_tipos" ]; then
+    detalle_de_tipos="$detalle_de_tipos, "
+  fi
+  detalle_de_tipos="$detalle_de_tipos$relativa $(wc -c < "$camino") B"
+done
+
+if [ "$tipos_resueltos" -eq 0 ]; then
+  fallar "el grupo de los textos de los type no ha resuelto ni un fichero en '$DIST': la comprobación estaría mirando la nada."
+fi
+
 # --- Total: todo lo servido menos los mapas -----------------------------------------------------
 
 bytes_total=0
@@ -286,6 +334,7 @@ echo "Arranque — lo que el navegador pide antes de pintar nada:"
 for i in "${!ficheros_arranque[@]}"; do
   printf '  %8s B  %s\n' "${tamanos_arranque[$i]}" "${ficheros_arranque[$i]}"
 done
+echo "Fuera del arranque, pedidos después de pintar: $detalle_de_tipos"
 
 anotar "Frontal · arranque ${kib_arranque}/${TOPE_ARRANQUE_KIB} KiB en ${#ficheros_arranque[@]} ficheros · total servido ${kib_total}/${TOPE_TOTAL_KIB} KiB"
 

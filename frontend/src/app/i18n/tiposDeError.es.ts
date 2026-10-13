@@ -1,0 +1,600 @@
+/**
+ * Un texto por cada `type` que la API puede emitir, en castellano, y **la forma** que el inglés
+ * tiene que cumplir (ADR-0030).
+ *
+ * Las claves son el CÓDIGO tal cual, sin camelizar: la correspondencia con `docs/api/errores.json`
+ * tiene que poder mirarse a ojo y compararse entera, y cualquier transformación en medio es una
+ * regla más que se puede equivocar. El barrido de `ElCambioDeIdioma` compara este objeto contra el
+ * artefacto en los dos sentidos, así que un `type` nuevo sin texto es rojo el día que se escribe.
+ *
+ * **No viaja con el diccionario, y es a propósito** (ADR-0063 §9). Hasta el 2.14 vivía en
+ * `errores.tipos` de `es.ts`, y era el 68 % de lo que el arranque esperaba antes de pintar
+ * —33 454 de los 48 966 B del fragmento—, para unos textos que solo se leen cuando algo falla.
+ * Ahora se pide después de montar el árbol (`completarConLosTipos`) y se mezcla en `errores.tipos`
+ * del mismo espacio de nombres, así que `t('errores.tipos.…')` sigue siendo la misma clave en
+ * todas partes.
+ *
+ * Se importa por su TIPO desde donde haga falta, y por su VALOR solo desde `diccionarios.ts` y los
+ * tests: un import de valor desde el código de la aplicación ataría el fragmento a quien lo
+ * hiciera, y lo vigila el *linter*.
+ *
+ * Sin `as const`, por lo mismo que `es.ts`: las claves literales y los valores como `string`.
+ */
+export const tiposDeError = {
+  // Las doce del ajuste (ítem 2.3). Las cuatro de un maestro bloqueado o retirado dicen las
+  // DOS mitades del ADR-0037 y del ADR-0023 —lo que ya está escrito se sigue leyendo, lo
+  // nuevo no entra—, porque un texto que solo dijera «no se puede» manda a quien lo lee a
+  // buscar una ficha que sí existe.
+  'ajuste-almacen-bloqueado':
+    'Ese almacén está bloqueado: sus movimientos anteriores se siguen leyendo y valorando, ' +
+    'pero no admite un ajuste nuevo. Elige otro almacén o pide que lo desbloqueen.',
+  'ajuste-almacen-no-encontrado': 'Ese almacén no existe. Elige uno del maestro de almacenes.',
+  'ajuste-articulo-no-encontrado': 'Ese artículo no existe. Elige uno del maestro de artículos.',
+  'ajuste-articulo-no-se-almacena':
+    'Ese artículo es un servicio: no tiene existencias que ajustar. Quita esa línea o cambia ' +
+    'el artículo.',
+  'ajuste-con-fecha-futura':
+    'La fecha de ese ajuste es posterior a hoy: el libro solo recoge lo que ya ha pasado. ' +
+    'Confírmalo ese día o corrige la fecha.',
+  'ajuste-coste-no-valido':
+    'Una línea que saca existencias no lleva coste: se valora al precio medio. Y ningún ' +
+    'coste puede ser negativo; una muestra o un regalo entran a cero.',
+  'ajuste-de-un-recuento-no-se-anula':
+    'Ese ajuste es el de la diferencia de un recuento, y no se anula por separado: el recuento ' +
+    'seguiría confirmado con su diferencia deshecha. Anula el recuento, y su ajuste se anulará ' +
+    'con él.',
+  'ajuste-en-ejercicio-cerrado':
+    'La fecha de ese ajuste cae en un ejercicio cerrado: ese periodo ya es definitivo y no ' +
+    'admite documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
+  'ajuste-entrada-sin-coste-ni-precio-medio':
+    'Una línea mete un artículo que no tiene existencias en ese almacén, y sin existencias no ' +
+    'hay precio medio al que valorarla. Escribe el coste de esa línea.',
+  'ajuste-fecha-anterior-al-ultimo-movimiento':
+    'Algún artículo del documento ya tiene un movimiento posterior a esa fecha en ese almacén, ' +
+    'y un documento no puede ir por detrás del último movimiento de su artículo. Pon esa fecha ' +
+    'o una posterior.',
+  'ajuste-inverso-no-se-anula':
+    'Ese ajuste es el inverso de otro, y un inverso no se deshace con otro: deshacerlo sería ' +
+    'volver a hacer el ajuste. Si hace falta, se hace con un ajuste nuevo.',
+  'ajuste-lote-no-valido':
+    'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
+    'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote de esa ' +
+    'línea.',
+  'ajuste-motivo-no-valido':
+    'Escribe por qué anulas el ajuste, en 300 caracteres o menos. Es lo único que quedará ' +
+    'para entender la corrección dentro de dos años.',
+  'ajuste-no-encontrado': 'Ese ajuste ya no existe. Vuelve al listado y actualiza.',
+  'ajuste-no-esta-confirmado':
+    'Ese ajuste no está confirmado, así que no hay nada que anular: un borrador no ha movido ' +
+    'el libro. Actualiza la pantalla para ver en qué estado está.',
+  'ajuste-no-esta-en-borrador':
+    'Ese ajuste ya no está en borrador: uno confirmado no se vuelve a confirmar, porque sus ' +
+    'filas del libro ya están escritas y el libro no se reescribe. Actualiza la pantalla.',
+  'ajuste-numero-de-serie-no-valido':
+    'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
+    'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
+    'número de serie de esa línea.',
+  'ajuste-serie-cerrada':
+    'Esa serie está cerrada: sigue resolviendo los documentos que ya numeró, pero no entrega ' +
+    'ni un número más. Elige otra serie.',
+  'ajuste-serie-no-encontrada': 'Esa serie no existe. Elige una del maestro de series.',
+  'ajuste-serie-no-unitaria':
+    'Una línea con número de serie mueve exactamente una unidad, porque cada número es una ' +
+    'pieza y no hay dos con el mismo. Pon una línea por pieza, con cantidad 1 en la unidad ' +
+    'base del artículo.',
+  'ajuste-serie-repetida':
+    'Dos líneas del ajuste nombran el mismo número de serie, y cada pieza sale una sola vez ' +
+    'por documento. Cambiarla de ubicación es una reubicación, que es otro documento.',
+  'ajuste-sin-ejercicio':
+    'La fecha de ese ajuste no cae en ningún ejercicio: sin periodo al que imputarlo, el ' +
+    'documento no entraría en ninguna declaración. Abre el ejercicio que falta o corrige la ' +
+    'fecha.',
+  'ajuste-sin-lineas':
+    'Un ajuste necesita al menos una línea: un documento que no mueve nada no ajusta nada.',
+  'ajuste-trazabilidad-no-casa':
+    'Alguna línea no casa con la trazabilidad de su artículo: le falta el lote o el número de ' +
+    'serie que pide la ficha, o lleva uno que la ficha no pide. Corrige la línea, o la ' +
+    'trazabilidad del artículo si todavía no se ha movido.',
+  'ajuste-ubicacion-bloqueada':
+    'Esa ubicación está bloqueada: lo que ya hay apuntado a ella se sigue leyendo, pero no se ' +
+    'mueve nada nuevo a ese hueco. Elige otra ubicación.',
+  'ajuste-ubicacion-no-encontrada':
+    'Esa ubicación no existe en ese almacén. Elige una de las suyas.',
+  'ajuste-unidad-no-encontrada':
+    'Esa unidad de medida no existe. Elige una del maestro de unidades.',
+  'ajuste-unidad-retirada':
+    'Esa unidad está retirada: los movimientos que ya se escribieron en ella se siguen ' +
+    'leyendo, pero no se escribe uno nuevo con ella. Elige otra unidad.',
+  'ajuste-valoracion-en-otra-divisa':
+    'Las existencias de algún artículo del documento están valoradas en otra divisa en ese ' +
+    'almacén, y sumarlas pediría un tipo de cambio. Haz el ajuste en la divisa en que están ' +
+    'valoradas.',
+  'almacen-duplicado': 'Ya hay un almacén con ese código en esta empresa.',
+  'almacen-no-encontrado': 'Ese almacén ya no existe. Vuelve al listado y actualiza.',
+  'articulo-duplicado': 'Ya hay un artículo con ese código en esta empresa.',
+  'articulo-impuesto-no-encontrado': 'Ese impuesto no existe. Elige uno del maestro de impuestos.',
+  'articulo-impuesto-no-vigente': 'Ese tramo de impuesto ya no rige. Elige uno que esté vigente.',
+  'articulo-no-encontrado': 'Ese artículo ya no existe. Vuelve al listado y actualiza.',
+  'articulo-proveedor-duplicado': 'Ese proveedor ya está en la lista de este artículo.',
+  'articulo-proveedor-no-encontrado':
+    'Ese proveedor ya no está en la lista de este artículo. Actualiza la pantalla.',
+  // El texto que NO distingue, y por eso está escrito así de largo. Detrás hay tres
+  // situaciones —la ficha no existe, está reservada por el artículo 32, o no está marcada
+  // como proveedora— y la API contesta lo mismo en las tres a propósito: separarlas
+  // convertiría este formulario en una manera de averiguar quién está dado de baja. Así que
+  // aquí tampoco se separan, y lo que se le ofrece a quien lo lee es lo que puede hacer.
+  'articulo-proveedor-tercero-no-valido':
+    'Ese tercero no se puede poner como proveedor de este artículo. Comprueba en el maestro ' +
+    'de terceros que la ficha existe y que está marcada como proveedora.',
+  'articulo-servicio-con-trazabilidad':
+    'Un servicio no tiene existencias, así que no lleva lote ni número de serie.',
+  'articulo-tipo-no-valido': 'El tipo de un artículo solo puede ser «Bien» o «Servicio».',
+  // Un conflicto con el libro, no un error de lo tecleado: lo que hay que decir es por qué
+  // ya no se puede, para que nadie lo reintente esperando otra respuesta.
+  'articulo-trazabilidad-con-movimientos':
+    'Este artículo ya tiene movimientos de stock, así que su trazabilidad no se puede cambiar.',
+  'articulo-trazabilidad-no-valida':
+    'La trazabilidad de un artículo solo puede ser ninguna, por lote o por número de serie.',
+  'articulo-unidad-no-encontrada':
+    'Esa unidad de medida no existe. Elige una del maestro de unidades.',
+  // La retirada del ADR-0023 dicha entera, con sus dos mitades: por eso no vale «esa unidad
+  // no existe». Quien lee esto tiene delante artículos que la siguen usando, y una frase que
+  // dijera que no existe le mandaría a buscar un fallo que no hay.
+  'articulo-unidad-retirada':
+    'Esa unidad está retirada: los artículos que ya la usan siguen contándose en ella, pero ' +
+    'no se puede dar de alta uno nuevo. Elige otra.',
+  'categoria-ciclo':
+    'Una categoría no puede colgar de sí misma ni de ninguna de las que cuelgan de ella.',
+  'categoria-demasiado-profunda':
+    'El árbol de categorías no admite más niveles por debajo de ese sitio.',
+  'categoria-duplicada': 'Ya hay una categoría con ese código en esta empresa.',
+  'categoria-no-encontrada': 'Esa categoría ya no existe. Vuelve al listado y actualiza.',
+  'categoria-padre-no-encontrado': 'La categoría de la que quieres colgar esta no existe.',
+  'codigo-barras-duplicado':
+    'Ese GTIN ya lo lleva un artículo de esta empresa. Si ahora es de otro, quítalo antes del que lo lleva.',
+  'codigo-barras-nivel-no-valido':
+    'Un código de barras va en la unidad base, en una caja o en un palé.',
+  'codigo-barras-no-encontrado':
+    'Ese código de barras ya no está en este artículo: alguien lo ha quitado antes.',
+  'codigo-barras-unidades-no-validas':
+    'La unidad base lleva una unidad. Una caja o un palé llevan las unidades base que ' +
+    'contienen, que son dos o más.',
+  'codigo-de-rol-ya-usado': 'Ya hay un rol con ese código. Elige otro.',
+  'contrasena-actual-incorrecta': 'La contraseña actual no es correcta.',
+  'conversion-um-duplicada': 'Ya hay una conversión entre esas dos unidades.',
+  'conversion-um-inversa-implausible':
+    'El sentido contrario ya está declarado y ese factor no es su inverso.',
+  'conversion-um-no-declarada':
+    'No hay conversión declarada entre esas dos unidades. Dala de alta.',
+  'conversion-um-no-encontrada': 'Esa conversión de unidades ya no existe.',
+  'correo-ya-registrado': 'Ya hay una cuenta con ese correo electrónico.',
+  'credenciales-no-validas': 'El correo o la contraseña no son correctos.',
+  'cuenta-bancaria-duplicada': 'Esta ficha ya tiene esa cuenta bancaria.',
+  'cuenta-bancaria-no-encontrada': 'Esta ficha no tiene esa cuenta bancaria.',
+  'cuerpo-demasiado-grande':
+    'Lo que intentas enviar es demasiado grande. Pártelo en varios envíos más pequeños.',
+  'datos-no-validos': 'Algunos campos no son válidos. Revisa los que aparecen marcados.',
+  'divisa-duplicada': 'Ya hay una divisa con ese código.',
+  'divisa-no-encontrada': 'Esa divisa ya no existe.',
+  'ejercicio-cerrado': 'El ejercicio está cerrado y no admite cambios.',
+  'ejercicio-con-borradores':
+    'Quedan documentos en borrador con fecha dentro del ejercicio. Confírmalos o bórralos antes de cerrar.',
+  'ejercicio-con-documentos':
+    'El ejercicio tiene documentos con fecha dentro. Borrarlo los dejaría sin ejercicio al que pertenecer.',
+  'ejercicio-con-series':
+    'No se puede eliminar un ejercicio que tiene series. Elimina antes las series.',
+  'ejercicio-dejaria-documentos-fuera':
+    'Esas fechas dejarían fuera del ejercicio documentos que hoy caen dentro. Mueve antes los documentos o deja el intervalo donde está.',
+  'ejercicio-duplicado': 'Ya hay un ejercicio con ese año en esta empresa.',
+  'ejercicio-motivo-no-valido':
+    'Escribe por qué reabres el ejercicio: es lo único que quedará para entenderlo.',
+  'ejercicio-no-encontrado': 'Ese ejercicio ya no existe. Vuelve al listado y actualiza.',
+  'ejercicio-solapado':
+    'Esas fechas se pisan con las de otro ejercicio de la empresa. Una fecha tiene que caer en un solo ejercicio.',
+  'ejercicio-ya-abierto': 'Ese ejercicio ya estaba abierto, así que no se ha reabierto.',
+  'ejercicio-ya-cerrado':
+    'Ese ejercicio ya estaba cerrado, así que no lo has cerrado tú. Vuelve a leerlo antes de decidir.',
+  'empresa-activa-no-operativa':
+    'La empresa con la que estás operando ya no está disponible. Vuelve a entrar.',
+  'empresa-ajena': 'Esa empresa no es la tuya, así que no puedes operar sobre ella.',
+  'empresa-destino-no-operativa':
+    'La empresa que has elegido no admite altas: no existe o está bloqueada.',
+  'empresa-no-encontrada': 'Esa empresa ya no existe. Vuelve al listado y actualiza.',
+  'empresa-no-pertenece': 'No perteneces a esa empresa, así que no puedes operar con ella.',
+  'empresa-ya-registrada': 'Ya hay una empresa con ese NIF.',
+  'falta-if-match':
+    'Para guardar hay que decir sobre qué versión se escribe. Vuelve a abrir el formulario.',
+  'fecha-fuera-del-ejercicio-de-la-serie':
+    'Esa serie es de otro ejercicio: no numera documentos con esta fecha. Abre el ajuste con ' +
+    'una serie del ejercicio de su fecha.',
+  'gtin-circulacion-restringida':
+    'Es un número de circulación restringida: lo pone una tienda o un país para su uso ' +
+    'interno, y fuera de ahí no identifica un artículo.',
+  'gtin-cupon': 'Es el número de un cupón o de un vale de devolución, no el de un artículo.',
+  'gtin-digito-de-control':
+    'La última cifra no cuadra con las demás: el número está mal leído o mal tecleado.',
+  'gtin-largo-no-admitido':
+    'Un GTIN tiene 8, 12, 13 o 14 cifras. Si te salen otras, vuelve a mirar el código: falta ' +
+    'o sobra alguna.',
+  'gtin-medida-variable':
+    'Es un código de peso o medida variable: sin la medida no está entero, y no identifica ' +
+    'un artículo.',
+  'gtin-no-son-digitos': 'Un GTIN son solo cifras: sin letras, ni guiones, ni espacios por dentro.',
+  'gtin-sin-asignar':
+    'Ese prefijo está reservado, o es de algo que no es un artículo, así que no es el GTIN ' +
+    'de ninguno.',
+  'idempotencia-clave-no-valida':
+    'La aplicación ha enviado una clave de repetición que no vale. Inténtalo otra vez.',
+  'idempotencia-cuerpo-distinto':
+    'Se ha repetido una operación con los mismos datos de envío pero distinto contenido. Vuelve a empezar.',
+  'idempotencia-no-admitida': 'Esta operación no admite repetición segura. Inténtalo otra vez.',
+  'idempotencia-obligatoria':
+    'Esta operación solo se hace con una clave de repetición, porque a medias dejaría un ' +
+    'hueco en la numeración. Vuelve a intentarlo.',
+  'idempotencia-sin-empresa-activa':
+    'Tu sesión no tiene ninguna empresa activa. Elige una y vuelve a intentarlo.',
+  'if-match-no-valido':
+    'La versión que traía el formulario no tiene forma válida. Vuelve a abrirlo.',
+  'importacion-cabecera-no-valida':
+    'La primera fila del fichero no es la cabecera de la plantilla. Cópiala tal cual, en su orden.',
+  'importacion-codificacion-no-admitida':
+    'El fichero no está guardado como CSV de Excel. Guárdalo como «CSV (delimitado por comas)» o «CSV UTF-8».',
+  'importacion-comillas-sin-cerrar':
+    'El fichero tiene unas comillas que se abren y no se cierran. Revísalo en la hoja de cálculo.',
+  'importacion-demasiadas-filas':
+    'El fichero tiene demasiadas filas. Pártelo en varios de 5000 filas como mucho.',
+  'importacion-fin-de-linea-no-admitido':
+    'El fichero separa las filas de una forma que no admitimos. Ábrelo y guárdalo otra vez como CSV.',
+  'importacion-separador-no-admitido':
+    'El fichero no separa las columnas con punto y coma. Guárdalo desde Excel con la configuración regional de España.',
+  'importacion-sin-permiso-de-alta':
+    'Importar terceros es darlos de alta, y no tienes permiso para dar de alta terceros.',
+  'importacion-sin-permiso-de-limite':
+    'Alguna fila trae límite de crédito y no tienes permiso para fijarlo. Deja vacías esas columnas.',
+  'impuesto-con-tramos-solapados':
+    'Los tramos de vigencia de ese impuesto se solapan. Revisa las fechas.',
+  'impuesto-no-encontrado': 'Ese impuesto ya no existe.',
+  'numero-de-serie-en-existencias':
+    'Algún número de serie del documento ya está en existencias: cada pieza solo puede estar ' +
+    'en un sitio, y una sola vez. No se ha guardado nada. Si la pieza ha cambiado de sitio, ' +
+    'eso es una reubicación y no una entrada.',
+  'orden-no-admitido': 'No se puede ordenar por ese campo.',
+  'permisos-de-rol-del-sistema':
+    'Los permisos del rol del sistema los fija cada actualización. Puedes cambiarle el nombre; para dar menos permisos, crea un rol propio.',
+  'pertenencia-no-encontrada': 'Esa persona no pertenece a la empresa indicada.',
+  'recuento-almacen-bloqueado':
+    'Ese almacén está bloqueado: sus existencias se siguen leyendo, pero no admite un recuento ' +
+    'nuevo. Pide que lo desbloqueen.',
+  'recuento-almacen-no-encontrado': 'Ese almacén no existe. Elige uno del maestro de almacenes.',
+  'recuento-articulo-no-encontrado': 'Ese artículo no existe. Elige uno del maestro de artículos.',
+  'recuento-articulo-no-se-almacena':
+    'Ese artículo es un servicio: no tiene existencias que contar. Elige un artículo que se ' +
+    'almacene.',
+  'recuento-clave-repetida':
+    'El recuento ya lleva esa clave: la misma ubicación, el mismo artículo y el mismo lote o ' +
+    'número de serie. Búscala en las líneas y cuéntala ahí.',
+  'recuento-con-lineas-sin-contar':
+    'Quedan líneas sin contar, y una línea sin contar no es un cero. Cuéntalas, o quita las que ' +
+    'no vayas a contar: su existencia quedará como está.',
+  'recuento-contado-no-valido':
+    'Lo contado va en la unidad base del artículo: no es negativo, lleva seis decimales como ' +
+    'mucho y, en un número de serie, es 0 o 1. Corrige la cifra.',
+  'recuento-coste-no-valido':
+    'El coste de una unidad no puede ser negativo ni pasar de catorce cifras enteras. ' +
+    'Corrígelo, o déjalo vacío si no lo sabes.',
+  'recuento-en-ejercicio-cerrado':
+    'Hoy cae en un ejercicio cerrado, y lo que el recuento escribe lleva la fecha de hoy: su ' +
+    'ajuste al confirmarlo y el inverso al anularlo. Ese periodo ya es definitivo y no admite ' +
+    'documentos nuevos. Pide que se reabra el ejercicio.',
+  'recuento-linea-no-encontrada':
+    'Esa línea ya no está en el recuento: alguien la ha quitado antes. Vuelve a la ficha y actualiza.',
+  'recuento-lote-no-valido':
+    'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
+    'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote.',
+  'recuento-motivo-no-valido':
+    'Escribe el motivo, en 300 caracteres o menos. Es lo único que quedará para entender por ' +
+    'qué se contó, se anuló o se descartó.',
+  'recuento-no-encontrado': 'Ese recuento ya no existe. Vuelve al listado y actualiza.',
+  'recuento-no-esta-confirmado':
+    'Ese recuento no está confirmado, y solo se anula uno confirmado: uno en curso no ha movido ' +
+    'nada y se descarta, y uno anulado o descartado ya está cerrado. Actualiza la pantalla para ' +
+    'ver en qué estado está.',
+  'recuento-no-esta-en-curso':
+    'Ese recuento ya no está en curso: se confirmó, se anuló o se descartó, y lo contado ya no ' +
+    'cambia. Actualiza la pantalla para ver en qué estado está.',
+  'recuento-numero-de-serie-no-valido':
+    'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
+    'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
+    'número de serie.',
+  'recuento-serie-cerrada':
+    'Una de las dos series está cerrada: la del recuento o la del ajuste. Elige otra.',
+  'recuento-serie-de-otro-documento':
+    'Una de las dos series numera otro documento: la del recuento tiene que ser de recuentos, y ' +
+    'la del ajuste, de ajustes. Elige la que toca en cada casilla.',
+  'recuento-serie-de-un-ejercicio-terminado':
+    'Una de las dos series es de un ejercicio que ya terminó, y el recuento se numera con la ' +
+    'fecha en que se confirme. Elige una serie del ejercicio en curso.',
+  'recuento-serie-no-encontrada':
+    'Una de las dos series no existe: la del recuento o la del ajuste. Elige una del maestro de series.',
+  'recuento-serie-repetida':
+    'Ese número de serie ya está en el recuento, en otra ubicación, y cada pieza se cuenta una ' +
+    'sola vez. Cuéntala en la línea que ya la lleva, o quita esa línea antes.',
+  'recuento-sin-ejercicio':
+    'Hoy no cae en ningún ejercicio, y lo que el recuento escribe lleva la fecha de hoy: su ' +
+    'ajuste al confirmarlo y el inverso al anularlo. Abre el ejercicio que falta y vuelve a ' +
+    'intentarlo.',
+  'recuento-sube-con-transito':
+    'Hay líneas contadas por encima de lo que dice el sistema en huecos con mercancía en ' +
+    'tránsito hacia ellos: si ya ha llegado y no se ha recibido, se sumaría dos veces. Recibe ' +
+    'las transferencias y vuelve a confirmar.',
+  'recuento-teorico-cambiado':
+    'El almacén ha cambiado desde que abriste la ficha: alguien ha movido mercancía de las ' +
+    'líneas marcadas. Revísalas, vuelve a contarlas si hace falta y confirma otra vez.',
+  'recuento-trazabilidad-no-casa':
+    'Esa clave no casa con la trazabilidad del artículo: le falta el lote o el número de serie ' +
+    'que pide la ficha, o lleva uno que la ficha no pide. Corrige la clave.',
+  'recuento-ubicacion-bloqueada':
+    'Esa ubicación está bloqueada: lo que ya hay apuntado a ella se sigue leyendo, pero no se ' +
+    'añade nada nuevo en ese hueco. Elige otra ubicación.',
+  'recuento-ubicacion-no-encontrada':
+    'Esa ubicación no existe en el almacén del recuento. Elige una de las suyas.',
+  'recuento-ya-hay-uno-en-curso':
+    'Ese almacén ya se está contando. Confirma o descarta el recuento en curso antes de abrir otro.',
+  // Las veintiocho de la reserva (ítem 2.13). Ninguna pantalla las enseña todavía: las leerá
+  // quien reserve desde un pedido en la fase 4. Y aun así llevan texto desde hoy, porque un
+  // `type` que la API emite sin su frase es rojo el día que se escribe (ADR-0030). Las del
+  // libro son las de la transferencia, con la salida del albarán en lugar del viaje.
+  'reserva-almacen-bloqueado':
+    'Ese almacén está bloqueado: sus existencias se siguen leyendo, pero no admite una reserva ' +
+    'nueva. Elige otro almacén o pide que lo desbloqueen.',
+  'reserva-almacen-no-encontrado': 'Ese almacén no existe. Elige uno del maestro de almacenes.',
+  'reserva-articulo-no-encontrado': 'Ese artículo no existe. Elige uno del maestro de artículos.',
+  'reserva-articulo-no-se-almacena':
+    'Ese artículo es un servicio: no tiene existencias que apartar. Quita esa línea o cambia el ' +
+    'artículo.',
+  'reserva-caducada':
+    'Esa reserva caducó, y lo que apartaba ha vuelto al disponible: ya no se consume ni se ' +
+    'libera. Revisa el documento que la pidió.',
+  'reserva-caducidad-no-valida':
+    'La caducidad tiene que ser posterior a ahora: una reserva que caduca al nacer no aparta ' +
+    'nada. Pon una fecha posterior, o déjala sin caducidad.',
+  'reserva-cantidad-no-valida':
+    'La cantidad va en la unidad base del artículo: positiva y con seis decimales como mucho. ' +
+    'Corrige la cifra.',
+  'reserva-con-fecha-futura':
+    'Esa fecha es posterior a hoy: el libro solo recoge lo que ya ha pasado, y la mercancía sale ' +
+    'el día en que sale. Hazlo ese día o corrige la fecha.',
+  'reserva-consumo-por-encima-de-lo-pendiente':
+    'Las líneas sacan más de lo que le queda a la reserva, y lo que pasa de ahí no está ' +
+    'apartado para este documento. Saca como mucho lo pendiente.',
+  'reserva-consumo-sin-stock':
+    'Alguna línea saca de un hueco más de lo que hay en él con ese lote o ese número de serie. ' +
+    'Elige otro hueco u otro lote, o saca menos.',
+  'reserva-documento-no-valido':
+    'Lo que consume una reserva es un albarán, y tiene que decir cuál. Indica el albarán.',
+  'reserva-documento-ya-la-consumio':
+    'Ese albarán ya consumió esta reserva, y un albarán la consume una sola vez. Si queda algo ' +
+    'pendiente, sácalo con otro albarán.',
+  'reserva-en-ejercicio-cerrado':
+    'Esa fecha cae en un ejercicio cerrado: ese periodo ya es definitivo y no admite ' +
+    'documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
+  'reserva-fecha-anterior-al-ultimo-movimiento':
+    'El artículo ya tiene un movimiento posterior a esa fecha en ese almacén, y una salida no ' +
+    'puede ir por detrás del último movimiento de su artículo. Pon esa fecha o una posterior.',
+  'reserva-lote-no-valido':
+    'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
+    'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote de esa ' +
+    'línea.',
+  'reserva-motivo-no-valido':
+    'Escribe por qué liberas la reserva, en 300 caracteres o menos. Es lo único que quedará ' +
+    'para entender por qué se soltó lo que apartaba.',
+  'reserva-no-encontrada': 'Esa línea no tiene ninguna reserva. Vuelve al documento y actualiza.',
+  'reserva-no-esta-activa':
+    'Esa reserva ya no está activa: se consumió entera o se liberó, y no aparta nada. ' +
+    'Actualiza la pantalla para ver en qué estado está.',
+  'reserva-numero-de-serie-no-valido':
+    'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
+    'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
+    'número de serie de esa línea.',
+  'reserva-origen-con-otra-reserva':
+    'Esa línea ya tiene su reserva, y pides otra cosa: otro artículo, otro almacén, otra ' +
+    'cantidad u otra caducidad. Una línea reserva una sola vez, así que vale la que tiene.',
+  'reserva-origen-no-valido':
+    'La reserva tiene que decir de qué documento y de qué línea sale: sin eso, un reintento no ' +
+    'la reconocería y apartaría dos veces.',
+  'reserva-por-encima-del-disponible':
+    'No hay tanto disponible: lo que queda en ese almacén, quitado lo que ya está reservado, no ' +
+    'llega a lo que pides. Reserva menos, o en otro almacén.',
+  'reserva-serie-no-entera':
+    'Ese artículo va por número de serie, y cada número es una pieza: se reservan piezas ' +
+    'enteras. Pide una cantidad sin decimales en la unidad base del artículo.',
+  'reserva-serie-no-unitaria':
+    'Una línea con número de serie saca exactamente una unidad, porque cada número es una ' +
+    'pieza y no hay dos con el mismo. Pon una línea por pieza, con cantidad 1 en la unidad ' +
+    'base del artículo.',
+  'reserva-serie-repetida':
+    'Dos líneas del albarán nombran el mismo número de serie, y cada pieza sale una sola vez ' +
+    'por documento. Quita una de las dos líneas.',
+  'reserva-sin-ejercicio':
+    'Esa fecha no cae en ningún ejercicio: sin periodo al que imputarlo, la salida no entraría ' +
+    'en ninguna declaración. Abre el ejercicio que falta o corrige la fecha.',
+  'reserva-sin-lineas':
+    'Consumir una reserva necesita al menos una línea: un albarán que no saca nada no sirve ' +
+    'nada de ella.',
+  'reserva-trazabilidad-no-casa':
+    'Alguna línea no casa con la trazabilidad del artículo: le falta el lote o el número de ' +
+    'serie que pide la ficha, o lleva uno que la ficha no pide. Corrige la línea.',
+  'reserva-ubicacion-bloqueada':
+    'Esa ubicación está bloqueada, o lo está su almacén: lo que hay en ella se sigue viendo, ' +
+    'pero no sale nada nuevo de ahí. Saca la mercancía de otra ubicación, o desbloquéala.',
+  'reserva-valoracion-en-otra-divisa':
+    'Las existencias del artículo están valoradas en ese almacén en otra divisa, y sacarlas ' +
+    'pediría un tipo de cambio. La salida no se puede hacer mientras el almacén las tenga ' +
+    'valoradas así.',
+  'rol-no-encontrado': 'Ese rol ya no existe. Vuelve al listado y actualiza.',
+  'serie-cerrada': 'La serie está cerrada y no admite cambios.',
+  'serie-de-otro-documento':
+    'Esa serie numera otra clase de documentos. Abre el ajuste con una serie de ajustes de ' +
+    'inventario.',
+  'serie-duplicada': 'Ya hay una serie con ese código en ese ejercicio.',
+  'serie-no-encontrada': 'Esa serie ya no existe. Vuelve al listado y actualiza.',
+  'serie-no-numera':
+    'Esa serie ya no entrega números: la han cerrado o la han borrado mientras tenías el ' +
+    'borrador abierto. Abre el ajuste con otra serie.',
+  'serie-ya-numerada': 'La serie ya ha numerado documentos, así que eso no se puede cambiar.',
+  'sesion-no-renovable': 'Tu sesión no se ha podido renovar. Vuelve a entrar.',
+  'stock-insuficiente':
+    'No hay bastante stock en alguna ubicación del documento, y no se ha guardado nada. Si ' +
+    'anulas una entrada, sus unidades ya han salido: anula antes esas salidas o registra la ' +
+    'entrada que falta.',
+  // Las doce de la tarifa. La de la divisa retirada dice las DOS mitades del ADR-0023, igual
+  // que la de la unidad: quien la lee tiene delante tarifas que la siguen usando, y una frase
+  // que dijera que no existe le mandaría a buscar un fallo que no hay.
+  'tarifa-divisa-no-encontrada': 'Esa divisa no existe. Elige una del maestro de divisas.',
+  'tarifa-divisa-retirada':
+    'Esa divisa está retirada: las tarifas que ya la usan se siguen expresando en ella, pero ' +
+    'no se puede abrir una nueva. Elige otra.',
+  'tarifa-linea-articulo-o-categoria':
+    'Una línea de tarifa le pone precio a un artículo o a una categoría, y hay que elegir uno ' +
+    'de los dos: ni los dos, ni ninguno.',
+  'tarifa-linea-no-encontrada': 'Esa línea de tarifa ya no existe. Vuelve al listado y actualiza.',
+  // Los dos negativos dichos enteros. El segundo es el que se olvida, y es el que dejaría
+  // entrar una línea que devuelve un importe que nadie escribió.
+  'tarifa-linea-precio-o-descuento':
+    'Una línea de tarifa lleva un precio o un descuento, y hay que poner uno de los dos: ni ' +
+    'los dos, ni ninguno.',
+  'tarifa-linea-primer-tramo-sin-cero':
+    'El primer tramo de cantidad tiene que empezar en cero. Empezando más arriba, las ' +
+    'cantidades por debajo se quedarían sin precio.',
+  'tarifa-linea-tramo-duplicado':
+    'Ya hay un tramo que empieza en esa cantidad para ese artículo o esa categoría.',
+  'tarifa-no-encontrada': 'Esa tarifa ya no existe. Vuelve al listado y actualiza.',
+  // «No hay tarifa» y «la hay pero no cubre ese día» no se arreglan igual, y por eso son dos
+  // frases distintas: la primera se corrige escribiendo bien el código, la segunda abriendo el
+  // tramo que falta.
+  'tarifa-no-vigente':
+    'Esa tarifa existe, pero ninguno de sus tramos cubre la fecha pedida. Abre el tramo que ' +
+    'falta o pregunta por otra fecha.',
+  'tarifa-sin-linea-aplicable':
+    'Esa tarifa no dice nada de ese artículo para esa cantidad, ni suya ni de ninguna de sus ' +
+    'categorías. Añade la línea que falta: aquí no hay precio que aplicar.',
+  'tarifa-vigencia-al-reves': 'La vigencia acaba antes de empezar. Revisa las dos fechas.',
+  'tarifa-vigencias-solapadas':
+    'Ya hay otro tramo de esa tarifa que cubre alguno de esos días. Los periodos de una ' +
+    'tarifa no se pueden solapar.',
+  'tercero-duplicado': 'Esta empresa ya tiene un tercero con ese identificador fiscal.',
+  'tercero-no-encontrado': 'Ese tercero ya no existe. Vuelve al listado y actualiza.',
+  'tercero-tarifa-no-encontrada': 'Esa tarifa no existe. Elige una del maestro de tarifas.',
+  // La retirada del ADR-0023 otra vez, con sujeto nuevo: la tarifa caducada NO desaparece
+  // —sigue diciendo a qué precio se vendió lo ya emitido—, lo que no se puede es empezar a
+  // aplicarla hoy. Un «esa tarifa no existe» mandaría a buscar un fallo que no hay.
+  'tercero-tarifa-no-vigente':
+    'Esa tarifa ya no está vigente: sigue valiendo para lo que se emitió mientras regía, ' +
+    'pero no se puede asignar hoy. Elige una que esté vigente.',
+  'tipo-cambio-duplicado': 'Ya hay un tipo de cambio para esa divisa en esa fecha.',
+  'tipo-cambio-no-encontrado': 'Ese tipo de cambio ya no existe.',
+  // Las veintinueve de la transferencia (ítem 2.11). Las de los maestros son las del ajuste
+  // con sus dos mitades; las propias dicen qué punta del viaje falla, porque quien envía y
+  // quien recibe suelen ser personas distintas, en almacenes distintos.
+  'transferencia-almacen-bloqueado':
+    'Ese almacén está bloqueado: sus movimientos anteriores se siguen leyendo y valorando, ' +
+    'pero no admite una transferencia nueva, ni de salida ni de llegada. Elige otro almacén o ' +
+    'pide que lo desbloqueen.',
+  'transferencia-almacen-no-encontrado':
+    'Ese almacén no existe. Elige uno del maestro de almacenes.',
+  'transferencia-articulo-no-encontrado':
+    'Ese artículo no existe. Elige uno del maestro de artículos.',
+  'transferencia-articulo-no-se-almacena':
+    'Ese artículo es un servicio: no tiene existencias que llevar de un almacén a otro. Quita ' +
+    'esa línea o cambia el artículo.',
+  'transferencia-cantidad-no-valida':
+    'Alguna línea no lleva nada del origen al destino: la cantidad y el factor a unidad base ' +
+    'tienen que ser positivos, y su producto no puede redondear a cero. Corrige la cantidad de ' +
+    'esa línea.',
+  'transferencia-con-fecha-futura':
+    'Esa fecha es posterior a hoy: el libro solo recoge lo que ya ha pasado, y una ' +
+    'transferencia se envía y se recibe el día en que ocurre. Hazlo ese día o corrige la fecha.',
+  'transferencia-en-ejercicio-cerrado':
+    'Esa fecha cae en un ejercicio cerrado: ese periodo ya es definitivo y no admite ' +
+    'documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
+  'transferencia-fecha-anterior-al-ultimo-movimiento':
+    'Algún artículo del documento ya tiene un movimiento posterior a esa fecha en uno de los ' +
+    'dos almacenes, y un documento no puede ir por detrás del último movimiento de su ' +
+    'artículo. Pon esa fecha o una posterior.',
+  'transferencia-lote-no-valido':
+    'Ese lote no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin espacios, ' +
+    'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote de esa ' +
+    'línea.',
+  'transferencia-mismo-almacen':
+    'El origen y el destino son el mismo almacén, y eso no es una transferencia. Cambiar la ' +
+    'mercancía de hueco dentro de un almacén es una reubicación, que es otro documento.',
+  'transferencia-motivo-no-valido':
+    'Escribe por qué anulas la transferencia, en 300 caracteres o menos. Es lo único que ' +
+    'quedará para entender la corrección dentro de dos años.',
+  'transferencia-no-encontrada': 'Esa transferencia ya no existe. Vuelve al listado y actualiza.',
+  'transferencia-no-esta-en-borrador':
+    'Esa transferencia ya no está en borrador: una enviada no se vuelve a enviar, porque lo ' +
+    'que salió del origen ya está escrito en el libro. Actualiza la pantalla.',
+  'transferencia-no-esta-enviada':
+    'Esa transferencia no está en tránsito: un borrador todavía no ha salido del origen, y una ' +
+    'recibida o anulada ya no vuela. Actualiza la pantalla para ver en qué estado está.',
+  'transferencia-no-se-anula':
+    'Esa transferencia no se puede anular: un borrador no ha movido el libro, una anulada ya ' +
+    'tiene su inverso, y un inverso no se deshace con otro. Actualiza la pantalla para ver en ' +
+    'qué estado está.',
+  'transferencia-numero-de-serie-no-valido':
+    'Ese número de serie no es un código que quepa en la etiqueta: de 1 a 20 caracteres, sin ' +
+    'espacios, con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el ' +
+    'número de serie de esa línea.',
+  'transferencia-por-encima-del-disponible':
+    'Parte de ese stock está reservado para otros pedidos, y una transferencia no se lo lleva: ' +
+    'lo que queda en el almacén de origen, quitado lo reservado, no llega a lo que envías. ' +
+    'Envía menos, o libera antes la reserva.',
+  'transferencia-recepcion-antes-del-envio':
+    'La fecha de recepción es anterior a la del envío, y nada llega antes de salir. Pon la ' +
+    'fecha del envío o una posterior.',
+  'transferencia-serie-cerrada':
+    'Esa serie está cerrada: sigue resolviendo los documentos que ya numeró, pero no entrega ' +
+    'ni un número más. Elige otra serie.',
+  'transferencia-serie-no-encontrada': 'Esa serie no existe. Elige una del maestro de series.',
+  'transferencia-serie-no-unitaria':
+    'Una línea con número de serie mueve exactamente una unidad, porque cada número es una ' +
+    'pieza y no hay dos con el mismo. Pon una línea por pieza, con cantidad 1 en la unidad ' +
+    'base del artículo.',
+  'transferencia-serie-repetida':
+    'Dos líneas de la transferencia nombran el mismo número de serie, y cada pieza viaja una ' +
+    'sola vez por documento. Quita una de las dos líneas.',
+  'transferencia-sin-ejercicio':
+    'Esa fecha no cae en ningún ejercicio: sin periodo al que imputarlo, el documento no ' +
+    'entraría en ninguna declaración. Abre el ejercicio que falta o corrige la fecha.',
+  'transferencia-sin-lineas':
+    'Una transferencia necesita al menos una línea: un documento que no mueve nada no lleva ' +
+    'nada de un almacén a otro.',
+  'transferencia-trazabilidad-no-casa':
+    'Alguna línea no casa con la trazabilidad de su artículo: le falta el lote o el número de ' +
+    'serie que pide la ficha, o lleva uno que la ficha no pide. Corrige la línea, o la ' +
+    'trazabilidad del artículo si todavía no se ha movido.',
+  'transferencia-ubicacion-bloqueada':
+    'Esa ubicación está bloqueada: lo que ya hay apuntado a ella se sigue leyendo, pero no se ' +
+    'mueve nada nuevo desde ese hueco ni hacia él. Elige otra ubicación.',
+  'transferencia-ubicacion-no-encontrada':
+    'Esa ubicación no existe en ese almacén. Elige una de las suyas.',
+  'transferencia-unidad-no-encontrada':
+    'Esa unidad de medida no existe. Elige una del maestro de unidades.',
+  'transferencia-unidad-retirada':
+    'Esa unidad está retirada: los movimientos que ya se escribieron en ella se siguen ' +
+    'leyendo, pero no se escribe uno nuevo con ella. Elige otra unidad.',
+  'transferencia-valoracion-en-otra-divisa':
+    'Las existencias de algún artículo del documento están valoradas en otra divisa en uno de ' +
+    'los dos almacenes, y juntarlas pediría un tipo de cambio. La transferencia no se puede ' +
+    'hacer mientras ese almacén las tenga valoradas así.',
+  'ubicacion-duplicada': 'Ya hay una ubicación con ese código en ese almacén.',
+  'ubicacion-no-encontrada': 'Esa ubicación ya no existe. Vuelve al listado y actualiza.',
+  'unidad-medida-duplicada': 'Ya hay una unidad de medida con ese código.',
+  'unidad-medida-no-encontrada': 'Esa unidad de medida ya no existe.',
+  'usuario-no-encontrado': 'Esa persona ya no existe. Vuelve al listado y actualiza.',
+  'version-obsoleta':
+    'Alguien ha guardado antes que tú. Vuelve a abrir el formulario para no pisar sus cambios.',
+};
+
+export type TiposDeError = typeof tiposDeError;

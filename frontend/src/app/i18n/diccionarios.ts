@@ -1,5 +1,6 @@
 import type { Diccionario } from './es.ts';
 import type { Idioma } from './idioma.ts';
+import type { TiposDeError } from './tiposDeError.es.ts';
 
 /**
  * De dónde sale el diccionario de cada idioma, y por qué vive en un fichero aparte.
@@ -45,4 +46,26 @@ const CARGADORES: Record<Idioma, () => Promise<Diccionario>> = {
  */
 export function cargarDiccionario(idioma: Idioma): Promise<Diccionario> {
   return CARGADORES[idioma]();
+}
+
+/**
+ * Los textos de los `type` de error, en su propio fragmento por idioma (ADR-0063 §9), y con las
+ * mismas dos reglas que el diccionario: el tipo en su línea con `import type`, y un especificador
+ * literal por idioma.
+ *
+ * Este módulo es el ÚNICO de la aplicación que los importa por su valor, y no por gusto: un import
+ * estático desde otro sitio ata el fragmento a ese sitio. Si es algo del arranque, el fragmento
+ * desaparece dentro del de entrada; si es una página, se descarga con ella, en el idioma que sea.
+ * Lo segundo ya pasaba con el diccionario castellano, que `useTextoDeFallo` importaba para su
+ * guarda y arrastraba a once páginas. El *linter* lo prohíbe ahora en todo `src/` salvo aquí y en
+ * los tests, y el presupuesto exige que el fragmento de cada idioma exista.
+ */
+const CARGADORES_DE_TIPOS: Record<Idioma, () => Promise<TiposDeError>> = {
+  es: async () => (await import('./tiposDeError.es.ts')).tiposDeError,
+  en: async () => (await import('./tiposDeError.en.ts')).tiposDeError,
+};
+
+/** Trae los textos de los `type` de un idioma, con la misma caché que el diccionario. */
+export function cargarTiposDeError(idioma: Idioma): Promise<TiposDeError> {
+  return CARGADORES_DE_TIPOS[idioma]();
 }

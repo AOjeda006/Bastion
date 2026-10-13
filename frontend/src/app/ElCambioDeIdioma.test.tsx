@@ -9,6 +9,9 @@ import { describe, expect, it } from 'vitest';
 import { en } from './i18n/en.ts';
 import { es } from './i18n/es.ts';
 import { IDIOMAS } from './i18n/idioma.ts';
+import { conLosTipos } from './i18n/index.ts';
+import { tiposDeError as tiposEn } from './i18n/tiposDeError.en.ts';
+import { tiposDeError as tiposEs } from './i18n/tiposDeError.es.ts';
 import { ALFA } from '@/pruebas/datos.ts';
 import { abrirSesionSimulada } from '@/pruebas/servidor.ts';
 import { montarAplicacion } from '@/pruebas/montar.tsx';
@@ -122,8 +125,11 @@ describe('El cambio de idioma', () => {
     // al compilador: afirma lo que el compilador NO puede: que el conjunto no esté vacío. Dos
     // diccionarios vacíos cumplen el tipo, casan clave a clave, y dejarían verdes todos los demás
     // casos de este fichero sin haber comprobado una sola traducción.
-    const enCastellano = clavesEnProfundidad(es).sort();
-    const enIngles = clavesEnProfundidad(en).sort();
+    //
+    // Con los textos de los `type` dentro: viajan aparte desde el 2.14 (ADR-0063 §9), pero se
+    // leen juntos, así que se comparan juntos.
+    const enCastellano = clavesEnProfundidad(conLosTipos(es, tiposEs)).sort();
+    const enIngles = clavesEnProfundidad(conLosTipos(en, tiposEn)).sort();
 
     expect(enCastellano.length).toBeGreaterThan(40);
     expect(enIngles).toEqual(enCastellano);
@@ -146,6 +152,10 @@ describe('El cambio de idioma', () => {
     // La fuente es el artefacto versionado, el mismo fichero que la CI regenera y compara contra
     // el código fuente (`scripts/generar-errores.sh`). Aquí NO se vuelve a barrer el backend: eso
     // sería repetir el guion y las dos copias se separarían. Se lee lo que el guion dejó.
+    //
+    // Y del otro lado, los módulos de los textos de los `type`, que desde el 2.14 no viven en el
+    // diccionario sino en uno propio por idioma (ADR-0063 §9). Son los mismos objetos que la
+    // aplicación descarga después de pintar, no una copia.
     const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
     const artefacto = resolve(raiz, 'docs/api/errores.json');
 
@@ -164,7 +174,7 @@ describe('El cambio de idioma', () => {
     ).toBeGreaterThan(20);
 
     const queEmiteLaApi = catalogo.tipos.map((tipo) => tipo.codigo).sort();
-    const queTienenTexto = Object.keys(es.errores.tipos).sort();
+    const queTienenTexto = Object.keys(tiposEs).sort();
 
     expect(queTienenTexto).toEqual(queEmiteLaApi);
 
@@ -173,20 +183,23 @@ describe('El cambio de idioma', () => {
     // no es que los idiomas casen entre sí, sino que CADA UNO cubra el contrato. El día que
     // aquella comparación se relaje —o que entre un tercer idioma— esta seguiría diciendo la
     // verdad.
-    expect(Object.keys(en.errores.tipos).sort()).toEqual(queEmiteLaApi);
+    expect(Object.keys(tiposEn).sort()).toEqual(queEmiteLaApi);
   });
 
   it('ninguna traducción se ha quedado sin traducir', () => {
     // Copiar el castellano en `en.ts` cumple el tipo, cumple la comparación de claves de arriba, y
     // deja la mitad de la aplicación en castellano para quien lee inglés. Esto lo caza: se exige
     // que la inmensa mayoría de los textos SEAN distintos. No todos —«Bastion», «NIF» o «{{titulo}}
-    //  · Bastion» se escriben igual en los dos—, y por eso el umbral es alto y no total.
-    const claves = clavesEnProfundidad(es);
+    //  · Bastion» se escriben igual en los dos—, y por eso el umbral es alto y no total. Los textos
+    // de los `type` entran en la cuenta, como cuando vivían en el diccionario.
+    const castellano = conLosTipos(es, tiposEs);
+    const ingles = conLosTipos(en, tiposEn);
+    const claves = clavesEnProfundidad(castellano);
     const iguales = claves.filter((clave) => {
       const leer = (d: object): unknown =>
         clave.split('.').reduce<unknown>((valor, parte) => (valor as never)[parte], d);
 
-      return leer(es) === leer(en);
+      return leer(castellano) === leer(ingles);
     });
 
     expect(

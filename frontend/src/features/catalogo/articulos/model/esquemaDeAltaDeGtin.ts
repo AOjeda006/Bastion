@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 import { NIVELES_DE_GTIN } from './codigoDeBarras.ts';
-import type { Diccionario } from '@/app/i18n/es.ts';
+import type { TiposDeError } from '@/app/i18n/tiposDeError.es.ts';
 
-type CodigoConTexto = keyof Diccionario['errores']['tipos'];
+type CodigoConTexto = keyof TiposDeError;
 
 /**
  * Los rechazos del GTIN que el formulario reconoce antes de ir al servidor: los mismos `type` que

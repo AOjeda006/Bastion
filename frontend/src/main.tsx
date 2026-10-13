@@ -2,7 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './app/App.tsx';
-import { crearI18nDelArranque } from './app/i18n/index.ts';
+import { completarConLosTipos, crearI18nDelArranque } from './app/i18n/index.ts';
+import { idiomaInicial } from './app/i18n/idioma.ts';
 import './index.css';
 
 const contenedor = document.getElementById('root');
@@ -17,9 +18,16 @@ if (!contenedor) {
  * descargarse. Lo que cuesta es esta espera, que es la de un fichero pequeño desde el mismo origen.
  * Pintar antes no era una opción: sin diccionario, la primera pantalla saldría con las claves en
  * crudo y se traduciría un instante después, que se ve peor que tardar ese instante en aparecer.
+ *
+ * Los textos de los `type` de error, en cambio, NO se esperan (ADR-0063 §9): se piden después de
+ * pintar. Hasta que llegan, un fallo se dice con el genérico por código de estado, y en cuanto
+ * llegan se repinta con el suyo. Si no llegan —la red se cae justo ahí—, se queda el genérico, que
+ * es exactamente lo que pasaba antes con un `type` sin texto; no hay nada más que hacer con el
+ * rechazo, y dejarlo suelto solo ensuciaría la consola con algo que la persona ya ve.
  */
 async function arrancar(raiz: HTMLElement): Promise<void> {
-  const i18n = await crearI18nDelArranque();
+  const idioma = idiomaInicial();
+  const i18n = await crearI18nDelArranque(idioma);
 
   // StrictMode siempre activo en desarrollo (`stacks/react/convenciones.md`). Que un efecto
   // se ejecute dos veces no es un fallo del modo estricto: es tu efecto sin función de limpieza.
@@ -28,6 +36,8 @@ async function arrancar(raiz: HTMLElement): Promise<void> {
       <App i18n={i18n} />
     </StrictMode>,
   );
+
+  completarConLosTipos(i18n, idioma).catch(() => undefined);
 }
 
 void arrancar(contenedor);
