@@ -146,11 +146,30 @@ export function tiposCargados(instancia: InstanciaDeI18n, idioma = instancia.lan
 }
 
 /**
- * Los mete en el diccionario de su idioma. Con `deep` y no a lo ancho: un `addResourceBundle` sin
- * mezcla profunda sustituye `errores` entero, y se llevaría los textos genéricos que ya estaban.
+ * Los mete en el diccionario de su idioma, con `errores` rehecho entero: los genéricos que ya
+ * estaban, más los textos. Ni a lo ancho a secas ni con mezcla profunda, y las dos cosas se
+ * midieron:
+ *
+ * - a lo ancho, `{ errores: { tipos } }` sustituye `errores` entero y se lleva los genéricos, que
+ *   son justo los que se dicen mientras los textos no han llegado;
+ * - la mezcla profunda escribe DENTRO del objeto que ya está, y el que se registró al crear la
+ *   instancia es el propio módulo `es.ts`: i18next guarda por referencia lo que recibe al iniciar.
+ *   Los textos acababan en el diccionario importado, y la siguiente instancia que lo usaba los
+ *   traía sin haberlos pedido. En los tests, eso dejaba verde un cambio de idioma que no los
+ *   descargaba (la mutación 456 del 2.14).
+ *
+ * `addResourceBundle` copia lo que recibe, así que aquí no se toca ni el módulo ni lo que se pasa.
  */
 function anadirLosTipos(instancia: InstanciaDeI18n, idioma: Idioma, tipos: TiposDeError): void {
-  instancia.addResourceBundle(idioma, ESPACIO, { errores: { tipos } }, true, true);
+  const actual = instancia.getResourceBundle(idioma, ESPACIO) as Diccionario;
+
+  instancia.addResourceBundle(
+    idioma,
+    ESPACIO,
+    { errores: { ...actual.errores, tipos } },
+    false,
+    true,
+  );
 }
 
 /**
@@ -193,7 +212,7 @@ export async function cambiarIdioma(instancia: InstanciaDeI18n, idioma: Idioma):
   ]);
 
   if (diccionario !== null) {
-    instancia.addResourceBundle(idioma, ESPACIO, diccionario, true, true);
+    instancia.addResourceBundle(idioma, ESPACIO, diccionario);
   }
 
   if (tipos !== null) {

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type * as Diccionarios from './i18n/diccionarios.ts';
 import { en } from './i18n/en.ts';
+import { es } from './i18n/es.ts';
 import {
   cambiarIdioma,
   completarConLosTipos,
@@ -98,6 +99,10 @@ describe('El arranque con un idioma', () => {
     expect(i18n.t('errores.servidor')).toBe(
       'El servidor no ha podido responder. Inténtalo de nuevo.',
     );
+    // Y van a la instancia, no al módulo: i18next guarda por referencia el diccionario con el que
+    // se crea, y una mezcla que escribiera dentro dejaría los textos en `es.ts` para la siguiente
+    // instancia que lo usara, que los tendría sin haberlos pedido.
+    expect(Object.keys(es.errores)).not.toContain('tipos');
 
     // Y un idioma sin diccionario no recibe los suyos sueltos: quedaría un diccionario con solo
     // `errores.tipos` que `hasResourceBundle` daría por cargado, y el cambio a ese idioma ya no lo
