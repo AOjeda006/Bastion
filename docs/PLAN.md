@@ -7051,6 +7051,161 @@ ediciones de `CLAUDE.md`, al principio o al final de la sesión, y la unidad cer
 pausa larga. **El informe cuenta todos los commits desde `0638419`, con sus runs**, y cada cifra va
 con la orden que la mide.
 
+### La puerta del 2.14 — lo que se pregunta, y lo que el ADR-0063 decide sin preguntar
+
+Escrita el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`. **Espera las respuestas**: el
+ADR-0063 y el código no empiezan hasta tenerlas.
+
+#### Lo que ya está escrito
+
+- **El §15 del plan maestro** pone «consulta de stock a fecha pasada» en el criterio de la fase.
+- **La R3** dice que la proyección es «instantánea periódica + saldo incremental», y que eso es lo
+  que da «trazabilidad, valoración e inventario a fecha pasada». **El §7.4** pone en la existencia
+  la cantidad física, la reservada, la disponible, la que está en tránsito y el coste medio.
+- **El ADR-0044 §4**: el saldo es la suma del libro con fecha menor o igual que hoy, y «hoy» es el
+  día UTC. **El §5**: el cerrojo por empresa, que este ítem pone.
+- **El ADR-0046 §5**: cada fila del libro lleva su `valor`, redondeado una sola vez, y «el valor de
+  una fecha pasada es la suma de esta columna hasta esa fecha, sin reproducir nada».
+- **El ADR-0053 §1**: el tránsito no está en el libro, y el de una fecha pasada «sale de los
+  documentos y de sus dos fechas, y es del 2.14». **El §5**: el inverso nace `Recibida` con las dos
+  fechas de hoy.
+
+#### Las cifras de partida, con la orden que las mide
+
+- **La instantánea solo guarda `fisico`**, por clave de existencia —artículo, almacén, ubicación,
+  lote y serie— y mes (`InstantaneaMensual.cs`). No guarda valor.
+- **El arranque es de 452 406 B, 442/450 KiB**: `index.html` 450 B, `index-*.js` 387 319 B, la hoja
+  de estilo 15 671 B y el diccionario mayor, el `es`, 48 966 B. Quedan **8 394 B**. Medido con
+  `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` sobre la construcción de
+  `fdaf42f`, que es el último commit que toca el frontal.
+- **Los textos de `errores.tipos` son 33 454 B de los 48 966 del fragmento `es`**, el 68,3 %, y
+  33 327 de los 48 151 del `en`. Son **234** tipos, a **143 B** de media en el fragmento construido.
+  En la fuente, 41 471 B de los 66 649 de `es.ts`. Medido con `python medir-tipos.py
+  frontend/src/app/i18n/es.ts frontend/dist/assets/es-B8hyXF4G.js`, que recorta el bloque `tipos`
+  por sus llaves en los dos ficheros.
+- **118 de los 234 tipos son de Inventario**: 30 de la reserva, 30 de la transferencia, 29 del
+  ajuste, 28 del recuento y `stock-insuficiente`. Los textos de pantalla son poco al lado: 4 652 B
+  el catálogo, 3 858 el inventario y 3 475 los terceros. Medido con `python secciones.py
+  frontend/dist/assets/es-B8hyXF4G.js docs/api/errores.json`.
+- **Lo que añadirá el 2.14 al arranque, estimado: unos 2,5 KB.** Un tipo, `saldo-con-fecha-futura`,
+  a 143 B; los textos de una pantalla, de 1 a 1,5 KB, si se parecen a los de las dos del recuento;
+  y la ruta y la entrada de la navegación en `index-*.js`, unos 0,5 KB. El arranque quedaría hacia
+  **444/450**: cabe, y deja sitio para unos cuarenta tipos más. La cifra de verdad se mide al cerrar
+  el ítem.
+
+#### Lo que se pregunta, todo junto
+
+1. **Qué es «el saldo».** Recomendado, como propone el usuario: **cantidad y valor por artículo y
+   almacén.** Con tres consecuencias, que no cambian la respuesta pero se dicen:
+   - la instantánea gana una columna `valor`, en la misma fila y por la misma sentencia que
+     `fisico`, porque el valor de una fecha pasada es la suma del libro (ADR-0046 §5);
+   - **ese valor solo significa algo sumado por artículo y almacén.** Por ubicación no: si entran 10
+     unidades a 1 € en la U1 y 10 a 3 € en la U2, y salen 10 de la U1 al precio medio, la U1 queda
+     con cero unidades y −10 €. La consulta nunca lo enseña por debajo de esa clave;
+   - una migración. En producción ninguna empresa tiene corte, así que no hay filas que rellenar; si
+     las hubiera, la migración las rellena desde el libro.
+
+   Las otras salidas: **solo la cantidad**, sin migración, y el valor cuando lo pida Contabilidad; o
+   **la cantidad por clave de existencia**, con su ubicación, su lote y su serie, y el valor solo
+   por artículo y almacén, que es una pantalla con desglose.
+2. **El tránsito a esa fecha.** Recomendado: **dicho aparte**, cantidad y valor en vuelo hacia cada
+   almacén, sin sumarlo al saldo. Sale de las transferencias: las líneas de una enviada en esa
+   fecha o antes, que no se había recibido ni anulado todavía. La recepción la da su fecha, y la
+   anulación, la de su inverso, que nace `Recibida` con la fecha de hoy. La otra salida: **fuera
+   del 2.14**, con su disparador, y la pantalla dice que no lo cuenta.
+3. **El presupuesto.** El límite no se sube en ninguna de las tres.
+   - **(A), recomendada: los tipos salen del arranque**, a un fragmento propio por idioma. Se pide
+     después del primer pintado, y lo espera quien traduce un `type`. El arranque baja unos 33 KB,
+     hacia **409/450**, y un tipo nuevo deja de contar en él. Va en su propio commit, antes de la
+     pantalla, con el barrido de `ElCambioDeIdioma` comparando contra el fragmento nuevo.
+   - **(B) Por funcionalidad**: los tipos de cada módulo viajan con sus rutas, y los transversales
+     —la idempotencia, la versión, la sesión— se quedan en el arranque. Inventario se llevaría unos
+     17 KB. Son más piezas: un tipo que sale en varias pantallas, como `stock-insuficiente`, y un
+     barrido que tiene que comparar por trozos.
+   - **(C) Nada ahora**: el 2.14 cabe, y se decide con el primero que no quepa.
+4. **Una corrección del encargo, que se confirma.** El encargo espera que «el exclusivo al anotar
+   pone rojo el de las dos empresas», y **por construcción no pasa**: con la clave por empresa, el
+   exclusivo de la B no choca con el de la A, así que la B sigue sin esperar y el caso sale verde.
+   Lo que lo pone rojo es **una clave sin la empresa**, que es lo que hacía el `LOCK TABLE`. Y el
+   exclusivo al anotar lo ve otro caso, que el criterio no nombra pero el ADR-0044 §5 sí promete:
+   **dos confirmaciones de la misma empresa no se esperan.** Recomendado: tres casos, cada uno con
+   su mutación:
+   - dos empresas, la B no espera al recálculo de la A — rojo con la clave sin empresa;
+   - la misma empresa, la confirmación espera al recálculo — rojo con el compartido al recalcular;
+   - la misma empresa, dos confirmaciones de series y claves distintas no se esperan — rojo con el
+     exclusivo al anotar.
+
+#### Lo que el ADR-0063 decide sin preguntar
+
+Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
+
+1. **La lectura.** El saldo a la fecha D es la instantánea del mes M más el libro desde el primer
+   día del mes siguiente hasta D. M es el mes anterior al de D, o el corte si el corte es anterior.
+   Sin corte, es el libro hasta D. Una sola sentencia, sobre tablas del propio esquema, que poda las
+   particiones del libro por su fecha. Las instantáneas son densas desde el primer mes de cada
+   clave, así que una clave sin fila en el mes M no se había movido todavía, y suma cero.
+2. **Las fechas.**
+   - D posterior a hoy, en UTC: `saldo-con-fecha-futura`, de clase `Validacion`, porque es un
+     parámetro de una lectura y no choca con ningún estado.
+   - D anterior al primer movimiento: cero, y no un error. La lista son los pares de artículo y
+     almacén que tienen valoración, y cada uno contesta su saldo a D, que puede ser cero.
+   - Sin D, hoy.
+3. **El trabajo mensual**, el primer proceso periódico de Inventario, con la forma de la purga de
+   recibos:
+   - **un `BackgroundService` que se despierta cada hora**, con `Task.Delay` sobre el
+     `TimeProvider`. El mes que toca es el anterior al de hoy en UTC;
+   - **cada empresa en su propio `try`**. El fallo de una se registra, cuenta en su métrica y no
+     para la vuelta, y la hora siguiente lo reintenta;
+   - **las empresas salen de las tablas del módulo**, las que tienen existencias, y no de
+     Organización: una empresa sin movimientos no necesita corte. Se leen en un ámbito sin
+     inquilino, con un motivo nuevo de la lista cerrada, y `ElFiltroNoSeSaltaPorAhiTests` lo admite
+     en su sitio;
+   - **idempotente, y se pone al día sola.** Con el exclusivo de su empresa ya tomado, el recálculo
+     vuelve a leer el corte y no hace nada si ya llega al mes que toca. Si no llega, rehace las
+     instantáneas desde el libro hasta ese mes, así que los meses saltados salen de una vez;
+   - **con dos instancias**, las dos lo intentan y no importa: la primera que toma el exclusivo
+     avanza, y la segunda encuentra el corte puesto y se va;
+   - **el cuadre va después, solo en la que avanza**. Sus cifras van al registro y a las métricas:
+     cuántas existencias e instantáneas comparó y cuántos descuadres encontró. Un descuadre es un
+     aviso en el registro, con la empresa y las cifras;
+   - **el recálculo y el cuadre reciben la empresa de quien los llama**, porque un trabajo de fondo
+     no tiene inquilino.
+4. **Los cerrojos.**
+   - **Dos `int4`**: el primero, una constante del módulo que nombra las instantáneas de Inventario;
+     el segundo, la empresa. PostgreSQL separa este espacio del de una sola clave `int8`, que es el
+     de la bandeja, así que no chocan. Se contrasta con su documentación al escribirlo.
+   - **La empresa se pliega en C#**, con un `XOR` de las cuatro palabras de 32 bits del `Guid`, y
+     no con `hashtext`, que es interna de PostgreSQL. Así el plegado se prueba en el carril rápido,
+     y una colisión se construye a mano: dos empresas con la misma clave se esperan, pierden
+     paralelismo y no corrección, y un caso lo dice.
+   - **El compartido se toma en un solo sitio**: justo antes de la sentencia que crea y bloquea las
+     filas vivas, que es por donde pasan el libro y el tránsito. En el orden de cerrojos va **entre
+     la fila del documento y las existencias**. Ahí quien anota ya tiene sus valoraciones, y el
+     recálculo no necesita ninguna. De las existencias solo toma el `FOR KEY SHARE` de su clave
+     ajena, que no choca con el `FOR NO KEY UPDATE` de quien anota. Así que esperar no forma ciclo.
+   - **El recálculo toma el exclusivo** en lugar del `LOCK TABLE`. La línea de la bandeja que dice
+     que no hay más cerrojos consultivos se corrige.
+5. **La superficie.** `GET /api/v1/inventario/saldos`, con `?fecha=`, `?almacen=`, `?articulo=`,
+   `?pagina=` y `?tamanio=`, y un permiso nuevo, `inventario.saldo.ver`, para los roles del sistema
+   que ven los recuentos. La respuesta lleva la fecha que contesta. La pantalla es `/saldos`, con la
+   ruta diferida: la fecha arriba, que por omisión es hoy, los dos filtros, y los nombres por el
+   mismo camino que el recuento.
+6. **La propiedad.** Tres clases de paso nuevas en `ElSaldoEsLaSumaDelLibroPorPropiedadTests`:
+   - **el saldo a una fecha al azar**, que puede ser anterior al primer movimiento, de un mes ya
+     cortado, posterior al corte o hoy, contra la suma del modelo hasta esa fecha, en cantidad y
+     valor; y mañana, con su `saldo-con-fecha-futura`;
+   - **el trabajo mensual**, que avanza el corte de su empresa, seguido del cuadre limpio.
+
+   - **la clave nueva antes del corte**, la frontera que el encargo señala: un movimiento fechado en
+     un mes ya cortado que es la primera fila de su clave. Hoy sale al azar y nada lo exige; pasa a
+     ser una clase de paso que la aserción final pide, con su mutación: la serie de meses de la
+     sentencia que mueve la proyección empieza en el corte y no en el mes del movimiento.
+
+   Lo que cueste, con su orden.
+7. **Las notas.** «Nadie avanza el corte» se cierra con el trabajo mensual. «Hoy es el día UTC»
+   sigue abierta para el cierre de la fase. Y la pantalla del saldo contesta también el saldo de
+   hoy, que es parte de la pregunta abierta de la lectura de las existencias; no la cierra.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 13 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -11385,8 +11540,9 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **448**. Su
      medida era la máquina y no el cambio. Por semilla, en la segunda: 36,1, 37,0, 36,4, 34,7, 51,1
      y 37,4 s antes; 35,1, 33,7, 35,1, 34,5, 46,3 y 34,5 después. La siguiente mutación es la
      **448**.
-4. La puerta del 2.14, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0063
-   decide sin preguntar.
+4. ~~La puerta del 2.14, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0063
+   decide sin preguntar.~~ Escrita en *Decisiones tomadas → La puerta del 2.14*: cuatro preguntas,
+   y siete puntos que el ADR-0063 decide sin preguntar.
 5. Parar y preguntar, todo junto. El ADR-0063 y el código esperan a las respuestas.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
