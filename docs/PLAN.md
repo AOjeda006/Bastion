@@ -11467,7 +11467,7 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
 **La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
 abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **459**. Su ADR es el
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **467**. Su ADR es el
 **0063**.
 
 **Lo que queda, por este orden:**
@@ -11635,8 +11635,66 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **459**. Su
        usarse. Es de la forma de la mutación, no de lo que ve.
      - **La 448 no la ve el presupuesto, y no tiene por qué**: cuenta bytes, no esperas. Lo que el
        arranque espera lo afirma el caso.
-8. El cerrojo consultivo por empresa, en lugar del `LOCK TABLE`, con los tres casos y sus
-   mutaciones. El recálculo y el cuadre reciben la empresa de quien los llama.
+   - **El run de rama de `2d0bf17`**, que lleva también `d72a063`, `8c9bb59` y `8ace0dd`, es el
+     **38385467313**, en verde al primer intento:
+     - sus jobs, Frontal `115256043317`, Backend `115256043379` y Humo `115259847035`;
+     - 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*;
+     - **1451** y **678** casos, **234** tipos de **241** sitios, **149** operaciones y **90**
+       rutas, y el centinela, con la marca y sin avisos;
+     - **410/450** y **711/900** KiB: la cifra del *runner* es la de aquí. Leído con `python
+       leer-run27.py 38385467313`.
+8. ~~El cerrojo consultivo por empresa, en lugar del `LOCK TABLE`, con los tres casos y sus
+   mutaciones. El recálculo y el cuadre reciben la empresa de quien los llama.~~ Hecho en
+   `feat(inventario): el cerrojo de las instantáneas es de la empresa` (`d36a9ce`). Y
+   `test(inventario): el aviso de la espera dice quién para, y las dos causas` (`5edb952`) arregla
+   dos mensajes que la tanda encontró mal escritos.
+   - **Dos claves `int4`**: `0x496E7631` y la empresa plegada con el `XOR` de las cuatro palabras
+     de su `Guid`, en `ClaveDelCerrojoDeLasInstantaneas`. Quien anota toma el compartido en un solo
+     sitio, justo antes de crear y bloquear las filas vivas; el recálculo, el exclusivo, lo
+     primero. El recálculo y el cuadre reciben la empresa, y con `Guid.Empty` lanzan. La línea de
+     la bandeja que decía que no había otro cerrojo consultivo, corregida.
+   - **Tres casos con dos transacciones de verdad**, en `LasExistenciasSonLaSumaDelLibroTests`,
+     con las semillas del 858 al 862:
+     - el recálculo se para dentro porque otra transacción tiene la fila de su corte cogida con
+       `FOR UPDATE`. Se le encuentra por `pg_blocking_pids`, y la precondición es que `pg_locks`
+       diga que tiene el cerrojo: `classid` el espacio y `objsubid` 2;
+     - que dos operaciones no se esperan lo mira `LaEspera.SinQueLaFreneAsync`, que falla en cuanto
+       el motor dice que alguien espera al proceso que no debe frenar;
+     - y el plegado, en el carril rápido, con tres valores escritos a mano y una colisión
+       construida permutando las palabras de un `Guid`.
+   - **Las cifras, sobre `d36a9ce`**: **1456** casos en el carril rápido y **681** en el de
+     integración, 596 y 85, todos en verde. Con `dotnet test Bastion.sln --no-build --filter
+     "Category!=Integracion"` y `--filter "Category=Integracion" --blame-hang --blame-hang-timeout
+     4m`, contados con `bash scripts/ci/recuento-de-tests.sh` y las dos listas del *workflow*.
+     Son cinco más que en el run de `2d0bf17`, los del plegado, y tres más de integración, los del
+     cerrojo.
+   - **La tanda, de la 459 a la 466**, con `python -X utf8 mutar-cerrojo.py tanda-cerrojo.json
+     comprobar base 459-466`, escrita antes de medir con lo que cada una tenía que poner rojo.
+     Cada una va sola, sobre un *worktree* aparte en `d36a9ce`: compila, corre los casos del
+     plegado y la clase de las existencias con `--blame-hang`, apunta los rojos por nombre y
+     revierte con `git restore --source=HEAD`. La base, 0 rojos de 5 y 0 de 12. **Las ocho casan
+     con lo escrito**, sin un rojo de más ni de menos, y cada rojo es la aserción que su caso pone
+     para eso, leída en el `.trx`. La 459 y la 465, otra vez sobre `5edb952`: los mismos rojos, con
+     el mensaje nuevo.
+
+     | # | Mutación | Rojo en |
+     |---|---|---|
+     | 459 | Una clave sin la empresa, en los dos sitios: lo que hacía el `LOCK TABLE` | Solo el primer caso: «el recálculo de otra empresa ha parado la operación» |
+     | 460 | El recálculo toma el compartido | El segundo, y `El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro`, del 2.7: los dos «han terminado sin esperar» |
+     | 461 | Quien anota toma el exclusivo | Solo el tercero: «otra confirmación de su empresa ha parado la operación» |
+     | 462 | El recálculo sin cerrojo | Los dos primeros, por su precondición: «el recálculo está parado en el corte con el cerrojo de las instantáneas tomado», 0 en lugar de 1. Y el del 2.7 |
+     | 463 | Quien anota sin el compartido | El segundo y el del 2.7, «han terminado sin esperar»; el tercero, por su precondición |
+     | 464 | **Arnés**: la fila del corte, sin `FOR UPDATE` | Los dos primeros: el recálculo «ha terminado sin esperar a la fila del corte» |
+     | 465 | **Arnés**: la segunda confirmación del tercer caso, a la clave de la primera | El tercero: `SinQueLaFreneAsync` ve una espera que no es la del cerrojo |
+     | 466 | El plegado con tres palabras | El valor de `01234567-…` y la colisión. Los otros dos valores no lo ven: su cuarta palabra es cero |
+
+     - **El primer caso no lo pone rojo el exclusivo al anotar, y la tabla no lo pretende.** Con la
+       clave de la empresa, el exclusivo de la B no choca con el de la A. Es la corrección del
+       encargo que confirmó la puerta (ADR-0063 §6), y la 461 la ve el tercero.
+     - **Los mensajes de la 459 y la 465 no decían lo que pasaba**, y `5edb952` los arregla. El de
+       la 459 pegaba «detrás de» al artículo de quien para: «detrás de el recálculo». El de la 465
+       culpaba al cerrojo de quien anota de una espera que venía de la fila. El motor dice que una
+       operación espera, no por qué, así que el caso nombra las dos causas.
 9. La instantánea con `valor`, con su migración, la sentencia que mueve la proyección, la
    reposición y el cuadre.
 10. El trabajo mensual que avanza el corte, con sus métricas y su registro.
