@@ -589,6 +589,11 @@ namespace Bastion.Inventario.Infrastructure.Migrations
                         .HasColumnType("numeric(18,6)")
                         .HasColumnName("fisico");
 
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("valor");
+
                     b.HasKey("ExistenciaId", "Mes")
                         .HasName("pk_instantaneas_mensuales");
 

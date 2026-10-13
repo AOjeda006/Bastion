@@ -649,6 +649,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_de_una_empresa_no_frena_las_confirmaciones_de_otra",
         "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro",
         "LasExistenciasSonLaSumaDelLibroTests.La_confirmacion_de_una_clave_nueva_espera_al_recalculo_de_su_empresa",
+        "LasExistenciasSonLaSumaDelLibroTests.La_migracion_rellena_el_valor_de_cada_instantanea_con_el_libro_hasta_su_mes",
         "LasExistenciasSonLaSumaDelLibroTests.Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan",
         "LasExistenciasSonLaSumaDelLibroTests.Una_fecha_futura_no_se_confirma_y_no_deja_nada_en_el_libro_ni_en_la_existencia",
 

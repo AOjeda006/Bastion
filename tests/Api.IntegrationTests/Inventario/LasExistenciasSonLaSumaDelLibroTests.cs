@@ -56,6 +56,12 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// corte: el recálculo toma su cerrojo, se para en esa fila, y se queda dentro hasta que el caso la
 /// suelta.
 /// </para>
+/// <para>
+/// <b>La instantánea lleva su valor desde el 2.14</b> (ADR-0063 §1 y §2): el caso de la reposición
+/// lo compara con una segunda cuenta en C# después de la sentencia del libro y después de
+/// recalcular, el del cuadre lo estropea con la cantidad bien, y el de la migración comprueba el
+/// relleno de las filas que ya hubiera, en una base propia y sin semilla.
+/// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
 [Collection(ColeccionDeLaApi.Nombre)]
@@ -63,6 +69,12 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModulos postgres)
     : IDisposable
 {
+    /// <summary>La migración anterior a la del valor, donde se para el caso del relleno.</summary>
+    private const string LaDeAntesDelValor = "20261009150913_LasReservas";
+
+    /// <summary>La migración del valor de la instantánea.</summary>
+    private const string LaDelValor = "20261013123740_ElValorDeLaInstantanea";
+
     private readonly ApiDeVerdad _api = new(postgres);
     private readonly List<HttpClient> _clientes = [];
 
@@ -335,6 +347,11 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         repuestas.ShouldBe(debidas.Count);
         (await LasExistencias.InstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(debidas);
 
+        (await LasExistencias.ValoresDeLasInstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(
+            LasExistencias.ValoresDebidosEnCSharp(
+                await LasExistencias.LibroValoradoAsync(postgres, caso.EmpresaId), corte),
+            "la reposición saca del libro también el valor (ADR-0063 §1)");
+
         // DESPUÉS DEL CORTE, TRES CONFIRMACIONES CON FECHA DE UN MES ANTERIOR, UNA DE HOY Y UNA
         // ANULACIÓN. Es la decisión (a) del ítem: quien anota el libro suma también en las
         // instantáneas de ese mes y de todos los que vienen detrás hasta el corte. Una clave nueva
@@ -365,6 +382,21 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
         antes.ShouldNotBeEmpty();
 
+        // Y SU VALOR, que la misma sentencia suma con la cantidad (ADR-0063 §1). Las entradas del
+        // caso cuestan 1,50 y las salidas salen a su precio medio, así que el valor no es la
+        // cantidad, y una sentencia que sumara la una en el sitio del otro no pasaría por buena.
+        IReadOnlyList<ValorDelMes> valoresAntes =
+            await LasExistencias.ValoresDeLasInstantaneasAsync(postgres, caso.EmpresaId);
+
+        valoresAntes.ShouldBe(
+            LasExistencias.ValoresDebidosEnCSharp(
+                await LasExistencias.LibroValoradoAsync(postgres, caso.EmpresaId), corte),
+            "el valor que dejó la sentencia del libro es el que el libro suma hasta cada fin de mes");
+
+        valoresAntes.ShouldContain(
+            valor => valor.Valor != 0m,
+            "con todos los valores a cero, una sentencia que no los sumara saldría igual");
+
         IReadOnlyDictionary<ClaveDeExistencia, decimal> saldos = LasExistencias.SaldosDelLibro(libro);
         IReadOnlyList<Existencia> vivas = await LasExistencias.VivasAsync(postgres, caso.EmpresaId);
 
@@ -389,6 +421,10 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         (await LasExistencias.InstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(
             antes,
             "la instantánea es una optimización: tirada y vuelta a sacar del libro, dice lo mismo");
+
+        (await LasExistencias.ValoresDeLasInstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(
+            valoresAntes,
+            "y su valor, también");
 
         CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, caso.EmpresaId);
 
@@ -428,7 +464,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         Guid laSegunda = vivas.Single(viva => viva.UbicacionId == caso.Ubicaciones[1]).Id;
         var unaUbicacionSinLibro = Guid.CreateVersion7();
 
-        // SIETE COPIAS ESTROPEADAS, una de cada manera en que una copia puede mentir, y todas en una
+        // OCHO COPIAS ESTROPEADAS, una de cada manera en que una copia puede mentir, y todas en una
         // transacción que se deshace: el cuadre corre dentro de ella, con el mismo contexto.
         await using InventarioDbContext contexto = postgres.AbrirInventario(caso.EmpresaId);
         await using IDbContextTransaction estropeando = await contexto.Database.BeginTransactionAsync();
@@ -445,7 +481,15 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             laPrimera,
             junio)).ShouldBe(1);
 
-        // Una instantánea que falta.
+        // Una instantánea que dice otro valor con la cantidad bien (ADR-0063 §2): sin comparar el
+        // valor, el saldo a una fecha saldría mal y el cuadre, limpio.
+        (await contexto.Database.ExecuteSqlRawAsync(
+            "UPDATE inventario.instantaneas_mensuales SET valor = valor + 7 " +
+            "WHERE existencia_id = {0} AND mes = {1}",
+            laSegunda,
+            junio)).ShouldBe(1);
+
+        // Una instantánea que falta: le falta la cantidad y le falta el valor.
         (await contexto.Database.ExecuteSqlRawAsync(
             "DELETE FROM inventario.instantaneas_mensuales WHERE existencia_id = {0} AND mes = {1}",
             laSegunda,
@@ -464,8 +508,8 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
         // Una instantánea que sobra: la de después del corte.
         (await contexto.Database.ExecuteSqlRawAsync(
-            "INSERT INTO inventario.instantaneas_mensuales (existencia_id, mes, empresa_id, fisico) " +
-            "VALUES ({0}, {1}, {2}, 6)",
+            "INSERT INTO inventario.instantaneas_mensuales (existencia_id, mes, empresa_id, fisico, valor) " +
+            "VALUES ({0}, {1}, {2}, 6, 0)",
             laPrimera,
             corte.AddMonths(1),
             caso.EmpresaId)).ShouldBe(1);
@@ -495,8 +539,8 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         // Y una instantánea de más, a cero, para una clave y un mes que ya tenían la suya: tampoco
         // cambia la suma.
         (await contexto.Database.ExecuteSqlRawAsync(
-            "INSERT INTO inventario.instantaneas_mensuales (existencia_id, mes, empresa_id, fisico) " +
-            "VALUES ({0}, {1}, {2}, 0)",
+            "INSERT INTO inventario.instantaneas_mensuales (existencia_id, mes, empresa_id, fisico, valor) " +
+            "VALUES ({0}, {1}, {2}, 0, 0)",
             laCopia,
             junio.AddMonths(1),
             caso.EmpresaId)).ShouldBe(1);
@@ -528,9 +572,11 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
                     new Hallado("instantanea", caso.Ubicaciones[0], corte.AddMonths(1), 0m, 6m, 1),
                     new Hallado("existencia", caso.Ubicaciones[0], null, 6m, 6m, 2),
                     new Hallado("instantanea", caso.Ubicaciones[0], junio.AddMonths(1), 5m, 5m, 2),
+                    new Hallado("instantanea-valor", caso.Ubicaciones[1], junio, 4.5m, 11.5m, 1),
+                    new Hallado("instantanea-valor", caso.Ubicaciones[1], junio.AddMonths(1), 4.5m, 0m, 0),
                 ],
                 ignoreOrder: true,
-                customMessage: "las siete, y ninguna más: cada una dice qué esperaba y qué encontró");
+                customMessage: "nueve de ocho copias, y ninguna más: la que falta, falta en sus dos columnas");
 
         await estropeando.RollbackAsync();
 
@@ -540,6 +586,187 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         otraVez.ExistenciasComparadas.ShouldBe(2);
         otraVez.InstantaneasComparadas.ShouldBe(debidas);
         otraVez.Descuadres.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// La migración del valor rellena cada instantánea que ya había con la suma del valor del libro
+    /// de su clave hasta el final de su mes, y se queda sin valor por omisión (ADR-0063 §1).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>En una base propia, migrada hasta la de antes</b>, con los lotes, las existencias, el libro
+    /// y las instantáneas escritos a mano. En producción no hay ninguna fila que rellenar, porque
+    /// ninguna empresa tiene corte: el caso está para que la migración diga la verdad en cualquier
+    /// base.
+    /// </para>
+    /// <para>
+    /// <b>Cada fila del libro prueba una parte de la clave o del límite</b>: la del 31 de julio entra
+    /// en julio y la del 1 de agosto no; la de otra ubicación, la del lote y la de otra empresa no se
+    /// cuelan en la clave sin lote; y una instantánea sin libro queda a cero, y no nula.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task La_migracion_rellena_el_valor_de_cada_instantanea_con_el_libro_hasta_su_mes()
+    {
+        string cadena = await postgres.CrearBaseNuevaAsync(migrada: false);
+
+        await PostgresConTodosLosModulos.MigrarInventarioHastaAsync(cadena, LaDeAntesDelValor);
+
+        DateOnly junio = new(Hoy.Year - 1, 6, 1);
+        DateOnly julio = junio.AddMonths(1);
+        DateOnly agosto = julio.AddMonths(1);
+
+        var empresa = Guid.CreateVersion7();
+        var otraEmpresa = Guid.CreateVersion7();
+        var articulo = Guid.CreateVersion7();
+        var almacen = Guid.CreateVersion7();
+        var ubicacion = Guid.CreateVersion7();
+        var otraUbicacion = Guid.CreateVersion7();
+        var sinLibro = Guid.CreateVersion7();
+        var lote = Guid.CreateVersion7();
+
+        var laClave = Guid.CreateVersion7();
+        var laDeOtraUbicacion = Guid.CreateVersion7();
+        var laDelLote = Guid.CreateVersion7();
+        var laDeOtraEmpresa = Guid.CreateVersion7();
+        var laSinLibro = Guid.CreateVersion7();
+
+        await using (NpgsqlConnection conexion = new(cadena))
+        {
+            await conexion.OpenAsync();
+
+            await EscribirAsync(
+                conexion,
+                "INSERT INTO inventario.lotes (id, empresa_id, articulo_id, codigo) VALUES ($1, $2, $3, 'L-1')",
+                lote,
+                empresa,
+                articulo);
+
+            foreach ((Guid id, Guid deEmpresa, Guid enUbicacion, Guid? deLote, decimal fisico) in new[]
+            {
+                (laClave, empresa, ubicacion, (Guid?)null, 8m),
+                (laDeOtraUbicacion, empresa, otraUbicacion, null, 3m),
+                (laDelLote, empresa, ubicacion, lote, 5m),
+                (laDeOtraEmpresa, otraEmpresa, ubicacion, null, 7m),
+                (laSinLibro, empresa, sinLibro, null, 0m),
+            })
+            {
+                await EscribirAsync(
+                    conexion,
+                    "INSERT INTO inventario.existencias "
+                    + "(id, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id, fisico, en_transito) "
+                    + "VALUES ($1, $2, $3, $4, $5, $6::uuid, $7, 0)",
+                    id,
+                    deEmpresa,
+                    articulo,
+                    almacen,
+                    enUbicacion,
+                    deLote is Guid conLote ? conLote : DBNull.Value,
+                    fisico);
+            }
+
+            foreach ((DateOnly fecha, Guid deEmpresa, Guid enUbicacion, Guid? deLote, decimal cantidad, decimal valor) in new[]
+            {
+                (junio.AddDays(9), empresa, ubicacion, (Guid?)null, 10m, 15m),
+                (julio.AddDays(30), empresa, ubicacion, null, -4m, -6m),
+                (agosto, empresa, ubicacion, null, 2m, 3.1234m),
+                (junio.AddDays(14), empresa, otraUbicacion, null, 3m, 4.5m),
+                (junio.AddDays(19), empresa, ubicacion, lote, 5m, 100m),
+                (junio.AddDays(4), otraEmpresa, ubicacion, null, 7m, 1000m),
+            })
+            {
+                await EscribirAsync(
+                    conexion,
+                    """
+                    INSERT INTO inventario.movimiento_stock
+                        (id, fecha_de_operacion, empresa_id, articulo_id, almacen_id, ubicacion_id, lote_id,
+                         unidad_introducida_id, cantidad_introducida, factor_a_unidad_base,
+                         cantidad_en_unidad_base, divisa, documento_origen_tipo, documento_origen_id,
+                         precio_medio, valor, creado_en, modificado_en)
+                    VALUES
+                        (gen_random_uuid(), $1, $2, $3, $4, $5, $6::uuid,
+                         gen_random_uuid(), $7, 1, $7, 'EUR', 'Ajuste', gen_random_uuid(),
+                         1.5, $8, now(), now())
+                    """,
+                    fecha,
+                    deEmpresa,
+                    articulo,
+                    almacen,
+                    enUbicacion,
+                    deLote is Guid conLote ? conLote : DBNull.Value,
+                    cantidad,
+                    valor);
+            }
+
+            foreach ((Guid existencia, Guid deEmpresa, DateOnly mes, decimal fisico) in new[]
+            {
+                (laClave, empresa, junio, 10m),
+                (laClave, empresa, julio, 6m),
+                (laClave, empresa, agosto, 8m),
+                (laDeOtraUbicacion, empresa, junio, 3m),
+                (laDeOtraUbicacion, empresa, julio, 3m),
+                (laDelLote, empresa, junio, 5m),
+                (laDeOtraEmpresa, otraEmpresa, junio, 7m),
+                (laSinLibro, empresa, junio, 0m),
+            })
+            {
+                await EscribirAsync(
+                    conexion,
+                    "INSERT INTO inventario.instantaneas_mensuales (existencia_id, mes, empresa_id, fisico) "
+                    + "VALUES ($1, $2, $3, $4)",
+                    existencia,
+                    mes,
+                    deEmpresa,
+                    fisico);
+            }
+        }
+
+        await PostgresConTodosLosModulos.MigrarInventarioHastaAsync(cadena, LaDelValor);
+
+        Dictionary<(Guid, DateOnly), decimal> valores = [];
+        object? porOmision;
+
+        await using (NpgsqlConnection conexion = new(cadena))
+        {
+            await conexion.OpenAsync();
+
+            await using (NpgsqlCommand lectura = new(
+                "SELECT existencia_id, mes, valor FROM inventario.instantaneas_mensuales", conexion))
+            await using (NpgsqlDataReader lector = await lectura.ExecuteReaderAsync())
+            {
+                while (await lector.ReadAsync())
+                {
+                    valores.Add(
+                        (lector.GetGuid(0), lector.GetFieldValue<DateOnly>(1)), lector.GetDecimal(2));
+                }
+            }
+
+            await using NpgsqlCommand columna = new(
+                "SELECT column_default FROM information_schema.columns "
+                + "WHERE table_schema = 'inventario' AND table_name = 'instantaneas_mensuales' "
+                + "AND column_name = 'valor'",
+                conexion);
+
+            porOmision = await columna.ExecuteScalarAsync();
+        }
+
+        valores.ShouldBe(
+            new Dictionary<(Guid, DateOnly), decimal>
+            {
+                [(laClave, junio)] = 15m,
+                [(laClave, julio)] = 9m,
+                [(laClave, agosto)] = 12.1234m,
+                [(laDeOtraUbicacion, junio)] = 4.5m,
+                [(laDeOtraUbicacion, julio)] = 4.5m,
+                [(laDelLote, junio)] = 100m,
+                [(laDeOtraEmpresa, junio)] = 1000m,
+                [(laSinLibro, junio)] = 0m,
+            },
+            ignoreOrder: true);
+
+        porOmision.ShouldBe(
+            DBNull.Value,
+            "el cero por omisión es solo para las filas que ya había: una nueva sin valor no entra");
     }
 
     [Fact]
@@ -881,6 +1108,23 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         borrar.Parameters.AddWithValue("empresa", empresaId);
 
         return await borrar.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>Escribe una fila a mano, con sus parámetros por posición, y exige que entre.</summary>
+    /// <param name="conexion">La conexión, abierta.</param>
+    /// <param name="sql">La sentencia, con <c>$1</c>, <c>$2</c>…</param>
+    /// <param name="valores">Los valores, en ese orden.</param>
+    /// <returns>Cuando la fila ha entrado.</returns>
+    private static async Task EscribirAsync(NpgsqlConnection conexion, string sql, params object[] valores)
+    {
+        await using NpgsqlCommand orden = new(sql, conexion);
+
+        foreach (object valor in valores)
+        {
+            orden.Parameters.Add(new NpgsqlParameter { Value = valor });
+        }
+
+        (await orden.ExecuteNonQueryAsync()).ShouldBe(1);
     }
 
     /// <summary>Abre y confirma un ajuste con la serie del año de su fecha.</summary>

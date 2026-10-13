@@ -13,6 +13,8 @@ using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Terceros.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -391,6 +393,28 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         }
 
         return cadena;
+    }
+
+    /// <summary>
+    /// Aplica las migraciones de Inventario hasta la que se diga, en una base de
+    /// <see cref="CrearBaseNuevaAsync"/>: la de antes de un relleno, para escribir a mano las filas
+    /// que la migración tiene que rellenar, y luego la del relleno.
+    /// </summary>
+    /// <remarks>
+    /// Vive aquí desde el 2.14, cuando el segundo caso de un relleno iba a necesitar una copia.
+    /// </remarks>
+    /// <param name="cadena">La base nueva.</param>
+    /// <param name="migracion">El identificador entero de la migración, con su fecha.</param>
+    /// <returns>Cuando la base está en esa migración.</returns>
+    public static async Task MigrarInventarioHastaAsync(string cadena, string migracion)
+    {
+        DbContextOptionsBuilder<InventarioDbContext> opciones = new();
+        InventarioDbContext.Configurar(opciones, cadena);
+
+        await using InventarioDbContext contexto =
+            new(opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
+
+        await contexto.GetService<IMigrator>().MigrateAsync(migracion);
     }
 
     /// <inheritdoc/>

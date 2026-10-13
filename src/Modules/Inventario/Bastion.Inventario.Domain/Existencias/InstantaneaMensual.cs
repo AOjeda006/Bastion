@@ -47,4 +47,17 @@ public sealed class InstantaneaMensual : IDeInquilino
 
     /// <summary>La suma del libro de esa existencia hasta el último día del mes.</summary>
     public decimal Fisico { get; private set; }
+
+    /// <summary>
+    /// La suma de la columna <c>valor</c> del libro de esa existencia hasta el último día del mes,
+    /// en la divisa de su valoración.
+    /// </summary>
+    /// <remarks>
+    /// <b>Solo significa algo sumado por artículo y almacén</b> (ADR-0063 §1). Si entran 10 unidades
+    /// a 1 € en una ubicación y 10 a 3 € en otra, y salen 10 de la primera al precio medio de 2 €,
+    /// la primera queda con cero unidades y −10 €. Se guarda por existencia porque la fila es la de
+    /// <see cref="Fisico"/> y la mueve la misma sentencia, no porque se pueda leer por debajo de esa
+    /// clave.
+    /// </remarks>
+    public decimal Valor { get; private set; }
 }

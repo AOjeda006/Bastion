@@ -65,6 +65,14 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
     /// clave y mes, así que una que falte, una que sobre y una que diga otra cosa salen las tres.
     /// </para>
     /// <para>
+    /// <b>Y en sus dos columnas desde el 2.14</b>, cada una con su descuadre, como la valoración: la
+    /// cantidad, con las filas, en «instantanea», y el valor en «instantanea-valor» (ADR-0063 §2).
+    /// Sin el segundo, una sentencia que moviera la cantidad y no el valor dejaría el saldo a una
+    /// fecha mal y el cuadre limpio. El valor solo significa algo sumado por artículo y almacén,
+    /// pero se compara por clave y mes porque así se guarda: si cada fila es la suma de su clave,
+    /// la de artículo y almacén también lo es.
+    /// </para>
+    /// <para>
     /// <b>La valoración, por artículo y almacén y sin mirar la divisa.</b> Una clave que cambia de
     /// divisa lo hace vacía, y vaciarla se lleva todo el valor (ADR-0046 §5), así que las filas de
     /// la divisa de antes suman cero y la suma de todas es la de la divisa de ahora. Una valoración
@@ -110,14 +118,17 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
         ),
         instantaneas_cuadradas AS (
             SELECT x.articulo_id, x.almacen_id, x.ubicacion_id, x.lote_id, x.numero_de_serie_id, x.mes,
-                   sum(x.esperado) AS esperado, sum(x.guardado) AS guardado, sum(x.filas) AS filas
+                   sum(x.esperado) AS esperado, sum(x.guardado) AS guardado,
+                   sum(x.valor_esperado) AS valor_esperado, sum(x.valor_guardado) AS valor_guardado,
+                   sum(x.filas) AS filas
             FROM (
                 SELECT d.articulo_id, d.almacen_id, d.ubicacion_id, d.lote_id, d.numero_de_serie_id, d.mes,
-                       d.fisico AS esperado, 0::numeric AS guardado, 0 AS filas
+                       d.fisico AS esperado, 0::numeric AS guardado,
+                       d.valor AS valor_esperado, 0::numeric AS valor_guardado, 0 AS filas
                 FROM debidas AS d
                 UNION ALL
                 SELECT e.articulo_id, e.almacen_id, e.ubicacion_id, e.lote_id, e.numero_de_serie_id, i.mes, 0,
-                       i.fisico, 1
+                       i.fisico, 0, i.valor, 1
                 FROM inventario.instantaneas_mensuales AS i
                 JOIN inventario.existencias AS e ON e.id = i.existencia_id
                 WHERE i.empresa_id = {0} AND e.empresa_id = {0}
@@ -222,6 +233,11 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
                c.numero_de_serie_id, c.mes, c.esperado, c.guardado, c.filas, NULL, NULL
         FROM instantaneas_cuadradas AS c
         WHERE c.esperado <> c.guardado OR c.filas <> 1
+        UNION ALL
+        SELECT 'instantanea-valor', false, 0, c.articulo_id, c.almacen_id, c.ubicacion_id, c.lote_id,
+               c.numero_de_serie_id, c.mes, c.valor_esperado, c.valor_guardado, c.filas, NULL, NULL
+        FROM instantaneas_cuadradas AS c
+        WHERE c.valor_esperado <> c.valor_guardado
         UNION ALL
         SELECT 'valoracion-cantidad', false, 0, c.articulo_id, c.almacen_id, NULL, NULL, NULL, NULL,
                c.cantidad_esperada, c.cantidad_guardada, c.filas, NULL, NULL
@@ -334,7 +350,9 @@ internal sealed record CuadreDeLasExistencias(
 /// «existencia», «instantanea», «valoracion-cantidad», «valoracion-valor» o «valoracion-fecha»; las
 /// tres últimas son las tres columnas de la valoración, cada una con su descuadre. Desde el 2.11,
 /// también «existencia-en-transito», «valoracion-en-transito-cantidad» y
-/// «valoracion-en-transito-valor», que comparan lo que vuela con las líneas enviadas.
+/// «valoracion-en-transito-valor», que comparan lo que vuela con las líneas enviadas. Y desde el
+/// 2.14, «instantanea-valor», el valor de la instantánea contra la suma del libro hasta el final de
+/// su mes.
 /// </param>
 /// <param name="ArticuloId">El artículo de la clave.</param>
 /// <param name="AlmacenId">El almacén de la clave.</param>
@@ -343,7 +361,7 @@ internal sealed record CuadreDeLasExistencias(
 /// <param name="NumeroDeSerieId">
 /// El número de serie de la clave, o nulo; nulo también en la valoración.
 /// </param>
-/// <param name="Mes">El mes, en las instantáneas.</param>
+/// <param name="Mes">El mes, en los dos de las instantáneas.</param>
 /// <param name="Esperado">
 /// Lo que dice el libro; nulo en el de la fecha, que lleva fechas. En los del tránsito, la suma de
 /// las líneas en vuelo, y en el del valor puede ser nula: ninguna de ellas lleva valor.

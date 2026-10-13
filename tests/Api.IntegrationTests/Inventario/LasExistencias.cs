@@ -32,6 +32,22 @@ internal sealed record ApunteDelLibro(ClaveDeExistencia Clave, DateOnly Fecha, d
 /// <param name="Fisico">El saldo al acabar ese mes.</param>
 internal sealed record FotoDelMes(ClaveDeExistencia Clave, DateOnly Mes, decimal Fisico);
 
+/// <summary>Una fila del libro, reducida a lo que la instantánea suma en su valor.</summary>
+/// <remarks>
+/// Va aparte de <see cref="ApunteDelLibro"/> porque la propiedad construye esos apuntes con su
+/// modelo, que todavía no sabe qué valor lleva cada uno.
+/// </remarks>
+/// <param name="Clave">De qué existencia es.</param>
+/// <param name="Fecha">El día al que se imputa.</param>
+/// <param name="Valor">Lo que vale, con signo y en la divisa de su valoración.</param>
+internal sealed record ValorDelLibro(ClaveDeExistencia Clave, DateOnly Fecha, decimal Valor);
+
+/// <summary>El valor de una instantánea, con su clave y su mes (ADR-0063 §1).</summary>
+/// <param name="Clave">De qué existencia es.</param>
+/// <param name="Mes">El primer día del mes.</param>
+/// <param name="Valor">La suma del valor del libro de la clave al acabar ese mes.</param>
+internal sealed record ValorDelMes(ClaveDeExistencia Clave, DateOnly Mes, decimal Valor);
+
 /// <summary>
 /// Lo que los casos del ítem 2.7 leen de la proyección del libro y lo que le mandan hacer.
 /// </summary>
@@ -42,9 +58,10 @@ internal sealed record FotoDelMes(ClaveDeExistencia Clave, DateOnly Mes, decimal
 /// escribir por debajo del sistema lo escribe él, a la vista.
 /// </para>
 /// <para>
-/// <b><see cref="DebidasEnCSharp"/> es una segunda cuenta, no una copia de la primera.</b> El
-/// recálculo y el cuadre comparten un fragmento de SQL con funciones de ventana; esto recorre mes a
-/// mes y suma con un bucle. Si las dos se equivocaran igual, lo harían por caminos que no se
+/// <b><see cref="DebidasEnCSharp"/> es una segunda cuenta, no una copia de la primera</b>, y
+/// <see cref="ValoresDebidosEnCSharp"/> es la misma para el valor, con el mismo bucle. El recálculo y
+/// el cuadre comparten un fragmento de SQL con funciones de ventana; esto recorre mes a mes y suma
+/// con un bucle. Si las dos se equivocaran igual, lo harían por caminos que no se
 /// parecen en nada, y eso es lo que da valor a que coincidan.
 /// </para>
 /// </remarks>
@@ -133,6 +150,40 @@ internal static class LasExistencias
             fila.Fisico)));
     }
 
+    /// <summary>El valor de las instantáneas de la empresa, con la clave de su fila viva.</summary>
+    /// <param name="postgres">El contenedor.</param>
+    /// <param name="empresaId">La empresa.</param>
+    /// <returns>Los valores, ordenados por clave y mes.</returns>
+    internal static async Task<IReadOnlyList<ValorDelMes>> ValoresDeLasInstantaneasAsync(
+        PostgresConTodosLosModulos postgres, Guid empresaId)
+    {
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+
+        var leidas = await contexto.InstantaneasMensuales
+            .AsNoTracking()
+            .Join(
+                contexto.Existencias,
+                instantanea => instantanea.ExistenciaId,
+                existencia => existencia.Id,
+                (instantanea, existencia) => new
+                {
+                    existencia.ArticuloId,
+                    existencia.AlmacenId,
+                    existencia.UbicacionId,
+                    existencia.LoteId,
+                    existencia.NumeroDeSerieId,
+                    instantanea.Mes,
+                    instantanea.Valor,
+                })
+            .ToListAsync();
+
+        return Ordenadas(leidas.Select(fila => new ValorDelMes(
+            new ClaveDeExistencia(
+                fila.ArticuloId, fila.AlmacenId, fila.UbicacionId, fila.LoteId, fila.NumeroDeSerieId),
+            fila.Mes,
+            fila.Valor)));
+    }
+
     /// <summary>El libro entero de la empresa, reducido a lo que la proyección suma.</summary>
     /// <param name="postgres">El contenedor.</param>
     /// <param name="empresaId">La empresa.</param>
@@ -151,6 +202,24 @@ internal static class LasExistencias
             fila.CantidadEnUnidadBase))];
     }
 
+    /// <summary>El libro entero de la empresa, reducido a lo que la instantánea suma en su valor.</summary>
+    /// <param name="postgres">El contenedor.</param>
+    /// <param name="empresaId">La empresa.</param>
+    /// <returns>Los valores, en el orden en que llegan.</returns>
+    internal static async Task<IReadOnlyList<ValorDelLibro>> LibroValoradoAsync(
+        PostgresConTodosLosModulos postgres, Guid empresaId)
+    {
+        await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
+
+        List<MovimientoStock> filas = await contexto.Movimientos.AsNoTracking().ToListAsync();
+
+        return [.. filas.Select(fila => new ValorDelLibro(
+            new ClaveDeExistencia(
+                fila.ArticuloId, fila.AlmacenId, fila.UbicacionId, fila.LoteId, fila.NumeroDeSerieId),
+            fila.FechaDeOperacion,
+            fila.Valor.Cantidad))];
+    }
+
     /// <summary>
     /// Las instantáneas que tiene que haber, contadas en C# y sin mirar el SQL que las escribe.
     /// </summary>
@@ -164,41 +233,23 @@ internal static class LasExistencias
     /// <param name="corte">El primer día del último mes con instantánea, o nulo si no hay corte.</param>
     /// <returns>Las instantáneas debidas, ordenadas por clave y mes.</returns>
     internal static IReadOnlyList<FotoDelMes> DebidasEnCSharp(
-        IEnumerable<ApunteDelLibro> libro, DateOnly? corte)
-    {
-        if (corte is not DateOnly hasta)
-        {
-            return [];
-        }
+        IEnumerable<ApunteDelLibro> libro, DateOnly? corte) =>
+        Ordenadas(PorMesHastaElCorte(
+                libro.Select(apunte => new Sumando(apunte.Clave, apunte.Fecha, apunte.Cantidad)), corte)
+            .Select(suma => new FotoDelMes(suma.Clave, suma.Mes, suma.Total)));
 
-        DateOnly despuesDelCorte = hasta.AddMonths(1);
-        List<FotoDelMes> debidas = [];
-
-        foreach (IGrouping<ClaveDeExistencia, ApunteDelLibro> clave in libro
-            .Where(apunte => apunte.Fecha < despuesDelCorte)
-            .GroupBy(apunte => apunte.Clave))
-        {
-            DateOnly primera = clave.Min(apunte => apunte.Fecha);
-
-            for (DateOnly mes = new(primera.Year, primera.Month, 1); mes <= hasta; mes = mes.AddMonths(1))
-            {
-                DateOnly siguiente = mes.AddMonths(1);
-                decimal saldo = 0m;
-
-                foreach (ApunteDelLibro apunte in clave)
-                {
-                    if (apunte.Fecha < siguiente)
-                    {
-                        saldo += apunte.Cantidad;
-                    }
-                }
-
-                debidas.Add(new FotoDelMes(clave.Key, mes, saldo));
-            }
-        }
-
-        return Ordenadas(debidas);
-    }
+    /// <summary>
+    /// El valor que tiene que tener cada instantánea, contado en C# con el mismo bucle que
+    /// <see cref="DebidasEnCSharp"/>: la suma del valor del libro de la clave hasta el final del mes.
+    /// </summary>
+    /// <param name="libro">Los valores del libro.</param>
+    /// <param name="corte">El primer día del último mes con instantánea, o nulo si no hay corte.</param>
+    /// <returns>Los valores debidos, ordenados por clave y mes.</returns>
+    internal static IReadOnlyList<ValorDelMes> ValoresDebidosEnCSharp(
+        IEnumerable<ValorDelLibro> libro, DateOnly? corte) =>
+        Ordenadas(PorMesHastaElCorte(
+                libro.Select(fila => new Sumando(fila.Clave, fila.Fecha, fila.Valor)), corte)
+            .Select(suma => new ValorDelMes(suma.Clave, suma.Mes, suma.Total)));
 
     /// <summary>El saldo de cada clave según el libro: la definición de la R3.</summary>
     /// <param name="libro">Los apuntes.</param>
@@ -225,10 +276,65 @@ internal static class LasExistencias
     /// <returns>El día 1 de su mes.</returns>
     internal static DateOnly MesDe(DateOnly fecha) => new(fecha.Year, fecha.Month, 1);
 
+    /// <summary>
+    /// Por cada clave, desde el primer mes en que se movió hasta el corte y sin huecos, la suma de
+    /// lo que el libro tiene antes del primer día del mes siguiente. Sin corte, ninguna.
+    /// </summary>
+    /// <param name="filas">Cada fila del libro, con lo que se suma de ella.</param>
+    /// <param name="corte">El primer día del último mes con instantánea, o nulo si no hay corte.</param>
+    /// <returns>Una suma por clave y mes, sin orden.</returns>
+    private static List<SumaDelMes> PorMesHastaElCorte(IEnumerable<Sumando> filas, DateOnly? corte)
+    {
+        List<SumaDelMes> sumas = [];
+
+        if (corte is not DateOnly hasta)
+        {
+            return sumas;
+        }
+
+        DateOnly despuesDelCorte = hasta.AddMonths(1);
+
+        foreach (IGrouping<ClaveDeExistencia, Sumando> clave in filas
+            .Where(fila => fila.Fecha < despuesDelCorte)
+            .GroupBy(fila => fila.Clave))
+        {
+            DateOnly primera = clave.Min(fila => fila.Fecha);
+
+            for (DateOnly mes = new(primera.Year, primera.Month, 1); mes <= hasta; mes = mes.AddMonths(1))
+            {
+                DateOnly siguiente = mes.AddMonths(1);
+                decimal total = 0m;
+
+                foreach (Sumando fila in clave)
+                {
+                    if (fila.Fecha < siguiente)
+                    {
+                        total += fila.Cuanto;
+                    }
+                }
+
+                sumas.Add(new SumaDelMes(clave.Key, mes, total));
+            }
+        }
+
+        return sumas;
+    }
+
     private static FotoDelMes[] Ordenadas(IEnumerable<FotoDelMes> fotos) =>
         [.. fotos
             .OrderBy(foto => foto.Clave, ComparadorDeClaves.Instancia)
             .ThenBy(foto => foto.Mes)];
+
+    private static ValorDelMes[] Ordenadas(IEnumerable<ValorDelMes> valores) =>
+        [.. valores
+            .OrderBy(valor => valor.Clave, ComparadorDeClaves.Instancia)
+            .ThenBy(valor => valor.Mes)];
+
+    /// <summary>Una fila del libro, con lo que se suma de ella: su cantidad o su valor.</summary>
+    private readonly record struct Sumando(ClaveDeExistencia Clave, DateOnly Fecha, decimal Cuanto);
+
+    /// <summary>Lo que suma una clave al acabar un mes.</summary>
+    private readonly record struct SumaDelMes(ClaveDeExistencia Clave, DateOnly Mes, decimal Total);
 
     /// <summary>Un orden de claves que no depende de cómo ordene el motor los <c>uuid</c>.</summary>
     private sealed class ComparadorDeClaves : IComparer<ClaveDeExistencia>

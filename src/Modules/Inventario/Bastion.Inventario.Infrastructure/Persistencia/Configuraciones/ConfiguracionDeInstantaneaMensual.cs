@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.Movimientos;
@@ -44,6 +45,12 @@ internal sealed class ConfiguracionDeInstantaneaMensual : IEntityTypeConfigurati
 
         instantanea.Property(fila => fila.Fisico)
             .HasPrecision(18, MovimientoStock.DecimalesDeCantidad)
+            .IsRequired();
+
+        // Con la precisión del valor del libro, que es lo que suma: importes de cuatro decimales
+        // sumados dan importes de cuatro decimales, sin redondear nada más (ADR-0063 §1).
+        instantanea.Property(fila => fila.Valor)
+            .HasPrecision(18, Importe.Decimales)
             .IsRequired();
 
         // El recálculo borra por empresa y el cuadre lee por empresa.

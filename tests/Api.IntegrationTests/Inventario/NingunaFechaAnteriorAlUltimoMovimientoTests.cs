@@ -16,8 +16,6 @@ using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using Shouldly;
@@ -334,7 +332,7 @@ public sealed class NingunaFechaAnteriorAlUltimoMovimientoTests(PostgresConTodos
         var almacen = Guid.CreateVersion7();
         var otroAlmacen = Guid.CreateVersion7();
 
-        await MigrarHastaAsync(cadena, LaDeAntes);
+        await PostgresConTodosLosModulos.MigrarInventarioHastaAsync(cadena, LaDeAntes);
 
         await using (NpgsqlConnection conexion = new(cadena))
         {
@@ -366,7 +364,7 @@ public sealed class NingunaFechaAnteriorAlUltimoMovimientoTests(PostgresConTodos
             }
         }
 
-        await MigrarHastaAsync(cadena, LaDeLaFecha);
+        await PostgresConTodosLosModulos.MigrarInventarioHastaAsync(cadena, LaDeLaFecha);
 
         Dictionary<(Guid, Guid, Guid), DateOnly?> fechas = [];
 
@@ -403,17 +401,6 @@ public sealed class NingunaFechaAnteriorAlUltimoMovimientoTests(PostgresConTodos
 
     /// <summary>Un día de junio del año pasado.</summary>
     private static DateOnly Dia(int dia) => new(AnioPasado, 6, dia);
-
-    /// <summary>Aplica las migraciones de Inventario hasta la que se diga, en una base propia.</summary>
-    private static async Task MigrarHastaAsync(string cadena, string migracion)
-    {
-        DbContextOptionsBuilder<InventarioDbContext> opciones = new();
-        InventarioDbContext.Configurar(opciones, cadena);
-
-        await using InventarioDbContext contexto = new(opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
-
-        await contexto.GetService<IMigrator>().MigrateAsync(migracion);
-    }
 
     /// <summary>Una fila del libro escrita a mano, con lo mínimo que la tabla exige.</summary>
     private static async Task EscribirEnElLibroAsync(

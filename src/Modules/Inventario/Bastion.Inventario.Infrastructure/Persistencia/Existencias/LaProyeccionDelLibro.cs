@@ -124,17 +124,25 @@ internal static class LaProyeccionDelLibro
     /// los materialice leerá el libro.
     /// </para>
     /// <para>
+    /// <b>La instantánea suma también el valor del movimiento</b>, desde el 2.14 (ADR-0063 §1), en la
+    /// misma fila y por la misma sentencia que la cantidad: una sentencia que moviera la una y no el
+    /// otro dejaría la lectura del saldo mal. El valor ya va redondeado a cuatro decimales en el
+    /// libro (ADR-0046 §5), así que la suma no redondea nada. La fila viva no lo lleva: el valor de
+    /// hoy es el de la valoración, que lo mueve su propia sentencia.
+    /// </para>
+    /// <para>
     /// <b>Sin punto y coma final</b>, como las demás cadenas crudas del proyecto.
     /// </para>
     /// </remarks>
     internal const string SqlQueMueveLaProyeccion =
         """
         WITH movimientos AS (
-            SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.numero_de_serie_id, m.mes, m.cantidad
+            SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.numero_de_serie_id, m.mes,
+                   m.cantidad, m.valor
             FROM unnest(
                 {1}::uuid[], {2}::uuid[], {3}::uuid[], {4}::uuid[], {5}::uuid[], {6}::date[],
-                {7}::numeric[])
-                AS m (articulo_id, almacen_id, ubicacion_id, lote_id, numero_de_serie_id, mes, cantidad)
+                {7}::numeric[], {8}::numeric[])
+                AS m (articulo_id, almacen_id, ubicacion_id, lote_id, numero_de_serie_id, mes, cantidad, valor)
         ),
         vivas AS (
             UPDATE inventario.existencias AS e
@@ -152,8 +160,8 @@ internal static class LaProyeccionDelLibro
                 AND e.numero_de_serie_id IS NOT DISTINCT FROM d.numero_de_serie_id
             RETURNING e.id, e.articulo_id, e.almacen_id, e.ubicacion_id, e.lote_id, e.numero_de_serie_id
         )
-        INSERT INTO inventario.instantaneas_mensuales AS i (existencia_id, mes, empresa_id, fisico)
-        SELECT v.id, g.mes::date, {0}, sum(m.cantidad)
+        INSERT INTO inventario.instantaneas_mensuales AS i (existencia_id, mes, empresa_id, fisico, valor)
+        SELECT v.id, g.mes::date, {0}, sum(m.cantidad), sum(m.valor)
         FROM movimientos AS m
         JOIN vivas AS v
             ON v.articulo_id = m.articulo_id
@@ -168,7 +176,8 @@ internal static class LaProyeccionDelLibro
             interval '1 month') AS g (mes)
         GROUP BY v.id, g.mes
         ORDER BY v.id, g.mes
-        ON CONFLICT (existencia_id, mes) DO UPDATE SET fisico = i.fisico + excluded.fisico
+        ON CONFLICT (existencia_id, mes) DO UPDATE
+        SET fisico = i.fisico + excluded.fisico, valor = i.valor + excluded.valor
         """;
 
     /// <summary>Las dos guardas de la sentencia, que quien anota comprueba antes de escribir nada.</summary>
@@ -250,6 +259,7 @@ internal static class LaProyeccionDelLibro
         var numerosDeSerie = new Guid?[movimientos.Count];
         var meses = new DateOnly[movimientos.Count];
         decimal[] cantidades = new decimal[movimientos.Count];
+        decimal[] valores = new decimal[movimientos.Count];
 
         int posicion = 0;
 
@@ -263,6 +273,7 @@ internal static class LaProyeccionDelLibro
             meses[posicion] = new DateOnly(
                 movimiento.FechaDeOperacion.Year, movimiento.FechaDeOperacion.Month, 1);
             cantidades[posicion] = movimiento.CantidadEnUnidadBase;
+            valores[posicion] = movimiento.Valor.Cantidad;
             posicion++;
         }
 
@@ -273,7 +284,7 @@ internal static class LaProyeccionDelLibro
         await contexto.Database
             .ExecuteSqlRawAsync(
                 SqlQueMueveLaProyeccion,
-                [empresaId, articulos, almacenes, ubicaciones, lotes, numerosDeSerie, meses, cantidades],
+                [empresaId, articulos, almacenes, ubicaciones, lotes, numerosDeSerie, meses, cantidades, valores],
                 cancelacion)
             .ConfigureAwait(false);
     }

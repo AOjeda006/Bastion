@@ -49,6 +49,11 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
     /// <b>Sin corte, ninguna</b>: <c>corte</c> sale vacío y todo lo que se cruza con él, también.
     /// </para>
     /// <para>
+    /// <b>Cada una lleva su cantidad y su valor</b>, sumados por la misma ventana, desde el 2.14
+    /// (ADR-0063 §1). El valor es la suma de la columna <c>valor</c> del libro, que ya va redondeada
+    /// a cuatro decimales, así que no se redondea nada más.
+    /// </para>
+    /// <para>
     /// El mes se trunca desde <c>timestamp</c> y no desde <c>date</c>: con una fecha a secas,
     /// PostgreSQL elige la versión de <c>date_trunc</c> con zona horaria.
     /// </para>
@@ -63,7 +68,8 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
         por_mes AS (
             SELECT m.articulo_id, m.almacen_id, m.ubicacion_id, m.lote_id, m.numero_de_serie_id,
                    date_trunc('month', m.fecha_de_operacion::timestamp)::date AS mes,
-                   sum(m.cantidad_en_unidad_base) AS cantidad
+                   sum(m.cantidad_en_unidad_base) AS cantidad,
+                   sum(m.valor) AS valor
             FROM inventario.movimiento_stock AS m
             CROSS JOIN corte
             WHERE m.empresa_id = {0}
@@ -88,7 +94,10 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
             SELECT r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.numero_de_serie_id, r.mes,
                    sum(coalesce(pm.cantidad, 0)) OVER (
                        PARTITION BY r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.numero_de_serie_id
-                       ORDER BY r.mes) AS fisico
+                       ORDER BY r.mes) AS fisico,
+                   sum(coalesce(pm.valor, 0)) OVER (
+                       PARTITION BY r.articulo_id, r.almacen_id, r.ubicacion_id, r.lote_id, r.numero_de_serie_id
+                       ORDER BY r.mes) AS valor
             FROM rejilla AS r
             LEFT JOIN por_mes AS pm
                 ON pm.articulo_id = r.articulo_id
@@ -154,8 +163,8 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
     internal const string SqlDeLaReposicion =
         $$"""
         WITH {{LasDebidas}}
-        INSERT INTO inventario.instantaneas_mensuales (existencia_id, mes, empresa_id, fisico)
-        SELECT e.id, d.mes, {0}, d.fisico
+        INSERT INTO inventario.instantaneas_mensuales (existencia_id, mes, empresa_id, fisico, valor)
+        SELECT e.id, d.mes, {0}, d.fisico, d.valor
         FROM debidas AS d
         JOIN inventario.existencias AS e
             ON e.empresa_id = {0}
