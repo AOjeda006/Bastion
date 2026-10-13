@@ -8,8 +8,8 @@ revisado: 2026-09-29
 
 # ADR-0044: La existencia se mueve en la sentencia que anota el libro, y la instantánea mensual se puede tirar
 
-- **Estado:** aceptado. **Enmendado por el ADR-0046 (§2 y §4) y por el ADR-0059 (§8); §5 corregido
-  en `d9dd1e1`.**
+- **Estado:** aceptado. **Enmendado por el ADR-0046 (§2 y §4), por el ADR-0059 (§8) y por el
+  ADR-0063 (§5, §6 y §10); §5 corregido en `d9dd1e1`.**
   - El [ADR-0046](adr-0046-el-valor-es-la-verdad-y-el-precio-medio-se-deduce.md) enmienda, en sus
     puntos 2 y 4, el §2 de este: una proyección que necesita leer lo que suma lo lee con la fila
     bloqueada, y la sentencia de la existencia se parte en dos.
@@ -20,6 +20,11 @@ revisado: 2026-09-29
     reescribió por dentro en `d9dd1e1` (2026-09-28), por encargo del usuario: el cerrojo del
     recálculo es de todas las empresas. No se deshace; esta línea lo declara, y el mensaje de ese
     commit dice qué cambió y por qué.
+  - El [ADR-0063](adr-0063-el-saldo-a-una-fecha-es-la-instantanea-mas-su-tramo-y-el-cerrojo-es-de-la-empresa.md)
+    enmienda tres puntos: en el §5, la empresa se pliega en C# y no con `hashtext`, y el compartido
+    tiene su sitio en el orden de cerrojos; en el §6, el cuadre compara también el valor de la
+    instantánea y recibe la empresa; en el §10, el trabajo mensual se pone al día solo y cuadra solo
+    la empresa que avanza.
 - **Fecha:** 2026-09-27
 - **Enmienda el [ADR-0015](adr-0015-lo-unico-que-genera-el-servidor-son-los-testigos-de-concurrencia.md)**,
   puntos 2 y 3: lo que genera el servidor ya no son solo los testigos de concurrencia. También lo
@@ -130,6 +135,11 @@ su disparador.
 
 ### 5. El recálculo, y el cerrojo que lo hace seguro
 
+> **Enmendado por el ADR-0063 (2026-10-13).** La empresa se pliega en C#, con un `XOR` de las
+> cuatro palabras del `Guid`, y no con `hashtext`. El compartido se toma justo antes de la sentencia
+> que crea y bloquea las filas vivas, entre la fila del documento y las existencias. Lo demás de
+> este punto sigue en pie.
+
 > **Corregido por dentro en `d9dd1e1` (2026-09-28), por encargo del usuario.** El párrafo del modo
 > del cerrojo decía que era el más débil que choca con quien escribe, y del modo es verdad; faltaba
 > que la tabla es de todas las empresas. Lo que sigue es el texto corregido, no el del 2026-09-27.
@@ -193,6 +203,9 @@ el criterio. El primer lector de la instantánea es el 2.14, y con él llega qui
 cada mes (punto 10).
 
 ### 6. El cuadre dice cuánto ha comparado
+
+> **Enmendado por el ADR-0063 (2026-10-13).** El cuadre compara también el `valor` de cada
+> instantánea con la suma del libro hasta el final de su mes, y recibe la empresa de quien lo llama.
 
 `ElCuadreDeLasExistencias.CuadrarAsync` compara, en **una sola lectura**:
 
@@ -291,6 +304,9 @@ Las tres entran en la lista cerrada por su ruta y con su motivo:
 `ElCuadreDeLasExistencias.cs` usa `.SqlQuery`.
 
 ### 10. Lo que llega después, con su disparador
+
+> **Enmendado por el ADR-0063 (2026-10-13), en el tercer punto.** El trabajo se despierta cada hora,
+> se pone al día solo si se saltó meses, y cuadra solo la empresa que avanza.
 
 - **El 2.9 trae el lote al libro**, y con él la sentencia, el recálculo y el cuadre cambian a la
   vez (punto 7).

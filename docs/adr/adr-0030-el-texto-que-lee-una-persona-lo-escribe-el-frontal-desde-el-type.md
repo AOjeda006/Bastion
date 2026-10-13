@@ -8,7 +8,9 @@ revisado: 2026-09-03
 
 # ADR-0030: el texto que lee una persona lo escribe el frontal, desde el `type` del `ProblemDetails`
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Ampliado por el [ADR-0063](adr-0063-el-saldo-a-una-fecha-es-la-instantanea-mas-su-tramo-y-el-cerrojo-es-de-la-empresa.md)**:
+  los textos de los `type` llegan después del arranque, y mientras no llegan se dice el genérico
+  por código de estado, sin traza.
 - **Fecha:** 2026-09-03
 - **Relacionado:** ADR-0004 (frontera entre resultado y excepción), ADR-0018 (el contrato se genera,
   se versiona y la CI lo vuelve a generar), ADR-0019 (la aserción de tipo es el punto ciego del

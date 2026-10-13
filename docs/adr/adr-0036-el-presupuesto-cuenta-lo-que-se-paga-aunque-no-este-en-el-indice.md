@@ -8,7 +8,8 @@ revisado: 2026-09-18
 
 # ADR-0036: El presupuesto cuenta lo que se paga antes de pintar, aunque no esté en el índice
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Ampliado por el [ADR-0063](adr-0063-el-saldo-a-una-fecha-es-la-instantanea-mas-su-tramo-y-el-cerrojo-es-de-la-empresa.md)**:
+  un segundo grupo declarado, el de los textos de los `type`, que tiene que existir y no se cuenta.
 - **Fecha:** 2026-09-18
 - **Enmienda** el [ADR-0028](adr-0028-el-presupuesto-mide-el-arranque-no-la-suma-de-los-fragmentos.md):
   sustituye su **definición de arranque**. Lo demás de aquel ADR —las dos métricas, los topes y su

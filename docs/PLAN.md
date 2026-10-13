@@ -11556,7 +11556,20 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **448**. Su
    y siete puntos que el ADR-0063 decide sin preguntar.
 5. ~~Parar y preguntar, todo junto.~~ Respondida el 2026-10-13, las cuatro con la recomendada: en
    *Decisiones tomadas → La puerta del 2.14*.
-6. El ADR-0063, con las respuestas y los siete puntos que decide sin preguntar.
+6. ~~El ADR-0063, con las respuestas y los siete puntos que decide sin preguntar.~~ Escrito en
+   `docs(adr): el 0063, el saldo a una fecha y el cerrojo de la empresa`. Enmienda el ADR-0044 en
+   el §5, el §6 y el §10, y amplía el ADR-0036 y el ADR-0030; los cuatro lo dicen en su *Estado*.
+   Añade cuatro cosas que la puerta no decía, y que el usuario no ha visto:
+   - **el plegado de la empresa en C#**, con un `XOR` de las cuatro palabras del `Guid`, y no con
+     `hashtext`, que es interna de PostgreSQL y es lo que proponía el ADR-0044 §5;
+   - **un cuarto caso al traducir un `type`**: mientras los textos no han llegado, el genérico por
+     código de estado, sin traza;
+   - **una regla del *linter***: ningún módulo importa un diccionario por su valor, salvo el que los
+     carga y los tests. Hoy `useTextoDeFallo` importa `es`, y once páginas arrastran el castellano
+     a quien entra en inglés. Contado con `grep -lE '(from|import)"\./es-B8hyXF4G\.js"'
+     frontend/dist/assets/*.js` sobre la construcción de `fdaf42f`: doce fragmentos;
+   - **el fragmento de los tipos en el presupuesto**, uno por idioma, que tiene que existir y no se
+     cuenta en el arranque.
 7. Los tipos fuera del arranque, por (A), en su propio commit: un fragmento por idioma, pedido
    después del primer pintado, y el barrido de `ElCambioDeIdioma` contra el fragmento nuevo. El
    arranque, medido antes y después.
