@@ -33,7 +33,10 @@ de datos, su contrato público y su comunicación por eventos.
 > diferencia entra en el libro como un ajuste numerado, que es lo que se anula para deshacerlo;
 > y el disponible es el físico menos lo reservado: una reserva aparta mercancía sin pasar nunca
 > de lo disponible, se consume con la salida de su albarán y, si caduca, suelta lo que apartaba
-> —quien reservará es el pedido de venta de la fase 4—.
+> —quien reservará es el pedido de venta de la fase 4—. El decimocuarto, el stock a fecha
+> pasada, está hecho: el saldo de cualquier día sale de la última instantánea anterior a su
+> mes más el tramo del libro, y cuadra con la suma del libro hasta ese día. Su casilla se
+> marca al cerrar la fase, después de repasarla criterio por criterio.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
 > **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo. Esta
 > línea se compara con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia

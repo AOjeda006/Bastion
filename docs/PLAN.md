@@ -11465,10 +11465,12 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
      La rama `2.13-las-reservas` se borró después, en local y en el remoto, y el *worktree* de la
      tanda también. Anotado al abrir el 2.14.
 
-**La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
-abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **573**. Su ADR es el
-**0063**.
+**El 2.14, hecho el 2026-10-14**, en la rama `2.14-el-stock-a-fecha-pasada`, abierta el
+2026-10-13 desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el
+encargo del 2026-10-13*. Sus mutaciones van de la **444** a la **572**, así que las siguientes
+empiezan en la **573**. Su ADR es el **0063**, así que el siguiente es el **0064**. **La fase no
+se cierra con él**, como dice el encargo: se prepara su repaso, y se para. Por eso su casilla se
+queda sin marcar (ítem 14).
 
 **Lo que queda, por este orden:**
 
@@ -12188,8 +12190,60 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **573**. Su
         **235** tipos de **242** sitios, **150** operaciones y **91** rutas; **412/450** y
         **720/900** KiB; el centinela, con la marca y sin avisos; y el humo, con los **109**
         permisos.
-14. La tanda, desde la **448**; la batería; el humo en su propio proyecto; el cierre del 2.14 por el
-    flujo de la rama.
+14. ~~La tanda, desde la **448**; la batería; el humo en su propio proyecto; el cierre del 2.14 por
+    el flujo de la rama.~~ Hecho en `docs(plan): el 2.14 hecho, con su batería, su humo y la
+    casilla sin marcar`, y en el avance de `main`.
+    - **La tanda se midió ítem a ítem**, de la 448 a la 572, cada una en la entrada de su ítem, y no
+      queda ninguna por medir: desde `9e0e0c1` solo cambian documentos. Las del 2.14 van de la
+      **444** a la **572**, porque la 444 a la 447 son de la propiedad por escritura, el ítem 3.
+    - **La batería de `AGENTS.md`, entera y en su orden, sobre `9e0e0c1`**, con `bash
+      bateria214.sh`, que es la del 2.13 con la base en `0638419`: los diecinueve pasos salen con 0,
+      y el árbol, limpio al terminar.
+      - `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **150** operaciones y
+        **235** tipos de **242** sitios, con los dos generadores en `--comprobar`;
+      - `typecheck`, `lint` y `format:check`, limpios; **277** casos del frontal en **29**
+        ficheros, y `canal-de-la-consola.sh`, con la marca y ningún aviso de `act()`;
+      - **412/450** y **720/900** KiB, con `bash scripts/ci/presupuesto-del-frontal.sh
+        frontend/dist 450 900`;
+      - el build, con 0 avisos y 0 errores, y `dotnet format`, limpio;
+      - **1477** casos en el carril rápido y **689** en el de integración, 604 y 85, todos en verde
+        y contados con `recuento-de-tests.sh` y las dos listas del *workflow*: los mismos que en el
+        run de `4e52202`, porque la propiedad es una teoría de seis semillas;
+      - y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py 0638419
+        HEAD`: 125 pares, 35 `Project` y 432 entradas del frontal en los dos lados, sin nada
+        añadido ni retirado.
+    - **El humo, con 0 fallos, sobre `9e0e0c1`**, en su propio proyecto, `bastion-humo-214`, con
+      `bash humo214.sh montar` y `bash humo214.sh rematar`. Es el del ítem 12, sin el recorrido:
+      - construye en 85 s, y la columna `valor` es `numeric(18,4)` sin nulos, con su migración una
+        vez en el historial y los **109** permisos del rol del sistema, el del saldo entre ellos;
+      - sin credenciales, `401`; mañana, `400` con `saldo-con-fecha-futura`; un día que no existe,
+        `400`; y hoy sin movimientos, `200` sin pares. Por la API y por el frontal;
+      - con los datos sintéticos, hoy da 7 unidades y 17,50 € en el origen, 20 y 50,00 € del otro
+        artículo, y en el destino 0 con 3 en tránsito por 7,50 €; y ayer, ceros;
+      - el segundo arranque, en verde en 15 s, y el saldo da lo mismo después. El `down -v` lleva
+        su `-p`, queda solo el proyecto `bastion`, y el entorno se borró al desmontar.
+    - **Los diagnósticos del editor**, sin ninguno en los ficheros del 2.14 que se le pidieron: la
+      propiedad, el módulo de los tests, la sentencia del saldo, las instantáneas y la pantalla.
+      Los dos que da son de `frontend/tsconfig.app.json` y `frontend/tsconfig.test.json`, y no son
+      de esta unidad: la versión de TypeScript del editor, la 6, avisa de que `baseUrl` dejará de
+      funcionar en la 7. El proyecto usa la `^5.9.3`, `typecheck` sale limpio, y esos ficheros no
+      se tocan desde `a68b3ea`, del 2.13. Se apunta para el repaso de la fase.
+    - **`/code-review` sobre el diff de la unidad**, `0638419..HEAD`, con 80 ficheros, lo lanza el
+      usuario: es una orden suya, y el agente no la puede lanzar.
+    - **La casilla del 2.14 se queda sin marcar, con su texto escrito.** Marcarla pone el README en
+      «fase 2 (Inventario), cerrada: 14 de 14 ítems», porque `ElEstadoDelReadmeEsElDelPlanTests`
+      deriva «cerrada» de las casillas, y el encargo dice que la fase no se cierra sin su repaso.
+      Se marca al cerrar la fase, y es la primera pregunta del repaso. El README dice que el
+      decimocuarto está hecho, en su prosa. Decidido sin preguntar, por reversible.
+    - **El cierre, por el flujo de la rama**: este commit va a la rama y espera su verde; `main`
+      avanza con `--ff-only`, y la rama se borra, en local y en el remoto, después del run de
+      `main`. Los dos runs se anotan en el primer commit del repaso.
+    - **El run de rama de `9e0e0c1`** es el **38481210895**, en verde al primer intento: Frontal
+      `115583980049`, Backend `115583980335` y Humo `115587289120`, con 69 pasos, 68 en verde y el
+      *Diagnóstico* omitido, y las cifras de los dos anteriores. Leído con `python leer-run27.py
+      38481210895`.
+    - **Los árboles de trabajo de las medidas**, `wt-avance`, `wt-cerrojo`, `wt-saldo` y `wt-valor`,
+      limpios, quitados con `git worktree remove`. `git worktree list` da solo el del repositorio.
 15. La revisión de la fase, preparada y sin cerrarla: cada criterio del 2.1 al 2.14 con su caso, y
     las notas abiertas para el cierre de la fase, como una tanda de preguntas.
 
@@ -20580,6 +20634,50 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   empresa sin corte no la tiene (ADR-0044 §5, corregido en el epílogo del 2.7). Es el último
   criterio del §15 que quedaba por cubrir, y con él la fase se repasa criterio por criterio antes de
   cerrarla.
+
+  **Hecho el 2026-10-14**, en la rama `2.14-el-stock-a-fecha-pasada`, y **sin marcar hasta el
+  repaso de la fase**, porque marcarla es lo que pone el README en «cerrada» (*Estado actual*, ítem
+  14 del 2.14). El porqué está en el ADR-0063, en `docs/adr/`. Los commits, las mutaciones de la
+  444 a la 572, la batería y el humo están en *Estado actual → El 2.14, hecho*.
+  Cada punto del criterio tiene su caso:
+
+  - la consulta contesta el saldo de cualquier día pasado **desde la instantánea más el tramo**:
+    `ElSaldoAUnaFechaTests`, en
+    `El_saldo_lee_la_instantanea_del_mes_anterior_o_la_del_corte…`, que estropea dos instantáneas
+    para ver cuál lee; y los diez de `LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests`, que leen
+    la sentencia;
+  - **coincide con la suma del libro hasta esa fecha**, sobre ajustes, anulaciones y
+    transferencias: `ElSaldoAUnaFechaTests`, en `El_saldo_de_cada_dia_es_el_libro_hasta_ese_dia…`,
+    contra un oráculo que suma el libro en C#, y la propiedad,
+    `ElSaldoEsLaSumaDelLibroPorPropiedadTests`, que lee el saldo a un día de cuatro tramos sobre
+    historias con ajustes, anulaciones, transferencias, recuentos y reservas, en seis semillas. La
+    562, la 563 y la 564 la ponen roja en las seis;
+  - y **la pantalla lo enseña con su fecha**: `ElSaldoAUnaFecha.test.tsx`, «el título dice el día
+    que contesta el servidor, aunque el navegador crea que es otro» y «sin día pide el de hoy, y
+    pinta el día que contesta, con lo que vuela aparte»; y el recorrido con `playwright-cli`, en
+    el ítem 12;
+  - una fecha anterior al primer movimiento contesta **cero y no un error**: el mismo
+    `El_saldo_de_cada_dia…`, con los tres pares en cero, y
+    `…La_consulta_acota_por_almacen_y_articulo_pagina_y_dice_la_fecha_que_contesta`, con el primer
+    día del calendario. En la propiedad, el tramo anterior al primer movimiento, que es donde la
+    562 la pone roja;
+  - una **fecha futura se rechaza**: `…La_consulta_acota…`, con `saldo-con-fecha-futura`; la
+    propiedad, con el día de mañana en cada lectura, que la 570 pone rojo; y en la pantalla, «un
+    día futuro que llega por la URL lo rechaza el servidor, y no se ofrece reintentarlo»;
+  - **el recálculo deja de cerrar la tabla entera**, con los dos cerrojos consultivos de la
+    empresa: `LasExistenciasSonLaSumaDelLibroTests`, en
+    `El_recalculo_de_una_empresa_no_frena_las_confirmaciones_de_otra`, con dos empresas y dos
+    transacciones de verdad, que la 459 pone rojo; y
+    `…La_confirmacion_de_una_clave_nueva_espera_al_recalculo_de_su_empresa` y
+    `…Dos_confirmaciones_de_la_misma_empresa_no_se_frenan_por_el_cerrojo_de_las_instantaneas`. El
+    de la clave nueva en vuelo,
+    `…El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro`, sigue
+    demostrando que la misma empresa espera. Y el plegado de la empresa, en
+    `LaClaveDelCerrojoEsDeLaEmpresaTests`;
+  - y **el trabajo mensual que lo llama**: los once de `ElTrabajoMensualAvanzaElCorteTests`, en el
+    carril rápido, los tres de la base en `LasExistenciasSonLaSumaDelLibroTests`, y su clase de
+    paso en la propiedad, que avanza el corte y cuadra todas las instantáneas. La 565 y la 566 la
+    ponen roja en las seis.
 
 ## Imports pendientes de `CLAUDE.md`
 
