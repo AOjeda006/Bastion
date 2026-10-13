@@ -145,6 +145,13 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// quinto generador envía a veces todo lo que hay de un artículo apartado.
 /// </para>
 /// <para>
+/// <b>Y la caducada que libera cada escritura</b> (encargo del 2026-10-13). Reservar, consumir y
+/// liberar sueltan las caducadas de su clave cada una en su código, así que cada una es su propia
+/// clase de paso. Al azar, una caducada casi nunca tenía una vigente al lado, y solo la liberaba quien
+/// reservaba. Así que el quinto generador pide a veces una que caduca en la clave de una vigente, y el
+/// paso siguiente de las reservas pasa por ella con la escritura que toca por turno.
+/// </para>
+/// <para>
 /// <b>Y el invariante de las reservas</b>, tras cada paso: las guardadas son las del modelo, así que
 /// en la base no hay ninguna que el modelo rechazara por pasar del disponible; y lo reservado de cada
 /// artículo en cada almacén, leído por el puerto de <c>Contracts</c>, es lo pendiente de las activas y
@@ -208,7 +215,9 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string ConsumidaEnParte = "reserva consumida en parte";
     private const string ConsumidaEntera = "reserva consumida entera";
     private const string ReservaLiberada = "reserva liberada";
-    private const string CaducadaAlPasar = "reserva caducada liberada al pasar";
+    private const string CaducadaAlReservar = "reserva caducada liberada al reservar";
+    private const string CaducadaAlConsumir = "reserva caducada liberada al consumir";
+    private const string CaducadaAlLiberar = "reserva caducada liberada al liberar";
     private const string CaducadaQueYaNoSeLibera = "reserva caducada que ya no se libera";
     private const string EnvioPorEncimaDelDisponible = "envío rechazado por el disponible";
 
@@ -263,7 +272,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         RecuentoConfirmado, RecuentoConLaHuellaNueva, RecuentoConElTeoricoCambiado, RecuentoQueSubeConTransito,
         RecuentoAnulado, RecuentoDescartado,
         Reservada, ReservaPorEncimaDelDisponible, ConsumidaEnParte, ConsumidaEntera, ReservaLiberada,
-        CaducadaAlPasar, CaducadaQueYaNoSeLibera, EnvioPorEncimaDelDisponible,
+        CaducadaAlReservar, CaducadaAlConsumir, CaducadaAlLiberar, CaducadaQueYaNoSeLibera,
+        EnvioPorEncimaDelDisponible,
     ];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
@@ -1551,6 +1561,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// el mismo <c>409</c>.
     /// </para>
     /// <para>
+    /// <b>Y la caducada con una vigente al lado</b> (encargo del 2026-10-13). Uno de cada cinco pasos
+    /// junta las dos: pide una unidad que caduca en la clave de una vigente que deja sitio, o, si no
+    /// la hay, una unidad vigente en la de una caducada sola, con el reloj de ayer, que no la libera
+    /// porque ayer no había caducado. Y mientras alguna vigente tenga al lado una caducada guardada
+    /// activa, el paso es pasar por ella, con la escritura que toca por turno. Al azar, ninguna
+    /// semilla consumía ni liberaba en una clave así (la 442 y la 443 del 2.13): las vigentes duran
+    /// poco, y la caducada casi nunca tenía una al lado.
+    /// </para>
+    /// <para>
     /// <b>Cada llamada, con su contexto</b>, como el recuento: un contexto que siguiera con una reserva
     /// en memoria la leería como estaba antes de que otra escritura pasara por su clave.
     /// </para>
@@ -1563,6 +1582,32 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         ReservaDelModelo[] caducadas = [.. secuencia.Reservas.Where(reserva => reserva.HaCaducadoEn(Ahora))];
 
         ReservaDelModelo[] conFisico = [.. vigentes.Where(reserva => secuencia.FisicoDe(reserva.Clave) > 0m)];
+
+        ReservaDelModelo[] junto = [.. vigentes.Where(reserva => secuencia.GuardaCaducadasEn(reserva.Clave, Ahora))];
+
+        // CON SITIO AYER, porque las dos se piden con el reloj de ayer y lo vigente es entonces lo de
+        // ayer. Las caducadas guardadas activas que quedan están solas: si alguna tuviera una vigente
+        // al lado, el paso habría sido pasar por ella.
+        DateTimeOffset ayer = s_relojDeAyer.GetUtcNow();
+
+        ReservaDelModelo[] conSitio =
+            [.. vigentes.Where(reserva => secuencia.FisicoDe(reserva.Clave) - secuencia.ReservadoEn(reserva.Clave, ayer) >= 1m)];
+
+        (Guid ArticuloId, Guid AlmacenId)[] solas =
+        [
+            .. secuencia.Reservas
+                .Where(reserva => reserva.GuardadaActivaYCaducadaEn(Ahora))
+                .Select(reserva => reserva.Clave)
+                .Distinct()
+                .Where(clave => secuencia.FisicoDe(clave) - secuencia.ReservadoEn(clave, ayer) >= 1m),
+        ];
+
+        if (junto.Length > 0)
+        {
+            await PasarPorLaCaducadaAsync(apartados, empresa, secuencia, junto[apartados.Next(junto.Length)]);
+
+            return;
+        }
 
         bool aUnaCaducada = caducadas.Length > 0 && apartados.Next(2) == 0;
 
@@ -1578,6 +1623,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         {
             await UnaLiberacionAsync(empresa, secuencia, vigentes[apartados.Next(vigentes.Length)], caducada: false);
         }
+        else if (dado < 75 && conSitio.Length > 0)
+        {
+            await UnaReservaAsync(
+                apartados, empresa, secuencia, enLaClave: conSitio[apartados.Next(conSitio.Length)].Clave, caduca: true);
+        }
+        else if (dado < 75 && solas.Length > 0)
+        {
+            await UnaReservaAsync(apartados, empresa, secuencia, enLaClave: solas[apartados.Next(solas.Length)], ayer: true);
+        }
         else if (dado >= 90 && conFisico.Length > 0)
         {
             await UnEnvioDeLoApartadoAsync(apartados, empresa, secuencia, conFisico[apartados.Next(conFisico.Length)]);
@@ -1585,6 +1639,34 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         else
         {
             await UnaReservaAsync(apartados, empresa, secuencia);
+        }
+    }
+
+    /// <summary>
+    /// La escritura que toca por turno —reservar, consumir o liberar— en la clave de una vigente que
+    /// tiene al lado una caducada guardada activa: la que la libera (encargo del 2026-10-13).
+    /// </summary>
+    /// <remarks>
+    /// El turno pasa aunque la escritura no salga —una reserva de más, o un consumo en una clave que ya
+    /// no tiene existencias—: la caducada sigue ahí, y el paso siguiente lo intenta con la escritura de
+    /// después.
+    /// </remarks>
+    private async Task PasarPorLaCaducadaAsync(
+        Random apartados, UnaEmpresa empresa, Secuencia secuencia, ReservaDelModelo vigente)
+    {
+        switch (secuencia.TurnoDeLaCaducada++ % 3)
+        {
+            case 0:
+                await UnaReservaAsync(apartados, empresa, secuencia, enLaClave: vigente.Clave, caduca: false);
+                break;
+
+            case 1:
+                await UnConsumoAsync(apartados, empresa, secuencia, vigente);
+                break;
+
+            default:
+                await UnaLiberacionAsync(empresa, secuencia, vigente, caducada: false);
+                break;
         }
     }
 
@@ -1600,6 +1682,13 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// la libera una escritura que pasa por ella, y al azar entre seis pares tardaba en pasar.
     /// </para>
     /// <para>
+    /// <b>O en la clave que se le da</b>, y entonces caduca solo si se le pide, y se pide ayer si
+    /// caduca o si se le dice: es la que caduca junto a una vigente, la vigente que se pone junto a
+    /// una caducada sola, o la que reserva por turno junto a una caducada (encargo del 2026-10-13).
+    /// Las tres tienen que salir, y su clave tiene sitio para una unidad por lo menos: la que caduca
+    /// pide una, y las otras, de una a tres sin pasar del sitio, para que se puedan consumir en parte.
+    /// </para>
+    /// <para>
     /// <b>De una a tres unidades</b>, salvo la que pide justo el disponible, que es el borde y tiene
     /// que salir. Lo apartado frena los envíos, y con reservas grandes las transferencias dejarían de
     /// salir.
@@ -1610,29 +1699,47 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// hoy y que nadie ha escrito todavía.
     /// </para>
     /// </remarks>
-    private async Task UnaReservaAsync(Random apartados, UnaEmpresa empresa, Secuencia secuencia)
+    private async Task UnaReservaAsync(
+        Random apartados,
+        UnaEmpresa empresa,
+        Secuencia secuencia,
+        (Guid ArticuloId, Guid AlmacenId)? enLaClave = null,
+        bool caduca = false,
+        bool ayer = false)
     {
-        (Guid ArticuloId, Guid AlmacenId)[] conFisico =
-            [.. empresa.Pares.Where(par => secuencia.FisicoDe(par) > 0m)];
+        (Guid ArticuloId, Guid AlmacenId) clave;
+        int caducidad;
 
-        // EL EMPUJÓN DE LA CADUCADA: la mitad de las veces que alguna sigue guardada activa, a su
-        // clave, que es donde la escritura la libera.
-        (Guid ArticuloId, Guid AlmacenId)[] conCaducadas =
-        [
-            .. secuencia.Reservas
-                .Where(reserva => reserva.Estado == EstadoDeReserva.Activa && reserva.HaCaducadoEn(Ahora))
-                .Select(reserva => reserva.Clave)
-                .Distinct(),
-        ];
+        if (enLaClave is { } dada)
+        {
+            clave = dada;
+            caducidad = caduca ? 0 : 1 + apartados.Next(3);
+        }
+        else
+        {
+            (Guid ArticuloId, Guid AlmacenId)[] conFisico =
+                [.. empresa.Pares.Where(par => secuencia.FisicoDe(par) > 0m)];
 
-        (Guid ArticuloId, Guid AlmacenId)[] candidatos =
-            conCaducadas.Length > 0 && apartados.Next(2) == 0 ? conCaducadas
-            : conFisico.Length > 0 ? conFisico
-            : empresa.Pares;
-        (Guid ArticuloId, Guid AlmacenId) clave = candidatos[apartados.Next(candidatos.Length)];
+            // EL EMPUJÓN DE LA CADUCADA: la mitad de las veces que alguna sigue guardada activa, a su
+            // clave, que es donde la escritura la libera.
+            (Guid ArticuloId, Guid AlmacenId)[] conCaducadas =
+            [
+                .. secuencia.Reservas
+                    .Where(reserva => reserva.GuardadaActivaYCaducadaEn(Ahora))
+                    .Select(reserva => reserva.Clave)
+                    .Distinct(),
+            ];
 
-        int caducidad = apartados.Next(4);
-        RelojParado reloj = caducidad == 0 ? s_relojDeAyer : s_reloj;
+            (Guid ArticuloId, Guid AlmacenId)[] candidatos =
+                conCaducadas.Length > 0 && apartados.Next(2) == 0 ? conCaducadas
+                : conFisico.Length > 0 ? conFisico
+                : empresa.Pares;
+
+            clave = candidatos[apartados.Next(candidatos.Length)];
+            caducidad = apartados.Next(4);
+        }
+
+        RelojParado reloj = caducidad == 0 || ayer ? s_relojDeAyer : s_reloj;
         DateTimeOffset ahora = reloj.GetUtcNow();
 
         DateTimeOffset? caducaEl = caducidad switch
@@ -1644,15 +1751,19 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         decimal disponible = secuencia.FisicoDe(clave) - secuencia.ReservadoEn(clave, ahora);
 
-        decimal cantidad = apartados.Next(8) switch
-        {
-            0 => Math.Max(disponible, 0m) + 1 + apartados.Next(3),
-            1 when disponible > 0m => disponible,
-            _ => 1 + apartados.Next(3),
-        };
+        decimal cantidad = enLaClave is null
+            ? apartados.Next(8) switch
+            {
+                0 => Math.Max(disponible, 0m) + 1 + apartados.Next(3),
+                1 when disponible > 0m => disponible,
+                _ => 1 + apartados.Next(3),
+            }
+            : caduca ? 1m
+            : Math.Max(1m, Math.Min(decimal.Floor(disponible), 1 + apartados.Next(3)));
 
         OrigenDeLaReserva origen = LasReservas.OrigenNuevo();
-        string detalle = DescribirLaReserva(empresa, clave, cantidad, caducaEl, disponible);
+        string detalle = DescribirLaReserva(empresa, clave, cantidad, caducaEl, disponible)
+            + (ayer ? ", pedida ayer" : string.Empty);
 
         Resultado<ReservaDto> reserva;
 
@@ -1676,7 +1787,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         reserva.EsCorrecto.ShouldBeTrue($"«{reserva.Error?.Codigo}»\n{secuencia.Relato()}");
 
-        PasarPorLaClave(secuencia, clave, ahora);
+        PasarPorLaClave(secuencia, clave, ahora, CaducadaAlReservar);
         secuencia.Reservas.Add(new ReservaDelModelo(reserva.Valor.Id, origen, clave, cantidad, caducaEl));
     }
 
@@ -1793,7 +1904,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         secuencia.ValorDeLosAlbaranes += valoradas.Sum(fila => fila.Valor);
 
         reserva.Consumir(sale);
-        PasarPorLaClave(secuencia, reserva.Clave, Ahora);
+        PasarPorLaClave(secuencia, reserva.Clave, Ahora, CaducadaAlConsumir);
     }
 
     /// <summary>
@@ -1832,7 +1943,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         liberacion.EsCorrecto.ShouldBeTrue($"«{liberacion.Error?.Codigo}»\n{secuencia.Relato()}");
 
         reserva.Liberar();
-        PasarPorLaClave(secuencia, reserva.Clave, Ahora);
+        PasarPorLaClave(secuencia, reserva.Clave, Ahora, CaducadaAlLiberar);
     }
 
     /// <summary>
@@ -1913,16 +2024,16 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
     /// <summary>
     /// Lo que escribe en su clave una escritura de reservas que sale: las caducadas, liberadas por su
-    /// caducidad (ADR-0059 §4). Si hay alguna, es una clase de paso.
+    /// caducidad (ADR-0059 §4). Si hay alguna, es la clase de paso de esa escritura.
     /// </summary>
     private static void PasarPorLaClave(
-        Secuencia secuencia, (Guid ArticuloId, Guid AlmacenId) clave, DateTimeOffset ahora)
+        Secuencia secuencia, (Guid ArticuloId, Guid AlmacenId) clave, DateTimeOffset ahora, string clase)
     {
         int liberadas = secuencia.LiberarLasCaducadas(clave, ahora);
 
         if (liberadas > 0)
         {
-            secuencia.Anotar(CaducadaAlPasar, string.Create(CultureInfo.InvariantCulture, $"{liberadas}"));
+            secuencia.Anotar(clase, string.Create(CultureInfo.InvariantCulture, $"{liberadas}"));
         }
     }
 
@@ -3205,11 +3316,15 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             Causa = CausaDeLiberacion.AMano;
         }
 
+        /// <summary>Si sigue guardada activa con la caducidad pasada: la que libera quien pasa por su clave.</summary>
+        internal bool GuardadaActivaYCaducadaEn(DateTimeOffset ahora) =>
+            Estado == EstadoDeReserva.Activa && CaducaEl <= ahora;
+
         /// <summary>La deja liberada por su caducidad si estaba guardada activa y ya caducó.</summary>
         /// <returns><c>true</c> si la ha liberado ahora.</returns>
         internal bool LiberarSiHaCaducado(DateTimeOffset ahora)
         {
-            if (Estado != EstadoDeReserva.Activa || !(CaducaEl <= ahora))
+            if (!GuardadaActivaYCaducadaEn(ahora))
             {
                 return false;
             }
@@ -3362,6 +3477,12 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         /// <summary>Las reservas que han salido, en el orden en que salieron.</summary>
         internal List<ReservaDelModelo> Reservas { get; } = [];
 
+        /// <summary>
+        /// Cuántas veces se ha pasado por una caducada con una vigente al lado: su resto entre tres es
+        /// la escritura que toca, reservar, consumir o liberar.
+        /// </summary>
+        internal int TurnoDeLaCaducada { get; set; }
+
         /// <summary>Las más claves en vuelo que ha comparado el cuadre tras un paso.</summary>
         internal long MasExistenciasEnVuelo { get; set; }
 
@@ -3441,6 +3562,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
                 return sale > fisico - ReservadoEn((articulo.Key, almacenId), ahora) && sale <= fisico;
             });
+
+        /// <summary>Si la clave tiene alguna caducada guardada activa: la que libera quien pasa por ella.</summary>
+        internal bool GuardaCaducadasEn((Guid ArticuloId, Guid AlmacenId) clave, DateTimeOffset ahora) =>
+            Reservas.Any(reserva => reserva.Clave == clave && reserva.GuardadaActivaYCaducadaEn(ahora));
 
         /// <summary>
         /// Las caducadas de la clave que siguen guardadas activas, liberadas por su caducidad: lo que
