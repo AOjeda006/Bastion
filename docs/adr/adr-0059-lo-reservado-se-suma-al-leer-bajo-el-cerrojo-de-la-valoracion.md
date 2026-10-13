@@ -3,12 +3,25 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql]
 aplica_a: [ddd, sql, inventario, concurrencia]
 tags: [adr, reserva, disponible, caducidad, cerrojo, consumo, albaran, r1, r12, r13, adr-0044, adr-0046, adr-0048, adr-0053, adr-0055]
-revisado: 2026-10-09
+revisado: 2026-10-13
 ---
 
 # ADR-0059: Lo reservado se suma al leer, bajo el cerrojo de la valoración, y el consumo escribe su salida
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **§9 corregido por dentro en `514ab46`; §4, §5 y §6, reescritos por dentro
+  en la rama del 2.13, antes de llegar a `main`.**
+  - El §9 no se enmendó desde un ADR nuevo, como pide `principios/git-workflow.md`, sino que se
+    reescribió por dentro en `514ab46` (2026-10-10), con el hallazgo 2 de la revisión del 2.13. La
+    guarda del envío mira el físico de la clave y no el del hueco, y el punto decía que lo que ya se
+    rechazaba se seguía rechazando con el mismo código. Ese párrafo lo había escrito `42f696b` el
+    mismo día. No se deshace: esta línea lo declara, y el mensaje de ese commit dice qué cambió y
+    por qué.
+  - Los §4, §5 y §6 se reescribieron igual mientras el ADR solo vivía en la rama, cada vez en el
+    commit del código que lo pedía: el §4, en `be8b0eb` y `653fa2f`; el §5, en `dd74f6e`, `653fa2f`
+    y `8537648`; y el §6, en `3fe50c9` y `fdaf42f`. Cada punto lleva su nota, y cada commit dice qué
+    cambió.
+  - Se declaran el 2026-10-13. El encargo de ese día pidió la línea del §9, y las otras tres van con
+    ella para que la cabecera no calle ninguna.
 - **Fecha:** 2026-10-09
 - **Sale del 2.13.** El encargo del 2026-10-08 fijó las reservas hasta su puerta (PLAN, *El 2.13:
   las reservas y el disponible, hasta su puerta*). La puerta preguntó ocho cosas, y el usuario
@@ -165,6 +178,11 @@ Ventas:
 
 ### 4. La caducidad se aplica al leer, y se escribe al pasar
 
+> **Reescrito por dentro en `be8b0eb` y `653fa2f` (2026-10-09 y 2026-10-10), en la rama del 2.13.**
+> El primero dice cómo mapea EF el estado guardado: por su nombre, como propiedad privada, y no por
+> su campo. El segundo cambia cuándo se liberan las caducadas, después del último rechazo y no antes
+> de decidir, con el hallazgo 5 de la revisión. Lo que sigue es el texto reescrito.
+
 - **El estado se lee con `Reserva.EstadoEn(ahora)`.** Una reserva guardada `Activa` cuyo
   `caduca_el` no es posterior a `ahora` se lee `Liberada`. El estado guardado no es público: el
   único que lo lee es `EstadoEn`, y EF lo mapea por su nombre, como propiedad privada.
@@ -181,6 +199,11 @@ Ventas:
   guardada `Activa`. Quien la lee la ve `Liberada`, y el disponible ya no la cuenta.
 
 ### 5. Reservar
+
+> **Reescrito por dentro en `dd74f6e`, `653fa2f` y `8537648` (2026-10-10), en la rama del 2.13.**
+> La caducidad pasa del paso 1 al 4, detrás del origen; las caducadas de la clave, detrás del
+> disponible; y los maestros miran que la cantidad sea entera si el artículo va por serie, con el
+> hallazgo 3 de la revisión. Lo que sigue es el texto reescrito.
 
 | Paso | Qué hace | Si falla |
 |---|---|---|
@@ -214,6 +237,11 @@ Ventas:
 - **Los rechazos son resultados** (precisión 7): ningún camino de fallo lanza.
 
 ### 6. Consumir escribe su salida
+
+> **Reescrito por dentro en `3fe50c9` y `fdaf42f` (2026-10-10), en la rama del 2.13.** El documento
+> que ya la consumió se mira antes que el estado, con el hallazgo 1 de la revisión, y la ubicación
+> bloqueada de cada línea es una guarda nueva, con el hallazgo 4. Lo que sigue es el texto
+> reescrito.
 
 - **Recibe el origen de la reserva**, no su identificador: el albarán sabe de qué línea de pedido
   sale, y el origen es único en todos los estados (precisión 6). Recibe también el documento que
@@ -280,6 +308,12 @@ cuando exista el albarán. Y el día que Ventas saque mercancía sin reserva, la
 también con esa otra salida.
 
 ### 9. La transferencia respeta el disponible de su origen
+
+> **Corregido por dentro en `514ab46` (2026-10-10), con el hallazgo 2 de la revisión del 2.13.** El
+> párrafo «Solo entre el disponible y el físico», que había escrito `42f696b`, decía que lo que ya
+> se rechazaba se seguía rechazando con el mismo código. No es así cuando el hueco se queda corto y
+> el resto de la clave está apartado: la guarda mira el físico de la clave, y contesta el `422` del
+> disponible. Lo que sigue es el texto corregido, no el de `42f696b`.
 
 - **Al enviar, con las valoraciones ya bloqueadas**: si lo que sale de una clave del origen, en la
   unidad base, pasa del disponible de esa clave, es un `422`

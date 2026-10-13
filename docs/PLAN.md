@@ -11307,7 +11307,11 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y su ADR es el **0063**.
 
 1. ~~Los runs del cierre del 2.13, anotados.~~ Hecho en el primer commit de la rama: el
    38083369049 y el 38084319374, en *El 2.13, cerrado* y en su casilla.
-2. La cabecera del ADR-0059, con el §9 corregido por dentro en `514ab46`.
+2. ~~La cabecera del ADR-0059, con el §9 corregido por dentro en `514ab46`.~~ Hecha en
+   `docs(adr): la cabecera del 0059 dice lo que se reescribió por dentro`. El §9 lleva su nota,
+   como pide el encargo, y con él van el §4, el §5 y el §6, que también se reescribieron por dentro
+   en la rama del 2.13, en seis commits del código que lo pedía. Una cabecera que solo declarara
+   el §9 callaría los otros tres.
 3. La propiedad, por escritura: `CaducadaAlPasar` en tres clases, con su tanda y lo que cuesta.
 4. La puerta del 2.14, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0063
    decide sin preguntar.
