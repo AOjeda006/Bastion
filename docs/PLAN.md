@@ -11467,7 +11467,7 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
 **La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
 abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **540**. Su ADR es el
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **560**. Su ADR es el
 **0063**.
 
 **Lo que queda, por este orden:**
@@ -12000,7 +12000,106 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **540**. Su
         rutas, y el centinela, con la marca y sin avisos;
       - **410/450** y **711/900** KiB, y el humo con los **109** permisos. Leído con `python
         leer-run27.py 38445287657`.
-12. La pantalla `/saldos`, en una ruta diferida, vista en el navegador.
+12. ~~La pantalla `/saldos`, en una ruta diferida, vista en el navegador.~~ Hecho en
+    `feat(inventario): la pantalla del saldo a una fecha` (`5aa5cf1`) y en `test(inventario): el
+    hoy del saldo, con la zona fijada en el caso` (`e004b9e`).
+    - **La ruta `/saldos`**, diferida y en la navegación, con el permiso `inventario.saldo.ver`
+      (ADR-0063 §8). Arriba, el día, que por omisión es hoy en UTC y no deja pasar de ahí con su
+      `max`; debajo, el almacén y el artículo. Los tres viven en la URL con los nombres de la API,
+      `fecha`, `almacen` y `articulo`, y lo que no tiene forma de día ni de identificador se ignora.
+      Un día futuro que llega por la URL sí se manda: lo rechaza el servidor con
+      `saldo-con-fecha-futura`, y ese fallo no ofrece reintentarlo.
+    - **La tabla lleva en su título el día que contesta el servidor**, no el del campo. Lo que vuela
+      va en sus dos columnas, que apuntan con `aria-describedby` a la frase que dice que no está
+      sumado. Los nombres del artículo y del almacén salen por el camino del recuento, con su
+      caché. La lista de artículos del filtro es de esta pantalla, con un tope de 200 que anota el
+      README del módulo.
+    - **Los casos**: cinco del modelo y diez de la pantalla, con el reloj parado en un instante UTC.
+      Y el barrido de rutas cuenta **15**, con un caso nuevo para la lista de las que salen en la
+      navegación, que no miraba nadie.
+    - **Decidido sin preguntar, por trivial o reversible**:
+      - los nombres reutilizan la caché del recuento y la clave de los almacenes, en vez de
+        pedirlos otra vez;
+      - hoy es el día UTC también en el frontal, el mismo que el del servidor, mientras siga
+        abierta la nota «Hoy es el día UTC»;
+      - el caso de la lista de la navegación entra en el barrido, porque sin él la 556 no la vería
+        nadie.
+    - **Las cifras, sobre `e004b9e`**, con la batería del frontal de `AGENTS.md`: `typecheck`,
+      `lint` y `format:check`, en verde. **277** casos en **29** ficheros, con el canal abierto, la
+      marca y ningún aviso. **412/450** y **720/900** KiB, con `bash
+      scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`, y los tipos de error, fuera del
+      arranque: 33 652 B el castellano y 33 539 B el inglés.
+    - **La tanda, de la 540 a la 559**, con `python -X utf8 mutar-pantalla.py base 540-559`,
+      escrita antes de medir con lo que cada una tenía que poner rojo. Corre los tres ficheros que
+      la ven —el modelo, la pantalla y el barrido de rutas— con `npx vitest run --reporter=json`, y
+      afirma que han corrido casos. La base, 0 rojos de 24 y ningún aviso de `act()`. **Las veinte
+      casan con lo escrito**, sin un rojo de más ni de menos.
+
+      | # | Mutación | Rojo en |
+      |---|---|---|
+      | 540 | El día de la URL, cualquier cadena | El modelo, «lo que no tiene forma de día…», y la pantalla, «lo que la URL trae y no se reconoce…» |
+      | 541 | Hoy, el día del calendario de quien mira | El modelo, «hoy es el día UTC…». Verde con `TZ=UTC` antes de `e004b9e` |
+      | 542 | El importe, con dos decimales como mucho | El modelo, «un importe lleva los decimales de su divisa…» |
+      | 543 | Sin la salida de la divisa que Intl no admite | El modelo, «una divisa que Intl no admite…» |
+      | 544 | La cantidad es la que vuela | La pantalla, «sin día pide el de hoy…» y «en inglés…» |
+      | 545 | El día no viaja al servidor | La pantalla, «el día, el almacén y el artículo van a la URL…» y «un día futuro…» |
+      | 546 | El artículo viaja como almacén | La pantalla, «el día, el almacén y el artículo…» |
+      | 547 | El día futuro ofrece reintentar | La pantalla, «un día futuro que llega por la URL…» |
+      | 548 | El campo del día, sin `max` | La pantalla, «sin día pide el de hoy…» |
+      | 549 | El campo del día empieza vacío | La pantalla, «sin día…» y «lo que la URL trae…» |
+      | 550 | El título, con el día del navegador | La pantalla, «el título dice el día que contesta el servidor…» |
+      | 551 | Lo que vuela, sin `aria-describedby` | La pantalla, «sin día pide el de hoy…» |
+      | 552 | Consultar no vuelve a la primera página | La pantalla, «el día, el almacén y el artículo…» |
+      | 553 | El filtro de artículos, sin mirar el permiso | La pantalla, «sin ver almacenes ni artículos…» |
+      | 554 | El vacío no cuenta el artículo como filtro | La pantalla, «sin saldos lo dice…» |
+      | 555 | La ruta, con el permiso de ver los recuentos | El barrido, «la partición cuadra: 15 rutas…» |
+      | 556 | La ruta, fuera de la navegación | El barrido, «la navegación ofrece estas…» |
+      | 557 | El artículo, `producto` en la URL | El modelo, «lee de la URL…», y la pantalla, «el día, el almacén…» y «sin saldos…» |
+      | 558 | **Arnés**: el servidor falso no acota por artículo | La pantalla, «el día, el almacén y el artículo…» |
+      | 559 | **Arnés**: el servidor falso, sin su propio hoy | La pantalla, «el título dice el día que contesta el servidor…» |
+
+      - **La 541 salió verde con `TZ=UTC`**, que es la zona del *runner*: el caso heredaba la zona
+        de la máquina, y en UTC el día local y el UTC son el mismo. Se cubrió en su commit,
+        `e004b9e`, que fija la zona en cada afirmación, Bogotá y Madrid, y la devuelve. Medida otra
+        vez, roja con la zona de la máquina y con `TZ=UTC python -X utf8 mutar-pantalla.py base
+        541`. El caso pasa en cuatro zonas, con `TZ=<zona> npx vitest run
+        src/features/inventario/saldos/model/saldo.test.ts`: UTC, `Europe/Madrid`, `America/Bogota`
+        y `Asia/Tokyo`.
+      - La siguiente mutación es la **560**.
+    - **El recorrido, con `playwright-cli`, contra la pila del humo** en su propio proyecto,
+      `bastion-humo-214`, con datos sintéticos: dos almacenes, dos artículos, un recuento confirmado
+      de partida y una transferencia de 3 unidades enviada hoy. Cinco capturas, sin secretos, que no
+      entran en el repositorio:
+      - hoy, los tres pares: 7 unidades y 17,50 € en el origen, 20 y 50,00 € del otro artículo, y en
+        el destino 0, con 3 en tránsito por 7,50 €;
+      - el destino solo, con su filtro;
+      - mañana, con el texto de `saldo-con-fecha-futura` y sin el botón de reintentar;
+      - en inglés, con el título «Stock balance at the end of Oct 13, 2026, by item and warehouse»;
+      - y a 375 px de ancho.
+    - **El humo, con 0 fallos**, en el mismo proyecto, con `bash humo214.sh montar` y `bash
+      humo214.sh rematar`. Construye, levanta, y lee del catálogo del motor la columna del valor de
+      la instantánea, `numeric(18,4)` sin nulos, la migración una vez en el historial y los **109**
+      permisos del rol del sistema, el del saldo entre ellos. Por la API y por el frontal: sin
+      credenciales, `401`; mañana, `400` con `saldo-con-fecha-futura`; un día que no existe, `400`;
+      y hoy sin movimientos, `200` sin pares. Con los datos del recorrido, hoy y ayer dan lo que
+      dicen las capturas y ceros. El segundo arranque sale en verde en 16 s, el saldo sigue dando
+      lo mismo después, y el `down -v` lleva su `-p`. El entorno se borró al desmontar.
+    - **Dos observaciones para la revisión de la fase, que no se arreglan aquí**:
+      - a 375 px la página mide 710 de ancho en todas las pantallas, por la cabecera. La tabla del
+        saldo llega a 387 y la de los recuentos a 451; la de artículos y la de almacenes caben. Ni
+        `ux-ipo` ni el PLAN tienen una regla para el ancho del móvil;
+      - el `400` del día futuro se pide dos veces, por el `retry: 1` de toda la aplicación en
+        `frontend/src/app/cache.ts`. La pantalla no ofrece reintentarlo, pero la consulta reintenta.
+    - **Los runs de rama, los dos en verde al primer intento**, leídos con `python leer-run27.py
+      <run>`:
+      - el de `47f35ad` es el **38447909213**: Backend `115471031947`, Frontal `115471032513` y
+        Humo `115474944867`;
+      - el de `5aa5cf1` y `e004b9e`, que subieron juntos, el **38449808651**: Backend
+        `115477494926`, Frontal `115477495098` y Humo `115480834337`. Lleva **720/900** KiB, la
+        pantalla dentro;
+      - los dos, con 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*; **1477** y **689** casos,
+        **235** tipos de **242** sitios, **150** operaciones y **91** rutas; el centinela, con la
+        marca y sin avisos; y el humo, con los **109** permisos.
 13. La propiedad, con tres clases de paso nuevas: el saldo a una fecha, el trabajo mensual y la
     clave nueva antes del corte. Con lo que cuesta.
 14. La tanda, desde la **448**; la batería; el humo en su propio proyecto; el cierre del 2.14 por el
