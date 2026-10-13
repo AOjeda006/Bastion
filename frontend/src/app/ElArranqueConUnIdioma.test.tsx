@@ -94,8 +94,9 @@ describe('El arranque con un idioma', () => {
     expect(i18n.t('errores.tipos.almacen-duplicado')).toBe(
       'Ya hay un almacén con ese código en esta empresa.',
     );
-    // La mezcla es profunda: sin ella, `errores` entero se habría sustituido por `{ tipos }` y los
-    // textos genéricos, que son los que se dicen mientras tanto, habrían desaparecido.
+    // Con los genéricos al lado: una mezcla a lo ancho de `{ errores: { tipos } }` habría
+    // sustituido `errores` entero, y los textos genéricos, que son los que se dicen mientras tanto,
+    // habrían desaparecido.
     expect(i18n.t('errores.servidor')).toBe(
       'El servidor no ha podido responder. Inténtalo de nuevo.',
     );
