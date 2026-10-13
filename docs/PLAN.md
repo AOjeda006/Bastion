@@ -11467,7 +11467,7 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
 **La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
 abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **482**. Su ADR es el
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **511**. Su ADR es el
 **0063**.
 
 **Lo que queda, por este orden:**
@@ -11758,10 +11758,126 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **482**. Su
        saca dos `instantanea-valor` con el valor igual donde la cantidad difiere.
      - **La 467 no la ve el de la clave nueva, y la 468 sí.** Una clave nueva crea su instantánea
        con el `INSERT` y no pasa por el `ON CONFLICT`, que es lo único que cambia la 467.
+   - **El run de rama de `1bea826`**, que lleva también `c980aa2`, es el **38403718372**, en verde
+     al primer intento:
+     - sus jobs, Backend `115317693492`, Frontal `115317694542` y Humo `115321787370`;
+     - 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*;
+     - **1456** y **682** casos, **234** tipos de **241** sitios, **149** operaciones y **90**
+       rutas, y el centinela, con la marca y sin avisos;
+     - **410/450** y **711/900** KiB. Leído con `python leer-run27.py 38403718372`.
      - **La 480 la ve el cuadre por la instantánea que falta.** Con el valor a cero, la que falta
        espera un cero y no tiene nada, y el cuadre no puede distinguirlo. Por eso las entradas del
        caso llevan coste.
-10. El trabajo mensual que avanza el corte, con sus métricas y su registro.
+10. ~~El trabajo mensual que avanza el corte, con sus métricas y su registro.~~ Hecho en
+    `feat(inventario): el trabajo mensual que avanza el corte` (`e500bcc`).
+    - **`AvanzadorDelCorte`, un `BackgroundService` que se despierta cada hora** (ADR-0063 §7). El
+      mes que toca es el anterior al de hoy en UTC. Las empresas son las que tienen alguna
+      existencia, leídas sin inquilino con su propio motivo, `AvanceDelCorte`: es el quinto camino
+      sin petición detrás en la lista cerrada de `ElFiltroNoSeSaltaPorAhiTests`, y lee solo eso.
+      Cada empresa va en su ámbito y en su `try`, así que su fallo se registra, se cuenta y no para
+      a las demás. Parar la API no es un fallo, y una cancelación que no es la de la parada, sí.
+    - **El avance es la sentencia del corte con una condición**: el `ON CONFLICT` solo mueve la fila
+      si el mes nuevo es posterior. Cero filas quiere decir que ya llegaba, y entonces no se rehace
+      nada ni se cuadra, y `AvanzarAsync` contesta nulo. Si avanza, rehace las instantáneas desde el
+      libro, con el cerrojo exclusivo de la empresa del ítem 8, y cuadra la empresa detrás.
+    - **Tres contadores en el medidor `Bastion.Inventario.Corte`**: `empresas_avanzadas`,
+      `avances_fallidos` y `descuadres`, que cuenta cada descuadre y no cada empresa. Ninguno lleva
+      la empresa como etiqueta: va en el registro, con el mes escrito como año y mes. Cada vuelta
+      deja una línea con cuántas empresas había, cuántas avanzaron y cuántas fallaron; cada avance,
+      otra con sus cifras y sus dos duraciones; y un cuadre con descuadres, un aviso con sus tipos.
+    - **Se registra solo con base y sin `BASTION_AVANCE_DEL_CORTE=apagado`.** La variable vale
+      `encendido` o `apagado`, sin ella va encendido, y cualquier otro valor para el arranque aunque
+      no haya base. Los anfitriones de integración la ponen en `apagado`, porque comparten base y el
+      trabajo movería el corte de los demás casos.
+    - **Los casos**: once en `ElTrabajoMensualAvanzaElCorteTests`, en el carril rápido, con un
+      avance de libreta, un reloj de prueba, un espía del medidor y un registro en memoria. Y tres
+      en `LasExistenciasSonLaSumaDelLibroTests`, contra la base, con las semillas del 863 al 865:
+      - el avance de varios meses de una vez, que no rehace lo que ya llega ni lleva el corte atrás;
+      - la lista de empresas, cada una una vez y ninguna sin existencias;
+      - y el anfitrión de los casos, que arranca la purga y no el trabajo.
+
+      Entran en los dos censos en su commit. Del 866 al 869 siguen libres.
+    - **Decidido sin preguntar, por trivial o reversible**:
+      - la variable no entra en el *compose* ni en `.env.example`, porque el valor por omisión es el
+        de producción;
+      - el medidor se publica como `ModuloDeInventario.MedidorDelCorte`, que es el nombre por el que
+        lo recoge la telemetría;
+      - un cuadre que falla después de avanzar cuenta como fallo de la empresa y no se repite: a la
+        hora siguiente el corte ya llega, y el avance contesta nulo sin cuadrar;
+      - la vuelta escribe su línea cada hora, también cuando no avanza ninguna empresa, para que el
+        registro diga que el trabajo está vivo;
+      - el motivo del ámbito no deja traza en una lectura pura, así que no tiene mutación propia: la
+        496, que lo abre y lo cierra antes de leer, es la que mira que la lista vaya dentro.
+    - **Las cifras, sobre `e500bcc`**: **1467** casos en el carril rápido y **685** en el de
+      integración, 600 y 85, todos en verde. Con `dotnet test Bastion.sln --no-build --filter
+      "Category!=Integracion" --logger trx --results-directory artifacts/test-results/dominio` y
+      `--filter "Category=Integracion" --blame-hang --blame-hang-timeout 4m`, contados con `bash
+      scripts/ci/recuento-de-tests.sh` y las dos listas del *workflow*. Son once más en el rápido,
+      los del trabajo, y tres más de integración, los de la base. El de integración se midió antes
+      de añadir `Una_cancelacion_que_no_es_la_parada_es_un_fallo_de_su_empresa`, que es del rápido
+      y no lo cambia.
+    - **La tanda, de la 482 a la 510**, con `python -X utf8 mutar-avance.py <ruta>/tanda-avance.json
+      comprobar base 482-509` y, después, `comprobar 510`. Escrita antes de medir con lo que cada
+      una tenía que poner rojo, y medida como la del ítem 8, sobre un *worktree* aparte en
+      `e500bcc`, con dos carriles: el trabajo, que son `ElTrabajoMensualAvanzaElCorteTests` y la
+      regla del filtro, y la clase de las existencias, con `--blame-hang`. La base, 0 rojos de 18
+      y 0 de 16. **Casan veintiocho con lo escrito**, sin un rojo de más ni de menos, y la 495 no
+      compila. Los mensajes, leídos en el `.trx` con `python -X utf8 mensajes.py`.
+
+      | # | Mutación | Rojo en |
+      |---|---|---|
+      | 482 | El avance sin condición: mueve el corte aunque ya llegue | Solo el avance de la base: el segundo avance al mismo mes «should be null», y rehace 34 instantáneas |
+      | 483 | La condición con `<=`: rehace el mismo mes | Solo el avance de la base, igual |
+      | 484 | La condición con `>`: lleva el corte atrás | Solo el avance de la base, en el avance al mes anterior, que rehace 32 |
+      | 485 | El avance con la sentencia del recálculo, que no tiene condición | Solo el avance de la base, en el segundo avance al mismo mes |
+      | 486 | Cero filas del corte no es «nada que hacer» | Solo el avance de la base, igual |
+      | 487 | El mes que toca restando al número del mes, sin el año | Los seis del trabajo que miran el mes, porque su reloj está en enero y `new DateOnly(…, 0, 1)` lanza. El de la parada, porque lanza otra cosa |
+      | 488 | El mes que toca con la hora que trae el instante, y no la de UTC | Solo `El_mes_que_toca…`: el 31 de marzo a las 23:30 en UTC−2 da febrero |
+      | 489 | El fallo de una empresa sale de la vuelta | El fallo de una empresa y la cancelación ajena: la excepción sale del caso |
+      | 490 | Parar es un fallo de la empresa | Solo el de la parada: «should throw `OperationCanceledException` but did not» |
+      | 491 | Cualquier cancelación para la vuelta | Solo la cancelación ajena, que sale del caso |
+      | 492 | No se cuenta la empresa avanzada | Los tres que leen `empresas_avanzadas`: 0 en lugar de 2 |
+      | 493 | No se cuenta el fallo | El fallo de una empresa y la cancelación ajena: `avances_fallidos`, 0 en lugar de 1 |
+      | 494 | Los descuadres se cuentan por empresa | Solo el del descuadre: 1 en lugar de 3, «cada descuadre, no cada empresa» |
+      | 495 | El descuadre, con nivel de información | **No compila**: `CA1873`, por el `string.Join` de los tipos, que se evaluaría con el registro apagado. La sustituye la 510 |
+      | 496 | La lista de empresas, fuera del ámbito sin inquilino | Solo la lista de la base: `FaltaLaEmpresaActivaException`. La regla del filtro sigue verde, porque la apertura sigue en su fichero |
+      | 497 | La lista de empresas sin `Distinct` | Solo la lista de la base: la empresa con dos existencias sale dos veces |
+      | 498 | La lista de empresas sin orden | Solo la lista de la base, que compara con la lista ordenada |
+      | 499 | El trabajo se registra con base aunque no se pida | El del módulo, con el trabajo apagado, y el anfitrión de los casos, que lo arranca |
+      | 500 | El arranque no lee la variable | El valor mal puesto, que no para nada, y el anfitrión de los casos |
+      | 501 | El arranque lee la variable solo si hay base | Solo el valor mal puesto: sin base no la lee |
+      | 502 | El arranque registra el trabajo sin base | Solo `Sin_base_de_datos…` |
+      | 503 | El avance contesta aunque el corte ya llegara | Solo el avance de la base: contesta con 0 repuestas en lugar de nulo |
+      | 504 | El avance no mide lo que tarda | Solo el avance de la base: su duración, cero |
+      | 505 | Sin la variable, apagado | Solo el de la variable |
+      | 506 | Cualquier valor que no sea `apagado`, encendido | El de la variable y el valor mal puesto, que ya no lanzan |
+      | 507 | La vuelta no cuenta las avanzadas | La vuelta y el fallo, por la línea del registro: «2 avanzadas» |
+      | 508 | Un ámbito para todas las empresas | Solo la vuelta: 2 ámbitos en lugar de 4, «uno para la lista y uno por empresa» |
+      | 509 | **Arnés**: el anfitrión de los casos deja el trabajo encendido | Solo el anfitrión de los casos |
+      | 510 | El descuadre, con nivel de error y no de aviso | Solo el del descuadre: `Error` en lugar de `Warning` |
+
+      - **La cancelación ajena no estaba en el diseño del commit.** La encontró la 491 al
+        escribirla, antes de commitear: ningún caso distinguía la cancelación de la parada de otra,
+        y tratarlas igual dejaría sin avanzar a las empresas de detrás hasta la hora siguiente. El
+        caso entró en `e500bcc`, y la 491 y la 493 lo ponen rojo.
+      - **La 487 no la ve una aserción, la ve un `ArgumentOutOfRangeException`.** El reloj de los
+        casos está en enero, y restar uno al número del mes da el mes cero. En otro mes, la resta
+        acertaría por casualidad, y la vería solo el caso del mes, que lleva un enero.
+      - **La 498 depende del plan de la consulta**: sin `ORDER BY`, el motor devuelve las empresas
+        en el orden que le sale. Se midió una vez, roja, y se escribe así.
+      - **La 495 la para el analizador**, y no es un rojo de ningún caso. Bajar el aviso a
+        información o a depuración no compila, por el `CA1873`, así que la 510 lo sube a error, que
+        sí compila, y la ve el caso del descuadre. La siguiente mutación es la **511**.
+    - **El run de rama de `e500bcc`** es el **38409690515**, en verde al primer intento:
+      - sus jobs, Frontal `115338423067`, Backend `115338423617` y Humo `115342487669`;
+      - 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*;
+      - **1467** y **685** casos, **234** tipos de **241** sitios, **149** operaciones y **90**
+        rutas, y el centinela, con la marca y sin avisos;
+      - **410/450** y **711/900** KiB. Leído con `python leer-run27.py 38409690515`.
+
+      El Humo tiene sus pasos en verde, «Complete job» incluido, pero la API lo daba todavía
+      `in_progress` y sin conclusión en las dos lecturas, con el run ya en `success`. Por eso sus
+      avisos no salen en la lectura.
 11. La consulta del saldo a una fecha, con el tránsito aparte, su permiso y
     `saldo-con-fecha-futura`.
 12. La pantalla `/saldos`, en una ruta diferida, vista en el navegador.
@@ -20282,7 +20398,15 @@ cuando hace falta el porqué.
   decidir —comparar las dos puntas en una sola zona, o comparar instantes y no días— va con la
   pregunta del cierre de la fase, no aquí.
 
-- **ABIERTA (2026-09-27, ítem 2.7) · nadie avanza el corte de la instantánea hasta el 2.14.** En el
+- **CERRADA (2026-10-13, ítem 2.14) · nadie avanza el corte de la instantánea hasta el 2.14.** La
+  cierra el trabajo mensual, `AvanzadorDelCorte` (`e500bcc`): cada hora lleva el corte de cada
+  empresa con existencias hasta el mes anterior al de hoy en UTC, rehace sus instantáneas con el
+  cerrojo de la empresa y la cuadra detrás, con tres contadores en el medidor
+  `Bastion.Inventario.Corte` y los descuadres como aviso en el registro (ADR-0063 §7). La mitad de
+  la consulta, la de qué hacer con una fecha posterior al corte, es el ítem 11 del 2.14. El detalle,
+  en *Estado actual*. Lo que sigue es la nota tal como se abrió.
+
+  En el
   2.7 el recálculo y el cuadre (`LasInstantaneasMensuales`, `ElCuadreDeLasExistencias`) no tienen
   quien los llame en producción, a propósito: los llaman los casos, que es lo que pide el criterio.
   Así que en producción **ninguna empresa tiene corte**, y la sentencia que anota el libro no escribe
