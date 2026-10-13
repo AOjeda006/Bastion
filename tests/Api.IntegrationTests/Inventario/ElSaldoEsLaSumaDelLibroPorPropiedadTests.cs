@@ -10,10 +10,12 @@ using Bastion.Inventario.Application.Reservas;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Existencias;
 using Bastion.Inventario.Contracts.Recuentos;
+using Bastion.Inventario.Contracts.Saldos;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Reservas;
+using Bastion.Inventario.Infrastructure.Corte;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Bastion.Organizacion.Contracts.Almacenes;
@@ -22,6 +24,7 @@ using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Bastion.Organizacion.Domain.Series;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Shouldly;
 
@@ -31,8 +34,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// La R3 como propiedad: después de cualquier secuencia de entradas, salidas, ajustes, anulaciones,
 /// recálculos, cierres, fechas prohibidas, transferencias, recuentos y reservas, el saldo es la suma
 /// del libro (ítem 2.7), lo que vuela, la suma de lo enviado sin recibir (ítem 2.11), lo contado, lo
-/// que hay al confirmar (epílogo del 2.12), y lo reservado, la suma de las reservas activas y
-/// vigentes (ítem 2.13).
+/// que hay al confirmar (epílogo del 2.12), lo reservado, la suma de las reservas activas y
+/// vigentes (ítem 2.13), y el saldo a cualquier día, la suma del libro hasta ese día (ítem 2.14).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -159,6 +162,19 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// de ajuste, el valor de la empresa.
 /// </para>
 /// <para>
+/// <b>Y el saldo a una fecha, el trabajo mensual y la clave nueva antes del corte</b> (ítem 2.14,
+/// ADR-0063 §10). Un sexto generador, con su semilla, decide tras cada paso si viene uno de los tres.
+/// El saldo se lee por el caso de uso a un día de uno de cuatro tramos —anterior al primer
+/// movimiento, de un mes ya cortado, posterior al corte u hoy—, y es la suma del modelo hasta ese
+/// día, en cantidad y en valor, con lo que vuela ese día hacia cada par; el de mañana se rechaza.
+/// Para eso el modelo guarda la fecha de cada valoración y de cada despegue y aterrizaje. El trabajo
+/// mensual avanza el corte hasta el mes anterior al de hoy, por el contenedor del anfitrión, y su
+/// cuadre no encuentra nada. Y la clave nueva es una entrada fechada en un mes ya cortado que es la
+/// primera fila de su clave, así que la proyección le crea una instantánea en cada mes hasta el
+/// corte. Al final, cada semilla ha leído los cuatro tramos, algún par con cantidad y alguno con algo
+/// en vuelo.
+/// </para>
+/// <para>
 /// <b>El modelo no conoce los identificadores del sistema.</b> Para el modelo, cada lote y cada
 /// serie es su código, y les da un identificador propio. Lo que se lee de la base se traduce con las
 /// tablas de los lotes y de las series, y esas tablas tienen que tener exactamente lo que el libro
@@ -220,6 +236,41 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string CaducadaAlLiberar = "reserva caducada liberada al liberar";
     private const string CaducadaQueYaNoSeLibera = "reserva caducada que ya no se libera";
     private const string EnvioPorEncimaDelDisponible = "envío rechazado por el disponible";
+    private const string SaldoAUnaFecha = "saldo a una fecha";
+    private const string TrabajoMensual = "trabajo mensual";
+    private const string ClaveNuevaAntesDelCorte = "clave nueva antes del corte";
+
+    // LOS CUATRO TRAMOS DEL DÍA DEL SALDO (ADR-0063 §10): cada uno lee la instantánea de otro mes, o
+    // ninguna, y suma otro trozo del libro.
+    private const string AntesDelPrimerMovimiento = "anterior al primer movimiento";
+    private const string DeUnMesCortado = "de un mes ya cortado";
+    private const string DespuesDelCorte = "posterior al corte";
+    private const string ElDeHoy = "hoy";
+
+    /// <summary>
+    /// De cada cien pasos, cuántos traen detrás una lectura del saldo a una fecha (ítem 2.14). No
+    /// mueve nada, así que no lleva comprobación detrás y sale barata.
+    /// </summary>
+    private const int PorcentajeDeSaldos = 15;
+
+    /// <summary>
+    /// Cuántos, una vuelta del trabajo mensual. Avanza el corte hasta el mes anterior al de hoy, y lo
+    /// que lo lleva atrás son los recálculos, uno de cada siete pasos del primer generador.
+    /// </summary>
+    private const int PorcentajeDeTrabajos = 5;
+
+    /// <summary>
+    /// Cuántos, una clave nueva antes del corte. Muchas se saltan: hace falta un par cuyo último
+    /// movimiento deje una fecha antes de este mes, y cada anulación lleva el suyo a hoy.
+    /// </summary>
+    /// <remarks>
+    /// <b>Doce, porque con este las seis semillas pasan por todas las clases de paso.</b> La clave
+    /// nueva mete existencias, a veces en B, y lo que encuentran los otros generadores cambia desde
+    /// ahí. Con el diez, la 464 no enviaba nada sin stock; con el cinco perdía tres clases de las
+    /// reservas y del recuento, y con el ocho la 461 no liberaba a mano ninguna caducada. Cambiarlo
+    /// cambia la secuencia de todas, como el reloj.
+    /// </remarks>
+    private const int PorcentajeDeClavesNuevas = 12;
 
     /// <summary>
     /// De cada cien pasos, cuántos traen detrás uno del recuento (epílogo del 2.12). Un recuento
@@ -230,7 +281,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
     /// <summary>
     /// Las claves de los ajustes: dos ubicaciones de A por cada uno de los tres artículos. Las tres
-    /// de B van detrás, una por artículo, y solo las tocan las transferencias.
+    /// de B van detrás, una por artículo, y solo las tocan las transferencias, los recuentos y la
+    /// clave nueva antes del corte (ítem 2.14).
     /// </summary>
     private const int ClavesDeLosAjustes = 6;
 
@@ -274,7 +326,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Reservada, ReservaPorEncimaDelDisponible, ConsumidaEnParte, ConsumidaEntera, ReservaLiberada,
         CaducadaAlReservar, CaducadaAlConsumir, CaducadaAlLiberar, CaducadaQueYaNoSeLibera,
         EnvioPorEncimaDelDisponible,
+        SaldoAUnaFecha, TrabajoMensual, ClaveNuevaAntesDelCorte,
     ];
+
+    private static readonly string[] s_tramosDelSaldo =
+        [AntesDelPrimerMovimiento, DeUnMesCortado, DespuesDelCorte, ElDeHoy];
 
     private static readonly decimal[] s_factores = [1m, 2m, 0.5m];
 
@@ -319,6 +375,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Random traslados = new(semilla + 2_000);
         Random recuentos = new(semilla + 3_000);
         Random apartados = new(semilla + 4_000);
+        Random fechas = new(semilla + 5_000);
         Secuencia secuencia = new(semilla);
 
         UnaEmpresa empresa = await UnaEmpresaAsync(semilla);
@@ -375,6 +432,27 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             if (apartados.Next(100) < PorcentajeDeReservas)
             {
                 await UnPasoDeReservaAsync(apartados, empresa, secuencia);
+                await ComprobarAsync(empresa, secuencia);
+            }
+
+            // LO DEL 2.14, DETRÁS DE TODO Y CON SUS PROPIOS DADOS (ADR-0063 §10): el saldo a una
+            // fecha, una vuelta del trabajo mensual o una clave nueva antes del corte. Los otros
+            // cinco generadores no saben de ellos, y el saldo no mueve nada; los otros dos mueven el
+            // corte y el libro, y cambian lo que encuentran los pasos que vienen.
+            int queToca = fechas.Next(100);
+
+            if (queToca < PorcentajeDeSaldos)
+            {
+                await UnSaldoAUnaFechaAsync(fechas, empresa, secuencia);
+            }
+            else if (queToca < PorcentajeDeSaldos + PorcentajeDeTrabajos)
+            {
+                await UnaVueltaDelTrabajoMensualAsync(empresa, secuencia);
+                await ComprobarAsync(empresa, secuencia);
+            }
+            else if (queToca < PorcentajeDeSaldos + PorcentajeDeTrabajos + PorcentajeDeClavesNuevas)
+            {
+                await UnaClaveNuevaAntesDelCorteAsync(fechas, modulo, empresa, secuencia);
                 await ComprobarAsync(empresa, secuencia);
             }
         }
@@ -445,6 +523,18 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         secuencia.AjustesDeRecuento.ShouldBeGreaterThan(
             0, "ningún recuento confirmado ha generado su ajuste\n" + secuencia.Relato());
+
+        // EL SALDO A UNA FECHA, AFIRMADO (ítem 2.14): en los cuatro tramos del día, porque cada uno
+        // lee otra instantánea; y con algún par con cantidad y alguno con algo en vuelo, porque una
+        // lectura que solo comparara ceros saldría verde sin sumar nada.
+        secuencia.TramosDelSaldo.ShouldBe(
+            s_tramosDelSaldo, ignoreOrder: true, customMessage: secuencia.Relato());
+
+        secuencia.SaldosConCantidad.ShouldBeGreaterThan(
+            0, "ninguna lectura del saldo ha comparado un par con cantidad\n" + secuencia.Relato());
+
+        secuencia.SaldosConTransito.ShouldBeGreaterThan(
+            0, "ninguna lectura del saldo ha comparado un par con algo en vuelo\n" + secuencia.Relato());
 
         secuencia.Clases.ShouldBe(s_clasesDePaso, ignoreOrder: true, customMessage: secuencia.Relato());
     }
@@ -581,6 +671,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         secuencia.Libro.AddRange(apuntes);
 
         FilaValorada[] valoradas = secuencia.Valorar(
+            fecha,
             [.. lineas.Select(linea => new LineaQueSeValora(
                 empresa.Claves[linea.Clave].ArticuloId,
                 empresa.AlmacenId,
@@ -647,6 +738,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         // EL INVERSO COMPENSA LO QUE CADA LÍNEA MOVIÓ, y no lo que valen hoy sus unidades
         // (ADR-0046 §6): cada línea lleva el valor de la suya con el signo cambiado.
         FilaValorada[] inversas = secuencia.Valorar(
+            Hoy,
             [.. valoradas.Select(fila => new LineaQueSeValora(
                 fila.ArticuloId, fila.AlmacenId, -fila.Cantidad, null, -fila.Valor))]);
 
@@ -864,13 +956,14 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         // LO QUE SALE DEL ORIGEN SE LLEVA SU VALOR, y ese valor es el que vuela (ADR-0053 §2).
         FilaValorada[] valoradas = secuencia.Valorar(
+            fecha,
             [.. lineas.Select(linea => new LineaQueSeValora(
                 linea.Origen.ArticuloId, origen, -linea.Cantidad, null, null))]);
 
         LineaEnVuelo[] enVuelo =
             [.. lineas.Select((linea, indice) => linea with { Valor = -valoradas[indice].Valor })];
 
-        secuencia.Volar(enVuelo, 1);
+        secuencia.Volar(fecha, enVuelo, 1);
         secuencia.Enviadas.Add(new TransferenciaDelModelo(alta.Valor.Id, origen, destino, fecha, enVuelo));
     }
 
@@ -918,10 +1011,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         secuencia.Enviadas.RemoveAt(cual);
         secuencia.Libro.AddRange(
             enviada.Lineas.Select(linea => new ApunteDelLibro(linea.Destino, fecha, linea.Cantidad)));
-        secuencia.Volar(enviada.Lineas, -1);
+        secuencia.Volar(fecha, enviada.Lineas, -1);
 
         // LA LLEGADA COMPENSA EL VALOR DE LA LÍNEA, y no el precio medio del destino (ADR-0053 §2).
         secuencia.Valorar(
+            fecha,
             [.. enviada.Lineas.Select(linea => new LineaQueSeValora(
                 linea.Destino.ArticuloId, enviada.Destino, linea.Cantidad, null, linea.Valor))]);
 
@@ -990,9 +1084,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         if (!recibida)
         {
-            secuencia.Volar(original.Lineas, -1);
+            secuencia.Volar(Hoy, original.Lineas, -1);
 
             secuencia.Valorar(
+                Hoy,
                 [.. original.Lineas.Select(linea => new LineaQueSeValora(
                     linea.Origen.ArticuloId, original.Origen, linea.Cantidad, null, linea.Valor))]);
 
@@ -1001,10 +1096,12 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         // EL DESTINO PRIMERO, y el origen recibe lo que salió de él (ADR-0053 §5).
         FilaValorada[] salen = secuencia.Valorar(
+            Hoy,
             [.. original.Lineas.Select(linea => new LineaQueSeValora(
                 linea.Destino.ArticuloId, original.Destino, -linea.Cantidad, null, -linea.Valor))]);
 
         secuencia.Valorar(
+            Hoy,
             [.. original.Lineas.Select((linea, indice) => new LineaQueSeValora(
                 linea.Origen.ArticuloId, original.Origen, linea.Cantidad, null, -salen[indice].Valor))]);
     }
@@ -1430,6 +1527,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         // LO QUE SUBE, AL PRECIO MEDIO DE SU ARTÍCULO EN EL ALMACÉN; lo que baja, como cualquier
         // salida (ADR-0055 §6 y §8). Es un ajuste más, y mueve el valor de la empresa.
         FilaValorada[] valoradas = secuencia.Valorar(
+            Hoy,
             [.. difieren.Select(par => new LineaQueSeValora(
                 par.Linea.Clave.ArticuloId, recuento.AlmacenId, par.Diferencia, null, null))]);
 
@@ -1541,6 +1639,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         // EL INVERSO COMPENSA LO QUE CADA LÍNEA MOVIÓ, como el de cualquier ajuste (ADR-0046 §6).
         FilaValorada[] inversas = secuencia.Valorar(
+            Hoy,
             [.. valoradas.Select(fila => new LineaQueSeValora(
                 fila.ArticuloId, fila.AlmacenId, -fila.Cantidad, null, -fila.Valor))]);
 
@@ -1897,6 +1996,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         // LA SALIDA DEL ALBARÁN SE VALORA COMO LA DE UN AJUSTE, al precio medio, y saca su valor de
         // la empresa (ADR-0059 §6).
         FilaValorada[] valoradas = secuencia.Valorar(
+            fecha,
             [.. lineas.Select(linea => new LineaQueSeValora(
                 reserva.Clave.ArticuloId, reserva.Clave.AlmacenId, -linea.Cantidad, null, null))]);
 
@@ -2355,6 +2455,242 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             HttpStatusCode.NoContent, $"{await Escenario.Detalle(cierre)}\n{secuencia.Relato()}");
 
         secuencia.PasadoCerrado = true;
+    }
+
+    /// <summary>
+    /// El saldo a un día de uno de los cuatro tramos, por el caso de uso, contra la suma del modelo
+    /// hasta ese día; y el de mañana, que se rechaza (ítem 2.14, ADR-0063 §3).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El tramo se sortea entre los que el estado deja</b>: hoy, siempre; anterior al primer
+    /// movimiento, si hay alguno; y con corte, un día de un mes ya cortado y, si el corte no es este
+    /// mes, uno posterior. El primero no lee ninguna instantánea con fila; el segundo lee la del mes
+    /// anterior al suyo; el tercero, la del corte; y hoy, la del corte o la del mes pasado.
+    /// </para>
+    /// <para>
+    /// <b>Todos los pares en una página</b>: son seis como mucho, y el tamaño máximo es doscientos.
+    /// La paginación la miran los casos del 2.14; aquí lo que se mira es la suma.
+    /// </para>
+    /// </remarks>
+    private async Task UnSaldoAUnaFechaAsync(Random fechas, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        DateOnly esteMes = LasExistencias.MesDe(Hoy);
+        List<(string Tramo, DateOnly Desde, DateOnly Hasta)> tramos = [(ElDeHoy, Hoy, Hoy)];
+
+        if (secuencia.Libro.Count > 0)
+        {
+            DateOnly primero = secuencia.Libro.Min(apunte => apunte.Fecha);
+
+            tramos.Add((AntesDelPrimerMovimiento, primero.AddDays(-31), primero.AddDays(-1)));
+        }
+
+        if (secuencia.Corte is { } corte)
+        {
+            DateOnly finDelCorte = corte.AddMonths(1).AddDays(-1);
+
+            tramos.Add((DeUnMesCortado, new DateOnly(Hoy.Year - 1, 1, 1), finDelCorte < Hoy ? finDelCorte : Hoy));
+
+            if (corte < esteMes)
+            {
+                tramos.Add((DespuesDelCorte, corte.AddMonths(1), Hoy));
+            }
+        }
+
+        (string tramo, DateOnly desde, DateOnly hasta) = tramos[fechas.Next(tramos.Count)];
+        DateOnly dia = desde.AddDays(fechas.Next(hasta.DayNumber - desde.DayNumber + 1));
+
+        secuencia.Anotar(SaldoAUnaFecha, string.Create(CultureInfo.InvariantCulture, $"{tramo}, {dia:yyyy-MM-dd}"));
+        secuencia.TramosDelSaldo.Add(tramo);
+
+        SaldoDto[] debidos = secuencia.SaldosA(dia);
+        Paginacion todos = new() { Tamanio = Paginacion.TamanioMaximo };
+
+        await using ElModuloDeInventario lectura = UnaPeticion(empresa);
+
+        Resultado<SaldosAUnaFechaDto> leido =
+            await lectura.Saldos.EjecutarAsync(dia, null, null, todos, CancellationToken.None);
+
+        leido.EsCorrecto.ShouldBeTrue($"«{leido.Error?.Codigo}»\n{secuencia.Relato()}");
+        leido.Valor.Fecha.ShouldBe(dia, secuencia.Relato());
+        leido.Valor.Saldos.Total.ShouldBe(debidos.LongLength, secuencia.Relato());
+
+        leido.Valor.Saldos.Elementos.ShouldBe(
+            debidos, "el saldo a una fecha no es la suma del modelo hasta ese día\n" + secuencia.Relato());
+
+        secuencia.SaldosConCantidad += debidos.Count(saldo => saldo.Cantidad != 0m);
+        secuencia.SaldosConTransito += debidos.Count(saldo => saldo.CantidadEnTransito != 0m);
+
+        Resultado<SaldosAUnaFechaDto> manana =
+            await lectura.Saldos.EjecutarAsync(Hoy.AddDays(1), null, null, todos, CancellationToken.None);
+
+        manana.EsCorrecto.ShouldBeFalse(secuencia.Relato());
+        manana.Error!.Codigo.ShouldBe("saldo-con-fecha-futura", secuencia.Relato());
+    }
+
+    /// <summary>
+    /// Una vuelta del trabajo mensual para la empresa: el avance del corte hasta el mes anterior al
+    /// de hoy, por el contenedor del anfitrión, con su cuadre (ítem 2.14, ADR-0063 §7).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Lo que el trabajo hace con una empresa, y no el bucle</b>: el anfitrión de los tests lo
+    /// lleva apagado, porque avanzaría el corte de las empresas de otros casos. El mes es el que
+    /// calcula el trabajo, con el reloj parado de la propiedad.
+    /// </para>
+    /// <para>
+    /// <b>Si el corte ya llega, no toca nada</b>, y el paso no cuenta como su clase: lo que la clase
+    /// pide es un avance, con las instantáneas rehechas desde el libro y un cuadre que las compara
+    /// todas sin descuadres. Las rehechas las mira después la comprobación de siempre.
+    /// </para>
+    /// </remarks>
+    private async Task UnaVueltaDelTrabajoMensualAsync(UnaEmpresa empresa, Secuencia secuencia)
+    {
+        DateOnly elQueToca = AvanzadorDelCorte.MesQueToca(Ahora);
+        bool yaLlega = secuencia.Corte >= elQueToca;
+        AvanceHecho? hecho;
+
+        secuencia.Anotar(
+            yaLlega ? "trabajo mensual con el corte ya al día" : TrabajoMensual,
+            string.Create(CultureInfo.InvariantCulture, $"hasta {elQueToca:yyyy-MM}"));
+
+        using (IServiceScope ambito = _api.Services.CreateScope())
+        {
+            hecho = await ambito.ServiceProvider
+                .GetRequiredService<IAvanceDelCorte>()
+                .AvanzarAsync(empresa.EmpresaId, elQueToca, CancellationToken.None);
+        }
+
+        if (yaLlega)
+        {
+            hecho.ShouldBeNull("el corte ya llegaba, y el avance ha hecho algo\n" + secuencia.Relato());
+
+            return;
+        }
+
+        secuencia.Corte = elQueToca;
+
+        AvanceHecho avance = hecho.ShouldNotBeNull("el corte no llegaba, y el avance no ha hecho nada\n" + secuencia.Relato());
+        IReadOnlyList<FotoDelMes> debidas = LasExistencias.DebidasEnCSharp(secuencia.Libro, elQueToca);
+
+        avance.Repuestas.ShouldBe(debidas.Count, secuencia.Relato());
+        avance.Cuadre.ExistenciasComparadas.ShouldBe(secuencia.ClavesConFila().Count, secuencia.Relato());
+        avance.Cuadre.InstantaneasComparadas.ShouldBe(debidas.Count, secuencia.Relato());
+        avance.Cuadre.Descuadres.ShouldBeEmpty("el cuadre del avance encuentra descuadres\n" + secuencia.Relato());
+    }
+
+    /// <summary>
+    /// Una entrada fechada en un mes ya cortado que es la primera fila de su clave (ítem 2.14,
+    /// ADR-0063 §10): la proyección tiene que darle instantánea en cada mes desde el suyo hasta el
+    /// corte, y crear todas las que faltan.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>La clave es nueva de verdad</b>: un lote o una serie que nadie ha tecleado, o la clave sin
+    /// trazabilidad de un hueco que no tiene ninguna fila en el libro. Puede ser de A o de B: el
+    /// documento va al almacén de su clave.
+    /// </para>
+    /// <para>
+    /// <b>Su fecha, de este año y antes de este mes</b>, y no anterior al último movimiento de su
+    /// artículo en su almacén (ADR-0047): desde enero, o desde ese movimiento, hasta el último día del
+    /// mes pasado. Si ningún par deja hueco, se salta. Cada anulación lleva el último movimiento de su
+    /// par a hoy, así que casi todas las que salen son de las primeras vueltas, o de B.
+    /// </para>
+    /// <para>
+    /// <b>Sin un corte posterior al mes de la fecha, el paso lo pone</b> con un recálculo, a un mes
+    /// al azar entre el siguiente y este. Con el corte en el mes de la fecha, la serie de meses tendría
+    /// uno, y empezar en el corte o en el mes del movimiento daría lo mismo.
+    /// </para>
+    /// </remarks>
+    private async Task UnaClaveNuevaAntesDelCorteAsync(
+        Random fechas, ElModuloDeInventario modulo, UnaEmpresa empresa, Secuencia secuencia)
+    {
+        DateOnly esteMes = LasExistencias.MesDe(Hoy);
+        DateOnly enero = new(Hoy.Year, 1, 1);
+        DateOnly finDelMesPasado = esteMes.AddDays(-1);
+
+        (int Clave, DateOnly Desde)[] huecos =
+        [
+            .. Enumerable.Range(0, empresa.Claves.Count)
+                .Where(indice => empresa.MarcaDe(indice) is PorLote or PorNumeroSerie
+                    || !secuencia.Libro.Any(apunte => apunte.Clave == empresa.Claves[indice]))
+                .Select(indice =>
+                {
+                    DateOnly? ultima = secuencia.UltimaFechaDe(
+                        empresa.Claves[indice].ArticuloId, empresa.Claves[indice].AlmacenId);
+
+                    return (Clave: indice, Desde: ultima > enero ? ultima.Value : enero);
+                })
+                .Where(hueco => hueco.Desde <= finDelMesPasado),
+        ];
+
+        if (huecos.Length == 0)
+        {
+            secuencia.Anotar("clave nueva que se salta: ningún par deja una fecha antes de este mes");
+
+            return;
+        }
+
+        (int indice, DateOnly desde) = huecos[fechas.Next(huecos.Length)];
+        DateOnly fecha = desde.AddDays(fechas.Next(finDelMesPasado.DayNumber - desde.DayNumber + 1));
+        DateOnly suMes = LasExistencias.MesDe(fecha);
+
+        if (!(secuencia.Corte > suMes))
+        {
+            int meses = ((esteMes.Year - suMes.Year) * 12) + esteMes.Month - suMes.Month;
+            DateOnly corte = suMes.AddMonths(1 + fechas.Next(meses));
+
+            secuencia.Anotar(Recalculo, corte);
+            secuencia.Corte = corte;
+
+            (await LasExistencias.RecalcularAsync(postgres, empresa.EmpresaId, corte)).ShouldBe(
+                LasExistencias.DebidasEnCSharp(secuencia.Libro, corte).Count, secuencia.Relato());
+        }
+
+        secuencia.ClavesNuevas++;
+
+        string numero = secuencia.ClavesNuevas.ToString(CultureInfo.InvariantCulture);
+        LineaAlAzar linea = ConSuCoste(empresa.MarcaDe(indice) switch
+        {
+            PorLote => new LineaAlAzar(indice, fechas.Next(1, 10), 1m, Lote: "LN-" + numero),
+            PorNumeroSerie => new LineaAlAzar(indice, 1m, 1m, Serie: "SN-" + numero),
+            _ => new LineaAlAzar(indice, fechas.Next(1, 10), 1m),
+        });
+
+        ClaveDeExistencia clave = secuencia.ClaveDe(empresa, linea);
+        ApunteDelLibro[] apuntes = [new(clave, fecha, linea.Cantidad * linea.Factor)];
+
+        Guid ajusteId = await AbrirAsync(modulo, empresa, empresa.Serie, fecha, [linea]);
+        Resultado<AjusteDto> confirmacion = await modulo.ConfirmarAsync(ajusteId);
+
+        secuencia.Anotar(ClaveNuevaAntesDelCorte, fecha, [linea]);
+
+        confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»\n{secuencia.Relato()}");
+
+        secuencia.Libro.AddRange(apuntes);
+
+        FilaValorada[] valoradas = secuencia.Valorar(
+            fecha,
+            [new LineaQueSeValora(clave.ArticuloId, clave.AlmacenId, linea.Cantidad * linea.Factor, linea.Coste, null)]);
+
+        // NO ENTRA EN LAS ANULABLES: el primer generador sortea la anulación entre ellas, y una más
+        // cambiaría cuál anula durante el resto de la secuencia, sin tirar un dado más.
+        secuencia.ValorDeLaEmpresa += valoradas.Sum(fila => fila.Valor);
+
+        // EL PASO HACE LO QUE DICE SU NOMBRE, y lo afirma sobre el modelo: la clave tiene una
+        // instantánea debida en cada mes desde el suyo hasta el corte, y son dos por lo menos. Que la
+        // base las tenga lo mira la comprobación de después.
+        DateOnly hastaElCorte = secuencia.Corte!.Value;
+        int cuantos = ((hastaElCorte.Year - suMes.Year) * 12) + hastaElCorte.Month - suMes.Month + 1;
+
+        cuantos.ShouldBeGreaterThan(1, secuencia.Relato());
+
+        LasExistencias.DebidasEnCSharp(secuencia.Libro, hastaElCorte)
+            .Where(foto => foto.Clave == clave)
+            .Select(foto => foto.Mes)
+            .ShouldBe(
+                [.. Enumerable.Range(0, cuantos).Select(suMes.AddMonths)],
+                "la clave nueva no tiene una instantánea debida en cada mes hasta el corte\n" + secuencia.Relato());
     }
 
     /// <summary>
@@ -3020,9 +3356,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         DateOnly fecha,
         IReadOnlyList<LineaAlAzar> lineas)
     {
+        // EL ALMACÉN, EL DE SUS CLAVES: todas de A, salvo la de una clave nueva antes del corte, que
+        // puede ser de B (ítem 2.14). Un documento no mezcla almacenes.
         AbrirAjusteDto peticion = new(
             serie.Id,
-            empresa.AlmacenId,
+            empresa.Claves[lineas[0].Clave].AlmacenId,
             fecha,
             "Paso del generador",
             [.. lineas.Select(linea =>
@@ -3435,6 +3773,31 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         internal List<FilaValorada> Valorado { get; } = [];
 
         /// <summary>
+        /// Las mismas filas, cada una con su fecha: lo que suma el valor del saldo a una fecha (ítem
+        /// 2.14). Van aparte porque las de arriba se comparan con el libro sin la fecha.
+        /// </summary>
+        internal List<(DateOnly Fecha, FilaValorada Fila)> ValoradoConSuFecha { get; } = [];
+
+        /// <summary>
+        /// Cada vez que unas líneas despegan (1) o dejan de volar (−1), con el día en que pasó: lo que
+        /// suma el tránsito del saldo a una fecha (ítem 2.14, ADR-0063 §4). Una anulada deja de volar
+        /// el día de su inverso, y una recibida, el de su recepción.
+        /// </summary>
+        internal List<(DateOnly Fecha, LineaEnVuelo Linea, int Signo)> Vuelos { get; } = [];
+
+        /// <summary>Los tramos del día en que se ha leído el saldo, de los cuatro de la propiedad.</summary>
+        internal HashSet<string> TramosDelSaldo { get; } = [];
+
+        /// <summary>Los pares con alguna cantidad que ha comparado una lectura del saldo.</summary>
+        internal int SaldosConCantidad { get; set; }
+
+        /// <summary>Los pares con algo en vuelo que ha comparado una lectura del saldo.</summary>
+        internal int SaldosConTransito { get; set; }
+
+        /// <summary>Las claves nuevas antes del corte que han entrado: numeran sus lotes y sus series.</summary>
+        internal int ClavesNuevas { get; set; }
+
+        /// <summary>
         /// Lo que vuela hacia cada clave del destino (ADR-0053 §1). Una clave a la que algo ha volado
         /// se queda aunque baje a cero: su fila viva tampoco se borra.
         /// </summary>
@@ -3602,9 +3965,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         /// <summary>
         /// Las líneas despegan (1) o dejan de volar (−1), porque llegan o porque se anulan: en la
-        /// clave del destino y en su valoración, con su cantidad y su valor.
+        /// clave del destino y en su valoración, con su cantidad y su valor. La fecha es el día en
+        /// que pasa, para el tránsito del saldo a una fecha.
         /// </summary>
-        internal void Volar(IEnumerable<LineaEnVuelo> lineas, int signo)
+        internal void Volar(DateOnly fecha, IEnumerable<LineaEnVuelo> lineas, int signo)
         {
             foreach (LineaEnVuelo linea in lineas)
             {
@@ -3613,6 +3977,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
                 Transito[linea.Destino] = Transito.GetValueOrDefault(linea.Destino) + (signo * linea.Cantidad);
                 ValoracionEnTransito[donde] = (cantidad + (signo * linea.Cantidad), valor + (signo * linea.Valor));
+                Vuelos.Add((fecha, linea, signo));
             }
         }
 
@@ -3678,9 +4043,10 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         /// suma mueve lo que compensa, o su coste por la cantidad, o el precio medio de antes por la
         /// cantidad, y congela el precio medio de después. La que resta congela el de antes y mueve
         /// lo que compensa, o ese precio por la cantidad; salvo si vacía el artículo o se llevaría
-        /// más de lo que hay, y entonces se lleva todo lo que hay.
+        /// más de lo que hay, y entonces se lleva todo lo que hay. La fecha es la del movimiento,
+        /// para el valor del saldo a una fecha.
         /// </remarks>
-        internal FilaValorada[] Valorar(IReadOnlyList<LineaQueSeValora> lineas)
+        internal FilaValorada[] Valorar(DateOnly fecha, IReadOnlyList<LineaQueSeValora> lineas)
         {
             var filas = new FilaValorada[lineas.Count];
 
@@ -3729,9 +4095,40 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             }
 
             Valorado.AddRange(filas);
+            ValoradoConSuFecha.AddRange(filas.Select(fila => (fecha, fila)));
 
             return filas;
         }
+
+        /// <summary>
+        /// El saldo de cada par de la valoración al final del día (ADR-0063 §1): el libro hasta ese
+        /// día en cantidad y en valor, y lo que vuela hacia el par ese día. Lo cuenta desde el
+        /// principio, sin instantáneas ni corte, que es lo que la sentencia se ahorra.
+        /// </summary>
+        internal SaldoDto[] SaldosA(DateOnly dia) =>
+            [.. ClavesDeValoracion()
+                .Select(par => new SaldoDto(
+                    par.ArticuloId,
+                    par.AlmacenId,
+                    Libro
+                        .Where(apunte => apunte.Fecha <= dia
+                            && (apunte.Clave.ArticuloId, apunte.Clave.AlmacenId) == par)
+                        .Sum(apunte => apunte.Cantidad),
+                    ValoradoConSuFecha
+                        .Where(valorada => valorada.Fecha <= dia
+                            && (valorada.Fila.ArticuloId, valorada.Fila.AlmacenId) == par)
+                        .Sum(valorada => valorada.Fila.Valor),
+                    Vuelos
+                        .Where(vuelo => vuelo.Fecha <= dia
+                            && (vuelo.Linea.Destino.ArticuloId, vuelo.Linea.Destino.AlmacenId) == par)
+                        .Sum(vuelo => vuelo.Signo * vuelo.Linea.Cantidad),
+                    Vuelos
+                        .Where(vuelo => vuelo.Fecha <= dia
+                            && (vuelo.Linea.Destino.ArticuloId, vuelo.Linea.Destino.AlmacenId) == par)
+                        .Sum(vuelo => vuelo.Signo * vuelo.Linea.Valor),
+                    "EUR"))
+                .OrderBy(saldo => saldo.ArticuloId)
+                .ThenBy(saldo => saldo.AlmacenId)];
 
         internal string Relato() =>
             string.Create(CultureInfo.InvariantCulture, $"semilla {semilla}:\n") +

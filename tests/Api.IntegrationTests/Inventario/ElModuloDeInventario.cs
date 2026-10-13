@@ -10,6 +10,7 @@ using Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Application.Recuentos;
 using Bastion.Inventario.Application.Reservas;
+using Bastion.Inventario.Application.Saldos;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Existencias;
@@ -19,6 +20,7 @@ using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 using Bastion.Inventario.Infrastructure.Persistencia.Reservas;
+using Bastion.Inventario.Infrastructure.Persistencia.Saldos;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
@@ -30,10 +32,15 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 
 /// <summary>
 /// Los cuatro casos de uso del ajuste, los cuatro de la transferencia, el alta, el conteo de una
-/// línea y la confirmación del recuento, los tres de la reserva y la lectura del disponible, con sus
-/// adaptadores REALES y los contextos que necesitan.
+/// línea y la confirmación del recuento, los tres de la reserva, la lectura del disponible y la del
+/// saldo a una fecha, con sus adaptadores REALES y los contextos que necesitan.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>El saldo a una fecha entró en el ítem 2.14</b>, para la propiedad: tiene borde, pero decide con
+/// el reloj qué día es futuro, y en la propiedad «mañana» es el día siguiente al del reloj parado,
+/// que la API no deja poner.
+/// </para>
 /// <para>
 /// <b>La reserva entró en el ítem 2.13</b>, y aquí no hay otro sitio: no tiene borde, porque la llama
 /// Ventas en proceso desde la fase 4 (ADR-0059 §12). Abre su propia transacción, así que se llama tal
@@ -257,6 +264,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         LiberacionDeReserva = new LiberarReserva(reservas, unidadDeTrabajo, elReloj);
 
         Disponible = new ElDisponibleDeLasExistencias(_inventario, new InquilinoFijo(empresaId), elReloj);
+
+        Saldos = new ConsultarSaldos(new LosSaldosAUnaFecha(_inventario, new InquilinoFijo(empresaId)), elReloj);
     }
 
     internal AbrirAjuste Alta { get; }
@@ -290,6 +299,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal LiberarReserva LiberacionDeReserva { get; }
 
     internal IConsultaDeExistencias Disponible { get; }
+
+    internal ConsultarSaldos Saldos { get; }
 
     /// <summary>Confirma un ajuste con una transacción abierta, como llegaría de verdad.</summary>
     /// <remarks>
