@@ -11467,7 +11467,7 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
 **La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
 abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **467**. Su ADR es el
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **482**. Su ADR es el
 **0063**.
 
 **Lo que queda, por este orden:**
@@ -11695,8 +11695,72 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **467**. Su
        la 459 pegaba «detrás de» al artículo de quien para: «detrás de el recálculo». El de la 465
        culpaba al cerrojo de quien anota de una espera que venía de la fila. El motor dice que una
        operación espera, no por qué, así que el caso nombra las dos causas.
-9. La instantánea con `valor`, con su migración, la sentencia que mueve la proyección, la
-   reposición y el cuadre.
+   - **El run de rama de `532e353`**, que lleva también `5edb952`, es el **38397975350**, en verde
+     al primer intento. El de `d36a9ce` solo, el **38396007508**, también, con los mismos casos:
+     - sus jobs, Backend `115297955920`, Frontal `115297956174` y Humo `115300669922`;
+     - 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*;
+     - **1456** y **681** casos, **234** tipos de **241** sitios, **149** operaciones y **90**
+       rutas, y el centinela, con la marca y sin avisos;
+     - **410/450** y **711/900** KiB. Leídos con `python leer-run27.py 38397975350` y `python
+       leer-run27.py 38396007508`.
+9. ~~La instantánea con `valor`, con su migración, la sentencia que mueve la proyección, la
+   reposición y el cuadre.~~ Hecho en `feat(inventario): la instantánea lleva su valor`
+   (`c980aa2`).
+   - **La columna `valor`**, `numeric(18,4)` como la del libro, va en la misma fila que `fisico` y
+     la mueve la misma sentencia. La que anota le suma el valor del movimiento, que ya va
+     redondeado, y la reposición lo suma del libro con `LasDebidas`. El cuadre compara también el
+     valor, con su propio descuadre, `instantanea-valor` (ADR-0063 §2).
+   - **La migración `ElValorDeLaInstantanea`** entra con un cero por omisión, rellena las filas que
+     haya con la suma del libro de su clave hasta el final de su mes, y quita el cero. En
+     producción no hay ninguna, porque ninguna empresa tiene corte.
+   - **Los casos**, en `LasExistenciasSonLaSumaDelLibroTests`:
+     - el de la reposición compara el valor con una segunda cuenta en C#,
+       `ValoresDebidosEnCSharp`, que usa el mismo bucle que la de la cantidad;
+     - el del cuadre estropea un valor con la cantidad bien;
+     - y uno nuevo, `La_migracion_rellena_el_valor_de_cada_instantanea_con_el_libro_hasta_su_mes`,
+       migra una base propia hasta `LasReservas`, escribe a mano una fila del libro para cada
+       parte de la clave y del límite del mes, y migra el resto. Entra en el censo en su commit.
+
+     El ayudante que migra hasta una migración pasa a `PostgresConTodosLosModulos`, porque ya lo
+     usan dos casos. No hay semillas nuevas: del 863 al 869 siguen libres.
+   - **Las cifras, sobre `c980aa2`**: **1456** casos en el carril rápido y **682** en el de
+     integración, 597 y 85, todos en verde. Con las órdenes y el recuento del ítem 8. El de más es
+     el de la migración.
+   - **La tanda, de la 467 a la 481**, con `python -X utf8 mutar-valor.py <ruta>/tanda-valor.json
+     comprobar base 467-481`, escrita antes de medir con lo que cada una tenía que poner rojo. El
+     método es el del ítem 8, sobre un *worktree* aparte en `c980aa2` y con la clase de las
+     existencias. La base, 0 rojos de 13. **Las quince casan con lo escrito**, sin un rojo de más
+     ni de menos. Los mensajes, leídos en el `.trx` con `python -X utf8 mensajes.py`.
+
+     | # | Mutación | Rojo en |
+     |---|---|---|
+     | 467 | La sentencia del libro no suma el valor en una instantánea que ya existe | Solo la reposición: tras las confirmaciones de después del corte, el valor no es el de la segunda cuenta |
+     | 468 | La sentencia del libro escribe el valor a cero | La reposición, igual. Y `La_confirmacion_de_una_clave_nueva_espera_al_recalculo_de_su_empresa`, del ítem 8, por el cuadre del final: un `instantanea-valor` |
+     | 469 | Quien anota manda las cantidades en el sitio de los valores | Los mismos dos, por lo mismo |
+     | 470 | Las debidas suman la cantidad como valor | La reposición, ya en el primer recálculo. El cuadre, con los dos `instantanea-valor` esperando 3 en lugar de 4,5. Y el de la clave nueva, por su cuadre |
+     | 471 | La ventana del valor sin orden: cada mes, el total hasta el corte | Solo la reposición, en el primer recálculo |
+     | 472 | La reposición escribe el valor a cero | La reposición. El cuadre, ya en la base limpia, con 34 descuadres. Y por el cuadre del final, `El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro`, del 2.7, y `Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan` |
+     | 473 | El cuadre sin el descuadre del valor | Solo el cuadre: le faltan los dos `instantanea-valor` |
+     | 474 | El descuadre del valor mira la cantidad | Solo el cuadre: no ve el valor estropeado, y ve dos donde difiere la cantidad y no el valor |
+     | 475 | El relleno cuenta el primer día del mes siguiente | Solo el de la migración |
+     | 476 | El relleno sin el lote en la clave | Solo el de la migración |
+     | 477 | El relleno sin la empresa en la clave | Solo el de la migración |
+     | 478 | El relleno sin `coalesce`: una instantánea sin libro, a nulo | Solo el de la migración, y no en su aserción: el `UPDATE` choca con el `NOT NULL` de la columna, `23502` |
+     | 479 | La migración no quita el cero por omisión | Solo el de la migración: «el cero por omisión es solo para las filas que ya había» |
+     | 480 | **Arnés**: las entradas del caso, a coste cero | La reposición, por su guarda: «con todos los valores a cero, una sentencia que no los sumara saldría igual». Y el cuadre, que no ve la instantánea que falta |
+     | 481 | **Arnés**: la segunda cuenta del valor suma la cantidad | Solo la reposición, en el primer recálculo |
+
+     - **La 478 no la para la aserción, la para el esquema.** La columna es `NOT NULL`, así que un
+       relleno que deja un nulo no llega a aplicarse: el caso cae en el `MigrateAsync`, antes de
+       comparar. Lo provoca la instantánea sin libro del caso, que es la que el `coalesce` deja en
+       cero.
+     - **La 474 se ve por los dos lados.** Pierde el valor estropeado, que tiene la cantidad bien, y
+       saca dos `instantanea-valor` con el valor igual donde la cantidad difiere.
+     - **La 467 no la ve el de la clave nueva, y la 468 sí.** Una clave nueva crea su instantánea
+       con el `INSERT` y no pasa por el `ON CONFLICT`, que es lo único que cambia la 467.
+     - **La 480 la ve el cuadre por la instantánea que falta.** Con el valor a cero, la que falta
+       espera un cero y no tiene nada, y el cuadre no puede distinguirlo. Por eso las entradas del
+       caso llevan coste.
 10. El trabajo mensual que avanza el corte, con sus métricas y su registro.
 11. La consulta del saldo a una fecha, con el tránsito aparte, su permiso y
     `saldo-con-fecha-futura`.
