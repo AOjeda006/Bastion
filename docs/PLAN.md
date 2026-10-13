@@ -11467,7 +11467,7 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
 **La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
 abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **448**. Su ADR es el
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **459**. Su ADR es el
 **0063**.
 
 **Lo que queda, por este orden:**
@@ -11570,9 +11570,71 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **448**. Su
      frontend/dist/assets/*.js` sobre la construcción de `fdaf42f`: doce fragmentos;
    - **el fragmento de los tipos en el presupuesto**, uno por idioma, que tiene que existir y no se
      cuenta en el arranque.
-7. Los tipos fuera del arranque, por (A), en su propio commit: un fragmento por idioma, pedido
+
+   **Los runs de rama desde el de `517ae7c`**, los tres en verde al primer intento, con 69 pasos,
+   68 en verde y el *Diagnóstico* omitido, **1451** y **678** casos, y **442/450** y **711/900**
+   KiB. Leídos con `python leer-run27.py <run>`:
+   - `140a1f8` y `4cafae0`, el **38371709660**: Backend `115210026905`, Frontal `115210027303` y
+     Humo `115212932926`;
+   - `3d65ea5`, el **38372938669**: Frontal `115214143288`, Backend `115214143731` y Humo
+     `115218493878`;
+   - `7b78516` y `bed21c7`, el **38379809379**: Backend `115237121136`, Frontal `115237121501` y
+     Humo `115241136491`, con **234** tipos de **241** sitios, **149** operaciones y **90** rutas.
+7. ~~Los tipos fuera del arranque, por (A), en su propio commit: un fragmento por idioma, pedido
    después del primer pintado, y el barrido de `ElCambioDeIdioma` contra el fragmento nuevo. El
-   arranque, medido antes y después.
+   arranque, medido antes y después.~~ Hecho en `perf(frontal): los textos de los type salen del
+   arranque, un fragmento por idioma` (`d72a063`). Lo arregla `fix(frontal): los textos de los
+   type van a la instancia, no al módulo es.ts` (`8c9bb59`), por un hallazgo de la tanda, la 456,
+   y `test(frontal): el comentario de la mezcla dice la que hay ahora` (`8ace0dd`) pone al día el
+   comentario del caso que la defiende.
+   - **El arranque, de 442 a 410 KiB sobre 450**, en los mismos 4 ficheros, y el total, 711 de
+     900. El fragmento castellano del diccionario, de 48 966 a 15 505 B, y el inglés, 14 817 B.
+     Los textos, aparte y pedidos después de pintar: `tiposDeError.es`, 33 490 B, y
+     `tiposDeError.en`, 33 363 B. Con `npm --prefix frontend run build` y `bash
+     scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` sobre `8c9bb59`. El 442 es el de
+     los runs de la rama hasta el 38379809379, y el 48 966, el del ADR-0063 §9.
+   - **Ningún fragmento importa ya un diccionario por su valor**: 0 donde había 12. Contado sobre
+     esa construcción, para `es-zsvcOL2d`, `en-Bs6CthOf`, `tiposDeError.es-GbJXowt6` y
+     `tiposDeError.en-8lSlr--f`, con `grep -lF -e 'from"./<fragmento>.js"' -e
+     'import"./<fragmento>.js"' frontend/dist/assets/*.js`. Su pareja, la forma dinámica, `grep -lF
+     'import("./<fragmento>.js")'`, da un fichero para cada uno, el índice: el recuento mira donde
+     tiene que mirar.
+   - **El frontal entero sobre `8c9bb59`**: los tipos, el lint y el formato, limpios; **261** casos
+     en **27** ficheros, en verde, y el centinela, con la marca y sin avisos de `act()`. El
+     catálogo de errores, al día, con 234 tipos de 241 sitios (`bash scripts/generar-errores.sh
+     --comprobar`): no lee los diccionarios, así que mover los textos no lo toca.
+   - **La tanda, de la 448 a la 458**, con `python -X utf8 mutar-tipos.py <n>…`. Aplica cada una
+     sobre el árbol limpio, corre la suite entera del frontal y el lint y, si la mutación toca lo
+     que se construye, el presupuesto; y la revierte con `git restore --source=HEAD`. Las rojas se
+     leen por el nombre del caso y el mensaje de la aserción, en el informe JSON de vitest. De la
+     448 a la 455 se midieron sobre `d72a063` y otra vez sobre `8c9bb59`, con los mismos rojos; la
+     456, sobre los dos; la 457 y la 458, sobre `8c9bb59`. La base, 0 rojos de 261 y 0 avisos.
+
+     | # | Mutación | Rojo en |
+     |---|---|---|
+     | 448 | El arranque espera también a los textos | `ElArranqueConUnIdioma`, «los textos de los `type` no vienen con el arranque»: `tiposCargados` sale `true` antes de pedirlos. El presupuesto, verde: el fragmento sigue aparte, y lo que cambia es cuándo se espera |
+     | 449 | `useTextoDeFallo` importa los textos por su valor | **Solo el lint**, `no-restricted-imports`, que es para lo que está la regla. Los tests y el presupuesto, verdes, con el total de 711 a 712 KiB |
+     | 450 | Sin `bindI18nStore: 'added'` | `ElTextoDeUnFallo`: al llegar los textos no se repinta, y el texto propio no aparece |
+     | 451 | `index.ts` trae los castellanos por su valor y el arranque los usa | `ElArranqueConUnIdioma`, el lint y el presupuesto: «resuelven en 0 ficheros» |
+     | 452 | **Arnés**: la regla del lint sin los textos de los `type` | `ElDiccionarioSeImportaPorSuTipo`: «no ha marcado un import de valor de `./i18n/tiposDeError.es.ts`» |
+     | 453 | La mezcla sin `deep`, en el código de `d72a063` | `ElArranqueConUnIdioma`: se lleva los genéricos. Su línea no existe en `8c9bb59`; la sustituyen la 457 y la 458 |
+     | 454 | `completarConLosTipos` sin la guarda del diccionario | `ElArranqueConUnIdioma`: sobre `8c9bb59`, revienta al leer `errores` de un diccionario inglés que no hay |
+     | 455 | `useTextoDeFallo` sin la guarda de «todavía no han llegado» | `ElTextoDeUnFallo`: sin los textos, no sale el genérico por estado |
+     | 456 | `cambiarIdioma` no trae los textos del idioma nuevo | **Verde en los tests sobre `d72a063`: un hallazgo.** El lint marcaba dos avisos que no la ven (`await-thenable` y `no-unnecessary-condition`, por el `null` que deja). Sobre `8c9bb59`, roja: «cambiar de idioma trae su diccionario Y sus textos», en `tiposCargados` |
+     | 457 | La mezcla profunda de antes, que escribe dentro del módulo | `ElArranqueConUnIdioma`: `es.errores` gana `tipos` |
+     | 458 | A lo ancho, sin los genéricos | `ElArranqueConUnIdioma`: `errores.servidor` deja de tener texto |
+
+     - **La 456 era verde porque la mezcla profunda escribía dentro del módulo `es.ts`.** i18next
+       guarda por referencia el diccionario con el que se crea la instancia, y `deep` metía los
+       textos en ese mismo objeto. El primer caso que los pedía los dejaba en el módulo importado,
+       y el cambio de idioma de un caso posterior los encontraba sin haberlos descargado. El
+       arreglo rehace `errores` entero, con los genéricos que había y los textos, sin `deep`; y
+       `addResourceBundle` copia lo que recibe. El caso afirma ahora que `es.errores` no gana
+       `tipos`, y la 457, que es la mezcla de antes, lo pone rojo.
+     - **La 457 y la 458 también marcan el lint**, con `no-unused-vars` sobre `actual`, que deja de
+       usarse. Es de la forma de la mutación, no de lo que ve.
+     - **La 448 no la ve el presupuesto, y no tiene por qué**: cuenta bytes, no esperas. Lo que el
+       arranque espera lo afirma el caso.
 8. El cerrojo consultivo por empresa, en lugar del `LOCK TABLE`, con los tres casos y sus
    mutaciones. El recálculo y el cuadre reciben la empresa de quien los llama.
 9. La instantánea con `valor`, con su migración, la sentencia que mueve la proyección, la
