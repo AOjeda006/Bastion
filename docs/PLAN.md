@@ -11301,7 +11301,8 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
 **La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
 abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y su ADR es el **0063**.
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **448**. Su ADR es el
+**0063**.
 
 **Lo que queda, por este orden:**
 
@@ -11312,7 +11313,78 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y su ADR es el **0063**.
    como pide el encargo, y con él van el §4, el §5 y el §6, que también se reescribieron por dentro
    en la rama del 2.13, en seis commits del código que lo pedía. Una cabecera que solo declarara
    el §9 callaría los otros tres.
-3. La propiedad, por escritura: `CaducadaAlPasar` en tres clases, con su tanda y lo que cuesta.
+3. ~~La propiedad, por escritura: `CaducadaAlPasar` en tres clases, con su tanda y lo que cuesta.~~
+   Hecha en `test(inventario): la propiedad separa la caducada por la escritura que la libera`
+   (`140a1f8`). El run de rama de `517ae7c`, el commit de la cabecera, es el **38360270646**, en
+   verde al primer intento: Frontal `115172546954`, Backend `115172547059` y Humo `115175839294`,
+   69 pasos con 68 en verde y el *Diagnóstico* omitido, **1451** y **678** casos, **234** tipos de
+   **241** sitios, **149** operaciones y **90** rutas, y **442/450** y **711/900** KiB. Leído con
+   `python leer-run27.py 38360270646`.
+   - **Tres clases donde había una**: `CaducadaAlReservar`, `CaducadaAlConsumir` y
+     `CaducadaAlLiberar`. Cada escritura pasa a `PasarPorLaClave` la suya, y la aserción final de
+     cada semilla pide las tres.
+   - **Al azar no salían, y por eso la 442 y la 443 eran verdes.** Consumir y liberar solo pasan por
+     la clave de una vigente, y una caducada casi nunca tenía una al lado, porque las vigentes duran
+     poco. El quinto generador las junta ahora de dos maneras: uno de cada cinco pasos pide una
+     unidad que caduca en la clave de una vigente con sitio ayer, o, si no la hay, una vigente con
+     el reloj de ayer en la clave de una caducada sola, que ayer no había caducado y no la libera.
+   - **Y mientras alguna vigente tenga al lado una caducada guardada activa, el paso de las reservas
+     es pasar por ella**, con la escritura que toca por turno: reservar, consumir o liberar. El
+     turno pasa aunque la escritura no salga, y la siguiente lo intenta con la de después.
+   - **La tanda, de la 422 a la 447**, escrita antes de medir en `tanda-caducadas.json`. La 422 y la
+     441 son las del 2.13, otra vez y con los cinco carriles; la 442 y la 443, también, con el
+     nombre de la clase nueva en el texto que quitan; de la 444 a la 447 son nuevas, y todas del
+     arnés. **La 445 y la 446 se reescribieron antes de medir**: la primera versión de la tanda las
+     escribió contra un diseño que se descartó, con un `UnaVigente` que ya no existe, y las dos
+     nombraban una línea que no estaba. `comprobar` lo habría parado, pero se rehicieron antes,
+     contra el commit, y se añadió la 447. Se midió con `python -X utf8 mut214.py
+     <ruta>/tanda-caducadas.json comprobar base 422 441 442 443 444 445 446 447 base`, sobre un
+     *worktree* aparte en `140a1f8`, con los mismos cinco carriles y el mismo plazo de cuelgue que
+     la tanda del 2.13. La base da 0 rojos en los cinco, antes y después, con 79, 8, 29, 2 y 6
+     casos, y el árbol restaurado compila con la porcelana vacía:
+
+     | # | Mutación | Dominio, de 79 | Sentencias, de 8 | Reservas, de 29 | Carreras, de 2 | Propiedad, de 6 |
+     |---|---|---|---|---|---|---|
+     | 422, tercera vez | El consumo no libera las caducadas de su clave | 0 | 0 | **1**: `LasReservasTests.Consumir_y_liberar_tambien_escriben_las_caducadas_de_su_clave` | 0 | **6**: en las seis, en el invariante de las reservas, en el paso del primer `CaducadaAlConsumir` |
+     | 441, otra vez | Liberar no libera las caducadas de su clave | 0 | 0 | **1**: `LasReservasTests.Consumir_y_liberar_tambien_escriben_las_caducadas_de_su_clave` | 0 | **6**: en las seis, en el invariante de las reservas, en el paso del primer `CaducadaAlLiberar` |
+     | 442, otra vez | **Arnés**: el modelo no pasa por la clave al consumir | — | — | — | — | **6**: en las seis, en el invariante de las reservas, en el consumo que en la base libera la caducada |
+     | 443, otra vez | **Arnés**: el modelo no pasa por la clave al liberar | — | — | — | — | **6**: en las seis, en el invariante de las reservas, en la liberación que en la base libera la caducada |
+     | 444 | **Arnés**: las tres escrituras se anotan con la clase de reservar | — | — | — | — | **6**: en las seis, solo en la aserción de las clases, sin la de consumir ni la de liberar |
+     | 445 | **Arnés**: sin el paso forzado por la caducada que tiene una vigente al lado | — | — | — | — | **3**: la 461 y la 463, sin `CaducadaAlLiberar`, y la 464, sin `CaducadaAlConsumir` |
+     | 446 | **Arnés**: el turno de la caducada, entre dos y no entre tres | — | — | — | — | **6**: en las seis, sin `CaducadaAlLiberar`; la 461, además, sin `RecuentoConLaHuellaNueva` |
+     | 447 | **Arnés**: sin los dos pasos que juntan una caducada y una vigente | — | — | — | — | **6**: en las seis, sin la de consumir ni la de liberar |
+
+     - **La 422 y la 441 se ponen rojas en la propiedad**, que es lo que pedía el encargo, y en el
+       mismo caso de `d44cc31` que en el 2.13. En cada semilla, el invariante cae en el paso de la
+       primera clase de su escritura: el modelo ha liberado la caducada, y la base la deja activa.
+     - **La 442 y la 443 pasan de verdes a rojas en las seis**, en el consumo o la liberación que en
+       la base libera la caducada: los pasos 261, 128, 142, 101, 214 y 56 en la 442, y 363, 164,
+       293, 168, 308 y 125 en la 443. La 422 y la 441 caen en el paso siguiente de la misma semilla,
+       que es el de la clase: la misma escritura, vista desde los dos lados. Es la última línea del
+       relato, leída con `python relato.py <trx> <semilla>`.
+     - **La 445 sale roja en tres semillas, y la espera decía seis.** Manda lo medido: con los dos
+       pasos que juntan, el azar ya lleva un consumo o una liberación a una caducada en la 460, la
+       462 y la 465, y en las otras tres no. El paso forzado es lo que hace que salgan en todas.
+     - **La 447, en las seis, y la espera decía la mayoría.** Sin los pasos que juntan, el paso
+       forzado casi nunca tiene a quién pasar, y faltan las dos clases en todas.
+     - **La 446 ve lo que tiene que ver, y uno más**: con el turno entre dos, la secuencia de la 461
+       cambia, y su recuento no llega a confirmarse con la huella nueva. No es de la mutación por
+       diseño, y la clase de liberar falta en las seis.
+     - Las clases que faltan, leídas del mensaje de la aserción con `python faltan.py <trx>`.
+   - **Lo que cuesta: nada que se distinga del ruido de esta máquina.** La propiedad entera, con la
+     orden `dotnet test tests/Api.IntegrationTests --no-build --filter
+     "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests" --logger
+     "trx;LogFileName=<n>.trx" --results-directory <ruta>/coste`, leída con `python duraciones.py
+     <trx>`, que suma la duración de cada semilla:
+     - la primera medida, `517ae7c` en un *worktree* y el cambio en el árbol, a horas distintas, dio
+       **159,1 s contra 232,9 s**, un 46 % más;
+     - la segunda, las dos en el mismo *worktree* y seguidas, con `coste-y-tanda.sh`, dio **232,7 s
+       contra 219,1 s**, un 6 % menos.
+
+     **El mismo commit, `517ae7c`, dio 159,1 s y 232,7 s**, así que la diferencia de la primera
+     medida era la máquina y no el cambio. Por semilla, en la segunda: 36,1, 37,0, 36,4, 34,7, 51,1
+     y 37,4 s antes; 35,1, 33,7, 35,1, 34,5, 46,3 y 34,5 después. La siguiente mutación es la
+     **448**.
 4. La puerta del 2.14, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0063
    decide sin preguntar.
 5. Parar y preguntar, todo junto. El ADR-0063 y el código esperan a las respuestas.
