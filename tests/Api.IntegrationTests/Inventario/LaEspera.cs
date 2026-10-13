@@ -74,4 +74,98 @@ internal static class LaEspera
         throw new ShouldAssertException(
             $"en treinta segundos nadie se ha puesto a esperar a {aQuien}");
     }
+
+    /// <summary>
+    /// Espera a que <paramref name="enVuelo"/> termine sin pararse detrás de
+    /// <paramref name="procesoQueNoFrena"/>, o falla en cuanto se para.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>La otra mitad, desde el 2.14</b>: dos operaciones que NO se esperan. Esperar a que la
+    /// segunda termine no basta, porque una que se queda parada detrás de la primera tampoco
+    /// termina, y el caso solo lo sabría por el plazo. Así que la pregunta es la misma que arriba,
+    /// con la respuesta al revés: si el motor dice que alguien espera a ese proceso, ese es el
+    /// fallo, y se dice en el momento.
+    /// </para>
+    /// <para>
+    /// Mira a quien espera al proceso y no a la operación, por lo mismo que arriba: el proceso de la
+    /// operación en vuelo no se conoce hasta que abre su conexión.
+    /// </para>
+    /// </remarks>
+    /// <param name="cadenaDeConexion">La base del caso.</param>
+    /// <param name="procesoQueNoFrena">
+    /// El proceso de PostgreSQL de la transacción que tiene su cerrojo, y que no debe frenar a la
+    /// operación.
+    /// </param>
+    /// <param name="enVuelo">La operación que tiene que terminar sin esperarla.</param>
+    /// <param name="aQuien">A quién no debe esperar: «el recálculo de la otra empresa».</param>
+    /// <param name="conEspera">Qué estaría mal si la esperara.</param>
+    /// <returns>Cuando la operación ha terminado.</returns>
+    internal static async Task SinQueLaFreneAsync(
+        string cadenaDeConexion,
+        int procesoQueNoFrena,
+        Task enVuelo,
+        string aQuien,
+        string conEspera)
+    {
+        await using NpgsqlConnection conexion = new(cadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand quienEspera = new(
+            "SELECT count(*) FROM pg_stat_activity WHERE @frena = ANY(pg_blocking_pids(pid))",
+            conexion);
+
+        quienEspera.Parameters.AddWithValue("frena", procesoQueNoFrena);
+
+        DateTimeOffset limite = DateTimeOffset.UtcNow.AddSeconds(30);
+
+        while (DateTimeOffset.UtcNow < limite)
+        {
+            if (enVuelo.IsCompleted)
+            {
+                return;
+            }
+
+            ((long)(await quienEspera.ExecuteScalarAsync())!).ShouldBe(
+                0,
+                $"la operación se ha parado detrás de {aQuien}: {conEspera}");
+
+            await Task.Delay(50);
+        }
+
+        throw new ShouldAssertException(
+            $"en treinta segundos la operación no ha terminado, y nadie espera a {aQuien}");
+    }
+
+    /// <summary>El proceso que está parado detrás de <paramref name="procesoQueFrena"/>, que es uno.</summary>
+    /// <remarks>
+    /// Para las operaciones que el caso no abre con una conexión suya, como el recálculo, que abre
+    /// la propia: se las para detrás de algo que el caso sí tiene, y se las encuentra por ahí.
+    /// </remarks>
+    /// <param name="cadenaDeConexion">La base del caso.</param>
+    /// <param name="procesoQueFrena">El proceso que la tiene parada.</param>
+    /// <returns>El proceso de la operación parada.</returns>
+    internal static async Task<int> LaParadaDetrasDeAsync(string cadenaDeConexion, int procesoQueFrena)
+    {
+        await using NpgsqlConnection conexion = new(cadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand quienes = new(
+            "SELECT pid FROM pg_stat_activity WHERE @frena = ANY(pg_blocking_pids(pid))",
+            conexion);
+
+        quienes.Parameters.AddWithValue("frena", procesoQueFrena);
+
+        List<int> procesos = [];
+
+        await using (NpgsqlDataReader lector = await quienes.ExecuteReaderAsync())
+        {
+            while (await lector.ReadAsync())
+            {
+                procesos.Add(lector.GetInt32(0));
+            }
+        }
+
+        return procesos.ShouldHaveSingleItem($"una sola operación parada detrás de {procesoQueFrena}");
+    }
 }

@@ -42,9 +42,19 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// van dentro de una transacción que se deshace.
 /// </para>
 /// <para>
-/// <b>Semillas: el fichero entero es del 440 al 459.</b> Las empresas, del 440 al 449; los maestros
-/// de instalación, del 450 al 459. El caso de las dos empresas se lleva la 447 y la 448, y la 457 y
-/// la 458; el de las dos salidas del ítem 2.8, la 449 y la 459.
+/// <b>Semillas: el fichero entero es del 440 al 459, y del 858 al 862.</b> Las empresas, del 440 al
+/// 449; los maestros de instalación, del 450 al 459. El caso de las dos empresas se lleva la 447 y la
+/// 448, y la 457 y la 458; el de las dos salidas del ítem 2.8, la 449 y la 459. Los tres del cerrojo
+/// de la empresa, del 2.14, del 858 al 862, empresa y maestros con el mismo número: el bloque estaba
+/// libre, y lo dice <c>LasReservasTests</c>.
+/// </para>
+/// <para>
+/// <b>El cerrojo de las instantáneas es de la empresa desde el 2.14</b> (ADR-0063 §5 y §6), y tiene
+/// tres casos además del que ya tenía, cada uno con dos transacciones de verdad: el recálculo de una
+/// empresa no frena a otra; sí frena a una confirmación de la suya; y dos confirmaciones de la misma
+/// empresa no se frenan entre sí. Para tener un recálculo a medias, el caso le coge antes la fila del
+/// corte: el recálculo toma su cerrojo, se para en esa fila, y se queda dentro hasta que el caso la
+/// suelta.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -582,6 +592,153 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     }
 
     [Fact]
+    public async Task El_recalculo_de_una_empresa_no_frena_las_confirmaciones_de_otra()
+    {
+        ElAlmacenDelCaso deA = await UnAlmacenAsync(858, "EXI-K", 858);
+        ElAlmacenDelCaso deB = await UnAlmacenAsync(859, "EXI-L", 859);
+
+        DateOnly esteMes = LasExistencias.MesDe(Hoy);
+
+        // EL CORTE DE A, PUESTO, para que haya una fila que coger.
+        (await LasExistencias.RecalcularAsync(postgres, deA.EmpresaId, esteMes.AddMonths(-1))).ShouldBe(0);
+
+        await using ElModuloDeInventario enB = new(postgres, deB.EmpresaId);
+
+        Guid deLaB = await AbrirAsync(enB, deB, deB.Serie.Id, Hoy, [new Linea(0, 5m)]);
+
+        // TRANSACCIÓN 1: el recálculo de A, con su cerrojo y parado en la fila de su corte.
+        await using ElCorteCogido corte = await CogerElCorteAsync(deA.EmpresaId);
+
+        Task<int> recalculo = LasExistencias.RecalcularAsync(postgres, deA.EmpresaId, esteMes);
+
+        int delRecalculo = await ElRecalculoParadoDentroAsync(corte, recalculo);
+
+        // TRANSACCIÓN 2: la confirmación de B. Con una clave sin la empresa —lo que hacía el
+        // `LOCK TABLE`— se pararía detrás del recálculo de A, y el caso lo dice en el momento.
+        Task<Resultado<AjusteDto>> confirmacion = enB.ConfirmarAsync(deLaB);
+
+        await LaEspera.SinQueLaFreneAsync(
+            postgres.CadenaDeConexion,
+            delRecalculo,
+            confirmacion,
+            "el recálculo de otra empresa",
+            "el cerrojo de las instantáneas no es de la empresa, y un recálculo para a todas");
+
+        Resultado<AjusteDto> confirmadaEnB = await confirmacion;
+
+        confirmadaEnB.EsCorrecto.ShouldBeTrue($"«{confirmadaEnB.Error?.Codigo}»");
+        recalculo.IsCompleted.ShouldBeFalse("B ha confirmado con el recálculo de A todavía dentro");
+
+        await corte.SoltarAsync();
+
+        (await recalculo.WaitAsync(TimeSpan.FromSeconds(30))).ShouldBe(0, "A no tiene libro");
+
+        (await LasExistencias.VivasAsync(postgres, deB.EmpresaId))
+            .ShouldHaveSingleItem()
+            .Fisico.ShouldBe(5m);
+    }
+
+    [Fact]
+    public async Task La_confirmacion_de_una_clave_nueva_espera_al_recalculo_de_su_empresa()
+    {
+        ElAlmacenDelCaso caso = await UnAlmacenAsync(860, "EXI-M", 860);
+
+        DateOnly esteMes = LasExistencias.MesDe(Hoy);
+
+        (await LasExistencias.RecalcularAsync(postgres, caso.EmpresaId, esteMes.AddMonths(-1))).ShouldBe(0);
+
+        await using ElModuloDeInventario modulo = new(postgres, caso.EmpresaId);
+
+        Guid ajusteId = await AbrirAsync(modulo, caso, caso.Serie.Id, Hoy, [new Linea(0, 5m)]);
+
+        // TRANSACCIÓN 1: el recálculo que avanza el corte a este mes, con su cerrojo y parado.
+        await using ElCorteCogido corte = await CogerElCorteAsync(caso.EmpresaId);
+
+        Task<int> recalculo = LasExistencias.RecalcularAsync(postgres, caso.EmpresaId, esteMes);
+
+        int delRecalculo = await ElRecalculoParadoDentroAsync(corte, recalculo);
+
+        // TRANSACCIÓN 2: una clave NUEVA de la misma empresa. Si entrara, leería el corte viejo y no
+        // se daría la instantánea de este mes; y el recálculo, que no ve su fila viva sin confirmar,
+        // tampoco. Con un cerrojo compartido al recalcular, no esperaría.
+        Task<Resultado<AjusteDto>> confirmacion = modulo.ConfirmarAsync(ajusteId);
+
+        await EsperarAQueLaFreneAsync(delRecalculo, confirmacion);
+
+        await corte.SoltarAsync();
+
+        (await recalculo.WaitAsync(TimeSpan.FromSeconds(30))).ShouldBe(
+            0, "la clave nueva todavía no existía: la confirmación esperaba fuera");
+
+        Resultado<AjusteDto> confirmada = await confirmacion.WaitAsync(TimeSpan.FromSeconds(30));
+
+        confirmada.EsCorrecto.ShouldBeTrue($"«{confirmada.Error?.Codigo}»");
+
+        (await LasExistencias.InstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(
+            [new FotoDelMes(caso.Clave(0), esteMes, 5m)],
+            "la confirmación leyó el corte que el recálculo acababa de mover");
+
+        CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, caso.EmpresaId);
+
+        cuadre.InstantaneasComparadas.ShouldBe(1);
+        cuadre.Descuadres.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Dos_confirmaciones_de_la_misma_empresa_no_se_frenan_por_el_cerrojo_de_las_instantaneas()
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(861);
+
+        // DOS SERIES, DOS ARTÍCULOS Y DOS ALMACENES: no comparten ni el contador de la serie, ni la
+        // fila viva, ni la valoración. Lo único que comparten es el cerrojo de las instantáneas de su
+        // empresa, y es compartido: si fuera exclusivo, la segunda esperaría a la primera.
+        EjercicioDto esteAnio = await LosMaestrosPorLaApi.CrearEjercicioAsync(cliente, Hoy.Year);
+        SerieDto primera = await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, esteAnio.Id, "EXI-N1");
+        SerieDto segunda = await LosMaestrosPorLaApi.CrearSerieEnAsync(cliente, esteAnio.Id, "EXI-N2");
+
+        ElAlmacenDelCaso uno = await LosMaestrosDeAsync(cliente, empresa.Id, "EXI-N", 861, primera);
+        ElAlmacenDelCaso otro = await LosMaestrosDeAsync(cliente, empresa.Id, "EXI-O", 862, segunda);
+
+        await using ElModuloDeInventario unos = new(postgres, empresa.Id);
+        await using ElModuloDeInventario otros = new(postgres, empresa.Id);
+
+        Guid delPrimero = await AbrirAsync(unos, uno, primera.Id, Hoy, [new Linea(0, 3m)]);
+        Guid delSegundo = await AbrirAsync(otros, otro, segunda.Id, Hoy, [new Linea(0, 4m)]);
+
+        // TRANSACCIÓN 1: confirma y no suelta, con el compartido de su empresa tomado.
+        (Resultado<AjusteDto> confirmacion, IDbContextTransaction enVuelo) =
+            await unos.ConfirmarYQuedarseDentroAsync(delPrimero);
+
+        await using (enVuelo)
+        {
+            confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»");
+
+            (await CerrojosDeLasInstantaneasAsync(unos.ProcesoDeLaBase)).ShouldBe(
+                1, "la primera tiene el cerrojo de las instantáneas de su empresa, y no lo suelta");
+
+            // TRANSACCIÓN 2: la otra serie, el otro artículo. Termina con la primera dentro.
+            Task<Resultado<AjusteDto>> laOtra = otros.ConfirmarAsync(delSegundo);
+
+            await LaEspera.SinQueLaFreneAsync(
+                postgres.CadenaDeConexion,
+                unos.ProcesoDeLaBase,
+                laOtra,
+                "otra confirmación de su empresa",
+                "el cerrojo de quien anota no es compartido, y las confirmaciones van de una en una");
+
+            Resultado<AjusteDto> segundaConfirmacion = await laOtra;
+
+            segundaConfirmacion.EsCorrecto.ShouldBeTrue($"«{segundaConfirmacion.Error?.Codigo}»");
+
+            await enVuelo.CommitAsync();
+        }
+
+        (await LasExistencias.VivasAsync(postgres, empresa.Id))
+            .Select(viva => viva.Fisico)
+            .ShouldBe([3m, 4m], ignoreOrder: true);
+    }
+
+    [Fact]
     public async Task Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan()
     {
         // LAS SENTENCIAS DE LA PROYECCIÓN SON SQL CRUDO, y el filtro global de empresa no las
@@ -847,6 +1004,89 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     }
 
     /// <summary>
+    /// Coge la fila del corte de la empresa en una transacción aparte, y no la suelta hasta que el
+    /// caso lo diga.
+    /// </summary>
+    /// <remarks>
+    /// Es lo que deja un recálculo a medias con su cerrojo tomado: el cerrojo va lo primero, y lo
+    /// siguiente es escribir esa fila. Se afirma que la fila estaba: sin ella, el recálculo no se
+    /// pararía en ningún sitio y el caso ejercería dos operaciones seguidas.
+    /// </remarks>
+    /// <param name="empresaId">La empresa, que ya tiene corte.</param>
+    /// <returns>La fila cogida, con su proceso.</returns>
+    private async Task<ElCorteCogido> CogerElCorteAsync(Guid empresaId)
+    {
+        NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        NpgsqlTransaction transaccion = await conexion.BeginTransactionAsync();
+
+        await using NpgsqlCommand coger = new(
+            "SELECT c.hasta_el_mes FROM inventario.cortes_de_la_instantanea AS c "
+            + "WHERE c.empresa_id = @empresa FOR UPDATE",
+            conexion,
+            transaccion);
+
+        coger.Parameters.AddWithValue("empresa", empresaId);
+
+        (await coger.ExecuteScalarAsync()).ShouldNotBeNull("la empresa del caso tiene que tener corte");
+
+        return new ElCorteCogido(conexion, transaccion);
+    }
+
+    /// <summary>
+    /// Espera a que el recálculo se pare en la fila del corte, y comprueba que lo hace con el
+    /// cerrojo de las instantáneas ya tomado.
+    /// </summary>
+    /// <param name="corte">La fila cogida.</param>
+    /// <param name="recalculo">El recálculo en vuelo.</param>
+    /// <returns>El proceso del recálculo.</returns>
+    private async Task<int> ElRecalculoParadoDentroAsync(ElCorteCogido corte, Task<int> recalculo)
+    {
+        await LaEspera.AQueLaFreneAsync(
+            postgres.CadenaDeConexion,
+            corte.Proceso,
+            recalculo,
+            "la fila del corte",
+            "no ha escrito el corte, o lo ha escrito sin que nadie lo tuviera cogido");
+
+        int delRecalculo = await LaEspera.LaParadaDetrasDeAsync(postgres.CadenaDeConexion, corte.Proceso);
+
+        // EL CERROJO, TOMADO Y EN SU ESPACIO, sin mirar el modo ni la segunda clave: eso lo deciden
+        // los casos. Sin esto, un recálculo sin cerrojo dejaría verde el de las dos empresas.
+        (await CerrojosDeLasInstantaneasAsync(delRecalculo)).ShouldBe(
+            1, "el recálculo está parado en el corte con el cerrojo de las instantáneas tomado");
+
+        return delRecalculo;
+    }
+
+    /// <summary>
+    /// Cuántos cerrojos consultivos del espacio de las instantáneas tiene concedidos un proceso.
+    /// </summary>
+    /// <remarks>
+    /// Una clave de dos <c>int4</c> sale en <c>pg_locks</c> con la primera en <c>classid</c>, la
+    /// segunda en <c>objid</c> y <c>objsubid</c> a 2; una de un <c>int8</c>, como la de la bandeja,
+    /// con <c>objsubid</c> a 1.
+    /// </remarks>
+    /// <param name="proceso">El proceso de PostgreSQL.</param>
+    /// <returns>Cuántos, en cualquier modo.</returns>
+    private async Task<long> CerrojosDeLasInstantaneasAsync(int proceso)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand cuantos = new(
+            "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND granted "
+            + "AND pid = @proceso AND classid = @espacio::oid AND objsubid = 2",
+            conexion);
+
+        cuantos.Parameters.AddWithValue("proceso", proceso);
+        cuantos.Parameters.AddWithValue("espacio", ClaveDelCerrojoDeLasInstantaneas.Espacio);
+
+        return (long)(await cuantos.ExecuteScalarAsync())!;
+    }
+
+    /// <summary>
     /// Espera a que la operación en vuelo se quede parada detrás del proceso dado, o falla.
     /// </summary>
     /// <remarks>
@@ -871,6 +1111,27 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         _clientes.Add(cliente);
 
         return (cliente, empresa);
+    }
+
+    /// <summary>La fila del corte de una empresa, cogida en una transacción aparte.</summary>
+    /// <param name="conexion">Su conexión, abierta.</param>
+    /// <param name="transaccion">Su transacción, que tiene la fila.</param>
+    private sealed class ElCorteCogido(NpgsqlConnection conexion, NpgsqlTransaction transaccion)
+        : IAsyncDisposable
+    {
+        /// <summary>El proceso de PostgreSQL que tiene la fila.</summary>
+        internal int Proceso => conexion.ProcessID;
+
+        /// <summary>Suelta la fila, sin escribir nada.</summary>
+        /// <returns>Cuando la ha soltado.</returns>
+        internal Task SoltarAsync() => transaccion.RollbackAsync();
+
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
+        {
+            await transaccion.DisposeAsync();
+            await conexion.DisposeAsync();
+        }
     }
 
     /// <summary>Una línea de ajuste sobre una de las ubicaciones del caso.</summary>

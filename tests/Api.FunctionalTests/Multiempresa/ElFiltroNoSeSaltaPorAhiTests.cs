@@ -265,38 +265,42 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         //     no traduce ni el upsert ni el incremento sobre lo que hay, y leer-sumar-guardar por
         //     el ORM deja la ventana por la que dos confirmaciones del mismo articulo se llevan el
         //     mismo saldo de partida y una cantidad se pierde sin error. Tampoco traduce un
-        //     `LOCK TABLE`, ni una funcion de ventana en un `INSERT ... SELECT`.
+        //     cerrojo consultivo, ni una funcion de ventana en un `INSERT ... SELECT`.
         //   - Por que no leen para decidir: la sentencia del libro suma sobre lo que hay y lee una
         //     sola cosa, el corte de la empresa, que el cerrojo del recalculo impide que cambie
         //     mientras ella esta en vuelo. El recalculo lee el libro entero, pero despues de tomar
         //     ese cerrojo. El cuadre solo lee, en una sola foto.
-        //   - Y las tres comparan la empresa ellas mismas, con el valor de IInquilinoActual, en
-        //     cada tabla que tocan. Que una comparacion que falte ponga algo rojo lo comprueba
+        //   - Y las tres comparan la empresa ellas mismas en cada tabla que tocan. La del libro la
+        //     toma de IInquilinoActual; el recalculo y el cuadre, desde el 2.14, la reciben de quien
+        //     los llama, porque el trabajo mensual no tiene inquilino (ADR-0063 §7), y la API les
+        //     pasa la del inquilino. Que una comparacion que falte ponga algo rojo lo comprueba
         //     LasExistenciasSonLaSumaDelLibroTests con dos empresas de verdad, no con los vecinos
         //     de la base compartida.
         ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
          "LaProyeccionDelLibro.cs usa .ExecuteSql"] =
-            "crea a cero y bloquea en orden de clave las filas vivas del documento, y despues "
-            + "mueve la fila viva de cada existencia y sus instantaneas en una sola sentencia, "
-            + "sumando sobre lo que hay y sin leer el saldo, dentro de la transaccion que anota el "
-            + "libro. Escribe la empresa con el valor de IInquilinoActual, despues de comprobar que "
-            + "cada fila del libro es de esa misma empresa; la compara en la fila viva que suma y "
-            + "lee el corte comparandola",
+            "toma el cerrojo compartido de las instantaneas de la empresa, crea a cero y bloquea en "
+            + "orden de clave las filas vivas del documento, y despues mueve la fila viva de cada "
+            + "existencia y sus instantaneas en una sola sentencia, sumando sobre lo que hay y sin "
+            + "leer el saldo, dentro de la transaccion que anota el libro. Escribe la empresa con el "
+            + "valor de IInquilinoActual, despues de comprobar que cada fila del libro es de esa "
+            + "misma empresa; la compara en la fila viva que suma y lee el corte comparandola",
 
         ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
          "LasInstantaneasMensuales.cs usa .ExecuteSql"] =
-            "tira y repone las instantaneas de una empresa desde el libro, con el cerrojo de la "
-            + "tabla tomado lo primero para que ninguna confirmacion quede a medias. Cada sentencia "
-            + "compara la empresa con el valor de IInquilinoActual en cada tabla que toca",
+            "tira y repone las instantaneas de una empresa desde el libro, con el cerrojo exclusivo "
+            + "de esa empresa tomado lo primero para que ninguna de sus confirmaciones quede a "
+            + "medias. Cada sentencia compara la empresa en cada tabla que toca, con la que recibe de "
+            + "quien la llama: la API le pasa la del inquilino, y el trabajo mensual, la de cada "
+            + "empresa que avanza",
 
         ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
          "ElCuadreDeLasExistencias.cs usa .SqlQuery"] =
             "compara el libro con las filas vivas, con las instantaneas y, desde el item 2.8, con "
             + "la valoracion, en una sola lectura, que es lo que impide que una confirmacion a "
             + "medias aparezca en una y no en otra. Desde el 2.11 compara tambien el transito con "
-            + "las lineas de las transferencias enviadas. Solo lee, y compara la empresa con el "
-            + "valor de IInquilinoActual en cada tabla que toca; la linea, que no tiene empresa, "
-            + "por la de su transferencia",
+            + "las lineas de las transferencias enviadas. Solo lee, y compara la empresa en cada "
+            + "tabla que toca, con la que recibe de quien lo llama, como el recalculo; la linea, "
+            + "que no tiene empresa, por la de su transferencia",
 
         ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/" +
          "CerrojoDeEjercicios.cs usa .SqlQuery"] =

@@ -44,7 +44,9 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 internal sealed class CerrojoDeLaBandeja(ContextoDeLaBandeja contexto)
 {
     // Constante y arbitraria: lo único que importa es que todos los publicadores de esta base usen
-    // la misma y que no choque con otro uso de cerrojos consultivos. Hoy no hay ninguno más.
+    // la misma y que no choque con otro uso de cerrojos consultivos. Desde el 2.14 hay otro, el de
+    // las instantáneas de Inventario, y no choca: va con dos claves `int4`, y PostgreSQL separa ese
+    // espacio del de una sola clave `int8`, que es esta (ADR-0063 §5).
     private const long Clave = 8_0800_8080;
 
     /// <summary>Intenta tomar el cerrojo sin esperar.</summary>

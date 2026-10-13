@@ -53,6 +53,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSerieDelRecuentoSeMiraAlAbrirTests.La_serie_del_recuento_se_admite_por_su_documento_y_por_el_fin_de_su_ejercicio",
         "LaSerieDelRecuentoSeMiraAlAbrirTests.Una_serie_que_dejo_de_verse_contesta_lo_que_una_que_no_existe",
 
+        // Del ítem 2.14 (ADR-0063 §5): las dos claves del cerrojo de las instantáneas, escritas a
+        // mano, en el carril rápido. Que las sentencias las usen lo dicen los tres casos del cerrojo.
+        "LaClaveDelCerrojoEsDeLaEmpresaTests.Dos_empresas_con_las_mismas_palabras_en_otro_orden_comparten_cerrojo",
+        "LaClaveDelCerrojoEsDeLaEmpresaTests.El_espacio_es_Inv1_en_ascii",
+        "LaClaveDelCerrojoEsDeLaEmpresaTests.La_empresa_se_pliega_con_el_xor_de_sus_cuatro_palabras",
+
         "ContratoDeCatalogoTests.Colgar_una_categoria_por_debajo_del_nivel_maximo_es_409_y_lo_dice",
         "ContratoDeCatalogoTests.Crear_un_articulo_devuelve_201_con_Location_que_lleva_al_recurso",
         "ContratoDeCatalogoTests.El_codigo_del_articulo_se_normaliza_y_el_duplicado_en_minusculas_es_409",
@@ -636,10 +642,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta",
         "LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos",
+        "LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_de_la_misma_empresa_no_se_frenan_por_el_cerrojo_de_las_instantaneas",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_lineas_de_la_misma_clave_y_otro_documento_dejan_una_sola_fila_viva_con_la_suma",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una",
         "LasExistenciasSonLaSumaDelLibroTests.El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro",
+        "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_de_una_empresa_no_frena_las_confirmaciones_de_otra",
         "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro",
+        "LasExistenciasSonLaSumaDelLibroTests.La_confirmacion_de_una_clave_nueva_espera_al_recalculo_de_su_empresa",
         "LasExistenciasSonLaSumaDelLibroTests.Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan",
         "LasExistenciasSonLaSumaDelLibroTests.Una_fecha_futura_no_se_confirma_y_no_deja_nada_en_el_libro_ni_en_la_existencia",
 

@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application.Multiempresa;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -37,12 +36,14 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// <b>En el 2.7 no tiene quien lo llame en producción</b>, igual que el recálculo: el trabajo
 /// periódico que avanza el corte y cuadra llega con el ítem 2.14.
 /// </para>
+/// <para>
+/// <b>La empresa la pone quien llama</b>, desde el 2.14 (ADR-0063 §7), y no el inquilino: el
+/// trabajo que cuadra después de avanzar el corte no tiene inquilino.
+/// </para>
 /// </remarks>
 /// <param name="contexto">El contexto de Inventario.</param>
-/// <param name="inquilino">De donde sale la empresa que se cuadra.</param>
 /// <param name="reloj">De dónde sale «hoy».</param>
-internal sealed class ElCuadreDeLasExistencias(
-    InventarioDbContext contexto, IInquilinoActual inquilino, TimeProvider reloj)
+internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, TimeProvider reloj)
 {
     /// <summary>La consulta del cuadre, para la empresa <c>{0}</c> y el día <c>{1}</c>.</summary>
     /// <remarks>
@@ -253,15 +254,20 @@ internal sealed class ElCuadreDeLasExistencias(
         WHERE c.valor_esperado IS DISTINCT FROM c.valor_guardado
         """;
 
-    /// <summary>Cuadra la empresa del inquilino.</summary>
+    /// <summary>Cuadra una empresa.</summary>
+    /// <param name="empresaId">La empresa que se cuadra.</param>
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
     /// <returns>Cuántas claves, instantáneas y valoraciones ha comparado, y lo que no cuadra.</returns>
-    /// <exception cref="InvalidOperationException">No hay empresa en el inquilino.</exception>
-    internal async Task<CuadreDeLasExistencias> CuadrarAsync(CancellationToken cancelacion)
+    /// <exception cref="ArgumentException">La empresa es el identificador vacío.</exception>
+    internal async Task<CuadreDeLasExistencias> CuadrarAsync(Guid empresaId, CancellationToken cancelacion)
     {
-        Guid empresaId = inquilino.EmpresaDelFiltro ?? throw new InvalidOperationException(
-            "Se están cuadrando las existencias dentro de un ámbito sin inquilino, y una " +
-            "existencia es siempre de una empresa: sin ella el cuadre mezclaría las de todas.");
+        if (empresaId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Una existencia es siempre de una empresa, y con el identificador vacío el cuadre " +
+                "no compararía nada y saldría limpio.",
+                nameof(empresaId));
+        }
 
         var hoy = DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime);
 

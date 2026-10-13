@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Application.Multiempresa;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -20,10 +19,13 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// cada mes —y cuadra después— llega con el primer lector de la instantánea, el ítem 2.14. Hasta
 /// entonces la llaman los casos, que es lo que el criterio del 2.7 pide.
 /// </para>
+/// <para>
+/// <b>La empresa la pone quien llama</b>, desde el 2.14 (ADR-0063 §7), y no el inquilino: el
+/// trabajo que avanza el corte no tiene inquilino, y recorre las empresas una a una.
+/// </para>
 /// </remarks>
 /// <param name="contexto">El contexto de Inventario, sin transacción abierta.</param>
-/// <param name="inquilino">De donde sale la empresa que se recalcula.</param>
-internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IInquilinoActual inquilino)
+internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto)
 {
     /// <summary>
     /// Las instantáneas que el libro dice que tiene que haber, para la empresa <c>{0}</c> y hasta
@@ -99,8 +101,10 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
         """;
 
     /// <summary>
-    /// <b>El cerrojo que decide.</b> Espera a toda confirmación que ya haya movido la proyección y
-    /// no deja empezar a ninguna hasta el <c>COMMIT</c> del recálculo.
+    /// <b>El cerrojo que decide.</b> El exclusivo de las instantáneas de la empresa, con las dos
+    /// claves de <see cref="ClaveDelCerrojoDeLasInstantaneas"/>: espera a toda confirmación de su
+    /// empresa que ya haya pasado por el compartido, y no deja pasar a ninguna hasta el
+    /// <c>COMMIT</c> del recálculo (ADR-0063 §5).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -111,20 +115,21 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
     /// añadir. Y al revés: una confirmación que empieza durante el recálculo leería el corte viejo.
     /// </para>
     /// <para>
-    /// <b>El modo es el más débil que choca con el de quien escribe</b>. La sentencia que anota el
-    /// libro toma <c>ROW EXCLUSIVE</c> sobre la tabla —aunque no llegue a escribir ninguna
-    /// instantánea: lo toma al analizarse— y lo suelta en su <c>COMMIT</c>. <c>SHARE ROW
-    /// EXCLUSIVE</c> choca con él y consigo mismo —dos recálculos se esperan—, pero no con las
-    /// lecturas: el cuadre y quien consulte siguen leyendo mientras tanto.
+    /// <b>Es de la empresa y no de la tabla</b>, que es lo que cambió en el 2.14. Hasta entonces era
+    /// un <c>LOCK TABLE</c>, que paraba las confirmaciones de todas las empresas mientras una
+    /// recalculaba: con un trabajo que las recorre todas cada mes, eso era parar el módulo entero
+    /// una vez por empresa. El de ahora no toca a las demás, y dos recálculos de la misma empresa
+    /// se esperan. Las lecturas no lo toman: el cuadre y quien consulte siguen leyendo.
     /// </para>
     /// <para>
-    /// <b>No hay interbloqueo</b> porque el recálculo no necesita nada que una confirmación tenga
-    /// cogido: lee el libro y las filas vivas sin cerrojo, y la única fila que escribe fuera de
-    /// esta tabla —la del corte— la confirmación solo la lee.
+    /// <b>No hay interbloqueo</b> porque se toma lo primero, sin nada cogido, y quien lo espera
+    /// tampoco tiene nada que el recálculo necesite: las confirmaciones que llegan después se paran
+    /// en el compartido antes de tocar una existencia o una instantánea. Lo que el recálculo toma
+    /// luego es la fila de su corte, que nadie más toma, las instantáneas de su empresa y el
+    /// <c>FOR KEY SHARE</c> de la clave ajena de cada una sobre su existencia (ADR-0063 §6).
     /// </para>
     /// </remarks>
-    internal const string SqlDelCerrojo =
-        "LOCK TABLE inventario.instantaneas_mensuales IN SHARE ROW EXCLUSIVE MODE";
+    internal const string SqlDelCerrojo = "SELECT pg_advisory_xact_lock({0}, {1})";
 
     /// <summary>Pone el corte de la empresa <c>{0}</c> en el mes <c>{1}</c>.</summary>
     internal const string SqlDelCorte =
@@ -161,7 +166,7 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
             AND e.numero_de_serie_id IS NOT DISTINCT FROM d.numero_de_serie_id
         """;
 
-    /// <summary>Recalcula las instantáneas de la empresa del inquilino hasta un mes.</summary>
+    /// <summary>Recalcula las instantáneas de una empresa hasta un mes.</summary>
     /// <remarks>
     /// <para>
     /// <b>Abre su propia transacción, y revienta si ya hay una.</b> El cerrojo tiene que ser lo
@@ -174,15 +179,24 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
     /// reposición lea el corte nuevo de la tabla, con el mismo fragmento que el cuadre.
     /// </para>
     /// </remarks>
+    /// <param name="empresaId">La empresa que se recalcula.</param>
     /// <param name="hastaElMes">El primer día del último mes con instantánea.</param>
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
     /// <returns>Cuántas instantáneas ha repuesto.</returns>
+    /// <exception cref="ArgumentException">La empresa es el identificador vacío.</exception>
     /// <exception cref="ArgumentOutOfRangeException">El mes no es un primer día.</exception>
-    /// <exception cref="InvalidOperationException">
-    /// Ya hay una transacción abierta, o no hay empresa en el inquilino.
-    /// </exception>
-    internal async Task<int> RecalcularAsync(DateOnly hastaElMes, CancellationToken cancelacion)
+    /// <exception cref="InvalidOperationException">Ya hay una transacción abierta.</exception>
+    internal async Task<int> RecalcularAsync(
+        Guid empresaId, DateOnly hastaElMes, CancellationToken cancelacion)
     {
+        if (empresaId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Una instantánea es siempre de una empresa, y con el identificador vacío las " +
+                "sentencias no tirarían ni repondrían nada de nadie.",
+                nameof(empresaId));
+        }
+
         if (hastaElMes.Day != 1)
         {
             throw new ArgumentOutOfRangeException(
@@ -198,17 +212,15 @@ internal sealed class LasInstantaneasMensuales(InventarioDbContext contexto, IIn
                 "lo primero: dentro de otra, lo que ya se hubiera leído podría estar viejo.");
         }
 
-        Guid empresaId = inquilino.EmpresaDelFiltro ?? throw new InvalidOperationException(
-            "Se están recalculando las instantáneas dentro de un ámbito sin inquilino, y una " +
-            "instantánea es siempre de una empresa: sin ella las sentencias tirarían las de " +
-            "cualquiera.");
-
         await using IDbContextTransaction transaccion = await contexto.Database
             .BeginTransactionAsync(cancelacion)
             .ConfigureAwait(false);
 
         await contexto.Database
-            .ExecuteSqlRawAsync(SqlDelCerrojo, cancelacion)
+            .ExecuteSqlRawAsync(
+                SqlDelCerrojo,
+                [ClaveDelCerrojoDeLasInstantaneas.Espacio, ClaveDelCerrojoDeLasInstantaneas.DeLaEmpresa(empresaId)],
+                cancelacion)
             .ConfigureAwait(false);
 
         await contexto.Database

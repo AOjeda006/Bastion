@@ -52,6 +52,27 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 internal static class LaProyeccionDelLibro
 {
     /// <summary>
+    /// El cerrojo compartido de las instantáneas de la empresa, con las dos claves de
+    /// <see cref="ClaveDelCerrojoDeLasInstantaneas"/> (ADR-0063 §5 y §6).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es la mitad de quien anota del cerrojo del recálculo.</b> Los compartidos no se esperan
+    /// entre sí, así que dos confirmaciones de la misma empresa siguen sin esperarse; el exclusivo
+    /// del recálculo espera a los que ya están dentro y frena a los que lleguen, y solo los de su
+    /// empresa. Lo que impide es que una confirmación lea el corte viejo mientras el recálculo lo
+    /// mueve, o que el recálculo no vea la fila viva que ella está creando.
+    /// </para>
+    /// <para>
+    /// <b>Va justo antes de crear y bloquear las filas vivas</b>, en el eslabón 7 del orden de
+    /// cerrojos, entre la fila del documento y las existencias. Una transferencia pasa dos veces, y
+    /// la segunda petición no espera aunque haya un exclusivo esperando: PostgreSQL concede siempre
+    /// a una sesión el cerrojo consultivo que ya tiene. Es de transacción, y se suelta en su fin.
+    /// </para>
+    /// </remarks>
+    internal const string SqlDelCerrojoDeLaEmpresa = "SELECT pg_advisory_xact_lock_shared({0}, {1})";
+
+    /// <summary>
     /// Crea a cero la fila viva de cada clave nueva y bloquea la de todas, en orden de clave.
     /// </summary>
     /// <remarks>
@@ -262,8 +283,14 @@ internal static class LaProyeccionDelLibro
     /// mitad de <see cref="MoverAsync"/> que no mueve nada.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Está aparte desde el 2.11 porque el tránsito necesita lo mismo antes de sumar lo que vuela
     /// (ADR-0053 §1), y su clave es la misma. Los arrays van en paralelo, una posición por fila.
+    /// </para>
+    /// <para>
+    /// <b>Antes de crear nada toma el cerrojo compartido de la empresa</b> (ADR-0063 §6), y es el
+    /// único sitio que lo toma: el libro y el tránsito pasan los dos por aquí.
+    /// </para>
     /// </remarks>
     /// <param name="contexto">El contexto de Inventario, con la transacción abierta.</param>
     /// <param name="empresaId">La empresa del inquilino.</param>
@@ -308,6 +335,13 @@ internal static class LaProyeccionDelLibro
 
             ids[posicion] = id;
         }
+
+        await contexto.Database
+            .ExecuteSqlRawAsync(
+                SqlDelCerrojoDeLaEmpresa,
+                [ClaveDelCerrojoDeLasInstantaneas.Espacio, ClaveDelCerrojoDeLasInstantaneas.DeLaEmpresa(empresaId)],
+                cancelacion)
+            .ConfigureAwait(false);
 
         await contexto.Database
             .ExecuteSqlRawAsync(

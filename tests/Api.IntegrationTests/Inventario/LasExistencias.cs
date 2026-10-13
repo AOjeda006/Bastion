@@ -68,8 +68,8 @@ internal static class LasExistencias
     /// <returns>Lo que contestó el cuadre.</returns>
     internal static Task<CuadreDeLasExistencias> CuadrarEnAsync(
         InventarioDbContext contexto, Guid empresaId) =>
-        new ElCuadreDeLasExistencias(contexto, new InquilinoFijo(empresaId), TimeProvider.System)
-            .CuadrarAsync(CancellationToken.None);
+        new ElCuadreDeLasExistencias(contexto, TimeProvider.System)
+            .CuadrarAsync(empresaId, CancellationToken.None);
 
     /// <summary>Recalcula las instantáneas de la empresa hasta un mes, con su propio contexto.</summary>
     /// <param name="postgres">El contenedor.</param>
@@ -81,8 +81,8 @@ internal static class LasExistencias
     {
         await using InventarioDbContext contexto = postgres.AbrirInventario(empresaId);
 
-        return await new LasInstantaneasMensuales(contexto, new InquilinoFijo(empresaId))
-            .RecalcularAsync(hastaElMes, CancellationToken.None);
+        return await new LasInstantaneasMensuales(contexto)
+            .RecalcularAsync(empresaId, hastaElMes, CancellationToken.None);
     }
 
     /// <summary>Las filas vivas de la empresa, en un orden que no depende del motor.</summary>
