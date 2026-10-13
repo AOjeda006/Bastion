@@ -1,6 +1,7 @@
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Application.Recuentos;
 using Bastion.Inventario.Application.Reservas;
+using Bastion.Inventario.Application.Saldos;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,7 @@ public static class CasosDeUsoDeInventario
         servicios.AddScoped<IConfirmarRecuento, ConfirmarRecuento>();
         servicios.AddScoped<IAnularRecuento, AnularRecuento>();
         servicios.AddScoped<IDescartarRecuento, DescartarRecuento>();
+        servicios.AddScoped<IConsultarSaldos, ConsultarSaldos>();
 
         // LOS TRES DE LA RESERVA, sin borde: los llama Ventas en la fase 4, en proceso, y hasta
         // entonces solo los tests (ADR-0059 §12).

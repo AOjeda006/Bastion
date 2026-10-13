@@ -451,7 +451,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(149, "acciones en total");
+        todas.Count.ShouldBe(150, "acciones en total");
         cambian.Count.ShouldBe(96, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
@@ -701,6 +701,10 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // total, +2 a las que cambian estado, +2 a If-Match, +2 a Idempotency-Key, +2 a las que
         // piden los dos y +1 a las obligatorias. La anulación exige la clave, porque su inverso
         // numera; el descarte la admite y no la exige, porque no numera (ADR-0057, Consecuencias).
+        //
+        // Ciento cincuenta desde el 2.14, y sube UNO SOLO, como el listado de lo bloqueado del 1.4:
+        // `GET .../inventario/saldos` es una lectura (ADR-0063 §8). No cambia estado, no exige
+        // If-Match, no admite Idempotency-Key y no está exenta de nada.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(52, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(30, "rutas que admiten Idempotency-Key");

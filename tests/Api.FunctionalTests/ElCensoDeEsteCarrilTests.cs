@@ -206,6 +206,19 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Los_puertos_no_dejan_que_quien_llama_elija_la_empresa",
         "LasSentenciasDeLaReservaNombranLaTablaYLaEmpresaTests.Ninguna_lleva_punto_y_coma",
 
+        // Del 2.14 (ADR-0063 §2 y §4): la sentencia del saldo a una fecha, con el mismo trato, y la
+        // fecha comparada con su sentido en el libro, en el mes y en el tránsito.
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.Cada_columna_que_nombra_existe_en_su_tabla",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.Cada_tabla_compara_la_empresa_contra_el_primer_parametro",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.Cada_tabla_que_nombra_es_la_del_modelo",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.El_valor_que_compara_sale_del_inquilino_y_va_en_su_sitio",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.La_fecha_se_compara_contra_el_segundo_parametro_con_su_sentido",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.La_pagina_se_ordena_dentro_para_cortarla_y_otra_vez_fuera",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.Lo_que_cuenta_como_borrador_es_lo_que_el_modelo_guarda",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.Lo_que_vuela_se_redondea_como_el_libro",
+        "LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests.No_lleva_punto_y_coma",
+
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.Cada_columna_que_las_sentencias_nombran_existe_en_la_tabla",
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_puerto_no_deja_que_quien_llama_elija_la_empresa",
         "LaSentenciaDeLaMarcaNombraLaTablaYLaEmpresaTests.El_valor_que_comparan_sale_del_inquilino_y_va_en_su_sitio",

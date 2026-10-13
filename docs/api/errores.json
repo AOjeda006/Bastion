@@ -173,6 +173,7 @@
     { "codigo": "reserva-ubicacion-bloqueada", "type": "/errors/reserva-ubicacion-bloqueada", "clase": "Conflicto" },
     { "codigo": "reserva-valoracion-en-otra-divisa", "type": "/errors/reserva-valoracion-en-otra-divisa", "clase": "ReglaDeNegocio" },
     { "codigo": "rol-no-encontrado", "type": "/errors/rol-no-encontrado", "clase": "NoEncontrado" },
+    { "codigo": "saldo-con-fecha-futura", "type": "/errors/saldo-con-fecha-futura", "clase": "Validacion" },
     { "codigo": "serie-cerrada", "type": "/errors/serie-cerrada", "clase": "Conflicto" },
     { "codigo": "serie-de-otro-documento", "type": "/errors/serie-de-otro-documento", "clase": "Conflicto" },
     { "codigo": "serie-duplicada", "type": "/errors/serie-duplicada", "clase": "Conflicto" },

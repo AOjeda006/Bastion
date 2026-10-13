@@ -428,6 +428,18 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "sola sentencia y sin cerrojo: quien decide con esas cifras reserva, y la reserva las "
             + "vuelve a mirar bajo cerrojo. Compara la empresa con el valor de IInquilinoActual en la "
             + "valoracion y en las reservas",
+
+        // Del 2.14: el saldo a una fecha (ADR-0063 §2 y §4). La instantánea, el libro desde el mes
+        // siguiente y el tránsito no tienen traductor en una sola sentencia que pode las
+        // particiones. Compara la empresa ella misma, y lo comprueba
+        // `LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests`.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Saldos/" +
+         "LosSaldosAUnaFecha.cs usa .SqlQuery"] =
+            "lee el saldo a una fecha de una pagina de pares, en una sola sentencia que poda las "
+            + "particiones del libro por su fecha: la instantanea del mes, el libro desde el mes "
+            + "siguiente y el transito de las transferencias. Compara la empresa "
+            + "con el valor de IInquilinoActual en cada tabla que nombra, y la linea de la "
+            + "transferencia es de la empresa de su transferencia",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

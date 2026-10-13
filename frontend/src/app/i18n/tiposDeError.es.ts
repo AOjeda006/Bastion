@@ -432,6 +432,9 @@ export const tiposDeError = {
     'pediría un tipo de cambio. La salida no se puede hacer mientras el almacén las tenga ' +
     'valoradas así.',
   'rol-no-encontrado': 'Ese rol ya no existe. Vuelve al listado y actualiza.',
+  'saldo-con-fecha-futura':
+    'Esa fecha es posterior a hoy: el saldo es la suma del libro, y el libro solo recoge lo que ' +
+    'ya ha pasado. Elige hoy o un día anterior.',
   'serie-cerrada': 'La serie está cerrada y no admite cambios.',
   'serie-de-otro-documento':
     'Esa serie numera otra clase de documentos. Abre el ajuste con una serie de ajustes de ' +

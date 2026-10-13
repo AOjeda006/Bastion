@@ -126,6 +126,14 @@ public static class PermisosDeInventario
     /// </remarks>
     public const string RecuentoDescartar = "inventario.recuento.descartar";
 
+    /// <summary>Ver el saldo de cada artículo en cada almacén a una fecha, con su tránsito.</summary>
+    /// <remarks>
+    /// <b>No va con ver los recuentos</b> (ADR-0063 §8): el recuento enseña lo que dice el libro de un
+    /// almacén mientras se cuenta, y el saldo enseña lo que valía el inventario entero cualquier día
+    /// pasado. Hay perfiles que cuentan y no tienen por qué ver el valor de todo el stock.
+    /// </remarks>
+    public const string SaldoVer = "inventario.saldo.ver";
+
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
     /// </summary>
@@ -149,5 +157,6 @@ public static class PermisosDeInventario
         RecuentoConfirmar,
         RecuentoAnular,
         RecuentoDescartar,
+        SaldoVer,
     ];
 }

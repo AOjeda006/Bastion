@@ -321,6 +321,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElReciboCaducaYSeBorraTests.La_purga_deja_lo_que_no_ha_vencido_y_se_lleva_lo_vencido_de_todas_las_empresas",
         "ElReciboCaducaYSeBorraTests.Purgado_el_recibo_el_mismo_reintento_vuelve_a_hacer_el_trabajo",
 
+        // Del ítem 2.14 (ADR-0063 §2 a §4): el saldo a una fecha por la API, contra el libro sumado
+        // hasta cada día, con la instantánea estropeada para ver cuál lee, la consulta y la empresa.
+        "ElSaldoAUnaFechaTests.Cada_empresa_lee_solo_sus_saldos_aunque_nombre_los_de_la_otra",
+        "ElSaldoAUnaFechaTests.El_saldo_de_cada_dia_es_el_libro_hasta_ese_dia_y_lo_que_vuela_lo_que_salio_sin_llegar_ni_volver",
+        "ElSaldoAUnaFechaTests.El_saldo_lee_la_instantanea_del_mes_anterior_o_la_del_corte_y_el_libro_desde_el_mes_siguiente",
+        "ElSaldoAUnaFechaTests.La_consulta_acota_por_almacen_y_articulo_pagina_y_dice_la_fecha_que_contesta",
+
         // Del ítem 2.7: la R3 como propiedad. Un solo método y seis semillas; cada semilla es una
         // secuencia distinta, y todas tienen que pasar por todas las clases de paso.
         "ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro",

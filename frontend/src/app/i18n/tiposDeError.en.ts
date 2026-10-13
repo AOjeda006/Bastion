@@ -394,6 +394,9 @@ export const tiposDeError: TiposDeError = {
     'The item’s stock in that warehouse is valued in another currency, and taking it out ' +
     'would need an exchange rate. It cannot leave while the warehouse values it that way.',
   'rol-no-encontrado': 'That role no longer exists. Go back to the list and refresh.',
+  'saldo-con-fecha-futura':
+    'That date is after today: the balance is the sum of the ledger, and the ledger only ' +
+    'records what has already happened. Pick today or an earlier day.',
   'serie-cerrada': 'The document series is closed and cannot be changed.',
   'serie-de-otro-documento':
     'That series numbers another kind of document. Open the adjustment with an inventory ' +

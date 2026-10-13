@@ -6558,6 +6558,131 @@
         ]
       }
     },
+    "/api/v1/inventario/saldos": {
+      "get": {
+        "tags": [
+          "Saldos"
+        ],
+        "summary": "Devuelve una página de saldos a una fecha, con la fecha que contesta.",
+        "description": "Sin `fecha`, hoy en UTC. Una fecha posterior a hoy es un `400`,\n`saldo-con-fecha-futura`. Una anterior al primer movimiento contesta ceros, y no un error.",
+        "operationId": "Saldos_Consultar",
+        "parameters": [
+          {
+            "name": "fecha",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "almacen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "articulo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaldosAUnaFechaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaldosAUnaFechaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaldosAUnaFechaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/transferencias/{id}/envio": {
       "post": {
         "tags": [
@@ -19065,6 +19190,52 @@
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
+      "PaginaDeSaldoDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaldoDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
       "PaginaDeSerieDto": {
         "required": [
           "elementos",
@@ -19963,6 +20134,90 @@
         },
         "description": "Un rol, tal como sale de la API."
       },
+      "SaldoDto": {
+        "required": [
+          "articuloId",
+          "almacenId",
+          "cantidad",
+          "valor",
+          "cantidadEnTransito",
+          "valorEnTransito",
+          "divisa"
+        ],
+        "type": "object",
+        "properties": {
+          "articuloId": {
+            "type": "string",
+            "description": "El artículo.",
+            "format": "uuid"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "El almacén.",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Las unidades base que había al acabar la fecha, que pueden ser cero.",
+            "format": "double"
+          },
+          "valor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Lo que valían, en la divisa de la valoración.",
+            "format": "double"
+          },
+          "cantidadEnTransito": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Las unidades base en vuelo hacia este almacén a esa fecha.",
+            "format": "double"
+          },
+          "valorEnTransito": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Lo que valían al salir de su origen.",
+            "format": "double"
+          },
+          "divisa": {
+            "type": "string",
+            "description": "La de los dos valores: la de la valoración del par."
+          }
+        },
+        "description": "El saldo de un artículo en un almacén a una fecha, con lo que viaja hacia él dicho aparte."
+      },
+      "SaldosAUnaFechaDto": {
+        "required": [
+          "fecha",
+          "saldos"
+        ],
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "description": "El día cuyo final contestan los saldos.",
+            "format": "date"
+          },
+          "saldos": {
+            "description": "La página.",
+            "$ref": "#/components/schemas/PaginaDeSaldoDto"
+          }
+        },
+        "description": "Una página de saldos, con la fecha a la que contestan."
+      },
       "SerieDto": {
         "required": [
           "id",
@@ -20591,6 +20846,9 @@
     },
     {
       "name": "Recuentos"
+    },
+    {
+      "name": "Saldos"
     },
     {
       "name": "Transferencias"

@@ -1,5 +1,7 @@
+using System.Reflection;
 using Bastion.Api.FunctionalTests.Salud;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.Inventario.Contracts.Saldos;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.DependencyInjection;
@@ -175,10 +177,19 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
         // identifica a nadie ni acota por nadie: lo que deja escrito el registro de acceso es
         // «alguien listó los recuentos en curso de tal almacén», que es lo que un ERP tiene que
         // poder decir en voz alta.
+        //
+        // `fecha` y `articulo` entraron en el 2.14, con el saldo a una fecha (ADR-0063 §8). `fecha`
+        // es un día, y lo que deja escrito el registro de acceso es «alguien miró el saldo del 31 de
+        // marzo», que no es un dato de nadie. `articulo` acota por el `Guid` de un artículo de la
+        // propia empresa, opaco como `almacen`, y tampoco dice cómo se llama. El saldo es también el
+        // primer listado cuya respuesta no es una página a secas —lleva la fecha al lado—, y por eso
+        // el barrido reconoce la página dentro de la respuesta: sin eso, este listado no estaría en
+        // la lista y sus dos parámetros no habrían puesto esto rojo.
         parametros.ShouldBe(
             new SortedSet<string>(StringComparer.Ordinal)
             {
-                "almacen", "categoria", "codigo", "estado", "page", "q", "retiradas", "size", "solo", "sort",
+                "almacen", "articulo", "categoria", "codigo", "estado", "fecha", "page", "q", "retiradas",
+                "size", "solo", "sort",
             },
             customMessage: "los parámetros de consulta de los listados no son los del contrato: " +
             string.Join(", ", parametros));
@@ -189,6 +200,14 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
         Contiene("nifDelCliente", "nif").ShouldBeTrue(
             "la comparación no ve un campo sensible dentro de un nombre compuesto, que es " +
             "justamente como se escriben los parámetros de verdad");
+
+        // Y que reconoce un listado que lleva su página dentro de la respuesta, que es como responde
+        // el saldo: sin esta, una respuesta envuelta sacaría su listado del barrido sin avisar.
+        EsColeccion(typeof(SaldosAUnaFechaDto)).ShouldBeTrue(
+            "el barrido no reconoce como listado una respuesta que lleva la página dentro");
+
+        EsColeccion(typeof(SaldoDto)).ShouldBeFalse(
+            "el barrido toma por listado una respuesta que no lleva ninguna página");
 
         s_sensibles.Keys.Any(sensible => Contiene("page", sensible)).ShouldBeFalse(
             "la comparación marca como sensible un parámetro que no lo es, así que su silencio " +
@@ -227,6 +246,12 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
     }
 
     private static bool EsColeccion(Type? tipo) =>
+        EsPagina(tipo)
+        || (tipo is not null
+            && tipo.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Any(propiedad => EsPagina(propiedad.PropertyType)));
+
+    private static bool EsPagina(Type? tipo) =>
         tipo is { IsGenericType: true }
         && (tipo.GetGenericTypeDefinition() == typeof(PaginaDe<>)
             || tipo.GetGenericTypeDefinition() == typeof(TramoDe<>));

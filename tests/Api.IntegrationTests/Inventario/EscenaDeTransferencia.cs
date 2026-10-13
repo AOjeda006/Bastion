@@ -170,14 +170,19 @@ internal sealed record EscenaDeTransferencia(
     /// <param name="almacenId">De dónde.</param>
     /// <param name="ubicacionId">De qué hueco.</param>
     /// <param name="cantidad">Cuánto, en unidad base y sin signo.</param>
+    /// <param name="fecha">El día del ajuste, o nulo para hoy.</param>
     /// <returns>El ajuste, ya confirmado.</returns>
     internal Task<Guid> SalirAsync(
-        PostgresConTodosLosModulos postgres, Guid almacenId, Guid ubicacionId, decimal cantidad) =>
+        PostgresConTodosLosModulos postgres,
+        Guid almacenId,
+        Guid ubicacionId,
+        decimal cantidad,
+        DateOnly? fecha = null) =>
         AjustarAsync(
             postgres,
             almacenId,
             new LineaDeAjusteDto(ubicacionId, ArticuloId, -cantidad, UnidadId, 1m, null),
-            fecha: null);
+            fecha);
 
     /// <summary>Un ajuste en borrador, abierto con el módulo que se le pase.</summary>
     /// <param name="modulo">El módulo de la empresa de la escena.</param>

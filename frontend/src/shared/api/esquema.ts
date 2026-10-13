@@ -961,6 +961,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/saldos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve una página de saldos a una fecha, con la fecha que contesta.
+         * @description Sin `fecha`, hoy en UTC. Una fecha posterior a hoy es un `400`,
+         *     `saldo-con-fecha-futura`. Una anterior al primer movimiento contesta ceros, y no un error.
+         */
+        get: operations["Saldos_Consultar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/transferencias/{id}/envio": {
         parameters: {
             query?: never;
@@ -3737,6 +3758,26 @@ export interface components {
             total: number | string;
         };
         /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeSaldoDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["SaldoDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
         PaginaDeSerieDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["SerieDto"][];
@@ -4165,6 +4206,51 @@ export interface components {
             esDelSistema: boolean;
             /** @description Permisos que concede, ordenados. */
             permisos: string[];
+        };
+        /** @description El saldo de un artículo en un almacén a una fecha, con lo que viaja hacia él dicho aparte. */
+        SaldoDto: {
+            /**
+             * Format: uuid
+             * @description El artículo.
+             */
+            articuloId: string;
+            /**
+             * Format: uuid
+             * @description El almacén.
+             */
+            almacenId: string;
+            /**
+             * Format: double
+             * @description Las unidades base que había al acabar la fecha, que pueden ser cero.
+             */
+            cantidad: number | string;
+            /**
+             * Format: double
+             * @description Lo que valían, en la divisa de la valoración.
+             */
+            valor: number | string;
+            /**
+             * Format: double
+             * @description Las unidades base en vuelo hacia este almacén a esa fecha.
+             */
+            cantidadEnTransito: number | string;
+            /**
+             * Format: double
+             * @description Lo que valían al salir de su origen.
+             */
+            valorEnTransito: number | string;
+            /** @description La de los dos valores: la de la valoración del par. */
+            divisa: string;
+        };
+        /** @description Una página de saldos, con la fecha a la que contestan. */
+        SaldosAUnaFechaDto: {
+            /**
+             * Format: date
+             * @description El día cuyo final contestan los saldos.
+             */
+            fecha: string;
+            /** @description La página. */
+            saldos: components["schemas"]["PaginaDeSaldoDto"];
         };
         /** @description Una serie de numeración, tal como sale de la API. */
         SerieDto: {
@@ -7796,6 +7882,47 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Saldos_Consultar: {
+        parameters: {
+            query?: {
+                fecha?: string;
+                almacen?: string;
+                articulo?: string;
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["SaldosAUnaFechaDto"];
+                    "application/json": components["schemas"]["SaldosAUnaFechaDto"];
+                    "text/json": components["schemas"]["SaldosAUnaFechaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
