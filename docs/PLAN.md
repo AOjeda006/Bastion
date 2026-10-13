@@ -7053,8 +7053,19 @@ con la orden que la mide.
 
 ### La puerta del 2.14 — lo que se pregunta, y lo que el ADR-0063 decide sin preguntar
 
-Escrita el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`. **Espera las respuestas**: el
-ADR-0063 y el código no empiezan hasta tenerlas.
+Escrita el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`.
+
+**Respondida el mismo día, las cuatro con la recomendada:**
+
+1. el saldo es **la cantidad y el valor por artículo y almacén**, y la instantánea gana `valor`, con
+   su migración;
+2. el tránsito a esa fecha va **dicho aparte**, en cantidad y valor hacia cada almacén, sin sumarlo;
+3. el presupuesto, por **(A)**: los tipos salen del arranque a un fragmento propio por idioma, en su
+   propio commit y antes de la pantalla, y el límite no se sube;
+4. los cerrojos, con **tres casos y tres mutaciones**, y la corrección del encargo, confirmada: lo
+   que pone rojo el caso de las dos empresas es una clave sin la empresa.
+
+Lo que sigue lo decide el ADR-0063, con estas respuestas.
 
 #### Lo que ya está escrito
 
@@ -11543,7 +11554,26 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **448**. Su
 4. ~~La puerta del 2.14, escrita en *Decisiones tomadas*, con sus preguntas y lo que el ADR-0063
    decide sin preguntar.~~ Escrita en *Decisiones tomadas → La puerta del 2.14*: cuatro preguntas,
    y siete puntos que el ADR-0063 decide sin preguntar.
-5. Parar y preguntar, todo junto. El ADR-0063 y el código esperan a las respuestas.
+5. ~~Parar y preguntar, todo junto.~~ Respondida el 2026-10-13, las cuatro con la recomendada: en
+   *Decisiones tomadas → La puerta del 2.14*.
+6. El ADR-0063, con las respuestas y los siete puntos que decide sin preguntar.
+7. Los tipos fuera del arranque, por (A), en su propio commit: un fragmento por idioma, pedido
+   después del primer pintado, y el barrido de `ElCambioDeIdioma` contra el fragmento nuevo. El
+   arranque, medido antes y después.
+8. El cerrojo consultivo por empresa, en lugar del `LOCK TABLE`, con los tres casos y sus
+   mutaciones. El recálculo y el cuadre reciben la empresa de quien los llama.
+9. La instantánea con `valor`, con su migración, la sentencia que mueve la proyección, la
+   reposición y el cuadre.
+10. El trabajo mensual que avanza el corte, con sus métricas y su registro.
+11. La consulta del saldo a una fecha, con el tránsito aparte, su permiso y
+    `saldo-con-fecha-futura`.
+12. La pantalla `/saldos`, en una ruta diferida, vista en el navegador.
+13. La propiedad, con tres clases de paso nuevas: el saldo a una fecha, el trabajo mensual y la
+    clave nueva antes del corte. Con lo que cuesta.
+14. La tanda, desde la **448**; la batería; el humo en su propio proyecto; el cierre del 2.14 por el
+    flujo de la rama.
+15. La revisión de la fase, preparada y sin cerrarla: cada criterio del 2.1 al 2.14 con su caso, y
+    las notas abiertas para el cierre de la fase, como una tanda de preguntas.
 
 ### El índice vuelve, y la traducción con él (2026-09-23)
 
