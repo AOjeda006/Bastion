@@ -11467,7 +11467,7 @@ el **0060**; el del `tsconfig` de los tests, el **0061**; y el de la lectura que
 
 **La puerta del 2.14, en curso** desde el 2026-10-13, en la rama `2.14-el-stock-a-fecha-pasada`,
 abierta desde `main` en `0638419`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo
-del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **511**. Su ADR es el
+del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **540**. Su ADR es el
 **0063**.
 
 **Lo que queda, por este orden:**
@@ -11878,8 +11878,128 @@ del 2026-10-13*. Sus mutaciones empiezan en la **444**, y van por la **511**. Su
       El Humo tiene sus pasos en verde, «Complete job» incluido, pero la API lo daba todavía
       `in_progress` y sin conclusión en las dos lecturas, con el run ya en `success`. Por eso sus
       avisos no salen en la lectura.
-11. La consulta del saldo a una fecha, con el tránsito aparte, su permiso y
-    `saldo-con-fecha-futura`.
+
+      **El run de rama de `681cf2a`**, el commit de la tanda, es el **38411947754**, en verde al
+      primer intento: Backend `115346261811`, Frontal `115346262349` y Humo `115350073131`, 69
+      pasos con 68 en verde y el *Diagnóstico* omitido, y las mismas cifras. Esta vez el Humo sale
+      con sus avisos, y el rol del sistema concede **108** permisos. Leído con `python
+      leer-run27.py 38411947754`.
+11. ~~La consulta del saldo a una fecha, con el tránsito aparte, su permiso y
+    `saldo-con-fecha-futura`.~~ Hecho en `feat(inventario): la consulta del saldo a una fecha`
+    (`4e52202`).
+    - **`GET /api/v1/inventario/saldos`**, con el permiso `inventario.saldo.ver` (ADR-0063 §8).
+      Acota por `?almacen=` y `?articulo=`, pagina con `page` y `size`, y contesta el día que
+      contesta y la página. Sin `?fecha=`, hoy en UTC; una posterior, `400` con
+      `saldo-con-fecha-futura` en el campo `fecha`; una anterior al primer movimiento, ceros. Los
+      roles del sistema reciben el permiso al alinearse con el catálogo, sin migración: el humo de
+      la rama cuenta **109**.
+    - **Una sola sentencia**, `LosSaldosAUnaFecha`, sobre una página de pares de artículo y almacén
+      ordenada antes de cortarla. Por cada par, tres cruces laterales: la instantánea del mes M, el
+      libro desde el día 1 del mes siguiente hasta D, y el tránsito. M es el menor entre el mes
+      anterior al de D y el corte, en una subconsulta escalar; sin corte es nulo, y el libro empieza
+      en `-infinity` (§2). El tránsito es lo que salió hacia ese almacén en una transferencia
+      original que no es borrador, enviada hasta D, sin recibir o recibida después, y sin un
+      inverso recibido hasta D. Su cantidad se redondea a seis decimales, como la del libro (§4).
+    - **La poda, medida** con un caso temporal que no entró, `TmpMedirLaPoda`, que pide el `EXPLAIN
+      (ANALYZE)` de la sentencia: `dotnet test tests/Api.IntegrationTests --no-build --filter
+      "FullyQualifiedName~TmpMedirLaPoda" --logger "console;verbosity=detailed"`. Sin corte y con D
+      hoy, el plan lleva 35 particiones y se leen todas. Con el corte en septiembre y D hoy, 22 no
+      se ejecutan y 13 sí. Con el mismo corte y D el 15 de noviembre, el plan lleva 24, y 22 no se
+      ejecutan. La poda es de ejecución, porque M sale de una subconsulta.
+    - **Los casos**: cuatro en `ElSaldoAUnaFechaTests`, contra la base, que comparan con un oráculo
+      que suma el libro en C#. Uno pide los días que deciden, con cuatro transferencias hacia un
+      almacén: una que llegó, una que se anula volando, una que sigue volando y un borrador. Otro
+      estropea dos instantáneas, en una transacción que se deshace, para ver cuál lee. Otro, los
+      filtros, la página y el día que contesta; y el último, dos empresas que nombran los pares de
+      la otra. Usan las semillas del 866 al 872, y del 873 al 899 quedan libres. Y diez en
+      `LaSentenciaDelSaldoNombraLasTablasYLaEmpresaTests`, en el carril rápido, que leen la
+      sentencia:
+      - cada tabla y cada columna, las del modelo;
+      - la empresa, contra el primer parámetro, y la fecha, contra el segundo con su sentido;
+      - el borrador, con el texto que guarda el modelo;
+      - el orden, dentro para cortar la página y fuera al componer;
+      - y el redondeo de lo que vuela, con la restricción del libro.
+
+      Entran en los dos censos en su commit. El barrido de la URL admite `fecha` y `articulo`, y
+      reconoce la página dentro de la respuesta. El de las escrituras cuenta **150** acciones, y la
+      lista cerrada de `ElFiltroNoSeSaltaPorAhiTests` lleva la sentencia.
+    - **Decidido sin preguntar, por trivial o reversible**:
+      - la página se pide con `page` y `size`, como en todos los listados, y no con `pagina` y
+        `tamanio`, que son los nombres de dentro y los que escribe el §8;
+      - la respuesta lleva la página dentro, al lado del día, y el barrido de la URL aprendió a
+        verla;
+      - `SalirAsync`, en la escena de la transferencia, recibe la fecha;
+      - `t.anula_a_id IS NULL` se queda, aunque hoy sea equivalente (la 518): un inverso nace
+        recibido el día que sale, y la cláusula dice lo que se quiere sin depender de eso;
+      - el orden de fuera y el redondeo tienen un caso estático, escrito antes de commitear,
+        porque la 527 y la 535 habrían salido verdes en los dos carriles.
+    - **Las cifras, sobre `4e52202`**: **1477** casos en el carril rápido y **689** en el de
+      integración, 604 y 85, todos en verde. Con las órdenes y el recuento del ítem 10. Son diez
+      más en el rápido, los de la sentencia, y cuatro más de integración. El resto de la batería:
+      - `npm run api`, sin cambios en el cliente;
+      - `comprobar-migraciones.sh`, con el modelo al día;
+      - **150** operaciones y **235** tipos de **242** sitios, con los dos generadores en
+        `--comprobar`;
+      - **261** casos del frontal en **27** ficheros, con el canal abierto y sin avisos;
+      - **410/450** y **711/900** KiB;
+      - y ninguna dependencia nueva, con `python -X utf8 scripts/dependencias-por-conjuntos.py
+        0638419 HEAD`.
+    - **La tanda, de la 511 a la 539**, con `python -X utf8 mutar-saldo.py
+      <ruta>/tanda-saldo.json comprobar base 511-539`, escrita antes de medir con lo que cada una
+      tenía que poner rojo. Va sobre un *worktree* aparte en `4e52202`, con dos carriles: la
+      sentencia, que son la clase de la sentencia, el barrido de la URL y el de los permisos; y la
+      clase del saldo, con `--blame-hang`. La base, 0 rojos de 18 y 0 de 4. **Las veintinueve casan
+      con lo escrito**, sin un rojo de más ni de menos.
+
+      | # | Mutación | Rojo en |
+      |---|---|---|
+      | 511 | M es el mes de D, no el anterior | La fecha de la sentencia; el del libro y el de la instantánea |
+      | 512 | `greatest` en vez de `least`: M pasa del corte | Los mismos tres |
+      | 513 | `least` fuera de la subconsulta: sin corte, M es el mes anterior | La fecha; el del libro |
+      | 514 | Sin el inverso: lo anulado sigue volando | Las tablas, las columnas, la empresa y la fecha; el del libro |
+      | 515 | El inverso cuenta solo si llegó antes de D | La fecha; el del libro |
+      | 516 | Lo recibido en D sigue volando en D | La fecha; el del libro |
+      | 517 | Lo enviado en D no vuela hasta el día siguiente | La fecha; el del libro |
+      | 518 | Sin excluir los inversos | Las columnas y la fecha. Ninguno de la base: es equivalente |
+      | 519 | El borrador también vuela | Las columnas y el borrador; el del libro |
+      | 520 | El libro empieza el día 2 del mes siguiente | La fecha; el del libro |
+      | 521 | El libro acaba el día antes de D | La fecha; el del libro, el de la instantánea y el de la consulta |
+      | 522 | Sin corte, ningún libro | La fecha; el del libro |
+      | 523 | Los pares de todas las empresas | Las columnas y la empresa; el del libro, el de la consulta y el de las dos empresas |
+      | 524 | Sin acotar por almacén | El de la consulta y el de las dos empresas |
+      | 525 | Sin acotar por artículo | Los mismos dos |
+      | 526 | La página se corta sin ordenar | El orden; el de la consulta |
+      | 527 | Sin el orden al componer | Solo el orden: el plan conserva el de la página |
+      | 528 | El total es lo que trae la página | El de la consulta y el de las dos empresas |
+      | 529 | Sin la guarda de la fecha futura | Solo el de la consulta |
+      | 530 | Sin fecha, ayer | Solo el de la consulta |
+      | 531 | Hoy es futuro | El del libro, el de la consulta y el de las dos empresas |
+      | 532 | La cantidad de la instantánea es su valor, y al revés | El del libro y el de la instantánea |
+      | 533 | Todas las instantáneas hasta M, no la de M | La fecha; el del libro y el de la instantánea |
+      | 534 | El libro desde el mes M, que ya está en la instantánea | Los mismos tres |
+      | 535 | Lo que vuela sin pasar a unidad base | Las columnas y el redondeo |
+      | 536 | Lo que vuela redondeado a cuatro decimales | Solo el redondeo |
+      | 537 | El saldo con el permiso de ver los recuentos | Solo el barrido de los permisos: nadie exige el del saldo |
+      | 538 | **Arnés**: la regla de la URL no mira dentro de la respuesta | Solo el barrido de la URL |
+      | 539 | **Arnés**: el oráculo suma el libro hasta el día antes | El del libro y el de la instantánea |
+
+      - **La 518 es equivalente, y lo dice la tabla desde antes de medir.** Un inverso nace
+        recibido, con el envío y la recepción el mismo día, así que el `NOT EXISTS` ya lo saca. La
+        ven solo los casos que leen la sentencia.
+      - **La 527 no se puede observar contra la base.** El plan de hoy conserva el orden de la
+        página a través de los cruces laterales, así que lo vigila un caso estático sobre la fuente.
+      - **La 535 y la 536 tampoco**: con lo que mueven los casos, las dos cuentas dan lo mismo. Las
+        ve el caso del redondeo, que compara la cuenta del tránsito con la restricción del libro.
+      - **La 520 la ve el del libro por una salida el día 1 del mes siguiente al corte**, que es el
+        primer día que el saldo lee del libro y no de la instantánea. La siguiente mutación es la
+        **540**.
+    - **El run de rama de `4e52202`** es el **38445287657**, en verde al primer intento:
+      - sus jobs, Frontal `115461946821`, Backend `115461946905` y Humo `115466918337`;
+      - 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*;
+      - **1477** y **689** casos, **235** tipos de **242** sitios, **150** operaciones y **91**
+        rutas, y el centinela, con la marca y sin avisos;
+      - **410/450** y **711/900** KiB, y el humo con los **109** permisos. Leído con `python
+        leer-run27.py 38445287657`.
 12. La pantalla `/saldos`, en una ruta diferida, vista en el navegador.
 13. La propiedad, con tres clases de paso nuevas: el saldo a una fecha, el trabajo mensual y la
     clave nueva antes del corte. Con lo que cuesta.
