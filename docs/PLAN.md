@@ -7217,17 +7217,150 @@ Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
    sigue abierta para el cierre de la fase. Y la pantalla del saldo contesta también el saldo de
    hoy, que es parte de la pregunta abierta de la lectura de las existencias; no la cierra.
 
+### Traídas por el encargo del 2026-10-17 — las siete respuestas del repaso, y los addenda
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **27** commits desde `0638419`, con 27 firmas válidas y sin *trailers*;
+- los runs **246 a 265** en verde al primer intento;
+- `main` está en `8734c6a`, y solo avanzó después del verde de su rama;
+- las cifras del run de `main`, iguales a las del *runner*;
+- los nombres del repaso, recontados aparte: faltan los mismos tres;
+- y el `500` de la paginación, confirmado en el código.
+
+**Dos correcciones al informe**, hechas en el primer commit del 2.15:
+
+- faltaban por anotar dos runs, el de rama de `8734c6a`, **38486605931**, y el de `main`,
+  **38487874035**. Van en el ítem 15 de *El 2.14, hecho*;
+- la tabla dejaba en blanco los trabajos de `d36a9ce`: **115291266591**, **115291266725** y
+  **115295814263**. Van en su ítem 8, que daba solo los del run de `532e353`.
+
+**El próximo informe cuenta desde `8734c6a`.** La siguiente mutación es la **573**, y el siguiente
+ADR, el **0064**. **El arnés** está al día desde `dbf2664`, y `arnes-de-agente.md` se lee al
+empezar cada sesión. La biblioteca no ha cambiado desde `3b45c6b`.
+
+#### Las siete respuestas, decisión del usuario
+
+1. **Las pantallas: (b), en dos ítems seguidos.** Primero, el alta del ajuste: alta, listado y
+   ficha, con su pantalla, y con el factor que resuelve el servidor (la respuesta 5). Después, el
+   alta de la transferencia, con su pantalla. Cada uno pasa su propia puerta de clarificación. Son
+   el **2.17** y el **2.18**.
+2. **La zona: (a) con (ii).** La zona IANA va en el almacén, con `Europe/Madrid` por defecto, y se
+   hace **antes de la fase 5**. En la transferencia, cada fecha va en la zona de su almacén, y la
+   guarda que exige que la recepción no sea anterior al envío compara instantes. **Y ya, en esta
+   fase, un solo «hoy»**, que sigue siendo el UTC. Es el **2.16**:
+   - un único sitio del backend da el día de negocio, y los nueve o más que hoy lo calculan cada
+     uno por su cuenta pasan por él: Inventario, Catálogo y Terceros, y el mes del trabajo mensual;
+   - un test de arquitectura prohíbe calcularlo en cualquier otro sitio, con su pareja: el único
+     sitio donde sí existe;
+   - el frontal también tiene un solo «hoy», el del servidor. Así la etiqueta de la tarifa dice lo
+     mismo que resuelve `ResolverPrecio`;
+   - la nota de la zona dice también qué zona rige para lo que no tiene almacén: tarifas, artículos
+     y terceros.
+3. **El recuento cíclico: (a).** Se queda como está, con los dos disparadores escritos en el
+   ADR-0055 y en la nota. El ADR solo tenía el primero, el almacén que no se puede contar de una
+   vez, en su §1.1 y en sus *Consecuencias*. El segundo, la huella, se le escribe por dentro, por
+   este encargo, en su propio commit, y lo declaran su *Estado* y el punto, como pide `AGENTS.md`.
+4. **La baja del artículo: (a).** El disparador se escribe en `IConsultaDeArticulos`, en su propio
+   commit, y la baja sigue contestando la unidad base.
+5. **El factor de conversión: (a), dentro del ítem del ajuste**, el 2.17.
+6. **El 500 de la paginación: (a).** Se arregla en un solo sitio, `ConsultaPaginada`, para que el
+   salto siempre quepa. Así quedan cubiertos los tres lectores: el `OFFSET` del saldo, el `Skip` en
+   memoria de las líneas del recuento y el `Paginador`. El caso lleva las dos filas de la frontera:
+   la última página válida con el tamaño máximo da `200` con la página vacía, y la siguiente da
+   `400`. Una mutación quita la guarda. Va en el **2.15**.
+7. **Los tres detalles.** El `retry` deja de repetir los `4xx`, y un caso lo afirma. La cabecera
+   cabe en 320 px sin desplazamiento horizontal, como pide el WCAG 1.4.10 (*Reflow*, AA): se mide
+   con `playwright-cli` a 320 y a 375 px, y queda un test que lo afirme donde se pueda. Los dos van
+   en el **2.15**. `baseUrl` va a una nota abierta, con el disparador «al subir TypeScript», y está
+   en *Notas / riesgos* desde el primer commit del 2.15.
+
+#### El orden de trabajo
+
+- **A. El primer commit, en la rama `2.15-lo-que-el-repaso-encontro`.** Lleva los dos runs
+  pendientes, las siete respuestas y la casilla del 2.14 marcada, con la línea del README en el
+  mismo commit. Los ítems nuevos se abren como addendum, en la forma de las fases 0 y 1, cada uno
+  con su criterio escrito antes de empezar. Detrás, en dos commits, los disparadores de las
+  respuestas 3 y 4.
+- **B. La revisión de código.** El usuario lanzó `/code-review` sobre `0638419..8734c6a`. Cada
+  hallazgo se comprueba contra el código antes de tocar nada, y va a una tabla con su veredicto,
+  como en el 2.13. Cada hallazgo real lleva su propio commit, con el caso que lo pone rojo. Si uno
+  reabre algo de las siete respuestas o del ADR-0063, se para y se pregunta.
+- **C. El 2.15 · Lo que el repaso encontró**, cada tema en su commit: el `500` de la paginación;
+  el `retry` y la cabecera; el coste del trabajo mensual; y la expresión de la nota de los enteros,
+  que no cuenta los nulables.
+- **D. El 2.16 · Un solo «hoy».**
+- **E. El 2.17 · El alta del ajuste, hasta su puerta.** Se para en la puerta y se pregunta lo que
+  siga abierto. Después irá la transferencia, el 2.18, con su propia puerta, y la fase se cierra
+  cuando acabe el último ítem.
+
+El criterio de cada ítem está en su casilla, en *Checklist → Addenda de la fase 2*.
+
+#### El coste del trabajo mensual, como lo plantea el usuario
+
+No hay `CommandTimeout` configurado, así que manda el de Npgsql, 30 s. A los 30 s el avance se
+cancela, y falla cada hora sin avanzar nunca. Y las confirmaciones de esa empresa que esperan al
+cerrojo compartido también fallan a los 30 s. El disparador del ADR-0063 §7, «pasa de un minuto»,
+no se puede alcanzar. Así que:
+
+- **antes de cambiar nada, se comprueba ese plazo**, en Npgsql y en EF Core, con `ctx7` y
+  contrastado con la documentación oficial;
+- se mide `AvanzarAsync` sobre un libro sintético de una empresa, por ejemplo de 10⁵ y 10⁶
+  movimientos, en el contenedor de pruebas y no en la CI, y la cifra va con la orden que la mide;
+- el disparador se vuelve a escribir contra esa cifra y contra el techo de 30 s, en el ADR-0064,
+  que enmienda el §7 del 0063. El 0063 lo anota en su *Estado* y en el propio punto;
+- **subir el plazo del trabajo no es la solución**: las confirmaciones seguirían esperando detrás,
+  con sus propios 30 s. Si la medida dice que el techo está cerca, se propone el avance incremental
+  y se pregunta;
+- y dos métricas, sin la empresa como etiqueta, como pide `herramientas/observabilidad.md`: un
+  histograma de la duración del avance, y un indicador de cuántos meses lleva de retraso el corte
+  más viejo, que es lo que detecta un trabajo parado. Cada una lleva su caso.
+
+#### La puerta del 2.17, como la plantea el usuario
+
+Las decisiones van en un ADR nuevo. **Lo primero es lo que diga el plan maestro.** Después:
+
+- las rutas y los permisos: alta, listado paginado y ficha;
+- el factor, desde Catálogo: un puerto de lectura en sus `Contracts`, porque no es una escritura
+  entre módulos;
+- una línea sin conversión se rechaza, con el código de la casa; una conversión retirada sigue
+  resolviendo lo viejo; y el inverso copia el factor del original;
+- la pantalla: ruta diferida, los tres estados y los errores de vuelta a su campo. Se miden los
+  KiB que añade, y si no cabe, se pregunta, porque el límite no se sube;
+- y `playwright-cli` contra la pila local, con datos sintéticos.
+
+#### Las herramientas, en este encargo
+
+- **Los servidores de lenguaje**: el símbolo se busca antes de leer, y los diagnósticos de cada
+  edición se abren. Un diagnóstico limpio no sustituye al build ni a los tests.
+- **`playwright-cli`**, para la cabecera a 320 y a 375 px, y después para la pantalla del ajuste;
+  siempre contra la pila local.
+- **Context7 (`ctx7`)**, solo para el plazo por defecto de Npgsql y de EF Core, contrastado con la
+  documentación oficial.
+- **`/code-review` lo lanza el usuario**, y el agente comprueba cada hallazgo.
+
+#### El método
+
+El de siempre: la tanda escrita antes de medir, con una mutación sobre el arnés; las dos listas por
+nombre; commits pequeños y firmados, un tema por commit; el humo, si hay migración o pantalla;
+`main` solo avanza a un commit que ya está en verde en su rama, y la rama se borra después de su
+run de `main`; las ediciones de `CLAUDE.md`, al principio o al final de la sesión; y la unidad se
+cierra antes de una pausa larga. **El informe cuenta todos los commits desde `8734c6a`, con sus
+runs de rama y de `main`**, y cada cifra va con la orden que la mide.
+
 ## Estado actual
 
-**FASE 2 EN CURSO — 13 de 14 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 14 de 18 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
-*Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*.
+*Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. Los
+catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, del 2.15
+al 2.18, y la fase se cierra cuando acabe el último.
 
-> **Dónde se retoma (2026-10-14): en las respuestas a la tanda del repaso.** Los catorce ítems
-> están hechos, la casilla del 2.14 sigue sin marcar y el repaso de la fase está preparado, con
-> siete preguntas al final: *La fase 2, criterio por criterio*, después del 2.14. **No se trabaja
-> en nada más hasta que el usuario las conteste.** Las respuestas van a *Decisiones tomadas*, y el
-> cierre, o los addenda, salen de ellas.
+> **Dónde se retoma (2026-10-17): en el orden del encargo.** El primer commit de la rama
+> `2.15-lo-que-el-repaso-encontro` marca el 2.14, anota las siete respuestas en *Decisiones tomadas
+> → Traídas por el encargo del 2026-10-17* y abre los addenda con su criterio. Lo que sigue, en ese
+> orden: los dos disparadores de las respuestas 3 y 4; la revisión de código del usuario sobre
+> `0638419..8734c6a`; el 2.15; el 2.16; y el 2.17 hasta su puerta, donde se para y se pregunta.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -11705,7 +11838,9 @@ queda sin marcar (ítem 14).
        operación espera, no por qué, así que el caso nombra las dos causas.
    - **El run de rama de `532e353`**, que lleva también `5edb952`, es el **38397975350**, en verde
      al primer intento. El de `d36a9ce` solo, el **38396007508**, también, con los mismos casos:
-     - sus jobs, Backend `115297955920`, Frontal `115297956174` y Humo `115300669922`;
+     - los jobs del de `532e353`, Backend `115297955920`, Frontal `115297956174` y Humo
+       `115300669922`; y los del de `d36a9ce`, Frontal `115291266591`, Backend `115291266725` y
+       Humo `115295814263`, que faltaban hasta el encargo del 2026-10-17;
      - 69 pasos, 68 en verde y 1 omitido, *Diagnóstico*;
      - **1456** y **681** casos, **234** tipos de **241** sitios, **149** operaciones y **90**
        rutas, y el centinela, con la marca y sin avisos;
@@ -12262,6 +12397,14 @@ queda sin marcar (ítem 14).
     y las notas abiertas para el cierre de la fase, como una tanda de preguntas.~~ Hecha en
     `docs(plan): el repaso de la fase 2, criterio por criterio, y sus siete preguntas`, en la
     sección siguiente. **Y se para ahí**: lo que sigue sale de las respuestas.
+    - **Sus dos runs**, anotados en el primer commit del 2.15. El de la rama
+      `revision-de-la-fase-2`, sobre `8734c6a`, es el **38486605931**, en verde al primer intento:
+      Backend `115601659703`, Frontal `115601660034` y Humo `115605106245`. El de `main`, tras el
+      `--ff-only`, es el **38487874035**, también al primer intento: Backend `115605792888`,
+      Frontal `115605793361` y Humo `115609399300`. Los dos dan 69 pasos, 68 en verde y el
+      *Diagnóstico* omitido, **1477** y **689** casos, **235** tipos de **242** sitios, **150**
+      operaciones en **91** rutas, **412/450** y **720/900** KiB, y el centinela con la marca y
+      sin avisos. Leídos con `python leer-run27.py <run>`.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
@@ -12373,6 +12516,10 @@ destrucción del art. 32 y la correlación buscar/alta. El arranque del frontal,
 de su regla, sí: lo resolvió el 2.1, y hoy mide **412/450**.
 
 #### La tanda del cierre: siete preguntas, todas juntas
+
+> **Contestada el 2026-10-17.** Las siete respuestas son del usuario y están en *Decisiones
+> tomadas → Traídas por el encargo del 2026-10-17*. Cuatro traen trabajo, así que la casilla del
+> 2.14 se marca y la fase sigue en curso con cuatro addenda, del 2.15 al 2.18.
 
 Cada pregunta dice lo que hay hoy, las salidas y la que el agente recomienda, con su motivo. Las
 respuestas van a *Decisiones tomadas*, y el cierre sale de ellas.
@@ -20837,7 +20984,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   de que su run de rama, el **38083369049**, saliera en verde, y el de `main`, el **38084319374**,
   sale en verde al primer intento con las mismas cifras. Anotado al abrir el 2.14.
 
-- [ ] **2.14 · El stock a fecha pasada** — criterio de aceptación: la consulta contesta el saldo de
+- [x] **2.14 · El stock a fecha pasada** — criterio de aceptación: la consulta contesta el saldo de
   cualquier día pasado desde la instantánea más el tramo, **coincide con la suma del libro hasta esa
   fecha** sobre una historia que incluye ajustes, anulaciones y transferencias, y la pantalla lo
   enseña con su fecha; una fecha anterior al primer movimiento contesta **cero y no un error**; y una
@@ -20855,6 +21002,9 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   repaso de la fase**, porque marcarla es lo que pone el README en «cerrada» (*Estado actual*, ítem
   14 del 2.14). El porqué está en el ADR-0063, en `docs/adr/`. Los commits, las mutaciones de la
   444 a la 572, la batería y el humo están en *Estado actual → El 2.14, hecho*.
+  **Marcada el 2026-10-17**, con las respuestas del repaso, que abren los addenda de abajo en vez
+  de cerrar la fase. La certifican los runs de su cierre sobre `1fb7fca`: el **38483426568**, de la
+  rama, y el **38485015079**, de `main`, los dos en verde al primer intento.
   Cada punto del criterio tiene su caso:
 
   - la consulta contesta el saldo de cualquier día pasado **desde la instantánea más el tramo**:
@@ -20894,6 +21044,60 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     carril rápido, los tres de la base en `LasExistenciasSonLaSumaDelLibroTests`, y su clase de
     paso en la propiedad, que avanza el corte y cuadra todas las instantáneas. La 565 y la 566 la
     ponen roja en las seis.
+
+### Addenda de la fase 2 — los cuatro ítems que abre el repaso (2026-10-17)
+
+> **Estos cuatro NO son de la puerta de clarificación de la fase 2.** Aquellos catorce están
+> cerrados y no se tocan. Los abren las respuestas del usuario a la tanda del repaso, y el porqué
+> de cada uno está en *Decisiones tomadas → Traídas por el encargo del 2026-10-17*. Se numeran
+> 2.15–2.18 por el mismo motivo que el 0.14–0.16 y el 1.12–1.14: son del cierre de la fase, y la
+> fase 3 no se abre arrastrándolos. Cada criterio se escribió antes de empezar su ítem.
+
+- [ ] **2.15 · Lo que el repaso encontró** — criterio de aceptación: cuatro temas, cada uno en su
+  commit.
+  - **Una página imposible es un `400`, también la enorme.** La guarda va en un solo sitio,
+    `ConsultaPaginada`, y hace que el salto de `Paginacion` quepa siempre en un `int`. Con ella
+    quedan cubiertos sus tres lectores: el `Paginador`, el `OFFSET` del saldo a una fecha y el
+    `Skip` en memoria de las líneas del recuento. El caso lleva las dos filas de la frontera: la
+    última página válida con el tamaño máximo contesta `200` con la página vacía, y la siguiente,
+    `400`. Una mutación que quita la guarda lo pone rojo.
+  - **El `retry` de la caché no repite un `4xx`.** Un caso lo afirma, con su pareja: lo que no es
+    un `4xx` se sigue reintentando.
+  - **La cabecera cabe en 320 px sin desplazamiento horizontal**, como pide el WCAG 1.4.10
+    (*Reflow*, AA). Se mide con `playwright-cli` contra la pila local a 320 y a 375 px, antes y
+    después, y queda un test que lo afirme donde se pueda, con dicho lo que afirma y lo que no.
+  - **El coste del trabajo mensual, medido contra el plazo que de verdad decide.** El plazo por
+    defecto de las órdenes, 30 s, se comprueba en Npgsql y en EF Core con `ctx7` y contra la
+    documentación oficial, y se comprueba que nada del proyecto lo cambia. `AvanzarAsync` se mide
+    sobre un libro sintético de una empresa, de 10⁵ y 10⁶ movimientos, en el contenedor de pruebas
+    y con la orden que lo mide. El disparador del ADR-0063 §7 se reescribe contra esa cifra y
+    contra el techo en el **ADR-0064**, que enmienda ese punto, y el 0063 lo anota en su *Estado*
+    y en el propio punto. Si el techo está cerca, se propone el avance incremental y se pregunta.
+    Y dos métricas, sin la empresa como etiqueta: un histograma de la duración del avance y un
+    indicador de cuántos meses lleva de retraso el corte más viejo, cada una con su caso.
+  - **La nota de los enteros cuenta también los nulables**, con la expresión corregida en la nota,
+    las cifras nuevas y la orden que las da.
+- [ ] **2.16 · Un solo «hoy»** — criterio de aceptación: el día de negocio del backend sale de
+  **un solo sitio**, y sigue siendo el día UTC. Los sitios que hoy lo calculan cada uno por su
+  cuenta, en Inventario, Catálogo y Terceros, y el mes del trabajo mensual, se cuentan por nombre
+  antes y después, y después pasan todos por ese sitio. Un test de arquitectura prohíbe calcularlo
+  en cualquier otro, con su pareja: el único sitio donde sí existe. Una mutación que calcula el día
+  por fuera lo pone rojo. El frontal también tiene un solo «hoy», el del servidor, y la etiqueta de
+  la tarifa dice lo mismo que resuelve `ResolverPrecio`. Y la nota de la zona dice qué zona rige
+  para lo que no tiene almacén: tarifas, artículos y terceros.
+- [ ] **2.17 · El alta del ajuste** — criterio de aceptación: el ajuste se da de alta, se lista
+  paginado en el servidor y se abre en su ficha, por HTTP con su permiso y desde su pantalla. El
+  factor a unidad base lo resuelve el servidor, con un puerto de lectura en el `Contracts` de
+  Catálogo. Una línea sin conversión se rechaza con el código de la casa, una conversión retirada
+  sigue resolviendo lo viejo, y el inverso copia el factor del original sin volver a validarlo. La
+  pantalla va en una ruta diferida, con los tres estados y los errores de vuelta a su campo, y los
+  KiB que añade, medidos: si no cabe, se pregunta, porque el límite no se sube. Su recorrido, con
+  `playwright-cli` contra la pila local y datos sintéticos. **Pasa su propia puerta de
+  clarificación**, con las decisiones en un ADR nuevo y lo que diga el plan maestro primero.
+- [ ] **2.18 · El alta de la transferencia** — criterio de aceptación: la transferencia se da de
+  alta por HTTP con su permiso y desde su pantalla, con el factor que resuelve el servidor por el
+  puerto del 2.17. **Pasa su propia puerta de clarificación**, que completa este criterio antes del
+  código. Es el último ítem de la fase 2, que se cierra cuando acabe.
 
 ## Imports pendientes de `CLAUDE.md`
 
@@ -20947,6 +21151,14 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTA (2026-10-17, respuesta 7 del repaso) · el editor avisa de que `baseUrl` dejará de
+  funcionar.** Lo dan `frontend/tsconfig.app.json` y `frontend/tsconfig.test.json` en el editor,
+  cuyo TypeScript es el 6: dice que `baseUrl` deja de funcionar en el 7. El proyecto usa la
+  `^5.9.3`, y `typecheck` sale limpio. Lo vio el ítem 14 del 2.14, y lo llevó al repaso. **El
+  disparador, decisión del usuario: al subir TypeScript.** El ítem que suba la versión del
+  `package.json` quita `baseUrl` o lo sustituye en los dos ficheros, en el mismo commit, y
+  `typecheck` lo dice.
+
 - **CERRADA (2026-10-09, ítem 2.13) · el código de la aplicación ve los tipos de Node.**
   `tsconfig.app.json` compila a la vez la aplicación y sus tests, y los tests usan `node:fs`,
   `node:path`, `node:url`, `node:util` y `process`. Con vitest 3 los tipos llegaban sin pedirlos, y
@@ -20973,6 +21185,11 @@ cuando hace falta el porqué.
   `recuento-teorico-cambiado`, y el recuento puede no llegar a confirmarse nunca. El primero de los
   dos que se dé abre la pregunta, que no se decide aquí.
 
+  **Contestada el 2026-10-17 (respuesta 3 del repaso): (a), se queda como está.** Abierta con sus
+  dos disparadores: el primer almacén que no se pueda contar de una vez, y el primer recuento que
+  no llegue a confirmarse por la huella. Los dos están aquí y en el ADR-0055, que recibe el segundo
+  por dentro, en su propio commit.
+
 - **ABIERTA (2026-09-28, encargo del usuario) · ¿trae algún ítem, hasta el 2.14, el alta, el
   listado y la ficha del ajuste, y la lectura de las existencias?** Es pregunta del **cierre de la
   fase**, y el usuario la deja escrita sin decidir. Hoy el borde HTTP de Inventario tiene **dos**
@@ -20988,6 +21205,11 @@ cuando hace falta el porqué.
   hoy.** Así que la fase puede cerrarse con un documento que solo se crea desde los tests. Si la
   respuesta es que sí, es un **addendum** al checklist, como las de las fases 0 y 1. Si es que no,
   el disparador se escribe en `AjustesController`. No se amplía el checklist por cuenta propia.
+
+  **Contestada el 2026-10-17 (respuesta 1 del repaso): (b), en dos ítems seguidos.** El alta, el
+  listado y la ficha del ajuste, con su pantalla, son el **2.17**; el alta de la transferencia,
+  con la suya, el **2.18**. Cada uno pasa su puerta. La nota se cierra con el 2.18. La lectura de
+  las existencias de hoy no tiene ítem propio: la contesta, sin día, el saldo del 2.14.
 
 - **ABIERTA (2026-09-27, ítem 2.7) · «hoy» es el día UTC, y no el de la empresa.** Confirmar
   rechaza una fecha de operación posterior a hoy —la decisión (b), ADR-0044 §4—, y el cuadre suma el
@@ -21016,6 +21238,13 @@ cuando hace falta el porqué.
   salida. Con «hoy» en UTC no pasa, porque las dos fechas salen del mismo reloj. Lo que haya que
   decidir —comparar las dos puntas en una sola zona, o comparar instantes y no días— va con la
   pregunta del cierre de la fase, no aquí.
+
+  **Contestada el 2026-10-17 (respuesta 2 del repaso): (a) con (ii).** La zona IANA va en el
+  almacén, con `Europe/Madrid` por defecto, y se hace **antes de la fase 5**: ese es el disparador.
+  En la transferencia, cada fecha va en la zona de su almacén, y la guarda «la recepción no es
+  anterior al envío» compara instantes. Hasta entonces, «hoy» sigue siendo el día UTC, pero de un
+  solo sitio en el backend y del servidor en el frontal: es el **2.16**, que escribe aquí también
+  qué zona rige para lo que no tiene almacén, las tarifas, los artículos y los terceros.
 
 - **CERRADA (2026-10-13, ítem 2.14) · nadie avanza el corte de la instantánea hasta el 2.14.** La
   cierra el trabajo mensual, `AvanzadorDelCorte` (`e500bcc`): cada hora lleva el corte de cada
@@ -21126,6 +21355,12 @@ cuando hace falta el porqué.
   un documento viejo, que es justo el documento para el que existe la anulación (R2). El inverso
   deshace lo que el original hizo, con los números con los que lo hizo.
 
+  **Contestada el 2026-10-17 (respuesta 5 del repaso): (a), dentro del 2.17.** El servidor resuelve
+  el factor con un puerto de lectura de Catálogo. Sin conversión, la línea se rechaza; una
+  conversión retirada sigue resolviendo lo viejo; y el inverso copia el factor del original sin
+  volver a validarlo. La transferencia usa el mismo puerto en el 2.18. La nota se cierra con el
+  2.17.
+
 - **ABIERTA (2026-09-18, ítem 2.2) · ¿recibe el artículo su final de vida en esta fase, una vez el 2.7
   le dé existencias?** Es **pregunta del cierre de la fase 2**, y se deja escrita aquí para que lo
   sea. `IConsultaDeArticulos` sale con **tres** valores porque el cuarto —`SoloResuelveLoViejo`— no
@@ -21155,6 +21390,11 @@ cuando hace falta el porqué.
   `UnidadesBaseDeAsync`, un artículo retirado con existencias dejaría sin poder abrir ningún
   recuento de su almacén, que es justo lo que hace falta para sacarlas. La baja tendría que seguir
   contestando su unidad base.
+
+  **Contestada el 2026-10-17 (respuesta 4 del repaso): (a), no en esta fase.** El disparador se
+  escribe en `IConsultaDeArticulos`, en su propio commit: la primera línea de un documento de
+  compra que elija un artículo, en la fase 3. Y va con la condición de arriba: la baja sigue
+  contestando la unidad base. Queda abierta, con la decisión tomada.
 
 - **TRASLADADA A *DECISIONES* (2026-09-07, ítem 1.6) · el conflicto no revela, pero DOS respuestas
   juntas sí.** El hecho sigue siendo el que se anotó en el 1.5 y no ha cambiado: la búsqueda no

@@ -10,8 +10,8 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 2 (Inventario), en curso: 13 de 14 ítems.** La fase 1 se cerró con catorce ítems y
-> la fase 2 lleva trece: el frontal arranca con un solo diccionario; los tres puertos que el libro
+> **Estado: fase 2 (Inventario), en curso: 14 de 18 ítems.** La fase 1 se cerró con catorce ítems y
+> la fase 2 lleva catorce: el frontal arranca con un solo diccionario; los tres puertos que el libro
 > de movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado contesta
 > que sigue resolviendo lo viejo, no que no existe—; el libro ya existe, particionado por mes y
 > de solo añadido en el motor, con el ajuste como primer documento; el ajuste se numera al
@@ -31,13 +31,13 @@ de datos, su contrato público y su comunicación por eventos.
 > almacén entero contra el teórico del instante en que se confirma, no del que se contó —si el
 > stock se movió entre medias, confirmar es un `409` que dice qué líneas cambiaron—, y la
 > diferencia entra en el libro como un ajuste numerado, que es lo que se anula para deshacerlo;
-> y el disponible es el físico menos lo reservado: una reserva aparta mercancía sin pasar nunca
+> el disponible es el físico menos lo reservado: una reserva aparta mercancía sin pasar nunca
 > de lo disponible, se consume con la salida de su albarán y, si caduca, suelta lo que apartaba
-> —quien reservará es el pedido de venta de la fase 4—. El decimocuarto, el stock a fecha
-> pasada, está hecho: el saldo de cualquier día sale de la última instantánea anterior a su
-> mes más el tramo del libro, y cuadra con la suma del libro hasta ese día. Su casilla se
-> marca al cerrar la fase. El repaso, criterio por criterio, ya está hecho, y deja siete
-> preguntas que decide el usuario antes de cerrarla.
+> —quien reservará es el pedido de venta de la fase 4—; y el stock a fecha pasada: el saldo de
+> cualquier día sale de la última instantánea anterior a su mes más el tramo del libro, y
+> cuadra con la suma del libro hasta ese día. El repaso de la fase abre cuatro ítems más, del
+> 2.15 al 2.18: lo que el propio repaso encontró, un solo «hoy» en todo el sistema, y el alta
+> del ajuste y la de la transferencia, cada una con su pantalla.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
 > **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo. Esta
 > línea se compara con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia
