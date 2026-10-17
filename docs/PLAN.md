@@ -7350,17 +7350,17 @@ runs de rama y de `main`**, y cada cifra va con la orden que la mide.
 
 ## Estado actual
 
-**FASE 2 EN CURSO — 14 de 18 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 15 de 18 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. Los
 catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, del 2.15
-al 2.18, y la fase se cierra cuando acabe el último.
+al 2.18, y la fase se cierra cuando acabe el último. El 2.15 está hecho.
 
-> **Dónde se retoma (2026-10-17): en el orden del encargo.** El primer commit de la rama
-> `2.15-lo-que-el-repaso-encontro` marca el 2.14, anota las siete respuestas en *Decisiones tomadas
-> → Traídas por el encargo del 2026-10-17* y abre los addenda con su criterio. Lo que sigue, en ese
-> orden: los dos disparadores de las respuestas 3 y 4; la revisión de código del usuario sobre
-> `0638419..8734c6a`; el 2.15; el 2.16; y el 2.17 hasta su puerta, donde se para y se pregunta.
+> **Dónde se retoma (2026-10-17): en el 2.16, desde `main`.** El 2.15 está hecho, en *El 2.15,
+> hecho*, más abajo. Lo que sigue, en el orden del encargo: el 2.16, en su rama, con los dos runs
+> del cierre del 2.15 en su primer commit; y el 2.17 hasta su puerta, donde se para y se pregunta.
+> **Dos cosas esperan al usuario**: los hallazgos de su `/code-review` sobre `0638419..8734c6a`,
+> que no han llegado, y la respuesta a la propuesta del avance incremental del ADR-0064 §5.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -12405,6 +12405,189 @@ queda sin marcar (ítem 14).
       *Diagnóstico* omitido, **1477** y **689** casos, **235** tipos de **242** sitios, **150**
       operaciones en **91** rutas, **412/450** y **720/900** KiB, y el centinela con la marca y
       sin avisos. Leídos con `python leer-run27.py <run>`.
+
+**El 2.15, hecho el 2026-10-17**, en la rama `2.15-lo-que-el-repaso-encontro`, abierta el mismo día
+desde `main` en `8734c6a`. Lo que pide está en *Decisiones tomadas → Traídas por el encargo del
+2026-10-17*. Sus mutaciones van de la **573** a la **603**, así que las siguientes empiezan en la
+**604**. Su ADR es el **0064**, así que el siguiente es el **0065**.
+
+**Lo que quedaba, por este orden:**
+
+1. ~~El primer commit: los dos runs del repaso, las siete respuestas, el 2.14 marcado y los
+   addenda.~~ Hecho en `c80b835`.
+2. ~~Los disparadores de las respuestas 3 y 4.~~ Hechos en `f69fe08`, el de la baja del artículo,
+   en el README de Catálogo, y en `a0cb170`, el segundo del recuento cíclico, en el ADR-0055. Los
+   tres commits los lleva el run de rama **39054352600**, en verde al primer intento: Backend
+   `117459158908`, Frontal `117459159086` y Humo `117460804150`.
+3. **La revisión de código del usuario, sobre `0638419..8734c6a`: sin hacer, porque sus hallazgos
+   no han llegado.** `/code-review` lo lanza el usuario, y su informe no está ni en el repositorio
+   ni en la sesión. Se piden en el informe del 2.15. Cuando lleguen, cada uno se comprueba contra el
+   código y va a una tabla con su veredicto, y cada hallazgo real lleva su commit con el caso que lo
+   pone rojo. No para el 2.15, porque ningún punto de su criterio depende de ella.
+4. ~~El tema 1, el `500` de la paginación.~~ Hecho en `a1d5b84`. Su run de rama es el
+   **39055107965**, en verde al primer intento: Backend `117461383301`, Frontal `117461383491` y
+   Humo `117463036487`. La guarda cubre también un cuarto lector que el repaso no contó: el listado
+   de lo bloqueado, que ya sumaba el tamaño en `long`.
+   - **La tanda, de la 573 a la 576**, escrita antes de medir en `tanda-paginacion.md`, con la 576
+     sobre el arnés. Se midió con `python -X utf8 mutar2.py <raíz> spec-paginacion.json <n>`, una a
+     una sobre el árbol limpio, en `tests/Api.IntegrationTests` y con el filtro que lleva el
+     *spec*, que coge el caso nuevo, `La_ultima_pagina…`, y las cinco filas del viejo,
+     `Una_paginacion_imposible…`, los dos de `EntradaHostilTests`.
+
+     | # | Mutación | Rojos, de 6 |
+     |---|---|---|
+     | 573 | La guarda fuera: el `Range` de la página vuelve a `int.MaxValue` | **1**: `EntradaHostilTests.La_ultima_pagina_cuyo_salto_cabe_es_200_y_vacia_y_la_siguiente_es_400`; las cinco filas de `Una_paginacion_imposible_es_400_y_no_una_excepcion`, verdes |
+     | 574 | El tope, uno de más: `PaginaMaxima = (int.MaxValue / TamanioMaximo) + 2` | **1**: el mismo, y las cinco, verdes |
+     | 575 | El tope, uno de menos: `PaginaMaxima = int.MaxValue / TamanioMaximo` | **1**: el mismo, y las cinco, verdes |
+     | 576 | **Arnés**: el caso calcula la frontera sin el `+ 1` | **1**: el mismo, en la comprobación aritmética, antes de pedir nada |
+
+     Las cuatro, como decía la espera. Las cinco filas viejas no ven ninguna, y no tienen por qué:
+     son las páginas imposibles por otra razón.
+5. ~~El tema 2, el `retry` de la caché.~~ Hecho en `ce18b0a`. Su run de rama es el
+   **39055857732**, en verde al primer intento: Backend `117463561990`, Frontal `117463562186` y
+   Humo `117465838800`.
+   - **La tanda, de la 577 a la 580**, escrita antes de medir en `spec-reintento.json`, con la 580
+     sobre el arnés, y medida con `python -X utf8 mutar-vitest.py <raíz> spec-reintento.json <n>`
+     sobre `frontend/src/app/LosReintentosDeLaCache.test.ts`, de 11 casos:
+
+     | # | Mutación | Rojos, de 11 |
+     |---|---|---|
+     | 577 | `retry: 1` en vez de `debeReintentar` | **7**: los siete `un 4xx se pide una sola vez`, del 400 al 422; los tres 5xx y el corte de red, verdes |
+     | 578 | `debeReintentar` no reintenta nada: `fallos < 0` | **4**: los tres `un 5xx se pide dos veces` y `un corte de red… también se reintenta una vez`; los siete 4xx, verdes |
+     | 579 | El intervalo del 4xx llega al 500: `<= 500` | **1**: `un 500 se pide dos veces: la segunda es el reintento` |
+     | 580 | **Arnés**: el caso monta la caché con `retry: false` | **4**: los tres 5xx y el corte de red, porque el caso deja de leer la caché de la aplicación |
+
+     Las cuatro, como decía la espera, y las dos listas se parten justo por el `4xx`.
+6. ~~El tema 2, la cabecera a 320 px.~~ Hecho en `afd3bd4`. Su run de rama es el **39056968883**,
+   en verde al primer intento: Frontal `117466805189`, Backend `117466805386` y Humo `117468338082`.
+   - **Lo medido, con `playwright-cli` contra la pila local**, en su propio proyecto,
+     `bastion-humo-215`, con dos empresas sintéticas, una de razón social larga, para que el
+     selector de empresa sea un `select`. En siete pantallas, `/`, `/almacenes`, `/articulos`,
+     `/saldos`, `/tarifas`, `/recuentos` y `/empresas`, a 320 y a 375 px y en los dos idiomas, el
+     documento medía **815 px** de ancho, con la navegación en 720 y de once a doce elementos fuera
+     de la ventana. Ahora mide **320** y **375**, sin nada fuera, y la cabecera pasa de 191 a 345
+     px de alto, porque envuelve. Con `python -X utf8 medir-cabecera.py`, que lee el ancho del
+     documento, el de la cabecera y lo que queda fuera de la ventana.
+   - **La tanda, de la 581 a la 587**, escrita antes de medir en `spec-cabecera.json`, con la 586 y
+     la 587 sobre el arnés, y medida con `python -X utf8 mutar-vitest.py <raíz> spec-cabecera.json
+     <n>` sobre `frontend/src/app/LaCabeceraCabeEn320.test.tsx`, de 2 casos. La columna de la
+     página viva es lo que dio la misma clase quitada en el navegador, antes de escribir el test:
+
+     | # | Mutación | Rojo | En la página viva |
+     |---|---|---|---|
+     | 581 | La navegación no envuelve | `toda fila flexible de la cabecera envuelve` | 720 px |
+     | 582 | El bloque de la derecha no envuelve | `toda fila flexible de la cabecera envuelve` | cabe, con los selectores en 18 y 84 px |
+     | 583 | El `select` de empresa sin `min-w-0` | `toda caja entre la fila de la cabecera y un <select> se puede estrechar` | 480 px |
+     | 584 | Su envoltorio sin `min-w-0` | el mismo | 480 px |
+     | 585 | El bloque de la derecha sin `min-w-0` | el mismo | 480 px |
+     | 586 | **Arnés**: la regla 1 busca una clase que nadie lleva, `flex-row` | `toda fila flexible…`, por la lista de lo encontrado | — |
+     | 587 | **Arnés**: el camino de la regla 2 se para en el propio `select` | `toda caja…`, por la lista de cajas | — |
+
+     En cada una, el otro caso, verde. Las siete, como decía la espera.
+   - **El humo, con 0 fallos**, en el mismo proyecto, y el segundo arranque en verde: el migrador
+     vuelve a crear la partición del mes que viene con su disparador, el rol del sistema queda con
+     los **109** permisos, y con la semilla fuera, `GET /api/v1/terceros/terceros` da `200`. El
+     `down -v` llevó su `-p`, queda solo el proyecto `bastion`, y el entorno se borró al desmontar.
+7. ~~El tema 3, el coste del trabajo mensual.~~ Hecho en dos commits: `11afd8e`, las métricas, y
+   `dba3653`, el **ADR-0064**, que enmienda el §7 del ADR-0063. El 0063 lo anota en su *Estado* y
+   al principio del §7.
+   - **El plazo, comprobado antes de cambiar nada**: es el de Npgsql, 30 s, en su documentación
+     (`Command Timeout`), en el código de `NpgsqlCommand.CommandTimeout` y en la de EF Core
+     (`RelationalDbContextOptionsBuilder.CommandTimeout`), y la API lo registra en cada orden,
+     `CommandTimeout='30'`. Que nada del proyecto lo cambia, con `git grep -n -i -E
+     "CommandTimeout|Command Timeout|statement_timeout|lock_timeout" -- src deploy`, que no
+     devuelve nada. El ADR-0064 §1 lleva las cuatro comprobaciones.
+   - **La medida, en el ADR-0064, *Medido***, con sus órdenes: tres libros sintéticos de una
+     empresa en la pila local. Con 10⁵ movimientos y 10⁴ claves, el avance tarda unos **4 s**; con
+     10⁶ y 10⁴, unos **6 s**; con 10⁶ y 10⁵, **pasa de 30 s en cuatro de cinco intentos**, y la
+     vez que acabó tardó 27,7 s. Mientras dura, las confirmaciones de la empresa esperan detrás del
+     exclusivo.
+   - **El disparador pasa a 10 s, o un fallo por plazo**, y se lee en las dos métricas nuevas, sin
+     la empresa como etiqueta: el histograma `bastion.inventario.corte.duracion_del_avance`, en
+     segundos y con cubos en 10 y en 30, y el indicador `bastion.inventario.corte.meses_de_retraso`,
+     del corte más viejo. Una empresa sin corte cuenta desde el mes anterior a su primer
+     movimiento, porque es la que el avance no consigue avanzar nunca.
+   - **La propuesta, sin decidirla**: el avance incremental, un mes por transacción, y un cuadre a
+     juego (ADR-0064 §5). Se pregunta, como dice el criterio, porque el techo no está cerca: ya se
+     ha pasado con 10⁵ claves. Y con ella, el cuadre que va después del `COMMIT` y que, si falla, no
+     se repite nunca (ADR-0064 §4).
+   - **Los casos**: en el carril rápido, `ElTrabajoMensualAvanzaElCorteTests`,
+     `El_retraso_es_el_del_corte_mas_viejo_y_sin_corte_cuenta_desde_el_primer_movimiento`,
+     `Una_vuelta_anota_lo_que_tarda_cada_avance_y_el_retraso_con_el_que_acaba` y
+     `La_duracion_va_en_segundos_con_sus_cubos_y_el_retraso_en_meses_sin_la_empresa`; en el de
+     integración, en `LasExistenciasSonLaSumaDelLibroTests`,
+     `El_corte_de_cada_empresa_es_su_mes_y_el_primer_movimiento_solo_lo_lleva_la_que_no_tiene`,
+     con las semillas 873 y 874. Cada uno, en el censo de su carril. Y la lista blanca de
+     `ElFiltroNoSeSaltaPorAhiTests` pasa de 1 a 2 en `ElAvanceDelCorte.cs`, porque `CortesAsync` es
+     la segunda apertura sin inquilino del fichero.
+   - **La tanda, de la 588 a la 603**, escrita antes de medir en `tanda-metricas.md`, con la 594
+     sobre el arnés. Se midió con `python -X utf8 mutar2.py <raíz> <spec> <n>`, una a una sobre el
+     árbol limpio en `11afd8e`. En el carril rápido, con `spec-metricas-rapido.json`: las clases
+     `ElTrabajoMensualAvanzaElCorteTests` y `ElFiltroNoSeSaltaPorAhiTests` de
+     `tests/Api.FunctionalTests`, con 21 casos. En el de integración, la 595 a la 598 y la 603, con
+     `spec-metricas-integracion.json`: la clase `LasExistenciasSonLaSumaDelLibroTests` de
+     `tests/Api.IntegrationTests`, con 17. Cada filtro, por `FullyQualifiedName~<clase>`. Los
+     nombres van sin el prefijo `ElTrabajoMensualAvanzaElCorteTests.`:
+
+     | # | Mutación | Rápido, de 21 | Integración, de 17 |
+     |---|---|---|---|
+     | 588 | El avance no anota su duración | **1**: `Una_vuelta_anota_lo_que_tarda_cada_avance_y_el_retraso_con_el_que_acaba` | — |
+     | 589 | La duración, en milisegundos | **2**: `La_duracion_va_en_segundos…` y `Una_vuelta_anota…` | — |
+     | 590 | El retraso no cuenta desde el primer movimiento | **1**: `El_retraso_es_el_del_corte_mas_viejo…` | — |
+     | 591 | Sin el `AddMonths(-1)` del primer movimiento | **1**: `El_retraso_es…` | — |
+     | 592 | Sin el término del año | **1**: `El_retraso_es…` | — |
+     | 593 | El retraso, medido antes de la vuelta | **2**: `Una_vuelta_anota…` y `Una_vuelta_avanza_cada_empresa_en_su_ambito_y_cuenta_las_que_avanzan` | — |
+     | 594 | **Arnés**: el espía no oye los `int` | **2**: `La_duracion_va…` y `Una_vuelta_anota…` | — |
+     | 595 | `CortesAsync` no lee el primer movimiento | 0 | **1**: `El_corte_de_cada_empresa_es_su_mes…` |
+     | 596 | `CortesAsync` sin `SinInquilino` | **1**: `ElFiltroNoSeSaltaPorAhiTests.El_ambito_sin_inquilino_solo_se_abre_donde_esta_declarado` | **1**: `El_corte_de_cada_empresa…` |
+     | 597 | La fecha del primer movimiento, para todas | 0 | **1**: `El_corte_de_cada_empresa…` |
+     | 598 | `Min` por `Max` | 0 | **1**: `El_corte_de_cada_empresa…` |
+     | 599 | El retraso suma en vez de quedarse con el mayor | **1**: `El_retraso_es…` | — |
+     | 600 | El histograma, sin los cubos recomendados | **1**: `La_duracion_va…` | — |
+     | 601 | La unidad, `ms` | **1**: `La_duracion_va…` | — |
+     | 602 | Los cubos, sin el 10 | **1**: `La_duracion_va…` | — |
+     | 603 | El corte de cualquier empresa, no el de la suya | 0 | **1**: `El_corte_de_cada_empresa…` |
+
+     - **Las dieciséis, como decía la espera, con una más en la 593.** La 593 abre un sexto ámbito,
+       y `Una_vuelta_avanza…` cuenta los ámbitos. No es suya por diseño: la que la ve por diseño es
+       `Una_vuelta_anota…`, que lee un retraso de 6 en vez de 2.
+     - **La 600 se midió dos veces con el mismo número.** La primera, con `advice: null`, no
+       compilaba (`CS0411`, la inferencia del genérico) y dio 0 casos: no midió nada. Se reescribió
+       como `CreateHistogram<double>(…, advice: null)` y se midió otra vez, en
+       `tanda-metricas-600.log`.
+     - **La 595, la 597, la 598 y la 603 salen verdes en el carril rápido**, y es lo esperado: el
+       avance de mentira no tiene base, y lo que miran es la consulta. Las ve el de integración.
+8. ~~El tema 4, la nota de los enteros.~~ Hecho en `6825256`: la nota cuenta también los
+   nulables, con la orden que da las cifras, **138** enteros y **38** números hoy.
+9. **La batería de `AGENTS.md`, entera y en su orden, sobre `6825256`**, con `bash bateria.sh`:
+   los pasos salen con 0, y el árbol, limpio al terminar.
+   - `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **150** operaciones y
+     **235** tipos de **242** sitios, con los dos generadores en `--comprobar`;
+   - `typecheck`, `lint` y `format:check`, limpios; **290** casos del frontal en **31** ficheros,
+     13 más que en el 2.14 —los once de los reintentos y los dos de la cabecera—, y
+     `canal-de-la-consola.sh`, con la marca y ningún aviso de `act()`;
+   - **413/450** y **721/900** KiB, con `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist
+     450 900`: 1 KiB más en los dos;
+   - el build, con 0 errores, y `dotnet format`, limpio;
+   - **1480** casos en el carril rápido y **691** en el de integración, 606 y 85, todos en verde y
+     contados con `recuento-de-tests.sh` y las dos listas del *workflow*: tres más en el rápido,
+     los tres del trabajo mensual, y dos más en el de integración, el de la paginación y el de
+     `CortesAsync`;
+   - y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py 8734c6a HEAD`:
+     125 pares, 35 `Project` y 432 entradas del frontal en los dos lados, sin nada añadido ni
+     retirado. La primera vez se lanzó sin `-X utf8`, como la escribe `AGENTS.md`, y con la salida a
+     un fichero Python escribe en `cp1252`, que no tiene la flecha de la cabecera: el guion acabó
+     con 1 antes de comparar. Con `-X utf8`, como en el 2.14, sale con 0. En la CI no pasa, porque
+     Linux escribe en UTF-8.
+10. **El run de rama de `6825256`**, que lleva también `11afd8e` y `dba3653`, es el
+    **39061478857**, en verde al primer intento: Frontal `117480177906`, Backend `117480178167` y
+    Humo `117482024469`, con 69 pasos, 68 en verde y el *Diagnóstico* omitido, y las cifras de la
+    batería: **1480** y **691** casos, **235** tipos de **242** sitios, **150** operaciones en
+    **91** rutas, **413/450** y **721/900** KiB, y el centinela con la marca y sin avisos. Leído
+    con `python leer-run27.py 39061478857`.
+11. **El cierre, por el flujo de la rama**: este commit va a la rama y espera su verde; `main`
+    avanza con `--ff-only`, y la rama se borra, en local y en el remoto, después del run de
+    `main`. Los dos runs se anotan en el primer commit del 2.16.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
@@ -21053,7 +21236,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 > 2.15–2.18 por el mismo motivo que el 0.14–0.16 y el 1.12–1.14: son del cierre de la fase, y la
 > fase 3 no se abre arrastrándolos. Cada criterio se escribió antes de empezar su ítem.
 
-- [ ] **2.15 · Lo que el repaso encontró** — criterio de aceptación: cuatro temas, cada uno en su
+- [x] **2.15 · Lo que el repaso encontró** — criterio de aceptación: cuatro temas, cada uno en su
   commit.
   - **Una página imposible es un `400`, también la enorme.** La guarda va en un solo sitio,
     `ConsultaPaginada`, y hace que el salto de `Paginacion` quepa siempre en un `int`. Con ella
@@ -21077,6 +21260,40 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     indicador de cuántos meses lleva de retraso el corte más viejo, cada una con su caso.
   - **La nota de los enteros cuenta también los nulables**, con la expresión corregida en la nota,
     las cifras nuevas y la orden que las da.
+
+  **Hecho el 2026-10-17**, en la rama `2.15-lo-que-el-repaso-encontro`, en seis commits, del
+  `a1d5b84` al `6825256`. El porqué del tercer tema está en el
+  [ADR-0064](adr/adr-0064-el-avance-del-corte-se-mide-contra-el-plazo-de-cada-orden.md), que
+  enmienda el §7 del ADR-0063. Los commits, las mutaciones de la 573 a la 603, la batería, los
+  runs y el humo están en *Estado actual → El 2.15, hecho*. Cada punto del criterio tiene su caso:
+
+  - **la página enorme**, en `a1d5b84`: la guarda es el `Range` de la página en
+    `ConsultaPaginada`, hasta `Paginacion.PaginaMaxima`, y la frontera la afirma
+    `EntradaHostilTests.La_ultima_pagina_cuyo_salto_cabe_es_200_y_vacia_y_la_siguiente_es_400`,
+    que la calcula en 64 bits. La 573 quita la guarda y lo pone rojo, y la 574 y la 575 mueven el
+    tope uno arriba y uno abajo;
+  - **el `retry`**, en `ce18b0a`: `LosReintentosDeLaCache.test.ts`, sobre la caché de la
+    aplicación, pide una vez siete `4xx`, y su pareja, dos veces tres `5xx` y un corte de red. La
+    577 y la 578 parten las dos listas justo por el `4xx`;
+  - **la cabecera a 320 px**, en `afd3bd4`: medida con `playwright-cli` contra la pila local, a 320
+    y a 375 px, en siete pantallas y los dos idiomas, de 815 px de ancho a lo que mide la ventana.
+    `LaCabeceraCabeEn320.test.tsx` afirma las dos reglas que dejó la medida: toda fila flexible de
+    la cabecera envuelve, y toda caja entre la fila y un `select` lleva `min-w-0`. **No afirma que
+    quepa**, porque jsdom no maqueta, y lo dice su cabecera. De la 581 a la 587;
+  - **el coste del trabajo mensual**, en `11afd8e` y `dba3653`: el plazo de 30 s, comprobado con
+    `ctx7` y contra la documentación oficial de Npgsql y de EF Core, y sin nada del proyecto que lo
+    cambie (ADR-0064 §1). La medida, con sus órdenes, en el ADR-0064, *Medido*. El disparador pasa
+    a 10 s, o un fallo por plazo. Las dos métricas, con tres de
+    `ElTrabajoMensualAvanzaElCorteTests`:
+    `.El_retraso_es_el_del_corte_mas_viejo_y_sin_corte_cuenta_desde_el_primer_movimiento`,
+    `.Una_vuelta_anota_lo_que_tarda_cada_avance_y_el_retraso_con_el_que_acaba` y
+    `.La_duracion_va_en_segundos_con_sus_cubos_y_el_retraso_en_meses_sin_la_empresa`. Y la lectura
+    de los cortes, con uno de `LasExistenciasSonLaSumaDelLibroTests`:
+    `.El_corte_de_cada_empresa_es_su_mes_y_el_primer_movimiento_solo_lo_lleva_la_que_no_tiene`.
+    De la 588 a la 603. **El techo ya se ha pasado** con 10⁵ claves, así que el avance incremental
+    se propone en el ADR-0064 §5 y se pregunta;
+  - **y la nota de los enteros**, en `6825256`: la orden que la cuenta recorre el JSON, y la tabla
+    de la nota da 138 enteros y 38 números hoy, y 110 y 26 al cerrar la fase 1.
 - [ ] **2.16 · Un solo «hoy»** — criterio de aceptación: el día de negocio del backend sale de
   **un solo sitio**, y sigue siendo el día UTC. Los sitios que hoy lo calculan cada uno por su
   cuenta, en Inventario, Catálogo y Terceros, y el mes del trabajo mensual, se cuentan por nombre
