@@ -12507,7 +12507,7 @@ salvo que la respuesta diga otra cosa:
 | el bloqueo del art. 32 no tiene proceso de destrucción | **Abierta, y eso es la decisión.** La fase 2 le añade un hecho, la decisión 12 de su puerta: el libro no se borra y apunta a lo que mueve, así que la destrucción, cuando tenga fase, será anonimización. |
 | el frontal no puede abrir la ficha de lo bloqueado | **Abierta, con la decisión tomada** (ADR-0017). Ningún criterio de la fase 2 la nombra. |
 | la renovación de sesión asierta el cuerpo | **Abierta, con la decisión tomada** (ADR-0019). Los dos `as` sobre un cuerpo de respuesta son los mismos que al cerrar la fase 1: `cuerpo as SesionDto` en `traduccion.ts` y `problema as CuerpoDeProblema` en `errores.ts`. Contados con `grep -rn " as [A-Z]" frontend/src/shared/api frontend/src/shared/sesion`, sin los tests. |
-| el contrato describe los enteros como `integer \| string` | **Abierta, con la decisión tomada.** Hoy son **127** `integer \| string` y **18** `number \| string` en `docs/api/openapi.json`, contados con la expresión de la nota; al cerrar la fase 1 eran 106 y 14. |
+| el contrato describe los enteros como `integer \| string` | **Abierta, con la decisión tomada.** Hoy son **127** `integer \| string` y **18** `number \| string` en `docs/api/openapi.json`, contados con la expresión de la nota; al cerrar la fase 1 eran 106 y 14. Esa expresión no veía los nulables: la cuenta corregida, en la nota, desde el 2.15. |
 | en Node 25 el `localStorage` de los tests no es el de jsdom | **De vigilancia, no de arreglo.** La máquina sigue en Node **25.6.1** (`node --version`) y la CI en **22** (`node-version: '22'` en `ci.yml`). |
 
 Lo demás que la fase 1 dejó abierto en su traspaso no lo nombra ningún criterio de la fase 2: la
@@ -21685,6 +21685,39 @@ cuando hace falta el porqué.
   **106** `"type": ["integer", "string"]` y **14** `["number", "string"]`, contados con
   `re.findall(r'"type":\s*\[\s*"integer",\s*"string"\s*\]', texto)` sobre `docs/api/openapi.json`
   (y lo mismo con `number`); la traducción sigue en `shared/api/enteros.ts`, en un solo sitio.
+  **Corregida el 2026-10-17, en el 2.15: la expresión de arriba no veía los nulables.** Busca la
+  lista `["integer", "string"]` tal cual, y un entero que admite `null` sale como
+  `["null", "integer", "string"]`; con `number`, igual. Al cerrar la fase 1 se quedaron fuera
+  **4** enteros y **12** números nulables, y hoy serían **11** y **20**. La cuenta corregida
+  recorre el JSON en vez de buscar texto: `object_hook` ve cada objeto del documento, y cada `type`
+  que es una lista se cuenta como un conjunto, sin depender del orden ni del formato.
+
+  ```bash
+  contar='import json, sys, collections; cuenta = collections.Counter(); (
+      json.load(sys.stdin, object_hook=lambda d: d if not isinstance(d.get("type"), list)
+                else cuenta.update([" | ".join(sorted(d["type"]))]) or d),
+      print(*cuenta.most_common(), sep="\n"))'
+  python -X utf8 -c "$contar" < docs/api/openapi.json                    # hoy
+  git show 36fc437:docs/api/openapi.json | python -X utf8 -c "$contar"   # al cerrar la fase 1
+  grep -cE '"type": *"(integer|number)"' docs/api/openapi.json           # 0
+  grep -cE '"type": *"string"' docs/api/openapi.json                     # 489, su pareja
+  ```
+
+  | Forma del `type` | Al cerrar la fase 1 (`36fc437`) | Hoy (`dba3653`) |
+  |---|---|---|
+  | `integer \| string` | 106 | 127 |
+  | `integer \| null \| string` | 4 | 11 |
+  | `number \| string` | 14 | 18 |
+  | `null \| number \| string` | 12 | 20 |
+  | `null \| string` | 72 | 89 |
+  | **Todas las listas** | **208** | **265** |
+
+  Enteros: **110** al cerrar la fase 1 y **138** hoy. Números: **26** y **38**. Las dos filas sin
+  `null` repiten las cifras de la expresión vieja, 106 y 14 entonces y 127 y 18 hoy, así que la
+  cuenta nueva contiene a la vieja y no la contradice. Y ningún entero se queda fuera de las
+  formas de la tabla: el primer `grep` dice que el documento no tiene ni un `integer` ni un
+  `number` escalar, y el segundo, que ese mismo patrón sí encuentra los escalares que existen. La
+  nota sigue abierta, y la decisión no cambia.
 - **ANOTADO (2026-09-02) · en Node 25 el `localStorage` del entorno de tests no es el de jsdom.**
   Node 25 define `globalThis.localStorage` como accesor propio (experimental, tras
   `--localstorage-file`) y gana al de jsdom: lo que queda es un objeto pelado, sin `setItem` ni
