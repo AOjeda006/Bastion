@@ -30,6 +30,26 @@ public sealed record Paginacion
     /// </summary>
     public const int TamanioMaximo = 200;
 
+    /// <summary>
+    /// La última página que se puede pedir: la mayor cuyo <see cref="Salto"/> cabe en un
+    /// <c>int</c> con el tamaño máximo.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Existe porque el salto se calcula en <c>int</c>, y una página más allá de esta le da la
+    /// vuelta. Sus lectores no lo esperan: el <c>OFFSET</c> de una sentencia, con un negativo, es
+    /// un <c>500</c>; y un <c>Skip</c> en memoria, con un negativo, no salta nada y contesta la
+    /// primera página con el número de otra. Con este tope, el salto no desborda con ningún tamaño
+    /// admitido. El salto más el tamaño sí puede pasar de un <c>int</c> en la última página, y por
+    /// eso el único que los suma, el listado de lo bloqueado, lo hace en <c>long</c> y con tope.
+    /// </para>
+    /// <para>
+    /// Lo encontró el repaso de la fase 2, y el usuario decidió arreglarlo en el borde, en un
+    /// solo sitio (respuesta 6): el modelo de consulta lo anota, y aquí solo se define.
+    /// </para>
+    /// </remarks>
+    public const int PaginaMaxima = (int.MaxValue / TamanioMaximo) + 1;
+
     /// <summary>Número de página, empezando en 1.</summary>
     public int Pagina { get; init; } = 1;
 

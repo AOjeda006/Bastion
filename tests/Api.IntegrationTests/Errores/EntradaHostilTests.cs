@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Identidad.Contracts.Sesiones;
 using Bastion.Organizacion.Contracts.Empresas;
 using Shouldly;
@@ -79,6 +80,36 @@ public sealed class EntradaHostilTests(PostgresConTodosLosModulos postgres) : ID
 
         respuesta.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         await NadaDeDentro(respuesta);
+    }
+
+    [Fact]
+    public async Task La_ultima_pagina_cuyo_salto_cabe_es_200_y_vacia_y_la_siguiente_es_400()
+    {
+        // La frontera se calcula aquí, y no se lee de `Paginacion.PaginaMaxima`: es la definición
+        // de «el salto cabe», `(página - 1) × tamaño ≤ int.MaxValue`, en 64 bits. Si el caso leyera
+        // la constante, un tope mal puesto movería las dos filas con él, y el caso seguiría verde.
+        const int Tamanio = Paginacion.TamanioMaximo;
+        long ultima = (int.MaxValue / (long)Tamanio) + 1;
+        ((ultima - 1) * Tamanio).ShouldBeLessThanOrEqualTo(int.MaxValue);
+        (ultima * Tamanio).ShouldBeGreaterThan(int.MaxValue);
+
+        using HttpClient cliente = await _api.ComoAdministradorAsync();
+
+        using HttpResponseMessage cabe = await cliente.GetAsync(
+            $"{Empresas}?page={ultima}&size={Tamanio}");
+        using HttpResponseMessage noCabe = await cliente.GetAsync(
+            $"{Empresas}?page={ultima + 1}&size={Tamanio}");
+
+        // Antes de la guarda, la segunda era un 500: el salto daba la vuelta y el OFFSET salía
+        // negativo. La primera es la que dice que la guarda no se pasa de estricta.
+        cabe.StatusCode.ShouldBe(HttpStatusCode.OK);
+        PaginaDe<EmpresaDto> pagina = (await cabe.Content.ReadFromJsonAsync<PaginaDe<EmpresaDto>>())!;
+        pagina.Pagina.ShouldBe((int)ultima);
+        pagina.Elementos.ShouldBeEmpty();
+        pagina.Total.ShouldBeGreaterThan(0);
+
+        noCabe.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        await NadaDeDentro(noCabe);
     }
 
     [Theory]

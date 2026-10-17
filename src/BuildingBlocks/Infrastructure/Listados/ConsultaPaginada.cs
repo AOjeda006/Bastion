@@ -62,8 +62,13 @@ public record ConsultaPaginada
     public const string NombreDelFiltro = "q";
 
     /// <summary>Número de página, empezando en 1.</summary>
+    /// <remarks>
+    /// El tope es <see cref="Paginacion.PaginaMaxima"/> y no <c>int.MaxValue</c>: con él, el salto
+    /// cabe en un <c>int</c> con cualquier tamaño admitido. Sin él, una página enorme era un
+    /// <c>500</c>, y esta anotación es la guarda de todos sus lectores.
+    /// </remarks>
     [FromQuery(Name = "page")]
-    [Range(1, int.MaxValue, ErrorMessage = "La página empieza en 1.")]
+    [Range(1, Paginacion.PaginaMaxima, ErrorMessage = "La página va de {1} a {2}.")]
     public int Pagina { get; init; } = 1;
 
     /// <summary>Cuántos elementos se piden.</summary>

@@ -342,6 +342,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElTrabajoDeFondoVaciaLaColaTests.Un_manejador_que_falla_la_primera_vez_acaba_recibiendo_el_evento",
         "ElTrabajoDeFondoVaciaLaColaTests.Un_manejador_que_no_funciona_nunca_acaba_aparcando_su_evento",
 
+        "EntradaHostilTests.La_ultima_pagina_cuyo_salto_cabe_es_200_y_vacia_y_la_siguiente_es_400",
         "EntradaHostilTests.Un_NIF_hostil_es_un_400_normal_y_corriente",
         "EntradaHostilTests.Un_correo_hostil_en_el_inicio_de_sesion_no_cuenta_nada_de_dentro",
         "EntradaHostilTests.Un_cuerpo_que_no_es_el_que_toca_es_400_y_no_dice_por_donde_ha_roto",
