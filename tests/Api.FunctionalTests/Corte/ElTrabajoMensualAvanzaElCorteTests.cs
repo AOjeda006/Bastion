@@ -14,7 +14,8 @@ namespace Bastion.Api.FunctionalTests.Corte;
 
 /// <summary>
 /// El trabajo mensual de Inventario sin base: el mes que toca, una empresa por ámbito, lo que cuenta
-/// y lo que anota, y cuándo se registra (ADR-0063 §7).
+/// y lo que anota, y cuándo se registra (ADR-0063 §7). Y lo que tarda cada avance y el retraso del
+/// corte más viejo (ADR-0064 §3).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -80,7 +81,7 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
             [(s_primera, s_diciembre), (s_segunda, s_diciembre), (s_tercera, s_diciembre)],
             "cada empresa, en el orden en que llegan, con el mes que toca");
 
-        libreta.Instancias.ShouldBe(4, "un ámbito para la lista y uno por empresa");
+        libreta.Instancias.ShouldBe(5, "un ámbito para la lista, uno por empresa y uno para los cortes");
 
         espia.Leer("bastion.inventario.corte.empresas_avanzadas").ShouldBe(2, "la que ya llegaba no cuenta");
         espia.Leer("bastion.inventario.corte.avances_fallidos").ShouldBe(0);
@@ -256,6 +257,101 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     }
 
     [Fact]
+    public void El_retraso_es_el_del_corte_mas_viejo_y_sin_corte_cuenta_desde_el_primer_movimiento()
+    {
+        AvanzadorDelCorte.MesesDeRetraso([], s_diciembre).ShouldBe(0, "sin empresas, nadie va atrás");
+
+        AvanzadorDelCorte.MesesDeRetraso(
+            [Corte(s_primera, s_diciembre), Corte(s_segunda, s_diciembre)], s_diciembre)
+            .ShouldBe(0, "todas llegan al mes que toca");
+
+        AvanzadorDelCorte.MesesDeRetraso(
+            [Corte(s_primera, s_diciembre), Corte(s_segunda, new DateOnly(2026, 9, 1))], s_diciembre)
+            .ShouldBe(3, "el más viejo manda, aunque no sea el primero de la lista");
+
+        AvanzadorDelCorte.MesesDeRetraso([Corte(s_primera, new DateOnly(2025, 11, 1))], s_diciembre)
+            .ShouldBe(13, "los años cuentan: de noviembre a diciembre del año siguiente van trece meses");
+
+        AvanzadorDelCorte.MesesDeRetraso([Corte(s_primera, new DateOnly(2027, 2, 1))], s_diciembre)
+            .ShouldBe(0, "un corte por delante del mes que toca no es un retraso negativo");
+
+        AvanzadorDelCorte.MesesDeRetraso(
+            [Corte(s_primera, new DateOnly(2027, 2, 1)), Corte(s_segunda, new DateOnly(2026, 11, 1))],
+            s_diciembre)
+            .ShouldBe(1, "ni compensa el retraso de otra empresa");
+
+        // Sin corte: el avance no la ha avanzado nunca. Su corte estaría en el mes anterior al de su
+        // primer movimiento, y desde ahí le faltan los meses.
+        AvanzadorDelCorte.MesesDeRetraso(
+            [new CorteDeUnaEmpresa(s_primera, null, new DateOnly(2026, 12, 31))], s_diciembre)
+            .ShouldBe(1, "un primer movimiento de diciembre deja el corte que falta en noviembre");
+
+        AvanzadorDelCorte.MesesDeRetraso(
+            [new CorteDeUnaEmpresa(s_primera, null, new DateOnly(2026, 1, 1))], s_diciembre)
+            .ShouldBe(12, "el primer movimiento del primer día cuenta su mes entero");
+
+        AvanzadorDelCorte.MesesDeRetraso(
+            [Corte(s_primera, new DateOnly(2026, 10, 1)), new CorteDeUnaEmpresa(s_segunda, null, null)],
+            s_diciembre)
+            .ShouldBe(2, "sin corte y sin movimientos no hay instantánea que falte");
+    }
+
+    [Fact]
+    public async Task Una_vuelta_anota_lo_que_tarda_cada_avance_y_el_retraso_con_el_que_acaba()
+    {
+        Libreta libreta = new([s_primera, s_segunda, s_tercera])
+        {
+            [s_primera] = () => Hecho(),
+            [s_segunda] = () => null,
+            [s_tercera] = () => throw new InvalidOperationException("el plazo de la orden se ha agotado"),
+        };
+
+        // La más vieja al empezar es la primera, seis meses atrás, y avanza. La que se queda atrás es
+        // la tercera, que falla: el retraso es el suyo, y se mide al acabar.
+        libreta.Cortes[s_primera] = Corte(s_primera, new DateOnly(2026, 6, 1));
+        libreta.Cortes[s_segunda] = Corte(s_segunda, s_diciembre);
+        libreta.Cortes[s_tercera] = Corte(s_tercera, new DateOnly(2026, 10, 1));
+
+        using MetricasDelCorte metricas = new();
+        using EspiaDeMedidas espia = new();
+
+        await using (ServiceProvider proveedor = Montar(libreta))
+        {
+            await Avanzador(proveedor, metricas, new Anotador()).UnaVueltaAsync(CancellationToken.None);
+        }
+
+        espia.Serie("bastion.inventario.corte.duracion_del_avance").ShouldBe(
+            [1.5], "en segundos, y solo el avance que termina: ni el que ya llegaba ni el que falla");
+
+        espia.Serie("bastion.inventario.corte.meses_de_retraso").ShouldBe(
+            [2], "una medida por vuelta, con los cortes como quedan: medida antes de avanzar, serían 6");
+    }
+
+    [Fact]
+    public void La_duracion_va_en_segundos_con_sus_cubos_y_el_retraso_en_meses_sin_la_empresa()
+    {
+        using MetricasDelCorte metricas = new();
+        using EspiaDeMedidas espia = new();
+
+        metricas.AnotarDuracionDelAvance(TimeSpan.FromMilliseconds(27_693));
+        metricas.AnotarMesesDeRetraso(3);
+
+        espia.Serie("bastion.inventario.corte.duracion_del_avance").ShouldBe([27.693]);
+        espia.Serie("bastion.inventario.corte.meses_de_retraso").ShouldBe([3]);
+
+        espia.Unidad("bastion.inventario.corte.duracion_del_avance").ShouldBe("s");
+        espia.Unidad("bastion.inventario.corte.meses_de_retraso").ShouldBe("{mes}");
+
+        // Los cubos que recomienda el instrumento, y en ellos lo que decide: el disparador y el techo.
+        espia.Cubos("bastion.inventario.corte.duracion_del_avance").ShouldBe(MetricasDelCorte.CubosDeLaDuracion);
+        MetricasDelCorte.CubosDeLaDuracion.ShouldContain(10, "el disparador del ADR-0064");
+        MetricasDelCorte.CubosDeLaDuracion.ShouldContain(30, "el plazo de cada orden, que es el techo");
+
+        espia.Etiquetas.ShouldBe(0, "una etiqueta con la empresa sería una serie por cliente en el recolector");
+        espia.Medidas.ShouldBe(2, "sin medidas, contar las etiquetas no diría nada");
+    }
+
+    [Fact]
     public void El_modulo_registra_siempre_el_avance_y_el_trabajo_solo_si_se_le_pide()
     {
         ServiceCollection encendido = [];
@@ -360,6 +456,8 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
             TimeSpan.FromMilliseconds(250),
             new CuadreDeLasExistencias(7, 40, 3, 0, 0, descuadres));
 
+    private static CorteDeUnaEmpresa Corte(Guid empresaId, DateOnly hastaElMes) => new(empresaId, hastaElMes, null);
+
     private static Descuadre Descuadre(string que) =>
         new(que, Guid.CreateVersion7(), Guid.CreateVersion7(), null, null, null, s_diciembre, 1m, 2m, 1, null, null);
 
@@ -382,6 +480,11 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         public List<(Guid EmpresaId, DateOnly HastaElMes)> Avances { get; } = [];
 
         public int Instancias { get; set; }
+
+        /// <summary>
+        /// El corte de cada empresa: el que tiene al empezar, y el que le deja el avance que termina.
+        /// </summary>
+        public Dictionary<Guid, CorteDeUnaEmpresa> Cortes { get; } = [];
     }
 
     /// <summary>Un avance que contesta lo que diga la libreta, y cuenta cuántas veces se crea.</summary>
@@ -405,8 +508,19 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
             _libreta.Avances.Add((empresaId, hastaElMes));
 
-            return _libreta[empresaId]();
+            AvanceHecho? hecho = _libreta[empresaId]();
+
+            if (hecho is not null)
+            {
+                _libreta.Cortes[empresaId] = new CorteDeUnaEmpresa(empresaId, hastaElMes, null);
+            }
+
+            return hecho;
         }
+
+        public Task<IReadOnlyList<CorteDeUnaEmpresa>> CortesAsync(CancellationToken cancelacion) =>
+            Task.FromResult<IReadOnlyList<CorteDeUnaEmpresa>>(
+                [.. _libreta.Cortes.Values.OrderBy(corte => corte.EmpresaId)]);
     }
 
     /// <summary>Un <c>TimeProvider</c> que siempre contesta lo mismo.</summary>
@@ -441,11 +555,14 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     }
 
     // Un oyente de los instrumentos del medidor del corte, como el de la bandeja: suma lo que se
-    // publica, guarda la unidad de cada uno y cuenta las medidas que llevan alguna etiqueta.
+    // publica en los contadores, guarda en su serie cada medida del histograma y del indicador,
+    // guarda la unidad y los cubos de cada uno, y cuenta las medidas que llevan alguna etiqueta.
     private sealed class EspiaDeMedidas : IDisposable
     {
         private readonly Dictionary<string, long> _valores = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, List<double>> _series = new(StringComparer.Ordinal);
         private readonly Dictionary<string, string?> _unidades = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, IReadOnlyList<double>?> _cubos = new(StringComparer.Ordinal);
         private readonly MeterListener _oyente = new();
 
         public EspiaDeMedidas()
@@ -455,6 +572,7 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
                 if (string.Equals(instrumento.Meter.Name, ModuloDeInventario.MedidorDelCorte, StringComparison.Ordinal))
                 {
                     _unidades[instrumento.Name] = instrumento.Unit;
+                    _cubos[instrumento.Name] = (instrumento as Histogram<double>)?.Advice?.HistogramBucketBoundaries;
                     oyente.EnableMeasurementEvents(instrumento);
                 }
             };
@@ -470,6 +588,12 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
                 }
             });
 
+            _oyente.SetMeasurementEventCallback<double>((instrumento, medida, etiquetas, _) =>
+                Anotar(instrumento.Name, medida, etiquetas.IsEmpty));
+
+            _oyente.SetMeasurementEventCallback<int>((instrumento, medida, etiquetas, _) =>
+                Anotar(instrumento.Name, medida, etiquetas.IsEmpty));
+
             _oyente.Start();
         }
 
@@ -480,6 +604,26 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         public long Leer(string instrumento) => _valores.GetValueOrDefault(instrumento);
 
         public string? Unidad(string instrumento) => _unidades.GetValueOrDefault(instrumento);
+
+        public List<double> Serie(string instrumento) => _series.GetValueOrDefault(instrumento) ?? [];
+
+        public IReadOnlyList<double>? Cubos(string instrumento) => _cubos.GetValueOrDefault(instrumento);
+
+        private void Anotar(string instrumento, double medida, bool sinEtiquetas)
+        {
+            if (!_series.TryGetValue(instrumento, out List<double>? serie))
+            {
+                _series[instrumento] = serie = [];
+            }
+
+            serie.Add(medida);
+            Medidas++;
+
+            if (!sinEtiquetas)
+            {
+                Etiquetas++;
+            }
+        }
 
         public void Dispose() => _oyente.Dispose();
     }

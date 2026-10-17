@@ -45,12 +45,14 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// van dentro de una transacción que se deshace.
 /// </para>
 /// <para>
-/// <b>Semillas: el fichero entero es del 440 al 459, y del 858 al 865.</b> Las empresas, del 440 al
-/// 449; los maestros de instalación, del 450 al 459. El caso de las dos empresas se lleva la 447 y la
-/// 448, y la 457 y la 458; el de las dos salidas del ítem 2.8, la 449 y la 459. Los tres del cerrojo
-/// de la empresa, del 2.14, del 858 al 862, empresa y maestros con el mismo número: el bloque estaba
-/// libre, y lo dice <c>LasReservasTests</c>. Los dos del avance del corte, también del 2.14, la 863 y
-/// la 864 del mismo modo, y la 865, una empresa sin existencias.
+/// <b>Semillas: el fichero entero es del 440 al 459, del 858 al 865, y la 873 y la 874.</b> Las
+/// empresas, del 440 al 449; los maestros de instalación, del 450 al 459. El caso de las dos empresas
+/// se lleva la 447 y la 448, y la 457 y la 458; el de las dos salidas del ítem 2.8, la 449 y la 459.
+/// Los tres del cerrojo de la empresa, del 2.14, del 858 al 862, empresa y maestros con el mismo
+/// número: el bloque estaba libre, y lo dice <c>LasReservasTests</c>. Los dos del avance del corte,
+/// también del 2.14, la 863 y la 864 del mismo modo, y la 865, una empresa sin existencias. El del
+/// corte de cada empresa, del 2.15, la 873 y la 874, del mismo modo: eran las primeras libres
+/// detrás de las de <c>ElSaldoAUnaFechaTests</c>.
 /// </para>
 /// <para>
 /// <b>El cerrojo de las instantáneas es de la empresa desde el 2.14</b> (ADR-0063 §5 y §6), y tiene
@@ -1161,6 +1163,59 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     }
 
     [Fact]
+    public async Task El_corte_de_cada_empresa_es_su_mes_y_el_primer_movimiento_solo_lo_lleva_la_que_no_tiene()
+    {
+        ElAlmacenDelCaso sinCorte =
+            await UnAlmacenAsync(873, "EXI-AX", 873, ubicaciones: 2, conElAnioPasado: true);
+        ElAlmacenDelCaso conCorte = await UnAlmacenAsync(874, "EXI-AY", 874);
+
+        DateOnly primero = new(Hoy.Year - 1, 5, 14);
+        DateOnly elQueToca = LasExistencias.MesDe(Hoy).AddMonths(-1);
+
+        // Tres fechas en tres meses, porque el almacén no admite una anterior a su último movimiento:
+        // una lectura que tomara el más reciente, o uno cualquiera, saldría con otra fecha.
+        await using (ElModuloDeInventario modulo = new(postgres, sinCorte.EmpresaId))
+        {
+            await ConfirmarAsync(modulo, sinCorte, primero, new Linea(1, 3m));
+            await ConfirmarAsync(modulo, sinCorte, new DateOnly(Hoy.Year - 1, 8, 2), new Linea(0, 4m));
+            await ConfirmarAsync(modulo, sinCorte, Hoy, new Linea(0, 1m));
+        }
+
+        await using (ElModuloDeInventario modulo = new(postgres, conCorte.EmpresaId))
+        {
+            await ConfirmarAsync(modulo, conCorte, Hoy, new Linea(0, 2m));
+        }
+
+        // La otra empresa tiene corte antes de leer: así hay un corte que no es de la del caso, y una
+        // empresa con movimientos cuya fecha no se tiene que leer.
+        (await AvanzarAsync(conCorte.EmpresaId, elQueToca)).ShouldNotBeNull();
+
+        IReadOnlyList<CorteDeUnaEmpresa> antes = await CortesAsync();
+
+        antes.Where(corte => corte.EmpresaId == sinCorte.EmpresaId).ShouldHaveSingleItem().ShouldBe(
+            new CorteDeUnaEmpresa(sinCorte.EmpresaId, null, primero),
+            "sin corte, la fecha del primer movimiento: es desde donde le faltan los meses");
+
+        antes.Where(corte => corte.EmpresaId == conCorte.EmpresaId).ShouldHaveSingleItem().ShouldBe(
+            new CorteDeUnaEmpresa(conCorte.EmpresaId, elQueToca, null),
+            "con corte, su mes, y la fecha no se busca");
+
+        antes.ShouldAllBe(
+            corte => corte.HastaElMes == null || corte.PrimerMovimiento == null,
+            "ninguna empresa con corte lleva la fecha de su primer movimiento");
+
+        antes.Select(corte => corte.EmpresaId).ShouldBe(
+            [.. antes.Select(corte => corte.EmpresaId).Distinct().Order()],
+            "una por empresa, en orden de identificador");
+
+        // Y AL AVANZAR, la del caso pasa a tener su corte, y deja de llevar la fecha.
+        (await AvanzarAsync(sinCorte.EmpresaId, elQueToca)).ShouldNotBeNull();
+
+        (await CortesAsync()).Where(corte => corte.EmpresaId == sinCorte.EmpresaId).ShouldHaveSingleItem()
+            .ShouldBe(new CorteDeUnaEmpresa(sinCorte.EmpresaId, elQueToca, null));
+    }
+
+    [Fact]
     public void El_anfitrion_de_los_casos_no_arranca_el_trabajo_mensual_y_la_purga_si()
     {
         // La purga es la pareja: con base, los trabajos de fondo arrancan, y el único que falta es
@@ -1260,6 +1315,20 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         return await ambito.ServiceProvider
             .GetRequiredService<IAvanceDelCorte>()
             .AvanzarAsync(empresaId, hastaElMes, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// El corte de cada empresa con existencias, por el contenedor del anfitrión y sin petición,
+    /// como lo lee el trabajo al acabar la vuelta.
+    /// </summary>
+    /// <returns>Lo que contesta el avance.</returns>
+    private async Task<IReadOnlyList<CorteDeUnaEmpresa>> CortesAsync()
+    {
+        using IServiceScope ambito = _api.Services.CreateScope();
+
+        return await ambito.ServiceProvider
+            .GetRequiredService<IAvanceDelCorte>()
+            .CortesAsync(CancellationToken.None);
     }
 
     /// <summary>El corte guardado de una empresa, leído por debajo del sistema.</summary>

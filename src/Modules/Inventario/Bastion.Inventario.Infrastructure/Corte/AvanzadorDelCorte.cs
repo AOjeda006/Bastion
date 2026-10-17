@@ -29,7 +29,7 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 /// </remarks>
 /// <param name="ambitos">Fábrica de ámbitos: el contexto es de ámbito y esto es un singleton.</param>
 /// <param name="reloj">De dónde sale «hoy», y con él el mes que toca.</param>
-/// <param name="metricas">Los tres contadores del trabajo.</param>
+/// <param name="metricas">Los contadores, la duración y el retraso del trabajo.</param>
 /// <param name="registro">Dónde se anota lo que hace cada vuelta.</param>
 internal sealed partial class AvanzadorDelCorte(
     IServiceScopeFactory ambitos,
@@ -52,6 +52,44 @@ internal sealed partial class AvanzadorDelCorte(
         var hoy = DateOnly.FromDateTime(ahora.UtcDateTime);
 
         return new DateOnly(hoy.Year, hoy.Month, 1).AddMonths(-1);
+    }
+
+    /// <summary>
+    /// Los meses que le faltan al corte más viejo para llegar al mes que toca (ADR-0064 §3).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Una empresa sin corte cuenta desde el mes anterior a su primer movimiento</b>, que es
+    /// donde estaría su corte si no le faltara ninguna instantánea: no es una empresa al día, es
+    /// una a la que el avance no ha conseguido avanzar nunca, y es la que más tiene que verse.
+    /// </para>
+    /// <para>
+    /// <b>Un corte por delante del mes que toca no resta</b>: lo pone quien recalcula a mano, y no
+    /// compensa el retraso de otra empresa.
+    /// </para>
+    /// </remarks>
+    /// <param name="cortes">El corte de cada empresa con existencias.</param>
+    /// <param name="mesQueToca">El primer día del mes al que tiene que llegar cada corte.</param>
+    /// <returns>Los meses del más retrasado, o cero si todos llegan.</returns>
+    internal static int MesesDeRetraso(IEnumerable<CorteDeUnaEmpresa> cortes, DateOnly mesQueToca)
+    {
+        int mayor = 0;
+
+        foreach (CorteDeUnaEmpresa corte in cortes)
+        {
+            DateOnly? desde = corte.HastaElMes
+                ?? (corte.PrimerMovimiento is { } primero
+                    ? new DateOnly(primero.Year, primero.Month, 1).AddMonths(-1)
+                    : null);
+
+            if (desde is { } mes)
+            {
+                mayor = Math.Max(
+                    mayor, ((mesQueToca.Year - mes.Year) * 12) + mesQueToca.Month - mes.Month);
+            }
+        }
+
+        return mayor;
     }
 
     /// <summary>Una vuelta: todas las empresas con existencias, una a una.</summary>
@@ -99,6 +137,18 @@ internal sealed partial class AvanzadorDelCorte(
         }
 
         Vuelta(registro, elMes, empresas.Count, avanzadas, fallidas);
+
+        // Después de la vuelta y no antes: lo que importa es dónde se han quedado los cortes, no
+        // dónde estaban. En su propio ámbito, como la lista.
+        using (IServiceScope ambito = ambitos.CreateScope())
+        {
+            IReadOnlyList<CorteDeUnaEmpresa> cortes = await ambito.ServiceProvider
+                .GetRequiredService<IAvanceDelCorte>()
+                .CortesAsync(cancelacion)
+                .ConfigureAwait(false);
+
+            metricas.AnotarMesesDeRetraso(MesesDeRetraso(cortes, mes));
+        }
     }
 
     /// <inheritdoc/>
@@ -151,6 +201,7 @@ internal sealed partial class AvanzadorDelCorte(
         }
 
         metricas.AnotarAvanzada();
+        metricas.AnotarDuracionDelAvance(hecho.DuracionDelAvance);
 
         int descuadres = hecho.Cuadre.Descuadres.Count;
 

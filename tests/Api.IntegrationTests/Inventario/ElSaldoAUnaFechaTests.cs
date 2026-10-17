@@ -45,7 +45,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <para>
 /// <b>Semillas.</b> La 866, la empresa del libro y su primer artículo; la 867, el segundo. La 868, la
 /// empresa de la instantánea. La 869, la empresa de la consulta y su primer artículo; la 870, el
-/// segundo. La 871 y la 872, las dos empresas que no se ven. Del 873 al 899 quedan libres, por
+/// segundo. La 871 y la 872, las dos empresas que no se ven. La 873 y la 874 son de
+/// <c>LasExistenciasSonLaSumaDelLibroTests</c> desde el 2.15, y del 875 al 899 quedan libres, por
 /// literal y por cálculo.
 /// </para>
 /// </remarks>

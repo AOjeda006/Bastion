@@ -487,7 +487,12 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // sin filtro, y lee solo eso: la lista de empresas. El avance de cada una recibe su
         // identificador y no abre ninguno, porque el recálculo y el cuadre comparan la empresa en
         // cada tabla que tocan.
-        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Corte/ElAvanceDelCorte.cs"] = 1,
+        //
+        // La segunda apertura del fichero es del 2.15 (ADR-0064 §3): al acabar la vuelta, el corte
+        // de cada empresa, para medir cuánto se ha quedado atrás el más viejo. Lee lo mismo que la
+        // lista —una fila por empresa— y, para la que no tiene corte, la fecha de su primer
+        // movimiento.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Corte/ElAvanceDelCorte.cs"] = 2,
     };
 
     // Lo mismo para el ámbito que ve lo bloqueado. Es una lista aparte y no una más en la de
