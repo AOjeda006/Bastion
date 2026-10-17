@@ -62,7 +62,7 @@ export function SelectorDeEmpresa(): React.JSX.Element {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       <label htmlFor="empresa-activa" className="text-sm text-neutral-500">
         {t('sesion.empresa')}
       </label>
@@ -73,7 +73,10 @@ export function SelectorDeEmpresa(): React.JSX.Element {
         onChange={(evento) => {
           cambio.mutate(evento.target.value);
         }}
-        className="rounded border border-neutral-300 px-2 py-1 text-sm"
+        // Un `<select>` mide lo que su opción más larga, y una razón social llega a 200 caracteres.
+        // `min-w-0` le deja estrecharse por debajo de eso, y lo lleva también cada caja que lo
+        // contiene hasta la fila de la cabecera: sin él en una sola, no cabe en un móvil.
+        className="min-w-0 rounded border border-neutral-300 px-2 py-1 text-sm"
       >
         {sesion.empresas.map((empresa) => (
           <option key={empresa.id} value={empresa.id}>

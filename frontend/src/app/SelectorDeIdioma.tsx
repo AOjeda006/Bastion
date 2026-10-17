@@ -24,7 +24,7 @@ export function SelectorDeIdioma(): React.JSX.Element {
   const { t, i18n } = useTranslation();
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       <label htmlFor="idioma" className="sr-only">
         {t('comun.idioma')}
       </label>
@@ -42,7 +42,7 @@ export function SelectorDeIdioma(): React.JSX.Element {
           // entonces cambia. Mientras llega, esta pantalla sigue entera en el idioma anterior.
           void cambiarIdioma(i18n, elegido);
         }}
-        className="rounded border border-neutral-300 px-2 py-1 text-sm"
+        className="min-w-0 rounded border border-neutral-300 px-2 py-1 text-sm"
       >
         {IDIOMAS.map((idioma) => (
           <option key={idioma} value={idioma}>

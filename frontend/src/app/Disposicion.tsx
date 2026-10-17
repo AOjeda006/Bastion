@@ -78,10 +78,19 @@ export function Disposicion(): React.JSX.Element {
 
       {sesion !== null && (
         <header className="border-b border-neutral-200 bg-white">
+          {/*
+            La cabecera cabe en 320 px sin desplazamiento horizontal ni controles aplastados (WCAG
+            1.4.10, *Reflow*). Lo decide, medido con playwright-cli en el 2.15, que envuelvan la
+            navegación y el bloque de la derecha, y que cada caja entre esta fila y el selector de
+            empresa —el bloque de la derecha, su envoltorio y el `<select>`— lleve `min-w-0`, para
+            poder estrecharse por debajo de la razón social más larga. Sin nada de eso, el documento
+            medía 815 px a 320 y a 375. Las cifras de cada pieza, en `LaCabeceraCabeEn320.test.tsx`,
+            que afirma las dos reglas.
+          */}
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-4 py-3">
             <span className="text-lg font-semibold tracking-tight">Bastion</span>
 
-            <nav aria-label={t('comun.navegacionPrincipal')} className="flex gap-1">
+            <nav aria-label={t('comun.navegacionPrincipal')} className="flex flex-wrap gap-1">
               {navegablesPara(sesion.permisos).map((ruta) => (
                 <NavLink
                   key={ruta.ruta}
@@ -100,7 +109,7 @@ export function Disposicion(): React.JSX.Element {
               ))}
             </nav>
 
-            <div className="ml-auto flex items-center gap-4">
+            <div className="ml-auto flex min-w-0 flex-wrap items-center gap-4">
               <SelectorDeIdioma />
               <SelectorDeEmpresa />
               <span className="text-sm text-neutral-500">{sesion.nombre}</span>
