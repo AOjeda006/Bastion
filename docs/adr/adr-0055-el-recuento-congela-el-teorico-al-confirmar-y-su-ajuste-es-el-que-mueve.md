@@ -3,12 +3,17 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql, react]
 aplica_a: [ddd, sql, inventario, concurrencia, api-rest]
 tags: [adr, recuento, teorico, huella, ajuste, anulacion, inverso, cerrojo, paginacion, adr-0043, adr-0046, adr-0047, adr-0048, adr-0053]
-revisado: 2026-10-06
+revisado: 2026-10-17
 ---
 
 # ADR-0055: El recuento congela el teórico al confirmar, y su ajuste es el que mueve
 
-- **Estado:** aceptado. **Enmendado por el ADR-0056 (§13, los permisos).**
+- **Estado:** aceptado. **Enmendado por el ADR-0056 (§13, los permisos).** **§1.1 y
+  *Consecuencias*, ampliados por dentro el 2026-10-17, por encargo del usuario**, en el commit
+  `docs(adr): el ADR-0055 escribe el segundo disparador del recuento cíclico`. Es la respuesta 3
+  del repaso de la fase 2: el recuento cíclico se queda como está, con sus dos disparadores
+  escritos aquí. El ADR solo tenía el primero; el segundo, la huella, lo anotó el PLAN el
+  2026-10-08. No cambia ninguna decisión: añade cuándo se vuelve a preguntar.
 - **Fecha:** 2026-10-06
 - **Sale del 2.12.** El encargo del 2026-10-05 fijó el recuento en nueve puntos (PLAN, *El 2.12: el
   recuento*). La puerta del 2.12 preguntó ocho cosas, y el usuario contestó el 2026-10-06: «todas
@@ -45,6 +50,14 @@ Va tal como la dio el usuario.
 
 1. **(R) El almacén entero.** El recuento por ubicación, el recuento cíclico, va a la pregunta del
    cierre de fase, con su disparador: el primer almacén que no se pueda contar de una vez.
+
+   > **Ampliado por dentro el 2026-10-17, por encargo del usuario** (respuesta 3 del repaso de la
+   > fase 2). La pregunta del cierre se contestó: se queda como está, y tiene **dos**
+   > disparadores. El segundo es la huella del punto 2, que es la del almacén entero. En uno con
+   > movimiento continuo, cualquier entrada o salida de una clave contada entre leer la ficha y
+   > confirmar da el `409` `recuento-teorico-cambiado`. Así que el recuento por ubicación vuelve a
+   > preguntarse con el primero de los dos que se dé: el primer almacén que no se pueda contar de
+   > una vez, o el primer recuento que no llegue a confirmarse por la huella.
 2. **(R) La unidad base.**
    - La consulta nueva va en el `Contracts` de Catálogo, por lotes, como `MarcasDeAsync`.
    - Lleva su caso: un artículo de otra empresa contesta lo mismo que uno que no existe.
@@ -267,7 +280,8 @@ líneas sin contar.
 - **El cuadre y la propiedad** ganan el recuento: tras confirmar, el físico de cada clave contada es
   lo contado, y el valor de la empresa solo lo mueven los ajustes, también los del recuento.
 - **Lo que se deja abierto, con su disparador:**
-  - el recuento cíclico: el primer almacén que no se pueda contar de una vez;
+  - el recuento cíclico: el primer almacén que no se pueda contar de una vez, o el primer recuento
+    que no llegue a confirmarse por la huella *(el segundo, ampliado por dentro el 2026-10-17)*;
   - el recuento a ciegas, sin enseñar el teórico a quien cuenta: la primera auditoría que lo pida;
   - las pantallas del ajuste y de la transferencia: el cierre de la fase 2.
 
