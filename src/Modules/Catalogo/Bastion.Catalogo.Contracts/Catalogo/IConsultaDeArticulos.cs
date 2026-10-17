@@ -30,10 +30,18 @@ namespace Bastion.Catalogo.Contracts.Catalogo;
 /// <b>Y el disparador del cuarto valor, con nombre.</b> <c>Articulo</c> no es bloqueable —no
 /// guarda ni un dato de una persona— y tampoco se retira; su propia cabecera dice <b>cuándo</b>
 /// tendrá motivo: «qué le pasa cuando deja de venderse es una pregunta de la fase 2, <b>cuando
-/// tenga existencias que sostener</b>. Hoy no tiene ninguna». Las existencias llegan en el ítem
-/// 2.7. Así que el valor que falta entra con <b>el primer ítem posterior al 2.7 que le dé una
-/// baja</b>, y hoy ninguno de los catorce se la da: eso está anotado como pregunta del cierre de
-/// la fase 2 en <c>docs/PLAN.md</c> → <i>Notas / riesgos</i>, y no se contesta aquí.
+/// tenga existencias que sostener</b>. Hoy no tiene ninguna». Las existencias llegaron en el
+/// ítem 2.7, y el usuario contestó en el repaso de la fase 2 que la baja <b>no va en esa fase</b>
+/// (respuesta 4, en <c>docs/PLAN.md</c> → <i>Decisiones tomadas</i>). Retirar un artículo es dejar
+/// de elegirlo para lo nuevo, y lo nuevo que lo elige llega después. Así que el valor que falta
+/// entra con <b>la primera línea de un documento de compra que elija un artículo</b>, en la
+/// fase 3: ahí es donde un artículo dado de baja tiene que dejar de ofrecerse.
+/// </para>
+/// <para>
+/// <b>Y la baja sigue contestando la unidad base</b>, en
+/// <see cref="IConsultaDeArticulos.UnidadesBaseDeAsync"/>. El recuento la pide para cada artículo
+/// con físico en el almacén, y si falta una, no se abre. Un artículo retirado con existencias que
+/// la perdiera dejaría sin recuento a su almacén, que es justo lo que hace falta para sacarlas.
 /// </para>
 /// <para>
 /// <see cref="NoExiste"/> es el valor cero a propósito, como en <c>EstadoDeMaestro</c> y en
