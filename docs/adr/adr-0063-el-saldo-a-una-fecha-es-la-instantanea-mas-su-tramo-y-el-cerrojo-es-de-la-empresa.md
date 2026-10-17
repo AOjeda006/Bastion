@@ -8,7 +8,11 @@ revisado: 2026-10-13
 
 # ADR-0063: El saldo a una fecha es la instantánea más su tramo, y el cerrojo de la instantánea es de la empresa
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0064 (§7).**
+  - El [ADR-0064](adr-0064-el-avance-del-corte-se-mide-contra-el-plazo-de-cada-orden.md) enmienda,
+    en el §7, el disparador y las métricas: el disparador es de 10 s o un fallo por plazo, porque la
+    orden se corta a los 30 s; y a los tres contadores se suman un histograma de lo que tarda cada
+    avance y un indicador del retraso del corte más viejo.
 - **Fecha:** 2026-10-13
 - **Sale del ítem 2.14** y de su puerta, que el usuario contestó el 2026-10-13 con la opción
   recomendada en las cuatro preguntas. Las preguntas y las respuestas están en `docs/PLAN.md`, en
@@ -169,6 +173,11 @@ usuario en la puerta, y el exclusivo al anotar lo ve el tercer caso, que es lo q
 prometía: dos confirmaciones de la misma empresa siguen sin esperarse.
 
 ### 7. El trabajo mensual
+
+> **Enmendado por el ADR-0064 (2026-10-17), en el último punto y en el último párrafo.** A los tres
+> contadores se suman un histograma de lo que tarda cada avance, en segundos, y un indicador de los
+> meses de retraso del corte más viejo. Y el disparador no es un minuto: la reposición es una sola
+> orden, que se corta a los 30 s. Es de 10 s, o un fallo por plazo.
 
 El primer proceso periódico de Inventario, con la forma de la purga de recibos:
 
