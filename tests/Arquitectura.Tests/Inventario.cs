@@ -567,7 +567,7 @@ internal static class Inventario
                 "escribe, y no publica ni las fechas ni el año del ejercicio.",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IDocumentosDeUnPeriodo"] =
-                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras catorce las implementa el módulo " +
+                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras quince las implementa el módulo " +
                 "que las publica y las llaman los demás; ésta la publica Organización y la " +
                 "implementa cada módulo con documentos. Contesta si en un intervalo de fechas " +
                 "queda algún borrador —la pregunta del cierre— o algún documento en el estado " +
@@ -605,6 +605,12 @@ internal static class Inventario
                 "están en `organizacion` y ninguna consulta cruza esquemas (regla 4). La ubicación " +
                 "hereda el estado de su almacén y el suyo propio solo puede empeorarlo (ADR-0037). " +
                 "No escribe.",
+
+            ["Bastion.Organizacion.Contracts.Unidades.IConsultaDeConversiones"] =
+                "LECTURA: el factor y la retirada de cada par de unidades, el par exacto y sin " +
+                "invertirlo ni encadenarlo (ADR-0023), para quien pase a unidad base lo que " +
+                "escribió la persona — el alta del ajuste (R3, ADR-0065 §1). No escribe, y no " +
+                "publica ni el identificador ni la versión de la conversión.",
 
             ["Bastion.Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida"] =
                 "LECTURA: en qué estado está una unidad de medida, para quien guarde su " +

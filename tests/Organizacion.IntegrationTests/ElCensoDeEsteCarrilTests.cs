@@ -88,6 +88,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaCargaDeSemillasTests.La_carga_deja_dentro_todo_lo_que_trae_el_fichero",
         "LaCargaDeSemillasTests.Los_tramos_del_IVA_general_entran_los_tres_y_solo_uno_queda_abierto",
 
+        // Del ítem 2.17: el puerto de las conversiones, que resuelve el factor del ajuste.
+        "LaConsultaDeConversionesTests.Contesta_el_par_exacto_con_su_factor_y_ni_su_inverso_ni_lo_que_no_esta",
+        "LaConsultaDeConversionesTests.La_conversion_retirada_se_contesta_con_su_marca_y_su_factor",
+        "LaConsultaDeConversionesTests.Sin_pares_no_contesta_nada",
+
         "LaMatrizDePuertoYEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta",
         "LaMatrizDePuertoYEstadoTests.Cada_cubrimiento_declarado_apunta_a_un_puerto_de_verdad",
         "LaMatrizDePuertoYEstadoTests.Cada_cubrimiento_vive_en_un_caso_que_corre_contra_la_base",

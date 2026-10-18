@@ -135,6 +135,10 @@ public static class ModuloDeOrganizacion
         servicios.AddScoped<IConsultaDeUnidadesDeMedida, ConsultaDeUnidadesDeMedida>();
         servicios.AddScoped<IConsultaDeDivisas, ConsultaDeDivisas>();
 
+        // El de las conversiones, del 2.17: el alta del ajuste resuelve con él el factor a unidad
+        // base, que hasta entonces mandaba el cliente (ADR-0065 §1).
+        servicios.AddScoped<IConsultaDeConversiones, ConsultaDeConversiones>();
+
         // Los dos del ítem 2.2, y tampoco tienen consumidor hasta el 2.3. A diferencia de los
         // tres de arriba, estos DOS reciben `IAccesoALoBloqueado`: un almacén bloqueado tiene que
         // poder contestar `SoloResuelveLoViejo`, y su fila no llega al puerto si el filtro de R16
