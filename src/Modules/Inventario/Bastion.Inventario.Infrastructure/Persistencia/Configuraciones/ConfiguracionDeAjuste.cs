@@ -144,7 +144,14 @@ internal sealed class ConfiguracionDeAjuste : IEntityTypeConfiguration<Ajuste>
             .HasFilter("recuento_id IS NOT NULL")
             .HasDatabaseName(IndiceDelRecuento);
 
-        ajuste.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeOperacion });
+        // EL BORRADO LÓGICO DEL BORRADOR (ADR-0065 §5): `timestamptz` y nula mientras siga vivo. Se
+        // audita porque es el único rastro de quién lo tiró y cuándo: el ajuste no cuenta ningún evento.
+        ajuste.Property(documento => documento.DescartadoEn).SeAudita();
+
+        // PARCIAL, por la convención del borrado lógico: toda consulta del contexto lleva el filtro
+        // `Descarte`, así que las filas tiradas no las pide nadie y no tienen por qué estar aquí.
+        ajuste.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeOperacion })
+            .HasFilter("descartado_en IS NULL");
 
         // LA ÚNICA MITAD DE LA R5 QUE PUEDE VIVIR EN ESTA TABLA: «correlativa» prohibe que dos
         // documentos de la misma serie lleven el mismo número, y eso sí se comprueba con las

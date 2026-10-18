@@ -147,6 +147,23 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     /// </remarks>
     public Guid? RecuentoId { get; private set; }
 
+    /// <summary>El instante en que se tiró el borrador, o <c>null</c> si sigue vivo (ADR-0065 §5).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es un borrado lógico y no un estado</b>, y la diferencia con el recuento es a propósito. El
+    /// recuento descartado sigue en su listado con su motivo, porque bloqueó un almacén mientras
+    /// estuvo en curso. Un borrador de ajuste no numeró, no movió nada y no bloqueó nada: se tira, y
+    /// lo que lo esconde es el filtro con nombre del contexto, en el repositorio. La fila se queda, y
+    /// la auditoría guarda quién la tiró y cuándo.
+    /// </para>
+    /// <para>
+    /// <b>Y el documento se defiende solo, aunque el filtro lo esconda</b>: uno descartado no admite
+    /// líneas ni se confirma. Un camino que se saltara el filtro no escribiría el libro desde un
+    /// documento que nadie ve.
+    /// </para>
+    /// </remarks>
+    public DateTimeOffset? DescartadoEn { get; private set; }
+
     /// <summary>Las líneas del documento, en el orden en que se escribieron.</summary>
     /// <remarks>
     /// <b>Por su número, y no por cómo estén en la colección</b>: EF Core la llena en el orden en
@@ -255,6 +272,8 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         string? codigoDeLote = null,
         string? numeroDeSerie = null)
     {
+        ExigirQueNoEsteDescartado("admite líneas nuevas");
+
         if (Estado != EstadoDeAjuste.Borrador)
         {
             throw new InvalidOperationException(
@@ -353,6 +372,8 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
     {
         ArgumentNullException.ThrowIfNull(valoracion);
         ArgumentNullException.ThrowIfNull(resueltos);
+
+        ExigirQueNoEsteDescartado("se confirma");
 
         if (_lineas.Count == 0)
         {
@@ -604,6 +625,37 @@ public sealed class Ajuste : DocumentoBase<EstadoDeAjuste>, IDeInquilino
         }
 
         Transitar(EstadoDeAjuste.Confirmado, EstadoDeAjuste.Anulado, evento);
+    }
+
+    /// <summary>Tira el borrador (ADR-0065 §5). Solo un borrador, y una sola vez.</summary>
+    /// <remarks>
+    /// <b>No transita y no cuenta nada</b>: el estado se queda en <see cref="EstadoDeAjuste.Borrador"/>
+    /// y no hay evento, porque no se movió nada que alguien de fuera necesite saber. Lo que cambia es
+    /// <see cref="DescartadoEn"/>, y con ella el documento deja de verse.
+    /// </remarks>
+    /// <param name="momento">Ahora.</param>
+    public void Descartar(DateTimeOffset momento)
+    {
+        ExigirQueNoEsteDescartado("se vuelve a descartar");
+
+        if (Estado != EstadoDeAjuste.Borrador)
+        {
+            throw new InvalidOperationException(
+                $"Un ajuste en estado «{Estado}» no se descarta: ya escribió el libro, y se corrige " +
+                "con su inverso (R2).");
+        }
+
+        DescartadoEn = momento;
+    }
+
+    private void ExigirQueNoEsteDescartado(string queNoHace)
+    {
+        if (DescartadoEn is { } descartadoEn)
+        {
+            throw new InvalidOperationException(
+                $"El ajuste {Id} ya se descartó el {descartadoEn:O}, y un borrador descartado no " +
+                $"{queNoHace} (ADR-0065 §5).");
+        }
     }
 
     private List<CodigoDeUnArticulo> Nombrados(Func<LineaDeAjuste, string?> codigoDe) =>

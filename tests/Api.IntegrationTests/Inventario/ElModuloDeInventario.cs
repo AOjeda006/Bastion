@@ -179,6 +179,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             unidadDeTrabajo,
             elReloj);
 
+        Descarte = new DescartarAjuste(ajustes, new VersionesDeInventario(_inventario), unidadDeTrabajo, elReloj);
+
         Lectura = new MovimientosDelDocumento(ajustes, almacenes);
 
         AltaDeTransferencia = new AbrirTransferencia(
@@ -275,6 +277,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal ConfirmarAjuste Confirmacion { get; }
 
     internal AnularAjuste Anulacion { get; }
+
+    internal DescartarAjuste Descarte { get; }
 
     internal MovimientosDelDocumento Lectura { get; }
 

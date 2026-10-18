@@ -184,6 +184,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElAltaDelRecuentoTests.Una_clave_que_solo_tiene_transito_no_se_precarga",
         "ElAltaDelRecuentoTests.Una_linea_se_lee_con_su_propia_version",
 
+        // Del ítem 2.17 (ADR-0065 §5): el borrador descartado, que el filtro esconde de todo.
+        "ElBorradorDescartadoTests.Con_la_version_de_antes_de_confirmarlo_es_412_y_con_la_de_ahora_409",
+        "ElBorradorDescartadoTests.Descartar_dos_veces_es_404_y_la_marca_es_la_primera",
+        "ElBorradorDescartadoTests.El_descartado_no_lo_encuentran_ni_la_ficha_ni_confirmar_ni_anular_ni_el_cierre",
+
         "ElCensoDeEsteCarrilTests.Los_casos_de_este_carril_son_los_declarados",
 
         "ElCierreLePreguntaALosModulosTests.Encoger_el_ejercicio_por_encima_de_un_documento_es_409_y_por_el_otro_lado_no",

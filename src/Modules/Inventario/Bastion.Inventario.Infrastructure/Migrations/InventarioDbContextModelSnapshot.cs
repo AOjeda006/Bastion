@@ -291,6 +291,11 @@ namespace Bastion.Inventario.Infrastructure.Migrations
                         .HasColumnName("creado_en")
                         .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
+                    b.Property<DateTimeOffset?>("DescartadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("descartado_en")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
                     b.Property<string>("Divisa")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -363,7 +368,8 @@ namespace Bastion.Inventario.Infrastructure.Migrations
                         .HasFilter("recuento_id IS NOT NULL");
 
                     b.HasIndex("EmpresaId", "FechaDeOperacion")
-                        .HasDatabaseName("ix_ajustes_empresa_id_fecha_de_operacion");
+                        .HasDatabaseName("ix_ajustes_empresa_id_fecha_de_operacion")
+                        .HasFilter("descartado_en IS NULL");
 
                     b.HasIndex("SerieId", "Numero")
                         .IsUnique()

@@ -148,6 +148,12 @@ public sealed class InventarioDbContext(
         modelBuilder.Entity<Ajuste>().HasQueryFilter(
             "Inquilinato", ajuste => EmpresaDelFiltro == null || ajuste.EmpresaId == EmpresaDelFiltro);
 
+        // EL BORRADOR TIRADO NO SE VE (ADR-0065 §5), y lo esconde el repositorio, no la pantalla: ni
+        // el listado ni la ficha lo traen, confirmar y anular no lo encuentran, y la pregunta del
+        // cierre no lo cuenta, porque un borrador tirado no tiene por qué parar un cierre. La fila se
+        // queda, con su marca, y quien necesite verla quita este filtro por su nombre.
+        modelBuilder.Entity<Ajuste>().HasQueryFilter("Descarte", ajuste => ajuste.DescartadoEn == null);
+
         modelBuilder.Entity<Transferencia>().HasQueryFilter(
             "Inquilinato",
             transferencia => EmpresaDelFiltro == null || transferencia.EmpresaId == EmpresaDelFiltro);
