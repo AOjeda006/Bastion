@@ -1,3 +1,5 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
@@ -7,13 +9,19 @@ namespace Bastion.Inventario.Application.Ajustes;
 
 /// <summary>Los ajustes y las filas del libro que escriben, que son dos cosas distintas.</summary>
 /// <remarks>
+/// <para>
 /// <b>Un solo repositorio para dos agregados, y a propósito.</b> Confirmar escribe la cabecera del
 /// documento y sus filas del libro en la <b>misma transacción</b> —es la mitad de la R12 que este
 /// ítem dobla a sabiendas, con su motivo en <c>docs/PLAN.md</c>—, así que separarlos en dos
 /// repositorios con dos unidades de trabajo sugeriría que se pueden guardar por separado, que es
 /// exactamente lo que no puede pasar.
+/// </para>
+/// <para>
+/// <b>El listado ordena por lo que dice <see cref="IOrdenaPor.CamposOrdenables"/></b>, como el del
+/// recuento, y lo valida el borde antes de llegar aquí (ADR-0065 §6).
+/// </para>
 /// </remarks>
-public interface IRepositorioDeAjustes
+public interface IRepositorioDeAjustes : IOrdenaPor
 {
     /// <summary>Trae un ajuste con sus líneas.</summary>
     /// <param name="id">Identificador del ajuste.</param>
@@ -24,6 +32,18 @@ public interface IRepositorioDeAjustes
     /// <summary>Apunta un ajuste nuevo.</summary>
     /// <param name="ajuste">El documento.</param>
     void Agregar(Ajuste ajuste);
+
+    /// <summary>Una página de ajustes, sin sus líneas.</summary>
+    /// <param name="paginacion">Qué página, de qué tamaño, con qué orden y qué filtro.</param>
+    /// <param name="estado">El estado al que se acota, o <see langword="null"/>.</param>
+    /// <param name="almacenId">El almacén al que se acota, o <see langword="null"/>.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>La página, con los ajustes sin rastrear.</returns>
+    Task<PaginaDe<Ajuste>> ListarAsync(
+        Paginacion paginacion,
+        EstadoDeAjuste? estado,
+        Guid? almacenId,
+        CancellationToken cancelacion);
 
     /// <summary>
     /// Bloquea la valoración de cada clave, en orden de clave y creándola si no existe, y la lee ya

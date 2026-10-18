@@ -4799,13 +4799,445 @@
         ]
       }
     },
+    "/api/v1/inventario/ajustes": {
+      "get": {
+        "tags": [
+          "Ajustes"
+        ],
+        "summary": "Devuelve una página de ajustes, sin sus líneas.",
+        "description": "Va por la fecha de operación, de la última a la primera, y se ordena también por el número. Un\nborrador descartado no sale (ADR-0065 §5).",
+        "operationId": "Ajustes_Listar",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "pattern": "^(Borrador|Confirmado|Anulado)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "almacen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 10737419,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeAjusteResumenDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeAjusteResumenDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeAjusteResumenDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Ajustes"
+        ],
+        "summary": "Abre un ajuste en borrador, con sus líneas.",
+        "description": "El factor de cada línea lo pone el servidor (ADR-0065 §2): 1 si la unidad es la base\n  del artículo, y si no, el de su conversión. Sin conversión, 422ajuste-sin-conversion; con una conversión retirada, 409ajuste-conversion-retirada; los dos, con la línea y las dos unidades en actual.\n  Cada rechazo de una línea dice cuál es: en errors, con la ruta del campo, si es un\n  400, y en actual si es un 409 o un 422 (§3).\nLa Idempotency-Key es OBLIGATORIA (§6), y no porque el alta numere, que no\n  numera: el alta del recuento la admite sin exigirla porque el índice de uno en curso por almacén\n  para el reintento, y aquí no hay nada que lo pare. Un reintento sin clave dejaría dos borradores\n  iguales, y los dos se podrían confirmar. Sin cabecera son 428.\nLa respuesta no lleva ETag: con la clave obligatoria, la repetición devolvería la\n  versión de entonces (ADR-0057 §1). La versión se lee con la ficha. Como mucho doscientas\n  líneas; una más es un 400.",
+        "operationId": "Ajustes_Abrir",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirAjusteDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirAjusteDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirAjusteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AjusteDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AjusteDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AjusteDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/ajustes/{id}": {
+      "get": {
+        "tags": [
+          "Ajustes"
+        ],
+        "summary": "Devuelve la ficha de un ajuste, con todas sus líneas y su `ETag`.",
+        "description": "Cada línea lleva el factor y la cantidad en unidad base, que pone el servidor, y su valor\ncuando ya se ha confirmado (ADR-0065 §8). La versión es la que pide el descarte.",
+        "operationId": "Ajustes_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del ajuste.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaDeAjusteDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaDeAjusteDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaDeAjusteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Ajustes"
+        ],
+        "summary": "Descarta un ajuste en borrador: deja de verse, y no para el cierre del ejercicio.",
+        "description": "Es un borrado lógico, y por eso un DELETE (ADR-0065 §5): el borrador no numeró,\n  no movió nada y no bloqueó nada, así que tirarlo no deja nada que contar. La fila se queda\n  con la marca, y la auditoría dice quién y cuándo.\nCon If-Match, y la versión va antes que el estado (ADR-0057 §3): con una versión\n  vieja es 412, aunque el ajuste ya no esté en borrador; con la de ahora, un confirmado\n  es 409ajuste-no-esta-en-borrador. Sin Idempotency-Key: repetirlo da\n  404, que es lo que es.",
+        "operationId": "Ajustes_Descartar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del ajuste.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/ajustes/{id}/confirmacion": {
       "post": {
         "tags": [
           "Ajustes"
         ],
         "summary": "Confirma un ajuste en borrador: le da su número y mueve el libro.",
-        "description": "Es un POST sobre un sub-recurso y no un PUT sobre el ajuste, porque lo que se pide no\n  es dejar el documento como dice el cuerpo: es que ocurra algo —se toma un correlativo, se\n  escriben los movimientos— y eso no tiene cuerpo que mandar. La confirmación es un hecho que\n  se crea, no un campo que se fija.\nLa Idempotency-Key es OBLIGATORIA aquí, que fue la primera acción de toda la API\n  que la exigió. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el\n  número y el documento se va con ella: el UPDATE del contador se confirmaría por su\n  cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es\n  exactamente lo que la R5 prohíbe. Sin cabecera son 428.\nY no exige If-Match, ni le haría falta: lo que protege de confirmar dos veces\n  no es una versión, es la máquina de estados —el segundo intento se encuentra un ajuste que\n  ya no está en borrador y sale 409—, y lo que protege del reintento del mismo cliente\n  es la clave de arriba, que le devuelve la respuesta de la primera vez con su número dentro.",
+        "description": "Es un POST sobre un sub-recurso y no un PUT sobre el ajuste, porque lo que se pide no\n  es dejar el documento como dice el cuerpo: es que ocurra algo —se toma un correlativo, se\n  escriben los movimientos— y eso no tiene cuerpo que mandar. La confirmación es un hecho que\n  se crea, no un campo que se fija.\nLa Idempotency-Key es OBLIGATORIA aquí, que fue la primera acción de toda la API\n  que la exigió. Sin ella el filtro se aparta sin abrir transacción, y la atomicidad entre el\n  número y el documento se va con ella: el UPDATE del contador se confirmaría por su\n  cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es\n  exactamente lo que la R5 prohíbe. Sin cabecera son 428.\nY no exige If-Match (ADR-0065 §7): lo que la ficha enseña de un borrador solo\n  cambia por una transición de estado, porque las líneas no se modifican, y esa la mira la\n  máquina de estados —quien confirma lo que otro acaba de confirmar recibe el 409, y si ya\n  lo habían descartado, el 404—. Contra la carrera está el testigo de la fila, con su\n  412, y del reintento del mismo cliente protege la clave de arriba, que le devuelve la\n  respuesta de la primera vez con su número dentro. El día que una línea se pueda modificar,\n  confirmar tendrá que haberla visto, y pedirá los dos mecanismos, como la del recuento.",
         "operationId": "Ajustes_Confirmar",
         "parameters": [
           {
@@ -4932,7 +5364,7 @@
           "Ajustes"
         ],
         "summary": "Anula un ajuste confirmado: crea el inverso que lo compensa, lo numera y lo confirma.",
-        "description": "Un POST sobre un sub-recurso, no un DELETE, y la diferencia es la regla entera: un\n  DELETE promete que el recurso deja de estar, y aquí no deja de estar nada. El\n  original se queda, sus filas del libro se quedan —es de solo añadido (R3)— y lo que se\n  crea es un documento nuevo. La anulación es un hecho que se añade, no una fila que se\n  quita, y el verbo tiene que decirlo.\nLa Idempotency-Key es OBLIGATORIA, y con esta fueron dos las acciones de\n  toda la API que la exigían; la lista entera, con el motivo de cada una, la lleva\n  TodaEscrituraDiceComoSeProtegeTests. El criterio no se amplía para que quepa: es el\n  mismo de la confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el\n  inverso no podría tomar su número sin dejar un hueco en la serie, que es lo que la R5\n  prohíbe—. Sin cabecera son 428, y el reintento con la misma clave devuelve el par de\n  la primera vez en vez de anular dos veces.\nY no exige If-Match, por lo mismo que la confirmación: de anular dos veces\n  seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya\n  no está confirmado y sale 409—, y de anular dos veces a la vez protegen dos\n  cosas que dicen lo mismo: el índice único de anula_a_id, que es el que llega primero,\n  y detrás el testigo de concurrencia de la fila (R11). Los dos salen por 412 —el\n  segundo con la versión de ahora dentro— y dejan sin efecto la transacción entera de quien\n  pierde: ni inverso, ni número gastado.",
+        "description": "Un POST sobre un sub-recurso, no un DELETE, y la diferencia es la regla entera: un\n  DELETE promete que el recurso deja de estar, y aquí no deja de estar nada. El\n  original se queda, sus filas del libro se quedan —es de solo añadido (R3)— y lo que se\n  crea es un documento nuevo. La anulación es un hecho que se añade, no una fila que se\n  quita, y el verbo tiene que decirlo.\nLa Idempotency-Key es OBLIGATORIA, y con esta fueron dos las acciones de\n  toda la API que la exigían; la lista entera, con el motivo de cada una, la lleva\n  TodaEscrituraDiceComoSeProtegeTests. El criterio no se amplía para que quepa: es el\n  mismo de la confirmación —sin la cabecera el filtro se aparta sin abrir transacción, y el\n  inverso no podría tomar su número sin dejar un hueco en la serie, que es lo que la R5\n  prohíbe—. Sin cabecera son 428, y el reintento con la misma clave devuelve el par de\n  la primera vez en vez de anular dos veces.\nY no exige If-Match, por lo mismo que la confirmación (ADR-0065 §7): de anular\n  dos veces seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que\n  ya no está confirmado y sale 409—, y de anular dos veces a la vez protegen dos\n  cosas que dicen lo mismo: el índice único de anula_a_id, que es el que llega primero,\n  y detrás el testigo de concurrencia de la fila (R11). Los dos salen por 412 —el\n  segundo con la versión de ahora dentro— y dejan sin efecto la transacción entera de quien\n  pierde: ni inverso, ni número gastado.",
         "operationId": "Ajustes_Anular",
         "parameters": [
           {
@@ -15644,6 +16076,45 @@
   },
   "components": {
     "schemas": {
+      "AbrirAjusteDto": {
+        "required": [
+          "serieId",
+          "almacenId",
+          "fechaDeOperacion",
+          "motivo",
+          "lineas"
+        ],
+        "type": "object",
+        "properties": {
+          "serieId": {
+            "type": "string",
+            "description": "Serie que lo numerará al confirmarlo (R5).",
+            "format": "uuid"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "Almacén contra el que se ajusta.",
+            "format": "uuid"
+          },
+          "fechaDeOperacion": {
+            "type": "string",
+            "description": "Día al que se imputa (R14: es un día, no un instante).",
+            "format": "date"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se ajusta."
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaDeAjusteDto"
+            },
+            "description": "Qué se mueve: de una a doscientas líneas."
+          }
+        },
+        "description": "Lo que hace falta para abrir un ajuste en borrador."
+      },
       "AbrirRecuentoDto": {
         "required": [
           "serieId",
@@ -15804,6 +16275,53 @@
           }
         },
         "description": "Un ajuste, como se enseña."
+      },
+      "AjusteResumenDto": {
+        "required": [
+          "id",
+          "numero",
+          "almacenId",
+          "fechaDeOperacion",
+          "estado",
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "El correlativo, o `null` si todavía es un borrador.",
+            "format": "int64"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "Almacén contra el que se ajusta.",
+            "format": "uuid"
+          },
+          "fechaDeOperacion": {
+            "type": "string",
+            "description": "Día al que se imputa.",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "description": "En qué punto de su vida está."
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se ajusta."
+          }
+        },
+        "description": "Un ajuste, como sale en el listado: sin líneas."
       },
       "AlmacenDto": {
         "required": [
@@ -17651,6 +18169,90 @@
         },
         "description": "Una empresa, tal como sale de la API."
       },
+      "FichaDeAjusteDto": {
+        "required": [
+          "id",
+          "serieId",
+          "numero",
+          "almacenId",
+          "fechaDeOperacion",
+          "motivo",
+          "estado",
+          "divisa",
+          "anulaAId",
+          "recuentoId",
+          "lineas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "serieId": {
+            "type": "string",
+            "description": "Serie que lo numera (R5).",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "El correlativo, o `null` si todavía es un borrador.",
+            "format": "int64"
+          },
+          "almacenId": {
+            "type": "string",
+            "description": "Almacén contra el que se ajusta.",
+            "format": "uuid"
+          },
+          "fechaDeOperacion": {
+            "type": "string",
+            "description": "Día al que se imputa.",
+            "format": "date"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Por qué se ajusta."
+          },
+          "estado": {
+            "type": "string",
+            "description": "En qué punto de su vida está."
+          },
+          "divisa": {
+            "type": "string",
+            "description": "La de todos sus importes: la divisa base de la empresa al abrirlo."
+          },
+          "anulaAId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El ajuste que este compensa, o `null` si no es un inverso.",
+            "format": "uuid"
+          },
+          "recuentoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El recuento cuya diferencia mueve, o `null` si no viene de uno.",
+            "format": "uuid"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaDeFichaDeAjusteDto"
+            },
+            "description": "Sus líneas, en su orden."
+          }
+        },
+        "description": "Un ajuste, como se enseña en su ficha: la cabecera y todas sus líneas (ADR-0065 §8)."
+      },
       "IdentificacionDeAltaDto": {
         "required": [
           "pais",
@@ -17900,6 +18502,171 @@
           }
         },
         "description": "El límite de crédito de un tercero, tal como sale de la API."
+      },
+      "LineaDeAjusteDto": {
+        "required": [
+          "ubicacionId",
+          "articuloId",
+          "cantidadIntroducida",
+          "unidadIntroducidaId",
+          "costeUnitario"
+        ],
+        "type": "object",
+        "properties": {
+          "ubicacionId": {
+            "type": "string",
+            "description": "Hueco del almacén.",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "Artículo que se mueve.",
+            "format": "uuid"
+          },
+          "cantidadIntroducida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad con signo, tal como se escribe.",
+            "format": "double"
+          },
+          "unidadIntroducidaId": {
+            "type": "string",
+            "description": "Unidad en la que se escribe: la base del artículo, o una que tenga conversión a ella.",
+            "format": "uuid"
+          },
+          "costeUnitario": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Coste de una unidad base, en la divisa base de la empresa, o nada. Solo lo lleva una línea que\nsube, y nunca negativo: si no, `ajuste-coste-no-valido`. Sin él, la entrada se valora al\nprecio medio de su artículo en el almacén; y sin precio medio, porque no hay existencias,\nconfirmar contesta `ajuste-entrada-sin-coste-ni-precio-medio`.",
+            "format": "double"
+          },
+          "codigoDeLote": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El lote, si el artículo va por lote: de 1 a 20 caracteres del conjunto 82 de GS1, con la caja\nque tenga. Los espacios de los extremos se recortan. Si no, `ajuste-lote-no-valido`."
+          },
+          "numeroDeSerie": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El número de serie, si el artículo va por serie, con la misma forma que el lote. La línea mueve\nentonces una unidad base, y el número no se repite en el documento."
+          }
+        },
+        "description": "Una línea de la petición de alta."
+      },
+      "LineaDeFichaDeAjusteDto": {
+        "required": [
+          "numero",
+          "ubicacionId",
+          "articuloId",
+          "cantidadIntroducida",
+          "unidadIntroducidaId",
+          "factorAUnidadBase",
+          "cantidadEnUnidadBase",
+          "costeUnitario",
+          "codigoDeLote",
+          "numeroDeSerie",
+          "valor"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Su posición en el documento, desde uno.",
+            "format": "int32"
+          },
+          "ubicacionId": {
+            "type": "string",
+            "description": "Hueco del almacén.",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "Artículo que se mueve.",
+            "format": "uuid"
+          },
+          "cantidadIntroducida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad con signo, tal como se escribió.",
+            "format": "double"
+          },
+          "unidadIntroducidaId": {
+            "type": "string",
+            "description": "Unidad en la que se escribió.",
+            "format": "uuid"
+          },
+          "factorAUnidadBase": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cuántas unidades base hay en una de las introducidas.",
+            "format": "double"
+          },
+          "cantidadEnUnidadBase": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad con signo, en la unidad en la que se suma.",
+            "format": "double"
+          },
+          "costeUnitario": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Coste de una unidad base, o nada.",
+            "format": "double"
+          },
+          "codigoDeLote": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El lote, si el artículo va por lote."
+          },
+          "numeroDeSerie": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El número de serie, si el artículo va por serie."
+          },
+          "valor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Lo que la línea sumó a la valoración, o lo que le restó, o `null` mientras es borrador.",
+            "format": "double"
+          }
+        },
+        "description": "Una línea de la ficha del ajuste."
       },
       "LineaDeRecuentoDto": {
         "required": [
@@ -18591,6 +19358,52 @@
           "repetida-en-el-fichero"
         ],
         "description": "Por qué se rechaza una fila, o una columna de una fila."
+      },
+      "PaginaDeAjusteResumenDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AjusteResumenDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
       "PaginaDeAlmacenDto": {
         "required": [

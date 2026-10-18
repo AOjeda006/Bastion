@@ -471,6 +471,16 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaFormaDeLosCodigosDeLaLineaTests.Un_numero_de_serie_que_no_es_de_gs1_no_abre_el_borrador",
         "LaFormaDeLosCodigosDeLaLineaTests.Una_serie_que_mueve_dos_unidades_no_abre_el_borrador",
 
+        // Del ítem 2.17 (ADR-0065 §6): la superficie del ajuste por HTTP, lo que lee su pantalla.
+        "LaSuperficieDelAjusteTests.Doscientas_lineas_abren_y_una_mas_es_400_con_el_motivo_del_tope",
+        "LaSuperficieDelAjusteTests.El_alta_es_201_sin_etag_y_la_ficha_dice_el_factor_y_la_cantidad_base_de_cada_linea",
+        "LaSuperficieDelAjusteTests.El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404",
+        "LaSuperficieDelAjusteTests.La_ficha_del_ajuste_de_un_recuento_dice_de_que_recuento_es",
+        "LaSuperficieDelAjusteTests.La_lista_va_de_la_ultima_fecha_a_la_primera_se_acota_y_no_trae_el_descartado",
+        "LaSuperficieDelAjusteTests.Otra_empresa_no_ve_el_ajuste_ni_lo_descarta",
+        "LaSuperficieDelAjusteTests.Sin_idempotency_key_el_alta_es_428_y_con_la_misma_clave_no_abre_otro",
+        "LaSuperficieDelAjusteTests.Una_linea_sin_conversion_es_422_con_la_linea_y_las_dos_unidades_en_actual",
+
         // Del ítem 1.11 (ADR-0034 §5): los ficheros que no son de Excel, con los cuatro criterios del
         // sondeo —contesta, no cuenta nada de dentro, no devuelve lo recibido y sigue atendiendo—.
         "LaImportacionAguantaFicherosHostilesTests.Ningun_fichero_hostil_tumba_la_importacion_ni_cuenta_nada_ni_devuelve_lo_que_le_mandaron",

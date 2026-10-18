@@ -697,6 +697,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/ajustes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve una página de ajustes, sin sus líneas.
+         * @description Va por la fecha de operación, de la última a la primera, y se ordena también por el número. Un
+         *     borrador descartado no sale (ADR-0065 §5).
+         */
+        get: operations["Ajustes_Listar"];
+        put?: never;
+        /**
+         * Abre un ajuste en borrador, con sus líneas.
+         * @description El factor de cada línea lo pone el servidor (ADR-0065 §2): 1 si la unidad es la base
+         *       del artículo, y si no, el de su conversión. Sin conversión, 422ajuste-sin-conversion; con una conversión retirada, 409ajuste-conversion-retirada; los dos, con la línea y las dos unidades en actual.
+         *       Cada rechazo de una línea dice cuál es: en errors, con la ruta del campo, si es un
+         *       400, y en actual si es un 409 o un 422 (§3).
+         *     La Idempotency-Key es OBLIGATORIA (§6), y no porque el alta numere, que no
+         *       numera: el alta del recuento la admite sin exigirla porque el índice de uno en curso por almacén
+         *       para el reintento, y aquí no hay nada que lo pare. Un reintento sin clave dejaría dos borradores
+         *       iguales, y los dos se podrían confirmar. Sin cabecera son 428.
+         *     La respuesta no lleva ETag: con la clave obligatoria, la repetición devolvería la
+         *       versión de entonces (ADR-0057 §1). La versión se lee con la ficha. Como mucho doscientas
+         *       líneas; una más es un 400.
+         */
+        post: operations["Ajustes_Abrir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/ajustes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve la ficha de un ajuste, con todas sus líneas y su `ETag`.
+         * @description Cada línea lleva el factor y la cantidad en unidad base, que pone el servidor, y su valor
+         *     cuando ya se ha confirmado (ADR-0065 §8). La versión es la que pide el descarte.
+         */
+        get: operations["Ajustes_Obtener"];
+        put?: never;
+        post?: never;
+        /**
+         * Descarta un ajuste en borrador: deja de verse, y no para el cierre del ejercicio.
+         * @description Es un borrado lógico, y por eso un DELETE (ADR-0065 §5): el borrador no numeró,
+         *       no movió nada y no bloqueó nada, así que tirarlo no deja nada que contar. La fila se queda
+         *       con la marca, y la auditoría dice quién y cuándo.
+         *     Con If-Match, y la versión va antes que el estado (ADR-0057 §3): con una versión
+         *       vieja es 412, aunque el ajuste ya no esté en borrador; con la de ahora, un confirmado
+         *       es 409ajuste-no-esta-en-borrador. Sin Idempotency-Key: repetirlo da
+         *       404, que es lo que es.
+         */
+        delete: operations["Ajustes_Descartar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/ajustes/{id}/confirmacion": {
         parameters: {
             query?: never;
@@ -717,10 +783,13 @@ export interface paths {
          *       número y el documento se va con ella: el UPDATE del contador se confirmaría por su
          *       cuenta y un fallo posterior dejaría el número gastado, o sea un hueco en la serie, que es
          *       exactamente lo que la R5 prohíbe. Sin cabecera son 428.
-         *     Y no exige If-Match, ni le haría falta: lo que protege de confirmar dos veces
-         *       no es una versión, es la máquina de estados —el segundo intento se encuentra un ajuste que
-         *       ya no está en borrador y sale 409—, y lo que protege del reintento del mismo cliente
-         *       es la clave de arriba, que le devuelve la respuesta de la primera vez con su número dentro.
+         *     Y no exige If-Match (ADR-0065 §7): lo que la ficha enseña de un borrador solo
+         *       cambia por una transición de estado, porque las líneas no se modifican, y esa la mira la
+         *       máquina de estados —quien confirma lo que otro acaba de confirmar recibe el 409, y si ya
+         *       lo habían descartado, el 404—. Contra la carrera está el testigo de la fila, con su
+         *       412, y del reintento del mismo cliente protege la clave de arriba, que le devuelve la
+         *       respuesta de la primera vez con su número dentro. El día que una línea se pueda modificar,
+         *       confirmar tendrá que haberla visto, y pedirá los dos mecanismos, como la del recuento.
          */
         post: operations["Ajustes_Confirmar"];
         delete?: never;
@@ -752,9 +821,9 @@ export interface paths {
          *       inverso no podría tomar su número sin dejar un hueco en la serie, que es lo que la R5
          *       prohíbe—. Sin cabecera son 428, y el reintento con la misma clave devuelve el par de
          *       la primera vez en vez de anular dos veces.
-         *     Y no exige If-Match, por lo mismo que la confirmación: de anular dos veces
-         *       seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que ya
-         *       no está confirmado y sale 409—, y de anular dos veces a la vez protegen dos
+         *     Y no exige If-Match, por lo mismo que la confirmación (ADR-0065 §7): de anular
+         *       dos veces seguidas protege la máquina de estados —el segundo intento se encuentra un ajuste que
+         *       ya no está confirmado y sale 409—, y de anular dos veces a la vez protegen dos
          *       cosas que dicen lo mismo: el índice único de anula_a_id, que es el que llega primero,
          *       y detrás el testigo de concurrencia de la fila (R11). Los dos salen por 412 —el
          *       segundo con la versión de ahora dentro— y dejan sin efecto la transacción entera de quien
@@ -2150,6 +2219,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Lo que hace falta para abrir un ajuste en borrador. */
+        AbrirAjusteDto: {
+            /**
+             * Format: uuid
+             * @description Serie que lo numerará al confirmarlo (R5).
+             */
+            serieId: string;
+            /**
+             * Format: uuid
+             * @description Almacén contra el que se ajusta.
+             */
+            almacenId: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa (R14: es un día, no un instante).
+             */
+            fechaDeOperacion: string;
+            /** @description Por qué se ajusta. */
+            motivo: string;
+            /** @description Qué se mueve: de una a doscientas líneas. */
+            lineas: components["schemas"]["LineaDeAjusteDto"][];
+        };
         /** @description Lo que hace falta para abrir un recuento de un almacén. */
         AbrirRecuentoDto: {
             /**
@@ -2236,6 +2327,33 @@ export interface components {
             anulaAId: null | string;
             /** @description La de todos sus importes: la divisa base de la empresa al abrirlo. */
             divisa: string;
+        };
+        /** @description Un ajuste, como sale en el listado: sin líneas. */
+        AjusteResumenDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: int64
+             * @description El correlativo, o `null` si todavía es un borrador.
+             */
+            numero: null | number | string;
+            /**
+             * Format: uuid
+             * @description Almacén contra el que se ajusta.
+             */
+            almacenId: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa.
+             */
+            fechaDeOperacion: string;
+            /** @description En qué punto de su vida está. */
+            estado: string;
+            /** @description Por qué se ajusta. */
+            motivo: string;
         };
         /** @description Un almacén, tal como sale de la API. */
         AlmacenDto: {
@@ -3090,6 +3208,52 @@ export interface components {
             /** @description Régimen de IVA, como texto. */
             regimenDeIva: string;
         };
+        /** @description Un ajuste, como se enseña en su ficha: la cabecera y todas sus líneas (ADR-0065 §8). */
+        FichaDeAjusteDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Serie que lo numera (R5).
+             */
+            serieId: string;
+            /**
+             * Format: int64
+             * @description El correlativo, o `null` si todavía es un borrador.
+             */
+            numero: null | number | string;
+            /**
+             * Format: uuid
+             * @description Almacén contra el que se ajusta.
+             */
+            almacenId: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa.
+             */
+            fechaDeOperacion: string;
+            /** @description Por qué se ajusta. */
+            motivo: string;
+            /** @description En qué punto de su vida está. */
+            estado: string;
+            /** @description La de todos sus importes: la divisa base de la empresa al abrirlo. */
+            divisa: string;
+            /**
+             * Format: uuid
+             * @description El ajuste que este compensa, o `null` si no es un inverso.
+             */
+            anulaAId: null | string;
+            /**
+             * Format: uuid
+             * @description El recuento cuya diferencia mueve, o `null` si no viene de uno.
+             */
+            recuentoId: null | string;
+            /** @description Sus líneas, en su orden. */
+            lineas: components["schemas"]["LineaDeFichaDeAjusteDto"][];
+        };
         /** @description Con qué identificador se da de alta un tercero. */
         IdentificacionDeAltaDto: {
             /** @description País emisor, en ISO 3166-1 alfa-2. `ES` exige un NIF, NIE o CIF válido. */
@@ -3201,6 +3365,99 @@ export interface components {
             cantidad: null | number | string;
             /** @description La divisa del importe, en ISO 4217. Nula si no se le fía. */
             divisa: null | string;
+        };
+        /** @description Una línea de la petición de alta. */
+        LineaDeAjusteDto: {
+            /**
+             * Format: uuid
+             * @description Hueco del almacén.
+             */
+            ubicacionId: string;
+            /**
+             * Format: uuid
+             * @description Artículo que se mueve.
+             */
+            articuloId: string;
+            /**
+             * Format: double
+             * @description Cantidad con signo, tal como se escribe.
+             */
+            cantidadIntroducida: number | string;
+            /**
+             * Format: uuid
+             * @description Unidad en la que se escribe: la base del artículo, o una que tenga conversión a ella.
+             */
+            unidadIntroducidaId: string;
+            /**
+             * Format: double
+             * @description Coste de una unidad base, en la divisa base de la empresa, o nada. Solo lo lleva una línea que
+             *     sube, y nunca negativo: si no, `ajuste-coste-no-valido`. Sin él, la entrada se valora al
+             *     precio medio de su artículo en el almacén; y sin precio medio, porque no hay existencias,
+             *     confirmar contesta `ajuste-entrada-sin-coste-ni-precio-medio`.
+             */
+            costeUnitario: null | number | string;
+            /**
+             * @description El lote, si el artículo va por lote: de 1 a 20 caracteres del conjunto 82 de GS1, con la caja
+             *     que tenga. Los espacios de los extremos se recortan. Si no, `ajuste-lote-no-valido`.
+             */
+            codigoDeLote?: null | string;
+            /**
+             * @description El número de serie, si el artículo va por serie, con la misma forma que el lote. La línea mueve
+             *     entonces una unidad base, y el número no se repite en el documento.
+             */
+            numeroDeSerie?: null | string;
+        };
+        /** @description Una línea de la ficha del ajuste. */
+        LineaDeFichaDeAjusteDto: {
+            /**
+             * Format: int32
+             * @description Su posición en el documento, desde uno.
+             */
+            numero: number | string;
+            /**
+             * Format: uuid
+             * @description Hueco del almacén.
+             */
+            ubicacionId: string;
+            /**
+             * Format: uuid
+             * @description Artículo que se mueve.
+             */
+            articuloId: string;
+            /**
+             * Format: double
+             * @description Cantidad con signo, tal como se escribió.
+             */
+            cantidadIntroducida: number | string;
+            /**
+             * Format: uuid
+             * @description Unidad en la que se escribió.
+             */
+            unidadIntroducidaId: string;
+            /**
+             * Format: double
+             * @description Cuántas unidades base hay en una de las introducidas.
+             */
+            factorAUnidadBase: number | string;
+            /**
+             * Format: double
+             * @description Cantidad con signo, en la unidad en la que se suma.
+             */
+            cantidadEnUnidadBase: number | string;
+            /**
+             * Format: double
+             * @description Coste de una unidad base, o nada.
+             */
+            costeUnitario: null | number | string;
+            /** @description El lote, si el artículo va por lote. */
+            codigoDeLote: null | string;
+            /** @description El número de serie, si el artículo va por serie. */
+            numeroDeSerie: null | string;
+            /**
+             * Format: double
+             * @description Lo que la línea sumó a la valoración, o lo que le restó, o `null` mientras es borrador.
+             */
+            valor: null | number | string;
         };
         /** @description Una línea del recuento: una clave del almacén, en su unidad base. */
         LineaDeRecuentoDto: {
@@ -3497,6 +3754,26 @@ export interface components {
          * @enum {unknown}
          */
         MotivoDeRechazo: "numero-de-campos-distinto" | "comillas-mal-colocadas" | "obligatorio" | "demasiado-largo" | "formato-no-valido" | "no-valido" | "ni-cliente-ni-proveedor" | "ya-existe" | "repetida-en-el-fichero";
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeAjusteResumenDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["AjusteResumenDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
         /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
         PaginaDeAlmacenDto: {
             /** @description Los de esta página, en el orden pedido. */
@@ -7012,6 +7289,221 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ajustes_Listar: {
+        parameters: {
+            query?: {
+                estado?: string;
+                almacen?: string;
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeAjusteResumenDto"];
+                    "application/json": components["schemas"]["PaginaDeAjusteResumenDto"];
+                    "text/json": components["schemas"]["PaginaDeAjusteResumenDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ajustes_Abrir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AbrirAjusteDto"];
+                "text/json": components["schemas"]["AbrirAjusteDto"];
+                "application/*+json": components["schemas"]["AbrirAjusteDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["AjusteDto"];
+                    "application/json": components["schemas"]["AjusteDto"];
+                    "text/json": components["schemas"]["AjusteDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ajustes_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del ajuste. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["FichaDeAjusteDto"];
+                    "application/json": components["schemas"]["FichaDeAjusteDto"];
+                    "text/json": components["schemas"]["FichaDeAjusteDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Ajustes_Descartar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del ajuste. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

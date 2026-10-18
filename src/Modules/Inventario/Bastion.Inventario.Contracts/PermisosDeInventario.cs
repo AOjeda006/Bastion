@@ -12,11 +12,11 @@ namespace Bastion.Inventario.Contracts;
 /// </para>
 /// <para>
 /// <b>Hay una constante por acción, y eso no es una lista a medias</b>: las dos del ajuste, desde
-/// el 2.11 las tres de la transferencia, y desde el 2.12 las del recuento, que entran con la acción
-/// que las pide. El catálogo se compara entero contra lo que las acciones exigen, así que un permiso
-/// declarado sin acción que lo pida <b>tumba el arranque</b>. Declarar aquí el alta, el listado o la
-/// ficha del ajuste o de la transferencia —que llegan con sus pantallas— sería repartir casillas
-/// que un administrador concede creyendo que abren algo.
+/// el 2.11 las tres de la transferencia, desde el 2.12 las del recuento y desde el 2.17 las de la
+/// pantalla del ajuste, que entran con la acción que las pide. El catálogo se compara entero contra
+/// lo que las acciones exigen, así que un permiso declarado sin acción que lo pida <b>tumba el
+/// arranque</b>. Declarar aquí el alta, el listado o la ficha de la transferencia —que llegan con su
+/// pantalla— sería repartir casillas que un administrador concede creyendo que abren algo.
 /// </para>
 /// <para>
 /// Son constantes y no un tipo, por lo mismo que en los otros tres módulos: <c>Contracts</c> no
@@ -31,8 +31,8 @@ public static class PermisosDeInventario
     /// <b>Es la facultad de mover el libro, no la de rellenar un papel.</b> Abrir un borrador y
     /// ponerle líneas no cambia ni una existencia; confirmarlo escribe los movimientos (R1, R13),
     /// consume el correlativo de su serie (R5) y deja el documento fuera del alcance de cualquier
-    /// edición. Por eso cuando el alta llegue irá con permiso propio: hay perfiles que preparan
-    /// regularizaciones y no las cierran.
+    /// edición. Por eso el alta, que llegó en el 2.17, va con permiso propio: hay perfiles que
+    /// preparan regularizaciones y no las cierran.
     /// </remarks>
     public const string AjusteConfirmar = "inventario.ajuste.confirmar";
 
@@ -44,6 +44,27 @@ public static class PermisosDeInventario
     /// que alguien dio por bueno. Con un solo permiso, conceder lo primero regalaría lo segundo.
     /// </remarks>
     public const string AjusteAnular = "inventario.ajuste.anular";
+
+    /// <summary>Ver los ajustes: el listado y la ficha, con sus líneas.</summary>
+    /// <remarks>
+    /// <b>No va con ver los recuentos</b> (ADR-0065 §6): un ajuste enseña lo que se movió a mano y por
+    /// qué, y hay perfiles que cuentan un almacén sin tener por qué ver las regularizaciones de otros.
+    /// </remarks>
+    public const string AjusteVer = "inventario.ajuste.ver";
+
+    /// <summary>Abrir un ajuste en borrador, con sus líneas.</summary>
+    /// <remarks>
+    /// <b>Abrir no es confirmar</b>: el borrador no mueve nada ni gasta ningún número, y hay perfiles
+    /// que preparan una regularización para que otro la revise y la cierre.
+    /// </remarks>
+    public const string AjusteAbrir = "inventario.ajuste.abrir";
+
+    /// <summary>Descartar un ajuste en borrador.</summary>
+    /// <remarks>
+    /// <b>No va con abrir</b> (ADR-0065 §5): tirar el borrador que preparó otro es decidir que esa
+    /// regularización no se hace, y quien revisa no siempre es quien escribe.
+    /// </remarks>
+    public const string AjusteDescartar = "inventario.ajuste.descartar";
 
     /// <summary>Enviar una transferencia entre almacenes.</summary>
     /// <remarks>
@@ -146,6 +167,9 @@ public static class PermisosDeInventario
     [
         AjusteConfirmar,
         AjusteAnular,
+        AjusteVer,
+        AjusteAbrir,
+        AjusteDescartar,
         TransferenciaEnviar,
         TransferenciaRecibir,
         TransferenciaAnular,

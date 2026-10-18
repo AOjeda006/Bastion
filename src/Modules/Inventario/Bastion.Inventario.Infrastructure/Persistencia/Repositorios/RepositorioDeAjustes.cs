@@ -1,4 +1,7 @@
+using System.Linq.Expressions;
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.LotesYSeries;
@@ -17,6 +20,28 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquilinoActual inquilino)
     : IRepositorioDeAjustes
 {
+    private static readonly CriteriosDe<Ajuste> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["fechaDeOperacion"] = (Expression<Func<Ajuste, DateOnly>>)(ajuste => ajuste.FechaDeOperacion),
+            ["numero"] = (Expression<Func<Ajuste, long?>>)(ajuste => ajuste.Numero),
+        },
+        PorOmision = "fechaDeOperacion",
+        // De la última a la primera (ADR-0065 §6): quien abre la lista busca lo que se movió hace
+        // poco, y el borrador que dejó a medias.
+        DescendentePorOmision = true,
+        Desempate = ordenada => ordenada.ThenBy(ajuste => ajuste.Id),
+        Filtro = texto =>
+        {
+            string patron = Filtros.Contiene(texto);
+
+            return ajuste => EF.Functions.ILike(ajuste.Motivo, patron, Filtros.Escape);
+        },
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     /// <inheritdoc/>
     /// <remarks>
     /// Las líneas vienen con el documento sin pedirlas: la navegación está marcada
@@ -28,6 +53,32 @@ internal sealed class RepositorioDeAjustes(InventarioDbContext contexto, IInquil
 
     /// <inheritdoc/>
     public void Agregar(Ajuste ajuste) => contexto.Ajustes.Add(ajuste);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <b>Sin las líneas</b>, que el resumen no enseña. Los descartados no salen: los esconde el
+    /// filtro con nombre del contexto, igual que el de la empresa (ADR-0065 §5).
+    /// </remarks>
+    public Task<PaginaDe<Ajuste>> ListarAsync(
+        Paginacion paginacion,
+        EstadoDeAjuste? estado,
+        Guid? almacenId,
+        CancellationToken cancelacion)
+    {
+        IQueryable<Ajuste> consulta = contexto.Ajustes.IgnoreAutoIncludes();
+
+        if (estado is { } elEstado)
+        {
+            consulta = consulta.Where(ajuste => ajuste.Estado == elEstado);
+        }
+
+        if (almacenId is { } elAlmacen)
+        {
+            consulta = consulta.Where(ajuste => ajuste.AlmacenId == elAlmacen);
+        }
+
+        return consulta.PaginarAsync(paginacion, s_criterios, cancelacion);
+    }
 
     /// <inheritdoc/>
     /// <remarks>

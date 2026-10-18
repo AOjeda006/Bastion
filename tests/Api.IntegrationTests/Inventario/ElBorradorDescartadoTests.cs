@@ -29,7 +29,7 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// </para>
 /// <para>
 /// <b>Semillas: la 884, la 885 y la 886</b>, del bloque del 2.17 (su reparto está en la cabecera de
-/// <c>ElFactorDelAjusteTests</c>). Del 887 al 898, libres.
+/// <c>ElFactorDelAjusteTests</c>). Del 896 al 898, libres.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

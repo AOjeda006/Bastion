@@ -1,21 +1,38 @@
+using System.ComponentModel.DataAnnotations;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+
 namespace Bastion.Inventario.Contracts.Ajustes;
 
 /// <summary>Lo que hace falta para abrir un ajuste en borrador.</summary>
 /// <remarks>
+/// <para>
 /// <b>No lleva empresa</b>, y la ausencia es la regla: la empresa sale del <i>claim</i> del usuario
 /// y no de la petición (R8). Si el campo existiera, alguien podría ajustar las existencias de otra
 /// sociedad de la misma instalación escribiendo su identificador.
+/// </para>
+/// <para>
+/// <b>Como mucho doscientas líneas</b>, el tope de una página del servidor (ADR-0065 §6): la ficha
+/// las devuelve todas sin paginar, porque el alta las trae en una petición. Una más es un
+/// <c>400</c> <c>datos-no-validos</c> con este motivo.
+/// </para>
+/// <para>
+/// <b>La clave de ese campo la pone el enlace de modelo</b>, como la de todo <c>400</c> que sale de
+/// una anotación, y no es la ruta de <c>zod</c> que llevan los rechazos de una línea (§3): esos los
+/// escribe el caso de uso. La pantalla no llega a mandar la línea doscientas una, porque su rejilla
+/// para en doscientas, así que no tiene que casar esta clave con ningún campo.
+/// </para>
 /// </remarks>
 /// <param name="SerieId">Serie que lo numerará al confirmarlo (R5).</param>
 /// <param name="AlmacenId">Almacén contra el que se ajusta.</param>
 /// <param name="FechaDeOperacion">Día al que se imputa (R14: es un día, no un instante).</param>
 /// <param name="Motivo">Por qué se ajusta.</param>
-/// <param name="Lineas">Qué se mueve.</param>
+/// <param name="Lineas">Qué se mueve: de una a doscientas líneas.</param>
 public sealed record AbrirAjusteDto(
     Guid SerieId,
     Guid AlmacenId,
     DateOnly FechaDeOperacion,
     string Motivo,
+    [MaxLength(Paginacion.TamanioMaximo, ErrorMessage = "Un ajuste lleva como mucho {1} líneas.")]
     IReadOnlyList<LineaDeAjusteDto> Lineas);
 
 /// <summary>Una línea de la petición de alta.</summary>
@@ -91,6 +108,91 @@ public sealed record AjusteDto(
     int Lineas,
     Guid? AnulaAId,
     string Divisa);
+
+/// <summary>Un ajuste, como se enseña en su ficha: la cabecera y todas sus líneas (ADR-0065 §8).</summary>
+/// <remarks>
+/// <para>
+/// <b>Las líneas van enteras y sin paginar</b>, porque el alta las trae en una sola petición y no
+/// admite más de doscientas (ADR-0065 §6).
+/// </para>
+/// <para>
+/// <b>Lleva lo que la pantalla necesita para decidir sus acciones</b>: el estado, si es el inverso de
+/// otro (<see cref="AnulaAId"/>) y si es el ajuste de un recuento (<see cref="RecuentoId"/>). Ni el
+/// uno ni el otro se anulan desde aquí.
+/// </para>
+/// </remarks>
+/// <param name="Id">Identificador.</param>
+/// <param name="SerieId">Serie que lo numera (R5).</param>
+/// <param name="Numero">El correlativo, o <c>null</c> si todavía es un borrador.</param>
+/// <param name="AlmacenId">Almacén contra el que se ajusta.</param>
+/// <param name="FechaDeOperacion">Día al que se imputa.</param>
+/// <param name="Motivo">Por qué se ajusta.</param>
+/// <param name="Estado">En qué punto de su vida está.</param>
+/// <param name="Divisa">La de todos sus importes: la divisa base de la empresa al abrirlo.</param>
+/// <param name="AnulaAId">El ajuste que este compensa, o <c>null</c> si no es un inverso.</param>
+/// <param name="RecuentoId">El recuento cuya diferencia mueve, o <c>null</c> si no viene de uno.</param>
+/// <param name="Lineas">Sus líneas, en su orden.</param>
+public sealed record FichaDeAjusteDto(
+    Guid Id,
+    Guid SerieId,
+    long? Numero,
+    Guid AlmacenId,
+    DateOnly FechaDeOperacion,
+    string Motivo,
+    string Estado,
+    string Divisa,
+    Guid? AnulaAId,
+    Guid? RecuentoId,
+    IReadOnlyList<LineaDeFichaDeAjusteDto> Lineas);
+
+/// <summary>Una línea de la ficha del ajuste.</summary>
+/// <remarks>
+/// <b>Con el factor y la cantidad en unidad base</b>, que pone el servidor (ADR-0065 §2): quien
+/// escribió tres cajas ve las unidades que mueven, que son las que suma el libro.
+/// </remarks>
+/// <param name="Numero">Su posición en el documento, desde uno.</param>
+/// <param name="UbicacionId">Hueco del almacén.</param>
+/// <param name="ArticuloId">Artículo que se mueve.</param>
+/// <param name="CantidadIntroducida">Cantidad con signo, tal como se escribió.</param>
+/// <param name="UnidadIntroducidaId">Unidad en la que se escribió.</param>
+/// <param name="FactorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
+/// <param name="CantidadEnUnidadBase">Cantidad con signo, en la unidad en la que se suma.</param>
+/// <param name="CosteUnitario">Coste de una unidad base, o nada.</param>
+/// <param name="CodigoDeLote">El lote, si el artículo va por lote.</param>
+/// <param name="NumeroDeSerie">El número de serie, si el artículo va por serie.</param>
+/// <param name="Valor">
+/// Lo que la línea sumó a la valoración, o lo que le restó, o <c>null</c> mientras es borrador.
+/// </param>
+public sealed record LineaDeFichaDeAjusteDto(
+    int Numero,
+    Guid UbicacionId,
+    Guid ArticuloId,
+    decimal CantidadIntroducida,
+    Guid UnidadIntroducidaId,
+    decimal FactorAUnidadBase,
+    decimal CantidadEnUnidadBase,
+    decimal? CosteUnitario,
+    string? CodigoDeLote,
+    string? NumeroDeSerie,
+    decimal? Valor);
+
+/// <summary>Un ajuste, como sale en el listado: sin líneas.</summary>
+/// <remarks>
+/// <b>Un borrador descartado no sale</b> (ADR-0065 §5): lo esconde el filtro del contexto.
+/// </remarks>
+/// <param name="Id">Identificador.</param>
+/// <param name="Numero">El correlativo, o <c>null</c> si todavía es un borrador.</param>
+/// <param name="AlmacenId">Almacén contra el que se ajusta.</param>
+/// <param name="FechaDeOperacion">Día al que se imputa.</param>
+/// <param name="Estado">En qué punto de su vida está.</param>
+/// <param name="Motivo">Por qué se ajusta.</param>
+public sealed record AjusteResumenDto(
+    Guid Id,
+    long? Numero,
+    Guid AlmacenId,
+    DateOnly FechaDeOperacion,
+    string Estado,
+    string Motivo);
 
 /// <summary>
 /// La línea de la petición que paró el alta, en la extensión <c>actual</c> del problema
