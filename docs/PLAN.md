@@ -7434,6 +7434,10 @@ casos: la 609, la pareja; la 612, el caso de `ResolverPrecio`.
 Escrita el 2026-10-18, en la rama `2.17-el-alta-del-ajuste`. **Se para aquí**: el código empieza
 con las respuestas, y el ADR-0065 se escribe con ellas, como el 0063 en el 2.14.
 
+**Contestada el mismo día, las cuatro con la recomendada**, en *Traídas por el encargo del
+2026-10-18*, justo debajo. La 2 lleva una cosa más: la ficha enseña en cada línea el factor y la
+cantidad en unidad base. Lo que esta sección dice que decidirá el ADR-0065 sigue en pie.
+
 #### Lo que dice el plan maestro, primero
 
 - **El §7.4** pone el ajuste como «cabecera con estado, líneas […] y generación de los movimientos
@@ -7557,21 +7561,129 @@ Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
    y con datos sintéticos: alta con una línea en la unidad base y otra en una unidad con
    conversión, el rechazo de una sin conversión en su campo, confirmar y anular.
 
+### Traídas por el encargo del 2026-10-18 — la puerta del 2.17, contestada
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **16** commits desde `8734c6a`, con 16 firmas válidas y sin *trailers*;
+- los runs **266 a 275** en verde al primer intento;
+- `main` avanzó a `0d26e76` solo después del verde de su rama;
+- las cifras del run de `main`, iguales a las del *runner*: **1490** y **691** casos, **413/450** y
+  **720/900** KiB, **291** casos de Vitest y **109** permisos.
+
+**Faltaba por anotar el run de `97645c9`**, el commit que abrió la puerta: es el **39130844935**,
+en verde al primer intento, con Backend `117685499770`, Frontal `117685499845` y Humo
+`117687901164`, y los mismos 69 pasos, 68 en verde y el *Diagnóstico* omitido. Leído con `python -X
+utf8 leer-run27.py 39130844935`. `main` no avanzó con él, porque la puerta se para en la rama.
+
+**El próximo informe cuenta desde `97645c9`.** La siguiente mutación es la **615**, y el siguiente
+ADR, el **0065**. **El arnés** está al día desde `dbf2664`, y `arnes-de-agente.md` se lee al
+empezar cada sesión. La biblioteca no ha cambiado desde `3b45c6b`.
+
+**Una corrección al encargo anterior**: el puerto del factor no va en Catálogo, como decía el
+criterio del 2.17, y la puerta tenía razón. Es la respuesta 1.
+
+#### Las respuestas de la puerta del 2.17, decisión del usuario
+
+1. **El puerto: (a).** Se llama `IConsultaDeConversiones` y va en `Organizacion.Contracts`, que es
+   el dueño del dato. Inventario lo combina con la unidad base que ya lee de Catálogo. El criterio
+   del 2.17 se reescribe con esto, y el ADR-0065 lo dice.
+2. **La conversión retirada, como la recomendaba la puerta**:
+   - en el alta, se rechaza con `ajuste-conversion-retirada`;
+   - en un borrador abierto antes, confirmar no vuelve a preguntar, y usa el factor que la línea
+     guardó en el alta;
+   - en el inverso, se copia el factor del original, con un caso para una conversión retirada y
+     otro para un factor cambiado;
+   - **y la ficha enseña en cada línea el factor y la cantidad en unidad base**, para que lo que se
+     confirma esté a la vista.
+3. **El borrador equivocado: (b).** Se añade el descarte: `inventario.ajuste.descartar`, borrado
+   lógico y `204`, como el del recuento. Modificar las líneas se queda fuera, con su disparador
+   escrito.
+4. **La exportación: (a), fuera del 2.17.** Una nota abierta nombra todos los listados que hoy no
+   exportan, que es una deuda del §10 desde la fase 1. Se hace como un ítem propio al empezar la
+   fase 3, para todos a la vez.
+
+#### Las respuestas a lo que seguía abierto, decisión del usuario
+
+5. **El avance incremental del ADR-0064 §5: aceptado, como 2.18**, y la transferencia pasa a ser el
+   **2.19**. El §2 del ADR-0064 ya lo decide: el avance de C falla por plazo, y mientras falle, las
+   confirmaciones de esa empresa esperan 30 s cada hora y fallan. El criterio lleva además los dos
+   techos que la propuesta dejaba intactos:
+   - **el recálculo a mano también va mes a mes**: el corte vuelve atrás y avanza desde ahí, un mes
+     por transacción. El recálculo de hoy es la misma sentencia con el mismo plazo, y en C no
+     termina;
+   - **el estado del cuadre queda en disco**, por ejemplo con un «cuadrado hasta» en la fila del
+     corte, para que la vuelta siguiente lo repita mientras quede pendiente;
+   - **el cuadre de las existencias compara contra la instantánea del corte más el libro desde el
+     corte**, y no contra el libro entero, que tiene su propio techo.
+
+   Así queda contestada la pregunta abierta del §4 del ADR-0064, la del cuadre que va después del
+   `COMMIT` y no se repite nunca.
+6. **La zona de lo que no tiene almacén: (i), `Europe/Madrid`**, que se aplica junto con la zona de
+   cada almacén antes de la fase 5. Va en **una sola fuente del servidor, que el frontal recibe**, y
+   no en dos literales en dos lenguajes. La nota también dice si esa zona es una por instalación o
+   una por empresa, pensando en una empresa canaria. Esa parte se pregunta cuando toque hacerla.
+7. **La regla de ESLint que prohíbe leer el reloj fuera de `shared/lib/dias.ts`: sí.** Lleva su
+   pareja, el sitio donde se lee el reloj de verdad, y una mutación que la pone roja.
+8. **`/code-review`**: el usuario la lanza en esta sesión, sobre `0638419..0d26e76`. Cada hallazgo
+   se comprueba contra el código antes de tocar nada, y va a una tabla con su veredicto. Cada
+   hallazgo real lleva su propio commit, con el caso que lo pone rojo. Si uno reabre algo ya
+   decidido, se para y se pregunta.
+
+#### El orden de trabajo
+
+- **A. El primer commit, en la rama del 2.17**: el run de `97645c9`, las ocho respuestas, el
+  criterio del 2.17 reescrito, el 2.18 nuevo con su criterio, la transferencia renumerada como
+  2.19 con la línea del README en el mismo commit, y las notas de la exportación y de la zona, al
+  día.
+- **B. Los hallazgos de `/code-review`**: si ya han llegado, se tratan antes del código, como dice
+  la respuesta 8.
+- **C. La regla de ESLint**, en su propio commit, con su pareja y su mutación.
+- **D. El 2.17 · El alta del ajuste.** El ADR-0065 recoge las respuestas y lo que la puerta decide
+  sin preguntar. Después, el código, con la tanda escrita antes de medir y una mutación sobre el
+  arnés; el humo, porque los permisos pasan de 109 a 112 y tiene que contarlos en los dos
+  arranques; el recorrido con `playwright-cli`; los KiB que añade, medidos, y si no cabe, se
+  pregunta, porque el límite no se sube; y el cierre, por el flujo de la rama.
+- **E. El 2.18 · El avance incremental**, con su criterio y su ADR, con la respuesta 5 dentro. Si
+  queda algo esencial abierto, se para y se pregunta.
+- **F. La puerta del 2.19, la transferencia.** Se para ahí y se pregunta.
+
+El criterio de cada ítem está en su casilla, en *Checklist → Addenda de la fase 2*.
+
+#### Las herramientas, en este encargo
+
+- **Los servidores de lenguaje**: el símbolo se busca antes de leer, y los diagnósticos de cada
+  edición se abren. Un diagnóstico limpio no sustituye al build ni a los tests.
+- **`playwright-cli`**, para el recorrido del ajuste, contra la pila local en su propio proyecto de
+  *compose*.
+- **Context7 (`ctx7`)**, solo si una API de Npgsql o de EF Core no cuadra, y contrastado con la
+  documentación oficial, como en el ADR-0064.
+- **`/code-review` lo lanza el usuario**, y el agente comprueba cada hallazgo.
+
+#### El método
+
+El de siempre: la tanda escrita antes de medir, con una mutación sobre el arnés; las dos listas por
+nombre; commits pequeños y firmados, un tema por commit; el humo, si hay migración o pantalla;
+`main` solo avanza a un commit que ya está en verde en su rama, y la rama se borra después de su
+run de `main`; las ediciones de `CLAUDE.md`, al principio o al final de la sesión; y la unidad se
+cierra antes de una pausa larga. **El informe cuenta todos los commits desde `97645c9`, con sus
+runs de rama y de `main`**, y cada cifra va con la orden que la mide.
+
 ## Estado actual
 
-**FASE 2 EN CURSO — 16 de 18 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 16 de 19 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. Los
-catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, del 2.15
-al 2.18, y la fase se cierra cuando acabe el último. El 2.15 y el 2.16 están hechos.
+catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, y la
+puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el 2.18, y la
+transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15 y el 2.16 están
+hechos.
 
-> **Dónde se retoma (2026-10-18): en la puerta del 2.17, en la rama `2.17-el-alta-del-ajuste`,
-> parado.** El 2.16 está hecho, en *El 2.16, hecho*, más abajo, con sus dos runs de cierre en
-> verde. La puerta del 2.17 está en *Decisiones tomadas → La puerta del 2.17*, con cuatro
-> preguntas, y **el código no empieza hasta que se contesten**. Esperan también al usuario los
-> hallazgos de su `/code-review` sobre `0638419..8734c6a`, que no han llegado; la respuesta a la
-> propuesta del avance incremental del ADR-0064 §5; y la de la zona de lo que no tiene almacén,
-> que el 2.16 propone en la nota de la zona.
+> **Dónde se retoma (2026-10-18): en el 2.17, en la rama `2.17-el-alta-del-ajuste`.** Su puerta
+> está contestada, en *Decisiones tomadas → Traídas por el encargo del 2026-10-18*, con el orden de
+> trabajo: los hallazgos de `/code-review` sobre `0638419..0d26e76`, si han llegado; la regla de
+> ESLint del reloj; el 2.17, con el ADR-0065 primero; el 2.18; y la puerta del 2.19, donde se para
+> y se pregunta.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -21536,12 +21648,13 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     paso en la propiedad, que avanza el corte y cuadra todas las instantáneas. La 565 y la 566 la
     ponen roja en las seis.
 
-### Addenda de la fase 2 — los cuatro ítems que abre el repaso (2026-10-17)
+### Addenda de la fase 2 — los cinco ítems que abren el repaso y la puerta del 2.17
 
-> **Estos cuatro NO son de la puerta de clarificación de la fase 2.** Aquellos catorce están
-> cerrados y no se tocan. Los abren las respuestas del usuario a la tanda del repaso, y el porqué
-> de cada uno está en *Decisiones tomadas → Traídas por el encargo del 2026-10-17*. Se numeran
-> 2.15–2.18 por el mismo motivo que el 0.14–0.16 y el 1.12–1.14: son del cierre de la fase, y la
+> **Estos cinco NO son de la puerta de clarificación de la fase 2.** Aquellos catorce están
+> cerrados y no se tocan. Cuatro los abren las respuestas del usuario a la tanda del repaso, el
+> 2026-10-17, y el quinto, el 2.18, las de la puerta del 2.17, el 2026-10-18. El porqué de cada
+> uno está en *Decisiones tomadas → Traídas por el encargo* de esos dos días. Se numeran
+> 2.15–2.19 por el mismo motivo que el 0.14–0.16 y el 1.12–1.14: son del cierre de la fase, y la
 > fase 3 no se abre arrastrándolos. Cada criterio se escribió antes de empezar su ítem.
 
 - [x] **2.15 · Lo que el repaso encontró** — criterio de aceptación: cuatro temas, cada uno en su
@@ -21638,18 +21751,46 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     artículos y los terceros. Para ellos se proponen tres salidas, con la recomendada, y se
     pregunta.
 - [ ] **2.17 · El alta del ajuste** — criterio de aceptación: el ajuste se da de alta, se lista
-  paginado en el servidor y se abre en su ficha, por HTTP con su permiso y desde su pantalla. El
-  factor a unidad base lo resuelve el servidor, con un puerto de lectura en el `Contracts` de
-  Catálogo. Una línea sin conversión se rechaza con el código de la casa, una conversión retirada
-  sigue resolviendo lo viejo, y el inverso copia el factor del original sin volver a validarlo. La
-  pantalla va en una ruta diferida, con los tres estados y los errores de vuelta a su campo, y los
-  KiB que añade, medidos: si no cabe, se pregunta, porque el límite no se sube. Su recorrido, con
-  `playwright-cli` contra la pila local y datos sintéticos. **Pasa su propia puerta de
-  clarificación**, con las decisiones en un ADR nuevo y lo que diga el plan maestro primero.
-- [ ] **2.18 · El alta de la transferencia** — criterio de aceptación: la transferencia se da de
+  paginado en el servidor, se abre en su ficha y, si es un borrador, se descarta, por HTTP con su
+  permiso y desde su pantalla. **El factor a unidad base lo resuelve el servidor**, y el cliente ya
+  no lo manda: 1 si la unidad es la base del artículo, que Inventario lee de Catálogo, y si no, el
+  de la conversión, por un puerto de lectura nuevo, `IConsultaDeConversiones`, en el `Contracts` de
+  **Organización**, que es el dueño del dato. Una línea sin conversión se rechaza con
+  `ajuste-sin-conversion` y el número de la línea. **La conversión retirada, en los tres
+  momentos**: en el alta se rechaza con `ajuste-conversion-retirada`; en un borrador abierto antes,
+  confirmar no vuelve a preguntar y usa el factor que la línea guardó en el alta; y el inverso copia
+  el factor del original, con un caso para una conversión retirada y otro para un factor cambiado.
+  **La ficha enseña en cada línea el factor y la cantidad en unidad base**, y su barra de acciones
+  sale de `accionesDisponibles`. El descarte es `inventario.ajuste.descartar`, borrado lógico y
+  `204`, como el del recuento; modificar las líneas se queda fuera, con su disparador escrito en el
+  ADR-0065. Los permisos pasan de 109 a 112, y el humo los cuenta en los dos arranques. La pantalla
+  va en una ruta diferida, con los tres estados y los errores de vuelta a su campo, y los KiB que
+  añade, medidos: si no cabe, se pregunta, porque el límite no se sube. Su recorrido, con
+  `playwright-cli` contra la pila local y datos sintéticos: alta con una línea en la unidad base y
+  otra con conversión, el rechazo de una sin conversión en su campo, confirmar, anular y descartar.
+  Las decisiones, en el ADR-0065, con lo que dice el plan maestro primero. **Pasó su puerta el
+  2026-10-18**, y este criterio se reescribió con las respuestas.
+- [ ] **2.18 · El avance incremental del corte** — criterio de aceptación: el avance hace **un solo
+  mes por transacción**, el del corte más uno, y suelta el exclusivo de la empresa entre un mes y el
+  siguiente. Las instantáneas del mes M son las del mes anterior más el libro de M, por clave: una
+  clave que no se ha movido arrastra su saldo, y una que se mueve por primera vez en M aparece en M.
+  **El recálculo a mano también va mes a mes**: el corte vuelve atrás y avanza desde ahí, un mes por
+  transacción. **El estado del cuadre queda en disco**, por ejemplo con un «cuadrado hasta» en la
+  fila del corte, y la vuelta siguiente lo repite mientras quede pendiente. **El cuadre de las
+  existencias compara contra la instantánea del corte más el libro desde el corte**, y no contra el
+  libro entero. Tres casos nuevos, cada uno con su mutación: una propiedad con un paso «avanzar un
+  mes» intercalado con los demás, en la que el saldo es correcto con el corte a mitad de una puesta
+  al día; una carrera de verdad, con una confirmación de una clave nueva entre dos meses de una
+  puesta al día; y un cuadre que falla y se repite en la vuelta siguiente. Se miden otra vez A, B y
+  C con los guiones del 2.15: cuánto tarda un mes y cuánto dura el exclusivo cada mes, contra el
+  disparador de 10 s. **C tiene que avanzar**, y el recálculo a mano también, en C. Las decisiones,
+  en un ADR nuevo que enmienda el §5 del ADR-0064, y el 0064 lo anota en su *Estado* y en el propio
+  punto. Si queda algo esencial abierto, se para y se pregunta.
+- [ ] **2.19 · El alta de la transferencia** — criterio de aceptación: la transferencia se da de
   alta por HTTP con su permiso y desde su pantalla, con el factor que resuelve el servidor por el
   puerto del 2.17. **Pasa su propia puerta de clarificación**, que completa este criterio antes del
-  código. Es el último ítem de la fase 2, que se cierra cuando acabe.
+  código. Es el último ítem de la fase 2, que se cierra cuando acabe. *Era el 2.18 hasta el
+  2026-10-18, cuando el avance incremental tomó ese número (respuesta 5 de la puerta del 2.17).*
 
 ## Imports pendientes de `CLAUDE.md`
 
@@ -21702,6 +21843,23 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-10-18, respuesta 4 de la puerta del 2.17) · ningún listado exporta lo que está
+  viendo.** El §10 del plan maestro pide que «cada listado exporta a CSV/Excel lo que está viendo,
+  con los mismos filtros aplicados», y ninguno lo hace: es una deuda desde la fase 1. La
+  importación de terceros lee un CSV, y nada escribe uno. Los listados que no exportan, por su
+  ruta, que se listan todas con `git grep -n "ruta: '" -- frontend/src/app/rutas.tsx`:
+  - de Organización, `/almacenes` y `/empresas`;
+  - de Catálogo, `/articulos`, `/categorias` y `/tarifas`, y los códigos de barras de un artículo,
+    en `/articulos/:id/gtin`;
+  - de Terceros, `/terceros`;
+  - de Inventario, `/recuentos`, las líneas de un recuento en su ficha, `/recuentos/:id`, y
+    `/saldos`;
+  - y `/ajustes`, el del 2.17, que nace sin exportar por esta misma respuesta.
+
+  **El disparador**: un ítem propio al empezar la fase 3, para todos a la vez, con los mismos
+  filtros que cada listado ya lleva en la URL al servidor. No va en el 2.17 ni en ningún otro ítem
+  de la fase 2.
 
 - **ABIERTA (2026-10-17, respuesta 7 del repaso) · el editor avisa de que `baseUrl` dejará de
   funcionar.** Lo dan `frontend/tsconfig.app.json` y `frontend/tsconfig.test.json` en el editor,
@@ -21762,6 +21920,9 @@ cuando hace falta el porqué.
   listado y la ficha del ajuste, con su pantalla, son el **2.17**; el alta de la transferencia,
   con la suya, el **2.18**. Cada uno pasa su puerta. La nota se cierra con el 2.18. La lectura de
   las existencias de hoy no tiene ítem propio: la contesta, sin día, el saldo del 2.14.
+
+  **Renumerada el 2026-10-18 (respuesta 5 de la puerta del 2.17):** la transferencia es ahora el
+  **2.19**, porque el avance incremental del corte tomó el 2.18, y la nota se cierra con el 2.19.
 
 - **ABIERTA (2026-09-27, ítem 2.7) · «hoy» es el día UTC, y no el de la empresa.** Confirmar
   rechaza una fecha de operación posterior a hoy —la decisión (b), ADR-0044 §4—, y el cuadre suma el
@@ -21834,6 +21995,27 @@ cuando hace falta el porqué.
   después, con doce por delante, y una fila de un mes sin partición iría a la partición por
   defecto: ninguna fecha se acepta ni se rechaza por eso. La regla del 2.16 no lo ve, porque es
   SQL, y no le hace falta.
+
+  **Contestada el 2026-10-18 (respuesta 6 de la puerta del 2.17): (i), `Europe/Madrid`**, que se
+  aplica junto con la zona de cada almacén, antes de la fase 5: ese sigue siendo el disparador.
+  **Va en una sola fuente del servidor, que el frontal recibe**, y no en dos literales en dos
+  lenguajes: `DiaDeNegocio` la lee de un solo sitio, y el frontal deja de calcular el día y recibe
+  del servidor el que rige. Así la pareja del 2.16 no puede separarse por un literal cambiado en un
+  lado y no en el otro.
+
+  **Lo que queda por decidir, y se pregunta cuando toque: ¿una zona por instalación o una por
+  empresa?** Pensando en una empresa canaria:
+  - **una por instalación** es la más sencilla: una variable de configuración, con
+    `Europe/Madrid` por omisión, y una instalación entera en Las Palmas la pone en
+    `Atlantic/Canary`. Pero una instalación que lleve a la vez una empresa de la península y una
+    canaria daría a la segunda el día de Madrid de las 23:00 a las 24:00 de allí;
+  - **una por empresa** lo arregla: la empresa lleva su zona, con `Europe/Madrid` por omisión, y
+    lo que no tiene almacén va con la de la empresa del *claim*, que es la que ya llega en cada
+    petición (R8). Cuesta una columna y su migración en Organización, y una empresa canaria con un
+    almacén en la península tendría dos días a la vez: el de su zona y el del almacén, que es el
+    que manda en lo que tiene almacén.
+
+  No se decide aquí. El ítem que haga la zona del almacén lo pregunta en su puerta.
 
 - **CERRADA (2026-10-13, ítem 2.14) · nadie avanza el corte de la instantánea hasta el 2.14.** La
   cierra el trabajo mensual, `AvanzadorDelCorte` (`e500bcc`): cada hora lleva el corte de cada
@@ -21949,6 +22131,11 @@ cuando hace falta el porqué.
   conversión retirada sigue resolviendo lo viejo; y el inverso copia el factor del original sin
   volver a validarlo. La transferencia usa el mismo puerto en el 2.18. La nota se cierra con el
   2.17.
+
+  **Corregida el 2026-10-18 (respuesta 1 de la puerta del 2.17):** el puerto no es de Catálogo,
+  sino de **Organización**, que es el dueño de `ConversionUM`: `IConsultaDeConversiones`, en
+  `Organizacion.Contracts`, que Inventario combina con la unidad base que ya lee de Catálogo. Y la
+  transferencia, que también lo usa, es ahora el **2.19**. La nota se sigue cerrando con el 2.17.
 
 - **ABIERTA (2026-09-18, ítem 2.2) · ¿recibe el artículo su final de vida en esta fase, una vez el 2.7
   le dé existencias?** Es **pregunta del cierre de la fase 2**, y se deja escrita aquí para que lo
