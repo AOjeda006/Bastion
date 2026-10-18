@@ -10,11 +10,11 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 2 (Inventario), en curso: 15 de 18 ítems.** La fase 1 se cerró con catorce ítems y
-> la fase 2 lleva quince: el frontal arranca con un solo diccionario; los tres puertos que el libro
-> de movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado contesta
-> que sigue resolviendo lo viejo, no que no existe—; el libro ya existe, particionado por mes y
-> de solo añadido en el motor, con el ajuste como primer documento; el ajuste se numera al
+> **Estado: fase 2 (Inventario), en curso: 16 de 18 ítems.** La fase 1 se cerró con catorce ítems y
+> la fase 2 lleva dieciséis: el frontal arranca con un solo diccionario; los tres puertos que el
+> libro de movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado
+> contesta que sigue resolviendo lo viejo, no que no existe—; el libro ya existe, particionado por
+> mes y de solo añadido en el motor, con el ajuste como primer documento; el ajuste se numera al
 > confirmarlo, sin huecos ni repetidos; un ajuste confirmado no se borra, se anula con un inverso
 > que suma cero; el ejercicio rige lo que se escribe —un documento no se confirma con fecha en un
 > ejercicio cerrado ni fuera de todos—; las existencias son ya la proyección del libro: se
@@ -36,11 +36,13 @@ de datos, su contrato público y su comunicación por eventos.
 > —quien reservará es el pedido de venta de la fase 4—; y el stock a fecha pasada: el saldo de
 > cualquier día sale de la última instantánea anterior a su mes más el tramo del libro, y
 > cuadra con la suma del libro hasta ese día. El repaso de la fase abre cuatro ítems más, del
-> 2.15 al 2.18. El primero, lo que el propio repaso encontró, está hecho: una página enorme es
-> un `400` y no un `500`, la caché no vuelve a pedir lo que la API rechaza, la cabecera cabe en
-> 320 px, y el trabajo mensual mide lo que tarda cada avance contra el plazo de 30 s de cada
-> orden. Faltan un solo «hoy» en todo el sistema, y el alta del ajuste y la de la
-> transferencia, cada una con su pantalla.
+> 2.15 al 2.18. Los dos primeros están hechos. Lo que el propio repaso encontró: una página
+> enorme es un `400` y no un `500`, la caché no vuelve a pedir lo que la API rechaza, la cabecera
+> cabe en 320 px, y el trabajo mensual mide lo que tarda cada avance contra el plazo de 30 s de
+> cada orden. Y un solo «hoy»: el día de negocio sale de un solo sitio y sigue siendo el UTC, una
+> regla que lee el código compilado prohíbe calcularlo en otro, y el frontal usa el del
+> servidor, así que la etiqueta de una tarifa dice lo mismo que su precio. Faltan el alta del
+> ajuste y la de la transferencia, cada una con su pantalla.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
 > **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo. Esta
 > línea se compara con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia
