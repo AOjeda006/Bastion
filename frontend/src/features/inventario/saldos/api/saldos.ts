@@ -1,5 +1,5 @@
 import type { ListadoDeSaldos, Saldo, SaldosAUnaFecha } from '../model/saldo.ts';
-import type { Maestro } from '../../recuentos/api/maestros.ts';
+import type { Maestro } from '../../maestros/api/maestros.ts';
 import { api } from '@/shared/api/cliente.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';

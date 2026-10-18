@@ -7,7 +7,8 @@ import { AccionesDelRecuento } from './AccionesDelRecuento.tsx';
 import { Avisos, type Aviso } from './Avisos.tsx';
 import { Estado } from './Estado.tsx';
 import { LineasDelRecuento } from './LineasDelRecuento.tsx';
-import { useNombre, useNombreDelRecuento } from './nombres.ts';
+import { useNombreDelRecuento } from './nombres.ts';
+import { useNombre } from '../../maestros/ui/nombres.ts';
 import { clavesDeRecuentos } from '../api/claves.ts';
 import { consultarRecuento } from '../api/recuentos.ts';
 import {

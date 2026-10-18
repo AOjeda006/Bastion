@@ -5,9 +5,11 @@ import { Link, useSearchParams } from 'react-router';
 
 import { Estado } from './Estado.tsx';
 import { FormularioDeApertura } from './FormularioDeApertura.tsx';
-import { VIDA_DE_UN_MAESTRO, useNombre, useNombreDelRecuento } from './nombres.ts';
+import { useNombreDelRecuento } from './nombres.ts';
+import { clavesDeMaestros } from '../../maestros/api/claves.ts';
+import { consultarAlmacenes } from '../../maestros/api/maestros.ts';
+import { VIDA_DE_UN_MAESTRO, useNombre } from '../../maestros/ui/nombres.ts';
 import { clavesDeRecuentos } from '../api/claves.ts';
-import { consultarAlmacenes } from '../api/maestros.ts';
 import { consultarRecuentos } from '../api/recuentos.ts';
 import {
   PARAMETRO_DE_ALMACEN,
@@ -217,7 +219,7 @@ function Filtros({
   const puedeVerAlmacenes = concede(sesion, PERMISOS.almacenVer);
 
   const almacenes = useQuery({
-    queryKey: clavesDeRecuentos.almacenes(),
+    queryKey: clavesDeMaestros.almacenes(),
     queryFn: consultarAlmacenes,
     staleTime: VIDA_DE_UN_MAESTRO,
     enabled: puedeVerAlmacenes,

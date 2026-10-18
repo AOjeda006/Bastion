@@ -3,10 +3,10 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
-import { clavesDeRecuentos } from '../../recuentos/api/claves.ts';
-import { consultarAlmacenes } from '../../recuentos/api/maestros.ts';
+import { clavesDeMaestros } from '../../maestros/api/claves.ts';
+import { consultarAlmacenes } from '../../maestros/api/maestros.ts';
+import { VIDA_DE_UN_MAESTRO, useNombre } from '../../maestros/ui/nombres.ts';
 import { cantidadLegible } from '../../recuentos/model/cantidad.ts';
-import { VIDA_DE_UN_MAESTRO, useNombre } from '../../recuentos/ui/nombres.ts';
 import { clavesDeSaldos } from '../api/claves.ts';
 import { consultarArticulos, consultarSaldos } from '../api/saldos.ts';
 import {
@@ -220,7 +220,7 @@ function Filtros({
 
   // Por el mismo camino y con la misma clave que el alta del recuento: es la misma lista.
   const almacenes = useQuery({
-    queryKey: clavesDeRecuentos.almacenes(),
+    queryKey: clavesDeMaestros.almacenes(),
     queryFn: consultarAlmacenes,
     staleTime: VIDA_DE_UN_MAESTRO,
     enabled: puedeVerAlmacenes,

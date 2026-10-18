@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useNombre } from './nombres.ts';
+import { useNombre } from '../../maestros/ui/nombres.ts';
 import { clavesDeRecuentos } from '../api/claves.ts';
 import { consultarLinea, consultarLineas, contarLinea } from '../api/recuentos.ts';
 import {

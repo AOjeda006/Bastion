@@ -48,6 +48,18 @@ const ESPACIOS_DEL_ARMAZON = ['comun', 'paginacion', 'rutas', 'sesion', 'errores
 const DICCIONARIOS = { es, en };
 
 /**
+ * Las carpetas de una funcionalidad que NO son un recurso suyo, y por eso no tienen textos.
+ *
+ * `inventario/maestros` pregunta a otros módulos por lo que nombran las pantallas del inventario, y
+ * no pinta nada: quien pinta es la pantalla que lo usa (ADR-0065 §8). La excepción va por nombre y
+ * con su pareja: la carpeta existe, y ninguno de sus ficheros lee el diccionario. Si un día lo lee,
+ * necesita su espacio de nombres y sale de aquí.
+ */
+const CARPETAS_SIN_TEXTOS: Readonly<Record<string, readonly string[]>> = {
+  inventario: ['maestros'],
+};
+
+/**
  * EL CANARIO. Un `any` en un fichero de una funcionalidad, que la configuración del proyecto tiene
  * que marcar siempre.
  *
@@ -437,12 +449,38 @@ describe('El barrido de las fronteras', () => {
 
       for (const funcionalidad of enDisco) {
         const dentro = espacios[funcionalidad] as Record<string, unknown> | undefined;
+        const sinTextos = CARPETAS_SIN_TEXTOS[funcionalidad] ?? [];
 
         expect(dentro, `${idioma}: ${funcionalidad} no tiene espacio de nombres`).toBeDefined();
         expect(
           Object.keys(dentro ?? {}).sort(),
           `${idioma}: los espacios dentro de ${funcionalidad} no son sus recursos en disco`,
-        ).toEqual(carpetasDe(join(FUNCIONALIDADES_EN_DISCO, funcionalidad)));
+        ).toEqual(
+          carpetasDe(join(FUNCIONALIDADES_EN_DISCO, funcionalidad)).filter(
+            (carpeta) => !sinTextos.includes(carpeta),
+          ),
+        );
+      }
+    }
+  });
+
+  it('las carpetas sin textos existen y ninguno de sus ficheros lee el diccionario', () => {
+    const declaradas = Object.entries(CARPETAS_SIN_TEXTOS).flatMap(([funcionalidad, carpetas]) =>
+      carpetas.map((carpeta) => join(FUNCIONALIDADES_EN_DISCO, funcionalidad, carpeta)),
+    );
+
+    expect(declaradas.length, 'no se declara ninguna carpeta sin textos').toBeGreaterThan(0);
+
+    for (const carpeta of declaradas) {
+      const ficheros = existsSync(carpeta) ? ficherosDe(carpeta) : [];
+
+      expect(ficheros.length, `${carpeta} no existe o no tiene ningún fichero`).toBeGreaterThan(0);
+
+      for (const fichero of ficheros) {
+        expect(
+          especificadoresDe(fichero),
+          `${fichero} lee el diccionario: su carpeta necesita su espacio de nombres`,
+        ).not.toContain('react-i18next');
       }
     }
   });

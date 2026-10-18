@@ -8,9 +8,9 @@ import type { ListadoDeSaldos } from '../model/saldo.ts';
  * servidor (R8).
  *
  * Los nombres del almacén y del artículo de cada fila **no cuelgan de aquí**: salen por el mismo
- * camino que los del recuento, con su clave (ADR-0063 §8), así que un artículo que ya nombró una
- * pantalla no se vuelve a pedir en la otra. Lo que sí es de aquí es la lista de artículos que se
- * ofrecen para acotar, que el recuento no pide.
+ * camino que los del recuento, con la clave de los maestros del inventario (ADR-0063 §8), así que
+ * un artículo que ya nombró una pantalla no se vuelve a pedir en la otra. Lo que sí es de aquí es
+ * la lista de artículos que se ofrecen para acotar, que el recuento no pide.
  */
 export const clavesDeSaldos = {
   todo: ['saldos'] as const,

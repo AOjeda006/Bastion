@@ -7,9 +7,8 @@ import type { ListadoDeLineas, ListadoDeRecuentos } from '../model/listado.ts';
  * que cambia al contar, al confirmar, al anular y al descartar. La empresa NO forma parte de la
  * clave: va dentro del testigo y quien filtra es el servidor (R8).
  *
- * **Los maestros de otros módulos también cuelgan de aquí** (ADR-0055 §12). Esta funcionalidad los
- * pide por la API de su dueño para nombrarlos, y la clave es suya: si fuera la del catálogo, la
- * forma de su caché la decidirían dos funcionalidades que no se pueden importar la una a la otra.
+ * Los maestros de otros módulos que el recuento nombra u ofrece **no cuelgan de aquí**: son de todo
+ * el inventario, y sus claves están en `maestros/api/claves.ts`.
  */
 export const clavesDeRecuentos = {
   todo: ['recuentos'] as const,
@@ -20,10 +19,4 @@ export const clavesDeRecuentos = {
   ficha: (id: string) => [...clavesDeRecuentos.una(id), 'ficha'] as const,
   lineas: (id: string, listado: ListadoDeLineas) =>
     [...clavesDeRecuentos.una(id), 'lineas', listado] as const,
-  /** Los maestros que se nombran, uno a uno, por su identificador. */
-  maestro: (clase: 'almacen' | 'articulo' | 'ubicacion' | 'unidad', id: string) =>
-    [...clavesDeRecuentos.todo, 'maestro', clase, id] as const,
-  /** Los que se ofrecen al abrir: los almacenes y las series de la empresa. */
-  almacenes: () => [...clavesDeRecuentos.todo, 'almacenes'] as const,
-  series: () => [...clavesDeRecuentos.todo, 'series'] as const,
 };

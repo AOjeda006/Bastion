@@ -5,15 +5,16 @@ import { useForm, type UseFormRegisterReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
-import { VIDA_DE_UN_MAESTRO } from './nombres.ts';
-import { clavesDeRecuentos } from '../api/claves.ts';
+import { clavesDeMaestros } from '../../maestros/api/claves.ts';
 import {
   SERIE_DE_AJUSTES,
   SERIE_DE_RECUENTOS,
   consultarAlmacenes,
   consultarSeries,
   type Serie,
-} from '../api/maestros.ts';
+} from '../../maestros/api/maestros.ts';
+import { VIDA_DE_UN_MAESTRO } from '../../maestros/ui/nombres.ts';
+import { clavesDeRecuentos } from '../api/claves.ts';
 import { abrirRecuento } from '../api/recuentos.ts';
 import {
   SIN_ALMACEN,
@@ -71,13 +72,13 @@ function Formulario(): React.JSX.Element {
   const intento = useRef<Intento | null>(null);
 
   const almacenes = useQuery({
-    queryKey: clavesDeRecuentos.almacenes(),
+    queryKey: clavesDeMaestros.almacenes(),
     queryFn: consultarAlmacenes,
     staleTime: VIDA_DE_UN_MAESTRO,
   });
 
   const series = useQuery({
-    queryKey: clavesDeRecuentos.series(),
+    queryKey: clavesDeMaestros.series(),
     queryFn: consultarSeries,
     staleTime: VIDA_DE_UN_MAESTRO,
   });

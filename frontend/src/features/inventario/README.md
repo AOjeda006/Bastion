@@ -1,8 +1,30 @@
 # `inventario` — lo que hay, dónde y cuánto
 
 Espeja el módulo **Inventario** del backend (`Bastion.Inventario.*`, `/api/v1/inventario/`). Dentro,
-una carpeta por recurso; entre funcionalidades, nada: `inventario` no importa de `catalogo` ni de
-`organizacion`, y eso lo impide una regla de ESLint, no un acuerdo (`docs/adr/adr-0022`).
+una carpeta por recurso, y una más, `maestros`, con lo que leen todas; entre funcionalidades, nada:
+`inventario` no importa de `catalogo` ni de `organizacion`, y eso lo impide una regla de ESLint, no
+un acuerdo (`docs/adr/adr-0022`).
+
+## `maestros` — los nombres de lo que es de otro módulo
+
+**Propósito.** Preguntar a sus dueños por los almacenes, las series, las ubicaciones, los artículos y
+las unidades que nombran u ofrecen las pantallas del inventario (ADR-0055 §12). No tiene rutas. Vivía
+en `recuentos`, y salió de ahí cuando lo empezaron a leer dos documentos (ADR-0065 §8).
+
+### Claves de consulta
+
+`maestros/api/claves.ts`:
+
+```
+['maestros-del-inventario']                        → clavesDeMaestros.todo
+['maestros-del-inventario', 'maestro', clase, id]  → clavesDeMaestros.maestro(clase, id)
+['maestros-del-inventario', 'almacenes']           → clavesDeMaestros.almacenes()
+['maestros-del-inventario', 'series']              → clavesDeMaestros.series()
+```
+
+Nada las invalida, porque nada del inventario escribe un maestro: duran cinco minutos
+(`VIDA_DE_UN_MAESTRO`). Son de todo el inventario, así que lo que nombró una pantalla no se vuelve a
+pedir en otra.
 
 ## `recuentos` — contar el almacén y ajustar la diferencia
 
@@ -45,15 +67,12 @@ Lo que no se reconoce se ignora: ni se manda ni se enseña.
 ['recuentos', 'una', id]                         → clavesDeRecuentos.una(id)
 ['recuentos', 'una', id, 'ficha']                → clavesDeRecuentos.ficha(id)
 ['recuentos', 'una', id, 'lineas', listado]      → clavesDeRecuentos.lineas(id, listado)
-['recuentos', 'maestro', clase, id]              → clavesDeRecuentos.maestro(clase, id)
-['recuentos', 'almacenes']                       → clavesDeRecuentos.almacenes()
-['recuentos', 'series']                          → clavesDeRecuentos.series()
 ```
 
 `una(id)` alcanza la ficha **y** sus líneas, que es lo que cambia al contar, confirmar, anular y
 descartar: cada escritura invalida `una(id)` y `listas()`, y no los maestros, que no han cambiado.
 El recuento no lleva `staleTime`: se lee para escribir sobre él, y su versión tiene que ser la de
-ahora. Los maestros, cinco minutos (`VIDA_DE_UN_MAESTRO`).
+ahora. Los maestros cuelgan de `clavesDeMaestros`, con sus cinco minutos.
 
 ## Lo que no es evidente
 
@@ -154,7 +173,7 @@ de día, y quien dice que el saldo del futuro no existe es el servidor, con `sal
 Nada escribe, así que nada invalida: el saldo de un día pasado no cambia, y el de hoy se vuelve a
 pedir al volver a la pantalla. Los nombres del almacén y del artículo de cada fila, y la lista de
 almacenes del filtro, **no cuelgan de aquí**: salen por el camino del recuento, con sus claves
-(`clavesDeRecuentos.maestro` y `.almacenes()`), así que lo que nombró una pantalla no se vuelve a
+(`clavesDeMaestros.maestro` y `.almacenes()`), así que lo que nombró una pantalla no se vuelve a
 pedir en la otra.
 
 ### Lo que no es evidente
