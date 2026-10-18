@@ -7348,6 +7348,87 @@ run de `main`; las ediciones de `CLAUDE.md`, al principio o al final de la sesi�
 cierra antes de una pausa larga. **El informe cuenta todos los commits desde `8734c6a`, con sus
 runs de rama y de `main`**, y cada cifra va con la orden que la mide.
 
+### Tomadas por el agente de desarrollo — ítem 2.16, antes de escribir su código (2026-10-17)
+
+El criterio está en su casilla. Lo que pide, y lo que no dice:
+
+1. **El sitio es `DiaDeNegocio`, en `BuildingBlocks.Domain/Fechas`**, una clase estática con dos
+   métodos: `De(DateTimeOffset)`, el día al que pertenece un instante, y `Hoy(TimeProvider)`, el de
+   ahora. En el dominio común porque lo ven los tres módulos que lo calculan y no conoce nada: es
+   una regla del negocio (R14: una fecha de negocio es un día, sin zona), no un detalle de la
+   infraestructura. Estática y no un servicio, porque es una función pura del instante: el reloj
+   ya se inyecta (`TimeProvider`), y una interfaz `IDiaDeNegocio` sería un segundo reloj que
+   tendría que dar la misma hora que el primero. El día que el almacén lleve su zona, el sitio
+   gana la sobrecarga con la zona, y los que tengan almacén la llaman.
+2. **Los sitios de antes, por nombre**, sobre `996a404`, que es `main` al abrir el 2.16:
+
+   ```bash
+   git grep -n "DateOnly.FromDateTime(" 996a404 -- src     # 16 líneas en 16 ficheros
+   ```
+
+   - Catálogo: `CrearArticulo`, `ModificarArticulo` y `ResolverPrecio`;
+   - Inventario, aplicación: `AnularAjuste`, `ConfirmarAjuste`, `AbrirRecuento`, `AnularRecuento`,
+     `ConfirmarRecuento`, `ConsumirReserva`, `ConsultarSaldos`, `AnularTransferencia`,
+     `EnviarTransferencia` y `RecibirTransferencia`;
+   - Inventario, infraestructura: el mes del trabajo mensual, `AvanzadorDelCorte.MesQueToca`, y
+     `ElCuadreDeLasExistencias`;
+   - Terceros: `TarifaAsignadaDelTercero`.
+
+   El repaso decía «nueve o más»: son dieciséis. **No son día de negocio**, y se quedan como
+   están: el `new DateOnly(primero.Year, primero.Month, 1)` de `AvanzadorDelCorte.MesesDeRetraso`,
+   que trunca un día que ya lo es, el del primer movimiento; y el `current_date` de
+   `inventario.asegurar_particiones_de_movimientos`, que es SQL del migrador y decide desde qué
+   mes se mantiene la pista de particiones, no qué día se acepta. Lo cuenta la nota de la zona.
+3. **El test de arquitectura lee la IL, con Mono.Cecil.** NetArchTest ve dependencias entre tipos,
+   y `DateOnly` lo usa medio backend con todo derecho: la regla es sobre una llamada dentro de un
+   cuerpo, y para eso hay que leer las instrucciones. Una búsqueda en el texto se dejaría un
+   `using static` o un alias, y vería un comentario. Mono.Cecil 0.11.6 ya llegaba de transitivo por
+   la bifurcación de NetArchTest; se declara directo, con su licencia, **MIT**, comprobada en el
+   `<license>` de su `.nuspec`, en el comentario de `Directory.Packages.props`. Son tres casos,
+   en `ElDiaDeNegocioSaleDeUnSoloSitioTests`:
+   - **el barrido lee el backend entero**: los ensamblados de la salida son los que el inventario
+     descubre, más el raíz de composición, y ninguno queda sin clasificar;
+   - **la pareja**: la llamada está en `DiaDeNegocio.De` y en ningún otro método del sitio;
+   - **y la prohibición**: nadie más la hace, con lambdas y métodos asíncronos atribuidos al tipo
+     que los declara.
+
+   Lo que no ve, dicho en el propio fichero: un día montado a mano con el año, el mes y el día de
+   un instante, o un `DateTime.Today`. Ninguno existe hoy en el backend, así que prohibirlos sería
+   una regla sin contraejemplo, como `System.Data` en el 0.12.
+4. **El frontal se queda con el «hoy» del servidor**, `hoyEnElServidor`, que pasa de
+   `inventario/saldos` a `shared/lib/dias.ts`. Se va `hoyEnElCalendarioLocal`, de las tarifas, que
+   era la decisión contraria: entre la medianoche de Madrid y la de Greenwich, la etiqueta decía
+   «Ya no rige» de un tramo cuyo precio seguía dando la API. Lo prueba una pareja con el mismo
+   instante, las 00:30 del 12 de septiembre en Madrid, y el mismo tramo, el que acaba el 11: la
+   pantalla dice «Rige hoy», en `ElListadoDeTarifas`, y `ResolverPrecio`, sin fecha, saca el
+   precio de ese tramo, en `ResolverPrecioTests`. Los dos fijan su zona: la pantalla con
+   `process.env.TZ`, y el reloj del backend con su `LocalTimeZone`, porque en la del *runner*, que
+   es UTC, leer en local no se distingue de leer en UTC.
+5. **La zona de lo que no tiene almacén se propone, y se pregunta.** Va en la nota de la zona, en
+   *Notas / riesgos*, porque es una decisión con más de una salida viable y es del usuario.
+6. **Lo que no hace.** Una regla de ESLint que prohíba leer el reloj fuera de `shared/lib/dias.ts`
+   no la pide el criterio. Se propone en el informe.
+
+**La tanda, escrita antes de medir.** De la **604** en adelante. Cada una se aplica sola, sobre el
+árbol limpio, se mide y se revierte:
+
+| # | Mutación | Se espera rojo |
+|---|---|---|
+| 604 | El antes entero: los dieciséis sitios vuelven a `DateOnly.FromDateTime` | `Nadie_mas_calcula_el_dia_de_negocio`, con los dieciséis por nombre |
+| 605 | Solo el mes del trabajo mensual, `MesQueToca`, calcula el día por fuera | `Nadie_mas_calcula_el_dia_de_negocio`, con uno |
+| 606 | Una lambda del raíz de composición lo calcula por fuera | `Nadie_mas_calcula_el_dia_de_negocio`, con el tipo que la declara |
+| 607 | **Arnés**: la aguja, con una letra de menos | `El_dia_de_negocio_se_calcula_en_su_sitio`; la prohibición, verde |
+| 608 | **Arnés**: el barrido solo lee el bloque común | `El_barrido_lee_el_backend_entero` |
+| 609 | El sitio monta el día a mano, sin `FromDateTime` | `El_dia_de_negocio_se_calcula_en_su_sitio` |
+| 610 | `De` lee el instante con su desplazamiento (`DateTime` y no `UtcDateTime`) | los tres casos de la madrugada de `DiaDeNegocioTests` |
+| 611 | `Hoy` lee el reloj en local | `Hoy_es_el_dia_de_negocio_del_instante_que_da_el_reloj` |
+| 612 | `ResolverPrecio`, sin fecha, monta el día local del reloj a mano | `Sin_fecha_el_dia_es_el_UTC_y_no_el_del_calendario_de_quien_pregunta` |
+| 613 | La pantalla de tarifas calcula su «hoy» en el calendario local | el caso de la medianoche de Madrid de `ElListadoDeTarifas` |
+| 614 | `hoyEnElServidor` devuelve el día del calendario local | `dias.test.ts`, y los dos casos de la frontera de las tarifas |
+
+La 609 y la 612 son de las que la regla de la IL no ve por diseño, y las tienen que ver otros
+casos: la 609, la pareja; la 612, el caso de `ResolverPrecio`.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 15 de 18 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -7356,11 +7437,13 @@ preguntas de la tanda y las tres que trajo la respuesta están contestadas y ano
 catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, del 2.15
 al 2.18, y la fase se cierra cuando acabe el último. El 2.15 está hecho.
 
-> **Dónde se retoma (2026-10-17): en el 2.16, desde `main`.** El 2.15 está hecho, en *El 2.15,
-> hecho*, más abajo. Lo que sigue, en el orden del encargo: el 2.16, en su rama, con los dos runs
-> del cierre del 2.15 en su primer commit; y el 2.17 hasta su puerta, donde se para y se pregunta.
-> **Dos cosas esperan al usuario**: los hallazgos de su `/code-review` sobre `0638419..8734c6a`,
-> que no han llegado, y la respuesta a la propuesta del avance incremental del ADR-0064 §5.
+> **Dónde se retoma (2026-10-17): en el 2.16, en la rama `2.16-un-solo-hoy`.** El 2.15 está
+> hecho, en *El 2.15, hecho*, más abajo, con sus dos runs de cierre en verde. Lo que sigue, en el
+> orden del encargo: el 2.16, con sus decisiones en *Decisiones tomadas → Tomadas por el agente de
+> desarrollo — ítem 2.16*; y el 2.17 hasta su puerta, donde se para y se pregunta. **Tres cosas
+> esperan al usuario**: los hallazgos de su `/code-review` sobre `0638419..8734c6a`, que no han
+> llegado; la respuesta a la propuesta del avance incremental del ADR-0064 §5; y la de la zona de
+> lo que no tiene almacén, que el 2.16 propone en la nota de la zona.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -12588,6 +12671,16 @@ desde `main` en `8734c6a`. Lo que pide está en *Decisiones tomadas → Traídas
 11. **El cierre, por el flujo de la rama**: este commit va a la rama y espera su verde; `main`
     avanza con `--ff-only`, y la rama se borra, en local y en el remoto, después del run de
     `main`. Los dos runs se anotan en el primer commit del 2.16.
+
+    **Anotados en el primer commit del 2.16.** El run de rama de `996a404` es el **39062696615**,
+    en verde al primer intento: Frontal `117483770786`, Backend `117483771069` y Humo
+    `117485381799`. `main` avanzó con `--ff-only` de `8734c6a` a `996a404`, y su run es el
+    **39063489938**, también en verde: Backend `117486169398`, Frontal `117486169667` y Humo
+    `117488494419`. Los dos con 69 pasos, 68 en verde y el *Diagnóstico* omitido, y las cifras de
+    la batería: **1480** y **691** casos, **235** tipos de **242** sitios, **150** operaciones,
+    **413/450** y **721/900** KiB, y el centinela con la marca y sin avisos. Leídos con
+    `python -X utf8 leer-run27.py <run>`. La rama `2.15-lo-que-el-repaso-encontro` se borró en
+    local y en el remoto después del run de `main`.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
