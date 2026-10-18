@@ -283,7 +283,7 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
         DateOnly.FromDateTime(DateTime.UtcNow),
         "Ajuste que no debería pasar de la serie",
         [new LineaDeAjusteDto(
-            Guid.CreateVersion7(), Guid.CreateVersion7(), 1m, Guid.CreateVersion7(), 1m, 1m)]);
+            Guid.CreateVersion7(), Guid.CreateVersion7(), 1m, Guid.CreateVersion7(), 1m)]);
 
     /// <summary>Todos los maestros de un ajuste que sí se puede abrir, y su petición.</summary>
     /// <param name="cliente">Cliente autenticado en la empresa del caso.</param>
@@ -312,7 +312,7 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
             almacen.Id,
             DateOnly.FromDateTime(DateTime.UtcNow),
             "Regularización de un recuento",
-            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m)]);
+            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 1.50m)]);
 
         return (peticion, serie);
     }

@@ -157,7 +157,7 @@ public sealed class LasCarrerasDeLaConfirmacionDelRecuentoTests(PostgresConTodos
         Guid ajusteId = await de.AbrirUnAjusteAsync(
             modulo,
             de.AlmacenA,
-            new LineaDeAjusteDto(de.UbicacionA, de.ArticuloId, 1m, de.UnidadId, 1m, 2.50m),
+            new LineaDeAjusteDto(de.UbicacionA, de.ArticuloId, 1m, de.UnidadId, 2.50m),
             otraSerie.Id);
 
         // TRANSACCIÓN 1: el ajuste confirmado, con la valoración bloqueada y su fila del libro escrita,

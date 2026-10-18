@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Inventario.Application.Ajustes;
@@ -18,6 +19,11 @@ namespace Bastion.Inventario.Application.Ajustes;
 /// <para>
 /// Los mensajes dicen el identificador. Un «no encontrado» sin decir cuál obliga a quien lo lee a
 /// adivinar cuál de los cuatro que envió es el que no existe.
+/// </para>
+/// <para>
+/// <b>Y los de una línea dicen cuál</b> (ADR-0065 §3): el <c>400</c>, con la ruta de su campo en
+/// <c>errors</c>; el <c>409</c>, con su número en <c>actual</c>. Es la primera línea que lo nombra,
+/// porque cada identificador se pregunta una vez.
 /// </para>
 /// </remarks>
 internal static class LosMaestrosDelAjuste
@@ -82,32 +88,42 @@ internal static class LosMaestrosDelAjuste
             "El puerto de series ha contestado un estado que este caso de uso no sabe traducir."),
     };
 
-    internal static Resultado LaUbicacion(EstadoDeMaestro estado, Guid ubicacionId) => estado switch
+    internal static Resultado LaUbicacion(EstadoDeMaestro estado, Guid ubicacionId, int linea) => estado switch
     {
         EstadoDeMaestro.SeOfreceParaLoNuevo => Resultado.Correcto(),
         EstadoDeMaestro.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
             CodigoDeUbicacionBloqueada,
             $"La ubicación {ubicacionId} está bloqueada: lo que ya hay apuntado a ella se sigue " +
-            "leyendo, pero no se mueve nada nuevo a ese hueco.")),
+            "leyendo, pero no se mueve nada nuevo a ese hueco.")
+            .ConElEstadoActual(new LineaQueFallaDto(linea))),
         EstadoDeMaestro.NoExiste => Resultado.Fallo(ErrorDeOperacion.Validacion(
             CodigoDeUbicacionNoEncontrada,
-            $"No hay ninguna ubicación {ubicacionId} en ese almacén.")),
+            $"No hay ninguna ubicación {ubicacionId} en ese almacén.",
+            ErroresDeAjuste.ElCampoDeLaLinea(
+                linea,
+                nameof(LineaDeAjusteDto.UbicacionId),
+                "No hay ninguna ubicación con este identificador en el almacén del ajuste."))),
         _ => throw new ArgumentOutOfRangeException(
             nameof(estado),
             estado,
             "El puerto de ubicaciones ha contestado un estado que este caso de uso no sabe traducir."),
     };
 
-    internal static Resultado LaUnidad(EstadoDeMaestro estado, Guid unidadId) => estado switch
+    internal static Resultado LaUnidad(EstadoDeMaestro estado, Guid unidadId, int linea) => estado switch
     {
         EstadoDeMaestro.SeOfreceParaLoNuevo => Resultado.Correcto(),
         EstadoDeMaestro.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
             CodigoDeUnidadRetirada,
             $"La unidad de medida {unidadId} está retirada: sigue resolviendo lo que ya está " +
-            "escrito en ella, pero no se escribe un movimiento nuevo con ella.")),
+            "escrito en ella, pero no se escribe un movimiento nuevo con ella.")
+            .ConElEstadoActual(new LineaQueFallaDto(linea))),
         EstadoDeMaestro.NoExiste => Resultado.Fallo(ErrorDeOperacion.Validacion(
             CodigoDeUnidadNoEncontrada,
-            $"No hay ninguna unidad de medida con el identificador {unidadId}.")),
+            $"No hay ninguna unidad de medida con el identificador {unidadId}.",
+            ErroresDeAjuste.ElCampoDeLaLinea(
+                linea,
+                nameof(LineaDeAjusteDto.UnidadIntroducidaId),
+                "No hay ninguna unidad de medida con este identificador."))),
         _ => throw new ArgumentOutOfRangeException(
             nameof(estado),
             estado,
@@ -126,18 +142,24 @@ internal static class LosMaestrosDelAjuste
     /// </remarks>
     /// <param name="aptitud">Lo que contestó el puerto de artículos.</param>
     /// <param name="articuloId">Por cuál se preguntó.</param>
+    /// <param name="linea">La primera línea que lo nombra, desde uno.</param>
     /// <returns>Correcto si se pueden mover existencias contra él.</returns>
-    internal static Resultado ElArticulo(AptitudParaMoverExistencias aptitud, Guid articuloId) =>
+    internal static Resultado ElArticulo(AptitudParaMoverExistencias aptitud, Guid articuloId, int linea) =>
         aptitud switch
         {
             AptitudParaMoverExistencias.SeOfreceParaLoNuevo => Resultado.Correcto(),
             AptitudParaMoverExistencias.NoSeAlmacena => Resultado.Fallo(ErrorDeOperacion.Conflicto(
                 CodigoDeArticuloNoSeAlmacena,
                 $"El artículo {articuloId} no se almacena: es un servicio, y un servicio no tiene " +
-                "existencias que ajustar.")),
+                "existencias que ajustar.")
+                .ConElEstadoActual(new LineaQueFallaDto(linea))),
             AptitudParaMoverExistencias.NoExiste => Resultado.Fallo(ErrorDeOperacion.Validacion(
                 CodigoDeArticuloNoEncontrado,
-                $"No hay ningún artículo con el identificador {articuloId}.")),
+                $"No hay ningún artículo con el identificador {articuloId}.",
+                ErroresDeAjuste.ElCampoDeLaLinea(
+                    linea,
+                    nameof(LineaDeAjusteDto.ArticuloId),
+                    "No hay ningún artículo con este identificador."))),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(aptitud),
                 aptitud,

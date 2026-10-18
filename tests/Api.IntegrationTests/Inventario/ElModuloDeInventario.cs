@@ -135,6 +135,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         ConsultaDeUbicaciones ubicaciones = new(_organizacion, acceso);
         ConsultaDeArticulos articulos = new(_catalogo);
         ConsultaDeUnidadesDeMedida unidades = new(_organizacion);
+        ConsultaDeConversiones conversiones = new(_organizacion);
 
         // La marca va sobre EL CONTEXTO DE INVENTARIO, como el ejercicio y por lo mismo: al
         // confirmar trae un cerrojo compartido sobre la fila del artículo (ADR-0048 §4).
@@ -150,6 +151,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             articulos,
             trazabilidad,
             unidades,
+            conversiones,
             unidadDeTrabajo,
             elReloj);
 

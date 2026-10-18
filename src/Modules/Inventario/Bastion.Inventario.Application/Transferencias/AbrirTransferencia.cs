@@ -165,10 +165,15 @@ internal sealed class AbrirTransferencia(
     /// Las tres formas en que una línea no lleva nada: lo que el dominio lanza, dicho antes con su
     /// <c>type</c>.
     /// </summary>
+    /// <remarks>
+    /// La línea de una transferencia siempre trae su factor, hasta el 2.19 (ADR-0065 §9): uno que no
+    /// estuviera sería un factor que no lleva nada.
+    /// </remarks>
     private static bool NoLlevaNada(LineaConForma linea) =>
         linea.CantidadIntroducida <= 0m
-        || linea.FactorAUnidadBase <= 0m
-        || MovimientoStock.EnUnidadBase(linea.CantidadIntroducida, linea.FactorAUnidadBase) == 0m;
+        || linea.FactorAUnidadBase is not { } factor
+        || factor <= 0m
+        || MovimientoStock.EnUnidadBase(linea.CantidadIntroducida, factor) == 0m;
 
     private async Task<Resultado> ComprobarLosMaestrosAsync(
         AbrirTransferenciaDto peticion,

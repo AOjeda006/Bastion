@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
@@ -104,7 +105,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     [Fact]
     public async Task Dos_lineas_de_la_misma_clave_y_otro_documento_dejan_una_sola_fila_viva_con_la_suma()
     {
-        ElAlmacenDelCaso caso = await UnAlmacenAsync(440, "EXI-A", 450);
+        ElAlmacenDelCaso caso = await UnAlmacenAsync(440, "EXI-A", 450, factores: [2m, 1.5m]);
 
         await using ElModuloDeInventario modulo = new(postgres, caso.EmpresaId);
 
@@ -1422,8 +1423,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
                 caso.Ubicaciones[linea.Ubicacion],
                 caso.ArticuloId,
                 linea.Cantidad,
-                caso.UnidadId,
-                linea.Factor,
+                linea.Factor == 1m ? caso.UnidadId : caso.UnidadDelFactor[linea.Factor],
                 linea.Cantidad > 0m ? 1.50m : null))]);
 
         Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(peticion, CancellationToken.None);
@@ -1442,13 +1442,15 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     /// <param name="semillaDeInstalacion">Número para la unidad y el tramo de impuesto.</param>
     /// <param name="ubicaciones">Cuántas ubicaciones, que son cuántas claves puede mover.</param>
     /// <param name="conElAnioPasado">Si abre también el ejercicio del año pasado.</param>
+    /// <param name="factores">Los factores distintos de 1 que van a teclear sus líneas, o ninguno.</param>
     /// <returns>Los maestros del caso.</returns>
     private async Task<ElAlmacenDelCaso> UnAlmacenAsync(
         int semilla,
         string codigo,
         int semillaDeInstalacion,
         int ubicaciones = 1,
-        bool conElAnioPasado = false)
+        bool conElAnioPasado = false,
+        IReadOnlyList<decimal>? factores = null)
     {
         (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(semilla);
 
@@ -1464,7 +1466,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         }
 
         return await LosMaestrosDeAsync(
-            cliente, empresa.Id, codigo, semillaDeInstalacion, serie, delAnioPasado, ubicaciones);
+            cliente, empresa.Id, codigo, semillaDeInstalacion, serie, delAnioPasado, ubicaciones, factores);
     }
 
     /// <summary>El almacén, las ubicaciones y el artículo, para una empresa y unas series que ya hay.</summary>
@@ -1475,6 +1477,11 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     /// <param name="serie">La serie de este año.</param>
     /// <param name="delAnioPasado">La del año pasado, si la hay.</param>
     /// <param name="ubicaciones">Cuántas ubicaciones.</param>
+    /// <param name="factores">
+    /// Los factores distintos de 1 que van a teclear sus líneas: una unidad por cada uno, que
+    /// convierte a la base del artículo. Desde el 2.17 el factor lo pone la conversión, no la línea
+    /// (ADR-0065 §2).
+    /// </param>
     /// <returns>Los maestros del caso.</returns>
     private static async Task<ElAlmacenDelCaso> LosMaestrosDeAsync(
         HttpClient cliente,
@@ -1483,7 +1490,8 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         int semillaDeInstalacion,
         SerieDto serie,
         SerieDto? delAnioPasado = null,
-        int ubicaciones = 1)
+        int ubicaciones = 1,
+        IReadOnlyList<decimal>? factores = null)
     {
         AlmacenDto almacen = await LosMaestrosPorLaApi.CrearAlmacenAsync(cliente, codigo);
 
@@ -1498,8 +1506,21 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         (Guid articuloId, Guid unidadId) =
             await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, semillaDeInstalacion);
 
+        // EL CÓDIGO DE LA UNIDAD, DE LA SEMILLA DE INSTALACIÓN: es la que ya hace única la del
+        // artículo, así que la de cada factor tampoco la repite nadie.
+        Dictionary<decimal, Guid> unidadDelFactor = [];
+
+        foreach ((decimal factor, int indice) in (factores ?? []).Select((factor, indice) => (factor, indice)))
+        {
+            unidadDelFactor[factor] = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+                cliente,
+                string.Create(CultureInfo.InvariantCulture, $"K{semillaDeInstalacion}-{indice}"),
+                factor,
+                unidadId);
+        }
+
         return new ElAlmacenDelCaso(
-            empresaId, almacen.Id, huecos, articuloId, unidadId, serie, delAnioPasado);
+            empresaId, almacen.Id, huecos, articuloId, unidadId, unidadDelFactor, serie, delAnioPasado);
     }
 
     /// <summary>
@@ -1636,7 +1657,10 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     /// <summary>Una línea de ajuste sobre una de las ubicaciones del caso.</summary>
     /// <param name="Ubicacion">Cuál de las ubicaciones del caso, desde cero.</param>
     /// <param name="Cantidad">La cantidad tecleada, con signo.</param>
-    /// <param name="Factor">El factor a unidad base.</param>
+    /// <param name="Factor">
+    /// El factor a unidad base: 1 es la unidad base del artículo, y otro, la unidad del caso que
+    /// convierte a ella con ese factor.
+    /// </param>
     private sealed record Linea(int Ubicacion, decimal Cantidad, decimal Factor = 1m);
 
     /// <summary>Un descuadre, sin lo que todos comparten.</summary>
@@ -1649,6 +1673,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     /// <param name="Ubicaciones">Sus ubicaciones: una clave por cada una.</param>
     /// <param name="ArticuloId">El artículo.</param>
     /// <param name="UnidadId">Su unidad base.</param>
+    /// <param name="UnidadDelFactor">La unidad de cada factor que no es 1, si el caso los pidió.</param>
     /// <param name="Serie">La serie del ejercicio de este año.</param>
     /// <param name="SerieDelAnioPasado">La del año pasado, si el caso la abrió.</param>
     private sealed record ElAlmacenDelCaso(
@@ -1657,6 +1682,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         IReadOnlyList<Guid> Ubicaciones,
         Guid ArticuloId,
         Guid UnidadId,
+        IReadOnlyDictionary<decimal, Guid> UnidadDelFactor,
         SerieDto Serie,
         SerieDto? SerieDelAnioPasado)
     {

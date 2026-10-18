@@ -244,6 +244,15 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElEjercicioRigeElAjusteTests.Mover_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso",
         "ElEjercicioRigeElAjusteTests.Una_fecha_fuera_de_todo_ejercicio_no_se_confirma_y_lo_dice_con_otro_codigo",
 
+        // Del ítem 2.17 (ADR-0065 §2 y §4): el factor de la línea lo pone el servidor, y lo que se
+        // guardó es lo que confirman y copian después.
+        "ElFactorDelAjusteTests.Confirmar_usa_el_factor_que_se_guardo_aunque_la_conversion_cambie_o_se_retire",
+        "ElFactorDelAjusteTests.El_inverso_copia_el_factor_del_original_aunque_su_conversion_haya_cambiado",
+        "ElFactorDelAjusteTests.El_inverso_copia_el_factor_del_original_aunque_su_conversion_se_haya_retirado",
+        "ElFactorDelAjusteTests.La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion",
+        "ElFactorDelAjusteTests.Una_conversion_retirada_es_409_y_antes_de_retirarla_la_misma_linea_pasa",
+        "ElFactorDelAjusteTests.Una_unidad_sin_conversion_a_la_base_es_422_aunque_la_haya_al_reves",
+
         // Del ítem 1.6, y son el SEGUNDO caso de este ensamblado que corre también en el carril
         // rápido: traducen consultas a SQL, y traducir no abre conexión. Están aquí porque desde el
         // 1.6 el listado del art. 32 lo componen tres módulos, y este es el único proyecto de
@@ -452,6 +461,7 @@ public sealed class ElCensoDeEsteCarrilTests
         // Del ítem 2.9 (ADR-0048 §2 y §3): la forma del lote y de la serie, dicha por el alta con su
         // `type` antes de que la diga el dominio sin él. Entraron por las mutaciones 87 y 88.
         "LaFormaDeLosCodigosDeLaLineaTests.La_misma_serie_en_dos_lineas_no_abre_el_borrador_aunque_sea_para_moverla",
+        "LaFormaDeLosCodigosDeLaLineaTests.La_serie_unitaria_se_mira_con_el_factor_de_la_conversion_y_no_con_lo_tecleado",
         "LaFormaDeLosCodigosDeLaLineaTests.Un_lote_que_no_es_de_gs1_no_abre_el_borrador",
         "LaFormaDeLosCodigosDeLaLineaTests.Un_numero_de_serie_que_no_es_de_gs1_no_abre_el_borrador",
         "LaFormaDeLosCodigosDeLaLineaTests.Una_serie_que_mueve_dos_unidades_no_abre_el_borrador",

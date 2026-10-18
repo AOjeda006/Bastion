@@ -162,7 +162,7 @@ internal sealed record EscenaDeTransferencia(
         AjustarAsync(
             postgres,
             almacenId,
-            new LineaDeAjusteDto(ubicacionId, ArticuloId, cantidad, UnidadId, 1m, coste, lote, serie),
+            new LineaDeAjusteDto(ubicacionId, ArticuloId, cantidad, UnidadId, coste, lote, serie),
             fecha);
 
     /// <summary>Saca unidades de un almacén con un ajuste confirmado por la API, al precio medio.</summary>
@@ -181,7 +181,7 @@ internal sealed record EscenaDeTransferencia(
         AjustarAsync(
             postgres,
             almacenId,
-            new LineaDeAjusteDto(ubicacionId, ArticuloId, -cantidad, UnidadId, 1m, null),
+            new LineaDeAjusteDto(ubicacionId, ArticuloId, -cantidad, UnidadId, null),
             fecha);
 
     /// <summary>Un ajuste en borrador, abierto con el módulo que se le pase.</summary>

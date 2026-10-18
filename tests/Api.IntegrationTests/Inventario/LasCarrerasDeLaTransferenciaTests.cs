@@ -303,7 +303,7 @@ public sealed class LasCarrerasDeLaTransferenciaTests(PostgresConTodosLosModulos
         SerieDto otraSerie =
             await LosMaestrosPorLaApi.CrearSerieEnAsync(escena.Cliente, escena.Ejercicio.Id, "TRC-C-AJ2");
 
-        LineaDeAjusteDto enC = new(escena.UbicacionC, escena.ArticuloId, 1m, escena.UnidadId, 1m, 10m, null, Serie);
+        LineaDeAjusteDto enC = new(escena.UbicacionC, escena.ArticuloId, 1m, escena.UnidadId, 10m, null, Serie);
 
         await using ElModuloDeInventario unos = new(postgres, escena.EmpresaId);
         await using ElModuloDeInventario otros = new(postgres, escena.EmpresaId);

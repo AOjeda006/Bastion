@@ -377,7 +377,7 @@ public sealed class ElCuadreDelTransitoTests(PostgresConTodosLosModulos postgres
             ajusteId = await escena.AbrirUnAjusteAsync(
                 modulo,
                 escena.AlmacenA,
-                new LineaDeAjusteDto(escena.UbicacionA, escena.ArticuloId, -1m, escena.UnidadId, 1m, null, null, serie));
+                new LineaDeAjusteDto(escena.UbicacionA, escena.ArticuloId, -1m, escena.UnidadId, null, null, serie));
         }
 
         using HttpResponseMessage confirmado = await escena.ConfirmarElAjustePorLaApiAsync(ajusteId);

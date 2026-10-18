@@ -164,7 +164,7 @@ public sealed class LaMarcaNoCambiaConMovimientosTests(PostgresConTodosLosModulo
                 DateOnly.FromDateTime(DateTime.UtcNow),
                 "Regularización de un recuento",
                 [new LineaDeAjusteDto(
-                    escena.UbicacionId, escena.Articulo.Id, 4m, escena.UnidadId, 2m, 1.50m)]),
+                    escena.UbicacionId, escena.Articulo.Id, 4m, escena.UnidadId, 1.50m)]),
             CancellationToken.None);
 
         alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");

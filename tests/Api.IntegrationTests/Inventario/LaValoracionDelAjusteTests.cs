@@ -99,7 +99,7 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
                         DateOnly.FromDateTime(DateTime.UtcNow),
                         "Ajuste que no debería pasar del coste",
                         [new LineaDeAjusteDto(
-                            Guid.CreateVersion7(), Guid.CreateVersion7(), cantidad, Guid.CreateVersion7(), 1m, coste)]),
+                            Guid.CreateVersion7(), Guid.CreateVersion7(), cantidad, Guid.CreateVersion7(), coste)]),
                     CancellationToken.None);
 
                 alta.Error.ShouldNotBeNull($"{cantidad} a {coste} no tendría que abrir un borrador");
@@ -133,7 +133,7 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
                 almacen.Id,
                 DateOnly.FromDateTime(DateTime.UtcNow),
                 "Recuento del ítem 2.8",
-                [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m)]),
+                [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 1.50m)]),
             CancellationToken.None);
 
         alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");
@@ -799,7 +799,6 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
                     caso.Articulos[linea.Articulo].ArticuloId,
                     linea.Cantidad,
                     caso.Articulos[linea.Articulo].UnidadId,
-                    1m,
                     linea.Coste))]),
             CancellationToken.None);
 

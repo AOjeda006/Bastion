@@ -31,6 +31,12 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// contestara siempre que no daría el mismo rojo que la buena.
 /// </para>
 /// <para>
+/// <b>Y desde el 2.17 cada rechazo del alta nombra su línea</b> (ADR-0065 §3): el maestro que no
+/// existe, en el campo de <c>errors</c>, <c>lineas[i].campo</c> con el índice desde cero; el que no
+/// se mueve, en el <c>actual</c>, con la línea desde uno. Las peticiones llevan dos líneas cuando la
+/// que falla puede ser la segunda, para que un índice corrido se vea.
+/// </para>
+/// <para>
 /// <b>Semillas: del 736 al 738</b>, empresas y maestros de instalación con el mismo número. El
 /// reparto del bloque está en la cabecera de <c>LaTransferenciaTests</c>. <b>Y el 763</b>, del
 /// bloque del 2.12, que está en la cabecera de <c>ElPuertoDelArticuloContraLaBaseTests</c>.
@@ -317,20 +323,24 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
         foreach (Guid hueco in new[] { escena.UbicacionB, Guid.CreateVersion7() })
         {
             ExigirElError(
-                await IntentarAbrirAsync(escena, modulo, [linea with { UbicacionId = hueco }]),
+                await IntentarAbrirAsync(escena, modulo, [linea, linea with { UbicacionId = hueco }]),
                 "ajuste-ubicacion-no-encontrada",
-                TipoDeError.Validacion);
+                TipoDeError.Validacion,
+                campo: "lineas[1].ubicacionId");
         }
 
         ExigirElError(
-            await IntentarAbrirAsync(escena, modulo, [linea with { ArticuloId = Guid.CreateVersion7() }]),
+            await IntentarAbrirAsync(escena, modulo, [linea, linea with { ArticuloId = Guid.CreateVersion7() }]),
             "ajuste-articulo-no-encontrado",
-            TipoDeError.Validacion);
+            TipoDeError.Validacion,
+            campo: "lineas[1].articuloId");
 
         ExigirElError(
-            await IntentarAbrirAsync(escena, modulo, [linea with { UnidadIntroducidaId = Guid.CreateVersion7() }]),
+            await IntentarAbrirAsync(
+                escena, modulo, [linea, linea with { UnidadIntroducidaId = Guid.CreateVersion7() }]),
             "ajuste-unidad-no-encontrada",
-            TipoDeError.Validacion);
+            TipoDeError.Validacion,
+            campo: "lineas[1].unidadIntroducidaId");
 
         using (HttpResponseMessage bloqueo = await escena.Cliente.SuprimirAsync(
             $"{LosMaestrosPorLaApi.Ubicaciones}/{otroHueco.Id}"))
@@ -339,9 +349,10 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
         }
 
         ExigirElError(
-            await IntentarAbrirAsync(escena, modulo, [linea with { UbicacionId = otroHueco.Id }]),
+            await IntentarAbrirAsync(escena, modulo, [linea, linea with { UbicacionId = otroHueco.Id }]),
             "ajuste-ubicacion-bloqueada",
-            TipoDeError.Conflicto);
+            TipoDeError.Conflicto,
+            linea: 2);
 
         using (HttpResponseMessage porLote = await escena.CambiarElArticuloAsync("Bien", "PorLote"))
         {
@@ -349,7 +360,10 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
         }
 
         ExigirElError(
-            await IntentarAbrirAsync(escena, modulo, [linea]), "ajuste-trazabilidad-no-casa", TipoDeError.Conflicto);
+            await IntentarAbrirAsync(escena, modulo, [linea with { CodigoDeLote = "L-00" }, linea]),
+            "ajuste-trazabilidad-no-casa",
+            TipoDeError.Conflicto,
+            linea: 2);
 
         Resultado<AjusteDto> conLote = await IntentarAbrirAsync(escena, modulo, [linea with { CodigoDeLote = "L-01" }]);
 
@@ -369,7 +383,10 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
         }
 
         ExigirElError(
-            await IntentarAbrirAsync(escena, modulo, [linea]), "ajuste-unidad-retirada", TipoDeError.Conflicto);
+            await IntentarAbrirAsync(escena, modulo, [linea]),
+            "ajuste-unidad-retirada",
+            TipoDeError.Conflicto,
+            linea: 1);
 
         using (HttpResponseMessage servicio = await escena.CambiarElArticuloAsync("Servicio", "Ninguna"))
         {
@@ -377,7 +394,10 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
         }
 
         ExigirElError(
-            await IntentarAbrirAsync(escena, modulo, [linea]), "ajuste-articulo-no-se-almacena", TipoDeError.Conflicto);
+            await IntentarAbrirAsync(escena, modulo, [linea]),
+            "ajuste-articulo-no-se-almacena",
+            TipoDeError.Conflicto,
+            linea: 1);
 
         await using InventarioDbContext contexto = postgres.AbrirInventario(escena.EmpresaId);
 
@@ -386,7 +406,7 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
     }
 
     private static LineaDeAjusteDto Entrada(EscenaDeTransferencia escena, decimal cantidad) =>
-        new(escena.UbicacionA, escena.ArticuloId, cantidad, escena.UnidadId, 1m, 2m);
+        new(escena.UbicacionA, escena.ArticuloId, cantidad, escena.UnidadId, 2m);
 
     private static Task<Resultado<AjusteDto>> IntentarAbrirAsync(
         EscenaDeTransferencia escena, ElModuloDeInventario modulo, IReadOnlyList<LineaDeAjusteDto> lineas) =>
@@ -408,11 +428,22 @@ public sealed class LasGuardasDelAjusteTests(PostgresConTodosLosModulos postgres
         (await EscenaDeTransferencia.TipoDelProblemaAsync(respuesta)).ShouldBe("/errors/" + codigo);
     }
 
-    private static void ExigirElError(Resultado<AjusteDto> alta, string codigo, TipoDeError tipo)
+    private static void ExigirElError(
+        Resultado<AjusteDto> alta, string codigo, TipoDeError tipo, string? campo = null, int? linea = null)
     {
         alta.EsCorrecto.ShouldBeFalse($"tenía que salir «{codigo}»");
         alta.Error!.Codigo.ShouldBe(codigo);
         alta.Error!.Tipo.ShouldBe(tipo);
+
+        if (campo is not null)
+        {
+            alta.Error!.Campos.Keys.ShouldBe([campo], "el campo de la línea que falla, desde cero (ADR-0065 §3)");
+        }
+
+        if (linea is { } numero)
+        {
+            alta.Error!.Actual.ShouldBe(new LineaQueFallaDto(numero), "la línea que falla, desde uno (ADR-0065 §3)");
+        }
     }
 
     private async Task<EstadoDeAjuste> ElEstadoDeAsync(EscenaDeTransferencia escena, Guid ajusteId)

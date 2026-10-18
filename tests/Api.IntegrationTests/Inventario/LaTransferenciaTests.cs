@@ -915,7 +915,7 @@ public sealed class LaTransferenciaTests(PostgresConTodosLosModulos postgres) : 
             Guid ajusteId = await escena.AbrirUnAjusteAsync(
                 modulo,
                 escena.AlmacenB,
-                new LineaDeAjusteDto(escena.UbicacionB, escena.ArticuloId, 1m, escena.UnidadId, 1m, 50m, null, Serie));
+                new LineaDeAjusteDto(escena.UbicacionB, escena.ArticuloId, 1m, escena.UnidadId, 50m, null, Serie));
 
             PostgresException choque = await Should.ThrowAsync<PostgresException>(() => modulo.ConfirmarAsync(ajusteId));
 

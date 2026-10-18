@@ -20,14 +20,18 @@ internal readonly record struct LineaConCodigos(
 /// <param name="Numero">Su posición en la petición, desde uno.</param>
 /// <param name="ArticuloId">El artículo.</param>
 /// <param name="CantidadIntroducida">La cantidad, tal como se escribió.</param>
-/// <param name="FactorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
+/// <param name="FactorAUnidadBase">
+/// Cuántas unidades base hay en una de las introducidas, o <see langword="null"/> si todavía no se
+/// sabe: en el alta del ajuste lo resuelve el servidor después de los maestros (ADR-0065 §2), y
+/// hasta entonces la serie unitaria no se puede mirar.
+/// </param>
 /// <param name="CodigoDeLote">El lote, si lo lleva.</param>
 /// <param name="NumeroDeSerie">El número de serie, si lo lleva.</param>
 internal readonly record struct LineaConForma(
     int Numero,
     Guid ArticuloId,
     decimal CantidadIntroducida,
-    decimal FactorAUnidadBase,
+    decimal? FactorAUnidadBase,
     string? CodigoDeLote,
     string? NumeroDeSerie);
 
@@ -76,6 +80,11 @@ internal static class LaTrazabilidadDeLasLineas
     ];
 
     /// <summary>Las líneas de una petición de alta de ajuste, numeradas desde uno.</summary>
+    /// <remarks>
+    /// <b>Sin factor</b>: la petición ya no lo trae, y el alta lo resuelve con los maestros. La
+    /// primera pasada de la forma no mira la serie unitaria, y la segunda va con el factor puesto
+    /// (ADR-0065 §2).
+    /// </remarks>
     /// <param name="lineas">Lo que llegó.</param>
     /// <returns>Cada línea con su forma, en su orden.</returns>
     internal static IReadOnlyList<LineaConForma> DeLaPeticion(IReadOnlyList<LineaDeAjusteDto> lineas) =>
@@ -84,7 +93,7 @@ internal static class LaTrazabilidadDeLasLineas
             indice + 1,
             linea.ArticuloId,
             linea.CantidadIntroducida,
-            linea.FactorAUnidadBase,
+            null,
             linea.CodigoDeLote,
             linea.NumeroDeSerie)),
     ];
@@ -117,6 +126,8 @@ internal static class LaTrazabilidadDeLasLineas
     /// <b>Son las mismas reglas que lanza el dominio</b>, dichas antes con su <c>type</c>: ahí son
     /// invariantes, y aquí, un cuerpo mal escrito que el borde contesta con un <c>400</c>
     /// (ADR-0004). Lote y serie a la vez no está aquí: lo rechaza la marca, que es de una sola cosa.
+    /// <b>Una línea sin factor no se mira por la serie unitaria</b>, porque sin él no se sabe cuántas
+    /// unidades base mueve: el alta del ajuste vuelve a llamar aquí cuando lo tiene (ADR-0065 §2).
     /// </remarks>
     /// <param name="lineas">Lo que llegó, en su orden.</param>
     /// <returns>La primera línea que falla, por orden, o <see langword="null"/>.</returns>
@@ -141,7 +152,8 @@ internal static class LaTrazabilidadDeLasLineas
                 return new LineaSinForma(linea.Numero, FaltaDeForma.NumeroDeSerieNoValido, null);
             }
 
-            if (Math.Abs(MovimientoStock.EnUnidadBase(linea.CantidadIntroducida, linea.FactorAUnidadBase)) != 1m)
+            if (linea.FactorAUnidadBase is { } factor
+                && Math.Abs(MovimientoStock.EnUnidadBase(linea.CantidadIntroducida, factor)) != 1m)
             {
                 return new LineaSinForma(linea.Numero, FaltaDeForma.SerieNoUnitaria, null);
             }

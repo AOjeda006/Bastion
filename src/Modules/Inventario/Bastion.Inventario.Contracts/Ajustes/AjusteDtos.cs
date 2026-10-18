@@ -25,13 +25,10 @@ public sealed record AbrirAjusteDto(
 /// el mismo signo acaban contradiciéndose.
 /// </para>
 /// <para>
-/// <b>El factor viaja en la petición, y eso tiene fecha de caducidad.</b> Lo que debería decir
-/// cuántas unidades base hay en una caja es el catálogo de conversiones de Organización
-/// (<c>ConversionUM</c>), pero <b>ningún ítem de la fase 2 le pone puerto</b> y el 2.2 fijó en tres
-/// los que Inventario pregunta. Mientras tanto lo aporta quien da el alta, y lo que sí queda
-/// garantizado es la coherencia interna de la fila: la cantidad en unidad base la calcula el
-/// dominio a partir de estas dos y ningún camino permite enviarla. Está anotado como pregunta
-/// abierta del cierre de fase en <c>docs/PLAN.md</c>.
+/// <b>No lleva factor: lo resuelve el servidor</b> (ADR-0065 §2). Si la unidad es la base del
+/// artículo, el factor es 1; si no, es el de la conversión de Organización de esa unidad a la base,
+/// y sin ella el alta contesta <c>ajuste-sin-conversion</c>. Hasta el 2.17 lo traía la petición, y
+/// quien la escribía podía decir que una caja tenía las unidades que quisiera.
 /// </para>
 /// <para>
 /// <b>No lleva divisa</b>: la del documento es la divisa base de la empresa, y la pone el servidor
@@ -41,8 +38,9 @@ public sealed record AbrirAjusteDto(
 /// <param name="UbicacionId">Hueco del almacén.</param>
 /// <param name="ArticuloId">Artículo que se mueve.</param>
 /// <param name="CantidadIntroducida">Cantidad con signo, tal como se escribe.</param>
-/// <param name="UnidadIntroducidaId">Unidad en la que se escribe.</param>
-/// <param name="FactorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
+/// <param name="UnidadIntroducidaId">
+/// Unidad en la que se escribe: la base del artículo, o una que tenga conversión a ella.
+/// </param>
 /// <param name="CosteUnitario">
 /// Coste de una unidad base, en la divisa base de la empresa, o nada. Solo lo lleva una línea que
 /// sube, y nunca negativo: si no, <c>ajuste-coste-no-valido</c>. Sin él, la entrada se valora al
@@ -62,7 +60,6 @@ public sealed record LineaDeAjusteDto(
     Guid ArticuloId,
     decimal CantidadIntroducida,
     Guid UnidadIntroducidaId,
-    decimal FactorAUnidadBase,
     decimal? CosteUnitario,
     string? CodigoDeLote = null,
     string? NumeroDeSerie = null);
@@ -94,6 +91,31 @@ public sealed record AjusteDto(
     int Lineas,
     Guid? AnulaAId,
     string Divisa);
+
+/// <summary>
+/// La línea de la petición que paró el alta, en la extensión <c>actual</c> del problema
+/// (ADR-0065 §3).
+/// </summary>
+/// <remarks>
+/// <b>La llevan los <c>409</c> y los <c>422</c> de una línea</b>: la ubicación bloqueada, el artículo
+/// que no se almacena, la unidad retirada y la trazabilidad que no casa. Un <c>400</c> dice lo mismo
+/// en <c>errors</c>, con la ruta del campo, porque solo una validación tiene campos.
+/// </remarks>
+/// <param name="Linea">Su número, desde uno, que es el que enseña la ficha.</param>
+public sealed record LineaQueFallaDto(int Linea);
+
+/// <summary>
+/// La conversión que le falta a una línea, o que está retirada, en la extensión <c>actual</c> del
+/// problema (ADR-0065 §2).
+/// </summary>
+/// <remarks>
+/// <b>Con las dos unidades</b>: quien lo lee sabe qué conversión dar de alta, o cuál está retirada,
+/// sin volver a preguntar por el artículo.
+/// </remarks>
+/// <param name="Linea">Su número, desde uno.</param>
+/// <param name="UnidadIntroducidaId">La unidad en la que se escribió la línea.</param>
+/// <param name="UnidadBaseId">La unidad base de su artículo.</param>
+public sealed record ConversionDeLaLineaDto(int Linea, Guid UnidadIntroducidaId, Guid UnidadBaseId);
 
 /// <summary>Lo que hace falta para anular un ajuste confirmado.</summary>
 /// <remarks>

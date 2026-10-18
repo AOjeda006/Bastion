@@ -1,7 +1,10 @@
+using System.Text.Json;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Application.Trazabilidad;
+using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Valoraciones;
+using Bastion.Organizacion.Contracts.Unidades;
 
 namespace Bastion.Inventario.Application.Ajustes;
 
@@ -27,6 +30,40 @@ internal static class ErroresDeAjuste
     internal const string CodigoSerieNoUnitaria = "ajuste-serie-no-unitaria";
     internal const string CodigoSerieRepetida = "ajuste-serie-repetida";
     internal const string CodigoTrazabilidadNoCasa = "ajuste-trazabilidad-no-casa";
+    internal const string CodigoSinConversion = "ajuste-sin-conversion";
+    internal const string CodigoConversionRetirada = "ajuste-conversion-retirada";
+
+    /// <summary>La ruta de un campo de una línea, tal como viaja en el cuerpo (ADR-0065 §3).</summary>
+    /// <remarks>
+    /// <b>Con el índice desde cero</b>, que es el de la ruta de <c>zod</c> sobre el formulario: el
+    /// error del servidor y el de la pantalla caen en el mismo campo. Los nombres salen de las
+    /// propiedades del contrato con la política del serializador, así que no hay una cadena
+    /// tecleada que se pueda quedar atrás.
+    /// </remarks>
+    /// <param name="linea">La línea, desde uno, como la dicen los mensajes.</param>
+    /// <param name="propiedad">La propiedad de <see cref="LineaDeAjusteDto"/>, por su <c>nameof</c>.</param>
+    /// <returns>La ruta, como <c>lineas[0].codigoDeLote</c>.</returns>
+    internal static string CampoDeLaLinea(int linea, string propiedad) =>
+        $"{JsonNamingPolicy.CamelCase.ConvertName(nameof(AbrirAjusteDto.Lineas))}[{linea - 1}]." +
+        JsonNamingPolicy.CamelCase.ConvertName(propiedad);
+
+    /// <summary>El campo de una línea que falla, para la sobrecarga de la validación.</summary>
+    /// <remarks>
+    /// <b>No fabrica el error, y es a propósito.</b> El catálogo de <c>type</c> lo saca un barrido
+    /// que lee el primer argumento de cada llamada a <see cref="ErrorDeOperacion"/> (ADR-0030): un
+    /// ayudante que recibiera el código como parámetro dejaría todos los suyos sin resolver. Así el
+    /// código va, literal, en la llamada de cada error.
+    /// </remarks>
+    /// <param name="linea">La línea, desde uno.</param>
+    /// <param name="propiedad">La propiedad que falla, por su <c>nameof</c>.</param>
+    /// <param name="motivo">Lo que se dice del campo.</param>
+    /// <returns>Un solo campo, con su motivo.</returns>
+    internal static IReadOnlyDictionary<string, IReadOnlyList<string>> ElCampoDeLaLinea(
+        int linea, string propiedad, string motivo) =>
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+        {
+            [CampoDeLaLinea(linea, propiedad)] = [motivo],
+        };
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,
@@ -207,7 +244,11 @@ internal static class ErroresDeAjuste
     internal static ErrorDeOperacion LoteNoValido(int linea) => ErrorDeOperacion.Validacion(
         CodigoLoteNoValido,
         $"El lote de la línea {linea} no es un código GS1: de 1 a {CodigoGs1.LargoMaximo} caracteres " +
-        "del conjunto 82, sin espacios dentro, que es lo que cabe en la etiqueta (ADR-0048 §2).");
+        "del conjunto 82, sin espacios dentro, que es lo que cabe en la etiqueta (ADR-0048 §2).",
+        ElCampoDeLaLinea(
+            linea,
+            nameof(LineaDeAjusteDto.CodigoDeLote),
+            $"No es un código GS1: de 1 a {CodigoGs1.LargoMaximo} caracteres del conjunto 82."));
 
     /// <summary>El número de serie de una línea no es un código GS1 (ADR-0048 §2).</summary>
     /// <param name="linea">La línea, desde uno.</param>
@@ -216,16 +257,28 @@ internal static class ErroresDeAjuste
         CodigoNumeroDeSerieNoValido,
         $"El número de serie de la línea {linea} no es un código GS1: de 1 a " +
         $"{CodigoGs1.LargoMaximo} caracteres del conjunto 82, sin espacios dentro, que es lo que cabe " +
-        "en la etiqueta (ADR-0048 §2).");
+        "en la etiqueta (ADR-0048 §2).",
+        ElCampoDeLaLinea(
+            linea,
+            nameof(LineaDeAjusteDto.NumeroDeSerie),
+            $"No es un código GS1: de 1 a {CodigoGs1.LargoMaximo} caracteres del conjunto 82."));
 
     /// <summary>Una línea con número de serie que no mueve una unidad base (ADR-0048 §3).</summary>
+    /// <remarks>
+    /// <b>El campo es la cantidad</b>, que es lo que se corrige. Se mira con el factor ya resuelto, así
+    /// que una caja de dos con número de serie también sale aquí (ADR-0065 §2).
+    /// </remarks>
     /// <param name="linea">La línea, desde uno.</param>
     /// <returns>El error.</returns>
     internal static ErrorDeOperacion SerieNoUnitaria(int linea) => ErrorDeOperacion.Validacion(
         CodigoSerieNoUnitaria,
         $"La línea {linea} lleva número de serie y no mueve una unidad base, ni arriba ni abajo: " +
         "un número de serie es una unidad, y dos unidades con el mismo número no existen " +
-        "(ADR-0048 §3).");
+        "(ADR-0048 §3).",
+        ElCampoDeLaLinea(
+            linea,
+            nameof(LineaDeAjusteDto.CantidadIntroducida),
+            "Con número de serie, la línea mueve una unidad base."));
 
     /// <summary>El mismo número de serie en dos líneas del documento (ADR-0048 §3).</summary>
     /// <remarks>
@@ -239,7 +292,11 @@ internal static class ErroresDeAjuste
     internal static ErrorDeOperacion SerieRepetida(int linea, string serie) => ErrorDeOperacion.Validacion(
         CodigoSerieRepetida,
         $"La línea {linea} repite el número de serie «{serie}» de otra línea del mismo artículo: una " +
-        "serie sale una sola vez por documento, y moverla de sitio es la reubicación (ADR-0048 §3).");
+        "serie sale una sola vez por documento, y moverla de sitio es la reubicación (ADR-0048 §3).",
+        ElCampoDeLaLinea(
+            linea,
+            nameof(LineaDeAjusteDto.NumeroDeSerie),
+            "Otra línea del mismo artículo ya lleva este número de serie."));
 
     /// <summary>Una línea que no casa con la marca de su artículo (ADR-0048 §4).</summary>
     /// <remarks>
@@ -249,7 +306,8 @@ internal static class ErroresDeAjuste
     /// con la fila bloqueada, y un borrador escrito con la marca de antes se para aquí.
     /// </para>
     /// <para>
-    /// <b>Dice qué línea y qué le falta o le sobra</b>, que es lo que hay que corregir.
+    /// <b>Dice qué línea y qué le falta o le sobra</b>, que es lo que hay que corregir, y la línea va
+    /// también en <c>actual</c>, para que la pantalla ponga el error en su artículo (ADR-0065 §3).
     /// </para>
     /// </remarks>
     /// <param name="noCasa">La línea, su artículo, su marca y lo que le falta o le sobra.</param>
@@ -259,5 +317,40 @@ internal static class ErroresDeAjuste
             CodigoTrazabilidadNoCasa,
             $"La línea {noCasa.Linea} no casa con la marca del artículo {noCasa.ArticuloId}, que es " +
             $"«{noCasa.Marca}»: {LaTrazabilidadDeLasLineas.EnPalabras(noCasa.Discrepancia)} Corrija la " +
-            "línea, o la marca si el artículo todavía no se ha movido (ADR-0048 §4).");
+            "línea, o la marca si el artículo todavía no se ha movido (ADR-0048 §4).")
+        .ConElEstadoActual(new LineaQueFallaDto(noCasa.Linea));
+
+    /// <summary>La unidad de una línea no tiene conversión a la base de su artículo (ADR-0065 §2).</summary>
+    /// <remarks>
+    /// <b>Un <c>422</c> y no un <c>400</c></b>: el cuerpo está bien escrito, y lo que falta es un
+    /// maestro que se puede dar de alta. No se invierte ni se encadena otra conversión: la inversa
+    /// redondeada sería una que nadie ha escrito (ADR-0023).
+    /// </remarks>
+    /// <param name="linea">La primera línea que la necesita, desde uno.</param>
+    /// <param name="par">De la unidad introducida a la base.</param>
+    /// <returns>El error, con las dos unidades en <c>actual</c>.</returns>
+    internal static ErrorDeOperacion SinConversion(int linea, ParDeUnidades par) =>
+        ErrorDeOperacion.ReglaDeNegocio(
+            CodigoSinConversion,
+            $"La línea {linea} está escrita en la unidad {par.OrigenId}, y no hay ninguna conversión " +
+            $"de esa unidad a {par.DestinoId}, que es la base de su artículo: sin ella no se sabe " +
+            "cuántas unidades base mueve. Dé de alta la conversión, o escriba la línea en la unidad " +
+            "base (ADR-0065 §2).")
+        .ConElEstadoActual(new ConversionDeLaLineaDto(linea, par.OrigenId, par.DestinoId));
+
+    /// <summary>La conversión de una línea a la base de su artículo está retirada (ADR-0065 §2).</summary>
+    /// <remarks>
+    /// Un <c>409</c>, como la unidad retirada: la conversión sigue explicando lo que ya está escrito
+    /// con ella, pero no se escribe nada nuevo.
+    /// </remarks>
+    /// <param name="linea">La primera línea que la usa, desde uno.</param>
+    /// <param name="par">De la unidad introducida a la base.</param>
+    /// <returns>El error, con las dos unidades en <c>actual</c>.</returns>
+    internal static ErrorDeOperacion ConversionRetirada(int linea, ParDeUnidades par) =>
+        ErrorDeOperacion.Conflicto(
+            CodigoConversionRetirada,
+            $"La línea {linea} está escrita en la unidad {par.OrigenId}, y su conversión a " +
+            $"{par.DestinoId}, la base de su artículo, está retirada: explica lo que ya está escrito " +
+            "con ella, pero no se escribe nada nuevo (ADR-0065 §2).")
+        .ConElEstadoActual(new ConversionDeLaLineaDto(linea, par.OrigenId, par.DestinoId));
 }

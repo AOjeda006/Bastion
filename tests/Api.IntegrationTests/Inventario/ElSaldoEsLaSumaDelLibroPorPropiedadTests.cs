@@ -3367,12 +3367,13 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             {
                 ClaveDeExistencia clave = empresa.Claves[linea.Clave];
 
+                // EL FACTOR LO PONE EL SERVIDOR (ADR-0065 §2): la línea lo pide por su unidad, la base
+                // si es 1 y si no, la que convierte a todas las bases con ese factor.
                 return new LineaDeAjusteDto(
                     clave.UbicacionId,
                     clave.ArticuloId,
                     linea.Cantidad,
-                    empresa.UnidadDe[clave.ArticuloId],
-                    linea.Factor,
+                    linea.Factor == 1m ? empresa.UnidadDe[clave.ArticuloId] : empresa.UnidadDelFactor[linea.Factor],
                     linea.Coste,
                     linea.Lote,
                     linea.Serie);
@@ -3455,6 +3456,18 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         (Guid tercero, Guid unidadDelTercero) =
             await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, semilla + 130, PorNumeroSerie);
 
+        // UNA UNIDAD POR CADA FACTOR QUE NO ES 1, que convierte a las tres bases: desde el 2.17 el
+        // factor sale de la conversión, no de la línea (ADR-0065 §2).
+        Dictionary<decimal, Guid> unidadDelFactor = [];
+
+        foreach (decimal factor in s_factores.Where(factor => factor != 1m))
+        {
+            string sufijo = string.Create(CultureInfo.InvariantCulture, $"K{semilla}{(factor > 1m ? "D" : "M")}");
+
+            unidadDelFactor[factor] = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+                cliente, sufijo, factor, unidadDelPrimero, unidadDelSegundo, unidadDelTercero);
+        }
+
         return new UnaEmpresa(
             cliente,
             empresa.Id,
@@ -3477,6 +3490,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                 [segundo] = unidadDelSegundo,
                 [tercero] = unidadDelTercero,
             },
+            unidadDelFactor,
             new Dictionary<Guid, string> { [primero] = "Ninguna", [segundo] = PorLote, [tercero] = PorNumeroSerie },
             serie,
             delAnioPasado,
@@ -3705,6 +3719,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Guid AlmacenB,
         IReadOnlyList<ClaveDeExistencia> Claves,
         IReadOnlyDictionary<Guid, Guid> UnidadDe,
+        IReadOnlyDictionary<decimal, Guid> UnidadDelFactor,
         IReadOnlyDictionary<Guid, string> Marcas,
         SerieDto Serie,
         SerieDto SerieDelAnioPasado,

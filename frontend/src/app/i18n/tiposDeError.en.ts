@@ -18,6 +18,10 @@ export const tiposDeError: TiposDeError = {
   'ajuste-con-fecha-futura':
     'That adjustment is dated after today: the ledger only records what has already ' +
     'happened. Confirm it on that day or fix the date.',
+  'ajuste-conversion-retirada':
+    'The unit on that line reaches the item’s unit through a retired conversion: what was ' +
+    'already written with it is still read, but no new movement comes in. Use the item’s ' +
+    'base unit or ask for the conversion to be reinstated.',
   'ajuste-coste-no-valido':
     'A line that takes stock out carries no cost: it is valued at the average cost. And no ' +
     'cost can be negative; a sample or a gift comes in at zero.',
@@ -66,6 +70,10 @@ export const tiposDeError: TiposDeError = {
     'Two lines of the adjustment name the same serial number, and each piece appears only ' +
     'once per document. Moving it to another location is a relocation, which is a different ' +
     'document.',
+  'ajuste-sin-conversion':
+    'The unit on that line has no conversion to the item’s base unit, so there is no way to ' +
+    'know how many units it moves. Use the base unit or add the conversion from that unit ' +
+    'to the base.',
   'ajuste-sin-ejercicio':
     'That adjustment is dated outside every financial year: with no period to book it to, ' +
     'the document would not reach any return. Open the missing year or fix the date.',

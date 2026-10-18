@@ -115,6 +115,10 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
         UbicacionDto ubicacion = await LosMaestrosPorLaApi.CrearUbicacionAsync(cliente, almacen.Id, "ADR37-A-01");
         (Guid articuloId, Guid unidadId) = await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, 349);
 
+        // LA LÍNEA VA EN CAJAS DE DOS, y desde el 2.17 eso es una conversión de verdad: el factor lo
+        // pone el servidor (ADR-0065 §2), y la fila que se lee abajo tiene que decir el de la caja.
+        Guid cajaDeDos = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(cliente, "K349", 2m, unidadId);
+
         // LA SERIE ES DE VERDAD, y desde el ítem 2.4 no queda otra: confirmar toma un número con
         // una sentencia que exige que la serie exista, sea de esta empresa y siga activa. Una
         // serie inventada haría fallar la confirmación de abajo por un motivo que no es el de
@@ -126,7 +130,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
             almacen.Id,
             DateOnly.FromDateTime(DateTime.UtcNow),
             "Regularización de un recuento",
-            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 2m, 1.50m)]);
+            [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, cajaDeDos, 1.50m)]);
 
         Guid ajusteId;
 
@@ -273,7 +277,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
         DateOnly.FromDateTime(DateTime.UtcNow),
         "Ajuste que no debería llegar a mirar sus líneas",
         [new LineaDeAjusteDto(
-            Guid.CreateVersion7(), Guid.CreateVersion7(), 1m, Guid.CreateVersion7(), 1m, 1m)]);
+            Guid.CreateVersion7(), Guid.CreateVersion7(), 1m, Guid.CreateVersion7(), 1m)]);
 
     /// <summary>
     /// El módulo de Inventario cableado a mano, con los adaptadores de verdad y contra la base.

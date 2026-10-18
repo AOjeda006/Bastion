@@ -466,7 +466,6 @@ public sealed class NingunaFechaAnteriorAlUltimoMovimientoTests(PostgresConTodos
                     caso.Articulos[linea.Articulo].ArticuloId,
                     linea.Cantidad,
                     caso.Articulos[linea.Articulo].UnidadId,
-                    1m,
                     linea.Coste))]),
             CancellationToken.None);
 

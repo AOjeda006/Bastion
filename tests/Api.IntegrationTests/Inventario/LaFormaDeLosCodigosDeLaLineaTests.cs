@@ -24,9 +24,16 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// la marca que casa. El único rechazo posible es el de la forma, y el caso exige su código.
 /// </para>
 /// <para>
+/// <b>Y desde el 2.17 cada rechazo nombra su campo</b> (ADR-0065 §3): la clave de <c>errors</c> es
+/// la ruta de zod, <c>lineas[i].campo</c>, con el índice desde cero, para que el formulario pinte el
+/// error en la celda que hay que corregir. La serie unitaria se mira entonces con el factor que pone
+/// el servidor, en una segunda pasada, y su caso propio lleva la pareja que pasa.
+/// </para>
+/// <para>
 /// <b>Semillas: las empresas, del 610 al 613; los maestros de instalación, del 614 al 617.</b> Del
 /// 600 al 607 y el 620 son de <c>Organizacion.IntegrationTests</c>, y del 596 al 599, de
-/// <c>ElCuadreMiraElLoteYLaSerieTests</c>.
+/// <c>ElCuadreMiraElLoteYLaSerieTests</c>. <b>Y la 876 y la 877</b>, empresa y maestros, del bloque
+/// del 2.17, que está en la cabecera de <c>ElFactorDelAjusteTests</c>.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -60,7 +67,8 @@ public sealed class LaFormaDeLosCodigosDeLaLineaTests(PostgresConTodosLosModulos
                 escena.Entrada(escena.UbicacionA1, 1m, lote: "L 02"),
             ],
             "ajuste-lote-no-valido",
-            "línea 2");
+            "línea 2",
+            "lineas[1].codigoDeLote");
     }
 
     [Fact]
@@ -72,7 +80,8 @@ public sealed class LaFormaDeLosCodigosDeLaLineaTests(PostgresConTodosLosModulos
             escena,
             [escena.Entrada(escena.UbicacionA1, 1m, serie: "SN 01")],
             "ajuste-numero-de-serie-no-valido",
-            "línea 1");
+            "línea 1",
+            "lineas[0].numeroDeSerie");
     }
 
     [Fact]
@@ -84,7 +93,8 @@ public sealed class LaFormaDeLosCodigosDeLaLineaTests(PostgresConTodosLosModulos
             escena,
             [escena.Entrada(escena.UbicacionA1, 2m, serie: "SN-01")],
             "ajuste-serie-no-unitaria",
-            "línea 1");
+            "línea 1",
+            "lineas[0].cantidadIntroducida");
     }
 
     [Fact]
@@ -102,7 +112,35 @@ public sealed class LaFormaDeLosCodigosDeLaLineaTests(PostgresConTodosLosModulos
                 escena.Entrada(escena.UbicacionA2, 1m, serie: " SN-01 "),
             ],
             "ajuste-serie-repetida",
-            "línea 2");
+            "línea 2",
+            "lineas[1].numeroDeSerie");
+    }
+
+    [Fact]
+    public async Task La_serie_unitaria_se_mira_con_el_factor_de_la_conversion_y_no_con_lo_tecleado()
+    {
+        EscenaTrazable escena = await MontarAsync(876, "FCE", 877, "PorNumeroSerie");
+
+        Guid deDos = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+            escena.Cliente, "K877D", 2m, escena.UnidadId);
+        Guid media = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+            escena.Cliente, "K877M", 0.5m, escena.UnidadId);
+
+        // TECLEA UNA Y MUEVE DOS: la primera pasada de la forma no la ve, porque todavía no hay
+        // factor. Sin la segunda, este borrador se abriría.
+        await ExigirElRechazoAsync(
+            escena,
+            [escena.Entrada(escena.UbicacionA1, 1m, serie: "SN-01") with { UnidadIntroducidaId = deDos }],
+            "ajuste-serie-no-unitaria",
+            "línea 1",
+            "lineas[0].cantidadIntroducida");
+
+        // LA PAREJA: teclea dos y mueve una. Si la primera pasada mirara la serie con factor 1, esta
+        // tampoco se abriría.
+        Resultado<AjusteDto> alta = await IntentarAbrirAsync(
+            escena, [escena.Entrada(escena.UbicacionA1, 2m, serie: "SN-01") with { UnidadIntroducidaId = media }]);
+
+        alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»: dos medias son una unidad base");
     }
 
     private async Task<EscenaTrazable> MontarAsync(int semilla, string codigo, int maestro, string trazabilidad)
@@ -114,15 +152,21 @@ public sealed class LaFormaDeLosCodigosDeLaLineaTests(PostgresConTodosLosModulos
         return escena;
     }
 
-    private async Task ExigirElRechazoAsync(
-        EscenaTrazable escena, IReadOnlyList<LineaDeAjusteDto> lineas, string codigo, string cualLinea)
+    private async Task<Resultado<AjusteDto>> IntentarAbrirAsync(
+        EscenaTrazable escena, IReadOnlyList<LineaDeAjusteDto> lineas)
     {
         await using ElModuloDeInventario modulo = new(postgres, escena.EmpresaId);
 
-        Resultado<AjusteDto> alta = await modulo.Alta.EjecutarAsync(
+        return await modulo.Alta.EjecutarAsync(
             new AbrirAjusteDto(
                 escena.Serie.Id, escena.AlmacenA, EscenaTrazable.Hoy, "Regularización de un recuento", lineas),
             CancellationToken.None);
+    }
+
+    private async Task ExigirElRechazoAsync(
+        EscenaTrazable escena, IReadOnlyList<LineaDeAjusteDto> lineas, string codigo, string cualLinea, string campo)
+    {
+        Resultado<AjusteDto> alta = await IntentarAbrirAsync(escena, lineas);
 
         alta.EsCorrecto.ShouldBeFalse("el cuerpo está mal escrito y el alta tenía que decirlo");
 
@@ -131,6 +175,7 @@ public sealed class LaFormaDeLosCodigosDeLaLineaTests(PostgresConTodosLosModulos
         error.Codigo.ShouldBe(codigo, error.Mensaje);
         error.Tipo.ShouldBe(TipoDeError.Validacion, "es un 400: lo que falla es el cuerpo, no la ficha");
         error.Mensaje.ShouldContain(cualLinea);
+        error.Campos.Keys.ShouldBe([campo], "la celda que hay que corregir, con el índice de zod (ADR-0065 §3)");
 
         long ajustes = await ElLibro.EscalarAsync<long>(
             postgres,

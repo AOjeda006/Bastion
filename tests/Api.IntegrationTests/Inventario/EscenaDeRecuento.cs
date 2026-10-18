@@ -395,7 +395,7 @@ internal sealed record EscenaDeRecuento(EscenaDeTransferencia Escena, SerieDto S
                 modulo,
                 almacenId,
                 new LineaDeAjusteDto(
-                    ubicacionId, Escena.ArticuloId, -cantidad, Escena.UnidadId, 1m, null, lote, serie));
+                    ubicacionId, Escena.ArticuloId, -cantidad, Escena.UnidadId, null, lote, serie));
         }
 
         using HttpResponseMessage confirmado = await Escena.ConfirmarElAjustePorLaApiAsync(ajusteId);

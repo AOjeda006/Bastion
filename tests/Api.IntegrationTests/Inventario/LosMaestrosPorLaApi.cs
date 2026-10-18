@@ -42,6 +42,7 @@ internal static class LosMaestrosPorLaApi
     internal const string Almacenes = "/api/v1/organizacion/almacenes";
     internal const string Ubicaciones = "/api/v1/organizacion/ubicaciones";
     internal const string Unidades = "/api/v1/organizacion/unidades-de-medida";
+    internal const string Conversiones = "/api/v1/organizacion/conversiones-de-unidades";
     internal const string Impuestos = "/api/v1/organizacion/impuestos";
     internal const string Articulos = "/api/v1/catalogo/articulos";
     internal const string Ejercicios = "/api/v1/organizacion/ejercicios";
@@ -223,5 +224,71 @@ internal static class LosMaestrosPorLaApi
         alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
 
         return ((await alta.Content.ReadFromJsonAsync<ArticuloDto>())!.Id, unidadId);
+    }
+
+    /// <summary>Una unidad de medida nueva, sin decimales y sin ninguna conversión.</summary>
+    /// <remarks>
+    /// Es un maestro de instalación, como la del artículo: el código lo elige quien llama, de hasta
+    /// diez caracteres, y no lo repite ningún otro caso.
+    /// </remarks>
+    /// <param name="cliente">Cliente autenticado.</param>
+    /// <param name="codigo">El código, único en toda la base.</param>
+    /// <returns>Su identificador.</returns>
+    internal static async Task<Guid> CrearUnidadAsync(HttpClient cliente, string codigo)
+    {
+        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
+            Unidades,
+            new CrearUnidadMedidaDto { Codigo = codigo, Nombre = "Unidad " + codigo, Decimales = 0 });
+
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+
+        return (await alta.Content.ReadFromJsonAsync<UnidadMedidaDto>())!.Id;
+    }
+
+    /// <summary>Una conversión de una unidad a otra, por la API de Organización.</summary>
+    /// <param name="cliente">Cliente autenticado.</param>
+    /// <param name="origenId">La unidad de la que se parte.</param>
+    /// <param name="destinoId">La unidad a la que se llega.</param>
+    /// <param name="factor">Unidades de destino en una de origen.</param>
+    /// <returns>La conversión dada de alta.</returns>
+    internal static async Task<ConversionUmDto> CrearConversionAsync(
+        HttpClient cliente, Guid origenId, Guid destinoId, decimal factor)
+    {
+        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
+            Conversiones,
+            new CrearConversionUmDto { UnidadOrigenId = origenId, UnidadDestinoId = destinoId, Factor = factor });
+
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+
+        return (await alta.Content.ReadFromJsonAsync<ConversionUmDto>())!;
+    }
+
+    /// <summary>
+    /// Una unidad nueva que convierte, con el mismo factor, a cada una de las unidades base que se le
+    /// den.
+    /// </summary>
+    /// <remarks>
+    /// <b>Desde el 2.17 el factor de una línea de ajuste lo pone el servidor</b> (ADR-0065 §2): una
+    /// línea que no va en la unidad base de su artículo necesita una conversión de verdad a ella, y
+    /// esta es la forma corta de darla de alta.
+    /// </remarks>
+    /// <param name="cliente">Cliente autenticado.</param>
+    /// <param name="codigo">El código de la unidad nueva, único en toda la base.</param>
+    /// <param name="factor">Unidades base que hay en una de la nueva.</param>
+    /// <param name="unidadesBase">Las bases a las que convierte.</param>
+    /// <returns>El identificador de la unidad nueva.</returns>
+    internal static async Task<Guid> CrearUnidadQueConvierteAAsync(
+        HttpClient cliente, string codigo, decimal factor, params Guid[] unidadesBase)
+    {
+        unidadesBase.ShouldNotBeEmpty("una unidad que convierte tiene que convertir a algo");
+
+        Guid unidadId = await CrearUnidadAsync(cliente, codigo);
+
+        foreach (Guid unidadBaseId in unidadesBase)
+        {
+            await CrearConversionAsync(cliente, unidadId, unidadBaseId, factor);
+        }
+
+        return unidadId;
     }
 }

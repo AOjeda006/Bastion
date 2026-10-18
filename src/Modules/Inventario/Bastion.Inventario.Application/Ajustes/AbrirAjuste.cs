@@ -49,6 +49,12 @@ public interface IAbrirAjuste
 /// repite es la pregunta idéntica: los artículos y las unidades se preguntan una vez por
 /// identificador distinto.
 /// </para>
+/// <para>
+/// <b>El factor de cada línea lo pone el servidor</b> (ADR-0065 §2), después de los maestros: 1 si
+/// la unidad es la base del artículo, y si no, el de su conversión de Organización. La serie
+/// unitaria se mira entonces, en una segunda pasada de la forma, porque antes no se sabe cuántas
+/// unidades base mueve la línea.
+/// </para>
 /// </remarks>
 /// <param name="usuarioActual">De dónde sale la empresa (R8).</param>
 /// <param name="ajustes">Dónde se apunta el documento.</param>
@@ -59,6 +65,7 @@ public interface IAbrirAjuste
 /// <param name="articulos">Puerto de artículos (ítem 2.2).</param>
 /// <param name="trazabilidad">La marca de los artículos, sin cerrojo: la cortesía (ADR-0048 §4).</param>
 /// <param name="unidades">Puerto de unidades de medida.</param>
+/// <param name="conversiones">Puerto de las conversiones entre unidades (ítem 2.17).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class AbrirAjuste(
@@ -71,6 +78,7 @@ internal sealed class AbrirAjuste(
     IConsultaDeArticulos articulos,
     IConsultaDeTrazabilidad trazabilidad,
     IConsultaDeUnidadesDeMedida unidades,
+    IConsultaDeConversiones conversiones,
     IUnidadTrabajoDeInventario unidadTrabajo,
     TimeProvider reloj) : IAbrirAjuste
 {
@@ -103,6 +111,8 @@ internal sealed class AbrirAjuste(
             return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.CosteNoValido());
         }
 
+        // LA FORMA, EN SU PRIMERA PASADA: lo que se dice sin preguntar a nadie. La serie unitaria
+        // espera al factor, y va en la segunda (ADR-0065 §2).
         IReadOnlyList<LineaConForma> conForma = LaTrazabilidadDeLasLineas.DeLaPeticion(peticion.Lineas);
 
         if (LaTrazabilidadDeLasLineas.LoQueNoTieneForma(conForma) is { } sinForma)
@@ -139,6 +149,25 @@ internal sealed class AbrirAjuste(
             return Resultado.Fallo<AjusteDto>(lasLineas.Error!);
         }
 
+        Resultado<IReadOnlyList<decimal>> losFactores = await ResolverLosFactoresAsync(peticion.Lineas, cancelacion)
+            .ConfigureAwait(false);
+
+        if (!losFactores.EsCorrecto)
+        {
+            return Resultado.Fallo<AjusteDto>(losFactores.Error!);
+        }
+
+        IReadOnlyList<decimal> factores = losFactores.Valor;
+
+        // LA FORMA, EN SU SEGUNDA PASADA: con el factor puesto. Lo demás ya pasó en la primera, así
+        // que lo único que puede salir aquí es una serie que no mueve una unidad base.
+        conForma = [.. conForma.Select((linea, indice) => linea with { FactorAUnidadBase = factores[indice] })];
+
+        if (LaTrazabilidadDeLasLineas.LoQueNoTieneForma(conForma) is { } noUnitaria)
+        {
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.DeLaForma(noUnitaria));
+        }
+
         // LA MARCA, SIN CERROJO: es la cortesía, y la guarda es la de confirmar (ADR-0048 §4). Va
         // después de los maestros, porque solo un artículo que existe tiene marca.
         IReadOnlyDictionary<Guid, MarcaDeTrazabilidad> marcas = await trazabilidad
@@ -162,14 +191,16 @@ internal sealed class AbrirAjuste(
             divisa,
             momento);
 
-        foreach (LineaDeAjusteDto linea in peticion.Lineas)
+        for (int indice = 0; indice < peticion.Lineas.Count; indice++)
         {
+            LineaDeAjusteDto linea = peticion.Lineas[indice];
+
             ajuste.AnadirLinea(
                 linea.UbicacionId,
                 linea.ArticuloId,
                 linea.CantidadIntroducida,
                 linea.UnidadIntroducidaId,
-                linea.FactorAUnidadBase,
+                factores[indice],
                 linea.CosteUnitario,
                 momento,
                 linea.CodigoDeLote,
@@ -190,15 +221,18 @@ internal sealed class AbrirAjuste(
         HashSet<Guid> articulosVistos = [];
         HashSet<Guid> unidadesVistas = [];
 
-        foreach (LineaDeAjusteDto linea in peticion.Lineas)
+        for (int indice = 0; indice < peticion.Lineas.Count; indice++)
         {
+            LineaDeAjusteDto linea = peticion.Lineas[indice];
+            int numero = indice + 1;
+
             if (ubicacionesVistas.Add(linea.UbicacionId))
             {
                 EstadoDeMaestro estado = await ubicaciones
                     .EstadoDeAsync(peticion.AlmacenId, linea.UbicacionId, cancelacion)
                     .ConfigureAwait(false);
 
-                Resultado laUbicacion = LosMaestrosDelAjuste.LaUbicacion(estado, linea.UbicacionId);
+                Resultado laUbicacion = LosMaestrosDelAjuste.LaUbicacion(estado, linea.UbicacionId, numero);
 
                 if (!laUbicacion.EsCorrecto)
                 {
@@ -212,7 +246,7 @@ internal sealed class AbrirAjuste(
                     .AptitudDeAsync(linea.ArticuloId, cancelacion)
                     .ConfigureAwait(false);
 
-                Resultado elArticulo = LosMaestrosDelAjuste.ElArticulo(aptitud, linea.ArticuloId);
+                Resultado elArticulo = LosMaestrosDelAjuste.ElArticulo(aptitud, linea.ArticuloId, numero);
 
                 if (!elArticulo.EsCorrecto)
                 {
@@ -226,7 +260,7 @@ internal sealed class AbrirAjuste(
                     .EstadoDeAsync(linea.UnidadIntroducidaId, cancelacion)
                     .ConfigureAwait(false);
 
-                Resultado laUnidad = LosMaestrosDelAjuste.LaUnidad(estado, linea.UnidadIntroducidaId);
+                Resultado laUnidad = LosMaestrosDelAjuste.LaUnidad(estado, linea.UnidadIntroducidaId, numero);
 
                 if (!laUnidad.EsCorrecto)
                 {
@@ -236,5 +270,77 @@ internal sealed class AbrirAjuste(
         }
 
         return Resultado.Correcto();
+    }
+
+    /// <summary>El factor de cada línea a la unidad base de su artículo (ADR-0065 §2).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Dos consultas como mucho, sea cual sea el número de líneas</b>: las unidades base de todos
+    /// los artículos, y las conversiones de todos los pares distintos. Una línea en la unidad base no
+    /// pregunta nada, porque una conversión de una unidad a sí misma no puede existir.
+    /// </para>
+    /// <para>
+    /// <b>Contesta la primera línea que falla, por su orden</b>, le falte la conversión o la tenga
+    /// retirada: el número que sale es el de la línea que hay que corregir primero.
+    /// </para>
+    /// </remarks>
+    /// <param name="lineas">Las líneas de la petición, con sus maestros ya comprobados.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El factor de cada línea, en su orden, o el motivo por el que una no lo tiene.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Falta la unidad base de un artículo: los artículos no se borran, y el alta ya comprobó que
+    /// existía.
+    /// </exception>
+    private async Task<Resultado<IReadOnlyList<decimal>>> ResolverLosFactoresAsync(
+        IReadOnlyList<LineaDeAjusteDto> lineas,
+        CancellationToken cancelacion)
+    {
+        IReadOnlyDictionary<Guid, Guid> unidadesBase = await articulos
+            .UnidadesBaseDeAsync([.. lineas.Select(linea => linea.ArticuloId).Distinct()], cancelacion)
+            .ConfigureAwait(false);
+
+        ParDeUnidades[] pares =
+        [
+            .. lineas.Select((linea, indice) => new ParDeUnidades(
+                linea.UnidadIntroducidaId,
+                unidadesBase.TryGetValue(linea.ArticuloId, out Guid unidadBaseId)
+                    ? unidadBaseId
+                    : throw new InvalidOperationException(
+                        $"El artículo {linea.ArticuloId} de la línea {indice + 1} no tiene unidad base: el " +
+                        "alta comprobó que existía y un artículo no se borra, así que o el puerto no lo " +
+                        "leyó o no es de esta empresa.")))
+        ];
+
+        ParDeUnidades[] porPreguntar = [.. pares.Where(par => par.OrigenId != par.DestinoId).Distinct()];
+
+        IReadOnlyDictionary<ParDeUnidades, ConversionResuelta> resueltas = porPreguntar.Length == 0
+            ? new Dictionary<ParDeUnidades, ConversionResuelta>()
+            : await conversiones.DeLosParesAsync(porPreguntar, cancelacion).ConfigureAwait(false);
+
+        decimal[] factores = new decimal[pares.Length];
+
+        for (int indice = 0; indice < pares.Length; indice++)
+        {
+            ParDeUnidades par = pares[indice];
+
+            if (par.OrigenId == par.DestinoId)
+            {
+                factores[indice] = 1m;
+            }
+            else if (!resueltas.TryGetValue(par, out ConversionResuelta? conversion))
+            {
+                return Resultado.Fallo<IReadOnlyList<decimal>>(ErroresDeAjuste.SinConversion(indice + 1, par));
+            }
+            else if (conversion.EstaRetirada)
+            {
+                return Resultado.Fallo<IReadOnlyList<decimal>>(ErroresDeAjuste.ConversionRetirada(indice + 1, par));
+            }
+            else
+            {
+                factores[indice] = conversion.Factor;
+            }
+        }
+
+        return Resultado.Correcto<IReadOnlyList<decimal>>(factores);
     }
 }

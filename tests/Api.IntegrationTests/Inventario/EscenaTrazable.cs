@@ -110,7 +110,7 @@ internal sealed record EscenaTrazable(
     /// <returns>La línea.</returns>
     internal LineaDeAjusteDto Entrada(
         Guid ubicacionId, decimal cantidad, string? lote = null, string? serie = null) =>
-        new(ubicacionId, ArticuloId, cantidad, UnidadId, 1m, 10m, lote, serie);
+        new(ubicacionId, ArticuloId, cantidad, UnidadId, 10m, lote, serie);
 
     /// <summary>Una línea que baja, sin coste: sale al precio medio.</summary>
     /// <param name="ubicacionId">De dónde.</param>
@@ -120,7 +120,7 @@ internal sealed record EscenaTrazable(
     /// <returns>La línea.</returns>
     internal LineaDeAjusteDto Salida(
         Guid ubicacionId, decimal cantidad, string? lote = null, string? serie = null) =>
-        new(ubicacionId, ArticuloId, -cantidad, UnidadId, 1m, null, lote, serie);
+        new(ubicacionId, ArticuloId, -cantidad, UnidadId, null, lote, serie);
 
     /// <summary>Un borrador, abierto por el caso de uso con el módulo que se le pase.</summary>
     /// <param name="modulo">El módulo de la empresa de la escena.</param>

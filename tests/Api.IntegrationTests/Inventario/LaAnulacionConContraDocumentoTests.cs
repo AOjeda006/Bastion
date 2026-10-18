@@ -629,6 +629,14 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
         (Guid otroArticulo, Guid otraUnidad) =
             await LosMaestrosPorLaApi.CrearArticuloAsync(cliente, segundoArticulo);
 
+        // LAS DOS LÍNEAS VAN EN UNA UNIDAD QUE NO ES LA BASE: la primera en cajas de doce y la
+        // segunda en pares. Desde el 2.17 el factor lo pone el servidor con la conversión de cada
+        // una (ADR-0065 §2), y sin ella no habría factor distinto de uno que el inverso copiara.
+        Guid caja = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+            cliente, string.Create(CultureInfo.InvariantCulture, $"K{primerArticulo}"), 12m, unaUnidad);
+        Guid par = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+            cliente, string.Create(CultureInfo.InvariantCulture, $"K{segundoArticulo}"), 2m, otraUnidad);
+
         SerieDto serie = await LosMaestrosPorLaApi.CrearSerieAsync(cliente, codigo);
 
         // LAS UNIDADES QUE LA SEGUNDA LÍNEA SACA ENTRAN ANTES, por otra serie del mismo ejercicio:
@@ -642,8 +650,8 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
 
         LineaDeAjusteDto[] lineas =
         [
-            new(ubicacion.Id, unArticulo, 3m, unaUnidad, 12m, 1.50m),
-            new(ubicacion.Id, otroArticulo, -2.5m, otraUnidad, 1m, null),
+            new(ubicacion.Id, unArticulo, 3m, caja, 1.50m),
+            new(ubicacion.Id, otroArticulo, -2.5m, par, null),
         ];
 
         Guid entradaPreviaId;

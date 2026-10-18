@@ -36,6 +36,10 @@ export const tiposDeError = {
   'ajuste-con-fecha-futura':
     'La fecha de ese ajuste es posterior a hoy: el libro solo recoge lo que ya ha pasado. ' +
     'Confírmalo ese día o corrige la fecha.',
+  'ajuste-conversion-retirada':
+    'La unidad de esa línea pasa a la del artículo por una conversión retirada: lo que ya ' +
+    'se escribió con ella se sigue leyendo, pero no entra un movimiento nuevo. Usa la unidad ' +
+    'base del artículo o pide que reincorporen la conversión.',
   'ajuste-coste-no-valido':
     'Una línea que saca existencias no lleva coste: se valora al precio medio. Y ningún ' +
     'coste puede ser negativo; una muestra o un regalo entran a cero.',
@@ -85,6 +89,10 @@ export const tiposDeError = {
   'ajuste-serie-repetida':
     'Dos líneas del ajuste nombran el mismo número de serie, y cada pieza sale una sola vez ' +
     'por documento. Cambiarla de ubicación es una reubicación, que es otro documento.',
+  'ajuste-sin-conversion':
+    'La unidad de esa línea no tiene conversión a la unidad base del artículo, así que no se ' +
+    'sabe cuántas unidades mueve. Usa la unidad base o da de alta la conversión de esa ' +
+    'unidad a la base.',
   'ajuste-sin-ejercicio':
     'La fecha de ese ajuste no cae en ningún ejercicio: sin periodo al que imputarlo, el ' +
     'documento no entraría en ninguna declaración. Abre el ejercicio que falta o corrige la ' +
