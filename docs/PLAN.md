@@ -7738,6 +7738,12 @@ el *Diagnóstico* omitido. Sus cifras son las de siempre, porque solo tocó docu
 **691** casos, **413/450** y **720/900** KiB, y **109** permisos en los dos arranques. Leído con
 `python -X utf8 leer-run27.py 39136228874`. `main` no avanza con él: el 2.17 se cierra entero.
 
+**El run de rama de `384a33f`**, que lleva la regla y su tanda, es el **39137144352**, en verde al
+primer intento: Frontal `117703858838`, Backend `117703858997` y Humo `117705506807`, con los
+mismos 69 pasos, 68 en verde y el *Diagnóstico* omitido. Los casos del backend son los mismos,
+**1490** y **691**, porque la regla es del frontal; los KiB, **413/450** y **720/900**; y **109**
+permisos en los dos arranques. Leído con `python -X utf8 leer-run27.py 39137144352`.
+
 La siguiente mutación es la **622**.
 
 ## Estado actual
@@ -7750,12 +7756,15 @@ puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el
 transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15 y el 2.16 están
 hechos.
 
-> **Dónde se retoma (2026-10-18): en el 2.17, en la rama `2.17-el-alta-del-ajuste`, por el
-> ADR-0065.** Su puerta está contestada, en *Decisiones tomadas → Traídas por el encargo del
-> 2026-10-18*, con el orden de trabajo. La regla de ESLint del reloj está hecha, en `6a5d612`, con
-> su tanda, de la 615 a la 621, en *La regla del reloj, el paso C*. Los hallazgos de `/code-review`
-> sobre `0638419..0d26e76` no han llegado, y se tratan antes de seguir con el código en cuanto
-> lleguen. Después del 2.17, el 2.18, y la puerta del 2.19, donde se para y se pregunta.
+> **Dónde se retoma (2026-10-18): en el 2.17, en la rama `2.17-el-alta-del-ajuste`, por su
+> código.** Las decisiones están en el **ADR-0065**, con las cuatro respuestas de la puerta y lo
+> que la puerta decidía sin preguntar. El orden de los commits: el puerto de Organización; el
+> factor en el servidor; el descarte; el borde HTTP con los permisos; los maestros del frontal, a
+> `inventario/maestros`; la pantalla; y la tanda, desde la **622**. La regla de ESLint del reloj
+> está hecha, en `6a5d612`, con su tanda, de la 615 a la 621, en *La regla del reloj, el paso C*.
+> Los hallazgos de `/code-review` sobre `0638419..0d26e76` no han llegado, y se tratan antes de
+> seguir con el código en cuanto lleguen. Después del 2.17, el 2.18, y la puerta del 2.19, donde se
+> para y se pregunta.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
