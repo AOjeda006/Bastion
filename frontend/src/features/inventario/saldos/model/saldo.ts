@@ -83,17 +83,6 @@ export function leerListado(parametros: URLSearchParams, paginacion: Paginacion)
 }
 
 /**
- * El día de hoy **del servidor**, que es el UTC (ADR-0063 §3), como `AAAA-MM-DD`.
- *
- * No es el del calendario de quien mira, a propósito: es el tope de la fecha que se puede pedir, y
- * ofrecer el día local entre la medianoche de aquí y la de Greenwich sería ofrecer un `400` seguro.
- * Que «hoy» sea el día UTC es una nota abierta para el cierre de la fase.
- */
-export function hoyEnElServidor(momento: Date = new Date()): string {
-  return momento.toISOString().slice(0, 10);
-}
-
-/**
  * Un importe con su divisa, como lo escribe quien lo lee: con los decimales de la divisa y hasta
  * cuatro, que son los que guarda el libro.
  *

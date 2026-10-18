@@ -6,13 +6,8 @@ import { useSearchParams } from 'react-router';
 import { clavesDeTarifas } from '../api/claves.ts';
 import { consultarTarifas } from '../api/consultas.ts';
 import { PARAMETRO_DE_BUSQUEDA, PARAMETRO_DE_CODIGO, leerListado } from '../model/listado.ts';
-import {
-  estadoDeVigencia,
-  hoyEnElCalendarioLocal,
-  type EstadoDeVigencia,
-  type Tarifa,
-} from '../model/tarifa.ts';
-import { diaLegible } from '@/shared/lib/dias.ts';
+import { estadoDeVigencia, type EstadoDeVigencia, type Tarifa } from '../model/tarifa.ts';
+import { diaLegible, hoyEnElServidor } from '@/shared/lib/dias.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
@@ -57,8 +52,9 @@ export function PaginaDeTarifas(): React.JSX.Element {
   // El día de HOY se calcula una vez por pintado y se le pasa a la regla, en vez de que la regla
   // mire el reloj: así el estado de todas las filas se decide con el mismo día —una tabla pintada
   // justo a medianoche no puede salir mitad de un día y mitad del siguiente— y la regla se puede
-  // ejercer en la frontera, que es el único sitio donde esto se equivoca.
-  const hoy = hoyEnElCalendarioLocal();
+  // ejercer en la frontera, que es el único sitio donde esto se equivoca. Es el del servidor, el
+  // mismo con el que `ResolverPrecio` elige el tramo cuando no se le da fecha.
+  const hoy = hoyEnElServidor();
   // Por qué rige hoy el tramo que acaba hoy: escrito una vez debajo de la tabla, y cada celda que
   // dice «rige» lo señala.
   const porQueRige = useId();

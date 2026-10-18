@@ -175,6 +175,59 @@ public sealed class ResolverPrecioTests
         categorias.LlamadasDeAscendencia.ShouldBe(0);
     }
 
+    /// <summary>
+    /// EL DÍA SIN FECHA ES EL DEL SERVIDOR: a las doce y media de la noche en Madrid, el tramo
+    /// que acabó «ayer» en el calendario de aquí todavía pone el precio, porque en UTC es hoy.
+    /// </summary>
+    /// <remarks>
+    /// Es la mitad de atrás de la etiqueta de la pantalla de tarifas: <c>ElListadoDeTarifas</c>
+    /// pinta el mismo instante con el mismo tramo y dice «Rige hoy». Si una de las dos mitades
+    /// leyera el día de quien mira y la otra el UTC, en esa ventana la pantalla diría que rige un
+    /// tramo cuyo precio la API ya no da, o al revés.
+    /// </remarks>
+    [Fact]
+    public async Task Sin_fecha_el_dia_es_el_UTC_y_no_el_del_calendario_de_quien_pregunta()
+    {
+        // Un servidor con la hora de Madrid: leer su reloj en local daría ya el día 12.
+        var madrugada = new DateTimeOffset(2026, 9, 12, 0, 30, 0, TimeSpan.FromHours(2));
+        var madridEnVerano = TimeZoneInfo.CreateCustomTimeZone(
+            "Madrid en verano", TimeSpan.FromHours(2), "CEST", "CEST");
+        var divisa = Guid.NewGuid();
+        var septiembre = Tarifa.Crear(
+            s_empresa, "PVP", "Promoción de septiembre", divisa,
+            new DateOnly(2026, 9, 1), s_hoy, s_ahora);
+        var siguiente = Tarifa.Crear(
+            s_empresa, "PVP", "La que viene", divisa, s_hoy.AddDays(1), null, s_ahora);
+        var articulo = Articulo.Crear(
+            s_empresa, "ART-1", "Un artículo", TipoDeArticulo.Bien, Trazabilidad.Ninguna,
+            Guid.NewGuid(), Guid.NewGuid(), null, s_ahora);
+
+        TarifasEnMemoria tarifas = new();
+        tarifas.Agregar(septiembre);
+        tarifas.Agregar(siguiente);
+        ArticulosEnMemoria articulos = new();
+        articulos.Agregar(articulo);
+        LineasDeTarifaEnMemoria lineas = new();
+        lineas.Guardadas.Add(LineaTarifa.ParaArticulo(
+            s_empresa, septiembre.Id, articulo.Id, 0m, PrecioODescuento.DePrecio(10m), s_ahora));
+        lineas.Guardadas.Add(LineaTarifa.ParaArticulo(
+            s_empresa, siguiente.Id, articulo.Id, 0m, PrecioODescuento.DePrecio(12m), s_ahora));
+
+        var reloj = new RelojParado(madrugada, madridEnVerano);
+
+        Resultado<PrecioResueltoDto> resuelto = await Resolver(
+            tarifas, lineas, articulos, new CategoriasEnMemoria(), reloj)
+            .EjecutarAsync("PVP", articulo.Id, 1m, null, CancellationToken.None);
+
+        resuelto.EsCorrecto.ShouldBeTrue();
+        resuelto.Valor.Fecha.ShouldBe(s_hoy, "sin fecha, el día es el UTC del instante");
+        resuelto.Valor.TarifaId.ShouldBe(
+            septiembre.Id,
+            "el precio ha salido del tramo que empieza mañana en UTC: el día se ha leído en la " +
+            "zona de quien pregunta");
+        resuelto.Valor.Precio.ShouldBe(10m);
+    }
+
     private static (Tarifa Tarifa, Articulo Articulo, TarifasEnMemoria Tarifas,
         LineasDeTarifaEnMemoria Lineas, ArticulosEnMemoria Articulos) Escenario(Guid? categoriaId)
     {
@@ -199,7 +252,8 @@ public sealed class ResolverPrecioTests
         TarifasEnMemoria tarifas,
         LineasDeTarifaEnMemoria lineas,
         ArticulosEnMemoria articulos,
-        CategoriasEnMemoria categorias) =>
+        CategoriasEnMemoria categorias,
+        TimeProvider? reloj = null) =>
         new(new UsuarioDe(s_empresa), tarifas, lineas, articulos, categorias,
-            new RelojParado(s_ahora));
+            reloj ?? new RelojParado(s_ahora));
 }

@@ -48,7 +48,8 @@ export type EstadoDeVigencia = 'rige' | 'futura' | 'caducada';
  * que comparar cadenas es exacto y no tiene huso que equivocar.
  *
  * `hoy` se recibe, no se lee dentro: una función que mirara el reloj no se podría ejercer en la
- * frontera, que es el único sitio donde esto se equivoca.
+ * frontera, que es el único sitio donde esto se equivoca. Y es el del servidor, `hoyEnElServidor`:
+ * así la etiqueta dice lo mismo que resuelve `ResolverPrecio`, que sin fecha usa el día UTC.
  */
 export function estadoDeVigencia(tarifa: Tarifa, hoy: string): EstadoDeVigencia {
   if (hoy < tarifa.vigenteDesde) {
@@ -56,21 +57,4 @@ export function estadoDeVigencia(tarifa: Tarifa, hoy: string): EstadoDeVigencia 
   }
 
   return tarifa.vigenteHasta !== null && tarifa.vigenteHasta < hoy ? 'caducada' : 'rige';
-}
-
-/**
- * Qué día es hoy **en el calendario de quien mira**, como `aaaa-mm-dd`.
- *
- * A mano y no con `toISOString()`, que es la otra mitad del mismo error de un día: `toISOString`
- * pasa por UTC, así que a las once de la noche en Madrid devuelve ya el día siguiente. Lo que una
- * persona entiende por «hoy» es el día de su calendario, no el de Greenwich.
- */
-export function hoyEnElCalendarioLocal(momento: Date = new Date()): string {
-  const dosCifras = (numero: number): string => String(numero).padStart(2, '0');
-
-  return [
-    String(momento.getFullYear()),
-    dosCifras(momento.getMonth() + 1),
-    dosCifras(momento.getDate()),
-  ].join('-');
 }

@@ -1,8 +1,8 @@
 /**
- * Los días de la API, para leerlos.
+ * Los días de la API: cómo se leen, y cuál es hoy.
  *
- * Vive en `shared/` porque lo usan dos funcionalidades: la vigencia de las tarifas y las fechas del
- * recuento. Los días viajan como `AAAA-MM-DD`, sin hora y sin huso.
+ * Vive en `shared/` porque lo usan tres funcionalidades: la vigencia de las tarifas, las fechas del
+ * recuento y el saldo a una fecha. Los días viajan como `AAAA-MM-DD`, sin hora y sin huso.
  */
 
 /**
@@ -23,4 +23,20 @@ export function diaLegible(dia: string, idioma: string): string {
   return new Intl.DateTimeFormat(idioma, { dateStyle: 'medium', timeZone: 'UTC' }).format(
     Date.UTC(Number(partes[1]), Number(partes[2]) - 1, Number(partes[3])),
   );
+}
+
+/**
+ * El día de hoy **del servidor**, como `AAAA-MM-DD`: el único «hoy» del frontal.
+ *
+ * Es el día UTC (ADR-0063 §3), el que calcula `DiaDeNegocio` en el backend, y no el del calendario
+ * de quien mira, a propósito. Entre la medianoche de aquí y la de Greenwich los dos no coinciden, y
+ * en esa ventana un «hoy» local diría que rige un tramo de tarifa cuyo precio la API ya no da, o
+ * ofrecería como tope del saldo un día que la API rechaza con un `400`. Hubo dos, uno por cada
+ * criterio, hasta el 2.16. La zona que regirá cuando el almacén lleve la suya la dice la nota de la
+ * zona, en `docs/PLAN.md`.
+ *
+ * `momento` se recibe para poder ejercerlo en la frontera; quien pinta lo llama sin argumentos.
+ */
+export function hoyEnElServidor(momento: Date = new Date()): string {
+  return momento.toISOString().slice(0, 10);
 }

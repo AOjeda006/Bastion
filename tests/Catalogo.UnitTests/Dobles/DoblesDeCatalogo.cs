@@ -324,9 +324,17 @@ internal sealed class VersionesQueDanIgual : IVersionesDeCatalogo
     }
 }
 
-/// <summary>Un reloj parado en un instante conocido.</summary>
-internal sealed class RelojParado(DateTimeOffset momento) : TimeProvider
+/// <summary>Un reloj parado en un instante conocido, y con la zona local que se le dé.</summary>
+/// <remarks>
+/// La zona local es la de la máquina si no se le da otra. La da el caso que tiene que fijarla: en
+/// la del <i>runner</i> de la CI, que es UTC, leer el reloj en local no se distinguiría de leerlo
+/// en UTC.
+/// </remarks>
+internal sealed class RelojParado(DateTimeOffset momento, TimeZoneInfo? zonaLocal = null)
+    : TimeProvider
 {
+    public override TimeZoneInfo LocalTimeZone => zonaLocal ?? base.LocalTimeZone;
+
     public override DateTimeOffset GetUtcNow() => momento;
 }
 

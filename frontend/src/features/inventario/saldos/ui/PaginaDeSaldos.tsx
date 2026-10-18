@@ -13,14 +13,13 @@ import {
   PARAMETRO_DE_ALMACEN,
   PARAMETRO_DE_ARTICULO,
   PARAMETRO_DE_FECHA,
-  hoyEnElServidor,
   importeLegible,
   leerListado,
   type ListadoDeSaldos,
   type Saldo,
 } from '../model/saldo.ts';
 import { tipoDeFallo } from '@/shared/api/errores.ts';
-import { diaLegible } from '@/shared/lib/dias.ts';
+import { diaLegible, hoyEnElServidor } from '@/shared/lib/dias.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';

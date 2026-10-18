@@ -1,32 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { hoyEnElServidor, importeLegible, leerListado } from './saldo.ts';
+import { importeLegible, leerListado } from './saldo.ts';
 
 const PRIMERA = { pagina: 1, tamanio: 20 };
 const ALMACEN = 'a1a1a1a1-0000-0000-0000-000000000001';
 const ARTICULO = 'fffffff1-0000-0000-0000-000000000001';
-
-/**
- * Ejecuta `caso` con la zona horaria de quien mira fijada, y deja la que había.
- *
- * El caso fija su zona y no la hereda: en la del *runner* de la CI, que es UTC, el día local y el
- * UTC son el mismo, y un «hoy» sacado del calendario local pasaría (la mutación 541, verde con
- * `TZ=UTC` y roja en Madrid). Node vuelve a leer la zona cuando cambia `process.env.TZ`.
- */
-function enLaZona(zona: string, caso: () => void): void {
-  const anterior = process.env['TZ'];
-  process.env['TZ'] = zona;
-
-  try {
-    caso();
-  } finally {
-    if (anterior === undefined) {
-      delete process.env['TZ'];
-    } else {
-      process.env['TZ'] = anterior;
-    }
-  }
-}
 
 describe('El saldo, en el modelo', () => {
   it('lee de la URL el día, el almacén y el artículo con los nombres de la API', () => {
@@ -55,17 +33,6 @@ describe('El saldo, en el modelo', () => {
     expect(leerListado(new URLSearchParams({ fecha: '2999-01-01' }), PRIMERA).fecha).toBe(
       '2999-01-01',
     );
-  });
-
-  it('hoy es el día UTC, que es el del servidor, y no el del calendario de quien mira', () => {
-    // Las once y media de la noche en Bogotá ya son el día siguiente en Greenwich.
-    enLaZona('America/Bogota', () => {
-      expect(hoyEnElServidor(new Date('2026-09-11T23:30:00-05:00'))).toBe('2026-09-12');
-    });
-    // Y la una de la madrugada en Madrid todavía es el día anterior.
-    enLaZona('Europe/Madrid', () => {
-      expect(hoyEnElServidor(new Date('2026-09-12T01:00:00+02:00'))).toBe('2026-09-11');
-    });
   });
 
   it('un importe lleva los decimales de su divisa y hasta cuatro, los del libro', () => {

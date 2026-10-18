@@ -6,8 +6,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ALFA, HOY_SIMULADO, tarifasDe } from '@/pruebas/datos.ts';
 import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
-import { diaLegible } from '@/shared/lib/dias.ts';
-import { estadoDeVigencia, hoyEnElCalendarioLocal } from '../model/tarifa.ts';
+import { enLaZona } from '@/pruebas/zona.ts';
+import { diaLegible, hoyEnElServidor } from '@/shared/lib/dias.ts';
+import { estadoDeVigencia } from '../model/tarifa.ts';
 import type { Tarifa } from '../model/tarifa.ts';
 import { PaginaDeTarifas } from './PaginaDeTarifas.tsx';
 
@@ -32,11 +33,14 @@ import { PaginaDeTarifas } from './PaginaDeTarifas.tsx';
  *
  * El día sale de `HOY_SIMULADO`, el mismo del que la fixture cuelga el tramo que acaba hoy. Escrito
  * en dos sitios, tocar uno dejaría el caso frontera verde sin comprobar nada: el tramo pasaría a
- * acabar ayer y «ya no rige» sería la respuesta correcta.
+ * acabar ayer y «ya no rige» sería la respuesta correcta. Y la hora va en UTC, porque «hoy» es el
+ * día del servidor: las diez de la mañana en Kiritimati, a +14, son todavía ayer en Greenwich.
  */
+const A_MEDIA_MANANA = new Date(`${HOY_SIMULADO}T10:00:00Z`);
+
 beforeAll(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(`${HOY_SIMULADO}T10:00:00`));
+  vi.setSystemTime(A_MEDIA_MANANA);
 });
 
 afterAll(() => {
@@ -224,6 +228,27 @@ describe('El listado de tarifas', () => {
     expect(enrutador.state.location.search).toBe('');
   });
 
+  it('a medianoche en Madrid, el tramo que acaba hoy en UTC rige, como dice ResolverPrecio', async () => {
+    // Las doce y media del día siguiente en Madrid son las diez y media de la noche de HOY en UTC,
+    // y el precio sale todavía de la promoción: lo afirma, con este mismo instante y este mismo
+    // tramo, `Sin_fecha_el_dia_es_el_UTC_y_no_el_del_calendario_de_quien_pregunta`, en
+    // `ResolverPrecioTests`. Con el día del calendario de aquí, la etiqueta diría «Ya no rige»
+    // de un tramo que sigue poniendo el precio.
+    abrirSesionYaRecuperada();
+
+    await enLaZona('Europe/Madrid', async () => {
+      vi.setSystemTime(new Date('2026-09-12T00:30:00+02:00'));
+
+      try {
+        montarPantalla(<PaginaDeTarifas />, '/tarifas');
+
+        expect(await filaCon('Promoción de septiembre')).toHaveTextContent('Rige hoy');
+      } finally {
+        vi.setSystemTime(A_MEDIA_MANANA);
+      }
+    });
+  });
+
   it('EL TRAMO QUE ACABA HOY TODAVÍA RIGE, y los otros dos estados se dicen distinto', async () => {
     abrirSesionYaRecuperada();
 
@@ -342,14 +367,26 @@ describe('La vigencia de un tramo', () => {
     expect(estadoDeVigencia(abierto, '2099-12-31')).toBe('rige');
   });
 
-  it('el día de hoy es el del calendario de quien mira, no el de Greenwich', () => {
-    // Las dos puntas del día. En cualquier huso distinto de UTC, una de las dos cae en otro día al
-    // pasar por UTC: con `toISOString()` —el atajo de una línea que hace esto mismo— una de estas
-    // dos aserciones sale roja se ejecute donde se ejecute, al este o al oeste. Por eso son dos y
-    // no una: con una sola, el caso sería verde en media Tierra y rojo en la otra media, que es
-    // exactamente el test que no avisa en la máquina en la que había que avisar.
-    expect(hoyEnElCalendarioLocal(new Date(2026, 8, 11, 0, 30))).toBe('2026-09-11');
-    expect(hoyEnElCalendarioLocal(new Date(2026, 8, 11, 23, 30))).toBe('2026-09-11');
+  it('el día de hoy es el del servidor, en las dos direcciones de la frontera', async () => {
+    // Hasta el 2.16 era el del calendario de quien mira, y la etiqueta podía contradecir el
+    // precio: `ResolverPrecio`, sin fecha, elige el tramo con el día UTC. Al este de Greenwich, la
+    // madrugada todavía es ayer; al oeste, la noche ya es mañana. Una aserción en cada zona,
+    // porque un «hoy» local acierta en una de las dos según dónde corra.
+    const septiembre = tramo('2026-09-01', '2026-09-11');
+    const laQueViene = tramo('2026-09-12', null);
+
+    await enLaZona('Europe/Madrid', () => {
+      const hoy = hoyEnElServidor(new Date('2026-09-12T00:30:00+02:00'));
+
+      expect(estadoDeVigencia(septiembre, hoy)).toBe('rige');
+      expect(estadoDeVigencia(laQueViene, hoy)).toBe('futura');
+    });
+    await enLaZona('America/Bogota', () => {
+      const hoy = hoyEnElServidor(new Date('2026-09-11T20:00:00-05:00'));
+
+      expect(estadoDeVigencia(septiembre, hoy)).toBe('caducada');
+      expect(estadoDeVigencia(laQueViene, hoy)).toBe('rige');
+    });
   });
 
   it('un día que no tiene forma de día se pinta tal cual, en vez de romper la pantalla', () => {
