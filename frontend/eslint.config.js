@@ -82,6 +82,20 @@ const fronterasEntreFuncionalidades = FUNCIONALIDADES.map((funcionalidad) => ({
   },
 }));
 
+/**
+ * LAS TRES FORMAS DE LEER EL RELOJ QUE TIENE `Date`: construirlo sin argumentos, llamarlo como
+ * función y su `now`, llamado o pasado como función. Lo que construye una fecha a partir de algo
+ * —una cadena, un número, `Date.UTC`— no lee nada, y pasa.
+ */
+const MENSAJE_DEL_RELOJ =
+  'El reloj solo se lee en src/shared/lib/dias.ts. Para el día de hoy, hoyEnElServidor(); un ' +
+  'segundo «hoy» volvería a separar la etiqueta de una tarifa de su precio (ítem 2.16).';
+const LECTURAS_DEL_RELOJ = [
+  "NewExpression[callee.name='Date'][arguments.length=0]",
+  "CallExpression[callee.name='Date']",
+  "MemberExpression[object.name='Date'][property.name='now']",
+].map((selector) => ({ selector, message: MENSAJE_DEL_RELOJ }));
+
 export default tseslint.config(
   // `src/shared/api/esquema.ts` se GENERA con `npm run api` desde `docs/api/openapi.json`.
   // No se linta lo que no se escribe: las reglas de estilo se aplican a las decisiones de
@@ -230,6 +244,24 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    // EL RELOJ SOLO SE LEE EN `shared/lib/dias.ts` (encargo del 2026-10-18, respuesta 7).
+    //
+    // El 2.16 dejó un solo «hoy» en el frontal, `hoyEnElServidor`, y es el único sitio que lee el
+    // reloj. La regla hace que lo siga siendo: un `new Date()` o un `Date.now()` en una pantalla
+    // traería de vuelta el «hoy» del calendario de quien mira, y la etiqueta de una tarifa volvería
+    // a decir otra cosa que su precio. `ElRelojSoloSeLeeEnDias` comprueba que marca cada forma
+    // desde cada zona, y su pareja: el contenido de verdad de `dias.ts`, lintado desde cualquier
+    // otro sitio, sale marcado. Lo que no ve está escrito allí.
+    //
+    // Alcanza también a los tests y a `src/pruebas/`: un test fija su instante y se lo pasa a quien
+    // lo use, no lo lee.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/shared/lib/dias.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', ...LECTURAS_DEL_RELOJ],
     },
   },
   // Las fronteras van LAS ÚLTIMAS: así ningún bloque posterior las apaga sin querer. Y alcanzan
