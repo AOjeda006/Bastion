@@ -41,9 +41,12 @@ public sealed class LaCargaDeSemillasTests(PostgresDeVerdad postgres) : IAsyncLi
     /// <inheritdoc/>
     // Las dos tablas ANTES de cada caso, y no después, por lo mismo que en el test de los
     // maestros: un caso que se cae a mitad no puede dejar al siguiente contando filas suyas.
+    // Las conversiones, delante: sus dos unidades son claves foráneas, y una que dejara otro
+    // fichero de la colección (LaConsultaDeConversionesTests) pararía el borrado con un 23503.
     public async Task InitializeAsync() =>
         await EjecutarAsync(
-            $"DELETE FROM {Esquema}.impuestos; DELETE FROM {Esquema}.unidades_de_medida;");
+            $"DELETE FROM {Esquema}.conversiones_de_unidades; DELETE FROM {Esquema}.impuestos; " +
+            $"DELETE FROM {Esquema}.unidades_de_medida;");
 
     /// <inheritdoc/>
     public Task DisposeAsync() => Task.CompletedTask;
