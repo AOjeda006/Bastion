@@ -12,6 +12,12 @@
           "Microsoft.TestPlatform.TestHost": "17.14.1"
         }
       },
+      "Mono.Cecil": {
+        "type": "Direct",
+        "requested": "[0.11.6, )",
+        "resolved": "0.11.6",
+        "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
+      },
       "NetArchTest.eNhancedEdition": {
         "type": "Direct",
         "requested": "[1.4.5, )",
@@ -384,11 +390,6 @@
         "type": "Transitive",
         "resolved": "1.0.52",
         "contentHash": "oNv2JtYXhpdJrX63nibx1JT3uCESOBQ1LAk7Dtz/sr0+laW0KRM6eKp4CZ3MHDR2siIkKsY8MmUkeP5DKkQQ5w=="
-      },
-      "Mono.Cecil": {
-        "type": "Transitive",
-        "resolved": "0.11.6",
-        "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
       "Mono.TextTemplating": {
         "type": "Transitive",

@@ -138,6 +138,12 @@ public sealed class LasReglasDeEsteCarrilTests
         "ElTipoBaseDeDocumentoNoSabeQueEsUnMovimientoTests.El_tipo_base_no_nombra_ningun_tipo_de_modulo_y_el_documento_concreto_si",
         "ElTipoBaseDeDocumentoNoSabeQueEsUnMovimientoTests.La_prohibicion_del_libro_puede_dispararse",
 
+        // Del ítem 2.16: el día de negocio sale de un solo sitio. Hubo dieciséis, y el que se
+        // quedara sin cambiar el día que cambie la regla contestaría otro día.
+        "ElDiaDeNegocioSaleDeUnSoloSitioTests.El_barrido_lee_el_backend_entero",
+        "ElDiaDeNegocioSaleDeUnSoloSitioTests.El_dia_de_negocio_se_calcula_en_su_sitio",
+        "ElDiaDeNegocioSaleDeUnSoloSitioTests.Nadie_mas_calcula_el_dia_de_negocio",
+
         // La línea de estado del README sale de las casillas del PLAN.
         "ElEstadoDelReadmeEsElDelPlanTests.El_checklist_del_plan_se_lee",
         "ElEstadoDelReadmeEsElDelPlanTests.La_linea_de_estado_del_readme_es_la_del_checklist",

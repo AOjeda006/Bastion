@@ -19,6 +19,7 @@
 
   <ItemGroup Label="Marco de pruebas">
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Mono.Cecil" />
     <PackageReference Include="NetArchTest.eNhancedEdition" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="xunit" />
