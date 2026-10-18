@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application.Ajustes;
@@ -109,7 +110,7 @@ internal sealed class ConfirmarRecuento(
         }
 
         DateTimeOffset ahora = reloj.GetUtcNow();
-        var hoy = DateOnly.FromDateTime(ahora.UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.De(ahora);
 
         // 4. EL EJERCICIO DE HOY, que es la fecha de la confirmación y la del ajuste (ADR-0055 §1.5).
         // El cerrojo compartido dura hasta el COMMIT: un cierre que llegue ahora espera a este

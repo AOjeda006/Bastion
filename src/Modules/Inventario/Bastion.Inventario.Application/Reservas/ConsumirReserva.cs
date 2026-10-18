@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application.Trazabilidad;
@@ -88,7 +89,7 @@ internal sealed class ConsumirReserva(
 
         // NADA CON FECHA FUTURA, antes que el ejercicio porque no toma cerrojos: un 422, como la
         // transferencia (ADR-0059 §6).
-        if (fecha > DateOnly.FromDateTime(ahora.UtcDateTime))
+        if (fecha > DiaDeNegocio.De(ahora))
         {
             return Resultado.Fallo<ReservaDto>(ErroresDeReserva.ConFechaFutura(fecha));
         }

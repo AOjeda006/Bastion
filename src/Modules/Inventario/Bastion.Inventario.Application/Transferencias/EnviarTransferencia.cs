@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application.Reservas;
@@ -87,7 +88,7 @@ internal sealed class EnviarTransferencia(
 
         // NADA CON FECHA FUTURA, antes que el ejercicio porque no toma cerrojos. Es un 422 y no el
         // 409 del ajuste: lo fija la tabla del ADR-0053 §3.
-        if (fecha > DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime))
+        if (fecha > DiaDeNegocio.Hoy(reloj))
         {
             return Resultado.Fallo<TransferenciaDto>(ErroresDeTransferencia.ConFechaFutura(fecha));
         }

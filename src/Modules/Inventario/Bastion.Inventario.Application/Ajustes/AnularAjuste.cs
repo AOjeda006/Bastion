@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
@@ -155,7 +156,7 @@ internal sealed class AnularAjuste(
         }
 
         DateTimeOffset ahora = reloj.GetUtcNow();
-        var hoy = DateOnly.FromDateTime(ahora.UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.De(ahora);
 
         // LA MISMA PREGUNTA QUE AL CONFIRMAR, Y SOBRE LA MISMA FECHA QUE SE VA A ESCRIBIR: `hoy`,
         // la del inverso. Va antes del número por lo mismo que allí —un periodo que no admite el

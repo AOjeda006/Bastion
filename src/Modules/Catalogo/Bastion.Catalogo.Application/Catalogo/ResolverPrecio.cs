@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
@@ -68,7 +69,7 @@ internal sealed class ResolverPrecio(
         // En UTC, como todo instante del sistema. La fecha es de NEGOCIO —el día para el que se
         // quiere el precio— y por eso es `DateOnly` y no un instante (R14): un presupuesto con
         // fecha de mañana se valora con la tarifa de mañana, no con la de cuando se teclea.
-        DateOnly dia = fecha ?? DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime);
+        DateOnly dia = fecha ?? DiaDeNegocio.Hoy(reloj);
 
         Articulo? articulo = await articulos
             .ObtenerAsync(articuloId, cancelacion)

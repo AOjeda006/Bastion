@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Application.Trazabilidad;
@@ -103,7 +104,7 @@ internal sealed class ConfirmarAjuste(
         // «Hoy» es el día UTC. En España eso deja dos horas —de 00:00 a 02:00 en verano— en las que
         // hoy aquí ya es mañana allí; la zona horaria de la empresa está anotada en `docs/PLAN.md`
         // como nota abierta, con su disparador.
-        if (ajuste.FechaDeOperacion > DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime))
+        if (ajuste.FechaDeOperacion > DiaDeNegocio.Hoy(reloj))
         {
             return Resultado.Fallo<AjusteDto>(
                 ErroresDeAjuste.ConFechaFutura(ajuste.FechaDeOperacion));

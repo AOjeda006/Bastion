@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -285,7 +286,7 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
                 nameof(empresaId));
         }
 
-        var hoy = DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.Hoy(reloj);
 
         List<FilaDelCuadre> filas = await contexto.Database
             .SqlQueryRaw<FilaDelCuadre>(SqlDelCuadre, empresaId, hoy)

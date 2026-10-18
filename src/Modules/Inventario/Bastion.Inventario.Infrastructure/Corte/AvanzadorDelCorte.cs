@@ -1,4 +1,5 @@
 using System.Globalization;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -49,7 +50,7 @@ internal sealed partial class AvanzadorDelCorte(
     /// <returns>El primer día del mes anterior.</returns>
     internal static DateOnly MesQueToca(DateTimeOffset ahora)
     {
-        var hoy = DateOnly.FromDateTime(ahora.UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.De(ahora);
 
         return new DateOnly(hoy.Year, hoy.Month, 1).AddMonths(-1);
     }

@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Comun;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -128,7 +129,7 @@ internal sealed class ModificarArticulo(
         // convierte la retirada de un maestro en un congelador para todo lo que lo usaba.
         if (peticion.ImpuestoPorDefectoId != articulo.ImpuestoPorDefectoId)
         {
-            var hoy = DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime);
+            DateOnly hoy = DiaDeNegocio.Hoy(reloj);
 
             EstadoDeMaestro estado = await impuestos
                 .EstadoDeAsync(peticion.ImpuestoPorDefectoId, hoy, cancelacion)

@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Application.Validacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Comun;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -106,7 +107,7 @@ internal sealed class CrearArticulo(
         // En UTC, como todo instante del sistema: la diferencia con la hora peninsular solo mueve
         // el día durante una o dos horas de madrugada, y el precio de equivocarse ahí es proponer
         // el tramo de ayer en una ficha que se puede corregir — no una cuota mal calculada.
-        var hoy = DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.Hoy(reloj);
 
         EstadoDeMaestro estadoDelImpuesto = await impuestos
             .EstadoDeAsync(peticion.ImpuestoPorDefectoId, hoy, cancelacion)

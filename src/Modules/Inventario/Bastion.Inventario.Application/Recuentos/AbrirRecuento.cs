@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Contracts.Recuentos;
@@ -95,7 +96,7 @@ internal sealed class AbrirRecuento(
         // Se lee una vez, antes de las series: el fin de su ejercicio se compara con el mismo «hoy»
         // con el que se fecha la apertura.
         DateTimeOffset momento = reloj.GetUtcNow();
-        var hoy = DateOnly.FromDateTime(momento.UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.De(momento);
 
         Resultado losMaestros = await ComprobarLosMaestrosAsync(peticion, hoy, cancelacion).ConfigureAwait(false);
 

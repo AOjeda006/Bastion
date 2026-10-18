@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts.Recuentos;
@@ -128,7 +129,7 @@ internal sealed class AnularRecuento(
         CancellationToken cancelacion)
     {
         DateTimeOffset ahora = reloj.GetUtcNow();
-        var hoy = DateOnly.FromDateTime(ahora.UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.De(ahora);
 
         // EL EJERCICIO DE HOY, que es la fecha del inverso, antes de gastar su número: la misma pregunta
         // que hace la anulación pública, y por lo mismo (R9).

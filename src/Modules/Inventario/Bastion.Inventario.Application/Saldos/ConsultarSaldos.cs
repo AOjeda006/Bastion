@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Saldos;
 
@@ -92,7 +93,7 @@ internal sealed class ConsultarSaldos(ILecturaDeSaldos saldos, TimeProvider relo
     {
         ArgumentNullException.ThrowIfNull(paginacion);
 
-        var hoy = DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.Hoy(reloj);
         DateOnly dia = fecha ?? hoy;
 
         if (dia > hoy)

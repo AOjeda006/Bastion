@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Terceros.Application.Comun;
@@ -108,7 +109,7 @@ internal sealed class AsignarTarifa(
             // puede elegir así porque lo que se guarda es la lista de precios que se le propone a
             // este cliente a partir de ahora; qué precio se aplica de verdad lo decidirá el
             // documento con SU fecha, volviendo a preguntar.
-            var hoy = DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime);
+            DateOnly hoy = DiaDeNegocio.Hoy(reloj);
 
             EstadoDeLaTarifa estado = await tarifas
                 .EstadoDeAsync(tarifaId, hoy, cancelacion)

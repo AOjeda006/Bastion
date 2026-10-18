@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.LotesYSeries;
@@ -93,7 +94,7 @@ internal sealed class AnularTransferencia(
         }
 
         DateTimeOffset ahora = reloj.GetUtcNow();
-        var hoy = DateOnly.FromDateTime(ahora.UtcDateTime);
+        DateOnly hoy = DiaDeNegocio.De(ahora);
 
         EstadoDelEjercicioParaEscribir ejercicio = await ejercicios
             .ParaEscribirEnAsync(hoy, cancelacion)

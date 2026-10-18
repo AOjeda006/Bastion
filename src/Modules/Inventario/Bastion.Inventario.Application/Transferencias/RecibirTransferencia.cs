@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.LotesYSeries;
@@ -85,7 +86,7 @@ internal sealed class RecibirTransferencia(
         }
 
         // LAS DOS FECHAS, ANTES QUE EL EJERCICIO: ninguna de las dos toma cerrojos (ADR-0053 §3).
-        if (fecha > DateOnly.FromDateTime(reloj.GetUtcNow().UtcDateTime))
+        if (fecha > DiaDeNegocio.Hoy(reloj))
         {
             return Resultado.Fallo<TransferenciaDto>(ErroresDeTransferencia.ConFechaFutura(fecha));
         }
