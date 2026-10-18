@@ -7669,6 +7669,77 @@ run de `main`; las ediciones de `CLAUDE.md`, al principio o al final de la sesi�
 cierra antes de una pausa larga. **El informe cuenta todos los commits desde `97645c9`, con sus
 runs de rama y de `main`**, y cada cifra va con la orden que la mide.
 
+### Tomadas por el agente de desarrollo — la regla del reloj, el paso C (2026-10-18)
+
+**Los hallazgos de `/code-review` no han llegado**, así que el paso B espera y el C va antes. La
+respuesta 7 pide una regla de ESLint que prohíba leer el reloj fuera de `shared/lib/dias.ts`, con
+su pareja y una mutación que la ponga roja. Está en `6a5d612`, en su propio commit, y no toca
+código de producción, porque el 2.16 ya dejó una sola lectura. Esta orden encuentra la de
+`dias.ts:40` y las seis formas que el test escribe como texto, y ninguna más:
+
+```bash
+git grep -n -E "new Date\(\)|new Date[;,)]|Date\.now|(^|[^.A-Za-z])Date\(\)" -- frontend/src
+```
+
+1. **Qué es leer el reloj.** Tres formas de `Date`: construirlo sin argumentos, con paréntesis o
+   sin ellos; llamarlo como función, que devuelve la cadena de ahora; y su `now`, llamado o pasado
+   como función. Lo que construye una fecha a partir de algo —una cadena, un número, `Date.UTC`,
+   `Date.parse`— no lee nada, y pasa.
+2. **Con `no-restricted-syntax` y tres selectores**, y no con una regla propia ni con
+   `no-restricted-globals`, que prohibiría `Date` entero: lo necesitan los tipos y las fechas que
+   se construyen. El mensaje dice adónde ir, `hoyEnElServidor()`, y por qué, el 2.16.
+3. **El alcance es `src/**/*.{ts,tsx}` menos `dias.ts`**, con los tests y `src/pruebas` dentro.
+   Un test que necesita un instante lo construye y se lo pasa a `hoyEnElServidor`, que lo admite
+   como parámetro. Ninguno de los de hoy lee el reloj.
+4. **Lo que no ve**, y no existe en el frontal: `globalThis.Date`, `window.Date`, un `Date`
+   guardado con otro nombre, `performance.now()` y el `format()` de `Intl.DateTimeFormat` sin
+   argumento. Prohibirlos sería una regla sin contraejemplo. La orden que lo comprueba está en la
+   cabecera del test, y no devuelve nada.
+5. **La prueba es por el efecto**, en `ElRelojSoloSeLeeEnDias.test.ts`, como la de las fronteras.
+   ESLint linta cada forma desde un fichero de verdad de cinco zonas —el armazón, lo compartido,
+   una funcionalidad, un test y las pruebas—, y el test exige que marque las seis prohibidas, 30
+   comprobaciones, y ninguna de las cinco permitidas, 25. **La pareja es `dias.ts`**: su contenido
+   de disco no sale marcado en su sitio, y sí desde las cinco zonas. Antes de cada zona, un `any`
+   hace de canario: si ESLint no lo marca, no está mirando el fichero.
+
+**La tanda, escrita antes de medir**, en el *scratchpad*, y aplicada sobre el árbol limpio con la
+regla commiteada, una a una, con `python -X utf8 mutar-reloj.py <n>`. El guion aplica la
+mutación, pasa `npm --prefix frontend run lint` y `npx vitest run
+src/shared/lib/ElRelojSoloSeLeeEnDias.test.ts`, revierte con `git restore --source=HEAD`, toca el
+fichero con la fecha de ahora y comprueba que el árbol queda limpio. Las siete se revirtieron con
+el árbol limpio, y las siete se pusieron rojas donde decía la tanda:
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 615 | `PaginaDeTarifas` lee el reloj: `console.info(new Date().toISOString());` al final del fichero | `npm run lint`, con el mensaje de la regla en `PaginaDeTarifas.tsx:317:14`. Los tres casos siguen en verde, porque lintan texto y no ese fichero |
+| 616 | Se quita el selector de `Date()` llamado como función | `marca cada lectura del reloj desde el armazón, lo compartido, una funcionalidad, un test y las pruebas` |
+| 617 | El selector de `new Date()` con una letra cambiada, `callee.name='Dat'` | el mismo, y `la pareja: dias.ts lee el reloj; en su sitio no se marca, y desde cualquier otro sí` |
+| 618 | La excepción se ensancha a `src/shared/**` | los dos de la 617 |
+| 619 | La excepción se quita | la pareja, y `npm run lint` en `dias.ts:40:49` |
+| 620 | El selector de `new Date()` pierde `[arguments.length=0]` | `no marca lo que construye una fecha sin leer el reloj`, y `npm run lint` con siete avisos en tres tests que construyen fechas: cuatro en `ElListadoDeTarifas.test.tsx`, uno en `ElSaldoAUnaFecha.test.tsx` y dos en `dias.test.ts` |
+| 621 | Arnés: `REGLA`, la regla que el test filtra, con una letra cambiada | el de las lecturas y la pareja. El de lo permitido sigue en verde, como decía la tanda: sin avisos de una regla que no existe, no hay nada que marcar |
+
+**Una diferencia con lo escrito**: la tanda decía, para la 615, `const ahora = new Date();` en el
+cuerpo, y el guion añadió `console.info(new Date().toISOString());` al final. Las dos son la misma
+lectura, `new Date()` sin argumentos, y la que se midió es la segunda.
+
+**Verificado en local**: `npm --prefix frontend run lint`, `typecheck` y `format:check`, limpios;
+la suite entera del frontal, **294** casos en **33** ficheros, los 291 de antes y los tres de la
+regla, con el centinela del canal con su marca y sin avisos de `act()`:
+
+```bash
+(set -o pipefail; npm --prefix frontend run test 2>&1 | tee artifacts/vitest.log)
+bash scripts/ci/canal-de-la-consola.sh artifacts/vitest.log
+```
+
+**El run de rama de `a8f691c`**, el paso A, es el **39136228874**, en verde al primer intento:
+Frontal `117701182080`, Backend `117701182230` y Humo `117702881664`, con 69 pasos, 68 en verde y
+el *Diagnóstico* omitido. Sus cifras son las de siempre, porque solo tocó documentos: **1490** y
+**691** casos, **413/450** y **720/900** KiB, y **109** permisos en los dos arranques. Leído con
+`python -X utf8 leer-run27.py 39136228874`. `main` no avanza con él: el 2.17 se cierra entero.
+
+La siguiente mutación es la **622**.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 16 de 19 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -7679,11 +7750,12 @@ puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el
 transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15 y el 2.16 están
 hechos.
 
-> **Dónde se retoma (2026-10-18): en el 2.17, en la rama `2.17-el-alta-del-ajuste`.** Su puerta
-> está contestada, en *Decisiones tomadas → Traídas por el encargo del 2026-10-18*, con el orden de
-> trabajo: los hallazgos de `/code-review` sobre `0638419..0d26e76`, si han llegado; la regla de
-> ESLint del reloj; el 2.17, con el ADR-0065 primero; el 2.18; y la puerta del 2.19, donde se para
-> y se pregunta.
+> **Dónde se retoma (2026-10-18): en el 2.17, en la rama `2.17-el-alta-del-ajuste`, por el
+> ADR-0065.** Su puerta está contestada, en *Decisiones tomadas → Traídas por el encargo del
+> 2026-10-18*, con el orden de trabajo. La regla de ESLint del reloj está hecha, en `6a5d612`, con
+> su tanda, de la 615 a la 621, en *La regla del reloj, el paso C*. Los hallazgos de `/code-review`
+> sobre `0638419..0d26e76` no han llegado, y se tratan antes de seguir con el código en cuanto
+> lleguen. Después del 2.17, el 2.18, y la puerta del 2.19, donde se para y se pregunta.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
