@@ -7429,6 +7429,134 @@ El criterio está en su casilla. Lo que pide, y lo que no dice:
 La 609 y la 612 son de las que la regla de la IL no ve por diseño, y las tienen que ver otros
 casos: la 609, la pareja; la 612, el caso de `ResolverPrecio`.
 
+### La puerta del 2.17 — lo que se pregunta, y lo que el ADR-0065 decidirá sin preguntar
+
+Escrita el 2026-10-18, en la rama `2.17-el-alta-del-ajuste`. **Se para aquí**: el código empieza
+con las respuestas, y el ADR-0065 se escribe con ellas, como el 0063 en el 2.14.
+
+#### Lo que dice el plan maestro, primero
+
+- **El §7.4** pone el ajuste como «cabecera con estado, líneas […] y generación de los movimientos
+  al confirmar». **El §7.1** pone `UnidadMedida` y `ConversionUM` (origen, destino, factor) en
+  **Organización**, y **el §7.3**, la unidad base en el artículo, en Catálogo.
+- **El §9**: recursos en plural, `201` con `Location` al crear, `Idempotency-Key` obligatoria en lo
+  que crea o confirma (R10), `ETag` e `If-Match` en los documentos (R11), paginación con tope y el
+  total cuando es barato, `422` para la regla de negocio y `403` para el permiso. Y **«`204` al
+  borrar un borrador»**.
+- **El §10**: el listado, con paginación y orden en el servidor y los filtros en la URL; la ficha
+  del documento, con «cabecera + líneas editables» y la barra de acciones derivada del estado y de
+  los permisos, en una función `accionesDisponibles(documento, permisos)` de `model/`; la entrada
+  de líneas, **pensada para teclado**: tabulador entre celdas, alta de línea con Intro y búsqueda
+  del artículo por código o descripción sin soltar el teclado. Y **«cada listado exporta a
+  CSV/Excel lo que está viendo, con los mismos filtros aplicados»**.
+- **El §11**: el permiso es `modulo.recurso.accion`, y la interfaz oculta y el servidor decide.
+
+#### Lo que ya está escrito
+
+- **`AbrirAjuste` existe**, en la aplicación y sin borde HTTP, y toma `FactorAUnidadBase` del
+  cliente en cada línea (`LineaDeAjusteDto`). Nadie lo compara con `ConversionUM`: es la pregunta 5
+  del repaso, contestada (a).
+- **El borde HTTP del ajuste tiene dos acciones**, confirmar y anular (`AjustesController`), con
+  `inventario.ajuste.confirmar` y `.anular`. El catálogo de permisos se compone en `Program.cs`
+  con `PermisosDeInventario.Todos`, y el rol del sistema se alinea con el catálogo entero en cada
+  arranque (`ActualizarRolesDelSistema`): son los 109 permisos que contó el humo del 2.15.
+- **`ConversionUM` es un maestro de la instalación**, sin artículo, retirable y con el factor
+  modificable (`ModificarConversionUm`). `ResolverConversionUm` contesta también la retirada, con
+  `EstaRetirada`: **eso es «sigue resolviendo lo viejo»** en Organización. Ni se invierte ni se
+  encadena (ADR-0023). `Organizacion.Contracts` no tiene todavía ningún puerto que la conteste: su
+  `IConsultaDeUnidadesDeMedida` solo da el estado de una unidad.
+- **El inverso ya copia las líneas del original en el dominio**, factor incluido, sin pasar por
+  ningún puerto (`Ajuste.Inverso`). Lo que falta es el caso que lo afirme contra una conversión
+  retirada o cambiada.
+- **El ajuste de un recuento no se anula por su camino** (`ajuste-de-un-recuento-no-se-anula`,
+  ADR-0055 §9), y el dominio dice de un borrador que «se tira», pero el ajuste no tiene descarte.
+- **El recuento es el precedente de la pantalla** (ADR-0055 §12): listado con `?pagina=`,
+  `?tamanio=`, `?estado=` y `?almacen=`, rutas diferidas, los nombres desde sus dueños y con caché,
+  y un permiso por acción, con `inventario.recuento.ver` para leer.
+- **Ningún listado exporta hoy a CSV**: la importación de terceros lee uno, y nada escribe.
+
+#### Las cifras de partida, con la orden que las mide
+
+- **El arranque es de 413/450 KiB y el total servido de 720/900**, con `bash
+  scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` sobre la construcción de `0d26e76`.
+  Una ruta diferida no cuenta en el arranque: cuentan su entrada de la navegación y los textos de
+  pantalla de los dos diccionarios, que sí van en él.
+- **Las dos pantallas del recuento, que son las más parecidas, pesan 25 553 B**: `PaginaDeRecuentos`
+  8 572 B y `PaginaDelRecuento` 16 981 B, con `ls -l frontend/dist/assets/PaginaDe*Recuento*.js`.
+  **Lo que añadirá el 2.17, estimado**: entre 25 y 40 KB en el total, porque el alta lleva una
+  rejilla de líneas que el recuento no tiene, y de 1 a 2 KB en el arranque. Quedaría hacia
+  **415/450** y **760/900**: cabe. La cifra de verdad se mide al cerrar el ítem.
+
+#### Lo que se pregunta, todo junto
+
+1. **Dónde vive el puerto del factor.** El criterio dice «un puerto de lectura en el `Contracts`
+   de Catálogo», que copia la pregunta 5 del repaso. Pero la conversión es de Organización (§7.1),
+   y lo único de Catálogo es la unidad base del artículo, que Inventario ya lee con
+   `IConsultaDeArticulos.UnidadesBaseDeAsync`.
+   - **(a) Recomendada: en `Organizacion.Contracts`**, que es el dueño del dato. Un puerto,
+     `IConsultaDeConversiones`, que contesta el factor y si está retirada para cada par de
+     unidades de una vez, e Inventario lo compone con la unidad base que ya lee. Cambia la letra
+     del criterio, y por eso se pregunta.
+   - (b) En `Catalogo.Contracts`, como dice el criterio: un `FactoresAUnidadBaseDeAsync` por
+     artículo y unidad, que Catálogo contesta con la unidad base y el puerto de (a) detrás. Son dos
+     puertos, y vale la pena el día que la conversión sea por artículo —la caja de doce de uno y la
+     de veinticuatro de otro—, que el plan maestro no pone.
+2. **Qué es «una conversión retirada sigue resolviendo lo viejo»**, en los tres momentos:
+   - **en el alta, que es lo nuevo**: recomendado, **se rechaza**, con `ajuste-conversion-retirada`,
+     como hoy una unidad retirada (`ajuste-unidad-retirada`). La otra salida: se admite con su
+     factor;
+   - **en un borrador abierto antes de retirarla o de cambiar su factor**: recomendado, **confirmar
+     no vuelve a preguntar**, y el factor es el que la línea guardó en el alta. La otra salida:
+     confirmar vuelve a resolverlo, y rechaza si ya no está o si cambió;
+   - **en el inverso**: lo dice el criterio, copia el factor del original sin preguntar. Un caso lo
+     afirma con la conversión retirada y otro con el factor cambiado.
+3. **El borrador equivocado.** El alta es una sola petición con todas sus líneas, y hoy un borrador
+   no se modifica ni se tira: se quedaría en el listado hasta que alguien lo confirme.
+   - (a) Solo lo que dice el criterio: alta, listado y ficha, con el disparador escrito.
+   - **(b) Recomendada: y el descarte del borrador**, como el del recuento:
+     `inventario.ajuste.descartar`, borrado lógico y `204`, que es lo que el §9 dice de un
+     borrador. Amplía el criterio en una acción, y por eso se pregunta.
+   - (c) Y la modificación de sus líneas, que son las «líneas editables» del §10: con su `If-Match`,
+     es un ítem por sí misma.
+4. **La exportación del listado** (§10). Ningún listado exporta todavía.
+   - **(a) Recomendada: fuera del 2.17**, en una nota abierta para todos los listados a la vez, con
+     el disparador de la fase 3, que es la de los primeros documentos con importes.
+   - (b) En el 2.17, como el primer listado que exporta.
+
+#### Lo que el ADR-0065 decidirá sin preguntar
+
+Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
+
+1. **Las rutas**, bajo `/api/v1/inventario/ajustes`:
+   - `POST`, el alta: `201` con `Location` y `ETag`, `Idempotency-Key` obligatoria y el permiso
+     nuevo `inventario.ajuste.abrir`;
+   - `GET`, el listado: `?pagina=`, `?tamanio=`, `?estado=` y `?almacen=`, como el del recuento,
+     ordenado por la fecha de operación y el número, de lo último a lo primero, con el total, y el
+     permiso nuevo `inventario.ajuste.ver`;
+   - `GET {id}`, la ficha: cabecera y líneas, con su `ETag`, y el mismo permiso. Las líneas van
+     enteras, sin paginar, porque el alta las trae en una petición: el alta acepta como mucho las
+     de una página del tope del servidor, y una más es un `400`.
+
+   Los dos permisos nuevos entran en `PermisosDeInventario.Todos`, y con ellos en el rol del
+   sistema, y el humo lo cuenta en el segundo arranque.
+2. **El factor lo resuelve el servidor, y el cliente ya no lo manda.** La línea del alta lleva la
+   unidad y la cantidad introducidas; si la unidad es la base del artículo, el factor es 1 sin
+   preguntar a nadie; si no, el del puerto, para todas las líneas en una consulta. Una línea sin
+   conversión es un `422` `ajuste-sin-conversion`, con el número de la línea, para que la pantalla
+   lo ponga en su campo. `LineaDeAjusteDto` pierde `FactorAUnidadBase`, y la línea del dominio lo
+   conserva, porque es lo que explica la cantidad en unidad base (R3).
+3. **La ficha**: la barra de acciones sale de `accionesDisponibles(ajuste, permisos)`: confirmar en
+   un borrador, anular en uno confirmado que no es un inverso ni de un recuento, y descartar en un
+   borrador, si va. El ajuste de un recuento lleva el enlace a su recuento.
+4. **La pantalla**: `/ajustes` y `/ajustes/:id`, diferidas, con la entrada en la navegación de
+   Inventario. Los tres estados, cargando, vacío y error, y cada `422` de vuelta a su campo. La
+   rejilla de líneas, para teclado, como pide el §10, con el artículo buscado por el filtro de
+   texto del listado de Catálogo, que ya mira el código y la descripción. Los nombres, desde sus
+   dueños (ADR-0055 §12).
+5. **El recorrido**, con `playwright-cli` contra la pila local, en su propio proyecto de *compose*
+   y con datos sintéticos: alta con una línea en la unidad base y otra en una unidad con
+   conversión, el rechazo de una sin conversión en su campo, confirmar y anular.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 16 de 18 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -7437,12 +7565,13 @@ preguntas de la tanda y las tres que trajo la respuesta están contestadas y ano
 catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, del 2.15
 al 2.18, y la fase se cierra cuando acabe el último. El 2.15 y el 2.16 están hechos.
 
-> **Dónde se retoma (2026-10-18): en la puerta del 2.17.** El 2.16 está hecho, en *El 2.16,
-> hecho*, más abajo, y sus dos runs de cierre se anotan en el primer commit del 2.17. Lo que sigue,
-> en el orden del encargo: el 2.17 hasta su puerta, donde se para y se pregunta. **Tres cosas
-> esperan al usuario**: los hallazgos de su `/code-review` sobre `0638419..8734c6a`, que no han
-> llegado; la respuesta a la propuesta del avance incremental del ADR-0064 §5; y la de la zona de
-> lo que no tiene almacén, que el 2.16 propone en la nota de la zona.
+> **Dónde se retoma (2026-10-18): en la puerta del 2.17, en la rama `2.17-el-alta-del-ajuste`,
+> parado.** El 2.16 está hecho, en *El 2.16, hecho*, más abajo, con sus dos runs de cierre en
+> verde. La puerta del 2.17 está en *Decisiones tomadas → La puerta del 2.17*, con cuatro
+> preguntas, y **el código no empieza hasta que se contesten**. Esperan también al usuario los
+> hallazgos de su `/code-review` sobre `0638419..8734c6a`, que no han llegado; la respuesta a la
+> propuesta del avance incremental del ADR-0064 §5; y la de la zona de lo que no tiene almacén,
+> que el 2.16 propone en la nota de la zona.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -12757,6 +12886,16 @@ empiezan en la **615**. No lleva ADR, así que el siguiente sigue siendo el **00
 8. **El cierre, por el flujo de la rama**: este commit va a la rama y espera su verde; `main`
    avanza con `--ff-only`, y la rama se borra, en local y en el remoto, después del run de
    `main`. Los dos runs se anotan en el primer commit del 2.17.
+
+   **Anotados en el primer commit del 2.17.** El run de rama de `0d26e76`, que lleva los cinco
+   commits del 2.16, es el **39128449712**, en verde al primer intento: Frontal `117678448495`,
+   Backend `117678448749` y Humo `117680657624`. `main` avanzó con `--ff-only` de `996a404` a
+   `0d26e76`, y su run es el **39129536761**, también en verde: Backend `117681687479`, Frontal
+   `117681687707` y Humo `117684144004`. Los dos con 69 pasos, 68 en verde y el *Diagnóstico*
+   omitido, y las cifras de la batería: **1490** y **691** casos, **235** tipos de **242**
+   sitios, **150** operaciones en **91** rutas, **413/450** y **720/900** KiB, y el centinela con
+   la marca y sin avisos. Leídos con `python -X utf8 leer-run27.py <run>`. La rama
+   `2.16-un-solo-hoy` se borró en local y en el remoto después del run de `main`.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
