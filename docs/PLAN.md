@@ -7746,25 +7746,234 @@ permisos en los dos arranques. Leído con `python -X utf8 leer-run27.py 39137144
 
 La siguiente mutación es la **622**.
 
+### Tomadas por el agente de desarrollo — ítem 2.17, al escribirlo y al medirlo (2026-10-19)
+
+El código siguió el orden de *Dónde se retoma*, y entraron tres cosas que el orden no decía:
+`c953d65`, porque los casos del puerto dejaban conversiones en la colección de PostgreSQL y la
+carga de semillas se paraba en su clave foránea; `b1db83e`, el `400` de lo que no cabe en su
+columna, que salió al sondear el alta antes de escribir la pantalla; y los tres commits que cubren
+los hallazgos de la tanda. Lo que se decidió sin preguntar, porque el ADR-0065 no lo decía o porque
+salió al escribirlo:
+
+1. **Intro solo añade en la última celda.** El ADR-0065 §8 dice, con el §10 del plan maestro,
+   «tabulador entre celdas, Intro en la última añade una línea». En cualquier otra celda, Intro no
+   hace nada, para no enviar el formulario a medias. Lo dicen la pista de la pantalla, el README de
+   `inventario` y `RejillaDeLineas.tsx`, y lo prueba «el lote se escribe solo si el artículo se
+   sigue por lote, y entonces es la última celda». **El mensaje de `236dd45` lo cuenta mal**: dice
+   que Intro pasa a la celda siguiente. No se reescribe, porque la rama sigue encima de él y cada
+   commit va firmado; queda dicho aquí.
+2. **La línea nueva, con `flushSync`.** `append` de react-hook-form lleva el foco a la línea nueva
+   desde un efecto, en mitad del pintado, y el `change` que user-event emula al salir de la celda
+   abría un `act()` dentro de otro. La rejilla añade la línea con `flushSync` y mueve el foco desde
+   el manejador. Quitarlo es la mutación 641, la que encontró el hueco del canal.
+3. **El tope de doscientas líneas va con `[MaxLength]`** en el parámetro del registro, y MVC lo
+   contesta con su `400` y su motivo. El OpenAPI de .NET 10 no publica los atributos de un
+   parámetro posicional, así que el documento no lleva `maxItems`. La pantalla no lo necesita: en
+   la línea doscientas, el botón de añadir se apaga y dice por qué.
+4. **Lo que no cabe es un `400` con su campo**, en `b1db83e`. Antes, el alta contestaba `500` a un
+   motivo en blanco, a una cantidad de cero o con siete decimales y a un coste de quince cifras
+   enteras. La cantidad estrena `ajuste-cantidad-no-valida`, en `lineas[i].cantidadIntroducida`
+   también cuando lo que no cabe es la cantidad base, porque el factor no lo escribe nadie.
+5. **El descarte no toma cerrojo**, como la confirmación del ajuste: el testigo `xmin` en el
+   `WHERE` del `UPDATE` deja sin fila al que llega segundo. Y el índice de empresa y fecha pasa a
+   parcial, `WHERE descartado_en IS NULL`, por la convención del borrado lógico.
+6. **`inventario/maestros` no tiene textos**, y el barrido de las fronteras exigía un espacio de
+   nombres por carpeta. La excepción va por nombre, `CARPETAS_SIN_TEXTOS`, con su pareja: la carpeta
+   existe, tiene ficheros, y ninguno importa `react-i18next`. Está en `1449de4`.
+7. **El canal de la consola cuenta todos los avisos de `act()`**, con el ADR-0066, que enmienda el
+   §1 del ADR-0060. Es el hallazgo de la 641, y está en `56fedeb`.
+8. **Los listados a 320 px se quedan como nota**, en *Notas / riesgos*. El recorrido encontró que
+   `/ajustes` hace correr la página entera en horizontal, y no es solo suyo. El criterio del 2.17
+   no lo pide, y arreglarlo toca listados de otros ítems.
+
+**La tanda, de la 622 a la 651, se escribió antes de medir**, sobre `236dd45`, en el
+*scratchpad*, con lo que debería ver cada una. La 649 y la 650 rompen el arnés: el servidor de pega
+del listado y la conversión que dan de alta las pruebas. El backend se midió en un *worktree*
+aparte, con cinco carriles: el dominio, `Inventario.UnitTests`; los funcionales,
+`Api.FunctionalTests`; la integración, `Api.IntegrationTests` filtrado a
+`Bastion.Api.IntegrationTests.Inventario.`; Organización, `Organizacion.IntegrationTests`; y la
+autorización, `Bastion.Api.IntegrationTests.Autorizacion.`. El frontal, en el árbol limpio, sobre
+los siete ficheros de `ajustes`. Cada mutación se aplicó sola, se revirtió con `git restore
+--source=HEAD` y se tocó con la fecha de ahora:
+
+```bash
+python -X utf8 mutar217.py tanda217.json base 622-634 650    # el backend, en su worktree
+python -X utf8 mutar217-web.py <n>                            # el frontal
+```
+
+La base, en verde: dominio 0 de 319, funcionales 0 de 249, integración 0 de 281, Organización 0 de
+110 y autorización 0 de 12; el frontal, 0 de 46. Al acabar el backend, el build del árbol
+restaurado sale con 0, y la porcelana, vacía. La 652, la 653 y la 654 son del canal, y se
+escribieron con su arreglo.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 622 | `LaCantidadCabe` sin la guarda de los seis decimales | **dominio 1**: `LoQueCabeEnUnaLineaDeAjusteTests.Una_cantidad_que_no_cabe_en_su_columna_no_entra`. La integración, verde, contra lo escrito: ver debajo |
+| 623 | `LaCantidadCabe` con `<=` en el tope | **dominio 1**: el mismo, con un billón |
+| 624 | `SePuedeAjustar` sin `enUnidadBase != 0` | **dominio 1**: `Lo_que_mueve_en_la_unidad_base_tampoco_se_queda_en_cero_ni_se_sale`; **integración 1**: `LaSuperficieDelAjusteTests.Una_cantidad_que_en_la_unidad_base_se_queda_en_cero_o_se_sale_es_400_en_su_cantidad` |
+| 625 | `ElCosteCabe` sin el redondeo a cuatro decimales | **dominio 1**: `Un_coste_que_no_cabe_en_su_columna_no_entra` |
+| 626 | El alta no mira si la conversión está retirada | **integración 1**: `ElFactorDelAjusteTests.Una_conversion_retirada_es_409_y_antes_de_retirarla_la_misma_linea_pasa` |
+| 627 | El alta busca el par al revés, de la base a la introducida | **integración 20**: los seis de `ElFactorDelAjusteTests`, con los dos que nombraba la tanda, y los catorce que abren una línea en una unidad con conversión: siete de `LaAnulacionConContraDocumentoTests`, el saldo por propiedad, las existencias, la serie unitaria de `LaFormaDeLosCodigosDeLaLineaTests`, tres de `LaSuperficieDelAjusteTests` y el almacén bloqueado |
+| 628 | El puerto no filtra el producto cruzado de orígenes y destinos | **Organización 1**: `LaConsultaDeConversionesTests.Contesta_el_par_exacto_con_su_factor_y_ni_su_inverso_ni_lo_que_no_esta` |
+| 629 | La línea del inverso lleva factor 1 | **dominio 2**: `ElInversoQueAnulaTests.El_inverso_copia_las_lineas_con_la_cantidad_negada` y `.El_par_suma_cero_en_unidad_base`; **integración 5**: los dos `ElFactorDelAjusteTests.El_inverso_copia_el_factor_del_original_…`, el saldo por propiedad, `LaAnulacionConContraDocumentoTests.El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion` y `LaSuperficieDelAjusteTests.El_alta_es_201_sin_etag_y_la_ficha_dice_el_factor_y_la_cantidad_base_de_cada_linea` |
+| 630 | Descartar no compara la versión | **integración 2**: `ElBorradorDescartadoTests.Con_la_version_de_antes_de_confirmarlo_es_412_y_con_la_de_ahora_409` y `LaSuperficieDelAjusteTests.El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404` |
+| 631 | Descartar no mira el estado en el caso de uso, y el dominio lanza | **integración 2**: los mismos dos |
+| 632 | Sin el filtro `Descarte` | **integración 4**: `ElBorradorDescartadoTests.Descartar_dos_veces_es_404_y_la_marca_es_la_primera` y `.El_descartado_no_lo_encuentran_ni_la_ficha_ni_confirmar_ni_anular_ni_el_cierre`; `LaSuperficieDelAjusteTests.El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404` y `.La_lista_va_de_la_ultima_fecha_a_la_primera_se_acota_y_no_trae_el_descartado` |
+| 633 | El `DELETE` exige `AjusteVer` | **funcionales 1**: `CadaAccionDeclaraSuPermisoTests.Todo_permiso_del_catalogo_lo_exige_alguna_accion`. La autorización, 0 de 12, contra lo escrito: ver debajo |
+| 634 | La ruta del campo de un `400` cuenta desde uno | **integración 8**: cinco de `LaFormaDeLosCodigosDeLaLineaTests`; `LaSuperficieDelAjusteTests.Una_cantidad_o_un_coste_que_no_caben_en_su_columna_son_400_y_en_su_borde_abren` y `.Una_cantidad_que_en_la_unidad_base_se_queda_en_cero_o_se_sale_es_400_en_su_cantidad`; y `LasGuardasDelAjusteTests.El_alta_rechaza_cada_maestro_que_no_se_mueve_con_su_codigo` |
+| 635 | `actual.linea` se lee sin restar uno | **3 de 46**: en `rechazos.test.ts`, «un 422 la dice en `actual.linea`, desde uno, que es el número que enseña la ficha» y «la trazabilidad que no casa va al artículo, y la serie que no es unitaria, a la cantidad»; en el alta, «el rechazo de una línea sin conversión va a la unidad de esa línea, con el foco» |
+| 636 | `lineas[i]` se lee sumando uno | **2 de 46**: en `rechazos.test.ts`, «un 400 dice la línea en la clave de `errors`, desde cero»; en el alta, «un 400 dice la línea en la clave de `errors`, y su error va en ese campo» |
+| 637 | Las ubicaciones no se filtran por el almacén | **1 de 46**: «las ubicaciones son las del almacén elegido, y cambiarlo deja sin elegir la de otro» |
+| 638 | Cambiar el almacén no deja sin elegir la ubicación del otro | **0 de 46. Hallazgo**, cubierto en `1ec84cb` |
+| 639 | Elegir el artículo no pone su unidad base | **6 de 46**, del alta: «abre un borrador…», «el rechazo de una línea sin conversión…», «escribir otra vez en el artículo…», «lo que el formulario ya sabe no sale…», «lo que no es de una línea va arriba…» y «un 400 dice la línea…» |
+| 640 | Intro añade en cualquier celda | **1 de 46**: «el lote se escribe solo si el artículo se sigue por lote, y entonces es la última celda» |
+| 641 | `append` con su foco, sin `flushSync` | **0 de 46**, como decía la tanda, **y el canal en verde. Hallazgo**, cubierto en `56fedeb` |
+| 642 | Confirmar sin `Idempotency-Key` | **1 de 46**: «confirmar se pregunta, manda su clave y no la versión, y el aviso dice el número con el foco» |
+| 643 | Descartar con `If-Match: *` | **1 de 46**: «descartar se pregunta, manda la versión de la ficha, y el borrador deja de existir» |
+| 644 | Descartar no saca la ficha de la caché | **0 de 46**, como decía la tanda. **Hallazgo**, cubierto en `eed3351` |
+| 645 | La ficha sin `key={id}` | **1 de 46**: «anular pide el motivo, y el aviso lleva al inverso, que se abre sin el aviso» |
+| 646 | `rutaDeLaLinea` con corchetes | **1 de 46**: «el nombre de un campo de una línea es el de `react-hook-form`». El rojo en masa del alta que decía la tanda no sale, porque react-hook-form también acepta los corchetes |
+| 647 | `accionesDisponibles` ofrece anular el ajuste de un recuento | **2 de 46**: en `acciones.test.ts`, «un inverso no se anula, y el ajuste de un recuento se anula desde su recuento»; en la ficha, «el ajuste de un recuento lleva a su recuento a quien puede verlo, y no se anula desde aquí» |
+| 648 | El listado manda la búsqueda como `busqueda`, y no como `q` | **2 de 46**: «los filtros van a la URL y al servidor con los nombres de la API, desde la primera página» y «acotado y sin nada, lo dice del filtro, no de la empresa» |
+| 649 | **Arnés** del frontal: el servidor de pega del listado no anota lo pedido | **3 de 46**: los dos de la 648 y «nombra cada uno por su número, y el borrador, que no lo tiene, por su almacén y su día» |
+| 650 | **Arnés** del backend: `CrearUnidadQueConvierteAAsync` escribe la conversión al revés | **integración 14**, los que dan de alta su unidad con ese ayudante: `ElFactorDelAjusteTests.La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion` y trece de los catorce de la 627 que no son de esa clase, todos menos `Una_linea_sin_conversion_es_422_con_la_linea_y_las_dos_unidades_en_actual`. Los otros cinco de `ElFactorDelAjusteTests`, verdes, contra lo escrito: ver debajo |
+| 651 | Escribir otra vez en el artículo no lo quita de la línea | **1 de 46**: «escribir otra vez en el artículo deja la línea sin él, hasta que se elige otro» |
+| 652 | El canal: un trozo con una letra cambiada, `insid` | **el paso, 1**: el trozo no está en React, y la cadena del suspendido se queda sin contar |
+| 653 | El canal: sin el trozo de los `act()` solapados | **el paso, 1**: React escribe «You seem to have overlapping act() calls…», y el canal no lo cuenta |
+| 654 | **Arnés** del canal: la expresión busca `acto` | **el paso, 1**: no hay ninguna cadena sobre `act` en los paquetes |
+
+- **Lo que salió distinto de lo escrito, y por qué**, leído en el código:
+  - **la 622 no se ve en la integración.** Sin la guarda de los decimales, `0.0000001` pasa la
+    primera pregunta del caso de uso y para en la segunda, `SePuedeAjustar`: con el factor 1, la
+    cantidad base redondea a cero. El `400` es el mismo, con el mismo código y el mismo campo. La
+    ve el dominio;
+  - **la 633 no la ve la autorización.** `LaPuertaDeCadaAccionTests` lee el permiso del atributo de
+    cada acción, así que, con `AjusteVer` en el `DELETE`, la puerta abre con el permiso que declara
+    y cierra con los demás. Lo que se queda sin acción es `inventario.ajuste.descartar`, y eso solo
+    lo mira el funcional;
+  - **la 650 no la ven cinco de `ElFactorDelAjusteTests`**, porque dan de alta su conversión con
+    `CrearConversionAsync`, y no con el ayudante. La ven los catorce que lo usan.
+- **Los tres hallazgos, cubiertos y medidos otra vez:**
+  - **la 638.** Sin su opción, el desplegable de la ubicación enseña la primera, y el formulario
+    guarda todavía la del otro almacén. El caso miraba lo que se pinta. En `1ec84cb` mira lo que se
+    manda: con la ubicación sin elegir, el alta no sale, y el error va en su celda;
+  - **la 644.** TanStack Query guardaba la ficha descartada, y volver atrás la pintaba antes del
+    `404`. En `eed3351`, «volver atrás a un descartado da su 404, sin pintar antes lo que había»,
+    que afirma sin esperar que no hay encabezado;
+  - **la 641.** Los casos siguen en verde, porque el foco acaba donde tiene que estar, y el aviso
+    de React salía en el registro, pero no era «not wrapped in act», la única cadena que contaba el
+    canal. En `56fedeb`, con el ADR-0066, el canal cuenta con siete trozos las ocho cadenas que
+    React 19.2.8 escribe sobre `act`, y compara su lista con los paquetes instalados, en los dos
+    sentidos.
+
+  ```bash
+  python -X utf8 mutar217-web.py base 638 644          # base, 0 de 47; la 638, 1; la 644, 1
+  python -X utf8 mutar641-canal.py base|641            # el registro, con el informe fijado
+  bash scripts/ci/canal-de-la-consola.sh canal-<n>.log # base, 0; la 641, 1 aviso
+  python -X utf8 mutar-canal217.py <n>                 # la 652, la 653 y la 654, en una copia
+  ```
+
+  La 638 la ve «las ubicaciones son las del almacén elegido, y cambiarlo deja sin elegir la de
+  otro», y la 644, «volver atrás a un descartado da su 404, sin pintar antes lo que había». Con la
+  641, el canal de antes sale con 0, y el de ahora, con 1. La 652, la 653 y la 654, con 1.
+
+**El humo**, con Docker 29.8.0, sobre `56fedeb`, en su propio proyecto, `-p bastion-humo-217`, con
+una copia del `.env` en el *scratchpad* que se borró al acabar. Lo lanzan dos órdenes de un guion
+del *scratchpad*, `bash humo217.sh montar`, el primer arranque, los rechazos y los datos del
+recorrido, y `bash humo217.sh rematar`, el segundo arranque y el desmontaje. Los fallos, 0 en las
+dos:
+
+- el build, en 41 s, y el migrador, con 0 y una línea `EsquemaMigrado` por cada uno de los seis
+  esquemas;
+- `inventario.ajustes.descartado_en`, `timestamptz` y nula; el índice de empresa y fecha, con
+  `WHERE (descartado_en IS NULL)`; y `ElDescarteDelAjuste`, una vez en el historial;
+- **112 permisos** en el rol `administracion`, con los tres del ajuste, en los dos arranques. El
+  segundo sale con 0 en 16 s, y el esquema y los permisos son los del primero;
+- `/health/live` y `/health/ready`, sanos; descartar sin credenciales, `401`;
+- por la API y por el frontal: la ficha de uno que no existe, y descartarlo, `404
+  ajuste-no-encontrado`; descartar sin `If-Match`, `428 falta-if-match`; abrir sin la clave, `428
+  idempotencia-obligatoria`; abrir en un almacén que no existe, `400
+  ajuste-almacen-no-encontrado`; y el listado, `200` con 0;
+- `/ajustes` y `/ajustes/nuevo` sirven la aplicación;
+- los datos del recorrido, por la API, y una línea sin conversión en la segunda: `422
+  ajuste-sin-conversion` con la línea 2, y ningún ajuste escrito;
+- los ajustes del recorrido sobreviven al segundo arranque: el anulado, el 1; su inverso, el 2; y
+  el borrador descartado;
+- y `down -v`, con 0: solo queda el proyecto `bastion`, y la copia del entorno, borrada.
+
+**El recorrido con `playwright-cli`**, contra esa pila y con datos sintéticos, y la contraseña por
+un guion que no la escribe en ningún fichero:
+
+- la sesión entra, y sobrevive a recargar la página;
+- **el alta**: la línea 1 en `H-01`, `HUM-M6`, 5 `UDH`, la unidad base, que la pantalla propone, a
+  2,5; Intro en su última celda abre la línea 2, con el foco en su ubicación; la 2 en `H-02`,
+  `HUM-M8`, 2 `CJH`, la caja de doce, a 1; y la 3 en `PQH`, que no tiene conversión;
+- **el rechazo va a su campo**: el `422` cae en «Unidad de la línea 3», con `aria-invalid`, el foco
+  y el texto de la conversión como descripción;
+- quitada la 3, el borrador abre con factor 1 y 5 en la base, y factor 12 y 24;
+- **confirmar** da el ajuste 1, con 12,50 € y 24,00 €; **anular**, con su motivo, da el inverso, el
+  2, confirmado, con −5 `UDH` y −2 `CJH` a factor 12, −24 en la base, y su enlace al original;
+- **el tope**: 199 clics en 6 390 ms dan 200 filas, y el botón se apaga con «Un ajuste lleva como
+  mucho 200 líneas.» en su descripción. Intro en la última celda de la 200 no añade nada;
+- **descartar** un borrador nuevo dice «Borrador descartado.», con el foco; el listado trae dos
+  filas, sin él; y volver atrás con el navegador da «Ese ajuste ya no existe. Vuelve al listado y
+  actualiza.», sin encabezado ni tabla;
+- en la consola, solo lo esperado: el `401` de la renovación antes de entrar, el `422` y el `404`;
+- **a 320 px**, la navegación marca «Ajustes de inventario» con `aria-current`, y el alta y la
+  ficha caben, con sus tablas en un contenedor que corre. **El listado no**: la página mide 394 px.
+  Va en *Notas / riesgos*.
+
+**Los KiB**, con `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`: **420/450** y
+**778/900**, desde 413/722 en `b1db83e`, el commit de antes de la pantalla. El arranque crece
+7 KiB, sobre todo por el diccionario del idioma activo, que pasa de 16 178 a 19 910 bytes con los
+textos de la pantalla, y el índice, de 389 385 a 391 306, medidos con `wc -c` sobre
+`frontend/dist/assets/index-*.js` y `es-*.js`. Las tres páginas van en sus fragmentos diferidos:
+`PaginaDeAjustes`, de 5 279 bytes; `PaginaDelAlta`, de 12 969; y `PaginaDelAjuste`, de 11 957.
+Caben, y el límite no se toca.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `56fedeb`**: el frontal, paso a paso, y
+el resto con `bash bateria217.sh`, un guion del *scratchpad* que deja cada paso en
+`artifacts/bateria-<paso>.log` y su código de salida en una línea. Los pasos salen con 0, y el
+árbol, limpio al terminar.
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **154** operaciones en **93**
+  rutas, cuatro y dos más, y **238** tipos de **246** sitios, desde 235 de 242, con los dos
+  generadores en `--comprobar`;
+- `typecheck`, `lint` y `format:check`, limpios; **342** casos del frontal en **40** ficheros,
+  desde 294 en 33: los 47 de `ajustes`, en siete ficheros, y la pareja de `CARPETAS_SIN_TEXTOS`.
+  Y `canal-de-la-consola.sh`, con la marca, ningún aviso de `act()` y siete trozos para las ocho
+  cadenas;
+- el build, con 0 errores, y `dotnet format`, limpio;
+- **1514** casos en el carril rápido y **715** en el de integración, 627 de
+  `Api.IntegrationTests` y 88 de `Organizacion.IntegrationTests`, todos en verde y contados con
+  `recuento-de-tests.sh` y las dos listas del *workflow*: 24 más en cada carril que en el 2.16, y
+  el de integración, con `--blame-hang --blame-hang-timeout 4m`;
+- `ElCensoDeEsteCarrilTests`, en verde en el carril rápido, con los casos nuevos del backend
+  dentro;
+- y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py 0d26e76 HEAD`:
+  125 pares, 35 `Project` y 432 entradas del frontal en los dos lados, sin nada añadido ni
+  retirado. Sin `-X utf8`, el guion se para al escribir la flecha en una salida redirigida, con la
+  página de códigos de Windows.
+
+La siguiente mutación es la **655**, y el siguiente ADR, el **0067**.
+
 ## Estado actual
 
-**FASE 2 EN CURSO — 16 de 19 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 17 de 19 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. Los
 catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, y la
 puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el 2.18, y la
-transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15 y el 2.16 están
-hechos.
+transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15, el 2.16 y el
+2.17 están hechos.
 
-> **Dónde se retoma (2026-10-18): en el 2.17, en la rama `2.17-el-alta-del-ajuste`, por su
-> código.** Las decisiones están en el **ADR-0065**, con las cuatro respuestas de la puerta y lo
-> que la puerta decidía sin preguntar. El orden de los commits: el puerto de Organización; el
-> factor en el servidor; el descarte; el borde HTTP con los permisos; los maestros del frontal, a
-> `inventario/maestros`; la pantalla; y la tanda, desde la **622**. La regla de ESLint del reloj
-> está hecha, en `6a5d612`, con su tanda, de la 615 a la 621, en *La regla del reloj, el paso C*.
-> Los hallazgos de `/code-review` sobre `0638419..0d26e76` no han llegado, y se tratan antes de
-> seguir con el código en cuanto lleguen. Después del 2.17, el 2.18, y la puerta del 2.19, donde se
-> para y se pregunta.
+> **Dónde se retoma (2026-10-19): en el 2.18, en una rama nueva desde `main`.** Su primer
+> commit anota los dos runs del cierre del 2.17, y el siguiente es su ADR, el **0067**, que
+> enmienda el §5 del ADR-0064; el 0064 lo anota en su *Estado* y en el propio punto. Después, el
+> código, con su tanda desde la **655**, y otra vez las medidas A, B y C con los guiones del 2.15.
+> Si queda algo esencial abierto, se para y se pregunta. Los hallazgos de `/code-review` sobre
+> `0638419..0d26e76` no han llegado, y se tratan antes de seguir con el código en cuanto lleguen.
+> Después del 2.18, la puerta del 2.19, donde se para y se pregunta.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -13089,6 +13298,29 @@ empiezan en la **615**. No lleva ADR, así que el siguiente sigue siendo el **00
    sitios, **150** operaciones en **91** rutas, **413/450** y **720/900** KiB, y el centinela con
    la marca y sin avisos. Leídos con `python -X utf8 leer-run27.py <run>`. La rama
    `2.16-un-solo-hoy` se borró en local y en el remoto después del run de `main`.
+
+**El 2.17, hecho el 2026-10-19**, en la rama `2.17-el-alta-del-ajuste`, abierta el 2026-10-18
+desde `main` en `0d26e76`. Lo que pide está en el ADR-0065, y lo que se decidió al escribirlo y al
+medirlo, en *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 2.17*. Lleva dos ADR,
+el 0065 y el 0066, así que el siguiente es el **0067**. Sus mutaciones van de la **622** a la
+**654**, y las siguientes empiezan en la **655**.
+
+**Los commits, por este orden:**
+
+1. La apertura, `97645c9`, con los dos runs del cierre del 2.16; las respuestas de la puerta y el
+   criterio reescrito, `a8f691c`; y la regla del reloj, `6a5d612`, con su tanda en `384a33f`.
+2. El ADR-0065, `21a122e`.
+3. El puerto de Organización, `7306d2a`, y la carga de semillas, que borra antes las conversiones,
+   `c953d65`. El rojo de la carga no llegó a la CI: `7306d2a` no se había subido.
+4. El factor en el servidor, `a1a5f38`; el descarte, `a624914`; y el borde HTTP con los permisos,
+   `f24cf89`.
+5. Los maestros del frontal, a `inventario/maestros`, `1449de4`; el `400` de lo que no cabe,
+   `b1db83e`; y la pantalla, `236dd45`.
+6. Los tres hallazgos de la tanda: `1ec84cb`, la 638; `eed3351`, la 644; y `56fedeb`, la 641, con
+   el ADR-0066.
+7. **El cierre, por el flujo de la rama**: este commit va a la rama y espera su verde; `main`
+   avanza con `--ff-only`, y la rama se borra, en local y en el remoto, después del run de `main`.
+   Los dos runs se anotan en el primer commit del 2.18.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
@@ -21831,7 +22063,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   - **y la nota de la zona**, en *Notas / riesgos*: lo que no tiene almacén son las tarifas, los
     artículos y los terceros. Para ellos se proponen tres salidas, con la recomendada, y se
     pregunta.
-- [ ] **2.17 · El alta del ajuste** — criterio de aceptación: el ajuste se da de alta, se lista
+- [x] **2.17 · El alta del ajuste** — criterio de aceptación: el ajuste se da de alta, se lista
   paginado en el servidor, se abre en su ficha y, si es un borrador, se descarta, por HTTP con su
   permiso y desde su pantalla. **El factor a unidad base lo resuelve el servidor**, y el cliente ya
   no lo manda: 1 si la unidad es la base del artículo, que Inventario lee de Catálogo, y si no, el
@@ -21851,6 +22083,58 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   otra con conversión, el rechazo de una sin conversión en su campo, confirmar, anular y descartar.
   Las decisiones, en el ADR-0065, con lo que dice el plan maestro primero. **Pasó su puerta el
   2026-10-18**, y este criterio se reescribió con las respuestas.
+
+  **Hecho el 2026-10-19**, en la rama `2.17-el-alta-del-ajuste`, en doce commits, del `21a122e` al
+  `56fedeb`, y el que lo cierra. Las decisiones, en el ADR-0065, y el canal de la consola, en el
+  ADR-0066. Lo decidido sin preguntar, la tanda de la 622 a la 654, el humo y el recorrido, en
+  *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 2.17*; los commits y la batería,
+  en *Estado actual → El 2.17, hecho*. Cada punto del criterio tiene su caso:
+
+  - **el alta, el listado paginado en el servidor, la ficha y el descarte, por HTTP y con su
+    permiso**, en `f24cf89`: los once de `LaSuperficieDelAjusteTests`, entre ellos
+    `El_alta_es_201_sin_etag_y_la_ficha_dice_el_factor_y_la_cantidad_base_de_cada_linea`,
+    `La_lista_va_de_la_ultima_fecha_a_la_primera_se_acota_y_no_trae_el_descartado` y
+    `Otra_empresa_no_ve_el_ajuste_ni_lo_descarta`; y las cuatro rutas, en la puerta de
+    `LaPuertaDeCadaAccionTests`;
+  - **el factor lo resuelve el servidor**, en `7306d2a` y `a1a5f38`: el puerto,
+    `IConsultaDeConversiones`, en `Organizacion.Contracts`, con los tres de
+    `LaConsultaDeConversionesTests`; y, en `ElFactorDelAjusteTests`,
+    `La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion`.
+    El cliente ya no lo manda: «la cantidad y el coste con punto, lo vacío nulo, y sin factor: lo
+    pone el servidor», en `formularios.test.ts`;
+  - **una línea sin conversión, `ajuste-sin-conversion` con su número**:
+    `ElFactorDelAjusteTests.Una_unidad_sin_conversion_a_la_base_es_422_aunque_la_haya_al_reves`, y,
+    en `LaSuperficieDelAjusteTests`,
+    `Una_linea_sin_conversion_es_422_con_la_linea_y_las_dos_unidades_en_actual`;
+  - **la conversión retirada, en los tres momentos**, en `ElFactorDelAjusteTests`: en el alta,
+    `Una_conversion_retirada_es_409_y_antes_de_retirarla_la_misma_linea_pasa`; en un borrador de
+    antes, `Confirmar_usa_el_factor_que_se_guardo_aunque_la_conversion_cambie_o_se_retire`; y en el
+    inverso, `El_inverso_copia_el_factor_del_original_aunque_su_conversion_se_haya_retirado` y
+    `El_inverso_copia_el_factor_del_original_aunque_su_conversion_haya_cambiado`;
+  - **la ficha, con el factor y la cantidad base de cada línea, y su barra de
+    `accionesDisponibles`**: «dice la cabecera y cada línea, con el factor que puso el servidor; el
+    borrador no lleva valor», en `LaFichaDelAjuste.test.tsx`, y los cuatro de `acciones.test.ts`;
+  - **el descarte, con `inventario.ajuste.descartar`, borrado lógico y `204`**, en `a624914` y
+    `f24cf89`: los cinco de `ElDescarteDelAjusteTests`, los tres de `ElBorradorDescartadoTests` y
+    `LaSuperficieDelAjusteTests.El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404`.
+    Modificar las líneas se queda fuera, con su disparador en el ADR-0065 §9;
+  - **de 109 a 112 permisos**, en `f24cf89`, con
+    `CadaAccionDeclaraSuPermisoTests.Todo_permiso_del_catalogo_lo_exige_alguna_accion`, y el humo
+    cuenta 112 en los dos arranques;
+  - **la pantalla, en rutas diferidas**, en `236dd45`: `/ajustes`, `/ajustes/nuevo` y
+    `/ajustes/:id`, cada una con su permiso en `ElBarridoDeRutas.test.ts`. Los tres estados, con
+    `Cargando`, `Vacio` y `Fallo`; el vacío y el fallo, con su caso: «acotado y sin nada, lo dice
+    del filtro, no de la empresa» y «sin poder ver los maestros que ofrece, lo dice y no enseña el
+    formulario». Los errores, de vuelta a su campo: «el rechazo de una línea sin conversión va a la
+    unidad de esa línea, con el foco», «un 400 dice la línea en la clave de `errors`, y su error va
+    en ese campo» y los cinco de `rechazos.test.ts`;
+  - **los KiB que añade, medidos**: **420/450** y **778/900**, desde 413/722, con
+    `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900`. Cabe;
+  - **el recorrido, con `playwright-cli`**, contra la pila del humo y con datos sintéticos: el alta
+    con una línea en la unidad base y otra con conversión, el rechazo de una sin conversión en su
+    campo, confirmar, anular y descartar;
+  - **y las decisiones, en el ADR-0065**, con lo que dice el plan maestro primero, en su
+    *Contexto*.
 - [ ] **2.18 · El avance incremental del corte** — criterio de aceptación: el avance hace **un solo
   mes por transacción**, el del corte más uno, y suelta el exclusivo de la empresa entre un mes y el
   siguiente. Las instantáneas del mes M son las del mes anterior más el libro de M, por clave: una
@@ -21924,6 +22208,17 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-10-19, recorrido del 2.17) · la página de tres listados corre en horizontal a
+  320 px.** Medido con `playwright-cli` a 320 px de ancho, con el `scrollWidth` del documento:
+  `/ajustes` mide **394**, `/saldos` **407** y `/articulos` **370**. Sus tablas no van en un
+  contenedor que corra, como sí van las del alta y la ficha del ajuste, y empujan la página entera,
+  con la cabecera y los filtros. El WCAG 1.4.10 exime las tablas de datos, no la página que las
+  lleva. No son solo esos tres: `git grep -n -B3 "<table" -- 'frontend/src/**/*.tsx'` da catorce
+  tablas en catorce ficheros, y solo las dos del ajuste tienen el contenedor. De las otras doce se
+  midieron esas tres. **La propuesta**: envolver cada tabla en un contenedor con `overflow-x-auto`,
+  y un caso como `LaCabeceraCabeEn320`, que mida la página de cada listado y no solo la cabecera.
+  No se hace sin encargo, porque toca pantallas de otros ítems y de otros módulos.
 
 - **ABIERTA (2026-10-18, respuesta 4 de la puerta del 2.17) · ningún listado exporta lo que está
   viendo.** El §10 del plan maestro pide que «cada listado exporta a CSV/Excel lo que está viendo,
