@@ -453,6 +453,7 @@ describe('El alta de un ajuste', { timeout: 15_000 }, () => {
     montar();
     const usuario = userEvent.setup();
 
+    await screen.findByRole('option', { name: 'AJU' });
     await screen.findByRole('option', { name: 'ALM-ALFA · Nave central de Alfa' });
     const opciones = (): string[] =>
       within(celda('Ubicación', 1))
@@ -473,6 +474,21 @@ describe('El alta de un ajuste', { timeout: 15_000 }, () => {
     );
     expect(opciones()).toEqual(['Sin elegir', 'M-01 · Muelle de carga']);
     expect(celda('Ubicación', 1)).toHaveValue('');
+
+    // Lo que cuenta es lo que se manda, no lo que pinta el desplegable: sin su opción, el navegador
+    // enseña la primera aunque el formulario guarde todavía la ubicación del otro almacén.
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Serie' }), 'AJU');
+    await usuario.click(screen.getByRole('textbox', { name: 'Motivo' }));
+    await usuario.paste('Rotura en el muelle');
+    await elegirArticulo(usuario, 1, 'TOR-M6', 'TOR-M6 · Tornillo M6 zincado');
+    await usuario.type(celda('Cantidad', 1), '1');
+    await usuario.click(screen.getByRole('button', { name: 'Abrir el ajuste' }));
+
+    await waitFor(() => {
+      expect(celda('Ubicación', 1)).toHaveFocus();
+    });
+    expect(celda('Ubicación', 1)).toHaveAccessibleDescription(/Elige la ubicación\./);
+    expect(servidorDelAlta.altas).toEqual([]);
   });
 
   it('el lote se escribe solo si el artículo se sigue por lote, y entonces es la última celda', async () => {
