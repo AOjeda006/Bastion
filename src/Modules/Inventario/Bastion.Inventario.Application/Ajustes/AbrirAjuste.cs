@@ -55,6 +55,13 @@ public interface IAbrirAjuste
 /// unitaria se mira entonces, en una segunda pasada de la forma, porque antes no se sabe cuántas
 /// unidades base mueve la línea.
 /// </para>
+/// <para>
+/// <b>Lo que no cabe en su columna es un <c>400</c></b>: el motivo, la cantidad, la cantidad base y el
+/// coste. Hasta el ítem 2.17 lo decía el dominio, que lanza, o la base al guardar, y el alta
+/// contestaba un <c>500</c>. La regla es la del dominio (<see cref="LineaDeAjuste.LaCantidadCabe"/>,
+/// <see cref="LineaDeAjuste.SePuedeAjustar"/>, <see cref="LineaDeAjuste.ElCosteCabe"/>), preguntada
+/// antes.
+/// </para>
 /// </remarks>
 /// <param name="usuarioActual">De dónde sale la empresa (R8).</param>
 /// <param name="ajustes">Dónde se apunta el documento.</param>
@@ -100,13 +107,26 @@ internal sealed class AbrirAjuste(
             return Resultado.Fallo<AjusteDto>(ErroresDeInquilinato.EmpresaActivaNoOperativa());
         }
 
+        if (string.IsNullOrWhiteSpace(peticion.Motivo) || peticion.Motivo.Trim().Length > Ajuste.LargoDelMotivo)
+        {
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.MotivoDelAltaNoValido());
+        }
+
         if (peticion.Lineas is null || peticion.Lineas.Count == 0)
         {
             return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.SinLineas(Guid.Empty));
         }
 
+        // LA CANTIDAD, ANTES QUE EL COSTE Y LA FORMA: lo escrito se dice sin preguntar a nadie. Lo
+        // que mueve en la unidad base espera al factor.
+        if (LaPrimeraQueNoCabe(peticion.Lineas, (linea, _) => LineaDeAjuste.LaCantidadCabe(linea.CantidadIntroducida))
+            is { } sinCantidad)
+        {
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.CantidadNoValida(sinCantidad));
+        }
+
         if (peticion.Lineas.Any(linea =>
-            linea.CosteUnitario is { } coste && (linea.CantidadIntroducida < 0m || coste < 0m)))
+            linea.CosteUnitario is { } coste && (linea.CantidadIntroducida < 0m || !LineaDeAjuste.ElCosteCabe(coste))))
         {
             return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.CosteNoValido());
         }
@@ -158,6 +178,14 @@ internal sealed class AbrirAjuste(
         }
 
         IReadOnlyList<decimal> factores = losFactores.Valor;
+
+        if (LaPrimeraQueNoCabe(
+                peticion.Lineas,
+                (linea, indice) => LineaDeAjuste.SePuedeAjustar(linea.CantidadIntroducida, factores[indice]))
+            is { } sinCantidadBase)
+        {
+            return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.CantidadNoValida(sinCantidadBase));
+        }
 
         // LA FORMA, EN SU SEGUNDA PASADA: con el factor puesto. Lo demás ya pasó en la primera, así
         // que lo único que puede salir aquí es una serie que no mueve una unidad base.
@@ -211,6 +239,25 @@ internal sealed class AbrirAjuste(
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
         return Resultado.Correcto(Mapeos.ADto(ajuste));
+    }
+
+    /// <summary>La primera línea que no cumple la regla, por su orden.</summary>
+    /// <param name="lineas">Las líneas de la petición.</param>
+    /// <param name="cabe">La regla, con la línea y su índice desde cero.</param>
+    /// <returns>Su número, desde uno, o <c>null</c> si todas la cumplen.</returns>
+    private static int? LaPrimeraQueNoCabe(
+        IReadOnlyList<LineaDeAjusteDto> lineas,
+        Func<LineaDeAjusteDto, int, bool> cabe)
+    {
+        for (int indice = 0; indice < lineas.Count; indice++)
+        {
+            if (!cabe(lineas[indice], indice))
+            {
+                return indice + 1;
+            }
+        }
+
+        return null;
     }
 
     private async Task<Resultado> ComprobarLasLineasAsync(

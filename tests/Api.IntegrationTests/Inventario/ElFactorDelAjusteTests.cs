@@ -37,8 +37,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <b>Semillas: del 876 al 898, el bloque del 2.17.</b> La 876 y la 877 son de
 /// <c>LaFormaDeLosCodigosDeLaLineaTests</c>, empresa y maestros de instalación; de la 878 a la 883,
 /// de este fichero, empresas y maestros con el mismo número. De la 884 a la 886, de
-/// <c>ElBorradorDescartadoTests</c>, igual. De la 887 a la 895, de <c>LaSuperficieDelAjusteTests</c>,
-/// igual, salvo la 893, que es solo una empresa, la ajena. Del 896 al 898, libres. Las unidades
+/// <c>ElBorradorDescartadoTests</c>, igual. De la 887 a la 898, de <c>LaSuperficieDelAjusteTests</c>,
+/// igual, salvo la 893, que es solo una empresa, la ajena. El bloque está lleno. Las unidades
 /// nuevas llevan el código <c>K</c> y su semilla, que no repite nadie: las del artículo son
 /// <c>W</c>.
 /// </para>

@@ -33,6 +33,10 @@ export const tiposDeError = {
   'ajuste-articulo-no-se-almacena':
     'Ese artículo es un servicio: no tiene existencias que ajustar. Quita esa línea o cambia ' +
     'el artículo.',
+  'ajuste-cantidad-no-valida':
+    'Esa cantidad no cabe en el libro: no puede ser cero, lleva seis decimales y doce cifras ' +
+    'enteras como mucho, y pasada a la unidad base del artículo tampoco puede quedarse en cero ' +
+    'ni pasar de doce cifras. Corrige la cantidad o la unidad.',
   'ajuste-con-fecha-futura':
     'La fecha de ese ajuste es posterior a hoy: el libro solo recoge lo que ya ha pasado. ' +
     'Confírmalo ese día o corrige la fecha.',
@@ -42,7 +46,8 @@ export const tiposDeError = {
     'base del artículo o pide que reincorporen la conversión.',
   'ajuste-coste-no-valido':
     'Una línea que saca existencias no lleva coste: se valora al precio medio. Y ningún ' +
-    'coste puede ser negativo; una muestra o un regalo entran a cero.',
+    'coste puede ser negativo, porque una muestra o un regalo entran a cero, ni pasar de ' +
+    'catorce cifras enteras.',
   'ajuste-de-un-recuento-no-se-anula':
     'Ese ajuste es el de la diferencia de un recuento, y no se anula por separado: el recuento ' +
     'seguiría confirmado con su diferencia deshecha. Anula el recuento, y su ajuste se anulará ' +
@@ -65,8 +70,8 @@ export const tiposDeError = {
     'con letras sin tilde ni eñe, cifras y los signos que admite GS1. Corrige el lote de esa ' +
     'línea.',
   'ajuste-motivo-no-valido':
-    'Escribe por qué anulas el ajuste, en 300 caracteres o menos. Es lo único que quedará ' +
-    'para entender la corrección dentro de dos años.',
+    'Escribe el motivo, en 300 caracteres o menos. Es lo único que quedará para entender el ' +
+    'ajuste, o su anulación, dentro de dos años.',
   'ajuste-no-encontrado': 'Ese ajuste ya no existe. Vuelve al listado y actualiza.',
   'ajuste-no-esta-confirmado':
     'Ese ajuste no está confirmado, así que no hay nada que anular: un borrador no ha movido ' +

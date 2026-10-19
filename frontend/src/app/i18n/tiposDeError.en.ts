@@ -15,6 +15,10 @@ export const tiposDeError: TiposDeError = {
   'ajuste-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
   'ajuste-articulo-no-se-almacena':
     'That item is a service: it has no stock to adjust. Remove that line or change the item.',
+  'ajuste-cantidad-no-valida':
+    'That quantity does not fit in the ledger: it cannot be zero, it has at most six decimals ' +
+    'and twelve whole digits, and once in the item’s base unit it cannot round to zero or go ' +
+    'past twelve digits either. Fix the quantity or the unit.',
   'ajuste-con-fecha-futura':
     'That adjustment is dated after today: the ledger only records what has already ' +
     'happened. Confirm it on that day or fix the date.',
@@ -24,7 +28,8 @@ export const tiposDeError: TiposDeError = {
     'base unit or ask for the conversion to be reinstated.',
   'ajuste-coste-no-valido':
     'A line that takes stock out carries no cost: it is valued at the average cost. And no ' +
-    'cost can be negative; a sample or a gift comes in at zero.',
+    'cost can be negative, because a sample or a gift comes in at zero, nor go past fourteen ' +
+    'whole digits.',
   'ajuste-de-un-recuento-no-se-anula':
     'That adjustment is the difference of a stock count, and it is not reversed on its own: ' +
     'the count would stay confirmed with its difference undone. Reverse the stock count, and ' +
@@ -46,8 +51,8 @@ export const tiposDeError: TiposDeError = {
     'That batch is not a code that fits on the label: 1 to 20 characters, no spaces, using ' +
     'unaccented letters, digits and the symbols GS1 allows. Fix the batch on that line.',
   'ajuste-motivo-no-valido':
-    'Write why you are reversing the adjustment, in 300 characters or fewer. It is the only ' +
-    'thing left to explain the correction two years from now.',
+    'Write the reason, in 300 characters or fewer. It is the only thing left to explain the ' +
+    'adjustment, or its reversal, two years from now.',
   'ajuste-no-encontrado': 'That adjustment no longer exists. Go back to the list and refresh.',
   'ajuste-no-esta-confirmado':
     'That adjustment is not confirmed, so there is nothing to reverse: a draft has not moved ' +

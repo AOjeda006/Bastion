@@ -2,7 +2,9 @@ using System.Text.Json;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.LotesYSeries;
+using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Domain.Valoraciones;
 using Bastion.Organizacion.Contracts.Unidades;
 
@@ -22,6 +24,7 @@ internal static class ErroresDeAjuste
     internal const string CodigoEnEjercicioCerrado = "ajuste-en-ejercicio-cerrado";
     internal const string CodigoConFechaFutura = "ajuste-con-fecha-futura";
     internal const string CodigoCosteNoValido = "ajuste-coste-no-valido";
+    internal const string CodigoCantidadNoValida = "ajuste-cantidad-no-valida";
     internal const string CodigoEntradaSinCosteNiPrecioMedio = "ajuste-entrada-sin-coste-ni-precio-medio";
     internal const string CodigoValoracionEnOtraDivisa = "ajuste-valoracion-en-otra-divisa";
     internal const string CodigoFechaAnteriorAlUltimoMovimiento = "ajuste-fecha-anterior-al-ultimo-movimiento";
@@ -82,17 +85,44 @@ internal static class ErroresDeAjuste
         $"El ajuste {ajusteId} no tiene ninguna línea: un documento que no mueve el libro no " +
         "ajusta nada (R13).");
 
-    /// <summary>Una línea que baja con coste, o un coste negativo (ADR-0046 §7).</summary>
+    /// <summary>Una línea que baja con coste, o un coste que no lo es (ADR-0046 §7).</summary>
     /// <remarks>
     /// <b>Se rechaza y no se ignora.</b> Una salida se valora al precio medio, así que un coste
     /// escrito ahí no se usaría, y quien lo escribió creería que sí. Un coste negativo no existe:
-    /// una muestra o un regalo entran a cero.
+    /// una muestra o un regalo entran a cero. Y uno que no cabe en su columna daba un <c>500</c> al
+    /// guardar hasta el ítem 2.17, como en el recuento.
     /// </remarks>
     /// <returns>El error.</returns>
     internal static ErrorDeOperacion CosteNoValido() => ErrorDeOperacion.Validacion(
         CodigoCosteNoValido,
         "Una línea que baja existencias no lleva coste, porque se valora al precio medio, y " +
-        "ninguna lleva un coste negativo: una muestra o un regalo entran a cero (ADR-0046).");
+        "ninguna lleva un coste negativo, porque una muestra o un regalo entran a cero. El coste " +
+        "tiene catorce cifras enteras como mucho, que es lo que cabe en su columna (ADR-0046).");
+
+    /// <summary>Una línea con una cantidad que no cabe en el libro.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Un <c>400</c> y no el <c>500</c> que daba</b> hasta el ítem 2.17: el dominio lanzaba con el
+    /// cero, y la columna, <c>numeric(18,6)</c>, con lo que no cabía. Se mira dos veces, como la forma:
+    /// lo escrito, antes de preguntar a nadie, y lo que mueve en la unidad base, con el factor puesto.
+    /// </para>
+    /// <para>
+    /// <b>El campo es la cantidad</b> también cuando lo que no cabe es la cantidad base, porque el
+    /// factor no lo escribe nadie (ADR-0065 §2): lo que se corrige es la cantidad, o la unidad.
+    /// </para>
+    /// </remarks>
+    /// <param name="linea">La línea, desde uno.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion CantidadNoValida(int linea) => ErrorDeOperacion.Validacion(
+        CodigoCantidadNoValida,
+        $"La línea {linea} no mueve una cantidad que quepa en el libro: no es cero, lleva " +
+        $"{MovimientoStock.DecimalesDeCantidad} decimales como mucho y doce cifras enteras como mucho, " +
+        "y en la unidad base de su artículo tampoco se queda en cero ni pasa de doce cifras enteras.",
+        ElCampoDeLaLinea(
+            linea,
+            nameof(LineaDeAjusteDto.CantidadIntroducida),
+            $"No es cero, y lleva {MovimientoStock.DecimalesDeCantidad} decimales y doce cifras enteras " +
+            "como mucho, también en la unidad base."));
 
     /// <summary>Lo que impide valorar el documento, con su código (ADR-0046 §10).</summary>
     /// <remarks>
@@ -151,8 +181,20 @@ internal static class ErroresDeAjuste
     internal static ErrorDeOperacion MotivoNoValido() => ErrorDeOperacion.Validacion(
         CodigoMotivoNoValido,
         "El motivo de la anulación no puede estar vacío ni pasar de " +
-        $"{Domain.Ajustes.Ajuste.LargoDelMotivo} caracteres: es lo único que queda para entender " +
+        $"{Ajuste.LargoDelMotivo} caracteres: es lo único que queda para entender " +
         "la corrección dentro de dos años.");
+
+    /// <summary>El motivo del alta, con el mismo código que el de la anulación.</summary>
+    /// <remarks>
+    /// <b>El mismo <c>type</c> y otro mensaje</b>, como en el recuento: lo que falla es lo mismo, un
+    /// motivo vacío o demasiado largo, y lo que se dice no. Hasta el ítem 2.17 lo miraba solo el
+    /// dominio, que lanza, y el alta contestaba un <c>500</c>.
+    /// </remarks>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion MotivoDelAltaNoValido() => ErrorDeOperacion.Validacion(
+        CodigoMotivoNoValido,
+        $"El motivo no puede estar vacío ni pasar de {Ajuste.LargoDelMotivo} caracteres: es lo único " +
+        "que queda para entender el ajuste dentro de dos años.");
 
     /// <summary>La fecha del documento no cae en ningún ejercicio de la empresa (R9).</summary>
     /// <remarks>

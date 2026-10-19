@@ -479,6 +479,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaSuperficieDelAjusteTests.La_lista_va_de_la_ultima_fecha_a_la_primera_se_acota_y_no_trae_el_descartado",
         "LaSuperficieDelAjusteTests.Otra_empresa_no_ve_el_ajuste_ni_lo_descarta",
         "LaSuperficieDelAjusteTests.Sin_idempotency_key_el_alta_es_428_y_con_la_misma_clave_no_abre_otro",
+        "LaSuperficieDelAjusteTests.Un_motivo_en_blanco_o_de_mas_de_trescientos_caracteres_es_400_y_el_de_trescientos_abre",
+        "LaSuperficieDelAjusteTests.Una_cantidad_o_un_coste_que_no_caben_en_su_columna_son_400_y_en_su_borde_abren",
+        "LaSuperficieDelAjusteTests.Una_cantidad_que_en_la_unidad_base_se_queda_en_cero_o_se_sale_es_400_en_su_cantidad",
         "LaSuperficieDelAjusteTests.Una_linea_sin_conversion_es_422_con_la_linea_y_las_dos_unidades_en_actual",
 
         // Del ítem 1.11 (ADR-0034 §5): los ficheros que no son de Excel, con los cuatro criterios del

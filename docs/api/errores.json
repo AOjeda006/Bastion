@@ -5,6 +5,7 @@
     { "codigo": "ajuste-almacen-no-encontrado", "type": "/errors/ajuste-almacen-no-encontrado", "clase": "Validacion" },
     { "codigo": "ajuste-articulo-no-encontrado", "type": "/errors/ajuste-articulo-no-encontrado", "clase": "Validacion" },
     { "codigo": "ajuste-articulo-no-se-almacena", "type": "/errors/ajuste-articulo-no-se-almacena", "clase": "Conflicto" },
+    { "codigo": "ajuste-cantidad-no-valida", "type": "/errors/ajuste-cantidad-no-valida", "clase": "Validacion" },
     { "codigo": "ajuste-con-fecha-futura", "type": "/errors/ajuste-con-fecha-futura", "clase": "Conflicto" },
     { "codigo": "ajuste-conversion-retirada", "type": "/errors/ajuste-conversion-retirada", "clase": "Conflicto" },
     { "codigo": "ajuste-coste-no-valido", "type": "/errors/ajuste-coste-no-valido", "clase": "Validacion" },

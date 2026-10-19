@@ -6,6 +6,7 @@ using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Recuentos;
+using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -24,16 +25,18 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// códigos ya se prueban contra el caso de uso, en sus ficheros. Lo que solo se ve por HTTP es lo que
 /// lee la pantalla: la <c>Location</c> del alta y la falta de <c>ETag</c>, la clave obligatoria, el
 /// tope de líneas con su motivo, la versión de la ficha que acepta el <c>DELETE</c>, y el
-/// <c>actual</c> del <c>422</c> con los nombres con que viaja.
+/// <c>actual</c> del <c>422</c> con los nombres con que viaja. Y el <c>400</c> de lo que no cabe en
+/// su columna —el motivo, la cantidad, la cantidad base y el coste—, que hasta el ítem 2.17 era un
+/// <c>500</c>, con el campo en el que la pantalla lo pone.
 /// </para>
 /// <para>
 /// <b>Cada ausencia lleva su pareja</b>: lo que no sale en la lista salía antes de descartarlo, lo que
 /// la otra empresa no ve lo ve la suya, y el alta rechazada pasa con lo que le faltaba.
 /// </para>
 /// <para>
-/// <b>Semillas: de la 887 a la 895</b>, del bloque del 2.17 (su reparto está en la cabecera de
+/// <b>Semillas: de la 887 a la 898</b>, del bloque del 2.17 (su reparto está en la cabecera de
 /// <c>ElFactorDelAjusteTests</c>), empresas y maestros con el mismo número; la 893 es solo una
-/// empresa, la ajena. Del 896 al 898, libres.
+/// empresa, la ajena. El bloque se acaba aquí.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -367,6 +370,142 @@ public sealed class LaSuperficieDelAjusteTests(PostgresConTodosLosModulos postgr
         using HttpResponseMessage alta = await AbrirAsync(escena, peticion, Guid.NewGuid().ToString());
 
         alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+    }
+
+    [Fact]
+    public async Task Un_motivo_en_blanco_o_de_mas_de_trescientos_caracteres_es_400_y_el_de_trescientos_abre()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(896, "SAJ-I");
+
+        foreach (string motivo in new[] { string.Empty, "   ", new string('m', Ajuste.LargoDelMotivo + 1) })
+        {
+            using HttpResponseMessage rechazo = await AbrirAsync(
+                escena, Peticion(escena, escena.AlmacenA, motivo, Entrada(escena, 1m)), Guid.NewGuid().ToString());
+
+            rechazo.StatusCode.ShouldBe(
+                HttpStatusCode.BadRequest, $"{motivo.Length} caracteres: {await Escenario.Detalle(rechazo)}");
+            (await EscenaDeTransferencia.TipoDelProblemaAsync(rechazo)).ShouldBe("/errors/ajuste-motivo-no-valido");
+        }
+
+        (await AjustesDeAsync(escena)).ShouldBe(0, "un alta rechazada no deja un borrador a medias");
+
+        // LA PAREJA: trescientos, con los espacios de alrededor, que se recortan.
+        using HttpResponseMessage alta = await AbrirAsync(
+            escena,
+            Peticion(escena, escena.AlmacenA, $"  {new string('m', Ajuste.LargoDelMotivo)}  ", Entrada(escena, 1m)),
+            Guid.NewGuid().ToString());
+
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+    }
+
+    [Fact]
+    public async Task Una_cantidad_o_un_coste_que_no_caben_en_su_columna_son_400_y_en_su_borde_abren()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(897, "SAJ-J");
+
+        decimal tope = LineaDeAjuste.TopeDeLaCantidad;
+
+        foreach (decimal cantidad in new[] { 0m, 0.0000001m, tope, -tope })
+        {
+            using HttpResponseMessage rechazo = await AbrirAsync(
+                escena,
+                Peticion(escena, escena.AlmacenA, Motivo, Entrada(escena, 1m), Entrada(escena, cantidad) with
+                {
+                    CosteUnitario = null,
+                }),
+                Guid.NewGuid().ToString());
+
+            rechazo.StatusCode.ShouldBe(
+                HttpStatusCode.BadRequest, $"{cantidad}: {await Escenario.Detalle(rechazo)}");
+
+            // EN LA CANTIDAD DE LA SEGUNDA, con el índice desde cero de la ruta de zod (ADR-0065 §3).
+            JsonElement problema = await ProblemaAsync(rechazo);
+
+            problema.GetProperty("type").GetString().ShouldBe("/errors/ajuste-cantidad-no-valida");
+            problema.GetProperty("errors").EnumerateObject().Select(campo => campo.Name)
+                .ShouldBe(["lineas[1].cantidadIntroducida"], $"{cantidad}");
+        }
+
+        using (HttpResponseMessage rechazo = await AbrirAsync(
+            escena,
+            Peticion(
+                escena,
+                escena.AlmacenA,
+                Motivo,
+                Entrada(escena, 1m) with { CosteUnitario = LineaDeAjuste.TopeDelCoste }),
+            Guid.NewGuid().ToString()))
+        {
+            rechazo.StatusCode.ShouldBe(HttpStatusCode.BadRequest, await Escenario.Detalle(rechazo));
+            (await EscenaDeTransferencia.TipoDelProblemaAsync(rechazo)).ShouldBe("/errors/ajuste-coste-no-valido");
+        }
+
+        (await AjustesDeAsync(escena)).ShouldBe(0, "un alta rechazada no deja un borrador a medias");
+
+        // LA PAREJA: en el borde de las dos columnas el alta abre, y se guarda lo escrito.
+        using HttpResponseMessage alta = await AbrirAsync(
+            escena,
+            Peticion(
+                escena,
+                escena.AlmacenA,
+                Motivo,
+                Entrada(escena, 999_999_999_999.999999m) with { CosteUnitario = 99_999_999_999_999.9999m },
+                Entrada(escena, -0.000001m) with { CosteUnitario = null }),
+            Guid.NewGuid().ToString());
+
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+
+        FichaDeAjusteDto ficha = await FichaAsync(escena, (await alta.Content.ReadFromJsonAsync<AjusteDto>())!.Id);
+
+        ficha.Lineas.Select(linea => (linea.CantidadIntroducida, linea.CosteUnitario)).ShouldBe(
+            [(999_999_999_999.999999m, (decimal?)99_999_999_999_999.9999m), (-0.000001m, null)]);
+    }
+
+    [Fact]
+    public async Task Una_cantidad_que_en_la_unidad_base_se_queda_en_cero_o_se_sale_es_400_en_su_cantidad()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(898, "SAJ-K");
+
+        Guid millonesima = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+            escena.Cliente, "K898", 0.000001m, escena.UnidadId);
+        Guid caja = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+            escena.Cliente, "K898C", 12m, escena.UnidadId);
+
+        // LO ESCRITO CABE, y lo que no cabe es la base: una décima de millonésima redondea a cero, y
+        // cien mil millones de cajas de doce pasan de doce cifras enteras.
+        foreach ((decimal cantidad, Guid unidad) in new[] { (0.1m, millonesima), (100_000_000_000m, caja) })
+        {
+            using HttpResponseMessage rechazo = await AbrirAsync(
+                escena,
+                Peticion(escena, escena.AlmacenA, Motivo, Entrada(escena, cantidad, unidad)),
+                Guid.NewGuid().ToString());
+
+            rechazo.StatusCode.ShouldBe(HttpStatusCode.BadRequest, $"{cantidad}: {await Escenario.Detalle(rechazo)}");
+
+            JsonElement problema = await ProblemaAsync(rechazo);
+
+            problema.GetProperty("type").GetString().ShouldBe("/errors/ajuste-cantidad-no-valida");
+            problema.GetProperty("errors").EnumerateObject().Select(campo => campo.Name)
+                .ShouldBe(["lineas[0].cantidadIntroducida"], "el factor no lo escribe nadie: se corrige la cantidad");
+        }
+
+        (await AjustesDeAsync(escena)).ShouldBe(0, "un alta rechazada no deja un borrador a medias");
+
+        // LA PAREJA: media millonésima redondea alejándose del cero, y 83 333 333 333 cajas de doce caben.
+        using HttpResponseMessage alta = await AbrirAsync(
+            escena,
+            Peticion(
+                escena,
+                escena.AlmacenA,
+                Motivo,
+                Entrada(escena, 0.5m, millonesima),
+                Entrada(escena, 83_333_333_333m, caja)),
+            Guid.NewGuid().ToString());
+
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+
+        FichaDeAjusteDto ficha = await FichaAsync(escena, (await alta.Content.ReadFromJsonAsync<AjusteDto>())!.Id);
+
+        ficha.Lineas.Select(linea => linea.CantidadEnUnidadBase).ShouldBe([0.000001m, 999_999_999_996m]);
     }
 
     [Fact]

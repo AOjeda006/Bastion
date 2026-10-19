@@ -25,6 +25,16 @@ namespace Bastion.Inventario.Domain.Ajustes;
 /// </remarks>
 public sealed class LineaDeAjuste : EntidadBase
 {
+    /// <summary>
+    /// Lo que cabe en una cantidad: <c>numeric(18,6)</c> deja doce cifras enteras, como en el recuento.
+    /// </summary>
+    public const decimal TopeDeLaCantidad = 1_000_000_000_000m;
+
+    /// <summary>
+    /// Lo que cabe en el coste de una unidad base: <c>numeric(18,4)</c> deja catorce cifras enteras.
+    /// </summary>
+    public const decimal TopeDelCoste = 100_000_000_000_000m;
+
     private LineaDeAjuste(
         Guid id,
         Guid ajusteId,
@@ -133,12 +143,55 @@ public sealed class LineaDeAjuste : EntidadBase
     /// </remarks>
     public decimal? ValorQueCompensa { get; private set; }
 
+    /// <summary>Si una cantidad, tal como se escribió, cabe en una línea.</summary>
+    /// <remarks>
+    /// <b>Lo pregunta también el caso de uso</b>, antes de resolver el factor, para contestar un
+    /// <c>400</c> en vez del <c>500</c> que daría la excepción o la columna. Es la misma regla, escrita
+    /// una vez, como <c>LineaDeRecuento.SePuedeContar</c>.
+    /// </remarks>
+    /// <param name="cantidadIntroducida">Cantidad con signo, tal como se escribió.</param>
+    /// <returns>Si cabe: no es cero, lleva seis decimales como mucho y está bajo el tope.</returns>
+    public static bool LaCantidadCabe(decimal cantidadIntroducida) =>
+        cantidadIntroducida != 0m
+        && Math.Abs(cantidadIntroducida) < TopeDeLaCantidad
+        && decimal.Round(cantidadIntroducida, MovimientoStock.DecimalesDeCantidad) == cantidadIntroducida;
+
+    /// <summary>Si la línea, con su factor, mueve algo que cabe en el libro.</summary>
+    /// <remarks>
+    /// <b>Se pregunta con el factor ya puesto</b>, porque lo que no cabe puede ser solo la cantidad
+    /// base: una décima de una unidad que vale una millonésima redondea a cero, y cien mil millones de
+    /// cajas de doce no caben en doce cifras enteras.
+    /// </remarks>
+    /// <param name="cantidadIntroducida">Cantidad con signo, tal como se escribió.</param>
+    /// <param name="factorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
+    /// <returns>Si cabe lo escrito, el factor es positivo y la cantidad base ni es cero ni pasa del tope.</returns>
+    public static bool SePuedeAjustar(decimal cantidadIntroducida, decimal factorAUnidadBase)
+    {
+        if (!LaCantidadCabe(cantidadIntroducida) || factorAUnidadBase <= 0m)
+        {
+            return false;
+        }
+
+        decimal enUnidadBase = MovimientoStock.EnUnidadBase(cantidadIntroducida, factorAUnidadBase);
+
+        return enUnidadBase != 0m && Math.Abs(enUnidadBase) < TopeDeLaCantidad;
+    }
+
+    /// <summary>Si un coste cabe en su columna, una vez a la escala del importe.</summary>
+    /// <param name="costeUnitario">El coste de una unidad base.</param>
+    /// <returns>Si no es negativo y, redondeado, está bajo el tope.</returns>
+    public static bool ElCosteCabe(decimal costeUnitario) =>
+        costeUnitario >= 0m
+        && decimal.Round(costeUnitario, Importe.Decimales, MidpointRounding.AwayFromZero) < TopeDelCoste;
+
     /// <summary>Crea una línea de ajuste ya validada.</summary>
     /// <remarks>
     /// <para>
     /// La cantidad y el factor se comprueban igual que en el libro, y eso es a propósito: una línea
     /// que el documento acepta y el libro rechaza dejaría un ajuste imposible de confirmar, con el
-    /// fallo apareciendo en la transición y no donde se escribió el dato.
+    /// fallo apareciendo en la transición y no donde se escribió el dato. Y se mira además lo que
+    /// cabe en su columna (<see cref="LaCantidadCabe"/>, <see cref="SePuedeAjustar"/>), que hasta el
+    /// ítem 2.17 lo decía la base al guardar.
     /// </para>
     /// <para>
     /// <b>El coste se comprueba aquí y no en el libro.</b> Las salidas confirmadas antes del 2.8
@@ -179,12 +232,14 @@ public sealed class LineaDeAjuste : EntidadBase
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(numero);
 
-        if (cantidadIntroducida == 0m)
+        if (!LaCantidadCabe(cantidadIntroducida))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(cantidadIntroducida),
-                "Una línea de ajuste de cero no ajusta nada: deja constancia de un movimiento que " +
-                "no ocurrió y la suma no la distingue de no haberla escrito.");
+                "Una línea de ajuste mueve una cantidad que no es cero, con " +
+                $"{MovimientoStock.DecimalesDeCantidad} decimales como mucho y doce cifras enteras como " +
+                "mucho: la de cero deja constancia de un movimiento que no ocurrió, y la otra no cabe " +
+                "en su columna.");
         }
 
         if (factorAUnidadBase <= 0m)
@@ -195,11 +250,19 @@ public sealed class LineaDeAjuste : EntidadBase
                 "cantidad en unidad base dejaría de ser la introducida.");
         }
 
-        if (costeUnitario is { } coste && (cantidadIntroducida < 0m || coste < 0m))
+        if (!SePuedeAjustar(cantidadIntroducida, factorAUnidadBase))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(cantidadIntroducida),
+                "En la unidad base del artículo, la línea no puede quedarse en cero ni pasar de doce " +
+                "cifras enteras: la fila del libro sumaría nada, o no cabría en su columna.");
+        }
+
+        if (costeUnitario is { } coste && (cantidadIntroducida < 0m || !ElCosteCabe(coste)))
         {
             throw new ArgumentException(
-                "Solo una línea que sube lleva coste, y no negativo: la que baja se valora al " +
-                "precio medio (ADR-0046 §7).",
+                "Solo una línea que sube lleva coste, no negativo y de catorce cifras enteras como " +
+                "mucho: la que baja se valora al precio medio (ADR-0046 §7).",
                 nameof(costeUnitario));
         }
 
