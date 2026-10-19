@@ -8,7 +8,10 @@ revisado: 2026-10-09
 
 # ADR-0060: El canal de la consola tiene centinela, y la CI lanza los tests como un agente
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0066 (§1).**
+  - El [ADR-0066](adr-0066-el-canal-cuenta-todos-los-avisos-de-act-y-los-mira-contra-el-react-instalado.md)
+    enmienda, el 2026-10-19, el tercer caso en que falla el guion: un aviso es cualquiera de los
+    de `act()` que escribe React, y no solo los que dicen «not wrapped in act».
 - **Fecha:** 2026-10-09
 - **Sale del encargo del 2026-10-09**, que pide el centinela del canal de `act()` antes del 2.13,
   en su propio commit y con su mutación: «borrar el informe fijado en `vite.config.ts` pone el paso
@@ -33,6 +36,10 @@ cuando detecta un agente por el entorno, y ese informe se calla la consola de lo
 ## Decisión
 
 ### 1. Un caso escribe una marca, y un paso la busca
+
+> **Enmendado por el ADR-0066 (2026-10-19), en el tercer caso.** El guion contaba una sola cadena,
+> y React 19.2.8 escribe ocho sobre `act`: ahora cuenta las ocho con siete trozos, y antes de leer
+> el registro compara la lista con las cadenas del React instalado, en los dos sentidos.
 
 `frontend/src/app/ElCanalDeLaConsola.test.ts` escribe `CENTINELA DEL CANAL DE LA CONSOLA` con
 `console.error`, desde un caso en verde, que es el camino de un aviso de `act()`.

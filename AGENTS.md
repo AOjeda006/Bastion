@@ -367,6 +367,11 @@ python scripts/dependencias-por-conjuntos.py <commit-base> HEAD
 > registro o si hay un solo aviso. La CI lanza los tests con `AI_AGENT` puesto, para que allí
 > también lo único que mantenga la marca sea el informe fijado: sin esa variable, la CI no es un
 > agente, vitest elige el informe que imprime la consola, y quitar la línea no se vería.
+>
+> **Un aviso es cualquiera de los de `act()` que escribe React, no solo «not wrapped in act»**
+> (ADR-0066, 2.17). El guion cuenta siete trozos, y antes de leer el registro los compara con
+> las cadenas del React instalado: un trozo que React no escribe, o un aviso de React sin su
+> trozo, es un rojo. Hasta el 2.17 solo contaba el primero, y un `act()` dentro de otro pasaba.
 
 Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:
 `docker compose -f deploy/docker-compose.yml up --build`, y **sobre ese mismo entorno ya en pie**
