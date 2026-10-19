@@ -7967,9 +7967,10 @@ puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el
 transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15, el 2.16 y el
 2.17 están hechos.
 
-> **Dónde se retoma (2026-10-19): en el 2.18, en una rama nueva desde `main`.** Su primer
-> commit anota los dos runs del cierre del 2.17, y el siguiente es su ADR, el **0067**, que
-> enmienda el §5 del ADR-0064; el 0064 lo anota en su *Estado* y en el propio punto. Después, el
+> **Dónde se retoma (2026-10-19): en el 2.18, en la rama `2.18-el-avance-incremental`**, abierta
+> desde `main` en `2fdd3cb`. Su primer commit anota los dos runs del cierre del 2.17, y el
+> siguiente es su ADR, el **0067**, que enmienda el §5 del ADR-0064; el 0064 lo anota en su
+> *Estado* y en el propio punto. Después, el
 > código, con su tanda desde la **655**, y otra vez las medidas A, B y C con los guiones del 2.15.
 > Si queda algo esencial abierto, se para y se pregunta. Los hallazgos de `/code-review` sobre
 > `0638419..0d26e76` no han llegado, y se tratan antes de seguir con el código en cuanto lleguen.
@@ -13321,6 +13322,18 @@ el 0065 y el 0066, así que el siguiente es el **0067**. Sus mutaciones van de l
 7. **El cierre, por el flujo de la rama**: este commit va a la rama y espera su verde; `main`
    avanza con `--ff-only`, y la rama se borra, en local y en el remoto, después del run de `main`.
    Los dos runs se anotan en el primer commit del 2.18.
+
+   **Anotados en el primer commit del 2.18.** El run de rama de `2fdd3cb`, que lleva los diecisiete
+   commits del 2.17, es el **39299523896**, en verde al primer intento: Backend `118220769584`,
+   Frontal `118220769880` y Humo `118225248025`. El empuje abrió dos runs para el mismo commit, y
+   el grupo de concurrencia canceló el primero, el **39299521617**, sin que llegara a correr nada.
+   `main` avanzó con `--ff-only` de `0d26e76` a `2fdd3cb`, y su run es el **39301336980**, también
+   en verde: Backend `118227005063`, Frontal `118227005596` y Humo `118231854573`. Los dos con 69
+   pasos, 68 en verde y el *Diagnóstico* omitido, y las cifras de la batería: **1514** y **715**
+   casos, **238** tipos de **246** sitios, **154** operaciones en **93** rutas, **420/450** y
+   **778/900** KiB, y el centinela con la marca y sin avisos, con 7 trozos para las 8 cadenas de
+   React. Leídos con `python -X utf8 leer-run27.py <run>`. La rama `2.17-el-alta-del-ajuste` se
+   borró en local y en el remoto después del run de `main`.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
