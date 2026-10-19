@@ -46,6 +46,9 @@ export const es = {
   rutas: {
     acceso: 'Iniciar sesión',
     inicio: 'Inicio',
+    ajustes: 'Ajustes de inventario',
+    nuevoAjuste: 'Nuevo ajuste',
+    ajuste: 'Ficha del ajuste',
     almacenes: 'Almacenes',
     articulos: 'Artículos',
     categorias: 'Categorías',
@@ -302,6 +305,131 @@ export const es = {
   // La primera pantalla del inventario (ítem 2.12, ADR-0055). Las cantidades van en la unidad
   // base de cada artículo, y la pantalla lo dice: un recuento contado en cajas cuadraría mal.
   inventario: {
+    // El ajuste a mano (ítem 2.17, ADR-0065). El alta va en su propia ruta, porque la rejilla de
+    // líneas es lo que más pesa y el listado no tiene por qué cargarla.
+    ajustes: {
+      cargando: 'los ajustes',
+      tabla: 'Ajustes de la empresa activa',
+      ajuste: 'Ajuste',
+      almacen: 'Almacén',
+      fecha: 'Fecha de operación',
+      estado: 'Estado',
+      motivo: 'Motivo',
+      // Se numera al confirmar. Un borrador se nombra por su almacén y su día, y puede haber dos
+      // iguales: los distingue el motivo.
+      numerado: 'Ajuste {{numero}}',
+      sinNumero: 'Borrador de {{almacen}} del {{dia}}',
+
+      todos: 'Todos',
+      buscar: 'Buscar en el motivo',
+      orden: 'Orden',
+      ordenes: {
+        masRecientes: 'Fecha, del último día al primero',
+        masAntiguos: 'Fecha, del primer día al último',
+        numeroDescendente: 'Número, de mayor a menor',
+        numeroAscendente: 'Número, de menor a mayor',
+      },
+      filtrar: 'Filtrar',
+      nuevo: 'Nuevo ajuste',
+      paginaVacia: 'Esta página no tiene ajustes. Vuelve a la anterior.',
+      ningunoTodavia: 'Todavía no hay ningún ajuste en esta empresa.',
+      ningunoConEsteFiltro: 'Ningún ajuste coincide con el filtro.',
+      volver: 'Volver a los ajustes',
+
+      estados: {
+        borrador: 'Borrador',
+        confirmado: 'Confirmado',
+        anulado: 'Anulado',
+        desconocido: 'Sin reconocer',
+        desconocidoDetalle: 'Esta versión de la pantalla no conoce ese estado. Recarga la página.',
+      },
+
+      alta: {
+        pista:
+          'Cada línea lleva su cantidad con signo: en positivo entra, en negativo sale. El número lo ' +
+          'recibe al confirmarlo.',
+        serie: 'Serie',
+        sinElegir: 'Sin elegir',
+        sinSeries:
+          'No hay ninguna serie de ajustes activa. Da una de alta en el maestro de series.',
+        tabla: 'Líneas del ajuste',
+        pistaDeLaRejilla:
+          'El tabulador pasa de una celda a otra, e Intro en la última celda añade una línea.',
+        numero: 'Nº',
+        ubicacion: 'Ubicación',
+        articulo: 'Artículo',
+        cantidad: 'Cantidad',
+        unidad: 'Unidad',
+        coste: 'Coste por unidad base',
+        lote: 'Lote',
+        numeroDeSerie: 'Número de serie',
+        celda: '{{campo}} de la línea {{numero}}',
+        antesElAlmacen: 'Elige antes el almacén',
+        buscando: 'Buscando…',
+        ningunArticulo: 'Ningún artículo coincide.',
+        anadir: 'Añadir una línea',
+        quitar: 'Quitar la línea {{numero}}',
+        eligeElAlmacen: 'Elige el almacén del ajuste.',
+        eligeLaSerie: 'Elige una serie.',
+        escribeLaFecha: 'Escribe el día del ajuste.',
+        eligeLaUbicacion: 'Elige la ubicación.',
+        eligeElArticulo: 'Elige un artículo de la lista.',
+        eligeLaUnidad: 'Elige la unidad.',
+        escribeLaCantidad: 'Escribe la cantidad: en negativo, si sale.',
+        costeMalEscrito: 'El coste es una cifra sin signo, con cuatro decimales como mucho.',
+        topeDeLineas: 'Un ajuste lleva como mucho 200 líneas.',
+        abrir: 'Abrir el ajuste',
+        abriendo: 'Abriendo…',
+        sinMaestros:
+          'Para abrir un ajuste hace falta poder ver los almacenes, las series, las ubicaciones, ' +
+          'las unidades y los artículos.',
+      },
+
+      ficha: {
+        cargando: 'el ajuste',
+        anulaA: 'Compensa a',
+        verOriginal: 'Ver el ajuste original',
+        recuento: 'Viene de',
+        verRecuento: 'Ver su recuento',
+        deUnRecuento: 'Un recuento',
+        lineas: 'Líneas',
+        tabla: 'Líneas del ajuste',
+        numero: 'Nº',
+        ubicacion: 'Ubicación',
+        articulo: 'Artículo',
+        cantidad: 'Cantidad',
+        factor: 'Factor de conversión',
+        enUnidadBase: 'En unidad base',
+        coste: 'Coste unitario',
+        loteOSerie: 'Lote o serie',
+        valor: 'Valor',
+        // El factor lo pone el servidor (ADR-0065 §2), con la conversión del día del alta.
+        nota:
+          'El factor y la cantidad en unidad base los puso el servidor al abrirlo, con la ' +
+          'conversión de ese día.',
+        notaDelBorrador: 'El valor se calcula al confirmarlo.',
+
+        confirmar: 'Confirmar el ajuste',
+        preguntaConfirmar: 'Al confirmarlo recibe su número y mueve el stock.',
+        siConfirmar: 'Sí, confirmar',
+        confirmando: 'Confirmando…',
+        confirmadoAviso: 'Ajuste confirmado con el número {{numero}}.',
+        anular: 'Anular el ajuste',
+        preguntaAnular: 'Anularlo crea un ajuste inverso, ya confirmado, que lo compensa.',
+        siAnular: 'Sí, anular',
+        anulando: 'Anulando…',
+        anuladoAviso: 'Ajuste anulado. Lo compensa el ajuste {{numero}}.',
+        verInverso: 'Ver el inverso',
+        descartar: 'Descartar el borrador',
+        preguntaDescartar:
+          'Descartarlo lo quita del listado. No ha movido nada, y no se puede deshacer.',
+        siDescartar: 'Sí, descartar',
+        descartando: 'Descartando…',
+        descartadoAviso: 'Borrador descartado.',
+        cancelar: 'Cancelar',
+      },
+    },
+
     recuentos: {
       cargando: 'los recuentos',
       tabla: 'Recuentos de la empresa activa',

@@ -20,6 +20,9 @@ en `recuentos`, y salió de ahí cuando lo empezaron a leer dos documentos (ADR-
 ['maestros-del-inventario', 'maestro', clase, id]  → clavesDeMaestros.maestro(clase, id)
 ['maestros-del-inventario', 'almacenes']           → clavesDeMaestros.almacenes()
 ['maestros-del-inventario', 'series']              → clavesDeMaestros.series()
+['maestros-del-inventario', 'ubicaciones']         → clavesDeMaestros.ubicaciones()
+['maestros-del-inventario', 'unidades']            → clavesDeMaestros.unidades()
+['maestros-del-inventario', 'articulos', busqueda] → clavesDeMaestros.articulos(busqueda)
 ```
 
 Nada las invalida, porque nada del inventario escribe un maestro: duran cinco minutos
@@ -200,3 +203,97 @@ pedir en la otra.
 - **El filtro de artículos pide una página de 200**, como los desplegables del alta del recuento.
   Una empresa con más artículos no verá los siguientes en la lista, aunque sí en la tabla. El
   disparador es el mismo: la primera que se acerque a ese número, y entonces el artículo se busca.
+
+## `ajustes` — corregir el stock a mano
+
+**Propósito.** Abrir un ajuste a mano —el almacén, la serie, el día, el motivo y sus líneas—, y
+confirmarlo, anularlo o descartarlo (ítem 2.17, `docs/adr/adr-0065`). Los ajustes que genera un
+recuento salen también aquí, y se anulan desde su recuento.
+
+### Rutas
+
+| Ruta             | Exigencia                         | Título                |
+| ---------------- | --------------------------------- | --------------------- |
+| `/ajustes`       | permiso `inventario.ajuste.ver`   | Ajustes de inventario |
+| `/ajustes/nuevo` | permiso `inventario.ajuste.abrir` | Nuevo ajuste          |
+| `/ajustes/:id`   | permiso `inventario.ajuste.ver`   | Ficha del ajuste      |
+
+Las tres van **diferidas**. Solo el listado sale en la navegación: el alta se abre desde él, y la
+ficha, desde su fila o al acabar el alta. Confirmar, anular y descartar piden
+`inventario.ajuste.confirmar`, `.anular` y `.descartar`. El alta pide además poder ver lo que
+ofrece —los almacenes, las series, las ubicaciones, las unidades y los artículos—, y sin uno de esos
+permisos lo dice en vez de enseñar listas vacías, que parecerían una empresa sin almacenes.
+
+Parámetros de URL del listado: `?pagina=`, `?tamanio=`, `?estado=` y `?almacen=`, con los nombres y
+los valores de la API, como en el recuento; `?busqueda=`, que busca en el motivo y viaja como `q`; y
+`?orden=`, con el valor de la API (`fechaDeOperacion`, `-numero` o `numero`; sin él, la fecha, del
+último día al primero). Ninguno es sensible (`docs/adr/adr-0025`), y lo que no se reconoce se ignora.
+
+### Claves de consulta
+
+`ajustes/api/claves.ts`:
+
+```
+['ajustes']                   → clavesDeAjustes.todo
+['ajustes', 'lista']          → clavesDeAjustes.listas()
+['ajustes', 'lista', listado] → clavesDeAjustes.lista(listado)
+['ajustes', 'una', id]        → clavesDeAjustes.una(id)
+```
+
+Abrir invalida `listas()`; confirmar, anular y un fallo de cualquiera de las dos, `una(id)` y
+`listas()`. Descartar **quita** `una(id)` de la caché, porque el ajuste deja de existir y volver a
+pedirlo daría un `404`, e invalida `listas()`. Lo que el alta ofrece cuelga de `clavesDeMaestros`.
+
+### Lo que no es evidente
+
+- **El factor no se escribe**: lo pone el servidor, con la conversión del día del alta (ADR-0065
+  §2), y la ficha lo enseña en cada línea junto a la cantidad en unidad base. Una unidad sin
+  conversión a la base del artículo vuelve como `ajuste-sin-conversion`, en la unidad de esa línea.
+- **El rechazo de una línea va en su campo, con el foco** (ADR-0065 §3). Un `400` dice la línea en
+  la clave de `errors` (`lineas[2].numeroDeSerie`, desde cero), y un `409` o un `422`, en
+  `actual.linea` (desde uno); el campo sale del `type`. Lo demás va arriba, en un `alert`: el
+  almacén, la serie, el día, el motivo y el coste que rechaza el servidor, que no los ata a ninguna
+  línea. El coste de una línea que saca existencias sí lo dice el formulario en su campo, antes de
+  mandar nada.
+- **Las ubicaciones que se ofrecen son las del almacén elegido.** La API de la organización no
+  acota por almacén: se piden las de la empresa y se filtran aquí. Cambiar de almacén deja sin
+  elegir la ubicación que era de otro, en vez de mandar una que el servidor rechazaría.
+- **El artículo se busca**, con un _combobox_ que pregunta al listado del catálogo (`?q=`, que mira
+  el código y la descripción) 250 ms después de la última tecla, y ofrece los diez primeros. Elegirlo
+  pone su unidad base, que no necesita conversión, y abre el lote o el número de serie si se sigue
+  así. Escribir otra vez deja la línea sin artículo hasta que se elige otro: lo escrito es una
+  búsqueda, no un artículo.
+- **La rejilla es de teclado** (§10 del plan maestro). El tabulador va de celda en celda, e Intro en
+  la última celda que se puede usar añade una línea, con el foco en su ubicación, o pasa a la
+  siguiente. La línea nueva se pinta con `flushSync` y el foco se mueve desde el manejador, no desde
+  el efecto de `append`: movido en mitad del pintado, el `blur` de la celda que se deja corría dentro
+  de él. Un ajuste lleva como mucho 200 líneas, y el botón de añadir lo dice al llegar.
+- **El coste lleva cuatro decimales como mucho.** El servidor redondea a cuatro lo que traiga más;
+  el formulario no lo deja escribir, para que lo que se escribe sea lo que se guarda.
+- **Un borrador se nombra por su almacén y su día**, como un recuento, pero aquí puede haber dos
+  iguales: los distingue el motivo.
+- **Confirmar y anular mandan su `Idempotency-Key` y no la versión; descartar manda la versión** en
+  el `If-Match`, y se pregunta antes (ADR-0065 §7 y §8). La clave va con el intento, como en el
+  recuento, y sobrevive a un fallo: el servidor solo guarda las respuestas que salen bien.
+- **Descartado, el borrador deja de existir**: la ficha no se vuelve a pedir, y queda el aviso con
+  el camino de vuelta al listado.
+- **Una ficha por ajuste.** La ruta monta la ficha con la clave del identificador, así que el
+  inverso, al que lleva el aviso de la anulación, se abre sin el aviso ni el estado del original.
+- **Un inverso no se anula, y el ajuste de un recuento se anula desde su recuento**
+  (`ajuste-de-un-recuento-no-se-anula`): la ficha no lo ofrece, y lleva al recuento a quien puede
+  verlo.
+
+### Límites conocidos
+
+- **Las ubicaciones se piden en una página de 200**, como los desplegables del recuento, y de toda
+  la empresa. Una empresa con más no verá las siguientes en el alta. El disparador es la primera que
+  se acerque a ese número: entonces la ubicación se busca, o la API de la organización acota por
+  almacén.
+- **Una unidad base retirada sale «Sin elegir»** al elegir el artículo, porque el desplegable solo
+  ofrece las vigentes. El servidor rechazaría esa unidad igual (`ajuste-unidad-retirada`).
+- **El valor de una línea no se comprueba al abrir.** La cantidad y el coste caben cada uno en su
+  columna, pero su producto, que se calcula al confirmar, puede no caber en la del valor
+  (`numeric(18,4)`) con los dos cerca de sus topes.
+- **El tope de 200 líneas no tiene caso de pantalla**: añadir 199 líneas en jsdom tarda 15 s, porque
+  cada una repinta la rejilla entera. Lo afirman el esquema (`model/formularios.test.ts`) y el
+  servidor, y el recorrido en el navegador del cierre del ítem.

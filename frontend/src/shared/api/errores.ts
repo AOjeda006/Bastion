@@ -40,11 +40,28 @@ export class FalloDeApi extends Error {
    */
   public readonly traza: string | null;
 
+  /**
+   * Los errores por campo de una validación (`errors`), por la ruta del campo tal como viaja en el
+   * cuerpo —`lineas[2].numeroDeSerie`—, o vacío si no los trae (ADR-0065 §3).
+   *
+   * El texto de cada uno es del servidor y no se enseña: lo que se pinta sale del `type`. Lo que
+   * sirve es la clave, que dice en qué campo poner el error.
+   */
+  public readonly campos: Readonly<Record<string, readonly string[]>>;
+
+  /**
+   * El estado actual del recurso (`actual`, ADR-0055 §11), o `null` si no lo trae. Un conflicto
+   * de una línea lleva aquí su número, desde uno (ADR-0065 §3).
+   */
+  public readonly actual: Readonly<Record<string, unknown>> | null;
+
   public constructor(
     estado: number,
     motivo: MotivoDeFallo,
     tipo: string | null = null,
     traza: string | null = null,
+    campos: Readonly<Record<string, readonly string[]>> = {},
+    actual: Readonly<Record<string, unknown>> | null = null,
   ) {
     super(`La API ha respondido ${String(estado)} (${motivo}).`);
     this.name = 'FalloDeApi';
@@ -52,6 +69,8 @@ export class FalloDeApi extends Error {
     this.motivo = motivo;
     this.tipo = tipo;
     this.traza = traza;
+    this.campos = campos;
+    this.actual = actual;
   }
 }
 
@@ -68,6 +87,28 @@ const BASE_DE_TIPOS = '/errors/';
 interface CuerpoDeProblema {
   type?: unknown;
   traceId?: unknown;
+  errors?: unknown;
+  actual?: unknown;
+}
+
+function esUnObjeto(valor: unknown): valor is Record<string, unknown> {
+  return typeof valor === 'object' && valor !== null && !Array.isArray(valor);
+}
+
+/** Los errores por campo, con las entradas que tienen la forma esperada y sin las que no. */
+function camposDe(problema: CuerpoDeProblema | undefined): Record<string, readonly string[]> {
+  const errores = problema?.errors;
+
+  if (!esUnObjeto(errores)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(errores).filter(
+      (entrada): entrada is [string, string[]] =>
+        Array.isArray(entrada[1]) && entrada[1].every((texto) => typeof texto === 'string'),
+    ),
+  );
 }
 
 function codigoDe(problema: CuerpoDeProblema | undefined): string | null {
@@ -95,20 +136,19 @@ export function fallo(estado: number, problema?: unknown): FalloDeApi {
 
   const tipo = codigoDe(cuerpo);
   const traza = typeof cuerpo?.traceId === 'string' ? cuerpo.traceId : null;
+  const campos = camposDe(cuerpo);
+  const actual = esUnObjeto(cuerpo?.actual) ? cuerpo.actual : null;
 
-  if (estado === 403) {
-    return new FalloDeApi(estado, 'sinPermiso', tipo, traza);
-  }
+  const motivo: MotivoDeFallo =
+    estado === 403
+      ? 'sinPermiso'
+      : estado === 401
+        ? 'sesionCaducada'
+        : estado >= 500
+          ? 'servidor'
+          : 'carga';
 
-  if (estado === 401) {
-    return new FalloDeApi(estado, 'sesionCaducada', tipo, traza);
-  }
-
-  if (estado >= 500) {
-    return new FalloDeApi(estado, 'servidor', tipo, traza);
-  }
-
-  return new FalloDeApi(estado, 'carga', tipo, traza);
+  return new FalloDeApi(estado, motivo, tipo, traza, campos, actual);
 }
 
 /**
@@ -135,4 +175,14 @@ export function tipoDeFallo(error: unknown): string | null {
 /** El identificador de traza de un error cualquiera, o `null` si no lo trae. */
 export function trazaDeFallo(error: unknown): string | null {
   return error instanceof FalloDeApi ? error.traza : null;
+}
+
+/** Las rutas de los campos que un error cualquiera dice que fallan, o ninguna si no las trae. */
+export function camposDeFallo(error: unknown): readonly string[] {
+  return error instanceof FalloDeApi ? Object.keys(error.campos) : [];
+}
+
+/** El estado actual que trae un error cualquiera, o `null` si no lo trae. */
+export function actualDeFallo(error: unknown): Readonly<Record<string, unknown>> | null {
+  return error instanceof FalloDeApi ? error.actual : null;
 }

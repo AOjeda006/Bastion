@@ -105,6 +105,39 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
     cargar: async () => (await import('@/app/paginas/PaginaDeInicio.tsx')).PaginaDeInicio,
   },
   {
+    // Los ajustes del inventario (ítem 2.17, ADR-0065 §8). Abrir, confirmar, anular y descartar
+    // tienen sus permisos, y la pantalla esconde lo que no se puede hacer.
+    ruta: '/ajustes',
+    duenio: 'inventario',
+    claveDeTitulo: 'ajustes',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.ajusteVer },
+    enLaNavegacion: true,
+    cargar: async () =>
+      (await import('@/features/inventario/ajustes/ui/PaginaDeAjustes.tsx')).PaginaDeAjustes,
+  },
+  {
+    // Fuera de la navegación: se llega desde el listado. Por el permiso de abrir, que es lo que
+    // pide el `POST`; la pantalla pide además ver los maestros que ofrece, y sin ellos lo dice.
+    ruta: '/ajustes/nuevo',
+    duenio: 'inventario',
+    claveDeTitulo: 'nuevoAjuste',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.ajusteAbrir },
+    enLaNavegacion: false,
+    cargar: async () =>
+      (await import('@/features/inventario/ajustes/ui/PaginaDelAlta.tsx')).PaginaDelAlta,
+  },
+  {
+    // Fuera de la navegación: se llega desde el listado y al abrir uno. Por el permiso de ver, que
+    // es el de la ficha y sus líneas; confirmar, anular y descartar tienen los suyos.
+    ruta: '/ajustes/:id',
+    duenio: 'inventario',
+    claveDeTitulo: 'ajuste',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.ajusteVer },
+    enLaNavegacion: false,
+    cargar: async () =>
+      (await import('@/features/inventario/ajustes/ui/PaginaDelAjuste.tsx')).PaginaDelAjuste,
+  },
+  {
     ruta: '/almacenes',
     duenio: 'organizacion',
     claveDeTitulo: 'almacenes',

@@ -11,6 +11,11 @@
  * igual. La interfaz oculta; el servidor autoriza. Queda anotado como riesgo en `docs/PLAN.md`.
  */
 export const PERMISOS = {
+  ajusteVer: 'inventario.ajuste.ver',
+  ajusteAbrir: 'inventario.ajuste.abrir',
+  ajusteConfirmar: 'inventario.ajuste.confirmar',
+  ajusteAnular: 'inventario.ajuste.anular',
+  ajusteDescartar: 'inventario.ajuste.descartar',
   almacenVer: 'organizacion.almacen.ver',
   articuloVer: 'catalogo.articulo.ver',
   articuloModificar: 'catalogo.articulo.modificar',

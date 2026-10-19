@@ -14,7 +14,14 @@ export const clavesDeMaestros = {
   /** Los maestros que se nombran, uno a uno, por su identificador. */
   maestro: (clase: 'almacen' | 'articulo' | 'ubicacion' | 'unidad', id: string) =>
     [...clavesDeMaestros.todo, 'maestro', clase, id] as const,
-  /** Los que se ofrecen en un alta o en un filtro: los almacenes y las series de la empresa. */
+  /**
+   * Los que se ofrecen en un alta o en un filtro: los almacenes, las series y las ubicaciones de la
+   * empresa, y las unidades de la instalación.
+   */
   almacenes: () => [...clavesDeMaestros.todo, 'almacenes'] as const,
   series: () => [...clavesDeMaestros.todo, 'series'] as const,
+  ubicaciones: () => [...clavesDeMaestros.todo, 'ubicaciones'] as const,
+  unidades: () => [...clavesDeMaestros.todo, 'unidades'] as const,
+  /** Los artículos que casan con lo escrito en la línea de un alta, por su código o descripción. */
+  articulos: (busqueda: string) => [...clavesDeMaestros.todo, 'articulos', busqueda] as const,
 };
