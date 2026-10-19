@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -415,6 +415,29 @@ describe('La ficha de un ajuste', () => {
       'href',
       '/ajustes',
     );
+  });
+
+  it('volver atrás a un descartado da su 404, sin pintar antes lo que había', async () => {
+    const { enrutador } = montar();
+    const usuario = userEvent.setup();
+
+    await usuario.click(await screen.findByRole('button', { name: 'Descartar el borrador' }));
+    await usuario.click(screen.getByRole('button', { name: 'Sí, descartar' }));
+    await usuario.click(await screen.findByRole('link', { name: 'Volver a los ajustes' }));
+    expect(await screen.findByText('El listado de ajustes')).toBeInTheDocument();
+
+    // Atrás, con el navegador. Lo que guardara la caché se pintaría al montar, antes de leer nada:
+    // por eso la primera aserción va sin esperar.
+    await act(async () => {
+      await enrutador.navigate(-1);
+    });
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Ese ajuste ya no existe. Vuelve al listado y actualiza.',
+    );
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(servidorDelAjuste.lecturas).toEqual([AJUSTE, AJUSTE]);
   });
 
   it('anular pide el motivo, y el aviso lleva al inverso, que se abre sin el aviso', async () => {
