@@ -274,6 +274,15 @@ en el PLAN. Lo que solo vale en esta máquina o en su *shell* se quedó fuera.
   el barrido se encuentra a sí mismo: esa línea se excluye y se dice.
 - **El informe cuenta los commits desde el último verificado, sean del ítem o no**, con sus sujetos
   y sus runs de rama y de `main`. «Se subió el trabajo» no vale.
+- **Cada commit va con su asunto, y lo que se encontró por el camino va arriba** (2.17). El 2.17
+  salió en una línea, sin sus trece asuntos, sin sus dos ADR y sin el hallazgo del canal de
+  `act()`, que cambiaba lo que significaban todos los ceros anteriores. Un hallazgo que solo está
+  en el PLAN no lo ve quien lee el informe. Primero va lo que cambia cómo se leía algo de antes.
+- **Un tema por subida, y la siguiente espera a la conclusión de la anterior** (2.17). La CI corre
+  sobre el último commit del empuje, y cancela el run en curso de la rama cuando llega otro
+  (`cancel-in-progress` en `ci.yml`). Trece commits en un empuje dejan sin comprobar los doce
+  primeros, y dos empujes seguidos, el primero. Un tema es un ADR, un caso de uso con sus casos o
+  una pantalla.
 
 ## Comandos del proyecto (parte variable)
 
