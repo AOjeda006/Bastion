@@ -14,14 +14,16 @@ namespace Bastion.Api.FunctionalTests.Corte;
 
 /// <summary>
 /// El trabajo mensual de Inventario sin base: el mes que toca, una empresa por ámbito, lo que cuenta
-/// y lo que anota, y cuándo se registra (ADR-0063 §7). Y lo que tarda cada avance y el retraso del
-/// corte más viejo (ADR-0064 §3).
+/// y lo que anota, y cuándo se registra (ADR-0063 §7). Lo que tarda cada mes y el retraso del corte
+/// más viejo (ADR-0064 §3). Y desde el 2.18, el avance mes a mes y el cuadre de lo pendiente detrás
+/// (ADR-0067).
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>El avance de verdad se prueba en el carril de integración</b>, llamándolo con su empresa, en
 /// <c>LasExistenciasSonLaSumaDelLibroTests</c>. Lo que queda aquí es lo que decide el bucle, que no
-/// necesita PostgreSQL: con un avance de mentira detrás, cada caso elige qué contesta cada empresa.
+/// necesita PostgreSQL: con un avance de mentira detrás, cada caso elige qué contesta cada empresa
+/// en cada mes, y qué contesta su cuadre.
 /// </para>
 /// <para>
 /// <b>El reloj está parado en la primera media hora de un año</b>, que es donde el mes que toca
@@ -33,6 +35,7 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 {
     private static readonly DateTimeOffset s_primeraMediaHoraDelAnio = new(2027, 1, 1, 0, 30, 0, TimeSpan.Zero);
 
+    private static readonly DateOnly s_noviembre = new(2026, 11, 1);
     private static readonly DateOnly s_diciembre = new(2026, 12, 1);
 
     private static readonly Guid s_primera = Guid.Parse("01900000-0000-7000-8000-000000000001");
@@ -63,9 +66,16 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     {
         Libreta libreta = new([s_primera, s_segunda, s_tercera])
         {
-            [s_primera] = () => Hecho(),
-            [s_segunda] = () => null,
-            [s_tercera] = () => Hecho(),
+            Meses =
+            {
+                [s_primera] = [() => Mes(s_noviembre), () => Mes(s_diciembre)],
+                [s_tercera] = [() => Mes(s_diciembre)],
+            },
+            Cuadres =
+            {
+                [s_primera] = () => Cuadrado(s_noviembre, s_diciembre),
+                [s_tercera] = () => Cuadrado(s_diciembre, s_diciembre),
+            },
         };
 
         using MetricasDelCorte metricas = new();
@@ -78,8 +88,15 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         }
 
         libreta.Avances.ShouldBe(
-            [(s_primera, s_diciembre), (s_segunda, s_diciembre), (s_tercera, s_diciembre)],
-            "cada empresa, en el orden en que llegan, con el mes que toca");
+            [
+                (s_primera, s_diciembre), (s_primera, s_diciembre), (s_primera, s_diciembre),
+                (s_segunda, s_diciembre),
+                (s_tercera, s_diciembre), (s_tercera, s_diciembre),
+            ],
+            "cada empresa, en el orden en que llegan y con el mes que toca, un mes por llamada hasta que " +
+            "una contesta que ya llega");
+
+        libreta.Cuadradas.ShouldBe([s_primera, s_segunda, s_tercera], "el cuadre va detrás de cada empresa");
 
         libreta.Instancias.ShouldBe(5, "un ámbito para la lista, uno por empresa y uno para los cortes");
 
@@ -89,10 +106,17 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
         registro.De(8701).Select(linea => linea.Mensaje).ShouldBe(
         [
-            $"Corte de la empresa {s_primera} avanzado hasta 2026-12: 40 instantáneas rehechas en 1500 ms. " +
-            "El cuadre comparó 7 existencias y 40 instantáneas en 250 ms, con 0 descuadres.",
-            $"Corte de la empresa {s_tercera} avanzado hasta 2026-12: 40 instantáneas rehechas en 1500 ms. " +
-            "El cuadre comparó 7 existencias y 40 instantáneas en 250 ms, con 0 descuadres.",
+            $"Corte de la empresa {s_primera} avanzado hasta 2026-11: 40 instantáneas escritas en 1500 ms.",
+            $"Corte de la empresa {s_primera} avanzado hasta 2026-12: 40 instantáneas escritas en 1500 ms.",
+            $"Corte de la empresa {s_tercera} avanzado hasta 2026-12: 40 instantáneas escritas en 1500 ms.",
+        ]);
+
+        registro.De(8705).Select(linea => linea.Mensaje).ShouldBe(
+        [
+            $"Cuadre de la empresa {s_primera} de 2026-11 a 2026-12: 7 existencias y 40 instantáneas " +
+            "comparadas en 250 ms, con 0 descuadres.",
+            $"Cuadre de la empresa {s_tercera} de 2026-12 a 2026-12: 7 existencias y 40 instantáneas " +
+            "comparadas en 250 ms, con 0 descuadres.",
         ]);
 
         registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
@@ -102,15 +126,13 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     }
 
     [Fact]
-    public async Task El_fallo_de_una_empresa_se_anota_se_cuenta_y_no_para_a_las_demas()
+    public async Task Una_empresa_que_ya_llega_cuadra_lo_que_le_quedo_pendiente()
     {
-        InvalidOperationException caida = new("la base se ha ido a mitad");
-
-        Libreta libreta = new([s_primera, s_segunda, s_tercera])
+        // La segunda no avanza, porque su corte ya llega, pero su cuadre se quedó a medias en la
+        // vuelta anterior: lo termina esta, y no cuenta como avanzada.
+        Libreta libreta = new([s_primera, s_segunda])
         {
-            [s_primera] = () => Hecho(),
-            [s_segunda] = () => throw caida,
-            [s_tercera] = () => Hecho(),
+            Cuadres = { [s_segunda] = () => Cuadrado(s_noviembre, s_diciembre) },
         };
 
         using MetricasDelCorte metricas = new();
@@ -122,9 +144,78 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
             await Avanzador(proveedor, metricas, registro).UnaVueltaAsync(CancellationToken.None);
         }
 
-        libreta.Avances.Select(avance => avance.EmpresaId).ShouldBe(
+        libreta.Cuadradas.ShouldBe([s_primera, s_segunda]);
+        espia.Leer("bastion.inventario.corte.empresas_avanzadas").ShouldBe(0);
+        registro.De(8701).ShouldBeEmpty();
+
+        registro.De(8705).ShouldHaveSingleItem().Mensaje.ShouldBe(
+            $"Cuadre de la empresa {s_segunda} de 2026-11 a 2026-12: 7 existencias y 40 instantáneas " +
+            "comparadas en 250 ms, con 0 descuadres.");
+
+        registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
+            "Avance del corte hasta 2026-12: 2 empresas con existencias, 0 avanzadas y 0 con fallo.");
+    }
+
+    [Fact]
+    public async Task Un_cuadre_que_falla_deja_la_empresa_avanzada_y_con_fallo()
+    {
+        InvalidOperationException caida = new("la base se ha ido en mitad del cuadre");
+
+        Libreta libreta = new([s_primera, s_segunda])
+        {
+            Meses = { [s_primera] = [() => Mes(s_diciembre)], [s_segunda] = [() => Mes(s_diciembre)] },
+            Cuadres = { [s_primera] = () => throw caida, [s_segunda] = () => Cuadrado(s_diciembre, s_diciembre) },
+        };
+
+        using MetricasDelCorte metricas = new();
+        using EspiaDeMedidas espia = new();
+        Anotador registro = new();
+
+        await using (ServiceProvider proveedor = Montar(libreta))
+        {
+            await Avanzador(proveedor, metricas, registro).UnaVueltaAsync(CancellationToken.None);
+        }
+
+        espia.Leer("bastion.inventario.corte.empresas_avanzadas").ShouldBe(
+            2, "el corte de la primera ya ha llegado cuando falla su cuadre");
+        espia.Leer("bastion.inventario.corte.avances_fallidos").ShouldBe(1);
+
+        registro.De(8702).ShouldHaveSingleItem().Fallo.ShouldBeSameAs(caida);
+        registro.De(8705).ShouldHaveSingleItem().Mensaje.ShouldStartWith($"Cuadre de la empresa {s_segunda} ");
+
+        registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
+            "Avance del corte hasta 2026-12: 2 empresas con existencias, 2 avanzadas y 1 con fallo.");
+    }
+
+    [Fact]
+    public async Task El_fallo_de_una_empresa_se_anota_se_cuenta_y_no_para_a_las_demas()
+    {
+        InvalidOperationException caida = new("la base se ha ido a mitad");
+
+        Libreta libreta = new([s_primera, s_segunda, s_tercera])
+        {
+            Meses =
+            {
+                [s_primera] = [() => Mes(s_diciembre)],
+                [s_segunda] = [() => throw caida],
+                [s_tercera] = [() => Mes(s_diciembre)],
+            },
+        };
+
+        using MetricasDelCorte metricas = new();
+        using EspiaDeMedidas espia = new();
+        Anotador registro = new();
+
+        await using (ServiceProvider proveedor = Montar(libreta))
+        {
+            await Avanzador(proveedor, metricas, registro).UnaVueltaAsync(CancellationToken.None);
+        }
+
+        libreta.Avances.Select(avance => avance.EmpresaId).Distinct().ShouldBe(
             [s_primera, s_segunda, s_tercera],
             "la tercera se avanza aunque la segunda haya fallado");
+
+        libreta.Cuadradas.ShouldBe([s_primera, s_tercera], "la que falla al avanzar no llega a su cuadre");
 
         espia.Leer("bastion.inventario.corte.empresas_avanzadas").ShouldBe(2);
         espia.Leer("bastion.inventario.corte.avances_fallidos").ShouldBe(1);
@@ -134,8 +225,8 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         fallo.Nivel.ShouldBe(LogLevel.Error);
         fallo.Fallo.ShouldBeSameAs(caida);
         fallo.Mensaje.ShouldBe(
-            $"El avance del corte de la empresa {s_segunda} hasta 2026-12 ha fallado. Se reintenta " +
-            "en la hora siguiente.");
+            $"El avance o el cuadre del corte de la empresa {s_segunda} hasta 2026-12 ha fallado. Se " +
+            "reintenta en la hora siguiente, desde el último mes que llegó a hacer.");
 
         registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
             "Avance del corte hasta 2026-12: 3 empresas con existencias, 2 avanzadas y 1 con fallo.");
@@ -148,13 +239,19 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
         Libreta libreta = new([s_primera, s_segunda, s_tercera])
         {
-            [s_primera] = () => Hecho(),
-            [s_segunda] = () =>
+            Meses =
             {
-                parada.Cancel();
-                throw new OperationCanceledException(parada.Token);
+                [s_primera] = [() => Mes(s_diciembre)],
+                [s_segunda] =
+                [
+                    () =>
+                    {
+                        parada.Cancel();
+                        throw new OperationCanceledException(parada.Token);
+                    },
+                ],
+                [s_tercera] = [() => Mes(s_diciembre)],
             },
-            [s_tercera] = () => Hecho(),
         };
 
         using MetricasDelCorte metricas = new();
@@ -167,9 +264,50 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
                 () => Avanzador(proveedor, metricas, registro).UnaVueltaAsync(parada.Token));
         }
 
-        libreta.Avances.Select(avance => avance.EmpresaId).ShouldBe([s_primera, s_segunda]);
+        libreta.Avances.Select(avance => avance.EmpresaId).Distinct().ShouldBe([s_primera, s_segunda]);
         espia.Leer("bastion.inventario.corte.avances_fallidos").ShouldBe(0, "apagar la API no es un fallo");
         registro.De(8702).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task La_parada_se_mira_entre_un_mes_y_el_siguiente()
+    {
+        // La parada llega mientras se hace el segundo de tres meses, y el avance de mentira no mira
+        // el token: lo que corta es el bucle, antes de pedir el tercero.
+        using CancellationTokenSource parada = new();
+
+        Libreta libreta = new([s_primera, s_segunda])
+        {
+            Meses =
+            {
+                [s_primera] =
+                [
+                    () => Mes(new DateOnly(2026, 10, 1)),
+                    () =>
+                    {
+                        parada.Cancel();
+                        return Mes(s_noviembre);
+                    },
+                    () => Mes(s_diciembre),
+                ],
+                [s_segunda] = [() => Mes(s_diciembre)],
+            },
+        };
+
+        using MetricasDelCorte metricas = new();
+        using EspiaDeMedidas espia = new();
+        Anotador registro = new();
+
+        await using (ServiceProvider proveedor = Montar(libreta))
+        {
+            await Should.ThrowAsync<OperationCanceledException>(
+                () => Avanzador(proveedor, metricas, registro).UnaVueltaAsync(parada.Token));
+        }
+
+        libreta.Avances.ShouldBe([(s_primera, s_diciembre), (s_primera, s_diciembre)]);
+        libreta.Cuadradas.ShouldBeEmpty();
+        registro.De(8701).Count().ShouldBe(2, "los dos meses que acabaron se quedan, y se anotan");
+        espia.Leer("bastion.inventario.corte.avances_fallidos").ShouldBe(0);
     }
 
     [Fact]
@@ -182,9 +320,12 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
         Libreta libreta = new([s_primera, s_segunda, s_tercera])
         {
-            [s_primera] = () => Hecho(),
-            [s_segunda] = () => throw ajena,
-            [s_tercera] = () => Hecho(),
+            Meses =
+            {
+                [s_primera] = [() => Mes(s_diciembre)],
+                [s_segunda] = [() => throw ajena],
+                [s_tercera] = [() => Mes(s_diciembre)],
+            },
         };
 
         using MetricasDelCorte metricas = new();
@@ -196,7 +337,7 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
             await Avanzador(proveedor, metricas, registro).UnaVueltaAsync(CancellationToken.None);
         }
 
-        libreta.Avances.Select(avance => avance.EmpresaId).ShouldBe([s_primera, s_segunda, s_tercera]);
+        libreta.Avances.Select(avance => avance.EmpresaId).Distinct().ShouldBe([s_primera, s_segunda, s_tercera]);
         espia.Leer("bastion.inventario.corte.avances_fallidos").ShouldBe(1);
         registro.De(8702).ShouldHaveSingleItem().Fallo.ShouldBeSameAs(ajena);
     }
@@ -206,8 +347,17 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     {
         Libreta libreta = new([s_primera, s_segunda])
         {
-            [s_primera] = () => Hecho(Descuadre("instantanea-valor"), Descuadre("instantanea"), Descuadre("instantanea")),
-            [s_segunda] = () => Hecho(),
+            Meses = { [s_primera] = [() => Mes(s_diciembre)], [s_segunda] = [() => Mes(s_diciembre)] },
+            Cuadres =
+            {
+                [s_primera] = () => Cuadrado(
+                    s_noviembre,
+                    s_diciembre,
+                    Descuadre("instantanea-valor"),
+                    Descuadre("instantanea"),
+                    Descuadre("instantanea")),
+                [s_segunda] = () => Cuadrado(s_diciembre, s_diciembre),
+            },
         };
 
         using MetricasDelCorte metricas = new();
@@ -226,8 +376,8 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
         aviso.Nivel.ShouldBe(LogLevel.Warning);
         aviso.Mensaje.ShouldBe(
-            $"El cuadre de la empresa {s_primera}, tras avanzar el corte hasta 2026-12, encontró 3 " +
-            "descuadres (instantanea, instantanea-valor) en 7 existencias y 40 instantáneas comparadas.");
+            $"El cuadre de la empresa {s_primera}, de 2026-11 a 2026-12, encontró 3 descuadres " +
+            "(instantanea, instantanea-valor) en 7 existencias y 40 instantáneas comparadas.");
     }
 
     [Fact]
@@ -299,15 +449,25 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     [Fact]
     public async Task Una_vuelta_anota_lo_que_tarda_cada_avance_y_el_retraso_con_el_que_acaba()
     {
+        // La más vieja al empezar es la primera, seis meses atrás, y avanza los seis. La que se queda
+        // atrás es la tercera: avanza noviembre y falla en diciembre. El retraso es el suyo, y se
+        // mide al acabar.
+        List<Func<MesAvanzado>> deJulioADiciembre =
+            [.. Enumerable.Range(7, 6).Select(mes => (Func<MesAvanzado>)(() => Mes(new DateOnly(2026, mes, 1))))];
+
         Libreta libreta = new([s_primera, s_segunda, s_tercera])
         {
-            [s_primera] = () => Hecho(),
-            [s_segunda] = () => null,
-            [s_tercera] = () => throw new InvalidOperationException("el plazo de la orden se ha agotado"),
+            Meses =
+            {
+                [s_primera] = deJulioADiciembre,
+                [s_tercera] =
+                [
+                    () => Mes(s_noviembre, milisegundos: 900),
+                    () => throw new InvalidOperationException("el plazo de la orden se ha agotado"),
+                ],
+            },
         };
 
-        // La más vieja al empezar es la primera, seis meses atrás, y avanza. La que se queda atrás es
-        // la tercera, que falla: el retraso es el suyo, y se mide al acabar.
         libreta.Cortes[s_primera] = Corte(s_primera, new DateOnly(2026, 6, 1));
         libreta.Cortes[s_segunda] = Corte(s_segunda, s_diciembre);
         libreta.Cortes[s_tercera] = Corte(s_tercera, new DateOnly(2026, 10, 1));
@@ -321,10 +481,13 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         }
 
         espia.Serie("bastion.inventario.corte.duracion_del_avance").ShouldBe(
-            [1.5], "en segundos, y solo el avance que termina: ni el que ya llegaba ni el que falla");
+            [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 0.9],
+            "en segundos, una por mes, y solo los meses que terminan: ni el que ya llegaba ni el que falla");
 
         espia.Serie("bastion.inventario.corte.meses_de_retraso").ShouldBe(
-            [2], "una medida por vuelta, con los cortes como quedan: medida antes de avanzar, serían 6");
+            [1],
+            "una medida por vuelta, con los cortes como quedan: el noviembre de la tercera se queda aunque " +
+            "falle diciembre, y medida antes de avanzar serían 6");
     }
 
     [Fact]
@@ -449,12 +612,11 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
             metricas,
             registro);
 
-    private static AvanceHecho Hecho(params Descuadre[] descuadres) =>
-        new(
-            40,
-            TimeSpan.FromMilliseconds(1500),
-            TimeSpan.FromMilliseconds(250),
-            new CuadreDeLasExistencias(7, 40, 3, 0, 0, descuadres));
+    private static MesAvanzado Mes(DateOnly mes, int milisegundos = 1500) =>
+        new(mes, 40, TimeSpan.FromMilliseconds(milisegundos));
+
+    private static CuadreHecho Cuadrado(DateOnly desde, DateOnly hasta, params Descuadre[] descuadres) =>
+        new(desde, hasta, TimeSpan.FromMilliseconds(250), new CuadreDeLasExistencias(7, 40, 3, 0, 0, descuadres));
 
     private static CorteDeUnaEmpresa Corte(Guid empresaId, DateOnly hastaElMes) => new(empresaId, hastaElMes, null);
 
@@ -465,24 +627,27 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     /// <param name="empresas">Las empresas que devuelve la lista.</param>
     private sealed class Libreta(IReadOnlyList<Guid> empresas)
     {
-        private readonly Dictionary<Guid, Func<AvanceHecho?>> _respuestas = [];
+        /// <summary>
+        /// Lo que contesta cada paso del avance de una empresa, en orden; lanzar es fallar. Cuando se
+        /// acaban, o si la empresa no tiene, el corte ya llega.
+        /// </summary>
+        public Dictionary<Guid, List<Func<MesAvanzado>>> Meses { get; } = [];
 
-        /// <summary>Lo que contesta el avance de una empresa; lanzar es fallar.</summary>
-        /// <param name="empresaId">La empresa.</param>
-        public Func<AvanceHecho?> this[Guid empresaId]
-        {
-            get => _respuestas[empresaId];
-            init => _respuestas[empresaId] = value;
-        }
+        /// <summary>Lo que contesta el cuadre de una empresa; si no tiene, no le quedaba nada pendiente.</summary>
+        public Dictionary<Guid, Func<CuadreHecho?>> Cuadres { get; } = [];
 
         public IReadOnlyList<Guid> Empresas => empresas;
 
+        /// <summary>Cada llamada al paso del avance, con su empresa y el mes al que tiene que llegar.</summary>
         public List<(Guid EmpresaId, DateOnly HastaElMes)> Avances { get; } = [];
+
+        /// <summary>Cada llamada al cuadre, con su empresa.</summary>
+        public List<Guid> Cuadradas { get; } = [];
 
         public int Instancias { get; set; }
 
         /// <summary>
-        /// El corte de cada empresa: el que tiene al empezar, y el que le deja el avance que termina.
+        /// El corte de cada empresa: el que tiene al empezar, y el que le deja cada mes que termina.
         /// </summary>
         public Dictionary<Guid, CorteDeUnaEmpresa> Cortes { get; } = [];
     }
@@ -501,21 +666,32 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         public Task<IReadOnlyList<Guid>> EmpresasConExistenciasAsync(CancellationToken cancelacion) =>
             Task.FromResult(_libreta.Empresas);
 
-        public async Task<AvanceHecho?> AvanzarAsync(
+        public async Task<MesAvanzado?> AvanzarUnMesAsync(
             Guid empresaId, DateOnly hastaElMes, CancellationToken cancelacion)
         {
             await Task.Yield();
 
+            int hechos = _libreta.Avances.Count(avance => avance.EmpresaId == empresaId);
             _libreta.Avances.Add((empresaId, hastaElMes));
 
-            AvanceHecho? hecho = _libreta[empresaId]();
-
-            if (hecho is not null)
+            if (!_libreta.Meses.TryGetValue(empresaId, out List<Func<MesAvanzado>>? meses) || hechos >= meses.Count)
             {
-                _libreta.Cortes[empresaId] = new CorteDeUnaEmpresa(empresaId, hastaElMes, null);
+                return null;
             }
 
+            MesAvanzado hecho = meses[hechos]();
+            _libreta.Cortes[empresaId] = new CorteDeUnaEmpresa(empresaId, hecho.Mes, null);
+
             return hecho;
+        }
+
+        public async Task<CuadreHecho?> CuadrarLoPendienteAsync(Guid empresaId, CancellationToken cancelacion)
+        {
+            await Task.Yield();
+
+            _libreta.Cuadradas.Add(empresaId);
+
+            return _libreta.Cuadres.TryGetValue(empresaId, out Func<CuadreHecho?>? cuadre) ? cuadre() : null;
         }
 
         public Task<IReadOnlyList<CorteDeUnaEmpresa>> CortesAsync(CancellationToken cancelacion) =>

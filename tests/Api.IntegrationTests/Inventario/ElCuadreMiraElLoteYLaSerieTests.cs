@@ -17,10 +17,16 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <remarks>
 /// <para>
 /// <b>Lo que se estropea suma en su hueco lo mismo que antes.</b> Una unidad pasa de un lote a otro
-/// en la fila viva y en la instantánea, y la serie que estaba le deja su unidad a la que había
+/// en la instantánea, y dos en la fila viva; y la serie que estaba le deja su unidad a la que había
 /// salido. Un cuadre que agrupara por artículo, almacén y ubicación no vería nada, y el caso lo
 /// afirma antes de mirar el de verdad: es la pareja que dice que lo que sale, sale por el lote y
 /// la serie.
+/// </para>
+/// <para>
+/// <b>Dos en la fila viva desde el ítem 2.18</b>, porque desde entonces la fila viva se cuadra
+/// contra su instantánea del corte más el libro desde el corte (ADR-0067 §7). Con la misma unidad
+/// de más en las dos, la fila viva cuadraría con su instantánea y solo saldría la cadena: el lote
+/// se vería en una de las dos copias. Con una de diferencia entre ellas, sale en las dos.
 /// </para>
 /// <para>
 /// <b>La propiedad solo lo ve por la cuenta.</b> <c>ElSaldoEsLaSumaDelLibroPorPropiedadTests</c>
@@ -108,12 +114,12 @@ public sealed class ElCuadreMiraElLoteYLaSerieTests(PostgresConTodosLosModulos p
 
         IReadOnlyList<PorHueco> antes = await PorHuecoAsync(contexto);
 
-        // Una unidad del L-2 pasa al L-1, en la fila viva y en la instantánea de este mes.
+        // Una unidad del L-2 pasa al L-1 en la instantánea de este mes, y dos en la fila viva.
         (await contexto.Database.ExecuteSqlRawAsync(
-            "UPDATE inventario.existencias SET fisico = fisico + 1 WHERE id = {0}", filaDeL1)).ShouldBe(1);
+            "UPDATE inventario.existencias SET fisico = fisico + 2 WHERE id = {0}", filaDeL1)).ShouldBe(1);
 
         (await contexto.Database.ExecuteSqlRawAsync(
-            "UPDATE inventario.existencias SET fisico = fisico - 1 WHERE id = {0}", filaDeL2)).ShouldBe(1);
+            "UPDATE inventario.existencias SET fisico = fisico - 2 WHERE id = {0}", filaDeL2)).ShouldBe(1);
 
         (await contexto.Database.ExecuteSqlRawAsync(
             "UPDATE inventario.instantaneas_mensuales SET fisico = fisico + 1 " +
@@ -159,15 +165,16 @@ public sealed class ElCuadreMiraElLoteYLaSerieTests(PostgresConTodosLosModulos p
                 descuadre.Filas))
             .ShouldBe(
                 [
-                    new Hallado("existencia", deLote.ArticuloId, hueco, l1, null, null, 5m, 6m, 1),
-                    new Hallado("existencia", deLote.ArticuloId, hueco, l2, null, null, 3m, 2m, 1),
+                    new Hallado("existencia", deLote.ArticuloId, hueco, l1, null, null, 6m, 7m, 1),
+                    new Hallado("existencia", deLote.ArticuloId, hueco, l2, null, null, 2m, 1m, 1),
                     new Hallado("instantanea", deLote.ArticuloId, hueco, l1, null, esteMes, 5m, 6m, 1),
                     new Hallado("instantanea", deLote.ArticuloId, hueco, l2, null, esteMes, 3m, 2m, 1),
                     new Hallado("existencia", articuloDeSerie, hueco, null, s1, null, 1m, 0m, 1),
                     new Hallado("existencia", articuloDeSerie, hueco, null, s2, null, 0m, 1m, 1),
                 ],
                 ignoreOrder: true,
-                customMessage: "las seis, cada una con su lote o su serie, y ninguna más");
+                customMessage: "las seis, cada una con su lote o su serie, y ninguna más: la fila viva, "
+                    + "contra su instantánea del corte, que también miente (ADR-0067 §7)");
 
         await estropeando.RollbackAsync();
 

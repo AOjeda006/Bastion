@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Bastion.Inventario.Infrastructure.Corte;
 
 /// <summary>
-/// El avance del corte contra la base: la lista de empresas, y el recálculo y el cuadre de una.
+/// El avance del corte contra la base: la lista de empresas, y el paso del avance y el cuadre de una.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -48,34 +48,36 @@ internal sealed class ElAvanceDelCorte(
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// <b>El cuadre va solo detrás de un avance.</b> Si el corte ya llegaba no hay nada nuevo que
-    /// comparar, y cuadrar cada hora todas las empresas sería leer el libro entero veinticuatro
-    /// veces al día para repetir la misma respuesta.
-    /// </remarks>
-    public async Task<AvanceHecho?> AvanzarAsync(
+    public async Task<MesAvanzado?> AvanzarUnMesAsync(
         Guid empresaId, DateOnly hastaElMes, CancellationToken cancelacion)
     {
         long inicio = reloj.GetTimestamp();
 
-        int? repuestas = await instantaneas
-            .AvanzarAsync(empresaId, hastaElMes, cancelacion)
+        MesDeLasInstantaneas? hecho = await instantaneas
+            .AvanzarUnMesAsync(empresaId, hastaElMes, cancelacion)
             .ConfigureAwait(false);
 
-        if (repuestas is null)
-        {
-            return null;
-        }
+        return hecho is null ? null : new MesAvanzado(hecho.Mes, hecho.Escritas, reloj.GetElapsedTime(inicio));
+    }
 
-        TimeSpan duracionDelAvance = reloj.GetElapsedTime(inicio);
-        long inicioDelCuadre = reloj.GetTimestamp();
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <b>Solo lo que no se ha cuadrado.</b> Si el corte no se ha movido desde el último cuadre, no
+    /// hay nada nuevo que comparar, y cuadrar cada hora todas las empresas sería repetir la misma
+    /// respuesta veinticuatro veces al día. Lo que quedó a medias, en cambio, se repite hasta que
+    /// acaba.
+    /// </remarks>
+    public async Task<CuadreHecho?> CuadrarLoPendienteAsync(Guid empresaId, CancellationToken cancelacion)
+    {
+        long inicio = reloj.GetTimestamp();
 
-        CuadreDeLasExistencias cifras = await cuadre
-            .CuadrarAsync(empresaId, cancelacion)
+        CuadreDeLoPendiente? hecho = await cuadre
+            .CuadrarLoPendienteAsync(empresaId, cancelacion)
             .ConfigureAwait(false);
 
-        return new AvanceHecho(
-            repuestas.Value, duracionDelAvance, reloj.GetElapsedTime(inicioDelCuadre), cifras);
+        return hecho is null
+            ? null
+            : new CuadreHecho(hecho.Desde, hecho.Hasta, reloj.GetElapsedTime(inicio), hecho.Cuadre);
     }
 
     /// <inheritdoc/>

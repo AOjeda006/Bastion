@@ -31,4 +31,22 @@ public sealed class CorteDeLaInstantanea : IDeInquilino
 
     /// <summary>El primer día del último mes con instantánea, incluido.</summary>
     public DateOnly HastaElMes { get; private set; }
+
+    /// <summary>
+    /// El primer día del último mes que el cuadre ha comparado, incluido, o <c>null</c> si no ha
+    /// comparado ninguno desde que el corte se rehízo (ADR-0067).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el estado del cuadre, y está en disco para que un cuadre que falla se repita.</b>
+    /// Mientras no llegue al corte, al cuadre le queda algo por comparar, y la vuelta siguiente del
+    /// trabajo mensual sigue desde aquí. Con el cuadre detrás del <c>COMMIT</c> del avance y sin nada
+    /// escrito, uno que fallara no se repetía nunca (ADR-0064 §4).
+    /// </para>
+    /// <para>
+    /// <b>Nunca pasa del corte</b>, y lo dice la base. Volver atrás lo deja en <c>null</c>: lo que se
+    /// había comparado ya no es lo que hay.
+    /// </para>
+    /// </remarks>
+    public DateOnly? CuadradoHasta { get; private set; }
 }

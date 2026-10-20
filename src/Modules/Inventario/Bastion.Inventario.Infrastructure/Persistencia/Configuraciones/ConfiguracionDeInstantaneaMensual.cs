@@ -53,7 +53,9 @@ internal sealed class ConfiguracionDeInstantaneaMensual : IEntityTypeConfigurati
             .HasPrecision(18, Importe.Decimales)
             .IsRequired();
 
-        // El recálculo borra por empresa y el cuadre lee por empresa.
-        instantanea.HasIndex(fila => fila.EmpresaId);
+        // Desde el 2.18 todo se lee y se borra por empresa y mes (ADR-0067): el avance lee el mes
+        // anterior, el cuadre lee dos meses seguidos y el recálculo borra el último. El mes va
+        // detrás porque es el rango, y la empresa sola sigue sirviéndose del mismo índice.
+        instantanea.HasIndex(fila => new { fila.EmpresaId, fila.Mes });
     }
 }

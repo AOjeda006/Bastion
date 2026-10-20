@@ -674,7 +674,7 @@ public sealed class ElCensoDeEsteCarrilTests
         // confirmación y nunca con una fecha futura—; la instantánea se borra, se recalcula y dice
         // lo mismo; el cuadre encuentra cada copia que miente y dice cuántas comparó; el
         // recálculo espera a la confirmación en vuelo; y dos empresas no se mezclan en ninguna de
-        // las sentencias crudas.
+        // las sentencias crudas. Y del 2.18 (ADR-0067): el avance un mes cada vez.
         "LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta",
         "LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos",
@@ -682,7 +682,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExistenciasSonLaSumaDelLibroTests.Dos_lineas_de_la_misma_clave_y_otro_documento_dejan_una_sola_fila_viva_con_la_suma",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una",
         "LasExistenciasSonLaSumaDelLibroTests.El_anfitrion_de_los_casos_no_arranca_el_trabajo_mensual_y_la_purga_si",
-        "LasExistenciasSonLaSumaDelLibroTests.El_avance_pone_el_corte_en_el_mes_que_toca_de_una_vez_y_no_rehace_lo_que_ya_llega",
+        "LasExistenciasSonLaSumaDelLibroTests.El_avance_pone_el_corte_un_mes_cada_vez_y_no_rehace_lo_que_ya_llega",
         "LasExistenciasSonLaSumaDelLibroTests.El_corte_de_cada_empresa_es_su_mes_y_el_primer_movimiento_solo_lo_lleva_la_que_no_tiene",
         "LasExistenciasSonLaSumaDelLibroTests.El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro",
         "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_de_una_empresa_no_frena_las_confirmaciones_de_otra",

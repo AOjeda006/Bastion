@@ -4,8 +4,8 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 
 /// <summary>
 /// Lo que el trabajo mensual cuenta de sí mismo, en su propio medidor: tres contadores
-/// (ADR-0063 §7), lo que tarda cada avance y cuántos meses lleva de retraso el corte más viejo
-/// (ADR-0064 §3).
+/// (ADR-0063 §7), lo que tarda cada mes del avance (ADR-0067 §4) y cuántos meses lleva de retraso el
+/// corte más viejo (ADR-0064 §3).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -23,7 +23,8 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 /// <b>La duración, en segundos y con los cubos alrededor de lo que decide</b>: el disparador, 10 s,
 /// y el plazo de cada orden, 30 s, que es el techo (ADR-0064 §2). Los cubos por defecto del SDK
 /// están pensados para milisegundos, y en segundos pondrían todo avance de menos de 5 s en el
-/// mismo. Solo se anota el avance que termina: el que no termina cuenta en los fallidos.
+/// mismo. Solo se anota el mes que termina: el que no termina cuenta en los fallidos. Desde el 2.18
+/// es un mes y no la puesta al día entera, porque un mes es lo que dura el exclusivo.
 /// </para>
 /// <para>
 /// <b>El retraso es un indicador y no un contador</b>, porque baja: vale cero mientras todas las
@@ -71,7 +72,7 @@ internal sealed class MetricasDelCorte : IDisposable
         _duracionDelAvance = _medidor.CreateHistogram(
             "bastion.inventario.corte.duracion_del_avance",
             unit: "s",
-            description: "Lo que tarda el avance del corte de una empresa, de abrir su transacción al COMMIT.",
+            description: "Lo que tarda un mes del avance del corte de una empresa, de abrir su transacción al COMMIT.",
             tags: null,
             advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = CubosDeLaDuracion });
 
@@ -91,7 +92,7 @@ internal sealed class MetricasDelCorte : IDisposable
     /// <param name="cuantos">Cuántos ha encontrado.</param>
     public void AnotarDescuadres(int cuantos) => _descuadres.Add(cuantos);
 
-    /// <summary>Apunta lo que ha tardado el avance de una empresa.</summary>
+    /// <summary>Apunta lo que ha tardado un mes del avance de una empresa.</summary>
     /// <param name="duracion">De abrir su transacción al <c>COMMIT</c>.</param>
     public void AnotarDuracionDelAvance(TimeSpan duracion) => _duracionDelAvance.Record(duracion.TotalSeconds);
 

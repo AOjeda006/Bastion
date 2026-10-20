@@ -59,10 +59,10 @@ internal sealed record ValorDelMes(ClaveDeExistencia Clave, DateOnly Mes, decima
 /// </para>
 /// <para>
 /// <b><see cref="DebidasEnCSharp"/> es una segunda cuenta, no una copia de la primera</b>, y
-/// <see cref="ValoresDebidosEnCSharp"/> es la misma para el valor, con el mismo bucle. El recálculo y
-/// el cuadre comparten un fragmento de SQL con funciones de ventana; esto recorre mes a mes y suma
-/// con un bucle. Si las dos se equivocaran igual, lo harían por caminos que no se
-/// parecen en nada, y eso es lo que da valor a que coincidan.
+/// <see cref="ValoresDebidosEnCSharp"/> es la misma para el valor, con el mismo bucle. El recálculo
+/// saca cada mes del anterior y del libro de su mes, y el cuadre compara cada uno con lo mismo
+/// (ADR-0067 §6); esto suma, para cada mes, el libro entero hasta su final. Si las dos se equivocaran
+/// igual, lo harían por caminos que no se parecen en nada, y eso es lo que da valor a que coincidan.
 /// </para>
 /// </remarks>
 internal static class LasExistencias

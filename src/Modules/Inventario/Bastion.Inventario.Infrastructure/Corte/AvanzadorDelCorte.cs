@@ -8,7 +8,8 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 
 /// <summary>
 /// El trabajo mensual de Inventario: cada hora, avanza el corte de las instantáneas de cada empresa
-/// hasta el mes anterior al de hoy, y cuadra las que avanza (ADR-0063 §7).
+/// hasta el mes anterior al de hoy, un mes cada vez, y cuadra lo que no esté cuadrado (ADR-0063 §7,
+/// ADR-0067).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -18,9 +19,14 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 /// </para>
 /// <para>
 /// <b>Cada empresa en su propio ámbito y su propio <c>try</c>.</b> El fallo de una se registra, cuenta
-/// en su métrica y no para a las demás, y la hora siguiente lo reintenta. Si lo que falla es el
-/// cuadre, el corte ya ha avanzado y la hora siguiente no lo repite: queda el error en el registro,
-/// con la empresa.
+/// en su métrica y no para a las demás, y la hora siguiente lo reintenta. Los meses que ya avanzó se
+/// quedan, porque cada uno es su propia transacción, y la hora siguiente sigue desde el último. Si lo
+/// que falla es el cuadre, también sigue desde el último mes que anotó (ADR-0067 §5).
+/// </para>
+/// <para>
+/// <b>Un mes por llamada, y la cancelación se mira entre uno y otro.</b> Una empresa que lleva meses
+/// sin avanzar se pone al día en una vuelta, pero soltando el exclusivo entre un mes y el siguiente:
+/// sus confirmaciones esperan un mes, no la puesta al día entera.
 /// </para>
 /// <para>
 /// <b>Nada sale de aquí hacia arriba</b>, por lo mismo que en la purga: una excepción que escapa de
@@ -117,10 +123,20 @@ internal sealed partial class AvanzadorDelCorte(
         {
             try
             {
-                if (await AvanzarAsync(empresaId, mes, elMes, cancelacion).ConfigureAwait(false))
+                // Uno por empresa, en su propio ámbito: el contexto de una no arrastra lo que haya
+                // dejado a medias la anterior.
+                using IServiceScope ambito = ambitos.CreateScope();
+                IAvanceDelCorte avance = ambito.ServiceProvider.GetRequiredService<IAvanceDelCorte>();
+
+                // La empresa cuenta como avanzada antes del cuadre: si lo que falla es el cuadre, el
+                // corte ya ha llegado, y cuenta en las dos.
+                if (await AvanzarAsync(avance, empresaId, mes, cancelacion).ConfigureAwait(false))
                 {
                     avanzadas++;
+                    metricas.AnotarAvanzada();
                 }
+
+                await CuadrarAsync(avance, empresaId, cancelacion).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancelacion.IsCancellationRequested)
             {
@@ -184,37 +200,50 @@ internal sealed partial class AvanzadorDelCorte(
         }
     }
 
-    // Uno por empresa, en su propio ámbito: el contexto de una no arrastra lo que haya dejado a
-    // medias la anterior.
+    // Mes a mes hasta que el corte llega. Cada mes es su transacción y su línea en el registro, y
+    // lo que tarda es lo que mide el histograma.
     private async Task<bool> AvanzarAsync(
-        Guid empresaId, DateOnly mes, string elMes, CancellationToken cancelacion)
+        IAvanceDelCorte avance, Guid empresaId, DateOnly mes, CancellationToken cancelacion)
     {
-        using IServiceScope ambito = ambitos.CreateScope();
+        bool avanzada = false;
 
-        AvanceHecho? hecho = await ambito.ServiceProvider
-            .GetRequiredService<IAvanceDelCorte>()
-            .AvanzarAsync(empresaId, mes, cancelacion)
-            .ConfigureAwait(false);
+        while (await avance.AvanzarUnMesAsync(empresaId, mes, cancelacion).ConfigureAwait(false) is { } hecho)
+        {
+            avanzada = true;
+            metricas.AnotarDuracionDelAvance(hecho.Duracion);
+
+            string elMes = ElMes(hecho.Mes);
+            MesAvanzado(registro, empresaId, elMes, hecho.Instantaneas, (long)hecho.Duracion.TotalMilliseconds);
+
+            cancelacion.ThrowIfCancellationRequested();
+        }
+
+        return avanzada;
+    }
+
+    // Detrás del avance, haya avanzado o no: lo que quedó a medias en una vuelta que falló se
+    // termina en la siguiente, aunque el corte ya llegara.
+    private async Task CuadrarAsync(IAvanceDelCorte avance, Guid empresaId, CancellationToken cancelacion)
+    {
+        CuadreHecho? hecho = await avance.CuadrarLoPendienteAsync(empresaId, cancelacion).ConfigureAwait(false);
 
         if (hecho is null)
         {
-            return false;
+            return;
         }
 
-        metricas.AnotarAvanzada();
-        metricas.AnotarDuracionDelAvance(hecho.DuracionDelAvance);
-
+        string desde = ElMes(hecho.Desde);
+        string hasta = ElMes(hecho.Hasta);
         int descuadres = hecho.Cuadre.Descuadres.Count;
 
-        Avanzada(
+        Cuadrada(
             registro,
             empresaId,
-            elMes,
-            hecho.Repuestas,
-            (long)hecho.DuracionDelAvance.TotalMilliseconds,
+            desde,
+            hasta,
             hecho.Cuadre.ExistenciasComparadas,
             hecho.Cuadre.InstantaneasComparadas,
-            (long)hecho.DuracionDelCuadre.TotalMilliseconds,
+            (long)hecho.Duracion.TotalMilliseconds,
             descuadres);
 
         if (descuadres > 0)
@@ -223,7 +252,8 @@ internal sealed partial class AvanzadorDelCorte(
             Descuadrada(
                 registro,
                 empresaId,
-                elMes,
+                desde,
+                hasta,
                 descuadres,
                 string.Join(
                     ", ",
@@ -234,8 +264,6 @@ internal sealed partial class AvanzadorDelCorte(
                 hecho.Cuadre.ExistenciasComparadas,
                 hecho.Cuadre.InstantaneasComparadas);
         }
-
-        return true;
     }
 
     // El mes, escrito con su año delante y en cultura invariante: el registro se lee igual en un
@@ -251,40 +279,33 @@ internal sealed partial class AvanzadorDelCorte(
 
     // La empresa va en el registro y no en la métrica: es lo que se mira cuando salta la alerta, y
     // en el registro no multiplica las series del recolector.
+    // Una línea por mes, desde el 2.18 (ADR-0067 §4): lo que se mira contra el disparador es lo que
+    // tarda cada mes, que es lo que dura el exclusivo.
     [LoggerMessage(
         EventId = 8701,
         Level = LogLevel.Information,
-        Message = "Corte de la empresa {EmpresaId} avanzado hasta {Mes}: {Repuestas} instantáneas " +
-            "rehechas en {MilisegundosDelAvance} ms. El cuadre comparó {Existencias} existencias y " +
-            "{Instantaneas} instantáneas en {MilisegundosDelCuadre} ms, con {Descuadres} descuadres.")]
-    private static partial void Avanzada(
-        ILogger registro,
-        Guid empresaId,
-        string mes,
-        int repuestas,
-        long milisegundosDelAvance,
-        long existencias,
-        long instantaneas,
-        long milisegundosDelCuadre,
-        int descuadres);
+        Message = "Corte de la empresa {EmpresaId} avanzado hasta {Mes}: {Instantaneas} instantáneas " +
+            "escritas en {Milisegundos} ms.")]
+    private static partial void MesAvanzado(
+        ILogger registro, Guid empresaId, string mes, int instantaneas, long milisegundos);
 
     [LoggerMessage(
         EventId = 8702,
         Level = LogLevel.Error,
-        Message = "El avance del corte de la empresa {EmpresaId} hasta {Mes} ha fallado. Se " +
-            "reintenta en la hora siguiente.")]
+        Message = "El avance o el cuadre del corte de la empresa {EmpresaId} hasta {Mes} ha fallado. " +
+            "Se reintenta en la hora siguiente, desde el último mes que llegó a hacer.")]
     private static partial void LaEmpresaFallo(ILogger registro, Guid empresaId, string mes, Exception fallo);
 
     [LoggerMessage(
         EventId = 8703,
         Level = LogLevel.Warning,
-        Message = "El cuadre de la empresa {EmpresaId}, tras avanzar el corte hasta {Mes}, encontró " +
-            "{Descuadres} descuadres ({Tipos}) en {Existencias} existencias y {Instantaneas} " +
-            "instantáneas comparadas.")]
+        Message = "El cuadre de la empresa {EmpresaId}, de {Desde} a {Hasta}, encontró {Descuadres} " +
+            "descuadres ({Tipos}) en {Existencias} existencias y {Instantaneas} instantáneas comparadas.")]
     private static partial void Descuadrada(
         ILogger registro,
         Guid empresaId,
-        string mes,
+        string desde,
+        string hasta,
         int descuadres,
         string tipos,
         long existencias,
@@ -295,4 +316,19 @@ internal sealed partial class AvanzadorDelCorte(
         Level = LogLevel.Error,
         Message = "La vuelta del avance del corte ha fallado. Se reintenta en la hora siguiente.")]
     private static partial void LaVueltaFallo(ILogger registro, Exception fallo);
+
+    [LoggerMessage(
+        EventId = 8705,
+        Level = LogLevel.Information,
+        Message = "Cuadre de la empresa {EmpresaId} de {Desde} a {Hasta}: {Existencias} existencias y " +
+            "{Instantaneas} instantáneas comparadas en {Milisegundos} ms, con {Descuadres} descuadres.")]
+    private static partial void Cuadrada(
+        ILogger registro,
+        Guid empresaId,
+        string desde,
+        string hasta,
+        long existencias,
+        long instantaneas,
+        long milisegundos,
+        int descuadres);
 }

@@ -86,6 +86,11 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_codigos_barras_unidades_segun_el_nivel"] = new([], [("unidades", "1")]),
         ["ck_condiciones_pago_plazo_legal"] = new([], [("dias_de_plazo", "30")]),
         ["ck_consumos_de_reserva_cantidad_positiva"] = Relleno.Ninguno,
+
+        // Las dos del cuadre guardado, del 2.18, sin relleno: la columna admite nulo y se queda en
+        // nulo, que es un corte que todavía no se ha cuadrado.
+        ["ck_cortes_de_la_instantanea_cuadrado_hasta_es_primer_dia"] = Relleno.Ninguno,
+        ["ck_cortes_de_la_instantanea_cuadrado_hasta_no_pasa_del_corte"] = Relleno.Ninguno,
         ["ck_cortes_de_la_instantanea_mes_es_primer_dia"] =
             new([], [("hasta_el_mes", "date_trunc('month', current_date)::date")]),
         ["ck_existencias_en_transito_no_negativo"] = Relleno.Ninguno,

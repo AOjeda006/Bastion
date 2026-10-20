@@ -175,6 +175,16 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// en vuelo.
 /// </para>
 /// <para>
+/// <b>Y el avance mes a mes</b> (ítem 2.18, ADR-0067). La vuelta del trabajo avanza un mes por
+/// llamada hasta el que toca, y cada mes es el que el modelo dice, con sus instantáneas; detrás
+/// cuadra lo que no está cuadrado, desde el mes siguiente al último cuadrado. Un séptimo generador,
+/// con su semilla, mete a veces un mes suelto del avance, y el corte se queda a mitad de una puesta
+/// al día mientras los demás pasos confirman, anulan, transfieren y leen el saldo. El modelo lleva
+/// también hasta dónde está cuadrado, que vuelve a nada con cada recálculo, y la comprobación de cada
+/// paso lo compara con la fila del corte. Al final, cada semilla ha leído el saldo con el corte a
+/// medias.
+/// </para>
+/// <para>
 /// <b>El modelo no conoce los identificadores del sistema.</b> Para el modelo, cada lote y cada
 /// serie es su código, y les da un identificador propio. Lo que se lee de la base se traduce con las
 /// tablas de los lotes y de las series, y esas tablas tienen que tener exactamente lo que el libro
@@ -197,15 +207,21 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLosModulos postgres)
     : IDisposable
 {
-    // DOSCIENTOS SESENTA DESDE EL ÍTEM 2.13. En el 2.8 fueron ochenta: con el stock que no baja de
-    // cero, cuarenta dejaban semillas sin una salida confirmada —sus anulaciones vaciaban todas las
-    // claves— o sin un documento contra el año cerrado. Con tres artículos y seis claves, ochenta
-    // dejaban cinco de las seis semillas sin ver a la serie parar un documento por sí sola, y ciento
-    // veinte, la 461 sin una entrada al precio medio. Con ciento sesenta, la 464 anulaba su primer
-    // recuento en la vuelta 156; los consumos de las reservas mueven el stock, y lo retrasan a la
-    // 245, y la 465 no consumía una reserva en parte hasta la 172. Alargar no cambia los primeros
-    // pasos: el generador sigue la misma serie.
-    private const int Pasos = 260;
+    // TRESCIENTOS CUARENTA DESDE EL ÍTEM 2.18, Y DOSCIENTOS SESENTA DESDE EL 2.13. En el 2.8 fueron
+    // ochenta: con el stock que no baja de cero, cuarenta dejaban semillas sin una salida confirmada
+    // —sus anulaciones vaciaban todas las claves— o sin un documento contra el año cerrado. Con tres
+    // artículos y seis claves, ochenta dejaban cinco de las seis semillas sin ver a la serie parar un
+    // documento por sí sola, y ciento veinte, la 461 sin una entrada al precio medio. Con ciento
+    // sesenta, la 464 anulaba su primer recuento en la vuelta 156; los consumos de las reservas mueven
+    // el stock, y lo retrasan a la 245, y la 465 no consumía una reserva en parte hasta la 172. Alargar
+    // no cambia los primeros pasos: el generador sigue la misma serie. En el 2.18, el mes suelto del
+    // avance mueve el corte, y con él lo que encuentra la clave nueva antes del corte, así que la
+    // secuencia de cada semilla cambia desde el primero. Con doscientos sesenta, trescientos y
+    // trescientos veinte, la 464 no enviaba nada sin stock, que en ella es un solo paso; con
+    // trescientos cuarenta, las seis pasan por todas las clases. La clase tarda 3 min 51 s, desde
+    // los 2 min 53 s de doscientos sesenta, y con cuatrocientos, 4 min 41 s, con dotnet test
+    // tests/Api.IntegrationTests --filter "FullyQualifiedName~ElSaldoEsLaSumaDelLibroPorPropiedadTests".
+    private const int Pasos = 340;
     private const string Anulacion = "anulación";
     private const string Futuro = "futuro";
     private const string Recalculo = "recálculo";
@@ -239,6 +255,8 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     private const string SaldoAUnaFecha = "saldo a una fecha";
     private const string TrabajoMensual = "trabajo mensual";
     private const string ClaveNuevaAntesDelCorte = "clave nueva antes del corte";
+    private const string MesDelAvance = "un mes del avance";
+    private const string TrabajoMensualQueSoloCuadra = "trabajo mensual que solo cuadra lo pendiente";
 
     // LOS CUATRO TRAMOS DEL DÍA DEL SALDO (ADR-0063 §10): cada uno lee la instantánea de otro mes, o
     // ninguna, y suma otro trozo del libro.
@@ -271,6 +289,20 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// cambia la secuencia de todas, como el reloj.
     /// </remarks>
     private const int PorcentajeDeClavesNuevas = 12;
+
+    /// <summary>
+    /// De cada cien pasos, cuántos traen detrás un mes suelto del avance del corte (ítem 2.18). Lo
+    /// que lo deja a medias es que el siguiente mes no llegue hasta otro de estos, una vuelta del
+    /// trabajo o un recálculo.
+    /// </summary>
+    /// <remarks>
+    /// <b>Diez, y lo que lo deja todo cubierto son los pasos, no este.</b> Con doscientos sesenta
+    /// pasos, al cinco, al diez, al quince y al veinte, la 464 se quedaba sin el envío rechazado sin
+    /// stock: cualquier mes suelto mueve el corte, y la serie de las otras cambia desde ahí. Con el
+    /// diez, cada semilla lleva de media treinta y cuatro meses sueltos, y en todas alguno deja el
+    /// corte a medias con una lectura del saldo detrás.
+    /// </remarks>
+    private const int PorcentajeDeMesesDelAvance = 10;
 
     /// <summary>
     /// De cada cien pasos, cuántos traen detrás uno del recuento (epílogo del 2.12). Un recuento
@@ -327,6 +359,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         CaducadaAlReservar, CaducadaAlConsumir, CaducadaAlLiberar, CaducadaQueYaNoSeLibera,
         EnvioPorEncimaDelDisponible,
         SaldoAUnaFecha, TrabajoMensual, ClaveNuevaAntesDelCorte,
+        MesDelAvance, TrabajoMensualQueSoloCuadra,
     ];
 
     private static readonly string[] s_tramosDelSaldo =
@@ -376,6 +409,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         Random recuentos = new(semilla + 3_000);
         Random apartados = new(semilla + 4_000);
         Random fechas = new(semilla + 5_000);
+        Random meses = new(semilla + 6_000);
         Secuencia secuencia = new(semilla);
 
         UnaEmpresa empresa = await UnaEmpresaAsync(semilla);
@@ -455,6 +489,33 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                 await UnaClaveNuevaAntesDelCorteAsync(fechas, modulo, empresa, secuencia);
                 await ComprobarAsync(empresa, secuencia);
             }
+
+            // UN MES SUELTO DEL AVANCE, EL ÚLTIMO Y CON SUS PROPIOS DADOS (ítem 2.18, ADR-0067 §1): los
+            // otros seis generadores no saben de él. Mueve el corte, y desde el primero los pasos que
+            // miran el corte encuentran otro.
+            if (meses.Next(100) < PorcentajeDeMesesDelAvance)
+            {
+                DateOnly? antes = secuencia.Corte;
+
+                await UnMesDelAvanceAsync(empresa, secuencia);
+                await ComprobarAsync(empresa, secuencia);
+
+                // Y SI LO HA DEJADO A MEDIAS, el saldo a una fecha en ese momento, con sus mismos
+                // dados: es el estado que trae el 2.18, y no se deja a que lo encuentre otro.
+                if (secuencia.CorteAMedias)
+                {
+                    await UnSaldoAUnaFechaAsync(meses, empresa, secuencia);
+                }
+
+                // Y SI CON ÉL LA PUESTA AL DÍA HA LLEGADO, la vuelta siguiente del trabajo, que ya no
+                // tiene nada que avanzar y solo cuadra (ADR-0067 §5). Es la de un trabajo que se cortó
+                // entre su último mes y su cuadre, y sin ella, la 463 no la encuentra ni con 400 pasos.
+                else if (secuencia.Corte != antes)
+                {
+                    await UnaVueltaDelTrabajoMensualAsync(empresa, secuencia);
+                    await ComprobarAsync(empresa, secuencia);
+                }
+            }
         }
 
         // AL FINAL, EL CORTE EN ESTE MES, que es el que da instantánea a todas las claves —el libro
@@ -465,7 +526,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         (await LasExistencias.RecalcularAsync(postgres, empresa.EmpresaId, esteMes))
             .ShouldBe(debidas.Count, secuencia.Relato());
 
-        secuencia.Corte = esteMes;
+        secuencia.Recalculado(esteMes);
         await ComprobarAsync(empresa, secuencia);
 
         CuadreDeLasExistencias cuadre = await LasExistencias.CuadrarAsync(postgres, empresa.EmpresaId);
@@ -535,6 +596,11 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         secuencia.SaldosConTransito.ShouldBeGreaterThan(
             0, "ninguna lectura del saldo ha comparado un par con algo en vuelo\n" + secuencia.Relato());
+
+        // Y CON EL CORTE A MEDIAS (ítem 2.18): sin una lectura entre dos meses de una puesta al día,
+        // el saldo con el corte a medio camino no lo habría mirado nadie.
+        secuencia.SaldosConElCorteAMedias.ShouldBeGreaterThan(
+            0, "ninguna lectura del saldo ha caído con el corte a mitad de una puesta al día\n" + secuencia.Relato());
 
         secuencia.Clases.ShouldBe(s_clasesDePaso, ignoreOrder: true, customMessage: secuencia.Relato());
     }
@@ -2406,7 +2472,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         DateOnly corte = new DateOnly(Hoy.Year - 1, 1, 1).AddMonths(azar.Next(12 + Hoy.Month));
 
         secuencia.Anotar(Recalculo, corte);
-        secuencia.Corte = corte;
+        secuencia.Recalculado(corte);
 
         (await LasExistencias.RecalcularAsync(postgres, empresa.EmpresaId, corte)).ShouldBe(
             LasExistencias.DebidasEnCSharp(secuencia.Libro, corte).Count, secuencia.Relato());
@@ -2521,6 +2587,13 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         secuencia.SaldosConCantidad += debidos.Count(saldo => saldo.Cantidad != 0m);
         secuencia.SaldosConTransito += debidos.Count(saldo => saldo.CantidadEnTransito != 0m);
 
+        // EL DE ANTES DEL PRIMER MOVIMIENTO NO CUENTA: no lee ninguna instantánea con fila, y lo que
+        // se mira es que lea la de un corte a medio camino.
+        if (secuencia.CorteAMedias && tramo != AntesDelPrimerMovimiento)
+        {
+            secuencia.SaldosConElCorteAMedias++;
+        }
+
         Resultado<SaldosAUnaFechaDto> manana =
             await lectura.Saldos.EjecutarAsync(Hoy.AddDays(1), null, null, todos, CancellationToken.None);
 
@@ -2530,53 +2603,186 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
     /// <summary>
     /// Una vuelta del trabajo mensual para la empresa: el avance del corte hasta el mes anterior al
-    /// de hoy, por el contenedor del anfitrión, con su cuadre (ítem 2.14, ADR-0063 §7).
+    /// de hoy, un mes por llamada, y el cuadre de lo que no esté cuadrado, por el contenedor del
+    /// anfitrión (ítem 2.14, ADR-0063 §7; ítem 2.18, ADR-0067).
     /// </summary>
     /// <remarks>
     /// <para>
     /// <b>Lo que el trabajo hace con una empresa, y no el bucle</b>: el anfitrión de los tests lo
     /// lleva apagado, porque avanzaría el corte de las empresas de otros casos. El mes es el que
-    /// calcula el trabajo, con el reloj parado de la propiedad.
+    /// calcula el trabajo, con el reloj parado de la propiedad, y las llamadas son las suyas, en un
+    /// solo ámbito: un mes cada vez hasta que no queda ninguno, y el cuadre detrás.
     /// </para>
     /// <para>
-    /// <b>Si el corte ya llega, no toca nada</b>, y el paso no cuenta como su clase: lo que la clase
-    /// pide es un avance, con las instantáneas rehechas desde el libro y un cuadre que las compara
-    /// todas sin descuadres. Las rehechas las mira después la comprobación de siempre.
+    /// <b>Cada mes, el que el modelo dice</b>, con las instantáneas debidas de ese mes; y el cuadre,
+    /// desde el mes siguiente al último cuadrado, o desde el primero si no hay ninguno, hasta el
+    /// corte, comparando todas las de esos meses sin descuadres. Las instantáneas y lo cuadrado los
+    /// mira después la comprobación de siempre.
+    /// </para>
+    /// <para>
+    /// <b>Si el corte ya llega, el paso no cuenta como su clase</b>, que pide un avance. Si además
+    /// queda algo por cuadrar, solo cuadra, y es otra clase; y si no queda nada, no toca nada.
     /// </para>
     /// </remarks>
     private async Task UnaVueltaDelTrabajoMensualAsync(UnaEmpresa empresa, Secuencia secuencia)
     {
         DateOnly elQueToca = AvanzadorDelCorte.MesQueToca(Ahora);
-        bool yaLlega = secuencia.Corte >= elQueToca;
-        AvanceHecho? hecho;
+        List<(DateOnly Mes, int Instantaneas)> faltan = LosMesesQueFaltan(secuencia, elQueToca);
+        DateOnly? corte = faltan.Count > 0 ? faltan[^1].Mes : secuencia.Corte;
+        bool pendiente = corte is not null && secuencia.CuadradoHasta != corte;
 
         secuencia.Anotar(
-            yaLlega ? "trabajo mensual con el corte ya al día" : TrabajoMensual,
+            faltan.Count > 0 ? TrabajoMensual
+                : pendiente ? TrabajoMensualQueSoloCuadra
+                : "trabajo mensual con el corte ya al día y cuadrado",
             string.Create(CultureInfo.InvariantCulture, $"hasta {elQueToca:yyyy-MM}"));
+
+        List<(DateOnly Mes, int Instantaneas)> hechos = [];
+        CuadreHecho? cuadre;
+
+        using (IServiceScope ambito = _api.Services.CreateScope())
+        {
+            IAvanceDelCorte avance = ambito.ServiceProvider.GetRequiredService<IAvanceDelCorte>();
+
+            // CON TOPE: un avance que no moviera el corte no pararía nunca, y el caso se colgaría en
+            // vez de ponerse rojo.
+            while (hechos.Count <= faltan.Count
+                && await avance.AvanzarUnMesAsync(empresa.EmpresaId, elQueToca, CancellationToken.None) is { } mes)
+            {
+                mes.Duracion.ShouldBeGreaterThan(TimeSpan.Zero, secuencia.Relato());
+                hechos.Add((mes.Mes, mes.Instantaneas));
+            }
+
+            cuadre = await avance.CuadrarLoPendienteAsync(empresa.EmpresaId, CancellationToken.None);
+        }
+
+        hechos.ShouldBe(faltan, "los meses del avance no son los que faltaban\n" + secuencia.Relato());
+
+        secuencia.Corte = corte;
+        secuencia.CorteAMedias = false;
+
+        if (!pendiente)
+        {
+            cuadre.ShouldBeNull("no quedaba nada por cuadrar, y el cuadre ha hecho algo\n" + secuencia.Relato());
+
+            return;
+        }
+
+        DateOnly hasta = corte!.Value;
+        DateOnly desde = secuencia.CuadradoHasta?.AddMonths(1) ?? ElPrimerMesPorCuadrar(secuencia, hasta);
+        CuadreHecho hecho = cuadre.ShouldNotBeNull("quedaba algo por cuadrar, y el cuadre no ha hecho nada\n" + secuencia.Relato());
+
+        (hecho.Desde, hecho.Hasta).ShouldBe((desde, hasta), secuencia.Relato());
+        hecho.Cuadre.ExistenciasComparadas.ShouldBe(secuencia.ClavesConFila().Count, secuencia.Relato());
+
+        hecho.Cuadre.InstantaneasComparadas.ShouldBe(
+            LasExistencias.DebidasEnCSharp(secuencia.Libro, hasta).Count(foto => foto.Mes >= desde),
+            "el cuadre no ha comparado las instantáneas de los meses que quedaban\n" + secuencia.Relato());
+
+        hecho.Cuadre.Descuadres.ShouldBeEmpty("el cuadre del trabajo encuentra descuadres\n" + secuencia.Relato());
+
+        secuencia.CuadradoHasta = hasta;
+    }
+
+    /// <summary>
+    /// Un mes suelto del avance del corte hacia el mes anterior al de hoy, por el contenedor del
+    /// anfitrión (ítem 2.18, ADR-0067 §1): lo que el trabajo hace entre un mes y el siguiente de una
+    /// puesta al día.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Deja el corte a medias</b> mientras no llegue al que toca, y los pasos que vienen detrás
+    /// confirman, anulan, transfieren y leen el saldo con él ahí: es una puesta al día parada entre
+    /// dos meses, con lo que entra entre uno y otro. Lo cuadrado no se mueve: el cuadre va detrás de
+    /// la vuelta, no de cada mes.
+    /// </para>
+    /// <para>
+    /// <b>Si el corte ya llega, no toca nada</b>, y el paso no cuenta como su clase.
+    /// </para>
+    /// </remarks>
+    private async Task UnMesDelAvanceAsync(UnaEmpresa empresa, Secuencia secuencia)
+    {
+        DateOnly elQueToca = AvanzadorDelCorte.MesQueToca(Ahora);
+        List<(DateOnly Mes, int Instantaneas)> faltan = LosMesesQueFaltan(secuencia, elQueToca);
+
+        if (faltan.Count == 0)
+        {
+            secuencia.Anotar("mes del avance con el corte ya al día", elQueToca);
+        }
+        else
+        {
+            secuencia.Anotar(MesDelAvance, faltan[0].Mes);
+        }
+
+        MesAvanzado? hecho;
 
         using (IServiceScope ambito = _api.Services.CreateScope())
         {
             hecho = await ambito.ServiceProvider
                 .GetRequiredService<IAvanceDelCorte>()
-                .AvanzarAsync(empresa.EmpresaId, elQueToca, CancellationToken.None);
+                .AvanzarUnMesAsync(empresa.EmpresaId, elQueToca, CancellationToken.None);
         }
 
-        if (yaLlega)
+        if (faltan.Count == 0)
         {
             hecho.ShouldBeNull("el corte ya llegaba, y el avance ha hecho algo\n" + secuencia.Relato());
 
             return;
         }
 
-        secuencia.Corte = elQueToca;
+        MesAvanzado mes = hecho.ShouldNotBeNull("el corte no llegaba, y el avance no ha hecho nada\n" + secuencia.Relato());
 
-        AvanceHecho avance = hecho.ShouldNotBeNull("el corte no llegaba, y el avance no ha hecho nada\n" + secuencia.Relato());
-        IReadOnlyList<FotoDelMes> debidas = LasExistencias.DebidasEnCSharp(secuencia.Libro, elQueToca);
+        (mes.Mes, mes.Instantaneas).ShouldBe(faltan[0], "el mes del avance no es el que tocaba\n" + secuencia.Relato());
 
-        avance.Repuestas.ShouldBe(debidas.Count, secuencia.Relato());
-        avance.Cuadre.ExistenciasComparadas.ShouldBe(secuencia.ClavesConFila().Count, secuencia.Relato());
-        avance.Cuadre.InstantaneasComparadas.ShouldBe(debidas.Count, secuencia.Relato());
-        avance.Cuadre.Descuadres.ShouldBeEmpty("el cuadre del avance encuentra descuadres\n" + secuencia.Relato());
+        secuencia.Corte = mes.Mes;
+        secuencia.CorteAMedias = mes.Mes < elQueToca;
+    }
+
+    /// <summary>
+    /// Los meses que le faltan al corte para llegar a uno, con las instantáneas que el modelo dice
+    /// que lleva cada uno: los que el avance tiene que hacer, uno por llamada.
+    /// </summary>
+    /// <remarks>
+    /// Desde el siguiente al corte; sin corte, desde el del primer movimiento. Sin corte y sin libro,
+    /// o con el primer movimiento después del mes, uno solo, sin instantáneas: el avance pone el corte
+    /// en el mes de una vez, porque no hay nada que escribir.
+    /// </remarks>
+    private static List<(DateOnly Mes, int Instantaneas)> LosMesesQueFaltan(Secuencia secuencia, DateOnly hasta)
+    {
+        DateOnly? primero = secuencia.Libro.Count == 0
+            ? null
+            : LasExistencias.MesDe(secuencia.Libro.Min(apunte => apunte.Fecha));
+
+        if (secuencia.Corte is null && (primero is null || primero > hasta))
+        {
+            return [(hasta, 0)];
+        }
+
+        IReadOnlyList<FotoDelMes> debidas = LasExistencias.DebidasEnCSharp(secuencia.Libro, hasta);
+        List<(DateOnly Mes, int Instantaneas)> meses = [];
+
+        for (DateOnly mes = secuencia.Corte?.AddMonths(1) ?? primero!.Value; mes <= hasta; mes = mes.AddMonths(1))
+        {
+            meses.Add((mes, debidas.Count(foto => foto.Mes == mes)));
+        }
+
+        return meses;
+    }
+
+    /// <summary>
+    /// El primer mes que cuadra un cuadre sin nada cuadrado: el del primer movimiento, o el del
+    /// corte si es anterior o si no hay libro.
+    /// </summary>
+    private static DateOnly ElPrimerMesPorCuadrar(Secuencia secuencia, DateOnly corte)
+    {
+        if (secuencia.Libro.Count == 0)
+        {
+            return corte;
+        }
+
+        DateOnly primero = LasExistencias.MesDe(secuencia.Libro.Min(apunte => apunte.Fecha));
+
+        return primero < corte ? primero : corte;
     }
 
     /// <summary>
@@ -2641,7 +2847,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             DateOnly corte = suMes.AddMonths(1 + fechas.Next(meses));
 
             secuencia.Anotar(Recalculo, corte);
-            secuencia.Corte = corte;
+            secuencia.Recalculado(corte);
 
             (await LasExistencias.RecalcularAsync(postgres, empresa.EmpresaId, corte)).ShouldBe(
                 LasExistencias.DebidasEnCSharp(secuencia.Libro, corte).Count, secuencia.Relato());
@@ -2749,6 +2955,12 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                 ignoreOrder: true,
                 customMessage: "las instantáneas no son las del libro\n" + secuencia.Relato());
 
+        // EL CORTE Y LO CUADRADO, en su fila (ítem 2.18): lo cuadrado es lo que el cuadre de la vuelta
+        // siguiente se salta, y un recálculo lo deja en nada.
+        (await ElCorteGuardadoAsync(empresa.EmpresaId)).ShouldBe(
+            (secuencia.Corte, secuencia.CuadradoHasta),
+            "el corte o lo cuadrado no es lo del modelo\n" + secuencia.Relato());
+
         (_, long fueraDeRango, long enDosSitios) = await LasSeriesDelLibroAsync(empresa.EmpresaId);
 
         (fueraDeRango, enDosSitios).ShouldBe(
@@ -2849,6 +3061,33 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         secuencia.MasValoracionesEnVuelo =
             Math.Max(secuencia.MasValoracionesEnVuelo, cuadre.ValoracionesEnTransitoComparadas);
+    }
+
+    /// <summary>
+    /// El corte de la empresa y hasta dónde está cuadrado, leídos por debajo del sistema; los dos
+    /// nulos si no tiene.
+    /// </summary>
+    private async Task<(DateOnly? HastaElMes, DateOnly? CuadradoHasta)> ElCorteGuardadoAsync(Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand orden = new(
+            "SELECT hasta_el_mes, cuadrado_hasta FROM inventario.cortes_de_la_instantanea WHERE empresa_id = @empresa",
+            conexion);
+
+        orden.Parameters.AddWithValue("empresa", empresaId);
+
+        await using NpgsqlDataReader lector = await orden.ExecuteReaderAsync();
+
+        if (!await lector.ReadAsync())
+        {
+            return (null, null);
+        }
+
+        return (
+            lector.GetFieldValue<DateOnly>(0),
+            await lector.IsDBNullAsync(1) ? null : lector.GetFieldValue<DateOnly>(1));
     }
 
     /// <summary>La tabla de la valoración de la empresa, leída sin el filtro y sin el mapeo.</summary>
@@ -3813,6 +4052,21 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         internal int ClavesNuevas { get; set; }
 
         /// <summary>
+        /// Hasta dónde ha cuadrado el trabajo, o nada (ADR-0067 §5): lo pone la vuelta del trabajo en
+        /// el corte, y lo quita cada recálculo.
+        /// </summary>
+        internal DateOnly? CuadradoHasta { get; set; }
+
+        /// <summary>
+        /// Si el corte está a mitad de una puesta al día: lo dejó ahí un mes suelto del avance, antes
+        /// del que toca, y no ha vuelto a moverlo nadie.
+        /// </summary>
+        internal bool CorteAMedias { get; set; }
+
+        /// <summary>Las lecturas del saldo con el corte a medias que leen alguna instantánea.</summary>
+        internal int SaldosConElCorteAMedias { get; set; }
+
+        /// <summary>
         /// Lo que vuela hacia cada clave del destino (ADR-0053 §1). Una clave a la que algo ha volado
         /// se queda aunque baje a cero: su fila viva tampoco se borra.
         /// </summary>
@@ -3880,6 +4134,18 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         internal DateOnly? Corte { get; set; }
 
         internal bool PasadoCerrado { get; set; }
+
+        /// <summary>
+        /// Lo que deja un recálculo: el corte donde se le dijo, nada cuadrado, porque vuelve atrás
+        /// hasta el principio (ADR-0067 §3), y el corte ya no a medias.
+        /// </summary>
+        /// <param name="corte">El mes del recálculo.</param>
+        internal void Recalculado(DateOnly corte)
+        {
+            Corte = corte;
+            CuadradoHasta = null;
+            CorteAMedias = false;
+        }
 
         internal int BorradoresEnElPasado { get; set; }
 

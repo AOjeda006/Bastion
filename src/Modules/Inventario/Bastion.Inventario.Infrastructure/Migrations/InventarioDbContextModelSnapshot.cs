@@ -487,6 +487,10 @@ namespace Bastion.Inventario.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("empresa_id");
 
+                    b.Property<DateOnly?>("CuadradoHasta")
+                        .HasColumnType("date")
+                        .HasColumnName("cuadrado_hasta");
+
                     b.Property<DateOnly>("HastaElMes")
                         .HasColumnType("date")
                         .HasColumnName("hasta_el_mes");
@@ -496,6 +500,10 @@ namespace Bastion.Inventario.Infrastructure.Migrations
 
                     b.ToTable("cortes_de_la_instantanea", "inventario", t =>
                         {
+                            t.HasCheckConstraint("ck_cortes_de_la_instantanea_cuadrado_hasta_es_primer_dia", "extract(day from cuadrado_hasta) = 1");
+
+                            t.HasCheckConstraint("ck_cortes_de_la_instantanea_cuadrado_hasta_no_pasa_del_corte", "cuadrado_hasta <= hasta_el_mes");
+
                             t.HasCheckConstraint("ck_cortes_de_la_instantanea_mes_es_primer_dia", "extract(day from hasta_el_mes) = 1");
                         });
 
@@ -603,8 +611,8 @@ namespace Bastion.Inventario.Infrastructure.Migrations
                     b.HasKey("ExistenciaId", "Mes")
                         .HasName("pk_instantaneas_mensuales");
 
-                    b.HasIndex("EmpresaId")
-                        .HasDatabaseName("ix_instantaneas_mensuales_empresa_id");
+                    b.HasIndex("EmpresaId", "Mes")
+                        .HasDatabaseName("ix_instantaneas_mensuales_empresa_id_mes");
 
                     b.ToTable("instantaneas_mensuales", "inventario", t =>
                         {

@@ -268,8 +268,10 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         //     cerrojo consultivo, ni una funcion de ventana en un `INSERT ... SELECT`.
         //   - Por que no leen para decidir: la sentencia del libro suma sobre lo que hay y lee una
         //     sola cosa, el corte de la empresa, que el cerrojo del recalculo impide que cambie
-        //     mientras ella esta en vuelo. El recalculo lee el libro entero, pero despues de tomar
-        //     ese cerrojo. El cuadre solo lee, en una sola foto.
+        //     mientras ella esta en vuelo. El recalculo, desde el item 2.18 un mes cada vez, lee
+        //     el mes anterior y el libro del suyo despues de tomar ese cerrojo. El cuadre lee en
+        //     una sola foto, y desde el 2.18 escribe solo su marca, con la version de la fila
+        //     del corte como guarda.
         //   - Y las tres comparan la empresa ellas mismas en cada tabla que tocan. La del libro la
         //     toma de IInquilinoActual; el recalculo y el cuadre, desde el 2.14, la reciben de quien
         //     los llama, porque el trabajo mensual no tiene inquilino (ADR-0063 §7), y la API les
@@ -287,9 +289,11 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
 
         ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
          "LasInstantaneasMensuales.cs usa .ExecuteSql"] =
-            "tira y repone las instantaneas de una empresa desde el libro, con el cerrojo exclusivo "
-            + "de esa empresa tomado lo primero para que ninguna de sus confirmaciones quede a "
-            + "medias. Cada sentencia compara la empresa en cada tabla que toca, con la que recibe de "
+            "escribe las instantaneas de un mes de una empresa desde las del mes anterior y el libro "
+            + "de ese mes, o borra las de su ultimo mes, y mueve su corte: desde el item 2.18, un mes "
+            + "por transaccion, con el cerrojo exclusivo de esa empresa tomado lo primero para que "
+            + "ninguna de sus confirmaciones quede a medias. Cada sentencia compara la empresa en "
+            + "cada tabla que toca, con la que recibe de "
             + "quien la llama: la API le pasa la del inquilino, y el trabajo mensual, la de cada "
             + "empresa que avanza",
 
@@ -300,7 +304,27 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "medias aparezca en una y no en otra. Desde el 2.11 compara tambien el transito con "
             + "las lineas de las transferencias enviadas. Solo lee, y compara la empresa en cada "
             + "tabla que toca, con la que recibe de quien lo llama, como el recalculo; la linea, "
-            + "que no tiene empresa, por la de su transferencia",
+            + "que no tiene empresa, por la de su transferencia. Desde el 2.18, el cuadre de lo "
+            + "pendiente hace esa lectura un mes cada vez, en una foto con el corte y su version",
+
+        // Y SUS DOS PAREJAS, DEL ITEM 2.18 (ADR-0067): cada una es la otra mitad de un fichero que
+        // ya estaba aqui. El avance lee, antes de escribir un mes, el corte, el primer movimiento
+        // y el ultimo mes con instantaneas; y el cuadre de lo pendiente anota hasta donde llega
+        // en la fila del corte. Ni una ni otra lee para decidir lo que suma: la primera decide
+        // que mes toca, con el exclusivo tomado, y la segunda no toca ninguna copia del libro.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
+         "LasInstantaneasMensuales.cs usa .SqlQuery"] =
+            "lee el corte de una empresa, su primer movimiento y su ultimo mes con instantaneas, "
+            + "con el cerrojo exclusivo de esa empresa ya tomado, para saber que mes le toca "
+            + "escribir o borrar. Cada lectura compara la empresa con la que recibe de quien la "
+            + "llama, como las escrituras del mismo fichero",
+
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/Existencias/" +
+         "ElCuadreDeLasExistencias.cs usa .ExecuteSql"] =
+            "anota en la fila del corte de una empresa hasta que mes esta cuadrado, despues de "
+            + "cuadrar ese mes, y solo si la fila no ha cambiado desde la foto que lo cuadro: "
+            + "compara la empresa y la version de la fila (xmin), y un recalculo o un avance en "
+            + "medio dejan la marca sin poner. No escribe ninguna copia del libro",
 
         ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/" +
          "CerrojoDeEjercicios.cs usa .SqlQuery"] =
