@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
@@ -19,6 +20,7 @@ using Bastion.Organizacion.Contracts.Ejercicios;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Contracts.Series;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -46,14 +48,17 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// van dentro de una transacción que se deshace.
 /// </para>
 /// <para>
-/// <b>Semillas: el fichero entero es del 440 al 459, del 858 al 865, y la 873 y la 874.</b> Las
-/// empresas, del 440 al 449; los maestros de instalación, del 450 al 459. El caso de las dos empresas
-/// se lleva la 447 y la 448, y la 457 y la 458; el de las dos salidas del ítem 2.8, la 449 y la 459.
-/// Los tres del cerrojo de la empresa, del 2.14, del 858 al 862, empresa y maestros con el mismo
-/// número: el bloque estaba libre, y lo dice <c>LasReservasTests</c>. Los dos del avance del corte,
-/// también del 2.14, la 863 y la 864 del mismo modo, y la 865, una empresa sin existencias. El del
-/// corte de cada empresa, del 2.15, la 873 y la 874, del mismo modo: eran las primeras libres
-/// detrás de las de <c>ElSaldoAUnaFechaTests</c>.
+/// <b>Semillas: el fichero entero es del 440 al 459, del 858 al 865, y la 873, la 874, la 875, la
+/// 899 y la 900.</b> Las empresas, del 440 al 449; los maestros de instalación, del 450 al 459. El
+/// caso de las dos empresas se lleva la 447 y la 448, y la 457 y la 458; el de las dos salidas del
+/// ítem 2.8, la 449 y la 459. Los tres del cerrojo de la empresa, del 2.14, del 858 al 862, empresa
+/// y maestros con el mismo número: el bloque estaba libre, y lo dice <c>LasReservasTests</c>. Los
+/// dos del avance del corte, también del 2.14, la 863 y la 864 del mismo modo, y la 865, una
+/// empresa sin existencias. El del corte de cada empresa, del 2.15, la 873 y la 874, del mismo
+/// modo: eran las primeras libres detrás de las de <c>ElSaldoAUnaFechaTests</c>. Los tres del 2.18,
+/// la 875, la 899 y la 900, también del mismo modo: la 875 y la 899 son las dos que el bloque del
+/// 2.17 dejó libres a sus lados, y la 900, la primera detrás del bloque que <c>LasReservasTests</c>
+/// buscó libre, del 830 al 899. Del 901 al 905 son de la importación, que lleva delante 33 000 000.
 /// </para>
 /// <para>
 /// <b>El cerrojo de las instantáneas es de la empresa desde el 2.14</b> (ADR-0063 §5 y §6), y tiene
@@ -78,7 +83,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <para>
 /// <b>Desde el 2.18 avanza un mes cada vez</b>, y cuadra detrás lo que no esté cuadrado (ADR-0067).
 /// Los casos lo llaman como el trabajo: mes a mes hasta que el corte llega, en un solo ámbito, y el
-/// cuadre de lo pendiente después.
+/// cuadre de lo pendiente después. Uno mete una clave nueva entre dos meses de una puesta al día,
+/// otro rompe un cuadre a medias y lo sigue en la vuelta siguiente, y el último cruza un recálculo
+/// con un cuadre, que no anota lo que comparó.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -1201,6 +1208,242 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         limpio.Cuadre.Descuadres.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// Una confirmación de una clave nueva entre dos meses de una puesta al día: el mes siguiente la
+    /// espera, y la lleva hasta el corte (ítem 2.18, ADR-0067 §1).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>La confirmación entra después del primer mes</b>, con el corte ya en él, y se queda dentro
+    /// con el compartido de su empresa tomado: deja la instantánea de su clave en ese mes, que es el
+    /// corte que lee. La puesta al día sigue como la sigue el trabajo, un mes por llamada en un solo
+    /// ámbito, y el mes siguiente se para en el exclusivo hasta el <c>COMMIT</c> de la confirmación.
+    /// </para>
+    /// <para>
+    /// <b>Sin el exclusivo en el paso, el mes siguiente no esperaría</b>, y no vería ni la fila viva
+    /// ni la instantánea de la clave nueva, que todavía no están confirmadas: a la clave le faltarían
+    /// todos los meses desde ese hasta el corte. La confirmación escribe antes de que el paso llegue, y
+    /// es justo lo que el paso tiene que ver: la carrera es sobre lo que ella escribe (epílogo del
+    /// 2.11).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Una_clave_nueva_entre_dos_meses_de_una_puesta_al_dia_la_espera_el_mes_siguiente()
+    {
+        ElAlmacenDelCaso caso =
+            await UnAlmacenAsync(875, "EXI-AZ", 875, ubicaciones: 2, conElAnioPasado: true);
+
+        int pasado = Hoy.Year - 1;
+        DateOnly marzo = new(pasado, 3, 1);
+        DateOnly elQueToca = LasExistencias.MesDe(Hoy).AddMonths(-1);
+
+        await using ElModuloDeInventario modulo = new(postgres, caso.EmpresaId);
+
+        await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 3, 10), new Linea(0, 5m));
+
+        // EL PRIMER MES DE LA PUESTA AL DÍA, suelto: sin corte, empieza en el de su primer movimiento.
+        MesAvanzado primero = (await AvanzarUnMesAsync(caso.EmpresaId, elQueToca)).ShouldNotBeNull();
+
+        (primero.Mes, primero.Instantaneas).ShouldBe((marzo, 1));
+
+        // TRANSACCIÓN 1: una clave NUEVA, la otra ubicación, con fecha del mes del corte y por detrás de
+        // nada (ADR-0047): el artículo se movió en ese almacén el día 10, y esta es del 20. Confirma y
+        // no suelta.
+        DateOnly delVeinte = new(pasado, 3, 20);
+        Guid ajusteId = await AbrirAsync(modulo, caso, caso.SerieDe(delVeinte).Id, delVeinte, [new Linea(1, 4m)]);
+
+        (Resultado<AjusteDto> confirmacion, IDbContextTransaction enVuelo) =
+            await modulo.ConfirmarYQuedarseDentroAsync(ajusteId);
+
+        Task<IReadOnlyList<MesAvanzado>> elResto;
+
+        await using (enVuelo)
+        {
+            confirmacion.EsCorrecto.ShouldBeTrue($"«{confirmacion.Error?.Codigo}»");
+
+            // TRANSACCIÓN 2: el resto de la puesta al día, como la hace el trabajo. Su primer mes se
+            // para en el exclusivo, detrás de la confirmación.
+            elResto = AvanzarAsync(caso.EmpresaId, elQueToca);
+
+            await EsperarAQueLaFreneAsync(modulo.ProcesoDeLaBase, elResto);
+
+            await enVuelo.CommitAsync();
+        }
+
+        IReadOnlyList<MesAvanzado> meses = await elResto.WaitAsync(TimeSpan.FromSeconds(60));
+        int cuantos = ((elQueToca.Year - marzo.Year) * 12) + elQueToca.Month - marzo.Month;
+
+        // CADA MES DEL RESTO LLEVA LAS DOS CLAVES, desde el primero: el que esperó ya vio la nueva.
+        meses.Select(mes => (mes.Mes, mes.Instantaneas)).ShouldBe(
+            [.. Enumerable.Range(1, cuantos).Select(mes => (marzo.AddMonths(mes), 2))],
+            "el mes que esperó a la confirmación tiene que haber visto su clave, y los demás arrastrarla");
+
+        IReadOnlyList<FotoDelMes> debidas = LasExistencias.DebidasEnCSharp(
+            await LasExistencias.LibroAsync(postgres, caso.EmpresaId), elQueToca);
+
+        (await CorteAsync(caso.EmpresaId)).ShouldBe(elQueToca);
+
+        (await LasExistencias.InstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(
+            debidas, "la clave nueva tiene su instantánea en cada mes, desde el suyo hasta el corte");
+
+        (await LasExistencias.ValoresDeLasInstantaneasAsync(postgres, caso.EmpresaId)).ShouldBe(
+            LasExistencias.ValoresDebidosEnCSharp(
+                await LasExistencias.LibroValoradoAsync(postgres, caso.EmpresaId), elQueToca));
+
+        CuadreHecho cuadre = (await CuadrarLoPendienteAsync(caso.EmpresaId)).ShouldNotBeNull();
+
+        (cuadre.Desde, cuadre.Hasta).ShouldBe((marzo, elQueToca));
+        cuadre.Cuadre.ExistenciasComparadas.ShouldBe(2);
+        cuadre.Cuadre.InstantaneasComparadas.ShouldBe(debidas.Count);
+        cuadre.Cuadre.Descuadres.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Un cuadre que falla a medias deja anotado hasta dónde llegó, y la vuelta siguiente sigue desde
+    /// ahí (ítem 2.18, ADR-0067 §5).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El fallo lo pone el caso</b>, con un interceptor en el contexto del cuadre que revienta la
+    /// lectura de un mes, y solo la de ese: es lo que se ve cuando la orden pasa de su plazo o la
+    /// conexión se cae a mitad de una puesta al día. Los meses de antes ya tienen su marca, cada uno
+    /// la suya; el del fallo y los de después, no.
+    /// </para>
+    /// <para>
+    /// <b>La vuelta siguiente va por el anfitrión</b>, como el trabajo, y cuadra solo lo que faltaba:
+    /// desde el mes del fallo hasta el corte. Lo que compara se cuenta, así que un cuadre que volviera
+    /// a empezar, o que se saltara el mes del fallo, no daría las mismas cifras.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Un_cuadre_que_falla_a_medias_sigue_en_la_vuelta_siguiente_desde_el_ultimo_mes_que_anoto()
+    {
+        ElAlmacenDelCaso caso =
+            await UnAlmacenAsync(899, "EXI-BA", 899, ubicaciones: 2, conElAnioPasado: true);
+
+        int pasado = Hoy.Year - 1;
+        DateOnly junio = new(pasado, 6, 1);
+        DateOnly elQueToca = LasExistencias.MesDe(Hoy).AddMonths(-1);
+
+        await using (ElModuloDeInventario modulo = new(postgres, caso.EmpresaId))
+        {
+            await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 3, 10), new Linea(0, 5m));
+            await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 7, 20), new Linea(1, 7m));
+        }
+
+        (await AvanzarAsync(caso.EmpresaId, elQueToca)).ShouldNotBeEmpty();
+
+        IReadOnlyList<FotoDelMes> debidas = LasExistencias.DebidasEnCSharp(
+            await LasExistencias.LibroAsync(postgres, caso.EmpresaId), elQueToca);
+
+        // LA PRIMERA VUELTA, CON JUNIO ROTO: marzo, abril y mayo se cuadran y se anotan, y la lectura
+        // de junio revienta.
+        ElMesQueRevienta rotura = new(junio);
+
+        await using (InventarioDbContext contexto = ElContextoCon(caso.EmpresaId, rotura))
+        {
+            InvalidOperationException fallo = await Should.ThrowAsync<InvalidOperationException>(
+                new ElCuadreDeLasExistencias(contexto, TimeProvider.System)
+                    .CuadrarLoPendienteAsync(caso.EmpresaId, CancellationToken.None));
+
+            fallo.InnerException.ShouldBeOfType<TimeoutException>("lo que falló tiene que ser la rotura del caso");
+        }
+
+        rotura.Reventadas.ShouldBe(1, "la rotura tiene que haber encontrado la lectura de su mes, y una vez");
+
+        (await CuadradoHastaAsync(caso.EmpresaId)).ShouldBe(
+            junio.AddMonths(-1), "lo que se cuadró antes del fallo se queda anotado, mes a mes");
+
+        // LA VUELTA SIGUIENTE, por el anfitrión: desde junio hasta el corte, ni un mes antes.
+        CuadreHecho siguiente = (await CuadrarLoPendienteAsync(caso.EmpresaId)).ShouldNotBeNull(
+            "quedaba por cuadrar desde junio, y la vuelta siguiente tiene que cuadrarlo");
+
+        (siguiente.Desde, siguiente.Hasta).ShouldBe((junio, elQueToca));
+        siguiente.Cuadre.ExistenciasComparadas.ShouldBe(2);
+        siguiente.Cuadre.InstantaneasComparadas.ShouldBe(debidas.Count(foto => foto.Mes >= junio));
+        siguiente.Cuadre.Descuadres.ShouldBeEmpty();
+
+        (await CuadradoHastaAsync(caso.EmpresaId)).ShouldBe(elQueToca);
+        (await CuadrarLoPendienteAsync(caso.EmpresaId)).ShouldBeNull("y ya no queda nada");
+    }
+
+    /// <summary>
+    /// Un cuadre que se cruza con un recálculo no anota el mes que comparó, y la vuelta siguiente lo
+    /// compara otra vez sobre lo que el recálculo dejó (ítem 2.18, ADR-0067 §5).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El cruce lo pone el caso</b>, con un interceptor en el contexto del cuadre que, cuando la
+    /// lectura del primer mes ya ha salido, recalcula la empresa por otra conexión, y solo esa vez. El
+    /// recálculo vuelve atrás hasta quitar el corte y avanza otra vez hasta el mismo mes: el corte es
+    /// el de antes, pero su fila es otra, y lo que el cuadre comparó era la de antes.
+    /// </para>
+    /// <para>
+    /// <b>Lo que lo protege es la versión de la fila del corte</b>, leída con el mes en la misma foto
+    /// (<see cref="ElCuadreDeLasExistencias.SqlDeLaMarca"/>): la marca no toca ninguna fila, y el
+    /// cuadre para en ese mes. Sin ella, anotaría marzo en la fila nueva y seguiría hasta el corte
+    /// como si nada hubiera pasado.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Un_cuadre_que_se_cruza_con_un_recalculo_no_anota_lo_que_comparo()
+    {
+        ElAlmacenDelCaso caso =
+            await UnAlmacenAsync(900, "EXI-BB", 900, ubicaciones: 2, conElAnioPasado: true);
+
+        int pasado = Hoy.Year - 1;
+        DateOnly marzo = new(pasado, 3, 1);
+        DateOnly elQueToca = LasExistencias.MesDe(Hoy).AddMonths(-1);
+
+        await using (ElModuloDeInventario modulo = new(postgres, caso.EmpresaId))
+        {
+            await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 3, 10), new Linea(0, 5m));
+            await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 7, 20), new Linea(1, 7m));
+        }
+
+        (await AvanzarAsync(caso.EmpresaId, elQueToca)).ShouldNotBeEmpty();
+        (await CuadradoHastaAsync(caso.EmpresaId)).ShouldBeNull("el avance no cuadra, y el caso cuadra después");
+
+        IReadOnlyList<FotoDelMes> debidas = LasExistencias.DebidasEnCSharp(
+            await LasExistencias.LibroAsync(postgres, caso.EmpresaId), elQueToca);
+
+        // EL CUADRE, CON EL RECÁLCULO CRUZADO en la lectura de marzo, que es su primer mes.
+        ElRecalculoQueSeCruza cruce = new(
+            marzo, () => LasExistencias.RecalcularAsync(postgres, caso.EmpresaId, elQueToca));
+
+        CuadreDeLoPendiente? cruzado;
+
+        await using (InventarioDbContext contexto = ElContextoCon(caso.EmpresaId, cruce))
+        {
+            cruzado = await new ElCuadreDeLasExistencias(contexto, TimeProvider.System)
+                .CuadrarLoPendienteAsync(caso.EmpresaId, CancellationToken.None);
+        }
+
+        cruce.Cruces.ShouldBe(1, "el cruce tiene que haber encontrado la lectura de su mes, y una vez");
+        cruce.Repuestas.ShouldBe(debidas.Count, "y el recálculo, haber repuesto todas las instantáneas");
+
+        CuadreDeLoPendiente cuadre = cruzado.ShouldNotBeNull("marzo se llegó a comparar");
+
+        (cuadre.Desde, cuadre.Hasta).ShouldBe((marzo, marzo), "el cuadre para en el mes en que se cruzó");
+        cuadre.Cuadre.InstantaneasComparadas.ShouldBe(debidas.Count(foto => foto.Mes == marzo));
+        cuadre.Cuadre.Descuadres.ShouldBeEmpty();
+
+        (await CuadradoHastaAsync(caso.EmpresaId)).ShouldBeNull(
+            "lo comparado era el corte de antes del recálculo, y no se anota en el de después");
+        (await CorteAsync(caso.EmpresaId)).ShouldBe(elQueToca, "el recálculo deja el corte donde estaba");
+
+        // LA VUELTA SIGUIENTE, por el anfitrión: otra vez desde marzo, sobre lo que dejó el recálculo.
+        CuadreHecho siguiente = (await CuadrarLoPendienteAsync(caso.EmpresaId)).ShouldNotBeNull(
+            "marzo no quedó anotado, y la vuelta siguiente tiene que cuadrarlo");
+
+        (siguiente.Desde, siguiente.Hasta).ShouldBe((marzo, elQueToca));
+        siguiente.Cuadre.ExistenciasComparadas.ShouldBe(2);
+        siguiente.Cuadre.InstantaneasComparadas.ShouldBe(debidas.Count);
+        siguiente.Cuadre.Descuadres.ShouldBeEmpty();
+
+        (await CuadradoHastaAsync(caso.EmpresaId)).ShouldBe(elQueToca);
+    }
+
     [Fact]
     public async Task Las_empresas_del_avance_son_las_que_tienen_existencias_cada_una_una_vez()
     {
@@ -1398,6 +1641,19 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         return meses;
     }
 
+    /// <summary>Un solo mes del avance del corte de una empresa, por el contenedor del anfitrión.</summary>
+    /// <param name="empresaId">La empresa.</param>
+    /// <param name="hastaElMes">El mes al que tiene que llegar.</param>
+    /// <returns>El mes que ha hecho, o <c>null</c> si el corte ya llegaba.</returns>
+    private async Task<MesAvanzado?> AvanzarUnMesAsync(Guid empresaId, DateOnly hastaElMes)
+    {
+        using IServiceScope ambito = _api.Services.CreateScope();
+
+        return await ambito.ServiceProvider
+            .GetRequiredService<IAvanceDelCorte>()
+            .AvanzarUnMesAsync(empresaId, hastaElMes, CancellationToken.None);
+    }
+
     /// <summary>
     /// Cuadra lo que la empresa no tiene cuadrado, por el contenedor del anfitrión, como lo hace el
     /// trabajo detrás del avance (ADR-0067 §5).
@@ -1459,6 +1715,22 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         leer.Parameters.AddWithValue("empresa", empresaId);
 
         return await leer.ExecuteScalarAsync() is DateOnly mes ? mes : null;
+    }
+
+    /// <summary>
+    /// Un contexto de Inventario de la empresa como el de <see cref="PostgresConTodosLosModulos.AbrirInventario"/>,
+    /// con el interceptor del caso puesto.
+    /// </summary>
+    /// <param name="empresaId">La empresa.</param>
+    /// <param name="interceptor">El que revienta la lectura de un mes, o el que se cruza con ella.</param>
+    /// <returns>El contexto, sin transacción.</returns>
+    private InventarioDbContext ElContextoCon(Guid empresaId, DbCommandInterceptor interceptor)
+    {
+        DbContextOptionsBuilder<InventarioDbContext> opciones = new();
+        InventarioDbContext.Configurar(opciones, postgres.CadenaDeConexion);
+        opciones.AddInterceptors(interceptor);
+
+        return new InventarioDbContext(opciones.Options, new InquilinoFijo(empresaId), new AccesoCerrado());
     }
 
     /// <summary>Un descuadre, sin lo que todos comparten.</summary>
@@ -1775,6 +2047,83 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         {
             await transaccion.DisposeAsync();
             await conexion.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Revienta la lectura del cuadre de un mes, y solo esa: la orden que devuelve filas y lleva el mes
+    /// entre sus parámetros. Las demás pasan.
+    /// </summary>
+    /// <remarks>
+    /// Revienta con un <see cref="TimeoutException"/>, que es lo que se ve cuando una orden pasa de su
+    /// plazo, y la estrategia de ejecución del proveedor lo tiene por pasajero y lo envuelve en un
+    /// <see cref="InvalidOperationException"/>, como en producción. Cuenta las que revienta: el caso
+    /// afirma que encontró la suya, porque un selector que no encontrara nada dejaría pasar el cuadre
+    /// entero, y el caso lo vería como un fallo que no ha ocurrido.
+    /// </remarks>
+    /// <param name="mes">El primer día del mes que revienta.</param>
+    private sealed class ElMesQueRevienta(DateOnly mes) : DbCommandInterceptor
+    {
+        /// <summary>Cuántas lecturas ha reventado.</summary>
+        internal int Reventadas { get; private set; }
+
+        /// <inheritdoc/>
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.Parameters.Cast<DbParameter>().Any(parametro => parametro.Value is DateOnly valor && valor == mes))
+            {
+                Reventadas++;
+
+                throw new TimeoutException(string.Create(
+                    CultureInfo.InvariantCulture, $"El caso revienta la lectura del cuadre de {mes:yyyy-MM}."));
+            }
+
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Recalcula la empresa cuando la lectura del cuadre de un mes ya ha salido, y solo la primera vez:
+    /// la orden que devuelve filas y lleva el mes entre sus parámetros. Las demás pasan.
+    /// </summary>
+    /// <remarks>
+    /// El recálculo va por otra conexión, con su propio contexto, mientras la foto del cuadre sigue
+    /// abierta: lo que el cuadre ha leído es de antes, y la fila del corte que anota, de después.
+    /// Cuenta las lecturas en que se cruza y lo que repuso el recálculo: el caso afirma que encontró
+    /// la suya, porque un selector que no encontrara nada dejaría el cuadre sin cruce, y la marca se
+    /// pondría sin que la versión tuviera nada que proteger.
+    /// </remarks>
+    /// <param name="mes">El primer día del mes en cuya lectura se cruza.</param>
+    /// <param name="recalcular">El recálculo, que devuelve cuántas instantáneas ha repuesto.</param>
+    private sealed class ElRecalculoQueSeCruza(DateOnly mes, Func<Task<int>> recalcular) : DbCommandInterceptor
+    {
+        /// <summary>En cuántas lecturas del mes se ha cruzado.</summary>
+        internal int Cruces { get; private set; }
+
+        /// <summary>Cuántas instantáneas repuso el recálculo.</summary>
+        internal int Repuestas { get; private set; }
+
+        /// <inheritdoc/>
+        public override async ValueTask<DbDataReader> ReaderExecutedAsync(
+            DbCommand command,
+            CommandExecutedEventData eventData,
+            DbDataReader result,
+            CancellationToken cancellationToken = default)
+        {
+            bool esLaDelMes = command.Parameters
+                .Cast<DbParameter>()
+                .Any(parametro => parametro.Value is DateOnly valor && valor == mes);
+
+            if (esLaDelMes && ++Cruces == 1)
+            {
+                Repuestas = await recalcular();
+            }
+
+            return await base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
         }
     }
 

@@ -674,7 +674,9 @@ public sealed class ElCensoDeEsteCarrilTests
         // confirmación y nunca con una fecha futura—; la instantánea se borra, se recalcula y dice
         // lo mismo; el cuadre encuentra cada copia que miente y dice cuántas comparó; el
         // recálculo espera a la confirmación en vuelo; y dos empresas no se mezclan en ninguna de
-        // las sentencias crudas. Y del 2.18 (ADR-0067): el avance un mes cada vez.
+        // las sentencias crudas. Y del 2.18 (ADR-0067): el avance un mes cada vez, una clave nueva
+        // que entra entre dos meses de una puesta al día, un cuadre que falla a medias y sigue en la
+        // vuelta siguiente, y uno que se cruza con un recálculo y no anota lo que comparó.
         "LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta",
         "LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos",
@@ -691,6 +693,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExistenciasSonLaSumaDelLibroTests.La_migracion_rellena_el_valor_de_cada_instantanea_con_el_libro_hasta_su_mes",
         "LasExistenciasSonLaSumaDelLibroTests.Las_empresas_del_avance_son_las_que_tienen_existencias_cada_una_una_vez",
         "LasExistenciasSonLaSumaDelLibroTests.Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan",
+        "LasExistenciasSonLaSumaDelLibroTests.Un_cuadre_que_falla_a_medias_sigue_en_la_vuelta_siguiente_desde_el_ultimo_mes_que_anoto",
+        "LasExistenciasSonLaSumaDelLibroTests.Un_cuadre_que_se_cruza_con_un_recalculo_no_anota_lo_que_comparo",
+        "LasExistenciasSonLaSumaDelLibroTests.Una_clave_nueva_entre_dos_meses_de_una_puesta_al_dia_la_espera_el_mes_siguiente",
         "LasExistenciasSonLaSumaDelLibroTests.Una_fecha_futura_no_se_confirma_y_no_deja_nada_en_el_libro_ni_en_la_existencia",
 
         // Del ítem 2.11 (revisión del paso 5): las guardas de la transferencia que no tenían un

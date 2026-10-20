@@ -46,8 +46,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <b>Semillas.</b> La 866, la empresa del libro y su primer artículo; la 867, el segundo. La 868, la
 /// empresa de la instantánea. La 869, la empresa de la consulta y su primer artículo; la 870, el
 /// segundo. La 871 y la 872, las dos empresas que no se ven. La 873 y la 874 son de
-/// <c>LasExistenciasSonLaSumaDelLibroTests</c> desde el 2.15, y del 875 al 899 quedan libres, por
-/// literal y por cálculo.
+/// <c>LasExistenciasSonLaSumaDelLibroTests</c> desde el 2.15, y la 875, la 899 y la 900, desde el
+/// 2.18; del 876 al 898, de los casos del 2.17, como dice <c>ElFactorDelAjusteTests</c>.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
