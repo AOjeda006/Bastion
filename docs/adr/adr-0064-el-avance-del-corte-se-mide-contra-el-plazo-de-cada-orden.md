@@ -8,7 +8,12 @@ revisado: 2026-10-17
 
 # ADR-0064: El avance del corte se mide contra el plazo de cada orden, y su disparador es de 10 s
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0067 (§3, §4, §5 y *Consecuencias*).**
+  - El [ADR-0067](adr-0067-el-avance-del-corte-va-un-mes-por-transaccion-y-el-cuadre-guarda-hasta-donde-llega.md) hace
+    decisión la propuesta del §5, con tres cambios: el recálculo a mano también va mes a mes, el
+    cuadre de cada vuelta es lo que quede por cuadrar, anotado en la fila del corte, y el cuadre
+    entero tampoco lee el libro entero. Con ella, el histograma del §3 mide cada mes, el cuadre
+    que falla del §4 se repite, y la C de las *Consecuencias* avanza.
 - **Fecha:** 2026-10-17
 - **Sale del ítem 2.15**, de su tercer tema, «el coste del trabajo mensual, medido contra el plazo
   que de verdad decide». El criterio está en `docs/PLAN.md`, en la casilla del 2.15.
@@ -82,6 +87,10 @@ registro, cuya excepción dice que se agotó el plazo, junto con el contador de 
 
 ### 3. Las dos métricas, sin la empresa como etiqueta
 
+> **Enmendado por el ADR-0067 (2026-10-19), en el primer punto.** El histograma mide cada mes del
+> avance, de abrir su transacción al `COMMIT`, y no la puesta al día entera: un mes es lo que dura
+> el exclusivo. Conserva el nombre y los cubos.
+
 Van en el medidor del corte, `Bastion.Inventario.Corte`, con los tres contadores del ADR-0063 §7:
 
 - **`bastion.inventario.corte.duracion_del_avance`**, un histograma en segundos de lo que tarda el
@@ -107,6 +116,11 @@ hacerlo cada hora para todas no diría nada que el corte no diga.
 
 ### 4. Lo que cuesta, y cómo crece
 
+> **Enmendado por el ADR-0067 (2026-10-19), en el último punto.** El cuadre ya no recorre todas
+> las instantáneas de una vez: va un mes por transacción, y lo que lleva cuadrado queda en la fila
+> del corte. Si falla, la vuelta siguiente sigue desde el último mes que anotó. Las cifras de este
+> punto son las del avance de entonces, y siguen siendo lo que se midió.
+
 Con las cifras del apartado *Medido*:
 
 - **La reposición cuesta unos 2,5 µs por movimiento y 31,4 µs por instantánea.** Es un ajuste
@@ -130,6 +144,13 @@ Con las cifras del apartado *Medido*:
   avanza nada, y ese cuadre no se repite nunca.
 
 ### 5. La propuesta: el avance incremental, un mes por transacción
+
+> **Enmendado por el ADR-0067 (2026-10-19): la propuesta es la decisión**, con tres cambios. El
+> recálculo a mano también va mes a mes, y no se queda con el cuadre entero. El cuadre de cada
+> vuelta no es «el mes nuevo y las existencias», sino todo lo que quede por cuadrar desde el último
+> mes anotado en la fila del corte. Y el cuadre entero tampoco lee el libro entero: cada
+> instantánea, contra la del mes anterior más el libro de su mes, y las existencias, contra la
+> instantánea del corte más el libro desde el corte.
 
 **Lo que se propone.** Cada avance hace un solo mes: el del corte más uno. Sus instantáneas son las
 del mes anterior más el libro de ese mes, por clave. Pone el corte en ese mes y confirma. Una
@@ -199,6 +220,10 @@ fuera del repositorio, en el *scratchpad* de la sesión.
   14,71. Las cifras de la clave foránea y del filtro de la junta del punto 4 salen de ahí.
 
 ## Consecuencias
+
+> **Enmendado por el ADR-0067 (2026-10-19), en el segundo y el tercer punto.** Con el avance de un
+> mes por transacción, una empresa de 10⁵ claves avanza, y sus confirmaciones esperan un mes; lo
+> que tarda cada uno está en el *Medido* del ADR-0067. Y el cuadre que falla se repite.
 
 - **El disparador se puede ver**: está en el histograma, con su cubo, y en el indicador del retraso,
   que deja de ser cero cuando una empresa se queda atrás.

@@ -8,8 +8,8 @@ revisado: 2026-09-29
 
 # ADR-0044: La existencia se mueve en la sentencia que anota el libro, y la instantánea mensual se puede tirar
 
-- **Estado:** aceptado. **Enmendado por el ADR-0046 (§2 y §4), por el ADR-0059 (§8) y por el
-  ADR-0063 (§5, §6 y §10); §5 corregido en `d9dd1e1`.**
+- **Estado:** aceptado. **Enmendado por el ADR-0046 (§2 y §4), por el ADR-0059 (§8), por el
+  ADR-0063 (§5, §6 y §10) y por el ADR-0067 (§5 y §6); §5 corregido en `d9dd1e1`.**
   - El [ADR-0046](adr-0046-el-valor-es-la-verdad-y-el-precio-medio-se-deduce.md) enmienda, en sus
     puntos 2 y 4, el §2 de este: una proyección que necesita leer lo que suma lo lee con la fila
     bloqueada, y la sentencia de la existencia se parte en dos.
@@ -25,6 +25,10 @@ revisado: 2026-09-29
     tiene su sitio en el orden de cerrojos; en el §6, el cuadre compara también el valor de la
     instantánea y recibe la empresa; en el §10, el trabajo mensual se pone al día solo y cuadra solo
     la empresa que avanza.
+  - El [ADR-0067](adr-0067-el-avance-del-corte-va-un-mes-por-transaccion-y-el-cuadre-guarda-hasta-donde-llega.md)
+    enmienda dos puntos: en el §5, el recálculo vuelve atrás y avanza un mes por transacción, en
+    vez de borrar y reponer de una vez; en el §6, lo que el cuadre espera de cada instantánea sale
+    del mes anterior y del libro de su mes, y no del fragmento del recálculo, que desaparece.
 - **Fecha:** 2026-09-27
 - **Enmienda el [ADR-0015](adr-0015-lo-unico-que-genera-el-servidor-son-los-testigos-de-concurrencia.md)**,
   puntos 2 y 3: lo que genera el servidor ya no son solo los testigos de concurrencia. También lo
@@ -135,6 +139,11 @@ su disparador.
 
 ### 5. El recálculo, y el cerrojo que lo hace seguro
 
+> **Enmendado por el ADR-0067 (2026-10-19), en los pasos 3 a 5.** El recálculo ya no pone el
+> corte, borra y repone de una vez. Vuelve atrás un mes por transacción, con el exclusivo de la
+> empresa, hasta que no le queda ninguna instantánea, y avanza otra vez un mes por transacción
+> hasta el que se le pide. El fragmento `LasDebidas` desaparece.
+
 > **Enmendado por el ADR-0063 (2026-10-13).** La empresa se pliega en C#, con un `XOR` de las
 > cuatro palabras del `Guid`, y no con `hashtext`. El compartido se toma justo antes de la sentencia
 > que crea y bloquea las filas vivas, entre la fila del documento y las existencias. Lo demás de
@@ -203,6 +212,12 @@ el criterio. El primer lector de la instantánea es el 2.14, y con él llega qui
 cada mes (punto 10).
 
 ### 6. El cuadre dice cuánto ha comparado
+
+> **Enmendado por el ADR-0067 (2026-10-19).** Lo que el cuadre espera de cada instantánea ya no
+> sale del fragmento del recálculo, que desaparece, sino de la instantánea del mes anterior más el
+> libro de su mes; y las filas vivas se comparan con la instantánea del corte más el libro desde el
+> corte. El cuadre entero sigue siendo una sola lectura; el del trabajo mensual va un mes por
+> transacción y anota hasta dónde llega.
 
 > **Enmendado por el ADR-0063 (2026-10-13).** El cuadre compara también el `valor` de cada
 > instantánea con la suma del libro hasta el final de su mes, y recibe la empresa de quien lo llama.

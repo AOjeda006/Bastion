@@ -8,11 +8,15 @@ revisado: 2026-10-13
 
 # ADR-0063: El saldo a una fecha es la instantánea más su tramo, y el cerrojo de la instantánea es de la empresa
 
-- **Estado:** aceptado. **Enmendado por el ADR-0064 (§7).**
+- **Estado:** aceptado. **Enmendado por el ADR-0064 (§7) y por el ADR-0067 (§1 y §7).**
   - El [ADR-0064](adr-0064-el-avance-del-corte-se-mide-contra-el-plazo-de-cada-orden.md) enmienda,
     en el §7, el disparador y las métricas: el disparador es de 10 s o un fallo por plazo, porque la
     orden se corta a los 30 s; y a los tres contadores se suman un histograma de lo que tarda cada
     avance y un indicador del retraso del corte más viejo.
+  - El [ADR-0067](adr-0067-el-avance-del-corte-va-un-mes-por-transaccion-y-el-cuadre-guarda-hasta-donde-llega.md)
+    enmienda el §1 y el §7: el valor de la instantánea se suma del mes anterior y del libro de su
+    mes, y no con `LasDebidas`, que desaparece; el avance va un mes por transacción hasta llegar;
+    y el cuadre de cada vuelta es lo que tenga pendiente toda empresa, haya avanzado o no.
 - **Fecha:** 2026-10-13
 - **Sale del ítem 2.14** y de su puerta, que el usuario contestó el 2026-10-13 con la opción
   recomendada en las cuatro preguntas. Las preguntas y las respuestas están en `docs/PLAN.md`, en
@@ -50,6 +54,10 @@ que solo se leen cuando algo falla. La pantalla de este ítem cabía; la siguien
 ## Decisión
 
 ### 1. El saldo es la cantidad y el valor, por artículo y almacén
+
+> **Enmendado por el ADR-0067 (2026-10-19), en el tercer punto.** La reposición ya no suma el
+> valor del libro con `LasDebidas`, que desaparece: cada mes lo suma de la instantánea del mes
+> anterior y del libro de su mes, en la misma sentencia que el físico.
 
 Lo contesta el usuario. Cada par de artículo y almacén que tiene valoración contesta, a la fecha D,
 su cantidad y su valor, con la divisa de su valoración.
@@ -173,6 +181,12 @@ usuario en la puerta, y el exclusivo al anotar lo ve el tercer caso, que es lo q
 prometía: dos confirmaciones de la misma empresa siguen sin esperarse.
 
 ### 7. El trabajo mensual
+
+> **Enmendado por el ADR-0067 (2026-10-19), en el cuarto y el quinto puntos.** El avance no rehace
+> las instantáneas desde el libro: avanza un mes por transacción, el del corte más uno, hasta
+> llegar, y suelta el exclusivo entre uno y otro. Y el cuadre no va solo en la empresa que avanza:
+> cada vuelta cuadra lo que tenga pendiente toda empresa, desde el último mes anotado en la fila
+> del corte, y cada mes tiene su línea en el registro.
 
 > **Enmendado por el ADR-0064 (2026-10-17), en el último punto y en el último párrafo.** A los tres
 > contadores se suman un histograma de lo que tarda cada avance, en segundos, y un indicador de los
