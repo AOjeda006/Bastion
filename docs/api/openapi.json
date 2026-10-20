@@ -7115,6 +7115,446 @@
         ]
       }
     },
+    "/api/v1/inventario/transferencias": {
+      "get": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Devuelve una página de transferencias, sin sus líneas.",
+        "description": "Va por la fecha de envío, de la última a la primera, y se ordena también por la fecha de\nrecepción y por el número. Una descartada no sale (ADR-0068 §5).",
+        "operationId": "Transferencias_Listar",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "pattern": "^(Borrador|Enviada|Recibida|Anulada)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "origen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "destino",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "maximum": 10737419,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTransferenciaResumenDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTransferenciaResumenDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDeTransferenciaResumenDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Abre una transferencia en borrador, con sus líneas.",
+        "description": "El factor de cada línea lo pone el servidor (ADR-0068 §2): 1 si la unidad es la base\n  del artículo, y si no, el de su conversión. Sin conversión, 422transferencia-sin-conversion; con una conversión retirada, 409transferencia-conversion-retirada; los dos, con la línea y las dos unidades en\n  actual. Cada rechazo de una línea dice cuál es: en errors, con la ruta del\n  campo, si es un 400, y en actual si es un 409 o un 422; el de una\n  ubicación bloqueada dice además la punta (§6).\nLa Idempotency-Key es OBLIGATORIA, por lo mismo que en el alta del ajuste: un\n  borrador de transferencia no tiene código único ni índice que pare el reintento, y uno sin\n  clave dejaría dos borradores iguales que se podrían enviar los dos. Sin cabecera son\n  428.\nLa respuesta no lleva ETag: con la clave obligatoria, la repetición devolvería la\n  versión de entonces (ADR-0057 §1). La versión se lee con la ficha. Como mucho doscientas\n  líneas; una más es un 400.",
+        "operationId": "Transferencias_Abrir",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirTransferenciaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirTransferenciaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirTransferenciaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferenciaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/transferencias/{id}": {
+      "get": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Devuelve la ficha de una transferencia, con todas sus líneas y su `ETag`.",
+        "description": "Cada línea lleva sus dos ubicaciones, el factor y la cantidad en unidad base, que pone el\nservidor, y su valor cuando ya se ha enviado (ADR-0068 §8). La versión es la que pide el\ndescarte.",
+        "operationId": "Transferencias_Obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la transferencia.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaDeTransferenciaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaDeTransferenciaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaDeTransferenciaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Descarta una transferencia en borrador: deja de verse, y no para el cierre del ejercicio.",
+        "description": "Es un borrado lógico, y por eso un DELETE (ADR-0068 §5), como el del ajuste: el\n  borrador no numeró, no movió nada y no bloqueó nada. La fila se queda con la marca, y la\n  auditoría dice quién y cuándo.\nCon If-Match, y la versión va antes que el estado (ADR-0057 §3): con una versión\n  vieja es 412, aunque ya no esté en borrador; con la de ahora, una enviada es 409transferencia-no-esta-en-borrador. Sin Idempotency-Key: repetirlo da\n  404, que es lo que es.",
+        "operationId": "Transferencias_Descartar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la transferencia.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/transferencias/{id}/envio": {
       "post": {
         "tags": [
@@ -16146,6 +16586,46 @@
         },
         "description": "Lo que hace falta para abrir un recuento de un almacén."
       },
+      "AbrirTransferenciaDto": {
+        "required": [
+          "serieId",
+          "almacenOrigenId",
+          "almacenDestinoId",
+          "fechaDeEnvio",
+          "lineas"
+        ],
+        "type": "object",
+        "properties": {
+          "serieId": {
+            "type": "string",
+            "description": "Serie que la numerará al enviarla (R5).",
+            "format": "uuid"
+          },
+          "almacenOrigenId": {
+            "type": "string",
+            "description": "De dónde sale.",
+            "format": "uuid"
+          },
+          "almacenDestinoId": {
+            "type": "string",
+            "description": "A dónde llega. Distinto del origen.",
+            "format": "uuid"
+          },
+          "fechaDeEnvio": {
+            "type": "string",
+            "description": "Día en que sale, que es al que se imputa la salida (R14).",
+            "format": "date"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaDeTransferenciaDto"
+            },
+            "description": "Qué se mueve: de una a doscientas líneas."
+          }
+        },
+        "description": "Lo que hace falta para abrir una transferencia en borrador."
+      },
       "AgregarCodigoBarrasDto": {
         "required": [
           "nivel"
@@ -18253,6 +18733,99 @@
         },
         "description": "Un ajuste, como se enseña en su ficha: la cabecera y todas sus líneas (ADR-0065 §8)."
       },
+      "FichaDeTransferenciaDto": {
+        "required": [
+          "id",
+          "serieId",
+          "numero",
+          "almacenOrigenId",
+          "almacenDestinoId",
+          "fechaDeEnvio",
+          "fechaDeRecepcion",
+          "estado",
+          "divisa",
+          "anulaAId",
+          "motivo",
+          "lineas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "serieId": {
+            "type": "string",
+            "description": "Serie que la numera (R5).",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "El correlativo, o `null` si todavía es un borrador.",
+            "format": "int64"
+          },
+          "almacenOrigenId": {
+            "type": "string",
+            "description": "De dónde sale.",
+            "format": "uuid"
+          },
+          "almacenDestinoId": {
+            "type": "string",
+            "description": "A dónde llega.",
+            "format": "uuid"
+          },
+          "fechaDeEnvio": {
+            "type": "string",
+            "description": "Día al que se imputa la salida.",
+            "format": "date"
+          },
+          "fechaDeRecepcion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Día al que se imputa la entrada, o `null` si no ha llegado.",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "description": "En qué punto de su vida está."
+          },
+          "divisa": {
+            "type": "string",
+            "description": "La de todos sus importes: la divisa base de la empresa al abrirla."
+          },
+          "anulaAId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La transferencia que esta compensa, o `null` si no es un inverso.",
+            "format": "uuid"
+          },
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Por qué se anuló lo que compensa; solo lo lleva un inverso."
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaDeFichaDeTransferenciaDto"
+            },
+            "description": "Sus líneas, en su orden."
+          }
+        },
+        "description": "Una transferencia, como se enseña en su ficha: la cabecera y todas sus líneas (ADR-0068 §8)."
+      },
       "IdentificacionDeAltaDto": {
         "required": [
           "pais",
@@ -18668,6 +19241,105 @@
         },
         "description": "Una línea de la ficha del ajuste."
       },
+      "LineaDeFichaDeTransferenciaDto": {
+        "required": [
+          "numero",
+          "ubicacionOrigenId",
+          "ubicacionDestinoId",
+          "articuloId",
+          "cantidadIntroducida",
+          "unidadIntroducidaId",
+          "factorAUnidadBase",
+          "cantidadEnUnidadBase",
+          "codigoDeLote",
+          "numeroDeSerie",
+          "valor"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Su posición en el documento, desde uno.",
+            "format": "int32"
+          },
+          "ubicacionOrigenId": {
+            "type": "string",
+            "description": "Hueco del almacén de origen.",
+            "format": "uuid"
+          },
+          "ubicacionDestinoId": {
+            "type": "string",
+            "description": "Hueco del almacén de destino.",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "Artículo que se mueve.",
+            "format": "uuid"
+          },
+          "cantidadIntroducida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad tal como se escribió: positiva, y negada en un inverso.",
+            "format": "double"
+          },
+          "unidadIntroducidaId": {
+            "type": "string",
+            "description": "Unidad en la que se escribió.",
+            "format": "uuid"
+          },
+          "factorAUnidadBase": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cuántas unidades base hay en una de las introducidas.",
+            "format": "double"
+          },
+          "cantidadEnUnidadBase": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "La misma cantidad, en la unidad en la que se suma.",
+            "format": "double"
+          },
+          "codigoDeLote": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El lote, si el artículo va por lote."
+          },
+          "numeroDeSerie": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El número de serie, si el artículo va por serie."
+          },
+          "valor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "Lo que salió del origen a su precio medio, que es lo que entra en el destino, o `null`\nmientras es un borrador (ADR-0053 §2).",
+            "format": "double"
+          }
+        },
+        "description": "Una línea de la ficha de la transferencia."
+      },
       "LineaDeRecuentoDto": {
         "required": [
           "id",
@@ -18810,6 +19482,62 @@
           }
         },
         "description": "Una línea del recuento: una clave del almacén, en su unidad base."
+      },
+      "LineaDeTransferenciaDto": {
+        "required": [
+          "ubicacionOrigenId",
+          "ubicacionDestinoId",
+          "articuloId",
+          "cantidadIntroducida",
+          "unidadIntroducidaId"
+        ],
+        "type": "object",
+        "properties": {
+          "ubicacionOrigenId": {
+            "type": "string",
+            "description": "Hueco del almacén de origen.",
+            "format": "uuid"
+          },
+          "ubicacionDestinoId": {
+            "type": "string",
+            "description": "Hueco del almacén de destino.",
+            "format": "uuid"
+          },
+          "articuloId": {
+            "type": "string",
+            "description": "Artículo que se mueve.",
+            "format": "uuid"
+          },
+          "cantidadIntroducida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Cantidad positiva, tal como se escribe: hasta seis decimales y menos de un billón, y lo mismo lo\nque mueve en la unidad base. Si no, `transferencia-cantidad-no-valida`.",
+            "format": "double"
+          },
+          "unidadIntroducidaId": {
+            "type": "string",
+            "description": "Unidad en la que se escribe: la base del artículo, o una que tenga conversión a ella.",
+            "format": "uuid"
+          },
+          "codigoDeLote": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El lote, si el artículo va por lote, con la forma del ajuste."
+          },
+          "numeroDeSerie": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El número de serie, si el artículo va por serie: una unidad base."
+          }
+        },
+        "description": "Una línea de la petición de alta."
       },
       "LineaTarifaDto": {
         "required": [
@@ -20233,6 +20961,52 @@
         },
         "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
       },
+      "PaginaDeTransferenciaResumenDto": {
+        "required": [
+          "elementos",
+          "pagina",
+          "tamanio",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferenciaResumenDto"
+            },
+            "description": "Los de esta página, en el orden pedido."
+          },
+          "pagina": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Número de página, empezando en 1.",
+            "format": "int32"
+          },
+          "tamanio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos elementos caben por página.",
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Cuántos hay en total, no en esta página.",
+            "format": "int64"
+          }
+        },
+        "description": "Una página de una colección, con lo que hace falta para pedir la siguiente."
+      },
       "PaginaDeUbicacionDto": {
         "required": [
           "elementos",
@@ -21480,6 +22254,72 @@
           }
         },
         "description": "Una transferencia, como se enseña."
+      },
+      "TransferenciaResumenDto": {
+        "required": [
+          "id",
+          "numero",
+          "almacenOrigenId",
+          "almacenDestinoId",
+          "fechaDeEnvio",
+          "fechaDeRecepcion",
+          "estado",
+          "anulaAId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador.",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "El correlativo, o `null` si todavía es un borrador.",
+            "format": "int64"
+          },
+          "almacenOrigenId": {
+            "type": "string",
+            "description": "De dónde sale.",
+            "format": "uuid"
+          },
+          "almacenDestinoId": {
+            "type": "string",
+            "description": "A dónde llega.",
+            "format": "uuid"
+          },
+          "fechaDeEnvio": {
+            "type": "string",
+            "description": "Día al que se imputa la salida.",
+            "format": "date"
+          },
+          "fechaDeRecepcion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Día al que se imputa la entrada, o `null` si no ha llegado.",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "description": "En qué punto de su vida está."
+          },
+          "anulaAId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "La transferencia que esta compensa, o `null` si no es un inverso.",
+            "format": "uuid"
+          }
+        },
+        "description": "Una transferencia, como sale en el listado: sin líneas."
       },
       "UbicacionDto": {
         "required": [

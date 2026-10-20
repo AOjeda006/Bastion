@@ -1051,6 +1051,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/transferencias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve una página de transferencias, sin sus líneas.
+         * @description Va por la fecha de envío, de la última a la primera, y se ordena también por la fecha de
+         *     recepción y por el número. Una descartada no sale (ADR-0068 §5).
+         */
+        get: operations["Transferencias_Listar"];
+        put?: never;
+        /**
+         * Abre una transferencia en borrador, con sus líneas.
+         * @description El factor de cada línea lo pone el servidor (ADR-0068 §2): 1 si la unidad es la base
+         *       del artículo, y si no, el de su conversión. Sin conversión, 422transferencia-sin-conversion; con una conversión retirada, 409transferencia-conversion-retirada; los dos, con la línea y las dos unidades en
+         *       actual. Cada rechazo de una línea dice cuál es: en errors, con la ruta del
+         *       campo, si es un 400, y en actual si es un 409 o un 422; el de una
+         *       ubicación bloqueada dice además la punta (§6).
+         *     La Idempotency-Key es OBLIGATORIA, por lo mismo que en el alta del ajuste: un
+         *       borrador de transferencia no tiene código único ni índice que pare el reintento, y uno sin
+         *       clave dejaría dos borradores iguales que se podrían enviar los dos. Sin cabecera son
+         *       428.
+         *     La respuesta no lleva ETag: con la clave obligatoria, la repetición devolvería la
+         *       versión de entonces (ADR-0057 §1). La versión se lee con la ficha. Como mucho doscientas
+         *       líneas; una más es un 400.
+         */
+        post: operations["Transferencias_Abrir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/transferencias/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve la ficha de una transferencia, con todas sus líneas y su `ETag`.
+         * @description Cada línea lleva sus dos ubicaciones, el factor y la cantidad en unidad base, que pone el
+         *     servidor, y su valor cuando ya se ha enviado (ADR-0068 §8). La versión es la que pide el
+         *     descarte.
+         */
+        get: operations["Transferencias_Obtener"];
+        put?: never;
+        post?: never;
+        /**
+         * Descarta una transferencia en borrador: deja de verse, y no para el cierre del ejercicio.
+         * @description Es un borrado lógico, y por eso un DELETE (ADR-0068 §5), como el del ajuste: el
+         *       borrador no numeró, no movió nada y no bloqueó nada. La fila se queda con la marca, y la
+         *       auditoría dice quién y cuándo.
+         *     Con If-Match, y la versión va antes que el estado (ADR-0057 §3): con una versión
+         *       vieja es 412, aunque ya no esté en borrador; con la de ahora, una enviada es 409transferencia-no-esta-en-borrador. Sin Idempotency-Key: repetirlo da
+         *       404, que es lo que es.
+         */
+        delete: operations["Transferencias_Descartar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/transferencias/{id}/envio": {
         parameters: {
             query?: never;
@@ -2261,6 +2328,31 @@ export interface components {
             /** @description Por qué se cuenta. Es el motivo que llevará su ajuste. */
             motivo: string;
         };
+        /** @description Lo que hace falta para abrir una transferencia en borrador. */
+        AbrirTransferenciaDto: {
+            /**
+             * Format: uuid
+             * @description Serie que la numerará al enviarla (R5).
+             */
+            serieId: string;
+            /**
+             * Format: uuid
+             * @description De dónde sale.
+             */
+            almacenOrigenId: string;
+            /**
+             * Format: uuid
+             * @description A dónde llega. Distinto del origen.
+             */
+            almacenDestinoId: string;
+            /**
+             * Format: date
+             * @description Día en que sale, que es al que se imputa la salida (R14).
+             */
+            fechaDeEnvio: string;
+            /** @description Qué se mueve: de una a doscientas líneas. */
+            lineas: components["schemas"]["LineaDeTransferenciaDto"][];
+        };
         /** @description Lo que hace falta para dar de alta un código de barras en un artículo. */
         AgregarCodigoBarrasDto: {
             /** @description El GTIN, de 8, 12, 13 o 14 cifras. Los espacios de los extremos no cuentan. */
@@ -3254,6 +3346,57 @@ export interface components {
             /** @description Sus líneas, en su orden. */
             lineas: components["schemas"]["LineaDeFichaDeAjusteDto"][];
         };
+        /** @description Una transferencia, como se enseña en su ficha: la cabecera y todas sus líneas (ADR-0068 §8). */
+        FichaDeTransferenciaDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Serie que la numera (R5).
+             */
+            serieId: string;
+            /**
+             * Format: int64
+             * @description El correlativo, o `null` si todavía es un borrador.
+             */
+            numero: null | number | string;
+            /**
+             * Format: uuid
+             * @description De dónde sale.
+             */
+            almacenOrigenId: string;
+            /**
+             * Format: uuid
+             * @description A dónde llega.
+             */
+            almacenDestinoId: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa la salida.
+             */
+            fechaDeEnvio: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa la entrada, o `null` si no ha llegado.
+             */
+            fechaDeRecepcion: null | string;
+            /** @description En qué punto de su vida está. */
+            estado: string;
+            /** @description La de todos sus importes: la divisa base de la empresa al abrirla. */
+            divisa: string;
+            /**
+             * Format: uuid
+             * @description La transferencia que esta compensa, o `null` si no es un inverso.
+             */
+            anulaAId: null | string;
+            /** @description Por qué se anuló lo que compensa; solo lo lleva un inverso. */
+            motivo: null | string;
+            /** @description Sus líneas, en su orden. */
+            lineas: components["schemas"]["LineaDeFichaDeTransferenciaDto"][];
+        };
         /** @description Con qué identificador se da de alta un tercero. */
         IdentificacionDeAltaDto: {
             /** @description País emisor, en ISO 3166-1 alfa-2. `ES` exige un NIF, NIE o CIF válido. */
@@ -3459,6 +3602,59 @@ export interface components {
              */
             valor: null | number | string;
         };
+        /** @description Una línea de la ficha de la transferencia. */
+        LineaDeFichaDeTransferenciaDto: {
+            /**
+             * Format: int32
+             * @description Su posición en el documento, desde uno.
+             */
+            numero: number | string;
+            /**
+             * Format: uuid
+             * @description Hueco del almacén de origen.
+             */
+            ubicacionOrigenId: string;
+            /**
+             * Format: uuid
+             * @description Hueco del almacén de destino.
+             */
+            ubicacionDestinoId: string;
+            /**
+             * Format: uuid
+             * @description Artículo que se mueve.
+             */
+            articuloId: string;
+            /**
+             * Format: double
+             * @description Cantidad tal como se escribió: positiva, y negada en un inverso.
+             */
+            cantidadIntroducida: number | string;
+            /**
+             * Format: uuid
+             * @description Unidad en la que se escribió.
+             */
+            unidadIntroducidaId: string;
+            /**
+             * Format: double
+             * @description Cuántas unidades base hay en una de las introducidas.
+             */
+            factorAUnidadBase: number | string;
+            /**
+             * Format: double
+             * @description La misma cantidad, en la unidad en la que se suma.
+             */
+            cantidadEnUnidadBase: number | string;
+            /** @description El lote, si el artículo va por lote. */
+            codigoDeLote: null | string;
+            /** @description El número de serie, si el artículo va por serie. */
+            numeroDeSerie: null | string;
+            /**
+             * Format: double
+             * @description Lo que salió del origen a su precio medio, que es lo que entra en el destino, o `null`
+             *     mientras es un borrador (ADR-0053 §2).
+             */
+            valor: null | number | string;
+        };
         /** @description Una línea del recuento: una clave del almacén, en su unidad base. */
         LineaDeRecuentoDto: {
             /**
@@ -3529,6 +3725,39 @@ export interface components {
              * @description La línea del ajuste que la movió, o `null`.
              */
             lineaDeAjusteId: null | string;
+        };
+        /** @description Una línea de la petición de alta. */
+        LineaDeTransferenciaDto: {
+            /**
+             * Format: uuid
+             * @description Hueco del almacén de origen.
+             */
+            ubicacionOrigenId: string;
+            /**
+             * Format: uuid
+             * @description Hueco del almacén de destino.
+             */
+            ubicacionDestinoId: string;
+            /**
+             * Format: uuid
+             * @description Artículo que se mueve.
+             */
+            articuloId: string;
+            /**
+             * Format: double
+             * @description Cantidad positiva, tal como se escribe: hasta seis decimales y menos de un billón, y lo mismo lo
+             *     que mueve en la unidad base. Si no, `transferencia-cantidad-no-valida`.
+             */
+            cantidadIntroducida: number | string;
+            /**
+             * Format: uuid
+             * @description Unidad en la que se escribe: la base del artículo, o una que tenga conversión a ella.
+             */
+            unidadIntroducidaId: string;
+            /** @description El lote, si el artículo va por lote, con la forma del ajuste. */
+            codigoDeLote?: null | string;
+            /** @description El número de serie, si el artículo va por serie: una unidad base. */
+            numeroDeSerie?: null | string;
         };
         /** @description Una línea de tarifa, tal como sale de la API. */
         LineaTarifaDto: {
@@ -4118,6 +4347,26 @@ export interface components {
         PaginaDeTipoCambioDto: {
             /** @description Los de esta página, en el orden pedido. */
             elementos: components["schemas"]["TipoCambioDto"][];
+            /**
+             * Format: int32
+             * @description Número de página, empezando en 1.
+             */
+            pagina: number | string;
+            /**
+             * Format: int32
+             * @description Cuántos elementos caben por página.
+             */
+            tamanio: number | string;
+            /**
+             * Format: int64
+             * @description Cuántos hay en total, no en esta página.
+             */
+            total: number | string;
+        };
+        /** @description Una página de una colección, con lo que hace falta para pedir la siguiente. */
+        PaginaDeTransferenciaResumenDto: {
+            /** @description Los de esta página, en el orden pedido. */
+            elementos: components["schemas"]["TransferenciaResumenDto"][];
             /**
              * Format: int32
              * @description Número de página, empezando en 1.
@@ -4770,6 +5019,46 @@ export interface components {
             motivo: null | string;
             /** @description La de todos sus importes: la divisa base de la empresa al abrirla. */
             divisa: string;
+        };
+        /** @description Una transferencia, como sale en el listado: sin líneas. */
+        TransferenciaResumenDto: {
+            /**
+             * Format: uuid
+             * @description Identificador.
+             */
+            id: string;
+            /**
+             * Format: int64
+             * @description El correlativo, o `null` si todavía es un borrador.
+             */
+            numero: null | number | string;
+            /**
+             * Format: uuid
+             * @description De dónde sale.
+             */
+            almacenOrigenId: string;
+            /**
+             * Format: uuid
+             * @description A dónde llega.
+             */
+            almacenDestinoId: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa la salida.
+             */
+            fechaDeEnvio: string;
+            /**
+             * Format: date
+             * @description Día al que se imputa la entrada, o `null` si no ha llegado.
+             */
+            fechaDeRecepcion: null | string;
+            /** @description En qué punto de su vida está. */
+            estado: string;
+            /**
+             * Format: uuid
+             * @description La transferencia que esta compensa, o `null` si no es un inverso.
+             */
+            anulaAId: null | string;
         };
         /** @description Una ubicación dentro de un almacén, tal como sale de la API. */
         UbicacionDto: {
@@ -8415,6 +8704,222 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Transferencias_Listar: {
+        parameters: {
+            query?: {
+                estado?: string;
+                origen?: string;
+                destino?: string;
+                page?: number | string;
+                size?: number | string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PaginaDeTransferenciaResumenDto"];
+                    "application/json": components["schemas"]["PaginaDeTransferenciaResumenDto"];
+                    "text/json": components["schemas"]["PaginaDeTransferenciaResumenDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Transferencias_Abrir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AbrirTransferenciaDto"];
+                "text/json": components["schemas"]["AbrirTransferenciaDto"];
+                "application/*+json": components["schemas"]["AbrirTransferenciaDto"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TransferenciaDto"];
+                    "application/json": components["schemas"]["TransferenciaDto"];
+                    "text/json": components["schemas"]["TransferenciaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Transferencias_Obtener: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la transferencia. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["FichaDeTransferenciaDto"];
+                    "application/json": components["schemas"]["FichaDeTransferenciaDto"];
+                    "text/json": components["schemas"]["FichaDeTransferenciaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Transferencias_Descartar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador de la transferencia. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

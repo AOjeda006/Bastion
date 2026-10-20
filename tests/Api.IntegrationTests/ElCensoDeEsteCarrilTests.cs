@@ -480,6 +480,16 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaFormaDeLosCodigosDeLaLineaTests.Un_numero_de_serie_que_no_es_de_gs1_no_abre_el_borrador",
         "LaFormaDeLosCodigosDeLaLineaTests.Una_serie_que_mueve_dos_unidades_no_abre_el_borrador",
 
+        // Del ítem 2.19 (ADR-0068 §1): la superficie de la transferencia por HTTP, la de su pantalla.
+        "LaSuperficieDeLaTransferenciaTests.Doscientas_lineas_abren_y_una_mas_es_400_con_el_motivo_del_tope",
+        "LaSuperficieDeLaTransferenciaTests.El_alta_es_201_sin_etag_y_la_ficha_dice_las_dos_ubicaciones_el_factor_y_la_cantidad_base",
+        "LaSuperficieDeLaTransferenciaTests.El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404",
+        "LaSuperficieDeLaTransferenciaTests.La_lista_va_de_la_ultima_fecha_de_envio_a_la_primera_se_acota_por_cada_punta_y_no_trae_la_descartada",
+        "LaSuperficieDeLaTransferenciaTests.Otra_empresa_no_ve_la_transferencia_ni_la_descarta",
+        "LaSuperficieDeLaTransferenciaTests.Sin_idempotency_key_el_alta_es_428_y_con_la_misma_clave_no_abre_otra",
+        "LaSuperficieDeLaTransferenciaTests.Una_linea_sin_conversion_es_422_con_la_linea_y_las_dos_unidades_en_actual",
+        "LaSuperficieDeLaTransferenciaTests.Una_ubicacion_que_falla_viaja_con_el_campo_de_su_punta_o_con_la_punta_en_actual",
+
         // Del ítem 2.17 (ADR-0065 §6): la superficie del ajuste por HTTP, lo que lee su pantalla.
         "LaSuperficieDelAjusteTests.Doscientas_lineas_abren_y_una_mas_es_400_con_el_motivo_del_tope",
         "LaSuperficieDelAjusteTests.El_alta_es_201_sin_etag_y_la_ficha_dice_el_factor_y_la_cantidad_base_de_cada_linea",

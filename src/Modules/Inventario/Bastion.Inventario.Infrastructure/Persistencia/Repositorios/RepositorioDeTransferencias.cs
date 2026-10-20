@@ -1,5 +1,8 @@
+using System.Linq.Expressions;
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
@@ -20,6 +23,29 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Repositorios;
 internal sealed class RepositorioDeTransferencias(InventarioDbContext contexto, IInquilinoActual inquilino)
     : IRepositorioDeTransferencias
 {
+    private static readonly CriteriosDe<Transferencia> s_criterios = new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["fechaDeEnvio"] =
+                (Expression<Func<Transferencia, DateOnly>>)(transferencia => transferencia.FechaDeEnvio),
+            ["fechaDeRecepcion"] =
+                (Expression<Func<Transferencia, DateOnly?>>)(transferencia => transferencia.FechaDeRecepcion),
+            ["numero"] = (Expression<Func<Transferencia, long?>>)(transferencia => transferencia.Numero),
+        },
+        PorOmision = "fechaDeEnvio",
+        // De la última a la primera, como el ajuste (ADR-0068 §1): quien abre la lista busca lo que
+        // salió hace poco, y el borrador que dejó a medias.
+        DescendentePorOmision = true,
+        Desempate = ordenada => ordenada.ThenBy(transferencia => transferencia.Id),
+
+        // Sin `Filtro`, como las líneas de tarifa: el alta no tiene ni un campo que una persona escriba
+        // —el motivo es del inverso, y se escribe al anular—, y un `?q=` sobre identificadores sería
+        // pedir que se teclee un `uuid`.
+    };
+
+    public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
+
     /// <inheritdoc/>
     /// <remarks>Las líneas vienen con el documento, como en el ajuste: la navegación es <c>AutoInclude</c>.</remarks>
     public Task<Transferencia?> ObtenerAsync(Guid id, CancellationToken cancelacion) =>
@@ -27,6 +53,38 @@ internal sealed class RepositorioDeTransferencias(InventarioDbContext contexto, 
 
     /// <inheritdoc/>
     public void Agregar(Transferencia transferencia) => contexto.Transferencias.Add(transferencia);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <b>Sin las líneas</b>, que el resumen no enseña. Las descartadas no salen: las esconde el filtro
+    /// con nombre del contexto, igual que el de la empresa (ADR-0068 §5).
+    /// </remarks>
+    public Task<PaginaDe<Transferencia>> ListarAsync(
+        Paginacion paginacion,
+        EstadoDeTransferencia? estado,
+        Guid? origenId,
+        Guid? destinoId,
+        CancellationToken cancelacion)
+    {
+        IQueryable<Transferencia> consulta = contexto.Transferencias.IgnoreAutoIncludes();
+
+        if (estado is { } elEstado)
+        {
+            consulta = consulta.Where(transferencia => transferencia.Estado == elEstado);
+        }
+
+        if (origenId is { } elOrigen)
+        {
+            consulta = consulta.Where(transferencia => transferencia.AlmacenOrigenId == elOrigen);
+        }
+
+        if (destinoId is { } elDestino)
+        {
+            consulta = consulta.Where(transferencia => transferencia.AlmacenDestinoId == elDestino);
+        }
+
+        return consulta.PaginarAsync(paginacion, s_criterios, cancelacion);
+    }
 
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado>> BloquearLasValoracionesAsync(

@@ -185,11 +185,17 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
         // primer listado cuya respuesta no es una página a secas —lleva la fecha al lado—, y por eso
         // el barrido reconoce la página dentro de la respuesta: sin eso, este listado no estaría en
         // la lista y sus dos parámetros no habrían puesto esto rojo.
+        //
+        // `origen` y `destino` entraron en el 2.19, con el listado de las transferencias (ADR-0068
+        // §1). Son el `almacen` del ajuste partido en dos, porque una transferencia tiene dos: el
+        // `Guid` del almacén del que sale y el del almacén al que llega, de la propia empresa y
+        // opacos como aquel. Lo que deja escrito el registro de acceso es «alguien listó lo que va de
+        // tal almacén a tal otro», que no es un dato de nadie.
         parametros.ShouldBe(
             new SortedSet<string>(StringComparer.Ordinal)
             {
-                "almacen", "articulo", "categoria", "codigo", "estado", "fecha", "page", "q", "retiradas",
-                "size", "solo", "sort",
+                "almacen", "articulo", "categoria", "codigo", "destino", "estado", "fecha", "origen", "page",
+                "q", "retiradas", "size", "solo", "sort",
             },
             customMessage: "los parámetros de consulta de los listados no son los del contrato: " +
             string.Join(", ", parametros));

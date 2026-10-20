@@ -12,11 +12,11 @@ namespace Bastion.Inventario.Contracts;
 /// </para>
 /// <para>
 /// <b>Hay una constante por acción, y eso no es una lista a medias</b>: las dos del ajuste, desde
-/// el 2.11 las tres de la transferencia, desde el 2.12 las del recuento y desde el 2.17 las de la
-/// pantalla del ajuste, que entran con la acción que las pide. El catálogo se compara entero contra
-/// lo que las acciones exigen, así que un permiso declarado sin acción que lo pida <b>tumba el
-/// arranque</b>. Declarar aquí el alta, el listado o la ficha de la transferencia —que llegan con su
-/// pantalla— sería repartir casillas que un administrador concede creyendo que abren algo.
+/// el 2.11 las tres de la transferencia, desde el 2.12 las del recuento, desde el 2.17 las de la
+/// pantalla del ajuste y desde el 2.19 las de la pantalla de la transferencia, que entran con la
+/// acción que las pide. El catálogo se compara entero contra lo que las acciones exigen, así que un
+/// permiso declarado sin acción que lo pida <b>tumba el arranque</b>: sería repartir casillas que un
+/// administrador concede creyendo que abren algo.
 /// </para>
 /// <para>
 /// Son constantes y no un tipo, por lo mismo que en los otros tres módulos: <c>Contracts</c> no
@@ -87,6 +87,28 @@ public static class PermisosDeInventario
     /// filas del libro y deja sin efecto lo que otros dieron por bueno.
     /// </remarks>
     public const string TransferenciaAnular = "inventario.transferencia.anular";
+
+    /// <summary>Ver las transferencias: el listado y la ficha, con sus líneas.</summary>
+    /// <remarks>
+    /// <b>No va con enviar ni con recibir</b> (ADR-0068 §1): hay perfiles que siguen lo que va de un
+    /// almacén a otro sin mover nada, y quien recibe en un almacén no tiene por qué poder sacar
+    /// mercancía de otro.
+    /// </remarks>
+    public const string TransferenciaVer = "inventario.transferencia.ver";
+
+    /// <summary>Abrir una transferencia en borrador, con sus líneas.</summary>
+    /// <remarks>
+    /// <b>Abrir no es enviar</b>: el borrador no saca nada del origen ni gasta ningún número, y hay
+    /// perfiles que preparan el traslado para que otro, en el muelle, lo dé por salido.
+    /// </remarks>
+    public const string TransferenciaAbrir = "inventario.transferencia.abrir";
+
+    /// <summary>Descartar una transferencia en borrador.</summary>
+    /// <remarks>
+    /// <b>No va con abrir</b>, por lo mismo que en el ajuste (ADR-0068 §5): tirar el borrador que
+    /// preparó otro es decidir que ese traslado no se hace.
+    /// </remarks>
+    public const string TransferenciaDescartar = "inventario.transferencia.descartar";
 
     /// <summary>Ver los recuentos: el listado, la ficha y sus líneas.</summary>
     /// <remarks>
@@ -173,6 +195,9 @@ public static class PermisosDeInventario
         TransferenciaEnviar,
         TransferenciaRecibir,
         TransferenciaAnular,
+        TransferenciaVer,
+        TransferenciaAbrir,
+        TransferenciaDescartar,
         RecuentoVer,
         RecuentoAbrir,
         RecuentoContar,

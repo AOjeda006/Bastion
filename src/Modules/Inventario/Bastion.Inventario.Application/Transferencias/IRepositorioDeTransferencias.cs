@@ -1,3 +1,5 @@
+using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Transferencias;
 using Bastion.Inventario.Domain.Valoraciones;
@@ -15,11 +17,15 @@ namespace Bastion.Inventario.Application.Transferencias;
 /// transferencia escribe además lo que vuela (ADR-0053 §1).
 /// </para>
 /// <para>
-/// <b>Sin lectura de movimientos</b>: la transferencia no tiene superficie de lectura en el 2.11
-/// (ADR-0053 §9), y la vuelta de la R13 desde el libro la da ya el tipo de documento de cada fila.
+/// <b>Sin lectura de movimientos</b>: la vuelta de la R13 desde el libro la da ya el tipo de documento
+/// de cada fila.
+/// </para>
+/// <para>
+/// <b>El listado ordena por lo que dice <see cref="IOrdenaPor.CamposOrdenables"/></b>, como el del
+/// ajuste, y lo valida el borde antes de llegar aquí (ADR-0068 §1).
 /// </para>
 /// </remarks>
-public interface IRepositorioDeTransferencias
+public interface IRepositorioDeTransferencias : IOrdenaPor
 {
     /// <summary>La transferencia con sus líneas, o <see langword="null"/> si no es de la empresa.</summary>
     /// <param name="id">Identificador de la transferencia.</param>
@@ -30,6 +36,20 @@ public interface IRepositorioDeTransferencias
     /// <summary>Añade una transferencia nueva, que se escribe al confirmar la unidad de trabajo.</summary>
     /// <param name="transferencia">La transferencia: un borrador, o el inverso que anula a otra.</param>
     void Agregar(Transferencia transferencia);
+
+    /// <summary>Una página de transferencias, sin sus líneas.</summary>
+    /// <param name="paginacion">Qué página, de qué tamaño y con qué orden.</param>
+    /// <param name="estado">El estado al que se acota, o <see langword="null"/>.</param>
+    /// <param name="origenId">El almacén de origen al que se acota, o <see langword="null"/>.</param>
+    /// <param name="destinoId">El almacén de destino al que se acota, o <see langword="null"/>.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>La página, con las transferencias sin rastrear.</returns>
+    Task<PaginaDe<Transferencia>> ListarAsync(
+        Paginacion paginacion,
+        EstadoDeTransferencia? estado,
+        Guid? origenId,
+        Guid? destinoId,
+        CancellationToken cancelacion);
 
     /// <summary>Bloquea la valoración de cada clave, creándola vacía si no existe, y la lee bloqueada.</summary>
     /// <param name="claves">Las claves que el documento toca: las del origen, las del destino o las dos.</param>
