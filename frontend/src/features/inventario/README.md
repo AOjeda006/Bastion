@@ -321,16 +321,20 @@ pedirlo daría un `404`, e invalida `listas()`. Lo que el alta ofrece cuelga de 
 ## `transferencias` — llevar stock de un almacén a otro
 
 **Propósito.** Listar las transferencias entre almacenes de la empresa, acotarlas por su estado y
-por sus dos puntas, y llegar a cada una (ítem 2.19, `docs/adr/adr-0068`). Una transferencia sale
-del origen al enviarla, viaja, y entra en el destino al recibirla.
+por sus dos puntas, y leer cada una con todas sus líneas, enviarla, recibirla, anularla o
+descartarla (ítem 2.19, `docs/adr/adr-0068`). Una transferencia sale del origen al enviarla, viaja,
+y entra en el destino al recibirla.
 
 ### Rutas
 
-| Ruta              | Exigencia                              | Título         |
-| ----------------- | -------------------------------------- | -------------- |
-| `/transferencias` | permiso `inventario.transferencia.ver` | Transferencias |
+| Ruta                  | Exigencia                              | Título                    |
+| --------------------- | -------------------------------------- | ------------------------- |
+| `/transferencias`     | permiso `inventario.transferencia.ver` | Transferencias            |
+| `/transferencias/:id` | permiso `inventario.transferencia.ver` | Ficha de la transferencia |
 
-Va **diferida**, como las del ajuste, y sale en la navegación.
+Las dos van **diferidas**, como las del ajuste. Solo el listado sale en la navegación: la ficha se
+abre desde su fila, y la de una inversa, desde el aviso de la anulación. Enviar, recibir, anular y
+descartar piden `inventario.transferencia.enviar`, `.recibir`, `.anular` y `.descartar`.
 
 Parámetros de URL del listado: `?pagina=`, `?tamanio=`, `?estado=`, `?origen=` y `?destino=`, con
 los nombres y los valores de la API; y `?orden=`, con el valor de la API (`fechaDeEnvio`,
@@ -346,9 +350,13 @@ ignora.
 ['transferencias']                   → clavesDeTransferencias.todo
 ['transferencias', 'lista']          → clavesDeTransferencias.listas()
 ['transferencias', 'lista', listado] → clavesDeTransferencias.lista(listado)
+['transferencias', 'una', id]        → clavesDeTransferencias.una(id)
 ```
 
-Los almacenes del filtro y los nombres de cada fila cuelgan de `clavesDeMaestros`.
+Enviar, recibir, anular y un fallo de cualquiera, `una(id)` y `listas()`. Descartar **quita**
+`una(id)` de la caché, porque la transferencia deja de existir y volver a pedirla daría un `404`, e
+invalida `listas()`. Los almacenes del filtro y los nombres de cada fila cuelgan de
+`clavesDeMaestros`.
 
 ### Lo que no es evidente
 
@@ -361,7 +369,21 @@ Los almacenes del filtro y los nombres de cada fila cuelgan de `clavesDeMaestros
   últimas al revés**, que es lo que hace PostgreSQL con un nulo. Las dos fechas van en su columna, y
   la de recepción está vacía mientras no llega.
 - **La tabla corre dentro de su contenedor**, y no la página: con dos almacenes y dos fechas es más
-  ancha que un móvil (WCAG 1.4.10, ADR-0068 §8).
+  ancha que un móvil (WCAG 1.4.10, ADR-0068 §8). La de las líneas de la ficha, también.
+- **La ficha trae todas sus líneas** (ADR-0068 §1), cada una con sus dos huecos, el que deja y el
+  que ocupa, y con el factor y la cantidad en unidad base que puso el servidor (§2). El valor es
+  del envío, así que un borrador no lo enseña.
+- **Recibir pide el día**, que empieza en hoy, el del servidor, y no va antes del envío. Lo que se
+  arregla cambiando el día va en el día, con el foco: un día de mañana, uno de antes del envío, y
+  los rechazos del servidor que dependen del día —sin ejercicio, ejercicio cerrado, por detrás del
+  último movimiento—. Lo demás va arriba.
+- **Enviar, recibir y anular mandan su `Idempotency-Key` y no la versión; descartar manda la
+  versión** en el `If-Match`, y se pregunta antes (ADR-0068 §7). La clave va con el intento, como en
+  el ajuste.
+- **La inversa nace recibida, con el motivo, y no se anula**: deshacerla sería volver a hacer la
+  transferencia. Su ficha no ofrece nada, y lleva a la original.
+- **Descartada, la transferencia deja de existir**, y **una ficha por transferencia**: lo mismo que
+  en el ajuste, por lo mismo.
 
 ### Límites conocidos
 

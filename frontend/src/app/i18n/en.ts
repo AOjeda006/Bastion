@@ -49,6 +49,7 @@ export const en: Diccionario = {
     trazabilidadDelArticulo: 'Item traceability',
     codigosDeBarrasDelArticulo: 'Item barcodes',
     transferencias: 'Stock transfers',
+    transferencia: 'Stock transfer record',
     noEncontrada: 'Page not found',
   },
 
@@ -537,6 +538,7 @@ export const en: Diccionario = {
       envio: 'Shipping date',
       recepcion: 'Receipt date',
       estado: 'Status',
+      motivo: 'Reason',
       numerada: 'Transfer {{numero}}',
       sinNumero: 'Draft from {{origen}} to {{destino}} on {{dia}}',
 
@@ -555,6 +557,56 @@ export const en: Diccionario = {
       paginaVacia: 'This page has no transfers. Go back to the previous one.',
       ningunaTodavia: 'This company has no stock transfers yet.',
       ningunaConEsteFiltro: 'No transfer matches the filter.',
+      volver: 'Back to stock transfers',
+
+      avisos: {
+        escribeLaFecha: 'Enter the day it arrives.',
+      },
+
+      ficha: {
+        cargando: 'the stock transfer',
+        anulaA: 'Offsets',
+        verOriginal: 'View the original transfer',
+        lineas: 'Lines',
+        tabla: 'Lines of the transfer',
+        numero: 'No.',
+        sale: 'Leaves',
+        entra: 'Arrives at',
+        articulo: 'Item',
+        cantidad: 'Quantity',
+        factor: 'Conversion factor',
+        enUnidadBase: 'In base unit',
+        loteOSerie: 'Batch or serial',
+        valor: 'Value',
+        nota:
+          'The server set the factor and the base-unit quantity when the transfer was opened, ' +
+          'with the conversion of that day.',
+        notaDelBorrador: 'The value is calculated when it is shipped.',
+
+        enviar: 'Ship the transfer',
+        preguntaEnviar: 'Once shipped it gets its number and the goods leave the origin.',
+        siEnviar: 'Yes, ship',
+        enviando: 'Shipping…',
+        enviadaAviso: 'Transfer shipped with number {{numero}}.',
+        recibir: 'Receive the transfer',
+        preguntaRecibir: 'Once received, the goods enter the destination on the day you give.',
+        siRecibir: 'Yes, receive',
+        recibiendo: 'Receiving…',
+        recibidaAviso: 'Transfer received on {{dia}}.',
+        anular: 'Void the transfer',
+        preguntaAnular: 'Voiding it creates a reverse transfer, already received, that offsets it.',
+        siAnular: 'Yes, void',
+        anulando: 'Voiding…',
+        anuladaAviso: 'Transfer voided. Transfer {{numero}} offsets it.',
+        verInverso: 'View the reverse',
+        descartar: 'Discard the draft',
+        preguntaDescartar:
+          'Discarding it removes it from the list. It has not moved anything, and it cannot be undone.',
+        siDescartar: 'Yes, discard',
+        descartando: 'Discarding…',
+        descartadaAviso: 'Draft discarded.',
+        cancelar: 'Cancel',
+      },
 
       estados: {
         borrador: 'Draft',

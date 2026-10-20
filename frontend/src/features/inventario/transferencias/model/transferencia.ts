@@ -41,3 +41,46 @@ export interface Pagina<T> {
   readonly elementos: readonly T[];
   readonly total: number;
 }
+
+/**
+ * Una línea, tal como quedó en el alta.
+ *
+ * **El factor y la cantidad en unidad base los puso el servidor** (ADR-0068 §2): la unidad base del
+ * artículo, o la conversión del día del alta. Es lo que explica lo que sale de una ubicación y
+ * entra en la otra.
+ */
+export interface LineaDeTransferencia {
+  readonly numero: number;
+  readonly ubicacionOrigenId: string;
+  readonly ubicacionDestinoId: string;
+  readonly articuloId: string;
+  /** Lo que se escribió, siempre en positivo: el inverso lleva su signo al revés. */
+  readonly cantidadIntroducida: number;
+  readonly unidadIntroducidaId: string;
+  readonly factorAUnidadBase: number;
+  readonly cantidadEnUnidadBase: number;
+  readonly codigoDeLote: string | null;
+  readonly numeroDeSerie: string | null;
+  /** Lo que llevó al tránsito, o nulo mientras sea un borrador. */
+  readonly valor: number | null;
+}
+
+/** Una transferencia como se enseña en su ficha, con todas sus líneas. */
+export interface Transferencia extends ResumenDeTransferencia {
+  readonly divisa: string;
+  /** El de la anulación, que lo lleva el inverso. */
+  readonly motivo: string | null;
+  readonly lineas: readonly LineaDeTransferencia[];
+}
+
+/** La ficha tal como se leyó, con su versión: la que cita el descarte en el `If-Match`. */
+export interface FichaDeTransferencia {
+  readonly transferencia: Transferencia;
+  readonly version: string;
+}
+
+/** Lo que devuelve la anulación: el original, ya anulado, y el inverso que lo compensa. */
+export interface Anulacion {
+  readonly original: ResumenDeTransferencia;
+  readonly inverso: ResumenDeTransferencia;
+}

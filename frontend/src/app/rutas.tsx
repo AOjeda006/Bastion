@@ -275,6 +275,18 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
         .PaginaDeTransferencias,
   },
   {
+    // Fuera de la navegación: se llega desde el listado, y de una anulación a su inverso. Por el
+    // permiso de ver, que es el de la ficha y todas sus líneas; cada acción tiene el suyo.
+    ruta: '/transferencias/:id',
+    duenio: 'inventario',
+    claveDeTitulo: 'transferencia',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.transferenciaVer },
+    enLaNavegacion: false,
+    cargar: async () =>
+      (await import('@/features/inventario/transferencias/ui/PaginaDeLaTransferencia.tsx'))
+        .PaginaDeLaTransferencia,
+  },
+  {
     ruta: '*',
     duenio: 'armazon',
     claveDeTitulo: 'noEncontrada',

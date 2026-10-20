@@ -62,6 +62,7 @@ export const es = {
     trazabilidadDelArticulo: 'Trazabilidad del artículo',
     codigosDeBarrasDelArticulo: 'Códigos de barras del artículo',
     transferencias: 'Transferencias',
+    transferencia: 'Ficha de la transferencia',
     noEncontrada: 'Página no encontrada',
   },
 
@@ -596,6 +597,7 @@ export const es = {
       envio: 'Fecha de envío',
       recepcion: 'Fecha de recepción',
       estado: 'Estado',
+      motivo: 'Motivo',
       // Se numera al enviarla. Un borrador se nombra por sus dos almacenes y el día en que sale.
       numerada: 'Transferencia {{numero}}',
       sinNumero: 'Borrador de {{origen}} a {{destino}} del {{dia}}',
@@ -615,6 +617,57 @@ export const es = {
       paginaVacia: 'Esta página no tiene transferencias. Vuelve a la anterior.',
       ningunaTodavia: 'Todavía no hay ninguna transferencia en esta empresa.',
       ningunaConEsteFiltro: 'Ninguna transferencia coincide con el filtro.',
+      volver: 'Volver a las transferencias',
+
+      avisos: {
+        escribeLaFecha: 'Escribe el día en que llega.',
+      },
+
+      ficha: {
+        cargando: 'la transferencia',
+        anulaA: 'Compensa a',
+        verOriginal: 'Ver la transferencia original',
+        lineas: 'Líneas',
+        tabla: 'Líneas de la transferencia',
+        numero: 'Nº',
+        sale: 'Sale de',
+        entra: 'Entra en',
+        articulo: 'Artículo',
+        cantidad: 'Cantidad',
+        factor: 'Factor de conversión',
+        enUnidadBase: 'En unidad base',
+        loteOSerie: 'Lote o serie',
+        valor: 'Valor',
+        // El factor lo pone el servidor (ADR-0068 §2), con la conversión del día del alta.
+        nota:
+          'El factor y la cantidad en unidad base los puso el servidor al abrirla, con la ' +
+          'conversión de ese día.',
+        notaDelBorrador: 'El valor se calcula al enviarla.',
+
+        enviar: 'Enviar la transferencia',
+        preguntaEnviar: 'Al enviarla recibe su número y la mercancía sale del origen.',
+        siEnviar: 'Sí, enviar',
+        enviando: 'Enviando…',
+        enviadaAviso: 'Transferencia enviada con el número {{numero}}.',
+        recibir: 'Recibir la transferencia',
+        preguntaRecibir: 'Al recibirla, la mercancía entra en el destino el día que digas.',
+        siRecibir: 'Sí, recibir',
+        recibiendo: 'Recibiendo…',
+        recibidaAviso: 'Transferencia recibida el {{dia}}.',
+        anular: 'Anular la transferencia',
+        preguntaAnular: 'Anularla crea una transferencia inversa, ya recibida, que la compensa.',
+        siAnular: 'Sí, anular',
+        anulando: 'Anulando…',
+        anuladaAviso: 'Transferencia anulada. La compensa la transferencia {{numero}}.',
+        verInverso: 'Ver la inversa',
+        descartar: 'Descartar el borrador',
+        preguntaDescartar:
+          'Descartarlo lo quita del listado. No ha movido nada, y no se puede deshacer.',
+        siDescartar: 'Sí, descartar',
+        descartando: 'Descartando…',
+        descartadaAviso: 'Borrador descartado.',
+        cancelar: 'Cancelar',
+      },
 
       estados: {
         borrador: 'Borrador',
