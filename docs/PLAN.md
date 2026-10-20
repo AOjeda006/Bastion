@@ -8072,6 +8072,137 @@ desmontaje. Los fallos, 0 en las tres:
 
 La siguiente mutación es la **672**, y el siguiente ADR, el **0068**.
 
+### La puerta del 2.19 — lo que se pregunta, y lo que el ADR-0068 decidirá sin preguntar
+
+Escrita el 2026-10-20, en la rama `2.19-el-alta-de-la-transferencia`, abierta desde `main` en
+`aa56bfc`. **Se para aquí**: el código empieza con las respuestas, y el ADR-0068 se escribe con
+ellas, como el 0065 en el 2.17. El plan maestro dice lo mismo que en la puerta del 2.17, y no se
+repite: el §9 para las rutas, el §10 para el listado, la ficha y la entrada de líneas, y el §11
+para los permisos.
+
+#### Lo que ya está escrito
+
+- **`AbrirTransferencia` existe**, en la aplicación y sin borde HTTP (ADR-0053 §9), y toma
+  `FactorAUnidadBase` del cliente en cada línea (`LineaDeTransferenciaDto`). Mira la forma de las
+  líneas en una sola pasada; el ADR-0065 §2 dejó las dos pasadas del ajuste para este ítem.
+- **El borde HTTP tiene tres acciones**, el envío, la recepción y la anulación
+  (`TransferenciasController`), con `inventario.transferencia.enviar`, `.recibir` y `.anular`, y
+  la `Idempotency-Key` obligatoria en las tres. Ninguna pide `If-Match`, porque la transferencia no
+  tiene un `GET` que publique su `ETag` (`TodaEscrituraDiceComoSeProtegeTests`).
+- **`TransferenciaDto` dice cuántas líneas tiene, y no cuáles**: la ficha necesita otro, como la
+  del ajuste.
+- **La recepción es entera y solo lleva la fecha**, y la anulación, solo el motivo (ADR-0053 §4 y
+  §5).
+- **El lote y la serie se escriben en el alta**, y la marca se mira sin cerrojo, como cortesía. La
+  guarda es el envío (ADR-0048 §4), que rechaza lo que no está en el origen con
+  `transferencia-por-encima-del-disponible`.
+- **`IConsultaDeConversiones` existe** (ADR-0065 §1), y el ajuste lo combina con la unidad base
+  que lee de Catálogo.
+- **Ninguna lectura dice lo que hay en una ubicación por lote o por serie**: el saldo es por
+  artículo y almacén (`SaldoDto`).
+- **La rejilla de líneas y el buscador del artículo son del ajuste**, en
+  `features/inventario/ajustes/ui`: `RejillaDeLineas` y `BuscadorDeArticulo`.
+
+#### Las cifras de partida, con la orden que las mide
+
+- **El arranque es de 420/450 KiB y el total servido de 778/900**, con `bash
+  scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` sobre la construcción de la
+  batería del 2.18, en `6bd26cc`.
+- **Las pantallas del ajuste añadieron 7 KiB al arranque y 56 al total**, de 413/722 en `b1db83e`,
+  el commit de antes, a 420/778 (*Tomadas por el agente de desarrollo — ítem 2.17*). **Lo que
+  añadirá el 2.19, estimado**: lo mismo si se copian, y de 30 a 45 KiB en el total si la rejilla y
+  el buscador se comparten. Quedaría hacia **427/450** y entre **810 y 835/900**: cabe. Pero a
+  la fase 3, con las pantallas de compras, le quedarían de 65 a 90 KiB del total, y el límite no
+  se sube. La cifra de verdad se mide al cerrar el ítem.
+- **112 permisos**, contados por el humo del 2.18 en los dos arranques. Con las respuestas
+  recomendadas, pasan a **115**.
+- **154 operaciones en 93 rutas**, contadas sobre `docs/api/openapi.json`. Con las recomendadas,
+  cuatro operaciones y dos rutas más.
+
+#### Lo que se pregunta, todo junto
+
+1. **El borrador equivocado.** Como el del ajuste antes del 2.17, un borrador de transferencia no se
+   modifica ni se tira, y se quedaría en el listado.
+   - **(a) Recomendada: el descarte, como el del ajuste** (ADR-0065 §5):
+     `inventario.transferencia.descartar`, `DELETE` con `If-Match`, borrado lógico con su filtro
+     con nombre, y `204`. Amplía el criterio en una acción, y por eso se pregunta.
+   - (b) Solo lo que dice el criterio.
+2. **El lote y la serie en el alta.**
+   - **(a) Recomendada: se escriben, como en el ajuste.** Que estén en la ubicación de origen lo
+     dice el envío, con su `422`, en la ficha.
+   - (b) Se eligen de lo que hay en la ubicación de origen. Necesita una lectura nueva de las
+     existencias por ubicación, lote y serie, con su permiso y su pantalla, que es un ítem por sí
+     misma. Su disparador natural es la expedición de la fase 4, que elegirá lo mismo.
+3. **El cierre de la fase.** El 2.19 es el último ítem de la fase 2.
+   - **(a) Recomendada: en el mismo encargo**, después del 2.19: el repaso de los cinco ítems
+     nuevos, del 2.15 al 2.19, en la forma del de la fase; el veredicto de cada nota abierta; y la
+     puerta de la fase 3, donde se para y se pregunta.
+   - (b) Se para al cerrar el 2.19, y el cierre de la fase va en otro encargo.
+4. **Las tres propuestas abiertas de *Notas / riesgos***, que no se hacen sin encargo. Cuáles van
+   en el cierre de la fase, si va en este encargo:
+   - el `SET LOCAL jit = off` en cada mes del cuadre, que deja el del mes del corte en 0,4 s en B
+     y en 3,0 en C (ADR-0067, *Medido*);
+   - la propiedad del saldo con movimientos en el primer y el último día de un mes, que hoy no
+     tiene ninguno en día 1, y por eso no ve la 656;
+   - las doce tablas sin contenedor que corra, y un caso que mida a 320 px la página de cada
+     listado, no solo la cabecera.
+
+   **Recomendado: las tres.** Las tres son deudas que encontró la fase 2, y ninguna toca el
+   criterio de un ítem cerrado.
+
+#### Lo que el ADR-0068 decidirá sin preguntar
+
+Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
+
+1. **Las rutas**, bajo `/api/v1/inventario/transferencias`, como las del ajuste (ADR-0065 §6):
+   - `POST`, el alta: `201` con `Location`, sin `ETag`, la `Idempotency-Key` obligatoria y el
+     permiso nuevo `inventario.transferencia.abrir`. Obligatoria por el motivo del ajuste: un
+     borrador no tiene índice que pare el reintento;
+   - `GET`, el listado, con el permiso nuevo `inventario.transferencia.ver`: `?page=`, `?size=`,
+     `?sort=`, `?estado=`, y **dos filtros de almacén y no uno, `?origen=` y `?destino=`**, porque
+     quien recibe busca lo que viene a su almacén, y quien envía, lo que sale del suyo. Por omisión,
+     por la fecha de envío, de la última a la primera;
+   - `GET {id}`, la ficha, con las líneas enteras y su `ETag`. El alta acepta como mucho 200
+     líneas, el tope de una página, y una más es un `400`;
+   - y `DELETE {id}`, el descarte, si va.
+2. **El factor lo resuelve el servidor**, con el puerto del 2.17 y como en el ajuste (ADR-0065 §2):
+   1 si la unidad es la base del artículo; si no, el del puerto, con todos los pares en una
+   consulta. Un par que no está es un `422` `transferencia-sin-conversion`, y uno retirado, un
+   `409` `transferencia-conversion-retirada`. La forma, en dos pasadas, con la serie unitaria
+   después del factor. `LineaDeTransferenciaDto` pierde `FactorAUnidadBase`.
+3. **La conversión retirada, como la respuesta 2 de la puerta del 2.17**: se rechaza en el alta;
+   enviar un borrador abierto antes no vuelve a preguntar, y usa el factor que la línea guardó; y
+   el inverso lo copia, con un caso para la conversión retirada y otro para el factor cambiado. La
+   ficha enseña en cada línea el factor y la cantidad en unidad base.
+4. **Cada rechazo de una línea dice cuál es**, como en el ajuste (ADR-0065 §3), para que la pantalla
+   lo ponga en su celda. Las dos ubicaciones son dos campos.
+5. **Enviar, recibir y anular siguen sin `If-Match`**, con el motivo del ADR-0065 §7: las líneas no
+   se modifican, y la máquina de estados contesta lo que contestaría la versión. El descarte sí lo
+   lleva, por ser un `DELETE`. El comentario de `TodaEscrituraDiceComoSeProtegeTests` cambia de
+   motivo.
+6. **La ficha**: la barra sale de `accionesDisponibles(transferencia, permisos)`. Enviar y
+   descartar, en un borrador; recibir, en una enviada, con la fecha, que por omisión es el día del
+   servidor; y anular, en una enviada o recibida que no es un inverso, con el motivo. Un inverso
+   enlaza a la que compensa.
+7. **La pantalla**: `/transferencias`, `/transferencias/nueva` y `/transferencias/:id`, diferidas,
+   con su entrada en la navegación de Inventario, y los tres estados, cargando, vacío y error. La
+   rejilla, para teclado, con las dos ubicaciones, cada una del almacén de su punta. **La rejilla y
+   el buscador del ajuste se comparten, no se copian**, en su propio commit antes de la pantalla.
+   Y la tabla del listado va desde el principio en un contenedor que corre.
+8. **El recorrido**, con `playwright-cli` contra la pila local, en su propio proyecto de *compose*
+   y con datos sintéticos: el alta con una línea en la unidad base y otra en una unidad con
+   conversión, el rechazo de una sin conversión en su celda, enviar, recibir y anular; y la página
+   del listado, a 320 px.
+9. **Lo que se queda fuera**: modificar las líneas (ADR-0065 §9); la exportación, en su nota; la
+   zona de cada almacén, antes de la fase 5; y la recepción con faltas (ADR-0053 §4).
+
+#### Lo que sigue pendiente, aparte de la puerta
+
+- **Los hallazgos de `/code-review`** sobre `0638419..0d26e76` no han llegado. Se tratan antes del
+  código en cuanto lleguen, como dice la respuesta 8 de la puerta del 2.17.
+
+La siguiente mutación es la **672**, y el siguiente ADR, el **0068**.
+
 ## Estado actual
 
 **FASE 2 EN CURSO — 18 de 19 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
@@ -8082,13 +8213,12 @@ puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el
 transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15, el 2.16, el
 2.17 y el 2.18 están hechos.
 
-> **Dónde se retoma (2026-10-20): en la puerta del 2.19, el alta de la transferencia**, donde se
-> para y se pregunta. El 2.18 está hecho, en la rama `2.18-el-avance-incremental`, y su cierre
-> sigue el flujo de la rama: el commit que lo cierra va a la rama y espera su verde, `main` avanza
-> con `--ff-only`, y la rama se borra después del run de `main`. Los dos runs se anotan en el
-> primer commit del 2.19. Los hallazgos de `/code-review` sobre `0638419..0d26e76` no han llegado,
-> y se tratan antes de seguir en cuanto lleguen. Y hay una propuesta sin contestar, el JIT del
-> cuadre del mes del corte, en *Notas / riesgos*.
+> **Dónde se retoma (2026-10-20): en la puerta del 2.19, escrita y sin contestar**, en la rama
+> `2.19-el-alta-de-la-transferencia`, abierta desde `main` en `aa56bfc`. Se para hasta que el
+> usuario conteste, y `main` no avanza con este commit. La puerta está en *Decisiones tomadas → La
+> puerta del 2.19*: cuatro preguntas, y lo que el ADR-0068 decidirá sin preguntar. Los hallazgos de
+> `/code-review` sobre `0638419..0d26e76` no han llegado, y se tratan antes del código en cuanto
+> lleguen.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -13468,6 +13598,17 @@ mutaciones van de la **655** a la **671**, y las siguientes empiezan en la **672
 4. **El cierre, por el flujo de la rama**: este commit va a la rama con `6bd26cc` y espera su
    verde; `main` avanza con `--ff-only`, y la rama se borra, en local y en el remoto, después del
    run de `main`. Los dos runs se anotan en el primer commit del 2.19.
+
+**Anotados en el primer commit del 2.19.** El run de rama de `aa56bfc`, que lleva `6bd26cc` y
+   el cierre, es el **39363608913**, en verde al primer intento: Backend `118435217750`, Frontal
+   `118435217892` y Humo `118437755970`. `main` avanzó con `--ff-only` de `2fdd3cb` a `aa56bfc`, y
+   su run es el **39364778371**, también en verde: Backend `118438999550`, Frontal `118438999786` y
+   Humo `118441903578`. Los dos con 69 pasos, 68 en verde y el *Diagnóstico* omitido, y las cifras
+   de la batería: **1517** y **718** casos, **238** tipos de **246** sitios, **154** operaciones en
+   **93** rutas, **420/450** y **778/900** KiB, **112** permisos en los dos arranques, y el
+   centinela con la marca y sin avisos, con 7 trozos para las 8 cadenas de React. Leídos con
+   `python -X utf8 leer-run27.py <run>`. La rama `2.18-el-avance-incremental` se borró en local y
+   en el remoto después del run de `main`.
 
 **La batería de `AGENTS.md`, entera y en su orden, sobre `6bd26cc`**, con `bash bateria218.sh`, un
 guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida
