@@ -260,6 +260,11 @@ public sealed class ElCuadreDelTransitoTests(PostgresConTodosLosModulos postgres
     {
         EscenaDeTransferencia escena = await MontarAsync(723, "CDR", "Ninguna");
 
+        // EL FACTOR LO PONE EL SERVIDOR desde el 2.19 (ADR-0068 §2): la unidad del tecleado es una
+        // que convierte a la base del artículo con el factor del redondeo.
+        Guid tercio = await LosMaestrosPorLaApi.CrearUnidadQueConvierteAAsync(
+            escena.Cliente, "K723T", Factor, escena.UnidadId);
+
         // A COSTE CERO: lo que sale de A no vale nada, y vuela sin valor.
         await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 5m, 0m);
 
@@ -272,7 +277,7 @@ public sealed class ElCuadreDelTransitoTests(PostgresConTodosLosModulos postgres
                 escena.AlmacenA,
                 escena.AlmacenB,
                 [new LineaDeTransferenciaDto(
-                    escena.UbicacionA, escena.UbicacionB, escena.ArticuloId, Tecleado, escena.UnidadId, Factor)]);
+                    escena.UbicacionA, escena.UbicacionB, escena.ArticuloId, Tecleado, tercio)]);
 
             alta.EsCorrecto.ShouldBeTrue($"«{alta.Error?.Codigo}»");
 

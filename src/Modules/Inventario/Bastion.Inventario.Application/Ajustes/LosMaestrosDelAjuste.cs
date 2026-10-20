@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Lineas;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Inventario.Application.Ajustes;

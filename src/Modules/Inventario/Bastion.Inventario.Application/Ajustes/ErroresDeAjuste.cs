@@ -1,7 +1,8 @@
-using System.Text.Json;
 using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Inventario.Application.Lineas;
 using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Lineas;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
@@ -36,37 +37,21 @@ internal static class ErroresDeAjuste
     internal const string CodigoSinConversion = "ajuste-sin-conversion";
     internal const string CodigoConversionRetirada = "ajuste-conversion-retirada";
 
-    /// <summary>La ruta de un campo de una línea, tal como viaja en el cuerpo (ADR-0065 §3).</summary>
-    /// <remarks>
-    /// <b>Con el índice desde cero</b>, que es el de la ruta de <c>zod</c> sobre el formulario: el
-    /// error del servidor y el de la pantalla caen en el mismo campo. Los nombres salen de las
-    /// propiedades del contrato con la política del serializador, así que no hay una cadena
-    /// tecleada que se pueda quedar atrás.
-    /// </remarks>
+    /// <summary>La ruta de un campo de una línea del ajuste (ADR-0065 §3).</summary>
     /// <param name="linea">La línea, desde uno, como la dicen los mensajes.</param>
     /// <param name="propiedad">La propiedad de <see cref="LineaDeAjusteDto"/>, por su <c>nameof</c>.</param>
     /// <returns>La ruta, como <c>lineas[0].codigoDeLote</c>.</returns>
     internal static string CampoDeLaLinea(int linea, string propiedad) =>
-        $"{JsonNamingPolicy.CamelCase.ConvertName(nameof(AbrirAjusteDto.Lineas))}[{linea - 1}]." +
-        JsonNamingPolicy.CamelCase.ConvertName(propiedad);
+        LosCamposDeLasLineas.Ruta(nameof(AbrirAjusteDto.Lineas), linea, propiedad);
 
-    /// <summary>El campo de una línea que falla, para la sobrecarga de la validación.</summary>
-    /// <remarks>
-    /// <b>No fabrica el error, y es a propósito.</b> El catálogo de <c>type</c> lo saca un barrido
-    /// que lee el primer argumento de cada llamada a <see cref="ErrorDeOperacion"/> (ADR-0030): un
-    /// ayudante que recibiera el código como parámetro dejaría todos los suyos sin resolver. Así el
-    /// código va, literal, en la llamada de cada error.
-    /// </remarks>
+    /// <summary>El campo de una línea del ajuste que falla, para la sobrecarga de la validación.</summary>
     /// <param name="linea">La línea, desde uno.</param>
     /// <param name="propiedad">La propiedad que falla, por su <c>nameof</c>.</param>
     /// <param name="motivo">Lo que se dice del campo.</param>
     /// <returns>Un solo campo, con su motivo.</returns>
     internal static IReadOnlyDictionary<string, IReadOnlyList<string>> ElCampoDeLaLinea(
         int linea, string propiedad, string motivo) =>
-        new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
-        {
-            [CampoDeLaLinea(linea, propiedad)] = [motivo],
-        };
+        LosCamposDeLasLineas.ElCampo(nameof(AbrirAjusteDto.Lineas), linea, propiedad, motivo);
 
     internal static ErrorDeOperacion NoEncontrado(Guid ajusteId) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrado,

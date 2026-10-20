@@ -476,11 +476,16 @@ export const tiposDeError: TiposDeError = {
     'That item is a service: it has no stock to carry from one warehouse to another. Remove ' +
     'that line or change the item.',
   'transferencia-cantidad-no-valida':
-    'A line carries nothing from origin to destination: the quantity and the base-unit factor ' +
-    'must be positive, and their product cannot round to zero. Fix the quantity on that line.',
+    'That quantity does not fit in the ledger: it must be positive, it has at most six ' +
+    'decimals and twelve whole digits, and once in the item’s base unit it cannot round to ' +
+    'zero or go past twelve digits either. Fix the quantity or the unit.',
   'transferencia-con-fecha-futura':
     'That date is after today: the ledger only records what has already happened, and a ' +
     'transfer is sent and received on the day it happens. Do it on that day or fix the date.',
+  'transferencia-conversion-retirada':
+    'The unit on that line reaches the item’s unit through a retired conversion: what was ' +
+    'already written with it is still read, but nothing new travels. Use the item’s base ' +
+    'unit or ask for the conversion to be reinstated.',
   'transferencia-en-ejercicio-cerrado':
     'That date falls inside a closed financial year: the period is already final and takes ' +
     'no new documents. Change the date or ask for the year to be reopened.',
@@ -530,6 +535,10 @@ export const tiposDeError: TiposDeError = {
   'transferencia-serie-repetida':
     'Two lines of the transfer name the same serial number, and each piece travels only once ' +
     'per document. Remove one of the two lines.',
+  'transferencia-sin-conversion':
+    'The unit on that line has no conversion to the item’s base unit, so there is no way to ' +
+    'know how many units it carries. Use the base unit or add the conversion from that unit ' +
+    'to the base.',
   'transferencia-sin-ejercicio':
     'That date falls outside every financial year: with no period to book it to, the ' +
     'document would not reach any return. Open the missing year or fix the date.',

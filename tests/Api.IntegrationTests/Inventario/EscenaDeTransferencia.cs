@@ -260,7 +260,7 @@ internal sealed record EscenaDeTransferencia(
     /// <returns>La línea.</returns>
     internal LineaDeTransferenciaDto Linea(
         Guid ubicacionOrigen, Guid ubicacionDestino, decimal cantidad, string? serie = null, string? lote = null) =>
-        new(ubicacionOrigen, ubicacionDestino, ArticuloId, cantidad, UnidadId, 1m, lote, serie);
+        new(ubicacionOrigen, ubicacionDestino, ArticuloId, cantidad, UnidadId, lote, serie);
 
     /// <summary>Una transferencia en borrador, abierta con un módulo propio que se cierra al volver.</summary>
     /// <param name="postgres">El contenedor.</param>

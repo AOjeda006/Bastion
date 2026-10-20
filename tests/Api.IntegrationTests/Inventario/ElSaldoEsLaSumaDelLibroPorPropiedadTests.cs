@@ -953,7 +953,6 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                     linea.Origen.ArticuloId,
                     linea.Cantidad,
                     empresa.UnidadDe[linea.Origen.ArticuloId],
-                    1m,
                     tecleados[indice].Lote,
                     tecleados[indice].Serie))]),
             CancellationToken.None);
@@ -2172,7 +2171,6 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                         linea.Origen.ArticuloId,
                         linea.Cantidad,
                         empresa.UnidadDe[linea.Origen.ArticuloId],
-                        1m,
                         linea.Origen.LoteId is { } lote ? secuencia.CodigoDe(lote) : null,
                         linea.Origen.NumeroDeSerieId is { } serie ? secuencia.CodigoDe(serie) : null))]),
                 CancellationToken.None);

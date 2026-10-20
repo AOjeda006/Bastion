@@ -249,6 +249,15 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElEjercicioRigeElAjusteTests.Mover_el_ejercicio_espera_a_la_anulacion_que_ya_estaba_dentro_y_ve_su_inverso",
         "ElEjercicioRigeElAjusteTests.Una_fecha_fuera_de_todo_ejercicio_no_se_confirma_y_lo_dice_con_otro_codigo",
 
+        // Del ítem 2.19 (ADR-0068 §2 y §3): el factor de la línea de la transferencia, como el del
+        // ajuste. Lo pone el servidor, y lo que se guardó es lo que envían, reciben y copian después.
+        "ElFactorDeLaTransferenciaTests.El_inverso_copia_el_factor_del_original_aunque_su_conversion_haya_cambiado",
+        "ElFactorDeLaTransferenciaTests.El_inverso_copia_el_factor_del_original_aunque_su_conversion_se_haya_retirado",
+        "ElFactorDeLaTransferenciaTests.Enviar_y_recibir_usan_el_factor_que_se_guardo_aunque_la_conversion_cambie_o_se_retire",
+        "ElFactorDeLaTransferenciaTests.La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion",
+        "ElFactorDeLaTransferenciaTests.Una_conversion_retirada_es_409_y_antes_de_retirarla_la_misma_linea_pasa",
+        "ElFactorDeLaTransferenciaTests.Una_unidad_sin_conversion_a_la_base_es_422_aunque_la_haya_al_reves",
+
         // Del ítem 2.17 (ADR-0065 §2 y §4): el factor de la línea lo pone el servidor, y lo que se
         // guardó es lo que confirman y copian después.
         "ElFactorDelAjusteTests.Confirmar_usa_el_factor_que_se_guardo_aunque_la_conversion_cambie_o_se_retire",
@@ -723,6 +732,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasGuardasDelAjusteTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa",
         "LasGuardasDelAjusteTests.El_alta_rechaza_cada_maestro_que_no_se_mueve_con_su_codigo",
         "LasGuardasDelAjusteTests.La_anulacion_pide_motivo_una_serie_que_numere_y_el_ejercicio_de_hoy_abierto",
+
+        // Del ítem 2.19 (ADR-0068 §4 y §6): cada rechazo del alta de la transferencia nombra su línea,
+        // y su campo o su punta. Lo que no cabe en su columna, escrito o en la unidad base, es un 400.
+        "LasLineasDeLaTransferenciaTests.Cada_maestro_que_falla_nombra_su_linea_y_la_ubicacion_su_punta",
+        "LasLineasDeLaTransferenciaTests.La_forma_de_la_serie_va_a_su_campo_y_la_unitaria_se_mira_con_el_factor",
+        "LasLineasDeLaTransferenciaTests.Lo_que_no_cabe_en_su_columna_es_400_en_la_cantidad_de_su_linea",
+        "LasLineasDeLaTransferenciaTests.Un_lote_que_no_es_de_gs1_va_al_campo_de_su_linea",
 
         // Del ítem 2.12: contar, añadir y quitar una línea del recuento por la API, con la versión de
         // la línea, sus rechazos sin escribir nada, sus 404 y la clave de idempotencia del alta.

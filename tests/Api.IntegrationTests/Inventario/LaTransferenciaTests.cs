@@ -1032,7 +1032,7 @@ public sealed class LaTransferenciaTests(PostgresConTodosLosModulos postgres) : 
                 destino,
                 Hoy,
                 [new LineaDeTransferenciaDto(
-                    ubicacionOrigen, ubicacionDestino, escena.ArticuloId, 1m, escena.UnidadId, 1m)]),
+                    ubicacionOrigen, ubicacionDestino, escena.ArticuloId, 1m, escena.UnidadId)]),
             CancellationToken.None);
 
     private static async Task ExigirElSinClaveAsync(

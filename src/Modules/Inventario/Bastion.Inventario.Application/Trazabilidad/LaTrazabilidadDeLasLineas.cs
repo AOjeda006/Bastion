@@ -22,8 +22,8 @@ internal readonly record struct LineaConCodigos(
 /// <param name="CantidadIntroducida">La cantidad, tal como se escribió.</param>
 /// <param name="FactorAUnidadBase">
 /// Cuántas unidades base hay en una de las introducidas, o <see langword="null"/> si todavía no se
-/// sabe: en el alta del ajuste lo resuelve el servidor después de los maestros (ADR-0065 §2), y
-/// hasta entonces la serie unitaria no se puede mirar.
+/// sabe: en el alta del ajuste y en la de la transferencia lo resuelve el servidor después de los
+/// maestros (ADR-0065 §2, ADR-0068 §2), y hasta entonces la serie unitaria no se puede mirar.
 /// </param>
 /// <param name="CodigoDeLote">El lote, si lo lleva.</param>
 /// <param name="NumeroDeSerie">El número de serie, si lo lleva.</param>
@@ -99,6 +99,7 @@ internal static class LaTrazabilidadDeLasLineas
     ];
 
     /// <summary>Las líneas de una petición de alta de transferencia, numeradas desde uno.</summary>
+    /// <remarks><b>Sin factor</b>, como las del ajuste (ADR-0068 §2).</remarks>
     /// <param name="lineas">Lo que llegó.</param>
     /// <returns>Cada línea con su forma, en su orden.</returns>
     internal static IReadOnlyList<LineaConForma> DeLaPeticion(IReadOnlyList<LineaDeTransferenciaDto> lineas) =>
@@ -107,7 +108,7 @@ internal static class LaTrazabilidadDeLasLineas
             indice + 1,
             linea.ArticuloId,
             linea.CantidadIntroducida,
-            linea.FactorAUnidadBase,
+            null,
             linea.CodigoDeLote,
             linea.NumeroDeSerie)),
     ];

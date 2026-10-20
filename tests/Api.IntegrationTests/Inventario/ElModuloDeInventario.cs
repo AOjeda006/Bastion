@@ -193,6 +193,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             articulos,
             trazabilidad,
             unidades,
+            conversiones,
             unidadDeTrabajo,
             elReloj);
 

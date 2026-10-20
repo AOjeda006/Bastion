@@ -22,6 +22,11 @@ namespace Bastion.Inventario.Domain.Transferencias;
 /// </remarks>
 public sealed class LineaDeTransferencia : EntidadBase
 {
+    /// <summary>
+    /// Lo que cabe en una cantidad: <c>numeric(18,6)</c> deja doce cifras enteras, como en el ajuste.
+    /// </summary>
+    public const decimal TopeDeLaCantidad = 1_000_000_000_000m;
+
     private LineaDeTransferencia(
         Guid id,
         Guid transferenciaId,
@@ -119,11 +124,46 @@ public sealed class LineaDeTransferencia : EntidadBase
     public decimal CantidadEnUnidadBase =>
         MovimientoStock.EnUnidadBase(CantidadIntroducida, FactorAUnidadBase);
 
+    /// <summary>Si una cantidad, tal como se escribió, cabe en su columna (ADR-0068 §4).</summary>
+    /// <remarks>
+    /// <b>Mira el valor absoluto</b>, porque la línea del inverso lleva la cantidad negada. Que el alta
+    /// solo admita una positiva lo dice el documento, no la columna.
+    /// </remarks>
+    /// <param name="cantidadIntroducida">Cantidad con signo, tal como se escribió.</param>
+    /// <returns>Si no es cero, lleva seis decimales como mucho y doce cifras enteras como mucho.</returns>
+    public static bool LaCantidadCabe(decimal cantidadIntroducida) =>
+        cantidadIntroducida != 0m
+        && Math.Abs(cantidadIntroducida) < TopeDeLaCantidad
+        && decimal.Round(cantidadIntroducida, MovimientoStock.DecimalesDeCantidad) == cantidadIntroducida;
+
+    /// <summary>Si la línea, con su factor, mueve algo que cabe en el libro (ADR-0068 §4).</summary>
+    /// <remarks>
+    /// <b>Se pregunta con el factor ya puesto</b>, porque lo que no cabe puede ser solo la cantidad
+    /// base: una décima de una unidad que vale una millonésima redondea a cero, y cien mil millones de
+    /// cajas de doce no caben en doce cifras enteras.
+    /// </remarks>
+    /// <param name="cantidadIntroducida">Cantidad con signo, tal como se escribió.</param>
+    /// <param name="factorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
+    /// <returns>Si lo escrito cabe, el factor es positivo y la cantidad base ni es cero ni se sale.</returns>
+    public static bool SePuedeTransferir(decimal cantidadIntroducida, decimal factorAUnidadBase)
+    {
+        if (!LaCantidadCabe(cantidadIntroducida) || factorAUnidadBase <= 0m)
+        {
+            return false;
+        }
+
+        decimal enUnidadBase = MovimientoStock.EnUnidadBase(cantidadIntroducida, factorAUnidadBase);
+
+        return enUnidadBase != 0m && Math.Abs(enUnidadBase) < TopeDeLaCantidad;
+    }
+
     /// <summary>Crea una línea de transferencia ya validada.</summary>
     /// <remarks>
-    /// Comprueba lo mismo que la del ajuste: la cantidad y el factor como el libro, el lote y la
-    /// serie como la etiqueta, los dos nunca juntos, y una serie que mueve una sola unidad base. El
-    /// signo de la cantidad lo mira el documento, que sabe si es un inverso.
+    /// Comprueba lo mismo que la del ajuste: la cantidad y el factor como el libro, y lo que cabe en
+    /// su columna (<see cref="LaCantidadCabe"/>, <see cref="SePuedeTransferir"/>), que hasta el ítem
+    /// 2.19 lo decía la base al guardar; el lote y la serie como la etiqueta, los dos nunca juntos, y
+    /// una serie que mueve una sola unidad base. El signo de la cantidad lo mira el documento, que
+    /// sabe si es un inverso.
     /// </remarks>
     /// <param name="transferenciaId">Transferencia a la que pertenece.</param>
     /// <param name="numero">Su posición en el documento, desde uno.</param>
@@ -152,11 +192,13 @@ public sealed class LineaDeTransferencia : EntidadBase
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(numero);
 
-        if (cantidadIntroducida == 0m)
+        if (!LaCantidadCabe(cantidadIntroducida))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(cantidadIntroducida),
-                "Una línea de transferencia de cero no lleva nada de un almacén a otro.");
+                "Una línea de transferencia mueve una cantidad que no es cero, con " +
+                $"{MovimientoStock.DecimalesDeCantidad} decimales como mucho y doce cifras enteras como " +
+                "mucho: la de cero no lleva nada de un almacén a otro, y la otra no cabe en su columna.");
         }
 
         if (factorAUnidadBase <= 0m)
@@ -167,11 +209,12 @@ public sealed class LineaDeTransferencia : EntidadBase
                 "cantidad en unidad base dejaría de ser la introducida.");
         }
 
-        if (MovimientoStock.EnUnidadBase(cantidadIntroducida, factorAUnidadBase) == 0m)
+        if (!SePuedeTransferir(cantidadIntroducida, factorAUnidadBase))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(cantidadIntroducida),
-                "La cantidad en unidad base redondea a cero: las dos filas del libro no moverían nada.");
+                "En la unidad base del artículo, la línea no puede quedarse en cero ni pasar de doce " +
+                "cifras enteras: las dos filas del libro no moverían nada, o no cabrían en su columna.");
         }
 
         string? lote = LeerCodigo(codigoDeLote, nameof(codigoDeLote));

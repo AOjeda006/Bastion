@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Inventario.Application.Lineas;
 using Bastion.Inventario.Application.Trazabilidad;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
@@ -119,7 +120,8 @@ internal sealed class AbrirAjuste(
 
         // LA CANTIDAD, ANTES QUE EL COSTE Y LA FORMA: lo escrito se dice sin preguntar a nadie. Lo
         // que mueve en la unidad base espera al factor.
-        if (LaPrimeraQueNoCabe(peticion.Lineas, (linea, _) => LineaDeAjuste.LaCantidadCabe(linea.CantidadIntroducida))
+        if (ElFactorDeCadaLinea.LaPrimeraQueNoCabe(
+                peticion.Lineas, (linea, _) => LineaDeAjuste.LaCantidadCabe(linea.CantidadIntroducida))
             is { } sinCantidad)
         {
             return Resultado.Fallo<AjusteDto>(ErroresDeAjuste.CantidadNoValida(sinCantidad));
@@ -169,7 +171,13 @@ internal sealed class AbrirAjuste(
             return Resultado.Fallo<AjusteDto>(lasLineas.Error!);
         }
 
-        Resultado<IReadOnlyList<decimal>> losFactores = await ResolverLosFactoresAsync(peticion.Lineas, cancelacion)
+        Resultado<IReadOnlyList<decimal>> losFactores = await ElFactorDeCadaLinea.ResolverAsync(
+                articulos,
+                conversiones,
+                [.. peticion.Lineas.Select(linea => new ArticuloYUnidad(linea.ArticuloId, linea.UnidadIntroducidaId))],
+                ErroresDeAjuste.SinConversion,
+                ErroresDeAjuste.ConversionRetirada,
+                cancelacion)
             .ConfigureAwait(false);
 
         if (!losFactores.EsCorrecto)
@@ -179,7 +187,7 @@ internal sealed class AbrirAjuste(
 
         IReadOnlyList<decimal> factores = losFactores.Valor;
 
-        if (LaPrimeraQueNoCabe(
+        if (ElFactorDeCadaLinea.LaPrimeraQueNoCabe(
                 peticion.Lineas,
                 (linea, indice) => LineaDeAjuste.SePuedeAjustar(linea.CantidadIntroducida, factores[indice]))
             is { } sinCantidadBase)
@@ -241,25 +249,6 @@ internal sealed class AbrirAjuste(
         return Resultado.Correcto(Mapeos.ADto(ajuste));
     }
 
-    /// <summary>La primera línea que no cumple la regla, por su orden.</summary>
-    /// <param name="lineas">Las líneas de la petición.</param>
-    /// <param name="cabe">La regla, con la línea y su índice desde cero.</param>
-    /// <returns>Su número, desde uno, o <c>null</c> si todas la cumplen.</returns>
-    private static int? LaPrimeraQueNoCabe(
-        IReadOnlyList<LineaDeAjusteDto> lineas,
-        Func<LineaDeAjusteDto, int, bool> cabe)
-    {
-        for (int indice = 0; indice < lineas.Count; indice++)
-        {
-            if (!cabe(lineas[indice], indice))
-            {
-                return indice + 1;
-            }
-        }
-
-        return null;
-    }
-
     private async Task<Resultado> ComprobarLasLineasAsync(
         AbrirAjusteDto peticion,
         CancellationToken cancelacion)
@@ -317,77 +306,5 @@ internal sealed class AbrirAjuste(
         }
 
         return Resultado.Correcto();
-    }
-
-    /// <summary>El factor de cada línea a la unidad base de su artículo (ADR-0065 §2).</summary>
-    /// <remarks>
-    /// <para>
-    /// <b>Dos consultas como mucho, sea cual sea el número de líneas</b>: las unidades base de todos
-    /// los artículos, y las conversiones de todos los pares distintos. Una línea en la unidad base no
-    /// pregunta nada, porque una conversión de una unidad a sí misma no puede existir.
-    /// </para>
-    /// <para>
-    /// <b>Contesta la primera línea que falla, por su orden</b>, le falte la conversión o la tenga
-    /// retirada: el número que sale es el de la línea que hay que corregir primero.
-    /// </para>
-    /// </remarks>
-    /// <param name="lineas">Las líneas de la petición, con sus maestros ya comprobados.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    /// <returns>El factor de cada línea, en su orden, o el motivo por el que una no lo tiene.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// Falta la unidad base de un artículo: los artículos no se borran, y el alta ya comprobó que
-    /// existía.
-    /// </exception>
-    private async Task<Resultado<IReadOnlyList<decimal>>> ResolverLosFactoresAsync(
-        IReadOnlyList<LineaDeAjusteDto> lineas,
-        CancellationToken cancelacion)
-    {
-        IReadOnlyDictionary<Guid, Guid> unidadesBase = await articulos
-            .UnidadesBaseDeAsync([.. lineas.Select(linea => linea.ArticuloId).Distinct()], cancelacion)
-            .ConfigureAwait(false);
-
-        ParDeUnidades[] pares =
-        [
-            .. lineas.Select((linea, indice) => new ParDeUnidades(
-                linea.UnidadIntroducidaId,
-                unidadesBase.TryGetValue(linea.ArticuloId, out Guid unidadBaseId)
-                    ? unidadBaseId
-                    : throw new InvalidOperationException(
-                        $"El artículo {linea.ArticuloId} de la línea {indice + 1} no tiene unidad base: el " +
-                        "alta comprobó que existía y un artículo no se borra, así que o el puerto no lo " +
-                        "leyó o no es de esta empresa.")))
-        ];
-
-        ParDeUnidades[] porPreguntar = [.. pares.Where(par => par.OrigenId != par.DestinoId).Distinct()];
-
-        IReadOnlyDictionary<ParDeUnidades, ConversionResuelta> resueltas = porPreguntar.Length == 0
-            ? new Dictionary<ParDeUnidades, ConversionResuelta>()
-            : await conversiones.DeLosParesAsync(porPreguntar, cancelacion).ConfigureAwait(false);
-
-        decimal[] factores = new decimal[pares.Length];
-
-        for (int indice = 0; indice < pares.Length; indice++)
-        {
-            ParDeUnidades par = pares[indice];
-
-            if (par.OrigenId == par.DestinoId)
-            {
-                factores[indice] = 1m;
-            }
-            else if (!resueltas.TryGetValue(par, out ConversionResuelta? conversion))
-            {
-                return Resultado.Fallo<IReadOnlyList<decimal>>(ErroresDeAjuste.SinConversion(indice + 1, par));
-            }
-            else if (conversion.EstaRetirada)
-            {
-                return Resultado.Fallo<IReadOnlyList<decimal>>(ErroresDeAjuste.ConversionRetirada(indice + 1, par));
-            }
-            else
-            {
-                factores[indice] = conversion.Factor;
-            }
-        }
-
-        return Resultado.Correcto<IReadOnlyList<decimal>>(factores);
     }
 }

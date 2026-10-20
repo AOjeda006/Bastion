@@ -34,13 +34,23 @@ public sealed record AbrirTransferenciaDto(
 /// <b>No lleva coste</b>: lo que sale del origen se valora a su precio medio, y ese importe es el
 /// que entra en el destino (ADR-0053 §2).
 /// </para>
+/// <para>
+/// <b>No lleva factor: lo resuelve el servidor</b> (ADR-0068 §2), como en el ajuste. Si la unidad es
+/// la base del artículo, el factor es 1; si no, es el de la conversión de Organización de esa unidad
+/// a la base, y sin ella el alta contesta <c>transferencia-sin-conversion</c>. Hasta el 2.19 lo traía
+/// la petición.
+/// </para>
 /// </remarks>
 /// <param name="UbicacionOrigenId">Hueco del almacén de origen.</param>
 /// <param name="UbicacionDestinoId">Hueco del almacén de destino.</param>
 /// <param name="ArticuloId">Artículo que se mueve.</param>
-/// <param name="CantidadIntroducida">Cantidad positiva, tal como se escribe.</param>
-/// <param name="UnidadIntroducidaId">Unidad en la que se escribe.</param>
-/// <param name="FactorAUnidadBase">Cuántas unidades base hay en una de las introducidas.</param>
+/// <param name="CantidadIntroducida">
+/// Cantidad positiva, tal como se escribe: hasta seis decimales y menos de un billón, y lo mismo lo
+/// que mueve en la unidad base. Si no, <c>transferencia-cantidad-no-valida</c>.
+/// </param>
+/// <param name="UnidadIntroducidaId">
+/// Unidad en la que se escribe: la base del artículo, o una que tenga conversión a ella.
+/// </param>
 /// <param name="CodigoDeLote">El lote, si el artículo va por lote, con la forma del ajuste.</param>
 /// <param name="NumeroDeSerie">El número de serie, si el artículo va por serie: una unidad base.</param>
 public sealed record LineaDeTransferenciaDto(
@@ -49,7 +59,6 @@ public sealed record LineaDeTransferenciaDto(
     Guid ArticuloId,
     decimal CantidadIntroducida,
     Guid UnidadIntroducidaId,
-    decimal FactorAUnidadBase,
     string? CodigoDeLote = null,
     string? NumeroDeSerie = null);
 

@@ -524,12 +524,16 @@ export const tiposDeError = {
     'Ese artículo es un servicio: no tiene existencias que llevar de un almacén a otro. Quita ' +
     'esa línea o cambia el artículo.',
   'transferencia-cantidad-no-valida':
-    'Alguna línea no lleva nada del origen al destino: la cantidad y el factor a unidad base ' +
-    'tienen que ser positivos, y su producto no puede redondear a cero. Corrige la cantidad de ' +
-    'esa línea.',
+    'Esa cantidad no cabe en el libro: tiene que ser positiva, lleva seis decimales y doce ' +
+    'cifras enteras como mucho, y pasada a la unidad base del artículo tampoco puede quedarse ' +
+    'en cero ni pasar de doce cifras. Corrige la cantidad o la unidad.',
   'transferencia-con-fecha-futura':
     'Esa fecha es posterior a hoy: el libro solo recoge lo que ya ha pasado, y una ' +
     'transferencia se envía y se recibe el día en que ocurre. Hazlo ese día o corrige la fecha.',
+  'transferencia-conversion-retirada':
+    'La unidad de esa línea pasa a la del artículo por una conversión retirada: lo que ya ' +
+    'se escribió con ella se sigue leyendo, pero no viaja nada nuevo. Usa la unidad base del ' +
+    'artículo o pide que reincorporen la conversión.',
   'transferencia-en-ejercicio-cerrado':
     'Esa fecha cae en un ejercicio cerrado: ese periodo ya es definitivo y no admite ' +
     'documentos nuevos. Cambia la fecha o pide que se reabra el ejercicio.',
@@ -580,6 +584,10 @@ export const tiposDeError = {
   'transferencia-serie-repetida':
     'Dos líneas de la transferencia nombran el mismo número de serie, y cada pieza viaja una ' +
     'sola vez por documento. Quita una de las dos líneas.',
+  'transferencia-sin-conversion':
+    'La unidad de esa línea no tiene conversión a la unidad base del artículo, así que no se ' +
+    'sabe cuántas unidades lleva. Usa la unidad base o da de alta la conversión de esa ' +
+    'unidad a la base.',
   'transferencia-sin-ejercicio':
     'Esa fecha no cae en ningún ejercicio: sin periodo al que imputarlo, el documento no ' +
     'entraría en ninguna declaración. Abre el ejercicio que falta o corrige la fecha.',

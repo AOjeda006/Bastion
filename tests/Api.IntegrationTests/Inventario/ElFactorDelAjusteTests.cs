@@ -4,6 +4,7 @@ using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
+using Bastion.Inventario.Contracts.Lineas;
 using Bastion.Inventario.Domain.Ajustes;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Contracts.Unidades;
