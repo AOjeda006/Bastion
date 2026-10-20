@@ -7957,24 +7957,138 @@ el resto con `bash bateria217.sh`, un guion del *scratchpad* que deja cada paso 
 
 La siguiente mutación es la **655**, y el siguiente ADR, el **0067**.
 
+### Tomadas por el agente de desarrollo — ítem 2.18, al escribirlo y al medirlo (2026-10-20)
+
+*Dónde se retoma* ponía el ADR antes que el código, y fue al revés: el código, en `ef874fe` y
+`8ef03b3`, y el ADR-0067 después, en `6bd26cc`, porque su *Medido* necesitaba el humo. Lo que se
+decidió sin preguntar, porque el criterio no lo decía o porque salió al escribirlo:
+
+1. **Lo cuadrado vive en la fila del corte**, `cuadrado_hasta`, `date` nulable, con dos `CHECK`:
+   es un primer día, y no pasa del corte. Volver atrás lo deja a nulo (ADR-0067 §2).
+2. **La marca va fuera de la transacción del mes, con el `xmin` de la fila del corte como
+   guarda.** Si un paso del avance o de la vuelta atrás ha escrito el corte entre medias, no anota
+   nada y el cuadre para. El mes que descuadra también se anota: el aviso sale una vez, y lo
+   arregla recalcular (§5).
+3. **Un cuarto caso, la 900**: un cuadre que se cruza con un recálculo no anota lo que comparó. Es
+   el que ve la guarda del `xmin`, que los tres del criterio no ejercen.
+4. **Cada mes del cuadre va en su `REPEATABLE READ`**, que lee la fila del corte con su versión y
+   el mes con la misma foto (§5).
+5. **El índice de las instantáneas pasa a `(empresa_id, mes)`**, en la migración
+   `ElCuadreGuardaHastaDondeLlega`, sin `CONCURRENTLY`: medio segundo con 1,23·10⁶ instantáneas
+   (§8 y *Medido*).
+6. **El histograma conserva su nombre y sus cubos**, y mide un mes, de abrir su transacción al
+   `COMMIT` (§4).
+7. **El recálculo sigue sin entrada en producción** (§3). Para medirlo en C, un programa del
+   *scratchpad* llama por reflexión a los dos pasos internos de `LasInstantaneasMensuales`, en el
+   orden de `RecalcularAsync`. La cadena de conexión le llega en una variable de entorno que el
+   guion que lo lanza no imprime.
+8. **La propiedad pasa de 260 a 340 pasos.** El paso nuevo, un mes suelto del avance en el 10 % de
+   los pasos, quita sitio a los demás, y con 260 la semilla 464 se quedaba sin «envío rechazado sin
+   stock». Se barrió con `bash barrido-pasos.sh 260 300 320 340 400`, un guion del *scratchpad*
+   que cambia `Pasos` y corre la propiedad sola: con 300 y 320 falta la misma clase, y 340 es el
+   primero con las seis semillas en todas, en 3 min 51 s, desde 2 min 53 s.
+9. **El caso del lote y la serie cambia sus datos**: dos unidades en la fila viva y una en la
+   instantánea. Con la misma mentira en las dos copias, la fila viva cuadra con su instantánea del
+   corte, y solo sale la cadena (ADR-0067 §7). Lo puso rojo la batería, y va en el `feat`, con los
+   otros dos rojos, los barridos del carril rápido: `LasFechasDicenDeQueTipoSonTests`, de 17 a 18
+   fechas, y `ElFiltroNoSeSaltaPorAhiTests`, con la lectura del avance y la marca del cuadre.
+10. **El JIT del cuadre del mes del corte se propone, y no se toca.** Cuesta unos 6 s en B y en C,
+    sin el exclusivo y dentro del plazo, y el criterio no lo pide. La propuesta, en *Notas /
+    riesgos*.
+11. **El mes de 12 s de B se explicó y se repitió.** Su `INSERT` tardó 270 ms, y el resto fue su
+    `COMMIT`, que esperó al punto de control del WAL que había dejado en marcha la carga: el
+    registro del motor lo da de las 01:13:53 a las 01:16:35. Tras un `CHECKPOINT`, el mes más largo
+    de la misma ronda es de 482 ms. Las dos rondas van en el ADR.
+
+**La tanda, de la 655 a la 671, se escribió antes de medir**, en `tanda218.md` del *scratchpad*,
+con lo que debería ver cada una. Tres rompen el arnés: la 669, la 670 y la 671. Se midió en un
+*worktree* aparte, sobre `6bd26cc`, con dos carriles: los funcionales, `Api.FunctionalTests`, y
+la integración, `Api.IntegrationTests` filtrado a `Bastion.Api.IntegrationTests.Inventario.`, con
+`--blame-hang --blame-hang-timeout 4m`. Cada mutación se aplicó sola, se revirtió con `git restore
+--source=HEAD` y se tocó con la fecha de ahora:
+
+```bash
+python -X utf8 mutar218.py tanda218.json base 655-671           # la tanda, en su worktree
+python -X utf8 solo218.py tanda218.json <n> <caso> <etiqueta>   # una mutación, con un caso solo
+```
+
+La base, en verde: funcionales 0 de 252 e integración 0 de 284. Al acabar, el build del árbol
+restaurado sale con 0, y la porcelana, vacía. **Ninguna sale verde en los dos carriles**, así que no
+hay hallazgo. La propiedad es un caso con seis semillas, y donde la ve, la ven las seis.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 655 | `SqlDelMes` sin el mes anterior: el mes es solo el libro de M | **integración 9**, en masa. Por diseño, `El_avance_pone_el_corte_un_mes_cada_vez_y_no_rehace_lo_que_ya_llega` y la propiedad, y solos, cada uno con su rojo: 1 de 1 y 6 de 6. Los demás: `Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`, `El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro`, la 875, la 899, la 900 y los dos de `ElSaldoAUnaFechaTests` |
+| 656 | `SqlDelMes` lee el libro de M desde el día 2 | **integración 1**: `Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`, con 36 instantáneas en vez de 50. La propiedad, verde, contra lo escrito: ver debajo |
+| 657 | El cerrojo de cada paso, compartido | **integración 3**, los de la tanda: la 875, `Una_clave_nueva_entre_dos_meses_de_una_puesta_al_dia_la_espera_el_mes_siguiente`, y los dos del 2.14, `El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro` y `La_confirmacion_de_una_clave_nueva_espera_al_recalculo_de_su_empresa` |
+| 658 | Volver atrás no deja lo cuadrado a nulo | **integración 2**: `El_avance_pone_el_corte…` y la propiedad, por el `CHECK` de no pasar del corte |
+| 659 | La marca sin la guarda de la versión | **integración 1**: la 900, `Un_cuadre_que_se_cruza_con_un_recalculo_no_anota_lo_que_comparo`, sola |
+| 660 | La marca pone lo cuadrado en el corte entero | **integración 5**: la 899, `Un_cuadre_que_falla_a_medias_sigue_en_la_vuelta_siguiente_desde_el_ultimo_mes_que_anoto`; `El_avance_pone_el_corte…`, la 875, la 900 y la propiedad |
+| 661 | El mes siguiente al cuadrado salta uno | **integración 5**: los mismos cinco |
+| 662 | El trabajo cuadra solo la empresa que ha avanzado | **funcionales 2**: `ElTrabajoMensualAvanzaElCorteTests.Una_empresa_que_ya_llega_cuadra_lo_que_le_quedo_pendiente` y `.Una_vuelta_avanza_cada_empresa_en_su_ambito_y_cuenta_las_que_avanzan`. La integración, 0 de 284, contra lo escrito: ver debajo |
+| 663 | Sin la parada entre un mes y el siguiente | **funcionales 1**: `La_parada_se_mira_entre_un_mes_y_el_siguiente` |
+| 664 | La empresa cuenta como avanzada después del cuadre | **funcionales 1**: `Un_cuadre_que_falla_deja_la_empresa_avanzada_y_con_fallo` |
+| 665 | El histograma anota solo el primer mes | **funcionales 1**: `Una_vuelta_anota_lo_que_tarda_cada_avance_y_el_retraso_con_el_que_acaba` |
+| 666 | La cadena sin el desplazamiento del mes | **integración 7**, en masa. Por diseño, `El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro`, y solo, con su rojo, 1 de 1. Los demás: la propiedad, `Borrar_las_instantaneas…`, `El_avance_pone_el_corte…`, la 875, la 899 y la 900 |
+| 667 | Las existencias contra el corte más el libro entero | **integración 11**, en masa. Por diseño, `El_avance_pone_el_corte…`, y solo, con su rojo, 1 de 1. Los demás: `ElCuadreMiraElLoteYLaSerieTests.El_cuadre_ve_el_lote_y_la_serie_aunque_el_hueco_sume_lo_que_debe`, la propiedad, `Borrar_las_instantaneas…`, `El_cuadre_encuentra_cada_copia…`, los dos del 2.14 de la 657, `Las_existencias_y_las_instantaneas_de_dos_empresas_no_se_mezclan`, la 875, la 899 y la 900 |
+| 668 | El recálculo vuelve atrás un solo mes | **integración 3**: `El_avance_pone_el_corte…`, la propiedad y la 900 |
+| 669 | **Arnés**: `ElMesQueRevienta` no encuentra su mes | **integración 1**: la 899, sola |
+| 670 | **Arnés**: `ElRecalculoQueSeCruza` no encuentra su mes | **integración 1**: la 900, sola |
+| 671 | **Arnés**: la propiedad sin el mes suelto del avance | **integración 1**: la propiedad, en sus seis semillas |
+
+- **Lo que salió distinto de lo escrito, y por qué**:
+  - **la 656 no la ve la propiedad**, porque su libro no tiene ningún movimiento en día 1. Lo midió
+    una sonda en el *worktree*, `python -X utf8 sonda656/sonda.py <worktree> <registro>`, que
+    añade al final de la propiedad la cuenta del libro de cada semilla y se revierte: entre 241 y
+    288 movimientos en solo 3 a 14 fechas, y ninguno en día 1. Casi todos caen en «hoy», porque un
+    documento con fecha anterior al último movimiento de su artículo se rechaza. Va en *Notas /
+    riesgos*;
+  - **la 662 no la ve la integración**, porque la propiedad hace las llamadas del trabajo, no el
+    trabajo: su anfitrión lo lleva apagado, y el paso lo dice en su cabecera. La mutación está en
+    el bucle, y la ven los funcionales.
+
+**El humo**, con Docker 29.8.0, sobre `8ef03b3`, en su propio proyecto, `-p bastion-humo-218`, con
+un entorno en el *scratchpad* hecho con `openssl rand`, que se borró al acabar. Lo lanzan tres
+órdenes de un guion del *scratchpad*: `bash humo218.sh montar`, el primer arranque y el esquema;
+`bash humo218.sh medir`, las medidas; y `bash humo218.sh rematar`, el segundo arranque y el
+desmontaje. Los fallos, 0 en las tres:
+
+- el build, en 34 s; el migrador, con 0 y una línea `EsquemaMigrado` por cada uno de los seis
+  esquemas; y `/health/live` y `/health/ready`, sanos;
+- leído del catálogo del motor, en los dos arranques: `cuadrado_hasta`, `date` y nula; sus dos
+  `CHECK`, `EXTRACT(day FROM cuadrado_hasta) = 1` y `cuadrado_hasta <= hasta_el_mes`; el índice
+  `(empresa_id, mes)`, sin el viejo; y `ElCuadreGuardaHastaDondeLlega`, una vez en el historial;
+- la primera vuelta del trabajo, al arrancar, con su `8700` y ninguna empresa todavía;
+- **las medidas A, B y C y el recálculo en C**, en el *Medido* del ADR-0067, con sus órdenes. El
+  mes más largo de las vueltas mensuales es de 4 326 ms, el de C, contra el disparador de 10 s, y
+  **C avanza**; el recálculo a mano de C también, en 46 202 ms, con el mes más largo en 7 373;
+- en el registro de la API de todo el humo, con `python -X utf8 contar-log.py api-todo.log`: 15
+  `8700`, 58 `8701` y 14 `8705`, ningún `Error` ni `Fatal`, y 16 `Warning`, todos de la protección
+  de datos de ASP.NET al arrancar, ajenos al ítem;
+- el segundo arranque, con 0 en 17 s y 112 permisos en los dos, con el esquema de antes. Encontró a
+  C con lo cuadrado a nulo, como lo deja el recálculo, y su primera vuelta lo iba cuadrando mes a
+  mes: al leer los cortes, ya llegaba a agosto;
+- y `down -v`, con 0: solo queda el proyecto `bastion`, y el entorno, borrado.
+
+La siguiente mutación es la **672**, y el siguiente ADR, el **0068**.
+
 ## Estado actual
 
-**FASE 2 EN CURSO — 17 de 19 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 18 de 19 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. Los
 catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, y la
 puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el 2.18, y la
-transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15, el 2.16 y el
-2.17 están hechos.
+transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15, el 2.16, el
+2.17 y el 2.18 están hechos.
 
-> **Dónde se retoma (2026-10-19): en el 2.18, en la rama `2.18-el-avance-incremental`**, abierta
-> desde `main` en `2fdd3cb`. Su primer commit anota los dos runs del cierre del 2.17, y el
-> siguiente es su ADR, el **0067**, que enmienda el §5 del ADR-0064; el 0064 lo anota en su
-> *Estado* y en el propio punto. Después, el
-> código, con su tanda desde la **655**, y otra vez las medidas A, B y C con los guiones del 2.15.
-> Si queda algo esencial abierto, se para y se pregunta. Los hallazgos de `/code-review` sobre
-> `0638419..0d26e76` no han llegado, y se tratan antes de seguir con el código en cuanto lleguen.
-> Después del 2.18, la puerta del 2.19, donde se para y se pregunta.
+> **Dónde se retoma (2026-10-20): en la puerta del 2.19, el alta de la transferencia**, donde se
+> para y se pregunta. El 2.18 está hecho, en la rama `2.18-el-avance-incremental`, y su cierre
+> sigue el flujo de la rama: el commit que lo cierra va a la rama y espera su verde, `main` avanza
+> con `--ff-only`, y la rama se borra después del run de `main`. Los dos runs se anotan en el
+> primer commit del 2.19. Los hallazgos de `/code-review` sobre `0638419..0d26e76` no han llegado,
+> y se tratan antes de seguir en cuanto lleguen. Y hay una propuesta sin contestar, el JIT del
+> cuadre del mes del corte, en *Notas / riesgos*.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -13334,6 +13448,49 @@ el 0065 y el 0066, así que el siguiente es el **0067**. Sus mutaciones van de l
    **778/900** KiB, y el centinela con la marca y sin avisos, con 7 trozos para las 8 cadenas de
    React. Leídos con `python -X utf8 leer-run27.py <run>`. La rama `2.17-el-alta-del-ajuste` se
    borró en local y en el remoto después del run de `main`.
+
+**El 2.18, hecho el 2026-10-20**, en la rama `2.18-el-avance-incremental`, abierta el 2026-10-19
+desde `main` en `2fdd3cb`. Lo que pide está en el ADR-0067, que enmienda el 0064, el 0063 y el
+0044, y lo que se decidió al escribirlo y al medirlo, en *Decisiones tomadas → Tomadas por el
+agente de desarrollo — ítem 2.18*. Lleva un ADR, así que el siguiente es el **0068**. Sus
+mutaciones van de la **655** a la **671**, y las siguientes empiezan en la **672**.
+
+**Los commits, por este orden:**
+
+1. La apertura, `3d59288`, con los dos runs del cierre del 2.17.
+2. El código, `ef874fe`: el avance de un mes, la vuelta atrás, el cuadre de lo pendiente con
+   `cuadrado_hasta`, la migración `ElCuadreGuardaHastaDondeLlega`, y los casos que ya había,
+   adaptados. Y los tres casos nuevos, la 875, la 899 y la 900, en `8ef03b3`. El run de rama de
+   `8ef03b3`, que lleva los tres commits, es el **39351912618**, en verde: Frontal
+   `118397820654`, Backend `118397821024` y Humo `118401563199`.
+3. El ADR-0067, con lo medido, y las notas de sus enmiendas en el 0064, el 0063 y el 0044,
+   `6bd26cc`.
+4. **El cierre, por el flujo de la rama**: este commit va a la rama con `6bd26cc` y espera su
+   verde; `main` avanza con `--ff-only`, y la rama se borra, en local y en el remoto, después del
+   run de `main`. Los dos runs se anotan en el primer commit del 2.19.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `6bd26cc`**, con `bash bateria218.sh`, un
+guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida
+en una línea. Los diecisiete pasos salen con 0, y la porcelana, con `docs/PLAN.md` solo, que es
+este cierre:
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **154** operaciones en
+  **93** rutas y **238** tipos de **246** sitios, como en el 2.17, con los dos generadores en
+  `--comprobar`. Las rutas, contadas sobre `docs/api/openapi.json`;
+- `typecheck`, `lint` y `format:check`, limpios; **342** casos del frontal en **40** ficheros; y
+  `canal-de-la-consola.sh`, con la marca, ningún aviso de `act()` y siete trozos para las ocho
+  cadenas;
+- **420/450** y **778/900** KiB, como en el 2.17, porque el ítem no toca el frontal;
+- el build, con 0 errores, y `dotnet format`, limpio;
+- **1517** casos en el carril rápido y **718** en el de integración, 630 de `Api.IntegrationTests`
+  y 88 de `Organizacion.IntegrationTests`, todos en verde y contados con `recuento-de-tests.sh` y
+  las dos listas del *workflow*. Son tres más en cada carril que en el 2.17: los tres funcionales
+  nuevos del trabajo y la 875, la 899 y la 900. El de integración, con `--blame-hang
+  --blame-hang-timeout 4m`, en 540 s;
+- `ElCensoDeEsteCarrilTests`, en verde en el carril rápido, con los seis casos nuevos y el
+  renombrado, `El_avance_pone_el_corte_un_mes_cada_vez_y_no_rehace_lo_que_ya_llega`;
+- y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py 3d59288 HEAD`: 125
+  pares, 35 `Project` y 432 entradas del frontal en los dos lados, sin nada añadido ni retirado.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
@@ -22148,7 +22305,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     campo, confirmar, anular y descartar;
   - **y las decisiones, en el ADR-0065**, con lo que dice el plan maestro primero, en su
     *Contexto*.
-- [ ] **2.18 · El avance incremental del corte** — criterio de aceptación: el avance hace **un solo
+- [x] **2.18 · El avance incremental del corte** — criterio de aceptación: el avance hace **un solo
   mes por transacción**, el del corte más uno, y suelta el exclusivo de la empresa entre un mes y el
   siguiente. Las instantáneas del mes M son las del mes anterior más el libro de M, por clave: una
   clave que no se ha movido arrastra su saldo, y una que se mueve por primera vez en M aparece en M.
@@ -22164,6 +22321,36 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   disparador de 10 s. **C tiene que avanzar**, y el recálculo a mano también, en C. Las decisiones,
   en un ADR nuevo que enmienda el §5 del ADR-0064, y el 0064 lo anota en su *Estado* y en el propio
   punto. Si queda algo esencial abierto, se para y se pregunta.
+
+  **Hecho el 2026-10-20**, en la rama `2.18-el-avance-incremental`, en tres commits, del `ef874fe`
+  al `6bd26cc`, y el que lo cierra. Las decisiones, en el ADR-0067. Lo decidido sin preguntar, la
+  tanda de la 655 a la 671 y el humo, en *Decisiones tomadas → Tomadas por el agente de desarrollo
+  — ítem 2.18*; los commits y la batería, en *Estado actual → El 2.18, hecho*. Cada punto del
+  criterio tiene su caso:
+
+  - **un mes por transacción, soltando el exclusivo entre uno y otro**:
+    `El_avance_pone_el_corte_un_mes_cada_vez_y_no_rehace_lo_que_ya_llega`, y la carrera de verdad,
+    la 875, `Una_clave_nueva_entre_dos_meses_de_una_puesta_al_dia_la_espera_el_mes_siguiente`, que
+    pone roja la 657, el cerrojo compartido;
+  - **el mes M, el anterior más el libro de M**: el mismo y la propiedad, que ven la 655 cada uno
+    solo; y `Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`, la 656;
+  - **el recálculo a mano, mes a mes**: `El_avance_pone_el_corte…`, la 668, y los dos del 2.14 que
+    esperan al recálculo, la 657;
+  - **el estado del cuadre en disco, repetido mientras queda pendiente**: la 899,
+    `Un_cuadre_que_falla_a_medias_sigue_en_la_vuelta_siguiente_desde_el_ultimo_mes_que_anoto`, con
+    la 660, la 661 y la 669; el funcional
+    `Una_empresa_que_ya_llega_cuadra_lo_que_le_quedo_pendiente`, la 662; y la 900,
+    `Un_cuadre_que_se_cruza_con_un_recalculo_no_anota_lo_que_comparo`, la 659 y la 670;
+  - **las existencias, contra la instantánea del corte más el libro desde el corte**:
+    `El_avance_pone_el_corte…`, que ve la 667 solo, y el caso del lote y la serie;
+  - **los tres casos nuevos, cada uno con su mutación**: la propiedad con el mes suelto del avance,
+    con el saldo leído con el corte a medias, la 671; la carrera, la 875, la 657; y el cuadre que
+    falla y se repite, la 899, la 669;
+  - **A, B y C, medidas otra vez**, en el *Medido* del ADR-0067: el mes más largo de las vueltas
+    mensuales, 4 326 ms, el de C, contra el disparador de 10 s. **C avanza, y el recálculo a mano
+    también**, en 46 202 ms;
+  - **el ADR nuevo**, el 0067, que enmienda el §5 del 0064, y el 0064 lo anota en su *Estado* y en
+    el propio punto.
 - [ ] **2.19 · El alta de la transferencia** — criterio de aceptación: la transferencia se da de
   alta por HTTP con su permiso y desde su pantalla, con el factor que resuelve el servidor por el
   puerto del 2.17. **Pasa su propia puerta de clarificación**, que completa este criterio antes del
@@ -22221,6 +22408,24 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-10-20, ítem 2.18) · el cuadre del mes del corte paga unos 6 s de JIT del
+  motor.** Medido con `EXPLAIN (ANALYZE, BUFFERS)` en el humo del 2.18 (ADR-0067, *Medido*): el plan
+  de B cuesta 589 865 y el de C 5 048 823, por encima del umbral de optimización del JIT, 500 000
+  por omisión, y el motor compila 1 252 y 1 345 funciones en 6 248 y 6 689 ms. Sin JIT, el mismo
+  cuadre tarda 410 ms en B y 3 032 en C, en vez de 6 687 y 9 587. No tiene el exclusivo y cabe en
+  el plazo de 30 s, así que el 2.18 no lo toca. **La propuesta**: un `SET LOCAL jit = off` en la
+  transacción de cada mes del cuadre, con un caso funcional que diga que la orden va dentro, y el
+  humo midiendo otra vez el de B y el de C. No se hace sin encargo.
+
+- **ABIERTA (2026-10-20, tanda del 2.18) · la propiedad del saldo no tiene ningún movimiento en día
+  1.** Lo midió una sonda de la tanda: en las seis semillas, entre 241 y 288 movimientos en solo 3 a
+  14 fechas, y ninguno en el primer día de un mes. Casi todos caen en «hoy», porque un documento con
+  fecha anterior al último movimiento de su artículo se rechaza. Así, la propiedad no ve la 656, el
+  libro de un mes leído desde el día 2; la ve `Borrar_las_instantaneas_y_recalcularlas…`. **La
+  propuesta**: que la propiedad afirme que su libro tiene movimientos en día 1 y en el último día
+  de un mes, y que su generador los busque. No se hace sin encargo, porque cambia las secuencias de
+  las seis semillas.
 
 - **ABIERTA (2026-10-19, recorrido del 2.17) · la página de tres listados corre en horizontal a
   320 px.** Medido con `playwright-cli` a 320 px de ancho, con el `scrollWidth` del documento:
