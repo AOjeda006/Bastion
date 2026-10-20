@@ -1,11 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { useForm, useWatch, type UseFormRegisterReturn } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 
-import { RejillaDeLineas } from './RejillaDeLineas.tsx';
+import { RejillaDelAjuste } from './RejillaDelAjuste.tsx';
+import { CampoDeLaCabecera } from '../../lineas/ui/CampoDeLaCabecera.tsx';
+import { ListaDeLaCabecera } from '../../lineas/ui/ListaDeLaCabecera.tsx';
 import { clavesDeMaestros } from '../../maestros/api/claves.ts';
 import {
   SERIE_DE_AJUSTES,
@@ -203,7 +205,7 @@ function Formulario(): React.JSX.Element {
       )}
 
       <div className="grid max-w-md gap-4">
-        <Lista
+        <ListaDeLaCabecera
           campo="almacenId"
           etiqueta={t('inventario.ajustes.almacen')}
           error={texto(errors.almacenId?.message)}
@@ -232,7 +234,7 @@ function Formulario(): React.JSX.Element {
           }))}
         />
 
-        <Lista
+        <ListaDeLaCabecera
           campo="serieId"
           etiqueta={t('inventario.ajustes.alta.serie')}
           error={texto(errors.serieId?.message)}
@@ -241,7 +243,7 @@ function Formulario(): React.JSX.Element {
           sinOpciones={series.isSuccess ? t('inventario.ajustes.alta.sinSeries') : null}
         />
 
-        <Campo
+        <CampoDeLaCabecera
           campo="fechaDeOperacion"
           etiqueta={t('inventario.ajustes.fecha')}
           error={texto(errors.fechaDeOperacion?.message)}
@@ -255,9 +257,9 @@ function Formulario(): React.JSX.Element {
               className="rounded border border-neutral-300 px-2 py-1.5"
             />
           )}
-        </Campo>
+        </CampoDeLaCabecera>
 
-        <Campo
+        <CampoDeLaCabecera
           campo="motivo"
           etiqueta={t('inventario.ajustes.motivo')}
           error={texto(errors.motivo?.message)}
@@ -270,10 +272,10 @@ function Formulario(): React.JSX.Element {
               className="rounded border border-neutral-300 px-2 py-1.5"
             />
           )}
-        </Campo>
+        </CampoDeLaCabecera>
       </div>
 
-      <RejillaDeLineas
+      <RejillaDelAjuste
         formulario={formulario}
         ubicaciones={delAlmacen}
         unidades={unidades.data ?? []}
@@ -289,104 +291,5 @@ function Formulario(): React.JSX.Element {
         {isSubmitting ? t('inventario.ajustes.alta.abriendo') : t('inventario.ajustes.alta.abrir')}
       </button>
     </form>
-  );
-}
-
-/** Lo que un campo de la cabecera le pasa a su control: el nombre y a qué se refiere su error. */
-interface PropiedadesDelCampo {
-  readonly id: string;
-  readonly 'aria-invalid': boolean;
-  readonly 'aria-describedby': string | undefined;
-}
-
-/** Un campo de la cabecera, con su etiqueta encima y su error debajo. */
-function Campo({
-  campo,
-  etiqueta,
-  error,
-  children,
-}: {
-  campo: string;
-  etiqueta: string;
-  error: string | null;
-  children: (propiedades: PropiedadesDelCampo) => React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <div className="flex flex-col gap-1 text-sm">
-      <label htmlFor={campo} className="font-medium">
-        {etiqueta}
-      </label>
-      {children({
-        id: campo,
-        'aria-invalid': error !== null,
-        'aria-describedby': error === null ? undefined : `${campo}-error`,
-      })}
-      {error !== null && (
-        <p id={`${campo}-error`} role="alert" className="text-red-800">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/**
- * Un desplegable de la cabecera, con su error debajo.
- *
- * La primera opción es «Sin elegir» y no la primera serie: abrir con la que el navegador eligió por
- * su cuenta numeraría el ajuste donde nadie lo pidió.
- */
-function Lista({
-  campo,
-  etiqueta,
-  error,
-  registro,
-  opciones,
-  sinOpciones = null,
-}: {
-  campo: string;
-  etiqueta: string;
-  error: string | null;
-  registro: UseFormRegisterReturn;
-  opciones: readonly { id: string; texto: string }[];
-  /** Lo que se dice si la lista llega vacía, o nulo si no hay nada que decir. */
-  sinOpciones?: string | null;
-}): React.JSX.Element {
-  const { t } = useTranslation();
-  const vacia = sinOpciones !== null && opciones.length === 0;
-  const descripciones = [vacia && `${campo}-vacia`, error !== null && `${campo}-error`]
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <div className="flex flex-col gap-1 text-sm">
-      <label htmlFor={campo} className="font-medium">
-        {etiqueta}
-      </label>
-      <select
-        id={campo}
-        aria-invalid={error !== null}
-        aria-describedby={descripciones === '' ? undefined : descripciones}
-        {...registro}
-        className="rounded border border-neutral-300 px-2 py-1.5"
-      >
-        <option value="">{t('inventario.ajustes.alta.sinElegir')}</option>
-        {opciones.map((opcion) => (
-          <option key={opcion.id} value={opcion.id}>
-            {opcion.texto}
-          </option>
-        ))}
-      </select>
-      {vacia && (
-        <p id={`${campo}-vacia`} className="text-neutral-600">
-          {sinOpciones}
-        </p>
-      )}
-      {error !== null && (
-        <p id={`${campo}-error`} role="alert" className="text-red-800">
-          {error}
-        </p>
-      )}
-    </div>
   );
 }

@@ -1,9 +1,9 @@
 # `inventario` — lo que hay, dónde y cuánto
 
 Espeja el módulo **Inventario** del backend (`Bastion.Inventario.*`, `/api/v1/inventario/`). Dentro,
-una carpeta por recurso, y una más, `maestros`, con lo que leen todas; entre funcionalidades, nada:
-`inventario` no importa de `catalogo` ni de `organizacion`, y eso lo impide una regla de ESLint, no
-un acuerdo (`docs/adr/adr-0022`).
+una carpeta por recurso, y dos más: `maestros`, con lo que leen todas, y `lineas`, con la rejilla de
+las altas que llevan líneas. Entre funcionalidades, nada: `inventario` no importa de `catalogo` ni
+de `organizacion`, y eso lo impide una regla de ESLint, no un acuerdo (`docs/adr/adr-0022`).
 
 ## `maestros` — los nombres de lo que es de otro módulo
 
@@ -28,6 +28,33 @@ en `recuentos`, y salió de ahí cuando lo empezaron a leer dos documentos (ADR-
 Nada las invalida, porque nada del inventario escribe un maestro: duran cinco minutos
 (`VIDA_DE_UN_MAESTRO`). Son de todo el inventario, así que lo que nombró una pantalla no se vuelve a
 pedir en otra.
+
+## `lineas` — la rejilla de las altas con líneas
+
+**Propósito.** Lo que comparten las altas de los documentos con líneas, el ajuste y la
+transferencia: el marco de la rejilla, sus celdas, el buscador del artículo y los campos de la
+cabecera (ADR-0068 §8). No tiene rutas, y su única consulta es la del buscador, que cuelga de
+`clavesDeMaestros.articulos(busqueda)`. Vivía en `ajustes`, y salió de ahí cuando lo empezó a
+necesitar la transferencia. El ajuste hace lo mismo que antes, y lo dicen sus casos, que salieron
+sin tocar. Sus textos van en el espacio `inventario.lineas`.
+
+- **El marco pone lo que es de toda rejilla** (`MarcoDeLineas`): la cabecera, el número de cada
+  línea, quitarla, añadir otra, el foco, Intro en la última celda y el tope de 200 líneas. **Cada
+  documento pone sus columnas** y sus celdas, el nombre de su tabla y la frase de su tope.
+- **Las celdas son tres**, de texto, de lista y del artículo, y cada una lleva su nombre entero,
+  con la línea («Cantidad de la línea 2»), y su error debajo (`useCeldasDeLaLinea`). El de un
+  rechazo del servidor va al mismo sitio.
+- **El artículo se busca**, con un _combobox_ que pregunta al listado del catálogo (`?q=`, que mira
+  el código y la descripción) 250 ms después de la última tecla, y ofrece los diez primeros. Elegirlo
+  pone su unidad base, que no necesita conversión, y abre el lote o el número de serie si se sigue
+  así. Escribir otra vez deja la línea sin artículo hasta que se elige otro: lo escrito es una
+  búsqueda, no un artículo.
+- **La rejilla es de teclado** (§10 del plan maestro). El tabulador va de celda en celda, e Intro en
+  la última celda que se puede usar añade una línea, con el foco en su primera celda, o pasa a la
+  siguiente. La línea nueva se pinta con `flushSync` y el foco se mueve desde el manejador, no desde
+  el efecto de `append`: movido en mitad del pintado, el `blur` de la celda que se deja corría dentro
+  de él. El cuerpo de la tabla llega del manejador, y no de la referencia, porque las celdas las
+  pinta el documento, y el compilador de React no puede saber que no llamarán a Intro al pintar.
 
 ## `recuentos` — contar el almacén y ajustar la diferencia
 
@@ -258,16 +285,9 @@ pedirlo daría un `404`, e invalida `listas()`. Lo que el alta ofrece cuelga de 
 - **Las ubicaciones que se ofrecen son las del almacén elegido.** La API de la organización no
   acota por almacén: se piden las de la empresa y se filtran aquí. Cambiar de almacén deja sin
   elegir la ubicación que era de otro, en vez de mandar una que el servidor rechazaría.
-- **El artículo se busca**, con un _combobox_ que pregunta al listado del catálogo (`?q=`, que mira
-  el código y la descripción) 250 ms después de la última tecla, y ofrece los diez primeros. Elegirlo
-  pone su unidad base, que no necesita conversión, y abre el lote o el número de serie si se sigue
-  así. Escribir otra vez deja la línea sin artículo hasta que se elige otro: lo escrito es una
-  búsqueda, no un artículo.
-- **La rejilla es de teclado** (§10 del plan maestro). El tabulador va de celda en celda, e Intro en
-  la última celda que se puede usar añade una línea, con el foco en su ubicación, o pasa a la
-  siguiente. La línea nueva se pinta con `flushSync` y el foco se mueve desde el manejador, no desde
-  el efecto de `append`: movido en mitad del pintado, el `blur` de la celda que se deja corría dentro
-  de él. Un ajuste lleva como mucho 200 líneas, y el botón de añadir lo dice al llegar.
+- **La rejilla y el buscador del artículo son los de `lineas`**, con las columnas del ajuste: una
+  ubicación, que es la primera celda y la que recibe el foco de la línea nueva, y el coste. Un
+  ajuste lleva como mucho 200 líneas, y el botón de añadir lo dice al llegar.
 - **El coste lleva cuatro decimales como mucho.** El servidor redondea a cuatro lo que traiga más;
   el formulario no lo deja escribir, para que lo que se escribe sea lo que se guarda.
 - **Un borrador se nombra por su almacén y su día**, como un recuento, pero aquí puede haber dos

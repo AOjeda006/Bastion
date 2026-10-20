@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { clavesDeMaestros } from '../../maestros/api/claves.ts';
 import { buscarArticulos, type ArticuloEncontrado } from '../../maestros/api/maestros.ts';
 import { VIDA_DE_UN_MAESTRO } from '../../maestros/ui/nombres.ts';
+import { textoDeLaOpcion } from '../model/lineas.ts';
 
 /** Lo que se espera desde la última tecla antes de preguntar: una petición por palabra, no por letra. */
 const ESPERA_AL_ESCRIBIR = 250;
@@ -72,9 +73,7 @@ export function BuscadorDeArticulo({
   const desplegada = encontrados.length > 0;
 
   const elegir = (articulo: ArticuloEncontrado): void => {
-    setTexto(
-      articulo.nombre === null ? articulo.codigo : `${articulo.codigo} · ${articulo.nombre}`,
-    );
+    setTexto(textoDeLaOpcion(articulo));
     setAbierta(false);
     setMarcada(-1);
     alElegir(articulo);
@@ -171,18 +170,18 @@ export function BuscadorDeArticulo({
             }}
             className="cursor-pointer px-2 py-1 aria-selected:bg-neutral-100"
           >
-            {articulo.nombre === null ? articulo.codigo : `${articulo.codigo} · ${articulo.nombre}`}
+            {textoDeLaOpcion(articulo)}
           </div>
         ))}
       </div>
       <p id={`${id}-estado`} role="status" className="text-xs text-neutral-600">
-        {abierta && busqueda !== '' && consulta.isFetching && t('inventario.ajustes.alta.buscando')}
+        {abierta && busqueda !== '' && consulta.isFetching && t('inventario.lineas.buscando')}
         {abierta &&
           busqueda !== '' &&
           consulta.isSuccess &&
           !consulta.isFetching &&
           encontrados.length === 0 &&
-          t('inventario.ajustes.alta.ningunArticulo')}
+          t('inventario.lineas.ningunArticulo')}
       </p>
     </div>
   );

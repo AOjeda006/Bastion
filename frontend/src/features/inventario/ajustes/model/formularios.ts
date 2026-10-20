@@ -6,6 +6,7 @@ import {
   RECHAZO_DEL_COSTE,
   RECHAZO_DEL_MOTIVO,
 } from './rechazos.ts';
+import { LINEAS_COMO_MUCHO } from '../../lineas/model/lineas.ts';
 import { hoyEnElServidor } from '@/shared/lib/dias.ts';
 
 /**
@@ -55,9 +56,6 @@ const AVISOS: ReadonlySet<string> = new Set<AvisoDelFormulario>([
 export function esAvisoDelFormulario(mensaje: string): mensaje is AvisoDelFormulario {
   return AVISOS.has(mensaje);
 }
-
-/** Las líneas que caben en un alta, que es el tope de una página del servidor (ADR-0065 §6). */
-export const LINEAS_COMO_MUCHO = 200;
 
 /** El largo máximo de un motivo, que es el de la columna. */
 const LARGO_DEL_MOTIVO = 300;

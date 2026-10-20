@@ -305,6 +305,28 @@ export const es = {
   // La primera pantalla del inventario (ítem 2.12, ADR-0055). Las cantidades van en la unidad
   // base de cada artículo, y la pantalla lo dice: un recuento contado en cajas cuadraría mal.
   inventario: {
+    // Lo que comparten las altas con líneas, el ajuste y la transferencia (ADR-0068 §8): el marco
+    // de la rejilla, sus celdas, el buscador del artículo y los campos de la cabecera. Cada
+    // documento pone el nombre de su tabla, sus columnas propias y su tope.
+    lineas: {
+      sinElegir: 'Sin elegir',
+      pistaDeLaRejilla:
+        'El tabulador pasa de una celda a otra, e Intro en la última celda añade una línea.',
+      numero: 'Nº',
+      ubicacion: 'Ubicación',
+      articulo: 'Artículo',
+      cantidad: 'Cantidad',
+      unidad: 'Unidad',
+      lote: 'Lote',
+      numeroDeSerie: 'Número de serie',
+      celda: '{{campo}} de la línea {{numero}}',
+      antesElAlmacen: 'Elige antes el almacén',
+      buscando: 'Buscando…',
+      ningunArticulo: 'Ningún artículo coincide.',
+      anadir: 'Añadir una línea',
+      quitar: 'Quitar la línea {{numero}}',
+    },
+
     // El ajuste a mano (ítem 2.17, ADR-0065). El alta va en su propia ruta, porque la rejilla de
     // líneas es lo que más pesa y el listado no tiene por qué cargarla.
     ajustes: {
@@ -349,26 +371,10 @@ export const es = {
           'Cada línea lleva su cantidad con signo: en positivo entra, en negativo sale. El número lo ' +
           'recibe al confirmarlo.',
         serie: 'Serie',
-        sinElegir: 'Sin elegir',
         sinSeries:
           'No hay ninguna serie de ajustes activa. Da una de alta en el maestro de series.',
         tabla: 'Líneas del ajuste',
-        pistaDeLaRejilla:
-          'El tabulador pasa de una celda a otra, e Intro en la última celda añade una línea.',
-        numero: 'Nº',
-        ubicacion: 'Ubicación',
-        articulo: 'Artículo',
-        cantidad: 'Cantidad',
-        unidad: 'Unidad',
         coste: 'Coste por unidad base',
-        lote: 'Lote',
-        numeroDeSerie: 'Número de serie',
-        celda: '{{campo}} de la línea {{numero}}',
-        antesElAlmacen: 'Elige antes el almacén',
-        buscando: 'Buscando…',
-        ningunArticulo: 'Ningún artículo coincide.',
-        anadir: 'Añadir una línea',
-        quitar: 'Quitar la línea {{numero}}',
         eligeElAlmacen: 'Elige el almacén del ajuste.',
         eligeLaSerie: 'Elige una serie.',
         escribeLaFecha: 'Escribe el día del ajuste.',
