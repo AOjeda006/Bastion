@@ -102,8 +102,9 @@ internal static class ErroresDeTransferencia
     internal static ErrorDeOperacion NoEstaEnBorrador(Guid transferenciaId, EstadoDeTransferencia estado) =>
         ErrorDeOperacion.Conflicto(
             CodigoNoEstaEnBorrador,
-            $"La transferencia {transferenciaId} está en estado «{estado}»: solo se envía un borrador, " +
-            "y lo enviado no se vuelve a enviar porque su salida ya está en el libro (R2, R3).");
+            $"La transferencia {transferenciaId} está en estado «{estado}»: solo un borrador se envía " +
+            "o se descarta, y lo enviado ya tiene su salida en el libro, que se corrige con su " +
+            "inverso (R2, R3).");
 
     internal static ErrorDeOperacion NoEstaEnviada(Guid transferenciaId, EstadoDeTransferencia estado) =>
         ErrorDeOperacion.Conflicto(

@@ -218,6 +218,9 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             unidadDeTrabajo,
             elReloj);
 
+        DescarteDeTransferencia = new DescartarTransferencia(
+            transferencias, new VersionesDeInventario(_inventario), unidadDeTrabajo, elReloj);
+
         AltaDeRecuento = new AbrirRecuento(
             new ElUsuarioDeLaEmpresa(empresaId),
             recuentos,
@@ -290,6 +293,8 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
     internal RecibirTransferencia Recepcion { get; }
 
     internal AnularTransferencia AnulacionDeTransferencia { get; }
+
+    internal DescartarTransferencia DescarteDeTransferencia { get; }
 
     internal AbrirRecuento AltaDeRecuento { get; }
 

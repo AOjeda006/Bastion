@@ -158,6 +158,13 @@ public sealed class InventarioDbContext(
             "Inquilinato",
             transferencia => EmpresaDelFiltro == null || transferencia.EmpresaId == EmpresaDelFiltro);
 
+        // LA TRANSFERENCIA TIRADA TAMPOCO SE VE (ADR-0068 §5), por lo mismo que el ajuste: ni el
+        // listado ni la ficha, ni enviar, recibir o anular, ni las dos preguntas del cierre. Las dos
+        // lecturas en SQL escrito a mano no pasan por aquí, y no lo necesitan: miran el estado, y una
+        // descartada es siempre un borrador.
+        modelBuilder.Entity<Transferencia>().HasQueryFilter(
+            "Descarte", transferencia => transferencia.DescartadoEn == null);
+
         modelBuilder.Entity<Recuento>().HasQueryFilter(
             "Inquilinato", recuento => EmpresaDelFiltro == null || recuento.EmpresaId == EmpresaDelFiltro);
 

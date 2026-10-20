@@ -39,8 +39,9 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <b>Semillas: del 901 al 906, del bloque del 2.19</b>, empresas y maestros con el mismo número. El
 /// 899 y el 900 son de <c>LasExistenciasSonLaSumaDelLibroTests</c>, y los NIF 901 a 905 de la
 /// importación llevan delante 33 000 000, así que no chocan. Del 907 al 910 son de
-/// <c>LasLineasDeLaTransferenciaTests</c>. Las unidades nuevas llevan el código <c>K</c> y su
-/// semilla, como en el ajuste.
+/// <c>LasLineasDeLaTransferenciaTests</c>, y del 911 al 913, de <c>LaTransferenciaDescartadaTests</c>.
+/// Del 914 en adelante, libres. Las unidades nuevas llevan el código <c>K</c> y su semilla, como en
+/// el ajuste.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

@@ -103,6 +103,22 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
     /// <remarks>Un solo enlace, como en el ajuste, y un índice único que impide un segundo inverso.</remarks>
     public Guid? AnulaAId { get; private set; }
 
+    /// <summary>El instante en que se tiró el borrador, o <c>null</c> si sigue vivo (ADR-0068 §5).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es un borrado lógico y no un estado</b>, como en el ajuste. Un borrador de transferencia no
+    /// numeró, no sacó nada del origen y no puso nada en tránsito: se tira, y lo que lo esconde es el
+    /// filtro con nombre del contexto, en el repositorio. La fila se queda, y la auditoría guarda
+    /// quién la tiró y cuándo.
+    /// </para>
+    /// <para>
+    /// <b>Y el documento se defiende solo, aunque el filtro lo esconda</b>: una descartada no admite
+    /// líneas ni se envía. Un camino que se saltara el filtro no sacaría mercancía del origen desde
+    /// un documento que nadie ve.
+    /// </para>
+    /// </remarks>
+    public DateTimeOffset? DescartadoEn { get; private set; }
+
     /// <summary>Las líneas del documento, por su número.</summary>
     public IReadOnlyList<LineaDeTransferencia> Lineas => [.. _lineas.OrderBy(linea => linea.Numero)];
 
@@ -181,6 +197,8 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
         string? codigoDeLote = null,
         string? numeroDeSerie = null)
     {
+        ExigirQueNoEsteDescartada("admite líneas nuevas");
+
         if (Estado != EstadoDeTransferencia.Borrador)
         {
             throw new InvalidOperationException(
@@ -311,6 +329,8 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
         LotesYSeriesResueltos resueltos,
         DateTimeOffset momento)
     {
+        ExigirQueNoEsteDescartada("se envía");
+
         if (AnulaAId is not null)
         {
             throw new InvalidOperationException(
@@ -620,6 +640,38 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
             : EstadoDeTransferencia.Enviada;
 
         Transitar(desde, EstadoDeTransferencia.Anulada, evento);
+    }
+
+    /// <summary>Tira el borrador (ADR-0068 §5). Solo un borrador, y una sola vez.</summary>
+    /// <remarks>
+    /// <b>No transita y no cuenta nada</b>: el estado se queda en
+    /// <see cref="EstadoDeTransferencia.Borrador"/> y no hay evento, porque no se movió nada que
+    /// alguien de fuera necesite saber. Lo que cambia es <see cref="DescartadoEn"/>, y con ella el
+    /// documento deja de verse.
+    /// </remarks>
+    /// <param name="momento">Ahora.</param>
+    public void Descartar(DateTimeOffset momento)
+    {
+        ExigirQueNoEsteDescartada("se vuelve a descartar");
+
+        if (Estado != EstadoDeTransferencia.Borrador)
+        {
+            throw new InvalidOperationException(
+                $"Una transferencia en estado «{Estado}» no se descarta: ya escribió el libro, y se " +
+                "corrige con su inverso (R2).");
+        }
+
+        DescartadoEn = momento;
+    }
+
+    private void ExigirQueNoEsteDescartada(string queNoHace)
+    {
+        if (DescartadoEn is { } descartadoEn)
+        {
+            throw new InvalidOperationException(
+                $"La transferencia {Id} ya se descartó el {descartadoEn:O}, y un borrador descartado no " +
+                $"{queNoHace} (ADR-0068 §5).");
+        }
     }
 
     private MovimientoStock PataDelOrigen(

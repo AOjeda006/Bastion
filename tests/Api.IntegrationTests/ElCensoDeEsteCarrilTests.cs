@@ -599,6 +599,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaTransferenciaFrenteAlDisponibleTests.La_guarda_mira_el_fisico_de_la_clave_y_no_el_del_hueco",
         "LaTransferenciaFrenteAlDisponibleTests.Una_reserva_caducada_no_frena_el_envio",
 
+        // Del ítem 2.19 (ADR-0068 §5): la transferencia descartada, que el filtro esconde de todo.
+        "LaTransferenciaDescartadaTests.Con_la_version_de_antes_de_enviarla_es_412_y_con_la_de_ahora_409",
+        "LaTransferenciaDescartadaTests.Descartar_dos_veces_es_404_y_la_marca_es_la_primera",
+        "LaTransferenciaDescartadaTests.La_descartada_no_la_encuentran_ni_la_ficha_ni_enviar_ni_recibir_ni_anular_ni_el_cierre",
+
         // Del ítem 2.11 (ADR-0053): la transferencia de punta a punta, por la API salvo el alta,
         // que no tiene borde, y el caso de las dos empresas, que necesita claves inventadas.
         "LaTransferenciaTests.Anular_la_de_un_ejercicio_cerrado_deja_el_inverso_en_el_abierto",

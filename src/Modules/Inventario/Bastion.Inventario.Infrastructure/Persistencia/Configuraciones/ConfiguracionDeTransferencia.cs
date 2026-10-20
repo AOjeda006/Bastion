@@ -96,8 +96,17 @@ internal sealed class ConfiguracionDeTransferencia : IEntityTypeConfiguration<Tr
 
         // LO QUE PREGUNTA EL CIERRE (ADR-0053 §12): un documento cuenta por cualquiera de sus dos
         // fechas, así que cada una lleva su índice.
-        transferencia.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeEnvio });
-        transferencia.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeRecepcion });
+        // EL BORRADO LÓGICO DEL BORRADOR (ADR-0068 §5), como el del ajuste: `timestamptz` y nula
+        // mientras siga vivo. Se audita porque es el único rastro de quién la tiró y cuándo: el
+        // descarte no cuenta ningún evento.
+        transferencia.Property(documento => documento.DescartadoEn).SeAudita();
+
+        // PARCIALES, por la convención del borrado lógico: toda consulta del contexto lleva el filtro
+        // `Descarte`, así que las filas tiradas no las pide nadie y no tienen por qué estar aquí.
+        transferencia.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeEnvio })
+            .HasFilter("descartado_en IS NULL");
+        transferencia.HasIndex(documento => new { documento.EmpresaId, documento.FechaDeRecepcion })
+            .HasFilter("descartado_en IS NULL");
 
         // La mitad de la R5 que cabe en una tabla, como en el ajuste.
         transferencia.HasIndex(documento => new { documento.SerieId, documento.Numero })

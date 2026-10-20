@@ -33,6 +33,7 @@ public static class CasosDeUsoDeInventario
         servicios.AddScoped<IEnviarTransferencia, EnviarTransferencia>();
         servicios.AddScoped<IRecibirTransferencia, RecibirTransferencia>();
         servicios.AddScoped<IAnularTransferencia, AnularTransferencia>();
+        servicios.AddScoped<IDescartarTransferencia, DescartarTransferencia>();
         servicios.AddScoped<IAbrirRecuento, AbrirRecuento>();
         servicios.AddScoped<IObtenerRecuento, ObtenerRecuento>();
         servicios.AddScoped<IListarRecuentos, ListarRecuentos>();
