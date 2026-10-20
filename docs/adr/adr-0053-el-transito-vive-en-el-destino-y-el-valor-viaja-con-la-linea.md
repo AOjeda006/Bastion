@@ -3,16 +3,18 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql]
 aplica_a: [ddd, sql, inventario, concurrencia]
 tags: [adr, transferencia, transito, valoracion, numero-de-serie, cerrojo, anulacion, adr-0043, adr-0046, adr-0047, adr-0048]
-revisado: 2026-10-03
+revisado: 2026-10-20
 ---
 
 # ADR-0053: El tránsito vive en el destino, y el valor viaja con la línea
 
 - **Estado:** aceptado. **Enmendado por el ADR-0054 (§5 y §6, lo que se lleva el inverso que vacía
-  el destino).**
+  el destino) y por el ADR-0068 (§9 y §12, la superficie y el descarte del borrador).**
   - El [ADR-0054](adr-0054-vaciar-la-clave-se-lleva-todo-su-valor-tambien-en-el-inverso.md) dice lo que estas dos frases callaban:
     si la salida del destino vacía la clave, se lleva todo lo que queda, que puede ser más de lo
     que entró, y eso es lo que recibe el origen.
+  - El [ADR-0068](adr-0068-la-transferencia-se-abre-como-el-ajuste-con-dos-puntas-en-cada-linea.md) da al alta, al listado y a la ficha su ruta y
+    su pantalla, y descarta el borrador equivocado, que ya no cuenta para el cierre.
 - **Fecha:** 2026-10-03
 - **Sale del 2.11.** Los diez puntos los fijó el usuario en el encargo del 2026-10-03 (PLAN, *El
   2.11: la transferencia y el stock en tránsito*). Tres cosas quedaron abiertas, y el usuario las
@@ -182,6 +184,10 @@ almacén inventado.
 
 ### 9. La superficie es la del ajuste
 
+> **Enmendado por el ADR-0068 (2026-10-20), en el último punto.** El alta, el listado y la ficha
+> tienen ruta, permiso y pantalla, y el borrador se descarta con un `DELETE`. Los permisos de la
+> transferencia pasan de tres a seis.
+
 - **Tres acciones**: `POST /api/v1/inventario/transferencias/{id}/envio`, `…/recepcion` y
   `…/anulacion`. Las tres llevan la `Idempotency-Key` **obligatoria**, porque el filtro de
   idempotencia es el dueño de la transacción.
@@ -236,6 +242,9 @@ primera ya cambió, y recibe el `412`. Su transacción entera se deshace, númer
   - una serie en un solo sitio, contando el tránsito.
 
 ### 12. Qué decidió el agente
+
+> **Enmendado por el ADR-0068 (2026-10-20), en lo que el cierre pregunta.** Un borrador
+> descartado no cuenta: lo esconde el filtro `Descarte`, y el cierre lo pregunta por el contexto.
 
 Lo que el encargo y las tres respuestas dejaron por decidir:
 
