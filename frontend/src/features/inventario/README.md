@@ -320,21 +320,24 @@ pedirlo daría un `404`, e invalida `listas()`. Lo que el alta ofrece cuelga de 
 
 ## `transferencias` — llevar stock de un almacén a otro
 
-**Propósito.** Listar las transferencias entre almacenes de la empresa, acotarlas por su estado y
-por sus dos puntas, y leer cada una con todas sus líneas, enviarla, recibirla, anularla o
-descartarla (ítem 2.19, `docs/adr/adr-0068`). Una transferencia sale del origen al enviarla, viaja,
-y entra en el destino al recibirla.
+**Propósito.** Abrir una transferencia a mano —los dos almacenes, la serie, el día en que sale y sus
+líneas—, listar las de la empresa, acotarlas por su estado y por sus dos puntas, y leer cada una con
+todas sus líneas, enviarla, recibirla, anularla o descartarla (ítem 2.19, `docs/adr/adr-0068`).
+Una transferencia sale del origen al enviarla, viaja, y entra en el destino al recibirla.
 
 ### Rutas
 
-| Ruta                  | Exigencia                              | Título                    |
-| --------------------- | -------------------------------------- | ------------------------- |
-| `/transferencias`     | permiso `inventario.transferencia.ver` | Transferencias            |
-| `/transferencias/:id` | permiso `inventario.transferencia.ver` | Ficha de la transferencia |
+| Ruta                    | Exigencia                                | Título                    |
+| ----------------------- | ---------------------------------------- | ------------------------- |
+| `/transferencias`       | permiso `inventario.transferencia.ver`   | Transferencias            |
+| `/transferencias/nueva` | permiso `inventario.transferencia.abrir` | Nueva transferencia       |
+| `/transferencias/:id`   | permiso `inventario.transferencia.ver`   | Ficha de la transferencia |
 
-Las dos van **diferidas**, como las del ajuste. Solo el listado sale en la navegación: la ficha se
-abre desde su fila, y la de una inversa, desde el aviso de la anulación. Enviar, recibir, anular y
-descartar piden `inventario.transferencia.enviar`, `.recibir`, `.anular` y `.descartar`.
+Las tres van **diferidas**, como las del ajuste. Solo el listado sale en la navegación: el alta se
+abre desde él, la ficha, desde su fila o al acabar el alta, y la de una inversa, desde el aviso de
+la anulación. Enviar, recibir, anular y descartar piden `inventario.transferencia.enviar`,
+`.recibir`, `.anular` y `.descartar`. El alta pide además poder ver lo que ofrece, como la del
+ajuste, y sin uno de esos permisos lo dice.
 
 Parámetros de URL del listado: `?pagina=`, `?tamanio=`, `?estado=`, `?origen=` y `?destino=`, con
 los nombres y los valores de la API; y `?orden=`, con el valor de la API (`fechaDeEnvio`,
@@ -353,7 +356,8 @@ ignora.
 ['transferencias', 'una', id]        → clavesDeTransferencias.una(id)
 ```
 
-Enviar, recibir, anular y un fallo de cualquiera, `una(id)` y `listas()`. Descartar **quita**
+Abrir invalida `listas()`; enviar, recibir, anular y un fallo de cualquiera, `una(id)` y
+`listas()`. Descartar **quita**
 `una(id)` de la caché, porque la transferencia deja de existir y volver a pedirla daría un `404`, e
 invalida `listas()`. Los almacenes del filtro y los nombres de cada fila cuelgan de
 `clavesDeMaestros`.
@@ -363,8 +367,8 @@ invalida `listas()`. Los almacenes del filtro y los nombres de cada fila cuelgan
 - **Dos filtros de almacén y no uno** (ADR-0068 §1): quien recibe busca lo que llega a su almacén, y
   quien envía, lo que sale del suyo. Juntos dan lo que va de uno a otro. Sin el permiso de ver los
   almacenes no salen, y cada fila lleva sus identificadores.
-- **No hay búsqueda.** El alta no tiene ningún campo que escriba una persona, y la API no filtra por
-  texto: un `?q=` llega y no filtra nada.
+- **No hay búsqueda.** El alta no tiene ningún texto libre, como el motivo del ajuste, y la API no
+  filtra por texto: un `?q=` llega y no filtra nada.
 - **Por la fecha de recepción, las que no han llegado van primero de la última a la primera, y
   últimas al revés**, que es lo que hace PostgreSQL con un nulo. Las dos fechas van en su columna, y
   la de recepción está vacía mientras no llega.
@@ -384,8 +388,27 @@ invalida `listas()`. Los almacenes del filtro y los nombres de cada fila cuelgan
   transferencia. Su ficha no ofrece nada, y lleva a la original.
 - **Descartada, la transferencia deja de existir**, y **una ficha por transferencia**: lo mismo que
   en el ajuste, por lo mismo.
+- **Una ubicación por punta en cada línea**: la de origen ofrece las del almacén de origen, y la de
+  destino, las del de destino. Cambiar el almacén de una punta deja sin elegir las ubicaciones de
+  esa punta que eran del otro, y la otra punta no se toca. La rejilla es la de `lineas`, sin coste:
+  lo que viaja se valora al enviarlo.
+- **El mismo almacén en las dos puntas lo dice el formulario en el destino**, en cuanto están los
+  dos, aunque falte lo demás: `zod` no mira el objeto entero mientras un campo falla, y la regla
+  lleva un `when` para que lo haga. El mismo rechazo, si lo dice el servidor, va arriba.
+- **El rechazo de una línea va en su campo, con el foco** (ADR-0068 §6), como en el ajuste: un `400`
+  dice la línea en la clave de `errors`, desde cero, y un `409` o un `422`, en `actual.linea`, desde
+  uno. El de una ubicación dice además su punta: la que no existe, en la ruta
+  (`lineas[0].ubicacionDestinoId`), y la bloqueada, en `actual.punta`. Una ubicación sin punta va
+  arriba, porque elegir una de las dos celdas sería inventárselo.
+- **La cantidad no lleva signo**: lo negativo es del inverso, que se construye anulando.
 
 ### Límites conocidos
 
 - **Un borrador se nombra por sus dos almacenes y el día en que sale**, y puede haber dos iguales:
   la fila no tiene nada más que los distinga. El número lo recibe al enviarse.
+- **El lote y el número de serie se escriben a mano** (respuesta 2 de la puerta del 2.19). Elegirlos
+  de lo que hay en el origen espera a la expedición de la fase 4, que es su disparador.
+- **Las ubicaciones se piden en una página de 200, y de toda la empresa**, como en el alta del
+  ajuste, con el mismo disparador.
+- **El tope de 200 líneas no tiene caso de pantalla**, por lo mismo que en el ajuste: lo afirman el
+  esquema (`model/formularios.test.ts`) y el servidor.

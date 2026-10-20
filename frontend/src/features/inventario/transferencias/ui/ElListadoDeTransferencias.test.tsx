@@ -257,4 +257,18 @@ describe('El listado de transferencias', () => {
     expect(screen.queryByRole('combobox', { name: 'Destino' })).not.toBeInTheDocument();
     expect(filas()[1]?.slice(0, 3)).toEqual(['Transferencia 15', CENTRAL.id, NAVE_DEL_NORTE.id]);
   });
+
+  it('el alta se ofrece a quien puede abrir, y a quien solo ve, no', async () => {
+    const { unmount } = montar('/transferencias', [...PUEDE_VER, PERMISOS.transferenciaAbrir]);
+
+    expect(await screen.findByRole('link', { name: 'Nueva transferencia' })).toHaveAttribute(
+      'href',
+      '/transferencias/nueva',
+    );
+    unmount();
+
+    montar();
+    await screen.findByRole('table', { name: 'Transferencias de la empresa activa' });
+    expect(screen.queryByRole('link', { name: 'Nueva transferencia' })).not.toBeInTheDocument();
+  });
 });

@@ -275,6 +275,19 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
         .PaginaDeTransferencias,
   },
   {
+    // Fuera de la navegación: se llega desde el listado. Por el permiso de abrir, que es lo que
+    // pide el `POST`; la pantalla pide además ver los maestros que ofrece, y sin ellos lo dice.
+    // Antes de la ficha, porque `nueva` no es un identificador.
+    ruta: '/transferencias/nueva',
+    duenio: 'inventario',
+    claveDeTitulo: 'nuevaTransferencia',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.transferenciaAbrir },
+    enLaNavegacion: false,
+    cargar: async () =>
+      (await import('@/features/inventario/transferencias/ui/PaginaDeLaNuevaTransferencia.tsx'))
+        .PaginaDeLaNuevaTransferencia,
+  },
+  {
     // Fuera de la navegación: se llega desde el listado, y de una anulación a su inverso. Por el
     // permiso de ver, que es el de la ficha y todas sus líneas; cada acción tiene el suyo.
     ruta: '/transferencias/:id',

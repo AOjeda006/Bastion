@@ -227,8 +227,8 @@ function Lineas({ transferencia }: { transferencia: Transferencia }): React.JSX.
           <thead>
             <tr className="border-b border-neutral-300 text-left">
               {columna(t('inventario.transferencias.ficha.numero'))}
-              {columna(t('inventario.transferencias.ficha.sale'))}
-              {columna(t('inventario.transferencias.ficha.entra'))}
+              {columna(t('inventario.transferencias.ubicacionOrigen'))}
+              {columna(t('inventario.transferencias.ubicacionDestino'))}
               {columna(t('inventario.transferencias.ficha.articulo'))}
               {columna(t('inventario.transferencias.ficha.cantidad'), true)}
               {columna(t('inventario.transferencias.ficha.factor'), true)}

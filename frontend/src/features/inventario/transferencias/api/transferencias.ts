@@ -1,3 +1,4 @@
+import type { AltaDeTransferencia } from '../model/formularios.ts';
 import { estadoDelContrato, estadoEnElContrato } from '../model/listado.ts';
 import type { ListadoDeTransferencias } from '../model/listado.ts';
 import type {
@@ -106,6 +107,26 @@ export async function consultarTransferencias(
   }
 
   return { elementos: data.elementos.map(traducirResumen), total: enteroDelContrato(data.total) };
+}
+
+/**
+ * Abre un borrador con sus líneas. Con la clave del intento, que es obligatoria (ADR-0068 §1):
+ * repetir el mismo envío devuelve el borrador de la primera vez en vez de abrir otro.
+ */
+export async function abrirTransferencia(
+  alta: AltaDeTransferencia,
+  clave: string,
+): Promise<ResumenDeTransferencia> {
+  const { data, error, response } = await api.POST('/api/v1/inventario/transferencias', {
+    body: { ...alta, lineas: alta.lineas.map((linea) => ({ ...linea })) },
+    headers: { [CABECERA_DE_IDEMPOTENCIA]: clave },
+  });
+
+  if (data === undefined) {
+    throw fallo(response.status, error);
+  }
+
+  return traducirResumen(data);
 }
 
 /** La ficha de una, con todas sus líneas y la versión que cita el descarte. */

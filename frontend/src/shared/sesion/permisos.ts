@@ -35,6 +35,7 @@ export const PERMISOS = {
   terceroVer: 'terceros.tercero.ver',
   terceroImportar: 'terceros.tercero.importar',
   transferenciaVer: 'inventario.transferencia.ver',
+  transferenciaAbrir: 'inventario.transferencia.abrir',
   transferenciaEnviar: 'inventario.transferencia.enviar',
   transferenciaRecibir: 'inventario.transferencia.recibir',
   transferenciaAnular: 'inventario.transferencia.anular',

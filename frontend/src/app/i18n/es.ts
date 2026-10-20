@@ -62,6 +62,7 @@ export const es = {
     trazabilidadDelArticulo: 'Trazabilidad del artículo',
     codigosDeBarrasDelArticulo: 'Códigos de barras del artículo',
     transferencias: 'Transferencias',
+    nuevaTransferencia: 'Nueva transferencia',
     transferencia: 'Ficha de la transferencia',
     noEncontrada: 'Página no encontrada',
   },
@@ -598,6 +599,8 @@ export const es = {
       recepcion: 'Fecha de recepción',
       estado: 'Estado',
       motivo: 'Motivo',
+      ubicacionOrigen: 'Ubicación de origen',
+      ubicacionDestino: 'Ubicación de destino',
       // Se numera al enviarla. Un borrador se nombra por sus dos almacenes y el día en que sale.
       numerada: 'Transferencia {{numero}}',
       sinNumero: 'Borrador de {{origen}} a {{destino}} del {{dia}}',
@@ -617,10 +620,37 @@ export const es = {
       paginaVacia: 'Esta página no tiene transferencias. Vuelve a la anterior.',
       ningunaTodavia: 'Todavía no hay ninguna transferencia en esta empresa.',
       ningunaConEsteFiltro: 'Ninguna transferencia coincide con el filtro.',
+      nueva: 'Nueva transferencia',
       volver: 'Volver a las transferencias',
 
+      // Lo que solo dice el formulario: no haber elegido o no haber escrito, que el servidor nunca
+      // llega a ver. Lo que rechaza el servidor dice su texto de `errores.tipos`.
       avisos: {
-        escribeLaFecha: 'Escribe el día en que llega.',
+        eligeElOrigen: 'Elige el almacén del que sale.',
+        eligeElDestino: 'Elige el almacén al que llega.',
+        eligeLaSerie: 'Elige una serie.',
+        escribeElEnvio: 'Escribe el día en que sale.',
+        escribeLaRecepcion: 'Escribe el día en que llega.',
+        eligeLaUbicacion: 'Elige la ubicación.',
+        eligeElArticulo: 'Elige un artículo de la lista.',
+        eligeLaUnidad: 'Elige la unidad.',
+        escribeLaCantidad: 'Escribe la cantidad.',
+        topeDeLineas: 'Una transferencia lleva como mucho 200 líneas.',
+      },
+
+      alta: {
+        pista:
+          'Cada línea sale de una ubicación del origen y entra en una del destino. El número lo ' +
+          'recibe al enviarla.',
+        serie: 'Serie',
+        sinSeries:
+          'No hay ninguna serie de transferencias activa. Da una de alta en el maestro de series.',
+        tabla: 'Líneas de la transferencia',
+        abrir: 'Abrir la transferencia',
+        abriendo: 'Abriendo…',
+        sinMaestros:
+          'Para abrir una transferencia hace falta poder ver los almacenes, las series, las ' +
+          'ubicaciones, las unidades y los artículos.',
       },
 
       ficha: {
@@ -630,8 +660,6 @@ export const es = {
         lineas: 'Líneas',
         tabla: 'Líneas de la transferencia',
         numero: 'Nº',
-        sale: 'Sale de',
-        entra: 'Entra en',
         articulo: 'Artículo',
         cantidad: 'Cantidad',
         factor: 'Factor de conversión',

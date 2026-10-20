@@ -50,6 +50,7 @@ const TRAZABILIDADES: ReadonlyMap<string, Trazabilidad> = new Map([
 /** Qué numeran las dos series del alta, con el texto del contrato (`TipoDeDocumento`). */
 export const SERIE_DE_RECUENTOS = 'RecuentoDeInventario';
 export const SERIE_DE_AJUSTES = 'AjusteDeInventario';
+export const SERIE_DE_TRANSFERENCIAS = 'TransferenciaDeInventario';
 
 /**
  * El tope de la página de los desplegables, que es el del servidor.

@@ -64,9 +64,12 @@ interface Filtrado {
  * salen y por el que llegan, y ordenable por las dos fechas o por el número (ítem 2.19, ADR-0068).
  *
  * Los filtros viven en la URL. Quien recibe busca lo que llega a su almacén, y quien envía, lo que
- * sale del suyo; los dos juntos dan lo que va de uno a otro.
+ * sale del suyo; los dos juntos dan lo que va de uno a otro. El alta va en su propia ruta
+ * (`/transferencias/nueva`), con su permiso: quien solo ve no encuentra el enlace.
  */
 export function PaginaDeTransferencias(): React.JSX.Element {
+  const { t } = useTranslation();
+  const sesion = useSesionAbierta();
   const [parametros, setParametros] = useSearchParams();
   const listado = leerListado(parametros, leerPaginacion(parametros));
 
@@ -78,6 +81,16 @@ export function PaginaDeTransferencias(): React.JSX.Element {
 
   return (
     <>
+      {concede(sesion, PERMISOS.transferenciaAbrir) && (
+        <p className="mt-4">
+          <Link
+            to="/transferencias/nueva"
+            className="inline-block rounded bg-neutral-900 px-4 py-2 text-sm text-white"
+          >
+            {t('inventario.transferencias.nueva')}
+          </Link>
+        </p>
+      )}
       <Filtros
         listado={listado}
         alFiltrar={(filtrado) => {

@@ -403,8 +403,8 @@ describe('La ficha de una transferencia', { timeout: 15_000 }, () => {
     });
     expect(columnas()).toEqual([
       'Nº',
-      'Sale de',
-      'Entra en',
+      'Ubicación de origen',
+      'Ubicación de destino',
       'Artículo',
       'Cantidad',
       'Factor de conversión',

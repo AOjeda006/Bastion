@@ -49,6 +49,7 @@ export const en: Diccionario = {
     trazabilidadDelArticulo: 'Item traceability',
     codigosDeBarrasDelArticulo: 'Item barcodes',
     transferencias: 'Stock transfers',
+    nuevaTransferencia: 'New stock transfer',
     transferencia: 'Stock transfer record',
     noEncontrada: 'Page not found',
   },
@@ -539,6 +540,8 @@ export const en: Diccionario = {
       recepcion: 'Receipt date',
       estado: 'Status',
       motivo: 'Reason',
+      ubicacionOrigen: 'Origin location',
+      ubicacionDestino: 'Destination location',
       numerada: 'Transfer {{numero}}',
       sinNumero: 'Draft from {{origen}} to {{destino}} on {{dia}}',
 
@@ -557,10 +560,35 @@ export const en: Diccionario = {
       paginaVacia: 'This page has no transfers. Go back to the previous one.',
       ningunaTodavia: 'This company has no stock transfers yet.',
       ningunaConEsteFiltro: 'No transfer matches the filter.',
+      nueva: 'New stock transfer',
       volver: 'Back to stock transfers',
 
       avisos: {
-        escribeLaFecha: 'Enter the day it arrives.',
+        eligeElOrigen: 'Choose the warehouse it leaves from.',
+        eligeElDestino: 'Choose the warehouse it goes to.',
+        eligeLaSerie: 'Choose a series.',
+        escribeElEnvio: 'Enter the day it leaves.',
+        escribeLaRecepcion: 'Enter the day it arrives.',
+        eligeLaUbicacion: 'Choose the location.',
+        eligeElArticulo: 'Choose an item from the list.',
+        eligeLaUnidad: 'Choose the unit.',
+        escribeLaCantidad: 'Enter the quantity.',
+        topeDeLineas: 'A stock transfer has at most 200 lines.',
+      },
+
+      alta: {
+        pista:
+          'Each line leaves a location at the origin and enters one at the destination. It gets ' +
+          'its number when it is shipped.',
+        serie: 'Series',
+        sinSeries:
+          'There is no active stock transfer series. Create one in the series master data.',
+        tabla: 'Lines of the transfer',
+        abrir: 'Open the transfer',
+        abriendo: 'Opening…',
+        sinMaestros:
+          'Opening a stock transfer requires being able to see the warehouses, the series, the ' +
+          'locations, the units and the items.',
       },
 
       ficha: {
@@ -570,8 +598,6 @@ export const en: Diccionario = {
         lineas: 'Lines',
         tabla: 'Lines of the transfer',
         numero: 'No.',
-        sale: 'Leaves',
-        entra: 'Arrives at',
         articulo: 'Item',
         cantidad: 'Quantity',
         factor: 'Conversion factor',
