@@ -48,6 +48,7 @@ export const en: Diccionario = {
     importarTerceros: 'Import business partners',
     trazabilidadDelArticulo: 'Item traceability',
     codigosDeBarrasDelArticulo: 'Item barcodes',
+    transferencias: 'Stock transfers',
     noEncontrada: 'Page not found',
   },
 
@@ -525,6 +526,45 @@ export const en: Diccionario = {
       paginaVacia: 'This page has no balances. Go back to the previous one.',
       ningunoTodavia: 'This company has not moved any stock yet.',
       ningunoConEsteFiltro: 'No balance matches the filter.',
+    },
+
+    transferencias: {
+      cargando: 'the stock transfers',
+      tabla: 'Stock transfers of the active company',
+      transferencia: 'Transfer',
+      origen: 'From',
+      destino: 'To',
+      envio: 'Shipping date',
+      recepcion: 'Receipt date',
+      estado: 'Status',
+      numerada: 'Transfer {{numero}}',
+      sinNumero: 'Draft from {{origen}} to {{destino}} on {{dia}}',
+
+      todas: 'All',
+      todos: 'All',
+      orden: 'Sort by',
+      ordenes: {
+        envioReciente: 'Shipping date, latest first',
+        envioAntiguo: 'Shipping date, earliest first',
+        recepcionReciente: 'Receipt date, latest first',
+        recepcionAntigua: 'Receipt date, earliest first',
+        numeroDescendente: 'Number, highest first',
+        numeroAscendente: 'Number, lowest first',
+      },
+      filtrar: 'Filter',
+      paginaVacia: 'This page has no transfers. Go back to the previous one.',
+      ningunaTodavia: 'This company has no stock transfers yet.',
+      ningunaConEsteFiltro: 'No transfer matches the filter.',
+
+      estados: {
+        borrador: 'Draft',
+        enviada: 'Shipped',
+        recibida: 'Received',
+        anulada: 'Voided',
+        desconocido: 'Unrecognised',
+        desconocidoDetalle:
+          'This version of the screen does not know that status. Reload the page.',
+      },
     },
   },
 

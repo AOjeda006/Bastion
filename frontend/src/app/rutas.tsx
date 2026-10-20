@@ -263,6 +263,18 @@ export const RUTAS: readonly DeclaracionDeRuta[] = [
       (await import('@/features/terceros/terceros/ui/PaginaDeImportacion.tsx')).PaginaDeImportacion,
   },
   {
+    // Las transferencias entre almacenes (ítem 2.19, ADR-0068 §8). Abrir, enviar, recibir, anular y
+    // descartar tienen sus permisos, y la pantalla esconde lo que no se puede hacer.
+    ruta: '/transferencias',
+    duenio: 'inventario',
+    claveDeTitulo: 'transferencias',
+    exigencia: { clase: 'permiso', permiso: PERMISOS.transferenciaVer },
+    enLaNavegacion: true,
+    cargar: async () =>
+      (await import('@/features/inventario/transferencias/ui/PaginaDeTransferencias.tsx'))
+        .PaginaDeTransferencias,
+  },
+  {
     ruta: '*',
     duenio: 'armazon',
     claveDeTitulo: 'noEncontrada',

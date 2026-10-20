@@ -317,3 +317,53 @@ pedirlo daría un `404`, e invalida `listas()`. Lo que el alta ofrece cuelga de 
 - **El tope de 200 líneas no tiene caso de pantalla**: añadir 199 líneas en jsdom tarda 15 s, porque
   cada una repinta la rejilla entera. Lo afirman el esquema (`model/formularios.test.ts`) y el
   servidor, y el recorrido en el navegador del cierre del ítem.
+
+## `transferencias` — llevar stock de un almacén a otro
+
+**Propósito.** Listar las transferencias entre almacenes de la empresa, acotarlas por su estado y
+por sus dos puntas, y llegar a cada una (ítem 2.19, `docs/adr/adr-0068`). Una transferencia sale
+del origen al enviarla, viaja, y entra en el destino al recibirla.
+
+### Rutas
+
+| Ruta              | Exigencia                              | Título         |
+| ----------------- | -------------------------------------- | -------------- |
+| `/transferencias` | permiso `inventario.transferencia.ver` | Transferencias |
+
+Va **diferida**, como las del ajuste, y sale en la navegación.
+
+Parámetros de URL del listado: `?pagina=`, `?tamanio=`, `?estado=`, `?origen=` y `?destino=`, con
+los nombres y los valores de la API; y `?orden=`, con el valor de la API (`fechaDeEnvio`,
+`fechaDeRecepcion` o `numero`, con un guion delante si es de mayor a menor; sin él, el envío, del
+último día al primero). Ninguno es sensible (`docs/adr/adr-0025`), y lo que no se reconoce se
+ignora.
+
+### Claves de consulta
+
+`transferencias/api/claves.ts`:
+
+```
+['transferencias']                   → clavesDeTransferencias.todo
+['transferencias', 'lista']          → clavesDeTransferencias.listas()
+['transferencias', 'lista', listado] → clavesDeTransferencias.lista(listado)
+```
+
+Los almacenes del filtro y los nombres de cada fila cuelgan de `clavesDeMaestros`.
+
+### Lo que no es evidente
+
+- **Dos filtros de almacén y no uno** (ADR-0068 §1): quien recibe busca lo que llega a su almacén, y
+  quien envía, lo que sale del suyo. Juntos dan lo que va de uno a otro. Sin el permiso de ver los
+  almacenes no salen, y cada fila lleva sus identificadores.
+- **No hay búsqueda.** El alta no tiene ningún campo que escriba una persona, y la API no filtra por
+  texto: un `?q=` llega y no filtra nada.
+- **Por la fecha de recepción, las que no han llegado van primero de la última a la primera, y
+  últimas al revés**, que es lo que hace PostgreSQL con un nulo. Las dos fechas van en su columna, y
+  la de recepción está vacía mientras no llega.
+- **La tabla corre dentro de su contenedor**, y no la página: con dos almacenes y dos fechas es más
+  ancha que un móvil (WCAG 1.4.10, ADR-0068 §8).
+
+### Límites conocidos
+
+- **Un borrador se nombra por sus dos almacenes y el día en que sale**, y puede haber dos iguales:
+  la fila no tiene nada más que los distinga. El número lo recibe al enviarse.

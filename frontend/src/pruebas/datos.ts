@@ -99,6 +99,29 @@ export function almacenesDe(empresaId: string): PaginaDeAlmacenDto {
 }
 
 /**
+ * Un segundo almacén de Alfa, para lo que necesita dos: la transferencia (ítem 2.19).
+ *
+ * No está en `NAVES`, que es lo que contesta el servidor simulado por omisión: las pantallas que ya
+ * había cuentan con que Alfa tenga uno solo, y lo que pintan lo dice. Quien lo necesita lo añade a
+ * su respuesta.
+ */
+export const NAVE_DEL_NORTE: AlmacenDto = {
+  id: 'aaaaaaa2-0000-0000-0000-000000000002',
+  empresaId: ALFA.id,
+  codigo: 'ALM-NORTE',
+  nombre: 'Nave del norte',
+  direccion: {
+    calle: 'Calle Tres',
+    numero: '3',
+    codigoPostal: '41003',
+    poblacion: 'Sevilla',
+    subdivision: 'SE',
+    pais: 'ES',
+  },
+  tipo: 'Fisico',
+};
+
+/**
  * Los terceros con los que responde el servidor simulado.
  *
  * **Ningún identificador fiscal de aquí es de nadie.** Los españoles se han fabricado con el

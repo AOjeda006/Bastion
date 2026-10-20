@@ -61,6 +61,7 @@ export const es = {
     importarTerceros: 'Importar terceros',
     trazabilidadDelArticulo: 'Trazabilidad del artículo',
     codigosDeBarrasDelArticulo: 'Códigos de barras del artículo',
+    transferencias: 'Transferencias',
     noEncontrada: 'Página no encontrada',
   },
 
@@ -582,6 +583,47 @@ export const es = {
       paginaVacia: 'Esta página no tiene saldos. Vuelve a la anterior.',
       ningunoTodavia: 'Esta empresa todavía no ha movido stock.',
       ningunoConEsteFiltro: 'Ningún saldo coincide con el filtro.',
+    },
+
+    // La transferencia entre almacenes (ítem 2.19, ADR-0068). Se nombra, se acota y se lee como el
+    // ajuste, pero con dos almacenes, y sin búsqueda: no tiene ningún texto que escriba una persona.
+    transferencias: {
+      cargando: 'las transferencias',
+      tabla: 'Transferencias de la empresa activa',
+      transferencia: 'Transferencia',
+      origen: 'Origen',
+      destino: 'Destino',
+      envio: 'Fecha de envío',
+      recepcion: 'Fecha de recepción',
+      estado: 'Estado',
+      // Se numera al enviarla. Un borrador se nombra por sus dos almacenes y el día en que sale.
+      numerada: 'Transferencia {{numero}}',
+      sinNumero: 'Borrador de {{origen}} a {{destino}} del {{dia}}',
+
+      todas: 'Todas',
+      todos: 'Todos',
+      orden: 'Orden',
+      ordenes: {
+        envioReciente: 'Envío, del último día al primero',
+        envioAntiguo: 'Envío, del primer día al último',
+        recepcionReciente: 'Recepción, del último día al primero',
+        recepcionAntigua: 'Recepción, del primer día al último',
+        numeroDescendente: 'Número, de mayor a menor',
+        numeroAscendente: 'Número, de menor a mayor',
+      },
+      filtrar: 'Filtrar',
+      paginaVacia: 'Esta página no tiene transferencias. Vuelve a la anterior.',
+      ningunaTodavia: 'Todavía no hay ninguna transferencia en esta empresa.',
+      ningunaConEsteFiltro: 'Ninguna transferencia coincide con el filtro.',
+
+      estados: {
+        borrador: 'Borrador',
+        enviada: 'Enviada',
+        recibida: 'Recibida',
+        anulada: 'Anulada',
+        desconocido: 'Sin reconocer',
+        desconocidoDetalle: 'Esta versión de la pantalla no conoce ese estado. Recarga la página.',
+      },
     },
   },
 

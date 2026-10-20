@@ -34,6 +34,7 @@ export const PERMISOS = {
   tarifaVer: 'catalogo.tarifa.ver',
   terceroVer: 'terceros.tercero.ver',
   terceroImportar: 'terceros.tercero.importar',
+  transferenciaVer: 'inventario.transferencia.ver',
   ubicacionVer: 'organizacion.ubicacion.ver',
   unidadMedidaVer: 'organizacion.unidad-medida.ver',
 } as const;
