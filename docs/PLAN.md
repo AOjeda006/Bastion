@@ -8203,22 +8203,124 @@ Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
 
 La siguiente mutación es la **672**, y el siguiente ADR, el **0068**.
 
+### Traídas por el encargo del 2026-10-20 — la puerta del 2.19, contestada
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **22** commits nuevos desde `97645c9`, con 22 firmas válidas y sin *trailers*. La cuenta de 23
+  del informe incluía `97645c9`;
+- los runs **276 a 284** en verde al primer intento, y el 278, un duplicado cancelado;
+- `main` avanzó a `aa56bfc` solo después del verde de su rama;
+- las cifras, iguales a las del *runner*: **1517** y **718** casos, **420/450** y **778/900** KiB,
+  **342** casos de Vitest y **112** permisos;
+- y las enmiendas del 0060, el 0063 y el 0064, declaradas.
+
+**Faltaba por anotar el run de `ffd8015`**, el commit que abrió la puerta: es el **39366249323**,
+en verde al primer intento, con Backend `118443664639`, Frontal `118443664721` y Humo
+`118447189137`, y los mismos 69 pasos, 68 en verde y el *Diagnóstico* omitido. Sus cifras son las
+del cierre del 2.18, porque solo tocó el PLAN. Leído con `python -X utf8 leer-run27.py
+39366249323`. `main` no avanzó con él, porque la puerta se para en la rama.
+
+**El próximo informe cuenta desde `ffd8015`.** La siguiente mutación es la **672**, y el siguiente
+ADR, el **0068**. **El arnés** está al día desde `dbf2664`, y `arnes-de-agente.md` se lee al
+empezar cada sesión. La biblioteca no ha cambiado desde `3b45c6b`.
+
+**Una corrección al informe.** El 2.17 salió como una sola línea: sin sus trece asuntos, sin el
+ADR-0065 y el ADR-0066, y sin el hallazgo del canal de `act()`. Ese hallazgo es el más importante
+del tramo, porque cambia lo que significaban todos los ceros anteriores. El próximo informe cuenta
+cada commit con su asunto, como pide `AGENTS.md`, y lo que se encuentra por el camino va arriba, no
+se queda solo en el PLAN. **Y un tema por subida**: trece commits en un solo run dejan sin
+comprobar en la CI los doce primeros.
+
+**`/code-review` deja de bloquear nada.** Si sus hallazgos llegan, se tratan como decía la
+respuesta 8 de la puerta del 2.17. Si no, el cierre de la fase la anota como no hecha, con su
+rango, `0638419..0d26e76`.
+
+#### Las respuestas de la puerta del 2.19, decisión del usuario
+
+1. **El descarte del borrador: sí.** Con `inventario.transferencia.descartar`, borrado lógico y
+   `204`, igual que el del ajuste.
+2. **El lote y la serie en el alta: (a)**, escritos a mano, como en el ajuste. El selector de lo
+   que hay en la ubicación de origen se anota como trabajo pendiente, con su disparador, en *Notas
+   / riesgos*.
+3. **El cierre de la fase: (a).** Va en este mismo trabajo, después del 2.20, y para en la puerta
+   de la fase 3.
+4. **Las tres propuestas, como un ítem propio, el 2.20 · Lo que el 2.18 dejó propuesto**, con dos
+   añadidos:
+   - el indicador `meses_sin_cuadrar`, el corte menos lo cuadrado, sin la empresa como etiqueta.
+     Es lo que el ADR-0067 reconoce que falta;
+   - una nueva medida del cuadre sin JIT en A, B y C, para ver si las tres cifras sin explicar
+     desaparecen.
+
+#### El orden de trabajo
+
+- **A. El primer commit, en la rama del 2.19**: el run de `ffd8015`, las respuestas, el criterio
+  del 2.19 con el descarte, el 2.20 nuevo con su criterio y la línea del README en el mismo
+  commit, y la nota del selector de lotes y series.
+- **B. El 2.19 · El alta de la transferencia.** El ADR-0068 recoge las respuestas y lo que la
+  puerta decide sin preguntar. La tanda, escrita antes de medir, con una mutación sobre el arnés.
+  El humo, porque los permisos pasan de 112 a 115. El recorrido con `playwright-cli`. Los KiB,
+  medidos y repartidos por fichero frente a la estimación. Y el cierre, por el flujo de la rama.
+- **C. El 2.20 · Lo que el 2.18 dejó propuesto.** Cada tema en su propio commit, y cada uno con su
+  caso y su mutación. El ADR del 2.20 enmienda lo que corresponda del 0067, y el 0067 lo anota.
+- **D. El cierre de la fase 2, hasta la puerta de la fase 3**:
+  - el repaso del 2.15 al 2.20, criterio por criterio, en la forma del de la fase, contra casos
+    con nombre, vigilado por un guion que busca los nombres en el código, con su canario;
+  - el veredicto de cada nota abierta, y lo que pasa a la fase 3, en el traspaso, con su
+    disparador: el ítem de la exportación, el primero de la fase 3; la zona, antes de la fase 5; la
+    edición de líneas de un borrador; el selector de lotes y series; y el ajuste a fecha de la
+    zona;
+  - si el repaso no trae ninguna pregunta, se cierra la fase: la casilla, los veredictos, el
+    traspaso y el README en «cerrada», con su línea en el mismo commit. Si trae alguna, va junto a
+    las preguntas de la puerta de la fase 3;
+  - y la puerta de la fase 3. Lo primero, lo que diga el plan maestro, el §15 y lo que cite. Lleva
+    la pregunta del presupuesto del frontal: las pantallas del ajuste sumaron 56 KiB al total,
+    cuando se estimaron entre 25 y 40, y sus tres páginas pesan 30 KB. Esos 56 KiB se reparten por
+    fichero, entre `b1db83e` y `2fdd3cb`, con la orden que lo mide, y se presentan las salidas: por
+    ejemplo, mantener el total y bajar lo que cuesta cada pantalla, o un tope por ruta diferida,
+    con el arranque como está y el total solo a título informativo. **El límite no se sube sin
+    que decida el usuario.** También lleva los cambios que harían falta en `CLAUDE.md`, el
+    objetivo y los imports de la fase 3, según *Imports pendientes*, que se aplican cuando el
+    usuario conteste, al principio de una sesión.
+
+  **Se para en la puerta de la fase 3, y se pregunta todo junto.**
+
+#### Las herramientas, en este encargo
+
+- **Los servidores de lenguaje**: el símbolo se busca antes de leer, y los diagnósticos de cada
+  edición se abren. Un diagnóstico limpio no sustituye al build ni a los tests.
+- **`playwright-cli`**, para el recorrido de la transferencia y para medir las páginas a 320 px,
+  siempre contra la pila local, en su propio proyecto de *compose*.
+- **Context7 (`ctx7`)**, solo si una API de Npgsql o el comportamiento del JIT de PostgreSQL no
+  cuadran, y contrastado con la documentación oficial.
+
+#### El método
+
+El de siempre: la tanda escrita antes de medir, con una mutación sobre el arnés; las dos listas por
+nombre; commits pequeños y firmados, **un tema por subida**; el humo, si hay migración o pantalla;
+`main` solo avanza a un commit que ya está en verde en su rama, y la rama se borra después de su
+run de `main`; las ediciones de `CLAUDE.md`, al principio o al final de la sesión; y la unidad se
+cierra antes de una pausa larga. **El informe cuenta todos los commits desde `ffd8015`, cada uno
+con su asunto, y con sus runs de rama y de `main`**, y cada cifra va con la orden que la mide.
+
 ## Estado actual
 
-**FASE 2 EN CURSO — 18 de 19 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 18 de 20 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. Los
 catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, y la
 puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el 2.18, y la
-transferencia pasa a ser el 2.19. La fase se cierra cuando acabe el último. El 2.15, el 2.16, el
+transferencia pasa a ser el 2.19. La del 2.19, el 2026-10-20, abre un sexto, el 2.20, con lo
+que el 2.18 dejó propuesto. La fase se cierra cuando acabe el último. El 2.15, el 2.16, el
 2.17 y el 2.18 están hechos.
 
-> **Dónde se retoma (2026-10-20): en la puerta del 2.19, escrita y sin contestar**, en la rama
-> `2.19-el-alta-de-la-transferencia`, abierta desde `main` en `aa56bfc`. Se para hasta que el
-> usuario conteste, y `main` no avanza con este commit. La puerta está en *Decisiones tomadas → La
-> puerta del 2.19*: cuatro preguntas, y lo que el ADR-0068 decidirá sin preguntar. Los hallazgos de
-> `/code-review` sobre `0638419..0d26e76` no han llegado, y se tratan antes del código en cuanto
-> lleguen.
+> **Dónde se retoma (2026-10-20): en el 2.19, con su puerta contestada**, en la rama
+> `2.19-el-alta-de-la-transferencia`, abierta desde `main` en `aa56bfc`. Las respuestas están en
+> *Decisiones tomadas → Traídas por el encargo del 2026-10-20*. El primer commit las anota, con el
+> run de `ffd8015` y el 2.20 nuevo; el siguiente es el ADR-0068, y después el código, con su tanda
+> desde la **672**. Detrás, el 2.20, y el cierre de la fase hasta la puerta de la fase 3, donde se
+> para y se pregunta todo junto. `/code-review` ya no bloquea: si sus hallazgos no llegan, el cierre
+> de la fase la anota como no hecha, con su rango.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -22272,14 +22374,15 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     paso en la propiedad, que avanza el corte y cuadra todas las instantáneas. La 565 y la 566 la
     ponen roja en las seis.
 
-### Addenda de la fase 2 — los cinco ítems que abren el repaso y la puerta del 2.17
+### Addenda de la fase 2 — los seis ítems que abren el repaso y las puertas del 2.17 y del 2.19
 
-> **Estos cinco NO son de la puerta de clarificación de la fase 2.** Aquellos catorce están
-> cerrados y no se tocan. Cuatro los abren las respuestas del usuario a la tanda del repaso, el
-> 2026-10-17, y el quinto, el 2.18, las de la puerta del 2.17, el 2026-10-18. El porqué de cada
-> uno está en *Decisiones tomadas → Traídas por el encargo* de esos dos días. Se numeran
-> 2.15–2.19 por el mismo motivo que el 0.14–0.16 y el 1.12–1.14: son del cierre de la fase, y la
-> fase 3 no se abre arrastrándolos. Cada criterio se escribió antes de empezar su ítem.
+> **Estos seis NO son de la puerta de clarificación de la fase 2.** Aquellos catorce están cerrados
+> y no se tocan. Cuatro los abren las respuestas del usuario a la tanda del repaso, el 2026-10-17;
+> el quinto, el 2.18, las de la puerta del 2.17, el 2026-10-18; y el sexto, el 2.20, las de la
+> puerta del 2.19, el 2026-10-20. El porqué de cada uno está en *Decisiones tomadas → Traídas por el
+> encargo* de esos tres días. Se numeran 2.15–2.20 por el mismo motivo que el 0.14–0.16 y el
+> 1.12–1.14: son del cierre de la fase, y la fase 3 no se abre arrastrándolos. Cada criterio se
+> escribió antes de empezar su ítem.
 
 - [x] **2.15 · Lo que el repaso encontró** — criterio de aceptación: cuatro temas, cada uno en su
   commit.
@@ -22494,9 +22597,39 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     el propio punto.
 - [ ] **2.19 · El alta de la transferencia** — criterio de aceptación: la transferencia se da de
   alta por HTTP con su permiso y desde su pantalla, con el factor que resuelve el servidor por el
-  puerto del 2.17. **Pasa su propia puerta de clarificación**, que completa este criterio antes del
-  código. Es el último ítem de la fase 2, que se cierra cuando acabe. *Era el 2.18 hasta el
-  2026-10-18, cuando el avance incremental tomó ese número (respuesta 5 de la puerta del 2.17).*
+  puerto del 2.17, y **un borrador se descarta**, con `inventario.transferencia.descartar`,
+  borrado lógico y `204`, igual que el del ajuste. El lote y la serie se escriben a mano, como en
+  el ajuste. Lo completa su puerta, contestada el 2026-10-20:
+  - **el ADR-0068** recoge las respuestas y lo que la puerta decide sin preguntar: las rutas, el
+    factor resuelto con la consulta del 2.17, la conversión retirada tratada como en el ajuste, los
+    filtros `?origen=` y `?destino=`, y la rejilla de líneas del ajuste, compartida y no copiada;
+  - **la tanda**, escrita antes de medir, con una mutación sobre el arnés;
+  - **el humo**, porque los permisos pasan de 112 a 115, y tiene que contarlos en los dos
+    arranques;
+  - **el recorrido**, con `playwright-cli` contra la pila local, en su propio proyecto de
+    *compose*: alta, rechazo en su campo, enviar, recibir, anular y descartar;
+  - **los KiB**, medidos y repartidos por fichero frente a la estimación de la puerta, 427/450 y
+    810–835/900. Si no cabe, se pregunta, porque el límite no se sube.
+
+  *Era el 2.18 hasta el 2026-10-18, cuando el avance incremental tomó ese número (respuesta 5 de
+  la puerta del 2.17).*
+- [ ] **2.20 · Lo que el 2.18 dejó propuesto** — criterio de aceptación: cuatro temas, cada uno en
+  su propio commit, y cada uno con su caso y su mutación.
+  - **`SET LOCAL jit = off` en la transacción de cada mes del cuadre**, y la medida otra vez de A,
+    B y C con los guiones del 2.18. Las tres cifras sin explicar del ADR-0067 —la tercera mensual
+    de A, las mensuales de B antes del `CHECKPOINT` y el recálculo de C— quedan explicadas o siguen
+    sin explicar, dicho con las cifras.
+  - **Una propiedad con movimientos el primer y el último día de un mes.** La 656, que la
+    propiedad no veía, tiene que salir roja en la propiedad.
+  - **Un contenedor con desplazamiento para las doce tablas que empujan la página a 320 px**, y un
+    test que mide cada página de listado a ese ancho. Es el 1.4.10 de WCAG (*Reflow*, AA). El test
+    lleva su pareja: una página que se sale si se quita el contenedor.
+  - **El indicador `meses_sin_cuadrar`**, el corte menos lo cuadrado, sin la empresa como
+    etiqueta, con su caso: un cuadre atascado lo deja por encima de cero.
+
+  El ADR del 2.20 enmienda lo que corresponda del 0067, y el 0067 lo anota. **Es el último ítem de
+  la fase 2**, que se cierra cuando acabe, hasta la puerta de la fase 3. *Lo abren las respuestas 3
+  y 4 de la puerta del 2.19, el 2026-10-20.*
 
 ## Imports pendientes de `CLAUDE.md`
 
@@ -22550,6 +22683,15 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTA (2026-10-20, respuesta 2 de la puerta del 2.19) · el lote y la serie de una
+  transferencia se escriben a mano.** El alta los toma como el ajuste, y que estén en la ubicación
+  de origen lo dice el envío, con `transferencia-por-encima-del-disponible`, en la ficha. Elegirlos
+  de lo que hay en el origen necesita una lectura que hoy no existe: las existencias por ubicación,
+  lote y serie, porque el saldo es por artículo y almacén (`SaldoDto`). Con su permiso y su
+  pantalla, es un ítem por sí misma. **El disparador**: la expedición de la fase 4, que elegirá lo
+  mismo de lo que hay en una ubicación; o alguien que pida elegir el lote del origen en una
+  transferencia antes.
+
 - **ABIERTA (2026-10-20, ítem 2.18) · el cuadre del mes del corte paga unos 6 s de JIT del
   motor.** Medido con `EXPLAIN (ANALYZE, BUFFERS)` en el humo del 2.18 (ADR-0067, *Medido*): el plan
   de B cuesta 589 865 y el de C 5 048 823, por encima del umbral de optimización del JIT, 500 000
@@ -22558,6 +22700,7 @@ cuando hace falta el porqué.
   el plazo de 30 s, así que el 2.18 no lo toca. **La propuesta**: un `SET LOCAL jit = off` en la
   transacción de cada mes del cuadre, con un caso funcional que diga que la orden va dentro, y el
   humo midiendo otra vez el de B y el de C. No se hace sin encargo.
+  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20).
 
 - **ABIERTA (2026-10-20, tanda del 2.18) · la propiedad del saldo no tiene ningún movimiento en día
   1.** Lo midió una sonda de la tanda: en las seis semillas, entre 241 y 288 movimientos en solo 3 a
@@ -22567,6 +22710,7 @@ cuando hace falta el porqué.
   propuesta**: que la propiedad afirme que su libro tiene movimientos en día 1 y en el último día
   de un mes, y que su generador los busque. No se hace sin encargo, porque cambia las secuencias de
   las seis semillas.
+  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20).
 
 - **ABIERTA (2026-10-19, recorrido del 2.17) · la página de tres listados corre en horizontal a
   320 px.** Medido con `playwright-cli` a 320 px de ancho, con el `scrollWidth` del documento:
@@ -22578,6 +22722,7 @@ cuando hace falta el porqué.
   midieron esas tres. **La propuesta**: envolver cada tabla en un contenedor con `overflow-x-auto`,
   y un caso como `LaCabeceraCabeEn320`, que mida la página de cada listado y no solo la cabecera.
   No se hace sin encargo, porque toca pantallas de otros ítems y de otros módulos.
+  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20).
 
 - **ABIERTA (2026-10-18, respuesta 4 de la puerta del 2.17) · ningún listado exporta lo que está
   viendo.** El §10 del plan maestro pide que «cada listado exporta a CSV/Excel lo que está viendo,
