@@ -100,22 +100,6 @@ const linea = z.object({
   numeroDeSerie: z.string().trim(),
 });
 
-/** Si lo que llega al esquema trae ya los dos almacenes elegidos. */
-function conLosDosAlmacenes(valor: unknown): boolean {
-  if (typeof valor !== 'object' || valor === null) {
-    return false;
-  }
-
-  const { almacenOrigenId, almacenDestinoId } = valor as Record<string, unknown>;
-
-  return (
-    typeof almacenOrigenId === 'string' &&
-    almacenOrigenId !== '' &&
-    typeof almacenDestinoId === 'string' &&
-    almacenDestinoId !== ''
-  );
-}
-
 export const esquemaDelAlta = z
   .object({
     almacenOrigenId: z.string().min(1, SIN_ORIGEN),
@@ -128,12 +112,13 @@ export const esquemaDelAlta = z
       .refine((dia) => dia <= hoyEnElServidor(), RECHAZO_DE_LA_FECHA),
     lineas: z.array(linea).max(LINEAS_COMO_MUCHO, TOPE_DE_LINEAS),
   })
-  // En el destino, que es el que se elige después. Y en cuanto están los dos, aunque el resto del
-  // formulario no valga todavía: `zod` no mira lo del objeto entero mientras algún campo falla.
-  .refine((alta) => alta.almacenOrigenId !== alta.almacenDestinoId, {
+  // En el destino, que es el que se elige después, y solo con el origen elegido: dos sin elegir no
+  // son el mismo almacén, y cada uno ya dice que falta. `zod` mira esta regla aunque falle algún
+  // campo —solo la salta tras un error de tipo, que el formulario no produce—, así que el mismo
+  // almacén se dice a la vez que lo demás que falte.
+  .refine((alta) => alta.almacenOrigenId === '' || alta.almacenOrigenId !== alta.almacenDestinoId, {
     message: RECHAZO_DEL_MISMO_ALMACEN,
     path: ['almacenDestinoId'],
-    when: ({ value }) => conLosDosAlmacenes(value),
   });
 
 export type DatosDelAlta = z.infer<typeof esquemaDelAlta>;

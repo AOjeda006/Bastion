@@ -53,6 +53,13 @@ function mensajes(escritos: DatosDelAlta): Record<string, string> {
   return primeros;
 }
 
+/** Todos los de un campo, y no solo el primero: lo que el formulario no enseña también cuenta. */
+function todosLosDe(escritos: DatosDelAlta, ruta: string): string[] {
+  return (esquemaDelAlta.safeParse(escritos).error?.issues ?? [])
+    .filter((problema) => problema.path.join('.') === ruta)
+    .map((problema) => problema.message);
+}
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(`${HOY_SIMULADO}T10:00:00Z`));
@@ -110,17 +117,21 @@ describe('El esquema del alta de la transferencia', () => {
     expect(mensajes(datos({ almacenDestinoId: CENTRAL }))).toEqual({
       almacenDestinoId: 'transferencia-mismo-almacen',
     });
-    // `zod` no mira el objeto entero mientras un campo falla: sin el `when`, este aviso esperaría
-    // a que estuviera todo lo demás.
+    // A la vez que lo que falta: `zod` mira la regla del objeto aunque falle un campo, y solo la
+    // salta tras un error de tipo, que el formulario no produce.
     expect(mensajes(datos({ almacenDestinoId: CENTRAL, serieId: '', lineas: [] }))).toEqual({
       almacenDestinoId: 'transferencia-mismo-almacen',
       serieId: 'eligeLaSerie',
     });
-    // Con una punta sin elegir no hay dos almacenes que comparar.
+    // Dos sin elegir no son el mismo almacén. El formulario enseña solo el primer aviso de cada
+    // campo, así que lo que se mira son todos: un segundo, oculto, aparecería en cuanto cambiara.
     expect(mensajes(datos({ almacenOrigenId: '', almacenDestinoId: '' }))).toEqual({
       almacenOrigenId: 'eligeElOrigen',
       almacenDestinoId: 'eligeElDestino',
     });
+    expect(
+      todosLosDe(datos({ almacenOrigenId: '', almacenDestinoId: '' }), 'almacenDestinoId'),
+    ).toEqual(['eligeElDestino']);
   });
 
   it('hoy vale y mañana no, con el día del servidor', () => {
