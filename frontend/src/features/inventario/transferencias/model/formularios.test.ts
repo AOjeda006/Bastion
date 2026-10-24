@@ -117,8 +117,8 @@ describe('El esquema del alta de la transferencia', () => {
     expect(mensajes(datos({ almacenDestinoId: CENTRAL }))).toEqual({
       almacenDestinoId: 'transferencia-mismo-almacen',
     });
-    // A la vez que lo que falta: `zod` mira la regla del objeto aunque falle un campo, y solo la
-    // salta tras un error de tipo, que el formulario no produce.
+    // A la vez que lo que falta: `zod` mira la regla del objeto aunque falle un campo. La salta tras
+    // un error de tipo, que el formulario no produce, y pasado el tope de líneas, que va abajo.
     expect(mensajes(datos({ almacenDestinoId: CENTRAL, serieId: '', lineas: [] }))).toEqual({
       almacenDestinoId: 'transferencia-mismo-almacen',
       serieId: 'eligeLaSerie',
@@ -152,6 +152,17 @@ describe('El esquema del alta de la transferencia', () => {
     expect(mensajes(datos({ lineas: Array.from({ length: 201 }, () => linea()) }))).toEqual({
       lineas: 'topeDeLineas',
     });
+    // Pasado el tope, `zod` no mira nada más: ni las líneas ni la regla del mismo almacén. Es lo
+    // que cambió en la 4.6.6, por el GHSA-mrhx-c7xc-m3w5: con la 4.5.4 salían también los de las
+    // líneas y el del mismo almacén.
+    expect(
+      mensajes(
+        datos({
+          almacenDestinoId: CENTRAL,
+          lineas: Array.from({ length: 201 }, () => linea({ articuloId: '' })),
+        }),
+      ),
+    ).toEqual({ lineas: 'topeDeLineas' });
   });
 });
 

@@ -393,9 +393,10 @@ invalida `listas()`. Los almacenes del filtro y los nombres de cada fila cuelgan
   esa punta que eran del otro, y la otra punta no se toca. La rejilla es la de `lineas`, sin coste:
   lo que viaja se valora al enviarlo.
 - **El mismo almacén en las dos puntas lo dice el formulario en el destino**, en cuanto están los
-  dos, aunque falte lo demás: `zod` mira la regla del objeto aunque falle un campo, y solo la salta
-  tras un error de tipo, que el formulario no produce. Dos sin elegir no son el mismo almacén, y la
-  regla lo dice ella misma. El mismo rechazo, si lo dice el servidor, va arriba.
+  dos, aunque falte lo demás: `zod` mira la regla del objeto aunque falle un campo. La salta tras
+  un error de tipo, que el formulario no produce, y con más líneas que el tope, que se dice solo,
+  desde la 4.6.6. Dos sin elegir no son el mismo almacén, y la regla lo dice ella misma. El mismo
+  rechazo, si lo dice el servidor, va arriba.
 - **El rechazo de una línea va en su campo, con el foco** (ADR-0068 §6), como en el ajuste: un `400`
   dice la línea en la clave de `errors`, desde cero, y un `409` o un `422`, en `actual.linea`, desde
   uno. El de una ubicación dice además su punta: la que no existe, en la ruta

@@ -114,8 +114,9 @@ export const esquemaDelAlta = z
   })
   // En el destino, que es el que se elige después, y solo con el origen elegido: dos sin elegir no
   // son el mismo almacén, y cada uno ya dice que falta. `zod` mira esta regla aunque falle algún
-  // campo —solo la salta tras un error de tipo, que el formulario no produce—, así que el mismo
-  // almacén se dice a la vez que lo demás que falte.
+  // campo, así que el mismo almacén se dice a la vez que lo demás que falte. La salta tras un error
+  // de tipo, que el formulario no produce, y, desde la 4.6.6, con más líneas que el tope: entonces
+  // dice solo el tope, sin mirar ni las líneas.
   .refine((alta) => alta.almacenOrigenId === '' || alta.almacenOrigenId !== alta.almacenDestinoId, {
     message: RECHAZO_DEL_MISMO_ALMACEN,
     path: ['almacenDestinoId'],
