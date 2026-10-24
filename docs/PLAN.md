@@ -8522,9 +8522,9 @@ transferencia pasa a ser el 2.19. La del 2.19, el 2026-10-20, abre un sexto, el 
 que el 2.18 dejó propuesto. La fase se cierra cuando acabe el último. Del 2.15 al 2.19 están
 hechos.
 
-> **Dónde se retoma (2026-10-24): en el 2.20**, en una rama nueva,
-> `2.20-lo-que-el-2.18-dejo-propuesto`, que se abre desde `main` cuando `main` llegue al cierre
-> del 2.19. El primer commit anota los dos runs de ese cierre. Después, cada tema del criterio en
+> **Dónde se retoma (2026-10-24): en el 2.20**, en la rama
+> `2.20-lo-que-el-2.18-dejo-propuesto`, abierta desde `main` en `7139fc2`, el cierre del 2.19. Su
+> primer commit anota los dos runs de ese cierre. Después, cada tema del criterio en
 > su propio commit y en su propia subida, con su caso y su mutación, desde la **714**, y el
 > **ADR-0070**, que enmienda lo que corresponda del 0067. Detrás, el cierre de la fase hasta la
 > puerta de la fase 3, donde se para y se pregunta todo junto, con la propuesta del `?q=` del
@@ -13987,9 +13987,13 @@ después del verde anterior:
     Su anotación de la herramienta da 0 críticas, 2 altas y 2 moderadas, las de *Notas / riesgos*.
 14. `4f6ac53`, «test(frontal): la regla del coste del ajuste, aunque falte lo demás», el punto 15:
     **40052486645**, `120747966679`, `120747966940` y `120750851907`.
-15. **El cierre, por el flujo de la rama**: este commit va a la rama y espera su verde; `main`
-    avanza con `--ff-only` de `aa56bfc` a este commit, y la rama se borra, en local y en el
-    remoto, después del run de `main`. Los dos runs se anotan en el primer commit del 2.20.
+15. `7139fc2`, «docs(plan): cierra el 2.19, con su tanda, el humo y el recorrido», **por el flujo
+    de la rama**: su run de rama, el **40053843761**, `120752285028`, `120752285220` y
+    `120755247599`, en verde; `main` avanzó con `--ff-only` de `aa56bfc` a `7139fc2`, dieciséis
+    commits, y su run, el **40055095029**, con Backend `120756229770`, Frontal `120756229643` y
+    Humo `120759015583`, salió en verde. Después se borró la rama, en local y en el remoto. Los dos
+    los anota el primer commit del 2.20, y se leyeron con `vigilar212.py`, un guion del
+    *scratchpad*.
 
 **La batería de `AGENTS.md`, entera y en su orden, sobre `3b188b7`**, con `bash bateria219.sh`, un
 guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida
