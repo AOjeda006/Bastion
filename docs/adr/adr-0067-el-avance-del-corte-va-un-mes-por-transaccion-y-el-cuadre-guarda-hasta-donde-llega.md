@@ -3,12 +3,12 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql]
 aplica_a: [inventario, concurrencia, observabilidad, rendimiento]
 tags: [adr, r3, instantanea, corte, trabajo-periodico, avance-incremental, cuadre, xmin, adr-0064, adr-0063, adr-0044]
-revisado: 2026-10-20
+revisado: 2026-10-24
 ---
 
 # ADR-0067: El avance del corte va un mes por transacción, y el cuadre guarda en el corte hasta dónde llega
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0070 (§4, §5, *Medido* y *Lo que no cubre*).**
 - **Fecha:** 2026-10-19
 - **Sale del ítem 2.18**, que es la respuesta 5 de la puerta del 2.17: el 2026-10-18 el usuario
   aceptó el avance incremental que el ADR-0064 §5 proponía, y fijó su criterio. Está en
@@ -121,6 +121,10 @@ también por detrás del que había.
 
 ### 4. Lo que se mide es cada mes
 
+> **Enmendado por el ADR-0070 (2026-10-24), en el último punto.** El indicador del retraso no
+> cambia, pero ya no es el único: `bastion.inventario.corte.meses_sin_cuadrar` dice cuántos meses
+> le faltan al cuadre más atrasado para llegar a su corte, que el retraso no ve.
+
 - **El histograma `bastion.inventario.corte.duracion_del_avance` mide cada mes**, de abrir su
   transacción al `COMMIT`, que es lo que dura el exclusivo y lo que espera una confirmación. Es lo
   que se compara con el disparador de 10 s del ADR-0064 §2. Conserva el nombre y los cubos, porque
@@ -135,6 +139,10 @@ también por detrás del que había.
 - **El indicador del retraso no cambia** (ADR-0064 §3).
 
 ### 5. El cuadre de cada vuelta es el de lo pendiente, y sigue donde se quedó
+
+> **Enmendado por el ADR-0070 (2026-10-24), en el primer punto.** Lo primero de la transacción de
+> cada mes, antes de leer la fila del corte, es `SET LOCAL jit = off`: el mes del corte pagaba la
+> compilación del JIT, y no la lectura. Con el `COMMIT`, la conexión vuelve al JIT que tenía.
 
 `ElCuadreDeLasExistencias.CuadrarLoPendienteAsync(empresa)` cuadra **desde el mes siguiente al
 último cuadrado hasta el corte**. Con lo cuadrado a nulo, desde el mes de la primera instantánea o
@@ -211,6 +219,11 @@ rango, y la empresa sola sigue sirviéndose del mismo índice.
 
 ## Medido
 
+> **Enmendado por el ADR-0070 (2026-10-24).** Las tres cifras que aquí quedan sin explicar —la
+> tercera mensual de A, las mensuales de B antes del `CHECKPOINT` y el recálculo de C— las explica,
+> o las explica en parte, el *Medido* del ADR-0070, con el humo del 2.20. Las de aquí siguen siendo
+> lo que se midió.
+
 **El entorno.** La pila local en su propio proyecto de *compose*, `bastion-humo-218`, sobre
 `8ef03b3`, con PostgreSQL 17.6 (`postgres:17.6-alpine`) en Docker Desktop, en esta máquina, y los
 ajustes del motor por omisión: entre ellos, `jit = on` y un `max_wal_size` de 1 GB. Las mismas tres
@@ -286,6 +299,10 @@ Ninguna ronda dejó un descuadre ni una vuelta fallida.
   llegó, a 9,8 en C. Lo que queda en B y en C es el JIT del tercer punto.
 
 ## Lo que no cubre, dicho
+
+> **Enmendado por el ADR-0070 (2026-10-24), en el tercer punto y en el quinto.** Ya hay una métrica
+> de lo que le falta al cuadre, `meses_sin_cuadrar`, y el cuadre de cada mes va sin JIT: el de C
+> baja de 9,8 s a entre 3,2 y 3,7.
 
 - **Un mes ya cuadrado que se estropea después no lo vuelve a mirar el cuadre de lo pendiente.** Si
   el avance lo arrastra hasta el corte, lo ven las existencias (punto 7). Si no, solo el cuadre
