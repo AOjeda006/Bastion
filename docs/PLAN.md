@@ -8672,8 +8672,8 @@ el README dice «cerrada», porque lo cuenta de las casillas. Lo que queda es el
 hasta la puerta de la fase 3.
 
 > **Dónde se retoma (2026-10-24): en el cierre de la fase 2**, en la rama `cierre-de-la-fase-2`,
-> que se abre desde `main` en el cierre del 2.20. Su primer commit anota los dos runs de ese
-> cierre. Después, por este orden:
+> abierta desde `main` en `08ea605`, el cierre del 2.20. Su primer commit anota los dos runs de
+> ese cierre. Después, por este orden:
 >
 > 1. el repaso del 2.15 al 2.20, criterio por criterio y en la forma del de la fase, contra casos
 >    por su nombre, con un guion que comprueba que cada nombre existe, y su canario;
@@ -14234,9 +14234,12 @@ decisiones:
    `120887215686`, `120887215945` y `120890129532`.
 7. `10ed2e8`, «docs(adr): el ADR-0070, lo que el 2.18 dejó propuesto»: **40101679632**,
    `120894958695`, `120894958812` y `120897910243`.
-8. Este cierre, **por el flujo de la rama**: va a la rama y espera su verde; `main` avanza con
-   `--ff-only` desde `7139fc2`, y la rama se borra, en local y en el remoto, después del run de
-   `main`. Los dos runs los anota el primer commit del cierre de la fase.
+8. `08ea605`, «docs(plan): cierra el 2.20, con su tanda, el humo y la batería», **por el flujo
+   de la rama**: su run de rama, el **40103202811**, `120899400279`, `120899400352` y
+   `120902257910`, en verde; `main` avanzó con `--ff-only` de `7139fc2` a `08ea605`, ocho
+   commits, y su run, el **40104536177**, con Backend `120903373322`, Frontal `120903373548` y
+   Humo `120905690366`, salió en verde. Después se borró la rama, en local y en el remoto. Los dos
+   los anota el primer commit del cierre de la fase.
 
 Los runs se leyeron con `python -X utf8 vigilar212.py <sha> <rama>` y
 `python -X utf8 leer-run27.py <run>`, dos guiones del *scratchpad*.
