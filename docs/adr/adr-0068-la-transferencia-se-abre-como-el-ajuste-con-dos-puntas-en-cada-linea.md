@@ -3,12 +3,15 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql, aspnetcore, react]
 aplica_a: [inventario, organizacion, api-rest, frontal]
 tags: [adr, transferencia, conversion, factor, unidad-base, descarte, borrado-logico, listado, rejilla, r3, r10, r11, adr-0048, adr-0053, adr-0057, adr-0065]
-revisado: 2026-10-20
+revisado: 2026-10-22
 ---
 
 # ADR-0068: La transferencia se abre como el ajuste, con dos puntas en cada línea
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0069 (§1).**
+  - El [ADR-0069](adr-0069-un-q-sin-filtro-declarado-llega-y-no-filtra-nada.md) enmienda, el
+    2026-10-22, el punto «Sin `?q=`» del §1: el borde no contesta que el recurso no admite filtro
+    de texto. El `?q=` llega y no filtra nada.
 - **Fecha:** 2026-10-20
 - **Sale del ítem 2.19**, el alta de la transferencia. El criterio está en `docs/PLAN.md`, en su
   casilla, y la puerta, con sus cuatro respuestas, en *Decisiones tomadas → La puerta del 2.19* y
@@ -80,7 +83,11 @@ Lo mismo que en el ADR-0065, y no se repite entero:
   sale del suyo. Juntos, dan lo que va de uno a otro. Por omisión va por la fecha de envío, de la
   última a la primera, con el desempate por el identificador. También se ordena por la fecha de
   recepción y por el número. Las filas no llevan las líneas.
-- **Sin `?q=`.** El alta de una transferencia no tiene un campo que escriba una persona: el motivo
+- > **Enmendado por el ADR-0069 (2026-10-22).** El borde no contesta nada: un `?q=` llega y no
+  > filtra nada, porque el paginador no aplica ningún filtro si el repositorio no declara uno. La
+  > frase de las líneas de tarifa tampoco era cierta, y se reescribió con el ADR-0069.
+
+  **Sin `?q=`.** El alta de una transferencia no tiene un campo que escriba una persona: el motivo
   es del inverso, y se escribe al anular (ADR-0053 §12). Como en las líneas de tarifa, el borde
   contesta que este recurso no admite filtro de texto. Un `?q=` sobre identificadores sería pedir
   que se teclee un `uuid`.

@@ -29,8 +29,8 @@ internal sealed class RepositorioDeLineasDeTarifa(CatalogoDbContext contexto)
             .ThenBy(linea => linea.Id),
 
         // Sin `Filtro`: una línea de tarifa no tiene ni un campo que una persona escriba, y un
-        // `?q=` sobre identificadores sería pedir que se teclee un `uuid`. El borde contesta que
-        // este recurso no admite filtro de texto porque aquí no hay ninguno declarado.
+        // `?q=` sobre identificadores sería pedir que se teclee un `uuid`. El `?q=` llega y no
+        // filtra nada: sin filtro declarado, el paginador no aplica ninguno (ADR-0069).
     };
 
     public IReadOnlySet<string> CamposOrdenables => s_criterios.CamposOrdenables;
