@@ -161,51 +161,54 @@ export function PaginaDeCodigosDeBarras(): React.JSX.Element {
       {codigos.data.length === 0 ? (
         <Vacio mensaje={t('catalogo.articulos.gestionDeCodigosDeBarras.ninguno')} />
       ) : (
-        <table className="mt-4 w-full border-collapse text-sm">
-          <caption className="sr-only">
-            {t('catalogo.articulos.gestionDeCodigosDeBarras.tabla', { codigo: articulo.codigo })}
-          </caption>
-          <thead>
-            <tr className="border-b border-neutral-300 text-left">
-              <th scope="col" className="py-2 pr-4 font-medium">
-                {t('catalogo.articulos.gestionDeCodigosDeBarras.gtin')}
-              </th>
-              <th scope="col" className="py-2 pr-4 font-medium">
-                {t('catalogo.articulos.gestionDeCodigosDeBarras.nivel')}
-              </th>
-              <th scope="col" className="py-2 pr-4 font-medium">
-                {t('catalogo.articulos.gestionDeCodigosDeBarras.unidades')}
-              </th>
-              {puedeQuitar && (
+        <div className="mt-4 overflow-x-auto">
+          {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+          <table className="w-full border-collapse text-sm">
+            <caption className="sr-only">
+              {t('catalogo.articulos.gestionDeCodigosDeBarras.tabla', { codigo: articulo.codigo })}
+            </caption>
+            <thead>
+              <tr className="border-b border-neutral-300 text-left">
                 <th scope="col" className="py-2 pr-4 font-medium">
-                  {t('catalogo.articulos.gestionDeCodigosDeBarras.acciones')}
+                  {t('catalogo.articulos.gestionDeCodigosDeBarras.gtin')}
                 </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {codigos.data.map((codigo) => (
-              <Fila
-                key={codigo.id}
-                codigo={codigo}
-                porQueElNivel={porQueElNivel}
-                puedeQuitar={puedeQuitar}
-                // Se espera a la lista nueva: hasta que llega, la fila sigue en «Quitando…» y no
-                // ofrece quitarla otra vez.
-                alQuitar={async () => {
-                  avisar({ clase: 'quitado', gtin: codigo.gtin });
-                  await releer();
-                }}
-                alFallar={(error) => {
-                  avisar({ clase: 'fallo', error });
-                  // Lo más probable es que alguien la quitara antes: la lista se lee otra vez para
-                  // que deje de ofrecerla.
-                  void releer();
-                }}
-              />
-            ))}
-          </tbody>
-        </table>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  {t('catalogo.articulos.gestionDeCodigosDeBarras.nivel')}
+                </th>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  {t('catalogo.articulos.gestionDeCodigosDeBarras.unidades')}
+                </th>
+                {puedeQuitar && (
+                  <th scope="col" className="py-2 pr-4 font-medium">
+                    {t('catalogo.articulos.gestionDeCodigosDeBarras.acciones')}
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {codigos.data.map((codigo) => (
+                <Fila
+                  key={codigo.id}
+                  codigo={codigo}
+                  porQueElNivel={porQueElNivel}
+                  puedeQuitar={puedeQuitar}
+                  // Se espera a la lista nueva: hasta que llega, la fila sigue en «Quitando…» y no
+                  // ofrece quitarla otra vez.
+                  alQuitar={async () => {
+                    avisar({ clase: 'quitado', gtin: codigo.gtin });
+                    await releer();
+                  }}
+                  alFallar={(error) => {
+                    avisar({ clase: 'fallo', error });
+                    // Lo más probable es que alguien la quitara antes: la lista se lee otra vez para
+                    // que deje de ofrecerla.
+                    void releer();
+                  }}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {codigos.data.some((codigo) => codigo.nivel === 'desconocido') && (

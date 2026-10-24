@@ -298,6 +298,7 @@ Desde la raíz del repositorio.
 | **Build frontal** | `npm --prefix frontend run build` |
 | **Presupuesto del frontal** (arranque y total, en KiB) | `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` |
 | **Tests frontal** | `npm --prefix frontend run test` |
+| **Tests frontal en el navegador** (la disposición, en Chromium) | `npm --prefix frontend run test:navegador` |
 | **Lint / formato frontal** | `npm --prefix frontend run lint` · `npm --prefix frontend run format:check` |
 | **Tipos frontal** | `npm --prefix frontend run typecheck` |
 | **Contrato al día** (el cliente generado) | `npm --prefix frontend run api` y que `git status --porcelain -- frontend/src/shared/api/esquema.ts` salga **vacío** |
@@ -330,6 +331,10 @@ npm --prefix frontend run format:check
 mkdir -p artifacts
 (set -o pipefail; npm --prefix frontend run test 2>&1 | tee artifacts/vitest.log)
 bash scripts/ci/canal-de-la-consola.sh artifacts/vitest.log
+# El carril del navegador (2.20): la disposición, en un Chromium sin cabeza. El `install` baja el
+# de la versión de `playwright` del lockfile, y con él ya en disco no hace nada.
+(cd frontend && npx playwright install --only-shell chromium)
+npm --prefix frontend run test:navegador
 npm --prefix frontend run build
 bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
 

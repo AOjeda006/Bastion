@@ -124,25 +124,28 @@ function Contenido({
 
   return (
     <>
-      <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('inventario.recuentos.tabla')}</caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            {(['recuento', 'almacen', 'abierto', 'confirmado', 'estado', 'motivo'] as const).map(
-              (columna) => (
-                <th key={columna} scope="col" className="py-2 pr-4 font-medium">
-                  {t(`inventario.recuentos.${columna}`)}
-                </th>
-              ),
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {elementos.map((recuento) => (
-            <Fila key={recuento.id} recuento={recuento} porQueElEstado={porQueElEstado} />
-          ))}
-        </tbody>
-      </table>
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{t('inventario.recuentos.tabla')}</caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              {(['recuento', 'almacen', 'abierto', 'confirmado', 'estado', 'motivo'] as const).map(
+                (columna) => (
+                  <th key={columna} scope="col" className="py-2 pr-4 font-medium">
+                    {t(`inventario.recuentos.${columna}`)}
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {elementos.map((recuento) => (
+              <Fila key={recuento.id} recuento={recuento} porQueElEstado={porQueElEstado} />
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {elementos.some((recuento) => recuento.estado === 'desconocido') && (
         <ExplicacionDeMarca
@@ -262,7 +265,12 @@ function Filtros({
       </label>
 
       {puedeVerAlmacenes && (
-        <label className="flex flex-col gap-1 text-sm">
+        <label
+          // Un `<select>` mide lo que su opción más larga, y un maestro se llama como quiera la
+          // empresa. `min-w-0` deja a la caja estrecharse hasta el ancho de la pantalla, y la lista
+          // con ella (WCAG 1.4.10).
+          className="flex min-w-0 flex-col gap-1 text-sm"
+        >
           {t('inventario.recuentos.almacen')}
           <select
             // Con las opciones dentro de la clave: hasta que llegan, la lista no puede enseñar el

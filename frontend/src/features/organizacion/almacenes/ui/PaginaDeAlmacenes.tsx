@@ -67,35 +67,38 @@ export function PaginaDeAlmacenes(): React.JSX.Element {
 
   return (
     <>
-      <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('organizacion.almacenes.tabla')}</caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('organizacion.almacenes.codigo')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('organizacion.almacenes.nombre')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('organizacion.almacenes.tipo')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('organizacion.almacenes.poblacion')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {consulta.data.elementos.map((almacen) => (
-            <tr key={almacen.id} className="border-b border-neutral-200">
-              <td className="py-2 pr-4 font-mono">{almacen.codigo}</td>
-              <td className="py-2 pr-4">{almacen.nombre}</td>
-              <td className="py-2 pr-4">{almacen.tipo}</td>
-              <td className="py-2 pr-4 text-neutral-600">{almacen.poblacion ?? '—'}</td>
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{t('organizacion.almacenes.tabla')}</caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('organizacion.almacenes.codigo')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('organizacion.almacenes.nombre')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('organizacion.almacenes.tipo')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('organizacion.almacenes.poblacion')}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {consulta.data.elementos.map((almacen) => (
+              <tr key={almacen.id} className="border-b border-neutral-200">
+                <td className="py-2 pr-4 font-mono">{almacen.codigo}</td>
+                <td className="py-2 pr-4">{almacen.nombre}</td>
+                <td className="py-2 pr-4">{almacen.tipo}</td>
+                <td className="py-2 pr-4 text-neutral-600">{almacen.poblacion ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <Paginador paginacion={paginacion} total={consulta.data.total} alCambiar={irA} />
     </>

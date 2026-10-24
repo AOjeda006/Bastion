@@ -130,33 +130,36 @@ export function LineasDelRecuento({
       {/* Con datos, el fallo de volver a leer va encima y no en su lugar. */}
       {fallo}
 
-      <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('inventario.recuentos.ficha.tabla')}</caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            {columnas.map((columna) => (
-              <th key={columna} scope="col" className="py-2 pr-4 font-medium">
-                {t(`inventario.recuentos.ficha.${columna}`)}
-              </th>
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{t('inventario.recuentos.ficha.tabla')}</caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              {columnas.map((columna) => (
+                <th key={columna} scope="col" className="py-2 pr-4 font-medium">
+                  {t(`inventario.recuentos.ficha.${columna}`)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {elementos.map((linea) => (
+              <Fila
+                key={linea.id}
+                recuentoId={recuento.id}
+                linea={linea}
+                enCurso={enCurso}
+                conAcciones={conAcciones}
+                sale={sale}
+                alContar={alContar}
+                alContarOtraPersona={alContarOtraPersona}
+                alFallar={alFallar}
+              />
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {elementos.map((linea) => (
-            <Fila
-              key={linea.id}
-              recuentoId={recuento.id}
-              linea={linea}
-              enCurso={enCurso}
-              conAcciones={conAcciones}
-              sale={sale}
-              alContar={alContar}
-              alContarOtraPersona={alContarOtraPersona}
-              alFallar={alFallar}
-            />
-          ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
 
       <Paginador paginacion={listado} total={total} alCambiar={alCambiarDePagina} />
     </>

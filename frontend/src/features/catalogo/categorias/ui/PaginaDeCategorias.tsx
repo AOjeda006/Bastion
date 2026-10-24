@@ -80,48 +80,51 @@ export function PaginaDeCategorias(): React.JSX.Element {
 
   return (
     <>
-      <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('catalogo.categorias.tabla')}</caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.categorias.codigo')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.categorias.nombre')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.categorias.nivel')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.categorias.articulos')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {filas.map((fila) => (
-            <tr key={fila.categoria.id} className="border-b border-neutral-200">
-              <td className="py-2 pr-4 font-mono">{fila.categoria.codigo}</td>
-              <td
-                className="py-2 pr-4"
-                style={{ paddingLeft: `${String(fila.profundidad)}rem` }}
-                aria-describedby={fila.huerfana ? porQueSinSuSitio : undefined}
-              >
-                {fila.categoria.nombre} {fila.huerfana && <SinSuSitio />}
-              </td>
-              <td className="py-2 pr-4 text-neutral-600">{fila.profundidad}</td>
-              <td className="py-2 pr-4">
-                <Link
-                  to={`/articulos?categoria=${encodeURIComponent(fila.categoria.id)}`}
-                  className="text-blue-800 underline"
-                >
-                  {t('catalogo.categorias.verSusArticulos', { categoria: fila.categoria.nombre })}
-                </Link>
-              </td>
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{t('catalogo.categorias.tabla')}</caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.categorias.codigo')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.categorias.nombre')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.categorias.nivel')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.categorias.articulos')}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filas.map((fila) => (
+              <tr key={fila.categoria.id} className="border-b border-neutral-200">
+                <td className="py-2 pr-4 font-mono">{fila.categoria.codigo}</td>
+                <td
+                  className="py-2 pr-4"
+                  style={{ paddingLeft: `${String(fila.profundidad)}rem` }}
+                  aria-describedby={fila.huerfana ? porQueSinSuSitio : undefined}
+                >
+                  {fila.categoria.nombre} {fila.huerfana && <SinSuSitio />}
+                </td>
+                <td className="py-2 pr-4 text-neutral-600">{fila.profundidad}</td>
+                <td className="py-2 pr-4">
+                  <Link
+                    to={`/articulos?categoria=${encodeURIComponent(fila.categoria.id)}`}
+                    className="text-blue-800 underline"
+                  >
+                    {t('catalogo.categorias.verSusArticulos', { categoria: fila.categoria.nombre })}
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {filas.some((fila) => fila.huerfana) && (
         <ExplicacionDeMarca

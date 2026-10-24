@@ -127,39 +127,42 @@ function Contenido({
 
   return (
     <>
-      <table className="mt-4 w-full border-collapse text-sm">
-        {/* El día es el que contestó el servidor, no el del campo: sin fecha, contesta su hoy. */}
-        <caption className="pb-2 text-left font-medium">
-          {t('inventario.saldos.tabla', { dia: diaLegible(fecha, i18n.language) })}
-        </caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('inventario.saldos.articulo')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('inventario.saldos.almacen')}
-            </th>
-            <th scope="col" className={numerica}>
-              {t('inventario.saldos.cantidad')}
-            </th>
-            <th scope="col" className={numerica}>
-              {t('inventario.saldos.valor')}
-            </th>
-            <th scope="col" className={numerica} aria-describedby={porQueAparte}>
-              {t('inventario.saldos.enTransito')}
-            </th>
-            <th scope="col" className={numerica} aria-describedby={porQueAparte}>
-              {t('inventario.saldos.valorEnTransito')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {elementos.map((saldo) => (
-            <Fila key={`${saldo.articuloId}|${saldo.almacenId}`} saldo={saldo} />
-          ))}
-        </tbody>
-      </table>
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          {/* El día es el que contestó el servidor, no el del campo: sin fecha, contesta su hoy. */}
+          <caption className="pb-2 text-left font-medium">
+            {t('inventario.saldos.tabla', { dia: diaLegible(fecha, i18n.language) })}
+          </caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('inventario.saldos.articulo')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('inventario.saldos.almacen')}
+              </th>
+              <th scope="col" className={numerica}>
+                {t('inventario.saldos.cantidad')}
+              </th>
+              <th scope="col" className={numerica}>
+                {t('inventario.saldos.valor')}
+              </th>
+              <th scope="col" className={numerica} aria-describedby={porQueAparte}>
+                {t('inventario.saldos.enTransito')}
+              </th>
+              <th scope="col" className={numerica} aria-describedby={porQueAparte}>
+                {t('inventario.saldos.valorEnTransito')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {elementos.map((saldo) => (
+              <Fila key={`${saldo.articuloId}|${saldo.almacenId}`} saldo={saldo} />
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <p id={porQueAparte} className="mt-2 text-sm text-neutral-600">
         {t('inventario.saldos.transitoAparte')}
@@ -270,7 +273,12 @@ function Filtros({
       </label>
 
       {puedeVerAlmacenes && (
-        <label className="flex flex-col gap-1 text-sm">
+        <label
+          // Un `<select>` mide lo que su opción más larga, y un maestro se llama como quiera la
+          // empresa. `min-w-0` deja a la caja estrecharse hasta el ancho de la pantalla, y la lista
+          // con ella (WCAG 1.4.10).
+          className="flex min-w-0 flex-col gap-1 text-sm"
+        >
           {t('inventario.saldos.almacen')}
           <select
             // Con las opciones dentro de la clave: hasta que llegan, la lista no puede enseñar el
@@ -291,7 +299,12 @@ function Filtros({
       )}
 
       {puedeVerArticulos && (
-        <label className="flex flex-col gap-1 text-sm">
+        <label
+          // Un `<select>` mide lo que su opción más larga, y un maestro se llama como quiera la
+          // empresa. `min-w-0` deja a la caja estrecharse hasta el ancho de la pantalla, y la lista
+          // con ella (WCAG 1.4.10).
+          className="flex min-w-0 flex-col gap-1 text-sm"
+        >
           {t('inventario.saldos.articulo')}
           <select
             key={`${articulo}|${String(articulos.data?.length ?? 0)}`}

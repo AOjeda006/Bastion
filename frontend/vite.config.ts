@@ -1,5 +1,5 @@
 // `defineConfig` de `vitest/config` (no de `vite`): es la que conoce la clave `test`.
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath, URL } from 'node:url';
@@ -39,6 +39,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
+    // Los del carril del navegador miden la disposición, y aquí no hay ninguna: van con
+    // `vitest.navegador.config.ts` (ítem 2.20).
+    exclude: [...configDefaults.exclude, 'src/**/*.navegador.test.tsx'],
     css: false,
     // El informe, fijado, y no el que elija vitest según quién lo lance. Sin esta línea, vitest 4
     // detecta un agente de IA por el entorno (`AI_AGENT`, `CLAUDECODE`…) y cambia al informe

@@ -54,35 +54,38 @@ export function PaginaDeEmpresas(): React.JSX.Element {
 
   return (
     <>
-      <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('organizacion.empresas.tabla')}</caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('organizacion.empresas.nif')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('organizacion.empresas.razonSocial')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('organizacion.empresas.poblacion')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('organizacion.empresas.divisa')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {consulta.data.elementos.map((empresa) => (
-            <tr key={empresa.id} className="border-b border-neutral-200">
-              <td className="py-2 pr-4 font-mono">{empresa.nif}</td>
-              <td className="py-2 pr-4">{empresa.razonSocial}</td>
-              <td className="py-2 pr-4 text-neutral-600">{empresa.poblacion}</td>
-              <td className="py-2 pr-4 font-mono">{empresa.divisaBase}</td>
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{t('organizacion.empresas.tabla')}</caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('organizacion.empresas.nif')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('organizacion.empresas.razonSocial')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('organizacion.empresas.poblacion')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('organizacion.empresas.divisa')}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {consulta.data.elementos.map((empresa) => (
+              <tr key={empresa.id} className="border-b border-neutral-200">
+                <td className="py-2 pr-4 font-mono">{empresa.nif}</td>
+                <td className="py-2 pr-4">{empresa.razonSocial}</td>
+                <td className="py-2 pr-4 text-neutral-600">{empresa.poblacion}</td>
+                <td className="py-2 pr-4 font-mono">{empresa.divisaBase}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <Paginador paginacion={paginacion} total={consulta.data.total} alCambiar={irA} />
     </>

@@ -136,6 +136,15 @@ jobs:
       - name: Canal de la consola — la marca está y no hay avisos de act()
         run: bash ../scripts/ci/canal-de-la-consola.sh ../artifacts/vitest.log
 
+      # EL CARRIL DEL NAVEGADOR (ítem 2.20): lo que jsdom no puede medir, la disposición, en un
+      # Chromium sin cabeza. Solo el *shell* sin cabeza, que es el que lanza `headless`, con las
+      # bibliotecas del sistema que pide; su versión es la del `playwright` del lockfile.
+      - name: Navegador — el Chromium del carril
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Tests en el navegador — las páginas caben en 320 px
+        run: npm run test:navegador
+
       - name: Construir
         run: npm run build
 

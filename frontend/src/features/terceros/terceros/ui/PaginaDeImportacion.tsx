@@ -149,44 +149,47 @@ function Informe({ informe }: { informe: InformeDeImportacion }): React.JSX.Elem
 
       {informe.rechazos.length > 0 && (
         <>
-          <table className="mt-4 w-full border-collapse text-sm">
-            <caption className="text-left font-medium">
-              {t('terceros.terceros.importacion.rechazos')}
-            </caption>
-            <thead>
-              <tr className="border-b border-neutral-300 text-left">
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  {t('terceros.terceros.importacion.columna')}
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  {t('terceros.terceros.importacion.motivo')}
-                </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  {t('terceros.terceros.importacion.lineas')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {informe.rechazos.map((rechazo) => (
-                <tr
-                  key={`${rechazo.columna ?? ''}|${rechazo.motivo}`}
-                  className="border-b border-neutral-200"
-                >
-                  <td className="py-2 pr-4">
-                    {rechazo.columna === null ? (
-                      t('terceros.terceros.importacion.filaEntera')
-                    ) : (
-                      <code>{rechazo.columna}</code>
-                    )}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <Motivo motivo={rechazo.motivo} />
-                  </td>
-                  <td className="py-2 pr-4">{rechazo.lineas.join(', ')}</td>
+          {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <caption className="text-left font-medium">
+                {t('terceros.terceros.importacion.rechazos')}
+              </caption>
+              <thead>
+                <tr className="border-b border-neutral-300 text-left">
+                  <th scope="col" className="py-2 pr-4 font-medium">
+                    {t('terceros.terceros.importacion.columna')}
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-medium">
+                    {t('terceros.terceros.importacion.motivo')}
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-medium">
+                    {t('terceros.terceros.importacion.lineas')}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {informe.rechazos.map((rechazo) => (
+                  <tr
+                    key={`${rechazo.columna ?? ''}|${rechazo.motivo}`}
+                    className="border-b border-neutral-200"
+                  >
+                    <td className="py-2 pr-4">
+                      {rechazo.columna === null ? (
+                        t('terceros.terceros.importacion.filaEntera')
+                      ) : (
+                        <code>{rechazo.columna}</code>
+                      )}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <Motivo motivo={rechazo.motivo} />
+                    </td>
+                    <td className="py-2 pr-4">{rechazo.lineas.join(', ')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="mt-2 max-w-prose text-sm text-neutral-600">
             {t('terceros.terceros.importacion.lineasDeLaHoja')}
           </p>

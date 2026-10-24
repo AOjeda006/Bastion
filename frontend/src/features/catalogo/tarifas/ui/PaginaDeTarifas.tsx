@@ -190,66 +190,69 @@ export function PaginaDeTarifas(): React.JSX.Element {
     <>
       {cabecera}
 
-      <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('catalogo.tarifas.tabla')}</caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.tarifas.codigo')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.tarifas.nombre')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.tarifas.vigencia')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.tarifas.estado')}
-            </th>
-            {/* La columna de la acción no lleva rótulo visible, pero sí nombre: una cabecera vacía
-                deja a un lector de pantalla anunciando «columna cinco». */}
-            <th scope="col" className="py-2 pr-4 font-medium">
-              <span className="sr-only">{t('catalogo.tarifas.acciones')}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {consulta.data.elementos.map((tarifa) => {
-            const estado = estadoDeVigencia(tarifa, hoy);
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{t('catalogo.tarifas.tabla')}</caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.tarifas.codigo')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.tarifas.nombre')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.tarifas.vigencia')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.tarifas.estado')}
+              </th>
+              {/* La columna de la acción no lleva rótulo visible, pero sí nombre: una cabecera vacía
+                  deja a un lector de pantalla anunciando «columna cinco». */}
+              <th scope="col" className="py-2 pr-4 font-medium">
+                <span className="sr-only">{t('catalogo.tarifas.acciones')}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {consulta.data.elementos.map((tarifa) => {
+              const estado = estadoDeVigencia(tarifa, hoy);
 
-            return (
-              <tr key={tarifa.id} className="border-b border-neutral-200">
-                <td className="py-2 pr-4 font-mono">{tarifa.codigo}</td>
-                <td className="py-2 pr-4">{tarifa.nombre}</td>
-                <td className="py-2 pr-4">
-                  <Vigencia tarifa={tarifa} idioma={i18n.language} />
-                </td>
-                <td
-                  className="py-2 pr-4"
-                  aria-describedby={estado === 'rige' ? porQueRige : undefined}
-                >
-                  <Estado estado={estado} />
-                </td>
-                <td className="py-2 pr-4">
-                  {listado.codigo === null && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        cambiarFiltro((siguientes) => {
-                          siguientes.set(PARAMETRO_DE_CODIGO, tarifa.codigo);
-                        });
-                      }}
-                      className="rounded border border-neutral-300 px-2 py-1 text-xs"
-                    >
-                      {t('catalogo.tarifas.verSusTramos', { codigo: tarifa.codigo })}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+              return (
+                <tr key={tarifa.id} className="border-b border-neutral-200">
+                  <td className="py-2 pr-4 font-mono">{tarifa.codigo}</td>
+                  <td className="py-2 pr-4">{tarifa.nombre}</td>
+                  <td className="py-2 pr-4">
+                    <Vigencia tarifa={tarifa} idioma={i18n.language} />
+                  </td>
+                  <td
+                    className="py-2 pr-4"
+                    aria-describedby={estado === 'rige' ? porQueRige : undefined}
+                  >
+                    <Estado estado={estado} />
+                  </td>
+                  <td className="py-2 pr-4">
+                    {listado.codigo === null && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          cambiarFiltro((siguientes) => {
+                            siguientes.set(PARAMETRO_DE_CODIGO, tarifa.codigo);
+                          });
+                        }}
+                        className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                      >
+                        {t('catalogo.tarifas.verSusTramos', { codigo: tarifa.codigo })}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {consulta.data.elementos.some((tarifa) => estadoDeVigencia(tarifa, hoy) === 'rige') && (
         <ExplicacionDeMarca

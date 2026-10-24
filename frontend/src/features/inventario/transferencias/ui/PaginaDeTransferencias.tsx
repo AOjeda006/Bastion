@@ -370,7 +370,12 @@ function ListaDeAlmacenes({
   const { t } = useTranslation();
 
   return (
-    <label className="flex flex-col gap-1 text-sm">
+    <label
+      // Un `<select>` mide lo que su opción más larga, y un maestro se llama como quiera la
+      // empresa. `min-w-0` deja a la caja estrecharse hasta el ancho de la pantalla, y la lista
+      // con ella (WCAG 1.4.10).
+      className="flex min-w-0 flex-col gap-1 text-sm"
+    >
       {etiqueta}
       <select
         // Con las opciones dentro de la clave: hasta que llegan, la lista no puede enseñar el

@@ -162,47 +162,50 @@ export function PaginaDeTerceros(): React.JSX.Element {
     <>
       {buscador}
 
-      <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('terceros.terceros.tabla')}</caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('terceros.terceros.identificador')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('terceros.terceros.razonSocial')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('terceros.terceros.poblacion')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('terceros.terceros.papel')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {consulta.data.elementos.map((tercero) => (
-            <tr key={tercero.id} className="border-b border-neutral-200">
-              <td className="py-2 pr-4" aria-describedby={porQue[tercero.verificacion]}>
-                <span className="font-mono">
-                  {tercero.pais} {tercero.numero}
-                </span>{' '}
-                <Sello verificacion={tercero.verificacion} />
-              </td>
-              <td className="py-2 pr-4">
-                {tercero.razonSocial}
-                {tercero.nombreComercial !== null && (
-                  <span className="block text-neutral-600">{tercero.nombreComercial}</span>
-                )}
-              </td>
-              <td className="py-2 pr-4 text-neutral-600">{tercero.poblacion}</td>
-              <td className="py-2 pr-4">
-                <Papel tercero={tercero} />
-              </td>
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{t('terceros.terceros.tabla')}</caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('terceros.terceros.identificador')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('terceros.terceros.razonSocial')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('terceros.terceros.poblacion')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('terceros.terceros.papel')}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {consulta.data.elementos.map((tercero) => (
+              <tr key={tercero.id} className="border-b border-neutral-200">
+                <td className="py-2 pr-4" aria-describedby={porQue[tercero.verificacion]}>
+                  <span className="font-mono">
+                    {tercero.pais} {tercero.numero}
+                  </span>{' '}
+                  <Sello verificacion={tercero.verificacion} />
+                </td>
+                <td className="py-2 pr-4">
+                  {tercero.razonSocial}
+                  {tercero.nombreComercial !== null && (
+                    <span className="block text-neutral-600">{tercero.nombreComercial}</span>
+                  )}
+                </td>
+                <td className="py-2 pr-4 text-neutral-600">{tercero.poblacion}</td>
+                <td className="py-2 pr-4">
+                  <Papel tercero={tercero} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {VERIFICACIONES.filter((verificacion) =>
         consulta.data.elementos.some((tercero) => tercero.verificacion === verificacion),

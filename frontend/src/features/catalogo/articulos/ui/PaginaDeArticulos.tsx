@@ -214,78 +214,83 @@ export function PaginaDeArticulos(): React.JSX.Element {
     <>
       {cabecera}
 
-      <table className="mt-4 w-full border-collapse text-sm">
-        <caption className="sr-only">{t('catalogo.articulos.tabla')}</caption>
-        <thead>
-          <tr className="border-b border-neutral-300 text-left">
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.articulos.codigo')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.articulos.descripcion')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.articulos.tipo')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.articulos.trazabilidad')}
-            </th>
-            <th scope="col" className="py-2 pr-4 font-medium">
-              {t('catalogo.articulos.codigosDeBarras')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {elementos.map((articulo) => (
-            <tr key={articulo.id} className="border-b border-neutral-200">
-              <td className="py-2 pr-4 font-mono">{articulo.codigo}</td>
-              <td className="py-2 pr-4">{articulo.descripcion}</td>
-              <td
-                className="py-2 pr-4"
-                aria-describedby={articulo.tipo === 'desconocido' ? porQueElTipo : undefined}
-              >
-                <Tipo tipo={articulo.tipo} />
-              </td>
-              <td
-                className="py-2 pr-4"
-                aria-describedby={
-                  articulo.trazabilidad === 'desconocida' ? porQueLaTrazabilidad : undefined
-                }
-              >
-                <NombreDeTrazabilidad trazabilidad={articulo.trazabilidad} />
-                {puedeModificar && (
-                  <>
-                    {' '}
-                    {/* El texto visible es «Cambiar», uno por fila; el nombre accesible dice de
-                        qué artículo, que es lo que distingue un enlace de otro en la lista de
-                        enlaces del lector de pantalla. */}
-                    <Link
-                      to={`/articulos/${articulo.id}/trazabilidad${delListado}`}
-                      aria-label={t('catalogo.articulos.cambiarLaDe', { codigo: articulo.codigo })}
-                      className="ml-2 text-xs underline"
-                    >
-                      {t('catalogo.articulos.cambiar')}
-                    </Link>
-                  </>
-                )}
-              </td>
-              <td className="py-2 pr-4">
-                {/* Para todos los que ven el listado: la pantalla de los códigos pide lo mismo, y
-                    dentro esconde lo que el permiso no da. */}
-                <Link
-                  to={`/articulos/${articulo.id}/gtin${delListado}`}
-                  aria-label={t('catalogo.articulos.verCodigosDeBarrasDe', {
-                    codigo: articulo.codigo,
-                  })}
-                  className="text-xs underline"
-                >
-                  {t('catalogo.articulos.verCodigosDeBarras')}
-                </Link>
-              </td>
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <caption className="sr-only">{t('catalogo.articulos.tabla')}</caption>
+          <thead>
+            <tr className="border-b border-neutral-300 text-left">
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.articulos.codigo')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.articulos.descripcion')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.articulos.tipo')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.articulos.trazabilidad')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.articulos.codigosDeBarras')}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {elementos.map((articulo) => (
+              <tr key={articulo.id} className="border-b border-neutral-200">
+                <td className="py-2 pr-4 font-mono">{articulo.codigo}</td>
+                <td className="py-2 pr-4">{articulo.descripcion}</td>
+                <td
+                  className="py-2 pr-4"
+                  aria-describedby={articulo.tipo === 'desconocido' ? porQueElTipo : undefined}
+                >
+                  <Tipo tipo={articulo.tipo} />
+                </td>
+                <td
+                  className="py-2 pr-4"
+                  aria-describedby={
+                    articulo.trazabilidad === 'desconocida' ? porQueLaTrazabilidad : undefined
+                  }
+                >
+                  <NombreDeTrazabilidad trazabilidad={articulo.trazabilidad} />
+                  {puedeModificar && (
+                    <>
+                      {' '}
+                      {/* El texto visible es «Cambiar», uno por fila; el nombre accesible dice de
+                          qué artículo, que es lo que distingue un enlace de otro en la lista de
+                          enlaces del lector de pantalla. */}
+                      <Link
+                        to={`/articulos/${articulo.id}/trazabilidad${delListado}`}
+                        aria-label={t('catalogo.articulos.cambiarLaDe', {
+                          codigo: articulo.codigo,
+                        })}
+                        className="ml-2 text-xs underline"
+                      >
+                        {t('catalogo.articulos.cambiar')}
+                      </Link>
+                    </>
+                  )}
+                </td>
+                <td className="py-2 pr-4">
+                  {/* Para todos los que ven el listado: la pantalla de los códigos pide lo mismo, y
+                      dentro esconde lo que el permiso no da. */}
+                  <Link
+                    to={`/articulos/${articulo.id}/gtin${delListado}`}
+                    aria-label={t('catalogo.articulos.verCodigosDeBarrasDe', {
+                      codigo: articulo.codigo,
+                    })}
+                    className="text-xs underline"
+                  >
+                    {t('catalogo.articulos.verCodigosDeBarras')}
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {hayTipoSinReconocer && (
         <ExplicacionDeSinReconocer

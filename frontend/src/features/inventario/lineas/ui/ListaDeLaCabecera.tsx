@@ -30,7 +30,12 @@ export function ListaDeLaCabecera({
     .join(' ');
 
   return (
-    <div className="flex flex-col gap-1 text-sm">
+    <div
+      // Un `<select>` mide lo que su opción más larga, y un maestro se llama como quiera la
+      // empresa. `min-w-0` deja a la caja estrecharse hasta el ancho de la pantalla, y la lista
+      // con ella (WCAG 1.4.10).
+      className="flex min-w-0 flex-col gap-1 text-sm"
+    >
       <label htmlFor={campo} className="font-medium">
         {etiqueta}
       </label>
