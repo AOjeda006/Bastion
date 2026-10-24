@@ -8685,6 +8685,9 @@ hasta la puerta de la fase 3.
 >    orden y sus opciones, porque el límite no se sube sin que decida el usuario; y los cambios de
 >    `CLAUDE.md`. Ahí se para, y se pregunta todo junto.
 >
+> **El paso 1 está hecho**, en *La fase 2, cerrada: del 2.15 al 2.20, criterio por criterio*, con
+> sus tres recuentos y su canario. Se sigue por el 2.
+>
 > `/code-review` no bloquea: si sus hallazgos no llegan, el cierre de la fase la anota como no
 > hecha, con su rango, `0638419..0d26e76`.
 
@@ -14269,6 +14272,73 @@ porcelana, vacía:
   4.1.11, `playwright` y `playwright-core` 1.64.0, y lo que traen, `@blazediff/core`, `@polka/url`,
   `mrmime`, `pngjs`, `sirv`, `totalist` y `ws`. Las once, solo de desarrollo, con su licencia en la
   cabecera de `vitest.navegador.config.ts`.
+
+### La fase 2, cerrada: del 2.15 al 2.20, criterio por criterio (2026-10-24)
+
+Es el primer paso del cierre (*Estado actual → Dónde se retoma*). El repaso del 2026-10-14, debajo,
+comprobó los catorce criterios del desglose, y las respuestas de su tanda abrieron seis ítems más,
+del 2.15 al 2.20. Este los comprueba en la misma forma: cada criterio, contra algo que se puede
+mirar hoy. Las veinte casillas están marcadas, y el cierre no se apoya en eso.
+
+Cada nombre es uno de los **2 284** casos que corrieron en los dos carriles de .NET en el run
+**40103202811**, el de `08ea605` en su rama (1 544 y 740, contados por `recuento-de-tests.sh`), un
+fichero de la suite del frontal o una cifra con su orden. **Y cada nombre se buscó en el árbol de
+`08ea605`** con el guion del repaso del 2026-10-14, que sigue en el *scratchpad* y no entra en el
+repositorio. Lleva un cambio: lee también los ficheros .test.ts del frontal, que el de entonces
+se saltaba, y de esos son dos de las filas de abajo. La orden es `python -X utf8 repaso.py <raíz>
+<extracto>`, sobre un extracto del PLAN en Markdown:
+
+- sobre las seis casillas, del 2.15 al 2.20: **69** nombres, y le faltan **6**. Uno es un nombre
+  que el código cambió después, y cinco son títulos que están en su fichero y que el guion busca en
+  otro. Se explican debajo de la tabla;
+- sobre las catorce casillas de antes, otra vez: **439**, uno más que el 2026-10-14 por el
+  .test.ts, y le faltan los mismos **4**, los tres nombres de *Los tres nombres que ya no están
+  así*, en el repaso de debajo;
+- sobre esta sección: **88**, y le falta **1**, el que se cita a propósito debajo de la tabla;
+- y la regla mira: en una copia de esta sección, un método inventado, un título de un .test.tsx
+  con una palabra cambiada y otro de un .test.ts salen como faltas, uno cada vez.
+
+| Ítem | Lo observable |
+|---|---|
+| **2.15** lo que el repaso encontró | **La página enorme:** `EntradaHostilTests.La_ultima_pagina_cuyo_salto_cabe_es_200_y_vacia_y_la_siguiente_es_400`, con la frontera calculada en 64 bits. **El `retry`:** `LosReintentosDeLaCache.test.ts`, «un %i se pide una sola vez», con siete `4xx`, y su pareja, «un %i se pide dos veces: la segunda es el reintento», con tres `5xx`, y «un corte de red, que no es un fallo de la API, también se reintenta una vez». **La cabecera a 320 px:** `LaCabeceraCabeEn320.test.tsx`, «toda fila flexible de la cabecera envuelve», y el caso del `min-w-0`; que quepa no lo podía medir jsdom, y lo mide desde el 2.20 su fila. **El coste del trabajo mensual:** el plazo y la medida, en el *Medido* del ADR-0064, con sus órdenes; y las dos métricas, `ElTrabajoMensualAvanzaElCorteTests.El_retraso_es_el_del_corte_mas_viejo_y_sin_corte_cuenta_desde_el_primer_movimiento`, `.Una_vuelta_anota_lo_que_tarda_cada_avance_y_el_retraso_con_el_que_acaba` y `.La_duracion_va_en_segundos_con_sus_cubos_y_los_dos_indicadores_en_meses_sin_la_empresa`. **La nota de los enteros:** su orden y su tabla, en *Notas / riesgos*. Es una cuenta, y no tiene caso. |
+| **2.16** un solo «hoy» | **El sitio:** `DiaDeNegocio`, en `BuildingBlocks.Domain/Fechas`, sigue siendo el día UTC, y lo afirman los seis de `DiaDeNegocioTests`, de `Las_doce_y_media_del_uno_de_marzo_en_Madrid_es_todavia_el_28_de_febrero` a `Hoy_sin_reloj_lanza`. **La prohibición y su pareja:** `ElDiaDeNegocioSaleDeUnSoloSitioTests.Nadie_mas_calcula_el_dia_de_negocio` y `.El_dia_de_negocio_se_calcula_en_su_sitio`, con `.El_barrido_lee_el_backend_entero`. **Los sitios, contados hoy**, debajo de la tabla. **El «hoy» del frontal:** `dias.test.ts`, «es el día UTC, que es el del servidor, y no el del calendario de quien mira»; y la tarifa, en los dos lados, `ElListadoDeTarifas.test.tsx`, «a medianoche en Madrid, el tramo que acaba hoy en UTC rige, como dice ResolverPrecio», y `ResolverPrecioTests.Sin_fecha_el_dia_es_el_UTC_y_no_el_del_calendario_de_quien_pregunta`. **La nota de la zona:** en *Notas / riesgos*, contestada. |
+| **2.17** el alta del ajuste | **El alta, el listado paginado, la ficha y el descarte, por HTTP:** `LaSuperficieDelAjusteTests.El_alta_es_201_sin_etag_y_la_ficha_dice_el_factor_y_la_cantidad_base_de_cada_linea`, `.La_lista_va_de_la_ultima_fecha_a_la_primera_se_acota_y_no_trae_el_descartado` y `.El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404`; y con su permiso, `CadaAccionDeclaraSuPermisoTests.Todo_permiso_del_catalogo_lo_exige_alguna_accion`. **El factor lo resuelve el servidor:** los de `LaConsultaDeConversionesTests`, y `ElFactorDelAjusteTests.La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion`; y el cliente no lo manda, `ajustes/model/formularios.test.ts`, «la cantidad y el coste con punto, lo vacío nulo, y sin factor: lo pone el servidor». **Sin conversión:** `ElFactorDelAjusteTests.Una_unidad_sin_conversion_a_la_base_es_422_aunque_la_haya_al_reves`. **La conversión retirada, en los tres momentos:** `.Una_conversion_retirada_es_409_y_antes_de_retirarla_la_misma_linea_pasa`, `.Confirmar_usa_el_factor_que_se_guardo_aunque_la_conversion_cambie_o_se_retire`, `.El_inverso_copia_el_factor_del_original_aunque_su_conversion_se_haya_retirado` y `.El_inverso_copia_el_factor_del_original_aunque_su_conversion_haya_cambiado`. **El descarte, en el dominio y contra la base:** `ElDescarteDelAjusteTests` y `ElBorradorDescartadoTests`. **La pantalla:** `LaFichaDelAjuste.test.tsx`, «dice la cabecera y cada línea, con el factor que puso el servidor; el borrador no lleva valor»; `ElListadoDeAjustes.test.tsx`, «acotado y sin nada, lo dice del filtro, no de la empresa»; y `ElAltaDelAjuste.test.tsx`, «sin poder ver los maestros que ofrece, lo dice y no enseña el formulario», «el rechazo de una línea sin conversión va a la unidad de esa línea, con el foco» y «un 400 dice la línea en la clave de `errors`, y su error va en ese campo». |
+| **2.18** el avance incremental del corte | **Un mes por transacción, soltando el exclusivo entre uno y otro:** `LasExistenciasSonLaSumaDelLibroTests.El_avance_pone_el_corte_un_mes_cada_vez_y_no_rehace_lo_que_ya_llega`, y la carrera de verdad, `.Una_clave_nueva_entre_dos_meses_de_una_puesta_al_dia_la_espera_el_mes_siguiente`. **El mes M es el anterior más el libro de M:** `.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`, y la propiedad, `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`, con el paso de avanzar un mes entre los demás. **El estado del cuadre, en disco:** `LasExistenciasSonLaSumaDelLibroTests.Un_cuadre_que_falla_a_medias_sigue_en_la_vuelta_siguiente_desde_el_ultimo_mes_que_anoto` y `.Un_cuadre_que_se_cruza_con_un_recalculo_no_anota_lo_que_comparo`, y `ElTrabajoMensualAvanzaElCorteTests.Una_empresa_que_ya_llega_cuadra_lo_que_le_quedo_pendiente`. **A, B y C, medidas otra vez, y C avanza:** en el *Medido* del ADR-0067, con el mes más largo en 4 326 ms contra el disparador de 10 s, y el recálculo de C en 46 202 ms. |
+| **2.19** el alta de la transferencia | **El alta por HTTP:** `LaSuperficieDeLaTransferenciaTests.El_alta_es_201_sin_etag_y_la_ficha_dice_las_dos_ubicaciones_el_factor_y_la_cantidad_base` y `.Sin_idempotency_key_el_alta_es_428_y_con_la_misma_clave_no_abre_otra`; y los filtros `?origen=` y `?destino=`, con el `?q=` del ADR-0069, `.La_lista_va_de_la_ultima_fecha_de_envio_a_la_primera_se_acota_por_cada_punta_y_no_trae_la_descartada`. **Con su permiso:** el de `CadaAccionDeclaraSuPermisoTests` de la fila del 2.17, y la ruta, `ElBarridoDeRutas.test.ts`, «la partición cuadra: 21 rutas = 2 públicas + 1 de sesión + 18 de permiso». **Desde su pantalla:** `ElAltaDeLaTransferencia.test.tsx`, «abre un borrador con dos líneas, cada una de un hueco del origen a uno del destino» y «cada punta ofrece los huecos de su almacén, y cambiarlo solo vacía los de esa punta». **El factor, por el puerto del 2.17:** `ElFactorDeLaTransferenciaTests.La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion` y `.Una_conversion_retirada_es_409_y_antes_de_retirarla_la_misma_linea_pasa`; y el cliente no lo manda, `transferencias/model/formularios.test.ts`, «la cantidad con punto, lo vacío nulo, y sin factor: lo pone el servidor». **Un borrador se descarta:** `ElDescarteDeLaTransferenciaTests.Descartar_dos_veces_lanza_y_no_mueve_la_marca` y `.Una_descartada_no_se_envia`; `LaSuperficieDeLaTransferenciaTests.El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404`; y `LaTransferenciaDescartadaTests`. **El lote y la serie, a mano:** `LasLineasDeLaTransferenciaTests.Un_lote_que_no_es_de_gs1_va_al_campo_de_su_linea` y `.La_forma_de_la_serie_va_a_su_campo_y_la_unitaria_se_mira_con_el_factor`. **El humo:** 115 permisos en los dos arranques, en los avisos del *job* Humo del run 40103202811. **Los KiB:** 426/450 y 828/900, en el paso *Presupuesto de tamaño* del mismo run. |
+| **2.20** lo que el 2.18 dejó propuesto | **El JIT, fuera del cuadre:** `LasExistenciasSonLaSumaDelLibroTests.El_cuadre_lee_cada_mes_sin_jit_y_la_marca_lo_encuentra_como_lo_tiene_la_conexion`; y A, B y C, medidas otra vez, en el *Medido* del ADR-0070, con las tres cifras del 0067 explicadas, una de ellas en parte. **Los dos bordes del mes:** `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`, que la 656, medida otra vez como la 656r, pone roja en las seis semillas. **Las tablas a 320 px:** `LasPaginasCabenEn320.navegador.test.tsx`, «${ruta} cabe, y cada tabla corre dentro de su contenedor», con la pareja en el mismo caso, y «cada ruta tiene su escenario, y ninguno sobra». Corre en un Chromium, en el paso *Tests en el navegador* del *job* Frontal. **El indicador `meses_sin_cuadrar`:** `ElTrabajoMensualAvanzaElCorteTests.Una_vuelta_anota_lo_que_falta_por_cuadrar_y_un_cuadre_parado_lo_deja_por_encima_de_cero` y `.Lo_que_falta_por_cuadrar_va_del_primer_mes_sin_cuadrar_al_corte_y_manda_la_mas_atrasada`. |
+| **§15** el criterio de la fase | Los cuatro de la fila del §15 del repaso de debajo, buscados otra vez en el árbol de `08ea605`. **El saldo proyectado siempre coincide con la suma del libro:** `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`, que desde el 2.20 lleva también los dos bordes de cada mes. **Un recuento genera ajustes trazables:** `ElAjusteDelRecuentoTests.Al_confirmar_cada_linea_que_difiere_apunta_a_la_del_ajuste_que_la_mueve`. **La valoración PMP pasa los casos dorados:** `LosCasosDoradosDelPrecioMedioTests.La_secuencia_del_criterio_da_sus_cifras_fila_a_fila`. **Y el stock a fecha pasada:** `ElSaldoAUnaFechaTests.El_saldo_de_cada_dia_es_el_libro_hasta_ese_dia_y_lo_que_vuela_lo_que_salio_sin_llegar_ni_volver`. |
+
+**Los sitios del día de negocio, contados sobre `08ea605`.** `git grep -n "DateOnly.FromDateTime("
+HEAD -- src` da una línea, la de `DiaDeNegocio.De`, como al cerrar el 2.16. Y `git grep -n
+"DiaDeNegocio\.\(Hoy\|De\)(" HEAD -- src` da diecisiete en dieciséis ficheros, y no dieciséis, uno
+por fichero, como entonces: el 2.18 le dio a `ElCuadreDeLasExistencias` una segunda llamada, en
+`ef874fe`. Pasa por el sitio, que es lo que pide el criterio.
+
+**Lo que el guion no encuentra, y por qué.** Las casillas no se reescriben:
+
+- en el 2.15, el de `ElTrabajoMensualAvanzaElCorteTests`
+  `.La_duracion_va_en_segundos_con_sus_cubos_y_el_retraso_en_meses_sin_la_empresa` se llama desde
+  `0778862` `…_y_los_dos_indicadores_en_meses_sin_la_empresa`, porque el 2.20 le añadió el
+  indicador `meses_sin_cuadrar`;
+- y los cinco títulos de la casilla del 2.17 están en su fichero, pero la casilla escribe el título
+  antes que el fichero, o no lo nombra, y el guion los busca en el último que se nombró. Están, con
+  `git grep -nF "<título>" HEAD -- frontend/src`, en `LaFichaDelAjuste.test.tsx`, en la línea 327;
+  en `ElListadoDeAjustes.test.tsx`, en la 191; y los tres del alta, en `ElAltaDelAjuste.test.tsx`,
+  en la 542, la 328 y la 384. En la fila de arriba, cada uno va detrás de su fichero, y el guion los
+  encuentra.
+
+**Lo que el repaso encontró sin que estuviera anotado:**
+
+- **el guion del 2026-10-14 no miraba los .test.ts.** Los nombres de esos ficheros no contaban,
+  ni sus títulos, así que el `LosReintentosDeLaCache.test.ts` de la casilla del 2.15 no lo había
+  buscado nadie. Con el cambio, las catorce casillas dan uno más, y ninguna falta nueva;
+- **los nombres de dos fragmentos del frontal engañan**, y cambian cómo se lee el desglose del
+  presupuesto. `schemas-*.js` es `zod` entero, dieciocho de sus módulos y 85 730 bytes en el de
+  `d1bd3ed`, y `zod-*.js` es `react-hook-form` con `@hookform/resolvers`, 42 017. Los dos los
+  nombra Vite por el primer módulo que encuentra. Va a la pregunta del presupuesto, en la puerta;
+- **y ningún módulo maneja todavía un evento de otro en producción.** Inventario publica los de sus
+  documentos por la bandeja de salida, y los únicos manejadores que hay son los de los tests. La
+  fase 3 escribe el primero, y va al traspaso.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
