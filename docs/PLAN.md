@@ -8511,26 +8511,182 @@ el desmontaje. Entre las dos, el recorrido. Los fallos, 0 en las dos:
 
 La siguiente mutación es la **714**, y el siguiente ADR, el **0070**.
 
+### Tomadas por el agente de desarrollo — ítem 2.20, al escribirlo y al medirlo (2026-10-24)
+
+Cada tema del criterio fue en su commit y en su subida, como pedía *Dónde se retoma*: el JIT, en
+`f3b0bec`; la propiedad, en `0f53fc8`; las páginas a 320 px, en `b9892e6`, que la CI puso roja, y
+`d1bd3ed`, que lo arregla; el indicador, en `0778862`; y el ADR-0070, en ``10ed2e8``, después de los
+cuatro, porque su *Medido* necesitaba el humo. Lo que se decidió sin preguntar, porque el criterio
+no lo decía o porque salió al escribirlo:
+
+1. **`SET LOCAL`, y no `SET`, y solo en el cuadre de lo pendiente** (ADR-0070 §1). Con el `COMMIT`
+   del mes, la conexión vuelve al JIT que tenía, y la marca, que va fuera, lo encuentra encendido.
+   El cuadre entero se queda como estaba: lo llaman los casos y quien recalcula a mano.
+2. **El caso del JIT es de integración, y no funcional**, como decía la propuesta: el JIT de una
+   conexión solo existe en un PostgreSQL de verdad, y un caso funcional solo vería el texto de la
+   orden. Un interceptor pregunta `current_setting('jit')` en la transacción de cada lectura y de
+   cada marca, con la semilla 923. Abre la conexión antes del cuadre, porque al cerrarla el *pool*
+   la limpia con `DISCARD ALL`, y un `SET` sin `LOCAL` se borraría antes de que nadie lo viera: es
+   lo que hace que la 715 salga roja.
+3. **El humo del 2.20 es el del 2.18 con más registro, y ningún ajuste del plan**: `auto_explain` a
+   partir de 1 s y `log_autovacuum_min_duration = 0`. Para separar las causas, tres recálculos de C
+   —a secas, con `VACUUM` y con `ANALYZE` entre la vuelta atrás y el avance—, el coste estimado del
+   cuadre de A en cada vuelta, y una cuarta empresa de 10⁶ movimientos sembrada para fabricar un
+   punto de control por `wal` mientras se medía B. Las cifras, en el *Medido* del ADR-0070.
+4. **La propiedad fuerza los dos bordes sin sacar otro número del azar** (`0f53fc8`): dos de cada
+   tres claves nuevas antes del corte van al día 1 de su mes o al último, y la propiedad afirma que
+   cada semilla tiene un movimiento en cada uno. Cambia la secuencia de las seis semillas, y las
+   seis siguen pasando por todas las clases de paso.
+5. **El contenedor lleva el margen que llevaba la tabla**, y las listas desplegables de los
+   filtros y de la cabecera de las dos altas, `min-w-0` en su caja. Con nombres de almacén largos,
+   un `<select>` ponía la página en 449 px, porque mide lo que su opción más larga; el recorrido del
+   2.19 dio 320 porque los nombres eran cortos. **El caso usa nombres largos a propósito**, y por
+   eso los ve.
+6. **La 726 salió verde, y su cambio se quitó antes del commit**: el `min-w-0` de las dos listas de
+   la apertura de un recuento no movía nada, y no se deja un cambio que ninguna medida sostiene.
+7. **El carril del navegador es nuevo**: vitest en modo navegador con Playwright, en
+   `npm run test:navegador`, con su configuración, `vitest.navegador.config.ts`, que el carril de
+   jsdom excluye. Es el Playwright que el §3 del plan maestro pone para los tests del frontal, por
+   debajo de vitest. Las licencias, comprobadas antes de adoptarlos, en la cabecera de esa
+   configuración: `@vitest/browser-playwright`, `@vitest/browser` y `@vitest/mocker`, MIT, y
+   `playwright` y `playwright-core` 1.64.0, Apache-2.0. Los manejadores de `pruebas/servidor.ts`
+   pasan a `pruebas/manejadores.ts`, sin nada de Node, para que los monten los dos carriles. La CI
+   instala el Chromium y corre el carril después del canal de la consola, y la batería de
+   `AGENTS.md` lo lleva en el mismo sitio (`b9892e6`).
+8. **`b9892e6` salió rojo en la CI, y es un hallazgo** (run 40064764889): `/tarifas` medía 322 en
+   el *runner* y 320 aquí. Un `sr-only`, que va en absoluto, se escapaba de un contenedor sin
+   posición: su bloque contenedor está más arriba, y cuenta en el ancho del documento desde su
+   posición estática, que depende de la fuente. El diagnóstico del caso salió vacío, porque contaba
+   como recorte cualquier caja con `overflow`. Se reprodujo, y se verificó el arreglo, en la imagen
+   `mcr.microsoft.com/playwright:v1.64.0-noble`, la de Playwright 1.64.0 sobre Ubuntu 24.04. **El
+   arreglo, `d1bd3ed`**: los dieciséis contenedores llevan `relative`; el caso mete una sonda
+   `sr-only` en la última celda de cada tabla, con la tabla a 2000 px, para que un par de píxeles de
+   fuente no cambien el resultado, y su pareja pone el contenedor en `position: static`; y el
+   diagnóstico sigue la cadena de bloques contenedores (ADR-0070 §4).
+9. **El indicador cuenta hasta el corte, y no hasta el mes que toca**, porque lo que el corte no ha
+   alcanzado ya lo cuenta el retraso; **se anota al acabar la vuelta**, de la misma lectura que el
+   retraso; y **empieza donde empezaría el cuadre**, con la misma sentencia,
+   `SqlDelPrimerMesPorCuadrar`, cuando no hay nada cuadrado (`0778862`, ADR-0070 §2).
+10. **El SQL crudo del indicador entra en la lista de saltos permitidos**, con su motivo. Lo
+    encontró la regla de `ElFiltroNoSeSaltaPorAhiTests`, que puso el carril rápido con un rojo, el
+    suyo: es la regla haciendo lo que dice.
+11. **El ADR-0070 cuenta los cuatro temas, y no solo lo que enmienda del 0067**, porque es el ADR
+    del ítem. La propiedad y las páginas no tocan el 0067, y el aprendizaje del bloque contenedor
+    sirve fuera del proyecto.
+
+**Las cinco tandas, de la 714 a la 744, se escribieron antes de medir**, cada una sobre el commit de
+su tema, en el *scratchpad*: `tanda220-jit.md`, `tanda220-prop.md`, y las listas de
+`reflujo/mutar.py`, `reflujo/mutar-relativo.py` y `tanda220-sin-cuadrar.json`. Las del servidor, con
+`mutar220.py` en el árbol limpio, sobre los carriles de dominio de Inventario, los funcionales y la
+integración filtrada a `Bastion.Api.IntegrationTests.Inventario.`, con `--blame-hang
+--blame-hang-timeout 4m`. Las del frontal, con el carril del navegador, contando los casos por
+nombre en su informe JSON. Cada mutación se aplicó sola, se revirtió con
+`git restore --source=HEAD` y se tocó con la fecha de ahora:
+
+```bash
+python -X utf8 mutar220.py tanda220-jit.json base 714-716           # sobre f3b0bec
+python -X utf8 mutar220.py tanda220-prop.json base 656r 717-719     # sobre 0f53fc8
+python -X utf8 reflujo/mutar.py                                     # 720-731, sobre b9892e6
+python -X utf8 reflujo/mutar-relativo.py <repo> <salida>            # 732-736, sobre d1bd3ed
+python -X utf8 mutar220.py tanda220-sin-cuadrar.json base 737-744   # sobre 0778862
+```
+
+Las bases, en verde: dominio 0 de 344, funcionales 0 de 252 (0 de 254 sobre `0778862`) e
+integración 0 de 306; el navegador, 22 de 22. Al acabar cada tanda del servidor, el build del árbol
+restaurado sale con 0, y la porcelana, vacía. De la 714 a la 744, la única verde es la **726**:
+el punto 6.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 714 | Sin el `SET LOCAL jit = off` | **integración 1**: `El_cuadre_lee_cada_mes_sin_jit_y_la_marca_lo_encuentra_como_lo_tiene_la_conexion`, en `ShouldAllBe(off)`: 39 lecturas con el JIT encendido |
+| 715 | `SET jit = off`, sin `LOCAL` | **integración 1**: el mismo, en las marcas: 19 lo encuentran apagado |
+| 716 | **Arnés**: el selector de la marca del interceptor, con otra columna | **integración 1**: el mismo, con las marcas vacías. El sujeto no se toca |
+| 656r | La 656 otra vez, el libro de un mes leído desde el día 2, sobre `0f53fc8` | **integración 2**: `ElSaldoEsLaSumaDelLibroPorPropiedadTests.Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro`, en las seis semillas, y `Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero`. **La propiedad ya la ve** |
+| 717 | El libro de un mes leído hasta el penúltimo día | **integración 1**: la propiedad, en las seis. Ningún otro caso tiene un movimiento el último día de un mes |
+| 718 | **Arnés**: la clave nueva sin el día 1 | **integración 1**: la propiedad, en las seis, en «ningún movimiento el primer día de un mes» |
+| 719 | **Arnés**: la clave nueva sin el último día | **integración 1**: la propiedad, en cuatro de seis, la 460, la 463, la 464 y la 465, en «ningún movimiento el último día de un mes». La 461 y la 462, verdes, porque otro paso cae por azar en un último día, como se escribió |
+| 720 | La tabla de saldos, sin su contenedor | **navegador 1**: `/saldos` |
+| 721 | La lista de almacenes del filtro de ajustes, sin `min-w-0` | **navegador 1**: `/ajustes` |
+| 722 | La caja de la lista de la cabecera de un alta, sin `min-w-0` | **navegador 2**: `/ajustes/nuevo` y `/transferencias/nueva` |
+| 723 | La lista de artículos del filtro de saldos, sin `min-w-0` | **navegador 1**: `/saldos` |
+| 724 | Las dos listas de almacenes de transferencias, sin `min-w-0` | **navegador 1**: `/transferencias` |
+| 725 | La lista de almacenes del filtro de recuentos, sin `min-w-0` | **navegador 1**: `/recuentos` |
+| 726 | Las cajas de las listas de la apertura de un recuento, sin `min-w-0` | **navegador 0**: el punto 6 |
+| 727 | **Arnés**: el carril sin la hoja de estilos | **navegador 20 de 22**: las veintiuna rutas salvo `/acceso`. En verde, `/acceso` y el caso de los escenarios |
+| 728 | **Arnés**: la ventana a 1024 px | **navegador 21 de 22**: las veintiuna rutas. En verde, el caso de los escenarios |
+| 729 | **Arnés**: la pareja no quita el contenedor | **navegador 17**: las diecisiete rutas con tabla |
+| 730 | **Arnés**: una ruta sin escenario, la de saldos | **navegador 2**: `cada ruta tiene su escenario, y ninguno sobra` y `/saldos` |
+| 731 | **Arnés**: el carril de jsdom sin la exclusión | **jsdom**: el fichero del navegador, rojo al cargarse, con los 392 de jsdom en verde |
+| 732 | El contenedor de las tarifas, sin `relative`, sobre `d1bd3ed` | **navegador 1**: `/tarifas`, en «lo que va en absoluto en la tabla empuja la página» |
+| 733 | El contenedor de las empresas, sin `relative` | **navegador 1**: `/empresas` |
+| 734 | **Arnés**: la sonda no entra en la tabla | **navegador 17**: las diecisiete rutas con tabla, en «sin posición en el contenedor, la sonda no llega a mover la página» |
+| 735 | **Arnés**: el diagnóstico de antes, que cuenta como recorte cualquier caja con `overflow` | **navegador 17**: las mismas, en «el diagnóstico no nombra la sonda» |
+| 736 | **Arnés**: la tabla de la sonda, sin sus 2000 px | **navegador 3**: `/almacenes`, `/categorias` y `/tarifas`, en la pareja. Es el hallazgo de abajo |
+| 737 | La vuelta no anota lo que falta por cuadrar, sobre `0778862` | **funcionales 1**: `Una_vuelta_anota_lo_que_falta_por_cuadrar_y_un_cuadre_parado_lo_deja_por_encima_de_cero`, con la serie vacía en vez de `[3]` |
+| 738 | El recuento sin el mes del corte: sin el `+ 1` | **funcionales 2**: `Lo_que_falta_por_cuadrar_va_del_primer_mes_sin_cuadrar_al_corte_y_manda_la_mas_atrasada`, 0 en vez de 1, y el de la vuelta, 2 en vez de 3 |
+| 739 | Manda la última empresa, y no la más atrasada | **funcionales 1**: el de la vuelta, 1 en vez de 3. El caso puro pone la más atrasada la última y no la ve, como se escribió |
+| 740 | Lo que falta empieza en el último mes cuadrado, y no en el siguiente | **integración 1**: `Un_cuadre_que_falla_a_medias_sigue_en_la_vuelta_siguiente_desde_el_ultimo_mes_que_anoto`, mayo de 2025 en vez de junio. Los funcionales, 0: su avance falso no calcula la fecha |
+| 741 | Sin nada cuadrado, lo que falta empieza en el corte: `SELECT {1}` en vez de `SqlDelPrimerMesPorCuadrar` | **integración 2**: el del cuadre parado, septiembre de 2026 en vez de marzo de 2025, y `El_corte_de_cada_empresa_es_su_mes_y_el_primer_movimiento_solo_lo_lleva_la_que_no_tiene`, en la empresa que empieza en mayo de 2025. La otra empieza en el corte, y no la ve |
+| 742 | Sin la guarda de lo cuadrado hasta el corte | **integración 2**: los dos, nulo esperado y octubre de 2026 leído. Los funcionales, 0: el indicador da 0 igual |
+| 743 | **Arnés**: el avance falso no mueve lo que falta al cuadrar | **funcionales 1**: el de la vuelta, 6 en vez de 3. El sujeto no se toca |
+| 744 | El corte de cada empresa sale sin lo que le falta | **integración 2**: los dos; el del cuadre parado, nulo en vez de marzo de 2025 |
+
+- **Lo que salió distinto de lo escrito, y por qué**:
+  - **la 726, verde**: el punto 6;
+  - **la 736, roja solo en tres**: sin ensanchar la tabla, que la sonda salga o no de la ventana
+    depende de dónde cae su posición estática, y eso depende de la fuente. En esta máquina, tres
+    rutas; en el *runner*, otras. Es lo que el ancho de 2000 px quita del caso;
+  - **ninguna de la 737 a la 744**: cada una dio los rojos que decía su predicción, por nombre. La
+    741 no la ve `ElFiltroNoSeSaltaPorAhiTests`, porque la llamada a `SqlQuery` sigue en su sitio, y
+    la 742 no la ven los funcionales, porque un mes después del corte da un recuento de 0.
+
+**El humo**, con Docker, sobre `f3b0bec`, en su propio proyecto, `-p bastion-humo-220`, con un
+entorno en el *scratchpad* hecho con `openssl rand`, que se borró al acabar. Lo lanza
+`humo220.sh` del *scratchpad* en cuatro órdenes, `montar`, `medir`, `rehacer` y `rematar`, y las
+cuatro salen con 0 fallos. Las cifras, en el *Medido* del ADR-0070. Además:
+
+- en los dos arranques, `cuadrado_hasta` es `date` nulable, con sus dos `CHECK`; el índice por
+  empresa y mes es el de la migración, el viejo no está, y `ElCuadreGuardaHastaDondeLlega` está una
+  vez en el historial;
+- **115 permisos en el rol del sistema en los dos arranques**;
+- el segundo arranque sale con 0, en 18 s, y vuelve a crear la partición borrada;
+- antes de desmontar, C estaba cuadrada hasta agosto, con el corte en septiembre: un mes sin
+  cuadrar, de verdad;
+- y `down -v`, con 0: solo queda el proyecto `bastion`, y el entorno, borrado.
+
+**El recorrido del frontal** no se hizo con `playwright-cli`: lo que mide a 320 px, cada ruta con
+sus datos, ya lo hace el carril del navegador en cada subida, y la CI lo corre en Linux.
+
+La siguiente mutación es la **745**, y el siguiente ADR, el **0071**.
+
 ## Estado actual
 
-**FASE 2 EN CURSO — 19 de 20 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
-preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
-*Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. Los
-catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, y la
-puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el 2.18, y la
-transferencia pasa a ser el 2.19. La del 2.19, el 2026-10-20, abre un sexto, el 2.20, con lo
-que el 2.18 dejó propuesto. La fase se cierra cuando acabe el último. Del 2.15 al 2.19 están
-hechos.
+**FASE 2 — 20 de 20 ítems, y el cierre de la fase en curso.** La puerta de clarificación se pasó el
+2026-09-18: las trece preguntas de la tanda y las tres que trajo la respuesta están contestadas y
+anotadas arriba, en *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en
+el *Checklist*. Los catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro
+addenda**, y la puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el
+2.18, y la transferencia pasa a ser el 2.19. La del 2.19, el 2026-10-20, abre un sexto, el 2.20,
+con lo que el 2.18 dejó propuesto. Del 2.15 al 2.20 están hechos, y las veinte casillas, marcadas:
+el README dice «cerrada», porque lo cuenta de las casillas. Lo que queda es el cierre de la fase,
+hasta la puerta de la fase 3.
 
-> **Dónde se retoma (2026-10-24): en el 2.20**, en la rama
-> `2.20-lo-que-el-2.18-dejo-propuesto`, abierta desde `main` en `7139fc2`, el cierre del 2.19. Su
-> primer commit anota los dos runs de ese cierre. Después, cada tema del criterio en
-> su propio commit y en su propia subida, con su caso y su mutación, desde la **714**, y el
-> **ADR-0070**, que enmienda lo que corresponda del 0067. Detrás, el cierre de la fase hasta la
-> puerta de la fase 3, donde se para y se pregunta todo junto, con la propuesta del `?q=` del
-> ADR-0069 y la de la auditoría de la herramienta entre los veredictos. `/code-review` ya no
-> bloquea: si sus hallazgos no llegan, el cierre de la fase la anota como no hecha, con su rango,
-> `0638419..0d26e76`.
+> **Dónde se retoma (2026-10-24): en el cierre de la fase 2**, en la rama `cierre-de-la-fase-2`,
+> que se abre desde `main` en el cierre del 2.20. Su primer commit anota los dos runs de ese
+> cierre. Después, por este orden:
+>
+> 1. el repaso del 2.15 al 2.20, criterio por criterio y en la forma del de la fase, contra casos
+>    por su nombre, con un guion que comprueba que cada nombre existe, y su canario;
+> 2. los veredictos de las notas abiertas y el traspaso, con la propuesta del `?q=` del ADR-0069 y
+>    la de la auditoría de la herramienta, que lleva dentro `vitest` 4.1.12;
+> 3. el cierre de la fase, si no sale ninguna pregunta;
+> 4. y la puerta de la fase 3: primero el §15 del plan maestro; después, la pregunta del
+>    presupuesto, con los 56 KiB del ajuste repartidos por fichero entre `b1db83e` y `2fdd3cb`, su
+>    orden y sus opciones, porque el límite no se sube sin que decida el usuario; y los cambios de
+>    `CLAUDE.md`. Ahí se para, y se pregunta todo junto.
+>
+> `/code-review` no bloquea: si sus hallazgos no llegan, el cierre de la fase la anota como no
+> hecha, con su rango, `0638419..0d26e76`.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -14050,6 +14206,66 @@ estimación de la puerta. Sobre ese commit, la batería del frontal sale en verd
 `lint` y `format:check`, limpios; los 392 casos en 47 ficheros, con la marca del canal y ningún
 aviso de `act()`; y el build. Sobre `4f6ac53`, los mismos 392 en verde, y el canal, con la marca
 y sin avisos.
+
+**El 2.20, hecho el 2026-10-24**, en la rama `2.20-lo-que-el-2.18-dejo-propuesto`, abierta el mismo
+día desde `main` en `7139fc2`. Lo que pide está en el ADR-0070, que enmienda el 0067 en su §4, su
+§5, su *Medido* y su *Lo que no cubre*; lo que se decidió al escribirlo y al medirlo, en
+*Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 2.20*. Lleva un ADR, así que el
+siguiente es el **0071**. Sus mutaciones van de la **714** a la **744**, con la 656 medida otra vez
+como la 656r, y las siguientes empiezan en la **745**.
+
+**Los commits, por este orden, cada uno en su subida y con su run de rama** (los trabajos,
+Backend, Frontal y Humo). Todos en verde menos el de `b9892e6`, que es el punto 8 de las
+decisiones:
+
+1. `c8c2997`, «docs(plan): los dos runs del cierre del 2.19, y el 2.20 abierto»: **40056563371**,
+   `120760721343`, `120760721727` y `120762788208`.
+2. `f3b0bec`, «perf(inventario): el cuadre lee cada mes sin el JIT del motor»: **40057458212**,
+   `120763484497`, `120763484683` y `120766234068`.
+3. `0f53fc8`, «test(inventario): la propiedad con los dos bordes de un mes»: **40060729047**,
+   `120773437844`, `120773437683` y `120775093188`.
+4. `b9892e6`, «fix(frontal): las páginas caben en 320 px, medidas en un Chromium»:
+   **40064764889**, rojo en el Frontal, `120785569704`, en *Tests en el navegador*: `/tarifas`
+   medía 322 y no 320. Backend `120785569892` en verde, y Humo `120787656544` omitido, porque
+   depende de los dos.
+5. `d1bd3ed`, «fix(frontal): el contenedor de cada tabla recorta también lo absoluto»:
+   **40097610764**, `120883041304`, `120883041582` y `120885869590`.
+6. `0778862`, «feat(inventario): el indicador de lo que le falta al cuadre»: **40099041852**,
+   `120887215686`, `120887215945` y `120890129532`.
+7. `10ed2e8`, «docs(adr): el ADR-0070, lo que el 2.18 dejó propuesto»: **40101679632**,
+   `120894958695`, `120894958812` y `120897910243`.
+8. Este cierre, **por el flujo de la rama**: va a la rama y espera su verde; `main` avanza con
+   `--ff-only` desde `7139fc2`, y la rama se borra, en local y en el remoto, después del run de
+   `main`. Los dos runs los anota el primer commit del cierre de la fase.
+
+Los runs se leyeron con `python -X utf8 vigilar212.py <sha> <rama>` y
+`python -X utf8 leer-run27.py <run>`, dos guiones del *scratchpad*.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `10ed2e8`**, con `bash bateria220.sh`, un
+guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida
+en una línea. Es el de `bateria219.sh` con los dos pasos del carril del navegador, el Chromium y
+`test:navegador`, en el sitio que les da `AGENTS.md`. Los diecinueve pasos salen con 0, y la
+porcelana, vacía:
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **158** operaciones en
+  **95** rutas y **240** tipos de **248** sitios, como en el 2.19, con los dos generadores en
+  `--comprobar`. Las rutas, contadas sobre `docs/api/openapi.json`;
+- `typecheck`, `lint` y `format:check`, limpios; **392** casos de jsdom en **47** ficheros, como
+  en el 2.19; `canal-de-la-consola.sh`, con la marca, ningún aviso de `act()` y siete trozos para
+  las ocho cadenas; y el carril del navegador, **22** casos en **1** fichero, todos en verde;
+- **426/450** y **828/900** KiB, los mismos que sobre `76726b7`;
+- el build, con 0 errores y 0 avisos, y `dotnet format`, limpio;
+- **1544** casos en el carril rápido y **740** en el de integración, 652 de `Api.IntegrationTests`
+  y 88 de `Organizacion.IntegrationTests`, todos en verde y contados con `recuento-de-tests.sh` y
+  las dos listas del *workflow*. Son dos más en el rápido, los dos funcionales del indicador, y uno
+  más en el de integración, el del JIT. El de integración, con `--blame-hang
+  --blame-hang-timeout 4m`, en 573 s;
+- y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py 7139fc2 HEAD`: 125
+  pares y 35 `Project` en los dos lados, sin nada añadido ni retirado; y en el frontal, de 432 a 443
+  entradas, once añadidas y ninguna retirada: `@vitest/browser-playwright` y `@vitest/browser`
+  4.1.11, `playwright` y `playwright-core` 1.64.0, y lo que traen, `@blazediff/core`, `@polka/url`,
+  `mrmime`, `pngjs`, `sirv`, `totalist` y `ws`. Las once, solo de desarrollo, con su licencia en la
+  cabecera de `vitest.navegador.config.ts`.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
@@ -22975,7 +23191,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     rechazo en su campo, enviar, recibir, anular y descartar, y las tres páginas a 320 px;
   - **los KiB**, **426/450 y 824/900**, dentro de la estimación de la puerta, 427/450 y
     810–835/900, y repartidos por fichero. Con `zod` 4.6.7, **426/450 y 828/900**: dentro todavía.
-- [ ] **2.20 · Lo que el 2.18 dejó propuesto** — criterio de aceptación: cuatro temas, cada uno en
+- [x] **2.20 · Lo que el 2.18 dejó propuesto** — criterio de aceptación: cuatro temas, cada uno en
   su propio commit, y cada uno con su caso y su mutación.
   - **`SET LOCAL jit = off` en la transacción de cada mes del cuadre**, y la medida otra vez de A,
     B y C con los guiones del 2.18. Las tres cifras sin explicar del ADR-0067 —la tercera mensual
@@ -22992,6 +23208,39 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
   El ADR del 2.20 enmienda lo que corresponda del 0067, y el 0067 lo anota. **Es el último ítem de
   la fase 2**, que se cierra cuando acabe, hasta la puerta de la fase 3. *Lo abren las respuestas 3
   y 4 de la puerta del 2.19, el 2026-10-20.*
+
+  **Hecho el 2026-10-24**, en la rama `2.20-lo-que-el-2.18-dejo-propuesto`, en siete commits, del
+  `c8c2997` al `10ed2e8`, y el que lo cierra. Cada tema, en su commit y en su subida. Por el camino,
+  `b9892e6` salió rojo en la CI por una fuente, y `d1bd3ed` lo arregla. Lo decidido sin preguntar,
+  la tanda de la 714 a la 744 y el humo, en *Decisiones tomadas → Tomadas por el agente de
+  desarrollo — ítem 2.20*; los commits y la batería, en *Estado actual → El 2.20, hecho*. Cada punto
+  del criterio tiene su caso:
+
+  - **el JIT, apagado en la transacción de cada mes del cuadre** (`f3b0bec`):
+    `El_cuadre_lee_cada_mes_sin_jit_y_la_marca_lo_encuentra_como_lo_tiene_la_conexion`, que ven la
+    714, la 715 y la 716, esta sobre el arnés;
+  - **A, B y C, medidas otra vez**, en el humo, con las cifras en el *Medido* del ADR-0070. La
+    tercera mensual de A, **explicada**: el coste de su plan, 509 994, cruzaba el umbral de
+    optimización del JIT, 500 000. Las mensuales de B antes del `CHECKPOINT`, **explicadas en
+    parte**: el JIT son de 6,8 a 7,2 s de los 11. Y el recálculo de C, **explicado**: lo mueve la
+    estadística de las instantáneas en el momento del avance, y no las tuplas muertas, con 33,9 s a
+    secas, 32,1 con `VACUUM` y 53,4 con `ANALYZE`;
+  - **la propiedad, con movimientos el primer y el último día de un mes** (`0f53fc8`): la 656, otra
+    vez como la 656r, pone roja `Tras_cualquier_secuencia_el_saldo_es_la_suma_del_libro` en las
+    seis semillas; y la ven también la 717, la 718 y la 719, estas dos sobre el arnés;
+  - **un contenedor para las doce tablas que empujaban la página** (`b9892e6` y `d1bd3ed`): las
+    dieciséis tablas del frontal van en un contenedor `relative overflow-x-auto`, y
+    `LasPaginasCabenEn320.navegador.test.tsx` mide las veintiuna rutas en un Chromium, en
+    `<ruta> cabe, y cada tabla corre dentro de su contenedor`. La pareja va en el mismo caso: sin
+    el contenedor, la página se sale. Lo ven de la 720 a la 736, menos la 726, que es el punto 6;
+  - **el indicador `meses_sin_cuadrar`, sin la empresa como etiqueta** (`0778862`):
+    `Una_vuelta_anota_lo_que_falta_por_cuadrar_y_un_cuadre_parado_lo_deja_por_encima_de_cero`, la
+    737, la 739 y la 743; `Lo_que_falta_por_cuadrar_va_del_primer_mes_sin_cuadrar_al_corte_y_…`,
+    la 738; y contra la base, `Un_cuadre_que_falla_a_medias_sigue_en_la_vuelta_siguiente_…` y
+    `El_corte_de_cada_empresa_es_su_mes_y_…`, de la 740 a la 744;
+  - **el ADR-0070** (`10ed2e8`), que enmienda el 0067 en el §4, el §5, el *Medido* y *Lo que no
+    cubre*; y el 0067 lo anota en su *Estado* y al principio de cada punto;
+  - **el humo**, sobre `f3b0bec`: **115 permisos en los dos arranques**, y 0 fallos.
 
 ## Imports pendientes de `CLAUDE.md`
 
@@ -23045,6 +23294,18 @@ cuando hace falta el porqué.
 
 ## Notas / riesgos
 
+- **ABIERTA (2026-10-24, ítem 2.20, ADR-0070) · el recálculo de C cuesta entre 32 y 53 s según
+  cuándo pase el `ANALYZE`.** Medido en el humo del 2.20, con tres recálculos de C sobre la misma
+  base: 33,9 s a secas, 32,1 con `VACUUM` entre la vuelta atrás y el avance, y 53,4 con `ANALYZE`.
+  Lo mueve la estadística de `instantaneas_mensuales` en el momento del avance, y no las tuplas
+  muertas: con el `ANALYZE` tomado cuando la empresa no tiene ninguna instantánea, el plan estima
+  una fila donde hay hasta 100 000 (ADR-0070, *Medido*). El recálculo no tiene entrada en
+  producción (ADR-0044 §5), así que hoy no lo paga nadie. **La propuesta**: si algún día la tiene,
+  que el avance hacia delante analice la tabla después de su primer mes, y medir otra vez las tres
+  variantes. No se hace sin encargo. **El disparador**: una entrada de producción para el
+  recálculo. En el mismo *Medido* quedan dos cifras sin explicar del todo: los 4 s de las
+  mensuales de B que no son del JIT, y lo que se mueve el avance de una ronda a otra.
+
 - **ABIERTA (2026-10-24, ítem 2.19, ADR-0045) · la auditoría de la herramienta da dos altas, en
   `vite` y en `undici`.** Medido con `npm --prefix frontend audit --json` sobre `4f6ac53`: 0
   críticas, 2 altas y 2 moderadas, en `@vitest/mocker`, `undici`, `vite` y `vitest`. La alta de
@@ -23057,6 +23318,14 @@ cuando hace falta el porqué.
   `fixAvailable` sin versión mayor, y `npm view` publica `vite` 7.3.7, `undici` 7.30.1 y `vitest`
   4.1.12. No lo pide ningún ítem, así que el 2.19 no lo hace. **El disparador**: el cierre de la
   fase 2, que decide si pasa al traspaso; o un aviso de `vite` que afecte a lo que se construye.
+
+  **Medido otra vez sobre `10ed2e8`, en el cierre del 2.20**, con la misma orden: 0 críticas, 2
+  altas y 4 moderadas. Las dos nuevas son las del carril del navegador, `@vitest/browser` y
+  `@vitest/browser-playwright`, y llegan por los dos avisos de `@vitest/mocker`
+  (GHSA-qxg6-89mg-rqv8 y GHSA-xp26-3454-mjgp), que tocan justo a ese modo (ADR-0070, *Lo que no
+  cubre*). Los seis paquetes dan `fixAvailable` sin versión mayor, `npm view` publica `vitest` y
+  `@vitest/browser-playwright` 4.1.12, y la puerta, `--omit=dev --audit-level=high`, sigue con 0.
+  La propuesta es la misma, con el carril nuevo dentro.
 
 - **ABIERTA (2026-10-24, ítem 2.19, ADR-0069) · un `?q=` a un listado sin filtro declarado llega y
   no filtra nada.** `Paginador.Filtrar` devuelve la consulta tal cual cuando el repositorio no
@@ -23080,7 +23349,7 @@ cuando hace falta el porqué.
   mismo de lo que hay en una ubicación; o alguien que pida elegir el lote del origen en una
   transferencia antes.
 
-- **ABIERTA (2026-10-20, ítem 2.18) · el cuadre del mes del corte paga unos 6 s de JIT del
+- **CERRADA (2026-10-24, ítem 2.20) · el cuadre del mes del corte paga unos 6 s de JIT del
   motor.** Medido con `EXPLAIN (ANALYZE, BUFFERS)` en el humo del 2.18 (ADR-0067, *Medido*): el plan
   de B cuesta 589 865 y el de C 5 048 823, por encima del umbral de optimización del JIT, 500 000
   por omisión, y el motor compila 1 252 y 1 345 funciones en 6 248 y 6 689 ms. Sin JIT, el mismo
@@ -23088,9 +23357,12 @@ cuando hace falta el porqué.
   el plazo de 30 s, así que el 2.18 no lo toca. **La propuesta**: un `SET LOCAL jit = off` en la
   transacción de cada mes del cuadre, con un caso funcional que diga que la orden va dentro, y el
   humo midiendo otra vez el de B y el de C. No se hace sin encargo.
-  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20).
+  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20). **La cerró el 2.20** con la
+  propuesta, en `perf(inventario): el cuadre lee cada mes sin el JIT del motor` (`f3b0bec`), con un
+  caso de integración y no funcional, por el punto 2 de sus decisiones. El cuadre mensual de B baja
+  de 11 s a 537 · 437 · 820 ms, y el de C, de 9,8 s a entre 3,2 y 3,7 (ADR-0070, *Medido*).
 
-- **ABIERTA (2026-10-20, tanda del 2.18) · la propiedad del saldo no tiene ningún movimiento en día
+- **CERRADA (2026-10-24, ítem 2.20) · la propiedad del saldo no tiene ningún movimiento en día
   1.** Lo midió una sonda de la tanda: en las seis semillas, entre 241 y 288 movimientos en solo 3 a
   14 fechas, y ninguno en el primer día de un mes. Casi todos caen en «hoy», porque un documento con
   fecha anterior al último movimiento de su artículo se rechaza. Así, la propiedad no ve la 656, el
@@ -23098,9 +23370,11 @@ cuando hace falta el porqué.
   propuesta**: que la propiedad afirme que su libro tiene movimientos en día 1 y en el último día
   de un mes, y que su generador los busque. No se hace sin encargo, porque cambia las secuencias de
   las seis semillas.
-  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20).
+  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20). **La cerró el 2.20** con la
+  propuesta, en `test(inventario): la propiedad con los dos bordes de un mes` (`0f53fc8`): la 656,
+  otra vez como la 656r, pone roja la propiedad en las seis semillas.
 
-- **ABIERTA (2026-10-19, recorrido del 2.17) · la página de tres listados corre en horizontal a
+- **CERRADA (2026-10-24, ítem 2.20) · la página de tres listados corre en horizontal a
   320 px.** Medido con `playwright-cli` a 320 px de ancho, con el `scrollWidth` del documento:
   `/ajustes` mide **394**, `/saldos` **407** y `/articulos` **370**. Sus tablas no van en un
   contenedor que corra, como sí van las del alta y la ficha del ajuste, y empujan la página entera,
@@ -23110,7 +23384,11 @@ cuando hace falta el porqué.
   midieron esas tres. **La propuesta**: envolver cada tabla en un contenedor con `overflow-x-auto`,
   y un caso como `LaCabeceraCabeEn320`, que mida la página de cada listado y no solo la cabecera.
   No se hace sin encargo, porque toca pantallas de otros ítems y de otros módulos.
-  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20).
+  **Pasa al 2.20** (respuesta 4 de la puerta del 2.19, el 2026-10-20). **La cerró el 2.20** con la
+  propuesta, en `b9892e6` y `d1bd3ed`: las doce tablas sin contenedor lo tienen, las dieciséis lo
+  llevan `relative`, y `LasPaginasCabenEn320.navegador.test.tsx` mide las veintiuna rutas en un
+  Chromium, en cada subida. Un caso de jsdom como `LaCabeceraCabeEn320` no podía medirlo: jsdom no
+  maqueta, y todo mide 0, como dice su cabecera.
 
 - **ABIERTA (2026-10-18, respuesta 4 de la puerta del 2.17) · ningún listado exporta lo que está
   viendo.** El §10 del plan maestro pide que «cada listado exporta a CSV/Excel lo que está viendo,
