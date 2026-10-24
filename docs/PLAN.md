@@ -8303,24 +8303,234 @@ run de `main`; las ediciones de `CLAUDE.md`, al principio o al final de la sesi�
 cierra antes de una pausa larga. **El informe cuenta todos los commits desde `ffd8015`, cada uno
 con su asunto, y con sus runs de rama y de `main`**, y cada cifra va con la orden que la mide.
 
+### Tomadas por el agente de desarrollo — ítem 2.19, al escribirlo y al medirlo (2026-10-24)
+
+El orden fue el de *El orden de trabajo*: el ADR-0068 primero, en `79ee1b4`; el servidor, en tres
+commits, del `dc8cc41` al `79fd5d6`; la rejilla compartida, en `9efd8d4`; y las tres pantallas, del
+`b635efa` al `b11072e`. Lo que encontró la tanda se arregló en `3b188b7`, y lo que encontró el
+borde, en el ADR-0069, `fcfff08`. Después, la auditoría de lo que llega al navegador se puso roja
+por un aviso de `zod`, que arregla `76726b7`, y la sonda de ese arreglo encontró un comentario
+falso del ajuste, que arregla `4f6ac53`. Lo que se decidió sin preguntar, porque el criterio no lo
+decía o porque salió al escribirlo:
+
+1. **`ElFactorDeCadaLinea` se comparte con el ajuste, y no se copia**: la consulta de conversiones
+   del 2.17, una sola vez por petición. Los DTO de la línea que falla pasan a
+   `Inventario.Contracts.Lineas`, y los campos de las líneas, a `Application/Lineas`, que usan los
+   dos documentos (`dc8cc41`).
+2. **La cantidad se mira en dos pasadas, como en el ajuste**: antes de ir a la base, la que no cabe
+   en su columna; con el factor ya resuelto, lo que lleva a la unidad base. Las dos dan `400` en
+   `lineas[i].cantidadIntroducida`, y el dominio lanza también, con `LaCantidadCabe` y
+   `SePuedeTransferir`.
+3. **El cuadre del tránsito saca su factor de un tercio de una unidad que convierte**, la `K723T`,
+   porque la petición ya no lo trae.
+4. **Una descartada no admite líneas ni se envía, aunque el filtro la esconda**, para que un camino
+   que se lo salte no saque mercancía del origen desde un documento que nadie ve. La columna
+   `descartado_en` se audita, y los dos índices por fecha pasan a parciales. Las dos lecturas en
+   SQL escrito a mano no ven el filtro y no lo necesitan: miran el estado, y una descartada es
+   siempre un borrador (`debb9ea`, que enmienda el ADR-0053 §12).
+5. **El alta exige la `Idempotency-Key`**, por el segundo criterio: un borrador no tiene código
+   único que pare el reintento, y dos iguales se podrían enviar los dos. Las acciones que la exigen
+   pasan de 8 a 9 (`79fd5d6`).
+6. **Los datos de prueba del frontal ganan una segunda nave de Alfa, `NAVE_DEL_NORTE`**, que no
+   entra en la respuesta por omisión: las pantallas que ya había cuentan con que Alfa tenga una
+   sola (`b635efa`).
+7. **La tabla del listado corre dentro de su contenedor desde el principio**, que es lo que el 2.20
+   pondrá en las demás.
+8. **La pregunta en dos pasos y el formulario del motivo son la tercera copia**, tras las del
+   recuento y del ajuste, como pide el precedente: cada documento tiene los suyos, y solo la
+   rejilla de líneas se comparte (`bbadcef`).
+9. **Un nombre por concepto**: la ficha nombra sus dos columnas como el alta, «Ubicación de origen»
+   y «Ubicación de destino», en vez de «Sale de» y «Entra en». El aviso de la recepción cambia de
+   clave, `escribeLaRecepcion`, porque ahora hay dos días (`b11072e`).
+10. **El cuerpo de la tabla llega al marco desde el manejador, y no de la referencia.** Leída de la
+    referencia, la regla `react-hooks/refs` daba un error, porque no puede saber que las celdas no
+    llaman a Intro al pintar (`9efd8d4`).
+11. **La 698 salió verde en los dos carriles, y es un hallazgo, arreglado en su commit,
+    `3b188b7`.** Quitaba el `when` de la regla del mismo almacén, y no puso nada rojo: 0 de 59 en
+    los ocho ficheros. Lo que `b11072e` escribió en el comentario del esquema, en el del caso, en el
+    README de inventario y en su mensaje era falso: `zod` 4.5.4 sí mira la regla del objeto aunque
+    falle un campo, y solo la salta tras un error de tipo, que el formulario no produce. Se midió
+    con un esquema aparte, `zod-when.mjs` del *scratchpad*: `min(1)`, el formato de `z.iso.date`,
+    un `refine` de campo y el `max` del array dejan correr la regla, y un número donde va una
+    cadena, no. Lo único que hacía el `when` era tapar un segundo aviso, el del mismo almacén con
+    los dos sin elegir. La guarda pasa a la regla, y el caso mira todos los avisos del destino, no
+    solo el primero. Medida otra vez como la **698r**, pone rojo su caso.
+12. **El `?q=` va a un ADR, y no al PLAN.** El mensaje de `79fd5d6` decía que la enmienda del
+    ADR-0068 §1 iba aquí, y va al ADR-0069, porque lo que corrige es un ADR aceptado. El rechazo con
+    un `400` se propone en *Notas / riesgos*, y lo decide el cierre de la fase.
+13. **`zod` pasa a la 4.6.7 por el GHSA-mrhx-c7xc-m3w5, un aviso alto** (`76726b7`). El run
+    40049217504 de `fcfff08`, un commit de documentos, salió rojo en la auditoría de lo que llega
+    al navegador: antes de la 4.6.6, validar una colección acotada demasiado grande puede agotar la
+    memoria, y es lo que hacen los dos formularios de líneas, con su tope de 200. El aviso se
+    publicó después del verde de `3b188b7`, y el ADR-0045 lo quiere así: la CI se pone roja sin que
+    el commit haya cambiado nada. El rango de `package.json` pasa a `^4.6.7`, para que no admita
+    una vulnerable, y el lockfile solo cambia esa entrada. Sigue siendo MIT.
+    `npm audit --omit=dev --audit-level=high` sale con 0. En la herramienta quedan avisos de
+    `vite`, `undici` y `vitest`, que informan y no deciden. Los de `vite` son del servidor de
+    desarrollo y de `launch-editor`, y no de lo que se construye, así que el disparador del
+    ADR-0045 no se cumple. Quedan en *Notas / riesgos*, con su propuesta.
+14. **Desde la 4.6.6, pasado el tope, `zod` no mira nada más**: ni las líneas ni la regla del
+    objeto. Con la 4.5.4 salían el tope, los avisos de cada línea y el del mismo almacén, y con la
+    4.6.7, solo el tope. Se midió con `zod-tope.mjs` del *scratchpad* contra las dos versiones, la
+    vieja instalada aparte. El comentario del esquema de la transferencia, el de su caso y el
+    README de inventario decían que la regla solo se salta tras un error de tipo, y ahora dicen las
+    dos cosas. El caso del tope lo afirma: 201 líneas sin artículo y el mismo almacén dicen solo el
+    tope. Lo ve la 712.
+15. **El comentario de la regla del coste del ajuste era falso desde `236dd45`, del 2.17**, y en
+    las dos versiones: decía que la regla solo se mira cuando el resto de la línea vale. `zod` la
+    mira aunque falle otro campo de la línea, así que sale a la vez que lo que falte. `4f6ac53`
+    reescribe el comentario, y el caso afirma una línea que baja, con coste y sin artículo, con los
+    dos avisos. Lo ve la 713. No cambia lo que hace el formulario, solo lo que se decía de él.
+
+**La tanda, de la 672 a la 711, se escribió antes de medir**, en `tanda219.md` del *scratchpad*,
+sobre `b11072e`, con lo que debería ver cada una. Dos rompen el arnés: la 694, del servidor, y la
+711, del frontal. El servidor se midió en un *worktree* aparte, con cuatro carriles: el dominio,
+`Inventario.UnitTests`; los funcionales, `Api.FunctionalTests`; la integración,
+`Api.IntegrationTests` filtrado a `Bastion.Api.IntegrationTests.Inventario.`; y la autorización,
+filtrado a `Bastion.Api.IntegrationTests.Autorizacion.`, con `--blame-hang --blame-hang-timeout
+4m`. El frontal, en el árbol principal limpio, con los siete ficheros de `transferencias` y
+`ElBarridoDeRutas.test.ts`, contando los siete trozos de los avisos de `act()`. Cada mutación se
+aplicó sola, se revirtió con `git restore --source=HEAD` y se tocó con la fecha de ahora:
+
+```bash
+python -X utf8 mutar219.py tanda219.json base 672-694   # el servidor, en su worktree
+python -X utf8 mutar219-web.py base $(seq 695 711)      # el frontal, en el árbol limpio
+python -X utf8 mutar219-web.py base 698r 699            # la 698, otra vez, sobre 3b188b7
+python -X utf8 mutar713.py                              # la 713, sobre 4f6ac53
+```
+
+La 712 y la 713 se escribieron con sus commits, cada una con la afirmación que tenía que poner
+roja. La 712 no cabe en el guion, porque no toca un fichero del repositorio: desde `frontend/`,
+`npm install --no-save --no-audit --no-fund zod@4.5.4`, `sha1sum -c` sobre las sumas de
+`package.json` y del lockfile tomadas antes, `npx vitest run --reporter=json` entero, y `npm ci`
+para volver. La 712 y la 713 corren los 392 casos, y no los ocho ficheros: `zod` lo usan todos
+los formularios, y la 713 es del ajuste. Su base, los 392 en verde, sobre cada uno de sus dos
+commits.
+
+La base, en verde: dominio 0 de 344, funcionales 0 de 252, integración 0 de 305 y autorización 0
+de 12; el frontal, 0 de 59 en 8 ficheros, sin avisos de `act()` ni plazos vencidos, y así en todas
+las mutaciones. Al acabar el servidor, el build del árbol restaurado sale con 0, y la porcelana,
+vacía. **Una sale verde en los dos carriles, la 698**, y es el hallazgo del punto 11.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 672 | `LaCantidadCabe` de la transferencia sin la guarda de los seis decimales | **dominio 1**: `LoQueCabeEnUnaLineaDeTransferenciaTests.Una_cantidad_que_no_cabe_en_su_columna_no_cabe`. La integración, verde, como se escribió: la guarda de la base para con el mismo código y el mismo campo |
+| 673 | `LaCantidadCabe` con `<=` en el tope | **dominio 1**: el mismo. La integración, verde, por lo mismo |
+| 674 | `SePuedeTransferir` sin `enUnidadBase != 0m` | **dominio 1**: `Lo_que_mueve_en_la_unidad_base_tampoco_se_queda_en_cero_ni_se_sale`; **integración 1**: `LasLineasDeLaTransferenciaTests.Lo_que_no_cabe_en_su_columna_es_400_en_la_cantidad_de_su_linea` |
+| 675 | El alta admite lo negativo en la primera guarda (`> 0m` → `!= 0m`) | **integración 2**: `Lo_que_no_cabe_en_su_columna_…` y `LasGuardasDeLaTransferenciaTests.El_alta_rechaza_cada_cosa_que_no_se_mueve_con_su_codigo` |
+| 676 | El alta sin la guarda del mismo almacén | **integración 1**: `LasGuardasDeLaTransferenciaTests.El_alta_pregunta_cada_hueco_a_su_almacen_y_no_toca_lo_bloqueado` |
+| 677 | La ubicación que no existe, con el campo de la otra punta | **integración 2**: `LasLineasDeLaTransferenciaTests.Cada_maestro_que_falla_nombra_su_linea_y_la_ubicacion_su_punta` y `LaSuperficieDeLaTransferenciaTests.Una_ubicacion_que_falla_viaja_con_el_campo_de_su_punta_o_con_la_punta_en_actual` |
+| 678 | La bloqueada sin `actual` (`UbicacionDeLaLineaDto`) | **integración 2**: los mismos dos |
+| 679 | `LosCamposDeLasLineas.Ruta` cuenta desde uno, y la comparte el ajuste | **integración 13**, como se escribió. De la transferencia, cinco: `Cada_maestro_que_falla_…`, `Lo_que_no_cabe_…`, `La_forma_de_la_serie_va_a_su_campo_y_la_unitaria_se_mira_con_el_factor`, `Un_lote_que_no_es_de_gs1_va_al_campo_de_su_linea` y `Una_ubicacion_que_falla_…`. Del ajuste, ocho: los cinco de `LaFormaDeLosCodigosDeLaLineaTests`, los dos de `LaSuperficieDelAjusteTests` que miran el campo de la cantidad y `LasGuardasDelAjusteTests.El_alta_rechaza_cada_maestro_que_no_se_mueve_con_su_codigo` |
+| 680 | Las ubicaciones vistas, solo por su identificador, sin su almacén | **integración 3**: `El_alta_pregunta_cada_hueco_a_su_almacen_…`, el mismo hueco en las dos puntas; `Cada_maestro_que_falla_…` y `Una_ubicacion_que_falla_…` |
+| 681 | La conversión retirada se dice como si no la hubiera | **integración 1**: `ElFactorDeLaTransferenciaTests.Una_conversion_retirada_es_409_y_antes_de_retirarla_la_misma_linea_pasa` |
+| 682 | Todas las líneas con el factor de la primera | **integración 3**: `La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion`, `Una_unidad_sin_conversion_a_la_base_es_422_aunque_la_haya_al_reves` y `El_alta_es_201_sin_etag_y_la_ficha_dice_las_dos_ubicaciones_el_factor_y_la_cantidad_base` |
+| 683 | Sin la segunda pasada de la forma | **integración 1**: `La_forma_de_la_serie_va_a_su_campo_…` |
+| 684 | Descartar no compara la versión | **integración 2**: `LaTransferenciaDescartadaTests.Con_la_version_de_antes_de_enviarla_es_412_y_con_la_de_ahora_409` y `El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404` |
+| 685 | Descartar no mira el estado en el caso de uso, y el dominio lanza: `500` | **integración 2**: los mismos dos |
+| 686 | Sin el filtro de EF `Descarte` de la transferencia | **integración 4**: `Descartar_dos_veces_es_404_y_la_marca_es_la_primera`, `La_descartada_no_la_encuentran_ni_la_ficha_ni_enviar_ni_recibir_ni_anular_ni_el_cierre`, `La_lista_va_de_la_ultima_fecha_de_envio_…_no_trae_la_descartada` y `El_descarte_pide_la_version_…`. Se escribieron los tres de `LaTransferenciaDescartadaTests`: ver debajo |
+| 687 | `Descartar` del dominio sin su guarda | **dominio 1**: `ElDescarteDeLaTransferenciaTests.Descartar_dos_veces_lanza_y_no_mueve_la_marca`. La integración, verde, como se escribió: el filtro da el `404` antes |
+| 688 | `Enviar` sin la guarda del descarte | **dominio 1**: `Una_descartada_no_se_envia`. La integración, verde, por lo mismo |
+| 689 | El `DELETE` exige `TransferenciaVer` | **funcionales 1**: `CadaAccionDeclaraSuPermisoTests.Todo_permiso_del_catalogo_lo_exige_alguna_accion`. La autorización, 0 de 12 |
+| 690 | El `POST` sin `Obligatoria = true` | **funcionales 2**: `TodaEscrituraDiceComoSeProtegeTests.La_clave_obligatoria_es_la_excepcion_y_esta_declarada_entera` y `.El_barrido_encuentra_el_inventario_entero`; **integración 1**: `Sin_idempotency_key_el_alta_es_428_y_con_la_misma_clave_no_abre_otra` |
+| 691 | El filtro del origen mira el destino | **integración 2**: `La_lista_va_de_la_ultima_fecha_de_envio_…` y `Otra_empresa_no_ve_la_transferencia_ni_la_descarta` |
+| 692 | `DescendentePorOmision = false` | **integración 1**: `La_lista_va_de_la_ultima_fecha_de_envio_…` |
+| 693 | El controlador cruza el origen y el destino | **integración 2**: los mismos dos de la 691 |
+| 694 | **Arnés** (servidor): el recuento de la superficie mira otra empresa | **integración 2**: `Sin_idempotency_key_…` y `Doscientas_lineas_abren_y_una_mas_es_400_con_el_motivo_del_tope`, que esperan uno. `Una_ubicacion_que_falla_…`, que espera cero, en verde, como se escribió: su pareja son las otras dos |
+| 695 | `actual.linea` se lee sin restar uno | **frontal 5**: de `rechazos.test.ts`, `un 409 o un 422 la dice en actual.linea…`, `la ubicación que no existe dice su punta…` y `la trazabilidad que no casa va al artículo…`; del alta, los dos del `it.each` de la ubicación bloqueada |
+| 696 | Las dos puntas, al revés | **frontal 3**: `la ubicación que no existe dice su punta…`; los dos del `it.each` |
+| 697 | La celda de la punta no mira la ruta | **frontal 2**: `la ubicación que no existe dice su punta…`; del alta, `un 400 dice la punta en la clave de errors…` |
+| 698 | La regla del mismo almacén sin `when` | **frontal 0**: el hallazgo del punto 11 |
+| 698r | La regla del mismo almacén sin la guarda del origen, sobre `3b188b7` | **frontal 1**: de `formularios.test.ts`, `el mismo almacén en las dos puntas va en el destino, aunque falte lo demás` |
+| 699 | La regla del mismo almacén, en el origen | **frontal 2**: ese mismo, y del alta, `el mismo almacén en las dos puntas se dice en el destino, y no se manda nada`. Sobre `3b188b7`, los mismos dos |
+| 700 | La cantidad admite el signo | **frontal 2**: `no vale el cero, ni un signo…` y `una cantidad mal escrita tiene la frase del servidor` |
+| 701 | Cambiar el origen mira la punta del destino | **frontal 1**: del alta, `cada punta ofrece los huecos de su almacén…` |
+| 702 | El destino ofrece los huecos del origen | **frontal 6**: del alta, `abre un borrador con dos líneas…`, `cada punta ofrece…`, los dos del `it.each`, `lo que no es de una línea va arriba…` y `un 400 dice la punta…` |
+| 703 | Las series, sin filtrar por el tipo | **frontal 1**: `abre un borrador…` |
+| 704 | El alta sin `Idempotency-Key` | **frontal 1**: `abre un borrador…`. El `it.each`, verde, como se escribió: `null` es igual a `null` |
+| 705 | El enlace del alta, a quien puede ver | **frontal 1**: del listado, `el alta se ofrece a quien puede abrir, y a quien solo ve, no` |
+| 706 | La ruta del alta pide ver | **frontal 1**: del barrido, `la partición cuadra: 21 rutas = 2 públicas + 1 de sesión + 18 de permiso` |
+| 707 | El lote, abierto sin mirar la marca | **frontal 1**: `abre un borrador…` |
+| 708 | La celda del origen ofrece los huecos del destino | **frontal 6**: los mismos seis de la 702 |
+| 709 | El lote vacío viaja como cadena | **frontal 2**: `la cantidad con punto, lo vacío nulo, y sin factor: lo pone el servidor` y `abre un borrador…` |
+| 710 | El día de hoy no vale (`<=` → `<`) | **frontal 11**, porque todos los datos del alta salen hoy: por diseño, `hoy vale y mañana no, con el día del servidor`, y además los seis de la 702, tres más del esquema y `la cantidad con punto…` |
+| 711 | **Arnés** (frontal): el servidor de pega no anota el alta | **frontal 3**: `abre un borrador…` y los dos del `it.each`. `el mismo almacén…` y `cada punta…`, que esperan ninguna, en verde, como se escribió |
+| 712 | `zod` 4.5.4 en `node_modules`, con `package.json` y el lockfile sin tocar, sobre `76726b7` | **frontal 1 de 392**, en los 47 ficheros: `El esquema del alta de la transferencia doscientas líneas caben y doscientas una no`, con 203 campos con aviso en vez de uno |
+| 713 | La regla del coste del ajuste, solo con la línea sin otros avisos (un `when`), sobre `4f6ac53` | **frontal 1 de 392**, en los 47 ficheros: `El coste de una línea una línea que sale no lo lleva, y el error va en el coste`, en la afirmación nueva |
+
+- **Lo que salió distinto de lo escrito, y por qué**:
+  - **la 698, verde en los dos carriles**: el `when` no hacía nada, y es el punto 11;
+  - **la 686 la ven dos de los tres de `LaTransferenciaDescartadaTests`, y no los tres**:
+    `Con_la_version_de_antes_de_enviarla_es_412_y_con_la_de_ahora_409` sigue en verde, porque su
+    transferencia no llega a descartarse: se envía antes, y el `412` y el `409` salen igual con el
+    filtro que sin él. Es un error de la predicción, no un hallazgo: el filtro lo ven los otros dos
+    y los dos de la superficie.
+
+**El humo**, con Docker 29.8.0, sobre `3b188b7`, en su propio proyecto, `-p bastion-humo-219`,
+con un entorno en el *scratchpad* hecho con `openssl rand`, que se borró al acabar. Lo lanzan dos
+órdenes de un guion del *scratchpad*: `bash humo219.sh montar`, el primer arranque, el esquema, los
+rechazos y los datos sintéticos del recorrido; y `bash humo219.sh rematar`, el segundo arranque y
+el desmontaje. Entre las dos, el recorrido. Los fallos, 0 en las dos:
+
+- el build, en 98 s; el migrador, con 0 y una línea `EsquemaMigrado` por cada uno de los seis
+  esquemas; y `/health/live` y `/health/ready`, sanos;
+- leído del catálogo del motor, en los dos arranques: `descartado_en`, `timestamptz` y nula; el
+  índice `(empresa_id, fecha_de_envio) WHERE (descartado_en IS NULL)`; y
+  `ElDescarteDeLaTransferencia`, una vez en el historial;
+- **115 permisos en el rol del sistema en los dos arranques**, con los tres de la transferencia
+  sembrados;
+- descartar sin credenciales, `401`; y por la API y por el frontal, cada uno con su `type`: la
+  ficha y el descarte de una que no existe, `404`; descartar sin `If-Match`, `428`; abrir sin la
+  clave, `428`; el mismo almacén en las dos puntas y un almacén que no existe, `400`; y el listado,
+  `200` y vacío. Ninguna transferencia en la base después;
+- `/transferencias` y `/transferencias/nueva` sirven la aplicación, y la API por el frontal, sin
+  credenciales, `401`;
+- los datos del recorrido, por la API: un ajuste que pone cincuenta en `H-01`, y un hueco del
+  origen en la punta del destino de la segunda línea, `400` en `lineas[1].ubicacionDestinoId`, sin
+  nada escrito;
+- el segundo arranque, con 0 en 16 s: reconstruye el estado viejo, vuelve a crear la partición
+  borrada, y las tres transferencias del recorrido siguen, «Anulada 1, Recibida 2 inversa,
+  Borrador descartada»;
+- y `down -v`, con 0: solo queda el proyecto `bastion`, y el entorno, borrado.
+
+**El recorrido**, con `playwright-cli`, sobre la pila del humo, con datos sintéticos, en
+`localhost:45173`. Las capturas, en `pw219/` del *scratchpad*:
+
+- el mismo almacén en las dos puntas se dice en el destino, a la vez que lo demás que falta;
+- el `409` de la ubicación bloqueada `N-02` va a la celda del destino de la línea 1, con el foco,
+  y no se escribe nada;
+- el alta lleva a la ficha, con el factor 1 y la cantidad base 5; enviar le da el número 1 y el
+  valor de 12,50 €;
+- la fecha de recepción que no vale se dice en su campo, y después se recibe;
+- el motivo vacío se dice en su campo, y después se anula: la inversa, la 2, con −5 y −12,50 €;
+- un segundo borrador, descartado, deja de existir;
+- a 320 px, el listado, el alta y la ficha miden 320 de ancho, y sus tablas se desplazan dentro de
+  su contenedor `overflow-x-auto`: 488, 1169 y 580 px de tabla en 288 de contenedor;
+- y en la consola, ningún error, salvo el `401` de la renovación antes de entrar, que es el
+  esperado.
+
+La siguiente mutación es la **714**, y el siguiente ADR, el **0070**.
+
 ## Estado actual
 
-**FASE 2 EN CURSO — 18 de 20 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
+**FASE 2 EN CURSO — 19 de 20 ítems.** La puerta de clarificación se pasó el 2026-09-18: las trece
 preguntas de la tanda y las tres que trajo la respuesta están contestadas y anotadas arriba, en
 *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en el *Checklist*. Los
 catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, y la
 puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el 2.18, y la
 transferencia pasa a ser el 2.19. La del 2.19, el 2026-10-20, abre un sexto, el 2.20, con lo
-que el 2.18 dejó propuesto. La fase se cierra cuando acabe el último. El 2.15, el 2.16, el
-2.17 y el 2.18 están hechos.
+que el 2.18 dejó propuesto. La fase se cierra cuando acabe el último. Del 2.15 al 2.19 están
+hechos.
 
-> **Dónde se retoma (2026-10-20): en el 2.19, con su puerta contestada**, en la rama
-> `2.19-el-alta-de-la-transferencia`, abierta desde `main` en `aa56bfc`. Las respuestas están en
-> *Decisiones tomadas → Traídas por el encargo del 2026-10-20*. El primer commit las anota, con el
-> run de `ffd8015` y el 2.20 nuevo; el siguiente es el ADR-0068, y después el código, con su tanda
-> desde la **672**. Detrás, el 2.20, y el cierre de la fase hasta la puerta de la fase 3, donde se
-> para y se pregunta todo junto. `/code-review` ya no bloquea: si sus hallazgos no llegan, el cierre
-> de la fase la anota como no hecha, con su rango.
+> **Dónde se retoma (2026-10-24): en el 2.20**, en una rama nueva,
+> `2.20-lo-que-el-2.18-dejo-propuesto`, que se abre desde `main` cuando `main` llegue al cierre
+> del 2.19. El primer commit anota los dos runs de ese cierre. Después, cada tema del criterio en
+> su propio commit y en su propia subida, con su caso y su mutación, desde la **714**, y el
+> **ADR-0070**, que enmienda lo que corresponda del 0067. Detrás, el cierre de la fase hasta la
+> puerta de la fase 3, donde se para y se pregunta todo junto, con la propuesta del `?q=` del
+> ADR-0069 y la de la auditoría de la herramienta entre los veredictos. `/code-review` ya no
+> bloquea: si sus hallazgos no llegan, el cierre de la fase la anota como no hecha, con su rango,
+> `0638419..0d26e76`.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -13734,6 +13944,108 @@ este cierre:
   renombrado, `El_avance_pone_el_corte_un_mes_cada_vez_y_no_rehace_lo_que_ya_llega`;
 - y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py 3d59288 HEAD`: 125
   pares, 35 `Project` y 432 entradas del frontal en los dos lados, sin nada añadido ni retirado.
+
+**El 2.19, hecho el 2026-10-24**, en la rama `2.19-el-alta-de-la-transferencia`, abierta el
+2026-10-20 desde `main` en `aa56bfc`. Lo que decidió la puerta está en el ADR-0068, y su enmienda,
+en el ADR-0069; lo que se decidió al escribirlo y al medirlo, en *Decisiones tomadas → Tomadas por
+el agente de desarrollo — ítem 2.19*. Lleva dos ADR, así que el siguiente es el **0070**. Sus
+mutaciones van de la **672** a la **713**, con la 698 medida otra vez como la 698r, y las
+siguientes empiezan en la **714**.
+
+**Los commits, por este orden, cada uno en su subida y con su run de rama** (los trabajos,
+Backend, Frontal y Humo). Todos en verde menos el de `fcfff08`, que puso rojo un aviso publicado
+después del verde anterior:
+
+1. `50128d4`, «docs(plan): las respuestas del 2.19, su criterio y el 2.20 nuevo», con los dos
+   runs del cierre del 2.18: **39382237276**, `118493731203`, `118493731216` y `118498053643`.
+2. `79ee1b4`, «docs(adr): ADR-0068, la transferencia se abre como el ajuste»: **39384084161**,
+   `118499662845`, `118499663082` y `118504158502`.
+3. `78fef78`, «docs(agents): un tema por subida, y lo encontrado arriba del informe»:
+   **39386179809**, `118506452956`, `118506452829` y `118510099049`.
+4. `dc8cc41`, «feat(inventario): el factor de la transferencia lo pone el servidor»:
+   **39489399235**, `118858198259`, `118858197968` y `118862955791`.
+5. `debb9ea`, «feat(inventario): el borrador de la transferencia se descarta»: **39491908808**,
+   `118866963772`, `118866964275` y `118872114647`.
+6. `79fd5d6`, «feat(inventario): la transferencia se abre, se lista y se lee por HTTP»:
+   **39496348251**, `118882283361`, `118882282890` y `118888627252`.
+7. `9efd8d4`, «refactor(frontal): la rejilla de líneas pasa a inventario/lineas»:
+   **39498534338**, `118889783520`, `118889783876` y `118895847983`.
+8. `b635efa`, «feat(frontal): el listado de las transferencias»: **39500991313**,
+   `118898128790`, `118898128375` y `118904007875`.
+9. `bbadcef`, «feat(frontal): la ficha de la transferencia»: **39503970117**, `118908125422`,
+   `118908125241` y `118913430029`.
+10. `b11072e`, «feat(frontal): el alta de la transferencia»: **39506508144**, `118916650365`,
+    `118916650649` y `118922286331`.
+11. `3b188b7`, «fix(frontal): la regla del mismo almacén, sin el when que no hacía nada», el
+    hallazgo de la 698: **39698534273**, `119561778055`, `119561777613` y `119566301421`.
+12. `fcfff08`, «docs(adr): ADR-0069, un ?q= sin filtro declarado no filtra nada»:
+    **40049217504**, rojo en el Frontal, `120737855775`, en la auditoría de lo que llega al
+    navegador, por el GHSA-mrhx-c7xc-m3w5 de `zod`; Backend `120737856023` en verde y Humo
+    `120741041034` omitido, porque depende de los dos.
+13. `76726b7`, «fix(frontal): zod 4.6.7, por el aviso alto GHSA-mrhx-c7xc-m3w5», el punto 13 y
+    el 14 de las decisiones: **40051151660**, `120743907938`, `120743908070` y `120746957614`.
+    Su anotación de la herramienta da 0 críticas, 2 altas y 2 moderadas, las de *Notas / riesgos*.
+14. `4f6ac53`, «test(frontal): la regla del coste del ajuste, aunque falte lo demás», el punto 15:
+    **40052486645**, `120747966679`, `120747966940` y `120750851907`.
+15. **El cierre, por el flujo de la rama**: este commit va a la rama y espera su verde; `main`
+    avanza con `--ff-only` de `aa56bfc` a este commit, y la rama se borra, en local y en el
+    remoto, después del run de `main`. Los dos runs se anotan en el primer commit del 2.20.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `3b188b7`**, con `bash bateria219.sh`, un
+guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida
+en una línea. Los diecisiete pasos salen con 0:
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **158** operaciones en
+  **95** rutas, desde 154 en 93, y **240** tipos de **248** sitios, desde 238 de 246, con los dos
+  generadores en `--comprobar`;
+- `typecheck`, `lint` y `format:check`, limpios; **392** casos del frontal en **47** ficheros,
+  desde 342 en 40; y `canal-de-la-consola.sh`, con la marca, ningún aviso de `act()` y siete trozos
+  para las ocho cadenas;
+- **426/450** y **824/900** KiB, desde 420 y 778;
+- el build, con 0 errores, y `dotnet format`, limpio;
+- **1542** casos en el carril rápido y **739** en el de integración, 651 de `Api.IntegrationTests`
+  y 88 de `Organizacion.IntegrationTests`, todos en verde y contados con `recuento-de-tests.sh` y
+  las dos listas del *workflow*. Son 25 más en el rápido, los 19 de
+  `LoQueCabeEnUnaLineaDeTransferenciaTests` y los 6 de `ElDescarteDeLaTransferenciaTests`, y 21
+  más en el de integración: 6 del factor, 4 de las líneas, 3 del descarte y 8 de la superficie. El
+  de integración, con `--blame-hang --blame-hang-timeout 4m`, en 555 s;
+- y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py aa56bfc HEAD`: 125
+  pares, 35 `Project` y 432 entradas del frontal en los dos lados, sin nada añadido ni retirado.
+
+**Los KiB, repartidos por fichero**, de `aa56bfc` a `3b188b7`, con un build de `vite` de cada uno
+en el *scratchpad* y `python -X utf8 kib-por-fichero.py <dist-de-antes> <dist-de-ahora>`, que
+compara los ficheros servidos por su nombre sin el hash y no cuenta los mapas, como el guion del
+presupuesto. El total pasa de 796 256 a 843 359 B, de 777,6 a 823,6 KiB: **+46,0**. La estimación
+de la puerta era 427/450 y 810–835/900, y lo medido, **426/450 y 824/900**: cabe en las dos.
+
+| Fichero, sin el hash | Antes → ahora (B) | Diferencia (B) |
+|---|---|---|
+| `PaginaDeLaTransferencia` | nuevo → 14 733 | +14 733 |
+| `ListaDeLaCabecera`, la rejilla compartida | nuevo → 7 114 | +7 114 |
+| `PaginaDeLaNuevaTransferencia` | nuevo → 6 842 | +6 842 |
+| `PaginaDeTransferencias` | nuevo → 5 783 | +5 783 |
+| `formularios`, los dos: el del ajuste, de 3 130 a 3 158, y el de la transferencia, nuevo, de 3 872 | 3 130 → 7 030 | +3 900 |
+| `es` | | +3 776 |
+| `transferencias` | nuevo → 3 601 | +3 601 |
+| `en` | | +3 587 |
+| `index`, el arranque | 391 306 → 393 133 | +1 827 |
+| `nombres` | | +934 |
+| `tiposDeError.es` | | +543 |
+| `tiposDeError.en` | | +542 |
+| `index.css` | | +327 |
+| `lineas` | nuevo → 110 | +110 |
+| `PaginaDelAjuste` | | +29 |
+| `Paginacion` | | +5 |
+| `PaginaDeSaldos` | | −5 |
+| `PaginaDelAlta`, la del ajuste: su rejilla pasa al trozo compartido | 12 969 → 6 424 | −6 545 |
+
+**Y `zod` 4.6.7 sube 3,5 KiB más.** Sobre `76726b7`, con el mismo guion contra el build de
+`3b188b7`, solo cambia un fichero, `schemas`, de 82 107 a 85 730 B, y el total pasa de 843 359 a
+846 982 B, de 823,6 a 827,1 KiB. El presupuesto da **426/450 y 828/900**, dentro todavía de la
+estimación de la puerta. Sobre ese commit, la batería del frontal sale en verde: `typecheck`,
+`lint` y `format:check`, limpios; los 392 casos en 47 ficheros, con la marca del canal y ningún
+aviso de `act()`; y el build. Sobre `4f6ac53`, los mismos 392 en verde, y el canal, con la marca
+y sin avisos.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
@@ -22595,7 +22907,7 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     también**, en 46 202 ms;
   - **el ADR nuevo**, el 0067, que enmienda el §5 del 0064, y el 0064 lo anota en su *Estado* y en
     el propio punto.
-- [ ] **2.19 · El alta de la transferencia** — criterio de aceptación: la transferencia se da de
+- [x] **2.19 · El alta de la transferencia** — criterio de aceptación: la transferencia se da de
   alta por HTTP con su permiso y desde su pantalla, con el factor que resuelve el servidor por el
   puerto del 2.17, y **un borrador se descarta**, con `inventario.transferencia.descartar`,
   borrado lógico y `204`, igual que el del ajuste. El lote y la serie se escriben a mano, como en
@@ -22613,6 +22925,52 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
 
   *Era el 2.18 hasta el 2026-10-18, cuando el avance incremental tomó ese número (respuesta 5 de
   la puerta del 2.17).*
+
+  **Hecho el 2026-10-24**, en la rama `2.19-el-alta-de-la-transferencia`, en catorce commits, del
+  `50128d4` al `4f6ac53`, y el que lo cierra. Las decisiones de la puerta, en el ADR-0068, y su
+  enmienda, en el ADR-0069: un `?q=` sin filtro declarado llega y no filtra nada. Por el camino,
+  un aviso alto de `zod` puso roja la auditoría de lo que llega al navegador, y `76726b7` sube
+  `zod` a la 4.6.7. Lo decidido sin preguntar, la tanda de la 672 a la 713, el humo y el
+  recorrido, en *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 2.19*; los
+  commits, la batería y los KiB, en *Estado actual → El 2.19, hecho*. Cada punto del criterio
+  tiene su caso:
+
+  - **el alta por HTTP**:
+    `El_alta_es_201_sin_etag_y_la_ficha_dice_las_dos_ubicaciones_el_factor_y_la_cantidad_base`,
+    que ve la 682, y `Sin_idempotency_key_el_alta_es_428_y_con_la_misma_clave_no_abre_otra`, la
+    690 y la 694;
+  - **con su permiso**:
+    `CadaAccionDeclaraSuPermisoTests.Todo_permiso_del_catalogo_lo_exige_alguna_accion`, la 689; y
+    en el frontal, la ruta del alta, `la partición cuadra: 21 rutas…`, la 706, y su
+    enlace, `el alta se ofrece a quien puede abrir, y a quien solo ve, no`, la 705;
+  - **desde su pantalla**: `abre un borrador con dos líneas, cada una de un hueco del origen a uno
+    del destino`, que ven la 702, la 703, la 704, la 707, la 708, la 709, la 710 y la 711; y
+    `cada punta ofrece los huecos de su almacén, y cambiarlo solo vacía los de esa punta`, la 701;
+  - **el factor lo resuelve el servidor por el puerto del 2.17**:
+    `La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion`, la 682;
+    `Una_conversion_retirada_es_409_y_antes_de_retirarla_la_misma_linea_pasa`, la 681; y en el
+    frontal, `la cantidad con punto, lo vacío nulo, y sin factor: lo pone el servidor`, la 709;
+  - **un borrador se descarta, con su permiso, borrado lógico y `204`**: en el dominio,
+    `Descartar_dos_veces_lanza_y_no_mueve_la_marca` y `Una_descartada_no_se_envia`, la 687 y la
+    688; contra la base, `El_descarte_pide_la_version_de_la_ficha_y_repetirlo_es_404` y
+    `LaTransferenciaDescartadaTests`, la 684, la 685 y la 686; y el permiso, la 689;
+  - **el lote y la serie, a mano**: `Un_lote_que_no_es_de_gs1_va_al_campo_de_su_linea` y
+    `La_forma_de_la_serie_va_a_su_campo_y_la_unitaria_se_mira_con_el_factor`, la 683 y la 679; y
+    en el frontal, el lote abierto solo con su marca, la 707;
+  - **el ADR-0068**, con las rutas; el factor; la conversión retirada; los filtros `?origen=` y
+    `?destino=`, `La_lista_va_de_la_ultima_fecha_de_envio_…_no_trae_la_descartada`, la 691, la
+    692 y la 693; y la rejilla del ajuste, compartida en `9efd8d4` con sus 342 casos sin tocar. Y
+    su enmienda, el ADR-0069, que el mismo caso de la lista afirma con `?q=no-esta-en-ninguna`;
+  - **la tanda**, escrita antes de medir, con dos mutaciones sobre el arnés, la 694 y la 711. La
+    698 salió verde en los dos carriles: es un hallazgo, se cubrió en `3b188b7`, y medida otra vez
+    como la 698r pone rojo su caso. Y dos más, con sus commits: la 712, `zod` 4.5.4, y la 713, la
+    regla del coste del ajuste con un `when`, cada una roja en su caso;
+  - **el humo**, sobre `3b188b7`: **115 permisos en los dos arranques**, con los tres de la
+    transferencia sembrados, y 0 fallos;
+  - **el recorrido**, con `playwright-cli` sobre la pila del humo, en `bastion-humo-219`: alta,
+    rechazo en su campo, enviar, recibir, anular y descartar, y las tres páginas a 320 px;
+  - **los KiB**, **426/450 y 824/900**, dentro de la estimación de la puerta, 427/450 y
+    810–835/900, y repartidos por fichero. Con `zod` 4.6.7, **426/450 y 828/900**: dentro todavía.
 - [ ] **2.20 · Lo que el 2.18 dejó propuesto** — criterio de aceptación: cuatro temas, cada uno en
   su propio commit, y cada uno con su caso y su mutación.
   - **`SET LOCAL jit = off` en la transacción de cada mes del cuadre**, y la medida otra vez de A,
@@ -22682,6 +23040,32 @@ cuando hace falta el porqué.
 > **lectura obligatoria entera antes de la primera línea** de esa fase.
 
 ## Notas / riesgos
+
+- **ABIERTA (2026-10-24, ítem 2.19, ADR-0045) · la auditoría de la herramienta da dos altas, en
+  `vite` y en `undici`.** Medido con `npm --prefix frontend audit --json` sobre `4f6ac53`: 0
+  críticas, 2 altas y 2 moderadas, en `@vitest/mocker`, `undici`, `vite` y `vitest`. La alta de
+  `vite` es de `launch-editor`, que abre el editor desde el servidor de desarrollo
+  (GHSA-587h-7wmj-h5pm), y la de `undici`, que llega por `jsdom`, el de los tests, una denegación
+  de servicio (GHSA-xjj6-f33q-929c). Ninguna llega al navegador: la puerta,
+  `npm audit --omit=dev --audit-level=high`, sale con 0, y los cinco avisos de `vite` son del
+  servidor de desarrollo, así que el disparador de *Lo que no cubre* del ADR-0045 no se cumple.
+  **La propuesta**: `npm audit fix` a secas, en su propio commit, porque los cuatro dan
+  `fixAvailable` sin versión mayor, y `npm view` publica `vite` 7.3.7, `undici` 7.30.1 y `vitest`
+  4.1.12. No lo pide ningún ítem, así que el 2.19 no lo hace. **El disparador**: el cierre de la
+  fase 2, que decide si pasa al traspaso; o un aviso de `vite` que afecte a lo que se construye.
+
+- **ABIERTA (2026-10-24, ítem 2.19, ADR-0069) · un `?q=` a un listado sin filtro declarado llega y
+  no filtra nada.** `Paginador.Filtrar` devuelve la consulta tal cual cuando el repositorio no
+  declara `Filtro`, y cinco no lo declaran: las líneas de tarifa, las transferencias, los
+  ejercicios, los tipos de cambio y las conversiones de unidades. Los 23 listados paginados
+  publican `q` en el contrato, porque viene de `ConsultaPaginada`, así que un cliente que lo mande
+  a uno de esos cinco recibe la página entera. El frontal no lo hace: esas pantallas no tienen
+  buscador. **La propuesta**: que el borde conteste con un `400` cuando el repositorio no declara
+  filtro, y que esos cinco dejen de publicar `q`. Cambia el contrato de cinco listados y el
+  paginador común, y no lo pide ningún ítem, así que el 2.19 no lo hace. **El disparador**: el
+  cierre de la fase 2, que decide si pasa al traspaso; o un cliente de la API que cuente con el
+  filtro. Si se hace, el caso que se pone rojo es
+  `La_lista_va_de_la_ultima_fecha_de_envio_…_no_trae_la_descartada`, que afirma la página entera.
 
 - **ABIERTA (2026-10-20, respuesta 2 de la puerta del 2.19) · el lote y la serie de una
   transferencia se escriben a mano.** El alta los toma como el ajuste, y que estén en la ubicación
