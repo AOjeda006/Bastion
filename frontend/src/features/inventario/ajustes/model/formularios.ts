@@ -119,7 +119,8 @@ const linea = z
     numeroDeSerie: z.string().trim(),
   })
   // Una línea que baja no lleva coste: se valora al precio medio, y uno escrito ahí no se usaría
-  // (ADR-0046 §7). Solo se mira cuando el resto de la línea vale, que es cuando `zod` la deja pasar.
+  // (ADR-0046 §7). `zod` la mira aunque falle otro campo de la línea, así que se dice a la vez
+  // que lo que falte. Con el coste mal escrito, sale detrás de ese aviso, que es el que se enseña.
   .refine(
     (escrita) =>
       escrita.costeUnitario === '' || !escrita.cantidadIntroducida.trim().startsWith('-'),

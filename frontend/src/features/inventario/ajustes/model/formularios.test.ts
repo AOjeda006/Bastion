@@ -97,6 +97,17 @@ describe('El coste de una línea', () => {
     ).toEqual({ 'lineas.0.costeUnitario': 'ajuste-coste-no-valido' });
     expect(mensajes(datos({ lineas: [linea({ cantidadIntroducida: '-2' })] }))).toEqual({});
     expect(mensajes(datos({ lineas: [linea({ costeUnitario: '3' })] }))).toEqual({});
+    // A la vez que lo que falte: `zod` mira la regla de la línea aunque falle otro de sus campos.
+    expect(
+      mensajes(
+        datos({
+          lineas: [linea({ articuloId: '', cantidadIntroducida: '-2', costeUnitario: '3' })],
+        }),
+      ),
+    ).toEqual({
+      'lineas.0.articuloId': 'eligeElArticulo',
+      'lineas.0.costeUnitario': 'ajuste-coste-no-valido',
+    });
   });
 });
 
