@@ -4,8 +4,8 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 
 /// <summary>
 /// Lo que el trabajo mensual cuenta de sí mismo, en su propio medidor: tres contadores
-/// (ADR-0063 §7), lo que tarda cada mes del avance (ADR-0067 §4) y cuántos meses lleva de retraso el
-/// corte más viejo (ADR-0064 §3).
+/// (ADR-0063 §7), lo que tarda cada mes del avance (ADR-0067 §4), cuántos meses lleva de retraso el
+/// corte más viejo (ADR-0064 §3) y cuántos le faltan por cuadrar al cuadre más atrasado (ítem 2.20).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -32,6 +32,13 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 /// empresa que se quedara atrás en silencio —el avance falla por plazo cada hora— es justo lo que
 /// tiene que verse.
 /// </para>
+/// <para>
+/// <b>Lo que falta por cuadrar es otro indicador</b>, y no cabe en el retraso: un corte puede llegar
+/// al mes que toca con su cuadre parado detrás —falla cada hora en el mismo mes—, y el retraso se
+/// quedaría a cero. Son los meses del corte menos lo cuadrado, en la empresa a la que más le faltan,
+/// y sin la empresa como etiqueta, por lo mismo que lo demás. Lo que el corte no ha alcanzado no
+/// cuenta aquí: lo cuenta el retraso, y contarlo en los dos haría saltar dos alertas por lo mismo.
+/// </para>
 /// </remarks>
 internal sealed class MetricasDelCorte : IDisposable
 {
@@ -50,6 +57,7 @@ internal sealed class MetricasDelCorte : IDisposable
     private readonly Counter<long> _descuadres;
     private readonly Histogram<double> _duracionDelAvance;
     private readonly Gauge<int> _mesesDeRetraso;
+    private readonly Gauge<int> _mesesSinCuadrar;
 
     /// <summary>Crea los instrumentos.</summary>
     public MetricasDelCorte()
@@ -80,6 +88,11 @@ internal sealed class MetricasDelCorte : IDisposable
             "bastion.inventario.corte.meses_de_retraso",
             unit: "{mes}",
             description: "Meses que le faltan al corte más viejo para llegar al mes que toca, tras cada vuelta.");
+
+        _mesesSinCuadrar = _medidor.CreateGauge<int>(
+            "bastion.inventario.corte.meses_sin_cuadrar",
+            unit: "{mes}",
+            description: "Meses que le faltan al cuadre más atrasado para llegar a su corte, tras cada vuelta.");
     }
 
     /// <summary>Apunta una empresa avanzada.</summary>
@@ -99,6 +112,10 @@ internal sealed class MetricasDelCorte : IDisposable
     /// <summary>Apunta el retraso del corte más viejo al acabar una vuelta.</summary>
     /// <param name="meses">Los meses que le faltan; cero si todos llegan.</param>
     public void AnotarMesesDeRetraso(int meses) => _mesesDeRetraso.Record(meses);
+
+    /// <summary>Apunta lo que le falta por cuadrar al cuadre más atrasado al acabar una vuelta.</summary>
+    /// <param name="meses">Los meses que le faltan hasta su corte; cero si todos llegan.</param>
+    public void AnotarMesesSinCuadrar(int meses) => _mesesSinCuadrar.Record(meses);
 
     /// <inheritdoc/>
     public void Dispose() => _medidor.Dispose();

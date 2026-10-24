@@ -118,15 +118,17 @@ public sealed class ElCensoDeEsteCarrilTests
         // Del 2.14: el trabajo mensual de Inventario sin base (ADR-0063 §7). El mes que toca, una
         // empresa por ámbito, lo que cuenta y lo que anota, y cuándo se registra. Y del 2.15, lo que
         // tarda cada avance y el retraso del corte más viejo (ADR-0064 §3). Y del 2.18, el avance mes
-        // a mes y el cuadre de lo pendiente detrás (ADR-0067).
+        // a mes y el cuadre de lo pendiente detrás (ADR-0067). Y del 2.20, lo que le falta al cuadre más
+        // atrasado.
         "ElTrabajoMensualAvanzaElCorteTests.El_fallo_de_una_empresa_se_anota_se_cuenta_y_no_para_a_las_demas",
         "ElTrabajoMensualAvanzaElCorteTests.El_mes_que_toca_es_el_anterior_al_de_hoy_y_hoy_es_el_de_UTC",
         "ElTrabajoMensualAvanzaElCorteTests.El_modulo_registra_siempre_el_avance_y_el_trabajo_solo_si_se_le_pide",
         "ElTrabajoMensualAvanzaElCorteTests.El_retraso_es_el_del_corte_mas_viejo_y_sin_corte_cuenta_desde_el_primer_movimiento",
-        "ElTrabajoMensualAvanzaElCorteTests.La_duracion_va_en_segundos_con_sus_cubos_y_el_retraso_en_meses_sin_la_empresa",
+        "ElTrabajoMensualAvanzaElCorteTests.La_duracion_va_en_segundos_con_sus_cubos_y_los_dos_indicadores_en_meses_sin_la_empresa",
         "ElTrabajoMensualAvanzaElCorteTests.La_parada_se_mira_entre_un_mes_y_el_siguiente",
         "ElTrabajoMensualAvanzaElCorteTests.La_variable_vale_encendido_o_apagado_y_sin_ella_va_encendido",
         "ElTrabajoMensualAvanzaElCorteTests.Las_tres_cifras_van_a_su_propio_contador_y_ninguna_lleva_la_empresa",
+        "ElTrabajoMensualAvanzaElCorteTests.Lo_que_falta_por_cuadrar_va_del_primer_mes_sin_cuadrar_al_corte_y_manda_la_mas_atrasada",
         "ElTrabajoMensualAvanzaElCorteTests.Parar_a_mitad_de_una_empresa_no_es_un_fallo_y_no_sigue_con_las_demas",
         "ElTrabajoMensualAvanzaElCorteTests.Sin_base_de_datos_el_host_no_arranca_el_trabajo_mensual",
         "ElTrabajoMensualAvanzaElCorteTests.Un_cuadre_que_falla_deja_la_empresa_avanzada_y_con_fallo",
@@ -134,6 +136,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElTrabajoMensualAvanzaElCorteTests.Un_valor_mal_puesto_para_el_arranque_aunque_no_haya_base",
         "ElTrabajoMensualAvanzaElCorteTests.Una_cancelacion_que_no_es_la_parada_es_un_fallo_de_su_empresa",
         "ElTrabajoMensualAvanzaElCorteTests.Una_empresa_que_ya_llega_cuadra_lo_que_le_quedo_pendiente",
+        "ElTrabajoMensualAvanzaElCorteTests.Una_vuelta_anota_lo_que_falta_por_cuadrar_y_un_cuadre_parado_lo_deja_por_encima_de_cero",
         "ElTrabajoMensualAvanzaElCorteTests.Una_vuelta_anota_lo_que_tarda_cada_avance_y_el_retraso_con_el_que_acaba",
         "ElTrabajoMensualAvanzaElCorteTests.Una_vuelta_avanza_cada_empresa_en_su_ambito_y_cuenta_las_que_avanzan",
 

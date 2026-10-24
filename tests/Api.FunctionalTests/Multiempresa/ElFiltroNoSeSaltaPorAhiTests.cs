@@ -326,6 +326,16 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "compara la empresa y la version de la fila (xmin), y un recalculo o un avance en "
             + "medio dejan la marca sin poner. No escribe ninguna copia del libro",
 
+        // Y LA DEL ITEM 2.20: el indicador de lo que le falta al cuadre empieza donde empezaria el
+        // cuadre, y lo pregunta con la sentencia del cuadre, no con una copia.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Corte/" +
+         "ElAvanceDelCorte.cs usa .SqlQuery"] =
+            "lanza SqlDelPrimerMesPorCuadrar, la misma sentencia de ElCuadreDeLasExistencias, para "
+            + "saber desde que mes le falta el cuadre a una empresa con corte y nada cuadrado. Solo "
+            + "lee, devuelve un mes y no una fila, y compara la empresa en las dos tablas que toca "
+            + "con la que recibe del corte que esta mirando, dentro del ambito sin inquilino del "
+            + "avance del corte, como el resto de ese fichero",
+
         ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/Repositorios/" +
          "CerrojoDeEjercicios.cs usa .SqlQuery"] =
             "el otro lado: toma el cerrojo EXCLUSIVO con el que cerrar, mover y borrar esperan a "

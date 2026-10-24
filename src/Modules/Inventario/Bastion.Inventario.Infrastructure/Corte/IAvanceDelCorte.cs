@@ -39,7 +39,7 @@ internal interface IAvanceDelCorte
 
     /// <summary>
     /// El corte de cada empresa con existencias, para saber cuánto se ha quedado atrás el más viejo
-    /// (ADR-0064 §3).
+    /// (ADR-0064 §3), y cuánto le falta por cuadrar al cuadre más atrasado (ítem 2.20).
     /// </summary>
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
     /// <returns>Uno por empresa, en orden de identificador.</returns>
@@ -71,4 +71,9 @@ internal sealed record CuadreHecho(DateOnly Desde, DateOnly Hasta, TimeSpan Dura
 /// La fecha de su primer movimiento, <b>solo si no tiene corte</b>: es desde donde le faltan meses.
 /// Con corte no se lee, porque buscarla es recorrer el libro de la empresa cada hora.
 /// </param>
-internal sealed record CorteDeUnaEmpresa(Guid EmpresaId, DateOnly? HastaElMes, DateOnly? PrimerMovimiento);
+/// <param name="SinCuadrarDesde">
+/// El primer día del primer mes que le falta por cuadrar, que es el mismo por el que empezaría su
+/// cuadre; o <c>null</c> si lo tiene cuadrado hasta el corte, o si no tiene corte.
+/// </param>
+internal sealed record CorteDeUnaEmpresa(
+    Guid EmpresaId, DateOnly? HastaElMes, DateOnly? PrimerMovimiento, DateOnly? SinCuadrarDesde = null);

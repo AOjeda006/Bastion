@@ -82,10 +82,20 @@ internal sealed class ElAvanceDelCorte(
 
     /// <inheritdoc/>
     /// <remarks>
-    /// <b>Dos lecturas, y la segunda casi nunca.</b> La primera trae las empresas con existencias y
-    /// su corte. La fecha del primer movimiento solo se busca para las que no tienen corte, que son
-    /// las que el avance no ha conseguido avanzar nunca: con 10⁶ movimientos, buscarla cuesta 0,66 s
-    /// (ADR-0064, *Medido*), y hacerlo cada hora para todas no diría nada que el corte no diga.
+    /// <para>
+    /// <b>Una lectura, y las demás casi nunca.</b> La primera trae las empresas con existencias, su
+    /// corte y hasta dónde está cuadrado. La fecha del primer movimiento solo se busca para las que no
+    /// tienen corte, que son las que el avance no ha conseguido avanzar nunca: con 10⁶ movimientos,
+    /// buscarla cuesta 0,66 s (ADR-0064, *Medido*), y hacerlo cada hora para todas no diría nada que
+    /// el corte no diga.
+    /// </para>
+    /// <para>
+    /// <b>Lo que falta por cuadrar empieza donde empezaría el cuadre</b> (ítem 2.20): el mes
+    /// siguiente al cuadrado, y si no tiene nada cuadrado, el de
+    /// <see cref="ElCuadreDeLasExistencias.SqlDelPrimerMesPorCuadrar"/>, la misma sentencia. Esa
+    /// recorre el libro de la empresa, y solo se lanza para las que tienen corte y nada cuadrado: tras
+    /// rehacer el corte, o con un cuadre que falla en su primer mes.
+    /// </para>
     /// </remarks>
     public async Task<IReadOnlyList<CorteDeUnaEmpresa>> CortesAsync(CancellationToken cancelacion)
     {
@@ -103,9 +113,32 @@ internal sealed class ElAvanceDelCorte(
                     .Where(corte => corte.EmpresaId == empresaId)
                     .Select(corte => (DateOnly?)corte.HastaElMes)
                     .FirstOrDefault(),
+                CuadradoHasta = contexto.CortesDeLaInstantanea
+                    .Where(corte => corte.EmpresaId == empresaId)
+                    .Select(corte => corte.CuadradoHasta)
+                    .FirstOrDefault(),
             })
             .ToListAsync(cancelacion)
             .ConfigureAwait(false);
+
+        Dictionary<Guid, DateOnly> sinCuadrar = [];
+
+        foreach (var corte in cortes)
+        {
+            if (corte.HastaElMes is not { } hasta || corte.CuadradoHasta == hasta)
+            {
+                continue;
+            }
+
+            sinCuadrar[corte.EmpresaId] = corte.CuadradoHasta is { } cuadrado
+                ? cuadrado.AddMonths(1)
+                : (await contexto.Database
+                        .SqlQueryRaw<DateOnly>(
+                            ElCuadreDeLasExistencias.SqlDelPrimerMesPorCuadrar, corte.EmpresaId, hasta)
+                        .ToListAsync(cancelacion)
+                        .ConfigureAwait(false))
+                    .Single();
+        }
 
         Guid[] sinCorte = [.. cortes.Where(corte => corte.HastaElMes is null).Select(corte => corte.EmpresaId)];
 
@@ -126,6 +159,7 @@ internal sealed class ElAvanceDelCorte(
         return [.. cortes.Select(corte => new CorteDeUnaEmpresa(
             corte.EmpresaId,
             corte.HastaElMes,
-            primeros.TryGetValue(corte.EmpresaId, out DateOnly primero) ? primero : null))];
+            primeros.TryGetValue(corte.EmpresaId, out DateOnly primero) ? primero : null,
+            sinCuadrar.TryGetValue(corte.EmpresaId, out DateOnly desde) ? desde : null))];
     }
 }

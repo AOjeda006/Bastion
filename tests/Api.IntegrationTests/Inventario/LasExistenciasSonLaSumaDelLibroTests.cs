@@ -1336,6 +1336,10 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
         (await AvanzarAsync(caso.EmpresaId, elQueToca)).ShouldNotBeEmpty();
 
+        // Lo que falta por cuadrar es lo que lee el trabajo al acabar la vuelta (ítem 2.20): sin nada
+        // cuadrado, desde el primer mes con movimiento.
+        (await SinCuadrarDesdeAsync(caso.EmpresaId)).ShouldBe(new DateOnly(pasado, 3, 1));
+
         IReadOnlyList<FotoDelMes> debidas = LasExistencias.DebidasEnCSharp(
             await LasExistencias.LibroAsync(postgres, caso.EmpresaId), elQueToca);
 
@@ -1357,6 +1361,9 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         (await CuadradoHastaAsync(caso.EmpresaId)).ShouldBe(
             junio.AddMonths(-1), "lo que se cuadró antes del fallo se queda anotado, mes a mes");
 
+        (await SinCuadrarDesdeAsync(caso.EmpresaId)).ShouldBe(
+            junio, "un cuadre parado deja por cuadrar desde el mes en que paró hasta el corte");
+
         // LA VUELTA SIGUIENTE, por el anfitrión: desde junio hasta el corte, ni un mes antes.
         CuadreHecho siguiente = (await CuadrarLoPendienteAsync(caso.EmpresaId)).ShouldNotBeNull(
             "quedaba por cuadrar desde junio, y la vuelta siguiente tiene que cuadrarlo");
@@ -1367,6 +1374,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         siguiente.Cuadre.Descuadres.ShouldBeEmpty();
 
         (await CuadradoHastaAsync(caso.EmpresaId)).ShouldBe(elQueToca);
+        (await SinCuadrarDesdeAsync(caso.EmpresaId)).ShouldBeNull();
         (await CuadrarLoPendienteAsync(caso.EmpresaId)).ShouldBeNull("y ya no queda nada");
     }
 
@@ -1576,8 +1584,9 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             "sin corte, la fecha del primer movimiento: es desde donde le faltan los meses");
 
         antes.Where(corte => corte.EmpresaId == conCorte.EmpresaId).ShouldHaveSingleItem().ShouldBe(
-            new CorteDeUnaEmpresa(conCorte.EmpresaId, elQueToca, null),
-            "con corte, su mes, y la fecha no se busca");
+            new CorteDeUnaEmpresa(conCorte.EmpresaId, elQueToca, null, elQueToca),
+            "con corte, su mes, y la fecha no se busca; y sin nada cuadrado, le falta desde donde " +
+            "empezaría su cuadre, que es el corte mismo: su único movimiento es de después");
 
         antes.ShouldAllBe(
             corte => corte.HastaElMes == null || corte.PrimerMovimiento == null,
@@ -1587,11 +1596,16 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             [.. antes.Select(corte => corte.EmpresaId).Distinct().Order()],
             "una por empresa, en orden de identificador");
 
-        // Y AL AVANZAR, la del caso pasa a tener su corte, y deja de llevar la fecha.
+        // Y AL AVANZAR, la del caso pasa a tener su corte, y deja de llevar la fecha. Le falta por
+        // cuadrar desde el mes de su primer movimiento, que es el de su primera instantánea.
         (await AvanzarAsync(sinCorte.EmpresaId, elQueToca)).ShouldNotBeEmpty();
 
         (await CortesAsync()).Where(corte => corte.EmpresaId == sinCorte.EmpresaId).ShouldHaveSingleItem()
-            .ShouldBe(new CorteDeUnaEmpresa(sinCorte.EmpresaId, elQueToca, null));
+            .ShouldBe(new CorteDeUnaEmpresa(sinCorte.EmpresaId, elQueToca, null, LasExistencias.MesDe(primero)));
+
+        // Y CUADRADA hasta el corte, ya no le falta nada.
+        (await CuadrarLoPendienteAsync(conCorte.EmpresaId)).ShouldNotBeNull();
+        (await SinCuadrarDesdeAsync(conCorte.EmpresaId)).ShouldBeNull("cuadrada hasta el corte, no le falta nada");
     }
 
     [Fact]
@@ -1747,6 +1761,15 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             .GetRequiredService<IAvanceDelCorte>()
             .CortesAsync(CancellationToken.None);
     }
+
+    /// <summary>
+    /// Desde dónde le falta por cuadrar a una empresa, como lo lee el trabajo al acabar la vuelta
+    /// (ítem 2.20).
+    /// </summary>
+    /// <param name="empresaId">La empresa.</param>
+    /// <returns>El primer mes sin cuadrar, o <c>null</c> si lo tiene cuadrado hasta el corte.</returns>
+    private async Task<DateOnly?> SinCuadrarDesdeAsync(Guid empresaId) =>
+        (await CortesAsync()).Where(corte => corte.EmpresaId == empresaId).ShouldHaveSingleItem().SinCuadrarDesde;
 
     /// <summary>El corte guardado de una empresa, leído por debajo del sistema.</summary>
     /// <param name="empresaId">La empresa.</param>

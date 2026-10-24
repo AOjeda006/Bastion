@@ -491,19 +491,92 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     }
 
     [Fact]
-    public void La_duracion_va_en_segundos_con_sus_cubos_y_el_retraso_en_meses_sin_la_empresa()
+    public void Lo_que_falta_por_cuadrar_va_del_primer_mes_sin_cuadrar_al_corte_y_manda_la_mas_atrasada()
+    {
+        AvanzadorDelCorte.MesesSinCuadrar([]).ShouldBe(0, "sin empresas, no falta nada");
+
+        AvanzadorDelCorte.MesesSinCuadrar([Corte(s_primera, s_diciembre), Corte(s_segunda, s_noviembre)])
+            .ShouldBe(0, "las dos lo tienen cuadrado hasta su corte, aunque los cortes no sean el mismo");
+
+        AvanzadorDelCorte.MesesSinCuadrar([SinCuadrar(s_primera, s_diciembre, s_diciembre)])
+            .ShouldBe(1, "el mes del corte sin cuadrar es un mes, no cero: los dos bordes cuentan");
+
+        AvanzadorDelCorte.MesesSinCuadrar(
+            [SinCuadrar(s_primera, s_diciembre, s_diciembre), SinCuadrar(s_segunda, s_diciembre, new DateOnly(2026, 9, 1))])
+            .ShouldBe(4, "la más atrasada manda, aunque no sea la primera de la lista");
+
+        AvanzadorDelCorte.MesesSinCuadrar([SinCuadrar(s_primera, s_diciembre, new DateOnly(2025, 11, 1))])
+            .ShouldBe(14, "los años cuentan: de noviembre a diciembre del año siguiente van catorce meses");
+
+        // Hasta el corte, y no hasta el mes que toca: lo que el corte no alcanza lo cuenta el retraso.
+        AvanzadorDelCorte.MesesSinCuadrar([SinCuadrar(s_primera, new DateOnly(2026, 6, 1), new DateOnly(2026, 5, 1))])
+            .ShouldBe(2, "de mayo a un corte de junio, aunque el mes que toca sea diciembre");
+
+        AvanzadorDelCorte.MesesSinCuadrar([new CorteDeUnaEmpresa(s_primera, null, new DateOnly(2026, 1, 1))])
+            .ShouldBe(0, "sin corte no hay instantáneas que cuadrar");
+    }
+
+    [Fact]
+    public async Task Una_vuelta_anota_lo_que_falta_por_cuadrar_y_un_cuadre_parado_lo_deja_por_encima_de_cero()
+    {
+        // Las tres llegan al mes que toca, así que el retraso acaba en cero. La primera avanza
+        // diciembre y lo cuadra. A la segunda, que ya llegaba, le falta desde octubre, y su cuadre
+        // falla otra vez en octubre. La tercera, cuadrada hasta junio, avanza noviembre y diciembre, y
+        // su cuadre para en noviembre: le queda diciembre, y antes de cuadrar le faltaban seis meses.
+        Libreta libreta = new([s_primera, s_segunda, s_tercera])
+        {
+            Meses =
+            {
+                [s_primera] = [() => Mes(s_diciembre)],
+                [s_tercera] = [() => Mes(s_noviembre), () => Mes(s_diciembre)],
+            },
+            Cuadres =
+            {
+                [s_primera] = () => Cuadrado(s_diciembre, s_diciembre),
+                [s_segunda] = () => throw new InvalidOperationException("el plazo de la orden se ha agotado"),
+                [s_tercera] = () => Cuadrado(new DateOnly(2026, 7, 1), s_noviembre),
+            },
+        };
+
+        libreta.Cortes[s_primera] = Corte(s_primera, s_noviembre);
+        libreta.Cortes[s_segunda] = SinCuadrar(s_segunda, s_diciembre, new DateOnly(2026, 10, 1));
+        libreta.Cortes[s_tercera] = SinCuadrar(s_tercera, new DateOnly(2026, 10, 1), new DateOnly(2026, 7, 1));
+
+        using MetricasDelCorte metricas = new();
+        using EspiaDeMedidas espia = new();
+
+        await using (ServiceProvider proveedor = Montar(libreta))
+        {
+            await Avanzador(proveedor, metricas, new Anotador()).UnaVueltaAsync(CancellationToken.None);
+        }
+
+        espia.Serie("bastion.inventario.corte.meses_de_retraso").ShouldBe(
+            [0], "todas llegan, y por eso hace falta otro indicador");
+
+        espia.Serie("bastion.inventario.corte.meses_sin_cuadrar").ShouldBe(
+            [3],
+            "una medida por vuelta, con lo cuadrado como queda: de octubre a diciembre en la segunda, " +
+            "que manda sobre el diciembre de la tercera; y la primera, cuadrada, no suma. Medida antes " +
+            "de los cuadres, la tercera daría 6");
+    }
+
+    [Fact]
+    public void La_duracion_va_en_segundos_con_sus_cubos_y_los_dos_indicadores_en_meses_sin_la_empresa()
     {
         using MetricasDelCorte metricas = new();
         using EspiaDeMedidas espia = new();
 
         metricas.AnotarDuracionDelAvance(TimeSpan.FromMilliseconds(27_693));
         metricas.AnotarMesesDeRetraso(3);
+        metricas.AnotarMesesSinCuadrar(2);
 
         espia.Serie("bastion.inventario.corte.duracion_del_avance").ShouldBe([27.693]);
         espia.Serie("bastion.inventario.corte.meses_de_retraso").ShouldBe([3]);
+        espia.Serie("bastion.inventario.corte.meses_sin_cuadrar").ShouldBe([2]);
 
         espia.Unidad("bastion.inventario.corte.duracion_del_avance").ShouldBe("s");
         espia.Unidad("bastion.inventario.corte.meses_de_retraso").ShouldBe("{mes}");
+        espia.Unidad("bastion.inventario.corte.meses_sin_cuadrar").ShouldBe("{mes}");
 
         // Los cubos que recomienda el instrumento, y en ellos lo que decide: el disparador y el techo.
         espia.Cubos("bastion.inventario.corte.duracion_del_avance").ShouldBe(MetricasDelCorte.CubosDeLaDuracion);
@@ -511,7 +584,7 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         MetricasDelCorte.CubosDeLaDuracion.ShouldContain(30, "el plazo de cada orden, que es el techo");
 
         espia.Etiquetas.ShouldBe(0, "una etiqueta con la empresa sería una serie por cliente en el recolector");
-        espia.Medidas.ShouldBe(2, "sin medidas, contar las etiquetas no diría nada");
+        espia.Medidas.ShouldBe(3, "sin medidas, contar las etiquetas no diría nada");
     }
 
     [Fact]
@@ -620,6 +693,9 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
     private static CorteDeUnaEmpresa Corte(Guid empresaId, DateOnly hastaElMes) => new(empresaId, hastaElMes, null);
 
+    private static CorteDeUnaEmpresa SinCuadrar(Guid empresaId, DateOnly hastaElMes, DateOnly desde) =>
+        new(empresaId, hastaElMes, null, desde);
+
     private static Descuadre Descuadre(string que) =>
         new(que, Guid.CreateVersion7(), Guid.CreateVersion7(), null, null, null, s_diciembre, 1m, 2m, 1, null, null);
 
@@ -680,7 +756,12 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
             }
 
             MesAvanzado hecho = meses[hechos]();
-            _libreta.Cortes[empresaId] = new CorteDeUnaEmpresa(empresaId, hecho.Mes, null);
+
+            // Lo que no estaba cuadrado sigue sin estarlo, y el mes nuevo se suma a lo que falta.
+            DateOnly? sinCuadrarDesde = _libreta.Cortes.TryGetValue(empresaId, out CorteDeUnaEmpresa? antes)
+                ? antes.SinCuadrarDesde ?? hecho.Mes
+                : hecho.Mes;
+            _libreta.Cortes[empresaId] = new CorteDeUnaEmpresa(empresaId, hecho.Mes, null, sinCuadrarDesde);
 
             return hecho;
         }
@@ -691,7 +772,21 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
             _libreta.Cuadradas.Add(empresaId);
 
-            return _libreta.Cuadres.TryGetValue(empresaId, out Func<CuadreHecho?>? cuadre) ? cuadre() : null;
+            CuadreHecho? hecho = _libreta.Cuadres.TryGetValue(empresaId, out Func<CuadreHecho?>? cuadre)
+                ? cuadre()
+                : null;
+
+            // Lo cuadrado se queda anotado hasta su último mes, como en la base. Un cuadre que lanza
+            // no llega aquí, y lo que faltaba sigue faltando.
+            if (hecho is not null && _libreta.Cortes.TryGetValue(empresaId, out CorteDeUnaEmpresa? corte))
+            {
+                _libreta.Cortes[empresaId] = corte with
+                {
+                    SinCuadrarDesde = hecho.Hasta == corte.HastaElMes ? null : hecho.Hasta.AddMonths(1),
+                };
+            }
+
+            return hecho;
         }
 
         public Task<IReadOnlyList<CorteDeUnaEmpresa>> CortesAsync(CancellationToken cancelacion) =>

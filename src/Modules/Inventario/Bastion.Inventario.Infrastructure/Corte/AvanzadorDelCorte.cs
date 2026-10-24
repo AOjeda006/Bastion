@@ -36,7 +36,7 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 /// </remarks>
 /// <param name="ambitos">Fábrica de ámbitos: el contexto es de ámbito y esto es un singleton.</param>
 /// <param name="reloj">De dónde sale «hoy», y con él el mes que toca.</param>
-/// <param name="metricas">Los contadores, la duración y el retraso del trabajo.</param>
+/// <param name="metricas">Los contadores, la duración, el retraso y lo que falta por cuadrar.</param>
 /// <param name="registro">Dónde se anota lo que hace cada vuelta.</param>
 internal sealed partial class AvanzadorDelCorte(
     IServiceScopeFactory ambitos,
@@ -93,6 +93,31 @@ internal sealed partial class AvanzadorDelCorte(
             {
                 mayor = Math.Max(
                     mayor, ((mesQueToca.Year - mes.Year) * 12) + mesQueToca.Month - mes.Month);
+            }
+        }
+
+        return mayor;
+    }
+
+    /// <summary>
+    /// Los meses que le faltan por cuadrar a la empresa a la que más le faltan: de su primer mes sin
+    /// cuadrar a su corte, los dos dentro (ítem 2.20).
+    /// </summary>
+    /// <remarks>
+    /// <b>Hasta el corte y no hasta el mes que toca</b>: lo que el corte no ha alcanzado lo cuenta el
+    /// retraso. Una empresa sin corte no tiene instantáneas que cuadrar, y no cuenta.
+    /// </remarks>
+    /// <param name="cortes">El corte de cada empresa con existencias.</param>
+    /// <returns>Los meses de la más atrasada, o cero si todas lo tienen cuadrado.</returns>
+    internal static int MesesSinCuadrar(IEnumerable<CorteDeUnaEmpresa> cortes)
+    {
+        int mayor = 0;
+
+        foreach (CorteDeUnaEmpresa corte in cortes)
+        {
+            if (corte is { HastaElMes: { } hasta, SinCuadrarDesde: { } desde })
+            {
+                mayor = Math.Max(mayor, ((hasta.Year - desde.Year) * 12) + hasta.Month - desde.Month + 1);
             }
         }
 
@@ -165,6 +190,7 @@ internal sealed partial class AvanzadorDelCorte(
                 .ConfigureAwait(false);
 
             metricas.AnotarMesesDeRetraso(MesesDeRetraso(cortes, mes));
+            metricas.AnotarMesesSinCuadrar(MesesSinCuadrar(cortes));
         }
     }
 
