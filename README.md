@@ -49,7 +49,7 @@ de datos, su contrato público y su comunicación por eventos.
 > desde su pantalla: el servidor pone el factor de cada línea, un rechazo de una ubicación vuelve a
 > la celda de su punta, y un borrador se descarta. Y lo que el 2.18 dejó propuesto: el cuadre lee
 > cada mes sin el JIT del motor, un indicador dice cuántos meses le faltan, y las páginas caben en
-> 320 px, medidas en un Chromium. El cierre de la fase está en curso, y la fase 3 no ha empezado.
+> 320 px, medidas en un Chromium. La fase está cerrada, y la fase 3 no ha empezado.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
 > **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo. Esta
 > línea se compara con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia

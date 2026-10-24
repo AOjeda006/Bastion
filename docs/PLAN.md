@@ -8661,35 +8661,66 @@ La siguiente mutación es la **745**, y el siguiente ADR, el **0071**.
 
 ## Estado actual
 
-**FASE 2 — 20 de 20 ítems, y el cierre de la fase en curso.** La puerta de clarificación se pasó el
+**FASE 2 CERRADA — 20 de 20 ítems, el 2026-10-24.** La puerta de clarificación se pasó el
 2026-09-18: las trece preguntas de la tanda y las tres que trajo la respuesta están contestadas y
 anotadas arriba, en *Decisiones tomadas*, y el desglose son **catorce ítems**, del 2.1 al 2.14, en
-el *Checklist*. Los catorce están hechos. Las respuestas del repaso, del 2026-10-17, abren **cuatro
-addenda**, y la puerta del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el
-2.18, y la transferencia pasa a ser el 2.19. La del 2.19, el 2026-10-20, abre un sexto, el 2.20,
-con lo que el 2.18 dejó propuesto. Del 2.15 al 2.20 están hechos, y las veinte casillas, marcadas:
-el README dice «cerrada», porque lo cuenta de las casillas. Lo que queda es el cierre de la fase,
-hasta la puerta de la fase 3.
+el *Checklist*. Las respuestas del repaso, del 2026-10-17, abren **cuatro addenda**, y la puerta
+del 2.17, el 2026-10-18, un quinto: el avance incremental del corte es el 2.18, y la transferencia
+pasa a ser el 2.19. La del 2.19, el 2026-10-20, abre un sexto, el 2.20, con lo que el 2.18 dejó
+propuesto. Los veinte están hechos. El cierre son tres secciones, por este orden y encima del
+repaso del 2026-10-14: *La fase 2, cerrada: del 2.15 al 2.20, criterio por criterio*, *El veredicto
+de las notas abiertas, al cerrar la fase 2* y *Traspaso a la fase 3*. Lo que queda es la puerta de
+la fase 3.
 
-> **Dónde se retoma (2026-10-24): en el cierre de la fase 2**, en la rama `cierre-de-la-fase-2`,
-> abierta desde `main` en `08ea605`, el cierre del 2.20. Su primer commit anota los dos runs de
-> ese cierre. Después, por este orden:
+**El run que lo certifica** es el **40104536177**, sobre `08ea605` en `main`, **success**, con sus
+tres jobs: Backend `120903373322`, Frontal `120903373548` y Humo `120905690366`. Es el del cierre
+del 2.20, el último de los veinte, y certifica el árbol entero de la fase: **2 284 casos** de .NET,
+1 544 en el carril rápido y 740 contra PostgreSQL, con las dos listas de ensamblados comparadas
+enteras; **158 operaciones** en 95 rutas y **240 `type`** de 248 sitios, cada artefacto al día con
+el versionado; 426/450 y 828/900 KiB; el canal de la consola con su marca y sin un aviso de
+`act()`; y un segundo arranque sobre la misma base, con los 115 permisos en el rol del sistema. Sus
+avisos se leyeron con `leer-run27.py`, un guion del *scratchpad*.
+
+**Cada casilla tiene su run.** El de cada ítem se volvió a pedir a la API al cerrar la fase, uno por
+uno —`GET /repos/AOjeda006/Bastion/actions/runs/<id>`, leyendo `head_sha`, `status` y
+`conclusion`, no la memoria— con `runs-fase-2.py`, otro guion del *scratchpad*, que además mira con
+`git merge-base --is-ancestor` que el commit esté en la historia de `main`. El de cada ítem es el
+que su casilla o su «hecho» da por el que lo cierra:
+
+| Ítem | Run | `head_sha` | Conclusión | Rama |
+|---|---|---|---|---|
+| 2.1 | 35367412759 | `d5ddf36` | success | `main` |
+| 2.2 | 35385999936 | `c02e006` | success | `feature/los-tres-puertos-y-el-bloqueo-de-una-estanteria` |
+| 2.3 | 35437128065 | `1e4864d` | success | `main` |
+| 2.4 | 35469264368 | `9a6aca6` | success | `item-2.4-numeracion-con-cerrojo` |
+| 2.5 | 35874205169 | `2589183` | success | `main` |
+| 2.6 | 36139488895 | `8ad3727` | success | `main` |
+| 2.7 | 36296564370 | `e1ffce3` | success | `item-2.7-las-existencias` |
+| 2.8 | 36501859271 | `ab09dc6` | success | `main` |
+| 2.9 | 36974258472 | `dca9b83` | success | `main` |
+| 2.10 | 37073246214 | `c9883cd` | success | `main` |
+| 2.11 | 37293342638 | `a68641c` | success | `main` |
+| 2.12 | 37637032242 | `df1e44d` | success | `main` |
+| 2.13 | 38084319374 | `0638419` | success | `main` |
+| 2.14 | 38485015079 | `1fb7fca` | success | `main` |
+| 2.15 | 39063489938 | `996a404` | success | `main` |
+| 2.16 | 39129536761 | `0d26e76` | success | `main` |
+| 2.17 | 39301336980 | `2fdd3cb` | success | `main` |
+| 2.18 | 39364778371 | `aa56bfc` | success | `main` |
+| 2.19 | 40055095029 | `7139fc2` | success | `main` |
+| 2.20 | 40104536177 | `08ea605` | success | `main` |
+
+Los veinte `head_sha` casan con el commit del PLAN, los veinte runs salieron `completed/success`, y
+los veinte commits están en la historia de `main`. Diecisiete corrieron sobre `main` y tres sobre su
+rama, y el guion sale con 0.
+
+> **Dónde se retoma (2026-10-24): en la puerta de la fase 3**, en la rama `cierre-de-la-fase-2`.
+> Los tres primeros pasos del cierre están hechos: el repaso del 2.15 al 2.20, los veredictos y el
+> traspaso, y el cierre de la fase. Falta el cuarto: la tanda de la puerta de la fase 3, que el
+> commit siguiente escribe aquí, sin contestar. Ahí se para, y se pregunta todo junto.
 >
-> 1. el repaso del 2.15 al 2.20, criterio por criterio y en la forma del de la fase, contra casos
->    por su nombre, con un guion que comprueba que cada nombre existe, y su canario;
-> 2. los veredictos de las notas abiertas y el traspaso, con la propuesta del `?q=` del ADR-0069 y
->    la de la auditoría de la herramienta, que lleva dentro `vitest` 4.1.12;
-> 3. el cierre de la fase, si no sale ninguna pregunta;
-> 4. y la puerta de la fase 3: primero el §15 del plan maestro; después, la pregunta del
->    presupuesto, con los 56 KiB del ajuste repartidos por fichero entre `b1db83e` y `2fdd3cb`, su
->    orden y sus opciones, porque el límite no se sube sin que decida el usuario; y los cambios de
->    `CLAUDE.md`. Ahí se para, y se pregunta todo junto.
->
-> **El paso 1 está hecho**, en *La fase 2, cerrada: del 2.15 al 2.20, criterio por criterio*, con
-> sus tres recuentos y su canario. Se sigue por el 2.
->
-> `/code-review` no bloquea: si sus hallazgos no llegan, el cierre de la fase la anota como no
-> hecha, con su rango, `0638419..0d26e76`.
+> `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
+> `0638419..0d26e76`.
 
 **Hecho el 2.1**, el 2026-09-18: el frontal arranca con **un** diccionario. Los dos idiomas pasan a
 importación dinámica, el arranque espera al del idioma elegido y el cambio descarga antes de
@@ -14339,6 +14370,151 @@ por fichero, como entonces: el 2.18 le dio a `ElCuadreDeLasExistencias` una segu
 - **y ningún módulo maneja todavía un evento de otro en producción.** Inventario publica los de sus
   documentos por la bandeja de salida, y los únicos manejadores que hay son los de los tests. La
   fase 3 escribe el primero, y va al traspaso.
+
+### El veredicto de las notas abiertas, al cerrar la fase 2
+
+Ninguna se queda sin veredicto. Son **dieciséis**, las abiertas de *Notas / riesgos* el día del
+cierre, y cada una lleva ya allí su «Repasada al cerrar la fase 2». **Dos se cierran**, y cada una
+dice dónde; **trece siguen abiertas, y eso es la decisión, no un descuido**; una es de vigilancia.
+De las trece, **seis llegan a la puerta de la fase 3**: porque su disparador es la fase 3, o porque
+lo que queda es una decisión del usuario.
+
+| Nota | Veredicto |
+|---|---|
+| el recálculo de C cuesta entre 32 y 53 s (2.20, ADR-0070) | **Abierta, con su propuesta.** El recálculo sigue sin entrada en producción (ADR-0044 §5), y ningún criterio de la fase 3 se la da. El disparador no cambia. |
+| la auditoría de la herramienta da dos altas (2.19, ADR-0045) | **Abierta, y va a la puerta de la fase 3.** En el run de `main` de `08ea605`, el **40104536177**, el paso de auditoría dice 0 críticas, 2 altas, 4 moderadas y 0 bajas, en seis paquetes de desarrollo, y la puerta, `--omit=dev --audit-level=high`, sigue con 0. La propuesta, `npm audit fix` en su propio commit, con `vitest` 4.1.12 dentro, es una pregunta de la tanda. |
+| un `?q=` a un listado sin filtro llega y no filtra (2.19, ADR-0069) | **Abierta, y va a la puerta de la fase 3**, con su propuesta: el `400` en el borde y los cinco listados sin `q` en el contrato. El frontal no lo manda a ninguno de los cinco, así que hoy no lo paga nadie. |
+| el lote y la serie de una transferencia se escriben a mano | **Abierta, con su disparador**: la expedición de la fase 4. La devolución de compra de la fase 3 la roza, porque saca lo que entró con una recepción, y la puerta pregunta de dónde toma su lote y su serie. |
+| ningún listado exporta lo que está viendo | **Abierta, y su disparador es ya**: «un ítem propio al empezar la fase 3, para todos a la vez». Va en el desglose de la puerta, como el primer ítem. La lista de la nota creció con el 2.19: `/transferencias`, y las líneas de una transferencia en su ficha. |
+| el editor avisa de que `baseUrl` dejará de funcionar | **Abierta, con su disparador**: subir TypeScript. La fase 2 no lo subió: `frontend/package.json` sigue en `^5.9.3`. |
+| el recuento cíclico tiene un segundo disparador | **Abierta, decidida (a)** el 2026-10-17. Ninguno de los dos se ha dado: ningún almacén ha dejado de contarse de una vez, y ningún recuento se ha quedado sin confirmar por la huella. |
+| ¿trae algún ítem el alta, el listado y la ficha del ajuste? | **Cerrada en el 2.17 y el 2.19**, como decía su respuesta: los del ajuste, con su pantalla, en el 2.17, y los de la transferencia en el 2.19. Los casos, en sus filas del repaso de arriba. |
+| «hoy» es el día UTC, y no el de la empresa | **Abierta, decidida**: (i), `Europe/Madrid`, en una sola fuente del servidor, junto con la zona de cada almacén, antes de la fase 5. Desde el 2.16, el día sale de un solo sitio, `DiaDeNegocio`. Una zona por instalación o una por empresa se pregunta en la puerta del ítem que haga la zona; la puerta de la fase 3 pregunta si ese ítem es de la fase 3 o de la 4. |
+| el factor a unidad base llega del cliente | **Cerrada en el 2.17**: lo resuelve el servidor con `IConsultaDeConversiones`, de Organización, y el 2.19 usa el mismo puerto. Los casos, en las filas del 2.17 y el 2.19 del repaso de arriba. |
+| ¿recibe el artículo su final de vida en esta fase? | **Abierta, decidida (a)**: no en esta fase. Su disparador está escrito en `IConsultaDeArticulos` —la primera línea de un documento de compra que elija un artículo— y llega con la fase 3, así que va al desglose de la puerta, con su condición: la baja sigue contestando la unidad base. |
+| el bloqueo del art. 32 no tiene proceso de destrucción | **Abierta a medias, y eso es la decisión.** La fase 2 le añadió un hecho, la decisión 12 de su puerta: el libro no se borra y apunta a lo que mueve, así que la destrucción será anonimización. La fase 3 le suma referencias, las de un pedido y una recepción a su proveedor. Su sitio en la hoja de ruta va a la puerta. |
+| el frontal no puede abrir la ficha de lo bloqueado | **Abierta, con la decisión tomada** (ADR-0017). Siguen siendo **cinco** acciones: `git grep -l "public async Task<IActionResult> Desbloquear(" HEAD -- src` encuentra los mismos cinco controladores que al cerrar la fase 1. Ningún criterio de la fase 2 la nombra. |
+| la renovación de sesión asierta el cuerpo | **Abierta, con la decisión tomada** (ADR-0019). Los dos `as` sobre un cuerpo de respuesta son los de siempre, `errores.ts:135` y `traduccion.ts:43`, contados con la orden de la nota sin los tests. |
+| el contrato describe los enteros como `integer \| string` | **Abierta, con la decisión tomada.** Con la cuenta de la nota, sobre `08ea605`: **154** enteros y **50** números, de 308 listas, contra 110 y 26 de 208 al cerrar la fase 1. Ningún escalar, y 550 `"type": "string"`, su pareja. |
+| en Node 25 el `localStorage` de los tests no es el de jsdom | **De vigilancia, no de arreglo.** La máquina sigue en Node **25.6.1** (`node --version`) y la CI en **22** (`node-version: '22'` en `ci.yml`). |
+
+Y las dos que **no** son notas abiertas:
+
+- **la correlación buscar/alta** (*Decisiones tomadas → ítem 1.6*, decisión 1) sigue sin contestar.
+  La fase 2 no la ensancha: Inventario no da de alta nada que se busque por un identificador. Va a
+  la puerta, con lo que se arrastra;
+- y **las pruebas basadas en propiedades**, que una nota de la fase 0 daba por pendientes, ya
+  existen: `ElSaldoEsLaSumaDelLibroPorPropiedadTests`, del 2.7 (`418184f`), con un generador propio
+  y una semilla fija, sin biblioteca, así que no hubo licencia que comprobar. La nota lo dice ya.
+
+### Traspaso a la fase 3
+
+**Qué hereda.** Seis módulos con persistencia —Organización, Identidad, Auditoría, Terceros,
+Catálogo e Inventario—, cada uno en su esquema y con sus migraciones al día
+(`comprobar-migraciones.sh`). El contrato, en **158 operaciones sobre 95 rutas** bajo `/api/v1/`,
+con **240 `type`** de error de 248 sitios y **115 permisos** en el rol del sistema, los tres
+contados por los avisos del run **40104536177**. En el frontal, `features/inventario/` junto a las
+de la fase 1, y **21** rutas en `rutas.tsx`. Una CI cuyos dos carriles de .NET suman **2 284
+casos**, 1 544 y 740, con las listas de ensamblados comparadas enteras; **392** casos de jsdom en
+**47** ficheros y **22** en un Chromium; **426/450** y **828/900** KiB; y un Humo que arranca dos
+veces sobre la misma base. Y una bandeja de salida con **ningún manejador en producción**:
+`git grep -n "AgregarManejadorDeEvento<" HEAD -- src` solo encuentra su definición.
+
+**Qué import se añade a `CLAUDE.md` al empezar: ninguno.** El Anexo A.2.3 no tiene fila para la
+fase 3: las siguientes son la 5, la 6 y la 7.
+
+**Qué invariantes de la fase 2 son portantes**, con el caso que lo dice. Romper uno no da un fallo
+local, da una avería muda:
+
+1. **El libro es de solo añadido, y lo dice el motor.** `ElLibroNoSePuedeLimpiarTests`: modificar,
+   borrar o vaciar, por la tabla padre o por la partición, lo rechaza PostgreSQL. Una recepción o
+   una devolución equivocada no se corrige: se anula con otro documento.
+2. **Las existencias se mueven en la misma sentencia que anota el libro**, por un solo camino,
+   `AnotarEnElLibroAsync`, y fuera de una transacción, sin inquilino o con filas de otra empresa,
+   revienta: `LasExistenciasSonLaSumaDelLibroTests`
+   `.Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta`. Un
+   documento de compra que escriba en el libro va por ese camino, y por ningún otro.
+3. **El stock no baja de cero, y lo para el motor** (ADR-0046 §4):
+   `.Dos_salidas_a_la_vez_que_caben_una_a_una_y_no_juntas_dejan_pasar_solo_una`. La devolución de
+   compra es una salida, y puede no caber.
+4. **Cada documento numera en un tipo de serie que existe, bajo cerrojo y en el ejercicio de su
+   fecha**: `LosDocumentosDeInventarioNumeranEnSusSeriesTests`
+   `.Cada_documento_del_modulo_numera_en_un_tipo_de_serie_que_existe` y `LaSerieDelAjusteTests`
+   `.Confirmar_pone_el_numero_en_el_documento_y_lo_sube_en_la_serie`. El pedido, la recepción y la
+   devolución necesitan cada uno su tipo de serie.
+5. **Lo confirmado se anula con un inverso que suma cero**: `LaAnulacionConContraDocumentoTests`
+   `.El_par_suma_cero_en_el_libro_por_articulo_almacen_y_ubicacion` y
+   `.El_inverso_es_un_documento_confirmado_con_su_numero_y_su_flecha`.
+6. **El ejercicio rige lo que se escribe, y su cierre pregunta a cada módulo con documentos.** Es
+   la flecha al revés: `IDocumentosDeUnPeriodo` vive en `Organizacion.Contracts` y lo implementa
+   cada módulo. `LosModulosConDocumentosSeInscribenTests`
+   `.Todo_modulo_con_documentos_esta_inscrito_y_ninguna_inscripcion_sobra`, y
+   `ElCierreLePreguntaALosModulosTests`
+   `.Un_borrador_de_inventario_dentro_del_ejercicio_impide_cerrarlo_y_el_error_lo_nombra`. Compras
+   tendrá documentos, así que contesta, o el cierre dice que no queda nada dentro.
+7. **El factor de una línea lo pone el servidor**, con `IConsultaDeConversiones`, y el cliente no
+   lo manda: `ElFactorDelAjusteTests`
+   `.La_linea_en_la_unidad_base_lleva_factor_uno_y_la_otra_el_de_su_conversion`. Una línea de
+   pedido en cajas va por el mismo puerto.
+8. **Un solo «hoy»**: `ElDiaDeNegocioSaleDeUnSoloSitioTests.Nadie_mas_calcula_el_dia_de_negocio`.
+   Las fechas de un pedido y de una recepción salen de `DiaDeNegocio`, o de la que traiga el
+   documento.
+9. **El valor es la verdad, y el precio medio se deduce** (ADR-0046): cada fila guarda su valor y
+   el PMP que dejó, una entrada lleva su coste y una salida congela el vigente.
+   `LosCasosDoradosDelPrecioMedioTests.La_secuencia_del_criterio_da_sus_cifras_fila_a_fila`. La
+   recepción es la primera entrada con el coste de un documento de verdad.
+10. **El corte de las instantáneas lleva un cerrojo por empresa, que comparten las
+   confirmaciones**: `LasExistenciasSonLaSumaDelLibroTests`
+   `.Dos_confirmaciones_de_la_misma_empresa_no_se_frenan_por_el_cerrojo_de_las_instantaneas` y
+   `.La_confirmacion_de_una_clave_nueva_espera_al_recalculo_de_su_empresa`. Un documento nuevo
+   que anote el libro lo toma por el camino del invariante 2, sin escribirlo otra vez.
+11. **El invariante 8 de la fase 1 sigue armado, y la fase 3 lo cruza.** La divisa vive como
+   código ISO en `Importe` y como `Guid` en la tarifa asignada, y el disparador es la primera línea
+   de un documento que convierta un precio resuelto en un `Importe`: la del pedido de compra, por
+   la R7. Hoy no lo cruza nadie: `git grep -n "PrecioResueltoDto" HEAD -- src` solo encuentra
+   Catálogo. Quien lo cruce mueve antes el `Guid`.
+12. **Ningún módulo maneja todavía un evento de otro.** El primero de producción decide lo que el
+   ADR-0013 §6 dejó escrito para ese día: el efecto y la huella en el mismo `SaveChanges`, o el
+   hueco de la huella grabada en su propia transacción.
+
+**Lo que pasa a la fase 3, cada cosa con su disparador.** Son las cinco que nombró el encargo del
+2026-10-20, y ninguna se hace «de paso»:
+- **la exportación de los listados**, el primer ítem de la fase 3, con los once de su nota y los
+  dos de la transferencia, trece. Su disparador es ya;
+- **la zona de cada almacén**, antes de la fase 5, decidida (a) con (ii) y `Europe/Madrid` para lo
+  que no tiene almacén. La puerta pregunta si va en la fase 3 o en la 4;
+- **la edición de las líneas de un borrador** (ADR-0065 §9 y ADR-0068 §9). Hoy un borrador
+  equivocado se descarta y se escribe otro. Su disparador es el primer documento de la fase 3 con
+  líneas editables, el pedido de compra, y con él confirmar pasa a pedir el `If-Match`, como el
+  recuento (ADR-0057). La puerta lo pregunta;
+- **el selector de lotes y series** de lo que hay en una ubicación, en su nota. Su disparador es la
+  expedición de la fase 4, y la devolución de compra lo roza;
+- **y el ajuste a fecha de la zona**: las fechas que el frontal propone y acota hoy salen de
+  `hoyEnElServidor`, que es el día UTC del servidor. Son 10 llamadas en 7 ficheros, contadas con
+  `git grep -n "hoyEnElServidor()" HEAD -- frontend/src ':!*.test.ts' ':!*.test.tsx'`: la fecha
+  del ajuste, las del envío y la recepción, y el «rige hoy» de las tarifas y los saldos. Con la
+  zona, cada una pasa a ser el día del almacén de su documento, y en la transferencia el de su
+  punta, que el servidor manda. Su disparador es el de la zona, y va en su mismo ítem.
+
+La recepción con faltas de una transferencia (ADR-0053 §4) sigue con su disparador, la primera
+que llegue con faltas, y no es de la fase 3.
+
+**Lo que la fase 2 deja abierto, cada cosa con su motivo**: las trece notas del veredicto de
+arriba, cada una con su disparador; y lo que la fase 1 dejó y ningún criterio de la fase 2 nombró,
+que sigue igual: la importación de artículos, la carrera de unicidad del alta, que contesta un
+`500` limpio en vez de un `409`, el `413` de nginx que la pantalla de importación no sabe leer, y
+la correlación buscar/alta.
+
+**La revisión de código, sin hacer.** El usuario la pidió sobre `0638419..0d26e76`, en la respuesta
+8 de la puerta del 2.17, y sus hallazgos no llegaron. La respuesta del 2026-10-20 la dejó sin
+bloquear nada, así que el cierre la anota como **no hecha**, con ese rango. Lo de después,
+`0d26e76..08ea605`, no se le pidió.
+
+**Dónde retomar exactamente:** la **fase 3 · Compras**, y **no por código**. No tiene un Anexo
+A.3, así que lo primero es la **puerta de clarificación** del `CLAUDE.md` §2: el desglose en ítems
+con criterio verificable, acordado con el usuario y escrito aquí, con las preguntas que este
+traspaso le pasa. Y el `CLAUDE.md` §5 sigue diciendo que el objetivo del encargo es completar la
+fase 2: cambiarlo es del usuario.
 
 ### La fase 2, criterio por criterio: el repaso, preparado y sin cerrar (2026-10-14)
 
@@ -23378,6 +23554,8 @@ cuando hace falta el porqué.
   variantes. No se hace sin encargo. **El disparador**: una entrada de producción para el
   recálculo. En el mismo *Medido* quedan dos cifras sin explicar del todo: los 4 s de las
   mensuales de B que no son del JIT, y lo que se mueve el avance de una ronda a otra.
+  **Repasada al cerrar la fase 2: sigue abierta, con su propuesta.** Ningún criterio de la fase 3
+  le da al recálculo una entrada en producción, así que el disparador no se acerca.
 
 - **ABIERTA (2026-10-24, ítem 2.19, ADR-0045) · la auditoría de la herramienta da dos altas, en
   `vite` y en `undici`.** Medido con `npm --prefix frontend audit --json` sobre `4f6ac53`: 0
@@ -23399,6 +23577,10 @@ cuando hace falta el porqué.
   cubre*). Los seis paquetes dan `fixAvailable` sin versión mayor, `npm view` publica `vitest` y
   `@vitest/browser-playwright` 4.1.12, y la puerta, `--omit=dev --audit-level=high`, sigue con 0.
   La propuesta es la misma, con el carril nuevo dentro.
+  **Repasada al cerrar la fase 2: sigue abierta, y va a la puerta de la fase 3.** El run de `main`
+  de `08ea605`, el **40104536177**, dice lo mismo que la medida de arriba: 0 críticas, 2 altas y 4
+  moderadas, en seis paquetes de desarrollo, con la puerta en 0. La propuesta es una pregunta de
+  la tanda.
 
 - **ABIERTA (2026-10-24, ítem 2.19, ADR-0069) · un `?q=` a un listado sin filtro declarado llega y
   no filtra nada.** `Paginador.Filtrar` devuelve la consulta tal cual cuando el repositorio no
@@ -23412,6 +23594,8 @@ cuando hace falta el porqué.
   cierre de la fase 2, que decide si pasa al traspaso; o un cliente de la API que cuente con el
   filtro. Si se hace, el caso que se pone rojo es
   `La_lista_va_de_la_ultima_fecha_de_envio_…_no_trae_la_descartada`, que afirma la página entera.
+  **Repasada al cerrar la fase 2: sigue abierta, y va a la puerta de la fase 3**, con su propuesta
+  tal cual. Ningún cliente cuenta con el filtro: el frontal no lo manda a ninguno de los cinco.
 
 - **ABIERTA (2026-10-20, respuesta 2 de la puerta del 2.19) · el lote y la serie de una
   transferencia se escriben a mano.** El alta los toma como el ajuste, y que estén en la ubicación
@@ -23421,6 +23605,9 @@ cuando hace falta el porqué.
   pantalla, es un ítem por sí misma. **El disparador**: la expedición de la fase 4, que elegirá lo
   mismo de lo que hay en una ubicación; o alguien que pida elegir el lote del origen en una
   transferencia antes.
+  **Repasada al cerrar la fase 2: sigue abierta, con su disparador.** La devolución de compra de la
+  fase 3 la roza, porque saca lo que entró con una recepción, y la puerta pregunta de dónde toma
+  su lote y su serie.
 
 - **CERRADA (2026-10-24, ítem 2.20) · el cuadre del mes del corte paga unos 6 s de JIT del
   motor.** Medido con `EXPLAIN (ANALYZE, BUFFERS)` en el humo del 2.18 (ADR-0067, *Medido*): el plan
@@ -23479,6 +23666,9 @@ cuando hace falta el porqué.
   **El disparador**: un ítem propio al empezar la fase 3, para todos a la vez, con los mismos
   filtros que cada listado ya lleva en la URL al servidor. No va en el 2.17 ni en ningún otro ítem
   de la fase 2.
+  **Repasada al cerrar la fase 2: sigue abierta, y su disparador es ya.** Va en el desglose de la
+  puerta de la fase 3, como el primer ítem. A la lista de arriba se suman los dos listados del
+  2.19: `/transferencias`, y las líneas de una transferencia en su ficha, `/transferencias/:id`.
 
 - **ABIERTA (2026-10-17, respuesta 7 del repaso) · el editor avisa de que `baseUrl` dejará de
   funcionar.** Lo dan `frontend/tsconfig.app.json` y `frontend/tsconfig.test.json` en el editor,
@@ -23487,6 +23677,8 @@ cuando hace falta el porqué.
   disparador, decisión del usuario: al subir TypeScript.** El ítem que suba la versión del
   `package.json` quita `baseUrl` o lo sustituye en los dos ficheros, en el mismo commit, y
   `typecheck` lo dice.
+  **Repasada al cerrar la fase 2: sigue abierta, con su disparador.** La fase 2 no subió
+  TypeScript: `frontend/package.json` sigue en `^5.9.3`.
 
 - **CERRADA (2026-10-09, ítem 2.13) · el código de la aplicación ve los tipos de Node.**
   `tsconfig.app.json` compila a la vez la aplicación y sus tests, y los tests usan `node:fs`,
@@ -23518,8 +23710,10 @@ cuando hace falta el porqué.
   dos disparadores: el primer almacén que no se pueda contar de una vez, y el primer recuento que
   no llegue a confirmarse por la huella. Los dos están aquí y en el ADR-0055, que recibe el segundo
   por dentro, en su propio commit.
+  **Repasada al cerrar la fase 2: sigue abierta, decidida (a).** Ninguno de sus dos disparadores
+  se ha dado.
 
-- **ABIERTA (2026-09-28, encargo del usuario) · ¿trae algún ítem, hasta el 2.14, el alta, el
+- **CERRADA (2026-10-24, en el 2.17 y el 2.19) · ¿trae algún ítem, hasta el 2.14, el alta, el
   listado y la ficha del ajuste, y la lectura de las existencias?** Es pregunta del **cierre de la
   fase**, y el usuario la deja escrita sin decidir. Hoy el borde HTTP de Inventario tiene **dos**
   acciones, confirmar y anular (`AjustesController`), y su cabecera dice que «el alta, el listado y
@@ -23542,6 +23736,9 @@ cuando hace falta el porqué.
 
   **Renumerada el 2026-10-18 (respuesta 5 de la puerta del 2.17):** la transferencia es ahora el
   **2.19**, porque el avance incremental del corte tomó el 2.18, y la nota se cierra con el 2.19.
+  **Repasada al cerrar la fase 2: cerrada.** El alta, el listado y la ficha del ajuste, con su
+  pantalla, son del 2.17, y los de la transferencia, del 2.19. Los casos, en *La fase 2, cerrada:
+  del 2.15 al 2.20, criterio por criterio*. La cabecera decía «ABIERTA» hasta hoy.
 
 - **ABIERTA (2026-09-27, ítem 2.7) · «hoy» es el día UTC, y no el de la empresa.** Confirmar
   rechaza una fecha de operación posterior a hoy —la decisión (b), ADR-0044 §4—, y el cuadre suma el
@@ -23635,6 +23832,9 @@ cuando hace falta el porqué.
     que manda en lo que tiene almacén.
 
   No se decide aquí. El ítem que haga la zona del almacén lo pregunta en su puerta.
+  **Repasada al cerrar la fase 2: sigue abierta, decidida.** Su disparador es antes de la fase 5, y
+  la puerta de la fase 3 pregunta si el ítem de la zona del almacén va en la fase 3 o en la 4. Una
+  zona por instalación o una por empresa se pregunta en la puerta de ese ítem.
 
 - **CERRADA (2026-10-13, ítem 2.14) · nadie avanza el corte de la instantánea hasta el 2.14.** La
   cierra el trabajo mensual, `AvanzadorDelCorte` (`e500bcc`): cada hora lleva el corte de cada
@@ -23723,7 +23923,7 @@ cuando hace falta el porqué.
   hipotético, o un addendum. El disparador queda escrito en `IConsultaDeSeries`, que dice de sí
   mismo que no contesta esto.
 
-- **ABIERTA (2026-09-19, ítem 2.3) · el factor a unidad base llega del cliente y nadie lo resuelve.**
+- **CERRADA (2026-10-24, en el 2.17) · el factor a unidad base llega del cliente y nadie lo resuelve.**
   `AbrirAjuste` toma `linea.FactorAUnidadBase` **del DTO** y se lo pasa al dominio tal cual. El
   dominio lo valida —positivo, y la cantidad base es la introducida por él—, pero eso comprueba la
   *aritmética*, no la *conversión*: nada mira que ese factor sea el que `ConversionUM` declara entre
@@ -23755,6 +23955,10 @@ cuando hace falta el porqué.
   sino de **Organización**, que es el dueño de `ConversionUM`: `IConsultaDeConversiones`, en
   `Organizacion.Contracts`, que Inventario combina con la unidad base que ya lee de Catálogo. Y la
   transferencia, que también lo usa, es ahora el **2.19**. La nota se sigue cerrando con el 2.17.
+  **Repasada al cerrar la fase 2: cerrada.** Lo resuelve el servidor con
+  `IConsultaDeConversiones` desde el 2.17, y la transferencia del 2.19 usa el mismo puerto. Los
+  casos, en *La fase 2, cerrada: del 2.15 al 2.20, criterio por criterio*. La cabecera decía
+  «ABIERTA» hasta hoy.
 
 - **ABIERTA (2026-09-18, ítem 2.2) · ¿recibe el artículo su final de vida en esta fase, una vez el 2.7
   le dé existencias?** Es **pregunta del cierre de la fase 2**, y se deja escrita aquí para que lo
@@ -23790,6 +23994,8 @@ cuando hace falta el porqué.
   escribe en `IConsultaDeArticulos`, en su propio commit: la primera línea de un documento de
   compra que elija un artículo, en la fase 3. Y va con la condición de arriba: la baja sigue
   contestando la unidad base. Queda abierta, con la decisión tomada.
+  **Repasada al cerrar la fase 2: sigue abierta, decidida (a).** Su disparador llega con la fase 3,
+  así que va al desglose de su puerta, con la condición de arriba.
 
 - **TRASLADADA A *DECISIONES* (2026-09-07, ítem 1.6) · el conflicto no revela, pero DOS respuestas
   juntas sí.** El hecho sigue siendo el que se anotó en el 1.5 y no ha cambiado: la búsqueda no
@@ -23922,6 +24128,10 @@ cuando hace falta el porqué.
   lo que la referencia, y a un tercero ya lo referencia `ArticuloProveedor` desde el 1.10. La nota
   emparentada ya no lo es: la de `auditoria.claves_de_idempotencia` se cerró en el 1.11. Necesita su
   sitio en la hoja de ruta, y ese sitio se pregunta, no se le da de paso.
+  **Repasada al cerrar la fase 2: la destrucción sigue abierta, y eso es la decisión.** La fase 2
+  le añadió un hecho, la decisión 12 de su puerta: el libro no se borra y apunta a lo que mueve,
+  así que la destrucción será anonimización. La fase 3 le suma las referencias de un pedido y de
+  una recepción a su proveedor. Su sitio en la hoja de ruta va a la puerta de la fase 3.
 
 - **ABIERTO (2026-09-03) · el frontal no tiene forma de aprovechar el listado de lo bloqueado
   mientras la lectura individual no exista.** Decidido en la puerta de la fase 1: el ítem 1.4
@@ -23935,6 +24145,9 @@ cuando hace falta el porqué.
   las acciones que volverían a exigir `If-Match` ya son **cinco**, porque `TercerosController.Desbloquear`
   entró en la lista de exentas en el 1.5 (`c69e03c`) con el mismo argumento. Nada en la fase 1 ha
   pedido abrir la ficha de lo bloqueado.
+  **Repasada al cerrar la fase 2: sigue abierta, y eso es la decisión.** Siguen siendo cinco:
+  `git grep -l "public async Task<IActionResult> Desbloquear(" HEAD -- src` encuentra los mismos
+  cinco controladores. Ningún criterio de la fase 2 ha pedido abrir la ficha de lo bloqueado.
 
 - **CERRADO (2026-09-03, en el ítem 1.1) · El presupuesto de tamaño del frontal
   se queda corto — y además mide otra cosa.** Al razonarlo en la puerta de la fase 1 apareció lo que
@@ -24020,6 +24233,9 @@ cuando hace falta el porqué.
   sus dos campos son `unknown` y cada uno pasa por un `typeof` antes de usarse, así que no afirma
   nada que no se mire, y lleva su test (`ElTextoDeUnFallo.test.tsx`). La que afirma una forma sin
   comprobarla sigue siendo una.
+  **Repasada al cerrar la fase 2: sigue abierta, y eso es la decisión.** Los dos `as` son los de
+  siempre, `errores.ts:135` y `traduccion.ts:43`, contados con
+  `grep -rn " as [A-Z]" frontend/src/shared/api frontend/src/shared/sesion`, sin los tests.
 - **CERRADO (2026-09-02) · los identificadores de permiso son la única parte del contrato escrita a
   mano.** `frontend/src/shared/sesion/permisos.ts` lleva las cadenas `organizacion.almacen.ver` y
   `organizacion.empresa.ver` tecleadas. No hay de dónde generarlas: el catálogo de permisos es un
@@ -24113,6 +24329,9 @@ cuando hace falta el porqué.
   formas de la tabla: el primer `grep` dice que el documento no tiene ni un `integer` ni un
   `number` escalar, y el segundo, que ese mismo patrón sí encuentra los escalares que existen. La
   nota sigue abierta, y la decisión no cambia.
+  **Repasada al cerrar la fase 2: sigue abierta, y la decisión no cambia.** Con la cuenta de arriba
+  sobre `08ea605`, las cinco filas de la tabla dan 139, 15, 26, 24 y 104, **308** listas: **154**
+  enteros y **50** números. El primer `grep` sigue en 0, y el segundo da 550.
 - **ANOTADO (2026-09-02) · en Node 25 el `localStorage` del entorno de tests no es el de jsdom.**
   Node 25 define `globalThis.localStorage` como accesor propio (experimental, tras
   `--localstorage-file`) y gana al de jsdom: lo que queda es un objeto pelado, sin `setItem` ni
@@ -24126,6 +24345,8 @@ cuando hace falta el porqué.
   **Repasada al cerrar la fase 1: igual.** La máquina de desarrollo sigue en Node **25.6.1**
   (`node --version`) y la CI en **22** (`node-version: '22'` en `ci.yml`), así que el remiendo de
   `setupTests.ts` sigue haciendo falta aquí.
+  **Repasada al cerrar la fase 2: igual.** Node **25.6.1** aquí (`node --version`) y **22** en la
+  CI (`node-version: '22'` en `ci.yml`).
 - **ARREGLADO (2026-09-02) · el presupuesto de tamaño del frontal ya aprieta.** Estaba en 1024 kB
   con 205 kB de consumo: un margen de cinco veces no señala nada. Con el armazón terminado
   —enrutador, caché de servidor, formularios, validación y cliente generado— el navegador descarga
@@ -24254,6 +24475,10 @@ cuando hace falta el porqué.
   la función para que encaje con la propiedad**, y si la propiedad se pone en rojo, la primera
   pregunta es **qué afirma la propiedad**, no qué falla en el código. Comprobar la licencia de la
   biblioteca antes de adoptarla.
+  **Repasada al cerrar la fase 2: ya no están pendientes.** La primera es
+  `ElSaldoEsLaSumaDelLibroPorPropiedadTests`, del 2.7 (`418184f`), y es la del criterio de la
+  fase 2 en el §15. Lleva un generador propio con una semilla fija, sin biblioteca, así que no
+  hubo licencia que comprobar. Los casos dorados de impuestos siguen siendo de la fase 5.
 - **El servicio de cálculo de impuestos es de la fase de facturación, no del bloque común.** El 0.3
   deja la primitiva (`Importe.Cuota`, un redondeo por par base/tipo) y el **caso dorado** del
   ADR-0005. Criterio de aceptación de aquel servicio: reproducir esa tabla. Si da 10,02 está
