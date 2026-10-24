@@ -130,8 +130,9 @@ export function LineasDelRecuento({
       {/* Con datos, el fallo de volver a leer va encima y no en su lugar. */}
       {fallo}
 
-      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
-      <div className="mt-4 overflow-x-auto">
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
+          recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}
+      <div className="relative mt-4 overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{t('inventario.recuentos.ficha.tabla')}</caption>
           <thead>

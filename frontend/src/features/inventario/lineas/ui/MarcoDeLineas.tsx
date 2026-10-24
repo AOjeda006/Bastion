@@ -101,8 +101,9 @@ export function MarcoDeLineas({
         {t('inventario.lineas.pistaDeLaRejilla')}
       </p>
 
-      {/* La rejilla es más ancha que un móvil: se desplaza ella, y no la página. */}
-      <div className="overflow-x-auto">
+      {/* La rejilla es más ancha que un móvil: se desplaza ella, y no la página. `relative`
+          recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}
+      <div className="relative overflow-x-auto">
         <table className="border-collapse text-sm" aria-describedby="pista-de-la-rejilla">
           <caption className="sr-only">{titulo}</caption>
           <thead>

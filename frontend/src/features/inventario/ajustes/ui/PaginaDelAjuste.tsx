@@ -218,7 +218,9 @@ function Lineas({ ajuste }: { ajuste: Ajuste }): React.JSX.Element {
         {!conValor && ` ${t('inventario.ajustes.ficha.notaDelBorrador')}`}
       </p>
 
-      <div className="mt-2 overflow-x-auto">
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
+          recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}
+      <div className="relative mt-2 overflow-x-auto">
         <table className="min-w-full border-collapse text-sm">
           <caption className="sr-only">{t('inventario.ajustes.ficha.tabla')}</caption>
           <thead>

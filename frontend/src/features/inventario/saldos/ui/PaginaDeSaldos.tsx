@@ -127,8 +127,9 @@ function Contenido({
 
   return (
     <>
-      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). */}
-      <div className="mt-4 overflow-x-auto">
+      {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
+          recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}
+      <div className="relative mt-4 overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           {/* El día es el que contestó el servidor, no el del campo: sin fecha, contesta su hoy. */}
           <caption className="pb-2 text-left font-medium">

@@ -162,8 +162,9 @@ function Contenido({
   return (
     <>
       {/* Con dos almacenes y dos fechas, la tabla es más ancha que un móvil: se desplaza ella, y
-          no la página (WCAG 1.4.10, ADR-0068 §8). */}
-      <div className="mt-4 overflow-x-auto">
+          no la página (WCAG 1.4.10, ADR-0068 §8). Con `relative`, también lo que va en absoluto,
+          como un `sr-only`, que si no la empuja (ítem 2.20). */}
+      <div className="relative mt-4 overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{t('inventario.transferencias.tabla')}</caption>
           <thead>

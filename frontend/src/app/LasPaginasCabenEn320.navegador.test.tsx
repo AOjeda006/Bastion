@@ -31,6 +31,15 @@ type Esquemas = components['schemas'];
  * se le quitara el contenedor. Así que los datos de aquí son largos a propósito, como los de una
  * empresa de verdad: códigos que no se parten, descripciones de catálogo y nombres de población.
  * Ninguno es de nadie; los NIF se han fabricado con el algoritmo, como los de `pruebas/datos.ts`.
+ *
+ * **Y lo que va en absoluto dentro de la tabla corre con ella.** Un `sr-only` es `position:
+ * absolute`, y una caja con `overflow` solo recorta lo absoluto si es su bloque contenedor o lo
+ * contiene. Sin `relative` en el contenedor, el rótulo oculto de la última columna de `/tarifas` se
+ * quedaba en su sitio, a la derecha de la tabla, y empujaba la página: 322 px en la CI, con las
+ * fuentes de Linux (run 40064764889), y 320 aquí, con las de Windows. Lo que depende de la fuente
+ * no se mide con los datos. Por eso cada tabla lleva una sonda: un `sr-only` en su última celda,
+ * con la tabla a 2000 px, que no puede mover la página; y su pareja, con el contenedor sin
+ * posición, que sí la mueve, y que el diagnóstico tiene que nombrar.
  */
 
 const ANCHO = 320;
@@ -525,15 +534,28 @@ function recortaLoDeDentro(elemento: Element): boolean {
 /**
  * Lo que pasa del borde de la ventana, solo lo más hondo de cada rama, para que el rojo diga qué
  * es. Lo que está dentro de una caja que lo recorta no cuenta: corre ella, y no la página.
+ *
+ * **Lo absoluto solo lo recorta su cadena de bloques contenedores**: la primera caja con posición
+ * por encima, y las que la contienen. Las de en medio, aunque lleven `overflow`, lo dejan salir.
+ * Contarlas como recorte es lo que dejó vacío el rojo de `/tarifas` en el run 40064764889.
  */
 function loQueSeSale(): string[] {
   const fuera = (elemento: Element): boolean =>
     elemento.getBoundingClientRect().right > ANCHO + 0.5;
   const recortado = (elemento: Element): boolean => {
+    let posicion = getComputedStyle(elemento).position;
     for (let caja = elemento.parentElement; caja !== null; caja = caja.parentElement) {
+      if (posicion === 'fixed') {
+        return false;
+      }
+      const estilo = getComputedStyle(caja);
+      if (posicion === 'absolute' && estilo.position === 'static') {
+        continue;
+      }
       if (recortaLoDeDentro(caja)) {
         return true;
       }
+      posicion = estilo.position;
     }
     return false;
   };
@@ -581,7 +603,25 @@ describe(`Las páginas a ${String(ANCHO)} px`, () => {
         contenedor.style.overflowX = 'visible';
         const sinContenedor = anchoDeLaPagina();
         contenedor.style.overflowX = '';
-        return { desplaza, sinContenedor };
+
+        // La sonda, al fondo de una tabla que no cabe con ninguna fuente.
+        const ultima = tabla.querySelector('tr > :last-child');
+        if (ultima === null) {
+          throw new Error(`${ruta}: una tabla sin celdas no tiene dónde poner la sonda`);
+        }
+        const sonda = document.createElement('span');
+        sonda.className = 'sr-only';
+        sonda.textContent = 'sonda';
+        ultima.append(sonda);
+        tabla.style.width = '2000px';
+        const conSonda = anchoDeLaPagina();
+        contenedor.style.position = 'static';
+        const sinPosicion = { ancho: anchoDeLaPagina(), seSale: loQueSeSale().join('; ') };
+        contenedor.style.position = '';
+        tabla.style.width = '';
+        sonda.remove();
+
+        return { desplaza, sinContenedor, conSonda, sinPosicion };
       });
 
       expect(anchoDeLaPagina(), `${ruta} se sale: ${loQueSeSale().join('; ')}`).toBe(ANCHO);
@@ -589,6 +629,16 @@ describe(`Las páginas a ${String(ANCHO)} px`, () => {
         expect(medida.desplaza, `${ruta}: el contenedor de la tabla no corre`).toBe('auto');
         expect(medida.sinContenedor, `${ruta}: sin el contenedor, la página cabe`).toBeGreaterThan(
           ANCHO,
+        );
+        expect(medida.conSonda, `${ruta}: lo que va en absoluto en la tabla empuja la página`).toBe(
+          ANCHO,
+        );
+        expect(
+          medida.sinPosicion.ancho,
+          `${ruta}: sin posición en el contenedor, la sonda no llega a mover la página`,
+        ).toBeGreaterThan(ANCHO);
+        expect(medida.sinPosicion.seSale, `${ruta}: el diagnóstico no nombra la sonda`).toContain(
+          '«sonda»',
         );
       }
     });
