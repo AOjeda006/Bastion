@@ -185,6 +185,11 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// medias.
 /// </para>
 /// <para>
+/// <b>Y los dos bordes de un mes</b> (ítem 2.20). Dos de cada tres claves nuevas antes del corte van
+/// al día 1 de su mes o al último, y al final cada semilla tiene en el libro un movimiento en cada
+/// uno de los dos: sin ellos, un mes leído con un día de menos por un lado o por el otro sale verde.
+/// </para>
+/// <para>
 /// <b>El modelo no conoce los identificadores del sistema.</b> Para el modelo, cada lote y cada
 /// serie es su código, y les da un identificador propio. Lo que se lee de la base se traduce con las
 /// tablas de los lotes y de las series, y esas tablas tienen que tener exactamente lo que el libro
@@ -601,6 +606,16 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         // el saldo con el corte a medio camino no lo habría mirado nadie.
         secuencia.SaldosConElCorteAMedias.ShouldBeGreaterThan(
             0, "ninguna lectura del saldo ha caído con el corte a mitad de una puesta al día\n" + secuencia.Relato());
+
+        // Y LOS DOS BORDES DE UN MES, EN EL LIBRO (ítem 2.20): sin un movimiento el día 1 y otro el
+        // último día de su mes, el libro de un mes leído con un día de menos por cualquiera de los dos
+        // lados sale verde por no tener nada que perder.
+        secuencia.Libro.ShouldContain(
+            apunte => apunte.Fecha.Day == 1, "ningún movimiento el primer día de un mes\n" + secuencia.Relato());
+
+        secuencia.Libro.ShouldContain(
+            apunte => apunte.Fecha.AddDays(1).Day == 1,
+            "ningún movimiento el último día de un mes\n" + secuencia.Relato());
 
         secuencia.Clases.ShouldBe(s_clasesDePaso, ignoreOrder: true, customMessage: secuencia.Relato());
     }
@@ -2801,6 +2816,13 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// par a hoy, así que casi todas las que salen son de las primeras vueltas, o de B.
     /// </para>
     /// <para>
+    /// <b>Y dos de cada tres, en un borde de su mes</b> (ítem 2.20): el día 1 o el último. El libro de
+    /// un mes va de uno al otro, y sin este empujón no caía nada en ninguno de los dos. Lo midió la
+    /// tanda del 2.18: entre 241 y 288 movimientos por semilla, en solo 3 a 14 fechas y ninguno en día
+    /// 1, porque casi todos son de hoy. Así, leer el libro de un mes desde el día 2, la 656, salía
+    /// verde aquí. Va en este paso porque es el que ya busca una fecha de un mes pasado.
+    /// </para>
+    /// <para>
     /// <b>Sin un corte posterior al mes de la fecha, el paso lo pone</b> con un recálculo, a un mes
     /// al azar entre el siguiente y este. Con el corte en el mes de la fecha, la serie de meses tendría
     /// uno, y empezar en el corte o en el mes del movimiento daría lo mismo.
@@ -2836,8 +2858,19 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
         }
 
         (int indice, DateOnly desde) = huecos[fechas.Next(huecos.Length)];
-        DateOnly fecha = desde.AddDays(fechas.Next(finDelMesPasado.DayNumber - desde.DayNumber + 1));
-        DateOnly suMes = LasExistencias.MesDe(fecha);
+        DateOnly sorteada = desde.AddDays(fechas.Next(finDelMesPasado.DayNumber - desde.DayNumber + 1));
+        DateOnly suMes = LasExistencias.MesDe(sorteada);
+        DateOnly elUltimoDelMes = suMes.AddMonths(1).AddDays(-1);
+
+        // EL PRIMER DÍA DE SU MES O EL ÚLTIMO, DOS DE CADA TRES (ítem 2.20): la primera clave nueva va
+        // al día 1, si el último movimiento de su par lo deja, y si no, al último; la segunda, al
+        // último, y la tercera se queda donde cayó. Sin tocar el azar, como el coste.
+        DateOnly fecha = (secuencia.ClavesNuevas % 3) switch
+        {
+            0 when suMes >= desde => suMes,
+            0 or 1 => elUltimoDelMes,
+            _ => sorteada,
+        };
 
         if (!(secuencia.Corte > suMes))
         {
