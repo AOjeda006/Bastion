@@ -49,7 +49,7 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// </para>
 /// <para>
 /// <b>Semillas: el fichero entero es del 440 al 459, del 858 al 865, y la 873, la 874, la 875, la
-/// 899 y la 900.</b> Las empresas, del 440 al 449; los maestros de instalación, del 450 al 459. El
+/// 899, la 900 y la 923.</b> Las empresas, del 440 al 449; los maestros de instalación, del 450 al 459. El
 /// caso de las dos empresas se lleva la 447 y la 448, y la 457 y la 458; el de las dos salidas del
 /// ítem 2.8, la 449 y la 459. Los tres del cerrojo de la empresa, del 2.14, del 858 al 862, empresa
 /// y maestros con el mismo número: el bloque estaba libre, y lo dice <c>LasReservasTests</c>. Los
@@ -59,6 +59,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// la 875, la 899 y la 900, también del mismo modo: la 875 y la 899 son las dos que el bloque del
 /// 2.17 dejó libres a sus lados, y la 900, la primera detrás del bloque que <c>LasReservasTests</c>
 /// buscó libre, del 830 al 899. Del 901 al 905 son de la importación, que lleva delante 33 000 000.
+/// El del JIT del 2.20, la 923, del mismo modo: la primera libre detrás del bloque del 2.19, que
+/// acaba en la 922.
 /// </para>
 /// <para>
 /// <b>El cerrojo de las instantáneas es de la empresa desde el 2.14</b> (ADR-0063 §5 y §6), y tiene
@@ -85,7 +87,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// Los casos lo llaman como el trabajo: mes a mes hasta que el corte llega, en un solo ámbito, y el
 /// cuadre de lo pendiente después. Uno mete una clave nueva entre dos meses de una puesta al día,
 /// otro rompe un cuadre a medias y lo sigue en la vuelta siguiente, y el último cruza un recálculo
-/// con un cuadre, que no anota lo que comparó.
+/// con un cuadre, que no anota lo que comparó. Desde el 2.20, uno más mira que cada mes del cuadre
+/// se lea sin el JIT del motor, y que la marca lo encuentre como estaba.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -1444,6 +1447,68 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         (await CuadradoHastaAsync(caso.EmpresaId)).ShouldBe(elQueToca);
     }
 
+    /// <summary>
+    /// El cuadre de lo pendiente lee cada mes sin el JIT del motor, y la marca, que va fuera de la
+    /// foto, lo encuentra como lo tiene la conexión (ítem 2.20, ADR-0067).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Lo mira un interceptor en el contexto del cuadre</b>, que antes de cada orden pregunta al
+    /// motor cómo tiene el JIT, por la misma conexión y en la misma transacción: cada lectura, dentro
+    /// de la foto de su mes, y cada marca, fuera. Cuenta las dos, porque un selector que no
+    /// encontrara nada dejaría las listas vacías, y el caso las afirma enteras.
+    /// </para>
+    /// <para>
+    /// <b>La marca es la pareja</b>: el sitio donde el JIT sigue encendido, porque el motor del
+    /// contenedor lo tiene así por omisión. Sin ella, un motor con el JIT apagado de fábrica daría las
+    /// lecturas apagadas sin que el cuadre hiciera nada. <b>Y la conexión se abre antes</b>, para que
+    /// EF no la cierre entre una orden y la siguiente: cerrada, el grupo de Npgsql la devuelve con
+    /// <c>DISCARD ALL</c>, y un <c>SET</c> sin <c>LOCAL</c> que se saliera de la foto no se vería.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task El_cuadre_lee_cada_mes_sin_jit_y_la_marca_lo_encuentra_como_lo_tiene_la_conexion()
+    {
+        ElAlmacenDelCaso caso =
+            await UnAlmacenAsync(923, "EXI-BC", 923, ubicaciones: 2, conElAnioPasado: true);
+
+        int pasado = Hoy.Year - 1;
+        DateOnly marzo = new(pasado, 3, 1);
+        DateOnly elQueToca = LasExistencias.MesDe(Hoy).AddMonths(-1);
+
+        await using (ElModuloDeInventario modulo = new(postgres, caso.EmpresaId))
+        {
+            await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 3, 10), new Linea(0, 5m));
+            await ConfirmarAsync(modulo, caso, new DateOnly(pasado, 7, 20), new Linea(1, 7m));
+        }
+
+        (await AvanzarAsync(caso.EmpresaId, elQueToca)).ShouldNotBeEmpty();
+
+        ElJitDeCadaOrden jit = new();
+        CuadreDeLoPendiente? cuadrado;
+
+        await using (InventarioDbContext contexto = ElContextoCon(caso.EmpresaId, jit))
+        {
+            await contexto.Database.OpenConnectionAsync();
+
+            cuadrado = await new ElCuadreDeLasExistencias(contexto, TimeProvider.System)
+                .CuadrarLoPendienteAsync(caso.EmpresaId, CancellationToken.None);
+        }
+
+        CuadreDeLoPendiente cuadre = cuadrado.ShouldNotBeNull("quedaba todo por cuadrar");
+
+        (cuadre.Desde, cuadre.Hasta).ShouldBe((marzo, elQueToca));
+        cuadre.Cuadre.Descuadres.ShouldBeEmpty();
+
+        int meses = ((elQueToca.Year - pasado) * 12) + elQueToca.Month - 3 + 1;
+
+        jit.Marcas.ShouldBe(
+            Enumerable.Repeat("on", meses), "una marca por mes, fuera de la foto, con el JIT de la conexión");
+        jit.Lecturas.Count.ShouldBe(
+            (2 * meses) + 1, "el corte y el mes en cada foto, y en la primera, el primer mes por cuadrar");
+        jit.Lecturas.ShouldAllBe(ajuste => ajuste == "off", "cada lectura del cuadre va sin JIT");
+    }
+
     [Fact]
     public async Task Las_empresas_del_avance_son_las_que_tienen_existencias_cada_una_una_vez()
     {
@@ -2124,6 +2189,60 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             }
 
             return await base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Pregunta al motor cómo tiene el JIT antes de cada orden del cuadre, por la misma conexión y en
+    /// la misma transacción que ella: las lecturas, por un lado, y las marcas, por otro.
+    /// </summary>
+    /// <remarks>
+    /// La pregunta va por una orden de ADO.NET, que no pasa por los interceptores de EF, así que no se
+    /// mira a sí misma. Las órdenes que no devuelven filas y no son la marca, como la que apaga el JIT,
+    /// no se miran.
+    /// </remarks>
+    private sealed class ElJitDeCadaOrden : DbCommandInterceptor
+    {
+        /// <summary>El JIT de cada lectura, en el orden en que llegaron.</summary>
+        internal List<string> Lecturas { get; } = [];
+
+        /// <summary>El JIT de cada marca, en el orden en que llegaron.</summary>
+        internal List<string> Marcas { get; } = [];
+
+        /// <inheritdoc/>
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Lecturas.Add(await ElJitDeAsync(command, cancellationToken));
+
+            return await base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains("SET cuadrado_hasta", StringComparison.Ordinal))
+            {
+                Marcas.Add(await ElJitDeAsync(command, cancellationToken));
+            }
+
+            return await base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
+        }
+
+        private static async Task<string> ElJitDeAsync(DbCommand orden, CancellationToken cancelacion)
+        {
+            await using DbCommand pregunta = orden.Connection!.CreateCommand();
+            pregunta.Transaction = orden.Transaction;
+            pregunta.CommandText = "SELECT current_setting('jit')";
+
+            return (string)(await pregunta.ExecuteScalarAsync(cancelacion))!;
         }
     }
 

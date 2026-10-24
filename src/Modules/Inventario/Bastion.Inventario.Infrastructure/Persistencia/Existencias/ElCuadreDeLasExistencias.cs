@@ -527,6 +527,23 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
         WHERE c.empresa_id = {0} AND c.xmin::text::bigint = {2}
         """;
 
+    /// <summary>Apaga el JIT del motor en la transacción de un mes del cuadre, y solo en ella.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El mes del corte pagaba la compilación, y no la lectura</b> (ADR-0067, <i>Lo que no
+    /// cubre</i>). Su plan cuesta más que el umbral de optimización del JIT, 500 000 por omisión, y en
+    /// las empresas B y C del 2.18 el motor compilaba 1 252 y 1 345 funciones en 6,2 y 6,7 s, para
+    /// una lectura que sin JIT tardaba 0,4 y 3,0 s. Lo que compila depende de lo grande que es el
+    /// plan, y no de las filas que lee, así que no se amortiza con empresas más grandes.
+    /// </para>
+    /// <para>
+    /// <b><c>LOCAL</c>, para que no salga de la foto</b>: con su <c>COMMIT</c>, la conexión vuelve
+    /// al JIT que tenía, y la marca, que va fuera, y lo que venga después en la misma conexión lo
+    /// encuentran como estaba. Ninguna otra sentencia del proyecto lo pierde.
+    /// </para>
+    /// </remarks>
+    internal const string SqlSinJit = "SET LOCAL jit = off";
+
     /// <summary>Cuadra una empresa entera, de una vez.</summary>
     /// <remarks>
     /// No mira ni anota hasta dónde está cuadrada, y vale dentro de la transacción de quien lo llama:
@@ -568,6 +585,10 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
     /// fila del corte primero y el mes después, con la misma foto: lo comparado es el corte que se
     /// leyó, y no uno que haya movido otro entre las dos sentencias. La marca va fuera, con la
     /// versión de esa fila (<see cref="SqlDeLaMarca"/>).
+    /// </para>
+    /// <para>
+    /// <b>Y sin el JIT del motor</b>, desde el 2.20 (<see cref="SqlSinJit"/>): lo primero de cada
+    /// foto lo apaga, y su <c>COMMIT</c> lo devuelve.
     /// </para>
     /// <para>
     /// <b>No toma el cerrojo de las instantáneas</b>: solo lee, y lo que lo protege de un paso del
@@ -623,6 +644,8 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
         await using IDbContextTransaction foto = await contexto.Database
             .BeginTransactionAsync(IsolationLevel.RepeatableRead, cancelacion)
             .ConfigureAwait(false);
+
+        await contexto.Database.ExecuteSqlRawAsync(SqlSinJit, cancelacion).ConfigureAwait(false);
 
         FilaDelCorte? corte = (await contexto.Database
                 .SqlQueryRaw<FilaDelCorte>(SqlDelCorteYSuVersion, empresaId)

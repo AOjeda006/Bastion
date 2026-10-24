@@ -700,7 +700,8 @@ public sealed class ElCensoDeEsteCarrilTests
         // recálculo espera a la confirmación en vuelo; y dos empresas no se mezclan en ninguna de
         // las sentencias crudas. Y del 2.18 (ADR-0067): el avance un mes cada vez, una clave nueva
         // que entra entre dos meses de una puesta al día, un cuadre que falla a medias y sigue en la
-        // vuelta siguiente, y uno que se cruza con un recálculo y no anota lo que comparó.
+        // vuelta siguiente, y uno que se cruza con un recálculo y no anota lo que comparó. Y del
+        // 2.20: cada mes del cuadre se lee sin el JIT del motor.
         "LasExistenciasSonLaSumaDelLibroTests.Anotar_el_libro_sin_transaccion_sin_inquilino_o_con_filas_de_otra_empresa_revienta",
         "LasExistenciasSonLaSumaDelLibroTests.Borrar_las_instantaneas_y_recalcularlas_no_cambia_ningun_numero",
         "LasExistenciasSonLaSumaDelLibroTests.Dos_confirmaciones_a_la_vez_sobre_la_misma_clave_suman_las_dos",
@@ -711,6 +712,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExistenciasSonLaSumaDelLibroTests.El_avance_pone_el_corte_un_mes_cada_vez_y_no_rehace_lo_que_ya_llega",
         "LasExistenciasSonLaSumaDelLibroTests.El_corte_de_cada_empresa_es_su_mes_y_el_primer_movimiento_solo_lo_lleva_la_que_no_tiene",
         "LasExistenciasSonLaSumaDelLibroTests.El_cuadre_encuentra_cada_copia_que_no_dice_lo_que_el_libro",
+        "LasExistenciasSonLaSumaDelLibroTests.El_cuadre_lee_cada_mes_sin_jit_y_la_marca_lo_encuentra_como_lo_tiene_la_conexion",
         "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_de_una_empresa_no_frena_las_confirmaciones_de_otra",
         "LasExistenciasSonLaSumaDelLibroTests.El_recalculo_espera_a_la_confirmacion_de_una_clave_nueva_que_ya_estaba_dentro",
         "LasExistenciasSonLaSumaDelLibroTests.La_confirmacion_de_una_clave_nueva_espera_al_recalculo_de_su_empresa",
