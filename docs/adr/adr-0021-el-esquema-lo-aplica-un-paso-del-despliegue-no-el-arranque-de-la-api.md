@@ -8,7 +8,9 @@ revisado: 2026-09-02
 
 # ADR-0021: El esquema lo aplica un paso del despliegue, no el arranque de la API
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Ampliado por el [ADR-0035](adr-0035-el-rol-del-sistema-lleva-el-catalogo-desplegado-y-el-arranque-se-prueba-arrancando.md)**:
+  el migrador, además de migrar, pone al día los permisos del rol del sistema. La anotación es
+  del 2026-10-26: el ADR-0035 lo declaraba y este no lo decía.
 - **Fecha:** 2026-09-02
 - **Relacionado:** cierra la deuda más antigua de la fase 0, abierta el 26 de agosto con el ítem
   0.4. Condiciona todos los entornos de aquí en adelante.
@@ -70,6 +72,11 @@ api:
 
 **La API no migra nunca al arrancar.** Con `--migrar` migra y sale; sin él, ni mira si hay
 migraciones pendientes.
+
+> **Ampliado por el ADR-0035 (2026-09-16).** El migrador ya no solo migra: después de las
+> migraciones pone los permisos del rol del sistema al día con el catálogo de la versión
+> desplegada, por lo mismo que aquí se saca la migración del arranque, porque con dos réplicas
+> lo haría la que arrancase primero. En el primer arranque no hay rol que alinear, y lo dice.
 
 Cuatro detalles que forman parte de la decisión:
 

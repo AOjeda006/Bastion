@@ -60,6 +60,11 @@ genérico **y el identificador de traza que el `ProblemDetails` ya lleva**. Eso 
 una consulta directa a la telemetría, que es exactamente para lo que la convención pide que el
 identificador viaje en el error.
 
+> **Ampliado por el ADR-0063 (2026-10-13), punto 9.** Hay un cuarto caso: los textos de los `type`
+> viven en un módulo por idioma que llega después del arranque, y quien traduce un `type` antes de
+> que llegue dice el genérico por código de estado, sin la traza, porque no es un `type`
+> desconocido. Se vuelve a pintar cuando el módulo llega.
+
 ### Lo que esta decisión NO cubre
 
 **Los errores por campo son otra cosa y ya están resueltos.** Ahí el servidor nombra el **campo**

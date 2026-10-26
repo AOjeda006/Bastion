@@ -48,6 +48,11 @@ perdido entero sin que ningún paso se pusiera rojo.
 
 ### 1. Arranque = lo que el índice referencia **más** lo declarado
 
+> **Ampliado por el ADR-0063 (2026-10-13), punto 9.** Hay un segundo grupo declarado, el del
+> fragmento de los textos de los `type`, uno por idioma, que tiene que existir y **no** se cuenta
+> en el arranque. Si los textos vuelven al diccionario, o algo del arranque importa el módulo, el
+> fragmento desaparece y el paso se pone rojo.
+
 ```text
 arranque = index.html
          + lo que index.html referencia (entrada, hoja de estilo, modulepreload)

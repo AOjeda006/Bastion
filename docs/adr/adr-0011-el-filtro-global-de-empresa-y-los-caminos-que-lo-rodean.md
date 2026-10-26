@@ -8,7 +8,9 @@ tags: [adr, r8, multiempresa, query-filters, ef-core, 404, fail-closed]
 
 # ADR-0011: El filtro global de empresa, y los caminos que lo rodean
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Ampliado por el [ADR-0016](adr-0016-el-bloqueo-es-uno-tapa-a-las-tres-y-la-direccion-deja-de-fingir-identidad.md)**
+  en el §2 y el §4: hay un segundo filtro global, el del bloqueo, con la misma forma. La
+  anotación es del 2026-10-26: el ADR-0016 lo declaraba y este no lo decía.
 - **Fecha:** 2026-08-27
 
 ## Contexto
@@ -46,6 +48,10 @@ Que no falte ninguna no lo garantiza la buena voluntad: lo garantiza
 dos sentidos, contra esta misma lista.
 
 ## 2. Falla cerrado: «sin inquilino» no degrada a «sin filtro»
+
+> **Ampliado por el ADR-0016 (2026-08-31).** El ámbito explícito tiene un hermano para el segundo
+> filtro global, `"Bloqueo"`: `ViendoLoBloqueado`, con su motivo, su rastro en el registro y la
+> lista cerrada de sitios donde se abre, igual que `SinInquilino`.
 
 `IInquilinoActual.EmpresaDelFiltro` **lanza** `FaltaLaEmpresaActivaException` cuando no hay empresa
 activa. No devuelve nulo, ni `Guid.Empty`, ni se salta el filtro: las tres serían un valor por
@@ -108,6 +114,10 @@ distinguiría —se comprobó por mutación y salieron verdes—. El tercero reu
 instancia de contexto con dos empresas, que es lo que haría la agrupación, y ese sí lo distingue.
 
 ## 4. Los caminos que rodean el filtro
+
+> **Ampliado por el ADR-0016 (2026-08-31).** Desde el ítem 0.10 hay dos filtros globales, y
+> `IgnoreQueryFilters()` apaga los dos a la vez. Quien lo escribiera para ver una fila bloqueada
+> abriría de paso el de empresa, así que la prohibición de la tabla tiene un motivo más.
 
 Un filtro de consulta protege lo que pasa por el traductor de consultas y nada más. La lista es
 corta, es conocida, y cada línea tiene un test que la ejerce o una prohibición comprobada. Un camino

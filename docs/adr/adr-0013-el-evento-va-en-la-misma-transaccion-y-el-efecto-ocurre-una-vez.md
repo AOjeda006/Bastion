@@ -8,7 +8,10 @@ revisado: 2026-08-29
 
 # ADR-0013: El evento va en la misma transacción que el cambio, y su efecto ocurre una sola vez
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el [ADR-0040](adr-0040-el-numero-lo-toma-una-sentencia-en-el-esquema-de-otro-modulo.md)**
+  en sus dos frases cerradas, la del contexto y la del §5: el «único camino» tiene dos
+  excepciones, y el criterio que decide una tercera es del ADR-0040. La anotación es del
+  2026-10-26: el ADR-0040 lo declaraba y este no lo decía.
 - **Fecha:** 2026-08-29
 
 ## Contexto
@@ -23,6 +26,11 @@ aquí, «Contabilidad se entera de que se emitió una factura» es una fila de e
 decida mal se decide para los dieciséis módulos, y el síntoma de casi todos los fallos posibles es
 el mismo: **no hay error que mirar**. Un evento perdido no lanza nada; un efecto duplicado tampoco.
 Por eso la forma de probar cada cláusula importa tanto como la cláusula.
+
+> **Enmendado por el ADR-0040 (2026-09-19).** La bandeja ya no es el único camino. La sentencia
+> que numera escribe en `organizacion.contadores_de_serie` desde el contexto del módulo del
+> documento, en la misma transacción y sin pasar por aquí. El ADR-0040 §2 escribe el criterio de
+> cuatro cláusulas que tiene que cumplir cualquier otra excepción.
 
 ## 1. El evento entra en el mismo `SaveChanges` que el cambio
 
@@ -148,6 +156,11 @@ vuelve en la siguiente.
    consumidor serializado. Repartir hoy la cola entre varios lectores haría imposible mañana ese
    consumidor sin rehacer el mecanismo. Un lector único ordenado ya es la forma que la R15 va a
    necesitar.
+
+> **Enmendado por el ADR-0040 (2026-09-19).** El párrafo siguiente dice «una», y desde el ítem 2.4
+> son dos: `NumeradorDeSerie.cs` entra en la misma lista cerrada, con su motivo. El argumento de
+> este fichero no le sirve, porque aquella sentencia sí lee una tabla con `empresa_id`, así que
+> trae el suyo, el criterio del ADR-0040 §2.
 
 **La excepción a la prohibición de SQL crudo del 0.6: una, nombrada, por su ruta, y con su motivo.**
 `CerrojoDeLaBandeja.cs` está listado en `ElFiltroNoSeSaltaPorAhiTests` y no se extiende a nada más.

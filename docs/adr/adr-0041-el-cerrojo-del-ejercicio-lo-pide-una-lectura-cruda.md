@@ -62,6 +62,9 @@ el borrador sí nace, y se queda en borrador hasta que haya un periodo que lo ad
 
 ### 2. Compartido al confirmar, exclusivo al cerrar, y el estado en la misma lectura
 
+> **Ampliado por el ADR-0042 (2026-09-26).** El exclusivo no es solo el de cerrar: lo toman
+> también mover y borrar un ejercicio, con la misma lectura que trae el estado y el cerrojo.
+
 La sentencia de confirmar toma `FOR SHARE` sobre la fila del ejercicio que comprende la fecha; la de
 cerrar toma `FOR UPDATE` sobre la fila del ejercicio que se cierra. **Las dos traen el estado en la
 misma lectura que pide el cerrojo**, y eso es lo que hace que la lectura no se pueda quedar vieja:
@@ -191,6 +194,10 @@ anulaba no puso nada rojo; el caso que la cubre
 (`Anular_con_hoy_fuera_de_todo_ejercicio_no_escribe_el_inverso`) salió de ahí.
 
 ### 8. El orden dentro del cierre compra el error correcto, no la seguridad
+
+> **Ampliado por el ADR-0042 (2026-09-26).** Lo que este punto dice vale para cerrar, y no para
+> mover ni para borrar. En esos dos, tomar el cerrojo antes de leer compra la seguridad, y el
+> ADR-0042 explica por qué la diferencia no es un matiz.
 
 Cerrar toma el cerrojo **antes** de leer el ejercicio por el ORM. Invertirlo no pone roja ninguna
 prueba, y está medido: la R11 lo recoge por detrás —la entidad leída antes del cerrojo trae un

@@ -108,6 +108,18 @@ public sealed class LasReglasDeEsteCarrilTests
         "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.El_barrido_encuentra_los_ADR_del_repositorio",
         "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.Ningun_numero_de_ADR_lo_llevan_dos_ficheros",
 
+        // Lo que un ADR enmienda o amplía, el otro lo anota en su Estado y en el punto (ítem 3.1).
+        // También nace de haberla incumplido: cinco enmiendas estaban solo en un lado, y otras
+        // tres no tenían nota en el punto que cambiaban.
+        "UnaEnmiendaSeAnotaEnLosDosAdrTests.Cada_enmienda_apunta_a_un_ADR_que_existe",
+        "UnaEnmiendaSeAnotaEnLosDosAdrTests.Cada_enmienda_nombra_lo_que_enmienda",
+        "UnaEnmiendaSeAnotaEnLosDosAdrTests.El_barrido_ve_las_enmiendas_y_la_pareja_anotada_en_los_dos_lados",
+        "UnaEnmiendaSeAnotaEnLosDosAdrTests.El_enmendado_anota_en_su_estado_quien_lo_enmienda",
+        "UnaEnmiendaSeAnotaEnLosDosAdrTests.El_enmendado_lleva_la_nota_en_el_punto_que_cambia",
+        "UnaEnmiendaSeAnotaEnLosDosAdrTests.Lo_que_anota_un_estado_lo_declara_quien_enmienda",
+        "UnaEnmiendaSeAnotaEnLosDosAdrTests.Ninguna_mencion_de_una_enmienda_queda_sin_clasificar",
+        "UnaEnmiendaSeAnotaEnLosDosAdrTests.Una_enmienda_que_el_enmendado_no_anota_se_ve",
+
         // Las diecisiete reglas duras del §6, con su estado, y el repositorio: la tabla nombra
         // las diecisiete, lo que nombra existe, y toda regla citada tiene fila (ítem 1.13). Lo
         // que no puede mirar —que el enunciado sea el del plan maestro— lo dice la tabla.

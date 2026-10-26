@@ -8,7 +8,9 @@ tags: [adr, esquema, multiempresa, direcciones, bloqueo, numeracion, migraciones
 
 # ADR-0007: Lo irreversible del esquema de Organización
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el [ADR-0039](adr-0039-el-contador-de-una-serie-no-cabe-en-la-fila-que-lleva-el-etag.md)**
+  en el §5: el contador sigue siendo una columna y no una secuencia, pero vive en otra fila. La
+  anotación es del 2026-10-26: el ADR-0039 lo declaraba y este no lo decía.
 - **Fecha:** 2026-08-26
 
 ## Contexto
@@ -111,6 +113,12 @@ La regla, para no volver a discutirla: *si la respuesta a «¿cuándo?» es una 
 es `date`; si es un punto en la línea del tiempo, es `timestamptz`.*
 
 ### 5. El contador de una serie es una columna, jamás una secuencia de PostgreSQL
+
+> **Enmendado por el ADR-0039 (2026-09-19).** Caen la primera frase y la última. El contador ya no
+> está en `series`, sino en `organizacion.contadores_de_serie`, una fila por serie que nace con
+> ella, y `Serie.RegistrarNumeroAsignado` se borra, porque ningún otro módulo podía llamarlo.
+> `SePuedeSuprimir` sigue siendo `Contador == 0`, porque la fila hija se carga siempre con la
+> serie. Sigue en pie lo que el punto decide: una columna de una fila, nunca una secuencia.
 
 `series.contador` es un `bigint` de la fila, y se sube llamando a `Serie.RegistrarNumeroAsignado`.
 

@@ -9,7 +9,11 @@ revisado: 2026-09-19
 # ADR-0040: El número lo toma una sentencia en el esquema de otro módulo, y esa es la segunda excepción al «único camino»
 
 - **Estado:** aceptado, con la **cláusula 2 del criterio enmendada** por el [ADR-0041](adr-0041-el-cerrojo-del-ejercicio-lo-pide-una-lectura-cruda.md) y el criterio
-  **ampliado al esquema propio** por el [ADR-0044](adr-0044-la-existencia-se-mueve-en-la-sentencia-que-anota-el-libro.md)
+  **ampliado al esquema propio** por el [ADR-0044](adr-0044-la-existencia-se-mueve-en-la-sentencia-que-anota-el-libro.md).
+  **Ampliado por el [ADR-0043](adr-0043-el-numerador-mira-el-tipo-y-el-ejercicio-de-la-serie.md)**
+  en el §4 y el §5: la sentencia comprueba también el tipo y el ejercicio de la serie, con un
+  código por cláusula. Esta última anotación es del 2026-10-26: el ADR-0043 lo declaraba y este
+  no lo decía.
 - **Fecha:** 2026-09-19
 - **Enmienda el [ADR-0013](adr-0013-el-evento-va-en-la-misma-transaccion-y-el-efecto-ocurre-una-vez.md)**
   en sus dos frases cerradas: «la bandeja de salida es el único camino por el que un módulo escribe
@@ -119,6 +123,11 @@ un error de sintaxis **en ejecución**, o sea en el humo o en producción, no al
 
 ### 4. El `WHERE` es la regla, y por eso no hay guardas de entrada que lo imiten
 
+> **Ampliado por el ADR-0043 (2026-09-26).** El `WHERE` lleva cinco cláusulas y no tres: la serie
+> tiene que ser también del tipo del documento, y su ejercicio tiene que comprender la fecha.
+> Cae el último párrafo: el tipo sí está en el `WHERE`, y cada módulo dice el suyo. Sigue en pie
+> lo que el punto decide: la condición y el efecto son la misma sentencia, sin guarda de entrada.
+
 Tres cláusulas sobre `organizacion.series`, y ninguna es el tipo de documento: la serie existe, es
 de esta empresa, y su estado es `Activa`. Las dos últimas sustituyen a las dos guardas que se
 fueron con `Serie.RegistrarNumeroAsignado`.
@@ -138,6 +147,11 @@ demuestra —`ElCerrojoDeLaNumeracionTests.Una_serie_numera_sin_huecos_sea_cual_
 recorre todos los valores de `TipoDeDocumento` sin nombrar ninguno.
 
 ### 5. Ninguna fila devuelta es un fallo, y los tres motivos dan el mismo error
+
+> **Ampliado por el ADR-0043 (2026-09-26).** Cuando no casa nada, una tercera sentencia lee por
+> qué, y hay dos códigos más: `serie-de-otro-documento` y `fecha-fuera-del-ejercicio-de-la-serie`.
+> Esa lectura filtra por empresa y estado igual que el incremento, así que los tres motivos de
+> este punto siguen dando `serie-no-numera`, y una serie ajena no dice de qué documentos es.
 
 Una escritura que no casa con nada **no lanza**: contesta «cero filas» y sigue. Dejarlo pasar
 confirmaría el documento con el número que hubiera en la variable —cero, o el de otro— sin que la
