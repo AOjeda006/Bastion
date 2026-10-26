@@ -9006,7 +9006,196 @@ Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
 
 La siguiente mutación es la **745**, y el siguiente ADR, el **0071**.
 
+### Traídas por el encargo del 2026-10-26 — la puerta de la fase 3, contestada
+
+El usuario lo trae tras verificar el tramo desde fuera:
+
+- **27** commits desde `ffd8015`, con 27 firmas válidas y sin *trailers*;
+- un run por commit, con los dos rojos, el **296** y el **304**, arreglados en el commit
+  siguiente;
+- `main` avanzó a `ec023f5` solo después del verde de su rama;
+- y las cifras, iguales a las del *runner*: **1544** y **740** casos, **426/450** y **828/900**
+  KiB, **392** casos de jsdom y **22** en Chromium, y **115** permisos.
+
+**Faltaban por anotar los runs del cierre.** El encargo cuenta tres, el de `8b296ad` y los dos de
+`ec023f5`, en su rama y en `main`. Tampoco estaban en el PLAN los de `35853be` y `95ed9f2`, así
+que son cinco: `git grep -n -E "40105877001|40107238444" ec023f5 -- docs/PLAN.md` no da nada. Van
+en *Estado actual → El cierre de la fase 2, por el flujo de la rama*.
+
+**El próximo informe cuenta desde `ec023f5`.** La siguiente mutación es la **745**, y el siguiente
+ADR, el **0071**. **El arnés** está al día desde `dbf2664`, y `arnes-de-agente.md` se lee al
+empezar cada sesión. La biblioteca no ha cambiado desde `3b45c6b`.
+
+**Antes de la fase 3, una revisión completa del proyecto**, que encargó el usuario. Lo que salió de
+ella va en estas respuestas y en el 3.1.
+
+#### Las respuestas de la puerta de la fase 3, decisión del usuario
+
+1. **El desglose: (a), con cuatro cambios.** Entra un ítem primero, la casa en orden; el de los
+   puertos lleva también el tipo de la tarifa; entra la bandeja, lista para su primer manejador,
+   antes de los documentos; y la zona pasa del final a antes del pedido. El orden queda así:
+   - **3.1** · La casa en orden: el punto A de *El orden de trabajo*, debajo;
+   - **3.2** · La exportación;
+   - **3.3** · Los puertos, con el tipo de la tarifa;
+   - **3.4** · La bandeja, lista para su primer manejador;
+   - **3.5** · La zona;
+   - **3.6** · La retirada del artículo;
+   - **3.7** · El pedido;
+   - **3.8** · La recepción;
+   - **3.9** · La devolución;
+   - **3.10** · La solicitud;
+   - **3.11** · El repaso y el cierre.
+2. **La exportación: (a)**, CSV en el dialecto de la importación, generado en el servidor.
+   - Se genera por páginas internas y en flujo, **nunca en una sola orden ni entero en memoria**.
+   - Se mide el listado más grande sobre una empresa del tamaño de la C del ADR-0064. **Si no cabe
+     en el plazo de 30 s por orden, se pregunta.**
+   - El `?q=` sin filtro (ADR-0069) va en este ítem.
+3. **La escritura de Compras en Inventario: (a), la saga de dos pasos.** El ADR de la fase tiene
+   que resolver dos cosas:
+   - **lo pendiente ve lo que está en camino.** Una recepción confirmada y todavía sin respuesta
+     resta de lo pendiente, bajo un cerrojo que pone en fila a dos recepciones del mismo pedido.
+     Lo prueba una carrera de dos transacciones de verdad, en la que **dos recepciones de 60 sobre
+     un pedido de 100 no pasan las dos**. Lo mismo para la devolución, con lo devuelto en camino;
+   - **la respuesta no cambia dos agregados en una transacción** (R12). Si no sale sin excepción,
+     se propone en la puerta de la recepción y se pregunta.
+4. **El precio y la divisa: (a)(i).**
+   - La columna de la divisa existe **desde el primer día** en el pedido, como dice el §7.5, y se
+     valida contra la divisa base.
+   - **La tarifa gana su tipo**, de compra o de venta, y **el tercero tiene una tarifa por rol**.
+     Va en el 3.3, porque hoy un tercero que es cliente y proveedor propondría su precio de venta
+     como precio de compra.
+   - Solo propone precio **una tarifa de compra en la divisa base**.
+5. **Los impuestos: (a).** El pedido congela el tipo en cada línea y suma la base, sin cuota.
+6. **Las líneas: (a).** El borrador del pedido se edita, cada línea con su `If-Match`, y confirmar
+   pide la versión. El ajuste y la transferencia siguen descartándose.
+7. **La devolución: (a)(i)**, y **no devuelve más de lo recibido menos lo ya devuelto, incluido lo
+   que está en camino**.
+8. **Los umbrales: (a).**
+9. **La recepción: (a), con dos fechas:**
+   - **la del movimiento**, sujeta al ADR-0047, y que por omisión es hoy;
+   - **la de entrega del proveedor**, con su número de albarán, que el ADR-0047 no limita.
+
+   **El devengo de la fase 5 sale de la segunda.** Sin ella, una recepción registrada tarde,
+   después de otro movimiento de su clave, no puede llevar su fecha real, y a fin de mes cae en
+   otro periodo de IVA.
+10. **«Pedido a proveedor»: (a).**
+11. **La zona va en el 3.5, antes del pedido.** Y la pregunta que se dejaba para la puerta del
+    ítem queda contestada:
+    - **una zona por empresa**, `Europe/Madrid` por defecto, que rige lo que no tiene almacén;
+    - **el almacén la hereda y la puede cambiar**;
+    - en la transferencia, **cada fecha va en la zona de su almacén, y la guarda compara
+      instantes**;
+    - y entran también **las diez llamadas del frontal a `hoyEnElServidor()`**.
+12. **Las notas, como se recomendaron**, salvo un sitio: `npm audit fix` va en el 3.1, y no como
+    primer commit de la fase. El `?q=` sin filtro, en el 3.2, que es ahora la exportación. La
+    correlación buscar/alta y los restos de la fase 1 se quedan con su disparador, y la
+    destrucción del art. 32 tiene su ítem en la fase 5.
+13. **El presupuesto: (b).**
+    - El arranque sigue en **450**, cada ruta diferida tiene un tope de **192 KiB**, y **el total
+      pasa a ser informativo**.
+    - **Los textos de cada módulo viajan con sus rutas.**
+    - Y **una línea informativa con lo comprimido**, que es lo que baja el usuario.
+    - Un ADR enmienda el **ADR-0028** y el **ADR-0036**, y cada uno lo anota.
+14. **`CLAUDE.md`: (a)**, y también **las líneas que mandan leer el PLAN, adaptadas al PLAN
+    partido** del punto A. **Se aplica todo junto al principio de una sesión.**
+
+#### El orden de trabajo, decisión del usuario
+
+**A. El 3.1, la casa en orden.** En su rama, un tema por subida:
+
+1. **El primer commit** lleva los runs anotados, las respuestas en *Decisiones tomadas*, el
+   checklist de la fase 3 con sus criterios y la línea del README.
+2. **`npm audit fix`**, y que la auditoría informativa vuelva a 0 o diga qué queda.
+3. **Las enmiendas que no se declararon.** El ADR-0013 no dice que lo enmienda el ADR-0040, y el
+   ADR-0007 no dice que lo enmienda el ADR-0039. Lo encontró un guion de reciprocidad sobre los 70
+   ADR.
+   - Cada uno lo anota en su *Estado* y en el punto afectado.
+   - Ese guion pasa al carril rápido como test, con su pareja: una enmienda que sí se declara.
+4. **El PLAN partido.** Hoy pesa 2 MB y unos 500 000 *tokens*, así que no se puede leer «antes de
+   nada».
+   - La historia de las fases 0, 1 y 2 pasa tal cual a `docs/historia/fase-N.md`: **se mueve, no
+     se reescribe**.
+   - El PLAN se queda con lo vigente: el objetivo, el alcance, un índice de decisiones que enlaza a
+     los ADR o a la historia, dónde se retoma, el checklist de la fase 3 y las notas abiertas.
+   - Se adapta lo que hoy lee el PLAN: `ElEstadoDelReadmeEsElDelPlanTests` y la regla de
+     numeración de las mutaciones de `AGENTS.md`, que tiene que buscar también en la historia.
+   - Se mide el tamaño antes y después, con la orden que lo mide.
+   - **Si algo de esto no sale sin perder información, se para y se pregunta.**
+5. **El presupuesto, con la forma nueva**: el guion, la CI, `AGENTS.md` y las dos enmiendas.
+6. **Cuatro notas abiertas nuevas**, con el disparador «antes del primer despliegue fuera de local,
+   y en todo caso en la puerta de la fase 5»:
+   - **los dos roles de la base**: uno dueño para el migrador, y otro solo de datos para la API.
+     Hoy la API es dueña de las tablas y, en el *compose*, superusuaria, así que puede desactivar
+     los disparadores de solo añadido;
+   - **`Include Error Detail=true`**, solo en desarrollo;
+   - **la limitación de ritmo en el acceso**: el bloqueo de 5 intentos durante 15 minutos deja
+     bloquear la cuenta de cualquiera;
+   - **las 100 000 iteraciones de PBKDF2**, frente a las 210 000 de OWASP.
+
+**B. El 3.2 y el 3.3**: la exportación y los puertos, cada uno con su criterio, su tanda y su
+cierre por el flujo de la rama.
+
+**C. El 3.4, la bandeja, lista para su primer manejador.** Antes de este ítem se lee
+`fundamentos/datos-distribuidos/convenciones.md`. Son cinco huecos, cada uno con su caso y su
+mutación:
+
+1. **Un ámbito y un contexto por evento.** Hoy todo el lote comparte uno, y lo que un manejador
+   deja a medias se lo guarda el siguiente.
+2. **El manejador corre con el inquilino del evento**, sacado de `EmpresaId`, y no dentro de
+   `SinInquilino`. Hoy lo que lee por EF ve todas las empresas.
+3. **El evento lleva quién lo causó y su correlación**, para que la traza de auditoría y la
+   telemetría no se corten entre módulos.
+4. **Un indicador de aparcados sin resolver.** Hoy un aparcado desaparece de la métrica de
+   antigüedad.
+5. **El despachador abre la transacción del manejador**, y en ella van el efecto, la huella
+   (ADR-0013 §6) y el evento de respuesta. Un manejador que choca con la versión de un documento
+   reintenta, y no se aparca por eso.
+
+Lo ejerce un manejador de prueba, con una carrera de verdad. Es una decisión de fondo: **si alguno
+de los cinco tiene varias salidas viables, se para en la puerta del ítem y se pregunta.**
+
+> **Se para cuando el 3.4 esté cerrado, y se pregunta antes del 3.5.** Es la base de toda la fase,
+> y el usuario la quiere verificada antes de los documentos.
+
+#### Las herramientas de la máquina, y cómo se trabaja
+
+- **Los servidores de lenguaje**: se busca por símbolo antes de leer, y se abren los diagnósticos
+  de cada edición. Un diagnóstico limpio no sustituye al build ni a los tests.
+- **`playwright-cli`**, para las pantallas, contra la pila local en su propio proyecto de
+  *compose*.
+- **Context7 (`ctx7`)**, solo para APIs de Npgsql, EF Core o del SDK de OpenTelemetry que no
+  cuadren, y contrastado con la documentación oficial.
+- **El método de siempre**: la tanda se escribe antes de medir, con una mutación sobre el arnés;
+  las dos listas, por nombre; commits firmados, un tema por subida, esperando a la conclusión de la
+  anterior; el humo, si hay migración o pantalla; `main` solo avanza a un commit que ya está en
+  verde en su rama, y la rama se borra después de su run de `main`; las ediciones de `CLAUDE.md`,
+  al principio de la sesión; y la unidad se cierra antes de una pausa larga.
+- **El informe** cuenta todos los commits desde `ec023f5`, cada uno con su asunto y con sus runs.
+  Lo encontrado por el camino va arriba, y cada cifra va con la orden que la mide.
+
+#### Lo que el agente decide sin preguntar, al anotarlo
+
+1. **La rama del 3.1 es `3.1-la-casa-en-orden`**, abierta desde `ec023f5`.
+2. **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
+   `main`.** Las líneas que mandan leer el PLAN tienen que describir el PLAN partido, y «todo
+   junto» quiere decir con ellas. Hasta entonces el §5 sigue diciendo que el objetivo es la fase 2,
+   y manda este PLAN, como mandó durante la fase 2 sobre un §5 que decía la fase 1.
+3. **El ADR de la saga** (respuesta 3) se escribe en la puerta de la recepción, el 3.8, que es
+   donde se cruza la frontera por primera vez con un documento. El 3.4 deja el despachador listo y
+   lo ejerce con un manejador de prueba.
+4. **La inscripción de Compras en `IDocumentosDeUnPeriodo` va con su primer documento**, el pedido
+   del 3.7: antes no hay documento que contar. El 3.3 trae el esquema, el contexto y las
+   migraciones.
+5. **El umbral rige la confirmación del pedido desde el 3.10**, con la solicitud, porque la
+   respuesta 8 los pone juntos. Hasta entonces, confirmar un pedido pide solo su permiso.
+
 ## Estado actual
+
+**FASE 3 EN CURSO — 0 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
+catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas están en
+*Decisiones tomadas → Traídas por el encargo del 2026-10-26*, y el desglose son **once ítems**, del
+3.1 al 3.11, en el *Checklist*. El primero, la casa en orden, está en curso en la rama
+`3.1-la-casa-en-orden`.
 
 **FASE 2 CERRADA — 20 de 20 ítems, el 2026-10-24.** La puerta de clarificación se pasó el
 2026-09-18: las trece preguntas de la tanda y las tres que trajo la respuesta están contestadas y
@@ -9061,11 +9250,33 @@ Los veinte `head_sha` casan con el commit del PLAN, los veinte runs salieron `co
 los veinte commits están en la historia de `main`. Diecisiete corrieron sobre `main` y tres sobre su
 rama, y el guion sale con 0.
 
-> **Dónde se retoma (2026-10-24): en la puerta de la fase 3, sin contestar.** Los cuatro pasos del
-> cierre están hechos: el repaso del 2.15 al 2.20, los veredictos y el traspaso, el cierre de la
-> fase, y la tanda de la puerta, con catorce preguntas, en *Decisiones tomadas → La puerta de la
-> fase 3*. **Se para ahí.** El desglose del *Checklist* y los cambios de `CLAUDE.md` salen de las
-> respuestas, y el código de la fase 3 no empieza antes.
+**El cierre de la fase 2, por el flujo de la rama.** Los cuatro commits de la rama
+`cierre-de-la-fase-2`, abierta desde `08ea605`, cada uno en su subida y con su run de rama, los
+tres trabajos en verde:
+
+1. `35853be`, «docs(plan): los dos runs del cierre del 2.20, y abre el de la fase»:
+   **40105877001**, Backend `120907332403`, Frontal `120907332604` y Humo `120910321511`.
+2. `95ed9f2`, «docs(plan): el repaso del 2.15 al 2.20, criterio por criterio»: **40107238444**,
+   Frontal `120911361743`, Backend `120911361846` y Humo `120914431081`.
+3. `8b296ad`, «docs(plan): cierra la fase 2, con el veredicto y el traspaso»: **40378087823**,
+   Backend `121766554747`, Frontal `121766555454` y Humo `121773543178`.
+4. `ec023f5`, «docs(plan): la puerta de la fase 3, con sus catorce preguntas», **por el flujo de
+   la rama**: su run de rama, el **40380787310**, Frontal `121776109268`, Backend `121776109799` y
+   Humo `121780488959`, en verde; `main` avanzó con `--ff-only` de `08ea605` a `ec023f5`, cuatro
+   commits, y su run, el **40382723302**, con Frontal `121782933315`, Backend `121782933930` y Humo
+   `121791341613`, salió en verde. Después se borró la rama, en local y en el remoto.
+
+Los cinco se leyeron con `python -X utf8 vigilar212.py <sha> <rama>`, un guion del *scratchpad*.
+
+> **Dónde se retoma (2026-10-26): en el 3.1, la casa en orden**, en la rama
+> `3.1-la-casa-en-orden`. El primer tema está hecho: los runs, las respuestas, el checklist y el
+> README. Siguen, cada uno en su commit y en su subida, y esperando a la conclusión de la
+> anterior: `npm audit fix`; las enmiendas no declaradas y su test; el PLAN partido; el presupuesto
+> con la forma nueva; y las cuatro notas nuevas. Después, el 3.2 y el 3.3, y el 3.4, **que se para
+> al cerrarse, antes del 3.5**.
+>
+> **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
+> `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
@@ -23839,6 +24050,120 @@ resueltos** por el ítem 0.1 y se conservan por trazabilidad; **3 y 4 siguen vig
     cubre*; y el 0067 lo anota en su *Estado* y al principio de cada punto;
   - **el humo**, sobre `f3b0bec`: **115 permisos en los dos arranques**, y 0 fallos.
 
+### Fase 3 · Compras (2026-10-26)
+
+> **La fase 3 tampoco tiene Anexo A.3.** El §15 da el criterio de la fase entera —«un pedido
+> confirmado no mueve stock; su recepción parcial sí, y deja las cantidades pendientes correctas;
+> la devolución revierte»— y el desglose en **once ítems** lo acordaron usuario y agente en la
+> **puerta de clarificación de la fase 3**, cuyas catorce respuestas con su motivo están en
+> *Decisiones tomadas → Traídas por el encargo del 2026-10-26*. Este checklist es el resultado;
+> **no se reordena ni se amplía** por iniciativa propia, igual que el A.3. Cada criterio se
+> escribió antes de empezar su ítem.
+>
+> **Se para cuando el 3.4 esté cerrado**, y se pregunta antes del 3.5.
+>
+> **Las líneas base, sobre `ec023f5`**, para que el primer ítem mida contra ellas: carril rápido
+> **1544** en 10 ensamblados · integración **740** en 2 · OpenAPI **158** operaciones en **95**
+> rutas · catálogo de `type` **240** de 248 sitios · frontal 47 ficheros / **392** casos / **0**
+> avisos de `act()`, y **22** casos en un Chromium · arranque **426/450 KiB**, total servido
+> **828/900** · **115** permisos · dependencias **125** pares y **35** `Project`, y **443** entradas
+> del frontal sin la raíz. Son las del run **40104536177** y de la batería del cierre del 2.20, y
+> `ec023f5` solo toca el PLAN.
+
+- [ ] **3.1 · La casa en orden** — criterio de aceptación: seis temas, cada uno en su commit y en
+  su subida, en la rama del ítem.
+  - **El primer commit**: los cinco runs del cierre de la fase 2 anotados, las respuestas de la
+    puerta en *Decisiones tomadas*, este checklist y la línea del README.
+  - **`npm audit fix`**, y la auditoría informativa en 0, o diciendo qué queda y por qué.
+  - **Las enmiendas que no se declararon**: el ADR-0013 anota que lo enmienda el ADR-0040, y el
+    ADR-0007, que lo enmienda el ADR-0039, cada uno en su *Estado* y en el punto afectado. Y la
+    reciprocidad pasa al carril rápido como test: una enmienda que un ADR declara, y que el
+    enmendado no anota, es un rojo. Con su pareja, una enmienda que sí se declara, y con la
+    afirmación de que encontró enmiendas.
+  - **El PLAN partido**: la historia de las fases 0, 1 y 2 pasa tal cual a
+    `docs/historia/fase-N.md`, movida y no reescrita; el PLAN se queda con el objetivo, el
+    alcance, un índice de decisiones que enlaza a los ADR o a la historia, dónde se retoma, el
+    checklist de la fase 3 y las notas abiertas. `ElEstadoDelReadmeEsElDelPlanTests` y la regla de
+    numeración de las mutaciones de `AGENTS.md` leen también la historia. El tamaño, antes y
+    después, con la orden que lo mide. Y que no se pierde nada, comprobado por un guion: cada
+    línea del PLAN de antes está en uno de los ficheros de después.
+  - **El presupuesto con la forma nueva**: el arranque en 450, un tope de 192 KiB por ruta
+    diferida, el total solo informativo, y una línea informativa con lo comprimido. Los textos de
+    cada módulo viajan con sus rutas. El guion, la CI y `AGENTS.md`, y un ADR que enmienda el 0028
+    y el 0036, que lo anotan.
+  - **Cuatro notas abiertas nuevas**, con el disparador «antes del primer despliegue fuera de
+    local, y en todo caso en la puerta de la fase 5»: los dos roles de la base, `Include Error
+    Detail=true` solo en desarrollo, la limitación de ritmo en el acceso y las iteraciones de
+    PBKDF2.
+- [ ] **3.2 · La exportación** — criterio de aceptación: cada listado de la nota de la exportación
+  descarga un CSV en el dialecto de la importación (ADR-0034 §5), con BOM y con la regla del
+  apóstrofo de la decisión 7 del 1.11. Lo genera el servidor con los filtros y el orden del
+  listado, **todas sus páginas**, el permiso del listado y sin lo bloqueado. Se genera por páginas
+  internas y en flujo, nunca en una sola orden ni entero en memoria. El listado más grande, medido
+  sobre una empresa del tamaño de la C del ADR-0064, cabe en el plazo de 30 s por orden; si no
+  cabe, se pregunta. Y un `?q=` sin filtro declarado es un `400` (ADR-0069).
+- [ ] **3.3 · Los puertos, con el tipo de la tarifa** — criterio de aceptación: la tarifa es de
+  compra o de venta, y un tercero lleva una tarifa por rol; un puerto de `Catalogo.Contracts`
+  resuelve el precio y el descuento de una tarifa para un artículo, una cantidad y una fecha, y
+  solo propone precio una tarifa de compra en la divisa base. Un tercero que es cliente y
+  proveedor recibe su precio de compra, no el de venta. La divisa de la tarifa pasa a ISO 4217, y
+  el invariante 8 del traspaso de la fase 1 queda desarmado. Y Compras gana persistencia: su
+  esquema, su contexto y sus migraciones, y los tests de arquitectura lo cuentan como módulo con
+  persistencia.
+- [ ] **3.4 · La bandeja, lista para su primer manejador** — criterio de aceptación: los cinco
+  huecos de *Decisiones tomadas → El orden de trabajo, C*, cada uno con su caso y su mutación: un
+  ámbito y un contexto por evento; el manejador con el inquilino del evento, y no dentro de
+  `SinInquilino`; quién lo causó y su correlación en el evento; un indicador de aparcados sin
+  resolver; y la transacción del manejador, abierta por el despachador, con el efecto, la huella y
+  el evento de respuesta dentro, y un choque de versión que reintenta sin aparcar. Lo ejerce un
+  manejador de prueba, con una carrera de verdad. Antes se lee
+  `fundamentos/datos-distribuidos/convenciones.md`. **Al cerrarlo, se para y se pregunta antes
+  del 3.5.**
+- [ ] **3.5 · La zona** — criterio de aceptación: una zona por empresa, `Europe/Madrid` por
+  defecto, que rige lo que no tiene almacén; el almacén la hereda y la puede cambiar. El día de
+  negocio de un documento sale de la zona de su almacén: a las 00:30 del 1 de enero en Madrid, la
+  fecha por omisión es el 1 de enero, y no el 31 de diciembre. En la transferencia, cada fecha va
+  en la zona de su almacén, y la guarda compara instantes. Y las diez llamadas del frontal a
+  `hoyEnElServidor()` dan el día de su zona.
+- [ ] **3.6 · La retirada del artículo** (ADR-0023) — criterio de aceptación: `IConsultaDeArticulos`
+  produce `SoloResuelveLoViejo`; una línea nueva no elige un artículo retirado; y el retirado sigue
+  contestando su unidad base, para que un recuento pueda sacar sus existencias.
+- [ ] **3.7 · El pedido de compra** — criterio de aceptación: el alta en borrador, con la divisa
+  desde el primer día y validada contra la base; las líneas del borrador se añaden, se cambian y se
+  quitan, cada una con su `If-Match`, y confirmar pide la versión; confirmar numera en su serie,
+  congela la R7 —el precio, el descuento, el tipo impositivo y la descripción, a la fecha del
+  pedido— y suma la base sin cuota; cerrar con lo pendiente, anular y descartar; lo pendiente, en
+  el pedido y en cada línea; un proveedor que no se puede tratar no recibe pedidos; Compras se
+  inscribe en `IDocumentosDeUnPeriodo`; y el listado, la ficha y sus pantallas. El primer criterio
+  del §15: **un pedido confirmado no tiene ni una fila en el libro**.
+- [ ] **3.8 · La recepción** — criterio de aceptación: total o parcial contra un pedido
+  confirmado, y nunca más de lo pendiente, que es un `422` con su línea; con su lote o su serie y
+  su ubicación; con dos fechas, la del movimiento, sujeta al ADR-0047 y hoy por omisión, y la de
+  entrega del proveedor con su número de albarán, que el ADR-0047 no limita. La entrada, valorada
+  con el coste de su línea, llega a Inventario por la saga de dos pasos: lo pendiente ve lo que
+  está en camino, bajo un cerrojo que pone en fila a dos recepciones del mismo pedido, y **dos
+  recepciones de 60 sobre un pedido de 100 no pasan las dos**, en una carrera de dos transacciones
+  de verdad; y la respuesta no cambia dos agregados en una transacción (R12). Si eso no sale sin
+  excepción, se propone en la puerta del ítem y se pregunta. El segundo criterio del §15: **dos
+  recepciones parciales dejan lo pendiente de cada línea bien, y el saldo sigue siendo la suma del
+  libro**.
+- [ ] **3.9 · La devolución de compra** — criterio de aceptación: desde una recepción, total o
+  parcial, y sin devolver más de lo recibido menos lo ya devuelto, incluido lo que está en camino,
+  con su carrera; se lleva el coste de su recepción, acotado como la transferencia (ADR-0054); el
+  lote y la serie salen de la línea de la recepción, y la ubicación la elige quien devuelve, con la
+  de la recepción por omisión; y revierte lo recibido, así que lo devuelto vuelve a estar
+  pendiente, y un pedido `Recibido` vuelve a `RecibidoParcial`. El tercer criterio del §15:
+  **recibir y devolver lo mismo deja el libro en cero** por artículo, almacén, ubicación y lote, en
+  cantidad y en valor.
+- [ ] **3.10 · La solicitud de compra** — criterio de aceptación: un umbral por empresa rige la
+  aprobación de la solicitud y la confirmación del pedido; por encima hace falta el permiso
+  `…-sin-limite`, y quien creó el documento no lo aprueba ni lo confirma por encima del umbral, ni
+  con los dos permisos (§11). La solicitud es opcional, su importe es el de sus líneas a precio
+  estimado en divisa base, y de una aprobada sale un pedido en borrador.
+- [ ] **3.11 · El repaso de la fase y su cierre** — criterio de aceptación: cada criterio de la
+  fase, contra un caso con nombre que un guion busca en el código, con su canario; el veredicto de
+  cada nota abierta; y el traspaso a la fase 4.
+
 ## Imports pendientes de `CLAUDE.md`
 
 `CLAUDE.md` ya trae el **núcleo permanente** (A.2.1) y los de **fase 0** (A.2.2). Los de abajo
@@ -23866,6 +24191,10 @@ al empezar su fase y se quedan (Anexo A.2.3).
 > cada sesión, más de dos veces el arranque entero. Las convenciones se leen bajo demanda, como
 > hasta hoy, y los imports se quedan escritos para el día que se aprueben. La tabla de abajo sigue
 > diciendo qué se lee al empezar cada fase.
+>
+> **La fase 3 no tiene import** (2026-10-26): el A.2.3 no tiene fila para ella. Antes del
+> primer manejador, en el 3.4, se lee a mano `fundamentos/datos-distribuidos/convenciones.md`,
+> que cita el §4 del plan maestro.
 >
 > **El de la fase 2 ya está puesto** (2026-09-18, al pasar la puerta de clarificación de la
 > fase): `negocio/identificacion-articulos/convenciones.md`, ese y solo ese. Con él entra

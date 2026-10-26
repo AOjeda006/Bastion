@@ -10,7 +10,7 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 2 (Inventario), cerrada: 20 de 20 ítems.** La fase 1 se cerró con catorce ítems y
+> **Estado: fase 3 (Compras), en curso: 0 de 11 ítems.** La fase 1 se cerró con catorce ítems y
 > la fase 2, con veinte: el frontal arranca con un solo diccionario; los tres puertos que el
 > libro de movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado
 > contesta que sigue resolviendo lo viejo, no que no existe—; el libro ya existe, particionado por
@@ -49,7 +49,8 @@ de datos, su contrato público y su comunicación por eventos.
 > desde su pantalla: el servidor pone el factor de cada línea, un rechazo de una ubicación vuelve a
 > la celda de su punta, y un borrador se descarta. Y lo que el 2.18 dejó propuesto: el cuadre lee
 > cada mes sin el JIT del motor, un indicador dice cuántos meses le faltan, y las páginas caben en
-> 320 px, medidas en un Chromium. La fase está cerrada, y la fase 3 no ha empezado.
+> 320 px, medidas en un Chromium. La fase 3, Compras, tiene once ítems, acordados en su puerta,
+> y empieza por poner la casa en orden.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
 > **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo. Esta
 > línea se compara con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia
