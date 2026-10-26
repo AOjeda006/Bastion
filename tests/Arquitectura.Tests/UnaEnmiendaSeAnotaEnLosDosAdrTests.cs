@@ -27,6 +27,8 @@ namespace Bastion.Arquitectura.Tests;
 /// viñetas ponen el objeto del verbo y no los ADR que solo citan. Una <b>anotación</b> es la viñeta
 /// del <c>Estado</c> del enmendado: dice «enmendado» o «ampliado» y nombra a cada autor con
 /// «por el ADR-NNNN». Una <b>nota</b> es la misma frase fuera de la cabecera, en el punto que cambia.
+/// Un ADR que se nombra a sí mismo no se aparta: saldría como una anotación que nadie declara, que
+/// es lo que sería. Apartarlo era un filtro que nada ejercía, y la mutación 753 lo dejó en verde.
 /// </para>
 /// <para>
 /// <b>Las cinco afirmaciones del ADR-0024</b>, porque se comparan dos fuentes. Las dos listas no
@@ -35,7 +37,8 @@ namespace Bastion.Arquitectura.Tests;
 /// lo que enmienda, y cada estado que se dice enmendado nombra a quién. Y nada del universo queda
 /// sin clasificar: una viñeta que nombra una enmienda y no la declara está en la lista cerrada, con
 /// su motivo. El caso sintético es el que rompe el arnés sin tocar el sujeto: si la comparación
-/// deja de ver una enmienda sin anotar, se pone rojo él solo.
+/// deja de ver una enmienda sin anotar, o toma la anotación del Estado por la nota del punto, se
+/// pone rojo él solo. Lo segundo lo dejó pasar la mutación 752, que leía la cabecera como cuerpo.
 /// </para>
 /// <para>
 /// <b>Lo que no mira.</b> Que la nota esté en el punto justo: se pide que esté en el cuerpo, y el
@@ -92,6 +95,9 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
             "0002", "aceptado", "- **Enmienda el [ADR-0001](adr-0001-uno.md)**, en su §1.", "Otra cosa.");
         string amplia = Sintetico(
             "0003", "aceptado", "- **Relacionado:** amplía el ADR-0001: un segundo caso.", "Otra más.");
+        const string Anotado =
+            "aceptado. **Enmendado por el [ADR-0002](adr-0002-dos.md)** en el §1, y\n" +
+            "  **ampliado por el ADR-0003**.";
 
         Analisis roja = Analizar(new Dictionary<string, string>
         {
@@ -103,12 +109,24 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
         roja.SinAnotar.ShouldBe([enmienda, ampliacion], "una enmienda sin anotar tiene que verse");
         roja.SinNota.ShouldBe([enmienda, ampliacion], "una enmienda sin nota tiene que verse");
 
+        // La anotación del Estado dice la misma frase que la nota, y no hace de nota: la nota es la
+        // del punto que cambia, fuera de la cabecera.
+        Analisis soloElEstado = Analizar(new Dictionary<string, string>
+        {
+            ["0001"] = Sintetico("0001", Anotado, "", "Lo que se decidió."),
+            ["0002"] = declara,
+            ["0003"] = amplia,
+        });
+
+        soloElEstado.SinAnotar.ShouldBeEmpty();
+        soloElEstado.SinNota.ShouldBe(
+            [enmienda, ampliacion], "la anotación del Estado no hace de nota en el punto");
+
         Analisis verde = Analizar(new Dictionary<string, string>
         {
             ["0001"] = Sintetico(
                 "0001",
-                "aceptado. **Enmendado por el [ADR-0002](adr-0002-dos.md)** en el §1, y\n" +
-                "  **ampliado por el ADR-0003**.",
+                Anotado,
                 "",
                 "> **Enmendado por el ADR-0002 (2026-01-02).** Cambia.\n>\n" +
                 "> **Ampliado por el [ADR-0003](adr-0003-tres.md) (2026-01-03).** Crece.\n\n" +
@@ -228,7 +246,7 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
                         continue;
                     }
 
-                    List<string> autores = Numeros(PorEl(), vineta, numero);
+                    List<string> autores = Numeros(PorEl(), vineta);
 
                     if (autores.Count == 0)
                     {
@@ -244,7 +262,7 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
                 if (declaracion.Success)
                 {
                     string clausula = FinDeLaClausula().Split(vineta[declaracion.Length..], 2)[0];
-                    List<string> enmendados = Numeros(NumeroDeAdr(), clausula, numero);
+                    List<string> enmendados = Numeros(NumeroDeAdr(), clausula);
 
                     if (enmendados.Count == 0)
                     {
@@ -323,11 +341,10 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
 
     private static string Limpio(string texto) => Enlace().Replace(texto, "$1").Replace("*", "", StringComparison.Ordinal);
 
-    private static List<string> Numeros(Regex patron, string texto, string propio) =>
+    private static List<string> Numeros(Regex patron, string texto) =>
     [
         .. patron.Matches(texto)
             .Select(numero => numero.Groups["numero"].Value)
-            .Where(numero => numero != propio)
             .Distinct(StringComparer.Ordinal),
     ];
 
