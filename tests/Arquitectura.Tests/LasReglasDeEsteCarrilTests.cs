@@ -159,6 +159,9 @@ public sealed class LasReglasDeEsteCarrilTests
         // La línea de estado del README sale de las casillas del PLAN.
         "ElEstadoDelReadmeEsElDelPlanTests.El_checklist_del_plan_se_lee",
         "ElEstadoDelReadmeEsElDelPlanTests.La_linea_de_estado_del_readme_es_la_del_checklist",
+        // El PLAN partido del 3.1: la fase vigente en el PLAN, y cada fase cerrada en su historia.
+        "ElEstadoDelReadmeEsElDelPlanTests.El_plan_lleva_las_casillas_de_una_sola_fase",
+        "ElEstadoDelReadmeEsElDelPlanTests.Cada_fase_cerrada_tiene_su_historia_con_el_checklist_entero",
 
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",

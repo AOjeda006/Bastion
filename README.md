@@ -52,9 +52,10 @@ de datos, su contrato público y su comunicación por eventos.
 > 320 px, medidas en un Chromium. La fase 3, Compras, tiene once ítems, acordados en su puerta,
 > y empieza por poner la casa en orden.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
-> **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo. Esta
-> línea se compara con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia
-> y la línea no, la CI sale roja.
+> **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo; lo de las
+> fases cerradas, en [`docs/historia/`](docs/historia/), un fichero por fase. Esta línea se compara
+> con sus casillas (`ElEstadoDelReadmeEsElDelPlanTests`): si una casilla cambia y la línea no, la
+> CI sale roja.
 
 ---
 
@@ -188,6 +189,7 @@ Bastion/
 │   └── semillas/                 PGC, tipos de IVA, unidades, países — configuración, no esquema
 ├── docs/
 │   ├── PLAN.md                   estado del trabajo (fuente de verdad)
+│   ├── historia/                 lo que el PLAN decía de cada fase cerrada, movido tal cual
 │   ├── adr/                      decisiones con su contexto y consecuencias
 │   ├── dominio/                  glosario del lenguaje ubicuo, diagramas E-R y de estados
 │   └── api/                      OpenAPI publicado por CI
@@ -247,7 +249,8 @@ ni línea a línea ni al total.
 | Dónde | Qué |
 |---|---|
 | `ERP-PLAN-MAESTRO.md` | **La especificación del producto.** Stack, arquitectura, dominio, las diecisiete reglas y la hoja de ruta. Lo aporta el usuario **fuera del repositorio**; es la fuente de verdad y no se contradice |
-| [`docs/PLAN.md`](docs/PLAN.md) | El **estado del trabajo**: checklist con criterios de aceptación, decisiones tomadas y dónde retomar |
+| [`docs/PLAN.md`](docs/PLAN.md) | El **estado del trabajo**: el checklist de la fase en curso con sus criterios de aceptación, las decisiones tomadas, las notas abiertas y dónde retomar |
+| [`docs/historia/`](docs/historia/) | La **historia de cada fase cerrada**: lo que el PLAN decía de ella —decisiones, estado, checklist y notas cerradas—, movido tal cual. El índice de *Decisiones tomadas* del PLAN lleva a cada bloque |
 | [`CLAUDE.md`](CLAUDE.md) | Memoria del agente: qué convenciones importa, política de commits, puerta de clarificación |
 | [`AGENTS.md`](AGENTS.md) | Contrato operativo del agente y comandos del proyecto |
 | [`docs/adr/`](docs/adr/) | Decisiones de arquitectura, con su contexto y sus consecuencias |
