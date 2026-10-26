@@ -122,12 +122,14 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
   repita en vez de creerla.
 
 - **El número de una mutación se toma del final de la última tabla, sea del tramo que sea.** Las
-  mutaciones llevan una sola numeración en todo el PLAN: un ítem, un epílogo o un addendum siguen
-  donde acabó la tabla más reciente, no donde acabó la de su propio ítem. El 2.8 empezó en la 52
-  porque la tabla del 2.7 acababa en la 51, sin ver la del epílogo, que ya llegaba a la 56. Cinco
-  quedaron numeradas dos veces, y el PLAN las cualifica («52 del epílogo», «52 del 2.8»); los
-  mensajes de commit no se tocan. El PLAN no está en orden cronológico, así que «la última» no es la
-  de más abajo: `grep -n "| # | Mutación" docs/PLAN.md` lista todas las tablas, y el número
+  mutaciones llevan una sola numeración en todo el PLAN y en su historia: un ítem, un epílogo o un
+  addendum siguen donde acabó la tabla más reciente, no donde acabó la de su propio ítem. El 2.8
+  empezó en la 52 porque la tabla del 2.7 acababa en la 51, sin ver la del epílogo, que ya llegaba a
+  la 56. Cinco quedaron numeradas dos veces, y el PLAN las cualifica («52 del epílogo», «52 del
+  2.8»); los mensajes de commit no se tocan. El PLAN no está en orden cronológico, así que «la
+  última» no es la de más abajo. Y desde el 3.1 las tablas de las fases cerradas están en
+  `docs/historia/`, así que la búsqueda va a los dos sitios:
+  `grep -n "| # | Mutación" docs/PLAN.md docs/historia/*.md` lista todas las tablas, y el número
   siguiente es uno más que la mayor de sus filas.
 
 - **Un ADR aceptado no se reescribe: se enmienda desde uno nuevo. Y si se reescribe, lo dice su
@@ -144,7 +146,8 @@ del §4 (fronteras). Romperlas no se arregla con un parche: hay que rehacer dato
 
 Vivía en la memoria local del agente, que no llega a otra máquina ni a una sesión en la nube, y que
 nadie revisa. Pasó aquí el 2026-09-29. Cada regla dice dónde se aprendió, y la historia entera está
-en el PLAN. Lo que solo vale en esta máquina o en su *shell* se quedó fuera.
+en el PLAN y, la de las fases cerradas, en `docs/historia/`. Lo que solo vale en esta máquina o en
+su *shell* se quedó fuera.
 
 **Verificar**
 
@@ -191,6 +194,9 @@ en el PLAN. Lo que solo vale en esta máquina o en su *shell* se quedó fuera.
   README son entrada de `ElEstadoDelReadmeEsElDelPlanTests`, y marcar una casilla cambia la línea
   que el README tiene que decir. En el cierre del 2.9, `e6975ed` marcó la suya sin mover el README
   y puso `main` rojo (run 36972547394). La casilla y la línea del README van en el mismo commit.
+  Desde el 3.1 también lo es `docs/historia/`: el PLAN lleva las casillas de la fase vigente, y la
+  historia de cada fase cerrada, las suyas, todas marcadas. Al cerrar una fase, su historia se mueve
+  del PLAN a `docs/historia/fase-N.md` en el mismo commit que estrena el checklist de la siguiente.
 - **`main` solo avanza a un commit que ya está en verde en su rama.** El commit que anota el run de
   cierre no es una excepción: va primero a la rama, espera su verde, y después avanza `main`. En el
   cierre del 2.9, `e6975ed` llegó a `main` sin pasar por ningún run, y lo encontró rojo el de `main`.
