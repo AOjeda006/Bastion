@@ -8659,6 +8659,353 @@ sus datos, ya lo hace el carril del navegador en cada subida, y la CI lo corre e
 
 La siguiente mutación es la **745**, y el siguiente ADR, el **0071**.
 
+### La puerta de la fase 3 — lo que dice el plan maestro, y lo que se pregunta (2026-10-24)
+
+Escrita el 2026-10-24, en la rama `cierre-de-la-fase-2`, con la fase 2 ya cerrada. **Se para
+aquí.** La fase 3 no tiene Anexo A.3, como la 1 y la 2, así que su desglose sale de esta puerta, y
+el código empieza con las respuestas. No se reabre nada del Anexo A.4.
+
+#### Lo que dice el plan maestro
+
+`sha256sum ERP-PLAN-MAESTRO.md` sigue dando `86aa53a0…`, la huella de
+`docs/dominio/reglas-duras.md`.
+
+- **El §15, la fila de la fase**:
+
+  > **3 · Compras** · Solicitud, pedido, recepción (total y parcial), devolución · **L** · Un
+  > pedido confirmado no mueve stock; su recepción parcial sí, y deja las cantidades pendientes
+  > correctas; la devolución revierte.
+
+- **El §7.5, el modelo**, en el esquema `compras`:
+  - **la solicitud**: quien la pide, el motivo, las líneas y su estado, `Borrador`, `Aprobada` o
+    `Rechazada`, con «aprobación por importe con umbrales»;
+  - **el pedido**: proveedor, serie y número, las fechas de pedido y de entrega prevista, divisa,
+    condiciones, y su estado, `Borrador`, `Confirmado`, `RecibidoParcial`, `Recibido`,
+    `Facturado`, `Cerrado` o `Anulado`. Su línea lleva artículo, descripción congelada, cantidad,
+    cantidad recibida, cantidad facturada, precio, descuento, impuesto, y el importe como columna
+    computada;
+  - **la recepción**, el albarán de entrada: pedido origen, almacén, fecha, y líneas con la
+    cantidad recibida y el lote o la serie. «Al confirmar genera movimientos de entrada y
+    actualiza la valoración»;
+  - **la devolución**: recepción origen, líneas, y «genera movimientos de salida»;
+  - y su regla propia: «confirmar un pedido no mueve stock, solo compromete (stock "pedido a
+    proveedor" para el MRP). El stock entra con la recepción».
+- **El §8.1, el ciclo**: la solicitud se aprueba y da un pedido; el pedido se confirma, que es un
+  compromiso sin stock; se recepciona, y la recepción, al confirmarse, es un movimiento de entrada
+  con la valoración por PMP. El otro brazo, facturar y el cotejo a tres bandas, es de la fase 5.
+- **Lo que la fase cruza por primera vez**:
+  - la **R7**: el precio, el descuento, el tipo impositivo y la descripción se congelan en la
+    línea al confirmar, y el importe es una columna computada;
+  - la **R12** y la **regla 5 del §4**: una transacción modifica un solo agregado, y entre módulos
+    se escribe «solo por eventos», con consumidores que registran el evento procesado;
+  - la **R14**: la fecha de la recepción es la primera fecha de entrega del proyecto, y será el
+    devengo de la factura recibida de la fase 5;
+  - el **§11**: «quien crea un pedido de compra no debería poder aprobarlo por encima de su
+    umbral», con permisos distintos y no con un rol que todo lo puede.
+- **Lo que cita**: el §4 remite a `fundamentos/datos-distribuidos/convenciones.md`, que pide
+  «idempotencia + patrón Outbox + sagas» antes que una transacción distribuida. No es import de
+  ninguna fase, y se lee a mano antes del primer manejador. Y el §18 dice que las fases 0 a 4 no
+  necesitan ninguna norma: son reglas de negocio.
+- **El Anexo A.2.3 no tiene fila para la fase 3**: no hay import que añadir.
+
+#### Lo que ya está escrito
+
+- **Compras es un esqueleto**: `git ls-files src/Modules/Compras` da cinco `.gitkeep`, uno por
+  proyecto, sin contexto, sin esquema y sin permisos.
+- **Ningún módulo maneja todavía un evento de otro** (invariante 12 del traspaso). El ADR-0013 §6
+  dejó escrito para ese día que «cerrarlo del todo exige que el manejador escriba su efecto y su
+  huella en el **mismo** `SaveChanges`», y `EventoProcesado` ya está mapeado en los contextos de
+  módulo para eso.
+- **Inventario escribe en el libro por un solo camino**, `AnotarEnElLibroAsync`, y el libro conoce
+  dos documentos de origen: `TipoDeDocumentoOrigen` tiene `Ajuste` y `Transferencia`. Sus importes
+  van en la divisa base de la empresa, como dice `Ajuste.Divisa`.
+- **Las lecturas que Compras necesitará**, y la que no existe:
+  - `IConsultaDeTerceros.EstadoDeAsync` con `RolDeTercero.Proveedor` dice si un proveedor existe,
+    hace ese rol y se puede tratar (R16);
+  - `IConsultaDeExistencias.DisponibleDeAsync` da el físico, lo reservado y lo disponible por
+    almacén y artículo;
+  - `IConsultaDeConversiones` da el factor de una línea en cajas, como en el ajuste;
+  - **ningún puerto resuelve un precio.** `IConsultaDeTarifas` solo publica `EstadoDeAsync`, y
+    `PrecioResueltoDto`, que está en `Catalogo.Contracts`, solo lo devuelve el caso de uso HTTP
+    de Catálogo. Lleva la divisa como `Guid`, `DivisaId`, y la empresa la tiene en ISO 4217, en
+    `EmpresaDto.DivisaBase`: es el invariante 8;
+  - **una tarifa no es de compra ni de venta**: `Tarifa` no tiene tipo, y un tercero, sea cliente
+    o proveedor, lleva una sola, `TarifaAsignadaId`. `ArticuloProveedor` solo guarda
+    `ReferenciaDelProveedor`, sin precio.
+- **La rejilla de líneas y el buscador del artículo se comparten** desde el 2.19, en
+  `features/inventario/lineas`. El ADR-0068 ya dice que el pedido de compra «la encuentra hecha».
+
+#### Las cifras de partida, con la orden que las mide
+
+- **426/450 KiB de arranque y 828/900 de total**, con
+  `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` sobre una construcción del
+  frontal de `08ea605`. El run **40104536177** dice lo mismo. Quedan **24 y 72 KiB**.
+- **115 permisos, 158 operaciones en 95 rutas, y 240 `type` de 248 sitios**, del mismo run.
+- **2 284 casos de .NET**, 1 544 en el carril rápido y 740 contra PostgreSQL; **392** de jsdom en
+  47 ficheros, y **22** en un Chromium.
+
+#### Lo que se pregunta, todo junto
+
+Cada pregunta dice lo que hay hoy, las salidas y la que el agente recomienda, con su motivo. Las
+respuestas van a *Decisiones tomadas*, y el desglose del *Checklist* sale de ellas.
+
+1. **El desglose de la fase, y su orden.** La propuesta, con el criterio de cada ítem:
+   - **3.1 · La exportación de los listados**: los trece de su nota, con los mismos filtros que
+     cada uno ya manda al servidor (pregunta 2);
+   - **3.2 · Los puertos de la fase**: el precio que Catálogo resuelve para otro módulo
+     (pregunta 4), la divisa de la tarifa en ISO, que desarma el invariante 8, y Compras con
+     persistencia: su esquema, su contexto, sus migraciones y su inscripción en
+     `IDocumentosDeUnPeriodo`. Los tests de arquitectura lo cuentan como módulo con persistencia;
+   - **3.3 · La retirada del artículo** (ADR-0023), decidida (a) el 2026-10-17:
+     `IConsultaDeArticulos` produce `SoloResuelveLoViejo`, una línea nueva no elige un artículo
+     retirado, y el retirado sigue contestando su unidad base, para que un recuento pueda sacar
+     sus existencias;
+   - **3.4 · El pedido de compra**: el alta en borrador, sus líneas (pregunta 6), confirmar, que
+     numera en su serie, congela la R7 y no escribe en el libro, cerrar con lo pendiente, anular y
+     descartar, con su listado, su ficha y sus pantallas. El criterio, el primero del §15: un
+     pedido confirmado no tiene ni una fila en el libro;
+   - **3.5 · La recepción**: total o parcial contra un pedido confirmado, con su lote o su serie y
+     su ubicación, y la entrada valorada con el coste de su línea (preguntas 3 y 9). El criterio,
+     el segundo: dos recepciones parciales dejan lo pendiente de cada línea bien, y el saldo sigue
+     siendo la suma del libro;
+   - **3.6 · La devolución de compra**, desde una recepción (pregunta 7). El criterio, el tercero:
+     recibir y devolver lo mismo deja el libro en cero por artículo, almacén, ubicación y lote, en
+     cantidad y en valor;
+   - **3.7 · La solicitud de compra**, con sus umbrales (pregunta 8), y de una aprobada sale un
+     pedido en borrador;
+   - **3.8 · La zona de cada almacén**, si va en esta fase (pregunta 11);
+   - **3.9 · El repaso de la fase**, criterio por criterio, y su cierre.
+
+   **Recomendada: este desglose, en este orden.** La exportación va primero porque así lo
+   contestó la respuesta 4 de la puerta del 2.17. La retirada va antes del pedido porque su
+   disparador es la primera línea de compra. Y el pedido va antes que la solicitud, aunque el
+   §8.1 empiece por ella: el criterio del §15 es del pedido, la recepción y la devolución, y una
+   solicitud aprobada no tiene adónde ir hasta que haya pedidos. Las salidas: (a) esta; (b) la
+   solicitud primero, en el orden del flujo; (c) la del usuario.
+
+2. **La exportación.** El §10 pide que «cada listado exporta a CSV/Excel lo que está viendo, con
+   los mismos filtros aplicados», y la decisión 7 del 1.11 ya escribió la regla del apóstrofo para
+   los campos que empiecen por `=`, `+`, `-`, `@`, tabulador o retorno.
+   - **(a) Recomendada: CSV, en el dialecto de la importación** (ADR-0034 §5): `;` y UTF-8, aquí
+     con BOM, para que lo abra bien un Excel en español. Lo genera el servidor, con los filtros y
+     el orden del listado y **todas sus páginas**, no solo la que se ve, y con el mismo permiso que
+     el listado: quien lo ve ya puede recorrerlo entero página a página, así que otro permiso no
+     protegería nada. Lo bloqueado queda fuera, como en el listado (R16).
+   - (b) CSV y también `.xlsx`. Necesita una biblioteca con su licencia comprobada, y el CSV ya
+     abre en Excel.
+   - (c) CSV hecho en el navegador con lo que ya ha bajado. Exportaría la página, no el listado.
+
+3. **La escritura de Compras en Inventario.** La regla 5 del §4 la manda por eventos, así que la
+   recepción no escribe en el libro: publica, e Inventario anota. Lo que hay que decidir es qué
+   pasa cuando Inventario no puede. La entrada puede caer en un ejercicio que se cerró entre medias
+   o en una ubicación bloqueada, y la salida de la devolución, además, puede no caber
+   (invariante 3).
+   - **(a) Recomendada: el evento y su respuesta, una saga de dos pasos.** Compras confirma y
+     publica, y su documento queda en un estado que dice que el stock está en camino. Inventario
+     anota en su manejador, con **el efecto y la huella en el mismo `SaveChanges`**, que cierra el
+     hueco del ADR-0013 §6, y contesta con otro evento: anotado, o rechazado con su motivo. Compras
+     lo recibe y pasa su documento al estado final, o lo devuelve con el motivo. Lo pendiente del
+     pedido se mueve con la respuesta, no antes. Y antes de confirmar, Compras pregunta por los
+     puertos de lectura lo que pueda, el ejercicio, la ubicación y lo disponible, para que el
+     rechazo sea la carrera y no el camino de siempre.
+   - (b) El evento sin respuesta. Si Inventario no puede, el evento se aparca a la quinta
+     (ADR-0013 §7), y Compras sigue diciendo que el stock entró. Es más corto, y deja un documento
+     que afirma algo falso sin saberlo.
+   - (c) La huella en su propia transacción, como hoy, con (a) o con (b). Deja el hueco: un
+     manejador que se cae entre su efecto y su huella anota dos veces, y en un libro que no se
+     puede limpiar (invariante 1) eso no tiene arreglo.
+
+4. **El precio de la línea (R7), y su divisa.** Hoy no hay de dónde sacar un precio de compra.
+   - **(a) Recomendada: el precio se escribe en la línea, y la tarifa del proveedor lo propone si
+     tiene una.** Un puerto nuevo en `Catalogo.Contracts` resuelve el precio y el descuento de una
+     tarifa para un artículo, una cantidad y una fecha, que es lo que ya hace el caso de uso HTTP.
+     Confirmar congela lo que la línea tenga, venga de la tarifa o de la mano, con la descripción
+     y el tipo impositivo del artículo a la fecha del pedido.
+   - (b) El precio, solo a mano. Sin puerto nuevo, y sin ayuda.
+   - (c) Un precio de compra por artículo y proveedor, en `ArticuloProveedor`. Cambia un maestro de
+     la fase 1 con datos dentro.
+
+   **Y la divisa:**
+   - **(i) Recomendada: el pedido, en la divisa base de la empresa, y solo en ella en esta
+     fase.** La tarifa pasa a ISO en el 3.2, y una tarifa en otra divisa no propone precio. El
+     libro valora en divisa base, así que un pedido en dólares necesitaría el cambio del día de la
+     recepción, y esa regla es de la fase 5, con la factura.
+   - (ii) Pedidos en cualquier divisa, valorados en la recepción al tipo de cambio de su fecha, con
+     el `TipoCambio` de Organización.
+
+5. **Los impuestos del pedido.** La R7 congela el tipo, y la R6 redondea por base imponible y
+   tipo, con unos casos dorados que son de la fase 5.
+   - **(a) Recomendada: el pedido congela el tipo en cada línea y suma la base, sin cuota.** La
+     cuota, con su regla de redondeo, se escribe una sola vez, en la fase 5, y el pedido la
+     enseñará entonces.
+   - (b) El pedido calcula ya la cuota por tipo, con la regla de la R6 y sus casos dorados
+     adelantados a esta fase.
+
+6. **Las líneas de un borrador de pedido.** El ADR-0065 §9 puso aquí su disparador: «el primer
+   documento de la fase 3 con líneas editables, el pedido de compra».
+   - **(a) Recomendada: el borrador del pedido se edita**: añadir, cambiar y quitar líneas, cada
+     una con su `If-Match`, como el recuento, y confirmar pasa a pedir la versión (ADR-0057). El
+     ajuste y la transferencia siguen descartándose, hasta que alguien pida corregirlos. Un pedido
+     se escribe en días, con el proveedor al teléfono, y descartarlo tira todas sus líneas; un
+     ajuste se escribe de una vez.
+   - (b) Como el ajuste: un borrador equivocado se descarta y se escribe otro.
+   - (c) Editables en los tres documentos, en el mismo ítem.
+
+7. **La devolución: qué se lleva, y qué le hace al pedido.**
+   - **Qué valor.** **(a) Recomendada: el coste de su recepción, acotado como la transferencia**
+     (ADR-0054): se lleva el valor que entró con esa línea, como mucho el que queda, y todo el que
+     queda si vacía la clave. El lote y la serie salen de la línea de la recepción, y la ubicación
+     la elige quien devuelve, con la de la recepción por omisión, porque la mercancía ha podido
+     moverse. (b) El PMP vigente, como cualquier salida: «la devolución revierte» se leería solo en
+     cantidades, porque una devolución al día siguiente de una entrada cara no devolvería su valor.
+   - **Qué le hace al pedido.** **(i) Recomendada: revierte también lo recibido**: lo devuelto
+     vuelve a estar pendiente, y un pedido `Recibido` vuelve a `RecibidoParcial`. Si no se quiere
+     reposición, el pedido se cierra con lo pendiente. (ii) Solo el stock: el pedido no se entera.
+   - Una devolución puede ser parcial, y una línea no devuelve más de lo que su recepción recibió
+     menos lo ya devuelto.
+
+8. **La solicitud y los umbrales** (el §7.5 y el §11).
+   - **(a) Recomendada: un umbral por empresa, que rige la aprobación de la solicitud y la
+     confirmación del pedido.** Por debajo basta el permiso de la acción, y por encima hace falta
+     otro, `…-sin-limite`. Quien creó el documento no lo aprueba ni lo confirma por encima del
+     umbral, ni con los dos permisos. La solicitud es opcional: un pedido se abre con ella o sin
+     ella. Su importe es el de sus líneas a precio estimado, en divisa base.
+   - (b) Un umbral por usuario, en su membresía. Cada aprobador con su cifra, pero Identidad
+     guardaría un dato de Compras.
+   - (c) La solicitud, obligatoria para todo pedido.
+
+9. **La recepción: sin pedido, de más, y sus fechas.**
+   - **(a) Recomendada: toda recepción sale de un pedido confirmado, y no recibe más de lo
+     pendiente**: una línea de más es un `422` con su línea. La recepción lleva su fecha, la de la
+     entrada en el almacén, que es la del movimiento y será el devengo de la factura (R14). Y, sin
+     ser obligatorios, el número y la fecha del albarán del proveedor, que es lo que mirará el
+     cotejo a tres bandas de la fase 5. Ponerlos ahora son dos columnas; ponerlos en la fase 5, una
+     migración sobre recepciones ya escritas.
+   - (b) Con una tolerancia de exceso por empresa, en porcentaje.
+   - (c) También sin pedido: una entrada sin compromiso, que el criterio del §15 no pide.
+
+10. **La cifra «pedido a proveedor»**, la que el §7.5 deja para el MRP.
+    - **(a) Recomendada: lo pendiente, en el pedido y en cada línea**, que es lo que pide el
+      criterio, y ninguna cifra agregada por artículo hasta que alguien la lea: el MRP de la fase 8,
+      o la ficha del artículo. Su disparador se escribe.
+    - (b) Un listado en Compras de lo pendiente de recibir, por artículo y almacén.
+    - (c) Una columna «pedido» en el saldo de Inventario, alimentada por eventos.
+
+11. **La zona de cada almacén**, decidida (a) con (ii) y `Europe/Madrid` para lo que no tiene
+    almacén, antes de la fase 5. ¿En qué fase va su ítem?
+    - **(a) Recomendada: el último de la fase 3.** La recepción es el primer documento cuya fecha
+      será un devengo, y con el día UTC, una entrada a las 00:30 del 1 de enero en Madrid propone
+      el 31 de diciembre, que es otro trimestre. La fase 4 empieza con el albarán, que es lo mismo
+      del lado de la venta.
+    - (b) El primero de la fase 4.
+    - (c) El último de la fase 4, justo antes de la 5.
+
+    Si la zona es una por instalación o una por empresa lo pregunta la puerta de ese ítem.
+
+12. **Lo que traen las notas y la fase 1, y que ningún ítem pide.** Cada una, (a) un commit o un
+    ítem en la fase 3, o (b) se queda con su disparador:
+    - **el `?q=` sin filtro** (ADR-0069): un `400` cuando el repositorio no declara filtro, y
+      los cinco listados dejan de publicar `q`. **Recomendada: (a), dentro del 3.1**, que toca los
+      mismos listados y el mismo paginador;
+    - **la auditoría de las herramientas** (ADR-0045): `npm audit fix` a secas, que sube seis
+      paquetes de desarrollo sin versión mayor, entre ellos `vitest` y
+      `@vitest/browser-playwright` a 4.1.12. **Recomendada: (a), el primer commit de la fase**,
+      porque dos de los avisos tocan el carril del navegador;
+    - **la correlación buscar/alta** (decisión 1 del 1.6): separar los permisos, que la búsqueda
+      enseñe lo bloqueado, o que el alta deje de distinguir. **Recomendada: (b)**, aceptada como
+      riesgo conocido: las tres salidas cuestan más que un canal que exige tener los dos permisos;
+    - **la destrucción del art. 32 al vencer**, con la anonimización que pide la decisión 12 de la
+      puerta de la fase 2. **Recomendada: su ítem en la fase 5**, porque lo que no se puede
+      destruir lo fija la conservación de las facturas;
+    - **y los restos de la fase 1**: la importación de artículos, la carrera de unicidad del alta,
+      que da un `500` en vez de un `409`, y el `413` de nginx que la importación no sabe leer.
+      **Recomendada: (b).**
+
+13. **El presupuesto del frontal.** Las pantallas del ajuste, en el 2.17, sumaron **56 KiB** al
+    total, cuando se estimaron entre 25 y 40, y sus tres páginas pesan 30 KB. Repartidos por
+    fichero, de `b1db83e` a `2fdd3cb`, con un build de `vite` de cada uno en el *scratchpad* y
+    `python -X utf8 kib-por-fichero.py <dist-de-antes> <dist-de-ahora>`, el guion del 2.19, que
+    compara los ficheros servidos por su nombre sin el hash y no cuenta los mapas:
+
+    | Qué | Bytes | Ficheros, sin el hash |
+    |---|---|---|
+    | Las tres páginas | +30 205 | `PaginaDelAlta` 12 969, `PaginaDelAjuste` 11 957, `PaginaDeAjustes` 5 279, las tres nuevas |
+    | Los módulos nuevos del ajuste | +7 021 | `ajustes` 3 219, `formularios` 3 130, `saldo` 579, `iso` 93 |
+    | Los tres `nombres`, juntos | +4 076 | de 5 768 a 9 844: el del ajuste, nuevo, y los maestros de Inventario, que pasaron de los recuentos a compartirse (ADR-0065 §8) |
+    | `zod`, que es `react-hook-form` con su resolutor y no zod | +7 753 | de 34 264 a 42 017 |
+    | Los diccionarios | +7 377 | `es` 3 732, `en` 3 645 |
+    | El índice y la hoja de estilos | +3 427 | `index.js` 1 921, `index.css` 1 506 |
+    | El resto | −2 497 | `cantidad` −2 183, `PaginaDeSaldos` −392, y +78 en seis más |
+    | **Total** | **+57 362** | de 738 894 a 796 256 B, de 721,6 a 777,6 KiB |
+
+    **El arranque** creció 7 159 B en el 2.17, y 5 952 del 2.18 al 2.20, contados con
+    `python -X utf8 kib-por-ruta.py <dist>`, otro guion del *scratchpad*, que suma `index.js`,
+    `index.css` y `es.js`: de 421 992 a 429 151 y a 435 103 B. Y **la ruta diferida más cara**,
+    lo que cuesta su primera visita con el arranque pagado, es `PaginaDelRecuento`, con
+    **160,8 KiB**, por delante de `PaginaDeLaTransferencia`, con 160,7.
+
+    **Lo que eso dice de la fase 3.** El 2.17 costó 56 KiB y el 2.19, 46, con la rejilla ya
+    compartida. La fase 3 trae cuatro documentos con pantalla, el pedido, la recepción, la
+    devolución y la solicitud: a 46 KiB cada uno, son unos 184, y quedan 72. Y el arranque, a
+    unos 6 o 7 KiB por documento, llega a la raya: de 24 a 28, con 24 de margen.
+
+    - (a) **Mantener 450 y 900, y bajar lo que cuesta cada pantalla.** Para que quepan los cuatro,
+      cada documento tendría que costar unos 18 KiB, un tercio de lo que costó el ajuste.
+    - **(b) Recomendada: el arranque en 450, como está, un tope por ruta diferida, y el total solo
+      a título informativo.** El tope que se propone es **192 KiB**, que deja un 19 % sobre la ruta
+      más cara de hoy. El arranque es lo que paga todo el que entra, y una ruta, lo que paga quien
+      la abre; el total crece con cada pantalla por construcción, y mide el tamaño de la
+      aplicación, no la espera de nadie. Para que el arranque deje de crecer con cada documento,
+      los textos de cada módulo viajarían con sus rutas, y no en el diccionario del arranque. Es un
+      cambio del guion del presupuesto, de la CI y del ADR-0028, que se enmienda, en su propio
+      commit al principio de la fase.
+    - (c) Subir el total, por ejemplo a 1 200 KiB, y seguir midiendo igual.
+
+    **El límite no se sube sin que decida el usuario**, y por eso es una pregunta.
+
+14. **Los cambios de `CLAUDE.md`**, que se aplican al contestar, al principio de una sesión. El §5
+    pasaría a decir:
+    - **Objetivo de este encargo:** completar la **fase 3 (Compras)**. La **fase 2 está cerrada con
+      veinte ítems** (run 40104536177 sobre `08ea605`; el cierre, `8b296ad`). El desglose en ítems
+      y sus criterios de aceptación los acordó la *puerta de clarificación de la fase 3*, y su
+      motivo está en `docs/PLAN.md` → *Decisiones tomadas*.
+    - **No adelantes fases.** Lo que sea de la fase 4 en adelante no se hace ahora, ni «de paso»:
+      en particular, el estado `Facturado` del pedido y la cantidad facturada de su línea, que son
+      de la fase 5, y el MRP, que es de la 8.
+    - **Imports: ninguno**, porque el A.2.3 no tiene fila para la fase 3. *Imports pendientes*
+      apunta que antes del primer manejador se lee a mano
+      `fundamentos/datos-distribuidos/convenciones.md`.
+
+    **Recomendada: así.** Hoy el §5 dice que el objetivo es la fase 2, y que no se adelanta nada
+    «de la fase 2 en adelante», con `CodigoBarras` de ejemplo, que entró en el 2.10.
+
+#### Lo que la puerta decidirá sin preguntar
+
+Con las respuestas recomendadas. Si alguna cambia, cambia lo que cuelga de ella.
+
+1. **Las rutas**, bajo `/api/v1/compras/`, con la forma del ajuste (ADR-0065 §6): el alta con la
+   `Idempotency-Key` obligatoria, el listado, la ficha con su `ETag`, y el descarte con `If-Match`.
+2. **Los permisos**, `compras.<documento>.<acción>`, uno por acción, como en Inventario.
+3. **La numeración**: un tipo de serie por documento, en el ejercicio de su fecha y bajo el cerrojo
+   del 2.4 (invariante 4).
+4. **El cierre del ejercicio**: Compras se inscribe en `IDocumentosDeUnPeriodo` con su primer
+   documento (invariante 6).
+5. **La doble flecha** (R13): `TipoDeDocumentoOrigen` gana la recepción y la devolución, con el
+   identificador del documento de Compras, y la vuelta es un puerto de lectura en
+   `Inventario.Contracts`.
+6. **Un proveedor que no se puede tratar** (R16) no recibe pedidos, recepciones ni devoluciones
+   nuevas, con el rechazo que ya dan los demás documentos.
+7. **La rejilla y el buscador** se comparten con Compras, no se copian, y se mueven en su propio
+   commit, como en el 2.19.
+8. **Cada ítem**, con su tanda escrita antes de medir y una mutación sobre el arnés, y con el humo
+   si trae migración o pantalla.
+
+#### Lo que sigue pendiente, aparte de la puerta
+
+- **`/code-review`** no se hizo sobre `0638419..0d26e76`: el traspaso la anota como no hecha.
+
+La siguiente mutación es la **745**, y el siguiente ADR, el **0071**.
+
 ## Estado actual
 
 **FASE 2 CERRADA — 20 de 20 ítems, el 2026-10-24.** La puerta de clarificación se pasó el
@@ -8714,10 +9061,11 @@ Los veinte `head_sha` casan con el commit del PLAN, los veinte runs salieron `co
 los veinte commits están en la historia de `main`. Diecisiete corrieron sobre `main` y tres sobre su
 rama, y el guion sale con 0.
 
-> **Dónde se retoma (2026-10-24): en la puerta de la fase 3**, en la rama `cierre-de-la-fase-2`.
-> Los tres primeros pasos del cierre están hechos: el repaso del 2.15 al 2.20, los veredictos y el
-> traspaso, y el cierre de la fase. Falta el cuarto: la tanda de la puerta de la fase 3, que el
-> commit siguiente escribe aquí, sin contestar. Ahí se para, y se pregunta todo junto.
+> **Dónde se retoma (2026-10-24): en la puerta de la fase 3, sin contestar.** Los cuatro pasos del
+> cierre están hechos: el repaso del 2.15 al 2.20, los veredictos y el traspaso, el cierre de la
+> fase, y la tanda de la puerta, con catorce preguntas, en *Decisiones tomadas → La puerta de la
+> fase 3*. **Se para ahí.** El desglose del *Checklist* y los cambios de `CLAUDE.md` salen de las
+> respuestas, y el código de la fase 3 no empieza antes.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
