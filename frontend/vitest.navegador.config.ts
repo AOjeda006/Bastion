@@ -15,8 +15,9 @@
 // Y LA AUDITORÍA DE LA HERRAMIENTA, leída al adoptarlos: los dos avisos moderados de
 // `@vitest/mocker` 4.1.11 (GHSA-qxg6-89mg-rqv8 y GHSA-xp26-3454-mjgp) ya estaban en la base, porque
 // lo trae `vitest`, pero tocan justo a este modo: el registro de *mocks* del servidor del navegador.
-// Se corrigen en 4.1.12, y la subida está propuesta en el PLAN, no hecha. El servidor escucha solo
-// en `localhost`, y la auditoría que decide, la de lo que llega al navegador, no los ve.
+// Se corrigen en 4.1.12, y la subida la hizo el 3.1. `npm audit fix` a secas no la da: `vitest` y
+// `@vitest/browser-playwright` se piden el uno al otro en la versión exacta, y solo suben juntos,
+// con `npm install -D vitest@4.1.12 @vitest/browser-playwright@4.1.12`. Las licencias no cambian.
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 
