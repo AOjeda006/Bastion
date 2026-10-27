@@ -914,6 +914,20 @@ datos:
   página se pide antes de escribir la cabecera, y un `4xx` sale como en el listado;
 - **el fichero se llama `<recurso>-<AAAA-MM-DD>.csv`**, con el día de negocio.
 
+### La pregunta del apóstrofo, contestada (2026-10-27)
+
+Salió al escribir la exportación de terceros, y se preguntó porque el dato no volvía igual: la
+importación guardaba el apóstrofo que la exportación había puesto, y «=Foo» volvía como «'=Foo».
+La respuesta es la recomendada:
+
+5. **El apóstrofo hace el viaje de vuelta.** Un texto que empieza por `=`, `+`, `-`, `@`, un
+   tabulador, un retorno **o un apóstrofo** sale con un apóstrofo delante, y la importación de
+   terceros quita uno solo, el primero, cuando lo sigue uno de esos siete. «=Foo» sale «'=Foo» y
+   vuelve «=Foo»; «'=Foo» sale «''=Foo» y vuelve «'=Foo». Las salidas eran (a) esta; (b) que la
+   importación lo quite sin que cambie el escritor, y un valor que empieza por «'=» perdería su
+   apóstrofo; (c) dejarlo y escribirlo; (d) terceros sin apóstrofo, contra la decisión 7 del 1.11.
+   Lo recoge el **ADR-0075**, que enmienda el §6 del 0073 y el §5 del 0034.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 1 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -1300,6 +1314,9 @@ cuando hace falta el porqué.
   ADR-NNNN» cuente solo si el último participio que lo precede es «enmendado» o «ampliado», con la
   primera forma de la 790 como su mutación y las cadenas de hoy como su pareja. No se hace sin
   encargo. **El disparador**: el próximo ADR que enmiende otro, o el repaso del 3.11.
+  **Saltó en el 3.2, dos veces**: con el ADR-0074, que enmienda el 0055, y con el 0075, que
+  enmienda el 0073 y el 0034. Medido otra vez con el mismo guion: 26 *Estado* anotados, diez con
+  más de un autor, y ninguno aprovecha el hueco. Se pregunta en el informe del 3.2.
 
 - **ABIERTA (2026-10-24, ítem 2.20, ADR-0070) · el recálculo de C cuesta entre 32 y 53 s según
   cuándo pase el `ANALYZE`.** Medido en el humo del 2.20, con tres recálculos de C sobre la misma

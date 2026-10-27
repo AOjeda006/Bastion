@@ -8,7 +8,8 @@ revisado: 2026-10-27
 
 # ADR-0073: La exportación recorre el listado por páginas dentro de una foto, y escribe el dialecto de la importación
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0075** en el §6: el apóstrofo es el séptimo
+  disparador.
 - **Fecha:** 2026-10-27
 - **Sale del ítem 3.2**, la exportación de los listados. Su criterio, en `docs/PLAN.md`, pide que el
   servidor genere el fichero «con los filtros y el orden del listado, **todas sus páginas**, el
@@ -82,6 +83,11 @@ acota y cuenta. La exportación necesita **todas**, y eso trae tres problemas qu
    `@`, un tabulador o un retorno sale con un apóstrofo delante, antes de entrecomillarlo. Un número,
    una fecha o un identificador los escribe Bastion, y un `-12,5` con apóstrofo dejaría de ser un
    número al abrirlo. El tipo del campo (`CampoCsv`) es el que lo dice, no lo que lleva escrito.
+
+   > **Enmendado por el ADR-0075 (2026-10-27).** Los disparadores son siete: también un texto que
+   > ya empieza por un apóstrofo sale con otro delante, para que la importación pueda quitar el
+   > que se puso sin quitar nada más, y lo que sale vuelva igual. La regla vive en
+   > `ApostrofoDelDialecto`, que usan los dos lados.
 7. **El fichero se llama `<recurso>-<AAAA-MM-DD>.csv`**, con el día de negocio de `DiaDeNegocio`, y
    sale como adjunto, con `filename` y `filename*`. El tipo es `text/csv; charset=utf-8`.
 8. **La ruta es `GET …/{recurso}/exportacion`**, con los parámetros del listado menos la página.

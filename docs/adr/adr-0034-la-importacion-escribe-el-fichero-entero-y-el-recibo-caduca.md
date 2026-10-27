@@ -3,12 +3,13 @@ tipo: referencia
 stack: [csharp, dotnet, aspnetcore, postgresql]
 aplica_a: [api-rest, manejo-errores, idempotencia, proteccion-datos, seguridad]
 tags: [adr, r10, r12, idempotencia, importacion, csv, retencion, dialecto, tope, adr-0026]
-revisado: 2026-09-14
+revisado: 2026-10-27
 ---
 
 # ADR-0034: La importación escribe el fichero entero o nada, su informe no repite ningún dato, y el recibo caduca
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0075** en el §5: un campo de texto se lee sin
+  el apóstrofo que le puso la exportación.
 - **Fecha:** 2026-09-14
 - **Corrige, y no sustituye**, dos frases del
   [ADR-0026](adr-0026-una-importacion-es-una-operacion-y-su-recibo-lleva-el-hash-del-fichero.md)
@@ -128,6 +129,11 @@ plazo, no va.
   en una sin ella, un segundo recurso. Queda dicho y documentado en el contrato.
 
 ### 5. El dialecto que se acepta, y lo que no es de él se rechaza con nombre
+
+> **Enmendado por el ADR-0075 (2026-10-27).** Se añade una regla: un campo de texto que empieza
+> por un apóstrofo seguido de `=`, `+`, `-`, `@`, un tabulador, un retorno u otro apóstrofo se lee
+> sin ese primer apóstrofo, que es el que pone la exportación. Los sí y no y los importes se leen
+> como llegan, y uno con apóstrofo sigue siendo `formato-no-valido`.
 
 - **Separador `;`**, siempre. No se detecta. Si la primera línea no casa con la cabecera pero **sí**
   casaría separada por `,` o por tabulador, el error se llama `importacion-separador-no-admitido`.
