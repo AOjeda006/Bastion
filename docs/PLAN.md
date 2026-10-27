@@ -714,26 +714,258 @@ de los cinco tiene varias salidas viables, se para en la puerta del ítem y se p
 5. **El umbral rige la confirmación del pedido desde el 3.10**, con la solicitud, porque la
    respuesta 8 los pone juntos. Hasta entonces, confirmar un pedido pide solo su permiso.
 
+### Tomadas por el agente de desarrollo — ítem 3.1, al escribirlo y al medirlo (2026-10-27)
+
+Cada tema del criterio fue en su subida, como pedía el orden de trabajo, y algunos en más de un
+commit: los runs y las respuestas, en `4a51ad0`; la auditoría, en `5661033`; las enmiendas, en
+`a5e086b` y `de17700`; el PLAN partido, en `73adc0e` y `fa07a91`; el presupuesto, en `6af95ca`,
+`571ece4`, `301a631`, `241750d` y `3ee6082`; y las cuatro notas, en `c99cd54`. Lo que se decidió
+sin preguntar, porque el criterio no lo decía o porque salió al escribirlo:
+
+1. **`npm audit fix` a secas no bastaba** (`5661033`). Subió `vite` a 7.3.7 y `undici` a 7.30.1,
+   y los cuatro paquetes de `vitest` se quedaron, porque `vitest` 4.1.12 pide
+   `@vitest/browser-playwright` 4.1.12 exacto, y al revés. Subieron juntos con un `npm install -D`
+   de los dos, que deja los rangos en `^4.1.12`. Ninguno es versión mayor: doce paquetes cambian
+   de versión, todos MIT, y no entra ni sale ninguno por nombre.
+2. **La regla de las enmiendas lee también las ampliaciones** (`a5e086b`). Una declaración es una
+   viñeta de la cabecera que empieza por «Enmienda» o «Amplía», con o sin etiqueta delante. Al
+   leerlas salieron seis huecos más que los dos del encargo, y se cerraron en el mismo commit:
+   - sin anotar en el *Estado*: el 0035 amplía el 0021, el 0043 el 0040, y el 0016 el 0011;
+   - anotadas y sin nota en el punto: el 0042 al 0041, y el 0063 al 0030 y al 0036.
+
+   Cada anotación nueva dice que es del 2026-10-26, porque el enmendado no lo decía, y ninguna
+   cambia lo que el ADR decidió.
+3. **Las cinco viñetas que nombran una enmienda sin declararla van en una lista cerrada**, cada
+   una con su motivo, y la lista se compara entera: una que sobra o que falta es un rojo.
+4. **La tanda de las enmiendas cambió el arnés dos veces** (`de17700`). La 752 salió verde, como
+   se escribió, porque ningún caso tenía un *Estado* anotado sin nota en el punto: el caso
+   sintético gana ese tercer estado. La 753 quitaba un filtro que nada ejercía, y el filtro se
+   borra: un ADR que se nombrara a sí mismo saldría como una anotación que nadie declara.
+5. **Cada bloque de la historia va a su fase** (`73adc0e`). Las decisiones, el estado y el
+   checklist, por sus encabezados. Las notas cerradas, a la fase de la fecha de su etiqueta, y las
+   quince sin etiqueta, del 2026-08-25, a la fase 0, con el título, el objetivo y el alcance de
+   antes, que eran de la fase 0.
+6. **`scripts/comprobar-el-plan-partido.py` cuenta las líneas como multiconjunto**, y lo único que
+   deshace antes de comparar son los enlaces a los ADR, que en la historia ganan un `../`. Sin
+   argumentos compara el commit que creó `docs/historia/` con su padre, así que se repite.
+7. **`ElEstadoDelReadmeEsElDelPlanTests` gana dos casos**: el PLAN lleva casillas de una sola fase,
+   y las fases con historia son exactamente las de antes de la vigente, cada una con sus casillas
+   marcadas. La pareja de las casillas de la fase 0 se busca ahora en su historia.
+8. **Los textos siguen en un solo espacio de nombres**, `traduccion` (`6af95ca`), así que
+   `t('inventario.…')` no cambia: cambia cuándo llegan. Los trae el `lazy` de la ruta, a la vez
+   que la pantalla, con el dueño que declara la tabla de rutas. El enrutador se crea en `main.tsx`
+   con la promesa de la instancia, para que la pantalla y el diccionario sigan bajando a la vez.
+9. **La ruta se mide con el manifiesto de Vite** (`301a631`, ADR-0071), porque en el `dist` un
+   fragmento compartido no dice quién lo importa: su cierre estático, menos el arranque, más los
+   textos de su dueño en el mayor de sus idiomas. El manifiesto no se sirve: `Dockerfile.web` lo
+   borra con los mapas, y el humo de la imagen lo comprueba, con el `index.html` como pareja.
+10. **Lo comprimido se mide con `gzip` de nivel 1**, el que usa nginx cuando su configuración no
+    dice `gzip_comp_level`, y `deploy/nginx.conf` no lo dice.
+11. **Las etiquetas de las descargas retenidas llevan barra** (`3ee6082`): `organizacion/es`, y no
+    `organizacion.es`. `LosPermisosQueNombraElFrontalTests`, en el carril de integración, vio
+    diecisiete literales con forma de permiso en los casos nuevos, y el barrido no se tocó: son
+    nombres del arnés, y la barra no tiene forma de permiso. Dos aserciones que tecleaban una clave
+    suelta se quitaron, porque otra del mismo caso ya las implica.
+12. **Se arregló en un commit nuevo, y no reescribiendo los cuatro**, que son la base de las
+    tandas de la 765 a la 791. Así que `6af95ca`, `571ece4`, `301a631` y `241750d` tienen ese caso
+    en rojo, cada uno por separado. Ningún run los vio rojos, porque fueron en la misma subida que
+    `3ee6082`: lo vio la batería sobre `241750d`, antes de subir.
+13. **Las cuatro notas nuevas llevan la orden que comprueba lo que dicen** (`c99cd54`), y el
+    disparador del encargo. Ninguna se hace ahora.
+14. **La nota de la auditoría se cierra aquí y se queda en el PLAN**, con su CERRADA, hasta que la
+    fase se cierre y su historia se mueva. Así se hizo en las fases de antes.
+15. **La debilidad que encontraron la 790 y la 791 va a una nota abierta**, y no se arregla, porque
+    ningún criterio del 3.1 la pide: *Notas / riesgos*, la quinta.
+
+**Las cinco tandas, de la 745 a la 791, se escribieron antes de medir**, cada una sobre el commit
+de su tema, en el *scratchpad*: `tanda-enmiendas.md`, `tanda-partido.md` y `tanda-presupuesto.md`,
+que lleva también la de los textos y la del ADR-0071. Cada mutación se aplicó sola en el árbol
+limpio, se revirtió con `git restore --source=HEAD` y se tocó con la fecha de ahora:
+
+```bash
+python -X utf8 mutar-enmiendas.py 745 746 747 748 749 750 751 752 753  # a5e086b, y de17700
+python -X utf8 mutar-partido.py 754 755 756 757 758 759 760 761 762 763 764   # sobre fa07a91
+python -X utf8 mutar-textos.py <salida>    # 765-775, sobre 6af95ca, 571ece4 y 3ee6082
+python -X utf8 solo-768.py                 # la 768, con cada caso solo y tres rondas
+python -X utf8 mutar-presupuesto.py <salida> 776 777 778 779 780 781 782 783   # sobre 301a631
+python -X utf8 mutar-presupuesto.py <salida> 784 785 786 787 788
+python -X utf8 canario-adr.py <salida>     # 790 y 791, sobre 241750d
+```
+
+Los carriles: las de las enmiendas y las del ADR-0071, con `dotnet test tests/Arquitectura.Tests`
+filtrado a la clase `UnaEnmiendaSeAnotaEnLosDosAdrTests`; las del PLAN partido, con la clase
+`ElEstadoDelReadmeEsElDelPlanTests` o con el guion que compara;
+las de los textos, con `npx vitest run` entero y su informe JSON, contando los casos por nombre; y
+las del presupuesto, con el guion entero dos veces, con el tope por ruta en la ruta más pesada,
+173, y en 172. Las bases, en verde: las enmiendas, 0 de 8; el PLAN partido, 0 de 4, y el guion,
+verde; los textos, 0 de 400 sobre `571ece4` y sobre `3ee6082`; el presupuesto, 0 con 173 y 1 con
+172, por la transferencia y el recuento; y el ADR-0071, 0 de 8. Al acabar cada tanda, la porcelana,
+vacía. Por los casos de los textos: (a) `una ruta trae los textos de su funcionalidad, y solo los
+suyos`; (b) `mientras sus textos viajan, la pantalla no se pinta…`; (c) `cambiar de idioma trae los
+textos de lo visitado…`; (d) `si el idioma cambia mientras los textos de la ruta viajan…`; y (e)
+`si los textos de la ruta llegan mientras el idioma cambia…`.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 745 | El *Estado* del ADR-0007 vuelve a «aceptado» a secas | **1 de 8**: `El_enmendado_anota_en_su_estado_quien_lo_enmienda` |
+| 746 | Sin la nota del §5 del ADR-0007 | **1 de 8**: `El_enmendado_lleva_la_nota_en_el_punto_que_cambia` |
+| 747 | El ADR-0016 dice «aplica el» en vez de «amplía el» | **1 de 8**: `Lo_que_anota_un_estado_lo_declara_quien_enmienda` |
+| 748 | **Arnés**: la declaración ya no admite etiqueta delante | **3 de 8**: `Lo_que_anota_un_estado_lo_declara_quien_enmienda`, `Ninguna_mencion_de_una_enmienda_queda_sin_clasificar` y `Una_enmienda_que_el_enmendado_no_anota_se_ve` |
+| 749 | **Arnés**: «por el ADR-» pasa a «por la ADR-» | **4 de 8**: `Cada_enmienda_nombra_lo_que_enmienda`, `El_barrido_ve_las_enmiendas_y_la_pareja_anotada_en_los_dos_lados`, `El_enmendado_anota_en_su_estado_quien_lo_enmienda` y `Una_enmienda_que_el_enmendado_no_anota_se_ve` |
+| 750 | **Arnés**: la cláusula no se corta nunca | **2 de 8**: `El_enmendado_anota_en_su_estado_quien_lo_enmienda` y `El_enmendado_lleva_la_nota_en_el_punto_que_cambia` |
+| 751 | Sale de la lista cerrada la mención del ADR-0055 | **1 de 8**: `Ninguna_mencion_de_una_enmienda_queda_sin_clasificar` |
+| 752 | **Arnés**: el cuerpo empieza en el título, con la cabecera dentro | sobre `a5e086b`, **0 de 8**, como se escribió; sobre `de17700`, **1 de 8**: `Una_enmienda_que_el_enmendado_no_anota_se_ve`, por el tercer estado del caso sintético (punto 4) |
+| 753 | **Arnés**: el número propio no se aparta | sobre `a5e086b`, **0 de 8**, como se escribió; sobre `de17700` no cambia nada, porque el filtro ya no está (punto 4) |
+| 754 | Una casilla de `fase-1.md` se desmarca, la del 1.5 | **1 de 4**: `Cada_fase_cerrada_tiene_su_historia_con_el_checklist_entero` |
+| 755 | Sin `fase-0.md` | **2 de 4**: el mismo y `El_checklist_del_plan_se_lee` |
+| 756 | El checklist del PLAN gana una casilla marcada de la fase 2 | **1 de 4**: `El_plan_lleva_las_casillas_de_una_sola_fase` |
+| 757 | `docs/historia/` gana un `notas.md` | **1 de 4**: `Cada_fase_cerrada_tiene_su_historia_con_el_checklist_entero` |
+| 758 | La historia de la fase 1 gana una casilla de la fase 2 | **1 de 4**: el mismo |
+| 759 | **Arnés**: la historia se busca como `fase-N.markdown` | **1 de 4**: el mismo, porque ninguna fase tiene historia |
+| 760 | **Arnés**: las fases debidas son `Range(0, vigente - 1)` | **1 de 4**: el mismo |
+| 761 | Una línea única, quitada de `fase-2.md` | **el guion, con 1**: falta `### Tomadas en la puerta de clarificación de la fase 2 (2026-09-18)` |
+| 762 | **Arnés**: el guion no deshace el `../` de los enlaces a los ADR | **el guion, con 1**: faltan 20 líneas, las que enlazan un ADR |
+| 763 | **Arnés**: el guion busca la historia en `docs/historias` | **el guion, con 1**: «el después no tiene ningún fichero en docs/historias/» |
+| 764 | Una de las dos copias de una línea que el PLAN de antes tenía dos veces | **el guion, con 1**: falta una vez `- rama propia por unidad, y commits pequeños y firmados.`; cuenta, y no solo mira si está |
+| 765 | `cargarTextosDe` sin el bucle: no mira si el idioma cambió | **1**: (d) |
+| 766 | `cambiarIdioma` sin la última mirada antes de cambiar | **1**: (e) |
+| 767 | `cambiarIdioma` no pide los textos de lo visitado | **1**: (c). Sobre `6af95ca`, 3: el hallazgo de abajo |
+| 768 | El `lazy` no espera a los textos | **2**: (b), y (d) solo en la pasada entera. Con el caso solo, (b) rojo en 3 de 3 y (d) verde en 3 de 3: el hallazgo de abajo |
+| 769 | El `lazy` no trae los textos | **5**: de la (a) a la (e) |
+| 770 | `es.ts` vuelve a llevar un espacio de una funcionalidad | **7**: el del arranque, el barrido de los espacios, y de la (a) a la (e), porque con el espacio en el armazón nadie lo trae |
+| 771 | La expresión del *linter*, con `tiposDeError\.` como único prefijo | **1**: `marca el valor desde el armazón…`, de `ElDiccionarioSeImportaPorSuTipo` |
+| 772 | El armazón nombra una clave de una funcionalidad | **1**: `ningún fichero del armazón ni de otra funcionalidad nombra una clave suya` |
+| 773 | **Arnés**: el barrido deja de casar las plantillas | **1**: `y la ve si alguien la nombra: desde el armazón, desde otra, y en una plantilla` |
+| 774 | **Arnés**: la lista de fuentes sale vacía, con `.jsx` | **1**: `ningún fichero del armazón…`, por su pareja, `FUENTES.length > 50` |
+| 775 | **Arnés**: la retención del cargador no retiene | **4**: de la (b) a la (e), los que retienen |
+| 776 | El tope por ruta compara con `>=` | **con 173, 1**: la del recuento, en su tope |
+| 777 | **Arnés**: el guion de las rutas sale siempre con 0 | **con 172, 0**, aunque escribe su `::error::` |
+| 778 | La ruta deja de sumar los textos de su dueño | **con 172, 0**: la más pesada baja a 161 |
+| 779 | El cierre no sigue las importaciones estáticas | **con 172, 0**: la más pesada baja a 29 |
+| 780 | La ruta no resta el arranque | **con 173, 1**: la más pesada sube a 577 |
+| 781 | El guion del arranque no pasa lo que lee del índice | **con 173, 1**: «el manifiesto pone en el arranque … y el guion no lo ha contado» |
+| 782 | **Arnés**: el guion del arranque se traga la salida 1 de las rutas | **con 172, 0** |
+| 783 | `build.manifest` apagado | **con 173, 1**: «no existe … manifest.json» |
+| 784 | El armazón importa por su valor los textos de una funcionalidad | **con 173, 1**: «no hay fragmento de los textos de 'organizacion' en 'es'» |
+| 785 | La entrada importa en diferido algo sin clasificar | **con 173, 1**: «la entrada importa en diferido src/app/sobrante.ts…» |
+| 786 | Una pantalla importa algo en diferido | **con 173, 1**: «…PaginaDeAlmacenes.tsx importa algo en diferido» |
+| 787 | Una pantalla que no está en `rutas.tsx` | **con 173, 1**: «Sobran: [src/features/organizacion/PaginaSobrante.tsx]» |
+| 788 | Una pantalla engorda 30 000 B | **con 173, 1**: el recuento, 202 KiB |
+| 789 | `Dockerfile.web` sin el `rm` del manifiesto | **a mano, con Docker**: la imagen construida con `Dockerfile.web.sin-rm`, del *scratchpad*, tiene `/usr/share/nginx/html/.vite`, y la de `Dockerfile.web`, no, con el `index.html` en su sitio |
+| 790 | El 0036 pierde de su *Estado* la frase del 0071 | **1 de 8**: `El_enmendado_anota_en_su_estado_quien_lo_enmienda`, en `ADR-0071 → ADR-0036` |
+| 791 | El 0028 pierde sus dos notas del 0071 | **1 de 8**: `El_enmendado_lleva_la_nota_en_el_punto_que_cambia`, en `ADR-0071 → ADR-0028` |
+
+- **Lo que salió distinto de lo escrito, y por qué**:
+  - **la 752 y la 753, verdes, como se escribió**, y cada una dejó su cambio en `de17700`: el
+    punto 4;
+  - **la 767 dio tres rojos sobre `6af95ca`, y no uno**. El `afterEach` soltaba lo que un caso
+    rojo había dejado retenido, y eso corría dentro del caso siguiente. Arreglado en `571ece4`: lo
+    retenido se olvida sin soltarse;
+  - **la 768, con el caso solo, salía verde sobre `6af95ca`**: la pantalla tardaba más en
+    compilarse que los textos en llegar. Desde `571ece4`, el caso carga antes la pantalla, y afirma
+    que el enrutador no ha terminado su primera carga. El rojo de (d) en la pasada entera es la
+    pantalla caliente que deja (b), y no su sujeto;
+  - **la 784 y la 788 no compilaban** en su primera forma: `tsc -b` pide `['…']`, por
+    `noPropertyAccessFromIndexSignature`. Se reescribieron y se midieron en la segunda pasada;
+  - **la 790 y la 791 salieron verdes en su primera forma, por diseño**, y no cuentan. Una cambiaba
+    «enmendado» por «corregido» en el *Estado* del 0036, y la viñeta seguía diciendo «Ampliado» por
+    el 0063 y nombrando «por el ADR-0071». La otra quitaba una sola de las dos notas del 0028, y la
+    regla pide la nota en el cuerpo, no en qué punto. Se reescribieron sobre el sujeto. La primera
+    es la nota abierta del punto 15;
+  - **el barrido de permisos del carril de integración vio lo que el carril rápido no ve**: un
+    literal de un caso del frontal con forma de permiso. Es el punto 11, y por eso la tanda de los
+    textos se midió otra vez sobre `3ee6082`, con los mismos rojos, caso por caso
+    (`tanda-textos-3.log`).
+
+La siguiente mutación es la **792**, y el siguiente ADR, el **0072**.
+
 ## Estado actual
 
-**FASE 3 EN CURSO — 0 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
+**FASE 3 EN CURSO — 1 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
 catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas están en
 *Decisiones tomadas → Traídas por el encargo del 2026-10-26*, y el desglose son **once ítems**, del
-3.1 al 3.11, en el *Checklist*. El primero, la casa en orden, está en curso en la rama
-`3.1-la-casa-en-orden`.
+3.1 al 3.11, en el *Checklist*. El primero, la casa en orden, está hecho.
 
-> **Dónde se retoma (2026-10-26): en el 3.1, la casa en orden**, en la rama
-> `3.1-la-casa-en-orden`. El primer tema está hecho: los runs, las respuestas, el checklist y el
-> README. Siguen, cada uno en su commit y en su subida, y esperando a la conclusión de la
-> anterior: `npm audit fix`; las enmiendas no declaradas y su test; el PLAN partido; el presupuesto
-> con la forma nueva; y las cuatro notas nuevas. Después, el 3.2 y el 3.3, y el 3.4, **que se para
+> **Dónde se retoma (2026-10-27): en el 3.2, la exportación**, en su rama, `3.2-la-exportacion`,
+> abierta desde `main` cuando el cierre del 3.1 haya llegado a él. Su primer commit anota los dos
+> runs del cierre del 3.1, el de la rama y el de `main`. Después, el 3.3, y el 3.4, **que se para
 > al cerrarse, antes del 3.5**.
 >
 > **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
-> `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto.
+> `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto. Llega a
+> `main` con el cierre del 3.1.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
+
+**El 3.1, hecho el 2026-10-27**, en la rama `3.1-la-casa-en-orden`, abierta el 2026-10-26 desde
+`main` en `ec023f5`. Lo que pide la respuesta 13 está en el ADR-0071, que enmienda el 0028 y el
+0036; lo que se decidió al escribirlo y al medirlo, en *Decisiones tomadas → Tomadas por el agente
+de desarrollo — ítem 3.1*. Lleva un ADR, así que el siguiente es el **0072**. Sus mutaciones van de
+la **745** a la **791**, y las siguientes empiezan en la **792**.
+
+**Los commits, por este orden, y las subidas, una por tema, cada una con su run de rama** sobre su
+último commit (los trabajos, Backend, Frontal y Humo). Todos en verde:
+
+1. `4a51ad0`, «docs(plan): la puerta de la fase 3, contestada, y su checklist»: **40415382989**,
+   Frontal `121896286522`, Backend `121896286797` y Humo `121901754984`.
+2. `5661033`, «fix(frontal): vitest 4.1.12 y vite 7.3.7, y la auditoría a cero»:
+   **40417648295**, Backend `121903848260`, Frontal `121903848630` y Humo `121909207661`.
+3. `a5e086b`, «docs(adr): las enmiendas, anotadas en los dos lados, y su regla», y `de17700`,
+   «test(arquitectura): la nota del punto no es la del Estado», en una subida: **40419763345**,
+   Frontal `121910970468`, Backend `121910970829` y Humo `121915165263`.
+4. `73adc0e`, «docs(plan): el PLAN partido, con cada fase cerrada en su historia», y `fa07a91`,
+   «docs(agents): la numeración de las mutaciones busca en la historia»: **40421394770**, Backend
+   `121916433084`, Frontal `121916433460` y Humo `121919992685`.
+5. `6af95ca`, «feat(frontal): los textos de cada módulo viajan con sus rutas»; `571ece4`,
+   «test(frontal): un caso rojo no suelta sus cargas en el siguiente»; `301a631`, «ci(frontal):
+   un tope por ruta, el total informativo y lo comprimido»; `241750d`, «docs(adr): el presupuesto
+   vigila el arranque y cada ruta (ADR-0071)»; y `3ee6082`, «test(frontal): los casos de los
+   textos no teclean forma de permiso», en una subida: **40435035345**, Backend `121961570006`,
+   Frontal `121961570175` y Humo `121965776910`. Los cuatro primeros tienen en rojo
+   `LosPermisosQueNombraElFrontalTests`, y el quinto lo arregla: el punto 12 de las decisiones.
+6. `c99cd54`, «docs(plan): cuatro notas abiertas de seguridad, para antes de desplegar»:
+   **40436956193**, Frontal `121967812130`, Backend `121967812439` y Humo `121972126362`.
+7. El que lo cierra, «docs(plan): cierra el 3.1, con sus tandas y la batería», por el flujo de la
+   rama. Su run de rama y el de `main` los anota el primer commit del 3.2.
+
+Los runs se leyeron con `python -X utf8 vigilar212.py <sha> <rama>`, un guion del *scratchpad*, y
+el de `c99cd54`, con su copia `vigilar31.py`, que pregunta con `curl`: el 2026-10-27 el `urllib`
+de Python dejó de verificar el certificado de `api.github.com`, y el guion salió con su «sondeo
+roto», como debe.
+
+**El tamaño del PLAN**, con `python -X utf8 scripts/comprobar-el-plan-partido.py`, sin argumentos:
+de 2 036 368 bytes en 25 280 líneas a 103 376 en 1298, y la historia, 346 621, 523 775 y
+1 083 260 bytes en las tres fases. El guion dice también que no se perdió ninguna línea.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `3ee6082`**, con `bash bateria31.sh`, un
+guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida
+en una línea. Los diecinueve pasos salen con 0, y la porcelana, vacía. `c99cd54` y el cierre solo
+tocan el PLAN y el README:
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **158** operaciones en
+  **95** rutas y **240** tipos de **248** sitios, como en la base, con los dos generadores en
+  `--comprobar`. Las rutas, contadas sobre `docs/api/openapi.json`;
+- `typecheck`, `lint` y `format:check`, limpios; **400** casos de jsdom en **48** ficheros, ocho
+  casos y un fichero más que la base; `canal-de-la-consola.sh`, con la marca, ningún aviso de
+  `act()` y siete trozos para las ocho cadenas; y el carril del navegador, **22** casos en **1**
+  fichero, todos en verde;
+- el arranque, **407/450 KiB** en 4 ficheros, 19 menos que la base; la ruta diferida más pesada,
+  `PaginaDelRecuento`, **173/192 KiB**, de 21 rutas; el total servido, **831 KiB**, informativo; y
+  lo comprimido, **145**, **61** y **298 KiB**, también informativo;
+- el build, con 0 errores y 0 avisos, y `dotnet format`, limpio;
+- **1554** casos en el carril rápido y **740** en el de integración, 652 de `Api.IntegrationTests`
+  y 88 de `Organizacion.IntegrationTests`, todos en verde y contados con `recuento-de-tests.sh` y
+  las dos listas del *workflow*. Son diez más en el rápido, los ocho de
+  `UnaEnmiendaSeAnotaEnLosDosAdrTests` y los dos nuevos de `ElEstadoDelReadmeEsElDelPlanTests`;
+- y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py ec023f5 HEAD`: 125
+  pares y 35 `Project` en los dos lados, sin nada añadido ni retirado; y en el frontal, 443
+  entradas en los dos, con doce que cambian de versión y ninguna de nombre: `vitest` y nueve de
+  `@vitest/` de 4.1.11 a 4.1.12, `vite` de 7.3.6 a 7.3.7 y `undici` de 7.30.0 a 7.30.1.
+
+**La auditoría de la herramienta**, con `npm --prefix frontend audit --json` sobre `c99cd54`: 0 en
+todas las gravedades. La puerta, `npm --prefix frontend audit --omit=dev --audit-level=high`, sale
+con 0.
 
 ## Checklist
 
@@ -760,7 +992,7 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 > del frontal sin la raíz. Son las del run **40104536177** y de la batería del cierre del 2.20, y
 > `ec023f5` solo toca el PLAN.
 
-- [ ] **3.1 · La casa en orden** — criterio de aceptación: seis temas, cada uno en su commit y en
+- [x] **3.1 · La casa en orden** — criterio de aceptación: seis temas, cada uno en su commit y en
   su subida, en la rama del ítem.
   - **El primer commit**: los cinco runs del cierre de la fase 2 anotados, las respuestas de la
     puerta en *Decisiones tomadas*, este checklist y la línea del README.
@@ -785,6 +1017,31 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
     local, y en todo caso en la puerta de la fase 5»: los dos roles de la base, `Include Error
     Detail=true` solo en desarrollo, la limitación de ritmo en el acceso y las iteraciones de
     PBKDF2.
+
+  **Hecho el 2026-10-27**, en la rama `3.1-la-casa-en-orden`, en doce commits, del `4a51ad0` al
+  `c99cd54`, y el que lo cierra. Cada tema, en su subida; tres de ellos, en más de un commit. Lo
+  decidido sin preguntar y las tandas de la 745 a la 791, en *Decisiones tomadas → Tomadas por el
+  agente de desarrollo — ítem 3.1*; los commits, sus runs y la batería, en *Estado actual → El 3.1,
+  hecho*. Cada tema, con lo que lo comprueba:
+
+  - **el primer commit** (`4a51ad0`): los cinco runs, en *Estado actual* de la historia de la fase
+    2, y las respuestas, este checklist y la línea del README, que comprueba
+    `ElEstadoDelReadmeEsElDelPlanTests`;
+  - **la auditoría** (`5661033`): 0 en todas las gravedades, con `npm --prefix frontend audit
+    --json`, y la nota de la auditoría, cerrada;
+  - **las enmiendas** (`a5e086b`, `de17700`): las dos del encargo y seis más, anotadas, y
+    `UnaEnmiendaSeAnotaEnLosDosAdrTests`, con su pareja, el 0070, y sus dos fuentes por encima de
+    veinte, que ven de la 745 a la 752;
+  - **el PLAN partido** (`73adc0e`, `fa07a91`): de 2 036 368 a 103 376 bytes, sin perder una
+    línea, con `scripts/comprobar-el-plan-partido.py`, que ven de la 761 a la 764; los dos casos
+    nuevos de `ElEstadoDelReadmeEsElDelPlanTests`, que ven de la 754 a la 760; y la orden de la
+    numeración de `AGENTS.md`, que lista 64 tablas en los dos sitios;
+  - **el presupuesto** (`6af95ca`, `571ece4`, `301a631`, `241750d`, `3ee6082`): el arranque,
+    407/450; la ruta más pesada, 173/192; el total y lo comprimido, informativos; los textos de
+    cada módulo, con sus rutas, que ven de la 765 a la 775; el guion, que ven de la 776 a la 789;
+    la CI y `AGENTS.md`, en `450 192`; y el ADR-0071, con el 0028 y el 0036 anotados, que ven la
+    790 y la 791;
+  - **las cuatro notas** (`c99cd54`), en *Notas / riesgos*, cada una con su orden.
 - [ ] **3.2 · La exportación** — criterio de aceptación: cada listado de la nota de la exportación
   descarga un CSV en el dialecto de la importación (ADR-0034 §5), con BOM y con la regla del
   apóstrofo de la decisión 7 del 1.11. Lo genera el servidor con los filtros y el orden del
@@ -920,7 +1177,11 @@ cuando hace falta el porqué.
 >
 > Las cuatro primeras son del 3.1, del orden de trabajo de la puerta de la fase 3, y comparten
 > disparador: antes del primer despliegue fuera de local, y en todo caso en la puerta de la
-> fase 5.
+> fase 5. La quinta salió de una tanda del 3.1.
+>
+> **Las que se cierran durante la fase 3 se quedan aquí**, con CERRADA, la fecha y el ítem que las
+> cierra, hasta que la fase se cierre y su historia se mueva, como en las fases de antes. La
+> primera es la de la auditoría, que cerró el 3.1.
 
 - **ABIERTA (2026-10-27, ítem 3.1, el orden de trabajo de la puerta de la fase 3) · la API es
   dueña de las tablas, y en el *compose*, superusuaria.** La API y el migrador comparten la cadena
@@ -974,6 +1235,21 @@ cuando hace falta el porqué.
   el que falla, contra el `HashDeRelleno`. **El disparador**: antes del primer despliegue fuera de
   local, y en todo caso en la puerta de la fase 5.
 
+- **ABIERTA (2026-10-27, ítem 3.1, la tanda del ADR-0071) · la anotación del *Estado* no ata cada
+  «por el ADR-NNNN» a su verbo.** `UnaEnmiendaSeAnotaEnLosDosAdrTests` da por anotada una
+  enmienda cuando la viñeta del *Estado* dice «enmendad» o «ampliad» en algún sitio y «por el
+  ADR-NNNN» en cualquier otro: toma todos los números de la viñeta, con `Numeros(PorEl(), vineta)`.
+  Lo encontró la primera forma de la 790, verde por diseño: con «corregido por el ADR-0071» en el
+  *Estado* del 0036, la regla lo daba por anotado, porque la misma viñeta dice «Ampliado» por el
+  0063. Ningún ADR de hoy lo aprovecha. De los 23 *Estado* anotados, ocho nombran a más de un
+  autor en cadena, como el del 0044, «Enmendado por el ADR-0046 (…), por el ADR-0059 (…), por el
+  ADR-0063 (…) y por el ADR-0067», y en los 23 el último participio delante de cada «por el» es
+  «enmendado» o «ampliado». Lo mide `python -X utf8 verbos-del-estado.py <repo>`, del
+  *scratchpad*, que limpia la viñeta como `Limpio()`. **La propuesta**: que cada «por el
+  ADR-NNNN» cuente solo si el último participio que lo precede es «enmendado» o «ampliado», con la
+  primera forma de la 790 como su mutación y las cadenas de hoy como su pareja. No se hace sin
+  encargo. **El disparador**: el próximo ADR que enmiende otro, o el repaso del 3.11.
+
 - **ABIERTA (2026-10-24, ítem 2.20, ADR-0070) · el recálculo de C cuesta entre 32 y 53 s según
   cuándo pase el `ANALYZE`.** Medido en el humo del 2.20, con tres recálculos de C sobre la misma
   base: 33,9 s a secas, 32,1 con `VACUUM` entre la vuelta atrás y el avance, y 53,4 con `ANALYZE`.
@@ -988,7 +1264,7 @@ cuando hace falta el porqué.
   **Repasada al cerrar la fase 2: sigue abierta, con su propuesta.** Ningún criterio de la fase 3
   le da al recálculo una entrada en producción, así que el disparador no se acerca.
 
-- **ABIERTA (2026-10-24, ítem 2.19, ADR-0045) · la auditoría de la herramienta da dos altas, en
+- **CERRADA (2026-10-27, ítem 3.1, ADR-0045) · la auditoría de la herramienta da dos altas, en
   `vite` y en `undici`.** Medido con `npm --prefix frontend audit --json` sobre `4f6ac53`: 0
   críticas, 2 altas y 2 moderadas, en `@vitest/mocker`, `undici`, `vite` y `vitest`. La alta de
   `vite` es de `launch-editor`, que abre el editor desde el servidor de desarrollo
@@ -1012,6 +1288,11 @@ cuando hace falta el porqué.
   de `08ea605`, el **40104536177**, dice lo mismo que la medida de arriba: 0 críticas, 2 altas y 4
   moderadas, en seis paquetes de desarrollo, con la puerta en 0. La propuesta es una pregunta de
   la tanda.
+  **La cerró el 3.1** (respuesta 12 de la puerta de la fase 3), en `fix(frontal): vitest 4.1.12 y
+  vite 7.3.7, y la auditoría a cero` (`5661033`). `npm audit fix` a secas solo subió `vite` y
+  `undici`, y los cuatro de `vitest` subieron juntos con un `npm install -D`, porque se piden entre
+  sí la versión exacta: el punto 1 de las decisiones del 3.1. Ninguno es versión mayor. Medido con
+  la misma orden sobre `c99cd54`: 0 en todas las gravedades, y la puerta, también con 0.
 
 - **ABIERTA (2026-10-24, ítem 2.19, ADR-0069) · un `?q=` a un listado sin filtro declarado llega y
   no filtra nada.** `Paginador.Filtrar` devuelve la consulta tal cual cuando el repositorio no

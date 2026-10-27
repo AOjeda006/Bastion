@@ -10,7 +10,7 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 3 (Compras), en curso: 0 de 11 ítems.** La fase 1 se cerró con catorce ítems y
+> **Estado: fase 3 (Compras), en curso: 1 de 11 ítems.** La fase 1 se cerró con catorce ítems y
 > la fase 2, con veinte: el frontal arranca con un solo diccionario; los tres puertos que el
 > libro de movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado
 > contesta que sigue resolviendo lo viejo, no que no existe—; el libro ya existe, particionado por
@@ -50,7 +50,10 @@ de datos, su contrato público y su comunicación por eventos.
 > la celda de su punta, y un borrador se descarta. Y lo que el 2.18 dejó propuesto: el cuadre lee
 > cada mes sin el JIT del motor, un indicador dice cuántos meses le faltan, y las páginas caben en
 > 320 px, medidas en un Chromium. La fase 3, Compras, tiene once ítems, acordados en su puerta,
-> y empieza por poner la casa en orden.
+> y la casa ya está en orden: la auditoría de las herramientas, a cero; las enmiendas entre ADR,
+> anotadas en los dos lados y vigiladas por un test; el PLAN, partido, con la historia de cada
+> fase cerrada en su fichero; y el frontal, con un tope por ruta y los textos de cada módulo
+> viajando con sus rutas.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
 > **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo; lo de las
 > fases cerradas, en [`docs/historia/`](docs/historia/), un fichero por fase. Esta línea se compara
