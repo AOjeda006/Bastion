@@ -879,6 +879,41 @@ textos de lo visitado…`; (d) `si el idioma cambia mientras los textos de la ru
 
 La siguiente mutación es la **792**, y el siguiente ADR, el **0072**.
 
+### La puerta del 3.2, contestada (2026-10-27)
+
+El criterio deja abiertas cuatro cosas con más de una salida, y se preguntaron juntas antes de
+escribir nada. Las cuatro respuestas son la opción recomendada:
+
+1. **Lo que en pantalla es un maestro de otro módulo va con su código y su nombre, por puertos.**
+   El artículo, el almacén, la ubicación, la unidad, el impuesto y la divisa van en dos columnas,
+   código y nombre, como los enseña la pantalla. Los resuelve un método nuevo por lotes en el
+   `Contracts` de su dueño, una vez por página interna. Sin el permiso de ver ese maestro va su
+   identificador, como en la pantalla, que lo pide a su dueño solo con permiso (ADR-0055 §12).
+2. **Terceros sale con la cabecera de su importación**: las dieciocho columnas de
+   `ImportacionDeTerceros.Cabecera`, en su orden y con el límite de crédito, para que un fichero
+   exportado se vuelva a importar.
+3. **El navegador descarga con `fetch` y un `Blob`**, por el cliente de siempre, con su reintento
+   tras un `401`. El servidor manda en flujo, y el navegador junta el fichero antes de guardarlo.
+4. **La cabecera de los demás va en `snake_case`**, como la de la importación: sin tildes, sin
+   traducir, y la escribe el servidor.
+
+Lo que no se preguntó, porque tiene un precedente o una salida obvia, y se puede cambiar sin tocar
+datos:
+
+- **La ruta es hermana del listado**, `GET …/{recurso}/exportacion`, con sus mismos parámetros
+  salvo `page` y `size`, como la importación es `POST /api/v1/terceros/terceros/importacion`;
+- **los valores van en el dialecto de la importación**: importes y cantidades con coma decimal,
+  sin punto de miles y sin ceros a la derecha; `sí` y `no`; las fechas, en `AAAA-MM-DD`; y los
+  estados y los tipos, con el valor del DTO, sin traducir. El fin de línea es CRLF (RFC 4180);
+- **la regla del apóstrofo va sobre los campos de texto.** Un número lo escribe Bastion, y un
+  `-12,5` con apóstrofo dejaría de ser un número;
+- **todas las páginas internas salen de la misma foto**: una transacción de solo lectura en
+  `REPEATABLE READ`, en el contexto del listado. Así, una fila que entra a mitad no empuja a otra
+  a salir dos veces;
+- **lo que el listado rechaza, la exportación lo rechaza antes del primer byte.** La primera
+  página se pide antes de escribir la cabecera, y un `4xx` sale como en el listado;
+- **el fichero se llama `<recurso>-<AAAA-MM-DD>.csv`**, con el día de negocio.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 1 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -887,13 +922,26 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. El primero, la casa en orden, está hecho.
 
 > **Dónde se retoma (2026-10-27): en el 3.2, la exportación**, en su rama, `3.2-la-exportacion`,
-> abierta desde `main` cuando el cierre del 3.1 haya llegado a él. Su primer commit anota los dos
-> runs del cierre del 3.1, el de la rama y el de `main`. Después, el 3.3, y el 3.4, **que se para
-> al cerrarse, antes del 3.5**.
+> abierta desde `main` en `eef05f7`. Su puerta está contestada, en *Decisiones tomadas → La
+> puerta del 3.2*. Los temas, cada uno en su subida, y en este orden:
+>
+> 1. la puerta y los dos runs del cierre del 3.1, que es el primer commit;
+> 2. las tres piezas de la consulta de un listado, y el `400` de un `?q=` que el listado no mira,
+>    con su ADR, el 0072;
+> 3. el mecanismo: el escritor del CSV, la foto de todas las páginas y el flujo, con el 0073;
+> 4. los puertos por lotes del código y el nombre: el artículo, y los cinco de Organización;
+> 5. las exportaciones de Organización y de Terceros;
+> 6. las de Catálogo;
+> 7. las de Inventario;
+> 8. el botón, en las trece pantallas;
+> 9. la medida sobre la empresa C, que si no cabe en 30 s por orden, se pregunta;
+> 10. y el cierre: la tanda, la batería y el PLAN.
+>
+> Después, el 3.3, y el 3.4, **que se para al cerrarse, antes del 3.5**.
 >
 > **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
-> `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto. Llega a
-> `main` con el cierre del 3.1.
+> `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto. Llegó a
+> `main` con el cierre del 3.1, en `eef05f7`, a mitad de una sesión, así que toca en la siguiente.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
@@ -926,8 +974,11 @@ la **745** a la **791**, y las siguientes empiezan en la **792**.
    `LosPermisosQueNombraElFrontalTests`, y el quinto lo arregla: el punto 12 de las decisiones.
 6. `c99cd54`, «docs(plan): cuatro notas abiertas de seguridad, para antes de desplegar»:
    **40436956193**, Frontal `121967812130`, Backend `121967812439` y Humo `121972126362`.
-7. El que lo cierra, «docs(plan): cierra el 3.1, con sus tandas y la batería», por el flujo de la
-   rama. Su run de rama y el de `main` los anota el primer commit del 3.2.
+7. `eef05f7`, el que lo cierra, «docs(plan): cierra el 3.1, con sus tandas y la batería», por el
+   flujo de la rama: **40449192600**, Backend `122007628995`, Frontal `122007629369` y Humo
+   `122011687631`. Y el de `main`, sobre el mismo commit: **40452123280**, Backend
+   `122017035207`, Frontal `122017035464` y Humo `122020743870`. Con él en verde, la rama se
+   borró, la local y la remota.
 
 Los runs se leyeron con `python -X utf8 vigilar212.py <sha> <rama>`, un guion del *scratchpad*, y
 el de `c99cd54`, con su copia `vigilar31.py`, que pregunta con `curl`: el 2026-10-27 el `urllib`
