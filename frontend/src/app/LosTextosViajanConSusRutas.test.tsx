@@ -15,6 +15,7 @@ import { es } from './i18n/es.ts';
 import type { Idioma } from './i18n/idioma.ts';
 import { crearI18n, textosCargados } from './i18n/index.ts';
 import { tiposDeError } from './i18n/tiposDeError.es.ts';
+import { RUTAS } from './rutas.tsx';
 import { FUNCIONALIDADES, type Funcionalidad } from '@/features/funcionalidades.ts';
 import { ALFA } from '@/pruebas/datos.ts';
 import { DICCIONARIOS_ENTEROS } from '@/pruebas/i18n.ts';
@@ -36,6 +37,12 @@ import { abrirSesionSimulada } from '@/pruebas/servidor.ts';
  * CARGADOR y no los textos, así que lo que llega es lo de verdad, y la ventana en la que se mira
  * dura lo que el caso quiera. Cada caso suelta lo que retiene antes de acabar: un caso no cierra su
  * árbol con una carga en vuelo.
+ *
+ * **Y si un caso se pone rojo a medias, lo que dejó retenido NO se suelta.** Soltarlo al acabar lo
+ * haría correr dentro del caso siguiente: un cambio de idioma del caso muerto pedía sus textos con
+ * el siguiente ya montado, y el siguiente los veía en su lista y se ponía rojo sin culpa. Lo
+ * enseñó la mutación 767, que puso tres casos rojos con un fallo de uno. Lo retenido se olvida y
+ * se queda esperando, que no cuesta nada: no hay temporizador ni red detrás.
  *
  * **Y la regla que hace que esto baste**: los textos de una funcionalidad solo los lee el código
  * de esa funcionalidad. El armazón, o una pantalla de otro módulo, los encontraría sin cargar. El
@@ -60,10 +67,8 @@ const descargas = vi.hoisted(() => {
       retenidas.get(clave)?.soltar();
       retenidas.delete(clave);
     },
-    soltarTodas(): void {
-      for (const retenida of retenidas.values()) {
-        retenida.soltar();
-      }
+    // Sin soltar nada: lo que siga retenido se queda esperando para siempre.
+    olvidarlo(): void {
       retenidas.clear();
       pedidas.length = 0;
       entregadas.length = 0;
@@ -98,11 +103,14 @@ vi.mock('@/app/i18n/diccionarios.ts', async (importarDeVerdad) => {
 });
 
 afterEach(() => {
-  descargas.soltarTodas();
+  descargas.olvidarlo();
 });
 
 /** La aplicación entera, con una instancia que arranca como la de verdad: el armazón y nada más. */
-function montarConElArmazonSolo(ruta: string): InstanciaDeI18n {
+function montarConElArmazonSolo(ruta: string): {
+  i18n: InstanciaDeI18n;
+  enrutador: ReturnType<typeof createMemoryRouter>;
+} {
   const i18n = crearI18n('es', es, tiposDeError);
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -117,7 +125,7 @@ function montarConElArmazonSolo(ruta: string): InstanciaDeI18n {
     </Proveedores>,
   );
 
-  return i18n;
+  return { i18n, enrutador };
 }
 
 /** Ninguna clave de una funcionalidad a la vista: es lo que `t()` pinta cuando no la encuentra. */
@@ -140,7 +148,7 @@ async function irAAlmacenes(usuario: ReturnType<typeof userEvent.setup>): Promis
 describe('Los textos viajan con sus rutas', () => {
   it('una ruta trae los textos de su funcionalidad, y solo los suyos', async () => {
     abrirSesionSimulada(ALFA.id);
-    const i18n = montarConElArmazonSolo('/almacenes');
+    const { i18n } = montarConElArmazonSolo('/almacenes');
 
     expect(
       await screen.findByRole('table', { name: 'Almacenes de la empresa activa' }),
@@ -160,16 +168,23 @@ describe('Los textos viajan con sus rutas', () => {
   });
 
   it('mientras sus textos viajan, la pantalla no se pinta: no hay ninguna clave en crudo', async () => {
+    // La pantalla, cargada ANTES: así lo único que puede retener la ruta son sus textos. Sin esto,
+    // la mutación 768 —que dejaba de esperarlos— salía verde con el caso solo, porque la pantalla
+    // tardaba más en compilarse que los textos en llegar, y la ventana miraba antes de que hubiera
+    // nada que ver.
+    await RUTAS.find((declaracion) => declaracion.ruta === '/almacenes')?.cargar();
+
     abrirSesionSimulada(ALFA.id);
     descargas.retener('organizacion.es');
-    const i18n = montarConElArmazonSolo('/almacenes');
+    const { i18n, enrutador } = montarConElArmazonSolo('/almacenes');
 
     // La carga está pedida y retenida: la ventana no se acaba sola. Una pantalla que se pintara sin
     // esperar a sus textos dejaría aquí `organizacion.almacenes.cargando`, o la tabla con sus
-    // rótulos en crudo.
+    // rótulos en crudo, y el enrutador habría terminado su primera carga.
     await waitFor(() => {
       expect(descargas.pedidas).toContain('organizacion.es');
     });
+    expect(enrutador.state.initialized).toBe(false);
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     exigirSinClavesEnCrudo();
     expect(textosCargados(i18n, 'organizacion')).toBe(false);
@@ -185,7 +200,7 @@ describe('Los textos viajan con sus rutas', () => {
   it('cambiar de idioma trae los textos de lo visitado, a la vez que el diccionario y antes del cambio', async () => {
     abrirSesionSimulada(ALFA.id);
     const usuario = userEvent.setup();
-    const i18n = montarConElArmazonSolo('/almacenes');
+    const { i18n } = montarConElArmazonSolo('/almacenes');
 
     expect(
       await screen.findByRole('table', { name: 'Almacenes de la empresa activa' }),
@@ -228,7 +243,7 @@ describe('Los textos viajan con sus rutas', () => {
   it('si el idioma cambia mientras los textos de la ruta viajan, la ruta trae también los del nuevo', async () => {
     abrirSesionSimulada(ALFA.id);
     const usuario = userEvent.setup();
-    const i18n = montarConElArmazonSolo('/');
+    const { i18n } = montarConElArmazonSolo('/');
 
     descargas.retener('organizacion.es');
     await irAAlmacenes(usuario);
@@ -255,7 +270,7 @@ describe('Los textos viajan con sus rutas', () => {
   it('si los textos de la ruta llegan mientras el idioma cambia, el cambio trae también los del nuevo', async () => {
     abrirSesionSimulada(ALFA.id);
     const usuario = userEvent.setup();
-    const i18n = montarConElArmazonSolo('/');
+    const { i18n } = montarConElArmazonSolo('/');
 
     descargas.retener('organizacion.es');
     descargas.retener('armazon.en');
