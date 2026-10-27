@@ -3,13 +3,14 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql, react]
 aplica_a: [ddd, sql, inventario, concurrencia, api-rest]
 tags: [adr, recuento, teorico, huella, ajuste, anulacion, inverso, cerrojo, paginacion, adr-0043, adr-0046, adr-0047, adr-0048, adr-0053]
-revisado: 2026-10-17
+revisado: 2026-10-27
 ---
 
 # ADR-0055: El recuento congela el teórico al confirmar, y su ajuste es el que mueve
 
-- **Estado:** aceptado. **Enmendado por el ADR-0056 (§13, los permisos).** **§1.1 y
-  *Consecuencias*, ampliados por dentro el 2026-10-17, por encargo del usuario**, en el commit
+- **Estado:** aceptado. **Enmendado por el ADR-0056 (§13, los permisos).** **Enmendado por el
+  ADR-0074 (§12, el puerto de Catálogo nombra el artículo).** **§1.1 y *Consecuencias*, ampliados
+  por dentro el 2026-10-17, por encargo del usuario**, en el commit
   `docs(adr): el ADR-0055 escribe el segundo disparador del recuento cíclico`. Es la respuesta 3
   del repaso de la fase 2: el recuento cíclico se queda como está, con sus dos disparadores
   escritos aquí. El ADR solo tenía el primero; el segundo, la huella, lo anotó el PLAN el
@@ -240,6 +241,10 @@ solo sabía llevar los errores por campo. Gana un dato opcional, que se publica 
 líneas sin contar.
 
 ### 12. La pantalla nombra lo que la ficha identifica
+
+> **Enmendado por el ADR-0074 (2026-10-27).** El puerto de Catálogo publica desde el 3.2 el código y
+> la descripción del artículo, por lotes y solo para enseñarlos: la exportación de un listado los
+> escribe donde la pantalla los pinta. La pantalla sigue nombrando por la API.
 
 - **La ficha devuelve identificadores** de artículo, ubicación y unidad, como todo el módulo. El
   puerto de Catálogo no publica ni el código ni la descripción, y esto no lo cambia.
