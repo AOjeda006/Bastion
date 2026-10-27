@@ -179,6 +179,15 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaColaSeDefiendeSolaTests.Un_evento_sin_declarar_lo_dice_al_volcarlo_y_no_al_leerlo",
         "LaColaSeDefiendeSolaTests.Una_fila_lleva_empresa_o_lleva_el_motivo_por_el_que_no_la_lleva",
 
+        "LaExportacionRecorreUnaFotoTests.Cada_pagina_lleva_el_orden_y_el_texto_del_listado",
+        "LaExportacionRecorreUnaFotoTests.El_fichero_se_llama_por_el_recurso_y_el_dia_de_negocio",
+        "LaExportacionRecorreUnaFotoTests.Pide_todas_las_paginas_del_tamanio_maximo_con_la_foto_abierta",
+        "LaExportacionRecorreUnaFotoTests.Un_fallo_a_mitad_lanza_con_el_fichero_empezado_y_cierra_la_foto",
+        "LaExportacionRecorreUnaFotoTests.Un_fallo_en_la_primera_pagina_sale_como_en_el_listado_antes_del_primer_byte",
+        "LaExportacionRecorreUnaFotoTests.Un_listado_que_no_falla_entra_por_su_interfaz_con_sus_criterios",
+        "LaExportacionRecorreUnaFotoTests.Un_orden_que_no_se_admite_es_su_400",
+        "LaExportacionRecorreUnaFotoTests.Un_texto_que_el_listado_no_mira_es_su_400_sin_abrir_la_foto_ni_escribir",
+
         "LaPlantillaDelFrontalEsLaDeLaApiTests.La_cabecera_que_ensena_el_frontal_es_la_que_exige_la_api",
         "LaPlantillaDelFrontalEsLaDeLaApiTests.La_extraccion_lee_la_lista_entera_y_no_se_salta_lo_que_no_entiende",
 

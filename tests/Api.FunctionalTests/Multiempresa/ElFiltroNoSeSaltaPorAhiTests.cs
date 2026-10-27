@@ -474,6 +474,17 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
             + "siguiente y el transito de las transferencias. Compara la empresa "
             + "con el valor de IInquilinoActual en cada tabla que nombra, y la linea de la "
             + "transferencia es de la empresa de su transferencia",
+
+        // Del 3.2: la foto de la exportación (ADR-0073 §2). Como las del gestor de bloqueos, no
+        // toca ninguna tabla: cambia el modo de la transacción que la foto acaba de abrir.
+        ["src/BuildingBlocks/Infrastructure/Listados/FotoDeLectura.cs usa .ExecuteSql"] =
+            "pone de solo lectura la transaccion que la foto acaba de abrir, con SET TRANSACTION "
+            + "READ ONLY y antes de su primera lectura. EF Core abre una transaccion con su nivel, "
+            + "pero no de solo lectura, asi que no hay forma de pedirlo sin SQL crudo. La excepcion "
+            + "es estrecha por lo que la hace inutil para otro caso: esa sentencia NO LEE NI ESCRIBE "
+            + "NINGUNA FILA, y lo unico que hace es quitarle a la transaccion la facultad de "
+            + "escribir. Todo lo que se lee dentro de la foto pasa por los repositorios, con su "
+            + "filtro puesto. Que la transaccion no escriba lo comprueba LaFotoDeLecturaTests",
     };
 
     // Dónde se abre un ámbito sin inquilino, cuántas veces, y por qué ahí. Es la lista blanca del

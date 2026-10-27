@@ -93,6 +93,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaConsultaDeConversionesTests.La_conversion_retirada_se_contesta_con_su_marca_y_su_factor",
         "LaConsultaDeConversionesTests.Sin_pares_no_contesta_nada",
 
+        "LaFotoDeLecturaTests.Dentro_de_la_foto_no_se_puede_escribir",
+        "LaFotoDeLecturaTests.Dentro_de_la_foto_no_se_ve_lo_que_otra_conexion_confirma_despues",
+        "LaFotoDeLecturaTests.Una_foto_no_se_abre_dentro_de_otra_transaccion",
+
         "LaMatrizDePuertoYEstadoTests.Cada_casilla_de_puerto_por_estado_esta_cubierta",
         "LaMatrizDePuertoYEstadoTests.Cada_cubrimiento_declarado_apunta_a_un_puerto_de_verdad",
         "LaMatrizDePuertoYEstadoTests.Cada_cubrimiento_vive_en_un_caso_que_corre_contra_la_base",
