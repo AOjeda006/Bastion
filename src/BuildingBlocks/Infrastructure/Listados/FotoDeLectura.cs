@@ -37,13 +37,10 @@ public static class FotoDeLectura
         ArgumentNullException.ThrowIfNull(contexto);
 
         // Una foto dentro de otra transacción no sería una foto: heredaría el nivel y el instante
-        // de la que ya está abierta, y lo que hubiera escrito esa.
-        if (contexto.Database.CurrentTransaction is not null)
-        {
-            throw new InvalidOperationException(
-                "El contexto ya tiene una transacción abierta, y una foto tiene que ser la suya.");
-        }
-
+        // de la que ya está abierta, y lo que hubiera escrito esa. No se comprueba aquí porque ya
+        // lo hace EF Core: no abre una transacción en un contexto que tiene otra, y lanza
+        // `InvalidOperationException`. Lo mide `LaFotoDeLecturaTests` contra la base; una guarda
+        // propia que lo repetía se quitó sin que ningún caso se pusiera rojo.
         IDbContextTransaction transaccion = await contexto.Database
             .BeginTransactionAsync(IsolationLevel.RepeatableRead, cancelacion)
             .ConfigureAwait(false);

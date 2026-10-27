@@ -77,10 +77,8 @@ public readonly record struct CampoCsv
         where TValor : struct, Enum =>
         new(valor?.ToString() ?? string.Empty, esTexto: false);
 
-    // El cero, sin signo: un `decimal` guarda el signo del cero, y `-0` no es lo que escribe una
-    // persona aunque la importación lo lea igual.
+    // El cero sale sin signo sin pedirlo: un `decimal` guarda el signo del cero, pero el formato no
+    // lo escribe, y `-0,0` sale `0`, como `0,0000`. Lo afirma la teoría de los números del escritor.
     private static string Escribir(decimal numero) =>
-        numero == 0m
-            ? "0"
-            : numero.ToString(FormatoDeNumero, CultureInfo.InvariantCulture).Replace('.', ',');
+        numero.ToString(FormatoDeNumero, CultureInfo.InvariantCulture).Replace('.', ',');
 }
