@@ -67,6 +67,8 @@ public sealed class EscritorCsvTests
     [InlineData("+34 600", "'+34 600")]
     [InlineData("-3", "'-3")]
     [InlineData("@usuario", "'@usuario")]
+    [InlineData("'=ya", "''=ya")]
+    [InlineData("'hola", "''hola")]
     [InlineData("\tdentro", "'\tdentro")]
     [InlineData("\rdentro", "\"'\rdentro\"")]
     public void Un_texto_que_parece_una_formula_sale_con_un_apostrofo_delante(string texto, string escrito) =>
@@ -77,7 +79,7 @@ public sealed class EscritorCsvTests
     /// escribe Bastion y no lleva apóstrofo aunque empiece igual.
     /// </summary>
     [Fact]
-    public void El_apostrofo_solo_lo_lleva_el_texto_que_empieza_por_uno_de_los_seis()
+    public void El_apostrofo_solo_lo_lleva_el_texto_que_empieza_por_uno_de_los_siete()
     {
         EscritorCsv.Escribir(CampoCsv.Texto("a=b")).ShouldBe("a=b");
         EscritorCsv.Escribir(CampoCsv.Texto("x-")).ShouldBe("x-");
@@ -113,7 +115,7 @@ public sealed class EscritorCsvTests
 
     /// <summary>
     /// Lo que se exporta vuelve a entrar: el lector de la importación lo parte en los mismos campos,
-    /// y lee los mismos números y los mismos sí y no.
+    /// y lee los mismos números, los mismos sí y no, y los mismos textos, quitado el apóstrofo.
     /// </summary>
     [Fact]
     public async Task El_lector_de_la_importacion_lee_lo_que_escribe_el_escritor()
@@ -124,6 +126,7 @@ public sealed class EscritorCsvTests
             new("con \"comillas\"", -0.5m, false, null),
             new("en dos\r\nlíneas, con eñe y tildes: áéíóú", 0m, true, new DateOnly(2025, 2, 28)),
             new("=FORMULA()", 99999999999999.9999m, false, null),
+            new("'=ya con su apóstrofo", 1m, true, null),
         ];
 
         Resultado<HojaCsv> leida = LectorCsv.Leer(
@@ -139,7 +142,10 @@ public sealed class EscritorCsvTests
 
             fila.CuadraConLaCabecera.ShouldBeTrue();
             fila.ComillasMalColocadas.ShouldBeEmpty();
-            fila.Campos[0].ShouldBe(cosa.Codigo!.StartsWith('=') ? "'" + cosa.Codigo : cosa.Codigo);
+            // En el fichero, con su apóstrofo; leído como lo lee la importación, como era (ADR-0075).
+            bool loLleva = cosa.Codigo!.StartsWith('=') || cosa.Codigo.StartsWith(ApostrofoDelDialecto.Apostrofo);
+            fila.Campos[0].ShouldBe(loLleva ? ApostrofoDelDialecto.Apostrofo + cosa.Codigo : cosa.Codigo);
+            ApostrofoDelDialecto.Quitar(fila.Campos[0]).ShouldBe(cosa.Codigo);
 
             CamposCsv.IntentarLeerImporte(fila.Campos[1], out decimal importe).ShouldBeTrue(fila.Campos[1]);
             importe.ShouldBe(cosa.Importe!.Value);

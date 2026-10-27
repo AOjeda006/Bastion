@@ -1,4 +1,5 @@
 using System.Text;
+using Bastion.BuildingBlocks.Application.Importacion;
 
 namespace Bastion.BuildingBlocks.Application.Exportacion;
 
@@ -18,8 +19,9 @@ namespace Bastion.BuildingBlocks.Application.Exportacion;
 /// <b>El apóstrofo va antes que las comillas</b>, y solo en los campos de texto
 /// (<see cref="CampoCsv.EsTexto"/>): un texto que empieza por <c>=</c>, <c>+</c>, <c>-</c>,
 /// <c>@</c>, un tabulador o un retorno sale con un apóstrofo delante, que es lo que una hoja de
-/// cálculo entiende como «esto es texto» (decisión 7 del 1.11). La cabecera la escribe Bastion y
-/// no lo lleva.
+/// cálculo entiende como «esto es texto» (decisión 7 del 1.11). También uno que ya empieza por un
+/// apóstrofo, para que la importación pueda quitar el suyo sin quitar nada más
+/// (<see cref="ApostrofoDelDialecto"/>, ADR-0075). La cabecera la escribe Bastion y no lo lleva.
 /// </para>
 /// <para>
 /// <b>Cada página se vacía a la corriente en cuanto se ha escrito</b>, así que lo que se queda en
@@ -39,8 +41,6 @@ public static class EscritorCsv
     private static readonly UTF8Encoding s_sinBom = new(encoderShouldEmitUTF8Identifier: false);
 
     private static readonly char[] s_obligaAComillas = [Separador, '"', '\r', '\n'];
-
-    private static readonly char[] s_pareceUnaFormula = ['=', '+', '-', '@', '\t', '\r'];
 
     /// <summary>El BOM de UTF-8, con el que empieza el fichero.</summary>
     public static ReadOnlyMemory<byte> Bom { get; } = new byte[] { 0xEF, 0xBB, 0xBF };
@@ -93,12 +93,7 @@ public static class EscritorCsv
     /// </summary>
     /// <param name="campo">El campo.</param>
     public static string Escribir(CampoCsv campo) =>
-        Entrecomillar(PareceUnaFormula(campo) ? "'" + campo.Escrito : campo.Escrito);
-
-    private static bool PareceUnaFormula(CampoCsv campo) =>
-        campo.EsTexto
-        && campo.Escrito.Length > 0
-        && Array.IndexOf(s_pareceUnaFormula, campo.Escrito[0]) >= 0;
+        Entrecomillar(campo.EsTexto ? ApostrofoDelDialecto.Poner(campo.Escrito) : campo.Escrito);
 
     private static string Cabecera<T>(HojaDeExportacion<T> hoja) =>
         string.Join(Separador, hoja.Columnas.Select(columna => Entrecomillar(columna.Nombre))) + FinDeLinea;

@@ -196,7 +196,10 @@ internal static class FilasDeTerceros
     // Lo que se lee de una fila, columna a columna, apuntando el formato que no vale.
     private sealed class Lectura(FilaCsv fila, RechazosDeImportacion rechazos)
     {
-        public string Texto(string columna) => fila.Campos[IndiceDe(columna)];
+        // Un campo de texto, sin el apóstrofo que le pone la exportación (ADR-0075). Los sí y no y
+        // los importes se leen tal como llegan: la exportación no se lo pone, porque no los escribió
+        // una persona, y uno con apóstrofo no es del dialecto.
+        public string Texto(string columna) => ApostrofoDelDialecto.Quitar(Crudo(columna));
 
         public string? Opcional(string columna) => Texto(columna) is { Length: > 0 } texto ? texto : null;
 
@@ -211,7 +214,7 @@ internal static class FilasDeTerceros
                 return null;
             }
 
-            if (CamposCsv.IntentarLeerSiNo(Texto(columna), out bool valor))
+            if (CamposCsv.IntentarLeerSiNo(Crudo(columna), out bool valor))
             {
                 return valor;
             }
@@ -222,12 +225,12 @@ internal static class FilasDeTerceros
 
         public decimal? Importe(string columna)
         {
-            if (!Legible(columna) || Texto(columna).Length == 0)
+            if (!Legible(columna) || Crudo(columna).Length == 0)
             {
                 return null;
             }
 
-            if (CamposCsv.IntentarLeerImporte(Texto(columna), out decimal valor))
+            if (CamposCsv.IntentarLeerImporte(Crudo(columna), out decimal valor))
             {
                 return valor;
             }
@@ -235,6 +238,8 @@ internal static class FilasDeTerceros
             Apuntar(columna, MotivoDeRechazo.FormatoNoValido);
             return null;
         }
+
+        private string Crudo(string columna) => fila.Campos[IndiceDe(columna)];
     }
 }
 
