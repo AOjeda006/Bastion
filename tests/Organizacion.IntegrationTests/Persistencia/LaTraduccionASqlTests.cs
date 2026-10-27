@@ -170,6 +170,50 @@ public sealed class LaTraduccionASqlTests
             Describir(intraducible));
     }
 
+    /// <summary>
+    /// Un texto que llega a un listado sin filtro declarado lanza antes de tocar la base, en vez
+    /// de devolver la página entera como si hubiera filtrado (ADR-0072).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Es la guarda de detrás del borde, que ya lo rechaza con un <c>400</c>: la de quien construya
+    /// la paginación sin pasar por él. Hasta el ítem 3.2 el paginador se lo saltaba, y seis
+    /// listados contestaban un <c>?q=</c> con todo (ADR-0069).
+    /// </para>
+    /// <para>
+    /// <b>Lleva sus dos parejas</b>, y las dos llegan al proveedor: el mismo listado con el texto en
+    /// blanco, que es «sin filtro» y no «lo que contenga nada», y el mismo texto con un filtro
+    /// declarado. Sin ellas, la excepción de arriba podría ser cualquier otro fallo de la consulta.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Un_texto_sin_filtro_declarado_lanza_antes_de_llegar_a_la_base()
+    {
+        using OrganizacionDbContext contexto = Abrir();
+
+        ArgumentException guarda = await Should.ThrowAsync<ArgumentException>(
+            () => contexto.Empresas.PaginarAsync(
+                new Paginacion { Filtro = "central" }, DeEmpresas(filtro: null), CancellationToken.None));
+
+        guarda.ParamName.ShouldBe("filtro");
+
+        Exception enBlanco = await Should.ThrowAsync<Exception>(
+            () => contexto.Empresas.PaginarAsync(
+                new Paginacion { Filtro = "  " }, DeEmpresas(filtro: null), CancellationToken.None));
+
+        LlegoALaBase(enBlanco).ShouldBeTrue(
+            "un texto en blanco es «sin filtro», y no ha llegado a la base. " + Describir(enBlanco));
+
+        Exception filtrado = await Should.ThrowAsync<Exception>(
+            () => contexto.Empresas.PaginarAsync(
+                new Paginacion { Filtro = "central" },
+                DeEmpresas(texto => empresa => empresa.RazonSocial == texto),
+                CancellationToken.None));
+
+        LlegoALaBase(filtrado).ShouldBeTrue(
+            "el mismo texto, con un filtro declarado, no ha llegado a la base. " + Describir(filtrado));
+    }
+
     // El listado de lo bloqueado tenía aquí su caso, y se lo llevó el ítem 1.6 a
     // `Bastion.Api.IntegrationTests` -> `ElListadoDelArticulo32SeTraduceEnteroTests`. No es un
     // traslado de conveniencia: desde el 1.6 ese listado lo componen TRES módulos, y este
@@ -202,6 +246,19 @@ public sealed class LaTraduccionASqlTests
             yield return actual;
         }
     }
+
+    // Unos criterios de empresas escritos aquí, y no los del repositorio, para poder quitarles el
+    // filtro: los de verdad lo declaran.
+    private static CriteriosDe<Empresa> DeEmpresas(Func<string, Expression<Func<Empresa, bool>>>? filtro) => new()
+    {
+        Ordenables = new Dictionary<string, LambdaExpression>(StringComparer.Ordinal)
+        {
+            ["razonSocial"] = (Expression<Func<Empresa, string>>)(empresa => empresa.RazonSocial),
+        },
+        PorOmision = "razonSocial",
+        Desempate = ordenada => ordenada.ThenBy(empresa => empresa.Id),
+        Filtro = filtro,
+    };
 
     private static OrganizacionDbContext Abrir()
     {

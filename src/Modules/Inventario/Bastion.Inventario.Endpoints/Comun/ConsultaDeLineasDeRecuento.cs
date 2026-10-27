@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bastion.Inventario.Endpoints.Comun;
 
 /// <summary>
-/// Los parámetros de la página de líneas de un recuento: los cuatro de siempre, más <c>?solo=</c>.
+/// Los parámetros de la página de líneas de un recuento: el orden, más <c>?solo=</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -23,7 +23,7 @@ namespace Bastion.Inventario.Endpoints.Comun;
 /// línea: lo que se lee en la etiqueta de lo que se tiene en la mano.
 /// </para>
 /// </remarks>
-public sealed record ConsultaDeLineasDeRecuento : ConsultaPaginada
+public sealed record ConsultaDeLineasDeRecuento : ConsultaDeListado
 {
     /// <summary>Nombre externo del parámetro.</summary>
     public const string NombreDeSolo = "solo";

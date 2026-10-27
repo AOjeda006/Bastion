@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bastion.Inventario.Endpoints.Comun;
 
 /// <summary>
-/// Los parámetros de la consulta del saldo: los cuatro de siempre, más <c>?fecha=</c>,
+/// Los parámetros de la consulta del saldo: el orden, más <c>?fecha=</c>,
 /// <c>?almacen=</c> y <c>?articulo=</c>.
 /// </summary>
 /// <remarks>
@@ -24,7 +24,7 @@ namespace Bastion.Inventario.Endpoints.Comun;
 /// reloj.
 /// </para>
 /// </remarks>
-public sealed record ConsultaDeSaldos : ConsultaPaginada
+public sealed record ConsultaDeSaldos : ConsultaDeListado
 {
     /// <summary>El día cuyo final se pide, o nulo para hoy.</summary>
     [FromQuery(Name = LosParametrosDelSaldo.Fecha)]

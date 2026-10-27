@@ -368,7 +368,7 @@ invalida `listas()`. Los almacenes del filtro y los nombres de cada fila cuelgan
   quien envía, lo que sale del suyo. Juntos dan lo que va de uno a otro. Sin el permiso de ver los
   almacenes no salen, y cada fila lleva sus identificadores.
 - **No hay búsqueda.** El alta no tiene ningún texto libre, como el motivo del ajuste, y la API no
-  filtra por texto: un `?q=` llega y no filtra nada.
+  filtra por texto: un `?q=` con algo escrito es un `400` (ADR-0072).
 - **Por la fecha de recepción, las que no han llegado van primero de la última a la primera, y
   últimas al revés**, que es lo que hace PostgreSQL con un nulo. Las dos fechas van en su columna, y
   la de recepción está vacía mientras no llega.

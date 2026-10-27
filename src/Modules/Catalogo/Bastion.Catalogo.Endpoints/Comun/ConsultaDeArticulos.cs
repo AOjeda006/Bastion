@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bastion.Catalogo.Endpoints.Comun;
 
 /// <summary>
-/// Los parámetros del listado de artículos: los cuatro de siempre, más <c>?categoria=</c>.
+/// Los parámetros del listado de artículos: el orden, más <c>?categoria=</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Por qué un tipo del módulo y no un quinto campo en <c>ConsultaPaginada</c>.</b> Es el mismo
+/// <b>Por qué un tipo del módulo y no un campo más en <c>ConsultaDeListado</c>.</b> Es el mismo
 /// razonamiento que llevó a <c>ConsultaDeMaestro</c> en el ítem 1.7, y por eso este tipo vive aquí
 /// y aquél en el bloque común: <c>?retiradas=</c> lo comparten los cuatro maestros de instalación,
 /// y <c>?categoria=</c> no lo comparte nadie. Puesto en el modelo común, los doce listados
@@ -30,7 +30,7 @@ namespace Bastion.Catalogo.Endpoints.Comun;
 /// añadirse</b> a esa lista, que es donde están escritos los motivos de cada uno.
 /// </para>
 /// </remarks>
-public sealed record ConsultaDeArticulos : ConsultaPaginada
+public sealed record ConsultaDeArticulos : ConsultaDeListado
 {
     /// <summary>Nombre externo del parámetro.</summary>
     public const string NombreDeLaCategoria = "categoria";

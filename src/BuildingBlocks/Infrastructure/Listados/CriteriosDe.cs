@@ -91,8 +91,16 @@ public sealed class CriteriosDe<TEntidad>
     /// Qué significa el <c>?q=</c> de este recurso, o nulo si no admite filtro de texto.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Recibe el texto ya recortado y no vacío; devolver una condición traducible es cosa del
     /// repositorio, que es quien conoce EF Core y quien sabe qué columnas tienen índice.
+    /// </para>
+    /// <para>
+    /// <b>Nulo no es «se ignora».</b> La acción de un listado sin filtro no enlaza el texto y el
+    /// borde rechaza un <c>?q=</c> con algo escrito; si aun así llega uno aquí, el
+    /// <see cref="Paginador"/> lanza, en vez de devolver la página entera como si hubiera
+    /// filtrado (ADR-0072).
+    /// </para>
     /// </remarks>
     public Func<string, Expression<Func<TEntidad, bool>>>? Filtro { get; init; }
 

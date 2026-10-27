@@ -3,6 +3,7 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Inventario.Application.Recuentos;
 using Bastion.Inventario.Contracts;
 using Bastion.Inventario.Contracts.Recuentos;
@@ -58,23 +59,28 @@ public sealed class RecuentosController(
     IDescartarRecuento descartar) : ControladorDeInventario
 {
     /// <summary>Devuelve una página de recuentos.</summary>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">
-    /// Paginación, orden, filtro, estado y almacén (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>,
-    /// <c>estado</c>, <c>almacen</c>). El filtro de texto mira el motivo.
+    /// El orden, el estado y el almacén (<c>sort</c>, <c>estado</c>, <c>almacen</c>).
     /// </param>
+    /// <param name="texto">El filtro de texto (<c>q</c>), que mira el motivo.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeInventario.RecuentoVer)]
     [ProducesResponseType(typeof(PaginaDe<RecuentoResumenDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Listar(
+        [FromQuery] PaginaPedida pagina,
         [FromQuery] ConsultaDeRecuentos consulta,
+        [FromQuery] FiltroDeTexto texto,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
         return await ResponderListadoAsync(
+            pagina,
             consulta,
+            texto,
             listar,
             (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Estado, consulta.Almacen, testigo),
             cancelacion).ConfigureAwait(false);
@@ -129,10 +135,11 @@ public sealed class RecuentosController(
 
     /// <summary>Devuelve una página de las líneas de un recuento, con su teórico.</summary>
     /// <param name="id">Identificador del recuento.</param>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">
-    /// Paginación, orden, filtro y acotado (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>,
-    /// <c>solo</c>). Se ordena por <c>numero</c>, y el filtro de texto mira el lote y la serie.
+    /// El orden y el acotado (<c>sort</c>, <c>solo</c>). Se ordena por <c>numero</c>.
     /// </param>
+    /// <param name="texto">El filtro de texto (<c>q</c>), que mira el lote y la serie.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("{id:guid}/lineas")]
     [ExigePermiso(PermisosDeInventario.RecuentoVer)]
@@ -141,13 +148,17 @@ public sealed class RecuentosController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ListarLineas(
         Guid id,
+        [FromQuery] PaginaPedida pagina,
         [FromQuery] ConsultaDeLineasDeRecuento consulta,
+        [FromQuery] FiltroDeTexto texto,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
         return await ResponderListadoDeResultadoAsync(
+            pagina,
             consulta,
+            texto,
             listarLineas,
             (paginacion, testigo) => listarLineas.EjecutarAsync(paginacion, id, consulta.Solo, testigo),
             cancelacion).ConfigureAwait(false);

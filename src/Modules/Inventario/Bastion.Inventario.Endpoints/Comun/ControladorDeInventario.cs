@@ -56,33 +56,42 @@ public abstract class ControladorDeInventario : ControllerBase
     /// admite y responde con la página, o con un <c>400</c> que dice qué campos valen.
     /// </summary>
     /// <typeparam name="TDto">Lo que se publica de cada elemento.</typeparam>
-    /// <param name="consulta">Los parámetros tal como han llegado en la URL.</param>
+    /// <param name="pagina">La página pedida, tal como ha llegado en la URL.</param>
+    /// <param name="consulta">El orden y los criterios propios, tal como han llegado.</param>
+    /// <param name="texto">El texto pedido, o nulo si el listado no filtra por texto.</param>
     /// <param name="ordenables">Quien dice por qué campos deja ordenar este listado.</param>
     /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     protected Task<IActionResult> ResponderListadoAsync<TDto>(
-        ConsultaPaginada consulta,
+        PaginaPedida pagina,
+        ConsultaDeListado consulta,
+        FiltroDeTexto? texto,
         IOrdenaPor ordenables,
         Func<Paginacion, CancellationToken, Task<PaginaDe<TDto>>> ejecutar,
         CancellationToken cancelacion) =>
-        RespuestasDeListado.ResponderAsync(this, consulta, ordenables, ejecutar, cancelacion);
+        RespuestasDeListado.ResponderAsync(
+            this, pagina, consulta, texto, ordenables, ejecutar, cancelacion);
 
     /// <summary>
     /// Lo mismo, para un listado que cuelga de otro recurso y por tanto puede no llegar a haber
     /// página: si el padre no existe, <c>404</c> y no una página vacía con un <c>200</c>.
     /// </summary>
     /// <typeparam name="TDto">Lo que se publica de cada elemento.</typeparam>
-    /// <param name="consulta">Los parámetros tal como han llegado en la URL.</param>
+    /// <param name="pagina">La página pedida, tal como ha llegado en la URL.</param>
+    /// <param name="consulta">El orden y los criterios propios, tal como han llegado.</param>
+    /// <param name="texto">El texto pedido, o nulo si el listado no filtra por texto.</param>
     /// <param name="ordenables">Quien dice por qué campos deja ordenar este listado.</param>
     /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     protected Task<IActionResult> ResponderListadoDeResultadoAsync<TDto>(
-        ConsultaPaginada consulta,
+        PaginaPedida pagina,
+        ConsultaDeListado consulta,
+        FiltroDeTexto? texto,
         IOrdenaPor ordenables,
         Func<Paginacion, CancellationToken, Task<Resultado<PaginaDe<TDto>>>> ejecutar,
         CancellationToken cancelacion) =>
         RespuestasDeListado.ResponderResultadoAsync(
-            this, consulta, ordenables, ejecutar, cancelacion);
+            this, pagina, consulta, texto, ordenables, ejecutar, cancelacion);
 
     /// <summary>Convierte el desenlace de un caso de uso que devuelve valor en respuesta.</summary>
     /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>

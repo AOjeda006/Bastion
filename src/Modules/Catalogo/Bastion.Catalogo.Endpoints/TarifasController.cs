@@ -35,23 +35,26 @@ public sealed class TarifasController(
     IResolverPrecio resolver) : ControladorDeCatalogo
 {
     /// <summary>Devuelve una página de tramos de tarifa.</summary>
-    /// <param name="consulta">
-    /// Paginación, orden, filtro y código (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>,
-    /// <c>codigo</c>). El filtro de texto mira el código y el nombre.
-    /// </param>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
+    /// <param name="consulta">El orden y el código (<c>sort</c>, <c>codigo</c>).</param>
+    /// <param name="texto">El filtro de texto (<c>q</c>), que mira el código y el nombre.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeCatalogo.TarifaVer)]
     [ProducesResponseType(typeof(PaginaDe<TarifaDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Listar(
+        [FromQuery] PaginaPedida pagina,
         [FromQuery] ConsultaDeTarifas consulta,
+        [FromQuery] FiltroDeTexto texto,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
         return await ResponderListadoAsync(
+            pagina,
             consulta,
+            texto,
             listar,
             (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Codigo, testigo),
             cancelacion).ConfigureAwait(false);
@@ -145,7 +148,10 @@ public sealed class TarifasController(
 
     /// <summary>Devuelve una página de líneas de un tramo de tarifa.</summary>
     /// <param name="tarifaId">Tramo cuyas líneas se piden.</param>
-    /// <param name="consulta">Paginación y orden (<c>page</c>, <c>size</c>, <c>sort</c>).</param>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
+    /// <param name="consulta">
+    /// El orden (<c>sort</c>). Sin filtro de texto: un <c>q</c> con algo escrito es un <c>400</c>.
+    /// </param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("{tarifaId:guid}/lineas")]
     [ExigePermiso(PermisosDeCatalogo.TarifaVer)]
@@ -154,13 +160,16 @@ public sealed class TarifasController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ListarLineas(
         Guid tarifaId,
-        [FromQuery] ConsultaPaginada consulta,
+        [FromQuery] PaginaPedida pagina,
+        [FromQuery] ConsultaDeListado consulta,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
         return await ResponderListadoDeResultadoAsync(
+            pagina,
             consulta,
+            texto: null,
             listarLineas,
             (paginacion, testigo) => listarLineas.EjecutarAsync(paginacion, tarifaId, testigo),
             cancelacion).ConfigureAwait(false);

@@ -191,6 +191,7 @@ export const tiposDeError: TiposDeError = {
   'fecha-fuera-del-ejercicio-de-la-serie':
     'That series belongs to another financial year: it does not number documents with this ' +
     'date. Open the adjustment with a series from the year of its date.',
+  'filtro-no-admitido': 'This list cannot be searched by text.',
   'gtin-circulacion-restringida':
     'That is a restricted circulation number: a shop or a country assigns it for internal ' +
     'use, and outside that scope it does not identify an item.',

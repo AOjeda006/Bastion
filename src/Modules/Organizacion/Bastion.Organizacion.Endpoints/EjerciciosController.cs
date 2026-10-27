@@ -23,18 +23,23 @@ public sealed class EjerciciosController(
     IReabrirEjercicio reabrir) : ControladorDeOrganizacion
 {
     /// <summary>Devuelve una página de ejercicios.</summary>
-    /// <param name="consulta">Paginación, orden y filtro (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>).</param>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
+    /// <param name="consulta">
+    /// El orden (<c>sort</c>). Sin filtro de texto: un <c>q</c> con algo escrito es un <c>400</c>.
+    /// </param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeOrganizacion.EjercicioVer)]
     [ProducesResponseType(typeof(PaginaDe<EjercicioDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
-        [FromQuery] ConsultaPaginada consulta,
+        [FromQuery] PaginaPedida pagina,
+        [FromQuery] ConsultaDeListado consulta,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
-        return await ResponderListadoAsync(consulta, listar, cancelacion).ConfigureAwait(false);
+        return await ResponderListadoAsync(pagina, consulta, texto: null, listar, cancelacion)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Devuelve un ejercicio.</summary>

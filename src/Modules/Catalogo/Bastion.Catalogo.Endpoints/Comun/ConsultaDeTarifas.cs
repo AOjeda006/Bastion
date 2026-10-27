@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bastion.Catalogo.Endpoints.Comun;
 
 /// <summary>
-/// Los parámetros del listado de tarifas: los cuatro de siempre, más <c>?codigo=</c>.
+/// Los parámetros del listado de tarifas: el orden, más <c>?codigo=</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,7 +24,7 @@ namespace Bastion.Catalogo.Endpoints.Comun;
 /// lista, que es donde están escritos los motivos de cada uno.
 /// </para>
 /// </remarks>
-public sealed record ConsultaDeTarifas : ConsultaPaginada
+public sealed record ConsultaDeTarifas : ConsultaDeListado
 {
     /// <summary>Nombre externo del parámetro.</summary>
     public const string NombreDelCodigo = "codigo";

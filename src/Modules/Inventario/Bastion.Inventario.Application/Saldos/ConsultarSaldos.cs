@@ -72,8 +72,8 @@ public interface IConsultarSaldos : IOrdenaPor
 /// <para>
 /// <b>No ordena por nada que se pueda pedir</b>: el orden es el del artículo y el almacén por su
 /// identificador, que es estable entre páginas. El nombre de cada uno está en Catálogo y en
-/// Organización, y una consulta no cruza esquemas (§4). Un <c>?sort=</c> es un <c>400</c>, y el
-/// <c>?q=</c> no busca nada, como en los tramos de una tarifa.
+/// Organización, y una consulta no cruza esquemas (§4). Un <c>?sort=</c> es un <c>400</c>, y un
+/// <c>?q=</c> con algo escrito también, como en los tramos de una tarifa (ADR-0072).
 /// </para>
 /// </remarks>
 /// <param name="saldos">La lectura del libro.</param>

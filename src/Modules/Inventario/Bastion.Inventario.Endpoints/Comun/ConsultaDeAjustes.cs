@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bastion.Inventario.Endpoints.Comun;
 
 /// <summary>
-/// Los parámetros del listado de ajustes: los cuatro de siempre, más <c>?estado=</c> y
+/// Los parámetros del listado de ajustes: el orden, más <c>?estado=</c> y
 /// <c>?almacen=</c>, como el del recuento (ADR-0065 §6).
 /// </summary>
 /// <remarks>
@@ -22,7 +22,7 @@ namespace Bastion.Inventario.Endpoints.Comun;
 /// ningún listado (ADR-0065 §5).
 /// </para>
 /// </remarks>
-public sealed record ConsultaDeAjustes : ConsultaPaginada
+public sealed record ConsultaDeAjustes : ConsultaDeListado
 {
     /// <summary>Nombre externo del parámetro del estado.</summary>
     public const string NombreDelEstado = "estado";

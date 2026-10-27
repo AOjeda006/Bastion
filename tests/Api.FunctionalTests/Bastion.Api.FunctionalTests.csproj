@@ -42,6 +42,7 @@
     <Compile Include="../Comun/CensoDeReglas.cs" Link="Comun/CensoDeReglas.cs" />
     <Compile Include="../Comun/CapturaDeRegistro.cs" Link="Comun/CapturaDeRegistro.cs" />
     <Compile Include="../Comun/RaizDelRepositorio.cs" Link="Comun/RaizDelRepositorio.cs" />
+    <Compile Include="../Comun/ListadosDeLaApi.cs" Link="Comun/ListadosDeLaApi.cs" />
   </ItemGroup>
 
   <ItemGroup>

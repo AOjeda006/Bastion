@@ -92,7 +92,7 @@ public sealed record Paginacion
     /// <b>Está aquí y no solo en el borde</b> porque quien tiene que aplicarlo es el repositorio,
     /// que es donde vive el filtro; y <b>lo pone únicamente el modelo de consulta de los maestros
     /// retirables</b>, que es el único que publica <c>?retiradas=</c>. Los demás listados enlazan
-    /// un <c>ConsultaPaginada</c> que no tiene ese parámetro, así que aquí les llega siempre
+    /// un <c>ConsultaDeListado</c> que no tiene ese parámetro, así que aquí les llega siempre
     /// <c>false</c> y no hay manera de que la URL diga otra cosa.
     /// </para>
     /// </remarks>

@@ -220,6 +220,7 @@ export const tiposDeError = {
   'fecha-fuera-del-ejercicio-de-la-serie':
     'Esa serie es de otro ejercicio: no numera documentos con esta fecha. Abre el ajuste con ' +
     'una serie del ejercicio de su fecha.',
+  'filtro-no-admitido': 'Este listado no se puede buscar por texto.',
   'gtin-circulacion-restringida':
     'Es un número de circulación restringida: lo pone una tienda o un país para su uso ' +
     'interno, y fuera de ahí no identifica un artículo.',

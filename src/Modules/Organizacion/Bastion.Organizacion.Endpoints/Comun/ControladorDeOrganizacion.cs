@@ -55,14 +55,19 @@ public abstract class ControladorDeOrganizacion : ControllerBase
     /// la página, o con un <c>400</c> que dice qué campos valen.
     /// </summary>
     /// <typeparam name="TDto">Lo que se publica de cada elemento.</typeparam>
-    /// <param name="consulta">Los parámetros tal como han llegado en la URL.</param>
+    /// <param name="pagina">La página pedida, tal como ha llegado en la URL.</param>
+    /// <param name="consulta">El orden y los criterios propios, tal como han llegado.</param>
+    /// <param name="texto">El texto pedido, o nulo si el listado no filtra por texto.</param>
     /// <param name="listado">El caso de uso, que es quien dice por qué campos deja ordenar.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     protected Task<IActionResult> ResponderListadoAsync<TDto>(
-        ConsultaPaginada consulta,
+        PaginaPedida pagina,
+        ConsultaDeListado consulta,
+        FiltroDeTexto? texto,
         IListado<TDto> listado,
         CancellationToken cancelacion) =>
-        RespuestasDeListado.ResponderAsync(this, consulta, listado, cancelacion);
+        RespuestasDeListado.ResponderAsync(
+            this, pagina, consulta, texto, listado, cancelacion);
 
     /// <summary>Convierte el desenlace de un caso de uso que devuelve valor en respuesta.</summary>
     /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>

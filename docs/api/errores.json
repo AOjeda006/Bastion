@@ -90,6 +90,7 @@
     { "codigo": "empresa-ya-registrada", "type": "/errors/empresa-ya-registrada", "clase": "Conflicto" },
     { "codigo": "falta-if-match", "type": "/errors/falta-if-match", "clase": "FaltaLaPrecondicion" },
     { "codigo": "fecha-fuera-del-ejercicio-de-la-serie", "type": "/errors/fecha-fuera-del-ejercicio-de-la-serie", "clase": "Conflicto" },
+    { "codigo": "filtro-no-admitido", "type": "/errors/filtro-no-admitido", "clase": "Validacion" },
     { "codigo": "gtin-circulacion-restringida", "type": "/errors/gtin-circulacion-restringida", "clase": "Validacion" },
     { "codigo": "gtin-cupon", "type": "/errors/gtin-cupon", "clase": "Validacion" },
     { "codigo": "gtin-digito-de-control", "type": "/errors/gtin-digito-de-control", "clase": "Validacion" },

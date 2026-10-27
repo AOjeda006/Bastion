@@ -360,6 +360,8 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElSelectorDeEmpresaTests.La_sesion_no_se_abre_en_una_empresa_bloqueada_aunque_sea_la_primera_pertenencia",
         "ElSelectorDeEmpresaTests.Una_empresa_bloqueada_se_cae_del_selector_y_su_pertenencia_sigue_en_la_tabla",
 
+        "ElTextoSoloLoRecibeQuienLoMiraTests.Cada_listado_contesta_al_texto_segun_lo_publique",
+
         "ElTrabajoDeFondoVaciaLaColaTests.El_fallo_de_uno_no_es_el_fallo_de_la_vuelta",
         "ElTrabajoDeFondoVaciaLaColaTests.Lo_que_esta_pendiente_acaba_publicado",
         "ElTrabajoDeFondoVaciaLaColaTests.Un_manejador_que_falla_la_primera_vez_acaba_recibiendo_el_evento",

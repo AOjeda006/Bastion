@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bastion.Inventario.Endpoints.Comun;
 
 /// <summary>
-/// Los parámetros del listado de transferencias: los de siempre, más <c>?estado=</c>,
+/// Los parámetros del listado de transferencias: el orden, más <c>?estado=</c>,
 /// <c>?origen=</c> y <c>?destino=</c> (ADR-0068 §1).
 /// </summary>
 /// <remarks>
@@ -23,11 +23,13 @@ namespace Bastion.Inventario.Endpoints.Comun;
 /// ningún listado (ADR-0068 §5).
 /// </para>
 /// <para>
-/// <b>El <c>?q=</c> llega y no filtra nada</b>, como en las líneas de tarifa: el repositorio no
-/// declara filtro de texto, porque el alta no tiene ningún campo que escriba una persona.
+/// <b>No tiene <c>?q=</c></b>, como las líneas de tarifa: el repositorio no declara filtro de
+/// texto, porque el alta no tiene ningún campo que escriba una persona. Hasta el ítem 3.2 lo
+/// publicaba, llegaba y no filtraba nada (ADR-0069); desde entonces la acción no lo enlaza, y
+/// uno con algo escrito es un <c>400</c> <c>filtro-no-admitido</c> (ADR-0072).
 /// </para>
 /// </remarks>
-public sealed record ConsultaDeTransferencias : ConsultaPaginada
+public sealed record ConsultaDeTransferencias : ConsultaDeListado
 {
     /// <summary>Nombre externo del parámetro del estado.</summary>
     public const string NombreDelEstado = "estado";

@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Contracts;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -23,9 +24,10 @@ public sealed class ArticulosController(
     IQuitarProveedorDelArticulo quitarProveedor) : ControladorDeCatalogo
 {
     /// <summary>Devuelve una página de artículos.</summary>
-    /// <param name="consulta">
-    /// Paginación, orden, filtro y categoría (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>,
-    /// <c>categoria</c>). El filtro de texto mira el código y la descripción.
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
+    /// <param name="consulta">El orden y la categoría (<c>sort</c>, <c>categoria</c>).</param>
+    /// <param name="texto">
+    /// El filtro de texto (<c>q</c>), que mira el código y la descripción.
     /// </param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
@@ -33,13 +35,17 @@ public sealed class ArticulosController(
     [ProducesResponseType(typeof(PaginaDe<ArticuloDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Listar(
+        [FromQuery] PaginaPedida pagina,
         [FromQuery] ConsultaDeArticulos consulta,
+        [FromQuery] FiltroDeTexto texto,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
         return await ResponderListadoAsync(
+            pagina,
             consulta,
+            texto,
             listar,
             (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Categoria, testigo),
             cancelacion).ConfigureAwait(false);

@@ -30,18 +30,23 @@ public sealed class EmpresasController(
     IDesbloquearEmpresa desbloquear) : ControladorDeOrganizacion
 {
     /// <summary>Devuelve una página de empresas.</summary>
-    /// <param name="consulta">Paginación, orden y filtro (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>).</param>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
+    /// <param name="consulta">El orden (<c>sort</c>).</param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeOrganizacion.EmpresaVer)]
     [ProducesResponseType(typeof(PaginaDe<EmpresaDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
-        [FromQuery] ConsultaPaginada consulta,
+        [FromQuery] PaginaPedida pagina,
+        [FromQuery] ConsultaDeListado consulta,
+        [FromQuery] FiltroDeTexto texto,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
-        return await ResponderListadoAsync(consulta, listar, cancelacion).ConfigureAwait(false);
+        return await ResponderListadoAsync(pagina, consulta, texto, listar, cancelacion)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Busca empresas por un criterio que no puede ir en la URL.</summary>

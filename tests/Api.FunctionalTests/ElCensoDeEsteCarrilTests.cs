@@ -74,6 +74,11 @@ public sealed class ElCensoDeEsteCarrilTests
         "CadaRestriccionTraducidaSeJustificaTests.Ninguna_restriccion_se_traduce_sin_estar_en_esta_lista",
         "CadaRestriccionTraducidaSeJustificaTests.Toda_restriccion_declarada_existe_en_el_modelo",
 
+        "ElBordeComponeLasTresPiezasTests.Sin_texto_escrito_un_listado_sin_texto_compone_la_pagina",
+        "ElBordeComponeLasTresPiezasTests.Un_listado_con_texto_lo_compone_con_la_pagina_y_el_orden",
+        "ElBordeComponeLasTresPiezasTests.Un_orden_que_no_se_admite_sigue_siendo_su_400",
+        "ElBordeComponeLasTresPiezasTests.Un_texto_escrito_a_un_listado_sin_texto_es_un_400_con_su_codigo",
+
         "ElCaptadorDeRegistroCapturaTests.Lo_que_la_API_escribe_llega_al_sumidero_con_su_identificador_de_suceso",
         "ElCaptadorDeRegistroCapturaTests.Un_evento_sin_identificador_de_suceso_no_se_lee_como_si_tuviera_uno",
 
@@ -334,6 +339,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "SinEmpresaNoSeConsultaTests.Con_un_ambito_abierto_a_proposito_devuelve_nulo_y_no_lanza",
         "SinEmpresaNoSeConsultaTests.Dos_ambitos_anidados_se_cierran_por_orden_y_el_de_fuera_sigue_abierto",
         "SinEmpresaNoSeConsultaTests.Sin_claim_y_sin_ambito_la_empresa_del_filtro_lanza",
+
+        "SoloPublicaElTextoQuienLoMiraTests.El_barrido_ve_listados_con_texto_y_sin_texto",
+        "SoloPublicaElTextoQuienLoMiraTests.Los_listados_sin_filtro_de_texto_son_los_seis_declarados",
 
         "SondasDeSaludTests.SondaDeDisponibilidad_SinBaseDeDatos_DiceCualDependenciaFalla",
         "SondasDeSaludTests.SondaDeDisponibilidad_SinBaseDeDatos_RespondeServicioNoDisponible",

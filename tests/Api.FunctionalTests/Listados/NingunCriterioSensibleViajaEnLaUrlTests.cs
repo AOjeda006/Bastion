@@ -1,10 +1,7 @@
-using System.Reflection;
 using Bastion.Api.FunctionalTests.Salud;
-using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Inventario.Contracts.Saldos;
+using Bastion.Pruebas.Comun;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
 namespace Bastion.Api.FunctionalTests.Listados;
@@ -90,11 +87,11 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
     {
         List<string> fugas =
         [
-            .. from listado in Listados()
-               from parametro in DeLaUrl(listado)
+            .. from listado in ListadosDeLaApi.De(_api.Services)
+               from parametro in ListadosDeLaApi.DeLaUrl(listado)
                from sensible in s_sensibles
                where Contiene(parametro, sensible.Key)
-               select $"{Nombre(listado)} recibe «{parametro}» por la URL — {sensible.Value}",
+               select $"{ListadosDeLaApi.Nombre(listado)} recibe «{parametro}» por la URL — {sensible.Value}",
         ];
 
         fugas.ShouldBeEmpty(
@@ -115,14 +112,14 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
     [Fact]
     public void El_barrido_ve_los_listados_y_sus_parametros()
     {
-        List<ApiDescription> listados = [.. Listados()];
+        List<ApiDescription> listados = [.. ListadosDeLaApi.De(_api.Services)];
 
         listados.ShouldNotBeEmpty(
             "el explorador de API no ha devuelto ni un listado, así que la regla de al lado " +
             "recorrería una lista vacía y saldría verde sin mirar ninguna URL");
 
         SortedSet<string> parametros = new(
-            listados.SelectMany(DeLaUrl), StringComparer.Ordinal);
+            listados.SelectMany(ListadosDeLaApi.DeLaUrl), StringComparer.Ordinal);
 
         // La lista entera de lo que los listados aceptan por la URL, hoy. Un parámetro nuevo
         // —sensible o no— pone esto rojo y obliga a decidirlo aquí, que es donde están escritos
@@ -209,10 +206,10 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
 
         // Y que reconoce un listado que lleva su página dentro de la respuesta, que es como responde
         // el saldo: sin esta, una respuesta envuelta sacaría su listado del barrido sin avisar.
-        EsColeccion(typeof(SaldosAUnaFechaDto)).ShouldBeTrue(
+        ListadosDeLaApi.EsColeccion(typeof(SaldosAUnaFechaDto)).ShouldBeTrue(
             "el barrido no reconoce como listado una respuesta que lleva la página dentro");
 
-        EsColeccion(typeof(SaldoDto)).ShouldBeFalse(
+        ListadosDeLaApi.EsColeccion(typeof(SaldoDto)).ShouldBeFalse(
             "el barrido toma por listado una respuesta que no lleva ninguna página");
 
         s_sensibles.Keys.Any(sensible => Contiene("page", sensible)).ShouldBeFalse(
@@ -222,43 +219,4 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
 
     private static bool Contiene(string parametro, string sensible) =>
         parametro.Contains(sensible, StringComparison.OrdinalIgnoreCase);
-
-    private static string Nombre(ApiDescription listado) =>
-        (listado.HttpMethod ?? "?") + " /" + listado.RelativePath;
-
-    private static IEnumerable<string> DeLaUrl(ApiDescription listado) =>
-        listado.ParameterDescriptions
-            .Where(parametro => parametro.Source == BindingSource.Query)
-            .Select(parametro => parametro.Name);
-
-    /// <summary>
-    /// Los listados, reconocidos por lo que DEVUELVEN y no por cómo se llaman.
-    /// </summary>
-    /// <remarks>
-    /// Una heurística por nombre —los métodos que se llamen <c>Listar</c>— es la que el ítem 1.2
-    /// tumbó: se le escapa el primero que se llame <c>Consultar</c>, y no se le escapa con un
-    /// rojo, se le escapa en silencio. El tipo de la respuesta es un hecho del contrato: si
-    /// devuelve una página o un tramo, es un listado.
-    /// </remarks>
-    private IEnumerable<ApiDescription> Listados()
-    {
-        IApiDescriptionGroupCollectionProvider explorador =
-            _api.Services.GetRequiredService<IApiDescriptionGroupCollectionProvider>();
-
-        return from grupo in explorador.ApiDescriptionGroups.Items
-               from descripcion in grupo.Items
-               where descripcion.SupportedResponseTypes.Any(respuesta => EsColeccion(respuesta.Type))
-               select descripcion;
-    }
-
-    private static bool EsColeccion(Type? tipo) =>
-        EsPagina(tipo)
-        || (tipo is not null
-            && tipo.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Any(propiedad => EsPagina(propiedad.PropertyType)));
-
-    private static bool EsPagina(Type? tipo) =>
-        tipo is { IsGenericType: true }
-        && (tipo.GetGenericTypeDefinition() == typeof(PaginaDe<>)
-            || tipo.GetGenericTypeDefinition() == typeof(TramoDe<>));
 }

@@ -24,21 +24,26 @@ public sealed class UnidadesDeMedidaController(
     IReincorporarUnidadMedida reincorporar) : ControladorDeOrganizacion
 {
     /// <summary>Devuelve una página de unidades de medida.</summary>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">
-    /// Paginación, orden, filtro y retiradas (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>,
-    /// <c>retiradas</c>). Por omisión, las retiradas <b>no</b> salen (ADR-0023).
+    /// El orden y las retiradas (<c>sort</c>, <c>retiradas</c>). Por omisión, las retiradas
+    /// <b>no</b> salen (ADR-0023).
     /// </param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeOrganizacion.UnidadMedidaVer)]
     [ProducesResponseType(typeof(PaginaDe<UnidadMedidaDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
+        [FromQuery] PaginaPedida pagina,
         [FromQuery] ConsultaDeMaestro consulta,
+        [FromQuery] FiltroDeTexto texto,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
-        return await ResponderListadoAsync(consulta, listar, cancelacion).ConfigureAwait(false);
+        return await ResponderListadoAsync(pagina, consulta, texto, listar, cancelacion)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Devuelve una unidad de medida.</summary>

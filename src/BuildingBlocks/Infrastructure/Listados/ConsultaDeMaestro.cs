@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bastion.BuildingBlocks.Infrastructure.Listados;
 
 /// <summary>
-/// Los parámetros de un listado de un maestro que se puede retirar: los cuatro de siempre, más
+/// Los parámetros de un listado de un maestro que se puede retirar: el orden, más
 /// <c>?retiradas=</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Por qué un tipo aparte y no un quinto campo en <see cref="ConsultaPaginada"/>.</b> Retirarse
+/// <b>Por qué un tipo aparte y no un campo más en <see cref="ConsultaDeListado"/>.</b> Retirarse
 /// solo les pasa a los cuatro maestros de instalación del ADR-0023. Puesto en el modelo común, los
 /// doce listados publicarían en <c>docs/api/openapi.json</c> un <c>?retiradas=</c> que no miran:
 /// un cliente lo pasaría, la API contestaría <c>200</c>, y no pasaría nada de nada. Una mentira
@@ -33,7 +33,7 @@ namespace Bastion.BuildingBlocks.Infrastructure.Listados;
 /// añadirse allí</b>, que es donde están escritos los motivos de cada uno.
 /// </para>
 /// </remarks>
-public sealed record ConsultaDeMaestro : ConsultaPaginada
+public sealed record ConsultaDeMaestro : ConsultaDeListado
 {
     /// <summary>Nombre externo del parámetro.</summary>
     public const string NombreDeLasRetiradas = "retiradas";

@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Inventario.Application.Saldos;
 using Bastion.Inventario.Contracts;
 using Bastion.Inventario.Contracts.Saldos;
@@ -31,9 +32,11 @@ public sealed class SaldosController(IConsultarSaldos consultar) : ControladorDe
     /// Sin <c>fecha</c>, hoy en UTC. Una fecha posterior a hoy es un <c>400</c>,
     /// <c>saldo-con-fecha-futura</c>. Una anterior al primer movimiento contesta ceros, y no un error.
     /// </remarks>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">
-    /// Paginación, fecha, almacén y artículo (<c>page</c>, <c>size</c>, <c>fecha</c>,
-    /// <c>almacen</c>, <c>articulo</c>). No admite orden: va por artículo y almacén.
+    /// La fecha, el almacén y el artículo (<c>fecha</c>, <c>almacen</c>, <c>articulo</c>). No admite
+    /// orden: va por artículo y almacén. Sin filtro de texto: un <c>q</c> con algo escrito es un
+    /// <c>400</c>.
     /// </param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
@@ -41,12 +44,14 @@ public sealed class SaldosController(IConsultarSaldos consultar) : ControladorDe
     [ProducesResponseType(typeof(SaldosAUnaFechaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Consultar(
+        [FromQuery] PaginaPedida pagina,
         [FromQuery] ConsultaDeSaldos consulta,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
-        Resultado<Paginacion> pedido = consulta.APaginacion(consultar.CamposOrdenables);
+        Resultado<Paginacion> pedido =
+            RespuestasDeListado.Componer(this, pagina, consulta, texto: null, consultar);
 
         if (!pedido.EsCorrecto)
         {

@@ -5146,9 +5146,9 @@ export interface operations {
     Articulos_Listar: {
         parameters: {
             query?: {
-                categoria?: string;
                 page?: number | string;
                 size?: number | string;
+                categoria?: string;
                 sort?: string;
                 q?: string;
             };
@@ -6068,9 +6068,9 @@ export interface operations {
     Tarifas_Listar: {
         parameters: {
             query?: {
-                codigo?: string;
                 page?: number | string;
                 size?: number | string;
+                codigo?: string;
                 sort?: string;
                 q?: string;
             };
@@ -6361,7 +6361,6 @@ export interface operations {
                 page?: number | string;
                 size?: number | string;
                 sort?: string;
-                q?: string;
             };
             header?: never;
             path: {
@@ -7592,10 +7591,10 @@ export interface operations {
     Ajustes_Listar: {
         parameters: {
             query?: {
-                estado?: string;
-                almacen?: string;
                 page?: number | string;
                 size?: number | string;
+                estado?: string;
+                almacen?: string;
                 sort?: string;
                 q?: string;
             };
@@ -7962,10 +7961,10 @@ export interface operations {
     Recuentos_Listar: {
         parameters: {
             query?: {
-                estado?: string;
-                almacen?: string;
                 page?: number | string;
                 size?: number | string;
+                estado?: string;
+                almacen?: string;
                 sort?: string;
                 q?: string;
             };
@@ -8088,9 +8087,9 @@ export interface operations {
     Recuentos_ListarLineas: {
         parameters: {
             query?: {
-                solo?: string;
                 page?: number | string;
                 size?: number | string;
+                solo?: string;
                 sort?: string;
                 q?: string;
             };
@@ -8677,13 +8676,12 @@ export interface operations {
     Saldos_Consultar: {
         parameters: {
             query?: {
+                page?: number | string;
+                size?: number | string;
                 fecha?: string;
                 almacen?: string;
                 articulo?: string;
-                page?: number | string;
-                size?: number | string;
                 sort?: string;
-                q?: string;
             };
             header?: never;
             path?: never;
@@ -8718,13 +8716,12 @@ export interface operations {
     Transferencias_Listar: {
         parameters: {
             query?: {
+                page?: number | string;
+                size?: number | string;
                 estado?: string;
                 origen?: string;
                 destino?: string;
-                page?: number | string;
-                size?: number | string;
                 sort?: string;
-                q?: string;
             };
             header?: never;
             path?: never;
@@ -9535,11 +9532,10 @@ export interface operations {
     ConversionesDeUnidades_Listar: {
         parameters: {
             query?: {
-                retiradas?: boolean;
                 page?: number | string;
                 size?: number | string;
+                retiradas?: boolean;
                 sort?: string;
-                q?: string;
             };
             header?: never;
             path?: never;
@@ -9887,9 +9883,9 @@ export interface operations {
     Divisas_Listar: {
         parameters: {
             query?: {
-                retiradas?: boolean;
                 page?: number | string;
                 size?: number | string;
+                retiradas?: boolean;
                 sort?: string;
                 q?: string;
             };
@@ -10193,7 +10189,6 @@ export interface operations {
                 page?: number | string;
                 size?: number | string;
                 sort?: string;
-                q?: string;
             };
             header?: never;
             path?: never;
@@ -11483,11 +11478,10 @@ export interface operations {
     TiposDeCambio_Listar: {
         parameters: {
             query?: {
-                retiradas?: boolean;
                 page?: number | string;
                 size?: number | string;
+                retiradas?: boolean;
                 sort?: string;
-                q?: string;
             };
             header?: never;
             path?: never;
@@ -12086,9 +12080,9 @@ export interface operations {
     UnidadesDeMedida_Listar: {
         parameters: {
             query?: {
-                retiradas?: boolean;
                 page?: number | string;
                 size?: number | string;
+                retiradas?: boolean;
                 sort?: string;
                 q?: string;
             };

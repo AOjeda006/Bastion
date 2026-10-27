@@ -15,14 +15,6 @@
         "operationId": "Articulos_Listar",
         "parameters": [
           {
-            "name": "categoria",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -48,6 +40,14 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -1835,13 +1835,6 @@
         "operationId": "Tarifas_Listar",
         "parameters": [
           {
-            "name": "codigo",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -1867,6 +1860,13 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "codigo",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -2468,15 +2468,6 @@
             "name": "sort",
             "in": "query",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "schema": {
-              "maxLength": 100,
-              "minLength": 0,
               "type": "string"
             }
           }
@@ -4809,22 +4800,6 @@
         "operationId": "Ajustes_Listar",
         "parameters": [
           {
-            "name": "estado",
-            "in": "query",
-            "schema": {
-              "pattern": "^(Borrador|Confirmado|Anulado)$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "almacen",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -4850,6 +4825,22 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "pattern": "^(Borrador|Confirmado|Anulado)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "almacen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -5534,22 +5525,6 @@
         "operationId": "Recuentos_Listar",
         "parameters": [
           {
-            "name": "estado",
-            "in": "query",
-            "schema": {
-              "pattern": "^(EnCurso|Confirmado|Anulado|Descartado)$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "almacen",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -5575,6 +5550,22 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "pattern": "^(EnCurso|Confirmado|Anulado|Descartado)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "almacen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -5820,14 +5811,6 @@
             }
           },
           {
-            "name": "solo",
-            "in": "query",
-            "schema": {
-              "pattern": "^(sin-contar|teorico-cambiado)$",
-              "type": "string"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -5853,6 +5836,14 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "solo",
+            "in": "query",
+            "schema": {
+              "pattern": "^(sin-contar|teorico-cambiado)$",
+              "type": "string"
             }
           },
           {
@@ -7000,30 +6991,6 @@
         "operationId": "Saldos_Consultar",
         "parameters": [
           {
-            "name": "fecha",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
-          },
-          {
-            "name": "almacen",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "articulo",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -7052,18 +7019,33 @@
             }
           },
           {
-            "name": "sort",
+            "name": "fecha",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date"
             }
           },
           {
-            "name": "q",
+            "name": "almacen",
             "in": "query",
             "schema": {
-              "maxLength": 100,
-              "minLength": 0,
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "articulo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
               "type": "string"
             }
           }
@@ -7125,30 +7107,6 @@
         "operationId": "Transferencias_Listar",
         "parameters": [
           {
-            "name": "estado",
-            "in": "query",
-            "schema": {
-              "pattern": "^(Borrador|Enviada|Recibida|Anulada)$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "origen",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "destino",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -7177,18 +7135,33 @@
             }
           },
           {
-            "name": "sort",
+            "name": "estado",
             "in": "query",
             "schema": {
+              "pattern": "^(Borrador|Enviada|Recibida|Anulada)$",
               "type": "string"
             }
           },
           {
-            "name": "q",
+            "name": "origen",
             "in": "query",
             "schema": {
-              "maxLength": 100,
-              "minLength": 0,
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "destino",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
               "type": "string"
             }
           }
@@ -8740,13 +8713,6 @@
         "operationId": "ConversionesDeUnidades_Listar",
         "parameters": [
           {
-            "name": "retiradas",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -8775,18 +8741,16 @@
             }
           },
           {
-            "name": "sort",
+            "name": "retiradas",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "boolean"
             }
           },
           {
-            "name": "q",
+            "name": "sort",
             "in": "query",
             "schema": {
-              "maxLength": 100,
-              "minLength": 0,
               "type": "string"
             }
           }
@@ -9423,13 +9387,6 @@
         "operationId": "Divisas_Listar",
         "parameters": [
           {
-            "name": "retiradas",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -9455,6 +9412,13 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "retiradas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -10042,15 +10006,6 @@
             "name": "sort",
             "in": "query",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "schema": {
-              "maxLength": 100,
-              "minLength": 0,
               "type": "string"
             }
           }
@@ -12527,13 +12482,6 @@
         "operationId": "TiposDeCambio_Listar",
         "parameters": [
           {
-            "name": "retiradas",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -12562,18 +12510,16 @@
             }
           },
           {
-            "name": "sort",
+            "name": "retiradas",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "boolean"
             }
           },
           {
-            "name": "q",
+            "name": "sort",
             "in": "query",
             "schema": {
-              "maxLength": 100,
-              "minLength": 0,
               "type": "string"
             }
           }
@@ -13689,13 +13635,6 @@
         "operationId": "UnidadesDeMedida_Listar",
         "parameters": [
           {
-            "name": "retiradas",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -13721,6 +13660,13 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "retiradas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           },
           {

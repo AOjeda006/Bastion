@@ -34,21 +34,25 @@ public sealed class ConversionesDeUnidadesController(
     IResolverConversionUm resolver) : ControladorDeOrganizacion
 {
     /// <summary>Devuelve una página de conversiones.</summary>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">
-    /// Paginación, orden, filtro y retiradas (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>,
-    /// <c>retiradas</c>). Por omisión, las retiradas <b>no</b> salen (ADR-0023).
+    /// El orden y las retiradas (<c>sort</c>, <c>retiradas</c>). Por omisión, las retiradas
+    /// <b>no</b> salen (ADR-0023).
+    /// Sin filtro de texto: un <c>q</c> con algo escrito es un <c>400</c>.
     /// </param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeOrganizacion.ConversionUmVer)]
     [ProducesResponseType(typeof(PaginaDe<ConversionUmDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(
+        [FromQuery] PaginaPedida pagina,
         [FromQuery] ConsultaDeMaestro consulta,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
-        return await ResponderListadoAsync(consulta, listar, cancelacion).ConfigureAwait(false);
+        return await ResponderListadoAsync(pagina, consulta, texto: null, listar, cancelacion)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Devuelve una conversión.</summary>

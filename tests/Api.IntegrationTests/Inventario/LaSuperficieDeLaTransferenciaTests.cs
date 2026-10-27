@@ -254,8 +254,10 @@ public sealed class LaSuperficieDeLaTransferenciaTests(PostgresConTodosLosModulo
         (await IdsAsync(escena, $"?origen={escena.AlmacenB}&destino={escena.AlmacenC}")).ShouldBe([deB]);
         (await IdsAsync(escena, $"?origen={escena.AlmacenA}&destino={escena.AlmacenC}")).ShouldBeEmpty();
 
-        // SIN FILTRO DE TEXTO (§1): el `q` llega y no filtra nada, como en las líneas de tarifa.
-        (await IdsAsync(escena, "?q=no-esta-en-ninguna")).ShouldBe([deB, deA, vieja]);
+        // SIN FILTRO DE TEXTO (§1): un `q` con algo escrito es un 400, como en las líneas de tarifa
+        // (ADR-0072), y en blanco es lo que manda un formulario con la caja vacía: todas.
+        await NoSeAdmiteAsync(escena, "?q=no-esta-en-ninguna", "/errors/filtro-no-admitido");
+        (await IdsAsync(escena, "?q=")).ShouldBe([deB, deA, vieja]);
 
         pagina.Elementos[^1].ShouldBe(new TransferenciaResumenDto(
             vieja, null, escena.AlmacenA, escena.AlmacenB, EscenaDeTransferencia.Hoy.AddDays(-1), null, "Borrador", null));

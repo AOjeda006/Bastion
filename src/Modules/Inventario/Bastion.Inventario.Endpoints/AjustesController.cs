@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -43,23 +44,28 @@ public sealed class AjustesController(
     /// Va por la fecha de operación, de la última a la primera, y se ordena también por el número. Un
     /// borrador descartado no sale (ADR-0065 §5).
     /// </remarks>
+    /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">
-    /// Paginación, orden, filtro, estado y almacén (<c>page</c>, <c>size</c>, <c>sort</c>, <c>q</c>,
-    /// <c>estado</c>, <c>almacen</c>). El filtro de texto mira el motivo.
+    /// El orden, el estado y el almacén (<c>sort</c>, <c>estado</c>, <c>almacen</c>).
     /// </param>
+    /// <param name="texto">El filtro de texto (<c>q</c>), que mira el motivo.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet]
     [ExigePermiso(PermisosDeInventario.AjusteVer)]
     [ProducesResponseType(typeof(PaginaDe<AjusteResumenDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Listar(
+        [FromQuery] PaginaPedida pagina,
         [FromQuery] ConsultaDeAjustes consulta,
+        [FromQuery] FiltroDeTexto texto,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
 
         return await ResponderListadoAsync(
+            pagina,
             consulta,
+            texto,
             listar,
             (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Estado, consulta.Almacen, testigo),
             cancelacion).ConfigureAwait(false);

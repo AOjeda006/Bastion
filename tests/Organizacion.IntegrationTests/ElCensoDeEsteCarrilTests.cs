@@ -101,6 +101,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaTraduccionASqlTests.El_barrido_ve_los_listados_y_reconoce_una_consulta_intraducible",
         "LaTraduccionASqlTests.La_busqueda_por_criterio_y_su_cursor_se_traducen_a_sql",
         "LaTraduccionASqlTests.Todo_orden_y_todo_filtro_declarado_se_traduce_a_sql",
+        "LaTraduccionASqlTests.Un_texto_sin_filtro_declarado_lanza_antes_de_llegar_a_la_base",
 
         "LosPuertosDeLecturaTests.El_impuesto_que_no_esta_no_existe",
         "LosPuertosDeLecturaTests.El_impuesto_que_rige_en_la_fecha_se_ofrece_para_lo_nuevo",

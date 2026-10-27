@@ -155,9 +155,19 @@ public static class Paginador
     {
         // Un `?q=` vacío o en blanco es «sin filtro», no «lo que contenga la cadena vacía»: lo
         // segundo sería un `ILIKE '%%'` que trae la tabla entera pasando por el índice.
-        if (criterios.Filtro is null || string.IsNullOrWhiteSpace(filtro))
+        if (string.IsNullOrWhiteSpace(filtro))
         {
             return consulta;
+        }
+
+        // Un texto que llega a un listado que no lo mira es un fallo del borde, como un orden que
+        // no se admite, y no una página entera con un `200` (ADR-0072). Hasta el ítem 3.2 se
+        // ignoraba aquí, y seis listados contestaban como si hubieran filtrado (ADR-0069).
+        if (criterios.Filtro is null)
+        {
+            throw new ArgumentException(
+                "Este listado no filtra por texto y le ha llegado uno. El borde tenía que haberlo " +
+                "rechazado con un 400 antes de llegar aquí.", nameof(filtro));
         }
 
         return consulta.Where(criterios.Filtro(filtro.Trim()));
