@@ -4,12 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { RUTAS, type DeclaracionDeRuta } from './rutas.tsx';
 import { crearRutas } from './enrutador.tsx';
 import { en } from './i18n/en.ts';
-import { es, type Diccionario } from './i18n/es.ts';
+import { es, type DiccionarioDelArmazon } from './i18n/es.ts';
 import { IDIOMAS, type Idioma } from './i18n/idioma.ts';
 import { FUNCIONALIDADES } from '@/features/funcionalidades.ts';
+import { crearI18nDePrueba } from '@/pruebas/i18n.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 
-const DICCIONARIOS: Record<Idioma, Diccionario> = { es, en };
+const DICCIONARIOS: Record<Idioma, DiccionarioDelArmazon> = { es, en };
 
 /**
  * EL QUINTO BARRIDO — toda ruta declara qué exige.
@@ -51,7 +52,8 @@ function recorrer(rutas: readonly RouteObject[]): RutaRecorrida[] {
 }
 
 describe('El barrido de rutas', () => {
-  const recorridas = recorrer(crearRutas());
+  // Ninguna carga se ejecuta: el barrido lee el árbol ya construido, y el i18n no se llega a usar.
+  const recorridas = recorrer(crearRutas(Promise.resolve(crearI18nDePrueba('es'))));
 
   it('el enrutador no tiene ninguna ruta que no esté en la tabla', () => {
     const sinDeclarar = recorridas

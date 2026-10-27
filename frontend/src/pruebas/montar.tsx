@@ -45,7 +45,9 @@ export function montarAplicacion(rutaInicial = '/', idioma: Idioma = 'es'): Apli
   // cosas —y de que sea la versión síncrona y no la del arranque— está en `pruebas/i18n.ts`.
   const i18n = crearI18nDePrueba(idioma);
 
-  const enrutador = createMemoryRouter(crearRutas(), { initialEntries: [rutaInicial] });
+  const enrutador = createMemoryRouter(crearRutas(Promise.resolve(i18n)), {
+    initialEntries: [rutaInicial],
+  });
 
   const pintado = render(
     <Proveedores cache={cache} i18n={i18n}>

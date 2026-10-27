@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './app/App.tsx';
+import { crearEnrutador } from './app/enrutador.tsx';
 import { completarConLosTipos, crearI18nDelArranque } from './app/i18n/index.ts';
 import { idiomaInicial } from './app/i18n/idioma.ts';
 import './index.css';
@@ -24,16 +25,22 @@ if (!contenedor) {
  * llegan se repinta con el suyo. Si no llegan —la red se cae justo ahí—, se queda el genérico, que
  * es exactamente lo que pasaba antes con un `type` sin texto; no hay nada más que hacer con el
  * rechazo, y dejarlo suelto solo ensuciaría la consola con algo que la persona ya ve.
+ *
+ * El enrutador se crea con la PROMESA del i18n, antes de esperarla: empieza a cargar la pantalla
+ * de la URL en cuanto existe, así que la pantalla viaja a la vez que el diccionario. Los textos de
+ * su funcionalidad (ADR-0071) esperan a la instancia, y la pantalla, a sus textos.
  */
 async function arrancar(raiz: HTMLElement): Promise<void> {
   const idioma = idiomaInicial();
-  const i18n = await crearI18nDelArranque(idioma);
+  const i18nDelArranque = crearI18nDelArranque(idioma);
+  const enrutador = crearEnrutador(i18nDelArranque);
+  const i18n = await i18nDelArranque;
 
   // StrictMode siempre activo en desarrollo (`stacks/react/convenciones.md`). Que un efecto
   // se ejecute dos veces no es un fallo del modo estricto: es tu efecto sin función de limpieza.
   createRoot(raiz).render(
     <StrictMode>
-      <App i18n={i18n} />
+      <App i18n={i18n} enrutador={enrutador} />
     </StrictMode>,
   );
 

@@ -10,9 +10,11 @@ import {
   completarConLosTipos,
   crearI18n,
   crearI18nDelArranque,
+  textosCargados,
   tiposCargados,
 } from './i18n/index.ts';
 import type { Idioma } from './i18n/idioma.ts';
+import { FUNCIONALIDADES } from '@/features/funcionalidades.ts';
 import { ALFA } from '@/pruebas/datos.ts';
 import { montarAplicacion } from '@/pruebas/montar.tsx';
 import { abrirSesionSimulada } from '@/pruebas/servidor.ts';
@@ -35,6 +37,9 @@ import { abrirSesionSimulada } from '@/pruebas/servidor.ts';
  * **Y desde el 2.14, los textos de los `type` tampoco están** (ADR-0063 §9): el arranque espera al
  * diccionario y no a ellos, y llegan después de pintar. Lo que se ve mientras no han llegado se
  * comprueba en `ElTextoDeUnFallo`; aquí, que no vienen con el arranque y que llegan sin pisar nada.
+ *
+ * **Y desde el 3.1, los de cada funcionalidad tampoco** (ADR-0071): llegan con la primera ruta de
+ * la suya. Aquí, que el arranque no los trae; cómo llegan, en `LosTextosViajanConSusRutas`.
  */
 const cargaDelIngles = vi.hoisted(() => {
   let soltar: (() => void) | undefined;
@@ -78,6 +83,21 @@ describe('El arranque con un idioma', () => {
     // presupuesto ve desaparecer: si alguien devolviera el import estático, aquí saldría `true`
     // aunque la cifra de la CI tardara otra fase en delatarlo.
     expect(i18n.hasResourceBundle('en', 'traduccion')).toBe(false);
+  });
+
+  it('los textos de las funcionalidades no vienen con el arranque: solo el armazón', async () => {
+    const i18n = await crearI18nDelArranque('es');
+
+    // La contrapartida en comportamiento del tope del arranque: si un espacio de una funcionalidad
+    // volviera a `es.ts`, o el arranque esperara a sus textos, aquí saldría `true`.
+    expect(FUNCIONALIDADES.length).toBeGreaterThan(0);
+    for (const funcionalidad of FUNCIONALIDADES) {
+      expect(textosCargados(i18n, funcionalidad), funcionalidad).toBe(false);
+    }
+    expect(i18n.exists('inventario.saldos.consultar')).toBe(false);
+
+    // Y el armazón sí: el menú, la sesión y los textos de error genéricos se pintan sin esperar.
+    expect(i18n.t('rutas.almacenes')).toBe('Almacenes');
   });
 
   it('los textos de los `type` no vienen con el arranque, y llegan después sin pisar nada', async () => {

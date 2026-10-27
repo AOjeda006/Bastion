@@ -1,6 +1,7 @@
-import type { Diccionario } from './es.ts';
+import type { DiccionarioDelArmazon, TextosDeLasFuncionalidades } from './es.ts';
 import type { Idioma } from './idioma.ts';
 import type { TiposDeError } from './tiposDeError.es.ts';
+import type { Funcionalidad } from '@/features/funcionalidades.ts';
 
 /**
  * De dónde sale el diccionario de cada idioma, y por qué vive en un fichero aparte.
@@ -35,7 +36,7 @@ import type { TiposDeError } from './tiposDeError.es.ts';
  * `Record<Idioma, …>` obliga a que estén los dos: añadir un idioma a `IDIOMAS` sin traerlo aquí es
  * un error de compilación, no un fragmento que falta al ejecutar.
  */
-const CARGADORES: Record<Idioma, () => Promise<Diccionario>> = {
+const CARGADORES: Record<Idioma, () => Promise<DiccionarioDelArmazon>> = {
   es: async () => (await import('./es.ts')).es,
   en: async () => (await import('./en.ts')).en,
 };
@@ -44,7 +45,7 @@ const CARGADORES: Record<Idioma, () => Promise<Diccionario>> = {
  * Trae el diccionario de un idioma. La primera vez cuesta una descarga; a partir de ahí el módulo
  * ya está evaluado y la promesa se resuelve sin volver a pedir nada.
  */
-export function cargarDiccionario(idioma: Idioma): Promise<Diccionario> {
+export function cargarDiccionario(idioma: Idioma): Promise<DiccionarioDelArmazon> {
   return CARGADORES[idioma]();
 }
 
@@ -68,4 +69,46 @@ const CARGADORES_DE_TIPOS: Record<Idioma, () => Promise<TiposDeError>> = {
 /** Trae los textos de los `type` de un idioma, con la misma caché que el diccionario. */
 export function cargarTiposDeError(idioma: Idioma): Promise<TiposDeError> {
   return CARGADORES_DE_TIPOS[idioma]();
+}
+
+/**
+ * Los textos de cada funcionalidad, uno por funcionalidad y por idioma (ADR-0071), con las mismas
+ * dos reglas: el tipo por `import type` y un especificador literal por fichero.
+ *
+ * Los pide el enrutador junto con la primera pantalla de su funcionalidad, y no el arranque: el
+ * diccionario del arranque solo lleva el armazón, y no crece con cada documento que se añade. El
+ * tipo de la tabla es el que obliga a que estén todos: una funcionalidad nueva sin sus textos, o un
+ * idioma nuevo sin los suyos, no compila.
+ */
+const CARGADORES_DE_TEXTOS: {
+  readonly [F in Funcionalidad]: Record<Idioma, () => Promise<TextosDeLasFuncionalidades[F]>>;
+} = {
+  catalogo: {
+    es: async () => (await import('./catalogo.es.ts')).catalogo,
+    en: async () => (await import('./catalogo.en.ts')).catalogo,
+  },
+  identidad: {
+    es: async () => (await import('./identidad.es.ts')).identidad,
+    en: async () => (await import('./identidad.en.ts')).identidad,
+  },
+  inventario: {
+    es: async () => (await import('./inventario.es.ts')).inventario,
+    en: async () => (await import('./inventario.en.ts')).inventario,
+  },
+  organizacion: {
+    es: async () => (await import('./organizacion.es.ts')).organizacion,
+    en: async () => (await import('./organizacion.en.ts')).organizacion,
+  },
+  terceros: {
+    es: async () => (await import('./terceros.es.ts')).terceros,
+    en: async () => (await import('./terceros.en.ts')).terceros,
+  },
+};
+
+/** Trae los textos de una funcionalidad en un idioma, con la misma caché que el diccionario. */
+export function cargarTextos<F extends Funcionalidad>(
+  funcionalidad: F,
+  idioma: Idioma,
+): Promise<TextosDeLasFuncionalidades[F]> {
+  return CARGADORES_DE_TEXTOS[funcionalidad][idioma]();
 }

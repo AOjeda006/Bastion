@@ -6,13 +6,12 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { en } from './i18n/en.ts';
-import { es } from './i18n/es.ts';
 import { IDIOMAS } from './i18n/idioma.ts';
 import { conLosTipos } from './i18n/index.ts';
 import { tiposDeError as tiposEn } from './i18n/tiposDeError.en.ts';
 import { tiposDeError as tiposEs } from './i18n/tiposDeError.es.ts';
 import { ALFA } from '@/pruebas/datos.ts';
+import { DICCIONARIOS_ENTEROS } from '@/pruebas/i18n.ts';
 import { abrirSesionSimulada } from '@/pruebas/servidor.ts';
 import { montarAplicacion } from '@/pruebas/montar.tsx';
 
@@ -127,9 +126,10 @@ describe('El cambio de idioma', () => {
     // casos de este fichero sin haber comprobado una sola traducción.
     //
     // Con los textos de los `type` dentro: viajan aparte desde el 2.14 (ADR-0063 §9), pero se
-    // leen juntos, así que se comparan juntos.
-    const enCastellano = clavesEnProfundidad(conLosTipos(es, tiposEs)).sort();
-    const enIngles = clavesEnProfundidad(conLosTipos(en, tiposEn)).sort();
+    // leen juntos, así que se comparan juntos. Y con los de cada funcionalidad, que viajan con sus
+    // rutas desde el 3.1 (ADR-0071), por lo mismo.
+    const enCastellano = clavesEnProfundidad(conLosTipos(DICCIONARIOS_ENTEROS.es, tiposEs)).sort();
+    const enIngles = clavesEnProfundidad(conLosTipos(DICCIONARIOS_ENTEROS.en, tiposEn)).sort();
 
     expect(enCastellano.length).toBeGreaterThan(40);
     expect(enIngles).toEqual(enCastellano);
@@ -191,9 +191,10 @@ describe('El cambio de idioma', () => {
     // deja la mitad de la aplicación en castellano para quien lee inglés. Esto lo caza: se exige
     // que la inmensa mayoría de los textos SEAN distintos. No todos —«Bastion», «NIF» o «{{titulo}}
     //  · Bastion» se escriben igual en los dos—, y por eso el umbral es alto y no total. Los textos
-    // de los `type` entran en la cuenta, como cuando vivían en el diccionario.
-    const castellano = conLosTipos(es, tiposEs);
-    const ingles = conLosTipos(en, tiposEn);
+    // de los `type` entran en la cuenta, como cuando vivían en el diccionario, y los de cada
+    // funcionalidad, por lo mismo.
+    const castellano = conLosTipos(DICCIONARIOS_ENTEROS.es, tiposEs);
+    const ingles = conLosTipos(DICCIONARIOS_ENTEROS.en, tiposEn);
     const claves = clavesEnProfundidad(castellano);
     const iguales = claves.filter((clave) => {
       const leer = (d: object): unknown =>

@@ -4,6 +4,7 @@ import { ESLint } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
 import { IDIOMAS } from './i18n/idioma.ts';
+import { FUNCIONALIDADES } from '@/features/funcionalidades.ts';
 
 /**
  * UN DICCIONARIO SE IMPORTA POR SU TIPO — ADR-0063 §9.
@@ -16,7 +17,8 @@ import { IDIOMAS } from './i18n/idioma.ts';
  * Se prueba por el efecto, como las fronteras: se le pide a ESLint que linte cada forma prohibida
  * desde ficheros de verdad, uno por zona, y se exige que la marque. Y cada forma permitida, que
  * no. El patrón de la regla es una expresión regular tecleada, así que sus contraejemplos salen
- * del proyecto: cada idioma de `IDIOMAS`, con su diccionario y con sus textos de los `type`.
+ * del proyecto: cada idioma de `IDIOMAS`, con su diccionario, con sus textos de los `type` y con
+ * los de cada funcionalidad de `FUNCIONALIDADES`, que viajan aparte desde el 3.1 (ADR-0071).
  */
 const RAIZ = process.cwd();
 const REGLA = '@typescript-eslint/no-restricted-imports';
@@ -56,8 +58,12 @@ const EXENTOS = [
   join(RAIZ, 'src', 'app', 'ElCambioDeIdioma.test.tsx'),
 ];
 
-/** Los dos módulos de cada idioma: el diccionario y los textos de los `type`. */
-const NOMBRES = IDIOMAS.flatMap((idioma) => [idioma, `tiposDeError.${idioma}`]);
+/** Los módulos de cada idioma: el diccionario, los textos de los `type` y los de cada funcionalidad. */
+const NOMBRES = IDIOMAS.flatMap((idioma) => [
+  idioma,
+  `tiposDeError.${idioma}`,
+  ...FUNCIONALIDADES.map((funcionalidad) => `${funcionalidad}.${idioma}`),
+]);
 
 /** Las formas que traen el VALOR. La mezclada es la que escribe el arreglo automático. */
 const PROHIBIDAS = [
@@ -144,11 +150,13 @@ describe('Un diccionario se importa por su tipo', () => {
       }
     }
 
-    // El conjunto, contado: dos idiomas, dos módulos, seis caminos y cuatro formas. Si `IDIOMAS`
-    // se quedara vacío, lo de arriba sería verde sin haber comprobado nada.
-    expect(comprobadas).toBe(IDIOMAS.length * 2 * 6 * PROHIBIDAS.length);
+    // El conjunto, contado: dos idiomas, siete módulos, seis caminos y cuatro formas. Si `IDIOMAS`
+    // o `FUNCIONALIDADES` se quedaran vacíos, lo de arriba sería verde sin haber comprobado nada.
+    expect(comprobadas).toBe(IDIOMAS.length * (2 + FUNCIONALIDADES.length) * 6 * PROHIBIDAS.length);
     expect(IDIOMAS.length).toBeGreaterThan(1);
-  }, 60_000);
+    expect(FUNCIONALIDADES.length).toBeGreaterThan(0);
+    // Son 504 lintados, y aquí tardan unos 20 s: el plazo deja margen para un *runner* más lento.
+  }, 120_000);
 
   it('deja el valor a `diccionarios.ts` y a los tests, y no marca lo que no es un diccionario', async () => {
     for (const fichero of EXENTOS) {

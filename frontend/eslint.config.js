@@ -233,8 +233,10 @@ export default tseslint.config(
           patterns: [
             {
               // `…/i18n/es.ts` con alias o con camino relativo, y `./es.ts` desde la propia
-              // carpeta del i18n. Lo mismo con `en` y con los textos de los `type`.
-              regex: '^(?:.*/i18n/|\\./)(?:tiposDeError\\.)?[a-z]{2}\\.ts$',
+              // carpeta del i18n. Lo mismo con `en`, con los textos de los `type` y, desde el
+              // 3.1, con los de cada funcionalidad (`inventario.es.ts`, ADR-0071): el prefijo es
+              // cualquier nombre, para que una funcionalidad nueva no tenga que acordarse de él.
+              regex: '^(?:.*/i18n/|\\./)(?:[a-zA-Z]+\\.)?[a-z]{2}\\.ts$',
               allowTypeImports: true,
               message:
                 'Un diccionario se importa por su tipo (`import type`). Por su valor solo lo trae ' +

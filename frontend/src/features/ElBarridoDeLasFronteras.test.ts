@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { FUNCIONALIDADES } from './funcionalidades.ts';
 import { en } from '@/app/i18n/en.ts';
 import { es } from '@/app/i18n/es.ts';
+import { DICCIONARIOS_ENTEROS } from '@/pruebas/i18n.ts';
 
 /**
  * EL SEXTO BARRIDO — una funcionalidad no importa de otra, y el disco manda.
@@ -45,7 +46,14 @@ const FUNCIONALIDADES_EN_DISCO = join(RAIZ, 'src', 'features');
 /** Los espacios de nombres del diccionario que NO son de ninguna funcionalidad. */
 const ESPACIOS_DEL_ARMAZON = ['comun', 'paginacion', 'rutas', 'sesion', 'errores', 'inicio'];
 
-const DICCIONARIOS = { es, en };
+/**
+ * Los diccionarios ENTEROS, el del armazón con los textos de cada funcionalidad: desde el 3.1
+ * viajan por separado (ADR-0071), pero la partición se lee junta, porque `t()` los lee juntos.
+ */
+const DICCIONARIOS = DICCIONARIOS_ENTEROS;
+
+/** Los del arranque, que son solo el armazón. */
+const DEL_ARMAZON = { es, en };
 
 /**
  * Las carpetas de una funcionalidad que NO son un recurso suyo, y por eso no tienen textos.
@@ -438,8 +446,17 @@ describe('El barrido de las fronteras', () => {
     // nombres sin carpeta y una carpeta sin espacio de nombres salen los dos.
     expect(ESPACIOS_DEL_ARMAZON.length, 'no queda ningún espacio del armazón').toBeGreaterThan(0);
 
+    // Y el del arranque lleva el armazón y NADA más: un espacio de una funcionalidad que volviera a
+    // `es.ts` se descargaría antes de pintar, para todo el que entra, abra o no sus pantallas.
+    for (const [idioma, diccionario] of Object.entries(DEL_ARMAZON)) {
+      expect(
+        Object.keys(diccionario).sort(),
+        `${idioma}: el diccionario del arranque lleva algo más que el armazón`,
+      ).toEqual([...ESPACIOS_DEL_ARMAZON].sort());
+    }
+
     for (const [idioma, diccionario] of Object.entries(DICCIONARIOS)) {
-      const espacios: Record<string, unknown> = diccionario;
+      const espacios: Record<string, unknown> = { ...diccionario };
 
       expect(
         Object.keys(espacios).sort(),
