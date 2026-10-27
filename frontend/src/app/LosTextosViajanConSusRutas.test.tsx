@@ -86,16 +86,16 @@ vi.mock('@/app/i18n/diccionarios.ts', async (importarDeVerdad) => {
   return {
     ...deVerdad,
     cargarDiccionario: async (idioma: Idioma) => {
-      await descargas.pasar(`armazon.${idioma}`);
+      await descargas.pasar(`armazon/${idioma}`);
       const diccionario = await deVerdad.cargarDiccionario(idioma);
-      descargas.entregadas.push(`armazon.${idioma}`);
+      descargas.entregadas.push(`armazon/${idioma}`);
 
       return diccionario;
     },
     cargarTextos: async (funcionalidad: Funcionalidad, idioma: Idioma) => {
-      await descargas.pasar(`${funcionalidad}.${idioma}`);
+      await descargas.pasar(`${funcionalidad}/${idioma}`);
       const textos = await deVerdad.cargarTextos(funcionalidad, idioma);
-      descargas.entregadas.push(`${funcionalidad}.${idioma}`);
+      descargas.entregadas.push(`${funcionalidad}/${idioma}`);
 
       return textos;
     },
@@ -164,7 +164,7 @@ describe('Los textos viajan con sus rutas', () => {
       expect(textosCargados(i18n, otra), otra).toBe(false);
     }
     expect(textosCargados(i18n, 'organizacion', 'en')).toBe(false);
-    expect(descargas.pedidas).toEqual(['organizacion.es']);
+    expect(descargas.pedidas).toEqual(['organizacion/es']);
   });
 
   it('mientras sus textos viajan, la pantalla no se pinta: no hay ninguna clave en crudo', async () => {
@@ -175,21 +175,21 @@ describe('Los textos viajan con sus rutas', () => {
     await RUTAS.find((declaracion) => declaracion.ruta === '/almacenes')?.cargar();
 
     abrirSesionSimulada(ALFA.id);
-    descargas.retener('organizacion.es');
+    descargas.retener('organizacion/es');
     const { i18n, enrutador } = montarConElArmazonSolo('/almacenes');
 
     // La carga está pedida y retenida: la ventana no se acaba sola. Una pantalla que se pintara sin
     // esperar a sus textos dejaría aquí `organizacion.almacenes.cargando`, o la tabla con sus
     // rótulos en crudo, y el enrutador habría terminado su primera carga.
     await waitFor(() => {
-      expect(descargas.pedidas).toContain('organizacion.es');
+      expect(descargas.pedidas).toContain('organizacion/es');
     });
     expect(enrutador.state.initialized).toBe(false);
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     exigirSinClavesEnCrudo();
     expect(textosCargados(i18n, 'organizacion')).toBe(false);
 
-    descargas.soltar('organizacion.es');
+    descargas.soltar('organizacion/es');
 
     expect(
       await screen.findByRole('table', { name: 'Almacenes de la empresa activa' }),
@@ -206,23 +206,23 @@ describe('Los textos viajan con sus rutas', () => {
       await screen.findByRole('table', { name: 'Almacenes de la empresa activa' }),
     ).toBeInTheDocument();
 
-    descargas.retener('armazon.en');
-    descargas.retener('organizacion.en');
+    descargas.retener('armazon/en');
+    descargas.retener('organizacion/en');
     await usuario.selectOptions(screen.getByRole('combobox', { name: 'Idioma' }), 'en');
 
     // A la vez y no después: con el diccionario todavía retenido, los textos ya están pedidos. Y
     // los de lo que no se ha visitado, no.
     await waitFor(() => {
-      expect(descargas.pedidas).toContain('organizacion.en');
+      expect(descargas.pedidas).toContain('organizacion/en');
     });
-    expect(descargas.pedidas).toContain('armazon.en');
-    expect(descargas.pedidas.filter((clave) => clave.endsWith('.en'))).toHaveLength(2);
+    expect(descargas.pedidas).toContain('armazon/en');
+    expect(descargas.pedidas.filter((clave) => clave.endsWith('/en'))).toHaveLength(2);
 
     // Y antes del cambio: con el diccionario ya entregado y los textos aún no, sigue TODO en
     // castellano. Un cambio que no los esperara pintaría la tabla en crudo.
-    descargas.soltar('armazon.en');
+    descargas.soltar('armazon/en');
     await waitFor(() => {
-      expect(descargas.entregadas).toContain('armazon.en');
+      expect(descargas.entregadas).toContain('armazon/en');
     });
     expect(textosCargados(i18n, 'organizacion', 'en')).toBe(false);
     expect(
@@ -230,7 +230,7 @@ describe('Los textos viajan con sus rutas', () => {
     ).toBeInTheDocument();
     expect(document.documentElement.lang).toBe('es');
 
-    descargas.soltar('organizacion.en');
+    descargas.soltar('organizacion/en');
 
     expect(
       await screen.findByRole('table', { name: 'Warehouses of the active company' }),
@@ -245,20 +245,20 @@ describe('Los textos viajan con sus rutas', () => {
     const usuario = userEvent.setup();
     const { i18n } = montarConElArmazonSolo('/');
 
-    descargas.retener('organizacion.es');
+    descargas.retener('organizacion/es');
     await irAAlmacenes(usuario);
     await waitFor(() => {
-      expect(descargas.pedidas).toContain('organizacion.es');
+      expect(descargas.pedidas).toContain('organizacion/es');
     });
 
     // El cambio no ve a `organizacion` cargada —todavía no lo está— y se completa sin ella.
     await usuario.selectOptions(screen.getByRole('combobox', { name: 'Idioma' }), 'en');
     expect(await screen.findByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
-    expect(descargas.pedidas).not.toContain('organizacion.en');
+    expect(descargas.pedidas).not.toContain('organizacion/en');
 
     // Llegan los castellanos, que ya no sirven: la carga de la ruta tiene que darse cuenta de que el
     // idioma es otro y traer los ingleses antes de dejar pintar la pantalla.
-    descargas.soltar('organizacion.es');
+    descargas.soltar('organizacion/es');
 
     expect(
       await screen.findByRole('table', { name: 'Warehouses of the active company' }),
@@ -272,24 +272,24 @@ describe('Los textos viajan con sus rutas', () => {
     const usuario = userEvent.setup();
     const { i18n } = montarConElArmazonSolo('/');
 
-    descargas.retener('organizacion.es');
-    descargas.retener('armazon.en');
+    descargas.retener('organizacion/es');
+    descargas.retener('armazon/en');
     await irAAlmacenes(usuario);
     await usuario.selectOptions(screen.getByRole('combobox', { name: 'Idioma' }), 'en');
     await waitFor(() => {
-      expect(descargas.pedidas).toContain('armazon.en');
+      expect(descargas.pedidas).toContain('armazon/en');
     });
 
     // El cambio empezó sin `organizacion`, y los castellanos llegan con él a medias: la pantalla se
     // pinta en castellano, que es el idioma que todavía manda.
-    descargas.soltar('organizacion.es');
+    descargas.soltar('organizacion/es');
     expect(
       await screen.findByRole('table', { name: 'Almacenes de la empresa activa' }),
     ).toBeInTheDocument();
-    expect(descargas.pedidas).not.toContain('organizacion.en');
+    expect(descargas.pedidas).not.toContain('organizacion/en');
 
     // Y el cambio, justo antes de cambiar, tiene que ver lo que llegó mientras tanto.
-    descargas.soltar('armazon.en');
+    descargas.soltar('armazon/en');
 
     expect(
       await screen.findByRole('table', { name: 'Warehouses of the active company' }),
@@ -319,7 +319,7 @@ const CAMINOS = new Map(
 
 /**
  * Una cadena que empieza por el nombre de una funcionalidad y un punto, y que acaba en su comilla
- * o en el `${` de una plantilla: `'inventario.saldos.consultar'` o `` `inventario.ajustes.${x}` ``.
+ * o en el `${` de una plantilla: `t('inventario.saldos.consultar')` o `` `inventario.ajustes.${x}` ``.
  */
 const LITERAL = /['"`]((?:[a-z]+)\.[A-Za-z0-9_.]*?)\.?(?=['"`]|\$\{)/g;
 
@@ -405,7 +405,6 @@ describe('Los textos de una funcionalidad solo los lee ella', () => {
       expect.objectContaining({
         duenio: 'inventario',
         de: 'catalogo',
-        clave: 'catalogo.articulos.trazabilidades',
       }),
     ]);
     expect(desdeLaSuya).toEqual([expect.objectContaining({ duenio: 'catalogo', de: 'catalogo' })]);

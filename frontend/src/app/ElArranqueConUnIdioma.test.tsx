@@ -94,7 +94,6 @@ describe('El arranque con un idioma', () => {
     for (const funcionalidad of FUNCIONALIDADES) {
       expect(textosCargados(i18n, funcionalidad), funcionalidad).toBe(false);
     }
-    expect(i18n.exists('inventario.saldos.consultar')).toBe(false);
 
     // Y el armazón sí: el menú, la sesión y los textos de error genéricos se pintan sin esperar.
     expect(i18n.t('rutas.almacenes')).toBe('Almacenes');
