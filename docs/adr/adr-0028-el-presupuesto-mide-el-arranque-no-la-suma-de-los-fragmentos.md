@@ -12,7 +12,10 @@ revisado: 2026-09-03
   [ADR-0036](adr-0036-el-presupuesto-cuenta-lo-que-se-paga-aunque-no-este-en-el-indice.md)
   (2026-09-18). Desde el ítem 2.1 hay fragmentos que el arranque espera y que el `index.html` no
   nombra, así que el arranque dejó de ser «lo que `index.html` referencia» y pasó a ser eso **más**
-  una lista declarada. Todo lo demás de este ADR sigue vigente tal cual.
+  una lista declarada. Lo demás siguió vigente tal cual hasta el 3.1. Y **enmendado por el
+  [ADR-0071](adr-0071-el-presupuesto-vigila-el-arranque-y-cada-ruta-y-los-textos-viajan-con-sus-rutas.md)** (2026-10-27) en el
+  **tope del total servido** (§1 y §2): el total se sigue publicando y ya no corta, y lo que
+  vigilaba lo vigila un tope por cada ruta diferida. El arranque y su tope siguen en pie.
 - **Fecha:** 2026-09-03
 - **Relacionado:** continúa la corrección del 0.1 (medir el `sourcemap`) y la del 0.10 (bajar el tope
   a lo medido más un margen corto). Aplica la doctrina del **ADR-0020**: una comprobación tiene que
@@ -65,6 +68,10 @@ es como un presupuesto deja de serlo.
   > antes del primer pintado.
 - **Total servido** — todo lo que la imagen sirve, sin los `.map`. Vigila el crecimiento global sin
   castigar el troceo. **Tope: 900 KiB.**
+  > **Enmendado por el ADR-0071 (2026-10-27).** El total se sigue midiendo, sin los `.map` y sin
+  > el manifiesto de Vite, y **ya no tiene tope**: crecía con cada pantalla nueva aunque ninguna
+  > pesara más. El paquete que entra por descuido lo ve ahora el tope de 192 KiB de la ruta por
+  > la que entra.
 
 ### 2. De dónde salen los números
 
@@ -72,6 +79,9 @@ es como un presupuesto deja de serlo.
 unos **2 s** de descarga, dentro de la franja que se considera aceptable para el primer render útil.
 450 KiB es **lo medido más un margen corto (~15 %)**, que es exactamente la regla que el 0.10 dejó
 escrita: un presupuesto que no puede saltar ocupa el sitio del que sí avisaría.
+
+> **Enmendado por el ADR-0071 (2026-10-27).** Este tope ya no existe: el total se publica sin
+> cortar. El párrafo dice por qué se puso, y el ADR-0071, por qué se quitó.
 
 **El de total, holgado a propósito.** 900 KiB sobre 532 medidos: la fase 1 añade dos módulos y sus
 pantallas, y este tope no está para discutir cada una, sino para que un paquete de 300 KiB que entre

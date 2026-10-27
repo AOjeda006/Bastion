@@ -10,6 +10,10 @@ revisado: 2026-09-18
 
 - **Estado:** aceptado. **Ampliado por el [ADR-0063](adr-0063-el-saldo-a-una-fecha-es-la-instantanea-mas-su-tramo-y-el-cerrojo-es-de-la-empresa.md)**:
   un segundo grupo declarado, el de los textos de los `type`, que tiene que existir y no se cuenta.
+  Y **enmendado por el [ADR-0071](adr-0071-el-presupuesto-vigila-el-arranque-y-cada-ruta-y-los-textos-viajan-con-sus-rutas.md)**
+  (2026-10-27): un tercer grupo, el de los textos de cada funcionalidad, que tiene que existir,
+  no se cuenta en el arranque y sí en sus rutas (§1); y el manifiesto de Vite, que sigue
+  descartado para el arranque y mide las rutas (*Alternativas descartadas*).
 - **Fecha:** 2026-09-18
 - **Enmienda** el [ADR-0028](adr-0028-el-presupuesto-mide-el-arranque-no-la-suma-de-los-fragmentos.md):
   sustituye su **definición de arranque**. Lo demás de aquel ADR —las dos métricas, los topes y su
@@ -52,6 +56,12 @@ perdido entero sin que ningún paso se pusiera rojo.
 > fragmento de los textos de los `type`, uno por idioma, que tiene que existir y **no** se cuenta
 > en el arranque. Si los textos vuelven al diccionario, o algo del arranque importa el módulo, el
 > fragmento desaparece y el paso se pone rojo.
+>
+> **Enmendado por el ADR-0071 (2026-10-27), puntos 2 y 6.** Hay un tercer grupo, el de los
+> textos de cada funcionalidad, uno por funcionalidad y por idioma. Tampoco se cuenta en el
+> arranque, y **sí** en cada ruta de su funcionalidad, el mayor de sus idiomas, que es el §3
+> aplicado a cada ruta. Si los textos vuelven al diccionario, o algo del arranque los importa,
+> el fragmento desaparece y el guion de las rutas se pone rojo.
 
 ```text
 arranque = index.html
@@ -126,6 +136,10 @@ caducidad no se nota: el día que el margen se agote, el paso dejará pasar 18 k
 medida exacta y no admite discusión. Trae un navegador entero a la CI, un número que cambia entre
 ejecuciones y una dependencia que mantener, para un artefacto de veinte ficheros cuya composición
 cabe en dos líneas declaradas.
+
+> **Enmendado por el ADR-0071 (2026-10-27), punto 4.** Sigue descartado para el arranque, por la
+> razón de abajo. Para las rutas, no: qué arrastra cada una el `dist` no lo dice y el manifiesto
+> sí, así que el guion de las rutas lo lee, y compara su arranque con el que mide este.
 
 **Deducir los fragmentos del `manifest.json` de Vite.** El manifiesto sí dice qué importa
 dinámicamente el fragmento de entrada, pero no cuáles de esos se esperan antes de pintar: las rutas
