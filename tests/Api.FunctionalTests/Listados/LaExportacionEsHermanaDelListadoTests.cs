@@ -35,8 +35,6 @@ namespace Bastion.Api.FunctionalTests.Listados;
 /// </remarks>
 public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
 {
-    private const string Segmento = "/exportacion";
-
     private const string TipoDeContenido = "text/csv";
 
     /// <summary>Lo que el listado lee de la URL y la exportación no, porque las páginas las pone ella.</summary>
@@ -56,7 +54,8 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
     [Fact]
     public void Las_exportaciones_son_las_declaradas()
     {
-        SortedSet<string> exportaciones = new(Exportaciones().Select(ListadosDeLaApi.Nombre), StringComparer.Ordinal);
+        SortedSet<string> exportaciones = new(
+            ExportacionesDeLaApi.De(_api.Services).Select(ListadosDeLaApi.Nombre), StringComparer.Ordinal);
 
         exportaciones.ShouldBe(
             s_exportaciones,
@@ -70,10 +69,10 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
         List<string> fallos = [];
         int comparadas = 0;
 
-        foreach (ApiDescription exportacion in Exportaciones())
+        foreach (ApiDescription exportacion in ExportacionesDeLaApi.De(_api.Services))
         {
             string nombre = ListadosDeLaApi.Nombre(exportacion);
-            string ruta = exportacion.RelativePath![..^Segmento.Length];
+            string ruta = exportacion.RelativePath![..^ExportacionesDeLaApi.Segmento.Length];
             ApiDescription? listado = listados.SingleOrDefault(
                 candidato => string.Equals(candidato.RelativePath, ruta, StringComparison.Ordinal));
 
@@ -138,18 +137,12 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
         List<string> fallos = [];
         int resueltas = 0;
 
-        foreach (ApiDescription exportacion in Exportaciones())
+        foreach (ApiDescription exportacion in ExportacionesDeLaApi.De(_api.Services))
         {
             string nombre = ListadosDeLaApi.Nombre(exportacion);
             ControllerActionDescriptor accion = exportacion.ActionDescriptor.ShouldBeOfType<ControllerActionDescriptor>();
             string modulo = Modulo(accion.ControllerTypeInfo.Assembly, ".Endpoints");
-
-            Type[] fotos =
-            [
-                .. accion.MethodInfo.GetParameters()
-                    .Select(parametro => parametro.ParameterType)
-                    .Where(tipo => typeof(IFotoDeLectura).IsAssignableFrom(tipo)),
-            ];
+            Type[] fotos = ExportacionesDeLaApi.Fotos(exportacion);
 
             if (fotos is not [Type foto])
             {
@@ -192,17 +185,5 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
         nombre.ShouldEndWith(capa, customMessage: $"el arnés: {nombre} no es una capa {capa}");
 
         return nombre[..^capa.Length];
-    }
-
-    private IEnumerable<ApiDescription> Exportaciones()
-    {
-        IApiDescriptionGroupCollectionProvider explorador =
-            _api.Services.GetRequiredService<IApiDescriptionGroupCollectionProvider>();
-
-        return from grupo in explorador.ApiDescriptionGroups.Items
-               from descripcion in grupo.Items
-               where ListadosDeLaApi.SeConsulta(descripcion)
-                   && descripcion.RelativePath!.EndsWith(Segmento, StringComparison.Ordinal)
-               select descripcion;
     }
 }

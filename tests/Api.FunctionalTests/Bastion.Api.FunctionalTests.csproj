@@ -43,6 +43,7 @@
     <Compile Include="../Comun/CapturaDeRegistro.cs" Link="Comun/CapturaDeRegistro.cs" />
     <Compile Include="../Comun/RaizDelRepositorio.cs" Link="Comun/RaizDelRepositorio.cs" />
     <Compile Include="../Comun/ListadosDeLaApi.cs" Link="Comun/ListadosDeLaApi.cs" />
+    <Compile Include="../Comun/ExportacionesDeLaApi.cs" Link="Comun/ExportacionesDeLaApi.cs" />
   </ItemGroup>
 
   <ItemGroup>

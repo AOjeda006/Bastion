@@ -728,7 +728,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExistenciasSonLaSumaDelLibroTests.Una_fecha_futura_no_se_confirma_y_no_deja_nada_en_el_libro_ni_en_la_existencia",
 
         // Del ítem 3.2 (ADR-0073): las exportaciones de Organización contra la base, el fichero
-        // entero, con el orden, el texto, más de una página interna y sin lo bloqueado.
+        // entero, con el orden, el texto, más de una página interna y sin lo bloqueado; y la foto
+        // de cada módulo, que se abre en REPEATABLE READ y de solo lectura.
+        "LaFotoDeCadaModuloEsUnaFotoTests.La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read",
         "LasExportacionesDeOrganizacionTests.La_exportacion_lleva_el_orden_y_el_texto_del_listado",
         "LasExportacionesDeOrganizacionTests.Las_empresas_salen_con_el_texto_del_listado_sin_las_ajenas_y_sin_la_bloqueada",
         "LasExportacionesDeOrganizacionTests.Los_almacenes_salen_enteros_en_el_dialecto_y_sin_el_bloqueado",
