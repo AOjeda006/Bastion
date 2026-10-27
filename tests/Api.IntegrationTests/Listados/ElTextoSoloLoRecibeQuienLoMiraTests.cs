@@ -31,7 +31,8 @@ namespace Bastion.Api.IntegrationTests.Listados;
 /// <para>
 /// <b>Semillas: la 930</b>, la primera del bloque del 3.2, que va de la 930 a la 949. Del 931 al
 /// 934 son de <c>ElPuertoDelArticuloContraLaBaseTests</c>, del 935 al 939 de
-/// <c>LasExportacionesDeOrganizacionTests</c>, y del 940 al 949 quedan libres.
+/// <c>LasExportacionesDeOrganizacionTests</c>, del 940 al 942 de
+/// <c>LaExportacionDeTercerosTests</c>, y del 943 al 949 quedan libres.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

@@ -45,6 +45,7 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
     {
         "GET /api/v1/organizacion/almacenes/exportacion",
         "GET /api/v1/organizacion/empresas/exportacion",
+        "GET /api/v1/terceros/terceros/exportacion",
     };
 
     private readonly ApiSinDependencias _api = new();

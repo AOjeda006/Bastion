@@ -15978,6 +15978,48 @@
         ]
       }
     },
+    "/api/v1/terceros/terceros/exportacion": {
+      "get": {
+        "tags": [
+          "Terceros"
+        ],
+        "summary": "Descarga el listado de terceros entero, con su orden y su texto, en CSV y con la cabecera de\nla importación (ADR-0073).",
+        "operationId": "Terceros_Exportar",
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/terceros/terceros/buscar": {
       "post": {
         "tags": [

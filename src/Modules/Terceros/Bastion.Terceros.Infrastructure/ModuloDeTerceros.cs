@@ -51,6 +51,11 @@ public static class ModuloDeTerceros
         servicios.AddScoped<IUnidadTrabajoDeTerceros, UnidadDeTrabajoDeTerceros>();
         servicios.AddScoped<IVersionesDeTerceros, VersionesDeTerceros>();
 
+        // Y la foto de su exportación, por lo mismo: la del módulo, bajo el tipo del módulo
+        // (ADR-0073). Sin esta línea, la exportación no se construye, y lo dice
+        // `LaExportacionEsHermanaDelListadoTests` resolviéndola.
+        servicios.AddScoped<IFotoDeTerceros, FotoDeTerceros>();
+
         // El almacén de claves de idempotencia (R10), con la clave del módulo: el filtro del borde
         // resuelve el suyo por el segmento de la ruta, para que la clave y el trabajo caigan en la
         // transacción del MISMO contexto.

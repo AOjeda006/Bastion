@@ -1,14 +1,10 @@
-using System.Globalization;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json.Nodes;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Inventario;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
-using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Empresas;
 using Shouldly;
@@ -48,8 +44,6 @@ public sealed class LasExportacionesDeOrganizacionTests(PostgresConTodosLosModul
     private const string CabeceraDeEmpresas =
         "nif;razon_social;domicilio_calle;domicilio_numero;domicilio_codigo_postal;domicilio_poblacion;" +
         "domicilio_subdivision;domicilio_pais;divisa_base;regimen_de_iva\r\n";
-
-    private static readonly byte[] s_bom = [0xEF, 0xBB, 0xBF];
 
     private readonly ApiDeVerdad _api = new(postgres);
 
@@ -177,39 +171,8 @@ public sealed class LasExportacionesDeOrganizacionTests(PostgresConTodosLosModul
         alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
     }
 
-    /// <summary>
-    /// Pide la exportación y devuelve el fichero sin el BOM, después de afirmar el BOM, el tipo del
-    /// contenido y el nombre del adjunto.
-    /// </summary>
-    private static async Task<string> ExportarAsync(HttpClient cliente, string recurso, string consulta = "")
-    {
-        DateOnly antes = DiaDeNegocio.Hoy(TimeProvider.System);
-        using HttpResponseMessage respuesta =
-            await cliente.GetAsync($"/api/v1/organizacion/{recurso}/exportacion{consulta}");
-        DateOnly despues = DiaDeNegocio.Hoy(TimeProvider.System);
-
-        respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(respuesta));
-
-        MediaTypeHeaderValue? tipo = respuesta.Content.Headers.ContentType;
-        tipo.ShouldNotBeNull();
-        tipo.MediaType.ShouldBe("text/csv");
-        tipo.CharSet.ShouldBe("utf-8");
-
-        // El nombre lleva el día de negocio, y una exportación que cruza la medianoche puede llevar
-        // cualquiera de los dos.
-        ContentDispositionHeaderValue? adjunto = respuesta.Content.Headers.ContentDisposition;
-        adjunto.ShouldNotBeNull("el fichero sale sin Content-Disposition, y el navegador no lo guarda");
-        adjunto.DispositionType.ShouldBe("attachment");
-        adjunto.FileNameStar.ShouldBeOneOf(Nombre(recurso, antes), Nombre(recurso, despues));
-        adjunto.FileName.ShouldNotBeNull("sin filename, un navegador viejo no sabe cómo llamarlo");
-        adjunto.FileName.Trim('"').ShouldBe(adjunto.FileNameStar);
-
-        byte[] fichero = await respuesta.Content.ReadAsByteArrayAsync();
-
-        fichero[..3].ShouldBe(s_bom, "el fichero empieza por el BOM de UTF-8");
-
-        return Encoding.UTF8.GetString(fichero[3..]);
-    }
+    private static Task<string> ExportarAsync(HttpClient cliente, string recurso, string consulta = "") =>
+        Exportaciones.ExportarAsync(cliente, $"/api/v1/organizacion/{recurso}", recurso, consulta);
 
     private static async Task<string> ProblemaAsync(HttpResponseMessage respuesta)
     {
@@ -220,9 +183,6 @@ public sealed class LasExportacionesDeOrganizacionTests(PostgresConTodosLosModul
 
         return problema.ToJsonString();
     }
-
-    private static string Nombre(string recurso, DateOnly dia) =>
-        string.Create(CultureInfo.InvariantCulture, $"{recurso}-{dia:yyyy-MM-dd}.csv");
 
     /// <summary>La primera columna de cada fila, sin la cabecera.</summary>
     private static string[] Codigos(string fichero) =>

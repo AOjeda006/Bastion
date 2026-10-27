@@ -729,7 +729,10 @@ public sealed class ElCensoDeEsteCarrilTests
 
         // Del ítem 3.2 (ADR-0073): las exportaciones de Organización contra la base, el fichero
         // entero, con el orden, el texto, más de una página interna y sin lo bloqueado; y la foto
-        // de cada módulo, que se abre en REPEATABLE READ y de solo lectura.
+        // de cada módulo, que se abre en REPEATABLE READ y de solo lectura. Y la de terceros, que
+        // vuelve a entrar por la importación en otra empresa y sale igual.
+        "LaExportacionDeTercerosTests.La_exportacion_lleva_el_orden_y_el_texto_del_listado_y_no_busca_por_el_identificador",
+        "LaExportacionDeTercerosTests.Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado",
         "LaFotoDeCadaModuloEsUnaFotoTests.La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read",
         "LasExportacionesDeOrganizacionTests.La_exportacion_lleva_el_orden_y_el_texto_del_listado",
         "LasExportacionesDeOrganizacionTests.Las_empresas_salen_con_el_texto_del_listado_sin_las_ajenas_y_sin_la_bloqueada",

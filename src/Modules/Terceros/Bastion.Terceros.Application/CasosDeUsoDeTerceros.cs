@@ -31,6 +31,7 @@ public static class CasosDeUsoDeTerceros
         servicios.AddScoped<IImportarTerceros, ImportarTerceros>();
         servicios.AddScoped<IObtenerTercero, ObtenerTercero>();
         servicios.AddScoped<IListarTerceros, ListarTerceros>();
+        servicios.AddScoped<IListarTercerosConLimite, ListarTerceros>();
         servicios.AddScoped<IBuscarTerceros, BuscarTerceros>();
         servicios.AddScoped<IModificarTercero, ModificarTercero>();
         servicios.AddScoped<IBloquearTercero, BloquearTercero>();

@@ -1,9 +1,11 @@
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Contracts.Importacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.CuerpoDeLaPeticion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Terceros.Application;
 using Bastion.Terceros.Application.Terceros;
 using Bastion.Terceros.Contracts;
 using Bastion.Terceros.Contracts.Terceros;
@@ -26,11 +28,51 @@ public sealed class TercerosController(
     IImportarTerceros importar,
     IObtenerTercero obtener,
     IListarTerceros listar,
+    IListarTercerosConLimite listarConLimite,
     IBuscarTerceros buscar,
     IModificarTercero modificar,
     IBloquearTercero bloquear,
     IDesbloquearTercero desbloquear) : ControladorDeTerceros
 {
+    /// <summary>
+    /// Las columnas de la exportación: las dieciocho de la importación, con sus nombres y en su
+    /// orden, para que el fichero exportado vuelva a entrar (*La puerta del 3.2*, respuesta 2).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Sin el estado de verificación del identificador</b>, que la importación no lee: lo decide
+    /// el servidor al mirarlo, y un fichero no lo puede traer
+    /// (<see cref="IdentificacionDeAltaDto"/>). Sin <c>id</c> ni <c>empresa_id</c>, como en las
+    /// demás.
+    /// </para>
+    /// <para>
+    /// <b>El territorio y la divisa van con el valor del DTO</b>, sin apóstrofo, porque no los
+    /// escribió una persona, y el límite, como un número. Sin límite, sus dos campos salen vacíos,
+    /// que es como la importación lee «sin límite».
+    /// </para>
+    /// </remarks>
+    internal static readonly HojaDeExportacion<TerceroConLimite> HojaDeTerceros = new(
+        "terceros",
+        [
+            new(ImportacionDeTerceros.IdentificacionPais, fila => CampoCsv.Texto(fila.Tercero.Identificacion.Pais)),
+            new(ImportacionDeTerceros.IdentificacionNumero, fila => CampoCsv.Texto(fila.Tercero.Identificacion.Numero)),
+            new(ImportacionDeTerceros.RazonSocial, fila => CampoCsv.Texto(fila.Tercero.RazonSocial)),
+            new(ImportacionDeTerceros.NombreComercial, fila => CampoCsv.Texto(fila.Tercero.NombreComercial)),
+            .. ColumnasDeDireccion.De<TerceroConLimite>("domicilio", fila => fila.Tercero.DomicilioFiscal),
+            new(ImportacionDeTerceros.EsCliente, fila => CampoCsv.SiNo(fila.Tercero.EsCliente)),
+            new(ImportacionDeTerceros.EsProveedor, fila => CampoCsv.SiNo(fila.Tercero.EsProveedor)),
+            new(ImportacionDeTerceros.Territorio, fila => CampoCsv.Valor(fila.Tercero.RegimenFiscal.Territorio)),
+            new(
+                ImportacionDeTerceros.RecargoDeEquivalencia,
+                fila => CampoCsv.SiNo(fila.Tercero.RegimenFiscal.RecargoDeEquivalencia)),
+            new(ImportacionDeTerceros.CriterioDeCaja, fila => CampoCsv.SiNo(fila.Tercero.RegimenFiscal.CriterioDeCaja)),
+            new(
+                ImportacionDeTerceros.SujetoARetencionIrpf,
+                fila => CampoCsv.SiNo(fila.Tercero.RegimenFiscal.SujetoARetencionIrpf)),
+            new(ImportacionDeTerceros.LimiteCredito, fila => CampoCsv.Numero(fila.Limite.Cantidad)),
+            new(ImportacionDeTerceros.LimiteCreditoDivisa, fila => CampoCsv.Valor(fila.Limite.Divisa)),
+        ]);
+
     /// <summary>Devuelve una página de terceros.</summary>
     /// <remarks>
     /// Sigue siendo un <c>GET</c> porque <c>page</c>, <c>size</c>, <c>sort</c> y <c>q</c> no llevan
@@ -55,6 +97,27 @@ public sealed class TercerosController(
         return await ResponderListadoAsync(pagina, consulta, texto, listar, cancelacion)
             .ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Descarga el listado de terceros entero, con su orden y su texto, en CSV y con la cabecera de
+    /// la importación (ADR-0073).
+    /// </summary>
+    /// <param name="consulta">El orden (<c>sort</c>).</param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("exportacion")]
+    [ExigePermiso(PermisosDeTerceros.TerceroVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] ConsultaDeListado consulta,
+        [FromQuery] FiltroDeTexto texto,
+        [FromServices] IFotoDeTerceros foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion) =>
+        await ExportarListadoAsync(consulta, texto, listarConLimite, foto, HojaDeTerceros, reloj, cancelacion)
+            .ConfigureAwait(false);
 
     /// <summary>Busca terceros por un criterio que no puede ir en la URL.</summary>
     /// <remarks>
