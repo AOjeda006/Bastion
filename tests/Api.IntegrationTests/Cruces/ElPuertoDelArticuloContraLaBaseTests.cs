@@ -59,7 +59,7 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// <c>LaAnulacionYElDescarteDelRecuentoTests</c>; del 819 al 829 quedan libres.
 /// </para>
 /// <para>
-/// <b>Los nombres, del 3.2, van del 931 al 933</b>, en el bloque del 3.2, que va del 930 al 949;
+/// <b>Los nombres, del 3.2, van del 931 al 934</b>, en el bloque del 3.2, que va del 930 al 949;
 /// el 930 es de <c>ElTextoSoloLoRecibeQuienLoMiraTests</c>.
 /// </para>
 /// </remarks>
@@ -228,8 +228,9 @@ public sealed class ElPuertoDelArticuloContraLaBaseTests(PostgresConTodosLosModu
     /// <remarks>
     /// <b>La descripción, y no otra columna</b>: es lo que la ficha del artículo enseña como su
     /// nombre, y lo que la exportación de un listado escribe al lado del código (ADR-0074). Con dos
-    /// artículos, para que una consulta que nombrara a todos con el mismo no pasara; y la contraria
-    /// al final, como en la unidad base.
+    /// artículos, para que una consulta que nombrara a todos con el mismo no pasara; con un tercero
+    /// que está y no se pregunta, para que no pasara una que nombrara a todos los de la empresa; y
+    /// la contraria al final, como en la unidad base.
     /// </remarks>
     [Fact]
     public async Task El_codigo_y_la_descripcion_salen_por_lotes_y_los_de_otra_empresa_no_vuelven()
@@ -240,6 +241,7 @@ public sealed class ElPuertoDelArticuloContraLaBaseTests(PostgresConTodosLosModu
         ArticuloDto uno = await ArticuloAsync(cliente, 931, "Bien");
         ArticuloDto otro = await ArticuloAsync(cliente, 932, "Servicio");
         ArticuloDto deLaOtra = await ArticuloAsync(enLaAjena, 933, "Bien");
+        await ArticuloAsync(cliente, 934, "Bien");
         var inventado = Guid.CreateVersion7();
 
         await using (CatalogoDbContext contexto = postgres.AbrirCatalogo(propia.Id))
@@ -253,7 +255,8 @@ public sealed class ElPuertoDelArticuloContraLaBaseTests(PostgresConTodosLosModu
                         [otro.Id] = new("APT-932", "Artículo 932"),
                     },
                     ignoreOrder: true,
-                    "cada artículo de la empresa con lo suyo, y ni el de otra empresa ni el inventado: " +
+                    "cada artículo por el que se pregunta con lo suyo, y ni el de otra empresa, ni el " +
+                    "inventado, ni el de la empresa por el que no se pregunta: " +
                     "si el ajeno volviera, la exportación contaría qué vende la empresa de al lado");
         }
 

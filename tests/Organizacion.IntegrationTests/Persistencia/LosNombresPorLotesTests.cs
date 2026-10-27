@@ -39,11 +39,22 @@ namespace Bastion.Organizacion.IntegrationTests.Persistencia;
 /// diccionario entero: un puerto que devolviera todo, o nada, no pasa ninguna.
 /// </para>
 /// <para>
+/// <b>Y cada puerto tiene algo que está y no se pregunta.</b> El almacén y la ubicación lo tienen
+/// en su primera pregunta, la de antes del bloqueo, que pregunta por uno solo. Las unidades, los
+/// tramos y las divisas no lo tenían: el caso preguntaba por todos los suyos, y corrido solo no hay
+/// otros en la base, así que un puerto sin el <c>Contains</c> del lote pasaba. Con el carril entero
+/// los habría o no según el orden de los casos. Lo encontró la tanda del 3.2, con la 838, la 847 y
+/// la 848 en verde, y ahora llevan uno de cada fuera del lote.
+/// </para>
+/// <para>
 /// <b>Semillas: las empresas, de la 640 a la 643.</b> Del 600 al 607 son de
 /// <c>UnaEstanteriaBloqueadaSigueExistiendoTests</c> y del 620 al 625 de
 /// <c>ElPuertoDeSeriesTests</c>; del 640 al 649 no había ninguna, ni por literal ni por cálculo.
 /// Las unidades, los tramos y las divisas llevan su código, que no choca con los de
-/// <c>LosPuertosDeLecturaTests</c> ni con los de <c>LaConsultaDeConversionesTests</c>.
+/// <c>LosPuertosDeLecturaTests</c> ni con los de <c>LaConsultaDeConversionesTests</c>. El catálogo
+/// de divisas solo tiene cinco, y en este carril son de casos el JPY y el USD, de aquel, y el GBP,
+/// el CHF y el EUR, de este: una divisa más para un caso nuevo de este carril tiene que entrar
+/// antes en el catálogo.
 /// </para>
 /// </remarks>
 [Trait("Category", "Integracion")]
@@ -188,14 +199,20 @@ public sealed class LosNombresPorLotesTests(PostgresDeVerdad postgres)
         var franco = Divisa.Crear("CHF", "Franco suizo", s_momento);
         var inventado = Guid.CreateVersion7();
 
+        // Uno de cada, que está y no se pregunta: sin ellos, un puerto que devolviera todo pasaría,
+        // porque con este caso solo no hay en la base más unidades que las suyas.
+        var unidadFuera = UnidadMedida.Crear("PNL", "Unidad fuera del lote", 0, s_momento);
+        Impuesto tramoFuera = Tramo("PNO-LOTE", "Tramo fuera del lote", new DateOnly(2012, 9, 1), null);
+        var divisaFuera = Divisa.Crear("EUR", "Euro", s_momento);
+
         retirada.Retirar();
         franco.Retirar();
 
         await using (OrganizacionDbContext alta = postgres.AbrirContexto())
         {
-            alta.UnidadesDeMedida.AddRange(caja, retirada);
-            alta.Impuestos.AddRange(vigente, cerrado);
-            alta.Divisas.AddRange(libra, franco);
+            alta.UnidadesDeMedida.AddRange(caja, retirada, unidadFuera);
+            alta.Impuestos.AddRange(vigente, cerrado, tramoFuera);
+            alta.Divisas.AddRange(libra, franco, divisaFuera);
 
             await alta.SaveChangesAsync(CancellationToken.None);
         }
@@ -211,7 +228,7 @@ public sealed class LosNombresPorLotesTests(PostgresDeVerdad postgres)
                     [retirada.Id] = new("PNR", "Unidad del nombre retirada"),
                 },
                 ignoreOrder: true,
-                "las dos unidades, también la retirada, y no la inventada");
+                "las dos unidades, también la retirada, y ni la inventada ni la de fuera del lote");
 
         (await new ConsultaDeImpuestos(contexto)
             .NombresDeAsync([vigente.Id, cerrado.Id, inventado], CancellationToken.None))
@@ -222,7 +239,7 @@ public sealed class LosNombresPorLotesTests(PostgresDeVerdad postgres)
                     [cerrado.Id] = new("PNO-CERR", "Tramo que ya no rige"),
                 },
                 ignoreOrder: true,
-                "los dos tramos, rijan o no, y no el inventado");
+                "los dos tramos, rijan o no, y ni el inventado ni el de fuera del lote");
 
         (await new ConsultaDeDivisas(contexto)
             .NombresDeAsync([libra.Id, franco.Id, inventado], CancellationToken.None))
@@ -233,7 +250,7 @@ public sealed class LosNombresPorLotesTests(PostgresDeVerdad postgres)
                     [franco.Id] = new("CHF", "Franco suizo"),
                 },
                 ignoreOrder: true,
-                "las dos divisas, también la retirada, y no la inventada");
+                "las dos divisas, también la retirada, y ni la inventada ni la de fuera del lote");
     }
 
     private static Impuesto Tramo(string codigo, string nombre, DateOnly desde, DateOnly? hasta) =>
