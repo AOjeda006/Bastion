@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Almacenes;
@@ -37,4 +38,24 @@ public interface IConsultaDeAlmacenes
     /// <param name="almacenId">Identificador del almacén.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<EstadoDeMaestro> EstadoDeAsync(Guid almacenId, CancellationToken cancelacion);
+
+    /// <summary>El código y el nombre de cada almacén, en una sola consulta.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Nombra lo que enseña su ficha</b>, la de
+    /// <c>GET /api/v1/organizacion/almacenes/{id}</c>, con sus mismos filtros (ADR-0074): uno
+    /// de otra empresa no vuelve, y uno <b>bloqueado</b> tampoco. <see cref="EstadoDeAsync"/>
+    /// abre el ámbito del art. 32 para resolver lo viejo; este no, porque un nombre es para
+    /// enseñarlo, y la ficha de ese almacén contesta <c>404</c>.
+    /// </para>
+    /// <para>
+    /// <b>No mira el permiso de quien pregunta</b>: lo mira quien pregunta, antes de preguntar, como
+    /// la pantalla. Lo que no vuelve, se escribe con su identificador.
+    /// </para>
+    /// </remarks>
+    /// <param name="almacenes">Los almacenes por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El código y el nombre de cada uno que vuelve.</returns>
+    Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> almacenes, CancellationToken cancelacion);
 }

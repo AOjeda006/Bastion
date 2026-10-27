@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Application;
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.Catalogo.Application;
@@ -67,6 +68,10 @@ internal sealed class UnidadesEn(EstadoDeMaestro estado) : IConsultaDeUnidadesDe
 
         return Task.FromResult(estado);
     }
+
+    public Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> unidades, CancellationToken cancelacion) =>
+        throw new NotSupportedException("Catálogo no nombra maestros de Organización.");
 }
 
 /// <summary>El puerto de impuestos, fijado en un estado, que apunta fecha y todo.</summary>
@@ -83,6 +88,10 @@ internal sealed class ImpuestosEn(EstadoDeMaestro estado) : IConsultaDeImpuestos
 
         return Task.FromResult(estado);
     }
+
+    public Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> impuestos, CancellationToken cancelacion) =>
+        throw new NotSupportedException("Catálogo no nombra maestros de Organización.");
 }
 
 /// <summary>Un almacén de artículos en memoria.</summary>
@@ -354,6 +363,10 @@ internal sealed class DivisasEn(EstadoDeMaestro estado) : IConsultaDeDivisas
 
         return Task.FromResult(estado);
     }
+
+    public Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> divisas, CancellationToken cancelacion) =>
+        throw new NotSupportedException("Catálogo no nombra maestros de Organización.");
 }
 
 /// <summary>Un almacén de tramos de tarifa en memoria.</summary>

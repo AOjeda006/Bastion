@@ -1,3 +1,5 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
+
 namespace Bastion.Catalogo.Contracts.Catalogo;
 
 /// <summary>
@@ -82,9 +84,9 @@ public enum AptitudParaMoverExistencias
 /// en proceso</b>. Ni un <c>JOIN</c> contra <c>catalogo.articulos</c> ni una llamada HTTP.
 /// </para>
 /// <para>
-/// <b>No publica ni la descripción ni el código</b>, por lo mismo que el puerto de terceros no
-/// publica la ficha: lo que hace falta para decidir si un movimiento es legal es una aptitud, y una
-/// aptitud es lo que sale.
+/// <b>Para decidir no publica ni la descripción ni el código</b>, por lo mismo que el puerto de
+/// terceros no publica la ficha: lo que hace falta para decidir si un movimiento es legal es una
+/// aptitud, y una aptitud es lo que sale.
 /// </para>
 /// <para>
 /// <b>Hoy no tiene consumidor: lo estrena el ítem 2.3</b>, igual que <c>IConsultaDeUnidadesDeMedida</c>
@@ -95,6 +97,11 @@ public enum AptitudParaMoverExistencias
 /// <para>
 /// <b>Desde el 2.12 publica también la unidad base</b>, que es un identificador y no la ficha: el
 /// recuento cuenta en ella, y el ajuste que genera mueve en ella con factor 1 (ADR-0055 §1).
+/// </para>
+/// <para>
+/// <b>Y desde el 3.2, el código y la descripción, para enseñarlos</b>: la exportación de un listado
+/// los escribe donde la pantalla los pinta (ADR-0074, que enmienda el §12 del ADR-0055). Salen por
+/// lotes en <see cref="NombresDeAsync"/>, y con ellos no se decide nada.
 /// </para>
 /// </remarks>
 public interface IConsultaDeArticulos
@@ -115,5 +122,24 @@ public interface IConsultaDeArticulos
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     /// <returns>La unidad base de cada artículo que existe en la empresa.</returns>
     Task<IReadOnlyDictionary<Guid, Guid>> UnidadesBaseDeAsync(
+        IReadOnlyCollection<Guid> articulos, CancellationToken cancelacion);
+
+    /// <summary>El código y la descripción de cada artículo, en una sola consulta.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Nombra lo que enseña su ficha</b>, la de
+    /// <c>GET /api/v1/catalogo/articulos/{id}</c> (ADR-0074). Uno de otra empresa no vuelve,
+    /// como en <see cref="UnidadesBaseDeAsync"/>: desde fuera de Catálogo, es lo mismo que
+    /// uno que no está.
+    /// </para>
+    /// <para>
+    /// <b>No mira el permiso de quien pregunta</b>: lo mira quien pregunta, antes de preguntar, como
+    /// la pantalla. Lo que no vuelve, se escribe con su identificador.
+    /// </para>
+    /// </remarks>
+    /// <param name="articulos">Los artículos por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El código y el nombre de cada uno que vuelve.</returns>
+    Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
         IReadOnlyCollection<Guid> articulos, CancellationToken cancelacion);
 }

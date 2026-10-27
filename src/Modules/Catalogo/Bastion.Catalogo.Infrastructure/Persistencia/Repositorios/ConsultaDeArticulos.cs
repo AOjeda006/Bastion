@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
 using Microsoft.EntityFrameworkCore;
@@ -67,6 +68,27 @@ internal sealed class ConsultaDeArticulos(CatalogoDbContext contexto) : IConsult
             .Where(articulo => articulos.Contains(articulo.Id))
             .Select(articulo => new { articulo.Id, articulo.UnidadBaseId })
             .ToDictionaryAsync(fila => fila.Id, fila => fila.UnidadBaseId, cancelacion)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// El filtro de empresa es el único, como en <see cref="UnidadesBaseDeAsync"/>: el artículo
+    /// no es bloqueable, y el de otra empresa no vuelve.
+    /// </remarks>
+    /// <param name="articulos">Los artículos por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public async Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> articulos, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(articulos);
+
+        return await contexto.Articulos
+            .AsNoTracking()
+            .Where(articulo => articulos.Contains(articulo.Id))
+            .Select(articulo => new { articulo.Id, articulo.Codigo, Nombre = articulo.Descripcion })
+            .ToDictionaryAsync(
+                fila => fila.Id, fila => new NombreDeMaestro(fila.Codigo, fila.Nombre), cancelacion)
             .ConfigureAwait(false);
     }
 }

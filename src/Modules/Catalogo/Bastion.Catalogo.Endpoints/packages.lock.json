@@ -48,7 +48,10 @@
         }
       },
       "bastion.catalogo.contracts": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )"
+        }
       },
       "bastion.catalogo.domain": {
         "type": "Project",

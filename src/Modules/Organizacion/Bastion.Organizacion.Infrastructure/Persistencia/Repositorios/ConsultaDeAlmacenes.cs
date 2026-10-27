@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Bloqueos;
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Comun;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +50,28 @@ internal sealed class ConsultaDeAlmacenes(
             .ConfigureAwait(false);
 
         return Estado(bloqueado);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <b>No abre ningún ámbito</b>, al revés que <see cref="EstadoDeAsync"/>: el filtro de R16
+    /// se queda puesto, y el almacén bloqueado no vuelve, como no sale en su ficha. El de
+    /// empresa, también.
+    /// </remarks>
+    /// <param name="almacenes">Los almacenes por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public async Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> almacenes, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(almacenes);
+
+        return await contexto.Almacenes
+            .AsNoTracking()
+            .Where(almacen => almacenes.Contains(almacen.Id))
+            .Select(almacen => new { almacen.Id, almacen.Codigo, almacen.Nombre })
+            .ToDictionaryAsync(
+                fila => fila.Id, fila => new NombreDeMaestro(fila.Codigo, fila.Nombre), cancelacion)
+            .ConfigureAwait(false);
     }
 
     /// <summary>La traducción de «existe / está bloqueado» a la respuesta del puerto.</summary>

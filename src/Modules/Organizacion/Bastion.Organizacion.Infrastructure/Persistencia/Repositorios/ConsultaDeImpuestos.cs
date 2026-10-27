@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Impuestos;
 using Microsoft.EntityFrameworkCore;
@@ -39,5 +40,26 @@ internal sealed class ConsultaDeImpuestos(OrganizacionDbContext contexto) : ICon
             && (tramo.VigenteHasta is null || enLaFechaDeDevengo <= tramo.VigenteHasta);
 
         return rige ? EstadoDeMaestro.SeOfreceParaLoNuevo : EstadoDeMaestro.SoloResuelveLoViejo;
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Todos los tramos, rijan o no: el nombre no depende de la fecha, y aquí no hay nada que
+    /// decidir en memoria.
+    /// </remarks>
+    /// <param name="impuestos">Los tramos por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public async Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> impuestos, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(impuestos);
+
+        return await contexto.Impuestos
+            .AsNoTracking()
+            .Where(impuesto => impuestos.Contains(impuesto.Id))
+            .Select(impuesto => new { impuesto.Id, impuesto.Codigo, impuesto.Nombre })
+            .ToDictionaryAsync(
+                fila => fila.Id, fila => new NombreDeMaestro(fila.Codigo, fila.Nombre), cancelacion)
+            .ConfigureAwait(false);
     }
 }

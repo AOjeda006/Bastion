@@ -9,13 +9,23 @@
     hiciera, cualquier módulo que usara este proyecto vería el dominio ajeno por la puerta de
     atrás.
 
-    Y HOY NO REFERENCIA NADA MÁS, tampoco los bloques comunes. Los otros dos `Contracts` de módulo
-    ven `BuildingBlocks.Contracts` porque publican cursores y tramos (`TramoDe`, ADR-0029) y
-    `BuildingBlocks.Domain` por la forma de un evento de integración (ADR-0013). Catálogo no
-    publica ninguna de las dos cosas todavía: sus listados son páginas, y la página viaja envuelta
-    en `PaginaDe<T>` que compone el borde, no el DTO. Una referencia puesta «porque los otros la
-    tienen» sería un permiso concedido sin motivo — y el permiso es justo lo que el inventario de
-    arquitectura compara entero.
+    HASTA EL 3.2 NO REFERENCIABA NADA MÁS, tampoco los bloques comunes. Los otros dos `Contracts`
+    de módulo ven `BuildingBlocks.Contracts` porque publican cursores y tramos (`TramoDe`,
+    ADR-0029) y `BuildingBlocks.Domain` por la forma de un evento de integración (ADR-0013).
+    Catálogo no publica ninguna de las dos cosas: sus listados son páginas, y la página viaja
+    envuelta en `PaginaDe<T>` que compone el borde, no el DTO. Una referencia puesta «porque los
+    otros la tienen» sería un permiso concedido sin motivo — y el permiso es justo lo que el
+    inventario de arquitectura compara entero.
   -->
+
+  <ItemGroup>
+    <!--
+      Los contratos comunes desde el 3.2, y con su motivo: `IConsultaDeArticulos` publica el
+      código y la descripción de un artículo en `NombreDeMaestro`, la misma forma en la que
+      Organización publica los de sus cinco maestros (ADR-0074). El dominio común sigue fuera:
+      ningún tipo de este proyecto lo necesita.
+    -->
+    <ProjectReference Include="../../../BuildingBlocks/Contracts/Bastion.BuildingBlocks.Contracts.csproj" />
+  </ItemGroup>
 
 </Project>

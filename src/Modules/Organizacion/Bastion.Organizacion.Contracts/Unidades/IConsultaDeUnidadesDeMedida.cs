@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Unidades;
@@ -31,4 +32,23 @@ public interface IConsultaDeUnidadesDeMedida
     /// <param name="unidadId">Identificador de la unidad de medida.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<EstadoDeMaestro> EstadoDeAsync(Guid unidadId, CancellationToken cancelacion);
+
+    /// <summary>El código y el nombre de cada unidad de medida, en una sola consulta.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Nombra lo que enseña su ficha</b>, la de
+    /// <c>GET /api/v1/organizacion/unidades-de-medida/{id}</c> (ADR-0074). Una unidad
+    /// <b>retirada</b> vuelve, porque sigue resolviendo lo viejo y su ficha la enseña. Es un
+    /// maestro de instalación (R8): no hay empresa que filtrar.
+    /// </para>
+    /// <para>
+    /// <b>No mira el permiso de quien pregunta</b>: lo mira quien pregunta, antes de preguntar, como
+    /// la pantalla. Lo que no vuelve, se escribe con su identificador.
+    /// </para>
+    /// </remarks>
+    /// <param name="unidades">Las unidades por las que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El código y el nombre de cada una que vuelve.</returns>
+    Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> unidades, CancellationToken cancelacion);
 }

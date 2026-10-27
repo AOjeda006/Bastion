@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Divisas;
@@ -28,4 +29,23 @@ public interface IConsultaDeDivisas
     /// <param name="divisaId">Identificador de la divisa.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<EstadoDeMaestro> EstadoDeAsync(Guid divisaId, CancellationToken cancelacion);
+
+    /// <summary>El código y el nombre de cada divisa, en una sola consulta.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Nombra lo que enseña su ficha</b>, la de
+    /// <c>GET /api/v1/organizacion/divisas/{id}</c> (ADR-0074). Una divisa <b>retirada</b>
+    /// vuelve, porque sigue resolviendo lo viejo y su ficha la enseña. Es un maestro de
+    /// instalación (R8): no hay empresa que filtrar.
+    /// </para>
+    /// <para>
+    /// <b>No mira el permiso de quien pregunta</b>: lo mira quien pregunta, antes de preguntar, como
+    /// la pantalla. Lo que no vuelve, se escribe con su identificador.
+    /// </para>
+    /// </remarks>
+    /// <param name="divisas">Las divisas por las que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El código y el nombre de cada una que vuelve.</returns>
+    Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> divisas, CancellationToken cancelacion);
 }

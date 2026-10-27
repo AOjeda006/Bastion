@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Ubicaciones;
@@ -48,4 +49,28 @@ public interface IConsultaDeUbicaciones
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<EstadoDeMaestro> EstadoDeAsync(
         Guid almacenId, Guid ubicacionId, CancellationToken cancelacion);
+
+    /// <summary>El código y la descripción de cada ubicación, en una sola consulta.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Nombra lo que enseña su ficha</b>, la de
+    /// <c>GET /api/v1/organizacion/ubicaciones/{id}</c>, con sus mismos filtros (ADR-0074): una
+    /// de otra empresa no vuelve, y una <b>bloqueada</b> tampoco. Una ubicación de un almacén
+    /// bloqueado sí vuelve, porque su ficha la enseña: el filtro mira su propio bloqueo.
+    /// </para>
+    /// <para>
+    /// <b>No recibe el almacén</b>, al revés que <see cref="EstadoDeAsync"/>: aquel decide si
+    /// un movimiento puede apuntar a ese hueco de esa nave, y este solo dice cómo se llama. El
+    /// nombre de una ubicación sin descripción es <c>null</c>.
+    /// </para>
+    /// <para>
+    /// <b>No mira el permiso de quien pregunta</b>: lo mira quien pregunta, antes de preguntar, como
+    /// la pantalla. Lo que no vuelve, se escribe con su identificador.
+    /// </para>
+    /// </remarks>
+    /// <param name="ubicaciones">Las ubicaciones por las que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El código y el nombre de cada una que vuelve.</returns>
+    Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> ubicaciones, CancellationToken cancelacion);
 }

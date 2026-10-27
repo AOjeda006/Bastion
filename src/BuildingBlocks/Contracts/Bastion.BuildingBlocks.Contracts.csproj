@@ -20,6 +20,10 @@
     misma forma para terceros hoy y para artículos mañana, y el frontal traduce los motivos con UNA
     tabla; con un informe por módulo, la tabla serían dos que se separan.
 
+    Y desde el ítem 3.2, cómo se llama un maestro: `NombreDeMaestro`, su código y su nombre, que
+    publican Organización, por cinco maestros, y Catálogo, por el artículo (ADR-0074). Con uno por
+    dueño serían dos copias de la misma forma.
+
     NO referencia NADA, igual que `BuildingBlocks.Domain`, y por el mismo motivo elevado un grado:
     esto lo referencia el `Contracts` de cada módulo, o sea lo único que un módulo enseña a otro.
     Si arrastrara dominio o infraestructura, todo módulo que leyera un contrato ajeno lo vería por

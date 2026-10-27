@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Impuestos;
@@ -40,4 +41,23 @@ public interface IConsultaDeImpuestos
         Guid impuestoId,
         DateOnly enLaFechaDeDevengo,
         CancellationToken cancelacion);
+
+    /// <summary>El código y el nombre de cada tramo de impuesto, en una sola consulta.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Nombra lo que enseña su ficha</b>, la de
+    /// <c>GET /api/v1/organizacion/impuestos/{id}</c> (ADR-0074): cada tramo, rija o no, porque
+    /// el nombre no depende de la fecha. Es un maestro de instalación (R8): no hay empresa que
+    /// filtrar.
+    /// </para>
+    /// <para>
+    /// <b>No mira el permiso de quien pregunta</b>: lo mira quien pregunta, antes de preguntar, como
+    /// la pantalla. Lo que no vuelve, se escribe con su identificador.
+    /// </para>
+    /// </remarks>
+    /// <param name="impuestos">Los tramos por los que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El código y el nombre de cada uno que vuelve.</returns>
+    Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> impuestos, CancellationToken cancelacion);
 }

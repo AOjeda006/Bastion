@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Divisas;
 using Microsoft.EntityFrameworkCore;
@@ -41,5 +42,26 @@ internal sealed class ConsultaDeDivisas(OrganizacionDbContext contexto) : IConsu
             true => EstadoDeMaestro.SoloResuelveLoViejo,
             false => EstadoDeMaestro.SeOfreceParaLoNuevo,
         };
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Sin filtro que quitar: la retirada no es un filtro, y una divisa retirada vuelve, como
+    /// sale en su ficha.
+    /// </remarks>
+    /// <param name="divisas">Las divisas por las que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public async Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> divisas, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(divisas);
+
+        return await contexto.Divisas
+            .AsNoTracking()
+            .Where(divisa => divisas.Contains(divisa.Id))
+            .Select(divisa => new { divisa.Id, divisa.Codigo, divisa.Nombre })
+            .ToDictionaryAsync(
+                fila => fila.Id, fila => new NombreDeMaestro(fila.Codigo, fila.Nombre), cancelacion)
+            .ConfigureAwait(false);
     }
 }

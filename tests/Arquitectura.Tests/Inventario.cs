@@ -276,6 +276,12 @@ internal static class Inventario
         // y enumerados propios, y ni un tipo compartido. El día que este proyecto necesite el
         // bloque común, la arista aparecerá aquí y habrá que escribirla; lo que no puede
         // aparecer nunca es la arista al Contracts del otro módulo de la pareja.
+        //
+        // Y la necesitó en el 3.2: `IConsultaDeArticulos.NombresDeAsync` devuelve el
+        // `NombreDeMaestro` que publica también Organización (ADR-0074). Es la única arista de
+        // este proyecto, y va a un bloque que no referencia nada, así que no cierra ningún ciclo.
+        "Catalogo.Contracts -> BuildingBlocks.Contracts",
+
         "Catalogo.Domain -> BuildingBlocks.Domain",
         "Catalogo.Endpoints -> BuildingBlocks.Infrastructure",
         "Catalogo.Endpoints -> Catalogo.Application",
@@ -509,7 +515,8 @@ internal static class Inventario
                 "identificador — cada movimiento del libro de la fase 2 (§7.4). Contesta con " +
                 "enumerado PROPIO y de tres valores, no con `EstadoDeMaestro`: «¿se almacena?» es " +
                 "una tercera pregunta y no una tercera respuesta, y un `Servicio` contesta " +
-                "`NoSeAlmacena`. No escribe, y no publica ni el código ni la descripción.",
+                "`NoSeAlmacena`. No escribe. El código y la descripción los publica desde el 3.2 por " +
+                "lotes y solo para enseñarlos, lo que enseña su ficha (ADR-0074).",
 
             ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDeTrazabilidad"] =
                 "LECTURA, con la forma de `IConsultaDeEjercicios`: la declara Catálogo, la " +
@@ -546,11 +553,15 @@ internal static class Inventario
                 "que contesta `SoloResuelveLoViejo` de algo BLOQUEADO, al revés que el de terceros: " +
                 "lo que el bloqueo reserva es la privacidad de una persona, no la existencia de " +
                 "una estantería (ADR-0037). Para verlo abre el ámbito declarado del art. 32 con su " +
-                "motivo propio. No escribe.",
+                "motivo propio. No escribe. " +
+                "Desde el 3.2 nombra también un lote, con el código y el nombre, para " +
+                "enseñarlos: lo que enseña su ficha (ADR-0074).",
 
             ["Bastion.Organizacion.Contracts.Divisas.IConsultaDeDivisas"] =
                 "LECTURA: en qué estado está una divisa, para quien guarde su identificador — la " +
-                "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe.",
+                "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe. " +
+                "Desde el 3.2 nombra también un lote, con el código y el nombre, para " +
+                "enseñarlos: lo que enseña su ficha (ADR-0074).",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IConsultaDeEjercicios"] =
                 "LECTURA, y la primera puerta con la forma más rara de todas, que desde el 2.9 " +
@@ -584,7 +595,9 @@ internal static class Inventario
             ["Bastion.Organizacion.Contracts.Impuestos.IConsultaDeImpuestos"] =
                 "LECTURA: en qué estado está un tramo de impuesto para una fecha de devengo, " +
                 "para quien guarde su identificador — el impuesto por defecto del artículo " +
-                "(§7.3). No escribe.",
+                "(§7.3). No escribe. " +
+                "Desde el 3.2 nombra también un lote, con el código y el nombre, para " +
+                "enseñarlos: lo que enseña su ficha (ADR-0074).",
 
             ["Bastion.Organizacion.Contracts.Series.IConsultaDeSeries"] =
                 "LECTURA: en qué estado está una serie de numeración, para quien guarde su " +
@@ -604,7 +617,9 @@ internal static class Inventario
                 "almacén es una condición que quien pregunta no puede comprobar: las dos tablas " +
                 "están en `organizacion` y ninguna consulta cruza esquemas (regla 4). La ubicación " +
                 "hereda el estado de su almacén y el suyo propio solo puede empeorarlo (ADR-0037). " +
-                "No escribe.",
+                "No escribe. " +
+                "Desde el 3.2 nombra también un lote, con el código y el nombre, para " +
+                "enseñarlos: lo que enseña su ficha (ADR-0074).",
 
             ["Bastion.Organizacion.Contracts.Unidades.IConsultaDeConversiones"] =
                 "LECTURA: el factor y la retirada de cada par de unidades, el par exacto y sin " +
@@ -614,7 +629,9 @@ internal static class Inventario
 
             ["Bastion.Organizacion.Contracts.Unidades.IConsultaDeUnidadesDeMedida"] =
                 "LECTURA: en qué estado está una unidad de medida, para quien guarde su " +
-                "identificador — la unidad base del artículo (§7.3). No escribe.",
+                "identificador — la unidad base del artículo (§7.3). No escribe. " +
+                "Desde el 3.2 nombra también un lote, con el código y el nombre, para " +
+                "enseñarlos: lo que enseña su ficha (ADR-0074).",
 
             ["Bastion.Terceros.Contracts.Terceros.IConsultaDeTerceros"] =
                 "LECTURA: en qué estado está un tercero para un papel —se puede tratar en esta " +

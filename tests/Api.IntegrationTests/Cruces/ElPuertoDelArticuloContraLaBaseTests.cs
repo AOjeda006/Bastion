@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
@@ -56,6 +57,10 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// <c>LaConfirmacionDelRecuentoTests</c>, el 807 y el 808 de
 /// <c>LasCarrerasDeLaConfirmacionDelRecuentoTests</c> y del 809 al 818 de
 /// <c>LaAnulacionYElDescarteDelRecuentoTests</c>; del 819 al 829 quedan libres.
+/// </para>
+/// <para>
+/// <b>Los nombres, del 3.2, van del 931 al 933</b>, en el bloque del 3.2, que va del 930 al 949;
+/// el 930 es de <c>ElTextoSoloLoRecibeQuienLoMiraTests</c>.
 /// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]
@@ -212,6 +217,52 @@ public sealed class ElPuertoDelArticuloContraLaBaseTests(PostgresConTodosLosModu
             .UnidadesBaseDeAsync([deLaOtra.Id], CancellationToken.None))
             .ShouldBe(
                 new Dictionary<Guid, Guid> { [deLaOtra.Id] = deLaOtra.UnidadBaseId },
+                ignoreOrder: true,
+                "en su propia empresa sí vuelve");
+    }
+
+    /// <summary>
+    /// El código y la descripción salen por lotes, cada uno los suyos, y uno de otra empresa no
+    /// vuelve, como el inventado.
+    /// </summary>
+    /// <remarks>
+    /// <b>La descripción, y no otra columna</b>: es lo que la ficha del artículo enseña como su
+    /// nombre, y lo que la exportación de un listado escribe al lado del código (ADR-0074). Con dos
+    /// artículos, para que una consulta que nombrara a todos con el mismo no pasara; y la contraria
+    /// al final, como en la unidad base.
+    /// </remarks>
+    [Fact]
+    public async Task El_codigo_y_la_descripcion_salen_por_lotes_y_los_de_otra_empresa_no_vuelven()
+    {
+        (HttpClient cliente, EmpresaDto propia) = await EnUnaEmpresaNuevaAsync(931);
+        (HttpClient enLaAjena, EmpresaDto ajena) = await EnUnaEmpresaNuevaAsync(933);
+
+        ArticuloDto uno = await ArticuloAsync(cliente, 931, "Bien");
+        ArticuloDto otro = await ArticuloAsync(cliente, 932, "Servicio");
+        ArticuloDto deLaOtra = await ArticuloAsync(enLaAjena, 933, "Bien");
+        var inventado = Guid.CreateVersion7();
+
+        await using (CatalogoDbContext contexto = postgres.AbrirCatalogo(propia.Id))
+        {
+            (await new ConsultaDeArticulos(contexto)
+                .NombresDeAsync([uno.Id, otro.Id, deLaOtra.Id, inventado], CancellationToken.None))
+                .ShouldBe(
+                    new Dictionary<Guid, NombreDeMaestro>
+                    {
+                        [uno.Id] = new("APT-931", "Artículo 931"),
+                        [otro.Id] = new("APT-932", "Artículo 932"),
+                    },
+                    ignoreOrder: true,
+                    "cada artículo de la empresa con lo suyo, y ni el de otra empresa ni el inventado: " +
+                    "si el ajeno volviera, la exportación contaría qué vende la empresa de al lado");
+        }
+
+        await using CatalogoDbContext enSuEmpresa = postgres.AbrirCatalogo(ajena.Id);
+
+        (await new ConsultaDeArticulos(enSuEmpresa)
+            .NombresDeAsync([deLaOtra.Id], CancellationToken.None))
+            .ShouldBe(
+                new Dictionary<Guid, NombreDeMaestro> { [deLaOtra.Id] = new("APT-933", "Artículo 933") },
                 ignoreOrder: true,
                 "en su propia empresa sí vuelve");
     }

@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Bloqueos;
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +55,28 @@ internal sealed class ConsultaDeUbicaciones(
             : LaPeorDeLasDos(
                 ConsultaDeAlmacenes.Estado(pareja.Almacen),
                 ConsultaDeAlmacenes.Estado(pareja.Ubicacion));
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <b>Ni abre ningún ámbito ni une el almacén</b>, al revés que
+    /// <see cref="EstadoDeAsync"/>: el filtro de R16 mira el bloqueo de la ubicación, como en
+    /// su ficha, así que la bloqueada no vuelve y la de un almacén bloqueado sí.
+    /// </remarks>
+    /// <param name="ubicaciones">Las ubicaciones por las que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public async Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> ubicaciones, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(ubicaciones);
+
+        return await contexto.Ubicaciones
+            .AsNoTracking()
+            .Where(ubicacion => ubicaciones.Contains(ubicacion.Id))
+            .Select(ubicacion => new { ubicacion.Id, ubicacion.Codigo, Nombre = ubicacion.Descripcion })
+            .ToDictionaryAsync(
+                fila => fila.Id, fila => new NombreDeMaestro(fila.Codigo, fila.Nombre), cancelacion)
+            .ConfigureAwait(false);
     }
 
     /// <summary>

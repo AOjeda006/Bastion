@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Unidades;
 using Microsoft.EntityFrameworkCore;
@@ -43,5 +44,26 @@ internal sealed class ConsultaDeUnidadesDeMedida(OrganizacionDbContext contexto)
             true => EstadoDeMaestro.SoloResuelveLoViejo,
             false => EstadoDeMaestro.SeOfreceParaLoNuevo,
         };
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Sin filtro que quitar: la retirada no es un filtro, y una unidad retirada vuelve, como
+    /// sale en su ficha.
+    /// </remarks>
+    /// <param name="unidades">Las unidades por las que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public async Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> unidades, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(unidades);
+
+        return await contexto.UnidadesDeMedida
+            .AsNoTracking()
+            .Where(unidad => unidades.Contains(unidad.Id))
+            .Select(unidad => new { unidad.Id, unidad.Codigo, unidad.Nombre })
+            .ToDictionaryAsync(
+                fila => fila.Id, fila => new NombreDeMaestro(fila.Codigo, fila.Nombre), cancelacion)
+            .ConfigureAwait(false);
     }
 }

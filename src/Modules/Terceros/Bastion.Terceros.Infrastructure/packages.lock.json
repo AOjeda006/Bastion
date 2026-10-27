@@ -322,7 +322,10 @@
         }
       },
       "bastion.catalogo.contracts": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )"
+        }
       },
       "bastion.organizacion.contracts": {
         "type": "Project",

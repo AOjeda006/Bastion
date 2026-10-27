@@ -107,6 +107,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaTraduccionASqlTests.Todo_orden_y_todo_filtro_declarado_se_traduce_a_sql",
         "LaTraduccionASqlTests.Un_texto_sin_filtro_declarado_lanza_antes_de_llegar_a_la_base",
 
+        "LosNombresPorLotesTests.El_almacen_se_nombra_y_ni_el_bloqueado_ni_el_ajeno_ni_el_inventado_vuelven",
+        "LosNombresPorLotesTests.La_ubicacion_se_nombra_por_su_propio_bloqueo_y_no_por_el_de_su_almacen",
+        "LosNombresPorLotesTests.Las_unidades_los_tramos_y_las_divisas_se_nombran_sin_empresa_y_lo_retirado_tambien",
+
         "LosPuertosDeLecturaTests.El_impuesto_que_no_esta_no_existe",
         "LosPuertosDeLecturaTests.El_impuesto_que_rige_en_la_fecha_se_ofrece_para_lo_nuevo",
         "LosPuertosDeLecturaTests.El_tramo_cerrado_sigue_resolviendo_lo_viejo_pero_no_se_ofrece",
