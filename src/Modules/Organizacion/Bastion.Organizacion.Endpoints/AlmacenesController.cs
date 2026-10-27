@@ -1,7 +1,9 @@
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Organizacion.Application;
 using Bastion.Organizacion.Application.Almacenes;
 using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Contracts.Almacenes;
@@ -21,6 +23,24 @@ public sealed class AlmacenesController(
     IBloquearAlmacen bloquear,
     IDesbloquearAlmacen desbloquear) : ControladorDeOrganizacion
 {
+    /// <summary>
+    /// Las columnas de la exportación: lo que el listado publica de cada almacén, sin sus
+    /// identificadores, y la dirección en sus seis campos.
+    /// </summary>
+    /// <remarks>
+    /// Sin <c>id</c> ni <c>empresa_id</c>: la empresa es la de la sesión, la misma en todas las
+    /// filas, y el identificador no lo enseña la pantalla. El tipo va con el valor del DTO, sin
+    /// traducir (*La puerta del 3.2*).
+    /// </remarks>
+    internal static readonly HojaDeExportacion<AlmacenDto> HojaDeAlmacenes = new(
+        "almacenes",
+        [
+            new("codigo", almacen => CampoCsv.Texto(almacen.Codigo)),
+            new("nombre", almacen => CampoCsv.Texto(almacen.Nombre)),
+            new("tipo", almacen => CampoCsv.Valor(almacen.Tipo)),
+            .. ColumnasDeDireccion.De<AlmacenDto>("direccion", almacen => almacen.Direccion),
+        ]);
+
     /// <summary>Devuelve una página de almacenes.</summary>
     /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">El orden (<c>sort</c>).</param>
@@ -40,6 +60,24 @@ public sealed class AlmacenesController(
         return await ResponderListadoAsync(pagina, consulta, texto, listar, cancelacion)
             .ConfigureAwait(false);
     }
+
+    /// <summary>Descarga el listado de almacenes entero, con su orden y su texto, en CSV (ADR-0073).</summary>
+    /// <param name="consulta">El orden (<c>sort</c>).</param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("exportacion")]
+    [ExigePermiso(PermisosDeOrganizacion.AlmacenVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] ConsultaDeListado consulta,
+        [FromQuery] FiltroDeTexto texto,
+        [FromServices] IFotoDeOrganizacion foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion) =>
+        await ExportarListadoAsync(consulta, texto, listar, foto, HojaDeAlmacenes, reloj, cancelacion)
+            .ConfigureAwait(false);
 
     /// <summary>Devuelve un almacén.</summary>
     /// <param name="id">Identificador del almacén.</param>

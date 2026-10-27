@@ -1207,6 +1207,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizacion/almacenes/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Descarga el listado de almacenes entero, con su orden y su texto, en CSV (ADR-0073). */
+        get: operations["Almacenes_Exportar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/almacenes/{id}": {
         parameters: {
             query?: never;
@@ -1555,6 +1572,23 @@ export interface paths {
         put?: never;
         /** Da de alta una empresa. */
         post: operations["Empresas_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizacion/empresas/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Descarga el listado de empresas entero, con su orden y su texto, en CSV (ADR-0073). */
+        get: operations["Empresas_Exportar"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9290,6 +9324,29 @@ export interface operations {
             };
         };
     };
+    Almacenes_Exportar: {
+        parameters: {
+            query?: {
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
     Almacenes_Obtener: {
         parameters: {
             query?: never;
@@ -10674,6 +10731,29 @@ export interface operations {
                     "text/plain": components["schemas"]["ProblemDetails"];
                     "application/json": components["schemas"]["ProblemDetails"];
                     "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Empresas_Exportar: {
+        parameters: {
+            query?: {
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
         };

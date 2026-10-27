@@ -179,6 +179,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaColaSeDefiendeSolaTests.Un_evento_sin_declarar_lo_dice_al_volcarlo_y_no_al_leerlo",
         "LaColaSeDefiendeSolaTests.Una_fila_lleva_empresa_o_lleva_el_motivo_por_el_que_no_la_lleva",
 
+        "LaExportacionEsHermanaDelListadoTests.Cada_exportacion_pide_la_foto_de_su_modulo_y_el_host_la_construye",
+        "LaExportacionEsHermanaDelListadoTests.Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado",
+        "LaExportacionEsHermanaDelListadoTests.Las_exportaciones_son_las_declaradas",
+
         "LaExportacionRecorreUnaFotoTests.Cada_pagina_lleva_el_orden_y_el_texto_del_listado",
         "LaExportacionRecorreUnaFotoTests.El_fichero_se_llama_por_el_recurso_y_el_dia_de_negocio",
         "LaExportacionRecorreUnaFotoTests.Pide_todas_las_paginas_del_tamanio_maximo_con_la_foto_abierta",

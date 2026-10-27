@@ -1,7 +1,9 @@
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Organizacion.Application;
 using Bastion.Organizacion.Application.Empresas;
 using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Contracts.Comun;
@@ -29,6 +31,25 @@ public sealed class EmpresasController(
     IBloquearEmpresa bloquear,
     IDesbloquearEmpresa desbloquear) : ControladorDeOrganizacion
 {
+    /// <summary>
+    /// Las columnas de la exportación: lo que el listado publica de cada empresa, sin su
+    /// identificador, y el domicilio en sus seis campos.
+    /// </summary>
+    /// <remarks>
+    /// El NIF sale porque el listado lo enseña; lo que no hace es filtrar ni ordenar por él, porque
+    /// iría en la URL (ADR-0025), y la exportación tiene los mismos criterios que el listado. El
+    /// régimen va con el valor del DTO, sin traducir (*La puerta del 3.2*).
+    /// </remarks>
+    internal static readonly HojaDeExportacion<EmpresaDto> HojaDeEmpresas = new(
+        "empresas",
+        [
+            new("nif", empresa => CampoCsv.Texto(empresa.Nif)),
+            new("razon_social", empresa => CampoCsv.Texto(empresa.RazonSocial)),
+            .. ColumnasDeDireccion.De<EmpresaDto>("domicilio", empresa => empresa.DomicilioFiscal),
+            new("divisa_base", empresa => CampoCsv.Valor(empresa.DivisaBase)),
+            new("regimen_de_iva", empresa => CampoCsv.Valor(empresa.RegimenDeIva)),
+        ]);
+
     /// <summary>Devuelve una página de empresas.</summary>
     /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">El orden (<c>sort</c>).</param>
@@ -48,6 +69,24 @@ public sealed class EmpresasController(
         return await ResponderListadoAsync(pagina, consulta, texto, listar, cancelacion)
             .ConfigureAwait(false);
     }
+
+    /// <summary>Descarga el listado de empresas entero, con su orden y su texto, en CSV (ADR-0073).</summary>
+    /// <param name="consulta">El orden (<c>sort</c>).</param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("exportacion")]
+    [ExigePermiso(PermisosDeOrganizacion.EmpresaVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] ConsultaDeListado consulta,
+        [FromQuery] FiltroDeTexto texto,
+        [FromServices] IFotoDeOrganizacion foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion) =>
+        await ExportarListadoAsync(consulta, texto, listar, foto, HojaDeEmpresas, reloj, cancelacion)
+            .ConfigureAwait(false);
 
     /// <summary>Busca empresas por un criterio que no puede ir en la URL.</summary>
     /// <remarks>

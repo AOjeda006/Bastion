@@ -86,6 +86,11 @@ public static class ModuloDeOrganizacion
         servicios.AddScoped<IUnidadTrabajoDeOrganizacion, UnidadDeTrabajoDeOrganizacion>();
         servicios.AddScoped<IVersionesDeOrganizacion, VersionesDeOrganizacion>();
 
+        // Y la foto de sus exportaciones, por lo mismo: la del módulo, bajo el tipo del módulo
+        // (ADR-0073). Sin esta línea, la exportación no se construye, y lo dice
+        // `LaExportacionEsHermanaDelListadoTests` resolviéndola.
+        servicios.AddScoped<IFotoDeOrganizacion, FotoDeOrganizacion>();
+
         // Y el almacén de claves de idempotencia (R10), con la clave del módulo: el filtro del
         // borde resuelve el suyo por el segmento de la ruta, para que la clave y el trabajo caigan
         // en la transacción del MISMO contexto.

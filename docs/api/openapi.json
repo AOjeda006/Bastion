@@ -8241,6 +8241,48 @@
         ]
       }
     },
+    "/api/v1/organizacion/almacenes/exportacion": {
+      "get": {
+        "tags": [
+          "Almacenes"
+        ],
+        "summary": "Descarga el listado de almacenes entero, con su orden y su texto, en CSV (ADR-0073).",
+        "operationId": "Almacenes_Exportar",
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/organizacion/almacenes/{id}": {
       "get": {
         "tags": [
@@ -10918,6 +10960,48 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/organizacion/empresas/exportacion": {
+      "get": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Descarga el listado de empresas entero, con su orden y su texto, en CSV (ADR-0073).",
+        "operationId": "Empresas_Exportar",
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }

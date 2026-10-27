@@ -85,6 +85,7 @@ public sealed class EscritorCsvTests
         EscritorCsv.Escribir(CampoCsv.Texto(null)).ShouldBe(string.Empty);
         EscritorCsv.Escribir(CampoCsv.Numero(-3m)).ShouldBe("-3", "un número negativo lo escribe Bastion");
         EscritorCsv.Escribir(CampoCsv.Numero(-3L)).ShouldBe("-3");
+        EscritorCsv.Escribir(CampoCsv.Valor("-Raro")).ShouldBe("-Raro", "un valor de un conjunto lo escribe Bastion");
     }
 
     [Theory]
@@ -106,8 +107,8 @@ public sealed class EscritorCsvTests
         EscritorCsv.Escribir(CampoCsv.Numero(2026L)).ShouldBe("2026");
         EscritorCsv.Escribir(CampoCsv.Identificador(Guid.Parse("0199a0b1-2c3d-7e4f-8a9b-0c1d2e3f4a5b")))
             .ShouldBe("0199a0b1-2c3d-7e4f-8a9b-0c1d2e3f4a5b");
-        EscritorCsv.Escribir(CampoCsv.Valor<DayOfWeek>(DayOfWeek.Monday)).ShouldBe("Monday");
-        EscritorCsv.Escribir(CampoCsv.Valor<DayOfWeek>(null)).ShouldBe(string.Empty);
+        EscritorCsv.Escribir(CampoCsv.Valor("Peninsula")).ShouldBe("Peninsula");
+        EscritorCsv.Escribir(CampoCsv.Valor(null)).ShouldBe(string.Empty);
     }
 
     /// <summary>

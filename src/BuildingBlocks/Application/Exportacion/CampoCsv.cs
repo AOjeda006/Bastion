@@ -71,11 +71,13 @@ public readonly record struct CampoCsv
         new(identificador?.ToString("D", CultureInfo.InvariantCulture) ?? string.Empty, esTexto: false);
 
     /// <summary>Un valor de un conjunto cerrado —un estado, un tipo—, con su nombre, sin traducir.</summary>
-    /// <typeparam name="TValor">El conjunto.</typeparam>
-    /// <param name="valor">El valor, o nulo para un campo vacío.</param>
-    public static CampoCsv Valor<TValor>(TValor? valor)
-        where TValor : struct, Enum =>
-        new(valor?.ToString() ?? string.Empty, esTexto: false);
+    /// <remarks>
+    /// <b>Llega como texto porque así lo publica el DTO</b>: los enumerados viajan por su nombre, y
+    /// el DTO los lleva en una cadena. No lo escribió una persona, sino Bastion, así que no lleva
+    /// apóstrofo, como un número.
+    /// </remarks>
+    /// <param name="valor">El valor, tal como lo publica el DTO, o nulo para un campo vacío.</param>
+    public static CampoCsv Valor(string? valor) => new(valor ?? string.Empty, esTexto: false);
 
     // El cero sale sin signo sin pedirlo: un `decimal` guarda el signo del cero, pero el formato no
     // lo escribe, y `-0,0` sale `0`, como `0,0000`. Lo afirma la teoría de los números del escritor.
