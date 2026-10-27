@@ -28,8 +28,12 @@ COPY deploy/nginx-cabeceras-de-seguridad.conf /etc/nginx/cabeceras-de-seguridad.
 # leer una traza, y se quedan en el artefacto que publica la CI; aquí se borran, porque publicar el
 # mapa es publicar el código. Se hace con `find` y no con `rm assets/*.map` para que el día que un
 # mapa salga de otra carpeta siga desapareciendo.
+#
+# Y con ellos, el manifiesto de Vite (`.vite/manifest.json`, ADR-0071): lo lee el presupuesto por
+# ruta en la CI, nombra cada fichero del fuente y el navegador no lo pide nunca.
 USER root
-RUN find /usr/share/nginx/html -name '*.map' -delete
+RUN find /usr/share/nginx/html -name '*.map' -delete \
+    && rm -rf /usr/share/nginx/html/.vite
 USER 101
 
 EXPOSE 8080

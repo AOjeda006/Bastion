@@ -30,6 +30,10 @@ export default defineConfig({
     // navegador se lo descarga solo. Y la imagen de nginx no lo sirve: `Dockerfile.web` lo borra
     // del raíz servido, porque un mapa publicado es el código fuente publicado.
     sourcemap: 'hidden',
+    // El manifiesto, `.vite/manifest.json`, es lo que lee el presupuesto por ruta (ADR-0071): dice
+    // qué importa cada fragmento, y eso en el `dist` no está escrito. Como el mapa, no se sirve:
+    // `Dockerfile.web` lo borra, porque nombra cada fichero del fuente y el navegador no lo pide.
+    manifest: true,
     // Presupuesto de tamaño: la CI avisa si un fragmento se dispara. Un ERP acaba
     // cargando tablas, gráficas y un cliente de API generado; sin un tope, el arranque
     // se degrada un poco en cada sprint y nadie lo nota hasta que molesta.

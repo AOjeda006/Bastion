@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Mide el tamaño del frontal construido contra DOS presupuestos, y falla si alguno se pasa.
+# Mide el tamaño del frontal construido contra DOS presupuestos —el arranque y cada ruta diferida—,
+# y falla si alguno se pasa. El total servido y lo comprimido se publican, y no tienen tope.
 #
-# POR QUÉ DOS Y NO UNO
-# --------------------
+# POR QUÉ EL ARRANQUE Y NO LA SUMA
+# --------------------------------
 # Hasta el 0.16 esto era `du -sk --exclude='*.map' dist` contra un tope. El comentario de aquel
 # paso decía —y decía bien— que se mide «lo que el navegador DESCARGA», y que por eso se excluyen
 # los `.map`: «no se descarga al arrancar, así que contarlo medía otra cosa distinta de la que
@@ -19,8 +20,28 @@
 #               más el propio `index.html`, MÁS los fragmentos declarados que se pagan siempre
 #               antes del primer pintado sin estar en el `index.html`. Es lo que se paga antes de
 #               pintar nada.
-#   total     = todo lo servido menos los `.map`. Vigila el crecimiento global sin castigar el
-#               troceo: un paquete de 300 KiB que entre por descuido se nota aquí.
+#   total     = todo lo servido menos los `.map` y el manifiesto. Hasta el 3.1 tenía tope, para
+#               que un paquete de 300 KiB que entrara por descuido se notara.
+#
+# POR QUÉ UN TOPE POR RUTA, Y EL TOTAL SOLO INFORMATIVO (ADR-0071)
+# ----------------------------------------------------------------
+# El total vigilaba el crecimiento global, y por eso mismo crecía con cada pantalla nueva aunque
+# ninguna pesara más: con las pantallas de Compras, el tope de 900 iba a saltar a mitad de la fase 3
+# por hacer lo correcto, que es lo que el ADR-0028 sacó del arranque. Lo que sí degrada a alguien es
+# una RUTA que engorda: quien entra en ella por primera vez espera su fragmento y lo que arrastra.
+# Así que cada ruta diferida tiene su tope, 192 KiB, y lo mide `presupuesto-por-ruta.mjs` con el
+# manifiesto de Vite, porque en `dist` un fragmento compartido no dice quién lo importa. El paquete
+# de 300 KiB que vigilaba el total entra por alguna pantalla, y ahí salta. El total se sigue
+# publicando.
+#
+# Y desde el mismo ítem los textos de cada funcionalidad viajan con sus rutas y no en el diccionario
+# del arranque: se cuentan en cada ruta de su funcionalidad, el mayor de sus idiomas, y el guion de
+# las rutas exige que existan, uno por funcionalidad y por idioma, fuera del arranque.
+#
+# LO COMPRIMIDO, INFORMATIVO
+# --------------------------
+# Los topes miden lo que el navegador tiene que leer y ejecutar, que es lo descomprimido. Lo que
+# baja el usuario es lo que sirve nginx con `gzip`, y se publica en una línea aparte, sin tope.
 #
 # LA PARTE DECLARADA, Y POR QUÉ NO SE ADIVINA
 # -------------------------------------------
@@ -40,7 +61,8 @@
 #
 # Argumento entero, con las cifras del día que se decidió, en
 # `docs/adr/adr-0036-el-presupuesto-cuenta-lo-que-se-paga-aunque-no-este-en-el-indice.md`, que
-# enmienda la definición de arranque del **ADR-0028** —lo demás de aquel ADR sigue en pie—.
+# enmienda la definición de arranque del **ADR-0028**. El tope por ruta, el total informativo y lo
+# comprimido, en el **ADR-0071**, que enmienda los dos.
 #
 # POR QUÉ BYTES Y NO `du`
 # -----------------------
@@ -72,13 +94,15 @@
 # desaparece dentro de otro, el arranque crece unos 33 kB, y con el tope holgado solo lo diría
 # esto.
 #
-# Uso: presupuesto-del-frontal.sh <dist> [tope-arranque-KiB] [tope-total-KiB]
+# Uso: presupuesto-del-frontal.sh <dist> [tope-arranque-KiB] [tope-ruta-KiB]
 
 set -euo pipefail
 
 DIST="${1:-frontend/dist}"
 TOPE_ARRANQUE_KIB="${2:-450}"
-TOPE_TOTAL_KIB="${3:-900}"
+TOPE_RUTA_KIB="${3:-192}"
+
+POR_RUTA="$(dirname "$0")/presupuesto-por-ruta.mjs"
 
 INDICE="$DIST/index.html"
 
@@ -125,6 +149,8 @@ fi
 bytes_arranque=$(wc -c < "$INDICE")
 ficheros_arranque=("index.html")
 tamanos_arranque=("$bytes_arranque")
+# Los mismos caminos, sin el desglose: los que se le pasan al guion de las rutas.
+caminos_arranque=("index.html")
 javascript_en_arranque=0
 
 while IFS= read -r referencia; do
@@ -140,6 +166,7 @@ while IFS= read -r referencia; do
   bytes_arranque=$((bytes_arranque + bytes))
   ficheros_arranque+=("$relativa")
   tamanos_arranque+=("$bytes")
+  caminos_arranque+=("$relativa")
 
   case "$relativa" in *.js | *.mjs) javascript_en_arranque=1 ;; esac
 done < <(grep -oE '[[:space:]](src|href)="[^"]*"' "$INDICE" |
@@ -263,6 +290,7 @@ if [ -n "$fichero_del_grupo" ]; then
   bytes_arranque=$((bytes_arranque + mayor_del_grupo))
   ficheros_arranque+=("$fichero_del_grupo  <- el mayor del grupo de diccionarios: $detalle_del_grupo")
   tamanos_arranque+=("$mayor_del_grupo")
+  caminos_arranque+=("$fichero_del_grupo")
 fi
 
 # --- Los textos de los `type`: un fragmento por idioma, que tiene que existir y no se cuenta -----
@@ -304,12 +332,15 @@ if [ "$tipos_resueltos" -eq 0 ]; then
   fallar "el grupo de los textos de los type no ha resuelto ni un fichero en '$DIST': la comprobación estaría mirando la nada."
 fi
 
-# --- Total: todo lo servido menos los mapas -----------------------------------------------------
+# --- Total: todo lo servido menos los mapas y el manifiesto --------------------------------------
+#
+# El manifiesto (`.vite/manifest.json`) lo escribe el build para el guion de las rutas, y la imagen
+# no lo sirve: `Dockerfile.web` lo borra con los mapas.
 
 bytes_total=0
 while IFS= read -r fichero; do
   bytes_total=$((bytes_total + $(wc -c < "$fichero")))
-done < <(find "$DIST" -type f ! -name '*.map' | sort)
+done < <(find "$DIST" -type f ! -name '*.map' ! -path "$DIST/.vite/*" | sort)
 
 # --- Las tres afirmaciones de control, ANTES de comparar con los topes --------------------------
 
@@ -336,19 +367,29 @@ for i in "${!ficheros_arranque[@]}"; do
 done
 echo "Fuera del arranque, pedidos después de pintar: $detalle_de_tipos"
 
-anotar "Frontal · arranque ${kib_arranque}/${TOPE_ARRANQUE_KIB} KiB en ${#ficheros_arranque[@]} ficheros · total servido ${kib_total}/${TOPE_TOTAL_KIB} KiB"
+anotar "Frontal · arranque ${kib_arranque}/${TOPE_ARRANQUE_KIB} KiB en ${#ficheros_arranque[@]} ficheros · total servido ${kib_total} KiB, informativo"
 
-# --- Y solo ahora, los topes --------------------------------------------------------------------
+# --- Cada ruta diferida, y lo comprimido --------------------------------------------------------
+#
+# Lo mide el otro guion, con el manifiesto. Sale con 1 si una ruta se pasa de su tope, y con otro
+# código si no ha podido medir: en los dos casos el paso es rojo, pero lo de abajo se dice antes.
 
 excedido=0
 
-if [ "$kib_arranque" -gt "$TOPE_ARRANQUE_KIB" ]; then
-  echo "::error::El ARRANQUE del frontal supera su presupuesto (${kib_arranque} KiB > ${TOPE_ARRANQUE_KIB} KiB). Es lo que el usuario espera antes de ver nada: mirar si algo que debería cargarse tarde ha entrado como import estático."
+if node "$POR_RUTA" "$DIST" "$TOPE_RUTA_KIB" "${caminos_arranque[@]}"; then
+  :
+else
+  salida_por_ruta=$?
+  if [ "$salida_por_ruta" -ne 1 ]; then
+    fallar "el guion de las rutas no ha podido medir (salida $salida_por_ruta): su error, arriba."
+  fi
   excedido=1
 fi
 
-if [ "$kib_total" -gt "$TOPE_TOTAL_KIB" ]; then
-  echo "::error::El TOTAL servido del frontal supera su presupuesto (${kib_total} KiB > ${TOPE_TOTAL_KIB} KiB). Este tope no vigila el arranque sino el crecimiento global: mirar qué dependencia nueva ha entrado."
+# --- Y solo ahora, el tope del arranque ---------------------------------------------------------
+
+if [ "$kib_arranque" -gt "$TOPE_ARRANQUE_KIB" ]; then
+  echo "::error::El ARRANQUE del frontal supera su presupuesto (${kib_arranque} KiB > ${TOPE_ARRANQUE_KIB} KiB). Es lo que el usuario espera antes de ver nada: mirar si algo que debería cargarse tarde ha entrado como import estático."
   excedido=1
 fi
 

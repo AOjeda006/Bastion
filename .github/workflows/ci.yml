@@ -165,16 +165,24 @@ jobs:
       #
       #   arranque (450 KiB) — lo que se paga antes de pintar nada: lo que `index.html` referencia
       #                        MÁS los fragmentos declarados que el arranque espera sin estar ahí.
-      #                        Hoy 409 KiB. La parte declarada entró con el ADR-0036, que enmienda
+      #                        Hoy 407 KiB. La parte declarada entró con el ADR-0036, que enmienda
       #                        la definición del ADR-0028: desde que el diccionario del idioma se
       #                        carga aparte (2.1), el `index.html` se había quedado 18 kB corto.
-      #   total    (900 KiB) — todo lo servido menos los mapas. Vigila el crecimiento global sin
-      #                        castigar el troceo. Hoy 593 KiB.
+      #   cada ruta (192 KiB) — lo que se descarga la primera vez que se entra en una ruta diferida,
+      #                        con el arranque ya en casa: su fragmento, lo que arrastra y los
+      #                        textos de su módulo. Lo que arrastra lo dice el manifiesto de Vite.
+      #                        Hoy la más pesada, 173 KiB.
+      #   total, informativo — todo lo servido menos los mapas y el manifiesto. Tuvo tope, 900 KiB,
+      #                        hasta el 3.1: crecía con cada pantalla sin que ninguna pesara más, y
+      #                        lo que vigilaba lo vigila ya el tope de cada ruta. Hoy 831 KiB.
+      #   comprimido, informativo — lo que baja el usuario, como lo sirve nginx con `gzip`.
       #
       # El día que suban, suben con su motivo escrito y no porque nadie los estuviera mirando.
-      # Argumento entero en `docs/adr/adr-0028-el-presupuesto-mide-el-arranque-no-la-suma-de-los-fragmentos.md`.
+      # Argumento entero en `docs/adr/adr-0028-el-presupuesto-mide-el-arranque-no-la-suma-de-los-fragmentos.md`,
+      # y lo que cambió en el 3.1 —el tope por ruta, el total informativo, lo comprimido y los
+      # textos de cada módulo con sus rutas—, en el ADR-0071.
       - name: Presupuesto de tamaño
-        run: bash ../scripts/ci/presupuesto-del-frontal.sh dist 450 900
+        run: bash ../scripts/ci/presupuesto-del-frontal.sh dist 450 192
 
       - name: Publicar el frontal construido
         uses: actions/upload-artifact@v7
@@ -880,12 +888,16 @@ jobs:
           fi
 
       # Un mapa de fuentes es el código fuente. Se genera, se publica como artefacto de la CI, y
-      # NO se sirve: la imagen los borra y nginx contesta 404 a cualquiera que quede.
-      - name: La imagen del frontal no publica los mapas de fuentes
+      # NO se sirve: la imagen los borra y nginx contesta 404 a cualquiera que quede. Lo mismo el
+      # manifiesto de Vite (`.vite/`, ADR-0071), que nombra cada fichero del fuente. La pareja es
+      # el `index.html`: si no está, el `find` busca donde no se sirve nada, y vacío saldría igual.
+      - name: La imagen del frontal no publica los mapas de fuentes ni el manifiesto
         run: |
-          MAPA=$(docker compose -f deploy/docker-compose.yml exec -T web sh -c "find /usr/share/nginx/html -name '*.map' | head -1")
-          echo "Mapas dentro de la imagen: [${MAPA}]"
-          test -z "$MAPA"
+          RAIZ=/usr/share/nginx/html
+          docker compose -f deploy/docker-compose.yml exec -T web test -f "$RAIZ/index.html"
+          SOBRANTE=$(docker compose -f deploy/docker-compose.yml exec -T web sh -c "find $RAIZ -name '*.map' -o -path '$RAIZ/.vite*' | head -1")
+          echo "Mapas o manifiesto dentro de la imagen: [${SOBRANTE}]"
+          test -z "$SOBRANTE"
 
       # La instrumentación no se comprueba mirando si el paquete está en el csproj, sino
       # preguntándole al visor si le ha llegado algo.

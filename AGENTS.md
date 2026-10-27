@@ -302,7 +302,7 @@ Desde la raíz del repositorio.
 | **Formato backend** | `dotnet format Bastion.sln --verify-no-changes` (sin `--verify-no-changes` para arreglar) |
 | **Migraciones** (por módulo, cada uno con su `DbContext`) | `dotnet ef migrations add <Nombre> --project src/Modules/<Modulo>/Bastion.<Modulo>.Infrastructure --startup-project src/Api --output-dir ../../../../db/migraciones/<Modulo>` |
 | **Build frontal** | `npm --prefix frontend run build` |
-| **Presupuesto del frontal** (arranque y total, en KiB) | `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900` |
+| **Presupuesto del frontal** (arranque y cada ruta, en KiB) | `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 192` |
 | **Tests frontal** | `npm --prefix frontend run test` |
 | **Tests frontal en el navegador** (la disposición, en Chromium) | `npm --prefix frontend run test:navegador` |
 | **Lint / formato frontal** | `npm --prefix frontend run lint` · `npm --prefix frontend run format:check` |
@@ -342,7 +342,7 @@ bash scripts/ci/canal-de-la-consola.sh artifacts/vitest.log
 (cd frontend && npx playwright install --only-shell chromium)
 npm --prefix frontend run test:navegador
 npm --prefix frontend run build
-bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 900
+bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 192
 
 # 3. Backend. El carril rápido no necesita Docker; el de integración sí.
 dotnet build Bastion.sln
@@ -406,4 +406,6 @@ corre al arrancar se prueba arrancando. Contra un proyecto de *compose* aparte, 
 > decide cuándo se declara terminado un ítem. **Al tocar el *workflow*, se toca esto.** El
 > presupuesto entró aquí en el 1.1, cuando pasó a ser un guion que se puede ejecutar en local: los
 > bytes no dependen del sistema de ficheros, así que la cifra de esta máquina y la del *runner* son
-> la misma (ADR-0028).
+> la misma (ADR-0028). Desde el 3.1 el tercer número es el tope de **cada ruta** diferida, y el
+> total solo se publica: las rutas se leen del manifiesto que escribe el *build*, así que el guion
+> va después de `npm run build` (ADR-0071).
