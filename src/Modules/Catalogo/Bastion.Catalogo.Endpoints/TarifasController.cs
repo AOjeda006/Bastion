@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Catalogo.Application;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Contracts;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -34,6 +36,23 @@ public sealed class TarifasController(
     IModificarLineaTarifa modificarLinea,
     IResolverPrecio resolver) : ControladorDeCatalogo
 {
+    /// <summary>
+    /// Las columnas de la exportación: lo que el listado publica de cada tramo, sin sus
+    /// identificadores, y la divisa con su código y su nombre (ADR-0074).
+    /// </summary>
+    /// <remarks>
+    /// Un tramo abierto sale con <c>vigente_hasta</c> vacío, que es lo que dice el DTO con su nulo.
+    /// </remarks>
+    internal static readonly HojaDeExportacion<TarifaExportada> HojaDeTarifas = new(
+        "tarifas",
+        [
+            new("codigo", fila => CampoCsv.Texto(fila.Tarifa.Codigo)),
+            new("nombre", fila => CampoCsv.Texto(fila.Tarifa.Nombre)),
+            .. ColumnasDeMaestro.De<TarifaExportada>("divisa", fila => fila.Divisa),
+            new("vigente_desde", fila => CampoCsv.Fecha(fila.Tarifa.VigenteDesde)),
+            new("vigente_hasta", fila => CampoCsv.Fecha(fila.Tarifa.VigenteHasta)),
+        ]);
+
     /// <summary>Devuelve una página de tramos de tarifa.</summary>
     /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">El orden y el código (<c>sort</c>, <c>codigo</c>).</param>
@@ -57,6 +76,41 @@ public sealed class TarifasController(
             texto,
             listar,
             (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Codigo, testigo),
+            cancelacion).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Descarga el listado de tramos de tarifa entero, con su orden, su texto y su código, en CSV
+    /// (ADR-0073).
+    /// </summary>
+    /// <param name="consulta">El orden y el código (<c>sort</c>, <c>codigo</c>).</param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
+    /// <param name="exportar">El caso de uso del listado, con la divisa nombrada.</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("exportacion")]
+    [ExigePermiso(PermisosDeCatalogo.TarifaVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] ConsultaDeTarifas consulta,
+        [FromQuery] FiltroDeTexto texto,
+        [FromServices] IExportarTarifas exportar,
+        [FromServices] IFotoDeCatalogo foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(consulta);
+        ArgumentNullException.ThrowIfNull(exportar);
+
+        return await ExportarListadoAsync(
+            consulta,
+            texto,
+            exportar,
+            (paginacion, testigo) => exportar.EjecutarAsync(paginacion, consulta.Codigo, testigo),
+            foto,
+            HojaDeTarifas,
+            reloj,
             cancelacion).ConfigureAwait(false);
     }
 

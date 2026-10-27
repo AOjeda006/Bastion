@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json.Nodes;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Shouldly;
@@ -72,6 +73,21 @@ internal static class Exportaciones
     /// <summary>El texto de un fichero que ya se ha visto empezar por el BOM, sin él.</summary>
     /// <param name="fichero">Lo que devolvió <see cref="FicheroAsync"/>.</param>
     internal static string Texto(byte[] fichero) => Encoding.UTF8.GetString(fichero[3..]);
+
+    /// <summary>
+    /// El problema de una respuesta sin lo que es de cada petición, que es dónde se pidió y su
+    /// traza: lo que queda es lo que dos respuestas al mismo rechazo tienen que tener igual.
+    /// </summary>
+    /// <param name="respuesta">Una respuesta con su <c>application/problem+json</c>.</param>
+    internal static async Task<string> ProblemaAsync(HttpResponseMessage respuesta)
+    {
+        JsonObject problema = JsonNode.Parse(await respuesta.Content.ReadAsStringAsync())!.AsObject();
+
+        problema.Remove("instance").ShouldBeTrue("el arnés: el problema dice dónde se pidió");
+        problema.Remove("traceId").ShouldBeTrue("el arnés: el problema lleva su traza");
+
+        return problema.ToJsonString();
+    }
 
     private static string Nombre(string recurso, DateOnly dia) =>
         string.Create(CultureInfo.InvariantCulture, $"{recurso}-{dia:yyyy-MM-dd}.csv");

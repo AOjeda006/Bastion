@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Listados;
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Catalogo.Domain.Catalogo;
 
@@ -97,6 +98,21 @@ public interface IRepositorioDeCategorias : IOrdenaPor
 
     /// <summary>Una página de categorías, con el total.</summary>
     Task<PaginaDe<Categoria>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion);
+
+    /// <summary>
+    /// El código y el nombre de cada categoría, en una sola consulta, para la exportación
+    /// (ADR-0074).
+    /// </summary>
+    /// <remarks>
+    /// Nombra lo que enseña su ficha, la de <c>GET /api/v1/catalogo/categorias/{id}</c>: las de la
+    /// empresa, por el filtro de inquilinato del contexto. Una de otra empresa no vuelve, y la fila
+    /// que la cite sale con su identificador.
+    /// </remarks>
+    /// <param name="categorias">Las categorías por las que se pregunta.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>El código y el nombre de cada una que vuelve.</returns>
+    Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> categorias, CancellationToken cancelacion);
 
     /// <summary>Apunta una categoría nueva. No la graba: eso lo hace la unidad de trabajo.</summary>
     void Agregar(Categoria categoria);

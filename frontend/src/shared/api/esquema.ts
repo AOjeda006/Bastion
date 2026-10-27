@@ -29,6 +29,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalogo/articulos/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga el listado de artículos entero, con su orden, su texto y su categoría, en CSV
+         *     (ADR-0073).
+         */
+        get: operations["Articulos_Exportar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogo/articulos/{id}": {
         parameters: {
             query?: never;
@@ -141,6 +161,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalogo/categorias/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Descarga el listado de categorías entero, con su orden y su texto, en CSV (ADR-0073). */
+        get: operations["Categorias_Exportar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogo/categorias/{id}": {
         parameters: {
             query?: never;
@@ -185,6 +222,28 @@ export interface paths {
          *     artículo de la empresa, lo diga la comprobación previa o el índice único (ADR-0051 §5).
          */
         post: operations["CodigosBarras_Agregar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/articulos/{articuloId}/gtins/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga los códigos de barras de un artículo, en CSV (ADR-0073).
+         * @description No lee nada de la URL, como el listado: ni orden ni texto. Un ?q= es un
+         *       400, el de un listado que no filtra por texto, y no un fichero que parece filtrado.
+         *     Un artículo que no existe es el 404 del listado, antes del primer byte.
+         */
+        get: operations["CodigosBarras_Exportar"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -253,6 +312,26 @@ export interface paths {
          *     cubre dos peticiones a la vez.
          */
         post: operations["Tarifas_Crear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/tarifas/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga el listado de tramos de tarifa entero, con su orden, su texto y su código, en CSV
+         *     (ADR-0073).
+         */
+        get: operations["Tarifas_Exportar"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5286,6 +5365,30 @@ export interface operations {
             };
         };
     };
+    Articulos_Exportar: {
+        parameters: {
+            query?: {
+                categoria?: string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
     Articulos_Obtener: {
         parameters: {
             query?: never;
@@ -5767,6 +5870,29 @@ export interface operations {
             };
         };
     };
+    Categorias_Exportar: {
+        parameters: {
+            query?: {
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
     Categorias_Obtener: {
         parameters: {
             query?: never;
@@ -5991,6 +6117,40 @@ export interface operations {
             };
         };
     };
+    CodigosBarras_Exportar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del artículo. */
+                articuloId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     CodigosBarras_Obtener: {
         parameters: {
             query?: never;
@@ -6204,6 +6364,30 @@ export interface operations {
                     "text/plain": components["schemas"]["ProblemDetails"];
                     "application/json": components["schemas"]["ProblemDetails"];
                     "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Tarifas_Exportar: {
+        parameters: {
+            query?: {
+                codigo?: string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
         };

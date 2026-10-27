@@ -730,10 +730,17 @@ public sealed class ElCensoDeEsteCarrilTests
         // Del ítem 3.2 (ADR-0073): las exportaciones de Organización contra la base, el fichero
         // entero, con el orden, el texto, más de una página interna y sin lo bloqueado; y la foto
         // de cada módulo, que se abre en REPEATABLE READ y de solo lectura. Y la de terceros, que
-        // vuelve a entrar por la importación en otra empresa y sale igual.
+        // vuelve a entrar por la importación en otra empresa y sale igual. Y las de Catálogo, con
+        // cada maestro nombrado si quien exporta lo puede ver (ADR-0074), y los códigos de barras
+        // de un artículo, que no se paginan.
         "LaExportacionDeTercerosTests.La_exportacion_lleva_el_orden_y_el_texto_del_listado_y_no_busca_por_el_identificador",
         "LaExportacionDeTercerosTests.Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado",
         "LaFotoDeCadaModuloEsUnaFotoTests.La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read",
+        "LasExportacionesDeCatalogoTests.Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver",
+        "LasExportacionesDeCatalogoTests.Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden",
+        "LasExportacionesDeCatalogoTests.Los_articulos_salen_con_sus_maestros_nombrados_y_los_filtros_del_listado",
+        "LasExportacionesDeCatalogoTests.Los_codigos_de_barras_salen_en_el_orden_del_listado_con_su_articulo_nombrado",
+        "LasExportacionesDeCatalogoTests.Los_nombres_de_las_categorias_salen_por_lotes_y_los_ajenos_no_vuelven",
         "LasExportacionesDeOrganizacionTests.La_exportacion_lleva_el_orden_y_el_texto_del_listado",
         "LasExportacionesDeOrganizacionTests.Las_empresas_salen_con_el_texto_del_listado_sin_las_ajenas_y_sin_la_bloqueada",
         "LasExportacionesDeOrganizacionTests.Los_almacenes_salen_enteros_en_el_dialecto_y_sin_el_bloqueado",

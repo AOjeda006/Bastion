@@ -1,10 +1,12 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Catalogo.Application;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bastion.Catalogo.Endpoints.Comun;
@@ -100,6 +102,78 @@ public abstract class ControladorDeCatalogo : ControllerBase
         CancellationToken cancelacion) =>
         RespuestasDeListado.ResponderResultadoAsync(
             this, pagina, consulta, texto, ordenables, ejecutar, cancelacion);
+
+    /// <summary>
+    /// Exporta un listado: todas sus páginas, de la foto del módulo, en CSV y en flujo (ADR-0073).
+    /// </summary>
+    /// <remarks>
+    /// La foto se pide con el tipo del módulo, y no como <see cref="IFotoDeLectura"/>: así una
+    /// acción de este módulo no puede abrir la de otro, que no vería las lecturas del listado.
+    /// </remarks>
+    /// <typeparam name="TDto">Lo que se escribe de cada elemento.</typeparam>
+    /// <param name="consulta">El orden y los criterios propios, tal como han llegado.</param>
+    /// <param name="texto">El texto pedido, o nulo si el listado no filtra por texto.</param>
+    /// <param name="listado">El caso de uso de la exportación, que llama al del listado.</param>
+    /// <param name="foto">La foto del módulo.</param>
+    /// <param name="hoja">Las columnas del fichero.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    protected Task<IActionResult> ExportarListadoAsync<TDto>(
+        ConsultaDeListado consulta,
+        FiltroDeTexto? texto,
+        IListado<TDto> listado,
+        IFotoDeCatalogo foto,
+        HojaDeExportacion<TDto> hoja,
+        TimeProvider reloj,
+        CancellationToken cancelacion) =>
+        ExportacionDeListado.ExportarAsync(this, consulta, texto, listado, foto, hoja, reloj, cancelacion);
+
+    /// <summary>Lo mismo, para un listado que además recibe un criterio propio suyo.</summary>
+    /// <typeparam name="TDto">Lo que se escribe de cada elemento.</typeparam>
+    /// <param name="consulta">El orden y los criterios propios, tal como han llegado.</param>
+    /// <param name="texto">El texto pedido, o nulo si el listado no filtra por texto.</param>
+    /// <param name="ordenables">Quien dice por qué campos deja ordenar este listado.</param>
+    /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios.</param>
+    /// <param name="foto">La foto del módulo.</param>
+    /// <param name="hoja">Las columnas del fichero.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    protected Task<IActionResult> ExportarListadoAsync<TDto>(
+        ConsultaDeListado consulta,
+        FiltroDeTexto? texto,
+        IOrdenaPor ordenables,
+        Func<Paginacion, CancellationToken, Task<PaginaDe<TDto>>> ejecutar,
+        IFotoDeCatalogo foto,
+        HojaDeExportacion<TDto> hoja,
+        TimeProvider reloj,
+        CancellationToken cancelacion) =>
+        ExportacionDeListado.ExportarAsync(
+            this, consulta, texto, ordenables, ejecutar, foto, hoja, reloj, cancelacion);
+
+    /// <summary>
+    /// Lo mismo, para un listado que cuelga de otro recurso: si el padre no existe, su error, y
+    /// antes del primer byte.
+    /// </summary>
+    /// <typeparam name="TDto">Lo que se escribe de cada elemento.</typeparam>
+    /// <param name="consulta">El orden y los criterios propios, tal como han llegado.</param>
+    /// <param name="texto">El texto pedido, o nulo si el listado no filtra por texto.</param>
+    /// <param name="ordenables">Quien dice por qué campos deja ordenar este listado.</param>
+    /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios.</param>
+    /// <param name="foto">La foto del módulo.</param>
+    /// <param name="hoja">Las columnas del fichero.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    protected Task<IActionResult> ExportarListadoDeResultadoAsync<TDto>(
+        ConsultaDeListado consulta,
+        FiltroDeTexto? texto,
+        IOrdenaPor ordenables,
+        Func<Paginacion, CancellationToken, Task<Resultado<PaginaDe<TDto>>>> ejecutar,
+        IFotoDeCatalogo foto,
+        HojaDeExportacion<TDto> hoja,
+        TimeProvider reloj,
+        CancellationToken cancelacion) =>
+        ExportacionDeListado.ExportarResultadoAsync(
+            this, consulta, texto, ordenables, ejecutar, foto, hoja, reloj, cancelacion);
 
     /// <summary>Convierte el desenlace de un caso de uso que devuelve valor en respuesta.</summary>
     /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>

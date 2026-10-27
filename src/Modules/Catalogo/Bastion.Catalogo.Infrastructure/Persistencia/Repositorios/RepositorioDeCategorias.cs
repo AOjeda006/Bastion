@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Catalogo.Application.Catalogo;
@@ -125,6 +126,20 @@ internal sealed class RepositorioDeCategorias(CatalogoDbContext contexto) : IRep
         Paginacion paginacion,
         CancellationToken cancelacion) =>
         contexto.Categorias.PaginarAsync(paginacion, s_criterios, cancelacion);
+
+    public async Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> categorias, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(categorias);
+
+        return await contexto.Categorias
+            .AsNoTracking()
+            .Where(categoria => categorias.Contains(categoria.Id))
+            .Select(categoria => new { categoria.Id, categoria.Codigo, categoria.Nombre })
+            .ToDictionaryAsync(
+                fila => fila.Id, fila => new NombreDeMaestro(fila.Codigo, fila.Nombre), cancelacion)
+            .ConfigureAwait(false);
+    }
 
     public void Agregar(Categoria categoria) => contexto.Categorias.Add(categoria);
 }

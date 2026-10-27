@@ -1,7 +1,9 @@
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Catalogo.Application;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Contracts;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -23,6 +25,27 @@ public sealed class ArticulosController(
     IModificarProveedorDelArticulo modificarProveedor,
     IQuitarProveedorDelArticulo quitarProveedor) : ControladorDeCatalogo
 {
+    /// <summary>
+    /// Las columnas de la exportación: lo que el listado publica de cada artículo, sin sus
+    /// identificadores, y cada maestro al que apunta con su código y su nombre (ADR-0074).
+    /// </summary>
+    /// <remarks>
+    /// Sin <c>id</c> ni <c>empresa_id</c>, como las demás. El tipo y la trazabilidad van con el
+    /// valor del DTO, sin traducir (*La puerta del 3.2*). Un maestro que quien exporta no puede ver
+    /// sale con su identificador, como en la pantalla.
+    /// </remarks>
+    internal static readonly HojaDeExportacion<ArticuloExportado> HojaDeArticulos = new(
+        "articulos",
+        [
+            new("codigo", fila => CampoCsv.Texto(fila.Articulo.Codigo)),
+            new("descripcion", fila => CampoCsv.Texto(fila.Articulo.Descripcion)),
+            new("tipo", fila => CampoCsv.Valor(fila.Articulo.Tipo)),
+            new("trazabilidad", fila => CampoCsv.Valor(fila.Articulo.Trazabilidad)),
+            .. ColumnasDeMaestro.De<ArticuloExportado>("unidad_base", fila => fila.UnidadBase),
+            .. ColumnasDeMaestro.De<ArticuloExportado>("impuesto_por_defecto", fila => fila.ImpuestoPorDefecto),
+            .. ColumnasDeMaestro.De<ArticuloExportado>("categoria", fila => fila.Categoria),
+        ]);
+
     /// <summary>Devuelve una página de artículos.</summary>
     /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">El orden y la categoría (<c>sort</c>, <c>categoria</c>).</param>
@@ -48,6 +71,41 @@ public sealed class ArticulosController(
             texto,
             listar,
             (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Categoria, testigo),
+            cancelacion).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Descarga el listado de artículos entero, con su orden, su texto y su categoría, en CSV
+    /// (ADR-0073).
+    /// </summary>
+    /// <param name="consulta">El orden y la categoría (<c>sort</c>, <c>categoria</c>).</param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
+    /// <param name="exportar">El caso de uso del listado, con los maestros nombrados.</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("exportacion")]
+    [ExigePermiso(PermisosDeCatalogo.ArticuloVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] ConsultaDeArticulos consulta,
+        [FromQuery] FiltroDeTexto texto,
+        [FromServices] IExportarArticulos exportar,
+        [FromServices] IFotoDeCatalogo foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(consulta);
+        ArgumentNullException.ThrowIfNull(exportar);
+
+        return await ExportarListadoAsync(
+            consulta,
+            texto,
+            exportar,
+            (paginacion, testigo) => exportar.EjecutarAsync(paginacion, consulta.Categoria, testigo),
+            foto,
+            HojaDeArticulos,
+            reloj,
             cancelacion).ConfigureAwait(false);
     }
 

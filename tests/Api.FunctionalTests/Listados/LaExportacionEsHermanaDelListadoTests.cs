@@ -28,6 +28,12 @@ namespace Bastion.Api.FunctionalTests.Listados;
 /// la pone roja hasta que se declara, y una que se pierde, también.
 /// </para>
 /// <para>
+/// <b>Un listado sin paginar también tiene exportación</b>, como los códigos de barras de un
+/// artículo: su hermano no es una página, y no lee la página de la URL. Esos son otra lista
+/// cerrada, la de <see cref="s_sinPaginar"/>, para que un listado paginado no pase por uno sin
+/// paginar quitándole la página, ni uno sin paginar se cuele sin decirlo.
+/// </para>
+/// <para>
 /// <b>La foto se resuelve</b> desde un ámbito del host, que es la prueba de construcción que pide
 /// el ADR-0073: sin el registro del módulo, la exportación no llega ni a abrirla, y eso solo se
 /// vería pidiéndola por HTTP con una base detrás.
@@ -43,9 +49,21 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
     /// <summary>Las exportaciones, con el verbo y la ruta.</summary>
     private static readonly SortedSet<string> s_exportaciones = new(StringComparer.Ordinal)
     {
+        "GET /api/v1/catalogo/articulos/exportacion",
+        "GET /api/v1/catalogo/articulos/{articuloId}/gtins/exportacion",
+        "GET /api/v1/catalogo/categorias/exportacion",
+        "GET /api/v1/catalogo/tarifas/exportacion",
         "GET /api/v1/organizacion/almacenes/exportacion",
         "GET /api/v1/organizacion/empresas/exportacion",
         "GET /api/v1/terceros/terceros/exportacion",
+    };
+
+    /// <summary>
+    /// Los listados que no se paginan y tienen exportación: devuelven la lista entera.
+    /// </summary>
+    private static readonly SortedSet<string> s_sinPaginar = new(StringComparer.Ordinal)
+    {
+        "GET /api/v1/catalogo/articulos/{articuloId}/gtins",
     };
 
     private readonly ApiSinDependencias _api = new();
@@ -66,7 +84,11 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
     [Fact]
     public void Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado()
     {
-        List<ApiDescription> listados = [.. ListadosDeLaApi.De(_api.Services).Where(ListadosDeLaApi.SeConsulta)];
+        HashSet<string> paginados = new(
+            ListadosDeLaApi.De(_api.Services).Where(ListadosDeLaApi.SeConsulta).Select(ListadosDeLaApi.Nombre),
+            StringComparer.Ordinal);
+        List<ApiDescription> consultas = [.. Consultas(_api.Services)];
+        SortedSet<string> sinPaginar = new(StringComparer.Ordinal);
         List<string> fallos = [];
         int comparadas = 0;
 
@@ -74,7 +96,7 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
         {
             string nombre = ListadosDeLaApi.Nombre(exportacion);
             string ruta = exportacion.RelativePath![..^ExportacionesDeLaApi.Segmento.Length];
-            ApiDescription? listado = listados.SingleOrDefault(
+            ApiDescription? listado = consultas.SingleOrDefault(
                 candidato => string.Equals(candidato.RelativePath, ruta, StringComparison.Ordinal));
 
             if (listado is null)
@@ -82,6 +104,31 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
                 fallos.Add($"{nombre}: no hay un listado en GET /{ruta}");
 
                 continue;
+            }
+
+            string hermano = ListadosDeLaApi.Nombre(listado);
+            bool paginado = paginados.Contains(hermano);
+
+            if (!paginado && !s_sinPaginar.Contains(hermano))
+            {
+                fallos.Add($"{nombre}: {hermano} no se pagina, y no está entre los listados sin paginar");
+
+                continue;
+            }
+
+            if (paginado && s_sinPaginar.Contains(hermano))
+            {
+                fallos.Add($"{nombre}: {hermano} está entre los listados sin paginar, y se pagina");
+            }
+
+            if (!paginado)
+            {
+                sinPaginar.Add(hermano);
+
+                if (!DevuelveUnaLista(listado))
+                {
+                    fallos.Add($"{nombre}: {hermano} no devuelve una lista");
+                }
             }
 
             Permiso? permiso = PermisoDe(exportacion);
@@ -95,10 +142,16 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
             string[] deLaExportacion = [.. ListadosDeLaApi.DeLaUrl(exportacion).Order(StringComparer.Ordinal)];
 
             // EL ARNÉS: que lo que se quita esté en el listado. Si un día la página dejara de
-            // llamarse así, la resta no quitaría nada y la exportación tendría que leer `page`.
-            if (!s_deLaPagina.All(delListado.Contains))
+            // llamarse así, la resta no quitaría nada y la exportación tendría que leer `page`. Y su
+            // pareja: el que no se pagina no la lee, así que no hay nada que quitarle.
+            if (paginado && !s_deLaPagina.All(delListado.Contains))
             {
                 fallos.Add($"{nombre}: su listado no lee {string.Join(" ni ", s_deLaPagina)} de la URL");
+            }
+
+            if (!paginado && s_deLaPagina.Any(delListado.Contains))
+            {
+                fallos.Add($"{nombre}: su listado no se pagina, y lee la página de la URL");
             }
 
             string[] esperados = [.. delListado.Except(s_deLaPagina, StringComparer.Ordinal)];
@@ -125,6 +178,7 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
 
         fallos.ShouldBeEmpty(string.Join(Environment.NewLine, fallos));
         comparadas.ShouldBe(s_exportaciones.Count, "el arnés: se han comparado todas las declaradas");
+        sinPaginar.ShouldBe(s_sinPaginar, "los listados sin paginar declarados son los hermanos de una exportación");
     }
 
     /// <summary>
@@ -174,6 +228,26 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
         fallos.ShouldBeEmpty(string.Join(Environment.NewLine, fallos));
         resueltas.ShouldBe(s_exportaciones.Count, "el arnés: se han resuelto las fotos de todas las declaradas");
     }
+
+    /// <summary>
+    /// Todas las consultas de la API, y no solo los listados paginados: el hermano de una
+    /// exportación puede devolver la lista entera.
+    /// </summary>
+    private static IEnumerable<ApiDescription> Consultas(IServiceProvider servicios) =>
+        from grupo in servicios.GetRequiredService<IApiDescriptionGroupCollectionProvider>().ApiDescriptionGroups.Items
+        from descripcion in grupo.Items
+        where ListadosDeLaApi.SeConsulta(descripcion)
+        select descripcion;
+
+    /// <summary>
+    /// Si el <c>200</c> de una consulta es una lista: una colección genérica, que no es una página.
+    /// </summary>
+    private static bool DevuelveUnaLista(ApiDescription consulta) =>
+        consulta.SupportedResponseTypes.Any(
+            respuesta => respuesta.StatusCode == 200
+                && respuesta.Type is { IsGenericType: true } tipo
+                && typeof(System.Collections.IEnumerable).IsAssignableFrom(tipo)
+                && !ListadosDeLaApi.EsColeccion(tipo));
 
     private static Permiso? PermisoDe(ApiDescription accion) =>
         accion.ActionDescriptor.EndpointMetadata.OfType<ExigePermisoAttribute>().FirstOrDefault()?.Permiso;

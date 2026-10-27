@@ -207,6 +207,56 @@
         ]
       }
     },
+    "/api/v1/catalogo/articulos/exportacion": {
+      "get": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Descarga el listado de artículos entero, con su orden, su texto y su categoría, en CSV\n(ADR-0073).",
+        "operationId": "Articulos_Exportar",
+        "parameters": [
+          {
+            "name": "categoria",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/catalogo/articulos/{id}": {
       "get": {
         "tags": [
@@ -1152,6 +1202,48 @@
         ]
       }
     },
+    "/api/v1/catalogo/categorias/exportacion": {
+      "get": {
+        "tags": [
+          "Categorias"
+        ],
+        "summary": "Descarga el listado de categorías entero, con su orden y su texto, en CSV (ADR-0073).",
+        "operationId": "Categorias_Exportar",
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/catalogo/categorias/{id}": {
       "get": {
         "tags": [
@@ -1567,6 +1659,63 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/articulos/{articuloId}/gtins/exportacion": {
+      "get": {
+        "tags": [
+          "CodigosBarras"
+        ],
+        "summary": "Descarga los códigos de barras de un artículo, en CSV (ADR-0073).",
+        "description": "No lee nada de la URL, como el listado: ni orden ni texto. Un ?q= es un\n  400, el de un listado que no filtra por texto, y no un fichero que parece filtrado.\nUn artículo que no existe es el 404 del listado, antes del primer byte.",
+        "operationId": "CodigosBarras_Exportar",
+        "parameters": [
+          {
+            "name": "articuloId",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "text/plain": {
                 "schema": {
@@ -2016,6 +2165,55 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/tarifas/exportacion": {
+      "get": {
+        "tags": [
+          "Tarifas"
+        ],
+        "summary": "Descarga el listado de tramos de tarifa entero, con su orden, su texto y su código, en CSV\n(ADR-0073).",
+        "operationId": "Tarifas_Exportar",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }

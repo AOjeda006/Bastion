@@ -52,6 +52,11 @@ public static class ModuloDeCatalogo
         servicios.AddScoped<IUnidadTrabajoDeCatalogo, UnidadDeTrabajoDeCatalogo>();
         servicios.AddScoped<IVersionesDeCatalogo, VersionesDeCatalogo>();
 
+        // Y la foto de su exportación, por lo mismo: la del módulo, bajo el tipo del módulo
+        // (ADR-0073). Sin esta línea, la exportación no se construye, y lo dice
+        // `LaExportacionEsHermanaDelListadoTests` resolviéndola.
+        servicios.AddScoped<IFotoDeCatalogo, FotoDeCatalogo>();
+
         // El cerrojo del artículo, que corre en la transacción de ESTE contexto: cambiar la marca
         // de trazabilidad lo toma antes de preguntar a Inventario (ADR-0048 §4).
         servicios.AddScoped<ICerrojoDeArticulos, CerrojoDeArticulos>();

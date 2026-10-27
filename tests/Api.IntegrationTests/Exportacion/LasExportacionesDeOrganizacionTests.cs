@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json.Nodes;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Inventario;
 using Bastion.Api.IntegrationTests.Persistencia;
@@ -98,7 +97,7 @@ public sealed class LasExportacionesDeOrganizacionTests(PostgresConTodosLosModul
         exportado.StatusCode.ShouldBe(HttpStatusCode.BadRequest, await Escenario.Detalle(exportado));
         exportado.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
         // El mismo problema, salvo dónde se pidió y la traza, que son de cada petición.
-        (await ProblemaAsync(exportado)).ShouldBe(await ProblemaAsync(listado));
+        (await Exportaciones.ProblemaAsync(exportado)).ShouldBe(await Exportaciones.ProblemaAsync(listado));
     }
 
     /// <summary>
@@ -173,16 +172,6 @@ public sealed class LasExportacionesDeOrganizacionTests(PostgresConTodosLosModul
 
     private static Task<string> ExportarAsync(HttpClient cliente, string recurso, string consulta = "") =>
         Exportaciones.ExportarAsync(cliente, $"/api/v1/organizacion/{recurso}", recurso, consulta);
-
-    private static async Task<string> ProblemaAsync(HttpResponseMessage respuesta)
-    {
-        JsonObject problema = JsonNode.Parse(await respuesta.Content.ReadAsStringAsync())!.AsObject();
-
-        problema.Remove("instance").ShouldBeTrue("el arnés: el problema dice dónde se pidió");
-        problema.Remove("traceId").ShouldBeTrue("el arnés: el problema lleva su traza");
-
-        return problema.ToJsonString();
-    }
 
     /// <summary>La primera columna de cada fila, sin la cabecera.</summary>
     private static string[] Codigos(string fichero) =>

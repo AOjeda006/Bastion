@@ -1,5 +1,8 @@
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
+using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Catalogo.Application;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Contracts;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -34,6 +37,24 @@ public sealed class CodigosBarrasController(
     IAgregarCodigoBarrasAlArticulo agregar,
     IQuitarCodigoBarras quitar) : ControladorDeCatalogo
 {
+    /// <summary>
+    /// Las columnas de la exportación: lo que el listado publica de cada código, sin sus
+    /// identificadores, y el artículo con su código y su descripción (ADR-0074).
+    /// </summary>
+    /// <remarks>
+    /// El artículo es el mismo en todas las filas, y aun así va: el fichero se lee fuera de la
+    /// pantalla, y sin él no dice de qué artículo son los códigos. El nivel va con el valor del
+    /// DTO, sin traducir (*La puerta del 3.2*).
+    /// </remarks>
+    internal static readonly HojaDeExportacion<CodigoBarrasExportado> HojaDeCodigosBarras = new(
+        "gtins",
+        [
+            .. ColumnasDeMaestro.De<CodigoBarrasExportado>("articulo", fila => fila.Articulo),
+            new("gtin", fila => CampoCsv.Texto(fila.CodigoBarras.Gtin)),
+            new("nivel", fila => CampoCsv.Valor(fila.CodigoBarras.Nivel)),
+            new("unidades", fila => CampoCsv.Numero(fila.CodigoBarras.Unidades)),
+        ]);
+
     /// <summary>Devuelve los códigos de barras de un artículo, de la base a las agrupaciones.</summary>
     /// <remarks>Sin paginar: son los de UN artículo, que son unos pocos.</remarks>
     /// <param name="articuloId">Identificador del artículo.</param>
@@ -44,6 +65,43 @@ public sealed class CodigosBarrasController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Listar(Guid articuloId, CancellationToken cancelacion) =>
         Responder(await listar.EjecutarAsync(articuloId, cancelacion).ConfigureAwait(false));
+
+    /// <summary>Descarga los códigos de barras de un artículo, en CSV (ADR-0073).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>No lee nada de la URL</b>, como el listado: ni orden ni texto. Un <c>?q=</c> es un
+    /// <c>400</c>, el de un listado que no filtra por texto, y no un fichero que parece filtrado.
+    /// </para>
+    /// <para>Un artículo que no existe es el <c>404</c> del listado, antes del primer byte.</para>
+    /// </remarks>
+    /// <param name="articuloId">Identificador del artículo.</param>
+    /// <param name="exportar">El caso de uso del listado, con el artículo nombrado.</param>
+    /// <param name="foto">La foto del módulo, de la que sale el listado.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("{articuloId:guid}/gtins/exportacion")]
+    [ExigePermiso(PermisosDeCatalogo.ArticuloVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Exportar(
+        Guid articuloId,
+        [FromServices] IExportarCodigosBarrasDelArticulo exportar,
+        [FromServices] IFotoDeCatalogo foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(exportar);
+
+        return await ExportarListadoDeResultadoAsync(
+            new ConsultaDeListado(),
+            null,
+            exportar,
+            (paginacion, testigo) => exportar.EjecutarAsync(articuloId, paginacion, testigo),
+            foto,
+            HojaDeCodigosBarras,
+            reloj,
+            cancelacion).ConfigureAwait(false);
+    }
 
     /// <summary>Devuelve un código de barras, con la ETag que pide su baja.</summary>
     /// <param name="id">Identificador del código de barras.</param>

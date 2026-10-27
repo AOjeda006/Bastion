@@ -62,6 +62,13 @@ public static class CasosDeUsoDeCatalogo
 
         servicios.AddScoped<IResolverPrecio, ResolverPrecio>();
 
+        // Las exportaciones: cada una llama al caso de uso de su listado, y nombra sus maestros
+        // (ADR-0074). La de categorías no es el listado tal cual porque nombra a la madre.
+        servicios.AddScoped<IExportarArticulos, ExportarArticulos>();
+        servicios.AddScoped<IExportarCategorias, ExportarCategorias>();
+        servicios.AddScoped<IExportarTarifas, ExportarTarifas>();
+        servicios.AddScoped<IExportarCodigosBarrasDelArticulo, ExportarCodigosBarrasDelArticulo>();
+
         // Mismo criterio que en los otros tres módulos: el reloj como servicio, y `TryAdd` para
         // que un test que ya haya puesto un reloj falso conserve el suyo.
         servicios.TryAddSingleton(TimeProvider.System);

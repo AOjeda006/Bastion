@@ -71,7 +71,7 @@ internal sealed class UnidadesEn(EstadoDeMaestro estado) : IConsultaDeUnidadesDe
 
     public Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
         IReadOnlyCollection<Guid> unidades, CancellationToken cancelacion) =>
-        throw new NotSupportedException("Catálogo no nombra maestros de Organización.");
+        throw new NotSupportedException("Este doble no nombra: la exportación trae los suyos.");
 }
 
 /// <summary>El puerto de impuestos, fijado en un estado, que apunta fecha y todo.</summary>
@@ -91,7 +91,7 @@ internal sealed class ImpuestosEn(EstadoDeMaestro estado) : IConsultaDeImpuestos
 
     public Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
         IReadOnlyCollection<Guid> impuestos, CancellationToken cancelacion) =>
-        throw new NotSupportedException("Catálogo no nombra maestros de Organización.");
+        throw new NotSupportedException("Este doble no nombra: la exportación trae los suyos.");
 }
 
 /// <summary>Un almacén de artículos en memoria.</summary>
@@ -240,6 +240,12 @@ internal sealed class CategoriasEnMemoria : IRepositorioDeCategorias
         CancellationToken cancelacion) =>
         throw new NotSupportedException("El listado se prueba contra PostgreSQL, no aquí.");
 
+    public Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
+        IReadOnlyCollection<Guid> categorias, CancellationToken cancelacion) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, NombreDeMaestro>>(Guardadas
+            .Where(una => categorias.Contains(una.Id))
+            .ToDictionary(una => una.Id, una => new NombreDeMaestro(una.Codigo, una.Nombre)));
+
     public void Agregar(Categoria categoria) => Guardadas.Add(categoria);
 }
 
@@ -366,7 +372,7 @@ internal sealed class DivisasEn(EstadoDeMaestro estado) : IConsultaDeDivisas
 
     public Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
         IReadOnlyCollection<Guid> divisas, CancellationToken cancelacion) =>
-        throw new NotSupportedException("Catálogo no nombra maestros de Organización.");
+        throw new NotSupportedException("Este doble no nombra: la exportación trae los suyos.");
 }
 
 /// <summary>Un almacén de tramos de tarifa en memoria.</summary>
