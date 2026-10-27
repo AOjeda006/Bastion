@@ -917,6 +917,62 @@ cuando hace falta el porqué.
 > esas quince miran hacia delante: la cadena de R15 serializa la emisión y se diseña antes de la
 > fase 5, el reloj del servidor es corrección fiscal, y el servicio de impuestos de la fase 5 tiene
 > su caso dorado en el ADR-0005.
+>
+> Las cuatro primeras son del 3.1, del orden de trabajo de la puerta de la fase 3, y comparten
+> disparador: antes del primer despliegue fuera de local, y en todo caso en la puerta de la
+> fase 5.
+
+- **ABIERTA (2026-10-27, ítem 3.1, el orden de trabajo de la puerta de la fase 3) · la API es
+  dueña de las tablas, y en el *compose*, superusuaria.** La API y el migrador comparten la cadena
+  de conexión, `&entorno-de-la-api` en `deploy/docker-compose.yml`, con
+  `Username=${POSTGRES_USER:-bastion}`, que es el usuario que la imagen de PostgreSQL crea como
+  superusuario. El migrador crea las tablas, así que las tablas son de ese usuario, y la API, que
+  entra con él, puede hacer lo que haga su dueño: `ALTER TABLE … DISABLE TRIGGER` sobre un libro,
+  o, como superusuaria, `SET session_replication_role = replica`, que apaga los disparadores de la
+  sesión. Los dos caminos se saltan el solo añadido, que hoy guardan dos funciones de disparador,
+  `auditoria.registros_son_de_solo_anadido` e `inventario.movimientos_son_de_solo_anadido`. Lo
+  dicen `git grep -n "Username=" -- deploy/docker-compose.yml` y
+  `git grep -n "_son_de_solo_anadido() RETURNS trigger" -- db/migraciones`. **La propuesta**: dos
+  roles, uno dueño para el migrador y otro solo de datos para la API, que no es dueño de nada ni
+  superusuario, con los permisos de cada esquema concedidos por el migrador, y un caso de
+  integración que afirme que el rol de la API no puede desactivar un disparador de un libro.
+  **El disparador**: antes del primer despliegue fuera de local, y en todo caso en la puerta de
+  la fase 5.
+
+- **ABIERTA (2026-10-27, ítem 3.1, el orden de trabajo de la puerta de la fase 3) ·
+  `Include Error Detail=true` va en la cadena de todos los entornos.** Está en la misma cadena de
+  la nota de arriba, y no depende de `ASPNETCORE_ENVIRONMENT`: con él, Npgsql añade al mensaje de
+  cada `PostgresException` el detalle del servidor, que puede llevar los valores de la fila que
+  la causó, y el mensaje acaba en el registro. Ningún código lo lee:
+  `git grep -n -E "\.Detail\b|ErrorDetail" -- 'src/*.cs'` no encuentra nada, y
+  `git grep -n "Include Error Detail" -- ':!*.md'` solo lo encuentra en el *compose*. **La
+  propuesta**: que salga de la cadena común y lo ponga solo el entorno de desarrollo. **El
+  disparador**: antes del primer despliegue fuera de local, y en todo caso en la puerta de la fase
+  5.
+
+- **ABIERTA (2026-10-27, ítem 3.1, el orden de trabajo de la puerta de la fase 3) · el bloqueo
+  por intentos deja bloquear la cuenta de cualquiera.** `Usuario.IntentosTolerados` son 5, y
+  `Usuario.EsperaTrasIntentosFallidos`, 15 minutos (ADR-0008). Quien sepa el correo de alguien
+  manda cinco contraseñas falsas a `POST /api/v1/identidad/sesiones` y lo deja fuera un cuarto de
+  hora, y otra vez al acabar, sin saber su contraseña. El acceso no tiene limitación de ritmo:
+  `git grep -n -E "AddRateLimiter|RequireRateLimiting" -- 'src/*.cs'` no encuentra nada. **La
+  propuesta**: un límite de ritmo por origen en el acceso, con el limitador de ASP.NET Core, que
+  viene con la plataforma, y decidir con él si el rechazo sigue siendo por cuenta o pasa a ser por
+  cuenta y origen. Cambia lo que decide el ADR-0008, así que va con un ADR que lo enmiende. **El
+  disparador**: antes del primer despliegue fuera de local, y en todo caso en la puerta de la fase
+  5.
+
+- **ABIERTA (2026-10-27, ítem 3.1, el orden de trabajo de la puerta de la fase 3) · las
+  contraseñas se resumen con 100 000 iteraciones de PBKDF2, y OWASP pide 210 000.** El ADR-0008 §1
+  adoptó el `PasswordHasher` de ASP.NET Core con sus parámetros por omisión, PBKDF2-HMAC-SHA512 y
+  100 000 iteraciones, y la hoja de OWASP sobre el almacenamiento de contraseñas pide 210 000 para
+  ese PRF. Subirlo no necesita migración: el resumen lleva sus parámetros, y
+  `HasherDeContrasenas` ya convierte `SuccessRehashNeeded` en
+  `CorrectaPeroConvieneRehashear`, así que cada cuenta se rehace en su siguiente acceso. **La
+  propuesta**: `PasswordHasherOptions.IterationCount` a 210 000, con un ADR que enmiende el §1
+  del 0008, y medir otra vez lo que cuesta un acceso, que el ADR da en unos 100 ms y paga también
+  el que falla, contra el `HashDeRelleno`. **El disparador**: antes del primer despliegue fuera de
+  local, y en todo caso en la puerta de la fase 5.
 
 - **ABIERTA (2026-10-24, ítem 2.20, ADR-0070) · el recálculo de C cuesta entre 32 y 53 s según
   cuándo pase el `ANALYZE`.** Medido en el humo del 2.20, con tres recálculos de C sobre la misma
