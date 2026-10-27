@@ -3,12 +3,16 @@ tipo: referencia
 stack: [dotnet, aspnetcore, efcore]
 aplica_a: [api-rest, inventario, catalogo, organizacion]
 tags: [adr, listado, paginacion, filtro, q, contrato, transferencia, adr-0068]
-revisado: 2026-10-22
+revisado: 2026-10-27
 ---
 
 # ADR-0069: Un `?q=` sin filtro declarado llega y no filtra nada
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el ADR-0072 (puntos 1 y 3 de la decisión).**
+  - El [ADR-0072](adr-0072-un-listado-enlaza-tres-piezas-y-el-texto-solo-quien-lo-mira.md)
+    enmienda, el 2026-10-27, los puntos 1 y 3: un `?q=` con algo escrito a uno de esos listados
+    es un `400` `filtro-no-admitido`, ya no lo publican, y el rechazo que el punto 3 dejaba
+    propuesto se hace en el ítem 3.2.
 - **Fecha:** 2026-10-22
 - **Sale del ítem 2.19**, de un hallazgo al escribir el borde de la transferencia, en `79fd5d6`.
   Su mensaje dice que la enmienda iba al PLAN, y va aquí, porque lo que corrige es un ADR.
@@ -56,12 +60,21 @@ las tres transferencias de la escena.
 
 ## Decisión
 
-1. **El `?q=` de un listado sin filtro declarado llega y no filtra nada**, en la transferencia y en
+1. > **Enmendado por el ADR-0072 (2026-10-27).** Ya no llega: los seis listados sin filtro
+   > declarado dejan de publicar `q`, y un `?q=` con algo escrito es un `400`
+   > `filtro-no-admitido`. En blanco, o sin él, pasa.
+
+   **El `?q=` de un listado sin filtro declarado llega y no filtra nada**, en la transferencia y en
    los otros cuatro. Es lo que hace el código, y lo que dice ya la cabecera de
    `ConsultaDeTransferencias` y la ayuda de `TransferenciasController`.
 2. **El comentario de `RepositorioDeLineasDeTarifa` se reescribe** con lo que hace, en este mismo
    commit. Es la regla de `AGENTS.md`: un comentario que contradice la medida se reescribe.
-3. **Rechazarlo con un `400` no se hace aquí, y queda propuesto.** Sería un cambio del contrato en
+3. > **Enmendado por el ADR-0072 (2026-10-27).** Se hace en el ítem 3.2, que es la exportación:
+   > un fichero con todas las filas saldría con el nombre de lo que se creía haber buscado. El
+   > contrato cambia en los seis listados, y el paginador común lanza si le llega un texto que
+   > el repositorio no mira.
+
+   **Rechazarlo con un `400` no se hace aquí, y queda propuesto.** Sería un cambio del contrato en
    cinco listados, que dejarían de publicar `q`, y un cambio del paginador común. No lo pide ningún
    ítem, y cambiar el contrato por un hallazgo no es su sitio. La propuesta, con su disparador, va a
    *Notas / riesgos* del PLAN, y el cierre de la fase 2 decide si pasa al traspaso.
