@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
 import { clavesDeTerceros } from '../api/claves.ts';
-import { consultarTerceros } from '../api/consultas.ts';
+import { consultarTerceros, exportarTerceros } from '../api/consultas.ts';
 import { PARAMETRO_DE_BUSQUEDA, leerListado } from '../model/listado.ts';
 import type { Tercero, Verificacion } from '../model/tercero.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
@@ -161,6 +162,7 @@ export function PaginaDeTerceros(): React.JSX.Element {
   return (
     <>
       {buscador}
+      <BotonDeExportar exportar={() => exportarTerceros(listado)} />
 
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}

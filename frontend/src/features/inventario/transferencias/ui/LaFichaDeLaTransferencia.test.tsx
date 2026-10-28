@@ -15,6 +15,7 @@ import {
   articulosDe,
 } from '@/pruebas/datos.ts';
 import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
 type ArticuloDto = components['schemas']['ArticuloDto'];
@@ -422,6 +423,17 @@ describe('La ficha de una transferencia', { timeout: 15_000 }, () => {
     expect(tablaDeLineas().parentElement).toHaveClass('overflow-x-auto');
   });
 
+  it('exportar se lleva las líneas de la ficha', async () => {
+    const exportaciones = capturarExportaciones();
+    montar(PUEDE_VER);
+
+    expect(await screen.findByRole('heading', { name: BORRADOR })).toBeInTheDocument();
+    await exportarYComprobar(
+      exportaciones,
+      `/api/v1/inventario/transferencias/${TRANSFERENCIA}/lineas/exportacion`,
+    );
+  });
+
   it('enviar se pregunta, manda su clave y no la versión, y el aviso dice el número con el foco', async () => {
     montar();
     const usuario = userEvent.setup();
@@ -656,7 +668,10 @@ describe('La ficha de una transferencia', { timeout: 15_000 }, () => {
       'href',
       `/transferencias/${TRANSFERENCIA}`,
     );
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    // El único botón es el de exportar sus líneas, que lee y no cambia nada (ítem 3.2).
+    expect(screen.getAllByRole('button').map((boton) => boton.textContent)).toEqual([
+      'Exportar a CSV',
+    ]);
   });
 
   it('el motivo que falta o que rechaza el servidor va en su campo, con el foco', async () => {
@@ -715,7 +730,7 @@ describe('La ficha de una transferencia', { timeout: 15_000 }, () => {
     expect(screen.getByRole('heading', { name: BORRADOR })).toBeInTheDocument();
   });
 
-  it('quien solo ve lee la ficha entera y no encuentra ni un botón', async () => {
+  it('quien solo ve lee la ficha entera y no encuentra más botón que el de exportar', async () => {
     servidorDeLaTransferencia.fichas.set(TRANSFERENCIA, enviada());
     montar(PUEDE_VER);
 
@@ -723,6 +738,9 @@ describe('La ficha de una transferencia', { timeout: 15_000 }, () => {
     await waitFor(() => {
       expect(filas()).toHaveLength(2);
     });
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    // Exportar lee, con el mismo permiso que la ficha (ítem 3.2): ninguno de los que cambian algo.
+    expect(screen.getAllByRole('button').map((boton) => boton.textContent)).toEqual([
+      'Exportar a CSV',
+    ]);
   });
 });

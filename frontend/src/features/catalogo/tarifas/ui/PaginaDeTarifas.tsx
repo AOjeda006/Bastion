@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { clavesDeTarifas } from '../api/claves.ts';
-import { consultarTarifas } from '../api/consultas.ts';
+import { consultarTarifas, exportarTarifas } from '../api/consultas.ts';
 import { PARAMETRO_DE_BUSQUEDA, PARAMETRO_DE_CODIGO, leerListado } from '../model/listado.ts';
 import { estadoDeVigencia, type EstadoDeVigencia, type Tarifa } from '../model/tarifa.ts';
 import { diaLegible, hoyEnElServidor } from '@/shared/lib/dias.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
@@ -189,6 +190,7 @@ export function PaginaDeTarifas(): React.JSX.Element {
   return (
     <>
       {cabecera}
+      <BotonDeExportar exportar={() => exportarTarifas(listado)} />
 
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}

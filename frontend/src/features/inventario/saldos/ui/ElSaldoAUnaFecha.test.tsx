@@ -15,6 +15,7 @@ import {
   articulosDe,
 } from '@/pruebas/datos.ts';
 import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
 type SaldoDto = components['schemas']['SaldoDto'];
@@ -331,6 +332,23 @@ describe('El saldo a una fecha', () => {
       expect(filas('Saldo al final del 10 sept 2026, por artículo y almacén')).toHaveLength(2);
     });
     expect(ultimoPedido()).toEqual(SIN_ACOTAR);
+  });
+
+  it('sin día, exportar se lleva el que contestó el listado, con los dos filtros y sin la página', async () => {
+    // El del servidor y no el del navegador: el fichero tiene que ser la tabla que se mira, y la
+    // exportación pedida sin día contestaría con el de otra petición, que puede ser otro.
+    servidorDeSaldos.hoy = '2026-09-10';
+    const exportaciones = capturarExportaciones();
+    montar(`/saldos?almacen=${ALMACEN.id}&articulo=${TORNILLO.id}&pagina=1`);
+
+    await waitFor(() => {
+      expect(filas('Saldo al final del 10 sept 2026, por artículo y almacén')).toHaveLength(1);
+    });
+    await exportarYComprobar(exportaciones, '/api/v1/inventario/saldos/exportacion', {
+      fecha: '2026-09-10',
+      almacen: ALMACEN.id,
+      articulo: TORNILLO.id,
+    });
   });
 
   it('pagina en el servidor, con la página en la URL', async () => {

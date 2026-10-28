@@ -8,7 +8,7 @@ import { consultarAlmacenes } from '../../maestros/api/maestros.ts';
 import { VIDA_DE_UN_MAESTRO, useNombre } from '../../maestros/ui/nombres.ts';
 import { cantidadLegible } from '../../recuentos/model/cantidad.ts';
 import { clavesDeSaldos } from '../api/claves.ts';
-import { consultarArticulos, consultarSaldos } from '../api/saldos.ts';
+import { consultarArticulos, consultarSaldos, exportarSaldos } from '../api/saldos.ts';
 import {
   PARAMETRO_DE_ALMACEN,
   PARAMETRO_DE_ARTICULO,
@@ -24,6 +24,7 @@ import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
@@ -127,6 +128,7 @@ function Contenido({
 
   return (
     <>
+      <BotonDeExportar exportar={() => exportarSaldos(listado, fecha)} />
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}
       <div className="relative mt-4 overflow-x-auto">

@@ -9,9 +9,10 @@ import type {
   ResumenDeRecuento,
 } from '../model/recuento.ts';
 import { api } from '@/shared/api/cliente.ts';
-import type { components } from '@/shared/api/esquema.ts';
+import type { components, operations } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 
 /**
  * La frontera de los recuentos con el contrato (ADR-0055).
@@ -96,6 +97,23 @@ function versionDe(respuesta: Response): string {
   return version;
 }
 
+/** Lo que admiten las dos exportaciones, que son los filtros de su listado sin `page` ni `size`. */
+type Filtros = NonNullable<operations['Recuentos_Exportar']['parameters']['query']>;
+type Vista = NonNullable<operations['Recuentos_ExportarLineas']['parameters']['query']>;
+
+/** Los filtros del listado, sin la página: los que llevan el listado y su exportación. */
+function filtrosDe(listado: ListadoDeRecuentos): Filtros {
+  return {
+    ...(listado.estado === null ? {} : { estado: estadoEnElContrato(listado.estado) }),
+    ...(listado.almacenId === null ? {} : { almacen: listado.almacenId }),
+  };
+}
+
+/** La vista de las líneas, sin la página: la que llevan las líneas y su exportación. */
+function vistaDe(listado: ListadoDeLineas): Vista {
+  return listado.solo === null ? {} : { solo: listado.solo };
+}
+
 /** Una página de recuentos, del más reciente al más antiguo, como los ordena la API. */
 export async function consultarRecuentos(
   listado: ListadoDeRecuentos,
@@ -105,8 +123,7 @@ export async function consultarRecuentos(
       query: {
         page: listado.pagina,
         size: listado.tamanio,
-        ...(listado.estado === null ? {} : { estado: estadoEnElContrato(listado.estado) }),
-        ...(listado.almacenId === null ? {} : { almacen: listado.almacenId }),
+        ...filtrosDe(listado),
       },
     },
   });
@@ -116,6 +133,16 @@ export async function consultarRecuentos(
   }
 
   return { elementos: data.elementos.map(traducirResumen), total: enteroDelContrato(data.total) };
+}
+
+/** Los recuentos del listado, con sus filtros y todas sus páginas, en el CSV de la exportación. */
+export async function exportarRecuentos(listado: ListadoDeRecuentos): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/inventario/recuentos/exportacion', {
+      params: { query: filtrosDe(listado) },
+      parseAs: 'blob',
+    }),
+  );
 }
 
 /** La ficha de uno, con la versión que citan confirmar, anular y descartar. */
@@ -156,7 +183,7 @@ export async function consultarLineas(
       query: {
         page: listado.pagina,
         size: listado.tamanio,
-        ...(listado.solo === null ? {} : { solo: listado.solo }),
+        ...vistaDe(listado),
       },
     },
   });
@@ -166,6 +193,16 @@ export async function consultarLineas(
   }
 
   return { elementos: data.elementos.map(traducirLinea), total: enteroDelContrato(data.total) };
+}
+
+/** Las líneas de un recuento, las de la vista que se mira y todas sus páginas, en el CSV. */
+export async function exportarLineas(id: string, listado: ListadoDeLineas): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/inventario/recuentos/{id}/lineas/exportacion', {
+      params: { path: { id }, query: vistaDe(listado) },
+      parseAs: 'blob',
+    }),
+  );
 }
 
 /**

@@ -10,9 +10,10 @@ import type {
   Transferencia,
 } from '../model/transferencia.ts';
 import { api } from '@/shared/api/cliente.ts';
-import type { components } from '@/shared/api/esquema.ts';
+import type { components, operations } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 
 /**
  * La frontera de las transferencias con el contrato (ADR-0068).
@@ -85,6 +86,19 @@ function versionDe(respuesta: Response): string {
   return version;
 }
 
+/** Lo que admite la exportación, que son los filtros del listado sin `page` ni `size`. */
+type Filtros = NonNullable<operations['Transferencias_Exportar']['parameters']['query']>;
+
+/** Los filtros y el orden del listado, sin la página: lo que llevan él y su exportación. */
+function filtrosDe(listado: ListadoDeTransferencias): Filtros {
+  return {
+    ...(listado.estado === null ? {} : { estado: estadoEnElContrato(listado.estado) }),
+    ...(listado.origenId === null ? {} : { origen: listado.origenId }),
+    ...(listado.destinoId === null ? {} : { destino: listado.destinoId }),
+    ...(listado.orden === null ? {} : { sort: listado.orden }),
+  };
+}
+
 /** Una página de transferencias, en el orden pedido, o del último envío al primero, el de la API. */
 export async function consultarTransferencias(
   listado: ListadoDeTransferencias,
@@ -94,10 +108,7 @@ export async function consultarTransferencias(
       query: {
         page: listado.pagina,
         size: listado.tamanio,
-        ...(listado.estado === null ? {} : { estado: estadoEnElContrato(listado.estado) }),
-        ...(listado.origenId === null ? {} : { origen: listado.origenId }),
-        ...(listado.destinoId === null ? {} : { destino: listado.destinoId }),
-        ...(listado.orden === null ? {} : { sort: listado.orden }),
+        ...filtrosDe(listado),
       },
     },
   });
@@ -107,6 +118,16 @@ export async function consultarTransferencias(
   }
 
   return { elementos: data.elementos.map(traducirResumen), total: enteroDelContrato(data.total) };
+}
+
+/** Las transferencias del listado, con sus filtros, su orden y todas sus páginas, en el CSV. */
+export async function exportarTransferencias(listado: ListadoDeTransferencias): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/inventario/transferencias/exportacion', {
+      params: { query: filtrosDe(listado) },
+      parseAs: 'blob',
+    }),
+  );
 }
 
 /**
@@ -140,6 +161,16 @@ export async function consultarTransferencia(id: string): Promise<FichaDeTransfe
   }
 
   return { transferencia: traducir(data), version: versionDe(response) };
+}
+
+/** Las líneas de una, las mismas y en el mismo orden que la ficha, en el CSV de la exportación. */
+export async function exportarLineas(id: string): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/inventario/transferencias/{id}/lineas/exportacion', {
+      params: { path: { id } },
+      parseAs: 'blob',
+    }),
+  );
 }
 
 /**

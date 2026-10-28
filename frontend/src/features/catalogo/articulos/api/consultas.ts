@@ -7,9 +7,10 @@ import type {
   Trazabilidad,
 } from '../model/articulo.ts';
 import { api } from '@/shared/api/cliente.ts';
-import type { components } from '@/shared/api/esquema.ts';
+import type { components, operations } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 
 /**
  * La frontera de los artículos con el contrato.
@@ -60,6 +61,17 @@ function traducir(dto: ArticuloDto): Articulo {
   };
 }
 
+/** Lo que admite la exportación, que son los filtros del listado sin `page` ni `size`. */
+type Filtros = NonNullable<operations['Articulos_Exportar']['parameters']['query']>;
+
+/** Los filtros del listado, sin la página: los que llevan el listado y su exportación. */
+function filtrosDe(listado: ListadoDeArticulos): Filtros {
+  return {
+    ...(listado.busqueda === '' ? {} : { q: listado.busqueda }),
+    ...(listado.categoriaId === null ? {} : { categoria: listado.categoriaId }),
+  };
+}
+
 /**
  * Pide una página de artículos de la empresa con la que se está operando.
  *
@@ -73,8 +85,7 @@ export async function consultarArticulos(listado: ListadoDeArticulos): Promise<P
       query: {
         page: listado.pagina,
         size: listado.tamanio,
-        ...(listado.busqueda === '' ? {} : { q: listado.busqueda }),
-        ...(listado.categoriaId === null ? {} : { categoria: listado.categoriaId }),
+        ...filtrosDe(listado),
       },
     },
   });
@@ -120,4 +131,14 @@ export async function consultarFicha(id: string): Promise<FichaDeArticulo> {
       categoriaId: data.categoriaId,
     },
   };
+}
+
+/** Los artículos del listado, con sus dos filtros y todas sus páginas, en el CSV. */
+export async function exportarArticulos(listado: ListadoDeArticulos): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/catalogo/articulos/exportacion', {
+      params: { query: filtrosDe(listado) },
+      parseAs: 'blob',
+    }),
+  );
 }

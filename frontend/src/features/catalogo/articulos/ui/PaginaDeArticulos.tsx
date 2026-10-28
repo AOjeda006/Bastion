@@ -6,7 +6,7 @@ import { Link, useSearchParams } from 'react-router';
 import { NombreDeTrazabilidad } from './NombreDeTrazabilidad.tsx';
 import { ExplicacionDeSinReconocer, SinReconocer } from './SinReconocer.tsx';
 import { clavesDeArticulos } from '../api/claves.ts';
-import { consultarArticulos } from '../api/consultas.ts';
+import { consultarArticulos, exportarArticulos } from '../api/consultas.ts';
 import {
   PARAMETRO_DE_BUSQUEDA,
   PARAMETRO_DE_CATEGORIA,
@@ -20,6 +20,7 @@ import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
@@ -213,6 +214,7 @@ export function PaginaDeArticulos(): React.JSX.Element {
   return (
     <>
       {cabecera}
+      <BotonDeExportar exportar={() => exportarArticulos(listado)} />
 
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}

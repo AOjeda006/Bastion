@@ -1,9 +1,10 @@
 import type { ListadoDeTerceros } from '../model/listado.ts';
 import type { PaginaDeTerceros, Tercero, Verificacion } from '../model/tercero.ts';
 import { api } from '@/shared/api/cliente.ts';
-import type { components } from '@/shared/api/esquema.ts';
+import type { components, operations } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 
 /**
  * La frontera de esta funcionalidad con el contrato.
@@ -44,6 +45,14 @@ function traducir(dto: TerceroDto): Tercero {
   };
 }
 
+/** Lo que admite la exportación, que son los filtros del listado sin `page` ni `size`. */
+type Filtros = NonNullable<operations['Terceros_Exportar']['parameters']['query']>;
+
+/** Los filtros del listado, sin la página: los que llevan el listado y su exportación. */
+function filtrosDe(listado: ListadoDeTerceros): Filtros {
+  return listado.busqueda === '' ? {} : { q: listado.busqueda };
+}
+
 /**
  * Pide una página de terceros de la empresa con la que se está operando.
  *
@@ -57,7 +66,7 @@ export async function consultarTerceros(listado: ListadoDeTerceros): Promise<Pag
       query: {
         page: listado.pagina,
         size: listado.tamanio,
-        ...(listado.busqueda === '' ? {} : { q: listado.busqueda }),
+        ...filtrosDe(listado),
       },
     },
   });
@@ -69,4 +78,14 @@ export async function consultarTerceros(listado: ListadoDeTerceros): Promise<Pag
   }
 
   return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
+}
+
+/** Los terceros del listado, con su filtro y todas sus páginas, en el CSV de la exportación. */
+export async function exportarTerceros(listado: ListadoDeTerceros): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/terceros/terceros/exportacion', {
+      params: { query: filtrosDe(listado) },
+      parseAs: 'blob',
+    }),
+  );
 }

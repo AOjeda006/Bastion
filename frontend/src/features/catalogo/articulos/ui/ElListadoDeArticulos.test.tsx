@@ -4,6 +4,7 @@ import { HttpResponse, delay, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { ALFA, PERMISOS_DE_LECTURA, articulosDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 import { PaginaDeArticulos } from './PaginaDeArticulos.tsx';
@@ -159,6 +160,22 @@ describe('El listado de artículos', () => {
     // viendo tres filas en vez de treinta.
     expect(await screen.findByText('Filtrando por la categoría «Tornillería».')).toBeVisible();
     expect(servidorSimulado.articulosPedidos).toEqual([{ busqueda: '', categoria: TORNILLERIA }]);
+  });
+
+  it('exportar se lleva los dos filtros del listado, y no su página', async () => {
+    abrirSesionYaRecuperada();
+    const exportaciones = capturarExportaciones();
+
+    montarPantalla(
+      <PaginaDeArticulos />,
+      `/articulos?busqueda=m6&categoria=${TORNILLERIA}&pagina=1`,
+    );
+
+    expect(await screen.findByText('Tornillo M6 zincado')).toBeVisible();
+    await exportarYComprobar(exportaciones, '/api/v1/catalogo/articulos/exportacion', {
+      q: 'm6',
+      categoria: TORNILLERIA,
+    });
   });
 
   it('quitar el filtro de rama lo borra de la URL y devuelve el listado entero', async () => {

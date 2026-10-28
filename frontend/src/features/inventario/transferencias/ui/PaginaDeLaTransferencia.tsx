@@ -11,9 +11,10 @@ import { useNombre } from '../../maestros/ui/nombres.ts';
 import { cantidadLegible } from '../../recuentos/model/cantidad.ts';
 import { importeLegible } from '../../saldos/model/saldo.ts';
 import { clavesDeTransferencias } from '../api/claves.ts';
-import { consultarTransferencia } from '../api/transferencias.ts';
+import { consultarTransferencia, exportarLineas } from '../api/transferencias.ts';
 import type { LineaDeTransferencia, Transferencia } from '../model/transferencia.ts';
 import { diaLegible } from '@/shared/lib/dias.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo } from '@/shared/ui/Estados.tsx';
 import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
@@ -220,6 +221,10 @@ function Lineas({ transferencia }: { transferencia: Transferencia }): React.JSX.
         {t('inventario.transferencias.ficha.nota')}
         {!conValor && ` ${t('inventario.transferencias.ficha.notaDelBorrador')}`}
       </p>
+
+      {transferencia.lineas.length > 0 && (
+        <BotonDeExportar exportar={() => exportarLineas(transferencia.id)} />
+      )}
 
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}

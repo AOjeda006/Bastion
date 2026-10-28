@@ -10,9 +10,10 @@ import type { AltaDeAjuste } from '../model/formularios.ts';
 import { estadoDelContrato, estadoEnElContrato } from '../model/listado.ts';
 import type { ListadoDeAjustes } from '../model/listado.ts';
 import { api } from '@/shared/api/cliente.ts';
-import type { components } from '@/shared/api/esquema.ts';
+import type { components, operations } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 
 /**
  * La frontera de los ajustes con el contrato (ADR-0065).
@@ -90,6 +91,19 @@ function versionDe(respuesta: Response): string {
   return version;
 }
 
+/** Lo que admite la exportación, que son los filtros del listado sin `page` ni `size`. */
+type Filtros = NonNullable<operations['Ajustes_Exportar']['parameters']['query']>;
+
+/** Los filtros y el orden del listado, sin la página: lo que llevan él y su exportación. */
+function filtrosDe(listado: ListadoDeAjustes): Filtros {
+  return {
+    ...(listado.estado === null ? {} : { estado: estadoEnElContrato(listado.estado) }),
+    ...(listado.almacenId === null ? {} : { almacen: listado.almacenId }),
+    ...(listado.busqueda === '' ? {} : { q: listado.busqueda }),
+    ...(listado.orden === null ? {} : { sort: listado.orden }),
+  };
+}
+
 /** Una página de ajustes, en el orden pedido, o del último día al primero, que es el de la API. */
 export async function consultarAjustes(
   listado: ListadoDeAjustes,
@@ -99,10 +113,7 @@ export async function consultarAjustes(
       query: {
         page: listado.pagina,
         size: listado.tamanio,
-        ...(listado.estado === null ? {} : { estado: estadoEnElContrato(listado.estado) }),
-        ...(listado.almacenId === null ? {} : { almacen: listado.almacenId }),
-        ...(listado.busqueda === '' ? {} : { q: listado.busqueda }),
-        ...(listado.orden === null ? {} : { sort: listado.orden }),
+        ...filtrosDe(listado),
       },
     },
   });
@@ -112,6 +123,16 @@ export async function consultarAjustes(
   }
 
   return { elementos: data.elementos.map(traducirResumen), total: enteroDelContrato(data.total) };
+}
+
+/** Los ajustes del listado, con sus filtros, su orden y todas sus páginas, en el CSV. */
+export async function exportarAjustes(listado: ListadoDeAjustes): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/inventario/ajustes/exportacion', {
+      params: { query: filtrosDe(listado) },
+      parseAs: 'blob',
+    }),
+  );
 }
 
 /** La ficha de uno, con todas sus líneas y la versión que cita el descarte. */

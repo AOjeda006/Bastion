@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
 import { clavesDeCategorias } from '../api/claves.ts';
-import { consultarCategorias } from '../api/consultas.ts';
+import { consultarCategorias, exportarCategorias } from '../api/consultas.ts';
 import { componerElArbol } from '../model/arbol.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
@@ -80,6 +81,7 @@ export function PaginaDeCategorias(): React.JSX.Element {
 
   return (
     <>
+      <BotonDeExportar exportar={exportarCategorias} />
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}
       <div className="relative mt-4 overflow-x-auto">

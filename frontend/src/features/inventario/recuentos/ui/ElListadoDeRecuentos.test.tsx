@@ -8,6 +8,7 @@ import type { Idioma } from '@/app/i18n/idioma.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { ALFA, PERMISOS_DE_LECTURA, almacenesDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
@@ -278,6 +279,19 @@ describe('El listado de recuentos', () => {
     // Con la URL ya acotada, las dos listas enseñan el filtro que se está viendo.
     expect(within(filtros).getByRole('combobox', { name: 'Estado' })).toHaveValue('Confirmado');
     expect(within(filtros).getByRole('combobox', { name: 'Almacén' })).toHaveValue(ALMACEN.id);
+  });
+
+  it('exportar se lleva el estado y el almacén del listado, sin la página', async () => {
+    const exportaciones = capturarExportaciones();
+    montar(`/recuentos?estado=Confirmado&almacen=${ALMACEN.id}&pagina=1`);
+
+    await waitFor(() => {
+      expect(filas()).toHaveLength(1);
+    });
+    await exportarYComprobar(exportaciones, '/api/v1/inventario/recuentos/exportacion', {
+      estado: 'Confirmado',
+      almacen: ALMACEN.id,
+    });
   });
 
   it('lo que la URL trae y no se reconoce se ignora: ni se manda ni se enseña', async () => {

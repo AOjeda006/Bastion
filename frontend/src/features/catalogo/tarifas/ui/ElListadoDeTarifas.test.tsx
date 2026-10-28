@@ -4,6 +4,7 @@ import { HttpResponse, delay, http } from 'msw';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ALFA, HOY_SIMULADO, tarifasDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 import { enLaZona } from '@/pruebas/zona.ts';
@@ -209,6 +210,19 @@ describe('El listado de tarifas', () => {
 
     // Acotado a un código, el botón de cada fila sobra: llevaría al sitio en el que ya se está.
     expect(screen.queryByRole('button', { name: 'Ver los tramos de PVP' })).not.toBeInTheDocument();
+  });
+
+  it('exportar se lleva los dos filtros del listado, y no su página', async () => {
+    abrirSesionYaRecuperada();
+    const exportaciones = capturarExportaciones();
+
+    montarPantalla(<PaginaDeTarifas />, '/tarifas?busqueda=venta&codigo=PVP&pagina=1');
+
+    await screen.findByText(/Mostrando los tramos de la tarifa «PVP»/);
+    await exportarYComprobar(exportaciones, '/api/v1/catalogo/tarifas/exportacion', {
+      q: 'venta',
+      codigo: 'PVP',
+    });
   });
 
   it('quitar el filtro de código lo borra de la URL y devuelve el listado entero', async () => {

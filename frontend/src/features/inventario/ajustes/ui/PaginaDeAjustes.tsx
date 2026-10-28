@@ -9,7 +9,7 @@ import { clavesDeMaestros } from '../../maestros/api/claves.ts';
 import { consultarAlmacenes } from '../../maestros/api/maestros.ts';
 import { VIDA_DE_UN_MAESTRO, useNombre } from '../../maestros/ui/nombres.ts';
 import { clavesDeAjustes } from '../api/claves.ts';
-import { consultarAjustes } from '../api/ajustes.ts';
+import { consultarAjustes, exportarAjustes } from '../api/ajustes.ts';
 import { ESTADOS_DE_AJUSTE, type ResumenDeAjuste } from '../model/ajuste.ts';
 import {
   LARGO_DE_LA_BUSQUEDA,
@@ -28,6 +28,7 @@ import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
@@ -153,6 +154,7 @@ function Contenido({
 
   return (
     <>
+      <BotonDeExportar exportar={() => exportarAjustes(listado)} />
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}
       <div className="relative mt-4 overflow-x-auto">

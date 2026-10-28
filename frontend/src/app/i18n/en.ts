@@ -17,6 +17,8 @@ export const en: DiccionarioDelArmazon = {
     cargando: 'Loading {{que}}…',
     laPantalla: 'the screen',
     volverAIntentarlo: 'Try again',
+    exportar: 'Export to CSV',
+    exportando: 'Preparing the file…',
     pantallaRota:
       'This screen could not be shown. You can keep using the rest of Bastion from the menu; if ' +
       'it happens again, let us know what you were doing.',

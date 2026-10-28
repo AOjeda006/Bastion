@@ -1,9 +1,10 @@
 import type { ListadoDeSaldos, Saldo, SaldosAUnaFecha } from '../model/saldo.ts';
 import type { Maestro } from '../../maestros/api/maestros.ts';
 import { api } from '@/shared/api/cliente.ts';
-import type { components } from '@/shared/api/esquema.ts';
+import type { components, operations } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 
 /**
  * La frontera del saldo con el contrato (ADR-0055, y ADR-0063 §8).
@@ -27,6 +28,18 @@ function traducir(dto: SaldoDto): Saldo {
   };
 }
 
+/** Lo que admite la exportación, que son los filtros del listado sin `page` ni `size`. */
+type Filtros = NonNullable<operations['Saldos_Exportar']['parameters']['query']>;
+
+/** El día y los filtros del listado, sin la página: los que llevan el listado y su exportación. */
+function filtrosDe(listado: ListadoDeSaldos): Filtros {
+  return {
+    ...(listado.fecha === null ? {} : { fecha: listado.fecha }),
+    ...(listado.almacenId === null ? {} : { almacen: listado.almacenId }),
+    ...(listado.articuloId === null ? {} : { articulo: listado.articuloId }),
+  };
+}
+
 /**
  * Una página de saldos al final del día pedido, por artículo y almacén, como los ordena la API.
  *
@@ -39,9 +52,7 @@ export async function consultarSaldos(listado: ListadoDeSaldos): Promise<SaldosA
       query: {
         page: listado.pagina,
         size: listado.tamanio,
-        ...(listado.fecha === null ? {} : { fecha: listado.fecha }),
-        ...(listado.almacenId === null ? {} : { almacen: listado.almacenId }),
-        ...(listado.articuloId === null ? {} : { articulo: listado.articuloId }),
+        ...filtrosDe(listado),
       },
     },
   });
@@ -55,6 +66,25 @@ export async function consultarSaldos(listado: ListadoDeSaldos): Promise<SaldosA
     elementos: data.saldos.elementos.map(traducir),
     total: enteroDelContrato(data.saldos.total),
   };
+}
+
+/**
+ * Los saldos del listado, con sus filtros y todas sus páginas, en el CSV de la exportación.
+ *
+ * **El día va siempre, y es el que contestó el listado**, no el del campo: sin fecha, el listado
+ * dice el día del servidor, y la exportación pedida sin ella diría el suyo, que pasada la
+ * medianoche ya es otro. El fichero tiene que ser la tabla que se está mirando.
+ *
+ * @param listado - Los filtros de la pantalla.
+ * @param dia - El día que dice la tabla, el que contestó el servidor al listado.
+ */
+export async function exportarSaldos(listado: ListadoDeSaldos, dia: string): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/inventario/saldos/exportacion', {
+      params: { query: filtrosDe({ ...listado, fecha: dia }) },
+      parseAs: 'blob',
+    }),
+  );
 }
 
 /**

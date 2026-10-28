@@ -3,6 +3,7 @@ import { api } from '@/shared/api/cliente.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 import type { Paginacion } from '@/shared/lib/parametrosDeUrl.ts';
 
 /** La frontera de las categorías con el contrato. Se GENERA: `npm run api`. */
@@ -29,6 +30,14 @@ export async function consultarCategorias(paginacion: Paginacion): Promise<Pagin
   }
 
   return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
+}
+
+/**
+ * Las categorías, todas, en el CSV de la exportación (ítem 3.2). Planas como en el listado, con el
+ * nombre de su padre al lado: el árbol es de la pantalla, no del fichero.
+ */
+export async function exportarCategorias(): Promise<Fichero> {
+  return ficheroDe(await api.GET('/api/v1/catalogo/categorias/exportacion', { parseAs: 'blob' }));
 }
 
 /**

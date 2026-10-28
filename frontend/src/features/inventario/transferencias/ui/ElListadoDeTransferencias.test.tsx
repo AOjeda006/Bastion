@@ -7,6 +7,7 @@ import { PaginaDeTransferencias } from './PaginaDeTransferencias.tsx';
 import type { components } from '@/shared/api/esquema.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { ALFA, NAVE_DEL_NORTE, PERMISOS_DE_LECTURA, almacenesDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
@@ -196,6 +197,24 @@ describe('El listado de transferencias', () => {
     });
     await waitFor(() => {
       expect(filas().map((fila) => fila[0])).toEqual(['Transferencia 15']);
+    });
+  });
+
+  it('exportar se lleva los filtros y el orden del listado con los nombres de la API, sin la página', async () => {
+    const exportaciones = capturarExportaciones();
+    montar(
+      `/transferencias?estado=Enviada&origen=${CENTRAL.id}&destino=${NAVE_DEL_NORTE.id}` +
+        '&orden=-fechaDeRecepcion&pagina=1',
+    );
+
+    await waitFor(() => {
+      expect(filas().map((fila) => fila[0])).toEqual(['Transferencia 15']);
+    });
+    await exportarYComprobar(exportaciones, '/api/v1/inventario/transferencias/exportacion', {
+      estado: 'Enviada',
+      origen: CENTRAL.id,
+      destino: NAVE_DEL_NORTE.id,
+      sort: '-fechaDeRecepcion',
     });
   });
 

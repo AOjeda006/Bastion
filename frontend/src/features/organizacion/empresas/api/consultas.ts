@@ -3,6 +3,7 @@ import { api } from '@/shared/api/cliente.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 import type { Paginacion } from '@/shared/lib/parametrosDeUrl.ts';
 
 /** La frontera de esta funcionalidad con el contrato. El tipo es el GENERADO, no uno escrito aquí. */
@@ -38,4 +39,12 @@ export async function consultarEmpresas(paginacion: Paginacion): Promise<PaginaD
   }
 
   return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
+}
+
+/**
+ * Las empresas del listado, todas, en el CSV de la exportación (ítem 3.2). Con el mismo permiso
+ * que el listado, y no son las del selector de la cabecera, por lo mismo que arriba.
+ */
+export async function exportarEmpresas(): Promise<Fichero> {
+  return ficheroDe(await api.GET('/api/v1/organizacion/empresas/exportacion', { parseAs: 'blob' }));
 }

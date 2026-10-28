@@ -43,6 +43,8 @@ export const es = {
     cargando: 'Cargando {{que}}…',
     laPantalla: 'la pantalla',
     volverAIntentarlo: 'Volver a intentarlo',
+    exportar: 'Exportar a CSV',
+    exportando: 'Preparando el fichero…',
     pantallaRota:
       'Esta pantalla no se ha podido mostrar. Puedes seguir usando el resto de Bastion desde el ' +
       'menú; si vuelve a pasar, avisa indicando qué estabas haciendo.',

@@ -7,6 +7,7 @@ import { PaginaDeCodigosDeBarras } from './PaginaDeCodigosDeBarras.tsx';
 import type { Idioma } from '@/app/i18n/idioma.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { ALFA, PERMISOS_DE_LECTURA, articulosDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
@@ -221,6 +222,17 @@ describe('Los códigos de barras del artículo', () => {
     expect(screen.getByRole('link', { name: 'Volver a los artículos' })).toHaveAttribute(
       'href',
       '/articulos',
+    );
+  });
+
+  it('exportar se lleva los códigos del artículo, y no lo que trae del listado', async () => {
+    const exportaciones = capturarExportaciones();
+    montar('es', PUEDE_TODO, '?pagina=2&busqueda=tor');
+
+    expect(await screen.findByText('Tornillo M6 zincado', { exact: false })).toBeVisible();
+    await exportarYComprobar(
+      exportaciones,
+      `/api/v1/catalogo/articulos/${ARTICULO.id}/gtins/exportacion`,
     );
   });
 

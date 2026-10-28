@@ -7,6 +7,7 @@ import { PaginaDeAjustes } from './PaginaDeAjustes.tsx';
 import type { components } from '@/shared/api/esquema.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { ALFA, PERMISOS_DE_LECTURA, almacenesDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
@@ -185,6 +186,21 @@ describe('El listado de ajustes', () => {
     });
     await waitFor(() => {
       expect(filas().map((fila) => fila[0])).toEqual(['Borrador de ALM-ALFA del 5 nov 2026']);
+    });
+  });
+
+  it('exportar se lleva los filtros y el orden del listado con los nombres de la API, sin la página', async () => {
+    const exportaciones = capturarExportaciones();
+    montar(`/ajustes?estado=Borrador&almacen=${ALMACEN.id}&busqueda=rotura&orden=-numero&pagina=1`);
+
+    await waitFor(() => {
+      expect(filas().map((fila) => fila[0])).toEqual(['Borrador de ALM-ALFA del 5 nov 2026']);
+    });
+    await exportarYComprobar(exportaciones, '/api/v1/inventario/ajustes/exportacion', {
+      estado: 'Borrador',
+      almacen: ALMACEN.id,
+      q: 'rotura',
+      sort: '-numero',
     });
   });
 

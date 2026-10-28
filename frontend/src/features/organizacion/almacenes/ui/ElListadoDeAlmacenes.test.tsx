@@ -4,6 +4,11 @@ import { HttpResponse, delay, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { ALFA, almacenesDe } from '@/pruebas/datos.ts';
+import {
+  type Contestacion,
+  capturarExportaciones,
+  exportarYComprobar,
+} from '@/pruebas/exportaciones.ts';
 import { abrirSesionSimulada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarAplicacion } from '@/pruebas/montar.tsx';
 import type { components } from '@/shared/api/esquema.ts';
@@ -68,6 +73,8 @@ describe('El listado de almacenes', () => {
     expect(screen.getByRole('navigation', { name: 'Paginación' })).toHaveTextContent(
       'Sin resultados',
     );
+    // Exportar un listado vacío daría una cabecera sola: el botón no se ofrece.
+    expect(screen.queryByRole('button', { name: 'Exportar a CSV' })).not.toBeInTheDocument();
   });
 
   it('pasar de página lo escribe EN LA URL, y de la URL sale lo que se pide', async () => {
@@ -103,6 +110,51 @@ describe('El listado de almacenes', () => {
     expect(await screen.findByText('Almacén 21')).toBeVisible();
     expect(screen.getByRole('navigation', { name: 'Paginación' })).toHaveTextContent('21–25 de 25');
     expect(pedidas).toEqual(['2']);
+  });
+
+  it('exportar se lleva todos los almacenes, no la página, con el nombre del servidor', async () => {
+    abrirSesionSimulada();
+    servidor.use(http.get('/api/v1/organizacion/almacenes', pagina([])));
+    const exportaciones = capturarExportaciones();
+
+    montarAplicacion('/almacenes?pagina=2');
+
+    expect(await screen.findByText('Almacén 21')).toBeVisible();
+    await exportarYComprobar(exportaciones, '/api/v1/organizacion/almacenes/exportacion');
+  });
+
+  it('mientras se prepara, el botón se apaga y lo dice; si falla, lo dice y deja reintentar', async () => {
+    const usuario = userEvent.setup();
+    abrirSesionSimulada();
+    const contestacion: Contestacion = { fallo: 500, espera: 80 };
+    const exportaciones = capturarExportaciones(contestacion);
+
+    montarAplicacion('/almacenes');
+
+    const exportar = await screen.findByRole('button', { name: 'Exportar a CSV' });
+    await usuario.click(exportar);
+
+    // Un `status`, para que el lector de pantalla lo anuncie sin mover el foco del botón.
+    expect(await screen.findByText('Preparando el fichero…')).toHaveAttribute('role', 'status');
+    expect(exportar).toBeDisabled();
+
+    // El fallo se dice con la frase del listado, y no se guarda nada.
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'El servidor no ha podido responder. Inténtalo de nuevo.',
+    );
+    expect(exportar).toBeEnabled();
+    expect(screen.queryByText('Preparando el fichero…')).not.toBeInTheDocument();
+    expect(exportaciones.guardadas).toEqual([]);
+
+    // Y el mismo botón vuelve a pedir: la segunda vez, el fichero llega y el aviso se va.
+    contestacion.fallo = null;
+    await usuario.click(exportar);
+
+    await waitFor(() => {
+      expect(exportaciones.guardadas).toHaveLength(1);
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(exportaciones.pedidas).toHaveLength(2);
   });
 
   it('una página disparatada en la URL no rompe la pantalla', async () => {

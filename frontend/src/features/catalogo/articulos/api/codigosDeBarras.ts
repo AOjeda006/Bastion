@@ -4,6 +4,7 @@ import { api } from '@/shared/api/cliente.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 
 type CodigoBarrasDto = components['schemas']['CodigoBarrasDto'];
 type AgregarCodigoBarrasDto = components['schemas']['AgregarCodigoBarrasDto'];
@@ -57,6 +58,16 @@ export async function consultarCodigosDeBarras(articuloId: string): Promise<Codi
   }
 
   return data.map(traducir);
+}
+
+/** Los códigos de barras de un artículo, los mismos y en el mismo orden, en el CSV. */
+export async function exportarCodigosDeBarras(articuloId: string): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/catalogo/articulos/{articuloId}/gtins/exportacion', {
+      params: { path: { articuloId } },
+      parseAs: 'blob',
+    }),
+  );
 }
 
 /**

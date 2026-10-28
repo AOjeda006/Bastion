@@ -4,6 +4,7 @@ import { HttpResponse, delay, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { ALFA, categoriasDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 import { PaginaDeCategorias } from './PaginaDeCategorias.tsx';
@@ -119,6 +120,18 @@ describe('El árbol de categorías', () => {
       'href',
       '/articulos?categoria=eeeeeee1-0000-0000-0000-000000000002',
     );
+  });
+
+  it('exportar se lleva todas las categorías, no la página', async () => {
+    abrirSesionYaRecuperada();
+    const exportaciones = capturarExportaciones();
+
+    montarPantalla(<PaginaDeCategorias />, '/categorias?pagina=1');
+
+    expect(
+      await screen.findByRole('link', { name: 'Ver los artículos de Tornillería' }),
+    ).toBeVisible();
+    await exportarYComprobar(exportaciones, '/api/v1/catalogo/categorias/exportacion');
   });
 
   it('una categoría cuyo padre se quedó en otra página se pinta IGUALMENTE, marcada', async () => {

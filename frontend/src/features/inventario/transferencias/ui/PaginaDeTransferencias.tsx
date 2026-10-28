@@ -9,7 +9,7 @@ import { clavesDeMaestros } from '../../maestros/api/claves.ts';
 import { consultarAlmacenes, type Maestro } from '../../maestros/api/maestros.ts';
 import { VIDA_DE_UN_MAESTRO, useNombre } from '../../maestros/ui/nombres.ts';
 import { clavesDeTransferencias } from '../api/claves.ts';
-import { consultarTransferencias } from '../api/transferencias.ts';
+import { consultarTransferencias, exportarTransferencias } from '../api/transferencias.ts';
 import {
   PARAMETRO_DE_DESTINO,
   PARAMETRO_DE_ESTADO,
@@ -27,6 +27,7 @@ import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { ExplicacionDeMarca } from '@/shared/ui/Explicacion.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
@@ -161,6 +162,7 @@ function Contenido({
 
   return (
     <>
+      <BotonDeExportar exportar={() => exportarTransferencias(listado)} />
       {/* Con dos almacenes y dos fechas, la tabla es más ancha que un móvil: se desplaza ella, y
           no la página (WCAG 1.4.10, ADR-0068 §8). Con `relative`, también lo que va en absoluto,
           como un `sr-only`, que si no la empuja (ítem 2.20). */}

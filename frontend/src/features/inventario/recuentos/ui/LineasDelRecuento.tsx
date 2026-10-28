@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useNombre } from '../../maestros/ui/nombres.ts';
 import { clavesDeRecuentos } from '../api/claves.ts';
-import { consultarLinea, consultarLineas, contarLinea } from '../api/recuentos.ts';
+import { consultarLinea, consultarLineas, contarLinea, exportarLineas } from '../api/recuentos.ts';
 import {
   cambioDelTeorico,
   cantidadLegible,
@@ -23,6 +23,7 @@ import type { ListadoDeLineas } from '../model/listado.ts';
 import { RECHAZO_DE_LO_CONTADO } from '../model/rechazos.ts';
 import type { FichaDeLinea, LineaDeRecuento, Recuento } from '../model/recuento.ts';
 import { tipoDeFallo } from '@/shared/api/errores.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
@@ -129,6 +130,8 @@ export function LineasDelRecuento({
     <>
       {/* Con datos, el fallo de volver a leer va encima y no en su lugar. */}
       {fallo}
+
+      <BotonDeExportar exportar={() => exportarLineas(recuento.id, listado)} />
 
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}

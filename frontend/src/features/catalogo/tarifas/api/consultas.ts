@@ -1,9 +1,21 @@
 import type { ListadoDeTarifas } from '../model/listado.ts';
 import type { PaginaDeTarifas, Tarifa } from '../model/tarifa.ts';
 import { api } from '@/shared/api/cliente.ts';
-import type { components } from '@/shared/api/esquema.ts';
+import type { components, operations } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
+
+/** Lo que admite la exportación, que son los filtros del listado sin `page` ni `size`. */
+type Filtros = NonNullable<operations['Tarifas_Exportar']['parameters']['query']>;
+
+/** Los filtros del listado, sin la página: los que llevan el listado y su exportación. */
+function filtrosDe(listado: ListadoDeTarifas): Filtros {
+  return {
+    ...(listado.busqueda === '' ? {} : { q: listado.busqueda }),
+    ...(listado.codigo === null ? {} : { codigo: listado.codigo }),
+  };
+}
 
 /**
  * La frontera de las tarifas con el contrato.
@@ -43,8 +55,7 @@ export async function consultarTarifas(listado: ListadoDeTarifas): Promise<Pagin
       query: {
         page: listado.pagina,
         size: listado.tamanio,
-        ...(listado.busqueda === '' ? {} : { q: listado.busqueda }),
-        ...(listado.codigo === null ? {} : { codigo: listado.codigo }),
+        ...filtrosDe(listado),
       },
     },
   });
@@ -56,4 +67,14 @@ export async function consultarTarifas(listado: ListadoDeTarifas): Promise<Pagin
   }
 
   return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
+}
+
+/** Las tarifas del listado, con sus dos filtros y en el mismo orden, en el CSV. */
+export async function exportarTarifas(listado: ListadoDeTarifas): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/catalogo/tarifas/exportacion', {
+      params: { query: filtrosDe(listado) },
+      parseAs: 'blob',
+    }),
+  );
 }

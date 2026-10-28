@@ -4,6 +4,7 @@ import { HttpResponse, delay, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { ALFA, tercerosDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 import { PaginaDeTerceros } from './PaginaDeTerceros.tsx';
@@ -138,6 +139,18 @@ describe('El listado de terceros', () => {
     expect(screen.queryByText('Ferretería Industrial del Sur SL')).not.toBeInTheDocument();
     expect(screen.getByRole('searchbox')).toHaveValue('Girondin');
     expect(servidorSimulado.busquedasDeTerceros).toEqual(['Girondin']);
+  });
+
+  it('exportar se lleva el filtro del listado, y no su página', async () => {
+    abrirSesionYaRecuperada();
+    const exportaciones = capturarExportaciones();
+
+    montarPantalla(<PaginaDeTerceros />, '/terceros?busqueda=Girondin&pagina=1');
+
+    expect(await screen.findByText('Outillage Girondin SARL')).toBeVisible();
+    await exportarYComprobar(exportaciones, '/api/v1/terceros/terceros/exportacion', {
+      q: 'Girondin',
+    });
   });
 
   it('cambiar el filtro vuelve a la primera página', async () => {

@@ -3,6 +3,7 @@ import { api } from '@/shared/api/cliente.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
 import { fallo } from '@/shared/api/errores.ts';
+import { ficheroDe, type Fichero } from '@/shared/api/exportacion.ts';
 import type { Paginacion } from '@/shared/lib/parametrosDeUrl.ts';
 
 /**
@@ -37,4 +38,11 @@ export async function consultarAlmacenes(paginacion: Paginacion): Promise<Pagina
   }
 
   return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
+}
+
+/** Los almacenes de la empresa activa, todos, en el CSV de la exportación (ítem 3.2). */
+export async function exportarAlmacenes(): Promise<Fichero> {
+  return ficheroDe(
+    await api.GET('/api/v1/organizacion/almacenes/exportacion', { parseAs: 'blob' }),
+  );
 }

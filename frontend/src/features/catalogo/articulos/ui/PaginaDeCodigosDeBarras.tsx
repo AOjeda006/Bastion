@@ -11,6 +11,7 @@ import {
   agregarCodigoDeBarras,
   consultarCodigosDeBarras,
   cuerpoDelAlta,
+  exportarCodigosDeBarras,
   quitarCodigoDeBarras,
 } from '../api/codigosDeBarras.ts';
 import { consultarFicha } from '../api/consultas.ts';
@@ -29,6 +30,7 @@ import { intentoPara, type Intento } from '@/shared/api/intento.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
+import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 
@@ -157,6 +159,8 @@ export function PaginaDeCodigosDeBarras(): React.JSX.Element {
       {codigos.isError && fallo(codigos.error, codigos.refetch)}
 
       <Avisos aviso={aviso} numero={numeroDeAviso} textoDeFallo={textoDeFallo} />
+
+      {codigos.data.length > 0 && <BotonDeExportar exportar={() => exportarCodigosDeBarras(id)} />}
 
       {codigos.data.length === 0 ? (
         <Vacio mensaje={t('catalogo.articulos.gestionDeCodigosDeBarras.ninguno')} />

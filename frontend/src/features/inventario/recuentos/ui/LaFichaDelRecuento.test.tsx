@@ -8,6 +8,7 @@ import type { Idioma } from '@/app/i18n/idioma.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { ALFA, PERMISOS_DE_LECTURA, almacenesDe, articulosDe } from '@/pruebas/datos.ts';
+import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
@@ -839,6 +840,37 @@ describe('La ficha del recuento', () => {
     });
     expect(screen.getByText('Se descartó sin mover nada.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Contar/ })).not.toBeInTheDocument();
+  });
+
+  it('exportar se lleva las líneas de la vista que se mira, sin la página', async () => {
+    const exportaciones = capturarExportaciones();
+    montar('es', PUEDE_TODO, `/recuentos/${RECUENTO}?solo=sin-contar&pagina=1`);
+
+    await screen.findByRole('button', { name: 'Contar la línea 1' });
+    await exportarYComprobar(
+      exportaciones,
+      `/api/v1/inventario/recuentos/${RECUENTO}/lineas/exportacion`,
+      { solo: 'sin-contar' },
+    );
+  });
+
+  it('cerrado, exportar se lleva todas las líneas, como las enseña, aunque el enlace traiga una vista', async () => {
+    Object.assign(servidorDelRecuento, {
+      estado: 'Confirmado',
+      numero: 12,
+      fechaDeConfirmacion: '2026-11-06',
+      lineas: todasContadas(),
+    });
+    const exportaciones = capturarExportaciones();
+    montar('es', PUEDE_TODO, `/recuentos/${RECUENTO}?solo=teorico-cambiado`);
+
+    await waitFor(() => {
+      expect(filas().map((fila) => fila[0])).toEqual(['1', '2', '3']);
+    });
+    await exportarYComprobar(
+      exportaciones,
+      `/api/v1/inventario/recuentos/${RECUENTO}/lineas/exportacion`,
+    );
   });
 
   it('cerrado, un enlace viejo a una vista enseña todas sus líneas y no ofrece las vistas', async () => {
