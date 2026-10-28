@@ -140,19 +140,26 @@ public sealed class LasExportacionesDeInventarioTests(PostgresConTodosLosModulos
 
         await escena.ContarConSuVersionAsync(deA.Id, delPrimerLote.Id, 2m);
 
+        // DESPUÉS DE CONTARLO, ENTRA UNO MÁS DEL MISMO LOTE: el teórico de ahora ya no es el de
+        // cuando se contó, la diferencia es contra el de ahora, y la línea lo dice. Sin esto, ningún
+        // teórico cambiaba y escribir siempre «no» salía verde (la mutación 930).
+        await escena.EntrarAsync(postgres, de.AlmacenA, de.UbicacionA, 1m, lote: "L-1");
+
         string lineas = $"{EscenaDeRecuento.Recuentos}/{deA.Id}/lineas";
-        string contada = $"1;EXR-A1;{Hueco};APT-950;Artículo 950;L-1;;W950;Unidad 950;Precargada;;2;3;3;0;-1;no\r\n";
+        string contada = $"1;EXR-A1;{Hueco};APT-950;Artículo 950;L-1;;W950;Unidad 950;Precargada;;2;3;4;0;-2;sí\r\n";
         string sinContar = $"2;EXR-A1;{Hueco};APT-950;Artículo 950;L-2;;W950;Unidad 950;Precargada;;;;5;0;;no\r\n";
 
         (await Exportaciones.ExportarAsync(cliente, lineas, "lineas-de-recuento")).ShouldBe(
             CabeceraDeLineasDeRecuento + contada + sinContar,
-            "lo contado, el teórico al contarlo y la diferencia; y sin contar, las tres vacías");
+            "lo contado, el teórico al contarlo, el de ahora y la diferencia; y sin contar, las tres vacías");
         (await Exportaciones.ExportarAsync(cliente, lineas, "lineas-de-recuento", "?sort=-numero")).ShouldBe(
             CabeceraDeLineasDeRecuento + sinContar + contada);
         (await Exportaciones.ExportarAsync(cliente, lineas, "lineas-de-recuento", "?solo=sin-contar")).ShouldBe(
             CabeceraDeLineasDeRecuento + sinContar);
         (await Exportaciones.ExportarAsync(cliente, lineas, "lineas-de-recuento", "?q=l-1")).ShouldBe(
             CabeceraDeLineasDeRecuento + contada);
+        (await Exportaciones.ExportarAsync(cliente, lineas, "lineas-de-recuento", "?solo=teorico-cambiado"))
+            .ShouldBe(CabeceraDeLineasDeRecuento + contada);
 
         // El recuento que no existe es el 404 del listado de sus líneas, con su problema y sin fichero.
         string inventado = $"{EscenaDeRecuento.Recuentos}/{Guid.CreateVersion7()}/lineas";
