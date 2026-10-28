@@ -222,9 +222,9 @@ function Lineas({ transferencia }: { transferencia: Transferencia }): React.JSX.
         {!conValor && ` ${t('inventario.transferencias.ficha.notaDelBorrador')}`}
       </p>
 
-      {transferencia.lineas.length > 0 && (
-        <BotonDeExportar exportar={() => exportarLineas(transferencia.id)} />
-      )}
+      {/* Sin guarda de «sin líneas»: una transferencia no se abre sin ellas
+          (`transferencia-sin-lineas`), y ninguna operación se las quita después. */}
+      <BotonDeExportar exportar={() => exportarLineas(transferencia.id)} />
 
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}

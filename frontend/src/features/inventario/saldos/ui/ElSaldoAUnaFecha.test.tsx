@@ -308,17 +308,19 @@ describe('El saldo a una fecha', () => {
     });
   });
 
-  it('sin saldos lo dice, y no es lo mismo que ninguno con el filtro', async () => {
+  it('sin saldos lo dice, y no es lo mismo que ninguno con el filtro; y no ofrece exportar', async () => {
     servidorDeSaldos.saldos = [];
     const primera = montar();
 
     expect(await screen.findByText('Esta empresa todavía no ha movido stock.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Exportar a CSV' })).not.toBeInTheDocument();
     primera.unmount();
 
     for (const filtro of [`almacen=${ALMACEN.id}`, `articulo=${TORNILLO.id}`]) {
       const acotada = montar(`/saldos?${filtro}`);
 
       expect(await screen.findByText('Ningún saldo coincide con el filtro.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Exportar a CSV' })).not.toBeInTheDocument();
       acotada.unmount();
     }
   });

@@ -250,7 +250,7 @@ describe('Los códigos de barras del artículo', () => {
     );
   });
 
-  it('sin ninguno, lo dice en vez de enseñar una tabla vacía', async () => {
+  it('sin ninguno, lo dice en vez de enseñar una tabla vacía, y no ofrece exportar', async () => {
     servidorDeCodigos.codigos = [];
     montar();
 
@@ -258,6 +258,7 @@ describe('Los códigos de barras del artículo', () => {
       await screen.findByText('Este artículo todavía no tiene ningún código de barras.'),
     ).toBeVisible();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Exportar a CSV' })).not.toBeInTheDocument();
   });
 
   // `constructor` porque un objeto lo hereda: un registro consultado con `??` lo daría por bueno.
