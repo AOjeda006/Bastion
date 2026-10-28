@@ -29,11 +29,11 @@ namespace Bastion.Api.IntegrationTests.Listados;
 /// de un recuento cuelgan de algo, y filtran en memoria, sin paginador.
 /// </para>
 /// <para>
-/// <b>Semillas: la 930</b>, la primera del bloque del 3.2, que va de la 930 a la 949. Del 931 al
-/// 934 son de <c>ElPuertoDelArticuloContraLaBaseTests</c>, del 935 al 939 de
-/// <c>LasExportacionesDeOrganizacionTests</c>, del 940 al 942 de
+/// <b>Semillas: la 930</b>, la primera del bloque del 3.2, que va de la 930 a la 949, y se alarga
+/// hasta la 953. Del 931 al 934 son de <c>ElPuertoDelArticuloContraLaBaseTests</c>, del 935 al 939
+/// de <c>LasExportacionesDeOrganizacionTests</c>, del 940 al 942 de
 /// <c>LaExportacionDeTercerosTests</c>, del 943 al 948 de <c>LasExportacionesDeCatalogoTests</c>, y
-/// el 949 queda libre.
+/// del 950 al 953 de <c>LasExportacionesDeInventarioTests</c>. El 949 queda libre.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

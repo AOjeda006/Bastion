@@ -1,15 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Tests unitarios del módulo Inventario: el agregado `Ajuste` con su máquina de estados y la
-    fila del libro con su aritmética.
+    Tests unitarios del módulo Inventario: el agregado `Ajuste` con su máquina de estados, la
+    fila del libro con su aritmética y, desde el 3.2, las exportaciones.
 
-    SOLO `Domain` Y `Contracts`, como Organización y Terceros y a diferencia de Catálogo. Lo que
-    se prueba aquí son invariantes de agregado y una regla de redondeo: no hace falta ningún
-    puerto, así que tampoco hay dobles. El `Contracts` entra por una sola cosa —`AjusteConfirmado`
-    y `AjusteAnulado`, que son los eventos que la transición exige— y esa dependencia dice algo:
-    el dominio no construye sus propios eventos (quien lo hace es la capa de aplicación), así que
-    un test del dominio tiene que traerlos de donde viven.
+    `Domain` Y `Contracts` para el dominio. Lo que se prueba ahí son invariantes de agregado y una
+    regla de redondeo: no hace falta ningún puerto. El `Contracts` entró por una sola cosa
+    —`AjusteConfirmado` y `AjusteAnulado`, que son los eventos que la transición exige— y esa
+    dependencia dice algo: el dominio no construye sus propios eventos (quien lo hace es la capa
+    de aplicación), así que un test del dominio tiene que traerlos de donde viven.
+
+    `Application` DESDE EL 3.2, como Catálogo. Las exportaciones nombran los maestros de cada
+    página solo con el permiso de verlos (ADR-0074 §3), y eso se decide en la capa de
+    aplicación, con un `if` y sin E/S. Sus casos llevan sus dobles dentro, escritos a mano: un
+    usuario con los permisos que se le den y un puerto que apunta lo que se le pregunta.
 
     POR QUÉ NO BASTA CON LAS DE INTEGRACIÓN. El carril completo ejerce el camino feliz —abrir,
     confirmar, leer— contra una base de verdad, y no puede ejercer lo demás: las fronteras del
@@ -25,6 +29,7 @@
     <ProjectReference Include="../../src/BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Inventario/Bastion.Inventario.Domain/Bastion.Inventario.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Inventario/Bastion.Inventario.Contracts/Bastion.Inventario.Contracts.csproj" />
+    <ProjectReference Include="../../src/Modules/Inventario/Bastion.Inventario.Application/Bastion.Inventario.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup Label="Marco de pruebas">

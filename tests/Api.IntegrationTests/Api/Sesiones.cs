@@ -80,7 +80,31 @@ public static class Sesiones
         administrador.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", sesionDelAdministrador.TokenDeAcceso);
 
-        Guid empresaId = sesionDelAdministrador.EmpresaActivaId;
+        return await api.ConPermisosEnAsync(administrador, sesionDelAdministrador.EmpresaActivaId, permisos)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Lo mismo, en la empresa en la que está operando el administrador que se pase: una cuenta
+    /// nueva con EXACTAMENTE esos permisos, y esa empresa como la única suya.
+    /// </summary>
+    /// <remarks>
+    /// <b>La cuenta nace en la empresa activa de quien la crea</b> (R8), así que el administrador
+    /// tiene que estar operando en <paramref name="empresaId"/>: el caso que la pide en la empresa
+    /// de su escena le pasa el cliente de la escena. Y se afirma al entrar, porque una cuenta que
+    /// naciera en otra leería otros datos, y un listado vacío se leería como un problema de
+    /// permisos.
+    /// </remarks>
+    /// <param name="api">La fábrica del host.</param>
+    /// <param name="administrador">Un cliente que lo puede todo, operando en esa empresa.</param>
+    /// <param name="empresaId">La empresa en la que opera, y en la que se dan los permisos.</param>
+    /// <param name="permisos">Los permisos del rol que se le asigna. Vacío = ninguno.</param>
+    public static async Task<HttpClient> ConPermisosEnAsync(
+        this ApiDeVerdad api, HttpClient administrador, Guid empresaId, params string[] permisos)
+    {
+        ArgumentNullException.ThrowIfNull(api);
+        ArgumentNullException.ThrowIfNull(administrador);
+        ArgumentNullException.ThrowIfNull(permisos);
 
         // Correo y código irrepetibles: los tests comparten base y se ejecutan en el mismo
         // proceso, así que reutilizar un correo haría que el segundo chocara con un 409 y el
@@ -126,7 +150,9 @@ public static class Sesiones
         }
 
         HttpClient cliente = api.CrearCliente();
-        await AutenticarAsync(cliente, correo, contrasena).ConfigureAwait(false);
+        SesionDto sesion = await AutenticarAsync(cliente, correo, contrasena).ConfigureAwait(false);
+
+        sesion.EmpresaActivaId.ShouldBe(empresaId, "la cuenta recortada entra en la empresa en la que nació");
 
         return cliente;
     }

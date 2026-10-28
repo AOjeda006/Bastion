@@ -1,7 +1,9 @@
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Ajustes;
 using Bastion.Inventario.Contracts;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -39,6 +41,24 @@ public sealed class AjustesController(
     IConfirmarAjuste confirmar,
     IAnularAjuste anular) : ControladorDeInventario
 {
+    /// <summary>
+    /// Las columnas de la exportación: lo que el listado publica de cada ajuste, sin sus
+    /// identificadores, y su almacén con su código y su nombre (ADR-0074).
+    /// </summary>
+    /// <remarks>
+    /// El estado va con el valor del DTO, sin traducir (*La puerta del 3.2*). Un almacén que quien
+    /// exporta no puede ver sale con su identificador, como en la pantalla.
+    /// </remarks>
+    internal static readonly HojaDeExportacion<AjusteExportado> HojaDeAjustes = new(
+        "ajustes",
+        [
+            new("numero", fila => CampoCsv.Numero(fila.Ajuste.Numero)),
+            .. ColumnasDeMaestro.De<AjusteExportado>("almacen", fila => fila.Almacen),
+            new("fecha_de_operacion", fila => CampoCsv.Fecha(fila.Ajuste.FechaDeOperacion)),
+            new("estado", fila => CampoCsv.Valor(fila.Ajuste.Estado)),
+            new("motivo", fila => CampoCsv.Texto(fila.Ajuste.Motivo)),
+        ]);
+
     /// <summary>Devuelve una página de ajustes, sin sus líneas.</summary>
     /// <remarks>
     /// Va por la fecha de operación, de la última a la primera, y se ordena también por el número. Un
@@ -68,6 +88,43 @@ public sealed class AjustesController(
             texto,
             listar,
             (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Estado, consulta.Almacen, testigo),
+            cancelacion).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Descarga el listado de ajustes entero, con su orden, su texto, su estado y su almacén, en
+    /// CSV (ADR-0073).
+    /// </summary>
+    /// <param name="consulta">
+    /// El orden, el estado y el almacén (<c>sort</c>, <c>estado</c>, <c>almacen</c>).
+    /// </param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
+    /// <param name="exportar">El caso de uso del listado, con el almacén nombrado.</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("exportacion")]
+    [ExigePermiso(PermisosDeInventario.AjusteVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] ConsultaDeAjustes consulta,
+        [FromQuery] FiltroDeTexto texto,
+        [FromServices] IExportarAjustes exportar,
+        [FromServices] IFotoDeInventario foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(consulta);
+        ArgumentNullException.ThrowIfNull(exportar);
+
+        return await ExportarListadoAsync(
+            consulta,
+            texto,
+            exportar,
+            (paginacion, testigo) => exportar.EjecutarAsync(paginacion, consulta.Estado, consulta.Almacen, testigo),
+            foto,
+            HojaDeAjustes,
+            reloj,
             cancelacion).ConfigureAwait(false);
     }
 

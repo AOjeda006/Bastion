@@ -1,7 +1,10 @@
+using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Transferencias;
 using Bastion.Inventario.Contracts;
 using Bastion.Inventario.Contracts.Transferencias;
@@ -46,6 +49,51 @@ public sealed class TransferenciasController(
     IRecibirTransferencia recibir,
     IAnularTransferencia anular) : ControladorDeInventario
 {
+    /// <summary>
+    /// Las columnas de la exportación de transferencias: lo que publica el listado, sin sus
+    /// identificadores, y los dos almacenes con su código y su nombre (ADR-0074).
+    /// </summary>
+    /// <remarks>
+    /// <b>Sin la transferencia que anula</b>, que es el identificador de otro documento y no un
+    /// maestro: no tiene código que escribir, y la anulada sale en el mismo fichero con su número.
+    /// </remarks>
+    internal static readonly HojaDeExportacion<TransferenciaExportada> HojaDeTransferencias = new(
+        "transferencias",
+        [
+            new("numero", fila => CampoCsv.Numero(fila.Transferencia.Numero)),
+            .. ColumnasDeMaestro.De<TransferenciaExportada>("almacen_origen", fila => fila.AlmacenOrigen),
+            .. ColumnasDeMaestro.De<TransferenciaExportada>("almacen_destino", fila => fila.AlmacenDestino),
+            new("fecha_de_envio", fila => CampoCsv.Fecha(fila.Transferencia.FechaDeEnvio)),
+            new("fecha_de_recepcion", fila => CampoCsv.Fecha(fila.Transferencia.FechaDeRecepcion)),
+            new("estado", fila => CampoCsv.Valor(fila.Transferencia.Estado)),
+        ]);
+
+    /// <summary>
+    /// Las columnas de la exportación de las líneas de una transferencia: lo que publica la ficha
+    /// de cada línea, sus cuatro maestros con su código y su nombre, y la divisa de su valor.
+    /// </summary>
+    /// <remarks>
+    /// <b>La divisa es la de la ficha</b>, que la publica una vez para todas sus líneas: en el
+    /// fichero va en cada una, junto al valor, porque un importe sin divisa no se lee.
+    /// </remarks>
+    internal static readonly HojaDeExportacion<LineaDeTransferenciaExportada> HojaDeLineas = new(
+        "lineas-de-transferencia",
+        [
+            new("numero", fila => CampoCsv.Numero(fila.Linea.Numero)),
+            .. ColumnasDeMaestro.De<LineaDeTransferenciaExportada>("ubicacion_origen", fila => fila.UbicacionOrigen),
+            .. ColumnasDeMaestro.De<LineaDeTransferenciaExportada>("ubicacion_destino", fila => fila.UbicacionDestino),
+            .. ColumnasDeMaestro.De<LineaDeTransferenciaExportada>("articulo", fila => fila.Articulo),
+            new("cantidad_introducida", fila => CampoCsv.Numero(fila.Linea.CantidadIntroducida)),
+            .. ColumnasDeMaestro.De<LineaDeTransferenciaExportada>(
+                "unidad_introducida", fila => fila.UnidadIntroducida),
+            new("factor_a_unidad_base", fila => CampoCsv.Numero(fila.Linea.FactorAUnidadBase)),
+            new("cantidad_en_unidad_base", fila => CampoCsv.Numero(fila.Linea.CantidadEnUnidadBase)),
+            new("codigo_de_lote", fila => CampoCsv.Texto(fila.Linea.CodigoDeLote)),
+            new("numero_de_serie", fila => CampoCsv.Texto(fila.Linea.NumeroDeSerie)),
+            new("valor", fila => CampoCsv.Numero(fila.Linea.Valor)),
+            new("divisa", fila => CampoCsv.Texto(fila.Divisa)),
+        ]);
+
     /// <summary>Devuelve una página de transferencias, sin sus líneas.</summary>
     /// <remarks>
     /// Va por la fecha de envío, de la última a la primera, y se ordena también por la fecha de
@@ -78,6 +126,44 @@ public sealed class TransferenciasController(
             cancelacion).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Descarga el listado de transferencias entero, con su orden, su estado y sus dos almacenes,
+    /// en CSV (ADR-0073).
+    /// </summary>
+    /// <param name="consulta">
+    /// El orden, el estado y los dos almacenes (<c>sort</c>, <c>estado</c>, <c>origen</c>,
+    /// <c>destino</c>). Sin filtro de texto, como el listado: un <c>q</c> con algo escrito es un
+    /// <c>400</c>.
+    /// </param>
+    /// <param name="exportar">El caso de uso del listado, con los almacenes nombrados.</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("exportacion")]
+    [ExigePermiso(PermisosDeInventario.TransferenciaVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] ConsultaDeTransferencias consulta,
+        [FromServices] IExportarTransferencias exportar,
+        [FromServices] IFotoDeInventario foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(consulta);
+        ArgumentNullException.ThrowIfNull(exportar);
+
+        return await ExportarListadoAsync(
+            consulta,
+            texto: null,
+            exportar,
+            (paginacion, testigo) => exportar.EjecutarAsync(
+                paginacion, consulta.Estado, consulta.Origen, consulta.Destino, testigo),
+            foto,
+            HojaDeTransferencias,
+            reloj,
+            cancelacion).ConfigureAwait(false);
+    }
+
     /// <summary>Devuelve la ficha de una transferencia, con todas sus líneas y su <c>ETag</c>.</summary>
     /// <remarks>
     /// Cada línea lleva sus dos ubicaciones, el factor y la cantidad en unidad base, que pone el
@@ -92,6 +178,47 @@ public sealed class TransferenciasController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Obtener(Guid id, CancellationToken cancelacion) =>
         ResponderConVersion(await obtener.EjecutarAsync(id, cancelacion).ConfigureAwait(false));
+
+    /// <summary>
+    /// Descarga las líneas de una transferencia, las de su ficha, en CSV (ADR-0073).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>No lee nada de la URL</b>, como la ficha: ni orden ni texto. Un <c>?q=</c> es un
+    /// <c>400</c>, el de un listado que no filtra por texto, y no un fichero que parece filtrado.
+    /// </para>
+    /// <para>
+    /// Una transferencia que no existe es el <c>404</c> de la ficha, antes del primer byte.
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Identificador de la transferencia.</param>
+    /// <param name="exportar">El caso de uso de la ficha, con los maestros nombrados.</param>
+    /// <param name="foto">La foto del módulo, de la que sale la ficha.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("{id:guid}/lineas/exportacion")]
+    [ExigePermiso(PermisosDeInventario.TransferenciaVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportarLineas(
+        Guid id,
+        [FromServices] IExportarLineasDeTransferencia exportar,
+        [FromServices] IFotoDeInventario foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(exportar);
+
+        return await ExportarListadoDeResultadoAsync(
+            new ConsultaDeListado(),
+            null,
+            exportar,
+            (paginacion, testigo) => exportar.EjecutarAsync(id, paginacion, testigo),
+            foto,
+            HojaDeLineas,
+            reloj,
+            cancelacion).ConfigureAwait(false);
+    }
 
     /// <summary>Abre una transferencia en borrador, con sus líneas.</summary>
     /// <remarks>

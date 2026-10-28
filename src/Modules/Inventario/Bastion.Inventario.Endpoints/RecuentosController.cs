@@ -1,9 +1,11 @@
+using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Inventario.Application;
 using Bastion.Inventario.Application.Recuentos;
 using Bastion.Inventario.Contracts;
 using Bastion.Inventario.Contracts.Recuentos;
@@ -58,6 +60,50 @@ public sealed class RecuentosController(
     IAnularRecuento anular,
     IDescartarRecuento descartar) : ControladorDeInventario
 {
+    /// <summary>
+    /// Las columnas de la exportación de recuentos: lo que publica el listado, sin sus
+    /// identificadores, y el almacén con su código y su nombre (ADR-0074).
+    /// </summary>
+    internal static readonly HojaDeExportacion<RecuentoExportado> HojaDeRecuentos = new(
+        "recuentos",
+        [
+            new("numero", fila => CampoCsv.Numero(fila.Recuento.Numero)),
+            .. ColumnasDeMaestro.De<RecuentoExportado>("almacen", fila => fila.Almacen),
+            new("fecha_de_apertura", fila => CampoCsv.Fecha(fila.Recuento.FechaDeApertura)),
+            new("fecha_de_confirmacion", fila => CampoCsv.Fecha(fila.Recuento.FechaDeConfirmacion)),
+            new("estado", fila => CampoCsv.Valor(fila.Recuento.Estado)),
+            new("motivo", fila => CampoCsv.Texto(fila.Recuento.Motivo)),
+        ]);
+
+    /// <summary>
+    /// Las columnas de la exportación de las líneas de un recuento: lo que publica el listado, sin
+    /// sus identificadores, y sus tres maestros con su código y su nombre (ADR-0074).
+    /// </summary>
+    /// <remarks>
+    /// <b>Sin la línea del ajuste</b>, que es el identificador de otro documento y no un maestro:
+    /// no tiene código que escribir, y su número sale en el ajuste que regulariza el recuento. El
+    /// origen va con el valor del DTO, sin traducir, y el teórico cambiado, como el resto de los sí
+    /// o no del dialecto.
+    /// </remarks>
+    internal static readonly HojaDeExportacion<LineaDeRecuentoExportada> HojaDeLineas = new(
+        "lineas-de-recuento",
+        [
+            new("numero", fila => CampoCsv.Numero(fila.Linea.Numero)),
+            .. ColumnasDeMaestro.De<LineaDeRecuentoExportada>("ubicacion", fila => fila.Ubicacion),
+            .. ColumnasDeMaestro.De<LineaDeRecuentoExportada>("articulo", fila => fila.Articulo),
+            new("codigo_de_lote", fila => CampoCsv.Texto(fila.Linea.CodigoDeLote)),
+            new("numero_de_serie", fila => CampoCsv.Texto(fila.Linea.NumeroDeSerie)),
+            .. ColumnasDeMaestro.De<LineaDeRecuentoExportada>("unidad_base", fila => fila.UnidadBase),
+            new("origen", fila => CampoCsv.Valor(fila.Linea.Origen)),
+            new("coste_unitario", fila => CampoCsv.Numero(fila.Linea.CosteUnitario)),
+            new("contado", fila => CampoCsv.Numero(fila.Linea.Contado)),
+            new("teorico_al_contar", fila => CampoCsv.Numero(fila.Linea.TeoricoAlContar)),
+            new("teorico", fila => CampoCsv.Numero(fila.Linea.Teorico)),
+            new("en_transito", fila => CampoCsv.Numero(fila.Linea.EnTransito)),
+            new("diferencia", fila => CampoCsv.Numero(fila.Linea.Diferencia)),
+            new("teorico_cambiado", fila => CampoCsv.SiNo(fila.Linea.TeoricoCambiado)),
+        ]);
+
     /// <summary>Devuelve una página de recuentos.</summary>
     /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">
@@ -83,6 +129,43 @@ public sealed class RecuentosController(
             texto,
             listar,
             (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Estado, consulta.Almacen, testigo),
+            cancelacion).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Descarga el listado de recuentos entero, con su orden, su texto, su estado y su almacén, en
+    /// CSV (ADR-0073).
+    /// </summary>
+    /// <param name="consulta">
+    /// El orden, el estado y el almacén (<c>sort</c>, <c>estado</c>, <c>almacen</c>).
+    /// </param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
+    /// <param name="exportar">El caso de uso del listado, con el almacén nombrado.</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("exportacion")]
+    [ExigePermiso(PermisosDeInventario.RecuentoVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] ConsultaDeRecuentos consulta,
+        [FromQuery] FiltroDeTexto texto,
+        [FromServices] IExportarRecuentos exportar,
+        [FromServices] IFotoDeInventario foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(consulta);
+        ArgumentNullException.ThrowIfNull(exportar);
+
+        return await ExportarListadoAsync(
+            consulta,
+            texto,
+            exportar,
+            (paginacion, testigo) => exportar.EjecutarAsync(paginacion, consulta.Estado, consulta.Almacen, testigo),
+            foto,
+            HojaDeRecuentos,
+            reloj,
             cancelacion).ConfigureAwait(false);
     }
 
@@ -161,6 +244,47 @@ public sealed class RecuentosController(
             texto,
             listarLineas,
             (paginacion, testigo) => listarLineas.EjecutarAsync(paginacion, id, consulta.Solo, testigo),
+            cancelacion).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Descarga las líneas de un recuento enteras, con su orden, su texto y su acotado, en CSV
+    /// (ADR-0073).
+    /// </summary>
+    /// <remarks>
+    /// Un recuento que no existe es el <c>404</c> del listado, antes del primer byte.
+    /// </remarks>
+    /// <param name="id">Identificador del recuento.</param>
+    /// <param name="consulta">El orden y el acotado (<c>sort</c>, <c>solo</c>).</param>
+    /// <param name="texto">El filtro de texto (<c>q</c>).</param>
+    /// <param name="exportar">El caso de uso del listado, con los maestros nombrados.</param>
+    /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
+    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("{id:guid}/lineas/exportacion")]
+    [ExigePermiso(PermisosDeInventario.RecuentoVer)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/csv")]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportarLineas(
+        Guid id,
+        [FromQuery] ConsultaDeLineasDeRecuento consulta,
+        [FromQuery] FiltroDeTexto texto,
+        [FromServices] IExportarLineasDeRecuento exportar,
+        [FromServices] IFotoDeInventario foto,
+        [FromServices] TimeProvider reloj,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(consulta);
+        ArgumentNullException.ThrowIfNull(exportar);
+
+        return await ExportarListadoDeResultadoAsync(
+            consulta,
+            texto,
+            exportar,
+            (paginacion, testigo) => exportar.EjecutarAsync(paginacion, id, consulta.Solo, testigo),
+            foto,
+            HojaDeLineas,
+            reloj,
             cancelacion).ConfigureAwait(false);
     }
 

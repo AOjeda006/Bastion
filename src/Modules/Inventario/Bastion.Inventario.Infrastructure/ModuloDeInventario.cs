@@ -90,6 +90,11 @@ public static class ModuloDeInventario
         // recuento al contexto de otro módulo contestaría con un testigo que nadie rastrea.
         servicios.AddScoped<IVersionesDeInventario, VersionesDeInventario>();
 
+        // Y la foto de su exportación, por lo mismo: la del módulo, bajo el tipo del módulo
+        // (ADR-0073). Sin esta línea, la exportación no se construye, y lo dice
+        // `LaExportacionEsHermanaDelListadoTests` resolviéndola.
+        servicios.AddScoped<IFotoDeInventario, FotoDeInventario>();
+
         // UNO para los dos agregados —el documento y el libro—, y el porqué está en su interfaz:
         // se guardan en la misma transacción, así que dos repositorios con dos unidades de trabajo
         // sugerirían que pueden guardarse por separado.

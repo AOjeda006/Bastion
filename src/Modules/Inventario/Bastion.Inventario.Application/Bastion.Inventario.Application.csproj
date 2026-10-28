@@ -47,6 +47,15 @@
       modulos sobre PostgreSQL.
     -->
     <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
+
+    <!--
+      Desde el 3.2, las exportaciones (ADR-0074): cada una nombra los maestros de su página solo
+      con el permiso de verlos, y esa rama es un `if` sobre un permiso, que no abre ninguna
+      conexion. Su testigo no puede vivir solo detras de Testcontainers, por lo mismo que en
+      Catalogo: con el motor parado, un permiso cambiado por el de otro maestro saldria verde.
+      Las implementaciones son `internal`, como todas.
+    -->
+    <InternalsVisibleTo Include="Bastion.Inventario.UnitTests" />
   </ItemGroup>
 
   <ItemGroup Label="Infraestructura del módulo">

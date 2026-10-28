@@ -811,6 +811,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/ajustes/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga el listado de ajustes entero, con su orden, su texto, su estado y su almacén, en
+         *     CSV (ADR-0073).
+         */
+        get: operations["Ajustes_Exportar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/ajustes/{id}": {
         parameters: {
             query?: never;
@@ -944,6 +964,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/recuentos/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga el listado de recuentos entero, con su orden, su texto, su estado y su almacén, en
+         *     CSV (ADR-0073).
+         */
+        get: operations["Recuentos_Exportar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/recuentos/{id}": {
         parameters: {
             query?: never;
@@ -987,6 +1027,27 @@ export interface paths {
          *           clave lo para la clave repetida.
          */
         post: operations["Recuentos_AnadirLinea"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/recuentos/{id}/lineas/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga las líneas de un recuento enteras, con su orden, su texto y su acotado, en CSV
+         *     (ADR-0073).
+         * @description Un recuento que no existe es el `404` del listado, antes del primer byte.
+         */
+        get: operations["Recuentos_ExportarLineas"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1130,6 +1191,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/saldos/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga los saldos a una fecha enteros, con su almacén y su artículo, en CSV (ADR-0073).
+         * @description <b>El día se fija aquí, una vez</b>: sin `fecha` es hoy, y una exportación que cruzara
+         *             la medianoche no puede escribir dos. Una fecha futura es el `400` de la consulta, antes
+         *             del primer byte.
+         */
+        get: operations["Saldos_Exportar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/transferencias": {
         parameters: {
             query?: never;
@@ -1166,6 +1249,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventario/transferencias/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga el listado de transferencias entero, con su orden, su estado y sus dos almacenes,
+         *     en CSV (ADR-0073).
+         */
+        get: operations["Transferencias_Exportar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventario/transferencias/{id}": {
         parameters: {
             query?: never;
@@ -1192,6 +1295,28 @@ export interface paths {
          *       404, que es lo que es.
          */
         delete: operations["Transferencias_Descartar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventario/transferencias/{id}/lineas/exportacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descarga las líneas de una transferencia, las de su ficha, en CSV (ADR-0073).
+         * @description No lee nada de la URL, como la ficha: ni orden ni texto. Un ?q= es un
+         *       400, el de un listado que no filtra por texto, y no un fichero que parece filtrado.
+         *     Una transferencia que no existe es el 404 de la ficha, antes del primer byte.
+         */
+        get: operations["Transferencias_ExportarLineas"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7938,6 +8063,31 @@ export interface operations {
             };
         };
     };
+    Ajustes_Exportar: {
+        parameters: {
+            query?: {
+                estado?: string;
+                almacen?: string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
     Ajustes_Obtener: {
         parameters: {
             query?: never;
@@ -8286,6 +8436,31 @@ export interface operations {
             };
         };
     };
+    Recuentos_Exportar: {
+        parameters: {
+            query?: {
+                estado?: string;
+                almacen?: string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
     Recuentos_Obtener: {
         parameters: {
             query?: never;
@@ -8428,6 +8603,44 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Recuentos_ExportarLineas: {
+        parameters: {
+            query?: {
+                solo?: string;
+                sort?: string;
+                q?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Identificador del recuento. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8951,6 +9164,31 @@ export interface operations {
             };
         };
     };
+    Saldos_Exportar: {
+        parameters: {
+            query?: {
+                fecha?: string;
+                almacen?: string;
+                articulo?: string;
+                sort?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
     Transferencias_Listar: {
         parameters: {
             query?: {
@@ -9063,6 +9301,31 @@ export interface operations {
             };
         };
     };
+    Transferencias_Exportar: {
+        parameters: {
+            query?: {
+                estado?: string;
+                origen?: string;
+                destino?: string;
+                sort?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
     Transferencias_Obtener: {
         parameters: {
             query?: never;
@@ -9155,6 +9418,40 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Transferencias_ExportarLineas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la transferencia. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -732,7 +732,8 @@ public sealed class ElCensoDeEsteCarrilTests
         // de cada módulo, que se abre en REPEATABLE READ y de solo lectura. Y la de terceros, que
         // vuelve a entrar por la importación en otra empresa y sale igual. Y las de Catálogo, con
         // cada maestro nombrado si quien exporta lo puede ver (ADR-0074), y los códigos de barras
-        // de un artículo, que no se paginan.
+        // de un artículo, que no se paginan. Y las de Inventario, con las líneas de una
+        // transferencia, que salen de su ficha, y los saldos al final del día pedido.
         "LaExportacionDeTercerosTests.La_exportacion_lleva_el_orden_y_el_texto_del_listado_y_no_busca_por_el_identificador",
         "LaExportacionDeTercerosTests.Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado",
         "LaFotoDeCadaModuloEsUnaFotoTests.La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read",
@@ -741,6 +742,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasExportacionesDeCatalogoTests.Los_articulos_salen_con_sus_maestros_nombrados_y_los_filtros_del_listado",
         "LasExportacionesDeCatalogoTests.Los_codigos_de_barras_salen_en_el_orden_del_listado_con_su_articulo_nombrado",
         "LasExportacionesDeCatalogoTests.Los_nombres_de_las_categorias_salen_por_lotes_y_los_ajenos_no_vuelven",
+        "LasExportacionesDeInventarioTests.Cada_maestro_del_recuento_se_nombra_solo_si_quien_exporta_lo_puede_ver",
+        "LasExportacionesDeInventarioTests.Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados",
+        "LasExportacionesDeInventarioTests.Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado",
+        "LasExportacionesDeInventarioTests.Los_saldos_salen_al_final_del_dia_pedido_con_lo_que_vuela_y_sus_maestros_nombrados",
         "LasExportacionesDeOrganizacionTests.La_exportacion_lleva_el_orden_y_el_texto_del_listado",
         "LasExportacionesDeOrganizacionTests.Las_empresas_salen_con_el_texto_del_listado_sin_las_ajenas_y_sin_la_bloqueada",
         "LasExportacionesDeOrganizacionTests.Los_almacenes_salen_enteros_en_el_dialecto_y_sin_el_bloqueado",

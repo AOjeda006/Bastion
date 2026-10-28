@@ -473,7 +473,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(165, "acciones en total");
+        todas.Count.ShouldBe(171, "acciones en total");
         cambian.Count.ShouldBe(100, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
@@ -768,6 +768,9 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         //
         // Ciento sesenta y cinco con las cuatro de Catálogo: artículos, categorías, tarifas y los
         // códigos de barras de un artículo, que cuelga del suyo y no se pagina. Cuatro lecturas.
+        //
+        // Ciento setenta y una con las seis de Inventario: ajustes, recuentos y sus líneas,
+        // transferencias y sus líneas, que salen de su ficha, y los saldos a una fecha. Seis lecturas.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(54, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(32, "rutas que admiten Idempotency-Key");

@@ -5238,6 +5238,64 @@
         ]
       }
     },
+    "/api/v1/inventario/ajustes/exportacion": {
+      "get": {
+        "tags": [
+          "Ajustes"
+        ],
+        "summary": "Descarga el listado de ajustes entero, con su orden, su texto, su estado y su almacén, en\nCSV (ADR-0073).",
+        "operationId": "Ajustes_Exportar",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "pattern": "^(Borrador|Confirmado|Anulado)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "almacen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/ajustes/{id}": {
       "get": {
         "tags": [
@@ -5923,6 +5981,64 @@
         ]
       }
     },
+    "/api/v1/inventario/recuentos/exportacion": {
+      "get": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Descarga el listado de recuentos entero, con su orden, su texto, su estado y su almacén, en\nCSV (ADR-0073).",
+        "operationId": "Recuentos_Exportar",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "pattern": "^(EnCurso|Confirmado|Anulado|Descartado)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "almacen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/recuentos/{id}": {
       "get": {
         "tags": [
@@ -6229,6 +6345,87 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/recuentos/{id}/lineas/exportacion": {
+      "get": {
+        "tags": [
+          "Recuentos"
+        ],
+        "summary": "Descarga las líneas de un recuento enteras, con su orden, su texto y su acotado, en CSV\n(ADR-0073).",
+        "description": "Un recuento que no existe es el `404` del listado, antes del primer byte.",
+        "operationId": "Recuentos_ExportarLineas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del recuento.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "solo",
+            "in": "query",
+            "schema": {
+              "pattern": "^(sin-contar|teorico-cambiado)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "text/plain": {
                 "schema": {
@@ -7295,6 +7492,64 @@
         ]
       }
     },
+    "/api/v1/inventario/saldos/exportacion": {
+      "get": {
+        "tags": [
+          "Saldos"
+        ],
+        "summary": "Descarga los saldos a una fecha enteros, con su almacén y su artículo, en CSV (ADR-0073).",
+        "description": "<b>El día se fija aquí, una vez</b>: sin `fecha` es hoy, y una exportación que cruzara\n        la medianoche no puede escribir dos. Una fecha futura es el `400` de la consulta, antes\n        del primer byte.",
+        "operationId": "Saldos_Exportar",
+        "parameters": [
+          {
+            "name": "fecha",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "almacen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "articulo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/transferencias": {
       "get": {
         "tags": [
@@ -7544,6 +7799,63 @@
         ]
       }
     },
+    "/api/v1/inventario/transferencias/exportacion": {
+      "get": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Descarga el listado de transferencias entero, con su orden, su estado y sus dos almacenes,\nen CSV (ADR-0073).",
+        "operationId": "Transferencias_Exportar",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "pattern": "^(Borrador|Enviada|Recibida|Anulada)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "origen",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "destino",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/inventario/transferencias/{id}": {
       "get": {
         "tags": [
@@ -7702,6 +8014,63 @@
           },
           "428": {
             "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/inventario/transferencias/{id}/lineas/exportacion": {
+      "get": {
+        "tags": [
+          "Transferencias"
+        ],
+        "summary": "Descarga las líneas de una transferencia, las de su ficha, en CSV (ADR-0073).",
+        "description": "No lee nada de la URL, como la ficha: ni orden ni texto. Un ?q= es un\n  400, el de un listado que no filtra por texto, y no un fichero que parece filtrado.\nUna transferencia que no existe es el 404 de la ficha, antes del primer byte.",
+        "operationId": "Transferencias_ExportarLineas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador de la transferencia.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "text/plain": {
                 "schema": {

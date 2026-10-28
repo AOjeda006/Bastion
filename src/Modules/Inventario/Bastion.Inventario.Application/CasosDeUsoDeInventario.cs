@@ -49,6 +49,16 @@ public static class CasosDeUsoDeInventario
         servicios.AddScoped<IDescartarRecuento, DescartarRecuento>();
         servicios.AddScoped<IConsultarSaldos, ConsultarSaldos>();
 
+        // Las exportaciones: cada una llama al caso de uso de su listado, y nombra sus maestros
+        // (ADR-0074). Las líneas de una transferencia, al de su ficha, que es donde se publican.
+        servicios.AddScoped<LosNombresDeLosMaestros>();
+        servicios.AddScoped<IExportarAjustes, ExportarAjustes>();
+        servicios.AddScoped<IExportarRecuentos, ExportarRecuentos>();
+        servicios.AddScoped<IExportarLineasDeRecuento, ExportarLineasDeRecuento>();
+        servicios.AddScoped<IExportarTransferencias, ExportarTransferencias>();
+        servicios.AddScoped<IExportarLineasDeTransferencia, ExportarLineasDeTransferencia>();
+        servicios.AddScoped<IExportarSaldos, ExportarSaldos>();
+
         // LOS TRES DE LA RESERVA, sin borde: los llama Ventas en la fase 4, en proceso, y hasta
         // entonces solo los tests (ADR-0059 §12).
         servicios.AddScoped<IReservar, Reservar>();

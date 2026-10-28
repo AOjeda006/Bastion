@@ -34,6 +34,12 @@ namespace Bastion.Api.FunctionalTests.Listados;
 /// paginar quitándole la página, ni uno sin paginar se cuele sin decirlo.
 /// </para>
 /// <para>
+/// <b>Y unas líneas sin listado, también</b>: las de una transferencia van dentro de su ficha, y
+/// su exportación es hermana de la ficha, quitándole a la ruta el nombre de la lista. Son la
+/// tercera lista cerrada, la de <see cref="s_deUnaFicha"/>, con el mismo permiso y la misma URL
+/// que la ficha, y la lista con ese nombre en su <c>200</c>.
+/// </para>
+/// <para>
 /// <b>La foto se resuelve</b> desde un ámbito del host, que es la prueba de construcción que pide
 /// el ADR-0073: sin el registro del módulo, la exportación no llega ni a abrirla, y eso solo se
 /// vería pidiéndola por HTTP con una base detrás.
@@ -53,6 +59,12 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
         "GET /api/v1/catalogo/articulos/{articuloId}/gtins/exportacion",
         "GET /api/v1/catalogo/categorias/exportacion",
         "GET /api/v1/catalogo/tarifas/exportacion",
+        "GET /api/v1/inventario/ajustes/exportacion",
+        "GET /api/v1/inventario/recuentos/exportacion",
+        "GET /api/v1/inventario/recuentos/{id}/lineas/exportacion",
+        "GET /api/v1/inventario/saldos/exportacion",
+        "GET /api/v1/inventario/transferencias/exportacion",
+        "GET /api/v1/inventario/transferencias/{id}/lineas/exportacion",
         "GET /api/v1/organizacion/almacenes/exportacion",
         "GET /api/v1/organizacion/empresas/exportacion",
         "GET /api/v1/terceros/terceros/exportacion",
@@ -64,6 +76,14 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
     private static readonly SortedSet<string> s_sinPaginar = new(StringComparer.Ordinal)
     {
         "GET /api/v1/catalogo/articulos/{articuloId}/gtins",
+    };
+
+    /// <summary>
+    /// Las exportaciones de unas líneas sin listado: su hermana es la ficha que las lleva.
+    /// </summary>
+    private static readonly SortedSet<string> s_deUnaFicha = new(StringComparer.Ordinal)
+    {
+        "GET /api/v1/inventario/transferencias/{id}/lineas/exportacion",
     };
 
     private readonly ApiSinDependencias _api = new();
@@ -89,6 +109,7 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
             StringComparer.Ordinal);
         List<ApiDescription> consultas = [.. Consultas(_api.Services)];
         SortedSet<string> sinPaginar = new(StringComparer.Ordinal);
+        SortedSet<string> deUnaFicha = new(StringComparer.Ordinal);
         List<string> fallos = [];
         int comparadas = 0;
 
@@ -99,11 +120,30 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
             ApiDescription? listado = consultas.SingleOrDefault(
                 candidato => string.Equals(candidato.RelativePath, ruta, StringComparison.Ordinal));
 
+            if (!PublicaCsv(exportacion))
+            {
+                fallos.Add($"{nombre}: su 200 no publica {TipoDeContenido}");
+            }
+
+            if (listado is null && s_deUnaFicha.Contains(nombre))
+            {
+                fallos.AddRange(ComoLasLineasDeSuFicha(exportacion, ruta, consultas));
+                deUnaFicha.Add(nombre);
+                comparadas++;
+
+                continue;
+            }
+
             if (listado is null)
             {
                 fallos.Add($"{nombre}: no hay un listado en GET /{ruta}");
 
                 continue;
+            }
+
+            if (s_deUnaFicha.Contains(nombre))
+            {
+                fallos.Add($"{nombre}: está entre las de una ficha, y tiene un listado en GET /{ruta}");
             }
 
             string hermano = ListadosDeLaApi.Nombre(listado);
@@ -163,22 +203,13 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
                     $"sin la página, [{string.Join(", ", esperados)}]");
             }
 
-            bool esCsv = exportacion.SupportedResponseTypes.Any(
-                respuesta => respuesta.StatusCode == 200
-                    && respuesta.ApiResponseFormats.Any(
-                        formato => string.Equals(formato.MediaType, TipoDeContenido, StringComparison.Ordinal)));
-
-            if (!esCsv)
-            {
-                fallos.Add($"{nombre}: su 200 no publica {TipoDeContenido}");
-            }
-
             comparadas++;
         }
 
         fallos.ShouldBeEmpty(string.Join(Environment.NewLine, fallos));
         comparadas.ShouldBe(s_exportaciones.Count, "el arnés: se han comparado todas las declaradas");
         sinPaginar.ShouldBe(s_sinPaginar, "los listados sin paginar declarados son los hermanos de una exportación");
+        deUnaFicha.ShouldBe(s_deUnaFicha, "las de una ficha declaradas son exportaciones sin listado");
     }
 
     /// <summary>
@@ -238,6 +269,63 @@ public sealed class LaExportacionEsHermanaDelListadoTests : IDisposable
         from descripcion in grupo.Items
         where ListadosDeLaApi.SeConsulta(descripcion)
         select descripcion;
+
+    /// <summary>
+    /// Lo que se compara de la exportación de las líneas de una ficha: que la ficha esté en la ruta
+    /// sin el nombre de la lista, que su <c>200</c> publique una lista con ese nombre, y que exija
+    /// el mismo permiso y lea de la URL lo mismo.
+    /// </summary>
+    private static IEnumerable<string> ComoLasLineasDeSuFicha(
+        ApiDescription exportacion, string ruta, List<ApiDescription> consultas)
+    {
+        string nombre = ListadosDeLaApi.Nombre(exportacion);
+        int corte = ruta.LastIndexOf('/');
+        string deLaFicha = ruta[..corte];
+        string lista = ruta[(corte + 1)..];
+        ApiDescription? ficha = consultas.SingleOrDefault(
+            candidato => string.Equals(candidato.RelativePath, deLaFicha, StringComparison.Ordinal));
+
+        if (ficha is null)
+        {
+            yield return $"{nombre}: no hay una ficha en GET /{deLaFicha}";
+
+            yield break;
+        }
+
+        string hermana = ListadosDeLaApi.Nombre(ficha);
+        Type? recurso = ficha.SupportedResponseTypes.SingleOrDefault(respuesta => respuesta.StatusCode == 200)?.Type;
+        PropertyInfo? lineas = recurso?.GetProperty(
+            lista, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+        if (lineas is not { PropertyType: { IsGenericType: true } tipo }
+            || !typeof(System.Collections.IEnumerable).IsAssignableFrom(tipo))
+        {
+            yield return $"{nombre}: el 200 de {hermana} no publica una lista «{lista}»";
+        }
+
+        Permiso? permiso = PermisoDe(exportacion);
+
+        if (permiso is null || permiso != PermisoDe(ficha))
+        {
+            yield return $"{nombre}: exige «{permiso}», y su ficha, «{PermisoDe(ficha)}»";
+        }
+
+        string[] leeLaFicha = [.. ListadosDeLaApi.DeLaUrl(ficha).Order(StringComparer.Ordinal)];
+        string[] leeLaExportacion = [.. ListadosDeLaApi.DeLaUrl(exportacion).Order(StringComparer.Ordinal)];
+
+        if (!leeLaExportacion.SequenceEqual(leeLaFicha, StringComparer.Ordinal))
+        {
+            yield return $"{nombre}: lee [{string.Join(", ", leeLaExportacion)}] de la URL, y su ficha, " +
+                $"[{string.Join(", ", leeLaFicha)}]";
+        }
+    }
+
+    /// <summary>Si el <c>200</c> de una exportación publica un CSV.</summary>
+    private static bool PublicaCsv(ApiDescription exportacion) =>
+        exportacion.SupportedResponseTypes.Any(
+            respuesta => respuesta.StatusCode == 200
+                && respuesta.ApiResponseFormats.Any(
+                    formato => string.Equals(formato.MediaType, TipoDeContenido, StringComparison.Ordinal)));
 
     /// <summary>
     /// Si el <c>200</c> de una consulta es una lista: una colección genérica, que no es una página.
