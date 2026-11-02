@@ -109,7 +109,7 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "LosNombresPorLotesTests.El_almacen_se_nombra_y_ni_el_bloqueado_ni_el_ajeno_ni_el_inventado_vuelven",
         "LosNombresPorLotesTests.La_ubicacion_se_nombra_por_su_propio_bloqueo_y_no_por_el_de_su_almacen",
-        "LosNombresPorLotesTests.Las_unidades_los_tramos_y_las_divisas_se_nombran_sin_empresa_y_lo_retirado_tambien",
+        "LosNombresPorLotesTests.Las_unidades_y_los_tramos_se_nombran_sin_empresa_y_lo_retirado_tambien",
 
         "LosPuertosDeLecturaTests.El_impuesto_que_no_esta_no_existe",
         "LosPuertosDeLecturaTests.El_impuesto_que_rige_en_la_fecha_se_ofrece_para_lo_nuevo",
@@ -117,6 +117,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LosPuertosDeLecturaTests.El_tramo_que_todavia_no_ha_entrado_tampoco_se_ofrece",
         "LosPuertosDeLecturaTests.La_divisa_dada_de_alta_se_ofrece_y_la_que_no_esta_no_existe",
         "LosPuertosDeLecturaTests.La_divisa_retirada_deja_de_ofrecerse_y_sigue_resolviendo",
+        "LosPuertosDeLecturaTests.La_divisa_se_busca_por_su_codigo_como_se_guarda_y_lo_que_no_es_un_codigo_no_existe",
         "LosPuertosDeLecturaTests.La_unidad_dada_de_alta_se_ofrece_y_la_que_no_esta_no_existe",
         "LosPuertosDeLecturaTests.La_unidad_retirada_deja_de_ofrecerse_y_sigue_resolviendo",
         "LosPuertosDeLecturaTests.Los_tres_puertos_contestan_sin_empresa_activa_y_sin_ver_lo_bloqueado",

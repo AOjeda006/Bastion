@@ -66,6 +66,16 @@ internal sealed class RepositorioDeTarifas(CatalogoDbContext contexto) : IReposi
             tarifa => tarifa.EmpresaId == empresaId && tarifa.Codigo == codigo,
             cancelacion);
 
+    public async Task<TipoDeTarifa?> TipoDelCodigoAsync(
+        Guid empresaId,
+        string codigo,
+        CancellationToken cancelacion) =>
+        await contexto.Tarifas
+            .Where(tarifa => tarifa.EmpresaId == empresaId && tarifa.Codigo == codigo)
+            .Select(tarifa => (TipoDeTarifa?)tarifa.Tipo)
+            .FirstOrDefaultAsync(cancelacion)
+            .ConfigureAwait(false);
+
     public Task<bool> HaySolapeAsync(
         Guid empresaId,
         string codigo,

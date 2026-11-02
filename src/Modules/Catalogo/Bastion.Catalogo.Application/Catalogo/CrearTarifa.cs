@@ -50,6 +50,12 @@ public interface ICrearTarifa
 /// con el motivo escrito, y no para sustituir a la restricción de exclusión — que es la única que
 /// cubre dos peticiones simultáneas y cualquier otro camino de escritura.
 /// </para>
+/// <para>
+/// <b>Desde el 3.3, la tarifa es de venta o de compra, y la divisa llega por su código</b>
+/// (ADR-0076). El tipo de un tramo nuevo es el de los que ya tiene su código, con el mismo reparto
+/// que el solape: la pregunta previa da el <c>409</c> con su motivo, y la restricción
+/// <c>tarifas_un_tipo_por_codigo</c> lo impide.
+/// </para>
 /// </remarks>
 internal sealed class CrearTarifa(
     IUsuarioActual usuarioActual,
@@ -82,12 +88,22 @@ internal sealed class CrearTarifa(
                 ErroresDeTarifa.VigenciaAlReves(peticion.VigenteDesde, hasta));
         }
 
+        TipoDeTarifa? tipo = TiposDeTarifa.Leer(peticion.Tipo);
+
+        if (tipo is null)
+        {
+            return Resultado.Fallo<TarifaDto>(ErroresDeTarifa.TipoNoValido(TiposDeTarifa.Admitidos));
+        }
+
+        // Por el código ISO 4217, desde el 3.3 (ADR-0076). El puerto lo normaliza como lo guarda
+        // Organización, así que «usd» encuentra la del dólar; y uno sin forma de código no es
+        // ninguna de las que tiene, que es un «no existe» y no un 500.
         EstadoDeMaestro estadoDeLaDivisa = await divisas
-            .EstadoDeAsync(peticion.DivisaId, cancelacion)
+            .EstadoDeAsync(peticion.Divisa, cancelacion)
             .ConfigureAwait(false);
 
         Resultado laDivisa = ElMaestroSeOfreceParaLoNuevo.LaDivisa(
-            estadoDeLaDivisa, peticion.DivisaId);
+            estadoDeLaDivisa, peticion.Divisa);
 
         if (!laDivisa.EsCorrecto)
         {
@@ -95,6 +111,19 @@ internal sealed class CrearTarifa(
         }
 
         string codigo = Tarifa.NormalizarCodigo(peticion.Codigo);
+
+        // El tipo va con el código: un tramo nuevo es del tipo de los que ya tiene. Se pregunta
+        // antes para contestar el 409 con su motivo, y quien lo impide entre dos altas a la vez es
+        // la restricción `tarifas_un_tipo_por_codigo`, como el solape.
+        TipoDeTarifa? tipoDelCodigo = await tarifas
+            .TipoDelCodigoAsync(empresaId, codigo, cancelacion)
+            .ConfigureAwait(false);
+
+        if (tipoDelCodigo is { } yaEs && yaEs != tipo)
+        {
+            return Resultado.Fallo<TarifaDto>(
+                ErroresDeTarifa.TipoDistintoDelCodigo(codigo, yaEs.ToString()));
+        }
 
         if (await tarifas
                 .HaySolapeAsync(
@@ -108,7 +137,8 @@ internal sealed class CrearTarifa(
             empresaId,
             codigo,
             peticion.Nombre,
-            peticion.DivisaId,
+            tipo.Value,
+            peticion.Divisa,
             peticion.VigenteDesde,
             peticion.VigenteHasta,
             reloj.GetUtcNow());

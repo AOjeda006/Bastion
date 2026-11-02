@@ -37,7 +37,7 @@ public static class OrigenDelPrecio
 /// </remarks>
 /// <param name="TarifaId">Tramo de tarifa que ha resuelto el precio.</param>
 /// <param name="Codigo">Código de la tarifa, el que se pidió.</param>
-/// <param name="DivisaId">Divisa en la que está expresado el precio.</param>
+/// <param name="Divisa">Divisa en la que está expresado el precio, en ISO 4217.</param>
 /// <param name="ArticuloId">Artículo por el que se preguntó.</param>
 /// <param name="Cantidad">Cantidad por la que se preguntó.</param>
 /// <param name="Fecha">Día para el que se ha resuelto.</param>
@@ -57,7 +57,7 @@ public static class OrigenDelPrecio
 public sealed record PrecioResueltoDto(
     Guid TarifaId,
     string Codigo,
-    Guid DivisaId,
+    string Divisa,
     Guid ArticuloId,
     decimal Cantidad,
     DateOnly Fecha,

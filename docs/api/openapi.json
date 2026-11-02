@@ -18754,7 +18754,8 @@
         "required": [
           "codigo",
           "nombre",
-          "divisaId",
+          "tipo",
+          "divisa",
           "vigenteDesde"
         ],
         "type": "object",
@@ -18771,10 +18772,15 @@
             "type": "string",
             "description": "Nombre con el que se muestra."
           },
-          "divisaId": {
+          "tipo": {
             "type": "string",
-            "description": "Divisa en la que se expresan los precios de esta tarifa.",
-            "format": "uuid"
+            "description": "Si es de venta o de compra: `Venta` o `Compra`."
+          },
+          "divisa": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string",
+            "description": "Divisa en la que se expresan los precios de esta tarifa, en ISO 4217: tres letras."
           },
           "vigenteDesde": {
             "type": "string",
@@ -21788,7 +21794,7 @@
         "required": [
           "tarifaId",
           "codigo",
-          "divisaId",
+          "divisa",
           "articuloId",
           "cantidad",
           "fecha",
@@ -21810,10 +21816,9 @@
             "type": "string",
             "description": "Código de la tarifa, el que se pidió."
           },
-          "divisaId": {
+          "divisa": {
             "type": "string",
-            "description": "Divisa en la que está expresado el precio.",
-            "format": "uuid"
+            "description": "Divisa en la que está expresado el precio, en ISO 4217."
           },
           "articuloId": {
             "type": "string",
@@ -22581,7 +22586,8 @@
           "empresaId",
           "codigo",
           "nombre",
-          "divisaId",
+          "tipo",
+          "divisa",
           "vigenteDesde",
           "vigenteHasta"
         ],
@@ -22605,10 +22611,13 @@
             "type": "string",
             "description": "Nombre con el que se muestra."
           },
-          "divisaId": {
+          "tipo": {
             "type": "string",
-            "description": "Divisa en la que se expresan sus precios (maestro de Organización).",
-            "format": "uuid"
+            "description": "`Venta` o `Compra`, como texto. Lo comparten todos los tramos del código."
+          },
+          "divisa": {
+            "type": "string",
+            "description": "Divisa en la que se expresan sus precios, en ISO 4217."
           },
           "vigenteDesde": {
             "type": "string",

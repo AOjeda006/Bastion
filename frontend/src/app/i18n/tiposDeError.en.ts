@@ -450,6 +450,11 @@ export const tiposDeError: TiposDeError = {
   'tarifa-sin-linea-aplicable':
     'That price list says nothing about that item at that quantity, neither its own line nor ' +
     'any of its categories. Add the missing line: there is no price to apply here.',
+  'tarifa-tipo-distinto-del-codigo':
+    'That price list already has periods of the other kind, and all the periods of a price ' +
+    'list are either for sales or for purchases. For the other kind, open a price list with ' +
+    'another code.',
+  'tarifa-tipo-no-valido': 'A price list is either for sales or for purchases. Choose one.',
   'tarifa-vigencia-al-reves': 'The period ends before it starts. Check both dates.',
   'tarifa-vigencias-solapadas':
     'There is already another period of that price list covering some of those days. The ' +

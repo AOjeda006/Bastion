@@ -86,7 +86,8 @@ internal static class Mapeos
             tarifa.EmpresaId,
             tarifa.Codigo,
             tarifa.Nombre,
-            tarifa.DivisaId,
+            tarifa.Tipo.ToString(),
+            tarifa.Divisa,
             tarifa.VigenteDesde,
             tarifa.VigenteHasta);
     }

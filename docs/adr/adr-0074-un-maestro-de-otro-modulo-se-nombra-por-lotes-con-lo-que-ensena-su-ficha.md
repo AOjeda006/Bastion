@@ -8,7 +8,8 @@ revisado: 2026-10-27
 
 # ADR-0074: Un maestro de otro módulo se nombra por lotes desde su dueño, con lo que enseña su ficha
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Enmendado por el [ADR-0076](adr-0076-la-tarifa-es-de-venta-o-de-compra-y-su-divisa-se-traduce-una-vez-al-migrar.md)**
+  en el §1, el §2 y *Cómo se vigila*: desde el 3.3, el puerto de divisas ya no nombra por lotes.
 - **Fecha:** 2026-10-27
 - **Sale del ítem 3.2**, la exportación de los listados. La respuesta 1 de su puerta (PLAN, *La
   puerta del 3.2, contestada*) fija lo que se escribe de un maestro de otro módulo: dos columnas,
@@ -40,13 +41,20 @@ API de su dueño, uno a uno y con caché (ADR-0055 §12). La exportación no pue
 
 ## Decisión
 
-1. **Un método por lotes en cada uno de los seis puertos.** `NombresDeAsync`, con los
+1. > **Enmendado por el ADR-0076 (2026-11-02).** Son cinco puertos: `IConsultaDeDivisas` ya no
+   > tiene `NombresDeAsync`. La tarifa guarda el código ISO de su divisa, y su exportación lo
+   > escribe tal cual.
+
+   **Un método por lotes en cada uno de los seis puertos.** `NombresDeAsync`, con los
    identificadores de una página y la cancelación, devuelve un diccionario con el código y el
    nombre de cada uno que vuelve. Está en `IConsultaDeArticulos`, `IConsultaDeAlmacenes`,
    `IConsultaDeUbicaciones`, `IConsultaDeUnidadesDeMedida`, `IConsultaDeImpuestos` e
    `IConsultaDeDivisas`. Es una consulta por llamada, y la exportación hace una por maestro y página
    interna, con los identificadores distintos de esa página.
-2. **Nombra lo que enseña la ficha del maestro**, la de su `GET …/{id}`: el mismo contexto, con sus
+2. > **Enmendado por el ADR-0076 (2026-11-02).** En la tabla, la fila de la unidad ya no nombra
+   > la divisa: su puerto no nombra.
+
+   **Nombra lo que enseña la ficha del maestro**, la de su `GET …/{id}`: el mismo contexto, con sus
    filtros globales puestos, y sin abrir el ámbito del art. 32. Lo que la ficha no enseña, el puerto
    no lo nombra, y la exportación escribe su identificador. Así un fichero no enseña nada que la
    pantalla no enseñe.
@@ -80,6 +88,9 @@ API de su dueño, uno a uno y con caché (ADR-0055 §12). La exportación no pue
    así, muertas. El consumidor que no tiene identificadores no pregunta.
 
 ### Cómo se vigila
+
+> **Enmendado por el ADR-0076 (2026-11-02).** `LosNombresPorLotesTests` ya no nombra la divisa: su
+> segunda fila es de la unidad y el tramo.
 
 | Qué | Dónde | Carril |
 |---|---|---|

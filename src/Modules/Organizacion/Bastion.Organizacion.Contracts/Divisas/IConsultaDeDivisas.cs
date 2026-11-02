@@ -1,4 +1,3 @@
-using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Divisas;
@@ -16,6 +15,12 @@ namespace Bastion.Organizacion.Contracts.Divisas;
 /// lleve importe. No devuelve los decimales: cuántos tiene un euro lo dice el catálogo del código
 /// —no una fila editable—, y esa decisión ya está escrita en <c>DivisaDto</c>.
 /// </para>
+/// <para>
+/// <b>Desde el 3.3 se pregunta por el código ISO 4217, y no por el identificador</b> (ADR-0076):
+/// la tarifa guarda el código, como el límite de crédito del tercero y la divisa base de la
+/// empresa. Con el identificador se fue su único consumidor, y con el nombre por lotes, también:
+/// la exportación de tarifas escribe el código, que ya es lo que la tarifa tiene.
+/// </para>
 /// </remarks>
 public interface IConsultaDeDivisas
 {
@@ -26,26 +31,10 @@ public interface IConsultaDeDivisas
     /// mucho después de que nadie pueda emitir una nueva. Hoy ninguna fila puede estar ahí porque la
     /// retirada llega en el ítem 1.7.
     /// </remarks>
-    /// <param name="divisaId">Identificador de la divisa.</param>
+    /// <param name="codigo">
+    /// Código ISO 4217, tal como lo escribieron: se normaliza como lo guarda Organización, y uno sin
+    /// forma de código es <see cref="EstadoDeMaestro.NoExiste"/>, no una excepción.
+    /// </param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<EstadoDeMaestro> EstadoDeAsync(Guid divisaId, CancellationToken cancelacion);
-
-    /// <summary>El código y el nombre de cada divisa, en una sola consulta.</summary>
-    /// <remarks>
-    /// <para>
-    /// <b>Nombra lo que enseña su ficha</b>, la de
-    /// <c>GET /api/v1/organizacion/divisas/{id}</c> (ADR-0074). Una divisa <b>retirada</b>
-    /// vuelve, porque sigue resolviendo lo viejo y su ficha la enseña. Es un maestro de
-    /// instalación (R8): no hay empresa que filtrar.
-    /// </para>
-    /// <para>
-    /// <b>No mira el permiso de quien pregunta</b>: lo mira quien pregunta, antes de preguntar, como
-    /// la pantalla. Lo que no vuelve, se escribe con su identificador.
-    /// </para>
-    /// </remarks>
-    /// <param name="divisas">Las divisas por las que se pregunta.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    /// <returns>El código y el nombre de cada una que vuelve.</returns>
-    Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
-        IReadOnlyCollection<Guid> divisas, CancellationToken cancelacion);
+    Task<EstadoDeMaestro> EstadoDeAsync(string codigo, CancellationToken cancelacion);
 }

@@ -42,7 +42,7 @@ namespace Bastion.Api.IntegrationTests.Contrato;
 /// chocarían, y el 409 del segundo se leería como un fallo de la API.
 /// </para>
 /// <para>
-/// <b>Las semillas de este fichero son el bloque 190-193, y el bloque importa.</b> La semilla
+/// <b>Las semillas de este fichero son el bloque 190-194, y el bloque importa.</b> La semilla
 /// escribe el NIF de la empresa que el caso da de alta, y el NIF es único en toda la instalación:
 /// dos ficheros que compartieran una semilla se pisarían. El choque no sale por el que llega
 /// segundo, sale por EL OTRO —quien recibe el 409 es el que corriera después—, así que se lee como
@@ -154,12 +154,11 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
     public async Task Dos_tramos_del_mismo_codigo_que_se_pisan_los_rechaza_la_BASE()
     {
         var empresa = Guid.NewGuid();
-        var divisa = Guid.NewGuid();
 
-        await InsertarTarifaAsync(empresa, divisa, "PVP", new DateOnly(2026, 1, 1), null);
+        await InsertarTarifaAsync(empresa, "PVP", new DateOnly(2026, 1, 1), null);
 
         PostgresException choque = await Should.ThrowAsync<PostgresException>(
-            () => InsertarTarifaAsync(empresa, divisa, "PVP", new DateOnly(2027, 6, 1), null));
+            () => InsertarTarifaAsync(empresa, "PVP", new DateOnly(2027, 6, 1), null));
 
         choque.SqlState.ShouldBe(
             PostgresErrorCodes.ExclusionViolation,
@@ -173,7 +172,60 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
         // La otra empresa NO estorba, y es la mitad que se cae si alguien quita `empresa_id WITH =`
         // de la restricción: la tarifa PVP de una ferretería impediría a la imprenta de al lado
         // abrir la suya, con un rechazo que habla de una fila que no puede ni ver (R8).
-        await InsertarTarifaAsync(Guid.NewGuid(), divisa, "PVP", new DateOnly(2026, 1, 1), null);
+        await InsertarTarifaAsync(Guid.NewGuid(), "PVP", new DateOnly(2026, 1, 1), null);
+    }
+
+    /// <summary>
+    /// Dos tramos del mismo código y de distinto tipo los rechaza <b>la base</b>, aunque no se
+    /// pisen.
+    /// </summary>
+    /// <remarks>
+    /// El gemelo del solape, con el tipo (ADR-0076): <c>tarifas_un_tipo_por_codigo</c> excluye dos
+    /// filas de la misma empresa y el mismo código cuyo tipo sea distinto. Las fechas van seguidas
+    /// y sin pisarse a propósito, para que lo que salte sea esta restricción y no la del solape.
+    /// Por el caso de uso, quien contesta es <c>TipoDelCodigoAsync</c>, y esa pregunta no cubre dos
+    /// altas a la vez.
+    /// </remarks>
+    [Fact]
+    public async Task Dos_tramos_del_mismo_codigo_y_distinto_tipo_los_rechaza_la_BASE()
+    {
+        var empresa = Guid.NewGuid();
+        DateOnly frontera = new(2026, 12, 31);
+
+        await InsertarTarifaAsync(empresa, "PRV", new DateOnly(2026, 1, 1), frontera, "Compra");
+
+        PostgresException choque = await Should.ThrowAsync<PostgresException>(
+            () => InsertarTarifaAsync(empresa, "PRV", frontera.AddDays(1), null, "Venta"));
+
+        choque.SqlState.ShouldBe(
+            PostgresErrorCodes.ExclusionViolation,
+            "la base ha dejado entrar un tramo de venta en un código cuyos tramos son de compra. " +
+            "Según el día, la tarifa PRV le daría a un cliente los precios de un proveedor");
+
+        choque.ConstraintName.ShouldBe("tarifas_un_tipo_por_codigo");
+
+        // Las parejas. El tramo siguiente del mismo tipo entra: sin esta, una restricción que
+        // rechazara cualquier segundo tramo del código pasaría la aserción de arriba y subir
+        // precios sería imposible. Y el otro tipo entra con otro código, y en otra empresa con el
+        // mismo, que es la mitad que se cae si alguien quita `empresa_id WITH =` (R8).
+        await InsertarTarifaAsync(empresa, "PRV", frontera.AddDays(1), null, "Compra");
+        await InsertarTarifaAsync(empresa, "PVP", new DateOnly(2026, 1, 1), null, "Venta");
+        await InsertarTarifaAsync(Guid.NewGuid(), "PRV", new DateOnly(2026, 1, 1), null, "Venta");
+    }
+
+    /// <summary>Un tipo que no es ni de venta ni de compra lo rechaza la base.</summary>
+    /// <remarks>
+    /// La restricción se escribe con los nombres del enumerado, y en mayúsculas y minúsculas como
+    /// están: «venta» no es un tipo, igual que no lo es para el caso de uso.
+    /// </remarks>
+    [Fact]
+    public async Task Un_tipo_que_no_es_venta_ni_compra_lo_rechaza_la_BASE()
+    {
+        PostgresException choque = await Should.ThrowAsync<PostgresException>(
+            () => InsertarTarifaAsync(Guid.NewGuid(), "OTRO", new DateOnly(2026, 1, 1), null, "venta"));
+
+        choque.SqlState.ShouldBe(PostgresErrorCodes.CheckViolation);
+        choque.ConstraintName.ShouldBe("ck_tarifas_tipo");
     }
 
     /// <summary>El día en que un tramo <b>acaba</b> todavía cuenta para el solape.</summary>
@@ -187,13 +239,12 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
     public async Task El_dia_en_que_un_tramo_ACABA_todavia_cuenta_para_el_solape()
     {
         var empresa = Guid.NewGuid();
-        var divisa = Guid.NewGuid();
         DateOnly frontera = new(2026, 12, 31);
 
-        await InsertarTarifaAsync(empresa, divisa, "MAY", new DateOnly(2026, 1, 1), frontera);
+        await InsertarTarifaAsync(empresa, "MAY", new DateOnly(2026, 1, 1), frontera);
 
         PostgresException choque = await Should.ThrowAsync<PostgresException>(
-            () => InsertarTarifaAsync(empresa, divisa, "MAY", frontera, null));
+            () => InsertarTarifaAsync(empresa, "MAY", frontera, null));
 
         choque.SqlState.ShouldBe(
             PostgresErrorCodes.ExclusionViolation,
@@ -203,7 +254,7 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
 
         // Y el día siguiente SÍ entra: sin esta mitad, una restricción que rechazara todo pasaría
         // la aserción de arriba y nadie podría encadenar dos tramos consecutivos.
-        await InsertarTarifaAsync(empresa, divisa, "MAY", frontera.AddDays(1), null);
+        await InsertarTarifaAsync(empresa, "MAY", frontera.AddDays(1), null);
     }
 
     /// <summary>
@@ -247,6 +298,56 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
             "una tarifa que existe y no cubre el día contesta lo mismo que una que no existe. El " +
             "descuido normal —una tarifa caducada sin sucesora— saldría como «esa tarifa no " +
             "existe» delante de quien la tiene en pantalla");
+    }
+
+    /// <summary>
+    /// El tipo y la divisa por HTTP: la divisa se guarda con su código en mayúsculas, y cada
+    /// rechazo del alta tiene su <c>type</c>.
+    /// </summary>
+    /// <remarks>
+    /// Los <c>type</c> son el contrato del frontal (ADR-0030), y los tres se arreglan distinto: un
+    /// tipo que no es ninguno se corrige eligiendo uno, un código cuyos tramos son del otro tipo se
+    /// corrige con otro código, y una divisa que no existe, escribiéndola bien.
+    /// </remarks>
+    [Fact]
+    public async Task La_divisa_se_guarda_con_su_codigo_y_cada_rechazo_del_tipo_tiene_su_type()
+    {
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(194);
+        await DivisaAsync(cliente, "EUR", "Euro");
+
+        using (HttpResponseMessage alta = await PedirTarifaAsync(
+                   cliente, "T194", "Compra", "eur", s_desde, new DateOnly(2001, 12, 31)))
+        {
+            alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+
+            TarifaDto guardada = (await alta.Content.ReadFromJsonAsync<TarifaDto>())!;
+
+            (guardada.Tipo, guardada.Divisa).ShouldBe(("Compra", "EUR"));
+            (await cliente.GetFromJsonAsync<TarifaDto>($"{Tarifas}/{guardada.Id}"))!
+                .ShouldBe(guardada, "lo que se lee de la base es lo que contestó el alta");
+        }
+
+        await RechazadaAsync(
+            cliente, "T194", "Venta", "EUR", HttpStatusCode.Conflict, "tarifa-tipo-distinto-del-codigo");
+        await RechazadaAsync(
+            cliente, "T194B", "Alquiler", "EUR", HttpStatusCode.BadRequest, "tarifa-tipo-no-valido");
+        await RechazadaAsync(
+            cliente, "T194C", "Venta", "XYZ", HttpStatusCode.BadRequest, "tarifa-divisa-no-encontrada");
+
+        static async Task RechazadaAsync(
+            HttpClient cliente,
+            string codigo,
+            string tipo,
+            string divisa,
+            HttpStatusCode esperado,
+            string type)
+        {
+            using HttpResponseMessage intento = await PedirTarifaAsync(
+                cliente, codigo, tipo, divisa, new DateOnly(2002, 1, 1), null);
+
+            intento.StatusCode.ShouldBe(esperado, await Escenario.Detalle(intento));
+            (await Problema(intento)).GetProperty("type").GetString().ShouldBe("/errors/" + type);
+        }
     }
 
     /// <summary>Sin línea aplicable hay un error con nombre, y <b>nunca</b> un precio cero.</summary>
@@ -349,7 +450,8 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
         resuelto.Origen.ShouldBe("Categoria");
         resuelto.OrigenId.ShouldBe(madre.Id);
         resuelto.NivelDeLaCategoria.ShouldBe(1, "la madre está a UN salto del artículo");
-        resuelto.DivisaId.ShouldBe(tarifa.DivisaId, "el precio viaja siempre con su divisa");
+        resuelto.Divisa.ShouldBe(tarifa.Divisa, "el precio viaja siempre con su divisa");
+        resuelto.Divisa.ShouldBe("EUR");
     }
 
     /// <summary>
@@ -471,10 +573,10 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
     /// </remarks>
     private async Task InsertarTarifaAsync(
         Guid empresaId,
-        Guid divisaId,
         string codigo,
         DateOnly desde,
-        DateOnly? hasta)
+        DateOnly? hasta,
+        string tipo = "Venta")
     {
         await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
         await conexion.OpenAsync();
@@ -482,9 +584,9 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
         await using NpgsqlCommand insercion = new(
             """
             INSERT INTO catalogo.tarifas
-                (id, empresa_id, codigo, nombre, divisa_id, vigente_desde, vigente_hasta,
+                (id, empresa_id, codigo, nombre, tipo, divisa, vigente_desde, vigente_hasta,
                  creado_en, modificado_en)
-            VALUES (@id, @empresa, @codigo, @nombre, @divisa, @desde, @hasta, now(), now());
+            VALUES (@id, @empresa, @codigo, @nombre, @tipo, 'EUR', @desde, @hasta, now(), now());
             """,
             conexion);
 
@@ -492,7 +594,7 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
         insercion.Parameters.AddWithValue("empresa", empresaId);
         insercion.Parameters.AddWithValue("codigo", codigo);
         insercion.Parameters.AddWithValue("nombre", "Tramo " + codigo);
-        insercion.Parameters.AddWithValue("divisa", divisaId);
+        insercion.Parameters.AddWithValue("tipo", tipo);
         insercion.Parameters.AddWithValue("desde", desde);
         insercion.Parameters.AddWithValue("hasta", (object?)hasta ?? DBNull.Value);
 
@@ -548,69 +650,60 @@ public sealed class ContratoDeTarifasTests(PostgresConTodosLosModulos postgres) 
             (await impuesto.Content.ReadFromJsonAsync<ImpuestoDto>())!.Id);
     }
 
-    /// <summary>La divisa con ese código ISO, dándola de alta si todavía no está.</summary>
-    private static async Task<Guid> DivisaAsync(HttpClient cliente, string codigo, string nombre)
+    /// <summary>El código de la divisa, dándola de alta si todavía no está.</summary>
+    /// <remarks>
+    /// Desde el 3.3 la tarifa la guarda por su código (ADR-0076), así que basta con que esté: el
+    /// <c>409</c> de un alta repetida dice eso mismo, y no hace falta buscar su identificador.
+    /// </remarks>
+    private static async Task<string> DivisaAsync(HttpClient cliente, string codigo, string nombre)
     {
         using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
             Divisas, new CrearDivisaDto { Codigo = codigo, Nombre = nombre });
 
-        if (alta.StatusCode == HttpStatusCode.Created)
+        if (alta.StatusCode != HttpStatusCode.Created)
         {
-            return (await alta.Content.ReadFromJsonAsync<DivisaDto>())!.Id;
+            alta.StatusCode.ShouldBe(
+                HttpStatusCode.Conflict,
+                "si no se ha creado, lo único esperable es que ya estuviera. " +
+                await Escenario.Detalle(alta));
         }
 
-        alta.StatusCode.ShouldBe(
-            HttpStatusCode.Conflict,
-            "si no se ha creado, lo único esperable es que ya estuviera. " +
-            await Escenario.Detalle(alta));
-
-        for (int pagina = 1; ; pagina++)
-        {
-            using HttpResponseMessage listado = await cliente.GetAsync(
-                $"{Divisas}?page={pagina}&size=50");
-
-            listado.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(listado));
-
-            PaginaDe<DivisaDto> trozo =
-                (await listado.Content.ReadFromJsonAsync<PaginaDe<DivisaDto>>())!;
-
-            DivisaDto? suya = trozo.Elementos.FirstOrDefault(divisa => divisa.Codigo == codigo);
-
-            if (suya is not null)
-            {
-                return suya.Id;
-            }
-
-            if (trozo.Elementos.Count == 0 || pagina * 50 >= trozo.Total)
-            {
-                throw new InvalidOperationException(
-                    $"La divisa {codigo} ni se ha creado ni está en el listado.");
-            }
-        }
+        return codigo;
     }
 
     private static async Task<TarifaDto> CrearTarifaAsync(
         HttpClient cliente,
         string codigo,
-        Guid divisaId,
+        string divisa,
         DateOnly desde,
         DateOnly? hasta)
     {
-        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
-            Tarifas,
-            new CrearTarifaDto
-            {
-                Codigo = codigo,
-                Nombre = "Tarifa " + codigo,
-                DivisaId = divisaId,
-                VigenteDesde = desde,
-                VigenteHasta = hasta,
-            });
+        using HttpResponseMessage alta = await PedirTarifaAsync(
+            cliente, codigo, "Venta", divisa, desde, hasta);
 
         alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
 
         return (await alta.Content.ReadFromJsonAsync<TarifaDto>())!;
     }
+
+    private static Task<HttpResponseMessage> PedirTarifaAsync(
+        HttpClient cliente,
+        string codigo,
+        string tipo,
+        string divisa,
+        DateOnly desde,
+        DateOnly? hasta) =>
+        cliente.PostAsJsonAsync(
+            Tarifas,
+            new CrearTarifaDto
+            {
+                Codigo = codigo,
+                Nombre = "Tarifa " + codigo,
+                Tipo = tipo,
+                Divisa = divisa,
+                VigenteDesde = desde,
+                VigenteHasta = hasta,
+            });
 
     private static async Task CrearLineaAsync(
         HttpClient cliente,

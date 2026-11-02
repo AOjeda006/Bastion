@@ -558,10 +558,10 @@ internal static class Inventario
                 "enseñarlos: lo que enseña su ficha (ADR-0074).",
 
             ["Bastion.Organizacion.Contracts.Divisas.IConsultaDeDivisas"] =
-                "LECTURA: en qué estado está una divisa, para quien guarde su identificador — la " +
-                "tarifa del §7.3, y detrás de ella todo lo que lleve importe. No escribe. " +
-                "Desde el 3.2 nombra también un lote, con el código y el nombre, para " +
-                "enseñarlos: lo que enseña su ficha (ADR-0074).",
+                "LECTURA: en qué estado está una divisa, por su código ISO 4217 — la tarifa del " +
+                "§7.3, y detrás de ella todo lo que lleve importe. No escribe. Desde el 3.3 se " +
+                "pregunta por el código y no por el identificador, y ya no nombra: la tarifa " +
+                "guarda el código, que es lo que se enseña (ADR-0076, que enmienda el ADR-0074).",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IConsultaDeEjercicios"] =
                 "LECTURA, y la primera puerta con la forma más rara de todas, que desde el 2.9 " +
@@ -1004,17 +1004,6 @@ internal static class Inventario
                 "Empresa",
                 Raiz + ".Organizacion.Contracts.Empresas.IConsultaDeEmpresas",
                 "gemelo del del lote."),
-
-            ["Tarifa.DivisaId"] = new(
-                "Divisa",
-                Raiz + ".Organizacion.Contracts.Divisas.IConsultaDeDivisas",
-                "el cruce del ítem 1.9, y el que estrena el puerto que el 1.2 declaró «para la " +
-                "tarifa del §7.3» y se quedó sin consumidor dos fases. No hay clave ajena y no " +
-                "puede haberla: la divisa vive en el esquema de Organización y la tarifa en el " +
-                "de Catálogo (regla 4 del §5), así que lo único que impide una tarifa en una " +
-                "divisa inventada es que CrearTarifa lo pregunte. Y pregunta por el ESTADO, no " +
-                "por la existencia: una divisa retirada sigue resolviendo las tarifas abiertas " +
-                "cuando se usaba y no se ofrece para una nueva (ADR-0023)."),
 
             ["Tarifa.EmpresaId"] = new(
                 "Empresa",

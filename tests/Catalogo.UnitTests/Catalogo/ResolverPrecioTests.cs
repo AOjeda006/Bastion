@@ -148,7 +148,7 @@ public sealed class ResolverPrecioTests
             tarifa.Codigo, articulo.Id, 1m, null, CancellationToken.None);
 
         resuelto.EsCorrecto.ShouldBeTrue();
-        resuelto.Valor.DivisaId.ShouldBe(tarifa.DivisaId);
+        resuelto.Valor.Divisa.ShouldBe("USD");
         resuelto.Valor.Origen.ShouldBe(OrigenDelPrecio.Articulo);
         resuelto.Valor.NivelDeLaCategoria.ShouldBeNull("una línea de artículo no está a ningún salto");
     }
@@ -192,12 +192,12 @@ public sealed class ResolverPrecioTests
         var madrugada = new DateTimeOffset(2026, 9, 12, 0, 30, 0, TimeSpan.FromHours(2));
         var madridEnVerano = TimeZoneInfo.CreateCustomTimeZone(
             "Madrid en verano", TimeSpan.FromHours(2), "CEST", "CEST");
-        var divisa = Guid.NewGuid();
         var septiembre = Tarifa.Crear(
-            s_empresa, "PVP", "Promoción de septiembre", divisa,
+            s_empresa, "PVP", "Promoción de septiembre", TipoDeTarifa.Venta, "EUR",
             new DateOnly(2026, 9, 1), s_hoy, s_ahora);
         var siguiente = Tarifa.Crear(
-            s_empresa, "PVP", "La que viene", divisa, s_hoy.AddDays(1), null, s_ahora);
+            s_empresa, "PVP", "La que viene", TipoDeTarifa.Venta, "EUR", s_hoy.AddDays(1), null,
+            s_ahora);
         var articulo = Articulo.Crear(
             s_empresa, "ART-1", "Un artículo", TipoDeArticulo.Bien, Trazabilidad.Ninguna,
             Guid.NewGuid(), Guid.NewGuid(), null, s_ahora);
@@ -231,8 +231,10 @@ public sealed class ResolverPrecioTests
     private static (Tarifa Tarifa, Articulo Articulo, TarifasEnMemoria Tarifas,
         LineasDeTarifaEnMemoria Lineas, ArticulosEnMemoria Articulos) Escenario(Guid? categoriaId)
     {
+        // En dólares, y no en la de la empresa, para que el precio resuelto no pueda acertar la
+        // divisa por ser la de siempre.
         var tarifa = Tarifa.Crear(
-            s_empresa, "PVP", "Precio de venta al público", Guid.NewGuid(),
+            s_empresa, "PVP", "Precio de venta al público", TipoDeTarifa.Venta, "USD",
             s_hoy.AddYears(-1), null, s_ahora);
 
         var articulo = Articulo.Crear(

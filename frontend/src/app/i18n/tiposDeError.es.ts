@@ -495,6 +495,12 @@ export const tiposDeError = {
   'tarifa-sin-linea-aplicable':
     'Esa tarifa no dice nada de ese artículo para esa cantidad, ni suya ni de ninguna de sus ' +
     'categorías. Añade la línea que falta: aquí no hay precio que aplicar.',
+  // El tipo va con el código (ADR-0076): todos los tramos de una tarifa son de venta o todos de
+  // compra, y lo que se arregla es el código, no el tipo.
+  'tarifa-tipo-distinto-del-codigo':
+    'Esa tarifa ya tiene tramos del otro tipo, y todos los tramos de una tarifa son de venta o ' +
+    'todos de compra. Para el otro tipo, abre una tarifa con otro código.',
+  'tarifa-tipo-no-valido': 'Una tarifa es de venta o de compra. Elige uno de los dos.',
   'tarifa-vigencia-al-reves': 'La vigencia acaba antes de empezar. Revisa las dos fechas.',
   'tarifa-vigencias-solapadas':
     'Ya hay otro tramo de esa tarifa que cubre alguno de esos días. Los periodos de una ' +

@@ -12,7 +12,10 @@ namespace Bastion.Catalogo.Contracts.Catalogo;
 /// <param name="EmpresaId">Empresa a la que pertenece (R8).</param>
 /// <param name="Codigo">Código, en mayúsculas. Se repite entre tramos de la misma tarifa.</param>
 /// <param name="Nombre">Nombre con el que se muestra.</param>
-/// <param name="DivisaId">Divisa en la que se expresan sus precios (maestro de Organización).</param>
+/// <param name="Tipo">
+/// <c>Venta</c> o <c>Compra</c>, como texto. Lo comparten todos los tramos del código.
+/// </param>
+/// <param name="Divisa">Divisa en la que se expresan sus precios, en ISO 4217.</param>
 /// <param name="VigenteDesde">Primer día en que rige, incluido.</param>
 /// <param name="VigenteHasta">Último día en que rige, incluido; nulo mientras siga vigente.</param>
 public sealed record TarifaDto(
@@ -20,7 +23,8 @@ public sealed record TarifaDto(
     Guid EmpresaId,
     string Codigo,
     string Nombre,
-    Guid DivisaId,
+    string Tipo,
+    string Divisa,
     DateOnly VigenteDesde,
     DateOnly? VigenteHasta);
 
@@ -40,18 +44,29 @@ public sealed record CrearTarifaDto
     [StringLength(100, ErrorMessage = "El nombre no puede pasar de {1} caracteres.")]
     public string Nombre { get; init; } = string.Empty;
 
+    /// <summary>Si es de venta o de compra: <c>Venta</c> o <c>Compra</c>.</summary>
+    /// <remarks>
+    /// <b>Es obligatorio y no tiene valor por omisión</b>: una tarifa de compra abierta como de
+    /// venta propondría a un proveedor los precios de un cliente. Y es <b>el mismo</b> que el de los
+    /// tramos que ya tenga el código; uno distinto es un <c>409</c>.
+    /// </remarks>
+    [Required(ErrorMessage = "El tipo de la tarifa es obligatorio.")]
+    public string Tipo { get; init; } = string.Empty;
+
     /// <summary>
-    /// Divisa en la que se expresan los precios de esta tarifa.
+    /// Divisa en la que se expresan los precios de esta tarifa, en ISO 4217: tres letras.
     /// </summary>
     /// <remarks>
     /// <b>Es obligatoria y no se hereda de la empresa</b>, por lo mismo que la del límite de
     /// crédito del ítem 1.6: heredarla en silencio deja todas las tarifas ya guardadas
     /// reinterpretadas el día que alguien cambie la divisa base. Y <b>puede no ser la de la
     /// empresa</b>: una tarifa de exportación en dólares es legítima, y la divisa viaja con cada
-    /// precio resuelto para que nadie la confunda.
+    /// precio resuelto para que nadie la confunda. Tiene que estar dada de alta en Organización y
+    /// no retirada.
     /// </remarks>
     [Required(ErrorMessage = "La divisa de la tarifa es obligatoria.")]
-    public Guid DivisaId { get; init; }
+    [StringLength(3, MinimumLength = 3, ErrorMessage = "La divisa son tres letras (ISO 4217).")]
+    public string Divisa { get; init; } = string.Empty;
 
     /// <summary>Primer día en que rige, incluido.</summary>
     [Required(ErrorMessage = "La fecha desde la que rige es obligatoria.")]
@@ -70,9 +85,9 @@ public sealed record CrearTarifaDto
 
 /// <summary>Lo que se puede cambiar de un tramo de tarifa.</summary>
 /// <remarks>
-/// <b>Solo el nombre.</b> Ni el código, ni la divisa, ni el tramo de fechas: los tres describen los
-/// precios que ya se aplicaron bajo esta fila, y cambiarlos los reescribiría hacia atrás. Subir
-/// precios es cerrar este tramo y crear el siguiente con el mismo código.
+/// <b>Solo el nombre.</b> Ni el código, ni el tipo, ni la divisa, ni el tramo de fechas: los cuatro
+/// describen los precios que ya se aplicaron bajo esta fila, y cambiarlos los reescribiría hacia
+/// atrás. Subir precios es cerrar este tramo y crear el siguiente con el mismo código.
 /// </remarks>
 public sealed record ModificarTarifaDto
 {

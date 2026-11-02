@@ -38,19 +38,28 @@ public sealed class TarifasController(
 {
     /// <summary>
     /// Las columnas de la exportación: lo que el listado publica de cada tramo, sin sus
-    /// identificadores, y la divisa con su código y su nombre (ADR-0074).
+    /// identificadores.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// <b>La divisa va con su código y sin nombre desde el 3.3</b>, como la divisa base de la
+    /// exportación de empresas: el código ISO 4217 ya es lo que la tarifa guarda, y no hay ningún
+    /// maestro que nombrar (ADR-0076). Hasta entonces era el identificador de una fila de
+    /// Organización, y la exportación preguntaba su código y su nombre (ADR-0074).
+    /// </para>
+    /// <para>
     /// Un tramo abierto sale con <c>vigente_hasta</c> vacío, que es lo que dice el DTO con su nulo.
+    /// </para>
     /// </remarks>
-    internal static readonly HojaDeExportacion<TarifaExportada> HojaDeTarifas = new(
+    internal static readonly HojaDeExportacion<TarifaDto> HojaDeTarifas = new(
         "tarifas",
         [
-            new("codigo", fila => CampoCsv.Texto(fila.Tarifa.Codigo)),
-            new("nombre", fila => CampoCsv.Texto(fila.Tarifa.Nombre)),
-            .. ColumnasDeMaestro.De<TarifaExportada>("divisa", fila => fila.Divisa),
-            new("vigente_desde", fila => CampoCsv.Fecha(fila.Tarifa.VigenteDesde)),
-            new("vigente_hasta", fila => CampoCsv.Fecha(fila.Tarifa.VigenteHasta)),
+            new("codigo", tarifa => CampoCsv.Texto(tarifa.Codigo)),
+            new("nombre", tarifa => CampoCsv.Texto(tarifa.Nombre)),
+            new("tipo", tarifa => CampoCsv.Valor(tarifa.Tipo)),
+            new("divisa", tarifa => CampoCsv.Valor(tarifa.Divisa)),
+            new("vigente_desde", tarifa => CampoCsv.Fecha(tarifa.VigenteDesde)),
+            new("vigente_hasta", tarifa => CampoCsv.Fecha(tarifa.VigenteHasta)),
         ]);
 
     /// <summary>Devuelve una página de tramos de tarifa.</summary>
@@ -85,7 +94,6 @@ public sealed class TarifasController(
     /// </summary>
     /// <param name="consulta">El orden y el código (<c>sort</c>, <c>codigo</c>).</param>
     /// <param name="texto">El filtro de texto (<c>q</c>).</param>
-    /// <param name="exportar">El caso de uso del listado, con la divisa nombrada.</param>
     /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
     /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
@@ -95,19 +103,17 @@ public sealed class TarifasController(
     public async Task<IActionResult> Exportar(
         [FromQuery] ConsultaDeTarifas consulta,
         [FromQuery] FiltroDeTexto texto,
-        [FromServices] IExportarTarifas exportar,
         [FromServices] IFotoDeCatalogo foto,
         [FromServices] TimeProvider reloj,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
-        ArgumentNullException.ThrowIfNull(exportar);
 
         return await ExportarListadoAsync(
             consulta,
             texto,
-            exportar,
-            (paginacion, testigo) => exportar.EjecutarAsync(paginacion, consulta.Codigo, testigo),
+            listar,
+            (paginacion, testigo) => listar.EjecutarAsync(paginacion, consulta.Codigo, testigo),
             foto,
             HojaDeTarifas,
             reloj,

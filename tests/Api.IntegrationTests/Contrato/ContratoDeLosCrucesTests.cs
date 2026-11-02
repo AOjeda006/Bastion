@@ -46,7 +46,7 @@ namespace Bastion.Api.IntegrationTests.Contrato;
 /// <b>Las semillas son el bloque 200-215</b>: 200-205 en <c>ElPuertoDeTercerosContraLaBaseTests</c>
 /// y 206-215 aquí. Los terceros van del 32 000 001 al 32 000 009 allí y del 32 000 010 en adelante
 /// aquí. El NIF de una empresa es único en toda la instalación, y el de un tercero dentro de su
-/// empresa; <c>ContratoDeTarifasTests</c> tiene el 190-193 y <c>ContratoDeCatalogoTests</c> el
+/// empresa; <c>ContratoDeTarifasTests</c> tiene el 190-194 y <c>ContratoDeCatalogoTests</c> el
 /// 170-183, y un choque de semillas no sale por el que llega segundo sino por el otro.
 /// </para>
 /// <para>
@@ -588,7 +588,8 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
             {
                 Codigo = codigo,
                 Nombre = "Tarifa " + codigo,
-                DivisaId = await EuroAsync(cliente),
+                Tipo = "Venta",
+                Divisa = await EuroAsync(cliente),
                 VigenteDesde = desde,
                 VigenteHasta = hasta,
             });
@@ -598,40 +599,24 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
         return (await alta.Content.ReadFromJsonAsync<TarifaDto>())!;
     }
 
-    /// <summary>El euro, dándolo de alta si todavía no está.</summary>
-    private static async Task<Guid> EuroAsync(HttpClient cliente)
+    /// <summary>El código del euro, dándolo de alta si todavía no está.</summary>
+    /// <remarks>
+    /// Desde el 3.3 la tarifa guarda el código (ADR-0076), así que basta con que esté: el
+    /// <c>409</c> de un alta repetida dice eso mismo.
+    /// </remarks>
+    private static async Task<string> EuroAsync(HttpClient cliente)
     {
         using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
             Divisas, new CrearDivisaDto { Codigo = "EUR", Nombre = "Euro" });
 
-        if (alta.StatusCode == HttpStatusCode.Created)
+        if (alta.StatusCode != HttpStatusCode.Created)
         {
-            return (await alta.Content.ReadFromJsonAsync<DivisaDto>())!.Id;
+            alta.StatusCode.ShouldBe(
+                HttpStatusCode.Conflict,
+                "si no se ha creado, lo único esperable es que ya estuviera. " + await Escenario.Detalle(alta));
         }
 
-        alta.StatusCode.ShouldBe(
-            HttpStatusCode.Conflict,
-            "si no se ha creado, lo único esperable es que ya estuviera. " + await Escenario.Detalle(alta));
-
-        for (int pagina = 1; ; pagina++)
-        {
-            using HttpResponseMessage listado = await cliente.GetAsync($"{Divisas}?page={pagina}&size=50");
-
-            listado.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(listado));
-
-            PaginaDe<DivisaDto> trozo = (await listado.Content.ReadFromJsonAsync<PaginaDe<DivisaDto>>())!;
-            DivisaDto? euro = trozo.Elementos.FirstOrDefault(divisa => divisa.Codigo == "EUR");
-
-            if (euro is not null)
-            {
-                return euro.Id;
-            }
-
-            if (trozo.Elementos.Count == 0 || pagina * 50 >= trozo.Total)
-            {
-                throw new InvalidOperationException("El euro ni se ha creado ni está en el listado.");
-            }
-        }
+        return "EUR";
     }
 
     /// <summary>Asigna la tarifa citando la versión de la FICHA, que es la que se escribe.</summary>

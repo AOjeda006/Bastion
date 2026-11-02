@@ -1,11 +1,12 @@
+using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Entidades;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 
 namespace Bastion.Catalogo.Domain.Catalogo;
 
 /// <summary>
-/// Una lista de precios de la empresa, con la divisa en la que se expresa y el tramo de fechas en
-/// el que rige.
+/// Una lista de precios de la empresa, de venta o de compra, con la divisa en la que se expresa y
+/// el tramo de fechas en el que rige.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -37,11 +38,18 @@ namespace Bastion.Catalogo.Domain.Catalogo;
 /// la frontera valdría lo que dijera la última que se leyó.
 /// </para>
 /// <para>
-/// <b>La divisa es un <c>Guid</c> de Organización, sin clave ajena</b> (§5, regla 4). Lo único que
-/// impide que ahí acabe un identificador inventado es <c>IConsultaDeDivisas</c>, el puerto que el
-/// ítem 1.2 declaró diciendo —con estas palabras— que su consumidor sería «la tarifa del §7.3».
-/// Este es el sitio. Y una divisa <b>retirada</b> no funda una tarifa nueva, pero la tarifa que ya
-/// la usaba sigue resolviéndola: las dos mitades del ADR-0023, otra vez.
+/// <b>La divisa es su código ISO 4217 desde el ítem 3.3</b> (ADR-0076), y hasta entonces fue el
+/// <c>Guid</c> de una fila de Organización. El código es lo que la pone al lado de la divisa base
+/// de la empresa, que ya lo era: el precio de compra solo se propone en esa divisa, y comparar un
+/// identificador con un código obligaría a preguntar a otro módulo en cada precio. Que exista y
+/// no esté retirada lo sigue preguntando el alta a <c>IConsultaDeDivisas</c>, ahora por el código;
+/// y una divisa <b>retirada</b> no funda una tarifa nueva, pero la tarifa que ya la usaba sigue
+/// resolviéndola: las dos mitades del ADR-0023, otra vez.
+/// </para>
+/// <para>
+/// <b>Y es de venta o de compra</b> (<see cref="TipoDeTarifa"/>), con el tipo pegado al código:
+/// los tramos de un código son todos del mismo tipo, y lo sostiene otra restricción de exclusión.
+/// Toda tarifa anterior al 3.3 pasó a ser de venta en la migración que trajo el tipo.
 /// </para>
 /// <para>
 /// <b>Que la divisa no sea la de la empresa se acepta a propósito.</b> Una tarifa de exportación en
@@ -64,7 +72,8 @@ public sealed class Tarifa : EntidadBase, IDeInquilino
         Guid empresaId,
         string codigo,
         string nombre,
-        Guid divisaId,
+        TipoDeTarifa tipo,
+        string divisa,
         DateOnly vigenteDesde,
         DateOnly? vigenteHasta,
         DateTimeOffset momento)
@@ -74,7 +83,8 @@ public sealed class Tarifa : EntidadBase, IDeInquilino
         EmpresaId = empresaId;
         Codigo = codigo;
         Nombre = nombre;
-        DivisaId = divisaId;
+        Tipo = tipo;
+        Divisa = divisa;
         VigenteDesde = vigenteDesde;
         VigenteHasta = vigenteHasta;
     }
@@ -83,6 +93,7 @@ public sealed class Tarifa : EntidadBase, IDeInquilino
     {
         Codigo = null!;
         Nombre = null!;
+        Divisa = null!;
     }
 
     /// <summary>Identificador de la tarifa.</summary>
@@ -97,13 +108,22 @@ public sealed class Tarifa : EntidadBase, IDeInquilino
     /// <summary>Nombre con el que se muestra.</summary>
     public string Nombre { get; private set; }
 
-    /// <summary>Divisa en la que se expresan sus precios, del maestro de Organización.</summary>
+    /// <summary>Si es una tarifa de venta o de compra. Lo comparten todos los tramos del código.</summary>
+    /// <remarks>
+    /// <b>No cambia</b>: los precios de esta fila ya se aplicaron a clientes, o ya los propuso un
+    /// proveedor, y cambiar el tipo los pasaría al otro lado sin tocar ni un número.
+    /// </remarks>
+    public TipoDeTarifa Tipo { get; private set; }
+
+    /// <summary>
+    /// Divisa en la que se expresan sus precios: su código ISO 4217, en mayúsculas.
+    /// </summary>
     /// <remarks>
     /// <b>No cambia</b>, por lo mismo que no cambia el porcentaje de un tramo de impuesto: los
     /// precios que cuelgan de esta fila están escritos en esta divisa, y cambiar la columna los
     /// reinterpretaría todos de golpe sin tocar ni un número. Vender en otra divisa es otra tarifa.
     /// </remarks>
-    public Guid DivisaId { get; private set; }
+    public string Divisa { get; private set; }
 
     /// <summary>Primer día en que rige. Fecha de negocio: sin hora y sin zona (R14).</summary>
     public DateOnly VigenteDesde { get; private set; }
@@ -120,7 +140,8 @@ public sealed class Tarifa : EntidadBase, IDeInquilino
     /// <param name="empresaId">Empresa a la que pertenece (R8), que sale del <i>claim</i>.</param>
     /// <param name="codigo">Código; se normaliza a mayúsculas.</param>
     /// <param name="nombre">Nombre con el que se muestra.</param>
-    /// <param name="divisaId">Divisa, ya validada contra su puerto.</param>
+    /// <param name="tipo">De venta o de compra, el mismo que los demás tramos del código.</param>
+    /// <param name="divisa">Código ISO 4217 de la divisa, ya validado contra su puerto.</param>
     /// <param name="vigenteDesde">Primer día en que rige.</param>
     /// <param name="vigenteHasta">Último día en que rige, o nulo si sigue vigente.</param>
     /// <param name="momento">Ahora, de quien tenga el <c>TimeProvider</c>.</param>
@@ -128,7 +149,8 @@ public sealed class Tarifa : EntidadBase, IDeInquilino
         Guid empresaId,
         string codigo,
         string nombre,
-        Guid divisaId,
+        TipoDeTarifa tipo,
+        string divisa,
         DateOnly vigenteDesde,
         DateOnly? vigenteHasta,
         DateTimeOffset momento)
@@ -139,27 +161,29 @@ public sealed class Tarifa : EntidadBase, IDeInquilino
                 "Una tarifa pertenece siempre a una empresa (R8).", nameof(empresaId));
         }
 
-        // Igual que en el artículo: el identificador ajeno viene ya preguntado a su puerto, pero un
-        // `Guid.Empty` no llega a preguntarse —es el valor por omisión de la estructura, o sea lo
-        // que aparece cuando alguien construye por un camino que no pasó por la validación—.
-        if (divisaId == Guid.Empty)
+        if (!Enum.IsDefined(tipo))
         {
-            throw new ArgumentException(
-                "Una tarifa se expresa en alguna divisa.", nameof(divisaId));
+            throw new ArgumentOutOfRangeException(
+                nameof(tipo), tipo, "Una tarifa es de venta o de compra.");
         }
 
+        // La forma y no el catálogo: que la divisa exista y se ofrezca lo contesta Organización
+        // por su puerto, antes de llegar aquí. Esto es lo que queda cuando alguien construye por un
+        // camino que no pasó por esa validación, que es el mismo papel que hacía `Guid.Empty`
+        // cuando la divisa era un identificador.
         return new Tarifa(
             Guid.CreateVersion7(),
             empresaId,
             CodigoValido(codigo),
             NombreValido(nombre),
-            divisaId,
+            tipo,
+            CatalogoDeDivisas.Normalizar(divisa),
             vigenteDesde,
             HastaValido(vigenteDesde, vigenteHasta),
             momento);
     }
 
-    /// <summary>Cambia el nombre. Ni el código, ni la divisa, ni el tramo.</summary>
+    /// <summary>Cambia el nombre. Ni el código, ni el tipo, ni la divisa, ni el tramo.</summary>
     /// <param name="nombre">Nombre con el que se muestra.</param>
     public void Modificar(string nombre) => Nombre = NombreValido(nombre);
 

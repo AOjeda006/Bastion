@@ -9,7 +9,6 @@ using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Organizacion.Contracts;
-using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Impuestos;
 using Bastion.Organizacion.Contracts.Unidades;
 
@@ -33,11 +32,6 @@ public sealed record ArticuloExportado(
 /// <param name="Categoria">La categoría, tal como la publica el listado.</param>
 /// <param name="Padre">La categoría de la que cuelga, o nula si es raíz.</param>
 public sealed record CategoriaExportada(CategoriaDto Categoria, MaestroCitado? Padre);
-
-/// <summary>Una tarifa como sale en su exportación, con su divisa nombrada.</summary>
-/// <param name="Tarifa">La tarifa, tal como la publica el listado.</param>
-/// <param name="Divisa">Su divisa, de Organización.</param>
-public sealed record TarifaExportada(TarifaDto Tarifa, MaestroCitado Divisa);
 
 /// <summary>Un código de barras como sale en su exportación, con su artículo nombrado.</summary>
 /// <param name="CodigoBarras">El código, tal como lo publica el listado.</param>
@@ -71,20 +65,6 @@ public interface IExportarArticulos : IOrdenaPor
 /// él la exportación no habría llegado aquí.
 /// </remarks>
 public interface IExportarCategorias : IListado<CategoriaExportada>;
-
-/// <summary>Una página interna de la exportación de tarifas, con la divisa nombrada.</summary>
-/// <remarks>La divisa, solo con el permiso de verla, como los maestros del artículo.</remarks>
-public interface IExportarTarifas : IOrdenaPor
-{
-    /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="paginacion">Qué página interna, con qué orden y qué filtro.</param>
-    /// <param name="codigo">Código por el que se acota, o nulo para no acotar.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    Task<PaginaDe<TarifaExportada>> EjecutarAsync(
-        Paginacion paginacion,
-        string? codigo,
-        CancellationToken cancelacion);
-}
 
 /// <summary>
 /// Una página interna de la exportación de los códigos de barras de un artículo, con el artículo
@@ -196,42 +176,6 @@ internal sealed class ExportarCategorias(
             [
                 .. pagina.Elementos.Select(categoria =>
                     new CategoriaExportada(categoria, MaestroCitado.De(categoria.PadreId, deMadres))),
-            ],
-            pagina.Pagina,
-            pagina.Tamanio,
-            pagina.Total);
-    }
-}
-
-/// <inheritdoc cref="IExportarTarifas"/>
-internal sealed class ExportarTarifas(
-    IListarTarifas listar,
-    IConsultaDeDivisas divisas,
-    IUsuarioActual usuarioActual) : IExportarTarifas
-{
-    private static readonly Permiso s_verDivisas = Permiso.De(PermisosDeOrganizacion.DivisaVer);
-
-    public IReadOnlySet<string> CamposOrdenables => listar.CamposOrdenables;
-
-    public async Task<PaginaDe<TarifaExportada>> EjecutarAsync(
-        Paginacion paginacion,
-        string? codigo,
-        CancellationToken cancelacion)
-    {
-        PaginaDe<TarifaDto> pagina = await listar.EjecutarAsync(paginacion, codigo, cancelacion).ConfigureAwait(false);
-
-        IReadOnlyDictionary<Guid, NombreDeMaestro> deDivisas = await NombresDeMaestros.PedirAsync(
-                usuarioActual,
-                s_verDivisas,
-                pagina.Elementos.Select(tarifa => (Guid?)tarifa.DivisaId),
-                divisas.NombresDeAsync,
-                cancelacion)
-            .ConfigureAwait(false);
-
-        return new PaginaDe<TarifaExportada>(
-            [
-                .. pagina.Elementos.Select(tarifa =>
-                    new TarifaExportada(tarifa, MaestroCitado.De(tarifa.DivisaId, deDivisas))),
             ],
             pagina.Pagina,
             pagina.Tamanio,

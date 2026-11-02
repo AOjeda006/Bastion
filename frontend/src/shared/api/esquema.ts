@@ -3329,11 +3329,10 @@ export interface components {
             codigo: string;
             /** @description Nombre con el que se muestra. */
             nombre: string;
-            /**
-             * Format: uuid
-             * @description Divisa en la que se expresan los precios de esta tarifa.
-             */
-            divisaId: string;
+            /** @description Si es de venta o de compra: `Venta` o `Compra`. */
+            tipo: string;
+            /** @description Divisa en la que se expresan los precios de esta tarifa, en ISO 4217: tres letras. */
+            divisa: string;
             /**
              * Format: date
              * @description Primer día en que rige, incluido.
@@ -4710,11 +4709,8 @@ export interface components {
             tarifaId: string;
             /** @description Código de la tarifa, el que se pidió. */
             codigo: string;
-            /**
-             * Format: uuid
-             * @description Divisa en la que está expresado el precio.
-             */
-            divisaId: string;
+            /** @description Divisa en la que está expresado el precio, en ISO 4217. */
+            divisa: string;
             /**
              * Format: uuid
              * @description Artículo por el que se preguntó.
@@ -5122,11 +5118,10 @@ export interface components {
             codigo: string;
             /** @description Nombre con el que se muestra. */
             nombre: string;
-            /**
-             * Format: uuid
-             * @description Divisa en la que se expresan sus precios (maestro de Organización).
-             */
-            divisaId: string;
+            /** @description `Venta` o `Compra`, como texto. Lo comparten todos los tramos del código. */
+            tipo: string;
+            /** @description Divisa en la que se expresan sus precios, en ISO 4217. */
+            divisa: string;
             /**
              * Format: date
              * @description Primer día en que rige, incluido.

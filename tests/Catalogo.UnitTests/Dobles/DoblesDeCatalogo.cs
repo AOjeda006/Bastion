@@ -355,24 +355,21 @@ internal sealed class RelojParado(DateTimeOffset momento, TimeZoneInfo? zonaLoca
 
 /// <summary>El puerto de divisas, fijado en un estado, que apunta por cuál se preguntó.</summary>
 /// <remarks>
-/// Guarda el identificador por lo mismo que el de unidades: sin eso, un alta de tarifa que
-/// <b>no llamara</b> al puerto pasaría el caso de «se ofrece» sin haber preguntado nada, y el
-/// consumidor que este ítem construye para <c>IConsultaDeDivisas</c> sería otra vez decorativo.
+/// Guarda el código por lo mismo que el de unidades guarda el identificador: sin eso, un alta de
+/// tarifa que <b>no llamara</b> al puerto pasaría el caso de «se ofrece» sin haber preguntado
+/// nada, y el consumidor de <c>IConsultaDeDivisas</c> sería otra vez decorativo. Lo guarda tal
+/// como llegó, porque normalizarlo es del puerto (ADR-0076).
 /// </remarks>
 internal sealed class DivisasEn(EstadoDeMaestro estado) : IConsultaDeDivisas
 {
-    internal List<Guid> Preguntadas { get; } = [];
+    internal List<string> Preguntadas { get; } = [];
 
-    public Task<EstadoDeMaestro> EstadoDeAsync(Guid divisaId, CancellationToken cancelacion)
+    public Task<EstadoDeMaestro> EstadoDeAsync(string codigo, CancellationToken cancelacion)
     {
-        Preguntadas.Add(divisaId);
+        Preguntadas.Add(codigo);
 
         return Task.FromResult(estado);
     }
-
-    public Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
-        IReadOnlyCollection<Guid> divisas, CancellationToken cancelacion) =>
-        throw new NotSupportedException("Este doble no nombra: la exportación trae los suyos.");
 }
 
 /// <summary>Un almacén de tramos de tarifa en memoria.</summary>
@@ -382,6 +379,12 @@ internal sealed class TarifasEnMemoria : IRepositorioDeTarifas
 
     /// <summary>Si la siguiente comprobación de solape tiene que decir que sí.</summary>
     internal bool DiceQueHaySolape { get; set; }
+
+    /// <summary>Lo que contesta la pregunta por el tipo del código; nulo, que no tiene tramos.</summary>
+    internal TipoDeTarifa? TipoQueYaTieneElCodigo { get; set; }
+
+    /// <summary>Los códigos por los que se preguntó el tipo, en orden.</summary>
+    internal List<string> CodigosPorLosQueSePreguntoElTipo { get; } = [];
 
     public IReadOnlySet<string> CamposOrdenables { get; } =
         new HashSet<string>(StringComparer.Ordinal) { "codigo", "nombre", "vigenteDesde" };
@@ -402,6 +405,16 @@ internal sealed class TarifasEnMemoria : IRepositorioDeTarifas
         string codigo,
         CancellationToken cancelacion) =>
         Task.FromResult(Guardadas.Exists(una => una.EmpresaId == empresaId && una.Codigo == codigo));
+
+    public Task<TipoDeTarifa?> TipoDelCodigoAsync(
+        Guid empresaId,
+        string codigo,
+        CancellationToken cancelacion)
+    {
+        CodigosPorLosQueSePreguntoElTipo.Add(codigo);
+
+        return Task.FromResult(TipoQueYaTieneElCodigo);
+    }
 
     public Task<bool> HaySolapeAsync(
         Guid empresaId,

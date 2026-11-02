@@ -196,6 +196,8 @@
     { "codigo": "tarifa-no-encontrada", "type": "/errors/tarifa-no-encontrada", "clase": "NoEncontrado" },
     { "codigo": "tarifa-no-vigente", "type": "/errors/tarifa-no-vigente", "clase": "Validacion" },
     { "codigo": "tarifa-sin-linea-aplicable", "type": "/errors/tarifa-sin-linea-aplicable", "clase": "Validacion" },
+    { "codigo": "tarifa-tipo-distinto-del-codigo", "type": "/errors/tarifa-tipo-distinto-del-codigo", "clase": "Conflicto" },
+    { "codigo": "tarifa-tipo-no-valido", "type": "/errors/tarifa-tipo-no-valido", "clase": "Validacion" },
     { "codigo": "tarifa-vigencia-al-reves", "type": "/errors/tarifa-vigencia-al-reves", "clase": "Validacion" },
     { "codigo": "tarifa-vigencias-solapadas", "type": "/errors/tarifa-vigencias-solapadas", "clase": "Conflicto" },
     { "codigo": "tercero-duplicado", "type": "/errors/tercero-duplicado", "clase": "Conflicto" },

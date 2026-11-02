@@ -234,7 +234,7 @@ public sealed class CrearLineaTarifaTests
                 Guid.NewGuid(), Guid.NewGuid(), Categoria, s_ahora);
 
             Tarifa = Tarifa.Crear(
-                s_empresa, "PVP", "Precio de venta al público", Guid.NewGuid(),
+                s_empresa, "PVP", "Precio de venta al público", TipoDeTarifa.Venta, "EUR",
                 s_hoy.AddYears(-1), null, s_ahora);
 
             Articulos.Agregar(Articulo);

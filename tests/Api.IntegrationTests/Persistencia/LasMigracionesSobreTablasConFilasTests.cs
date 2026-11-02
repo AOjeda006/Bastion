@@ -142,6 +142,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_reservas_liberada_con_causa_y_fecha"] = new([], [("estado", "'Activa'")]),
         ["ck_reservas_motivo_solo_a_mano"] = Relleno.Ninguno,
         ["ck_reservas_origen_linea_desde_uno"] = Relleno.Ninguno,
+        ["ck_tarifas_tipo"] = new([], [("tipo", "'Venta'")]),
         ["ck_tarifas_vigencia_no_invertida"] = Relleno.Ninguno,
         ["ck_terceros_limite_credito_completo"] = Relleno.Ninguno,
         ["ck_terceros_territorio_fiscal"] = new([], [("territorio_fiscal", "'PeninsulaYBaleares'")]),
@@ -158,6 +159,31 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_valoraciones_valor_no_negativo"] = Relleno.Ninguno,
     };
 
+    /// <summary>
+    /// Las referencias entre esquemas que la base no declara y que una migración necesita que se
+    /// cumplan, como si fueran claves ajenas.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Una sola, y entra en el 3.3</b> (ADR-0076). La migración que pasa la divisa de la tarifa a
+    /// su código la traduce leyendo <c>organizacion.divisas</c>, y se para si un tramo apunta a una
+    /// divisa que no está. Con un identificador inventado por <c>gen_random_uuid()</c>, todos
+    /// apuntarían a ninguna, y la parada —que es lo que se quiere de ella con datos reales— pondría
+    /// esto rojo.
+    /// </para>
+    /// <para>
+    /// <b>No es una clave ajena, ni puede serlo</b> (§5, regla 4), y por eso el censo no la
+    /// encuentra y hay que decírsela. Vale mientras existan las dos columnas: desde esa migración,
+    /// <c>divisa_id</c> ya no está y la referencia no se añade. Que se use al menos una vez lo afirma
+    /// <see cref="Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila"/>: una
+    /// referencia con una letra cambiada no se aplicaría nunca y no protegería nada.
+    /// </para>
+    /// </remarks>
+    private static readonly ReferenciaDeclarada[] s_referencias =
+    [
+        new("catalogo.tarifas", "divisa_id", "organizacion.divisas", "id"),
+    ];
+
     [Fact]
     public async Task Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila()
     {
@@ -173,6 +199,11 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         List<string> sinRestriccion = [.. s_restricciones.Keys.Except(recorrido.Restricciones).Order(StringComparer.Ordinal)];
         sinRestriccion.ShouldBeEmpty(
             "estas restricciones están nombradas y no hay ninguna tabla que las tenga: " + string.Join(", ", sinRestriccion));
+
+        // Y cada referencia declarada, usada al menos en una fila: la que no se usa no hace nada.
+        List<string> sinUsar = [.. s_referencias.Select(referencia => referencia.Nombre).Except(recorrido.Referencias).Order(StringComparer.Ordinal)];
+        sinUsar.ShouldBeEmpty(
+            "estas referencias están declaradas y ninguna fila inventada las ha usado: " + string.Join(", ", sinUsar));
     }
 
     [Fact]
@@ -221,6 +252,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         FilasInventadas inventadas = new();
         List<string> fallos = [];
         HashSet<string> restricciones = new(StringComparer.Ordinal);
+        HashSet<string> referencias = new(StringComparer.Ordinal);
         int aplicadas = 0;
 
         foreach ((string id, Contexto contexto) in escritas)
@@ -233,9 +265,9 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
 
                 if (conFilas
                     && !await InventarUnaFilaEnCadaTablaAsync(
-                        conexion, tablas, inventadas, restricciones, fallos, $"antes de {id}"))
+                        conexion, tablas, inventadas, restricciones, referencias, fallos, $"antes de {id}"))
                 {
-                    return new(fallos, restricciones, aplicadas, escritas.Count);
+                    return new(fallos, restricciones, referencias, aplicadas, escritas.Count);
                 }
 
                 antes = await ContarAsync(conexion, tablas);
@@ -249,7 +281,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             {
                 fallos.Add(
                     $"antes de {id} {(conFilas ? "estaban vacías" : "tenían filas")}: {string.Join(", ", malRellenas)}");
-                return new(fallos, restricciones, aplicadas, escritas.Count);
+                return new(fallos, restricciones, referencias, aplicadas, escritas.Count);
             }
 
             try
@@ -260,7 +292,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             catch (PostgresException error)
             {
                 fallos.Add($"{id} no se aplica {(conFilas ? "con filas" : "sin filas")}: {error.Message}");
-                return new(fallos, restricciones, aplicadas, escritas.Count);
+                return new(fallos, restricciones, referencias, aplicadas, escritas.Count);
             }
 
             aplicadas++;
@@ -299,9 +331,9 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             IReadOnlyList<Tabla> tablas = await LeerTablasAsync(conexion, historiales);
 
             if (!await InventarUnaFilaEnCadaTablaAsync(
-                    conexion, tablas, inventadas, restricciones, fallos, "con todo migrado"))
+                    conexion, tablas, inventadas, restricciones, referencias, fallos, "con todo migrado"))
             {
-                return new(fallos, restricciones, aplicadas, escritas.Count);
+                return new(fallos, restricciones, referencias, aplicadas, escritas.Count);
             }
 
             Dictionary<string, long> llenas = await ContarAsync(conexion, tablas);
@@ -313,7 +345,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             }
         }
 
-        return new(fallos, restricciones, aplicadas, escritas.Count);
+        return new(fallos, restricciones, referencias, aplicadas, escritas.Count);
     }
 
     /// <summary>Una fila inventada en cada tabla del censo, padres primero.</summary>
@@ -323,6 +355,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         IReadOnlyList<Tabla> tablas,
         FilasInventadas inventadas,
         HashSet<string> restricciones,
+        HashSet<string> referencias,
         List<string> fallos,
         string momento)
     {
@@ -344,6 +377,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             {
                 await using NpgsqlCommand fila = new(inventadas.Insercion(tabla, s_restricciones), conexion);
                 await fila.ExecuteNonQueryAsync();
+                referencias.UnionWith(tabla.Claves.Select(clave => clave.Declarada).OfType<string>());
             }
             catch (PostgresException error)
             {
@@ -523,6 +557,18 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             }
         }
 
+        // Las que la base no declara, solo mientras existan las dos columnas.
+        foreach (ReferenciaDeclarada referencia in s_referencias)
+        {
+            if (tablas.TryGetValue(referencia.Tabla, out Tabla? tabla)
+                && tabla.Columnas.Any(columna => columna.Nombre == referencia.Columna)
+                && tablas.TryGetValue(referencia.Destino, out Tabla? destino)
+                && destino.Columnas.Any(columna => columna.Nombre == referencia.ColumnaDestino))
+            {
+                tabla.Claves.Add(new(referencia.Destino, [referencia.Columna], [referencia.ColumnaDestino], referencia.Nombre));
+            }
+        }
+
         return [.. tablas.Values.OrderBy(tabla => tabla.Nombre, StringComparer.Ordinal)];
     }
 
@@ -581,11 +627,22 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
 
     private sealed record Columna(string Nombre, string Tipo, int? Longitud, bool AdmiteNulo, bool TieneValorPropio);
 
-    private sealed record ClaveAjena(string Destino, string[] Columnas, string[] ColumnasDestino);
+    /// <param name="Destino">La tabla a la que apunta.</param>
+    /// <param name="Columnas">Sus columnas en esta tabla, en el orden de la clave.</param>
+    /// <param name="ColumnasDestino">Las del destino, en el mismo orden.</param>
+    /// <param name="Declarada">El nombre de la referencia declarada de la que sale, o nulo si es de la base.</param>
+    private sealed record ClaveAjena(string Destino, string[] Columnas, string[] ColumnasDestino, string? Declarada = null);
+
+    /// <summary>Una referencia entre esquemas que la base no declara, como en <see cref="s_referencias"/>.</summary>
+    private sealed record ReferenciaDeclarada(string Tabla, string Columna, string Destino, string ColumnaDestino)
+    {
+        public string Nombre => $"{Tabla}.{Columna} -> {Destino}.{ColumnaDestino}";
+    }
 
     private sealed record Tabla(string Nombre, string Citada, List<Columna> Columnas, List<ClaveAjena> Claves, List<string> Restricciones);
 
-    private sealed record Recorrido(IReadOnlyList<string> Fallos, IReadOnlySet<string> Restricciones, int Aplicadas, int Escritas);
+    private sealed record Recorrido(
+        IReadOnlyList<string> Fallos, IReadOnlySet<string> Restricciones, IReadOnlySet<string> Referencias, int Aplicadas, int Escritas);
 
     /// <summary>Lo que una restricción CHECK necesita de la fila inventada.</summary>
     /// <param name="AunqueAdmitanNulo">Columnas anulables que hay que rellenar igualmente.</param>

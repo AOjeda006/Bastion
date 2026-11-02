@@ -35,6 +35,31 @@ internal static class ErroresDeTarifa
     /// <summary>Código del error de una vigencia que acaba antes de empezar.</summary>
     internal const string CodigoVigenciaAlReves = "tarifa-vigencia-al-reves";
 
+    /// <summary>Código del error de un tipo que no es ni de venta ni de compra.</summary>
+    internal const string CodigoTipoNoValido = "tarifa-tipo-no-valido";
+
+    /// <summary>Código del error de un tramo de otro tipo que los demás de su código.</summary>
+    internal const string CodigoTipoDistintoDelCodigo = "tarifa-tipo-distinto-del-codigo";
+
+    internal static ErrorDeOperacion TipoNoValido(string valores) => ErrorDeOperacion.Validacion(
+        CodigoTipoNoValido,
+        $"El tipo de tarifa tiene que ser uno de estos: {valores}.");
+
+    /// <summary>El código ya tiene tramos, y son de otro tipo.</summary>
+    /// <remarks>
+    /// <b>Un <c>409</c> y no un <c>400</c></b>: la petición está bien escrita, y lo que la impide
+    /// son los tramos que ya tiene el código. Se contesta aquí con su motivo, y quien lo impide de
+    /// verdad, también entre dos altas a la vez, es la restricción de exclusión
+    /// <c>tarifas_un_tipo_por_codigo</c>.
+    /// </remarks>
+    /// <param name="codigo">Código ya normalizado.</param>
+    /// <param name="tipoDelCodigo">El tipo de los tramos que ya tiene.</param>
+    internal static ErrorDeOperacion TipoDistintoDelCodigo(string codigo, string tipoDelCodigo) =>
+        ErrorDeOperacion.Conflicto(
+            CodigoTipoDistintoDelCodigo,
+            $"Los tramos de la tarifa {codigo} son de {tipoDelCodigo}, y un tramo nuevo del mismo " +
+            "código lo es también. Para el otro tipo, abra una tarifa con otro código.");
+
     internal static ErrorDeOperacion NoEncontrada(Guid id) => ErrorDeOperacion.NoEncontrado(
         CodigoNoEncontrada,
         $"No hay ningún tramo de tarifa con el identificador {id}.");

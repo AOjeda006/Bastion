@@ -117,11 +117,39 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
         // comprueba el compilador en `ModuloDeOrganizacion`, que la registra bajo él—.
         ConsultaDeDivisas puerto = new(contexto);
 
-        (await puerto.EstadoDeAsync(divisa.Id, CancellationToken.None))
+        (await puerto.EstadoDeAsync("JPY", CancellationToken.None))
             .ShouldBe(EstadoDeMaestro.SeOfreceParaLoNuevo);
 
-        (await puerto.EstadoDeAsync(Guid.CreateVersion7(), CancellationToken.None))
+        // Desde el 3.3 se pregunta por el código (ADR-0076), y uno con forma de código ISO que no
+        // está dado de alta es el «no existe». No puede estarlo: `Divisa.Crear` no lo deja nacer.
+        (await puerto.EstadoDeAsync("XYZ", CancellationToken.None))
             .ShouldBe(EstadoDeMaestro.NoExiste);
+    }
+
+    [Fact]
+    public async Task La_divisa_se_busca_por_su_codigo_como_se_guarda_y_lo_que_no_es_un_codigo_no_existe()
+    {
+        // Las dos mitades del `Divisa.NormalizarCodigo` del puerto. Sin él, «gbp» no encontraría
+        // la libra; y que no valide la forma es lo que hace que «EURO» sea un «no existe» que el
+        // alta de tarifa contesta con su 400, y no una excepción que saldría como un 500. La libra,
+        // porque el yen y el dólar los da de alta otro caso de esta clase, y el índice único
+        // pondría rojo al segundo que llegara.
+        var divisa = Divisa.Crear("GBP", "Libra esterlina", s_momento);
+        await GuardarAsync(contexto => contexto.Divisas.Add(divisa));
+
+        await using OrganizacionDbContext contexto = postgres.AbrirContexto();
+        ConsultaDeDivisas puerto = new(contexto);
+
+        (await puerto.EstadoDeAsync(" gbp ", CancellationToken.None))
+            .ShouldBe(
+                EstadoDeMaestro.SeOfreceParaLoNuevo,
+                "el código se busca como lo guarda Organización: sin blancos y en mayúsculas");
+
+        foreach (string sinForma in new[] { "GBPS", "G", "", "   " })
+        {
+            (await puerto.EstadoDeAsync(sinForma, CancellationToken.None))
+                .ShouldBe(EstadoDeMaestro.NoExiste, $"«{sinForma}» no es el código de ninguna");
+        }
     }
 
     [Fact]
@@ -158,7 +186,7 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
 
         await using OrganizacionDbContext antes = postgres.AbrirContexto();
 
-        (await new ConsultaDeDivisas(antes).EstadoDeAsync(divisa.Id, CancellationToken.None))
+        (await new ConsultaDeDivisas(antes).EstadoDeAsync("USD", CancellationToken.None))
             .ShouldBe(
                 EstadoDeMaestro.SeOfreceParaLoNuevo,
                 "recién dada de alta, una divisa se ofrece: sin esta mitad, un puerto que " +
@@ -172,7 +200,7 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
 
         await using OrganizacionDbContext despues = postgres.AbrirContexto();
 
-        (await new ConsultaDeDivisas(despues).EstadoDeAsync(divisa.Id, CancellationToken.None))
+        (await new ConsultaDeDivisas(despues).EstadoDeAsync("USD", CancellationToken.None))
             .ShouldBe(
                 EstadoDeMaestro.SoloResuelveLoViejo,
                 "retirada, la divisa NO se ofrece para operaciones nuevas y NO desaparece: una " +
@@ -241,7 +269,7 @@ public sealed class LosPuertosDeLecturaTests(PostgresDeVerdad postgres)
             await new ConsultaDeImpuestos(contexto).EstadoDeAsync(
                 inventado, new DateOnly(2026, 3, 31), CancellationToken.None),
             await new ConsultaDeDivisas(contexto).EstadoDeAsync(
-                inventado, CancellationToken.None),
+                "XYZ", CancellationToken.None),
             await new ConsultaDeUnidadesDeMedida(contexto).EstadoDeAsync(
                 inventado, CancellationToken.None),
         ];

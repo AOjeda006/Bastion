@@ -417,6 +417,44 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         await contexto.GetService<IMigrator>().MigrateAsync(migracion);
     }
 
+    /// <summary>
+    /// Aplica las migraciones de Catálogo hasta la que se diga, como
+    /// <see cref="MigrarInventarioHastaAsync"/>: hacia delante, o hacia atrás si la base ya está
+    /// más allá.
+    /// </summary>
+    /// <remarks>
+    /// Entra en el 3.3, con la migración que pasa la divisa de la tarifa a su código (ADR-0076).
+    /// </remarks>
+    /// <param name="cadena">La base nueva.</param>
+    /// <param name="migracion">El identificador entero de la migración, con su fecha.</param>
+    /// <returns>Cuando la base está en esa migración.</returns>
+    public static async Task MigrarCatalogoHastaAsync(string cadena, string migracion)
+    {
+        DbContextOptionsBuilder<CatalogoDbContext> opciones = new();
+        CatalogoDbContext.Configurar(opciones, cadena);
+
+        await using CatalogoDbContext contexto =
+            new(opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
+
+        await contexto.GetService<IMigrator>().MigrateAsync(migracion);
+    }
+
+    /// <summary>
+    /// Aplica todas las migraciones de Organización en una base de <see cref="CrearBaseNuevaAsync"/>.
+    /// </summary>
+    /// <param name="cadena">La base nueva.</param>
+    /// <returns>Cuando la base tiene el esquema de Organización entero.</returns>
+    public static async Task MigrarOrganizacionAsync(string cadena)
+    {
+        DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
+        OrganizacionDbContext.Configurar(opciones, cadena);
+
+        await using OrganizacionDbContext contexto =
+            new(opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
+
+        await contexto.Database.MigrateAsync();
+    }
+
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {

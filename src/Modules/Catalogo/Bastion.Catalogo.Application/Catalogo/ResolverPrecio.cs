@@ -121,7 +121,7 @@ internal sealed class ResolverPrecio(
 
             // La divisa de la TARIFA, y va siempre. Es lo que hace que una tarifa expresada en otra
             // divisa que la de la empresa sea segura sin haberla rechazado al abrirla.
-            tarifa.DivisaId,
+            tarifa.Divisa,
             articuloId,
             cantidad,
             dia,

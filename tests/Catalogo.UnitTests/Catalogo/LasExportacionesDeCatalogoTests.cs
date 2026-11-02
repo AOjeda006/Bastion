@@ -12,7 +12,6 @@ using Bastion.Catalogo.Domain.Catalogo;
 using Bastion.Catalogo.UnitTests.Dobles;
 using Bastion.Organizacion.Contracts;
 using Bastion.Organizacion.Contracts.Comun;
-using Bastion.Organizacion.Contracts.Divisas;
 using Bastion.Organizacion.Contracts.Impuestos;
 using Bastion.Organizacion.Contracts.Unidades;
 using Shouldly;
@@ -45,8 +44,6 @@ public sealed class LasExportacionesDeCatalogoTests
     private readonly Nombrador _unidades = new("U");
 
     private readonly Nombrador _impuestos = new("I");
-
-    private readonly Nombrador _divisas = new("D");
 
     private readonly Nombrador _articulos = new("A");
 
@@ -115,26 +112,6 @@ public sealed class LasExportacionesDeCatalogoTests
         pagina.Elementos[0].Padre.ShouldBeNull();
         pagina.Elementos[1].Padre.ShouldBe(new MaestroCitado(madre.Id, new NombreDeMaestro("RAIZ", "Raíz")));
         (pagina.Pagina, pagina.Tamanio, pagina.Total).ShouldBe((1, 200, 2L));
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task La_tarifa_nombra_su_divisa_solo_con_el_permiso_de_verla(bool puedeVerla)
-    {
-        TarifaDto tarifa = new(
-            Guid.NewGuid(), s_empresa, "PVP", "Venta", Guid.NewGuid(), new DateOnly(2026, 1, 1), null);
-        ListadoDeTarifas listado = new(new PaginaDe<TarifaDto>([tarifa], 1, 200, 1));
-        IUsuarioActual usuario =
-            Usuario.Con(puedeVerla ? PermisosDeOrganizacion.DivisaVer : PermisosDeCatalogo.TarifaVer);
-
-        TarifaExportada fila = (await new ExportarTarifas(listado, _divisas, usuario)
-            .EjecutarAsync(s_paginacion, "PVP", CancellationToken.None)).Elementos.ShouldHaveSingleItem();
-
-        listado.Pedidas.ShouldHaveSingleItem().ShouldBe((s_paginacion, "PVP"));
-        fila.Tarifa.ShouldBe(tarifa);
-        Nombrado(fila.Divisa, tarifa.DivisaId).ShouldBe(puedeVerla);
-        _divisas.Preguntas.Count.ShouldBe(puedeVerla ? 1 : 0);
     }
 
     [Fact]
@@ -239,10 +216,10 @@ public sealed class LasExportacionesDeCatalogoTests
 
     /// <summary>
     /// El puerto de un maestro que nombra todo lo que se le pregunta, con su prefijo, y apunta cada
-    /// pregunta. Sirve de los cuatro puertos, porque los cuatro nombran con la misma firma.
+    /// pregunta. Sirve de los tres puertos, porque los tres nombran con la misma firma.
     /// </summary>
     private sealed class Nombrador(string prefijo)
-        : IConsultaDeUnidadesDeMedida, IConsultaDeImpuestos, IConsultaDeDivisas, IConsultaDeArticulos
+        : IConsultaDeUnidadesDeMedida, IConsultaDeImpuestos, IConsultaDeArticulos
     {
         internal List<Guid[]> Preguntas { get; } = [];
 
@@ -296,21 +273,6 @@ public sealed class LasExportacionesDeCatalogoTests
         public Task<PaginaDe<CategoriaDto>> EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion)
         {
             Pedidas.Add(paginacion);
-
-            return Task.FromResult(pagina);
-        }
-    }
-
-    private sealed class ListadoDeTarifas(PaginaDe<TarifaDto> pagina) : IListarTarifas
-    {
-        internal List<(Paginacion, string?)> Pedidas { get; } = [];
-
-        public IReadOnlySet<string> CamposOrdenables { get; } = new HashSet<string>(StringComparer.Ordinal);
-
-        public Task<PaginaDe<TarifaDto>> EjecutarAsync(
-            Paginacion paginacion, string? codigo, CancellationToken cancelacion)
-        {
-            Pedidas.Add((paginacion, codigo));
 
             return Task.FromResult(pagina);
         }

@@ -693,9 +693,11 @@ namespace Bastion.Catalogo.Infrastructure.Migrations
                         .HasColumnName("creado_en")
                         .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
-                    b.Property<Guid>("DivisaId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("divisa_id")
+                    b.Property<string>("Divisa")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("divisa")
                         .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<Guid>("EmpresaId")
@@ -713,6 +715,13 @@ namespace Bastion.Catalogo.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("nombre")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo")
                         .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<uint>("Version")
@@ -740,6 +749,8 @@ namespace Bastion.Catalogo.Infrastructure.Migrations
 
                     b.ToTable("tarifas", "catalogo", t =>
                         {
+                            t.HasCheckConstraint("ck_tarifas_tipo", "tipo IN ('Venta', 'Compra')");
+
                             t.HasCheckConstraint("ck_tarifas_vigencia_no_invertida", "vigente_hasta IS NULL OR vigente_hasta >= vigente_desde");
                         });
 

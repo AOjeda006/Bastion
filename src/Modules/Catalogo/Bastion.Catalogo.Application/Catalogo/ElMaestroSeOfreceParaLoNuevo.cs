@@ -139,22 +139,27 @@ internal static class ElMaestroSeOfreceParaLoNuevo
     /// <b>sigue resolviendo sus precios</b>: eso segundo consiste, como siempre, en que no se hace
     /// nada — la divisa de una tarifa no se puede cambiar, así que no hay ningún camino de
     /// modificación que la vuelva a preguntar y la congele.
+    /// <para>
+    /// Desde el 3.3 se pregunta por el <b>código</b> ISO 4217 y no por el identificador
+    /// (ADR-0076), y los dos <c>type</c> son los mismos: «no existe» se arregla escribiendo bien
+    /// el código, y «está retirada», eligiendo otra.
+    /// </para>
     /// </remarks>
     /// <param name="estado">Lo que contestó <c>IConsultaDeDivisas</c>.</param>
-    /// <param name="divisaId">El identificador por el que se preguntó.</param>
-    internal static Resultado LaDivisa(EstadoDeMaestro estado, Guid divisaId) => estado switch
+    /// <param name="divisa">El código por el que se preguntó.</param>
+    internal static Resultado LaDivisa(EstadoDeMaestro estado, string divisa) => estado switch
     {
         EstadoDeMaestro.SeOfreceParaLoNuevo => Resultado.Correcto(),
 
         EstadoDeMaestro.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
             CodigoDeDivisaRetirada,
-            $"La divisa {divisaId} está retirada: las tarifas que ya están expresadas en ella " +
+            $"La divisa {divisa} está retirada: las tarifas que ya están expresadas en ella " +
             "siguen resolviendo sus precios, pero no se abre una tarifa nueva con ella. Elija una " +
             "que siga en uso.")),
 
         EstadoDeMaestro.NoExiste => Resultado.Fallo(ErrorDeOperacion.Validacion(
             CodigoDeDivisaNoEncontrada,
-            $"No hay ninguna divisa con el identificador {divisaId}.")),
+            $"No hay ninguna divisa con el código {divisa}.")),
 
         _ => throw new ArgumentOutOfRangeException(
             nameof(estado),

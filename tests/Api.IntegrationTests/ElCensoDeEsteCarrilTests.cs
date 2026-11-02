@@ -142,11 +142,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "ContratoDeOrganizacionTests.Varios_campos_malos_se_devuelven_todos_de_una_vez",
 
         "ContratoDeTarifasTests.Dos_tramos_del_mismo_codigo_que_se_pisan_los_rechaza_la_BASE",
+        "ContratoDeTarifasTests.Dos_tramos_del_mismo_codigo_y_distinto_tipo_los_rechaza_la_BASE",
         "ContratoDeTarifasTests.El_dia_en_que_un_tramo_ACABA_todavia_cuenta_para_el_solape",
         "ContratoDeTarifasTests.Gana_el_antepasado_MAS_CERCANO_y_la_mas_honda_de_otra_rama_no_compite",
+        "ContratoDeTarifasTests.La_divisa_se_guarda_con_su_codigo_y_cada_rechazo_del_tipo_tiene_su_type",
         "ContratoDeTarifasTests.La_extension_btree_gist_la_puso_la_MIGRACION_en_la_imagen_del_compose",
         "ContratoDeTarifasTests.La_linea_del_articulo_gana_y_el_tramo_se_elige_DESPUES_con_la_frontera_arriba",
         "ContratoDeTarifasTests.Sin_linea_aplicable_hay_error_con_nombre_y_NUNCA_un_precio_cero",
+        "ContratoDeTarifasTests.Un_tipo_que_no_es_venta_ni_compra_lo_rechaza_la_BASE",
         "ContratoDeTarifasTests.Una_tarifa_que_no_existe_y_una_que_no_cubre_el_dia_son_DOS_type_distintos",
 
         "ContratoDeTercerosTests.Crear_un_tercero_devuelve_201_con_Location_que_lleva_al_recurso",
@@ -738,7 +741,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaExportacionDeTercerosTests.Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado",
         "LaFotoDeCadaModuloEsUnaFotoTests.La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read",
         "LasExportacionesDeCatalogoTests.Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver",
-        "LasExportacionesDeCatalogoTests.Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden",
+        "LasExportacionesDeCatalogoTests.Las_categorias_nombran_a_su_madre_y_las_tarifas_salen_con_su_tipo_y_su_divisa",
         "LasExportacionesDeCatalogoTests.Los_articulos_salen_con_sus_maestros_nombrados_y_los_filtros_del_listado",
         "LasExportacionesDeCatalogoTests.Los_codigos_de_barras_salen_en_el_orden_del_listado_con_su_articulo_nombrado",
         "LasExportacionesDeCatalogoTests.Los_nombres_de_las_categorias_salen_por_lotes_y_los_ajenos_no_vuelven",
@@ -805,6 +808,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasMigracionesSobreTablasConFilasTests.Recorre_todos_los_contextos_que_tienen_migraciones",
         "LasMigracionesSobreTablasConFilasTests.Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila",
         "LasMigracionesSobreTablasConFilasTests.Y_sobre_tablas_vacias_se_aplican_igual_que_en_la_base_de_los_tests",
+
+        // Del 3.3 (ADR-0076): la migración que pasa la divisa de la tarifa a su código, sobre tramos
+        // escritos a mano, con su vuelta y sus dos paradas.
+        "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.Cada_tramo_recibe_el_codigo_de_su_divisa_y_la_vuelta_le_devuelve_su_identificador",
+        "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.Sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola",
+        "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.Un_tramo_cuya_divisa_no_esta_para_la_migracion_diciendo_cual_y_no_se_pierde_nada",
 
         // Del ítem 2.13 (ADR-0059 §3 a §5): reservar, liberar y leer el disponible, por el caso de uso,
         // porque la reserva no tiene borde. El disponible de la empresa que pregunta, sin lo que vuela.

@@ -434,8 +434,8 @@ export const HOY_SIMULADO = '2026-09-11';
  * de los cuales uno acaba justamente hoy. Ese último es el caso frontera: el final está incluido,
  * así que sigue rigiendo hoy y dejará de hacerlo mañana.
  *
- * La divisa es un identificador de un maestro de OTRO módulo y esta pantalla no la pinta; está
- * porque el contrato la exige, con un valor que no es de ningún maestro real.
+ * El tipo y la divisa los exige el contrato, y esta pantalla no los pinta. La divisa va por su
+ * código ISO 4217 desde el 3.3 (ADR-0076).
  */
 const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
   [ALFA.id]: [
@@ -444,7 +444,8 @@ const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
       empresaId: ALFA.id,
       codigo: 'PVP',
       nombre: 'Precio de venta al público 2026',
-      divisaId: 'aaaa0003-0000-0000-0000-000000000001',
+      tipo: 'Venta',
+      divisa: 'EUR',
       vigenteDesde: '2026-01-01',
       vigenteHasta: null,
     },
@@ -453,7 +454,8 @@ const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
       empresaId: ALFA.id,
       codigo: 'PVP',
       nombre: 'Precio de venta al público 2025',
-      divisaId: 'aaaa0003-0000-0000-0000-000000000001',
+      tipo: 'Venta',
+      divisa: 'EUR',
       vigenteDesde: '2025-01-01',
       vigenteHasta: '2025-12-31',
     },
@@ -462,7 +464,8 @@ const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
       empresaId: ALFA.id,
       codigo: 'MAYORISTA',
       nombre: 'Mayorista, a partir de octubre',
-      divisaId: 'aaaa0003-0000-0000-0000-000000000001',
+      tipo: 'Venta',
+      divisa: 'EUR',
       vigenteDesde: '2026-10-01',
       vigenteHasta: null,
     },
@@ -471,7 +474,8 @@ const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
       empresaId: ALFA.id,
       codigo: 'PROMO',
       nombre: 'Promoción de septiembre',
-      divisaId: 'aaaa0003-0000-0000-0000-000000000001',
+      tipo: 'Venta',
+      divisa: 'EUR',
       vigenteDesde: '2026-09-01',
       // Acaba HOY, y por eso todavía rige. Es el caso que separa `<=` de `<`.
       vigenteHasta: HOY_SIMULADO,
@@ -483,7 +487,8 @@ const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
       empresaId: BETA.id,
       codigo: 'EXPORT',
       nombre: 'Exportación',
-      divisaId: 'aaaa0003-0000-0000-0000-000000000002',
+      tipo: 'Venta',
+      divisa: 'USD',
       vigenteDesde: '2026-01-01',
       vigenteHasta: null,
     },

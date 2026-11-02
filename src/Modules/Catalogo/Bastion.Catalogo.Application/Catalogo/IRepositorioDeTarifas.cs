@@ -48,6 +48,23 @@ public interface IRepositorioDeTarifas : IOrdenaPor
     Task<bool> ExisteElCodigoAsync(Guid empresaId, string codigo, CancellationToken cancelacion);
 
     /// <summary>
+    /// El tipo de los tramos que esa empresa tiene con ese código, o nulo si no tiene ninguno.
+    /// </summary>
+    /// <remarks>
+    /// <b>Uno solo, y que no puedan ser dos lo garantiza la base</b>: la restricción de exclusión
+    /// <c>tarifas_un_tipo_por_codigo</c>, sobre la empresa, el código y el tipo con <c>&lt;&gt;</c>.
+    /// Como <see cref="HaySolapeAsync"/>, se adelanta para contestar un 409 con su motivo, y no la
+    /// sustituye.
+    /// </remarks>
+    /// <param name="empresaId">Empresa a la que pertenece (R8).</param>
+    /// <param name="codigo">Código ya normalizado.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<TipoDeTarifa?> TipoDelCodigoAsync(
+        Guid empresaId,
+        string codigo,
+        CancellationToken cancelacion);
+
+    /// <summary>
     /// Indica si esa empresa ya tiene un tramo de ese código cuya vigencia se pisa con la que se le
     /// pasa.
     /// </summary>

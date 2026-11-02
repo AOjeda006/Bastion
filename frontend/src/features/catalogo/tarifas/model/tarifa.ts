@@ -2,14 +2,11 @@
  * Un tramo de tarifa, tal como lo pinta esta funcionalidad. No es el DTO: lo traduce
  * `api/consultas.ts`.
  *
- * **La divisa no está aquí, y no es un recorte de la pantalla.** Es el identificador de un maestro
- * de OTRO módulo —Organización—, y esta funcionalidad no importa de aquélla (`docs/adr/adr-0022`):
- * el mismo criterio que dejó fuera la unidad y el impuesto de un artículo, y por el mismo motivo,
- * que un `uuid` en una columna no le dice nada a nadie. Lo que hace que aquí no falte es que esta
- * pantalla **no pinta ningún precio**: no hay ni un número al que le falte su moneda. Donde el
- * precio se resuelve —`GET /tarifas/{codigo}/precio`— viaja SIEMPRE con su `divisaId` pegado, y eso
- * es lo que hace segura la decisión de aceptar una tarifa en una divisa distinta de la de la
- * empresa.
+ * **La divisa no está aquí, y no es un recorte de la pantalla.** El contrato la trae, por su código
+ * ISO 4217 desde el 3.3 (ADR-0076), y lo que hace que aquí no falte es que esta pantalla **no pinta
+ * ningún precio**: no hay ni un número al que le falte su moneda. Donde el precio se resuelve
+ * —`GET /tarifas/{codigo}/precio`— viaja SIEMPRE con su `divisa` pegada, y eso es lo que hace
+ * segura la decisión de aceptar una tarifa en una divisa distinta de la de la empresa.
  */
 export interface Tarifa {
   readonly id: string;

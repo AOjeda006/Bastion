@@ -52,8 +52,7 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
 
     private const string CabeceraDeCategorias = "codigo;nombre;padre_codigo;padre_nombre\r\n";
 
-    private const string CabeceraDeTarifas =
-        "codigo;nombre;divisa_codigo;divisa_nombre;vigente_desde;vigente_hasta\r\n";
+    private const string CabeceraDeTarifas = "codigo;nombre;tipo;divisa;vigente_desde;vigente_hasta\r\n";
 
     private const string CabeceraDeGtins = "articulo_codigo;articulo_nombre;gtin;nivel;unidades\r\n";
 
@@ -123,7 +122,7 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
     }
 
     [Fact]
-    public async Task Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden()
+    public async Task Las_categorias_nombran_a_su_madre_y_las_tarifas_salen_con_su_tipo_y_su_divisa()
     {
         (HttpClient cliente, _) = await _api.EnUnaEmpresaNuevaAsync(Escenario.NifInventado(945));
         using HttpClient suyo = cliente;
@@ -140,23 +139,26 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
             CabeceraDeCategorias + LineaDeRaiz + LineaDeHoja);
         (await ExportarAsync(cliente, "categorias", "?q=dentro")).ShouldBe(CabeceraDeCategorias + LineaDeHoja);
 
-        DivisaDto euro = await EuroAsync(cliente);
+        await EuroAsync(cliente);
 
+        // La divisa sale con el código que guarda la tarifa desde el 3.3, y no con el nombre del
+        // maestro: el código ISO ya dice cuál es, y la importación lo lee igual (ADR-0076). La de
+        // la mayorista se escribe en minúsculas para que la columna no pueda acertar copiando lo
+        // que se tecleó.
         await CrearTarifaAsync(
-            cliente, "GEN", "General vieja", euro.Id, new DateOnly(2000, 1, 1), new DateOnly(2000, 12, 31));
-        await CrearTarifaAsync(cliente, "GEN", "General", euro.Id, new DateOnly(2001, 1, 1), null);
-        await CrearTarifaAsync(cliente, "MAY", "Mayorista", euro.Id, new DateOnly(2001, 1, 1), null);
+            cliente, "GEN", "General vieja", "Venta", "EUR", new DateOnly(2000, 1, 1), new DateOnly(2000, 12, 31));
+        await CrearTarifaAsync(cliente, "GEN", "General", "Venta", "EUR", new DateOnly(2001, 1, 1), null);
+        await CrearTarifaAsync(cliente, "MAY", "Mayorista", "Compra", "eur", new DateOnly(2001, 1, 1), null);
 
-        string divisa = $"{euro.Codigo};{euro.Nombre}";
-        string general = $"GEN;General;{divisa};2001-01-01;\r\n";
-        string vieja = $"GEN;General vieja;{divisa};2000-01-01;2000-12-31\r\n";
-        string mayorista = $"MAY;Mayorista;{divisa};2001-01-01;\r\n";
+        const string General = "GEN;General;Venta;EUR;2001-01-01;\r\n";
+        const string Vieja = "GEN;General vieja;Venta;EUR;2000-01-01;2000-12-31\r\n";
+        const string Mayorista = "MAY;Mayorista;Compra;EUR;2001-01-01;\r\n";
 
         (await ExportarAsync(cliente, "tarifas")).ShouldBe(
-            CabeceraDeTarifas + general + vieja + mayorista,
+            CabeceraDeTarifas + General + Vieja + Mayorista,
             "el desempate del listado: dentro del código, el tramo más reciente primero");
-        (await ExportarAsync(cliente, "tarifas", "?codigo=GEN")).ShouldBe(CabeceraDeTarifas + general + vieja);
-        (await ExportarAsync(cliente, "tarifas", "?q=mayor")).ShouldBe(CabeceraDeTarifas + mayorista);
+        (await ExportarAsync(cliente, "tarifas", "?codigo=GEN")).ShouldBe(CabeceraDeTarifas + General + Vieja);
+        (await ExportarAsync(cliente, "tarifas", "?q=mayor")).ShouldBe(CabeceraDeTarifas + Mayorista);
     }
 
     [Fact]
@@ -297,7 +299,8 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
         HttpClient cliente,
         string codigo,
         string nombre,
-        Guid divisaId,
+        string tipo,
+        string divisa,
         DateOnly desde,
         DateOnly? hasta)
     {
@@ -307,7 +310,8 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
             {
                 Codigo = codigo,
                 Nombre = nombre,
-                DivisaId = divisaId,
+                Tipo = tipo,
+                Divisa = divisa,
                 VigenteDesde = desde,
                 VigenteHasta = hasta,
             });
@@ -329,36 +333,17 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
         alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
     }
 
-    /// <summary>El euro, dándolo de alta si todavía no está, con el nombre que tenga.</summary>
-    private static async Task<DivisaDto> EuroAsync(HttpClient cliente)
+    /// <summary>El euro, dándolo de alta si todavía no está.</summary>
+    private static async Task EuroAsync(HttpClient cliente)
     {
         using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
             Divisas, new CrearDivisaDto { Codigo = "EUR", Nombre = "Euro" });
 
-        if (alta.StatusCode == HttpStatusCode.Created)
+        if (alta.StatusCode != HttpStatusCode.Created)
         {
-            return (await alta.Content.ReadFromJsonAsync<DivisaDto>())!;
-        }
-
-        alta.StatusCode.ShouldBe(
-            HttpStatusCode.Conflict,
-            "si no se ha creado, lo único esperable es que ya estuviera. " + await Escenario.Detalle(alta));
-
-        for (int pagina = 1; ; pagina++)
-        {
-            PaginaDe<DivisaDto> trozo = (await cliente.GetFromJsonAsync<PaginaDe<DivisaDto>>(
-                $"{Divisas}?page={pagina}&size={Paginacion.TamanioMaximo}"))!;
-            DivisaDto? euro = trozo.Elementos.FirstOrDefault(divisa => divisa.Codigo == "EUR");
-
-            if (euro is not null)
-            {
-                return euro;
-            }
-
-            if (trozo.Elementos.Count == 0 || pagina * Paginacion.TamanioMaximo >= trozo.Total)
-            {
-                throw new InvalidOperationException("El euro ni se ha creado ni está en el listado.");
-            }
+            alta.StatusCode.ShouldBe(
+                HttpStatusCode.Conflict,
+                "si no se ha creado, lo único esperable es que ya estuviera. " + await Escenario.Detalle(alta));
         }
     }
 

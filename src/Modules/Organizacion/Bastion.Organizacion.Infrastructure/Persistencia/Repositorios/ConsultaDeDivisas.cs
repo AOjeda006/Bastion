@@ -1,6 +1,6 @@
-using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Divisas;
+using Bastion.Organizacion.Domain.Divisas;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
@@ -12,7 +12,7 @@ namespace Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 /// </remarks>
 internal sealed class ConsultaDeDivisas(OrganizacionDbContext contexto) : IConsultaDeDivisas
 {
-    /// <summary>Las tres respuestas, desde el ítem 1.7.</summary>
+    /// <summary>Las tres respuestas, desde el ítem 1.7, y por el código desde el 3.3.</summary>
     /// <remarks>
     /// <para>
     /// <b>Una sola consulta y no dos.</b> Preguntar primero si existe y luego si está retirada son
@@ -25,13 +25,20 @@ internal sealed class ConsultaDeDivisas(OrganizacionDbContext contexto) : IConsu
     /// pesetas tiene que poder seguir diciendo en qué se emitió mucho después de que nadie pueda
     /// emitir una nueva.
     /// </para>
+    /// <para>
+    /// <b>El código se busca como se guarda</b>, con <c>Divisa.NormalizarCodigo</c>, que no valida:
+    /// uno sin forma de código no está en la tabla, y eso es un <c>NoExiste</c>. El índice único
+    /// sobre el código es el que contesta.
+    /// </para>
     /// </remarks>
-    /// <param name="divisaId">Identificador de la divisa.</param>
+    /// <param name="codigo">Código ISO 4217, tal como lo escribieron.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    public async Task<EstadoDeMaestro> EstadoDeAsync(Guid divisaId, CancellationToken cancelacion)
+    public async Task<EstadoDeMaestro> EstadoDeAsync(string codigo, CancellationToken cancelacion)
     {
+        string buscado = Divisa.NormalizarCodigo(codigo);
+
         bool? retirada = await contexto.Divisas
-            .Where(divisa => divisa.Id == divisaId)
+            .Where(divisa => divisa.Codigo == buscado)
             .Select(divisa => (bool?)divisa.EstaRetirada)
             .FirstOrDefaultAsync(cancelacion)
             .ConfigureAwait(false);
@@ -42,26 +49,5 @@ internal sealed class ConsultaDeDivisas(OrganizacionDbContext contexto) : IConsu
             true => EstadoDeMaestro.SoloResuelveLoViejo,
             false => EstadoDeMaestro.SeOfreceParaLoNuevo,
         };
-    }
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// Sin filtro que quitar: la retirada no es un filtro, y una divisa retirada vuelve, como
-    /// sale en su ficha.
-    /// </remarks>
-    /// <param name="divisas">Las divisas por las que se pregunta.</param>
-    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    public async Task<IReadOnlyDictionary<Guid, NombreDeMaestro>> NombresDeAsync(
-        IReadOnlyCollection<Guid> divisas, CancellationToken cancelacion)
-    {
-        ArgumentNullException.ThrowIfNull(divisas);
-
-        return await contexto.Divisas
-            .AsNoTracking()
-            .Where(divisa => divisas.Contains(divisa.Id))
-            .Select(divisa => new { divisa.Id, divisa.Codigo, divisa.Nombre })
-            .ToDictionaryAsync(
-                fila => fila.Id, fila => new NombreDeMaestro(fila.Codigo, fila.Nombre), cancelacion)
-            .ConfigureAwait(false);
     }
 }
