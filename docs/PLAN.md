@@ -1432,31 +1432,251 @@ datos:
   3.7. Entra en el migrador después de Inventario, en `LasMigracionesSobreTablasConFilasTests`, en
   `comprobar-migraciones.sh` y en los censos de los tests de arquitectura.
 
+### Tomadas por el agente de desarrollo — ítem 3.3, al escribirlo y al medirlo (2026-11-02)
+
+Cada tema del orden de trabajo fue en su subida, y tres de ellos en dos commits: la puerta, en
+`1fd5efb`; la tarifa, en `c12f3e2` y `7f867bb`; sus pantallas, en `eead063`; el tercero, en
+`e26217d`; los puertos, en `ae253c1` y `1e47d47`; y Compras, en `82cf007` y `4955575`. Lo que se
+decidió sin preguntar, porque el criterio no lo decía o porque salió al escribirlo:
+
+1. **El tipo se lee por su nombre exacto, y la base impide que un código mezcle dos** (`c12f3e2`,
+   ADR-0076). `tarifas_un_tipo_por_codigo` es un `EXCLUDE` gemelo del de los solapes, y el alta
+   pregunta antes, para contestar el `409` `tarifa-tipo-distinto-del-codigo`. `Venta` y `Compra`
+   se comparan con `Ordinal`, y no con `Enum.TryParse`, que acepta «1» y «Venta,Compra»: lo demás
+   es el `400` `tarifa-tipo-no-valido`. La divisa se valida por su código con
+   `IConsultaDeDivisas`, que ya no nombra por lotes, y por eso el ADR enmienda el §1, el §2 y el
+   *Cómo se vigila* del 0074.
+2. **La migración se para con un código que no es transitorio** (`c12f3e2`). La primera versión
+   paraba con `55000`, `object_not_in_prerequisite_state`, que Npgsql cuenta como transitorio, y
+   EF Core lo envolvía en una `InvalidOperationException` que proponía activar los reintentos.
+   Ahora para con `42P01` si hay tramos y no está Organización, y con `23503` si la divisa de un
+   tramo no está, y nombra el tramo y su código. Los casos afirman el código y que la parada no es
+   transitoria. El recorrido con filas aprende la referencia de `catalogo.tarifas` a
+   `organizacion.divisas`, que la base no declara, y la ven la 991 y la 992, por su arnés.
+3. **La vuelta se para como la ida** (`7f867bb`): la tanda dejó en verde la 979, la 980 y la 981,
+   porque la vuelta solo se ejercía con todas sus divisas en el maestro. Dos casos nuevos en
+   `LaDivisaDeLaTarifaSeTraduceAlMigrarTests`: la vuelta de un tramo cuya divisa no está se para
+   con `23503` y no se lleva nada, y sin Organización se para si hay tramos y pasa si no los hay.
+4. **No hay pantalla de alta de tarifas, así que el tipo se elige en la API** (`eead063`). El
+   listado enseña el tipo de cada tramo y su divisa por el código, sin preguntar a Organización.
+   Un tipo que no es ninguno de los dos sale «Sin reconocer», con su explicación debajo de la
+   tabla, y la celda la señala. El servidor de pega gana una tarifa de compra en dólares, para que
+   una tabla que pintara la divisa de la empresa, o el mismo tipo en todas las filas, no acierte.
+   Lo dice el README de la funcionalidad. La pantalla de alta se propone: no está en el PLAN.
+5. **El tercero no tiene ficha en el frontal**, solo su listado y su importación, así que «su ficha
+   enseña las dos» se cumple en la API: cada tarifa se lee por su subrecurso, como se leía la
+   asignada. La pantalla de la ficha también se propone.
+6. **El puerto de las tarifas recibe el tipo que se busca, en vez de decir el suyo** (`e26217d`), y
+   contesta `EsDeOtroTipo` antes que la vigencia. La aplicación traduce el rol al tipo, así que el
+   controlador no ve nada de Catálogo. Dos `409` nuevos: `tercero-tarifa-de-otro-tipo`, aunque
+   además esté caducada, y `tercero-tarifa-sin-su-rol`, que se mira antes de preguntar al puerto.
+   Quitar con nulo no pide el rol: quien dejó de ser cliente tiene que poder soltar la suya.
+7. **Un permiso para cada tarifa** (`e26217d`): la de venta conserva el código de antes, que es el
+   que guardan los roles, y la de compra estrena `terceros.tarifa-de-compra.fijar`. Con uno para
+   los dos `PUT` se puso roja la regla de que dos escrituras no comparten permiso, y con razón:
+   con qué precios se compra lo decide compras, y con cuáles se vende, ventas. El rol del sistema
+   lo recibe al arrancar, y uno propio, cuando alguien se lo conceda. Las acciones del borde pasan
+   de 171 a 173.
+8. **La vuelta de la migración del tercero pierde la de compra** (`e26217d`), por lo mismo que la
+   del ADR-0076 pierde el tipo: devuelve su nombre a la columna de venta y borra la de compra.
+   `LaTarifaDelTerceroSeConservaAlMigrarTests` hace la ida y la vuelta sobre tres fichas.
+9. **El precio de compra lo propone un puerto que dice por qué no** (`ae253c1`, ADR-0077).
+   `IConsultaDePrecios.DeCompraAsync` contesta un `PrecioPropuesto`, sellado, con el precio o con
+   el motivo y nunca los dos, y sus dos fábricas son las únicas puertas. Los motivos se miran de la
+   tarifa hacia la línea, y se para en el primero que se sabe. El precio sale del tramo de su
+   código que rige ese día, no del asignado, y la divisa que se compara es la de ese tramo: los de
+   un código comparten el tipo, pero no la divisa. Una empresa bloqueada contesta nulo, que no es
+   la divisa de ningún tramo, y por eso el motivo es `NoEstaEnLaDivisaBase`. La implementación vive
+   en la aplicación, porque es la precedencia de las líneas, y comparte `ElPrecioDelTramo` con
+   `ResolverPrecio`. No tiene consumidor hasta el 3.7, así que un caso le pregunta al *host* de
+   verdad si está registrado. La tanda vio la 1043 solo contra la base, y `1e47d47` la baja al
+   carril rápido con un caso que pide dos cantidades sobre dos líneas.
+10. **La tarifa de compra de un proveedor la dice `Terceros.Contracts`, con el papel en el `WHERE`**
+    (`ae253c1`): quien deja de ser proveedor conserva la tarifa en su ficha, y el puerto no la
+    contesta. La matriz de puerto por estado reconoce la respuesta con motivo, una clase sellada de
+    un `Contracts` con un solo enumerado público, y un anclaje lo afirma: con la forma de antes, el
+    puerto habría entrado con la matriz en verde y sus siete casillas sin mirar. Para componer el
+    puerto con los adaptadores de verdad, `Api.IntegrationTests` ve lo interno de
+    `Catalogo.Application`.
+11. **El invariante 8 queda desarmado** (`ae253c1`): la divisa de la tarifa, la del límite del
+    tercero y la base de la empresa son un código ISO, y el puerto compara la del tramo con la de
+    la empresa sin traducir. El traspaso de la fase 1 no se reescribe: lo dicen este punto y el
+    ADR-0077.
+12. **Compras se monta con una sola capa con tipos** (`82cf007`), la infraestructura, con
+    `ComprasDbContext` y `ModuloDeCompras`. Las otras cuatro compilan vacías hasta el pedido del
+    3.7, y el inventario de arquitectura lo dice en `EnsambladosConTipos`, como en Auditoría. El
+    contexto no llama a `ApplyConfigurationsFromAssembly`, porque sobre un ensamblado sin
+    configuraciones EF Core avisa cada vez que construye el modelo. El `EnsureSchema` de la primera
+    migración está escrito a mano, porque EF Core la generó vacía: la 1063 lo quitó y nada se puso
+    rojo, ni el humo, como dice su comentario, porque el historial crea el esquema al aplicarla.
+13. **La 1073 y la 1074 son equivalentes hoy**: sin el interceptor de la bandeja y sin la convención
+    de nombres no cambia nada, porque Compras no escribe y no tiene tablas propias. Dejan de serlo
+    con el primer `SaveChanges` y la primera tabla del pedido del 3.7, y su tanda tiene que verlas.
+    Ninguna regla mira qué interceptores lleva un contexto: se propone.
+14. **La lista de `comprobar-migraciones.sh` se compara con el disco** (`4955575`): la 1065 quitó
+    Compras del bucle y el guion salió con 0. Ahora `MODULOS` se compara, entera, con los módulos
+    que tienen su `<Modulo>DbContext.cs`, y aparte se afirma que el patrón encuentra alguno: lo ven
+    la 1076, por su arnés, y la 1077, con la comparación al revés. El paso del humo de `ci.yml`
+    tiene otra lista de contextos tecleada, y la lee con `echo "$REGISTRO" | grep -q` bajo
+    `pipefail`, la forma del SIGPIPE del 1.12. Se propone: no está en el PLAN.
+
+**Las tandas, de la 972 a la 1077, se escribieron antes de medir**, una por tema y sobre su commit,
+tres de ellas con una segunda pasada sobre el commit que cubría lo que la primera dejó en verde, y
+cada mutación con su «espera», en el *scratchpad*: un guion `mutarNN.py` por tanda, con sus
+mutaciones dentro. Cada una se aplicó sola sobre el árbol limpio del repositorio, se revirtió con
+`git restore --source=HEAD`, se tocó con la fecha de ahora, y al acabar cada tanda el árbol
+restaurado compiló y la porcelana salió vacía. Los registros, `tandaNN.out` y `tandaNN.log`:
+
+```bash
+python -X utf8 mutar33.py base 972-993          # sobre c12f3e2
+python -X utf8 mutar33.py 979-981               # sobre 7f867bb
+python -X utf8 mutar33-web.py base 994-1004     # sobre eead063
+python -X utf8 mutar34.py base 1005-1031        # sobre e26217d
+python -X utf8 mutar35.py base 1032-1057        # sobre ae253c1
+python -X utf8 mutar35.py 1043                  # sobre 1e47d47
+python -X utf8 mutar36.py base 1058-1075        # sobre 82cf007
+python -X utf8 mutar36.py 1065 1076 1077        # sobre 4955575
+```
+
+Los carriles son `dotnet test` de un proyecto, sin compilar y filtrado a las clases que la tanda
+puede ver; en el frontal, `vitest run` sobre el fichero del listado de tarifas, con los rojos por
+nombre y los avisos de `act()` de los siete trozos del canal (ADR-0066); `mig`, el guion
+`comprobar-migraciones.sh`; y `humo`, `humo33.sh`, que levanta el *compose* en su propio proyecto,
+`bastion-humo-33`, lee del motor el esquema y el historial de Compras, hace el segundo arranque y
+lo desmonta. En la tabla, `fun` es `Api.FunctionalTests`; `int`, `Api.IntegrationTests`; `org`,
+`Organizacion.IntegrationTests`; `ter` y `cat`, los `UnitTests` de Terceros y de Catálogo; `arq`,
+`Arquitectura.Tests`; y `web`, el frontal. Las bases, todas a cero, con los casos de cada carril:
+
+- la 33: `cat` 287, `org` 10 e `int` 34; y su segunda pasada, con los dos casos nuevos, `int` 36;
+- la del frontal: `web` 19, en 1 fichero, con 0 avisos de `act()` y 0 plazos agotados, en la base
+  y en cada una de las once pasadas;
+- la 34: `ter` 113, `fun` 279, `arq` 67 e `int` 19;
+- la 35: `cat` 309, `arq` 67 e `int` 26; y la pasada de la 1043, con el caso nuevo, `cat` 310;
+- y la 36: `arq` 67, `fun` 279, `int` 81, filtrado a `Persistencia`, y `mig`, con 0. El humo no
+  corrió en la base: la suya es la pasada del cierre, sobre `4955575`, con 0 fallos.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 972 | La ida, sin la salida de la tabla vacía: sin Organización se para aunque no haya tramos | **int 1**: `Sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola` |
+| 973 | La ida, sin la guarda de Organización: llega el `42P01` de la base, sin el mensaje que la pide | **int 1**: `Sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola` |
+| 974 | La ida, sin la parada del tramo cuya divisa no está: el `23502` de la columna, sin nombrar el tramo | **int 1**: `Un_tramo_cuya_divisa_no_esta_para_la_migracion_diciendo_cual_y_no_se_pierde_nada` |
+| 975 | La ida traduce todos los tramos a la primera divisa del maestro | **int 2**: `Cada_tramo_recibe_el_codigo_de_su_divisa_y_la_vuelta_le_devuelve_su_identificador` y `Un_tramo_cuya_divisa_no_esta_para_la_migracion_diciendo_cual_y_no_se_pierde_nada` |
+| 976 | La ida pasa los tramos de hoy a compra | **int 1**: `Cada_tramo_recibe_el_codigo_de_su_divisa_y_la_vuelta_le_devuelve_su_identificador` |
+| 977 | La ida, sin la exclusión `tarifas_un_tipo_por_codigo` | **int 1**: `Dos_tramos_del_mismo_codigo_y_distinto_tipo_los_rechaza_la_BASE` |
+| 978 | La vuelta devuelve a todos los tramos el primer identificador del maestro | **int 1**: `Cada_tramo_recibe_el_codigo_de_su_divisa_y_la_vuelta_le_devuelve_su_identificador` |
+| 979 | La vuelta, sin la parada del tramo cuya divisa no está | sobre `c12f3e2`, **ninguno**, en los tres carriles; sobre `7f867bb`, **int 1**: `La_vuelta_de_un_tramo_cuya_divisa_no_esta_se_para_diciendo_cual_y_no_se_pierde_nada`, el caso nuevo (punto 3) |
+| 980 | La vuelta, sin la guarda de Organización | sobre `c12f3e2`, **ninguno**, en los tres carriles; sobre `7f867bb`, **int 1**: `La_vuelta_sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola`, el caso nuevo (punto 3) |
+| 981 | La vuelta, sin la salida de la tabla vacía | sobre `c12f3e2`, **ninguno**, en los tres carriles; sobre `7f867bb`, **int 1**: `La_vuelta_sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola`, el caso nuevo (punto 3) |
+| 982 | El alta no mira el tipo de los tramos de su código | **cat 1**: `Un_tramo_de_otro_tipo_que_los_de_su_codigo_no_entra`; **int 1**: `La_divisa_se_guarda_con_su_codigo_y_cada_rechazo_del_tipo_tiene_su_type` |
+| 983 | El repositorio no encuentra el tipo del código | **int 1**: `La_divisa_se_guarda_con_su_codigo_y_cada_rechazo_del_tipo_tiene_su_type` |
+| 984 | La divisa se busca con el código tal como llega, sin normalizar | **org 1**: `La_divisa_se_busca_por_su_codigo_como_se_guarda_y_lo_que_no_es_un_codigo_no_existe`; **int 2**: `La_divisa_se_guarda_con_su_codigo_y_cada_rechazo_del_tipo_tiene_su_type` y `Las_categorias_nombran_a_su_madre_y_las_tarifas_salen_con_su_tipo_y_su_divisa` |
+| 985 | La tarifa guarda la divisa sin normalizar | **cat 3**: `La_divisa_se_pregunta_como_llego_y_se_guarda_en_mayusculas`, `La_divisa_se_guarda_con_su_codigo_en_mayusculas_y_sin_blancos` y `Una_divisa_sin_forma_de_codigo_ISO_no_abre_una_tarifa`; **int 2**: `La_divisa_se_guarda_con_su_codigo_y_cada_rechazo_del_tipo_tiene_su_type` y `Las_categorias_nombran_a_su_madre_y_las_tarifas_salen_con_su_tipo_y_su_divisa` |
+| 986 | El tipo se lee sin distinguir mayúsculas | **cat 1**: `Un_tipo_que_no_es_venta_ni_compra_se_contesta_antes_de_preguntar_la_divisa` |
+| 987 | El tipo se lee con `Enum.TryParse`, que acepta «1» y «Venta,Compra» | **cat 1**: `Un_tipo_que_no_es_venta_ni_compra_se_contesta_antes_de_preguntar_la_divisa` |
+| 988 | La exportación cruza el tipo y la divisa | **int 1**: `Las_categorias_nombran_a_su_madre_y_las_tarifas_salen_con_su_tipo_y_su_divisa` |
+| 989 | El DTO dice siempre «Venta» | **cat 2**: `El_tipo_se_guarda_tal_cual_se_pidio` y `Un_tramo_del_mismo_tipo_que_los_de_su_codigo_entra`; **int 2**: `La_divisa_se_guarda_con_su_codigo_y_cada_rechazo_del_tipo_tiene_su_type` y `Las_categorias_nombran_a_su_madre_y_las_tarifas_salen_con_su_tipo_y_su_divisa` |
+| 990 | La divisa retirada se ofrece como vigente | **org 1**: `La_divisa_retirada_deja_de_ofrecerse_y_sigue_resolviendo` |
+| 991 | **Arnés**: la referencia que la base no declara, con una letra cambiada | **int 1**: `Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila` |
+| 992 | **Arnés**: el recorrido no apunta como usadas las claves declaradas | **int 1**: `Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila` |
+| 993 | La ida, con el `CHECK` del tipo abierto | **int 1**: `Un_tipo_que_no_es_venta_ni_compra_lo_rechaza_la_BASE` |
+| 994 | Todo es de venta | **web 2**: «El listado de tarifas cada tramo dice si es de venta o de compra, y su divisa por su código» y «El listado de tarifas un tipo que esta versión no conoce se marca y se explica, y no sale en bruto» |
+| 995 | La de compra no se reconoce | **web 1**: «El listado de tarifas cada tramo dice si es de venta o de compra, y su divisa por su código» |
+| 996 | Lo desconocido se toma por compra | **web 1**: «El listado de tarifas un tipo que esta versión no conoce se marca y se explica, y no sale en bruto» |
+| 997 | La divisa no llega del contrato: siempre `EUR` | **web 1**: «El listado de tarifas cada tramo dice si es de venta o de compra, y su divisa por su código» |
+| 998 | La celda pinta `EUR`, y no la divisa del tramo | **web 1**: «El listado de tarifas cada tramo dice si es de venta o de compra, y su divisa por su código» |
+| 999 | Las etiquetas del tipo, cruzadas | **web 2**: «El listado de tarifas cada tramo dice si es de venta o de compra, y su divisa por su código» y «El listado de tarifas un tipo que esta versión no conoce se marca y se explica, y no sale en bruto» |
+| 1000 | Lo desconocido sale en bruto, sin marca | **web 1**: «El listado de tarifas un tipo que esta versión no conoce se marca y se explica, y no sale en bruto» |
+| 1001 | La celda no señala la explicación (`aria-describedby`) | **web 1**: «El listado de tarifas un tipo que esta versión no conoce se marca y se explica, y no sale en bruto» |
+| 1002 | Sin la explicación debajo de la tabla | **web 1**: «El listado de tarifas un tipo que esta versión no conoce se marca y se explica, y no sale en bruto» |
+| 1003 | La explicación, siempre | **web 1**: «El listado de tarifas cada tramo dice si es de venta o de compra, y su divisa por su código» |
+| 1004 | **Arnés**: el servidor de pega no cambia ningún tipo | **web 1**: «El listado de tarifas un tipo que esta versión no conoce se marca y se explica, y no sale en bruto» |
+| 1005 | El hueco del cliente pregunta por una tarifa de compra | **ter 1**: `Se_pregunta_por_hoy_segun_el_reloj_y_por_el_tipo_del_hueco`; **int 5**, todos de `ContratoDeLosCrucesTests` |
+| 1006 | La aplicación no mira el rol del hueco, y lanza el dominio | **ter 1**: `Sin_el_rol_del_hueco_es_409_y_no_se_pregunta_ni_se_toca_la_ficha`; **int 1**: `Sin_el_rol_del_hueco_es_409_y_quitar_la_de_ese_hueco_no_lo_pide` |
+| 1007 | El rol de cada hueco, cruzado | **ter 4**: `El_unico_estado_que_deja_asignar_es_el_que_rige_ese_dia`, `Los_tres_noes_de_la_tarifa_se_distinguen_entre_si`, `Se_pregunta_por_hoy_segun_el_reloj_y_por_el_tipo_del_hueco` y `Sin_el_rol_del_hueco_es_409_y_no_se_pregunta_ni_se_toca_la_ficha`; **int 5**, todos de `ContratoDeLosCrucesTests` |
+| 1008 | El rol se mira después de preguntar al puerto | **ter 1**: `Sin_el_rol_del_hueco_es_409_y_no_se_pregunta_ni_se_toca_la_ficha` |
+| 1009 | La escritura va al hueco del otro rol | **ter 4**: `El_unico_estado_que_deja_asignar_es_el_que_rige_ese_dia`, `Los_dos_huecos_no_se_pisan`, `Quitar_la_tarifa_no_pregunta_por_ninguna_ni_pide_el_rol` y `Se_pregunta_por_hoy_segun_el_reloj_y_por_el_tipo_del_hueco`; **int 5**, todos de `ContratoDeLosCrucesTests` |
+| 1010 | La de otro tipo se asigna | **ter 2**: `Los_tres_noes_de_la_tarifa_se_distinguen_entre_si` y `Un_estado_que_no_autoriza_no_toca_la_ficha_ni_confirma_nada`; **int 1**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` |
+| 1011 | La de otro tipo contesta el `type` de la que no rige | **ter 1**: `Los_tres_noes_de_la_tarifa_se_distinguen_entre_si`; **int 1**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` |
+| 1012 | El adaptador no mira el tipo | **int 1**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` |
+| 1013 | El adaptador mira la vigencia antes que el tipo | **int 1**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` |
+| 1014 | El tipo buscado, traducido al revés | **int 5**, todos de `ContratoDeLosCrucesTests` |
+| 1015 | La lectura del hueco de compra trae la de venta | **ter 2**: `El_unico_estado_que_deja_asignar_es_el_que_rige_ese_dia` y `La_lectura_devuelve_la_de_su_hueco_aunque_su_vigencia_haya_terminado`; **int 1**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte`. La espera nombraba `Los_dos_huecos`, y manda lo medido |
+| 1016 | El dominio, sin la guarda del rol | **ter 1**: `Cada_tarifa_pide_el_rol_de_su_hueco` |
+| 1017 | El dominio escribe la de compra en la de venta | **ter 4**: `El_unico_estado_que_deja_asignar_es_el_que_rige_ese_dia`, `La_lectura_devuelve_la_de_su_hueco_aunque_su_vigencia_haya_terminado`, `Los_dos_huecos_no_se_pisan` y `Cada_tarifa_pide_el_rol_de_su_hueco`; **int 1**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` |
+| 1018 | La de compra pide un cliente | **ter 3**: `El_unico_estado_que_deja_asignar_es_el_que_rige_ese_dia`, `Se_pregunta_por_hoy_segun_el_reloj_y_por_el_tipo_del_hueco` y `Cada_tarifa_pide_el_rol_de_su_hueco` |
+| 1019 | Una tarifa vacía, `Guid.Empty`, se acepta | **ter 1**: `Una_tarifa_vacia_no_es_ninguna` |
+| 1020 | La migración da de baja y de alta la columna en vez de renombrarla | **int 1**: `Cada_ficha_conserva_su_tarifa_como_la_de_venta_y_la_vuelta_se_la_devuelve` |
+| 1021 | La vuelta no devuelve el nombre de la columna | **int 1**: `Cada_ficha_conserva_su_tarifa_como_la_de_venta_y_la_vuelta_se_la_devuelve` |
+| 1022 | El `GET` de compra lee el hueco de venta | **int 1**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` |
+| 1023 | El `PUT` de compra escribe el hueco de venta | **int 2**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` y `Sin_el_rol_del_hueco_es_409_y_quitar_la_de_ese_hueco_no_lo_pide` |
+| 1024 | El `PUT` de compra exige el permiso de la de venta | **fun 2**: `Escribir_y_modificar_no_comparten_permiso_aunque_los_escriba_el_mismo_codigo` y `Todo_permiso_del_catalogo_lo_exige_alguna_accion` |
+| 1025 | El permiso nuevo, fuera del catálogo | **fun 1**: `Todo_permiso_exigido_existe_en_el_catalogo_que_registra_el_host`; **int 2**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` y `Sin_el_rol_del_hueco_es_409_y_quitar_la_de_ese_hueco_no_lo_pide` |
+| 1026 | La tarifa de compra, sin auditar | **fun 1**: `Ninguna_propiedad_de_una_entidad_auditada_se_queda_sin_clasificar` |
+| 1027 | El cruce de la tarifa de compra, sin su entrada en el inventario | **arq 1**: `Ningun_identificador_del_dominio_se_queda_sin_clasificar` |
+| 1028 | **Arnés**: la casilla `EsDeOtroTipo`, sin su caso declarado | **int 1**: `Cada_casilla_de_puerto_por_estado_esta_cubierta` |
+| 1029 | **Arnés**: el doble no apunta el tipo que se le pregunta | **ter 1**: `Se_pregunta_por_hoy_segun_el_reloj_y_por_el_tipo_del_hueco` |
+| 1030 | **Arnés**: la lectura del caso de la migración no lee la columna | **int 1**: `Cada_ficha_conserva_su_tarifa_como_la_de_venta_y_la_vuelta_se_la_devuelve` |
+| 1031 | **Arnés**: el `PUT` del caso va siempre al hueco de venta | **int 2**: `Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte` y `Sin_el_rol_del_hueco_es_409_y_quitar_la_de_ese_hueco_no_lo_pide` |
+| 1032 | El puerto pide una tarifa de venta | **cat 10**, todos de `ElPrecioDeCompraTests`; **int 5**, todos de `ElPrecioDeCompraContraLaBaseTests` |
+| 1033 | El tipo se mira después de la vigencia | **cat 1**: `Con_varios_motivos_gana_el_que_va_primero` |
+| 1034 | El precio sale del tramo asignado, y no del que rige | **cat 1**: `Resuelve_con_el_tramo_de_su_codigo_que_rige_ese_dia_y_no_con_el_asignado`; **int 1**: `El_precio_sale_del_tramo_que_rige_ese_dia_y_antes_del_primero_no_rige_ninguno` |
+| 1035 | La divisa que se compara es la del tramo asignado | **cat 1**: `La_divisa_que_se_compara_es_la_del_tramo_que_rige_y_no_la_del_asignado` |
+| 1036 | Una empresa sin divisa base propone | **cat 1**: `Un_tramo_fuera_de_la_divisa_base_no_propone` |
+| 1037 | La divisa no se compara | **cat 3**: `Con_varios_motivos_gana_el_que_va_primero`, `La_divisa_que_se_compara_es_la_del_tramo_que_rige_y_no_la_del_asignado` y `Un_tramo_fuera_de_la_divisa_base_no_propone`; **int 1**: `En_una_empresa_en_dolares_una_tarifa_en_euros_no_propone_aunque_su_precio_se_resuelva` |
+| 1038 | El artículo se mira antes que la divisa | **cat 1**: `Con_varios_motivos_gana_el_que_va_primero` |
+| 1039 | La divisa se mira antes que la vigencia | **cat 2**: `Con_varios_motivos_gana_el_que_va_primero` y `Una_tarifa_de_compra_en_la_divisa_base_propone_el_precio_de_su_linea` |
+| 1040 | El tramo que rige se busca un día después | **cat 4**: `Con_varios_motivos_gana_el_que_va_primero`, `La_divisa_que_se_compara_es_la_del_tramo_que_rige_y_no_la_del_asignado`, `Resuelve_con_el_tramo_de_su_codigo_que_rige_ese_dia_y_no_con_el_asignado` y `Si_ningun_tramo_de_su_codigo_rige_ese_dia_no_propone`; **int 1**: `El_precio_sale_del_tramo_que_rige_ese_dia_y_antes_del_primero_no_rige_ninguno` |
+| 1041 | Una cantidad cero pasa | **cat 1**: `Una_cantidad_que_no_es_positiva_lanza` |
+| 1042 | El origen del precio, al revés | **cat 3**: `Una_linea_de_la_categoria_del_articulo_tambien_propone`, `Una_tarifa_de_compra_en_la_divisa_base_propone_el_precio_de_su_linea` y `El_precio_resuelto_lleva_SIEMPRE_la_divisa_de_la_tarifa`; **int 2**: `Gana_el_antepasado_MAS_CERCANO_y_la_mas_honda_de_otra_rama_no_compite` y `La_linea_del_articulo_gana_y_el_tramo_se_elige_DESPUES_con_la_frontera_arriba` |
+| 1043 | `ResolverPrecio` le pasa a la línea otra cantidad | sobre `ae253c1`, **int 1**: `La_linea_del_articulo_gana_y_el_tramo_se_elige_DESPUES_con_la_frontera_arriba`, solo contra la base; sobre `1e47d47`, **cat 1**: `La_cantidad_que_se_pide_es_la_que_elige_la_linea_y_la_que_vuelve`; **int 1**: `La_linea_del_articulo_gana_y_el_tramo_se_elige_DESPUES_con_la_frontera_arriba`, el caso nuevo (punto 9) |
+| 1044 | El puerto le pasa a la línea otra cantidad | **cat 1**: `Una_tarifa_de_compra_en_la_divisa_base_propone_el_precio_de_su_linea` |
+| 1045 | El puerto contesta con otro día | **cat 1**: `Una_tarifa_de_compra_en_la_divisa_base_propone_el_precio_de_su_linea` |
+| 1046 | `Sin` acepta `Propone` | **cat 1**: `La_propuesta_no_se_construye_con_un_precio_y_un_motivo_a_la_vez` |
+| 1047 | `Sin` acepta un valor fuera del enumerado | **cat 1**: `La_propuesta_no_se_construye_con_un_precio_y_un_motivo_a_la_vez` |
+| 1048 | `Con` acepta un precio nulo | **cat 1**: `La_propuesta_no_se_construye_con_un_precio_y_un_motivo_a_la_vez` |
+| 1049 | La tarifa de compra la contesta quien dejó de ser proveedor | **int 1**: `La_tarifa_de_compra_la_contesta_el_proveedor_que_la_lleva_y_nadie_mas` |
+| 1050 | El puerto de Terceros contesta la tarifa de venta | **int 2**: `La_tarifa_de_compra_la_contesta_el_proveedor_que_la_lleva_y_nadie_mas` y `Un_cliente_que_tambien_es_proveedor_recibe_su_precio_de_compra_y_no_el_de_venta` |
+| 1051 | El puerto de Terceros, sin los filtros: el bloqueado y el de otra empresa | **int 1**: `La_tarifa_de_compra_la_contesta_el_proveedor_que_la_lleva_y_nadie_mas` |
+| 1052 | El puerto del precio, sin registrar | **int 1**: `El_host_de_verdad_registra_el_puerto_del_precio_de_compra` |
+| 1053 | La puerta pública, sin declarar en el inventario | **arq 1**: `Las_puertas_publicas_de_los_contratos_son_las_declaradas` |
+| 1054 | **Arnés**: la matriz deja de reconocer la respuesta sellada con motivo | **int 2**: `Cada_cubrimiento_nombra_un_puerto_de_aqui_y_un_valor_de_SU_enumerado` y `La_matriz_no_esta_vacia_y_ve_los_dos_sentidos_del_cruce` |
+| 1055 | **Arnés**: la casilla `NoRigeEseDia`, sin su caso declarado | **int 1**: `Cada_casilla_de_puerto_por_estado_esta_cubierta` |
+| 1056 | **Arnés**: el doble contesta siempre euros | **cat 1**: `Un_tramo_fuera_de_la_divisa_base_no_propone` |
+| 1057 | **Arnés**: el ayudante pregunta siempre por el mismo día | **int 1**: `El_precio_sale_del_tramo_que_rige_ese_dia_y_antes_del_primero_no_rige_ninguno` |
+| 1058 | El migrador no migra Compras | **humo**: «sin EsquemaMigrado para ComprasDbContext», «no existe el esquema compras» y los dos del historial; los carriles, en verde, porque solo el humo arranca el migrador |
+| 1059 | **Arnés**: el *fixture* no migra Compras | **int 1**: `Cada_modulo_tiene_SU_historial_de_migraciones_en_SU_esquema` |
+| 1060 | La traza, migrada desde Compras (`migra: true`) | **mig**: «El modelo de Compras tiene cambios sin migrar», que lo ve por diseño; e **int 38**, en siete clases, todos por el `MigrateAsync` del *fixture*, que lanza `PendingModelChangesWarning` |
+| 1061 | La bandeja de Compras, sin el filtro de inquilinato | **fun 1**: `Ninguna_entidad_del_modelo_se_queda_sin_filtro_y_sin_motivo` |
+| 1062 | El *host* no registra el módulo | **mig**: «dotnet ef no arranca para Compras», que lo ve por diseño; y **fun 29**, en nueve clases, todos con «No service for type `ComprasDbContext`», del *host* que resuelve cada contexto |
+| 1063 | La migración, sin su `EnsureSchema` | **ninguno**, con el humo: el historial crea el esquema al aplicar la migración, y la línea solo lo declara, como dice su comentario. Equivalente por diseño (punto 12) |
+| 1064 | Las migraciones de Compras, fuera del ensamblado: sin su `<Compile Include>` | **mig**: «EF no encuentra NINGUNA migración de Compras en el ensamblado»; e **int 1**: `Recorre_todos_los_contextos_que_tienen_migraciones` |
+| 1065 | Compras, fuera de la lista de `comprobar-migraciones.sh` | sobre `82cf007`, **ninguno**: la lista era tecleada (punto 14); sobre `4955575`, **mig**: «La lista MODULOS de este guion no es la de los contextos que hay en el disco» |
+| 1066 | El historial, en `public` | **int 2**: `Cada_modulo_tiene_SU_historial_de_migraciones_en_SU_esquema` y `En_public_no_queda_ni_una_tabla_de_ningun_modulo` |
+| 1067 | Una arista de Compras, sin declarar | **arq 1**: `Las_referencias_de_proyecto_son_las_declaradas` |
+| 1068 | Compras, andamio | **arq 3**: `Los_ensamblados_modulares_de_la_salida_son_los_declarados`, `Las_referencias_de_proyecto_son_las_declaradas` y `Ningun_modulo_ve_el_interior_de_otro` |
+| 1069 | La infraestructura de Compras, fuera de las capas con tipos | **arq 2**: `Cada_ensamblado_modular_lleva_los_tipos_que_el_inventario_declara` y `Ningun_modulo_ve_el_interior_de_otro` |
+| 1070 | El contexto, fuera del universo de modelos | **fun 1**: `El_universo_de_modelos_es_el_declarado` |
+| 1071 | El contexto, fuera del recorrido con filas | **int 1**: `Recorre_todos_los_contextos_que_tienen_migraciones` |
+| 1072 | El contexto, fuera de los sitios que declaran un filtro | **fun 1**: `Los_filtros_globales_se_definen_solo_en_los_contextos_de_modulo` |
+| 1073 | Sin el interceptor de la bandeja | **ninguno**: Compras no escribe nada, así que el interceptor no tiene qué hacer. Equivalente hoy; lo verá el primer `SaveChanges` del pedido del 3.7 (punto 13) |
+| 1074 | Sin la convención de nombres | **ninguno**, ni `mig`: las tres tablas que mapea no se migran desde aquí y no tiene ninguna propia. Equivalente hoy; lo verá la primera tabla del pedido (punto 13) |
+| 1075 | **Arnés**: el historial de Compras, sin declarar en `EsquemaDeIdentidadTests` | **int 1**: `Cada_modulo_tiene_SU_historial_de_migraciones_en_SU_esquema` |
+| 1076 | **Arnés**: el patrón de los contextos, con una letra cambiada | sobre `4955575`, **mig**: «No hay ningún contexto de módulo en src/Modules/*/Bastion.*.Infrastructure/Persistencia: el patrón de este guion no mira donde están» |
+| 1077 | La comparación de la lista, al revés | sobre `4955575`, **mig**: «La lista MODULOS de este guion no es la de los contextos que hay en el disco», con la lista buena |
+
 ## Estado actual
 
-**FASE 3 EN CURSO — 2 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
+**FASE 3 EN CURSO — 3 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
 catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas están en
 *Decisiones tomadas → Traídas por el encargo del 2026-10-26*, y el desglose son **once ítems**, del
-3.1 al 3.11, en el *Checklist*. Los dos primeros, la casa en orden y la exportación, están hechos.
+3.1 al 3.11, en el *Checklist*. Los tres primeros, la casa en orden, la exportación y los puertos,
+están hechos.
 
-> **Dónde se retoma (2026-11-02): en el 3.3, los puertos, con el tipo de la tarifa**, en su rama,
-> `3.3-los-puertos`, abierta desde `main` en `714cc6e`. Su puerta está contestada, en *Decisiones
-> tomadas → La puerta del 3.3*. Los temas, cada uno en su subida, y en este orden:
->
-> 1. la puerta y los dos runs del cierre del 3.2, que es el primer commit;
-> 2. la tarifa, con su tipo y su divisa en ISO: el dominio, la migración que lee
->    `organizacion.divisas`, con su ADR, el 0076, el contrato y la exportación;
-> 3. sus pantallas: el tipo al crearla, y la divisa por su código;
-> 4. el tercero, con una tarifa por rol: el dominio, la migración, la API y su ficha;
-> 5. los puertos: el precio de compra, en `Catalogo.Contracts`, y la tarifa de compra de un
->    proveedor, en `Terceros.Contracts`, con el cliente que también es proveedor; y el invariante
->    8, desarmado;
-> 6. Compras, con persistencia: su esquema, su contexto, su primera migración, el migrador y los
->    censos;
-> 7. y el cierre: la tanda, la batería y el PLAN.
->
-> Después, el 3.4, **que se para al cerrarse, antes del 3.5**. Antes de su primer commit se lee
-> `fundamentos/datos-distribuidos/convenciones.md`, de la biblioteca.
+> **Dónde se retoma (2026-11-02): en el 3.4, la bandeja, lista para su primer manejador**, en su
+> rama, `3.4-la-bandeja`, que se abre desde `main` en el commit que cierra el 3.3. Antes de su
+> primer commit se lee `fundamentos/datos-distribuidos/convenciones.md`, de la biblioteca. Ese
+> primer commit anota los runs del cierre del 3.3, el de la rama y el de `main`, y la puerta del
+> 3.4 si su criterio deja algo abierto. **El 3.4 se para al cerrarse, antes del 3.5.**
 >
 > **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
 > `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto. Llegó a
@@ -1464,6 +1684,74 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
+
+**El 3.3, hecho el 2026-11-02**, en la rama `3.3-los-puertos`, abierta el mismo día desde `main` en
+`714cc6e`. Su puerta, en *Decisiones tomadas → La puerta del 3.3, contestada*; lo que se decidió al
+escribirlo y al medirlo, con sus tandas, en *Decisiones tomadas → Tomadas por el agente de
+desarrollo — ítem 3.3*. Lleva dos ADR, el 0076 y el 0077, así que el siguiente es el **0078**. Sus
+mutaciones van de la **972** a la **1077**, y las siguientes empiezan en la **1078**.
+
+**Los commits, por este orden, y las subidas, una por tema, cada una con su run de rama** sobre su
+último commit (los trabajos, Backend, Frontal y Humo). Todos en verde:
+
+1. `1fd5efb`, «docs(plan): la puerta del 3.3, contestada, y los runs del cierre del 3.2»:
+   **41406461687**, Frontal `125149480802`, Backend `125149481059` y Humo `125154172979`.
+2. `c12f3e2`, «feat(catalogo): la tarifa, de venta o de compra, y su divisa en ISO», y `7f867bb`,
+   «test(catalogo): la vuelta de la migración de la divisa, con sus paradas», en una subida:
+   **41417657688**, Frontal `125185337223`, Backend `125185337542` y Humo `125190096746`.
+3. `eead063`, «feat(catalogo): el listado de tarifas, con su tipo y su divisa»: **41419690432**,
+   Backend `125191987417`, Frontal `125191987728` y Humo `125198207960`.
+4. `e26217d`, «feat(terceros): una tarifa por rol, la de venta y la de compra»: **41439001428**,
+   Backend `125255856982`, Frontal `125255857396` y Humo `125259830236`.
+5. `ae253c1`, «feat(catalogo): el precio de compra, o el motivo por el que no lo hay», y
+   `1e47d47`, «test(catalogo): la cantidad del precio por HTTP, en el carril rápido», en una
+   subida: **41450137647**, Frontal `125293022371`, Backend `125293022894` y Humo `125298014263`.
+6. `82cf007`, «feat(compras): el esquema, el contexto y su primera migración»: **41458877521**,
+   Frontal `125322497896`, Backend `125322497989` y Humo `125330167929`.
+7. `4955575`, «ci(migraciones): la lista de módulos, contra los contextos del disco»:
+   **41478853277**, Frontal `125391517899`, Backend `125391518430` y Humo `125399695148`.
+8. Y el que lo cierra, «docs(plan): cierra el 3.3, con sus tandas y la batería»: sus runs, el de la
+   rama y el de `main` tras el avance rápido, los anota el primer commit del 3.4.
+
+Los runs se leyeron con `python -X utf8 vigilar31.py <sha> <rama>`, el guion del *scratchpad* que
+pregunta con `curl`.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `4955575`**, con `bash bateria32.sh`, el
+guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida
+en una línea. Los diecinueve pasos salen con 0, y la porcelana, vacía. El cierre solo toca el PLAN
+y el README:
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día, con la lista de módulos
+  igual a la de los contextos del disco; **173** operaciones en **109** rutas, dos y una más que la
+  base: los dos subrecursos del tercero, en lugar del de la tarifa asignada; y **245** tipos de
+  **253** sitios, cuatro más: `tarifa-tipo-no-valido`, `tarifa-tipo-distinto-del-codigo`,
+  `tercero-tarifa-de-otro-tipo` y `tercero-tarifa-sin-su-rol`; con los dos generadores en
+  `--comprobar`. Las rutas, contadas sobre `docs/api/openapi.json`;
+- `typecheck`, `lint` y `format:check`, limpios; **428** casos de jsdom en **51** ficheros, dos más
+  que la base; `canal-de-la-consola.sh`, con la marca, ningún aviso de `act()` y siete trozos para
+  las ocho cadenas; y el carril del navegador, **22** casos en **1** fichero, todos en verde;
+- el arranque, **408/450 KiB** en 4 ficheros, como la base; la ruta diferida más pesada,
+  `PaginaDelRecuento`, **175/192 KiB**, de 21 rutas; el total servido, **838 KiB**, informativo; y
+  lo comprimido, **145**, **62** y **302 KiB**, también informativo;
+- el build, con 0 errores y 0 avisos, y `dotnet format`, limpio;
+- **1726** casos en el carril rápido y **783** en el de integración, todos en verde y contados con
+  `recuento-de-tests.sh` y las dos listas del *workflow*: 59 más en el rápido, y en el de
+  integración, 19, de ellos 18 en `Api.IntegrationTests` (688) y uno en
+  `Organizacion.IntegrationTests` (95). La batería tardó 14 min, 10 de ellos en integración;
+- y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py 714cc6e HEAD`: 125
+  pares en los dos lados, sin nada añadido ni retirado; de 35 `Project` a 40, y de 45
+  `packages.lock.json` a 50, los cinco de Compras, que deja de ser un andamio; y en el frontal, 443
+  entradas en los dos, sin nada añadido ni retirado.
+
+**El humo, con Docker, sobre `4955575`**, con `bash humo33.sh`, un guion del *scratchpad*, en su
+propio proyecto de *compose*, `bastion-humo-33`, con el entorno generado en el *scratchpad* y sus
+puertos en el 45xxx. El migrador sale con 0 y escribe siete `EsquemaMigrado`, en su orden, con
+Compras el último; el esquema `compras` existe y tiene solo su historial, con una fila, la de su
+primera migración; `public` no tiene historial, y las cuatro tablas compartidas siguen en
+`auditoria`; la salud, `Healthy`, y sin credenciales, `401`; y el segundo arranque sale con 0, con
+el rol del sistema con el catálogo entero, 116 permisos, y Compras igual que antes. Después, el
+`down -v` de su proyecto, el de por omisión intacto y el entorno borrado. **0 fallos**, en
+`humo33-cierre.txt`.
 
 **El 3.2, hecho el 2026-11-02**, en la rama `3.2-la-exportacion`, abierta el 2026-10-27 desde
 `main` en `eef05f7`. Su puerta y la pregunta del apóstrofo, en *Decisiones tomadas → La puerta del
@@ -1740,7 +2028,7 @@ con 0.
     con `errors.q`, en `ElBordeComponeLasTresPiezasTests`, `SoloPublicaElTextoQuienLoMiraTests` y
     `ElTextoSoloLoRecibeQuienLoMiraTests`, que ven de la 792 a la 802. Cierra la nota abierta del
     2.19, y la de la exportación, la del 2.17.
-- [ ] **3.3 · Los puertos, con el tipo de la tarifa** — criterio de aceptación: la tarifa es de
+- [x] **3.3 · Los puertos, con el tipo de la tarifa** — criterio de aceptación: la tarifa es de
   compra o de venta, y un tercero lleva una tarifa por rol; un puerto de `Catalogo.Contracts`
   resuelve el precio y el descuento de una tarifa para un artículo, una cantidad y una fecha, y
   solo propone precio una tarifa de compra en la divisa base. Un tercero que es cliente y
@@ -1748,6 +2036,53 @@ con 0.
   el invariante 8 del traspaso de la fase 1 queda desarmado. Y Compras gana persistencia: su
   esquema, su contexto y sus migraciones, y los tests de arquitectura lo cuentan como módulo con
   persistencia.
+
+  **Hecho el 2026-11-02**, en la rama `3.3-los-puertos`, en nueve commits, del `1fd5efb` al
+  `4955575`, y el que lo cierra. Cada tema del orden de trabajo, en su subida; tres de ellos, en
+  dos commits. Lo decidido sin preguntar y las tandas de la 972 a la 1077, en *Decisiones tomadas
+  → Tomadas por el agente de desarrollo — ítem 3.3*; los commits, sus runs y la batería, en
+  *Estado actual → El 3.3, hecho*. Cada parte del criterio, con lo que la comprueba:
+
+  - **la tarifa es de compra o de venta** (`c12f3e2`, ADR-0076): el tipo va con el código, y lo
+    impide la base, en `ContratoDeTarifasTests`, que ven la 977 y la 993; el alta lo contesta
+    antes, en `CrearTarifaTests`, que ven de la 982 a la 987 y la 989; la migración pasa a venta
+    las de hoy, que ve la 976; y el listado lo enseña (`eead063`), que ven de la 994 a la 1004;
+  - **y un tercero lleva una tarifa por rol** (`e26217d`): la de venta pide un cliente, y la de
+    compra, un proveedor, en `TerceroTests`, `LasTarifasDelTerceroTests` y
+    `ContratoDeLosCrucesTests`, que ven de la 1005 a la 1019, y la 1028, la 1029 y la 1031, por
+    su arnés; cada una por su subrecurso y con su permiso, que ven de la 1022 a la 1025; auditada
+    y declarada en el inventario, que ven la 1026 y la 1027; y lo asignado se conserva como la de
+    venta, en `LaTarifaDelTerceroSeConservaAlMigrarTests`, que ven la 1020, la 1021 y la 1030,
+    esta por su arnés;
+  - **un puerto de `Catalogo.Contracts` resuelve el precio y el descuento de una tarifa para un
+    artículo, una cantidad y una fecha** (`ae253c1`, ADR-0077): `ElPrecioDeCompraTests`, motivo a
+    motivo, que ven de la 1032 a la 1042, de la 1044 a la 1048 y la 1056; contra la base, en
+    `ElPrecioDeCompraContraLaBaseTests`, que ven la 1034, la 1037, la 1040 y la 1057; la cantidad
+    del precio por HTTP, en `ResolverPrecioTests` (`1e47d47`), que ve la 1043; registrado en el
+    *host* de verdad y declarado como puerta pública, que ven la 1052 y la 1053; y con sus
+    casillas en la matriz de puerto por estado, que ven la 1054 y la 1055, por su arnés;
+  - **solo propone precio una tarifa de compra en la divisa base**: la de venta contesta
+    `EsDeVenta`, que ven la 1032 y la 1033, y la de otra divisa, `NoEstaEnLaDivisaBase`, que ven
+    de la 1035 a la 1037 y la 1056;
+  - **un tercero que es cliente y proveedor recibe su precio de compra, no el de venta**:
+    `Un_cliente_que_tambien_es_proveedor_recibe_su_precio_de_compra_y_no_el_de_venta`, contra la
+    base, que ven la 1032 y la 1050; y la tarifa de compra la contesta solo quien es proveedor, en
+    su empresa y sin bloquear, que ven la 1049 y la 1051;
+  - **la divisa de la tarifa pasa a ISO 4217** (`c12f3e2`, `7f867bb`): la migración la traduce una
+    vez desde `organizacion.divisas`, y se para si no puede, en
+    `LaDivisaDeLaTarifaSeTraduceAlMigrarTests`, que ven de la 972 a la 981; el recorrido con filas
+    aprende la referencia que la base no declara, que ven la 991 y la 992, por su arnés; y se
+    valida y se guarda por su código, que ven la 984, la 985, la 988 y la 990;
+  - **el invariante 8 queda desarmado** (punto 11): el puerto compara el código del tramo con el
+    de la empresa sin traducir, que ven la 1035, la 1036 y la 1037;
+  - **y Compras gana persistencia** (`82cf007`, `4955575`): su esquema y su historial, en
+    `EsquemaDeIdentidadTests` y en el humo, que ven la 1058, la 1059, la 1066 y la 1075; su
+    contexto, registrado y con sus filtros, que ven de la 1060 a la 1062; y su migración,
+    compilada, recorrida y comprobada, que ven la 1064, la 1065, la 1071, la 1076 y la 1077. Los
+    tests de arquitectura lo cuentan como módulo con persistencia: montado, con su capa con tipos
+    y sus siete aristas, que ven de la 1067 a la 1069; y los censos de modelos y de filtros, que
+    ven la 1070 y la 1072. La 1063, la 1073 y la 1074 salen en verde, y lo explican los puntos 12
+    y 13.
 - [ ] **3.4 · La bandeja, lista para su primer manejador** — criterio de aceptación: los cinco
   huecos de *Decisiones tomadas → El orden de trabajo, C*, cada uno con su caso y su mutación: un
   ámbito y un contexto por evento; el manejador con el inquilino del evento, y no dentro de

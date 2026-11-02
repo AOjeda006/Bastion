@@ -10,7 +10,7 @@ produciría un monolito distribuido, que es la peor de las dos opciones. Lo que 
 principio es construirlo **como si algún día fuese a partirse**: cada módulo con su esquema de base
 de datos, su contrato público y su comunicación por eventos.
 
-> **Estado: fase 3 (Compras), en curso: 2 de 11 ítems.** La fase 1 se cerró con catorce ítems y
+> **Estado: fase 3 (Compras), en curso: 3 de 11 ítems.** La fase 1 se cerró con catorce ítems y
 > la fase 2, con veinte: el frontal arranca con un solo diccionario; los tres puertos que el
 > libro de movimientos pregunta antes de aceptar una línea ya contestan —y un almacén bloqueado
 > contesta que sigue resolviendo lo viejo, no que no existe—; el libro ya existe, particionado por
@@ -55,7 +55,10 @@ de datos, su contrato público y su comunicación por eventos.
 > fase cerrada en su fichero; y el frontal, con un tope por ruta y los textos de cada módulo
 > viajando con sus rutas. Y cada listado exporta lo que está viendo: un CSV en el dialecto de la
 > importación, con sus filtros, su orden y todas sus páginas, en flujo y desde una sola foto de la
-> base, con un botón en cada una de las trece pantallas.
+> base, con un botón en cada una de las trece pantallas. Y una tarifa es de venta o de compra, con
+> su divisa por su código ISO; el tercero lleva una por rol, y un puerto propone el precio de
+> compra o dice por qué no lo propone; y Compras tiene ya su esquema, su contexto y su primera
+> migración.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
 > **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo; lo de las
 > fases cerradas, en [`docs/historia/`](docs/historia/), un fichero por fase. Esta línea se compara
