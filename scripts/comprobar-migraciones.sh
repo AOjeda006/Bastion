@@ -24,7 +24,8 @@
 # Ninguno de los dos comandos se conecta a base de datos: este paso funciona sin PostgreSQL.
 #
 # UN MÓDULO, UNA LÍNEA. Cada módulo tiene su DbContext y su propia cadena de migraciones. Al
-# añadir un módulo con persistencia, se añade su nombre al bucle del final.
+# añadir un módulo con persistencia, se añade su nombre a MODULOS, al final; y si no se añade, el
+# guion lo dice, porque esa lista se compara con los contextos que hay en el disco.
 
 set -euo pipefail
 
@@ -110,7 +111,28 @@ comprobar() {
   fi
 }
 
-for modulo in Auditoria Organizacion Identidad Terceros Catalogo Inventario Compras; do
+# LA LISTA SE COMPARA CON EL DISCO, entera y en los dos sentidos. Una lista tecleada que nadie
+# contrasta es un selector: el módulo que se queda fuera no se mira, y el guion sale en verde. En el
+# 3.3, quitar Compras de aquí lo dejó en 0 (la mutación 1065). El universo es «los módulos con un
+# contexto propio», el fichero <Modulo>DbContext.cs de su Persistencia, que es lo que necesita
+# `dotnet ef` para mirarlo. Que el patrón encuentre alguno se afirma aparte, para que un patrón
+# roto diga eso y no «la lista no coincide».
+MODULOS=(Auditoria Organizacion Identidad Terceros Catalogo Inventario Compras)
+
+en_disco=$(for fichero in src/Modules/*/Bastion.*.Infrastructure/Persistencia/*DbContext.cs; do
+  if [ -f "$fichero" ]; then basename "$fichero" DbContext.cs; fi
+done | LC_ALL=C sort)
+declarados=$(printf '%s\n' "${MODULOS[@]}" | LC_ALL=C sort)
+
+if [ -z "$en_disco" ]; then
+  echo "::error title=Migraciones::No hay ningún contexto de módulo en src/Modules/*/Bastion.*.Infrastructure/Persistencia: el patrón de este guion no mira donde están."
+  FALLOS=$((FALLOS + 1))
+elif [ "$en_disco" != "$declarados" ]; then
+  echo "::error title=Migraciones::La lista MODULOS de este guion no es la de los contextos que hay en el disco. En la lista: $(tr '\n' ' ' <<< "$declarados"). En el disco: $(tr '\n' ' ' <<< "$en_disco")."
+  FALLOS=$((FALLOS + 1))
+fi
+
+for modulo in "${MODULOS[@]}"; do
   comprobar "$modulo"
 done
 
