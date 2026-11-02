@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -30,10 +31,12 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// </para>
 /// </remarks>
 /// <param name="inquilino">Desde qué empresa se emite, o por qué no hay ninguna.</param>
+/// <param name="causa">Quién lo causa, con qué correlación y en qué traza.</param>
 /// <param name="catalogo">Cómo se llama cada evento en la cola.</param>
 /// <param name="reloj">De dónde sale el instante.</param>
 public sealed class InterceptorDeLaBandeja(
     IInquilinoActual inquilino,
+    CausaDelAmbito causa,
     CatalogoDeEventos catalogo,
     TimeProvider reloj) : SaveChangesInterceptor
 {
@@ -103,6 +106,7 @@ public sealed class InterceptorDeLaBandeja(
         Guid? empresaId = inquilino.HayEmpresaActiva ? inquilino.EmpresaDelFiltro : null;
         MotivoSinInquilino? motivo = empresaId.HasValue ? null : DeclararSinInquilino();
         DateTimeOffset ahora = reloj.GetUtcNow();
+        Causa deEsteCambio = causa.Actual;
 
         foreach (RaizAgregado raiz in raices)
         {
@@ -114,7 +118,8 @@ public sealed class InterceptorDeLaBandeja(
                     empresaId,
                     motivo,
                     catalogo.NombreDe(evento.GetType()),
-                    JsonSerializer.Serialize(evento, evento.GetType(), s_json)));
+                    JsonSerializer.Serialize(evento, evento.GetType(), s_json),
+                    deEsteCambio));
             }
         }
     }

@@ -90,6 +90,10 @@ builder.Services.AddOpenTelemetry()
             opciones.Filter = contexto => !EsSonda(contexto.Request.Path));
         trazas.AddHttpClientInstrumentation();
 
+        // Y la bandeja de salida abre una actividad por manejador, hija de la traza en la que se
+        // escribió su evento (3.4): la petición y lo que pasó después por su culpa se leen juntas.
+        trazas.AddSource(TrazasDeLaBandeja.Fuente);
+
         if (hayRecolector)
         {
             trazas.AddOtlpExporter();

@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 
 namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 
@@ -27,6 +28,13 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// falta ordenar por <see cref="OcurridoEn"/>, y dos eventos del mismo <c>SaveChanges</c> comparten
 /// instante.
 /// </para>
+/// <para>
+/// <b>Y lleva quién lo causó</b> (3.4, hueco 3): el usuario, la correlación de la auditoría y el
+/// <c>traceparent</c> de su traza, en tres columnas y no dentro del cuerpo. Las llena el
+/// interceptor desde la <see cref="CausaDelAmbito"/> de la operación, y el despachador las
+/// restaura en el ámbito del manejador: su efecto y su respuesta las heredan sin que nadie copie
+/// nada, y el contrato del evento sigue contando solo el hecho.
+/// </para>
 /// </remarks>
 public sealed class EventoDeLaBandeja
 {
@@ -54,7 +62,8 @@ public sealed class EventoDeLaBandeja
         Guid? empresaId,
         MotivoSinInquilino? sinInquilino,
         string nombre,
-        string cuerpo)
+        string cuerpo,
+        Causa causa)
     {
         Id = Guid.CreateVersion7();
         EventoId = eventoId;
@@ -64,6 +73,9 @@ public sealed class EventoDeLaBandeja
         Nombre = nombre;
         Cuerpo = cuerpo;
         Estado = EstadoDelEnvio.Pendiente;
+        UsuarioId = causa.UsuarioId;
+        CorrelacionId = causa.CorrelacionId;
+        ContextoDeTraza = causa.ContextoDeTraza;
     }
 
     /// <summary>Identificador de la fila. Es de versión 7, así que además ordena la cola.</summary>
@@ -113,6 +125,25 @@ public sealed class EventoDeLaBandeja
     /// <summary>Qué dijo el último fallo. Es lo que se lee cuando algo queda aparcado.</summary>
     public string? UltimoError { get; private set; }
 
+    /// <summary>Quién causó el evento, si fue alguien con sesión.</summary>
+    public Guid? UsuarioId { get; private set; }
+
+    /// <summary>La correlación de la operación que lo causó, la de su traza de auditoría.</summary>
+    /// <remarks>
+    /// Nula solo en las filas escritas antes del 3.4, que no la guardaban. A esas, el despachador
+    /// les da una nueva: su causa no se sabe, y no se inventa.
+    /// </remarks>
+    public Guid? CorrelacionId { get; private set; }
+
+    /// <summary>
+    /// El <c>traceparent</c> W3C de la actividad en la que se escribió, si la había.
+    /// </summary>
+    /// <remarks>
+    /// Es de lo que cuelga la actividad del manejador, como hija y no como enlace: la petición y
+    /// lo que pasó después por su culpa se leen en la misma traza.
+    /// </remarks>
+    public string? ContextoDeTraza { get; private set; }
+
     /// <summary>Arma una fila de la bandeja, comprobando lo que la tabla también comprobará.</summary>
     /// <param name="eventoId">Identificador del evento.</param>
     /// <param name="ocurridoEn">Instante del hecho.</param>
@@ -120,6 +151,7 @@ public sealed class EventoDeLaBandeja
     /// <param name="sinInquilino">Motivo, si no la hay.</param>
     /// <param name="nombre">Nombre del evento en el cable.</param>
     /// <param name="cuerpo">El evento serializado.</param>
+    /// <param name="causa">Quién lo causó, con su correlación y su traza.</param>
     /// <returns>La fila, en estado pendiente.</returns>
     /// <exception cref="InvalidOperationException">
     /// Si lleva empresa y motivo a la vez, o ninguno de los dos.
@@ -130,8 +162,11 @@ public sealed class EventoDeLaBandeja
         Guid? empresaId,
         MotivoSinInquilino? sinInquilino,
         string nombre,
-        string cuerpo)
+        string cuerpo,
+        Causa causa)
     {
+        ArgumentNullException.ThrowIfNull(causa);
+
         if (empresaId.HasValue == sinInquilino.HasValue)
         {
             throw new InvalidOperationException(
@@ -139,7 +174,7 @@ public sealed class EventoDeLaBandeja
                 "pero nunca las dos cosas ni ninguna de las dos.");
         }
 
-        return new EventoDeLaBandeja(eventoId, ocurridoEn, empresaId, sinInquilino, nombre, cuerpo);
+        return new EventoDeLaBandeja(eventoId, ocurridoEn, empresaId, sinInquilino, nombre, cuerpo, causa);
     }
 
     /// <summary>Da el evento por publicado.</summary>

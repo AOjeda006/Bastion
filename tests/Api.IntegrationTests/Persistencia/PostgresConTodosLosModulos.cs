@@ -1,3 +1,4 @@
+using Bastion.Api.IntegrationTests.Inventario;
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Bloqueos;
@@ -111,8 +112,10 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
 
         InquilinoFijo inquilino = new(empresaId);
-        opciones.AddInterceptors(
-            new InterceptorDeAuditoria(inquilino, new UsuarioFijo(empresaId, usuarioId), TimeProvider.System));
+        opciones.AddInterceptors(new InterceptorDeAuditoria(
+            inquilino,
+            new CausaDelAmbito(new UsuarioFijo(empresaId, usuarioId)),
+            TimeProvider.System));
 
         return new OrganizacionDbContext(opciones.Options, inquilino, new AccesoCerrado());
     }
@@ -209,7 +212,11 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         OrganizacionDbContext.Configurar(opciones, CadenaDeConexion);
 
         InquilinoFijo inquilino = new(empresaId);
-        opciones.AddInterceptors(new InterceptorDeLaBandeja(inquilino, Catalogo, TimeProvider.System));
+        opciones.AddInterceptors(new InterceptorDeLaBandeja(
+            inquilino,
+            new CausaDelAmbito(new NadieEnConcreto()),
+            Catalogo,
+            TimeProvider.System));
 
         return new OrganizacionDbContext(opciones.Options, inquilino, new AccesoCerrado());
     }

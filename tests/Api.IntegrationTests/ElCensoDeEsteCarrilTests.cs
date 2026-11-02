@@ -176,6 +176,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElAccesoReservadoDelArticulo32Tests.Una_supresion_del_articulo_32_si_vence_y_la_fecha_sale_en_el_listado",
 
         "ElAltaDeUnaEmpresaSePublicaTests.Dar_de_alta_una_empresa_deja_su_evento_en_la_cola_y_el_host_lo_publica",
+        "ElAltaDeUnaEmpresaSePublicaTests.El_alta_lleva_quien_la_pidio_la_correlacion_de_su_auditoria_y_su_traza",
         "ElAltaDeUnaEmpresaSePublicaTests.El_alta_que_hace_la_semilla_se_publica_igual_y_dice_por_que_no_tiene_empresa",
 
         // Del ítem 2.12: el alta del recuento y su lectura por la API.
@@ -333,6 +334,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElManejadorVaConLaEmpresaDeSuFilaTests.El_publicador_aparca_a_la_quinta_una_fila_sin_empresa_con_su_motivo",
         "ElManejadorVaConLaEmpresaDeSuFilaTests.Escribir_en_otra_empresa_lo_para_la_guarda_de_la_auditoria",
         "ElManejadorVaConLaEmpresaDeSuFilaTests.Una_fila_sin_empresa_no_se_entrega_y_dice_su_motivo",
+
+        // Del ítem 3.4, hueco 3: el manejador corre con la causa de su fila —el usuario, la
+        // correlación y la traza—, que heredan su efecto y su respuesta, y su actividad es hija de
+        // la traza de la fila.
+        "ElManejadorVaConQuienLoCausoTests.El_efecto_y_su_respuesta_llevan_el_usuario_la_correlacion_y_la_traza_de_la_fila",
+        "ElManejadorVaConQuienLoCausoTests.La_actividad_de_un_manejador_que_falla_queda_en_error",
+        "ElManejadorVaConQuienLoCausoTests.La_actividad_del_manejador_es_hija_de_la_traza_de_su_fila",
+        "ElManejadorVaConQuienLoCausoTests.Una_fila_sin_correlacion_recibe_una_nueva_y_la_misma_para_todos_sus_manejadores",
 
         // Del ítem 3.4, huecos 1 y 5: cada manejador en su ámbito y en la transacción del contexto
         // de su módulo, comprobada por el `xmin` de sus cuatro filas.

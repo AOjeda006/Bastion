@@ -1,10 +1,13 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.Identidad.Contracts.Sesiones;
 using Bastion.Organizacion.Contracts.Empresas;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.BandejaDeSalida;
@@ -63,6 +66,50 @@ public sealed class ElAltaDeUnaEmpresaSePublicaTests(PostgresConTodosLosModulos 
     }
 
     [Fact]
+    public async Task El_alta_lleva_quien_la_pidio_la_correlacion_de_su_auditoria_y_su_traza()
+    {
+        // El hueco 3 del 3.4, por el lado del que escribe. La fila lleva el usuario del token, la
+        // correlación con la que se auditó la operación y el `traceparent` de su petición, que se
+        // manda en una cabecera para saber de qué traza tiene que colgar.
+        (HttpClient cliente, SesionDto sesion) = await _api.AbrirComoAdministradorAsync();
+        EmpresaDto activa = await Escenario.CrearEmpresaAsync(cliente, Escenario.NifInventado(3_400_001));
+
+        await Escenario.EntrarEnAsync(cliente, sesion.UsuarioId, activa.Id);
+
+        var traza = ActivityTraceId.CreateRandom();
+        var tramo = ActivitySpanId.CreateRandom();
+
+        cliente.DefaultRequestHeaders.Add("traceparent", $"00-{traza}-{tramo}-01");
+
+        EmpresaDto nueva = await Escenario.CrearEmpresaAsync(cliente, Escenario.NifInventado(3_400_002));
+
+        EventoDeLaBandeja fila = (await DelAltaDeAsync(nueva.Id)).ShouldNotBeNull();
+
+        fila.UsuarioId.ShouldBe(sesion.UsuarioId);
+
+        // La correlación es la de la traza de auditoría del alta: las dos filas son de la misma
+        // operación. Que la traza exista y sea de quien la pidió se afirma antes: sobre una lista
+        // vacía, la igualdad de abajo no compara nada.
+        List<(Guid Correlacion, Guid? Usuario)> auditadas = await LaAuditoriaDeAsync(nueva.Id);
+
+        auditadas.ShouldNotBeEmpty("el alta no ha dejado su traza de auditoría");
+        auditadas.Select(auditada => auditada.Usuario).Distinct().ShouldBe([sesion.UsuarioId]);
+        auditadas.Select(auditada => auditada.Correlacion).Distinct().ShouldBe(
+            [fila.CorrelacionId.ShouldNotBeNull()],
+            "la fila de la bandeja tenía que llevar la correlación con la que se auditó su operación");
+
+        // De la petición, y no de la cabecera tal cual: la misma traza, otro tramo, el del servidor.
+        string contexto = fila.ContextoDeTraza.ShouldNotBeNull("la fila no lleva la traza de su petición");
+
+        contexto.ShouldStartWith($"00-{traza}-");
+        contexto.ShouldNotContain(
+            tramo.ToString(),
+            Case.Insensitive,
+            "el tramo tenía que ser el de la petición en el servidor");
+        contexto.Length.ShouldBe(ConfiguracionDeLaBandeja.LongitudDelContextoDeTraza);
+    }
+
+    [Fact]
     public async Task El_alta_que_hace_la_semilla_se_publica_igual_y_dice_por_que_no_tiene_empresa()
     {
         // El arranque en frío: la primera empresa la crea la semilla, cuando todavía no hay
@@ -109,6 +156,28 @@ public sealed class ElAltaDeUnaEmpresaSePublicaTests(PostgresConTodosLosModulos 
         }
 
         return null;
+    }
+
+    private async Task<List<(Guid Correlacion, Guid? Usuario)>> LaAuditoriaDeAsync(Guid empresaId)
+    {
+        await using NpgsqlConnection conexion = new(postgres.CadenaDeConexion);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand consulta = new(
+            "SELECT correlacion_id, usuario_id FROM auditoria.registros WHERE entidad_id = @id",
+            conexion);
+        consulta.Parameters.AddWithValue("id", empresaId.ToString());
+
+        List<(Guid Correlacion, Guid? Usuario)> filas = [];
+
+        await using NpgsqlDataReader lector = await consulta.ExecuteReaderAsync();
+
+        while (await lector.ReadAsync())
+        {
+            filas.Add((lector.GetGuid(0), await lector.IsDBNullAsync(1) ? null : lector.GetGuid(1)));
+        }
+
+        return filas;
     }
 
     private async Task<List<(EventoDeLaBandeja Fila, EmpresaCreada Evento)>> AltasAsync()

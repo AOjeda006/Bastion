@@ -163,6 +163,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaBandejaSeMideYNoSeSondeaTests.La_bandeja_no_esta_en_ninguna_sonda",
         "LaBandejaSeMideYNoSeSondeaTests.Y_cuenta_lo_publicado_y_lo_aparcado_por_separado",
 
+        "LaCausaDelAmbitoTests.El_usuario_es_el_de_la_sesion_y_sin_sesion_no_es_nadie",
+        "LaCausaDelAmbitoTests.La_correlacion_es_una_por_ambito_y_no_una_por_lectura",
+        "LaCausaDelAmbitoTests.La_traza_es_la_de_la_actividad_en_curso_si_es_un_traceparent",
+
         "LaClaveDeIdempotenciaEsLaTuplaEnteraTests.El_objetivo_del_conflicto_es_la_clave_primaria_entera",
         "LaClaveDeIdempotenciaEsLaTuplaEnteraTests.Hay_un_hueco_por_columna_y_estan_numerados_en_orden",
         "LaClaveDeIdempotenciaEsLaTuplaEnteraTests.La_clave_primaria_es_la_tupla_entera",
@@ -178,6 +182,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaColaSeDefiendeSolaTests.Un_evento_que_no_sale_se_aparca_al_quinto_intento_y_no_antes",
         "LaColaSeDefiendeSolaTests.Un_evento_sin_declarar_lo_dice_al_volcarlo_y_no_al_leerlo",
         "LaColaSeDefiendeSolaTests.Una_fila_lleva_empresa_o_lleva_el_motivo_por_el_que_no_la_lleva",
+        "LaColaSeDefiendeSolaTests.Una_fila_lleva_la_causa_que_se_le_da_y_no_nace_sin_ella",
 
         "LaExportacionEsHermanaDelListadoTests.Cada_exportacion_pide_la_foto_de_su_modulo_y_el_host_la_construye",
         "LaExportacionEsHermanaDelListadoTests.Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado",

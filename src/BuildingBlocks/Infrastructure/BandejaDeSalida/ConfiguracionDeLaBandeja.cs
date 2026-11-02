@@ -43,6 +43,9 @@ public static class ConfiguracionDeLaBandeja
     /// <summary>Nombre del índice único sobre el identificador del evento.</summary>
     public const string IndiceDelEvento = "ix_bandeja_evento_id";
 
+    /// <summary>Longitud de un <c>traceparent</c> W3C de la versión 00.</summary>
+    public const int LongitudDelContextoDeTraza = 55;
+
     /// <summary>Aplica el mapeo.</summary>
     /// <param name="modelo">Constructor del modelo.</param>
     /// <param name="migra">
@@ -90,6 +93,12 @@ public static class ConfiguracionDeLaBandeja
             evento.Property(fila => fila.PublicadoEn);
             evento.Property(fila => fila.Intentos).IsRequired();
             evento.Property(fila => fila.UltimoError).HasMaxLength(EventoDeLaBandeja.MaximoDelError);
+
+            // La causa (3.4, hueco 3). El `traceparent` W3C mide 55 exactos: versión, traza, padre
+            // y banderas, con sus tres guiones.
+            evento.Property(fila => fila.UsuarioId);
+            evento.Property(fila => fila.CorrelacionId);
+            evento.Property(fila => fila.ContextoDeTraza).HasMaxLength(LongitudDelContextoDeTraza);
 
             // El mismo hecho no puede entrar dos veces en la cola. No es un lujo: el interceptor
             // vuelca los eventos del agregado, y un agregado que se guarde dos veces sin que nadie

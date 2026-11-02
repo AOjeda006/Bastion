@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Eventos;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -45,6 +46,10 @@ public static class CableadoDeLaBandeja
         // interceptor singleton se quedaría con la empresa de la primera petición y firmaría con
         // ella los eventos de todas las demás.
         servicios.TryAddScoped<InterceptorDeLaBandeja>();
+
+        // La causa la lee también el de la auditoría, que la registra igual: se registra en los dos
+        // sitios con `TryAdd`, y cualquiera de los dos cableados se basta.
+        servicios.TryAddScoped<CausaDelAmbito>();
 
         servicios.TryAddScoped<CerrojoDeLaBandeja>();
 

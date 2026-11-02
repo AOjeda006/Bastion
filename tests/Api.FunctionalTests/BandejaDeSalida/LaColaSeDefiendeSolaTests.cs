@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Shouldly;
 
@@ -29,6 +30,32 @@ public sealed class LaColaSeDefiendeSolaTests
 
         Should.NotThrow(() => Fila(Guid.CreateVersion7(), motivo: null));
         Should.NotThrow(() => Fila(empresaId: null, MotivoSinInquilino.SemillaDeArranque));
+    }
+
+    [Fact]
+    public void Una_fila_lleva_la_causa_que_se_le_da_y_no_nace_sin_ella()
+    {
+        // La causa son tres columnas que llena el interceptor (3.4, hueco 3). Sin ella, la fila
+        // nacería sin correlación, que es lo que solo tienen las de antes del 3.4.
+        Should.Throw<ArgumentNullException>(() => EventoDeLaBandeja.De(
+            Guid.CreateVersion7(),
+            DateTimeOffset.UtcNow,
+            Guid.CreateVersion7(),
+            sinInquilino: null,
+            "pruebas.uno",
+            "{}",
+            causa: null!));
+
+        Causa causa = new(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
+
+        EventoDeLaBandeja fila = Fila(Guid.CreateVersion7(), motivo: null, causa);
+
+        fila.UsuarioId.ShouldBe(causa.UsuarioId);
+        fila.CorrelacionId.ShouldBe(causa.CorrelacionId);
+        fila.ContextoDeTraza.ShouldBe(causa.ContextoDeTraza);
     }
 
     [Fact]
@@ -105,13 +132,15 @@ public sealed class LaColaSeDefiendeSolaTests
         catalogo.TipoDe("pruebas.uno").ShouldBe(typeof(UnHecho));
     }
 
-    private static EventoDeLaBandeja Fila(Guid? empresaId, MotivoSinInquilino? motivo) => EventoDeLaBandeja.De(
-        Guid.CreateVersion7(),
-        DateTimeOffset.UtcNow,
-        empresaId,
-        motivo,
-        "pruebas.uno",
-        "{}");
+    private static EventoDeLaBandeja Fila(Guid? empresaId, MotivoSinInquilino? motivo, Causa? causa = null) =>
+        EventoDeLaBandeja.De(
+            Guid.CreateVersion7(),
+            DateTimeOffset.UtcNow,
+            empresaId,
+            motivo,
+            "pruebas.uno",
+            "{}",
+            causa ?? new Causa(null, Guid.CreateVersion7(), null));
 
     private sealed record UnHecho : EventoDeIntegracion;
 

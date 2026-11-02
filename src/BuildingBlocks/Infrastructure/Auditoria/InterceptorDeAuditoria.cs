@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 using Microsoft.EntityFrameworkCore;
@@ -39,11 +38,11 @@ namespace Bastion.BuildingBlocks.Infrastructure.Auditoria;
 /// </para>
 /// </remarks>
 /// <param name="inquilino">De dónde sale la empresa activa, y el motivo si no la hay.</param>
-/// <param name="usuario">Quién pide la operación.</param>
+/// <param name="causa">Quién pide la operación, y su correlación.</param>
 /// <param name="reloj">De dónde sale el instante.</param>
 public sealed class InterceptorDeAuditoria(
     IInquilinoActual inquilino,
-    IUsuarioActual usuario,
+    CausaDelAmbito causa,
     TimeProvider reloj) : SaveChangesInterceptor
 {
     private const string Antes = "antes";
@@ -103,7 +102,8 @@ public sealed class InterceptorDeAuditoria(
 
         ComprobarQueNadieEscribeEnOtraEmpresa(cambios, empresaId);
 
-        var correlacion = Guid.CreateVersion7();
+        Guid correlacion = causa.CorrelacionId;
+        Guid? usuarioId = causa.UsuarioId;
         DateTimeOffset ahora = reloj.GetUtcNow();
 
         foreach ((Rastro rastro, Borrador borrador) in Recoger(cambios))
@@ -122,7 +122,7 @@ public sealed class InterceptorDeAuditoria(
                 ahora,
                 empresaId,
                 motivo,
-                usuario.EstaAutenticado ? usuario.UsuarioId : null,
+                usuarioId,
                 rastro.Entidad,
                 rastro.EntidadId,
                 borrador.Cambio,

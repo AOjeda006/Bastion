@@ -31,6 +31,7 @@ public static class CableadoDeAuditoria
         ArgumentNullException.ThrowIfNull(servicios);
 
         servicios.TryAddSingleton(TimeProvider.System);
+        servicios.TryAddScoped<CausaDelAmbito>();
         servicios.TryAddScoped<InterceptorDeAuditoria>();
 
         // Y el que mueve `ModificadoEn` (R14). Va con este porque comparte reloj y porque los dos

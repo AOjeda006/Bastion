@@ -63,12 +63,20 @@ public sealed class RegistroDeAuditoria
     public Guid Id { get; private set; }
 
     /// <summary>
-    /// Todas las filas escritas por el mismo <c>SaveChanges</c> comparten este identificador.
+    /// Todas las filas escritas por la misma operación comparten este identificador: las de una
+    /// petición, y las del manejador de un evento que causó esa petición.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Es lo que convierte seis filas en «un cambio». Sin él, una operación que toca la empresa y
     /// su domicilio deja dos rastros que solo se pueden juntar por el instante, que es una
     /// coincidencia, no una relación.
+    /// </para>
+    /// <para>
+    /// Hasta el 3.4 era uno por <c>SaveChanges</c>. Desde entonces es uno por ámbito, el que da
+    /// <see cref="CausaDelAmbito"/>, y viaja en la fila de la bandeja: el efecto de un manejador
+    /// lleva el de la operación que causó su evento.
+    /// </para>
     /// </remarks>
     public Guid CorrelacionId { get; private set; }
 

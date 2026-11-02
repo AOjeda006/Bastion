@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Bastion.BuildingBlocks.Application.Eventos;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -36,6 +38,13 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// guarda de la auditoría, como en una petición. Ese ámbito solo lo abre esta clase. Una fila sin
 /// empresa —escrita bajo un ámbito sin inquilino, como la de la semilla— no se entrega: lanza con
 /// su motivo, se reintenta, y a la quinta se aparca.
+/// </para>
+/// <para>
+/// <b>Y con quién lo causó</b> (3.4, hueco 3). En el mismo ámbito, la causa es la de la fila: el
+/// usuario y la correlación de la operación que escribió el evento, y una actividad hija de su
+/// traza. El efecto se audita a nombre de ese usuario y con esa correlación, y la respuesta lleva
+/// las tres, así que una cadena de eventos se sigue entera desde la petición que la empezó. A una
+/// fila de antes del 3.4, sin correlación, se le da una nueva, la misma para todos sus manejadores.
 /// </para>
 /// <para>
 /// <b>Lo que el manejador no confirma no lo guarda nadie</b>, como en una petición: la huella se
@@ -88,11 +97,13 @@ internal sealed partial class DespachadorDeEventos(
             "un manejador no corre sin empresa: vería las de todas. Se decide con el primer manejador " +
             "que necesite atender un evento así.");
 
+        Causa deLaFila = new(fila.UsuarioId, fila.CorrelacionId ?? Guid.CreateVersion7(), fila.ContextoDeTraza);
+
         int atendidos = 0;
 
         foreach (InscripcionDeManejador inscripcion in suyas)
         {
-            if (await EntregarAsync(inscripcion, evento, empresaId, cancelacion).ConfigureAwait(false))
+            if (await EntregarAsync(inscripcion, fila, evento, empresaId, deLaFila, cancelacion).ConfigureAwait(false))
             {
                 atendidos++;
             }
@@ -104,8 +115,10 @@ internal sealed partial class DespachadorDeEventos(
     // Devuelve si el manejador lo ha atendido ahora: `false` es que ya lo había procesado.
     private async Task<bool> EntregarAsync(
         InscripcionDeManejador inscripcion,
+        EventoDeLaBandeja fila,
         EventoDeIntegracion evento,
         Guid empresaId,
+        Causa deLaFila,
         CancellationToken cancelacion)
     {
         await using AsyncServiceScope ambito = ambitos.CreateAsyncScope();
@@ -115,6 +128,32 @@ internal sealed partial class DespachadorDeEventos(
         var manejador = (IManejadorDeEvento)ambito.ServiceProvider.GetRequiredService(inscripcion.Manejador);
         var contexto = (DbContext)ambito.ServiceProvider.GetRequiredService(inscripcion.Contexto);
 
+        using Activity? actividad = TrazasDeLaBandeja.Atender(fila, manejador.Consumidor);
+
+        // La traza que hereda lo que escriba el manejador es la de su actividad, que es hija de la
+        // de la fila. Sin nadie escuchando no hay actividad, y se queda la de la fila: lo que se
+        // guarda no depende de que haya un oyente.
+        using IDisposable conSuCausa = CausaDelAmbito.ConLaDelEvento(
+            deLaFila with { ContextoDeTraza = actividad?.Id ?? deLaFila.ContextoDeTraza });
+
+        try
+        {
+            return await AtenderAsync(manejador, contexto, evento, cancelacion).ConfigureAwait(false);
+        }
+        catch (Exception excepcion)
+        {
+            actividad?.SetStatus(ActivityStatusCode.Error, excepcion.Message);
+
+            throw;
+        }
+    }
+
+    private async Task<bool> AtenderAsync(
+        IManejadorDeEvento manejador,
+        DbContext contexto,
+        EventoDeIntegracion evento,
+        CancellationToken cancelacion)
+    {
         DbSet<EventoProcesado> huellas = HuellasDe(contexto);
 
         contexto.Database.AutoSavepointsEnabled = false;

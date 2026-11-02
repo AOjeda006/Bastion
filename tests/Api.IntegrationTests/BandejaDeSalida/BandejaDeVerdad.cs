@@ -137,11 +137,13 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
     /// El motivo de una fila escrita bajo un ámbito sin inquilino, que no lleva empresa. Por omisión
     /// la lleva, y es <see cref="EmpresaDePrueba"/>.
     /// </param>
+    /// <param name="causa">Quién lo causó. Por omisión, nadie con sesión y una correlación nueva.</param>
     public async Task EncolarAsync(
         EventoDeIntegracion evento,
         string? nombre = null,
         DateTimeOffset? ocurridoEn = null,
-        MotivoSinInquilino? sinInquilino = null)
+        MotivoSinInquilino? sinInquilino = null,
+        Causa? causa = null)
     {
         ArgumentNullException.ThrowIfNull(evento);
 
@@ -155,7 +157,8 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
             empresaId: sinInquilino is null ? EmpresaDePrueba : null,
             sinInquilino: sinInquilino,
             nombre ?? HechoDePrueba.Nombre,
-            JsonSerializer.Serialize(evento, evento.GetType(), Json)));
+            JsonSerializer.Serialize(evento, evento.GetType(), Json),
+            causa ?? SinCausa()));
 
         await contexto.SaveChangesAsync();
     }
@@ -170,27 +173,44 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
     /// <param name="evento">El hecho que se entrega.</param>
     /// <param name="empresaId">La empresa de la fila. Por omisión, <see cref="EmpresaDePrueba"/>.</param>
     /// <param name="sinInquilino">El motivo de una fila sin empresa; con él, no lleva ninguna.</param>
+    /// <param name="causa">Quién lo causó. Por omisión, nadie con sesión y una correlación nueva.</param>
     /// <returns>Cuántos manejadores lo han atendido.</returns>
     public async Task<int> DespacharAsync(
         EventoDeIntegracion evento,
         Guid? empresaId = null,
-        MotivoSinInquilino? sinInquilino = null)
+        MotivoSinInquilino? sinInquilino = null,
+        Causa? causa = null)
     {
         ArgumentNullException.ThrowIfNull(evento);
-
-        using IServiceScope ambito = _servicios.CreateScope();
-
-        IInquilinoActual inquilino = ambito.ServiceProvider.GetRequiredService<IInquilinoActual>();
-
-        using IDisposable deLaVuelta = inquilino.SinInquilino(MotivoSinInquilino.PublicacionDeEventos);
 
         var fila = EventoDeLaBandeja.De(
             evento.EventoId,
             DateTimeOffset.UtcNow,
             empresaId: sinInquilino is null ? empresaId ?? EmpresaDePrueba : null,
             sinInquilino: sinInquilino,
-            ambito.ServiceProvider.GetRequiredService<CatalogoDeEventos>().NombreDe(evento.GetType()),
-            JsonSerializer.Serialize(evento, evento.GetType(), Json));
+            _servicios.GetRequiredService<CatalogoDeEventos>().NombreDe(evento.GetType()),
+            JsonSerializer.Serialize(evento, evento.GetType(), Json),
+            causa ?? SinCausa());
+
+        return await DespacharLaFilaAsync(fila);
+    }
+
+    /// <summary>Entrega una fila tal como está, como la entrega el publicador al leerla de la cola.</summary>
+    /// <remarks>
+    /// Para la fila que no se puede armar con la factoría: la que se escribió antes del 3.4, sin
+    /// correlación, que se lee de la base después de quitársela.
+    /// </remarks>
+    /// <param name="fila">La fila que se entrega.</param>
+    /// <returns>Cuántos manejadores la han atendido.</returns>
+    public async Task<int> DespacharLaFilaAsync(EventoDeLaBandeja fila)
+    {
+        ArgumentNullException.ThrowIfNull(fila);
+
+        using IServiceScope ambito = _servicios.CreateScope();
+
+        IInquilinoActual inquilino = ambito.ServiceProvider.GetRequiredService<IInquilinoActual>();
+
+        using IDisposable deLaVuelta = inquilino.SinInquilino(MotivoSinInquilino.PublicacionDeEventos);
 
         return await ambito.ServiceProvider
             .GetRequiredService<IDespachadorDeEventos>()
@@ -250,6 +270,10 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
     }
 
     private static JsonSerializerOptions Json { get; } = new(JsonSerializerDefaults.Web);
+
+    // La de un evento que no causó nadie con sesión ni dentro de una traza: la de un trabajo de
+    // fondo. Su correlación es nueva, como lo sería la de su ámbito.
+    private static Causa SinCausa() => new(null, Guid.CreateVersion7(), null);
 }
 
 /// <summary>Un hecho que solo existe en los tests, para probar la fontanería sin tocar el negocio.</summary>
