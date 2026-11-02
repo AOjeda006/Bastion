@@ -810,8 +810,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasMigracionesSobreTablasConFilasTests.Y_sobre_tablas_vacias_se_aplican_igual_que_en_la_base_de_los_tests",
 
         // Del 3.3 (ADR-0076): la migración que pasa la divisa de la tarifa a su código, sobre tramos
-        // escritos a mano, con su vuelta y sus dos paradas.
+        // escritos a mano, con su vuelta y sus dos paradas, a la ida y a la vuelta.
         "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.Cada_tramo_recibe_el_codigo_de_su_divisa_y_la_vuelta_le_devuelve_su_identificador",
+        "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.La_vuelta_de_un_tramo_cuya_divisa_no_esta_se_para_diciendo_cual_y_no_se_pierde_nada",
+        "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.La_vuelta_sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola",
         "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.Sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola",
         "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.Un_tramo_cuya_divisa_no_esta_para_la_migracion_diciendo_cual_y_no_se_pierde_nada",
 

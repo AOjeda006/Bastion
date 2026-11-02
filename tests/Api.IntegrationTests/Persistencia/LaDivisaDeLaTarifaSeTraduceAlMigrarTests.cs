@@ -11,8 +11,8 @@ namespace Bastion.Api.IntegrationTests.Persistencia;
 /// <b>Es la única migración que lee otro esquema</b> (ADR-0076): traduce el <c>divisa_id</c> de
 /// cada tramo con <c>organizacion.divisas</c>, y se para si no puede. Lo que se prueba aquí es lo que
 /// <see cref="LasMigracionesSobreTablasConFilasTests"/> no ve, porque sus filas son inventadas: que
-/// cada tramo recibe el código de SU divisa, que la vuelta le devuelve su identificador, y que la
-/// parada no se lleva nada por delante.
+/// cada tramo recibe el código de SU divisa, que la vuelta le devuelve su identificador, y que
+/// ninguna de las paradas, a la ida o a la vuelta, se lleva nada por delante.
 /// </para>
 /// <para>
 /// <b>Cada parada se afirma con su código y con que no es transitorio.</b> La primera versión de la
@@ -200,6 +200,110 @@ public sealed class LaDivisaDeLaTarifaSeTraduceAlMigrarTests(PostgresConTodosLos
         columnas.ShouldNotContain("divisa_id");
     }
 
+    /// <summary>
+    /// Al deshacer la migración, un tramo cuyo código no está en Organización la para, que dice
+    /// cuál es, y no se pierde nada; con la divisa dada de alta, vuelve.
+    /// </summary>
+    /// <remarks>
+    /// La vuelta tiene sus propias paradas, en su propio bloque, y la tanda del 3.3 las quitó una a
+    /// una, la 979, la 980 y la 981, sin que ningún caso se pusiera rojo: la vuelta solo se ejercía
+    /// con todas sus divisas.
+    /// </remarks>
+    [Fact]
+    public async Task La_vuelta_de_un_tramo_cuya_divisa_no_esta_se_para_diciendo_cual_y_no_se_pierde_nada()
+    {
+        string cadena = await postgres.CrearBaseNuevaAsync(migrada: false);
+        await PostgresConTodosLosModulos.MigrarOrganizacionAsync(cadena);
+        await PostgresConTodosLosModulos.MigrarCatalogoHastaAsync(cadena, LaDeLaDivisa);
+
+        var euro = Guid.CreateVersion7();
+        var bueno = Guid.CreateVersion7();
+        var huerfano = Guid.CreateVersion7();
+
+        await using (NpgsqlConnection conexion = await AbrirAsync(cadena))
+        {
+            await DarDeAltaLaDivisaAsync(conexion, euro, "EUR", retirada: false);
+            await InsertarTramoConSuCodigoAsync(conexion, bueno, "Venta", "EUR");
+            await InsertarTramoConSuCodigoAsync(conexion, huerfano, "Compra", "CHF");
+        }
+
+        List<string> columnasDeAntes = await ColumnasAsync(cadena);
+
+        PostgresException parada = await Should.ThrowAsync<PostgresException>(
+            () => PostgresConTodosLosModulos.MigrarCatalogoHastaAsync(cadena, LaDeAntes));
+
+        parada.SqlState.ShouldBe(PostgresErrorCodes.ForeignKeyViolation, parada.MessageText);
+        parada.IsTransient.ShouldBeFalse("una parada que se reintenta no se arregla sola");
+        parada.MessageText.ShouldContain($"{huerfano} (divisa CHF)");
+        parada.MessageText.ShouldNotContain(bueno.ToString(), Case.Insensitive, "el tramo que sí tiene divisa no es de los que hay que arreglar");
+
+        (await ColumnasAsync(cadena)).ShouldBe(columnasDeAntes, "la parada deshace también el identificador");
+        (await LeerAsync(cadena, "tipo || ';' || divisa")).ShouldBe(
+            new Dictionary<Guid, string>
+            {
+                [bueno] = "Venta;EUR",
+                [huerfano] = "Compra;CHF",
+            },
+            ignoreOrder: true);
+
+        var franco = Guid.CreateVersion7();
+
+        await using (NpgsqlConnection conexion = await AbrirAsync(cadena))
+        {
+            await DarDeAltaLaDivisaAsync(conexion, franco, "CHF", retirada: false);
+        }
+
+        await PostgresConTodosLosModulos.MigrarCatalogoHastaAsync(cadena, LaDeAntes);
+
+        (await LeerAsync(cadena, "divisa_id::text")).ShouldBe(
+            new Dictionary<Guid, string>
+            {
+                [bueno] = euro.ToString(),
+                [huerfano] = franco.ToString(),
+            },
+            ignoreOrder: true);
+    }
+
+    /// <summary>
+    /// En una base sin Organización, la vuelta pasa si no hay tramos y se para pidiéndola si los
+    /// hay.
+    /// </summary>
+    [Fact]
+    public async Task La_vuelta_sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola()
+    {
+        string cadena = await postgres.CrearBaseNuevaAsync(migrada: false);
+        await PostgresConTodosLosModulos.MigrarCatalogoHastaAsync(cadena, LaDeLaDivisa);
+
+        await using (NpgsqlConnection conexion = await AbrirAsync(cadena))
+        {
+            await InsertarTramoConSuCodigoAsync(conexion, Guid.CreateVersion7(), "Venta", "EUR");
+        }
+
+        List<string> columnasDeAntes = await ColumnasAsync(cadena);
+
+        PostgresException parada = await Should.ThrowAsync<PostgresException>(
+            () => PostgresConTodosLosModulos.MigrarCatalogoHastaAsync(cadena, LaDeAntes));
+
+        parada.SqlState.ShouldBe(PostgresErrorCodes.UndefinedTable, parada.MessageText);
+        parada.IsTransient.ShouldBeFalse("una parada que se reintenta no se arregla sola");
+        parada.MessageText.ShouldContain("solo vuelve a su identificador con organizacion.divisas");
+        (await ColumnasAsync(cadena)).ShouldBe(columnasDeAntes);
+
+        await using (NpgsqlConnection conexion = await AbrirAsync(cadena))
+        {
+            await using NpgsqlCommand vaciar = new("DELETE FROM catalogo.tarifas", conexion);
+            await vaciar.ExecuteNonQueryAsync();
+        }
+
+        await PostgresConTodosLosModulos.MigrarCatalogoHastaAsync(cadena, LaDeAntes);
+
+        List<string> columnas = await ColumnasAsync(cadena);
+
+        columnas.ShouldContain("divisa_id");
+        columnas.ShouldNotContain("tipo");
+        columnas.ShouldNotContain("divisa");
+    }
+
     private static async Task<NpgsqlConnection> AbrirAsync(string cadena)
     {
         NpgsqlConnection conexion = new(cadena);
@@ -238,6 +342,28 @@ public sealed class LaDivisaDeLaTarifaSeTraduceAlMigrarTests(PostgresConTodosLos
         tramo.Parameters.AddWithValue("empresa", empresaId);
         tramo.Parameters.AddWithValue("codigo", codigo);
         tramo.Parameters.AddWithValue("divisa", divisaId);
+        await tramo.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Un tramo como lo guarda la tabla desde el 3.3, con su tipo y el código de su divisa, en una
+    /// empresa suya: así dos tramos del mismo código no chocan con ninguna de las dos exclusiones.
+    /// </summary>
+    private static async Task InsertarTramoConSuCodigoAsync(
+        NpgsqlConnection conexion, Guid id, string tipo, string divisa)
+    {
+        await using NpgsqlCommand tramo = new(
+            """
+            INSERT INTO catalogo.tarifas
+                (id, empresa_id, codigo, nombre, tipo, divisa, vigente_desde, vigente_hasta, creado_en, modificado_en)
+            VALUES (@id, @empresa, 'GEN', 'GEN', @tipo, @divisa, DATE '2026-01-01', NULL, now(), now())
+            """,
+            conexion);
+
+        tramo.Parameters.AddWithValue("id", id);
+        tramo.Parameters.AddWithValue("empresa", Guid.CreateVersion7());
+        tramo.Parameters.AddWithValue("tipo", tipo);
+        tramo.Parameters.AddWithValue("divisa", divisa);
         await tramo.ExecuteNonQueryAsync();
     }
 
