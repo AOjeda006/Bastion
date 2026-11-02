@@ -76,6 +76,36 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
     }
 
     [Fact]
+    public async Task Dos_confirmaciones_de_un_manejador_son_de_la_misma_transaccion()
+    {
+        // Lo que ve que no haya puntos de guardado. Con un solo `SaveChanges`, uno solo abriría su
+        // subtransacción y las cuatro filas seguirían llevando el mismo `xmin`; con dos, la huella
+        // sale con el primero y las otras tres con el segundo.
+        string cadena = await BaseConElModuloDePruebaAsync();
+
+        await using BandejaDeVerdad bandeja = new(
+            cadena,
+            publica: false,
+            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueConfirmaDosVeces, ContextoDePrueba>());
+
+        HechoDePrueba hecho = new(Marca());
+
+        (await bandeja.DespacharAsync(hecho)).ShouldBe(1);
+
+        List<(string Fila, string Transaccion)> filas =
+            await LasCuatroFilasAsync(cadena, hecho, "pruebas.el-que-confirma-dos-veces");
+
+        filas.Select(fila => fila.Fila).Order(StringComparer.Ordinal)
+            .ShouldBe(["efecto", "huella", "respuesta", "traza"]);
+
+        filas.Select(fila => fila.Transaccion).Distinct(StringComparer.Ordinal).Count().ShouldBe(
+            1,
+            "la huella, del primer guardado, y el resto, del segundo, tienen que ser de la misma " +
+            "transacción, y son de varias: " +
+            string.Join(", ", filas.Select(fila => $"{fila.Fila} {fila.Transaccion}")));
+    }
+
+    [Fact]
     public async Task Si_el_manejador_falla_despues_de_confirmar_no_queda_nada_de_lo_confirmado()
     {
         // El caso que la transacción cierra. Fuera de ella, el SaveChanges del manejador se habría
@@ -140,6 +170,25 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
         (await MarcasAsync(cadena, hecho.Marca)).ShouldBe(
             [hecho.Marca, $"{hecho.Marca}/a-medias"],
             "el sobrante del primer manejador lo ha guardado el segundo");
+    }
+
+    [Fact]
+    public async Task Un_manejador_no_recibe_un_evento_al_que_no_atiende()
+    {
+        // A qué evento atiende lo dice su base, y el despachador filtra por eso. Sin el filtro, o
+        // con la base mal leída, este manejador recibiría la respuesta y reventaría al convertirla.
+        string cadena = await BaseConElModuloDePruebaAsync();
+
+        await using BandejaDeVerdad bandeja = new(
+            cadena,
+            publica: false,
+            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueEscribe, ContextoDePrueba>());
+
+        RespuestaDePrueba otro = new(Marca());
+
+        (await bandeja.DespacharAsync(otro)).ShouldBe(0, "atiende a HechoDePrueba, no a RespuestaDePrueba");
+
+        (await MarcasAsync(cadena, otro.Marca)).ShouldBeEmpty();
     }
 
     [Fact]

@@ -328,10 +328,12 @@ public sealed class ElCensoDeEsteCarrilTests
 
         // Del ítem 3.4, huecos 1 y 5: cada manejador en su ámbito y en la transacción del contexto
         // de su módulo, comprobada por el `xmin` de sus cuatro filas.
+        "ElManejadorVaEnSuTransaccionTests.Dos_confirmaciones_de_un_manejador_son_de_la_misma_transaccion",
         "ElManejadorVaEnSuTransaccionTests.El_efecto_su_traza_su_huella_y_su_respuesta_son_de_la_misma_transaccion",
         "ElManejadorVaEnSuTransaccionTests.Lo_que_deja_a_medias_un_manejador_no_lo_guarda_el_siguiente",
         "ElManejadorVaEnSuTransaccionTests.Lo_que_el_manejador_no_confirma_no_lo_guarda_nadie_y_su_huella_si",
         "ElManejadorVaEnSuTransaccionTests.Si_el_manejador_falla_despues_de_confirmar_no_queda_nada_de_lo_confirmado",
+        "ElManejadorVaEnSuTransaccionTests.Un_manejador_no_recibe_un_evento_al_que_no_atiende",
         "ElManejadorVaEnSuTransaccionTests.Un_manejador_que_no_hereda_de_la_base_no_llega_a_registrarse",
 
         // Del ítem 2.4: el número dentro del recibo, y el 428 de la única acción de toda la API

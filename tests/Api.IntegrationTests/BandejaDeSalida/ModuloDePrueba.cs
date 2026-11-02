@@ -175,6 +175,34 @@ public sealed class ManejadorQueEscribe(ContextoDePrueba contexto) : ManejadorDe
     }
 }
 
+/// <summary>Un manejador que confirma dos veces: un documento, y después otro.</summary>
+/// <remarks>
+/// La huella entra con el primer <c>SaveChanges</c>, y el documento con la marca del evento, su
+/// traza y su respuesta, con el segundo. Con puntos de guardado, cada uno abriría su
+/// subtransacción y las filas de los dos llevarían <c>xmin</c> distintos.
+/// </remarks>
+/// <param name="contexto">El contexto de su módulo.</param>
+public sealed class ManejadorQueConfirmaDosVeces(ContextoDePrueba contexto) : ManejadorDeEvento<HechoDePrueba>
+{
+    /// <inheritdoc/>
+    public override string Consumidor => "pruebas.el-que-confirma-dos-veces";
+
+    /// <inheritdoc/>
+    protected override async Task AtenderAsync(HechoDePrueba evento, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(evento);
+
+        contexto.Documentos.Add(
+            DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, $"{evento.Marca}/primero"));
+
+        await contexto.SaveChangesAsync(cancelacion);
+
+        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, evento.Marca));
+
+        await contexto.SaveChangesAsync(cancelacion);
+    }
+}
+
 /// <summary>Un manejador que confirma su efecto y revienta después.</summary>
 /// <remarks>
 /// Es el caso que la transacción del despachador cierra: lo confirmado ANTES de fallar no puede
