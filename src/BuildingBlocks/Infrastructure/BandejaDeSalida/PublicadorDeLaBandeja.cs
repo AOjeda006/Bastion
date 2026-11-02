@@ -35,6 +35,12 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// registro. Sin el ámbito, la primera consulta a la cola lanzaría <c>FaltaLaEmpresaActiva</c>.
 /// </para>
 /// <para>
+/// <b>Un ámbito por evento, aparte del de la vuelta</b> (3.4, hueco 1). El de la vuelta guarda el
+/// cerrojo, que es de su conexión, y lee el lote sin rastrearlo. Cada evento se marca después en
+/// un contexto suyo, que relee su fila: lo que un evento deja a medias en un contexto —un fallo que
+/// no se pudo apuntar, una marca que no se pudo guardar— no lo guarda el siguiente con la suya.
+/// </para>
+/// <para>
 /// <b>Nada sale de aquí hacia arriba.</b> Una excepción que escape de un <see cref="BackgroundService"/>
 /// se lleva el host por delante en cuanto el arranque termina; y una que se trague en silencio deja
 /// el publicador muerto sin que nadie se entere. Las dos cosas están cerradas: el bucle captura y
@@ -43,6 +49,7 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// </para>
 /// </remarks>
 /// <param name="ambitos">Fábrica de ámbitos: los contextos son de ámbito y esto es un singleton.</param>
+/// <param name="despachador">Quién entrega cada evento a sus manejadores.</param>
 /// <param name="catalogo">Qué tipo hay detrás de cada nombre de la cola.</param>
 /// <param name="opciones">Cada cuánto y cuántos.</param>
 /// <param name="metricas">Dónde se apunta la edad del más viejo.</param>
@@ -50,6 +57,7 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// <param name="registro">Dónde se anota lo que hace el publicador.</param>
 internal sealed partial class PublicadorDeLaBandeja(
     IServiceScopeFactory ambitos,
+    IDespachadorDeEventos despachador,
     CatalogoDeEventos catalogo,
     OpcionesDeLaBandeja opciones,
     MetricasDeLaBandeja metricas,
@@ -112,7 +120,6 @@ internal sealed partial class PublicadorDeLaBandeja(
 
         ContextoDeLaBandeja contexto = ambito.ServiceProvider.GetRequiredService<ContextoDeLaBandeja>();
         CerrojoDeLaBandeja cerrojo = ambito.ServiceProvider.GetRequiredService<CerrojoDeLaBandeja>();
-        IDespachadorDeEventos despachador = ambito.ServiceProvider.GetRequiredService<IDespachadorDeEventos>();
 
         if (!await cerrojo.TomarAsync(cancelacion).ConfigureAwait(false))
         {
@@ -123,7 +130,7 @@ internal sealed partial class PublicadorDeLaBandeja(
 
         try
         {
-            return await VaciarAsync(contexto, despachador, cancelacion).ConfigureAwait(false);
+            return await VaciarAsync(contexto, cancelacion).ConfigureAwait(false);
         }
         finally
         {
@@ -131,16 +138,16 @@ internal sealed partial class PublicadorDeLaBandeja(
         }
     }
 
-    private async Task<bool> VaciarAsync(
-        ContextoDeLaBandeja contexto,
-        IDespachadorDeEventos despachador,
-        CancellationToken cancelacion)
+    private async Task<bool> VaciarAsync(ContextoDeLaBandeja contexto, CancellationToken cancelacion)
     {
         List<EventoDeLaBandeja> lote;
 
         try
         {
+            // Sin rastrear: este contexto no escribe en la cola. Cada fila se relee y se marca en
+            // el contexto de su evento.
             lote = await contexto.Bandeja
+                .AsNoTracking()
                 .Where(fila => fila.Estado == EstadoDelEnvio.Pendiente)
                 .OrderBy(fila => fila.Id)
                 .Take(opciones.Tamano)
@@ -163,26 +170,29 @@ internal sealed partial class PublicadorDeLaBandeja(
 
         foreach (EventoDeLaBandeja fila in lote)
         {
-            await PublicarAsync(contexto, despachador, fila, cancelacion).ConfigureAwait(false);
+            await PublicarAsync(fila, cancelacion).ConfigureAwait(false);
         }
 
         return true;
     }
 
-    private async Task PublicarAsync(
-        ContextoDeLaBandeja contexto,
-        IDespachadorDeEventos despachador,
-        EventoDeLaBandeja fila,
-        CancellationToken cancelacion)
+    private async Task PublicarAsync(EventoDeLaBandeja fila, CancellationToken cancelacion)
     {
         try
         {
             await despachador.DespacharAsync(Reconstruir(fila), cancelacion).ConfigureAwait(false);
 
             // DESPUÉS del despacho, nunca antes. Ver la decisión de entrega, arriba.
-            fila.DarPorPublicado(reloj.GetUtcNow());
+            await using (AsyncServiceScope ambito = ambitos.CreateAsyncScope())
+            {
+                ContextoDeLaBandeja contexto = ambito.ServiceProvider.GetRequiredService<ContextoDeLaBandeja>();
 
-            await contexto.SaveChangesAsync(cancelacion).ConfigureAwait(false);
+                EventoDeLaBandeja enLaCola = await ReleerAsync(contexto, fila.Id, cancelacion).ConfigureAwait(false);
+
+                enLaCola.DarPorPublicado(reloj.GetUtcNow());
+
+                await contexto.SaveChangesAsync(cancelacion).ConfigureAwait(false);
+            }
 
             metricas.AnotarPublicado();
         }
@@ -195,19 +205,30 @@ internal sealed partial class PublicadorDeLaBandeja(
         catch (Exception fallo)
 #pragma warning restore CA1031
         {
-            await AnotarElFalloAsync(contexto, fila, fallo).ConfigureAwait(false);
+            await AnotarElFalloAsync(fila, fallo).ConfigureAwait(false);
         }
     }
 
-    private async Task AnotarElFalloAsync(
-        ContextoDeLaBandeja contexto,
-        EventoDeLaBandeja fila,
-        Exception fallo)
+    // En un ámbito suyo, y no en el de la publicación: si lo que falló fue guardar la marca, ese
+    // contexto tiene la fila como publicada, y apuntar ahí el fallo la guardaría publicada y con un
+    // error, dos cosas que no van juntas. Releída, sigue pendiente, y la vuelta siguiente la marca.
+    private async Task AnotarElFalloAsync(EventoDeLaBandeja fila, Exception fallo)
     {
-        bool aparcado = fila.AnotarFallo($"{fallo.GetType().Name}: {fallo.Message}");
+        bool aparcado;
+        int intentos;
 
         try
         {
+            await using AsyncServiceScope ambito = ambitos.CreateAsyncScope();
+
+            ContextoDeLaBandeja contexto = ambito.ServiceProvider.GetRequiredService<ContextoDeLaBandeja>();
+
+            EventoDeLaBandeja enLaCola =
+                await ReleerAsync(contexto, fila.Id, CancellationToken.None).ConfigureAwait(false);
+
+            aparcado = enLaCola.AnotarFallo($"{fallo.GetType().Name}: {fallo.Message}");
+            intentos = enLaCola.Intentos;
+
             await contexto.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Si ni siquiera se puede apuntar el fallo, lo que queda es dejarlo
@@ -229,8 +250,14 @@ internal sealed partial class PublicadorDeLaBandeja(
             return;
         }
 
-        SeReintentara(registro, fila.Id, fila.Nombre, fila.Intentos, fallo);
+        SeReintentara(registro, fila.Id, fila.Nombre, intentos, fallo);
     }
+
+    private static Task<EventoDeLaBandeja> ReleerAsync(
+        ContextoDeLaBandeja contexto,
+        Guid filaId,
+        CancellationToken cancelacion) =>
+        contexto.Bandeja.SingleAsync(enLaCola => enLaCola.Id == filaId, cancelacion);
 
     private EventoDeIntegracion Reconstruir(EventoDeLaBandeja fila)
     {

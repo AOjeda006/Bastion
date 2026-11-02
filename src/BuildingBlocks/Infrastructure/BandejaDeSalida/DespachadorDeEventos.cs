@@ -1,6 +1,8 @@
 using Bastion.BuildingBlocks.Application.Eventos;
 using Bastion.BuildingBlocks.Domain.Eventos;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
@@ -12,17 +14,29 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// <para>
 /// <b>Es donde vive «reprocesar no duplica».</b> El publicador entrega al menos una vez a
 /// propósito; lo que hace que el <b>efecto</b> ocurra una sola vez es esta clase, que antes de
-/// llamar a un manejador mira si el par (evento, consumidor) ya está apuntado, y después de que el
-/// manejador termine lo apunta. La segunda vuelta no vuelve a ejecutar nada.
+/// llamar a un manejador mira si el par (evento, consumidor) ya está apuntado, y con lo que el
+/// manejador confirme lo apunta. La segunda vuelta no vuelve a ejecutar nada.
 /// </para>
 /// <para>
-/// <b>El hueco que queda, escrito.</b> La huella se graba en su propia transacción, no en la del
-/// efecto del manejador: si el proceso se cae entre «el manejador terminó» y «la huella está
-/// grabada», ese manejador se ejecutará otra vez. Cerrarlo del todo exige que el manejador escriba
-/// su efecto y su huella en el mismo <c>SaveChanges</c>, y para eso la tabla de huellas está
-/// mapeada también en los contextos de módulo — la puerta queda abierta y sin usar, porque la
-/// fase 0 no tiene ningún manejador con efecto de negocio. El día que lo haya, esto se decide con
-/// un caso delante y no en abstracto.
+/// <b>Cada manejador, en su ámbito y en su transacción</b> (3.4, huecos 1 y 5). El ámbito es nuevo
+/// por manejador, así que lo que uno deja a medias no lo guarda el siguiente; y la transacción es
+/// la del contexto de su módulo, el que declaró al registrarse, que es el mismo que reciben sus
+/// repositorios en ese ámbito. Dentro van la mirada a la huella, el efecto, la huella y el evento
+/// de respuesta, que el interceptor del contexto escribe en el mismo <c>SaveChanges</c> que el
+/// efecto. El hueco que quedaba hasta el 3.4 —la huella en su propia transacción, de modo que una
+/// caída entre el efecto y la huella repetía el efecto— queda cerrado: si se cae antes de
+/// confirmar, no queda ni lo uno ni lo otro.
+/// </para>
+/// <para>
+/// <b>Lo que el manejador no confirma no lo guarda nadie</b>, como en una petición: la huella se
+/// añade antes de llamarlo, para que vaya en el mismo <c>SaveChanges</c> que su efecto, y si el
+/// manejador termina sin haber guardado nada, el contexto se vacía antes de guardar la huella sola.
+/// Un caso de uso que dice que no y deja cambios en memoria se comporta igual que detrás de HTTP.
+/// </para>
+/// <para>
+/// <b>Sin puntos de guardado</b>, como el almacén de idempotencia: con ellos, cada
+/// <c>SaveChanges</c> dentro de la transacción abriría una subtransacción, y lo que se escribe en
+/// ella lleva otro <c>xmin</c>. Una sola transacción de verdad es lo que se puede comprobar.
 /// </para>
 /// <para>
 /// <b>Cero manejadores no es un error.</b> Un hecho que hoy no le interesa a nadie se publica
@@ -30,13 +44,13 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// cuenta. Al revés, añadir un consumidor obligaría a tocar el módulo que emite.
 /// </para>
 /// </remarks>
-/// <param name="manejadores">Todos los manejadores registrados.</param>
-/// <param name="contexto">Contexto donde se apunta la huella de lo ya procesado.</param>
+/// <param name="inscripciones">Los manejadores apuntados, con su evento y su contexto.</param>
+/// <param name="ambitos">Fábrica de ámbitos: uno por manejador.</param>
 /// <param name="reloj">De dónde sale el instante.</param>
 /// <param name="registro">Dónde se anota lo que hace el despachador.</param>
 internal sealed partial class DespachadorDeEventos(
-    IEnumerable<IManejadorDeEvento> manejadores,
-    ContextoDeLaBandeja contexto,
+    IEnumerable<InscripcionDeManejador> inscripciones,
+    IServiceScopeFactory ambitos,
     TimeProvider reloj,
     ILogger<DespachadorDeEventos> registro) : IDespachadorDeEventos
 {
@@ -46,33 +60,78 @@ internal sealed partial class DespachadorDeEventos(
 
         int atendidos = 0;
 
-        foreach (IManejadorDeEvento manejador in manejadores
-            .Where(candidato => candidato.EventoQueAtiende.IsInstanceOfType(evento)))
+        foreach (InscripcionDeManejador inscripcion in inscripciones
+            .Where(candidata => candidata.Evento.IsInstanceOfType(evento)))
         {
-            if (await YaPasoAsync(evento.EventoId, manejador.Consumidor, cancelacion).ConfigureAwait(false))
+            if (await EntregarAsync(inscripcion, evento, cancelacion).ConfigureAwait(false))
             {
-                Repetido(registro, manejador.Consumidor, evento.EventoId);
-
-                continue;
+                atendidos++;
             }
-
-            await manejador.ManejarAsync(evento, cancelacion).ConfigureAwait(false);
-
-            contexto.Procesados.Add(
-                EventoProcesado.De(evento.EventoId, manejador.Consumidor, reloj.GetUtcNow()));
-
-            await contexto.SaveChangesAsync(cancelacion).ConfigureAwait(false);
-
-            atendidos++;
         }
 
         return atendidos;
     }
 
-    private Task<bool> YaPasoAsync(Guid eventoId, string consumidor, CancellationToken cancelacion) =>
-        contexto.Procesados.AnyAsync(
-            huella => huella.EventoId == eventoId && huella.Consumidor == consumidor,
-            cancelacion);
+    // Devuelve si el manejador lo ha atendido ahora: `false` es que ya lo había procesado.
+    private async Task<bool> EntregarAsync(
+        InscripcionDeManejador inscripcion,
+        EventoDeIntegracion evento,
+        CancellationToken cancelacion)
+    {
+        await using AsyncServiceScope ambito = ambitos.CreateAsyncScope();
+
+        var manejador = (IManejadorDeEvento)ambito.ServiceProvider.GetRequiredService(inscripcion.Manejador);
+        var contexto = (DbContext)ambito.ServiceProvider.GetRequiredService(inscripcion.Contexto);
+
+        DbSet<EventoProcesado> huellas = HuellasDe(contexto);
+
+        contexto.Database.AutoSavepointsEnabled = false;
+
+        await using IDbContextTransaction transaccion =
+            await contexto.Database.BeginTransactionAsync(cancelacion).ConfigureAwait(false);
+
+        if (await huellas.AnyAsync(
+                huella => huella.EventoId == evento.EventoId && huella.Consumidor == manejador.Consumidor,
+                cancelacion).ConfigureAwait(false))
+        {
+            Repetido(registro, manejador.Consumidor, evento.EventoId);
+
+            return false;
+        }
+
+        var huella = EventoProcesado.De(evento.EventoId, manejador.Consumidor, reloj.GetUtcNow());
+
+        huellas.Add(huella);
+
+        await manejador.ManejarAsync(evento, cancelacion).ConfigureAwait(false);
+
+        // La huella sigue sin guardar: el manejador no ha confirmado nada. Lo que haya dejado en el
+        // contexto se descarta, como se descarta al acabar una petición que no confirma, y la
+        // huella se guarda sola. Si confirmó, la huella ya entró con su efecto.
+        if (contexto.Entry(huella).State != EntityState.Unchanged)
+        {
+            contexto.ChangeTracker.Clear();
+            huellas.Add(huella);
+
+            await contexto.SaveChangesAsync(cancelacion).ConfigureAwait(false);
+        }
+
+        // Una excepción antes de aquí la revierte el `await using`: ni efecto, ni huella, ni
+        // respuesta, y el evento se reintenta entero.
+        await transaccion.CommitAsync(cancelacion).ConfigureAwait(false);
+
+        return true;
+    }
+
+    // Todos los contextos de módulo mapean la huella (ADR-0013 §3). Uno que no la mapeara no se
+    // podría usar para esto, y se dice con su nombre en vez de con el error genérico de EF Core.
+    private static DbSet<EventoProcesado> HuellasDe(DbContext contexto) =>
+        contexto.Model.FindEntityType(typeof(EventoProcesado)) is null
+            ? throw new InvalidOperationException(
+                $"El contexto {contexto.GetType().Name} no mapea la huella de lo ya procesado, así que " +
+                "un manejador no puede escribir en él su efecto y su huella en la misma transacción. " +
+                "Se mapea con ConfiguracionDeLaBandeja.Mapear.")
+            : contexto.Set<EventoProcesado>();
 
     [LoggerMessage(
         EventId = 8200,

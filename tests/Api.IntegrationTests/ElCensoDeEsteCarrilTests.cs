@@ -326,6 +326,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElLoteVaConSuArticuloTests.El_primer_lote_en_dos_almacenes_a_la_vez_es_un_solo_lote",
         "ElLoteVaConSuArticuloTests.Una_salida_de_un_lote_que_no_hay_es_stock_insuficiente_y_no_deja_el_lote",
 
+        // Del ítem 3.4, huecos 1 y 5: cada manejador en su ámbito y en la transacción del contexto
+        // de su módulo, comprobada por el `xmin` de sus cuatro filas.
+        "ElManejadorVaEnSuTransaccionTests.El_efecto_su_traza_su_huella_y_su_respuesta_son_de_la_misma_transaccion",
+        "ElManejadorVaEnSuTransaccionTests.Lo_que_deja_a_medias_un_manejador_no_lo_guarda_el_siguiente",
+        "ElManejadorVaEnSuTransaccionTests.Lo_que_el_manejador_no_confirma_no_lo_guarda_nadie_y_su_huella_si",
+        "ElManejadorVaEnSuTransaccionTests.Si_el_manejador_falla_despues_de_confirmar_no_queda_nada_de_lo_confirmado",
+        "ElManejadorVaEnSuTransaccionTests.Un_manejador_que_no_hereda_de_la_base_no_llega_a_registrarse",
+
         // Del ítem 2.4: el número dentro del recibo, y el 428 de la única acción de toda la API
         // que EXIGE la clave. Los dos miran la misma frontera desde los dos lados.
         "ElNumeroEntraEnElReciboTests.El_reintento_con_la_misma_clave_devuelve_el_numero_y_no_gasta_otro",

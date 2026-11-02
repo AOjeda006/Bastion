@@ -33,7 +33,7 @@ public sealed class ElTrabajoDeFondoVaciaLaColaTests(PostgresConTodosLosModulos 
         await using BandejaDeVerdad bandeja = new(
             postgres.CadenaDeConexion,
             publica: true,
-            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueCuenta>());
+            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueCuenta, ContextoDeLaBandeja>());
 
         HechoDePrueba hecho = new(Marca());
         await bandeja.EncolarAsync(hecho);
@@ -63,7 +63,7 @@ public sealed class ElTrabajoDeFondoVaciaLaColaTests(PostgresConTodosLosModulos 
         await using BandejaDeVerdad bandeja = new(
             postgres.CadenaDeConexion,
             publica: true,
-            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueFallaLaPrimeraVez>());
+            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueFallaLaPrimeraVez, ContextoDeLaBandeja>());
 
         HechoDePrueba hecho = new(Marca());
         string efecto = $"{hecho.Marca}/pruebas.el-que-falla-una-vez";
@@ -95,7 +95,7 @@ public sealed class ElTrabajoDeFondoVaciaLaColaTests(PostgresConTodosLosModulos 
         await using BandejaDeVerdad bandeja = new(
             postgres.CadenaDeConexion,
             publica: true,
-            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueCuenta>());
+            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueCuenta, ContextoDeLaBandeja>());
 
         HechoDePrueba envenenado = new(Marca());
         HechoDePrueba bueno = new(Marca());
@@ -144,7 +144,7 @@ public sealed class ElTrabajoDeFondoVaciaLaColaTests(PostgresConTodosLosModulos 
         await using BandejaDeVerdad bandeja = new(
             postgres.CadenaDeConexion,
             publica: true,
-            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueSiempreFalla>());
+            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueSiempreFalla, ContextoDeLaBandeja>());
 
         HechoDePrueba hecho = new(Marca());
 

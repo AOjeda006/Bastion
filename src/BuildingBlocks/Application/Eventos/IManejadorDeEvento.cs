@@ -10,9 +10,15 @@ namespace Bastion.BuildingBlocks.Application.Eventos;
 /// <b>No es genérica, y eso es a propósito.</b> El despachador recibe del almacén un evento del que
 /// solo conoce el tipo en ejecución; con una interfaz genérica tendría que cerrarla por reflexión
 /// (<c>MakeGenericType</c>) y resolverla del contenedor por un tipo construido, que es la clase de
-/// código que falla en el arranque de producción y no en ningún test. Aquí se resuelven todos los
-/// manejadores registrados y cada uno dice a qué evento atiende. La comodidad de escribir el
-/// manejador con su tipo concreto la da <see cref="ManejadorDeEvento{T}"/>, que es lo que se hereda.
+/// código que falla en el arranque de producción y no en ningún test. Aquí cada manejador se
+/// resuelve por su propio tipo, y a qué evento atiende lo dice su base,
+/// <see cref="ManejadorDeEvento{T}"/>, que es lo que se hereda: se lee al registrarlo, en el
+/// arranque, sin construirlo.
+/// </para>
+/// <para>
+/// <b>Cada manejador corre en su ámbito y en una transacción del contexto de su módulo</b>, la que
+/// abre el despachador: lo que el manejador confirma, su huella y el evento de respuesta entran
+/// juntos o no entra nada. Lo que no confirma no lo guarda nadie, como en una petición.
 /// </para>
 /// <para>
 /// <b>Un manejador no devuelve nada.</b> Quien publica es un trabajo de fondo, no una petición: no
@@ -32,11 +38,8 @@ public interface IManejadorDeEvento
     /// </remarks>
     string Consumidor { get; }
 
-    /// <summary>A qué evento atiende.</summary>
-    Type EventoQueAtiende { get; }
-
     /// <summary>Reacciona al evento.</summary>
-    /// <param name="evento">El hecho ocurrido, ya del tipo que dice <see cref="EventoQueAtiende"/>.</param>
+    /// <param name="evento">El hecho ocurrido, ya del tipo al que atiende el manejador.</param>
     /// <param name="cancelacion">Cancelación de la parada del trabajo de fondo.</param>
     Task ManejarAsync(EventoDeIntegracion evento, CancellationToken cancelacion);
 }
@@ -50,9 +53,6 @@ public abstract class ManejadorDeEvento<T> : IManejadorDeEvento
 {
     /// <inheritdoc/>
     public abstract string Consumidor { get; }
-
-    /// <inheritdoc/>
-    public Type EventoQueAtiende => typeof(T);
 
     /// <inheritdoc/>
     public Task ManejarAsync(EventoDeIntegracion evento, CancellationToken cancelacion) =>

@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Eventos;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -46,7 +47,9 @@ public static class CableadoDeLaBandeja
         servicios.TryAddScoped<InterceptorDeLaBandeja>();
 
         servicios.TryAddScoped<CerrojoDeLaBandeja>();
-        servicios.TryAddScoped<IDespachadorDeEventos, DespachadorDeEventos>();
+
+        // Sin ámbito propio: abre uno por manejador, y no guarda nada de ninguno.
+        servicios.TryAddSingleton<IDespachadorDeEventos, DespachadorDeEventos>();
 
         if (publica)
         {
@@ -75,19 +78,34 @@ public static class CableadoDeLaBandeja
         return servicios.AddSingleton(new DeclaracionDeEvento(nombre, typeof(T)));
     }
 
-    /// <summary>Registra un manejador de eventos.</summary>
+    /// <summary>Registra un manejador de eventos, con el contexto de su módulo.</summary>
     /// <remarks>
-    /// De ámbito: el publicador abre uno por vuelta, y un manejador que necesite escribir necesita
-    /// el contexto de su módulo, que también lo es.
+    /// <para>
+    /// De ámbito, y por su propio tipo: el despachador abre un ámbito para cada manejador y le pide
+    /// en él este tipo y el de su contexto, que también es de ámbito. Así el contexto en el que se
+    /// abre la transacción es el mismo que reciben los repositorios del manejador.
+    /// </para>
+    /// <para>
+    /// <b>El contexto se declara aquí, y no en el manejador</b>, porque el manejador vive en la
+    /// Application de su módulo, que no ve EF Core. El que se declara es el del módulo que escribe:
+    /// es donde van su efecto, su huella y su respuesta, en una sola transacción.
+    /// </para>
     /// </remarks>
-    /// <typeparam name="T">Tipo del manejador.</typeparam>
+    /// <typeparam name="TManejador">Tipo del manejador; hereda de <see cref="ManejadorDeEvento{T}"/>.</typeparam>
+    /// <typeparam name="TContexto">Contexto del módulo en el que escribe.</typeparam>
     /// <param name="servicios">Colección de servicios.</param>
     /// <returns>La misma colección, para encadenar.</returns>
-    public static IServiceCollection AgregarManejadorDeEvento<T>(this IServiceCollection servicios)
-        where T : class, IManejadorDeEvento
+    public static IServiceCollection AgregarManejadorDeEvento<TManejador, TContexto>(
+        this IServiceCollection servicios)
+        where TManejador : class, IManejadorDeEvento
+        where TContexto : ContextoDeModulo
     {
         ArgumentNullException.ThrowIfNull(servicios);
 
-        return servicios.AddScoped<IManejadorDeEvento, T>();
+        var inscripcion = InscripcionDeManejador.De(typeof(TManejador), typeof(TContexto));
+
+        servicios.AddScoped<TManejador>();
+
+        return servicios.AddSingleton(inscripcion);
     }
 }

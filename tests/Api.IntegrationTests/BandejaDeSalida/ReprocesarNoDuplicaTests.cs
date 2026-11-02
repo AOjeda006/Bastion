@@ -1,8 +1,5 @@
 using Bastion.Api.IntegrationTests.Persistencia;
-using Bastion.BuildingBlocks.Application.Eventos;
-using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
-using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.BandejaDeSalida;
@@ -39,7 +36,7 @@ public sealed class ReprocesarNoDuplicaTests(PostgresConTodosLosModulos postgres
         await using BandejaDeVerdad bandeja = new(
             postgres.CadenaDeConexion,
             publica: false,
-            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueCuenta>());
+            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueCuenta, ContextoDeLaBandeja>());
 
         HechoDePrueba hecho = new(Marca());
         string efecto = $"{hecho.Marca}/pruebas.el-que-cuenta";
@@ -61,8 +58,8 @@ public sealed class ReprocesarNoDuplicaTests(PostgresConTodosLosModulos postgres
             postgres.CadenaDeConexion,
             publica: false,
             servicios => servicios
-                .AgregarManejadorDeEvento<ManejadorQueCuenta>()
-                .AgregarManejadorDeEvento<OtroManejadorQueCuenta>());
+                .AgregarManejadorDeEvento<ManejadorQueCuenta, ContextoDeLaBandeja>()
+                .AgregarManejadorDeEvento<OtroManejadorQueCuenta, ContextoDeLaBandeja>());
 
         HechoDePrueba hecho = new(Marca());
 
@@ -82,7 +79,7 @@ public sealed class ReprocesarNoDuplicaTests(PostgresConTodosLosModulos postgres
         await using BandejaDeVerdad bandeja = new(
             postgres.CadenaDeConexion,
             publica: false,
-            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueCuenta>());
+            servicios => servicios.AgregarManejadorDeEvento<ManejadorQueCuenta, ContextoDeLaBandeja>());
 
         HechoDePrueba uno = new(Marca());
         HechoDePrueba otro = new(Marca());
@@ -109,18 +106,6 @@ public sealed class ReprocesarNoDuplicaTests(PostgresConTodosLosModulos postgres
     // proceso, y sin esto un test contaría lo que hizo otro.
     private static string Marca() => Guid.CreateVersion7().ToString();
 
-    // Como lo hace el publicador: un ámbito por vuelta, y dentro el ámbito sin inquilino con su
-    // motivo. La cola no es de ninguna empresa en particular, y el despachador escribe en ella.
-    private static async Task<int> DespacharAsync(BandejaDeVerdad bandeja, HechoDePrueba hecho)
-    {
-        using IServiceScope ambito = bandeja.Servicios.CreateScope();
-
-        IInquilinoActual inquilino = ambito.ServiceProvider.GetRequiredService<IInquilinoActual>();
-
-        using IDisposable sinInquilino = inquilino.SinInquilino(MotivoSinInquilino.PublicacionDeEventos);
-
-        return await ambito.ServiceProvider
-            .GetRequiredService<IDespachadorDeEventos>()
-            .DespacharAsync(hecho, CancellationToken.None);
-    }
+    private static Task<int> DespacharAsync(BandejaDeVerdad bandeja, HechoDePrueba hecho) =>
+        bandeja.DespacharAsync(hecho);
 }

@@ -3,7 +3,9 @@ using System.Text.Json;
 using Bastion.BuildingBlocks.Application.Eventos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
+using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Organizacion.Contracts.Empresas;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +30,12 @@ namespace Bastion.Api.IntegrationTests.BandejaDeSalida;
 /// <b>Y el inquilino es el de producción</b>, con el <c>HttpContext</c> a nulo: fuera de un ámbito
 /// sin inquilino, pedir la empresa del filtro LANZA. Es lo que convierte «el publicador abre su
 /// ámbito» en algo comprobable — si esa línea desaparece, esto no publica nada.
+/// </para>
+/// <para>
+/// <b>Desde el 3.4 hay además un módulo de prueba</b>, <see cref="ContextoDePrueba"/>, con los tres
+/// interceptores de los módulos de verdad y en su orden: es donde escriben los manejadores con
+/// efecto. Su tabla solo existe en la base en la que alguien la crea, así que registrarlo aquí no
+/// le cuesta nada a quien no lo usa.
 /// </para>
 /// </remarks>
 internal sealed class BandejaDeVerdad : IAsyncDisposable
@@ -56,6 +64,7 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
             .AddProvider(Registro));
 
         servicios.AgregarInquilinato();
+        servicios.AgregarAuditoria();
 
         // ANTES del cableado: allí se registra con `TryAdd`, así que este gana. Cien milisegundos
         // en vez de dos segundos; lo demás es lo que se despliega.
@@ -70,11 +79,21 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
             .UseNpgsql(cadenaDeConexion)
             .UseSnakeCaseNamingConvention());
 
+        // Como los módulos: la traza, la marca de tiempo y los eventos, en este orden.
+        servicios.AddDbContext<ContextoDePrueba>((alcance, opciones) => opciones
+            .UseNpgsql(cadenaDeConexion)
+            .UseSnakeCaseNamingConvention()
+            .AddInterceptors(
+                alcance.GetRequiredService<InterceptorDeAuditoria>(),
+                alcance.GetRequiredService<InterceptorDeMarcasDeTiempo>(),
+                alcance.GetRequiredService<InterceptorDeLaBandeja>()));
+
         // Los eventos que puede haber en la cola de esta base: el de verdad —que lo deja ahí
-        // cualquier otro test que dé de alta una empresa— y el de prueba. Sin el primero, este
+        // cualquier otro test que dé de alta una empresa— y los de prueba. Sin el primero, este
         // publicador se encontraría filas con un nombre que no conoce y las iría aparcando.
         servicios.DeclararEvento<EmpresaCreada>(EmpresaCreada.Nombre);
         servicios.DeclararEvento<HechoDePrueba>(HechoDePrueba.Nombre);
+        servicios.DeclararEvento<RespuestaDePrueba>(RespuestaDePrueba.Nombre);
 
         manejadores?.Invoke(servicios);
 
@@ -131,6 +150,27 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
             JsonSerializer.Serialize(evento, evento.GetType(), Json)));
 
         await contexto.SaveChangesAsync();
+    }
+
+    /// <summary>Entrega un evento a sus manejadores, como lo entrega el publicador.</summary>
+    /// <remarks>
+    /// Un ámbito, y dentro el ámbito sin inquilino con su motivo, como en cada vuelta del
+    /// publicador: la cola no es de ninguna empresa en particular. Ejercita el despachador, que es
+    /// la capa que decide, sin esperar a ninguna vuelta.
+    /// </remarks>
+    /// <param name="evento">El hecho que se entrega.</param>
+    /// <returns>Cuántos manejadores lo han atendido.</returns>
+    public async Task<int> DespacharAsync(EventoDeIntegracion evento)
+    {
+        using IServiceScope ambito = _servicios.CreateScope();
+
+        IInquilinoActual inquilino = ambito.ServiceProvider.GetRequiredService<IInquilinoActual>();
+
+        using IDisposable sinInquilino = inquilino.SinInquilino(MotivoSinInquilino.PublicacionDeEventos);
+
+        return await ambito.ServiceProvider
+            .GetRequiredService<IDespachadorDeEventos>()
+            .DespacharAsync(evento, CancellationToken.None);
     }
 
     /// <summary>Lee la fila de la cola de un evento, con lo que el publicador haya dejado escrito.</summary>
