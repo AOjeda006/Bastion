@@ -6,7 +6,13 @@ import { useSearchParams } from 'react-router';
 import { clavesDeTarifas } from '../api/claves.ts';
 import { consultarTarifas, exportarTarifas } from '../api/consultas.ts';
 import { PARAMETRO_DE_BUSQUEDA, PARAMETRO_DE_CODIGO, leerListado } from '../model/listado.ts';
-import { estadoDeVigencia, type EstadoDeVigencia, type Tarifa } from '../model/tarifa.ts';
+import {
+  estadoDeVigencia,
+  type EstadoDeVigencia,
+  type Tarifa,
+  type TipoDeTarifa,
+} from '../model/tarifa.ts';
+import { ExplicacionDeSinReconocer, SinReconocer } from '../../articulos/ui/SinReconocer.tsx';
 import { diaLegible, hoyEnElServidor } from '@/shared/lib/dias.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
@@ -29,13 +35,16 @@ import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
  * cubrir. Se llega a ella desde la propia fila, igual que al filtro por rama se llega desde el
  * árbol de categorías.
  *
+ * **Cada tramo dice su tipo y su divisa**: si es para vender o para comprar, y en qué moneda
+ * están sus precios, por su código ISO 4217 (ADR-0076). Los dos van con la tarifa y no con el
+ * tramo —todos los de un código son del mismo tipo—, pero se pintan en cada fila, porque cada fila
+ * es lo que se lee.
+ *
  * **Y no pinta ni precios ni líneas.** Las líneas nombran su destino por identificador —un artículo
  * o una categoría—, y resolver cuarenta nombres serían cuarenta peticiones: exactamente el N+1 que
  * el servidor se niega a hacer para resolver un precio (`ResolverPrecioTests`), y no sale más
- * barato por hacerlo desde el navegador. Un precio, además, sin su divisa al lado es un número que
- * invita a leerse en euros, y la divisa es un maestro de otro módulo que esta funcionalidad no
- * puede nombrar (ADR-0022). Quien necesita un precio lo pide donde se resuelve con su divisa
- * pegada: `GET /tarifas/{codigo}/precio`.
+ * barato por hacerlo desde el navegador. Quien necesita un precio lo pide donde se resuelve con su
+ * divisa pegada: `GET /tarifas/{codigo}/precio`.
  */
 export function PaginaDeTarifas(): React.JSX.Element {
   const { t, i18n } = useTranslation();
@@ -57,8 +66,9 @@ export function PaginaDeTarifas(): React.JSX.Element {
   // mismo con el que `ResolverPrecio` elige el tramo cuando no se le da fecha.
   const hoy = hoyEnElServidor();
   // Por qué rige hoy el tramo que acaba hoy: escrito una vez debajo de la tabla, y cada celda que
-  // dice «rige» lo señala.
+  // dice «rige» lo señala. Lo mismo con el tipo que esta versión no sabe leer.
   const porQueRige = useId();
+  const porQueElTipo = useId();
 
   const irA = (pagina: number): void => {
     const siguientes = new URLSearchParams(parametros);
@@ -187,6 +197,10 @@ export function PaginaDeTarifas(): React.JSX.Element {
     );
   }
 
+  const hayTipoSinReconocer = consulta.data.elementos.some(
+    (tarifa) => tarifa.tipo === 'desconocido',
+  );
+
   return (
     <>
       {cabecera}
@@ -206,13 +220,19 @@ export function PaginaDeTarifas(): React.JSX.Element {
                 {t('catalogo.tarifas.nombre')}
               </th>
               <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.tarifas.tipo')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                {t('catalogo.tarifas.divisa')}
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
                 {t('catalogo.tarifas.vigencia')}
               </th>
               <th scope="col" className="py-2 pr-4 font-medium">
                 {t('catalogo.tarifas.estado')}
               </th>
               {/* La columna de la acción no lleva rótulo visible, pero sí nombre: una cabecera vacía
-                  deja a un lector de pantalla anunciando «columna cinco». */}
+                  deja a un lector de pantalla anunciando «columna siete». */}
               <th scope="col" className="py-2 pr-4 font-medium">
                 <span className="sr-only">{t('catalogo.tarifas.acciones')}</span>
               </th>
@@ -226,6 +246,13 @@ export function PaginaDeTarifas(): React.JSX.Element {
                 <tr key={tarifa.id} className="border-b border-neutral-200">
                   <td className="py-2 pr-4 font-mono">{tarifa.codigo}</td>
                   <td className="py-2 pr-4">{tarifa.nombre}</td>
+                  <td
+                    className="py-2 pr-4"
+                    aria-describedby={tarifa.tipo === 'desconocido' ? porQueElTipo : undefined}
+                  >
+                    <Tipo tipo={tarifa.tipo} />
+                  </td>
+                  <td className="py-2 pr-4 font-mono">{tarifa.divisa}</td>
                   <td className="py-2 pr-4">
                     <Vigencia tarifa={tarifa} idioma={i18n.language} />
                   </td>
@@ -264,9 +291,31 @@ export function PaginaDeTarifas(): React.JSX.Element {
           detalle={t('catalogo.tarifas.estados.rigeDetalle')}
         />
       )}
+      {hayTipoSinReconocer && (
+        <ExplicacionDeSinReconocer
+          id={porQueElTipo}
+          marca={t('catalogo.tarifas.tipos.desconocido')}
+          detalle={t('catalogo.tarifas.tipos.desconocidoDetalle')}
+        />
+      )}
 
       <Paginador paginacion={listado} total={consulta.data.total} alCambiar={irA} />
     </>
+  );
+}
+
+/**
+ * De venta o de compra, y la marca cuando llega un tercer valor, como el tipo del artículo.
+ */
+function Tipo({ tipo }: { tipo: TipoDeTarifa }): React.JSX.Element {
+  const { t } = useTranslation();
+
+  if (tipo === 'desconocido') {
+    return <SinReconocer texto={t('catalogo.tarifas.tipos.desconocido')} />;
+  }
+
+  return (
+    <>{tipo === 'venta' ? t('catalogo.tarifas.tipos.venta') : t('catalogo.tarifas.tipos.compra')}</>
   );
 }
 

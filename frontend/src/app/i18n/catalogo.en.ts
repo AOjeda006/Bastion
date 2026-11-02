@@ -129,6 +129,8 @@ export const catalogo: TextosDeCatalogo = {
     tabla: 'Price list periods of the active company',
     codigo: 'Code',
     nombre: 'Name',
+    tipo: 'Type',
+    divisa: 'Currency',
     vigencia: 'In force',
     estado: 'Status',
     acciones: 'Actions',
@@ -153,6 +155,15 @@ export const catalogo: TextosDeCatalogo = {
       rigeDetalle:
         'The last day in force is included: a period ending today still sets prices today, ' +
         'and stops tomorrow.',
+    },
+
+    tipos: {
+      venta: 'Sales',
+      compra: 'Purchase',
+      desconocido: 'Unrecognised',
+      desconocidoDetalle:
+        'This version of the screen does not know how to read the price list type that arrived. ' +
+        'Tell whoever administers Bastion.',
     },
 
     paginaVacia: 'This page has no price list periods. Go back to the previous one.',

@@ -189,11 +189,15 @@ declarada de `NingunCriterioSensibleViajaEnLaUrlTests`.
 - **La pantalla de tarifas no pinta ni precios ni líneas, y no es un recorte.** Una línea nombra su
   destino por identificador —un artículo o una categoría—, y resolver cuarenta nombres serían
   cuarenta peticiones: exactamente el N+1 que el servidor se niega a hacer para resolver un precio, y
-  no sale más barato por hacerlo desde el navegador. Un precio, además, sin su divisa al lado es un
-  número que invita a leerse en euros, y la divisa es un maestro de **otro módulo** que esta
-  funcionalidad no puede nombrar (ADR-0022, el mismo criterio que dejó fuera la unidad y el impuesto
-  de un artículo). Quien necesita un precio lo pide donde se resuelve con su divisa pegada:
-  `GET /api/v1/catalogo/tarifas/{codigo}/precio`.
+  no sale más barato por hacerlo desde el navegador. Quien necesita un precio lo pide donde se
+  resuelve con su divisa pegada: `GET /api/v1/catalogo/tarifas/{codigo}/precio`.
+- **Cada fila dice su tipo y su divisa** (ADR-0076, 3.3): si la tarifa es de venta o de compra, y
+  el código ISO 4217 de su moneda. Hasta el 3.3 la divisa era el identificador de un maestro de
+  **otro módulo**, y no se pintaba por lo mismo que la unidad y el impuesto de un artículo
+  (ADR-0022); desde entonces la tarifa guarda el código, y el código ya la nombra. El tipo viaja
+  como texto, así que uno que esta versión no conoce sale marcado como «Sin reconocer», con su
+  explicación debajo de la tabla, como el del artículo. **No hay pantalla de alta**: las tarifas se
+  dan de alta por la API, y el tipo se elige ahí.
 - Los DTO salen de `shared/api/esquema.ts`, que se **genera** (`npm run api`), y se traducen al
   modelo de vista en la capa `api`: los tipos del contrato no salen de ahí.
 - La empresa **no** forma parte de ninguna clave de consulta: va dentro del testigo y quien filtra

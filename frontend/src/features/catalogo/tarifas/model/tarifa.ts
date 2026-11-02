@@ -2,9 +2,9 @@
  * Un tramo de tarifa, tal como lo pinta esta funcionalidad. No es el DTO: lo traduce
  * `api/consultas.ts`.
  *
- * **La divisa no está aquí, y no es un recorte de la pantalla.** El contrato la trae, por su código
- * ISO 4217 desde el 3.3 (ADR-0076), y lo que hace que aquí no falte es que esta pantalla **no pinta
- * ningún precio**: no hay ni un número al que le falte su moneda. Donde el precio se resuelve
+ * **La divisa está por su código ISO 4217**, que es como la guarda la tarifa desde el 3.3
+ * (ADR-0076): el código ya la nombra, y no hace falta preguntarle nada a Organización. Lo que esta
+ * pantalla sigue sin pintar es un precio. Donde el precio se resuelve
  * —`GET /tarifas/{codigo}/precio`— viaja SIEMPRE con su `divisa` pegada, y eso es lo que hace
  * segura la decisión de aceptar una tarifa en una divisa distinta de la de la empresa.
  */
@@ -13,11 +13,24 @@ export interface Tarifa {
   /** El código, en mayúsculas. **Se repite**: una tarifa son varios tramos con el mismo código. */
   readonly codigo: string;
   readonly nombre: string;
+  /** De venta o de compra. Es el de todos los tramos de su código: el tipo va con el código. */
+  readonly tipo: TipoDeTarifa;
+  /** El código ISO 4217 de la divisa, en mayúsculas, como lo guarda la tarifa. */
+  readonly divisa: string;
   /** Primer día en que rige, incluido. Un día suelto —`aaaa-mm-dd`—, no un instante. */
   readonly vigenteDesde: string;
   /** Último día en que rige, **incluido**; nulo mientras siga vigente. */
   readonly vigenteHasta: string | null;
 }
+
+/**
+ * Para vender o para comprar (ADR-0076).
+ *
+ * Los dos valores que la API emite hoy, más `desconocido`, por lo mismo que el tipo del artículo:
+ * el tipo **viaja como texto** y el frontal se despliega aparte del backend, así que un valor nuevo
+ * llega antes de que este fichero lo conozca. Sin el tercer caso, la celda saldría en blanco.
+ */
+export type TipoDeTarifa = 'venta' | 'compra' | 'desconocido';
 
 /** Una página de tramos de tarifa. */
 export interface PaginaDeTarifas {

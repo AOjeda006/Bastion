@@ -151,12 +151,14 @@ export const catalogo = {
     tabla: 'Tramos de tarifa de la empresa activa',
     codigo: 'Código',
     nombre: 'Nombre',
+    tipo: 'Tipo',
+    divisa: 'Divisa',
     vigencia: 'Vigencia',
     estado: 'Estado',
     acciones: 'Acciones',
 
-    // El filtro dice por dónde busca. «Buscar» a secas manda a probar con la divisa o con el
-    // precio —que ni se enseñan ni se filtran— y a concluir que la tarifa no está.
+    // El filtro dice por dónde busca. «Buscar» a secas manda a probar con la divisa, que se enseña
+    // y no se filtra, o con el precio, que ni se enseña, y a concluir que la tarifa no está.
     filtro: 'Buscar por código o nombre',
     filtrar: 'Buscar',
 
@@ -182,6 +184,15 @@ export const catalogo = {
       rigeDetalle:
         'El último día de vigencia está incluido: un tramo que acaba hoy sigue poniendo precio ' +
         'hoy, y deja de hacerlo mañana.',
+    },
+
+    tipos: {
+      venta: 'Venta',
+      compra: 'Compra',
+      desconocido: 'Sin reconocer',
+      desconocidoDetalle:
+        'Esta versión de la pantalla no sabe interpretar el tipo de tarifa que ha llegado. Avisa ' +
+        'a quien administre Bastion.',
     },
 
     paginaVacia: 'Esta página no tiene tramos de tarifa. Vuelve a la anterior.',

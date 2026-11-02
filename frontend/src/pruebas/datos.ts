@@ -430,12 +430,13 @@ export const HOY_SIMULADO = '2026-09-11';
  * una restricción de exclusión. Con un solo tramo por código, una pantalla que ignorara la vigencia
  * pintaría exactamente lo mismo.
  *
- * Y están los tres estados que la tabla distingue: uno caducado, uno futuro, y **dos que rigen**,
+ * Y están los tres estados que la tabla distingue: dos caducados, uno futuro, y **dos que rigen**,
  * de los cuales uno acaba justamente hoy. Ese último es el caso frontera: el final está incluido,
  * así que sigue rigiendo hoy y dejará de hacerlo mañana.
  *
- * El tipo y la divisa los exige el contrato, y esta pantalla no los pinta. La divisa va por su
- * código ISO 4217 desde el 3.3 (ADR-0076).
+ * El tipo y la divisa van en cada tramo, y la divisa por su código ISO 4217 desde el 3.3
+ * (ADR-0076). La tarifa de compra está en dólares para que una tabla que pintara la divisa de la
+ * empresa, o el tipo de todas el de la primera, no acierte.
  */
 const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
   [ALFA.id]: [
@@ -479,6 +480,16 @@ const LISTAS_DE_PRECIOS: Record<string, TarifaDto[]> = {
       vigenteDesde: '2026-09-01',
       // Acaba HOY, y por eso todavía rige. Es el caso que separa `<=` de `<`.
       vigenteHasta: HOY_SIMULADO,
+    },
+    {
+      id: 'aaaabbb1-0000-0000-0000-000000000005',
+      empresaId: ALFA.id,
+      codigo: 'IMPORTACION',
+      nombre: 'Compras de importación 2025',
+      tipo: 'Compra',
+      divisa: 'USD',
+      vigenteDesde: '2025-01-01',
+      vigenteHasta: '2025-12-31',
     },
   ],
   [BETA.id]: [

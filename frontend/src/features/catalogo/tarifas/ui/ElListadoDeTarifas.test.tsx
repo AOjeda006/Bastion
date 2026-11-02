@@ -323,6 +323,64 @@ describe('El listado de tarifas', () => {
     expect(screen.queryByText(POR_QUE_RIGE)).not.toBeInTheDocument();
   });
 
+  it('cada tramo dice si es de venta o de compra, y su divisa por su código', async () => {
+    abrirSesionYaRecuperada();
+
+    montarPantalla(<PaginaDeTarifas />, '/tarifas');
+
+    // Una de venta en euros y una de compra en dólares: una tabla que pintara la divisa de la
+    // empresa, o el mismo tipo en todas las filas, no acertaría las dos.
+    const deVenta = await filaCon('Precio de venta al público 2026');
+    expect(within(deVenta).getByRole('cell', { name: 'Venta' })).toBeVisible();
+    expect(within(deVenta).getByRole('cell', { name: 'EUR' })).toBeVisible();
+
+    const deCompra = await filaCon('Compras de importación 2025');
+    expect(within(deCompra).getByRole('cell', { name: 'Compra' })).toBeVisible();
+    expect(within(deCompra).getByRole('cell', { name: 'USD' })).toBeVisible();
+
+    expect(screen.getByRole('columnheader', { name: 'Tipo' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'Divisa' })).toBeVisible();
+
+    // Todos los tipos son de los que esta versión sabe leer: no hay nada que explicar.
+    expect(screen.queryByText(/no sabe interpretar el tipo de tarifa/)).not.toBeInTheDocument();
+  });
+
+  it('un tipo que esta versión no conoce se marca y se explica, y no sale en bruto', async () => {
+    abrirSesionYaRecuperada();
+
+    // El frontal se despliega aparte del backend: un tercer tipo llega antes que su traducción.
+    servidor.use(
+      http.get('/api/v1/catalogo/tarifas', () => {
+        const pagina = tarifasDe(ALFA.id);
+        const elementos = pagina.elementos.map((tarifa) =>
+          tarifa.codigo === 'MAYORISTA' ? { ...tarifa, tipo: 'Consigna' } : tarifa,
+        );
+
+        return HttpResponse.json({ ...pagina, elementos });
+      }),
+    );
+
+    montarPantalla(<PaginaDeTarifas />, '/tarifas');
+
+    const detalle =
+      'Esta versión de la pantalla no sabe interpretar el tipo de tarifa que ha llegado. Avisa ' +
+      'a quien administre Bastion.';
+    const fila = await filaCon('Mayorista, a partir de octubre');
+
+    expect(
+      within(fila).getByRole('cell', { name: 'Sin reconocer', description: detalle }),
+    ).toBeVisible();
+    expect(fila).not.toHaveTextContent('Consigna');
+    expect(screen.getByText(detalle)).toBeVisible();
+
+    // Las demás filas, con su tipo y sin la descripción.
+    expect(
+      within(await filaCon('Precio de venta al público 2026')).getByRole('cell', {
+        name: 'Venta',
+      }),
+    ).not.toHaveAccessibleDescription();
+  });
+
   it('el periodo se pinta con sus dos formas: cerrado por los dos lados, o abierto por el final', async () => {
     abrirSesionYaRecuperada();
 
@@ -352,6 +410,8 @@ describe('La vigencia de un tramo', () => {
     id: 'da-igual',
     codigo: 'PVP',
     nombre: 'Un tramo',
+    tipo: 'venta',
+    divisa: 'EUR',
     vigenteDesde: desde,
     vigenteHasta: hasta,
   });

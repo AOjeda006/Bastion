@@ -1,5 +1,5 @@
 import type { ListadoDeTarifas } from '../model/listado.ts';
-import type { PaginaDeTarifas, Tarifa } from '../model/tarifa.ts';
+import type { PaginaDeTarifas, Tarifa, TipoDeTarifa } from '../model/tarifa.ts';
 import { api } from '@/shared/api/cliente.ts';
 import type { components, operations } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
@@ -26,11 +26,27 @@ function filtrosDe(listado: ListadoDeTarifas): Filtros {
  */
 type TarifaDto = components['schemas']['TarifaDto'];
 
+/**
+ * Del texto del contrato al valor que esta funcionalidad pinta.
+ *
+ * El tipo viaja como texto —`Venta` o `Compra`—, así que traducirlo es leer un dato de fuera: lo
+ * que no sea uno de los dos sale como `desconocido`, y la tabla lo dice.
+ */
+function tipoDe(texto: string): TipoDeTarifa {
+  if (texto === 'Venta') {
+    return 'venta';
+  }
+
+  return texto === 'Compra' ? 'compra' : 'desconocido';
+}
+
 function traducir(dto: TarifaDto): Tarifa {
   return {
     id: dto.id,
     codigo: dto.codigo,
     nombre: dto.nombre,
+    tipo: tipoDe(dto.tipo),
+    divisa: dto.divisa,
     vigenteDesde: dto.vigenteDesde,
     vigenteHasta: dto.vigenteHasta,
   };
