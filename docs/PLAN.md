@@ -928,30 +928,476 @@ La respuesta es la recomendada:
    apóstrofo; (c) dejarlo y escribirlo; (d) terceros sin apóstrofo, contra la decisión 7 del 1.11.
    Lo recoge el **ADR-0075**, que enmienda el §6 del 0073 y el §5 del 0034.
 
+### Tomadas por el agente de desarrollo — ítem 3.2, al escribirlo y al medirlo (2026-10-28)
+
+Cada tema del orden de trabajo fue en su subida, y algunos en más de un commit: la puerta, en
+`bb5d843`; las tres piezas, en `ace1b7c` y `3a03002`; el mecanismo, en `823fa7f`, `f1c3244` y
+`619190b`; los puertos, en `b1e726f`, `0e16aa6` y `f0f1909`; Organización, en `77568cd` y
+`a995ed0`; el apóstrofo, en `c4c4650` y `18c29ae`; Terceros, en `b81c67c` y `de5d431`; Catálogo,
+en `9b31c16`; Inventario, en `3a78bda` y `0b7661c`; y el botón, en `f912e12` y `a6666ea`. Lo que
+se decidió sin preguntar, porque el criterio no lo decía o porque salió al escribirlo:
+
+1. **Un listado enlaza tres piezas, y el texto, solo si lo mira** (`ace1b7c`, ADR-0072): la página,
+   `PaginaPedida`; el orden con sus criterios, `ConsultaDeListado`, que antes se llamaba
+   `ConsultaPaginada`; y el texto, `FiltroDeTexto`. Diecisiete lo enlazan y seis no: las líneas de
+   tarifa, el saldo, las transferencias, las conversiones de unidades, los ejercicios y los tipos
+   de cambio, que dejan de publicar `q`. Un `?q=` con algo escrito a uno de los seis es un `400`
+   `filtro-no-admitido`, con `errors.q`, y en blanco pasa. Lo decide `RespuestasDeListado`, antes
+   que el orden, y el paginador lanza si le llega un texto sin filtro declarado. El ADR enmienda
+   los puntos 1 y 3 del 0069 y el «Sin `?q=`» del §1 del 0068.
+2. **El `SET TRANSACTION READ ONLY` de la foto es SQL crudo, y entra entre los saltos de
+   `ElFiltroNoSeSaltaPorAhiTests`** (`823fa7f`), con su argumento: no lee ni escribe ninguna fila.
+   La batería lo encontró. Esquivar la regla con un `DbCommand` a mano habría escondido el SQL
+   crudo de la misma regla que lo vigila.
+3. **Las dos puertas de `ExportarAsync`, la del `IListado` y la de la función, no las ejercía
+   ningún caso**, y se añadió uno antes de la tanda, que ven la 826 y la 827.
+4. **Dos guardas que repetían a otro se quitaron** (`619190b`): la del cero negativo, que el formato
+   de .NET ya escribe «0» —medido con `dotnet fsi`: `decimal.Parse("-0.0")` guarda el signo, con los
+   bits `0x80010000`, y se escribe «0»—, y la de la foto dentro de otra transacción, que EF Core ya
+   rechaza con una `InvalidOperationException`. La 828 y la 829 miden que los casos ven lo que las
+   guardas decían defender.
+5. **Un maestro de otro módulo se nombra con lo que enseña su ficha** (`b1e726f`, ADR-0074): los
+   seis puertos estrenan `NombresDeAsync`, con los filtros del contexto puestos y sin abrir el
+   ámbito del art. 32. El almacén y la ubicación bloqueados no vuelven, y la ubicación de un almacén
+   bloqueado sí, porque su ficha no une el almacén; lo retirado y los tramos que ya no rigen,
+   también. El permiso lo mira quien pregunta, y no el puerto. `NombreDeMaestro` es un registro
+   común en el bloque de contratos, y con él `Catalogo.Contracts` estrena su primera arista. El ADR
+   enmienda el §12 del 0055.
+6. **El «Cómo se vigila» del ADR-0074 decía algo que no se cumplía** entre `0e16aa6` y `f0f1909`:
+   que un puerto que devolviera todo no pasaba. Pasaba en cuatro de seis, porque cada caso
+   preguntaba por todos los suyos y, corrido solo, no hay otros en la base. El ADR no se tocó: lo
+   cumplen los casos desde `f0f1909`, con uno de cada fuera del lote. La divisa de fuera es el
+   EUR, porque el catálogo solo tiene cinco y las otras cuatro ya son de casos de ese carril.
+7. **Las columnas de Organización son lo que publica el DTO, sin sus identificadores** (`77568cd`).
+   La dirección va en seis columnas, con los nombres de la importación de terceros y el prefijo de
+   quien la lleva (`ColumnasDeDireccion`). Los valores de un conjunto —el tipo del almacén, la
+   divisa, el régimen de IVA— van sin traducir y sin apóstrofo, con `CampoCsv.Valor`, porque no
+   los escribió una persona. **La exportación de empresas es la de la empresa activa** (R8), como su
+   listado, y no el padrón de la instalación: la otra no sale, y con la propia bloqueada sale solo
+   la cabecera.
+8. **La foto de cada módulo se mide contra la base** (`a995ed0`), porque la tanda dejó verde la
+   858. `LaFotoDeCadaModuloEsUnaFotoTests` resuelve del *host* la foto de cada exportación, la abre
+   y pregunta en el contexto del módulo el nivel y si es de solo lectura, con la misma pregunta sin
+   foto como pareja. Las exportaciones se reconocen en un solo sitio, `ExportacionesDeLaApi`, en
+   `tests/Comun`, para que la hermana del listado y este caso no puedan ver listas distintas.
+9. **El apóstrofo es el séptimo disparador** (`c4c4650`, ADR-0075, la respuesta 5):
+   `ApostrofoDelDialecto`, en `BuildingBlocks.Application`, lleva la regla en los dos sentidos.
+   Los sí y no y los importes se leen tal como llegan, así que «'-5» sigue siendo
+   `formato-no-valido`. La vuelta se afirma sobre un universo de 7381 textos, con su tamaño
+   afirmado.
+10. **Terceros sale con el límite de crédito de la misma fila** (`b81c67c`): `ListarTerceros`
+    implementa también `IListarTercerosConLimite`, sobre la misma lectura del repositorio. No
+    salen el identificador, la empresa ni la verificación del identificador fiscal, que la
+    importación no lee. La prueba es el viaje entero: se exporta de una empresa, se importa en otra
+    el fichero tal como bajó, con su BOM, y la segunda exportación es la primera, byte a byte. Lo
+    que envuelve el fichero —el BOM, el tipo y el nombre del adjunto— pasa a `Exportaciones.cs`,
+    compartido.
+11. **Cada «sí» y «no» de la importación, en su campo** (`de5d431`): la 879, el recargo siempre en
+    «no», solo la veía el viaje de ida y vuelta contra la base. `CadaSiNoDeLaFilaVaASuCampoTests`
+    decide una fila por cada combinación con un solo «sí» entre las tres columnas fiscales y uno
+    entre cliente y proveedor, así que dos columnas cambiadas tienen una fila en la que difieren.
+12. **Un maestro de otro módulo se nombra solo con el permiso de verlo; uno del propio listado, sin
+    mirar** (`9b31c16`): la unidad, el impuesto, la divisa y la categoría del artículo, con el suyo,
+    y sin él sale su identificador, como en la pantalla; la madre de una categoría y el artículo de
+    un código de barras, con el de la exportación. `MaestroCitado`, `ColumnasDeMaestro` y
+    `NombresDeMaestros` van a `BuildingBlocks`, y cada exportación es un caso de uso, `IExportarX`.
+13. **Lo que no tiene listado paginado se parte en tramos**: los códigos de barras de un artículo
+    (`9b31c16`) y las líneas de una transferencia (`3a78bda`), que van dentro de su ficha. Cada una
+    contesta el `404` de lo que la contiene, rechaza un `?q=` y no lee `?sort=`, como su pantalla.
+    La hermana del listado las declara aparte, en `s_sinPaginar`, los listados, y en
+    `s_deUnaFicha`, las exportaciones. Se pone roja si un listado sin paginar no está declarado o
+    uno declarado se pagina, y si una exportación sin listado no está declarada o una declarada
+    tiene listado.
+14. **Inventario pregunta los cuatro maestros con su permiso, en `LosNombresDeLosMaestros`**
+    (`3a78bda`), porque ninguno es suyo, y tiene foto propia, `IFotoDeInventario`, porque el saldo
+    se lee con SQL crudo en su contexto. Cada línea de una transferencia lleva la divisa de la
+    transferencia, porque su valor sin ella no se lee. No salen la transferencia que anula ni la
+    línea de ajuste de un recuento: son el identificador de otro documento, sin código que escribir.
+15. **El saldo fija el día antes de la primera página**: sin `?fecha=` es hoy, y un fichero que
+    cruzara la medianoche no lleva dos días en la misma columna. Una fecha futura es el `400` de la
+    consulta. **El nombre del fichero lleva el día de la exportación, y no el de `?fecha=`**: es el
+    `<recurso>-<AAAA-MM-DD>.csv` de la puerta, y el día pedido va en la columna `fecha`.
+16. **`ConPermisosEnAsync` da la cuenta recortada en la empresa de la escena** (`3a78bda`), que es
+    la única suya, y lo afirma al entrar: la 946 lo ve. Las acciones del borde pasan de 158 a 171,
+    lecturas que no cambian estado, y el inventario de la idempotencia sube el total y nada más.
+17. **El botón sale solo con filas** (`f912e12`, y `a6666ea`): «Exportar a CSV» pide la exportación
+    con una mutación de la caché, se apaga mientras llega, lo dice con un `role="status"` y, si
+    falla, enseña la frase del motivo y deja reintentar. La exportación arma su consulta con el
+    mismo `filtrosDe` que el listado, tipado del contrato y sin página ni tamaño; la de saldos manda
+    el día que contestó el listado, no el del campo; y la de un recuento cerrado exporta todas sus
+    líneas, como las enseña, aunque el enlace traiga una vista.
+18. **El nombre del fichero lo pone el servidor**: `ficheroDe` lee el `Content-Disposition`, con
+    `filename*` primero (RFC 6266), y sin ninguno guarda `exportacion.csv`. Un rechazo sale por el
+    mismo `FalloDeApi` que un listado, con su `type` y su traza, porque el cliente lee el cuerpo
+    del error como JSON aunque se pida un `blob`. `guardarFichero` revoca la URL `blob:` en el acto,
+    tras el `click()`, porque la descarga lee el `href` dentro de esa misma llamada.
+19. **Los casos del frontal pulsan el botón en la pantalla montada**, con `exportarYComprobar` de
+    `frontend/src/pruebas/exportaciones.ts`, que contesta con `servidor.use` y pone en el nombre el
+    1999-12-31, un día que el navegador no puede haber calculado: que el fichero se guarde con él
+    demuestra que el nombre sale de la cabecera. Afirman la petición, la consulta entera, el nombre
+    y los bytes, con el BOM. Y un censo, `CadaExportacionTieneSuBoton`, exige que las exportaciones
+    del contrato, las que pide el frontal y las que pulsa algún caso sean las mismas trece.
+20. **La guarda de «sin líneas» de la ficha de la transferencia se quitó** (`a6666ea`), porque la
+    966 salió verde y no podía salir de otra forma: una transferencia no se abre sin líneas
+    (`transferencia-sin-lineas`), y ninguna operación se las quita. El comentario dice quién lo
+    impide.
+
+**Las tandas, de la 792 a la 971, se escribieron antes de medir**, una por tema y sobre su commit,
+alguna con una segunda pasada sobre el commit que cubría lo que la primera dejó en verde, y cada
+mutación con su «espera», en el *scratchpad*: `tandaNN.json` y un guion `mutarNN.py` por tanda.
+Cada mutación se aplicó sola sobre el árbol limpio de un *worktree* (`wt-mut32` y `wt-mut33`; la
+del frontal, sobre el repositorio, con el árbol limpio), se revirtió con
+`git restore --source=HEAD`, se tocó con la fecha de ahora, y al acabar cada tanda el árbol
+restaurado compiló y la porcelana salió vacía. Los registros, `tandaNN.log`:
+
+```bash
+python -X utf8 mutar32.py tanda32.json base 792-802            # sobre 3a03002
+python -X utf8 mutar33.py tanda33.json base 803-827            # sobre f1c3244
+python -X utf8 mutar33.py tanda33b.json base 828-829           # sobre 619190b
+python -X utf8 mutar34.py tanda34.json base 830-843            # sobre 0e16aa6
+python -X utf8 mutar35.py tanda35.json 838 844-848             # sobre 0e16aa6
+python -X utf8 mutar36.py tanda35.json base 838 844-848        # sobre f0f1909
+python -X utf8 mutar37.py tanda37.json base 849-861            # sobre 77568cd
+python -X utf8 mutar38.py tanda38.json base 851 858 862 863    # sobre a995ed0, y la 862 otra vez
+python -X utf8 mutar39.py tanda39.json base 864-872            # sobre c4c4650
+python -X utf8 mutar40.py tanda40.json base 873-882            # sobre b81c67c
+python -X utf8 mutar41.py tanda41.json base 883-887            # sobre de5d431
+python -X utf8 mutar42.py tanda42.json base 888-911            # sobre 9b31c16; la 912, con tanda42b
+python -X utf8 mutar43.py tanda43.json base 913-946            # sobre 3a78bda
+python -X utf8 mutar43b.py tanda43b.json base 926 930 942r     # sobre 0b7661c
+python -X utf8 mutar44-web.py base 947-971                     # sobre f912e12
+python -X utf8 mutar44-web.py base 965 967                     # sobre a6666ea
+```
+
+Los carriles son `dotnet test` de un proyecto, sin compilar y filtrado a las clases que la tanda
+puede ver, y en el frontal, `vitest run` sobre los quince ficheros del botón, con los rojos por
+nombre y los avisos de `act()` de los siete trozos del canal (ADR-0066). En la tabla, `fun` es
+`Api.FunctionalTests`; `int`, `Api.IntegrationTests`; `org`, `Organizacion.IntegrationTests`;
+`bb`, `BuildingBlocks.UnitTests`; `ter`, `cat` e `inv`, los `UnitTests` de Terceros, Catálogo e
+Inventario; `arq`, `Arquitectura.Tests`; y `web`, el frontal. Las bases, todas a cero, con los casos
+de cada carril:
+
+- la 32: `fun` 263, `org` 4, e `int` 9 y 20, en dos filtros;
+- la 33 y su segunda pasada: `bb` 256, `fun` 276 y `org` 3;
+- la 34 y la 35, antes y después: `org` 3, `int` 4 y `arq` 67;
+- la 37: `fun` 3, `int` 4 y `bb` 27; y la 38, con el caso nuevo de la foto, `int` 5;
+- la 39: `bb` 128, `ter` 88 e `int` 14;
+- la 40: `fun` 11, `ter` 88 e `int` 7; y la 41, con la teoría nueva, `ter` 93;
+- la 42: `fun` 11, `cat` 271, `bb` 39 e `int` 12;
+- la 43 y su segunda pasada: `fun` 11, `cat` 271, `bb` 39, `inv` 14 e `int` 16;
+- y la 44 y la suya: `web` 174, en 15 ficheros, con 0 avisos de `act()` y 0 plazos agotados, en
+  la base y en cada una de las 27 pasadas.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 792 | El borde deja pasar un `?q=` escrito a un listado sin texto | **fun 2**: `Un_orden_que_no_se_admite_sigue_siendo_su_400` y `Un_texto_escrito_a_un_listado_sin_texto_es_un_400_con_su_codigo`; **int 2**: `Cada_listado_contesta_al_texto_segun_lo_publique` y `La_lista_va_de_la_ultima_fecha_de_envio_a_la_primera_se_acota_por_cada_punta_y_no_trae_la_descartada` |
+| 793 | El texto no llega al listado que lo mira (`Filtro = null`) | **fun 1**: `Un_listado_con_texto_lo_compone_con_la_pagina_y_el_orden`; **int 4**: `Abrir_con_numeros_de_serie_precarga_una_linea_por_unidad`, `La_lista_acota_por_estado_por_almacen_y_por_motivo`, `Las_lineas_se_paginan_se_ordenan_y_se_acotan_en_el_servidor` y `La_lista_va_de_la_ultima_fecha_a_la_primera_se_acota_y_no_trae_el_descartado` |
+| 794 | Un `?q=` en blanco cuenta como escrito | **fun 1**: `Sin_texto_escrito_un_listado_sin_texto_compone_la_pagina`; **int 2**: `Cada_listado_contesta_al_texto_segun_lo_publique` y `La_lista_va_de_la_ultima_fecha_de_envio_a_la_primera_se_acota_por_cada_punta_y_no_trae_la_descartada` |
+| 795 | El paginador no lanza con un texto y sin filtro declarado | **org 1**: `Un_texto_sin_filtro_declarado_lanza_antes_de_llegar_a_la_base` |
+| 796 | Un listado sin filtro de texto lo enlaza | **fun 1**: `Los_listados_sin_filtro_de_texto_son_los_seis_declarados`; **int 1**: `Cada_listado_contesta_al_texto_segun_lo_publique` |
+| 797 | Un listado con texto cuyo repositorio no declara el filtro | **int 1**: `Cada_listado_contesta_al_texto_segun_lo_publique` |
+| 798 | **Arnés**: el barrido toma por listado cualquier verbo, no solo `GET` | **fun 2**: `El_barrido_ve_listados_con_texto_y_sin_texto` y `Los_listados_sin_filtro_de_texto_son_los_seis_declarados`; **int 1**: `Cada_listado_contesta_al_texto_segun_lo_publique` |
+| 799 | **Arnés**: el parámetro del texto se busca como `qq` | **fun 2**: `El_barrido_ve_listados_con_texto_y_sin_texto` y `Los_listados_sin_filtro_de_texto_son_los_seis_declarados`; **int 1**: `Cada_listado_contesta_al_texto_segun_lo_publique` |
+| 800 | El texto se decide antes que el orden | **fun 1**: `Un_orden_que_no_se_admite_sigue_siendo_su_400` |
+| 801 | El paginador no lanza con un texto en blanco | **org 1**: `Un_texto_sin_filtro_declarado_lanza_antes_de_llegar_a_la_base` |
+| 802 | Un listado con texto deja de enlazarlo | **fun 1**: `Los_listados_sin_filtro_de_texto_son_los_seis_declarados` |
+| 803 | El escritor no vacía la corriente al final de cada página | **bb 1**: `Cada_pagina_esta_en_la_corriente_antes_de_pedir_la_siguiente` |
+| 804 | Sin la foto: la exportación no abre transacción | **org 1**: `Dentro_de_la_foto_no_se_ve_lo_que_otra_conexion_confirma_despues` |
+| 805 | La foto no es de solo lectura | **org 1**: `Dentro_de_la_foto_no_se_puede_escribir` |
+| 806 | Sin el apóstrofo delante de una fórmula | **bb 2**: `El_lector_de_la_importacion_lee_lo_que_escribe_el_escritor` y `Un_texto_que_parece_una_formula_sale_con_un_apostrofo_delante` |
+| 807 | El apóstrofo, en todos los campos | **bb 4**: `El_apostrofo_solo_lo_lleva_el_texto_que_empieza_por_uno_de_los_seis`, `El_fichero_es_el_bom_la_cabecera_y_una_linea_por_elemento_con_crlf`, `El_lector_de_la_importacion_lee_lo_que_escribe_el_escritor` y `Un_numero_sale_con_coma_decimal_sin_miles_y_sin_ceros_a_la_derecha` |
+| 808 | Una página interna de más (`<=` por `<`) | **fun 1**: `Pide_todas_las_paginas_del_tamanio_maximo_con_la_foto_abierta` |
+| 809 | Las páginas internas, de 50 y no del tamaño máximo | **fun 4**: `Cada_pagina_lleva_el_orden_y_el_texto_del_listado`, `Pide_todas_las_paginas_del_tamanio_maximo_con_la_foto_abierta`, `Un_fallo_a_mitad_lanza_con_el_fichero_empezado_y_cierra_la_foto` y `Un_listado_que_no_falla_entra_por_su_interfaz_con_sus_criterios` |
+| 810 | La foto se abre antes de mirar los criterios | **fun 2**: `Un_orden_que_no_se_admite_es_su_400` y `Un_texto_que_el_listado_no_mira_es_su_400_sin_abrir_la_foto_ni_escribir` |
+| 811 | Las cabeceras del adjunto, antes de pedir la primera página | **fun 1**: `Un_fallo_en_la_primera_pagina_sale_como_en_el_listado_antes_del_primer_byte` |
+| 812 | Sin el BOM | **bb 2**: `El_fichero_es_el_bom_la_cabecera_y_una_linea_por_elemento_con_crlf` y `Sin_elementos_el_fichero_es_el_bom_y_la_cabecera`; **fun 2**: `El_fichero_se_llama_por_el_recurso_y_el_dia_de_negocio` y `Pide_todas_las_paginas_del_tamanio_maximo_con_la_foto_abierta` |
+| 813 | LF en vez de CRLF | **bb 3**: `Cada_pagina_esta_en_la_corriente_antes_de_pedir_la_siguiente`, `El_fichero_es_el_bom_la_cabecera_y_una_linea_por_elemento_con_crlf` y `Sin_elementos_el_fichero_es_el_bom_y_la_cabecera`; **fun 3**: `Pide_todas_las_paginas_del_tamanio_maximo_con_la_foto_abierta`, `Un_fallo_a_mitad_lanza_con_el_fichero_empezado_y_cierra_la_foto` y `Un_listado_que_no_falla_entra_por_su_interfaz_con_sus_criterios` |
+| 814 | El cero con signo: sin la rama que lo quita | **ninguno**, en los tres carriles: la guarda estaba muerta, porque el formato ya escribe «0» del cero negativo. Se quitó en `619190b`, y lo mide la 829 |
+| 815 | La foto, sin la guarda de «dentro de otra transacción» | **ninguno**, en los tres carriles: EF Core ya lanza al abrir una transacción con otra abierta. Se quitó en `619190b`, y lo mide la 828 |
+| 816 | Un fallo a mitad cierra el fichero, corto, en vez de lanzar | **fun 1**: `Un_fallo_a_mitad_lanza_con_el_fichero_empezado_y_cierra_la_foto` |
+| 817 | El fallo de la primera página no se contesta | **fun 1**: `Un_fallo_en_la_primera_pagina_sale_como_en_el_listado_antes_del_primer_byte` |
+| 818 | El adjunto, `inline` | **fun 1**: `El_fichero_se_llama_por_el_recurso_y_el_dia_de_negocio` |
+| 819 | Un salto de línea sin comillas | **bb 1**: `Un_campo_va_entre_comillas_si_lleva_separador_comilla_o_salto` |
+| 820 | Punto decimal en vez de coma | **bb 3**: `El_fichero_es_el_bom_la_cabecera_y_una_linea_por_elemento_con_crlf`, `El_lector_de_la_importacion_lee_lo_que_escribe_el_escritor` y `Un_numero_sale_con_coma_decimal_sin_miles_y_sin_ceros_a_la_derecha` |
+| 821 | El texto, sin tildes | **bb 3**: `Cada_pagina_esta_en_la_corriente_antes_de_pedir_la_siguiente`, `El_fichero_es_el_bom_la_cabecera_y_una_linea_por_elemento_con_crlf` y `Los_demas_tipos_salen_en_la_forma_del_dialecto` |
+| 822 | Los números, con cuatro decimales | **bb 1**: `Un_numero_sale_con_coma_decimal_sin_miles_y_sin_ceros_a_la_derecha` |
+| 823 | **Arnés**: la otra conexión de `LaFotoDeLecturaTests` no confirma nada | **org 1**: `Dentro_de_la_foto_no_se_ve_lo_que_otra_conexion_confirma_despues` |
+| 824 | **Arnés**: el caso de la corriente no mira lo escrito al pedir la página | **bb 1**: `Cada_pagina_esta_en_la_corriente_antes_de_pedir_la_siguiente` |
+| 825 | **Arnés**: las páginas del listado de pega repiten filas | **fun 1**: `Pide_todas_las_paginas_del_tamanio_maximo_con_la_foto_abierta` |
+| 826 | La puerta del `IListado` pierde el orden | **fun 1**: `Un_listado_que_no_falla_entra_por_su_interfaz_con_sus_criterios` |
+| 827 | La puerta del `IListado` pierde el texto | **fun 1**: `Un_listado_que_no_falla_entra_por_su_interfaz_con_sus_criterios` |
+| 828 | La foto se cuela en una transacción abierta (sobre `619190b`) | **org 1**: `Una_foto_no_se_abre_dentro_de_otra_transaccion` |
+| 829 | El cero negativo sale «-0» (sobre `619190b`) | **bb 1**: `Un_numero_sale_con_coma_decimal_sin_miles_y_sin_ceros_a_la_derecha` |
+| 830 | El almacén abre el ámbito de lo bloqueado | **org 1**: `El_almacen_se_nombra_y_ni_el_bloqueado_ni_el_ajeno_ni_el_inventado_vuelven` |
+| 831 | La ubicación abre el ámbito de lo bloqueado | **org 1**: `La_ubicacion_se_nombra_por_su_propio_bloqueo_y_no_por_el_de_su_almacen` |
+| 832 | La ubicación une su almacén, y la de una nave cerrada no vuelve | **org 1**: `La_ubicacion_se_nombra_por_su_propio_bloqueo_y_no_por_el_de_su_almacen` |
+| 833 | El artículo, sin el filtro de empresa | **int 1**: `El_codigo_y_la_descripcion_salen_por_lotes_y_los_de_otra_empresa_no_vuelven` |
+| 834 | El artículo se nombra con otra columna | **int 1**: `El_codigo_y_la_descripcion_salen_por_lotes_y_los_de_otra_empresa_no_vuelven` |
+| 835 | La unidad retirada no vuelve | **org 1**: `Las_unidades_los_tramos_y_las_divisas_se_nombran_sin_empresa_y_lo_retirado_tambien` |
+| 836 | El tramo de impuesto cerrado no vuelve | **org 1**: `Las_unidades_los_tramos_y_las_divisas_se_nombran_sin_empresa_y_lo_retirado_tambien` |
+| 837 | La divisa retirada no vuelve | **org 1**: `Las_unidades_los_tramos_y_las_divisas_se_nombran_sin_empresa_y_lo_retirado_tambien` |
+| 838 | La unidad, sin el `Contains` del lote: vuelven todas | sobre `0e16aa6`, **ninguno**, dos veces; sobre `f0f1909`, **org 1**: `Las_unidades_los_tramos_y_las_divisas_se_nombran_sin_empresa_y_lo_retirado_tambien` (punto 6) |
+| 839 | **Arnés**: el caso no bloquea el almacén | **org 1**: `El_almacen_se_nombra_y_ni_el_bloqueado_ni_el_ajeno_ni_el_inventado_vuelven` |
+| 840 | El ADR-0055, sin la nota en su §12 | **arq 1**: `El_enmendado_lleva_la_nota_en_el_punto_que_cambia` |
+| 841 | El ADR-0055, sin la anotación en su *Estado* | **arq 1**: `El_enmendado_anota_en_su_estado_quien_lo_enmienda` |
+| 842 | El ADR-0074 deja de declarar la enmienda | **arq 1**: `Lo_que_anota_un_estado_lo_declara_quien_enmienda` |
+| 843 | El inventario de arquitectura, sin la arista nueva de `Catalogo.Contracts` | **arq 1**: `Las_referencias_de_proyecto_son_las_declaradas` |
+| 844 | El almacén, sin el `Contains` del lote | sobre `0e16aa6` y sobre `f0f1909`, **org 1**: `El_almacen_se_nombra_y_ni_el_bloqueado_ni_el_ajeno_ni_el_inventado_vuelven`, por su primera pregunta |
+| 845 | La ubicación, sin el `Contains` del lote | sobre `0e16aa6` y sobre `f0f1909`, **org 1**: `La_ubicacion_se_nombra_por_su_propio_bloqueo_y_no_por_el_de_su_almacen`, por su primera pregunta |
+| 846 | El artículo, sin el `Contains` del lote | sobre `0e16aa6`, **ninguno**; sobre `f0f1909`, **int 1**: `El_codigo_y_la_descripcion_salen_por_lotes_y_los_de_otra_empresa_no_vuelven` |
+| 847 | El impuesto, sin el `Contains` del lote | sobre `0e16aa6`, **ninguno**; sobre `f0f1909`, **org 1**: `Las_unidades_los_tramos_y_las_divisas_se_nombran_sin_empresa_y_lo_retirado_tambien` |
+| 848 | La divisa, sin el `Contains` del lote | sobre `0e16aa6`, **ninguno**; sobre `f0f1909`, **org 1**: el mismo |
+| 849 | Sin el registro de `IFotoDeOrganizacion` | **fun 1**: `Cada_exportacion_pide_la_foto_de_su_modulo_y_el_host_la_construye`; **int 4**: `La_exportacion_lleva_el_orden_y_el_texto_del_listado`, `Las_empresas_salen_con_el_texto_del_listado_sin_las_ajenas_y_sin_la_bloqueada`, `Los_almacenes_salen_enteros_en_el_dialecto_y_sin_el_bloqueado` y `Mas_de_una_pagina_sale_entera_y_en_el_orden_de_las_paginas_del_listado` |
+| 850 | La exportación de almacenes, con el permiso de otra acción | **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` |
+| 851 | La exportación de almacenes, sin el texto | sobre `77568cd`, **no compiló** (CS1572: el `<param>` del texto se quedaba); sin el comentario, sobre `a995ed0`, **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado`, e **int 1**: `La_exportacion_lleva_el_orden_y_el_texto_del_listado` |
+| 852 | Un valor de un conjunto, con la regla del apóstrofo | **bb 1**: `El_apostrofo_solo_lo_lleva_el_texto_que_empieza_por_uno_de_los_seis` |
+| 853 | La calle, con otro nombre de columna | **bb 1**: `Las_columnas_son_las_seis_de_la_importacion_con_el_prefijo`; **int 2**: `Las_empresas_salen_con_el_texto_del_listado_sin_las_ajenas_y_sin_la_bloqueada` y `Los_almacenes_salen_enteros_en_el_dialecto_y_sin_el_bloqueado` |
+| 854 | La población, con el campo de la subdivisión | **bb 1**: `Cada_columna_lleva_su_campo_como_texto` |
+| 855 | El tipo del almacén, con otro campo | **int 1**: `Los_almacenes_salen_enteros_en_el_dialecto_y_sin_el_bloqueado` |
+| 856 | Las empresas, sin una columna | **int 1**: `Las_empresas_salen_con_el_texto_del_listado_sin_las_ajenas_y_sin_la_bloqueada` |
+| 857 | El contrato de las empresas, con otro tipo de contenido | **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` |
+| 858 | La foto de Organización, una transacción cualquiera | sobre `77568cd`, **ninguno**, en los tres carriles; sobre `a995ed0`, **int 1**: `La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read`, el caso nuevo (punto 8) |
+| 859 | Una exportación sin declarar en la lista cerrada | **fun 3**: `Cada_exportacion_pide_la_foto_de_su_modulo_y_el_host_la_construye`, `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` y `Las_exportaciones_son_las_declaradas` |
+| 860 | **Arnés**: la página se llama `pagina` en la hermana | **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` |
+| 861 | **Arnés**: la hermana busca `/exportaciones` | **fun 3**: `Cada_exportacion_pide_la_foto_de_su_modulo_y_el_host_la_construye`, `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` y `Las_exportaciones_son_las_declaradas` |
+| 862 | La foto de Organización en `REPEATABLE READ`, pero de escritura | **int 1**: `La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read`. No compiló a la primera (CS1501: la sobrecarga con el nivel es una extensión) |
+| 863 | **Arnés**, el compartido: `ExportacionesDeLaApi` busca `/exportaciones` | **fun 3**: `Cada_exportacion_pide_la_foto_de_su_modulo_y_el_host_la_construye`, `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` y `Las_exportaciones_son_las_declaradas`; **int 1**: `La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read` |
+| 864 | Seis disparadores, sin el apóstrofo | **bb 4**: `Lo_que_empieza_por_uno_de_los_siete_sale_con_un_apostrofo_y_vuelve`, `Todo_texto_sale_y_vuelve_igual`, `El_lector_de_la_importacion_lee_lo_que_escribe_el_escritor` y `Un_texto_que_parece_una_formula_sale_con_un_apostrofo_delante`; **ter 1**: `Los_textos_vuelven_sin_el_apostrofo_que_les_puso_la_exportacion` |
+| 865 | La importación no quita el apóstrofo | **ter 1**: `Los_textos_vuelven_sin_el_apostrofo_que_les_puso_la_exportacion` |
+| 866 | La importación quita el apóstrofo de un importe | **ter 1**: `Un_importe_con_apostrofo_no_se_lee` |
+| 867 | La importación quita cualquier apóstrofo | **bb 1**: `Un_apostrofo_que_no_puso_la_exportacion_se_queda`; **ter 1**: `Un_apostrofo_que_no_puso_la_exportacion_se_queda` |
+| 868 | La importación quita todos los de delante (`TrimStart`) | **bb 3**: `Lo_que_empieza_por_uno_de_los_siete_sale_con_un_apostrofo_y_vuelve`, `Todo_texto_sale_y_vuelve_igual` y `El_lector_de_la_importacion_lee_lo_que_escribe_el_escritor`; **ter 1**: `Los_textos_vuelven_sin_el_apostrofo_que_les_puso_la_exportacion` |
+| 869 | No quita el de un campo de dos caracteres (`Length > 2`) | **bb 2**: `Lo_que_empieza_por_uno_de_los_siete_sale_con_un_apostrofo_y_vuelve` y `Todo_texto_sale_y_vuelve_igual` |
+| 870 | El apóstrofo, a todo texto | **bb 7**: los del escritor que leen un texto y los dos del universo; e **int 4**: las cuatro de Organización |
+| 871 | **Arnés**: el alfabeto del universo, sin el apóstrofo | **bb 1**: `Todo_texto_sale_y_vuelve_igual` |
+| 872 | El apóstrofo, también a un número | **bb 4**: `El_apostrofo_solo_lo_lleva_el_texto_que_empieza_por_uno_de_los_siete`, `El_fichero_es_el_bom_la_cabecera_y_una_linea_por_elemento_con_crlf`, `El_lector_de_la_importacion_lee_lo_que_escribe_el_escritor` y `Un_numero_sale_con_coma_decimal_sin_miles_y_sin_ceros_a_la_derecha` |
+| 873 | Sin el registro de `IFotoDeTerceros` | **fun 1**: `Cada_exportacion_pide_la_foto_de_su_modulo_y_el_host_la_construye`; **int 3**: `La_exportacion_lleva_el_orden_y_el_texto_del_listado_y_no_busca_por_el_identificador`, `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` y `La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read` |
+| 874 | La columna de cliente, con el valor de proveedor | **int 1**: `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` |
+| 875 | El límite de crédito no sale | **int 1**: `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` |
+| 876 | El territorio, siempre el de la península | **int 1**: `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` |
+| 877 | La exportación de terceros, sin el texto del listado | **int 1**: `La_exportacion_lleva_el_orden_y_el_texto_del_listado_y_no_busca_por_el_identificador` |
+| 878 | La exportación de terceros, con otro permiso que el del listado | **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` |
+| 879 | La importación no lee el recargo de equivalencia | **int 1**: `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado`. **ter 0**: ningún caso del carril rápido miraba que el recargo se leyera (punto 11) |
+| 880 | La 865 otra vez: la importación no quita el apóstrofo | **ter 1**: `Los_textos_vuelven_sin_el_apostrofo_que_les_puso_la_exportacion`; **int 1**: `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` |
+| 881 | **Arnés**: `Exportaciones.cs` pide el listado en vez del fichero | **int 6**: las seis de Organización y de Terceros, todas menos la de la foto |
+| 882 | El fichero de terceros, con otro nombre | **int 2**: `La_exportacion_lleva_el_orden_y_el_texto_del_listado_y_no_busca_por_el_identificador` y `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` |
+| 883 | La 879 otra vez, sobre `de5d431` | **ter 1**: `Cada_columna_llega_a_su_campo`; **int 1**: `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` |
+| 884 | La retención, leída de la columna del criterio de caja | **ter 1**: `Cada_columna_llega_a_su_campo`; **int 1**: `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` |
+| 885 | La retención, siempre «no» | **ter 1**: `Cada_columna_llega_a_su_campo`; **int 1**: `Lo_que_sale_vuelve_a_entrar_en_otra_empresa_y_sale_igual_sin_el_bloqueado` |
+| 886 | Cliente, leído de la columna de proveedor | **ter 4**: `Cada_columna_llega_a_su_campo` y los tres del apóstrofo, que llevan cliente sí y proveedor no; e **int 1**: el de ida y vuelta |
+| 887 | **Arnés**: la fila del caso, con el recargo y la caja cambiados | **ter 1**: `Cada_columna_llega_a_su_campo` |
+| 888 | La unidad del artículo, nombrada con los impuestos | **cat 2**: `Cada_maestro_del_articulo_se_nombra_solo_con_el_permiso_de_verlo` y `El_articulo_sale_con_la_pagina_del_listado_y_sus_tres_maestros_nombrados`; **int 2**: `Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver` y `Los_articulos_salen_con_sus_maestros_nombrados_y_los_filtros_del_listado` |
+| 889 | La unidad, con el permiso de las categorías | **cat 1**: `Cada_maestro_del_articulo_se_nombra_solo_con_el_permiso_de_verlo`; **int 1**: `Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver` |
+| 890 | La categoría, sin mirar el permiso | **cat 1**: `Cada_maestro_del_articulo_se_nombra_solo_con_el_permiso_de_verlo`; **int 1**: `Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver` |
+| 891 | La madre de una categoría, citada con el identificador de la hija | **cat 1**: `La_categoria_nombra_a_su_madre_sin_mirar_permisos_y_la_raiz_no_tiene`; **int 1**: `Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden` |
+| 892 | Se pregunta por las categorías de la página y no por sus madres | **int 1**: `Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden` |
+| 893 | La divisa de la tarifa, sin mirar el permiso | **no compiló** (CS9113: `usuarioActual` sin leer). La sustituye la 912 |
+| 894 | El tramo de los códigos de barras empieza una página tarde | **cat 1**: `Los_codigos_de_barras_salen_por_tramos_de_la_lista_entera_con_su_longitud_de_total`; **int 1**: `Los_codigos_de_barras_salen_en_el_orden_del_listado_con_su_articulo_nombrado` |
+| 895 | El total de los códigos de barras, el del tramo | **cat 1**: `Los_codigos_de_barras_salen_por_tramos_de_la_lista_entera_con_su_longitud_de_total` |
+| 896 | El artículo que no existe da una página vacía | **cat 1**: `Los_codigos_de_barras_de_un_articulo_que_no_existe_son_el_error_del_listado`; **int 1**: `Los_codigos_de_barras_salen_en_el_orden_del_listado_con_su_articulo_nombrado` |
+| 897 | El tramo de los códigos de barras, sin tope | **cat 1**: `Los_codigos_de_barras_salen_por_tramos_de_la_lista_entera_con_su_longitud_de_total` |
+| 898 | La exportación de artículos, sin la categoría pedida | **int 2**: `Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver` y `Los_articulos_salen_con_sus_maestros_nombrados_y_los_filtros_del_listado` |
+| 899 | La exportación de tarifas, sin el código pedido | **int 1**: `Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden` |
+| 900 | La exportación de categorías, sin su texto | **int 1**: `Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden` |
+| 901 | `vigente_hasta` escribe la fecha de inicio | **int 1**: `Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden` |
+| 902 | El maestro nombrado sale por su identificador | **bb 2**: `Un_maestro_nombrado_sale_con_su_codigo_y_su_nombre_como_texto` y `Un_maestro_sin_nombre_sale_con_su_codigo_y_el_nombre_vacio`; **int 4**: `Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver`, `Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden`, `Los_articulos_salen_con_sus_maestros_nombrados_y_los_filtros_del_listado` y `Los_codigos_de_barras_salen_en_el_orden_del_listado_con_su_articulo_nombrado` |
+| 903 | La fila sin maestro escribe un identificador vacío | **bb 1**: `Una_fila_que_no_apunta_a_ninguno_sale_con_los_dos_campos_vacios`; **int 2**: `Las_categorias_nombran_a_su_madre_y_las_tarifas_su_divisa_por_su_orden` y `Los_articulos_salen_con_sus_maestros_nombrados_y_los_filtros_del_listado` |
+| 904 | `NombresDeMaestros` no mira el permiso | **bb 1**: `Sin_el_permiso_no_pregunta_y_no_hay_nombres`; **cat 2**: `Cada_maestro_del_articulo_se_nombra_solo_con_el_permiso_de_verlo` y `La_tarifa_nombra_su_divisa_solo_con_el_permiso_de_verla`; **int 1**: `Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver` |
+| 905 | Se pregunta con repetidos | **bb 2**: `Con_el_permiso_pregunta_una_vez_con_los_distintos_y_devuelve_lo_que_vuelve` y `Sin_permiso_que_mirar_pregunta_por_los_distintos_y_sin_identificadores_no` |
+| 906 | Se pregunta aunque no haya identificadores | **bb 2**: `Sin_identificadores_no_pregunta_aunque_tenga_el_permiso` y `Sin_permiso_que_mirar_pregunta_por_los_distintos_y_sin_identificadores_no` |
+| 907 | El repositorio de categorías nombra todas las de la empresa | **int 1**: `Los_nombres_de_las_categorias_salen_por_lotes_y_los_ajenos_no_vuelven` |
+| 908 | El repositorio de categorías, sin el filtro de empresa | **int 1**: `Los_nombres_de_las_categorias_salen_por_lotes_y_los_ajenos_no_vuelven` |
+| 909 | **Arnés**: los códigos de barras, fuera de `s_sinPaginar` | **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` |
+| 910 | **Arnés**: un listado paginado, declarado sin paginar | **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` |
+| 911 | **Arnés**: el caso de los códigos de barras espera dos unidades | **int 1**: `Los_codigos_de_barras_salen_en_el_orden_del_listado_con_su_articulo_nombrado` |
+| 912 | La divisa de la tarifa, con el permiso de la propia exportación (en lugar de la 893) | **cat 1**: `La_tarifa_nombra_su_divisa_solo_con_el_permiso_de_verla` |
+| 913 | El ajuste, sin el estado pedido | **inv 1**: `El_ajuste_sale_con_la_pagina_del_listado_y_su_almacen_nombrado`; **int 1**: `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 914 | El total de los ajustes, el de la página | **inv 1**: `El_ajuste_sale_con_la_pagina_del_listado_y_su_almacen_nombrado` |
+| 915 | El recuento pregunta por su identificador y no por su almacén | **inv 1**: `El_recuento_sale_con_la_pagina_del_listado_y_su_almacen_nombrado`; **int 2**: `Cada_maestro_del_recuento_se_nombra_solo_si_quien_exporta_lo_puede_ver` y `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 916 | La unidad de la línea de recuento, nombrada con los artículos | **inv 1**: `La_linea_de_recuento_sale_con_sus_tres_maestros_nombrados_cada_uno_por_su_dueno`; **int 2**: `Cada_maestro_del_recuento_se_nombra_solo_si_quien_exporta_lo_puede_ver` y `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 917 | Las líneas de recuento, sin el `?solo=` pedido | **inv 1**: `La_linea_de_recuento_sale_con_sus_tres_maestros_nombrados_cada_uno_por_su_dueno`; **int 1**: `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 918 | El recuento que no existe da una página vacía | **inv 1**: `Las_lineas_de_un_recuento_que_no_existe_son_el_error_del_listado`; **int 1**: `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 919 | El destino de la transferencia, nombrado con el origen | **inv 1**: `La_transferencia_nombra_sus_dos_almacenes_en_una_sola_pregunta`; **int 1**: `Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados` |
+| 920 | Solo se pregunta por el almacén de origen | **inv 1**: `La_transferencia_nombra_sus_dos_almacenes_en_una_sola_pregunta`; **int 1**: `Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados` |
+| 921 | La transferencia, sin el destino pedido | **inv 1**: `La_transferencia_nombra_sus_dos_almacenes_en_una_sola_pregunta`; **int 1**: `Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados` |
+| 922 | El tramo de las líneas de la transferencia empieza una página tarde | **inv 1**: `Las_lineas_de_la_transferencia_salen_por_tramos_de_su_ficha_con_su_divisa`; **int 1**: `Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados` |
+| 923 | El total de las líneas, el del tramo | **inv 1**: `Las_lineas_de_la_transferencia_salen_por_tramos_de_su_ficha_con_su_divisa` |
+| 924 | El tramo de las líneas, sin tope | **inv 1**: `Las_lineas_de_la_transferencia_salen_por_tramos_de_su_ficha_con_su_divisa` |
+| 925 | La transferencia que no existe da una página vacía | **inv 1**: `Las_lineas_de_una_transferencia_que_no_existe_son_el_error_de_la_ficha`; **int 1**: `Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados` |
+| 926 | La divisa de la línea, escrita a mano | sobre `3a78bda`, **ninguno**: la ficha del caso iba en euros. Sobre `0b7661c`, **inv 1**: `Las_lineas_de_la_transferencia_salen_por_tramos_de_su_ficha_con_su_divisa` |
+| 927 | `cantidad_en_transito` escribe la cantidad | **int 1**: `Los_saldos_salen_al_final_del_dia_pedido_con_lo_que_vuela_y_sus_maestros_nombrados` |
+| 928 | El artículo del saldo escribe el almacén | **int 1**: `Los_saldos_salen_al_final_del_dia_pedido_con_lo_que_vuela_y_sus_maestros_nombrados` |
+| 929 | `teorico_al_contar` escribe el teórico | **int 2**: `Cada_maestro_del_recuento_se_nombra_solo_si_quien_exporta_lo_puede_ver` y `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 930 | `teorico_cambiado`, siempre «no» | sobre `3a78bda`, **ninguno**: ningún teórico cambiaba después de contar. Sobre `0b7661c`, **int 1**: `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 931 | `fecha_de_recepcion` escribe la de envío | **int 1**: `Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados` |
+| 932 | `ubicacion_destino` escribe la de origen | **int 1**: `Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados` |
+| 933 | El controlador de ajustes, sin el estado | **int 1**: `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 934 | El controlador de las líneas de recuento, sin el `?solo=` | **int 1**: `Los_ajustes_los_recuentos_y_sus_lineas_salen_con_los_filtros_de_su_listado` |
+| 935 | El controlador de transferencias cambia el origen por el destino | **int 1**: `Las_transferencias_y_sus_lineas_salen_con_sus_almacenes_y_sus_huecos_nombrados` |
+| 936 | El controlador de saldos no lee la fecha | **int 1**: `Los_saldos_salen_al_final_del_dia_pedido_con_lo_que_vuela_y_sus_maestros_nombrados` |
+| 937 | El día de la exportación de saldos, siempre hoy | **inv 1**: `El_dia_de_la_exportacion_es_el_pedido_y_sin_pedir_ninguno_hoy_en_utc`; **int 1**: `Los_saldos_salen_al_final_del_dia_pedido_con_lo_que_vuela_y_sus_maestros_nombrados` |
+| 938 | Una fecha futura da una página vacía | **inv 1**: `Los_saldos_a_una_fecha_futura_son_el_error_de_la_consulta`; **int 1**: `Los_saldos_salen_al_final_del_dia_pedido_con_lo_que_vuela_y_sus_maestros_nombrados` |
+| 939 | El saldo, sin el artículo pedido | **inv 1**: `El_saldo_sale_con_el_dia_que_contesta_la_consulta_y_sus_dos_maestros_nombrados` |
+| 940 | Las ubicaciones, con el permiso de los almacenes | **inv 1**: `Cada_maestro_se_nombra_solo_con_el_permiso_de_verlo` |
+| 941 | Los artículos, con el permiso de las unidades | **inv 1**: `Cada_maestro_se_nombra_solo_con_el_permiso_de_verlo` |
+| 942 | Las unidades se preguntan a Catálogo | **no compiló** (CS9113: `unidades` sin leer): la ve el compilador. Se mide la 942r |
+| 942r | La 942 sin el CS9113: los artículos y las unidades, cada uno al puerto del otro | sobre `0b7661c`, **inv 4**: la teoría de los permisos, el saldo, la línea de recuento y las líneas de la transferencia; e **int 4**: las cuatro de Inventario que nombran un artículo |
+| 943 | La foto de Inventario no abre transacción | **int 1**: `La_foto_de_cada_exportacion_es_de_solo_lectura_y_en_repeatable_read` |
+| 944 | Las líneas de la transferencia piden otro permiso que su ficha | **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` |
+| 945 | **Arnés**: la lista de las de una ficha, vacía | **fun 1**: `Cada_exportacion_tiene_el_permiso_y_los_criterios_de_su_listado` |
+| 946 | **Arnés**: la cuenta recortada espera otra empresa | **int 2**: `Cada_maestro_del_articulo_se_nombra_solo_si_quien_exporta_lo_puede_ver` y `Cada_maestro_del_recuento_se_nombra_solo_si_quien_exporta_lo_puede_ver` |
+| 947 | La URL `blob:` no se revoca | **web 14**: los catorce de `exportarYComprobar`, en 13 ficheros |
+| 948 | El enlace se pulsa sin ponerlo en la página | **web 14**: los catorce de `exportarYComprobar`, en 13 ficheros |
+| 949 | El fichero se guarda sin el BOM | **web 14**: los catorce de `exportarYComprobar`, en 13 ficheros, por los bytes |
+| 950 | `filename*` no se lee | **web 1**: «El nombre del adjunto es el de `filename*` cuando vienen los dos, que es el que manda (RFC 6266)» |
+| 951 | `filename*`, sin descodificar | **web 1**: «El nombre del adjunto es el de `filename*` cuando vienen los dos, que es el que manda (RFC 6266)» |
+| 952 | Sin nombre en la cabecera, el fichero se guarda sin nombre | **web 1**: «El nombre del adjunto sin ninguno, o sin cabecera, el fichero se guarda igual, con el nombre de reserva» |
+| 953 | Un rechazo se toma por un fichero | **web 2**: «El fichero de una exportación un rechazo pedido como blob trae su ProblemDetails, por el cliente de verdad» y «El listado de almacenes mientras se prepara, el botón se apaga y lo dice; si falla, lo dice y deja reintentar» |
+| 954 | El rechazo pierde su estado | **web 1**: «El fichero de una exportación un rechazo pedido como blob trae su ProblemDetails, por el cliente de verdad» |
+| 955 | El botón no se apaga mientras llega el fichero | **web 1**: «El listado de almacenes mientras se prepara, el botón se apaga y lo dice; si falla, lo dice y deja reintentar» |
+| 956 | La espera no se dice | **web 1**: «El listado de almacenes mientras se prepara, el botón se apaga y lo dice; si falla, lo dice y deja reintentar» |
+| 957 | El fallo no se dice | **web 1**: «El listado de almacenes mientras se prepara, el botón se apaga y lo dice; si falla, lo dice y deja reintentar» |
+| 958 | El fichero llega y no se guarda | **web 15**: los catorce de `exportarYComprobar`, en 13 ficheros, y el de la espera de almacenes |
+| 959 | Saldos exporta el día del campo, y no el que contestó el listado | **web 1**: «El saldo a una fecha sin día, exportar se lleva el que contestó el listado, con los dos filtros y sin la página» |
+| 960 | Ajustes exporta sin el orden | **web 1**: «El listado de ajustes exportar se lleva los filtros y el orden del listado con los nombres de la API, sin la página» |
+| 961 | Las líneas del recuento, sin la vista | **web 1**: «La ficha del recuento exportar se lleva las líneas de la vista que se mira, sin la página» |
+| 962 | Transferencias: el destino es el origen | **web 3**: «El listado de transferencias cada punta acota sola: lo que llega a la central es lo que sale del norte», «El listado de transferencias exportar se lleva los filtros y el orden del listado con los nombres de la API, sin la página» y «El listado de transferencias los filtros van a la URL y al servidor con los nombres de la API, desde la primera página» |
+| 963 | Artículos exporta con la página | **web 1**: «El listado de artículos exportar se lleva los dos filtros del listado, y no su página» |
+| 964 | Empresas ofrece exportar sin filas | **web 1**: «El listado de empresas sin empresas que ver, no ofrece exportar» |
+| 965 | Saldos ofrece exportar sin filas | sobre `f912e12`, **ninguno**; sobre `a6666ea`, **web 1**: «El saldo a una fecha sin saldos lo dice, … y no ofrece exportar» |
+| 966 | La ficha de la transferencia ofrece exportar sin líneas | **ninguno**: la guarda no podía saltar, porque una transferencia no se abre sin líneas (`transferencia-sin-lineas`). Se quitó en `a6666ea` |
+| 967 | Los códigos de barras ofrecen exportar sin ninguno | sobre `f912e12`, **ninguno**; sobre `a6666ea`, **web 1**: «Los códigos de barras del artículo sin ninguno, … y no ofrece exportar» |
+| 968 | Categorías, sin botón | **web 1**: «El árbol de categorías exportar se lleva todas las categorías, no la página» |
+| 969 | **Arnés**: el servidor de pega no contesta a las exportaciones | **web 15**: los catorce de `exportarYComprobar`, en 13 ficheros, y el de la espera de almacenes |
+| 970 | **Arnés**: el censo lee del contrato otra cosa | **web 3**: «Cada exportación tiene su botón cada exportación del contrato la pulsa un caso, desde su pantalla», «Cada exportación tiene su botón el contrato tiene las exportaciones que dice la entrega, sin repetir ninguna» y «Cada exportación tiene su botón el frontal pide todas las del contrato, y ninguna más» |
+| 971 | **Arnés**: el censo se lee a sí mismo | **web 1**: «Cada exportación tiene su botón ninguna exportación escrita se queda fuera de lo que leen las expresiones» |
+
+- **Lo que salió distinto de lo escrito, y por qué**:
+  - **doce verdes, y cada una dejó su cambio**: la 814 y la 815, dos guardas muertas que se
+    quitaron (punto 4); la 838, que llevó a medir las otras cinco, y de ellas la 846, la 847 y la
+    848 también salieron verdes (punto 6); la 858, la foto que nadie miraba (punto 8); la 926 y la
+    930, apuntadas antes de medir como hallazgo si salían verdes, porque los casos no podían
+    distinguirlas, y cubiertas en `0b7661c`; y la 965, la 966 y la 967, «¿sale el botón sin
+    filas?» en tres pantallas: dos casos que no lo preguntaban y una guarda que no podía saltar
+    (punto 20). Cada una se midió otra vez sobre el commit que la cubre, salvo las dos guardas
+    quitadas, que se midieron con su contraria, la 828 y la 829, y la 966, que ya no tiene línea
+    que mutar;
+  - **la 879 dio `ter 0`, y no «los suyos»**, como decía su espera: ningún caso del carril rápido
+    miraba que el recargo se leyera. Lo cubre `de5d431` (punto 11), y lo mide la 883;
+  - **cuatro no compilaron en su primera forma**: la 851 (CS1572, el `<param>` del texto), que se
+    midió sin el comentario sobre `a995ed0`; la 862 (CS1501, la sobrecarga con el nivel es una
+    extensión), en una segunda pasada; la 893 (CS9113: sin mirar el permiso, `usuarioActual` se
+    queda sin leer), a la que sustituye la 912, que mira otro permiso; y la 942 (CS9113,
+    `unidades` sin leer), que la ve el compilador y se midió como la 942r;
+  - **la 846 se escribió con un `viejo` que salía dos veces** en `ConsultaDeArticulos.cs`, y el
+    guion paró sin aplicarla (`tanda35-antes.log`); con el trozo único, la 846, la 847 y la 848 se
+    midieron en `tanda35-antes-2.log`;
+  - **los ceros de un carril que su espera ya decía no son verdes**: la 797, que solo ve el barrido
+    de integración; la 802, solo `SoloPublicaElTextoQuienLoMiraTests`; la 850 y la 878, `int 0`,
+    porque el usuario de los casos de integración tiene todos los permisos; la 854, que su espera
+    daba solo al caso de las columnas; la 892, `cat 0`, porque en el caso la madre está en la
+    página; la 905 y la 906, `int 0`, porque solo cambian cuántas veces se pregunta; la 939,
+    `int 0`, porque el caso de integración tiene un solo artículo; la 940 y la 941, `int 0`,
+    porque su usuario tiene los dos permisos o ninguno; y las de una sola página contra la base
+    —la 895, la 897, la 914, la 923 y la 924—, `int 0`. Cada una se pone roja en el carril que la
+    ve por diseño;
+  - **la 942r puso rojos más casos de los que decía su espera**: la línea de recuento y la teoría en
+    el carril de Inventario, y las semillas 950, 951 y 953 en el de integración. Salieron cuatro y
+    cuatro: también el saldo y las líneas de la transferencia, y la semilla 952, la de los saldos.
+    Los cuatro nombran un artículo, y la 942r manda los artículos al puerto de las unidades: la
+    espera se quedó corta, y la mutación, no (`tanda43b.out`);
+  - **la primera pasada de la medida no llegó a la API en tres de sus cuatro exportaciones**
+    (`medir-1.txt`): Git Bash convirtió la ruta `/api/v1/…` en `/Program Files/Git/api/v1/…` al
+    pasarla a `python`, y `urllib` la rechazó por el espacio. La que llegó, la del 2026-03-15, es la
+    primera fila de esa fecha en la tabla; las otras cuatro son de la segunda pasada (`medir.txt`),
+    con `humo32.sh` llamando a `python` con `MSYS2_ARG_CONV_EXCL="*"`;
+  - **la batería del frontal del tema 8 corrió mientras la tanda 43 compilaba en su copia**, contra
+    la regla de no lanzar una batería con otra carga en la máquina (`frontal-t8.log`). Dio dos
+    rojos. Uno era de verdad, y la contención solo lo adelantó: el `TS2322` de
+    `ElListadoDeAlmacenes.test.tsx`, una `contestacion` sin tipo a la que el caso le ponía `null`,
+    que se arregló antes de `f912e12` con el tipo `Contestacion` de `pruebas/exportaciones.ts`. El
+    otro, no: «si el stock se mueve, lleva a lo que cambió…», de `LaFichaDelRecuento.test.tsx`,
+    pasó del plazo de 5 s (5169 ms), con la preparación de la suite en 111 s y el entorno en 153.
+    El mismo registro trae **un aviso de `act()`**, de `PaginaDelRecuento`, en «descartar pide el
+    motivo…», un caso posterior del mismo fichero. **El aviso no se reprodujo**: el fichero solo,
+    tres veces, 20 de 20 y ningún aviso; la suite entera, ya sin la tanda, 426 de 426 y el canal a
+    cero; y 13 y 36 copias del fichero a la vez, 260 y 720 casos en verde y ningún aviso
+    (`ficha-contencion-1.log` y `-2.log`). Que lo dejara la cola del caso que pasó del plazo, que
+    sigue en vuelo cuando empieza el siguiente, es una hipótesis que no se pudo poner roja, así que
+    no se arregló nada. Va al informe.
+
+La siguiente mutación es la **972**, y el siguiente ADR, el **0076**.
+
+**La medida, el tema 9: la exportación más grande cabe en el plazo de 30 s por orden.** Sobre
+`0b7661c`, en un proyecto de *compose* aparte, `bastion-humo-32`, con su entorno generado en el
+*scratchpad*, los puertos en el 45xxx y PostgreSQL 17.6. El guion es `humo32.sh`, del *scratchpad*,
+con sus cuatro pasos:
+
+```bash
+bash humo32.sh montar      # la pila, el migrador y la salud
+bash humo32.sh sembrar     # los maestros por la API, la empresa C y su corte
+bash humo32.sh medir       # cada exportación, con sus órdenes leídas del registro de la API
+bash humo32.sh desmontar   # down -v de ese proyecto, y el entorno, borrado
+```
+
+- **La empresa C del ADR-0064, con sus maestros**: la unidad, el impuesto, cinco almacenes con su
+  ubicación y un artículo, por la API; y con `sembrar32.sql`, el artículo clonado hasta 20 000 y la
+  semilla del 2.15 sobre ellos, en 88 s: 10⁶ movimientos del 2025-10-01 al 2026-09-30, y 10⁵
+  existencias y valoraciones. La exportación nombra los maestros, y nombrar 10⁵ claves contra
+  maestros que no existen no mide nada. El corte, con su primera vuelta al arrancar: doce meses,
+  992 332 instantáneas, y el cuadre, 20 772 ms y ningún descuadre.
+- **Cada exportación**, con `api32.py <entorno> <api> exportar <ruta> <fichero>`, que la baja en
+  flujo y mide el primer byte y el total; sus órdenes, del registro de la API, con
+  `registro32.py <registro> <inicio> <fin>`, que lee el evento 20101 de EF Core con su `elapsed` y
+  su `commandTimeout`; y la memoria de la API, con `docker stats` mientras dura.
+
+| Exportación | Primer byte | Total | Fichero | Órdenes | La más larga | Memoria de la API |
+|---|---|---|---|---|---|---|
+| Saldos, hoy | 0,42 s | 86,33 s | 6 940 133 B, 100 001 líneas | 1630 | 268 ms | 157–170 MiB |
+| Saldos, hoy, otra vez | 0,49 s | 80,17 s | el mismo | 1621 | 235 ms | 132–155 MiB |
+| Saldos, `?fecha=2026-03-15` | 0,70 s | 84,06 s | 6 881 502 B, 100 001 líneas | 1627 | 257 ms | 148–172 MiB |
+| Saldos, `?fecha=2026-03-15`, otra vez | 0,44 s | 83,19 s | el mismo | 1627 | 243 ms | 139–158 MiB |
+| Artículos | 0,15 s | 2,45 s | 1 660 169 B, 20 001 líneas | 404 | 37 ms | 154 MiB, una muestra |
+| Saldos, hoy, por nginx | 0,46 s | 77,71 s | el mismo que el directo, byte a byte | — | — | — |
+
+- **Cabe**: la orden más larga son 268 ms, contra un plazo de 30 s, que es el `commandTimeout` de
+  todas. De las 1630 órdenes de saldos de hoy, 500 son las páginas, que suman 84 164 ms con una
+  mediana de 179 ms; 500 nombran los artículos y 500 los almacenes, de 1 ms cada una; una es el
+  `SET TRANSACTION READ ONLY`; y las otras 129 no son de la exportación, sino del despachador de la
+  bandeja, que sigue con su sondeo: 43 vueltas de su cerrojo, su lectura y su liberación. Ninguna
+  falló, y la ventana no tiene errores. Las 404 de artículos son 100 páginas, con su `count(*)`
+  cada una, que en el saldo va dentro de la página; 200 nombres; la foto; y tres del despachador.
+- **El fichero cuadra con el libro**: el de hoy tiene 100 000 filas, 100 000 pares distintos y
+  ninguna sin nombre, y suma 3 000 000 de cantidad y 7 500 000 de valor, que es el total del libro.
+  El del 2026-03-15 suma 1 358 911 y 3 397 277,5, que es lo que da
+  `SELECT sum(cantidad_en_unidad_base), sum(valor) FROM inventario.movimiento_stock` en la empresa
+  hasta ese día.
+- **El nombre del fichero es `saldos-2026-10-28.csv` en los dos**, con el día en que se exporta, y
+  el día pedido va en la columna `fecha` (punto 15).
+- **Al acabar**, `down -v` salió con 0, el único proyecto que queda es `bastion`, y el entorno está
+  borrado.
+
+**La descarga entera de saldos tarda entre 78 y 86 s**, y la memoria no crece con ella. Cada página
+cuesta lo mismo desde el principio —en la del 2026-03-15, 75 ms la primera y 105, 183, 182 y 184 de
+media por cuartos—, así que el coste es por página y no por profundidad. Qué parte es el `count(*)`
+que cada página rehace sobre los pares y qué parte las sumas laterales no se midió. Va a una nota
+abierta, la sexta de *Notas / riesgos*.
+
 ## Estado actual
 
-**FASE 3 EN CURSO — 1 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
+**FASE 3 EN CURSO — 2 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
 catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas están en
 *Decisiones tomadas → Traídas por el encargo del 2026-10-26*, y el desglose son **once ítems**, del
-3.1 al 3.11, en el *Checklist*. El primero, la casa en orden, está hecho.
+3.1 al 3.11, en el *Checklist*. Los dos primeros, la casa en orden y la exportación, están hechos.
 
-> **Dónde se retoma (2026-10-27): en el 3.2, la exportación**, en su rama, `3.2-la-exportacion`,
-> abierta desde `main` en `eef05f7`. Su puerta está contestada, en *Decisiones tomadas → La
-> puerta del 3.2*. Los temas, cada uno en su subida, y en este orden:
+> **Dónde se retoma (2026-11-02): en el 3.3, los puertos, con el tipo de la tarifa**, en una rama
+> nueva, abierta desde `main` en el commit que cierra el 3.2. Lo primero es su puerta: lo esencial
+> que su criterio no fija se pregunta todo junto antes de escribir nada, y las respuestas van a
+> *Decisiones tomadas*, con los dos runs del cierre del 3.2, el de la rama y el de `main`, en el
+> primer commit, como el del 3.2 llevó los del 3.1.
 >
-> 1. la puerta y los dos runs del cierre del 3.1, que es el primer commit;
-> 2. las tres piezas de la consulta de un listado, y el `400` de un `?q=` que el listado no mira,
->    con su ADR, el 0072;
-> 3. el mecanismo: el escritor del CSV, la foto de todas las páginas y el flujo, con el 0073;
-> 4. los puertos por lotes del código y el nombre: el artículo, y los cinco de Organización;
-> 5. las exportaciones de Organización y de Terceros;
-> 6. las de Catálogo;
-> 7. las de Inventario;
-> 8. el botón, en las trece pantallas;
-> 9. la medida sobre la empresa C, que si no cabe en 30 s por orden, se pregunta;
-> 10. y el cierre: la tanda, la batería y el PLAN.
->
-> Después, el 3.3, y el 3.4, **que se para al cerrarse, antes del 3.5**.
+> Después, el 3.4, **que se para al cerrarse, antes del 3.5**. Antes de su primer commit se lee
+> `fundamentos/datos-distribuidos/convenciones.md`, de la biblioteca.
 >
 > **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
 > `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto. Llegó a
@@ -959,6 +1405,84 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
+
+**El 3.2, hecho el 2026-11-02**, en la rama `3.2-la-exportacion`, abierta el 2026-10-27 desde
+`main` en `eef05f7`. Su puerta y la pregunta del apóstrofo, en *Decisiones tomadas → La puerta del
+3.2, contestada* y *→ La pregunta del apóstrofo, contestada*; lo que se decidió al escribirlo y al
+medirlo, con sus tandas y la medida sobre la empresa C, en *Decisiones tomadas → Tomadas por el
+agente de desarrollo — ítem 3.2*. Lleva cuatro ADR, del 0072 al 0075, así que el siguiente es el
+**0076**. Sus mutaciones van de la **792** a la **971**, y las siguientes empiezan en la **972**.
+
+**Los commits, por este orden, y las subidas, una por tema, cada una con su run de rama** sobre su
+último commit (los trabajos, Backend, Frontal y Humo). Todos en verde:
+
+1. `bb5d843`, «docs(plan): la puerta del 3.2, contestada, y los runs del cierre del 3.1»:
+   **40453767870**, Backend `122022231824`, Frontal `122022232124` y Humo `122026331496`.
+2. `ace1b7c`, «feat(listados): tres piezas por listado, y un ?q= que no mira es 400», y
+   `3a03002`, «docs(adr): un listado enlaza tres piezas, y el texto, quien lo mira», en una
+   subida: **40457645447**, Backend `122034601177`, Frontal `122034601625` y Humo `122038630171`.
+3. `823fa7f`, «feat(exportacion): el escritor del CSV, la foto y el recorrido», y `f1c3244`,
+   «docs(adr): la exportación recorre el listado en una foto»: **40461092260**, Backend
+   `122045624765`, Frontal `122045624988` y Humo `122050001565`.
+4. `619190b`, «fix(exportacion): dos guardas que la tanda encontró muertas»: **40462895062**,
+   Backend `122051399953`, Frontal `122051400134` y Humo `122054877625`.
+5. `b1e726f`, «feat(maestros): seis puertos nombran por lotes lo que enseña la ficha», y
+   `0e16aa6`, «docs(adr): un maestro de otro módulo se nombra por lotes»: **40538124733**, Frontal
+   `122308829045`, Backend `122308829487` y Humo `122315074976`.
+6. `f0f1909`, «test(maestros): lo que está y no se pregunta, en cuatro puertos»: **40540684711**,
+   Backend `122317919078`, Frontal `122317919322` y Humo `122325568354`.
+7. `77568cd`, «feat(exportacion): los almacenes y las empresas, enteros en CSV»: **40547362364**,
+   Backend `122341451129`, Frontal `122341451578` y Humo `122349404805`.
+8. `a995ed0`, «test(exportacion): la foto de cada módulo, contra la base»: **40550364991**,
+   Frontal `122352119827`, Backend `122352120450` y Humo `122359502425`.
+9. `c4c4650`, «feat(csv): el apóstrofo hace el viaje de vuelta»: **40553216465**, Backend
+   `122362240668`, Frontal `122362241157` y Humo `122368604729`.
+10. `18c29ae`, «docs(adr): el apóstrofo hace el viaje de vuelta»: **40555626373**, Backend
+    `122370805048`, Frontal `122370805731` y Humo `122378260803`.
+11. `b81c67c`, «feat(exportacion): los terceros, con la cabecera de su importación»:
+    **40558531161**, Backend `122380978386`, Frontal `122380978789` y Humo `122388596442`.
+12. `de5d431`, «test(terceros): cada sí o no de la importación, en su campo»: **40581871478**,
+    Backend `122463099382`, Frontal `122463099992` y Humo `122470428769`.
+13. `9b31c16`, «feat(exportacion): las de Catálogo, con sus maestros nombrados»: **40589679323**,
+    Backend `122490332784`, Frontal `122490333083` y Humo `122496382978`.
+14. `3a78bda`, «feat(exportacion): las de Inventario, con sus maestros nombrados»:
+    **40623207072**, Backend `122601910207`, Frontal `122601910413` y Humo `122606211595`.
+15. `f912e12`, «feat(exportacion): el botón, en las trece pantallas»: **40627305546**, Frontal
+    `122615205585`, Backend `122615205802` y Humo `122619497585`.
+16. `a6666ea`, «fix(exportacion): lo que la tanda del botón dejó en verde»: **40629222458**,
+    Backend `122621400588`, Frontal `122621400826` y Humo `122624057434`.
+17. `0b7661c`, «test(inventario): lo que la tanda de sus exportaciones dejó en verde»:
+    **40630426657**, Frontal `122625263719`, Backend `122625264035` y Humo `122629348734`.
+18. El que lo cierra, «docs(plan): cierra el 3.2, con sus tandas, la medida y la batería», por el
+    flujo de la rama. Su run de rama y el de `main` los anota el primer commit del 3.3.
+
+Los runs se leyeron con `python -X utf8 vigilar31.py <sha> <rama>`, un guion del *scratchpad* que
+pregunta con `curl`.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `0b7661c`**, con `bash bateria32.sh`, un
+guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida
+en una línea. Los diecinueve pasos salen con 0, y la porcelana, vacía. El cierre solo toca el PLAN
+y el README:
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **171** operaciones en
+  **108** rutas, trece más que la base, las trece exportaciones; y **241** tipos de **249** sitios,
+  uno más, `filtro-no-admitido`; con los dos generadores en `--comprobar`. Las rutas, contadas
+  sobre `docs/api/openapi.json`;
+- `typecheck`, `lint` y `format:check`, limpios; **426** casos de jsdom en **51** ficheros, 26
+  casos y tres ficheros más que la base; `canal-de-la-consola.sh`, con la marca, ningún aviso de
+  `act()` y siete trozos para las ocho cadenas; y el carril del navegador, **22** casos en **1**
+  fichero, todos en verde;
+- el arranque, **408/450 KiB** en 4 ficheros, uno más que la base; la ruta diferida más pesada,
+  `PaginaDelRecuento`, **175/192 KiB**, de 21 rutas; el total servido, **836 KiB**, informativo; y
+  lo comprimido, **145**, **62** y **301 KiB**, también informativo;
+- el build, con 0 errores y 0 avisos, y `dotnet format`, limpio;
+- **1667** casos en el carril rápido y **764** en el de integración, todos en verde y contados con
+  `recuento-de-tests.sh` y las dos listas del *workflow*: 113 más en el rápido, y en el de
+  integración, 24, de ellos 18 en `Api.IntegrationTests` (670) y 6 en
+  `Organizacion.IntegrationTests` (94). La batería tardó 24 min, 15 de ellos en integración;
+- y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py eef05f7 HEAD`: 125
+  pares y 35 `Project` en los dos lados, y en el frontal, 443 entradas en los dos, sin nada
+  añadido ni retirado.
 
 **El 3.1, hecho el 2026-10-27**, en la rama `3.1-la-casa-en-orden`, abierta el 2026-10-26 desde
 `main` en `ec023f5`. Lo que pide la respuesta 13 está en el ADR-0071, que enmienda el 0028 y el
@@ -1107,13 +1631,53 @@ con 0.
     la CI y `AGENTS.md`, en `450 192`; y el ADR-0071, con el 0028 y el 0036 anotados, que ven la
     790 y la 791;
   - **las cuatro notas** (`c99cd54`), en *Notas / riesgos*, cada una con su orden.
-- [ ] **3.2 · La exportación** — criterio de aceptación: cada listado de la nota de la exportación
+- [x] **3.2 · La exportación** — criterio de aceptación: cada listado de la nota de la exportación
   descarga un CSV en el dialecto de la importación (ADR-0034 §5), con BOM y con la regla del
   apóstrofo de la decisión 7 del 1.11. Lo genera el servidor con los filtros y el orden del
   listado, **todas sus páginas**, el permiso del listado y sin lo bloqueado. Se genera por páginas
   internas y en flujo, nunca en una sola orden ni entero en memoria. El listado más grande, medido
   sobre una empresa del tamaño de la C del ADR-0064, cabe en el plazo de 30 s por orden; si no
   cabe, se pregunta. Y un `?q=` sin filtro declarado es un `400` (ADR-0069).
+
+  **Hecho el 2026-11-02**, en la rama `3.2-la-exportacion`, en veinte commits, del `bb5d843` al
+  `0b7661c`, y el que lo cierra. Cada tema del orden de trabajo, en su subida; ocho de ellos, en
+  más de un commit. Lo decidido sin preguntar, las tandas de la 792 a la 971 y la medida, en
+  *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.2*; los commits, sus runs y
+  la batería, en *Estado actual → El 3.2, hecho*. Cada parte del criterio, con lo que la comprueba:
+
+  - **cada listado de la nota, con su CSV** (`77568cd`, `b81c67c`, `9b31c16`, `3a78bda`): los
+    once de la nota y los dos del 2.19, trece, en la lista cerrada de
+    `LaExportacionEsHermanaDelListadoTests`, que ven la 859 y la 861; y cada una, pulsada desde su
+    pantalla (`f912e12`), con el censo `CadaExportacionTieneSuBoton`, que ven la 970 y la 971;
+  - **en el dialecto de la importación, con BOM y el apóstrofo** (`823fa7f`, `c4c4650`):
+    `EscritorCsvTests`, con el lector de la importación leyendo lo que escribe el escritor, que
+    ven de la 806 a la 822; el apóstrofo de ida y vuelta, en `ApostrofoDelDialectoTests` y en la
+    importación de terceros, que ven de la 864 a la 872; y el viaje entero de terceros, de una
+    empresa a otra y otra vez fuera, byte a byte, que ven de la 873 a la 886;
+  - **con los filtros y el orden del listado, y todas sus páginas** (`823fa7f`): la exportación lee
+    de la URL lo mismo que su listado, sin la página, en la hermana del listado, que ve la 851, y
+    la 860, la 909 y la 910 por su arnés; recorre todas las páginas del tamaño máximo, en
+    `LaExportacionRecorreUnaFotoTests`, que ven de la 808 a la 811 y de la 825 a la 827; y cada
+    módulo, contra la base, con los filtros de su listado, que ven las que quitan uno, como la 851,
+    la 877, la 898, la 913, la 917, la 921 y la 936, y en el frontal, de la 959 a la 963;
+  - **con el permiso del listado**, en la hermana del listado, que ven la 850, la 878 y la 944; y
+    los maestros de otro módulo, nombrados solo con el permiso de verlos (punto 12), que ven la
+    889, la 890, la 904, la 912, la 940 y la 941;
+  - **sin lo bloqueado**: lo filtra el mismo repositorio que el listado, y lo afirman los casos de
+    Organización y de Terceros contra la base, con un bloqueado en la empresa; y los puertos que
+    nombran no devuelven el almacén ni la ubicación bloqueados, que ven la 830 y la 831;
+  - **por páginas internas y en flujo, nunca en una sola orden ni entera en memoria** (`823fa7f`,
+    ADR-0073): cada página está en la corriente antes de pedir la siguiente, que ven la 803 y la
+    824; la foto es de solo lectura y en `REPEATABLE READ`, en `LaFotoDeLecturaTests` y en
+    `LaFotoDeCadaModuloEsUnaFotoTests`, que ven la 804, la 805, la 823, la 858, la 862 y la 943;
+    y en la medida, 500 páginas para 100 000 filas, con la memoria de la API entre 132 y 172 MiB;
+  - **el listado más grande cabe en 30 s por orden**, sobre una empresa del tamaño de la C del
+    ADR-0064: el saldo, con 1630 órdenes y la más larga en 268 ms, así que no se pregunta. La
+    descarga entera tarda entre 78 y 86 s, que va a la sexta nota abierta;
+  - **y un `?q=` sin filtro declarado es un `400`** (`ace1b7c`, ADR-0072): `filtro-no-admitido`,
+    con `errors.q`, en `ElBordeComponeLasTresPiezasTests`, `SoloPublicaElTextoQuienLoMiraTests` y
+    `ElTextoSoloLoRecibeQuienLoMiraTests`, que ven de la 792 a la 802. Cierra la nota abierta del
+    2.19, y la de la exportación, la del 2.17.
 - [ ] **3.3 · Los puertos, con el tipo de la tarifa** — criterio de aceptación: la tarifa es de
   compra o de venta, y un tercero lleva una tarifa por rol; un puerto de `Catalogo.Contracts`
   resuelve el precio y el descuento de una tarifa para un artículo, una cantidad y una fecha, y
@@ -1242,11 +1806,12 @@ cuando hace falta el porqué.
 >
 > Las cuatro primeras son del 3.1, del orden de trabajo de la puerta de la fase 3, y comparten
 > disparador: antes del primer despliegue fuera de local, y en todo caso en la puerta de la
-> fase 5. La quinta salió de una tanda del 3.1.
+> fase 5. La quinta salió de una tanda del 3.1, y la sexta, de la medida del 3.2.
 >
 > **Las que se cierran durante la fase 3 se quedan aquí**, con CERRADA, la fecha y el ítem que las
 > cierra, hasta que la fase se cierre y su historia se mueva, como en las fases de antes. La
-> primera es la de la auditoría, que cerró el 3.1.
+> primera es la de la auditoría, que cerró el 3.1, y el 3.2 cerró dos: la del `?q=` que no
+> filtra y la de la exportación.
 
 - **ABIERTA (2026-10-27, ítem 3.1, el orden de trabajo de la puerta de la fase 3) · la API es
   dueña de las tablas, y en el *compose*, superusuaria.** La API y el migrador comparten la cadena
@@ -1318,6 +1883,21 @@ cuando hace falta el porqué.
   enmienda el 0073 y el 0034. Medido otra vez con el mismo guion: 26 *Estado* anotados, diez con
   más de un autor, y ninguno aprovecha el hueco. Se pregunta en el informe del 3.2.
 
+- **ABIERTA (2026-10-28, ítem 3.2, la medida del tema 9) · la descarga entera del saldo de la
+  empresa C tarda entre 78 y 86 s.** Cada orden cabe de sobra en el plazo —la más larga, 268 ms de
+  30 s—, pero son 500 páginas de unos 180 ms, y el navegador junta el fichero entero antes de
+  guardarlo (respuesta 3 de la puerta del 3.2): quien exporta espera minuto y medio con el botón
+  apagado. El coste es por página y no por profundidad: en la del 2026-03-15, 75 ms la primera y
+  105, 183, 182 y 184 de media por cuartos. Cada página rehace el `count(*)` de los pares, y en
+  una foto el total no cambia, así que solo hace falta el de la primera; y cada una rehace también
+  las sumas laterales de sus pares. Qué parte es de cada uno no se midió. Lo mide
+  `bash humo32.sh medir`, del *scratchpad*, sobre la semilla de `sembrar32.sql` (*Decisiones
+  tomadas → Tomadas por el agente de desarrollo — ítem 3.2*, la medida). **La propuesta**: medir
+  primero una página del medio con `EXPLAIN (ANALYZE, BUFFERS)`, y si el `count(*)` pesa, que la
+  exportación lo pida una vez. Recorrer el saldo por clave y no por desplazamiento lo descartó el
+  ADR-0073, y volver a eso pide un ADR que lo enmiende. No se hace sin encargo. **El
+  disparador**: una empresa mayor que la C, o alguien que encuentre lenta una descarga.
+
 - **ABIERTA (2026-10-24, ítem 2.20, ADR-0070) · el recálculo de C cuesta entre 32 y 53 s según
   cuándo pase el `ANALYZE`.** Medido en el humo del 2.20, con tres recálculos de C sobre la misma
   base: 33,9 s a secas, 32,1 con `VACUUM` entre la vuelta atrás y el avance, y 53,4 con `ANALYZE`.
@@ -1362,7 +1942,7 @@ cuando hace falta el porqué.
   sí la versión exacta: el punto 1 de las decisiones del 3.1. Ninguno es versión mayor. Medido con
   la misma orden sobre `c99cd54`: 0 en todas las gravedades, y la puerta, también con 0.
 
-- **ABIERTA (2026-10-24, ítem 2.19, ADR-0069) · un `?q=` a un listado sin filtro declarado llega y
+- **CERRADA (2026-10-27, ítem 3.2, ADR-0069) · un `?q=` a un listado sin filtro declarado llega y
   no filtra nada.** `Paginador.Filtrar` devuelve la consulta tal cual cuando el repositorio no
   declara `Filtro`, y cinco no lo declaran: las líneas de tarifa, las transferencias, los
   ejercicios, los tipos de cambio y las conversiones de unidades. Los 23 listados paginados
@@ -1376,6 +1956,11 @@ cuando hace falta el porqué.
   `La_lista_va_de_la_ultima_fecha_de_envio_…_no_trae_la_descartada`, que afirma la página entera.
   **Repasada al cerrar la fase 2: sigue abierta, y va a la puerta de la fase 3**, con su propuesta
   tal cual. Ningún cliente cuenta con el filtro: el frontal no lo manda a ninguno de los cinco.
+  **La cerró el 3.2**, en `feat(listados): tres piezas por listado, y un ?q= que no mira es
+  400` (`ace1b7c`), con el ADR-0072 (punto 1): un `?q=` con algo escrito a un listado sin texto
+  es un `400` `filtro-no-admitido`, con `errors.q`, y en blanco pasa; y los que no lo miran
+  dejan de publicar `q`. Eran seis, y no cinco: el saldo tampoco lo declaraba. El caso que se
+  iba a poner rojo afirma ahora el `400`, y lo ven la 792 y la 794.
 
 - **ABIERTA (2026-10-20, respuesta 2 de la puerta del 2.19) · el lote y la serie de una
   transferencia se escriben a mano.** El alta los toma como el ajuste, y que estén en la ubicación
@@ -1389,10 +1974,10 @@ cuando hace falta el porqué.
   fase 3 la roza, porque saca lo que entró con una recepción, y la puerta pregunta de dónde toma
   su lote y su serie.
 
-- **ABIERTA (2026-10-18, respuesta 4 de la puerta del 2.17) · ningún listado exporta lo que está
-  viendo.** El §10 del plan maestro pide que «cada listado exporta a CSV/Excel lo que está viendo,
-  con los mismos filtros aplicados», y ninguno lo hace: es una deuda desde la fase 1. La
-  importación de terceros lee un CSV, y nada escribe uno. Los listados que no exportan, por su
+- **CERRADA (2026-10-28, ítem 3.2, respuesta 4 de la puerta del 2.17) · ningún listado exporta
+  lo que está viendo.** El §10 del plan maestro pide que «cada listado exporta a CSV/Excel lo que
+  está viendo, con los mismos filtros aplicados», y ninguno lo hace: es una deuda desde la fase 1.
+  La importación de terceros lee un CSV, y nada escribe uno. Los listados que no exportan, por su
   ruta, que se listan todas con `git grep -n "ruta: '" -- frontend/src/app/rutas.tsx`:
   - de Organización, `/almacenes` y `/empresas`;
   - de Catálogo, `/articulos`, `/categorias` y `/tarifas`, y los códigos de barras de un artículo,
@@ -1408,6 +1993,12 @@ cuando hace falta el porqué.
   **Repasada al cerrar la fase 2: sigue abierta, y su disparador es ya.** Va en el desglose de la
   puerta de la fase 3, como el primer ítem. A la lista de arriba se suman los dos listados del
   2.19: `/transferencias`, y las líneas de una transferencia en su ficha, `/transferencias/:id`.
+  **La cerró el 3.2**: los trece, los once de la lista y los dos del 2.19, descargan su CSV con
+  los filtros y el orden de su listado y todas sus páginas (`77568cd`, `b81c67c`, `9b31c16` y
+  `3a78bda`), y cada pantalla tiene su botón (`f912e12`). Los cuenta la lista cerrada de
+  `LaExportacionEsHermanaDelListadoTests`, y el censo `CadaExportacionTieneSuBoton` exige que
+  las del contrato, las que pide el frontal y las que pulsa algún caso sean las mismas trece.
+  El Excel queda fuera: el criterio del 3.2 pide el CSV.
 
 - **ABIERTA (2026-10-17, respuesta 7 del repaso) · el editor avisa de que `baseUrl` dejará de
   funcionar.** Lo dan `frontend/tsconfig.app.json` y `frontend/tsconfig.test.json` en el editor,
