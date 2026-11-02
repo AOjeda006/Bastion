@@ -1664,6 +1664,56 @@ lo desmonta. En la tabla, `fun` es `Api.FunctionalTests`; `int`, `Api.Integratio
 | 1076 | **Arnés**: el patrón de los contextos, con una letra cambiada | sobre `4955575`, **mig**: «No hay ningún contexto de módulo en src/Modules/*/Bastion.*.Infrastructure/Persistencia: el patrón de este guion no mira donde están» |
 | 1077 | La comparación de la lista, al revés | sobre `4955575`, **mig**: «La lista MODULOS de este guion no es la de los contextos que hay en el disco», con la lista buena |
 
+### La puerta del 3.4, contestada (2026-11-02)
+
+De los cinco huecos de *El orden de trabajo, C*, tres tienen más de una salida viable, y se
+preguntaron juntos antes de escribir nada, como pide el propio orden de trabajo. Las cuatro
+respuestas son la opción recomendada:
+
+1. **La transacción del manejador es la del contexto de su módulo** (hueco 5). El manejador
+   declara su contexto, `ManejadorDeEvento<TEvento, TContexto>`, y el despachador lo resuelve en
+   un ámbito nuevo, abre en él la transacción, mira la huella dentro, llama al manejador, añade la
+   huella a ese contexto y guarda. El interceptor del contexto escribe en el mismo `SaveChanges` el
+   evento de respuesta y la auditoría: una conexión y un módulo, con la huella y la bandeja ya
+   mapeadas en cada contexto de módulo (ADR-0013 §3 y §6). La otra era una conexión compartida en
+   la que se enganchan todos los contextos del ámbito con `UseTransaction`, más general, y que deja
+   sin vigilar que un manejador escriba solo en su módulo.
+2. **Un choque de versión se reintenta en línea, y si no, a la vuelta** (hueco 5). Ante un
+   `DbUpdateConcurrencyException` se deshace la transacción y se reintenta en el acto con un ámbito
+   y un contexto nuevos, hasta tres veces, con espera exponencial y *jitter*. Si sigue chocando, la
+   fila se queda pendiente sin contar intento, y la vuelta siguiente lo vuelve a probar. Un choque
+   no aparca nunca, y cualquier otro fallo cuenta como hoy. Un manejador que chocara siempre, por
+   un error suyo, no se aparcaría: lo dirían el registro y la antigüedad, que sube. Las otras eran
+   esperar siempre a la vuelta siguiente, que deja el evento detrás de los que vienen después en el
+   lote, y contar el choque como un fallo después de los tres, que puede aparcar un documento muy
+   disputado.
+3. **Quién lo causó y su correlación van en tres columnas de la fila** (hueco 3): el usuario, la
+   correlación de la auditoría y el `traceparent` W3C. El interceptor de la bandeja las llena desde
+   el ámbito, y el despachador las restaura en el del manejador. La auditoría de su efecto lleva el
+   mismo usuario y la misma correlación, su actividad es hija de la traza original y no un enlace,
+   y su evento de respuesta hereda las tres sin que el manejador copie nada. La otra era llevarlas
+   en `EventoDeIntegracion`, dentro del cuerpo, con el manejador encargado de pasarlas a su
+   respuesta.
+4. **Una fila sin empresa no se entrega a ningún manejador** (hueco 2). La empresa de una fila es
+   la empresa desde la que se actuó (ADR-0013 §8), y el ámbito con esa empresa lo abre solo el
+   despachador. Es interno a `BuildingBlocks.Infrastructure` y no está en `IInquilinoActual`, así
+   que ningún caso de uso puede cambiar de empresa. Los filtros y la guarda de escribir en otra
+   empresa funcionan como en una petición. Una fila escrita bajo `SinInquilino`, como las de la
+   semilla, lanza con su motivo, se reintenta y a la quinta se aparca, y se decide con el primer
+   manejador que la necesite delante. La otra era un motivo nuevo, `ManejoDeEventos`, con el que
+   ese manejador vería todas las empresas, que es justo lo que el hueco cierra.
+
+Lo que no se preguntó, porque tiene una salida obvia y se puede cambiar sin tocar datos:
+
+- **el ámbito es uno por manejador y por intento, no solo por evento** (hueco 1): cada manejador
+  tiene su transacción, y cada reintento, su contexto limpio. Así, lo que deja a medias un manejador
+  no se lo guarda ni el siguiente evento ni el siguiente manejador del mismo evento;
+- **el indicador de aparcados sin resolver es un indicador observable con su recuento** (hueco 4),
+  `bastion.bandeja_de_salida.aparcados_sin_resolver`, que se lee de la base en cada vuelta, para
+  todas las empresas. El contador de aparcados que ya existe se reinicia con el proceso, y este no;
+- **el manejador de prueba vive en los tests de integración**, y la carrera es de dos
+  transacciones de verdad sobre un documento con su `xmin`.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 3 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -1673,10 +1723,21 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 están hechos.
 
 > **Dónde se retoma (2026-11-02): en el 3.4, la bandeja, lista para su primer manejador**, en su
-> rama, `3.4-la-bandeja`, que se abre desde `main` en el commit que cierra el 3.3. Antes de su
-> primer commit se lee `fundamentos/datos-distribuidos/convenciones.md`, de la biblioteca. Ese
-> primer commit anota los runs del cierre del 3.3, el de la rama y el de `main`, y la puerta del
-> 3.4 si su criterio deja algo abierto. **El 3.4 se para al cerrarse, antes del 3.5.**
+> rama, `3.4-la-bandeja`, abierta desde `main` en `3af3039`, el commit que cierra el 3.3. Su
+> puerta está contestada, en *Decisiones tomadas → La puerta del 3.4, contestada*. El orden de
+> trabajo, un tema por subida:
+>
+> 1. la puerta y los runs del cierre del 3.3;
+> 2. cada manejador en su ámbito y en la transacción del contexto de su módulo, con la huella
+>    dentro (huecos 1 y 5);
+> 3. el manejador, con la empresa de su fila (hueco 2);
+> 4. quién lo causó, su correlación y su traza, con su migración en Auditoría (hueco 3);
+> 5. el choque de versión, que reintenta, con el manejador de prueba y su carrera (hueco 5);
+> 6. los aparcados sin resolver (hueco 4);
+> 7. el ADR-0078;
+> 8. y el cierre: la tanda, la batería y el PLAN.
+>
+> **El 3.4 se para al cerrarse, antes del 3.5.**
 >
 > **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
 > `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto. Llegó a
@@ -1710,8 +1771,10 @@ mutaciones van de la **972** a la **1077**, y las siguientes empiezan en la **10
    Frontal `125322497896`, Backend `125322497989` y Humo `125330167929`.
 7. `4955575`, «ci(migraciones): la lista de módulos, contra los contextos del disco»:
    **41478853277**, Frontal `125391517899`, Backend `125391518430` y Humo `125399695148`.
-8. Y el que lo cierra, «docs(plan): cierra el 3.3, con sus tandas y la batería»: sus runs, el de la
-   rama y el de `main` tras el avance rápido, los anota el primer commit del 3.4.
+8. `3af3039`, «docs(plan): cierra el 3.3, con sus tandas y la batería», el que lo cierra: en la
+   rama, **41482866156**, Frontal `125405467025`, Backend `125405467241` y Humo
+   `125413836234`; y en `main`, tras el avance rápido, **41486166333**, Frontal `125416978916`,
+   Backend `125416978259` y Humo `125425145922`. La rama se borró después, en local y en el remoto.
 
 Los runs se leyeron con `python -X utf8 vigilar31.py <sha> <rama>`, el guion del *scratchpad* que
 pregunta con `curl`.
