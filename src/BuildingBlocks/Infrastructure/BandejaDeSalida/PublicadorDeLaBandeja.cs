@@ -1,7 +1,4 @@
-using System.Text.Json;
-using Bastion.BuildingBlocks.Application.Eventos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
-using Bastion.BuildingBlocks.Domain.Eventos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -50,7 +47,6 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// </remarks>
 /// <param name="ambitos">Fábrica de ámbitos: los contextos son de ámbito y esto es un singleton.</param>
 /// <param name="despachador">Quién entrega cada evento a sus manejadores.</param>
-/// <param name="catalogo">Qué tipo hay detrás de cada nombre de la cola.</param>
 /// <param name="opciones">Cada cuánto y cuántos.</param>
 /// <param name="metricas">Dónde se apunta la edad del más viejo.</param>
 /// <param name="reloj">De dónde sale el instante.</param>
@@ -58,14 +54,11 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 internal sealed partial class PublicadorDeLaBandeja(
     IServiceScopeFactory ambitos,
     IDespachadorDeEventos despachador,
-    CatalogoDeEventos catalogo,
     OpcionesDeLaBandeja opciones,
     MetricasDeLaBandeja metricas,
     TimeProvider reloj,
     ILogger<PublicadorDeLaBandeja> registro) : BackgroundService
 {
-    private static readonly JsonSerializerOptions s_json = new(JsonSerializerDefaults.Web);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         Arranca(registro, opciones.Intervalo.TotalSeconds);
@@ -180,7 +173,7 @@ internal sealed partial class PublicadorDeLaBandeja(
     {
         try
         {
-            await despachador.DespacharAsync(Reconstruir(fila), cancelacion).ConfigureAwait(false);
+            await despachador.DespacharAsync(fila, cancelacion).ConfigureAwait(false);
 
             // DESPUÉS del despacho, nunca antes. Ver la decisión de entrega, arriba.
             await using (AsyncServiceScope ambito = ambitos.CreateAsyncScope())
@@ -258,16 +251,6 @@ internal sealed partial class PublicadorDeLaBandeja(
         Guid filaId,
         CancellationToken cancelacion) =>
         contexto.Bandeja.SingleAsync(enLaCola => enLaCola.Id == filaId, cancelacion);
-
-    private EventoDeIntegracion Reconstruir(EventoDeLaBandeja fila)
-    {
-        Type tipo = catalogo.TipoDe(fila.Nombre) ?? throw new InvalidOperationException(
-            $"En la cola hay un evento «{fila.Nombre}» que ya no declara nadie. Un nombre que " +
-            "deja de estar declarado es un contrato retirado con filas todavía dentro: o se " +
-            "vuelve a declarar, o esas filas se resuelven a mano.");
-
-        return (EventoDeIntegracion)JsonSerializer.Deserialize(fila.Cuerpo, tipo, s_json)!;
-    }
 
     private double AntiguedadEnSegundos(List<EventoDeLaBandeja> lote) => lote.Count == 0
         ? 0

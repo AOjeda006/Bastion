@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Bastion.BuildingBlocks.Application.Eventos;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +30,14 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// confirmar, no queda ni lo uno ni lo otro.
 /// </para>
 /// <para>
+/// <b>Y con la empresa de su fila</b> (3.4, hueco 2). Dentro del ámbito del manejador, la empresa
+/// activa es la de la fila, y no el ámbito sin inquilino de la vuelta del publicador: lo que lee
+/// por EF lo filtra esa empresa, la traza y la respuesta la llevan, y escribir en otra lo para la
+/// guarda de la auditoría, como en una petición. Ese ámbito solo lo abre esta clase. Una fila sin
+/// empresa —escrita bajo un ámbito sin inquilino, como la de la semilla— no se entrega: lanza con
+/// su motivo, se reintenta, y a la quinta se aparca.
+/// </para>
+/// <para>
 /// <b>Lo que el manejador no confirma no lo guarda nadie</b>, como en una petición: la huella se
 /// añade antes de llamarlo, para que vaya en el mismo <c>SaveChanges</c> que su efecto, y si el
 /// manejador termina sin haber guardado nada, el contexto se vacía antes de guardar la huella sola.
@@ -39,31 +49,50 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// ella lleva otro <c>xmin</c>. Una sola transacción de verdad es lo que se puede comprobar.
 /// </para>
 /// <para>
-/// <b>Cero manejadores no es un error.</b> Un hecho que hoy no le interesa a nadie se publica
-/// igual: es el emisor quien decide contar lo que le ha pasado, no el receptor quien decide qué se
-/// cuenta. Al revés, añadir un consumidor obligaría a tocar el módulo que emite.
+/// <b>Cero manejadores no es un error</b>, tampoco con una fila sin empresa. Un hecho que hoy no le
+/// interesa a nadie se publica igual: es el emisor quien decide contar lo que le ha pasado, no el
+/// receptor quien decide qué se cuenta. Al revés, añadir un consumidor obligaría a tocar el módulo
+/// que emite.
 /// </para>
 /// </remarks>
 /// <param name="inscripciones">Los manejadores apuntados, con su evento y su contexto.</param>
+/// <param name="catalogo">Qué tipo tiene cada nombre de la cola.</param>
 /// <param name="ambitos">Fábrica de ámbitos: uno por manejador.</param>
 /// <param name="reloj">De dónde sale el instante.</param>
 /// <param name="registro">Dónde se anota lo que hace el despachador.</param>
 internal sealed partial class DespachadorDeEventos(
     IEnumerable<InscripcionDeManejador> inscripciones,
+    CatalogoDeEventos catalogo,
     IServiceScopeFactory ambitos,
     TimeProvider reloj,
     ILogger<DespachadorDeEventos> registro) : IDespachadorDeEventos
 {
-    public async Task<int> DespacharAsync(EventoDeIntegracion evento, CancellationToken cancelacion)
+    private static readonly JsonSerializerOptions s_json = new(JsonSerializerDefaults.Web);
+
+    public async Task<int> DespacharAsync(EventoDeLaBandeja fila, CancellationToken cancelacion)
     {
-        ArgumentNullException.ThrowIfNull(evento);
+        ArgumentNullException.ThrowIfNull(fila);
+
+        EventoDeIntegracion evento = Reconstruir(fila);
+
+        List<InscripcionDeManejador> suyas =
+            [.. inscripciones.Where(candidata => candidata.Evento.IsInstanceOfType(evento))];
+
+        if (suyas.Count == 0)
+        {
+            return 0;
+        }
+
+        Guid empresaId = fila.EmpresaId ?? throw new InvalidOperationException(
+            $"El evento «{fila.Nombre}» se escribió sin empresa, con el motivo {fila.SinInquilino}, y " +
+            "un manejador no corre sin empresa: vería las de todas. Se decide con el primer manejador " +
+            "que necesite atender un evento así.");
 
         int atendidos = 0;
 
-        foreach (InscripcionDeManejador inscripcion in inscripciones
-            .Where(candidata => candidata.Evento.IsInstanceOfType(evento)))
+        foreach (InscripcionDeManejador inscripcion in suyas)
         {
-            if (await EntregarAsync(inscripcion, evento, cancelacion).ConfigureAwait(false))
+            if (await EntregarAsync(inscripcion, evento, empresaId, cancelacion).ConfigureAwait(false))
             {
                 atendidos++;
             }
@@ -76,9 +105,12 @@ internal sealed partial class DespachadorDeEventos(
     private async Task<bool> EntregarAsync(
         InscripcionDeManejador inscripcion,
         EventoDeIntegracion evento,
+        Guid empresaId,
         CancellationToken cancelacion)
     {
         await using AsyncServiceScope ambito = ambitos.CreateAsyncScope();
+
+        using IDisposable conSuEmpresa = InquilinoActual.ConLaEmpresaDelEvento(empresaId);
 
         var manejador = (IManejadorDeEvento)ambito.ServiceProvider.GetRequiredService(inscripcion.Manejador);
         var contexto = (DbContext)ambito.ServiceProvider.GetRequiredService(inscripcion.Contexto);
@@ -121,6 +153,16 @@ internal sealed partial class DespachadorDeEventos(
         await transaccion.CommitAsync(cancelacion).ConfigureAwait(false);
 
         return true;
+    }
+
+    private EventoDeIntegracion Reconstruir(EventoDeLaBandeja fila)
+    {
+        Type tipo = catalogo.TipoDe(fila.Nombre) ?? throw new InvalidOperationException(
+            $"En la cola hay un evento «{fila.Nombre}» que ya no declara nadie. Un nombre que " +
+            "deja de estar declarado es un contrato retirado con filas todavía dentro: o se " +
+            "vuelve a declarar, o esas filas se resuelven a mano.");
+
+        return (EventoDeIntegracion)JsonSerializer.Deserialize(fila.Cuerpo, tipo, s_json)!;
     }
 
     // Todos los contextos de módulo mapean la huella (ADR-0013 §3). Uno que no la mapeara no se

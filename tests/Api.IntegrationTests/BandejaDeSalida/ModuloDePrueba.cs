@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Bloqueos;
 using Bastion.BuildingBlocks.Application.Eventos;
 using Bastion.BuildingBlocks.Application.Multiempresa;
@@ -46,6 +48,72 @@ public sealed class ContextoDePrueba(
 
     /// <summary>Los documentos que escriben los manejadores.</summary>
     public DbSet<DocumentoDePrueba> Documentos => Set<DocumentoDePrueba>();
+
+    /// <summary>La empresa con la que escribe un manejador: la activa, que es la de su fila.</summary>
+    /// <exception cref="InvalidOperationException">
+    /// Si el manejador corre bajo un ámbito sin inquilino, que no tiene empresa con la que escribir.
+    /// </exception>
+    public Guid EmpresaActiva => EmpresaDelFiltro ?? throw new InvalidOperationException(
+        "El manejador corre bajo un ámbito sin inquilino, y no tiene empresa con la que escribir.");
+
+    /// <summary>Una base nueva, con todo migrado y la tabla del módulo de prueba creada.</summary>
+    /// <param name="postgres">El contenedor compartido.</param>
+    /// <returns>La cadena de conexión de la base.</returns>
+    public static async Task<string> BaseNuevaAsync(PostgresConTodosLosModulos postgres)
+    {
+        ArgumentNullException.ThrowIfNull(postgres);
+
+        string cadena = await postgres.CrearBaseNuevaAsync(migrada: true);
+
+        await CrearTablaAsync(cadena);
+
+        return cadena;
+    }
+
+    /// <summary>Deja un documento a pelo, sin EF: sin filtro, sin guarda y sin traza.</summary>
+    /// <param name="cadena">La base del caso.</param>
+    /// <param name="empresaId">La empresa del documento.</param>
+    /// <param name="marca">Su marca.</param>
+    public static async Task SembrarAsync(string cadena, Guid empresaId, string marca)
+    {
+        await using NpgsqlConnection conexion = new(cadena);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand sembrar = new(
+            $"INSERT INTO {Esquema}.{Tabla} (id, empresa_id, marca, veces, creado_en, modificado_en) " +
+            "VALUES (gen_random_uuid(), @empresa, @marca, 1, now(), now())",
+            conexion);
+        sembrar.Parameters.AddWithValue("empresa", empresaId);
+        sembrar.Parameters.AddWithValue("marca", marca);
+
+        await sembrar.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>Las marcas de los documentos de un caso, en orden, leídas a pelo y sin filtro.</summary>
+    /// <param name="cadena">La base del caso.</param>
+    /// <param name="marca">La marca del caso, que es el principio de las de sus documentos.</param>
+    /// <returns>Las marcas.</returns>
+    public static async Task<List<string>> MarcasAsync(string cadena, string marca)
+    {
+        await using NpgsqlConnection conexion = new(cadena);
+        await conexion.OpenAsync();
+
+        await using NpgsqlCommand consulta = new(
+            $"SELECT marca FROM {Esquema}.{Tabla} WHERE marca LIKE @marca || '%' ORDER BY marca",
+            conexion);
+        consulta.Parameters.AddWithValue("marca", marca);
+
+        List<string> marcas = [];
+
+        await using NpgsqlDataReader lector = await consulta.ExecuteReaderAsync();
+
+        while (await lector.ReadAsync())
+        {
+            marcas.Add(lector.GetString(0));
+        }
+
+        return marcas;
+    }
 
     /// <summary>Crea el esquema y la tabla del módulo de prueba, a mano, en una base nueva.</summary>
     /// <param name="cadenaDeConexion">La base, ya con Auditoría migrada.</param>
@@ -120,9 +188,6 @@ public sealed class DocumentoDePrueba : RaizAgregado, IDeInquilino
         Veces = 1;
     }
 
-    /// <summary>La empresa con la que escriben los manejadores mientras no reciben la de su fila.</summary>
-    public static Guid EmpresaDePrueba { get; } = Guid.Parse("0196f3a0-7c00-7000-8000-000000003401");
-
     /// <summary>Identificador del documento.</summary>
     public Guid Id { get; private set; }
 
@@ -169,7 +234,7 @@ public sealed class ManejadorQueEscribe(ContextoDePrueba contexto) : ManejadorDe
     {
         ArgumentNullException.ThrowIfNull(evento);
 
-        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, evento.Marca));
+        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(contexto.EmpresaActiva, evento.Marca));
 
         await contexto.SaveChangesAsync(cancelacion);
     }
@@ -193,11 +258,11 @@ public sealed class ManejadorQueConfirmaDosVeces(ContextoDePrueba contexto) : Ma
         ArgumentNullException.ThrowIfNull(evento);
 
         contexto.Documentos.Add(
-            DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, $"{evento.Marca}/primero"));
+            DocumentoDePrueba.Nuevo(contexto.EmpresaActiva, $"{evento.Marca}/primero"));
 
         await contexto.SaveChangesAsync(cancelacion);
 
-        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, evento.Marca));
+        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(contexto.EmpresaActiva, evento.Marca));
 
         await contexto.SaveChangesAsync(cancelacion);
     }
@@ -219,7 +284,7 @@ public sealed class ManejadorQueEscribeYFalla(ContextoDePrueba contexto) : Manej
     {
         ArgumentNullException.ThrowIfNull(evento);
 
-        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, evento.Marca));
+        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(contexto.EmpresaActiva, evento.Marca));
 
         await contexto.SaveChangesAsync(cancelacion);
 
@@ -243,7 +308,7 @@ public sealed class ManejadorQueNoConfirma(ContextoDePrueba contexto) : Manejado
     {
         ArgumentNullException.ThrowIfNull(evento);
 
-        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, evento.Marca));
+        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(contexto.EmpresaActiva, evento.Marca));
 
         return Task.CompletedTask;
     }
@@ -266,11 +331,64 @@ public sealed class ManejadorQueDejaAlgoAMedias(ContextoDePrueba contexto) : Man
         ArgumentNullException.ThrowIfNull(evento);
 
         contexto.Documentos.Add(
-            DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, $"{evento.Marca}/a-medias"));
+            DocumentoDePrueba.Nuevo(contexto.EmpresaActiva, $"{evento.Marca}/a-medias"));
 
         await contexto.SaveChangesAsync(cancelacion);
 
         contexto.Documentos.Add(
-            DocumentoDePrueba.Nuevo(DocumentoDePrueba.EmpresaDePrueba, $"{evento.Marca}/sobrante"));
+            DocumentoDePrueba.Nuevo(contexto.EmpresaActiva, $"{evento.Marca}/sobrante"));
+    }
+}
+
+/// <summary>Un manejador que solo lee: apunta qué documentos de su caso ve.</summary>
+/// <remarks>
+/// Los lee por EF, con el filtro del inquilinato puesto. En una petición vería los de la empresa
+/// de su <i>claim</i>; detrás del despachador, los de la empresa de su fila.
+/// </remarks>
+/// <param name="contexto">El contexto de su módulo.</param>
+public sealed class ManejadorQueMiraLoQueVe(ContextoDePrueba contexto) : ManejadorDeEvento<HechoDePrueba>
+{
+    private static readonly ConcurrentDictionary<string, List<string>> s_vistos = new(StringComparer.Ordinal);
+
+    /// <inheritdoc/>
+    public override string Consumidor => "pruebas.el-que-mira";
+
+    /// <summary>Qué documentos vio al atender el hecho de esa marca.</summary>
+    /// <param name="marca">La marca del hecho.</param>
+    /// <returns>Las marcas de los documentos que vio, en orden; ninguna si no lo atendió.</returns>
+    public static IReadOnlyList<string> LoQueVio(string marca) => s_vistos.GetValueOrDefault(marca) ?? [];
+
+    /// <inheritdoc/>
+    protected override async Task AtenderAsync(HechoDePrueba evento, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(evento);
+
+        s_vistos[evento.Marca] = await contexto.Documentos
+            .Where(documento => EF.Functions.Like(documento.Marca, evento.Marca + "%"))
+            .OrderBy(documento => documento.Marca)
+            .Select(documento => documento.Marca)
+            .ToListAsync(cancelacion);
+    }
+}
+
+/// <summary>Un manejador que escribe su documento en una empresa que no es la de su fila.</summary>
+/// <remarks>
+/// Es el fallo que la guarda de la auditoría para en una petición: el filtro no interviene en un
+/// <c>INSERT</c>, y sin la guarda la fila nacería en otra empresa sin dar error.
+/// </remarks>
+/// <param name="contexto">El contexto de su módulo.</param>
+public sealed class ManejadorQueEscribeEnOtraEmpresa(ContextoDePrueba contexto) : ManejadorDeEvento<HechoDePrueba>
+{
+    /// <inheritdoc/>
+    public override string Consumidor => "pruebas.el-que-escribe-en-otra-empresa";
+
+    /// <inheritdoc/>
+    protected override async Task AtenderAsync(HechoDePrueba evento, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(evento);
+
+        contexto.Documentos.Add(DocumentoDePrueba.Nuevo(Guid.CreateVersion7(), evento.Marca));
+
+        await contexto.SaveChangesAsync(cancelacion);
     }
 }

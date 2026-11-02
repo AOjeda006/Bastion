@@ -100,6 +100,9 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
         _servicios = servicios.BuildServiceProvider();
     }
 
+    /// <summary>La empresa de las filas que encolan y despachan los casos, mientras no digan otra.</summary>
+    public static Guid EmpresaDePrueba { get; } = Guid.Parse("0196f3a0-7c00-7000-8000-000000003401");
+
     /// <summary>Lo que ha ido escribiendo en el registro, para poder mirarlo.</summary>
     public RegistroDeLaBandeja Registro { get; } = new();
 
@@ -130,10 +133,15 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
     /// Cuándo ocurrió el hecho. Por omisión, ahora; se dice otro para poder comprobar la métrica
     /// que de verdad importa, que es la EDAD del pendiente más viejo.
     /// </param>
+    /// <param name="sinInquilino">
+    /// El motivo de una fila escrita bajo un ámbito sin inquilino, que no lleva empresa. Por omisión
+    /// la lleva, y es <see cref="EmpresaDePrueba"/>.
+    /// </param>
     public async Task EncolarAsync(
         EventoDeIntegracion evento,
         string? nombre = null,
-        DateTimeOffset? ocurridoEn = null)
+        DateTimeOffset? ocurridoEn = null,
+        MotivoSinInquilino? sinInquilino = null)
     {
         ArgumentNullException.ThrowIfNull(evento);
 
@@ -144,8 +152,8 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
         contexto.Bandeja.Add(EventoDeLaBandeja.De(
             evento.EventoId,
             ocurridoEn ?? DateTimeOffset.UtcNow,
-            empresaId: null,
-            sinInquilino: MotivoSinInquilino.PublicacionDeEventos,
+            empresaId: sinInquilino is null ? EmpresaDePrueba : null,
+            sinInquilino: sinInquilino,
             nombre ?? HechoDePrueba.Nombre,
             JsonSerializer.Serialize(evento, evento.GetType(), Json)));
 
@@ -154,23 +162,39 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
 
     /// <summary>Entrega un evento a sus manejadores, como lo entrega el publicador.</summary>
     /// <remarks>
-    /// Un ámbito, y dentro el ámbito sin inquilino con su motivo, como en cada vuelta del
-    /// publicador: la cola no es de ninguna empresa en particular. Ejercita el despachador, que es
-    /// la capa que decide, sin esperar a ninguna vuelta.
+    /// La fila se arma en memoria, con la forma de la del interceptor, y no se escribe: lo que se
+    /// ejercita es el despachador, que es la capa que decide, sin esperar a ninguna vuelta. Se le
+    /// entrega dentro del ámbito sin inquilino con su motivo, como en cada vuelta del publicador: la
+    /// cola no es de ninguna empresa en particular, y la del manejador la pone la fila.
     /// </remarks>
     /// <param name="evento">El hecho que se entrega.</param>
+    /// <param name="empresaId">La empresa de la fila. Por omisión, <see cref="EmpresaDePrueba"/>.</param>
+    /// <param name="sinInquilino">El motivo de una fila sin empresa; con él, no lleva ninguna.</param>
     /// <returns>Cuántos manejadores lo han atendido.</returns>
-    public async Task<int> DespacharAsync(EventoDeIntegracion evento)
+    public async Task<int> DespacharAsync(
+        EventoDeIntegracion evento,
+        Guid? empresaId = null,
+        MotivoSinInquilino? sinInquilino = null)
     {
+        ArgumentNullException.ThrowIfNull(evento);
+
         using IServiceScope ambito = _servicios.CreateScope();
 
         IInquilinoActual inquilino = ambito.ServiceProvider.GetRequiredService<IInquilinoActual>();
 
-        using IDisposable sinInquilino = inquilino.SinInquilino(MotivoSinInquilino.PublicacionDeEventos);
+        using IDisposable deLaVuelta = inquilino.SinInquilino(MotivoSinInquilino.PublicacionDeEventos);
+
+        var fila = EventoDeLaBandeja.De(
+            evento.EventoId,
+            DateTimeOffset.UtcNow,
+            empresaId: sinInquilino is null ? empresaId ?? EmpresaDePrueba : null,
+            sinInquilino: sinInquilino,
+            ambito.ServiceProvider.GetRequiredService<CatalogoDeEventos>().NombreDe(evento.GetType()),
+            JsonSerializer.Serialize(evento, evento.GetType(), Json));
 
         return await ambito.ServiceProvider
             .GetRequiredService<IDespachadorDeEventos>()
-            .DespacharAsync(evento, CancellationToken.None);
+            .DespacharAsync(fila, CancellationToken.None);
     }
 
     /// <summary>Lee la fila de la cola de un evento, con lo que el publicador haya dejado escrito.</summary>

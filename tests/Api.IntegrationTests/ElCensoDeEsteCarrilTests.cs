@@ -326,6 +326,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElLoteVaConSuArticuloTests.El_primer_lote_en_dos_almacenes_a_la_vez_es_un_solo_lote",
         "ElLoteVaConSuArticuloTests.Una_salida_de_un_lote_que_no_hay_es_stock_insuficiente_y_no_deja_el_lote",
 
+        // Del ítem 3.4, hueco 2: el manejador corre con la empresa de su fila, que filtra lo que lee,
+        // va en lo que escribe y arma la guarda; una fila sin empresa no se entrega.
+        "ElManejadorVaConLaEmpresaDeSuFilaTests.El_efecto_su_traza_y_su_respuesta_llevan_la_empresa_de_la_fila",
+        "ElManejadorVaConLaEmpresaDeSuFilaTests.El_manejador_solo_ve_lo_de_la_empresa_de_su_fila",
+        "ElManejadorVaConLaEmpresaDeSuFilaTests.El_publicador_aparca_a_la_quinta_una_fila_sin_empresa_con_su_motivo",
+        "ElManejadorVaConLaEmpresaDeSuFilaTests.Escribir_en_otra_empresa_lo_para_la_guarda_de_la_auditoria",
+        "ElManejadorVaConLaEmpresaDeSuFilaTests.Una_fila_sin_empresa_no_se_entrega_y_dice_su_motivo",
+
         // Del ítem 3.4, huecos 1 y 5: cada manejador en su ámbito y en la transacción del contexto
         // de su módulo, comprobada por el `xmin` de sus cuatro filas.
         "ElManejadorVaEnSuTransaccionTests.Dos_confirmaciones_de_un_manejador_son_de_la_misma_transaccion",

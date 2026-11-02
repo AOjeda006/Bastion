@@ -50,7 +50,7 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
     [Fact]
     public async Task El_efecto_su_traza_su_huella_y_su_respuesta_son_de_la_misma_transaccion()
     {
-        string cadena = await BaseConElModuloDePruebaAsync();
+        string cadena = await ContextoDePrueba.BaseNuevaAsync(postgres);
 
         await using BandejaDeVerdad bandeja = new(
             cadena,
@@ -81,7 +81,7 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
         // Lo que ve que no haya puntos de guardado. Con un solo `SaveChanges`, uno solo abriría su
         // subtransacción y las cuatro filas seguirían llevando el mismo `xmin`; con dos, la huella
         // sale con el primero y las otras tres con el segundo.
-        string cadena = await BaseConElModuloDePruebaAsync();
+        string cadena = await ContextoDePrueba.BaseNuevaAsync(postgres);
 
         await using BandejaDeVerdad bandeja = new(
             cadena,
@@ -111,7 +111,7 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
         // El caso que la transacción cierra. Fuera de ella, el SaveChanges del manejador se habría
         // confirmado solo: el documento y su respuesta se quedarían, sin huella, y el reintento los
         // escribiría otra vez.
-        string cadena = await BaseConElModuloDePruebaAsync();
+        string cadena = await ContextoDePrueba.BaseNuevaAsync(postgres);
 
         await using BandejaDeVerdad bandeja = new(
             cadena,
@@ -131,7 +131,7 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
     {
         // Como detrás de HTTP: un caso de uso que dice que no, no confirma, y lo que dejó en memoria
         // se va con su ámbito. El evento sí está atendido: el manejador terminó sin lanzar.
-        string cadena = await BaseConElModuloDePruebaAsync();
+        string cadena = await ContextoDePrueba.BaseNuevaAsync(postgres);
 
         await using BandejaDeVerdad bandeja = new(
             cadena,
@@ -154,7 +154,7 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
         // El hueco 1. El primero confirma un documento y deja otro en su contexto; el segundo
         // confirma el suyo. Con un ámbito para los dos, el SaveChanges del segundo se llevaría el
         // sobrante del primero.
-        string cadena = await BaseConElModuloDePruebaAsync();
+        string cadena = await ContextoDePrueba.BaseNuevaAsync(postgres);
 
         await using BandejaDeVerdad bandeja = new(
             cadena,
@@ -167,7 +167,7 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
 
         (await bandeja.DespacharAsync(hecho)).ShouldBe(2);
 
-        (await MarcasAsync(cadena, hecho.Marca)).ShouldBe(
+        (await ContextoDePrueba.MarcasAsync(cadena, hecho.Marca)).ShouldBe(
             [hecho.Marca, $"{hecho.Marca}/a-medias"],
             "el sobrante del primer manejador lo ha guardado el segundo");
     }
@@ -177,7 +177,7 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
     {
         // A qué evento atiende lo dice su base, y el despachador filtra por eso. Sin el filtro, o
         // con la base mal leída, este manejador recibiría la respuesta y reventaría al convertirla.
-        string cadena = await BaseConElModuloDePruebaAsync();
+        string cadena = await ContextoDePrueba.BaseNuevaAsync(postgres);
 
         await using BandejaDeVerdad bandeja = new(
             cadena,
@@ -188,7 +188,7 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
 
         (await bandeja.DespacharAsync(otro)).ShouldBe(0, "atiende a HechoDePrueba, no a RespuestaDePrueba");
 
-        (await MarcasAsync(cadena, otro.Marca)).ShouldBeEmpty();
+        (await ContextoDePrueba.MarcasAsync(cadena, otro.Marca)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -227,37 +227,6 @@ public sealed class ElManejadorVaEnSuTransaccionTests(PostgresConTodosLosModulos
         }
 
         return filas;
-    }
-
-    private static async Task<List<string>> MarcasAsync(string cadena, string marca)
-    {
-        await using NpgsqlConnection conexion = new(cadena);
-        await conexion.OpenAsync();
-
-        await using NpgsqlCommand consulta = new(
-            "SELECT marca FROM pruebas_de_la_bandeja.documentos WHERE marca LIKE @marca || '%' ORDER BY marca",
-            conexion);
-        consulta.Parameters.AddWithValue("marca", marca);
-
-        List<string> marcas = [];
-
-        await using NpgsqlDataReader lector = await consulta.ExecuteReaderAsync();
-
-        while (await lector.ReadAsync())
-        {
-            marcas.Add(lector.GetString(0));
-        }
-
-        return marcas;
-    }
-
-    private async Task<string> BaseConElModuloDePruebaAsync()
-    {
-        string cadena = await postgres.CrearBaseNuevaAsync(migrada: true);
-
-        await ContextoDePrueba.CrearTablaAsync(cadena);
-
-        return cadena;
     }
 
     // Implementa la interfaz sin la base: no dice a qué evento atiende.
