@@ -134,4 +134,31 @@ public interface IConsultaDeTerceros
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<IReadOnlySet<Guid>> CualesSePuedenTratarAsync(
         IReadOnlyCollection<Guid> terceroIds, CancellationToken cancelacion);
+
+    /// <summary>
+    /// La tarifa de compra de un proveedor, o nulo si no hay ninguna que proponer.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es la mitad de Terceros del precio de compra</b> (ADR-0077). La otra es
+    /// <c>IConsultaDePrecios</c>, en <c>Catalogo.Contracts</c>: quien compra pregunta aquí qué
+    /// tarifa lleva el proveedor, y con ese identificador pregunta allí el precio. Lo que cruza es
+    /// un <c>Guid</c>, como en el resto del puerto.
+    /// </para>
+    /// <para>
+    /// <b>Nulo dice cuatro cosas a la vez, y las junta a propósito:</b> no hay ficha que se pueda
+    /// tratar —inventada, de otra empresa o bloqueada, como en
+    /// <see cref="EstadoDelTercero.NoExiste"/>—, no es proveedor, o lo es y no lleva tarifa de
+    /// compra. Para quien compra, las cuatro son la misma línea escrita a mano, y la que importa
+    /// saber se pregunta con <see cref="EstadoDeAsync"/>.
+    /// </para>
+    /// <para>
+    /// <b>Quien dejó de ser proveedor no propone su tarifa de compra, aunque la conserve.</b>
+    /// Quitar el papel no la borra de la ficha, y volver a ser proveedor la recupera; pero mientras
+    /// no lo es, su tarifa no le pone precio a nada.
+    /// </para>
+    /// </remarks>
+    /// <param name="proveedorId">Identificador del proveedor.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<Guid?> TarifaDeCompraDeAsync(Guid proveedorId, CancellationToken cancelacion);
 }

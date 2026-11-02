@@ -331,6 +331,16 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElNumeroEntraEnElReciboTests.El_reintento_con_la_misma_clave_devuelve_el_numero_y_no_gasta_otro",
         "ElNumeroEntraEnElReciboTests.Sin_la_cabecera_la_confirmacion_es_428_y_no_toca_nada",
 
+        // Del ítem 3.3 (ADR-0077): las siete casillas de `PropuestaDePrecio`, con el cliente que
+        // también es proveedor, la tarifa de compra que contesta Terceros y el registro del puerto.
+        "ElPrecioDeCompraContraLaBaseTests.El_articulo_decide_entre_proponer_no_tener_linea_y_no_existir",
+        "ElPrecioDeCompraContraLaBaseTests.El_host_de_verdad_registra_el_puerto_del_precio_de_compra",
+        "ElPrecioDeCompraContraLaBaseTests.El_precio_sale_del_tramo_que_rige_ese_dia_y_antes_del_primero_no_rige_ninguno",
+        "ElPrecioDeCompraContraLaBaseTests.En_una_empresa_en_dolares_una_tarifa_en_euros_no_propone_aunque_su_precio_se_resuelva",
+        "ElPrecioDeCompraContraLaBaseTests.La_tarifa_de_compra_la_contesta_el_proveedor_que_la_lleva_y_nadie_mas",
+        "ElPrecioDeCompraContraLaBaseTests.Un_cliente_que_tambien_es_proveedor_recibe_su_precio_de_compra_y_no_el_de_venta",
+        "ElPrecioDeCompraContraLaBaseTests.Una_tarifa_inventada_y_una_de_otra_empresa_no_existen_y_la_ajena_propone_en_la_suya",
+
         // Del ítem 2.2: las tres casillas de `AptitudParaMoverExistencias`, que son tres y no
         // cuatro. Si algún día el artículo recibe su final de vida, la casilla que entre
         // necesita su línea aquí y su caso allá.

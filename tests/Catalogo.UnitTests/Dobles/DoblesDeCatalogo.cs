@@ -42,7 +42,36 @@ internal sealed class EmpresasQueContestan(bool activa) : IConsultaDeEmpresas
         Task.FromResult(activa);
 
     public Task<string?> DivisaBaseDeAsync(Guid empresaId, CancellationToken cancelacion) =>
-        throw new NotSupportedException("Catálogo no guarda importes en la divisa de la empresa.");
+        throw new NotSupportedException("Este doble no tiene divisa: la del precio de compra es EmpresaEnDivisa.");
+
+    public Task<Guid?> PrimeraActivaAsync(CancellationToken cancelacion) =>
+        throw new NotSupportedException("Catálogo no elige empresa: la recibe en el claim.");
+
+    public Task<IReadOnlyDictionary<Guid, string>> RazonesSocialesDeAsync(
+        IReadOnlyCollection<Guid> empresas,
+        CancellationToken cancelacion) =>
+        throw new NotSupportedException("Catálogo no publica razones sociales de nadie.");
+}
+
+/// <summary>Una empresa con una divisa base, o bloqueada si la divisa es nula.</summary>
+/// <remarks>
+/// Es la de <c>ConsultaDePrecios</c>, el único caso de Catálogo que pregunta la divisa base.
+/// Apunta de qué empresa se le preguntó: sin eso, un puerto que preguntara por la empresa
+/// equivocada —o por ninguna— contestaría con la divisa que el doble tiene puesta y saldría verde.
+/// </remarks>
+internal sealed class EmpresaEnDivisa(string? divisaBase) : IConsultaDeEmpresas
+{
+    internal List<Guid> Preguntadas { get; } = [];
+
+    public Task<bool> EstaActivaAsync(Guid empresaId, CancellationToken cancelacion) =>
+        Task.FromResult(divisaBase is not null);
+
+    public Task<string?> DivisaBaseDeAsync(Guid empresaId, CancellationToken cancelacion)
+    {
+        Preguntadas.Add(empresaId);
+
+        return Task.FromResult(divisaBase);
+    }
 
     public Task<Guid?> PrimeraActivaAsync(CancellationToken cancelacion) =>
         throw new NotSupportedException("Catálogo no elige empresa: la recibe en el claim.");
@@ -570,6 +599,9 @@ internal sealed class TercerosEn(EstadoDelTercero estado) : IConsultaDeTerceros
                     _porFicha.GetValueOrDefault(uno, estado) is not EstadoDelTercero.NoExiste)
                 .ToHashSet());
     }
+
+    public Task<Guid?> TarifaDeCompraDeAsync(Guid proveedorId, CancellationToken cancelacion) =>
+        throw new NotSupportedException("Catálogo no pregunta la tarifa de nadie: la recibe.");
 }
 
 /// <summary>Los suministros de un artículo, en memoria.</summary>

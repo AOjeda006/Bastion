@@ -30,6 +30,13 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// modo que cada familia tiene exactamente una matriz y ninguna se queda sin ella.
 /// </para>
 /// <para>
+/// <b>Desde el 3.3 la forma admite también la respuesta con motivo.</b> <c>IConsultaDePrecios</c>
+/// no contesta un enumerado a secas: contesta el precio que propone, o el motivo por el que no,
+/// en una clase sellada de su <c>Contracts</c> con un solo enumerado público. Con la forma de
+/// antes habría entrado con la matriz en verde y sus siete casillas sin mirar, que es la misma
+/// infradetección; la forma nueva lo reconoce, y un anclaje lo afirma (ADR-0077).
+/// </para>
+/// <para>
 /// <b>Y fue esta regla la que encontró la primera avería del ítem, antes de escribir un solo
 /// caso.</b> Con el enumerado de terceros tal como se diseñó —cuatro valores, uno de ellos
 /// <c>Bloqueado</c>— la casilla <c>IConsultaDeTerceros -&gt; Bloqueado</c> no tenía dueño, y al
@@ -76,6 +83,15 @@ public sealed class LaMatrizDeLosPuertosDeEstadoTests
             "reconoce — y en los dos casos las casillas de ese puerto no las mira nadie");
 
         puertos.ShouldContain(typeof(IConsultaDeTarifas), "ídem con el puerto de Catálogo");
+
+        // El tercer anclaje es la forma de la respuesta con motivo (ADR-0077): el precio no es un
+        // enumerado a secas, y con la forma de antes su puerto entraba con la matriz en verde.
+        puertos.ShouldContain(
+            typeof(IConsultaDePrecios),
+            "el descubrimiento no ve el puerto del precio de compra: ya no reconoce una respuesta " +
+            "que lleva su motivo, y las siete casillas de `PropuestaDePrecio` no las mira nadie");
+
+        FamiliaDe(typeof(IConsultaDePrecios)).ShouldBe(typeof(PropuestaDePrecio));
 
         Cubrimientos().ShouldNotBeEmpty(
             "no hay un solo caso marcado con `CubreEstadoDelPuerto`, así que todas las casillas " +
@@ -208,17 +224,47 @@ public sealed class LaMatrizDeLosPuertosDeEstadoTests
         FamiliaONula(puerto)
         ?? throw new InvalidOperationException($"{puerto.Name} no contesta ningún estado.");
 
-    // El enumerado de `Task<TEnumerado>`. Un puerto con dos métodos que contestaran dos enumerados
-    // distintos no existe hoy; si llega, `Single` lo dice en vez de elegir uno a ciegas.
+    // El enumerado de `Task<TEnumerado>`, o el de la respuesta con motivo. Un puerto con dos
+    // métodos que contestaran dos enumerados distintos no existe hoy; si llega, `Single` lo dice en
+    // vez de elegir uno a ciegas.
     private static Type? FamiliaONula(Type tipo) =>
         tipo.GetMethods()
             .Select(metodo => metodo.ReturnType)
             .Where(retorno => retorno.IsGenericType
-                && retorno.GetGenericTypeDefinition() == typeof(Task<>)
-                && retorno.GetGenericArguments()[0].IsEnum)
-            .Select(retorno => retorno.GetGenericArguments()[0])
+                && retorno.GetGenericTypeDefinition() == typeof(Task<>))
+            .Select(retorno => EnumeradoDe(retorno.GetGenericArguments()[0]))
+            .OfType<Type>()
             .Distinct()
             .SingleOrDefault();
+
+    // LA RESPUESTA CON MOTIVO (ADR-0077): una clase sellada, no genérica, de un `Contracts`, con
+    // una sola propiedad pública que sea un enumerado. Es la forma de `PrecioPropuesto`, que lleva
+    // el precio y el motivo por el que no lo hay, y cuyo enumerado es tan de estado como los demás.
+    // Lo que cruza con otra forma —un `Guid`, un conjunto, un DTO sin enumerado— no es un estado.
+    private static Type? EnumeradoDe(Type respuesta)
+    {
+        if (respuesta.IsEnum)
+        {
+            return respuesta;
+        }
+
+        bool esDeUnContracts = respuesta.Assembly.GetName().Name is { } ensamblado
+            && ensamblado.StartsWith("Bastion.", StringComparison.Ordinal)
+            && ensamblado.EndsWith(".Contracts", StringComparison.Ordinal);
+
+        if (!esDeUnContracts || respuesta is not { IsClass: true, IsSealed: true, IsGenericType: false })
+        {
+            return null;
+        }
+
+        PropertyInfo[] enumerados =
+        [
+            .. respuesta.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(propiedad => propiedad.PropertyType.IsEnum),
+        ];
+
+        return enumerados is [PropertyInfo unico] ? unico.PropertyType : null;
+    }
 
     /// <summary>Las casillas que alguien afirma, descubiertas por sus marcas.</summary>
     private static IReadOnlyList<Cubrimiento> Cubrimientos() =>

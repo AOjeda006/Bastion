@@ -105,6 +105,12 @@ public static class ModuloDeCatalogo
         // un puerto que no existe no se puede exigir.
         servicios.AddScoped<IConsultaDeArticulos, ConsultaDeArticulos>();
 
+        // El del precio de compra, del 3.3, que tampoco tiene consumidor: lo estrena el pedido de
+        // compra del 3.7. Su implementación vive en la aplicación, porque es la precedencia de las
+        // líneas sobre los repositorios de arriba, y se registra aquí con los demás puertos: este
+        // es el sitio donde se lee lo que el módulo expone (ADR-0077).
+        servicios.AddScoped<IConsultaDePrecios, ConsultaDePrecios>();
+
         // SIN `IConsultaDeLoBloqueado`, y hay que leer por qué en vez de darlo por un olvido. Los
         // otros tres módulos aportan su trozo al listado del art. 32 porque tienen entidades
         // bloqueables: empresa, usuario y tercero guardan datos de personas. Catálogo no guarda

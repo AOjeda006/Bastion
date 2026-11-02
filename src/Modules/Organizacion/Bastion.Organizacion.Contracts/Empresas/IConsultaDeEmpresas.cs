@@ -31,8 +31,9 @@ public interface IConsultaDeEmpresas
     /// <summary>La divisa base de una empresa activa, o nulo si no existe o está bloqueada.</summary>
     /// <remarks>
     /// Existe para los documentos de Inventario, que llevan sus importes en la divisa base de la
-    /// empresa (ADR-0046 §7). Devuelve el código ISO 4217 y nada más. Nulo dice lo mismo que un
-    /// <c>false</c> de <see cref="EstaActivaAsync"/>, así que quien la usa no pregunta dos veces.
+    /// empresa (ADR-0046 §7), y desde el 3.3 para el precio de compra de Catálogo, que solo se
+    /// propone en ella (ADR-0077). Devuelve el código ISO 4217 y nada más. Nulo dice lo mismo
+    /// que un <c>false</c> de <see cref="EstaActivaAsync"/>: quien la usa no pregunta dos veces.
     /// </remarks>
     /// <param name="empresaId">Identificador de la empresa.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>

@@ -97,39 +97,15 @@ internal sealed class ResolverPrecio(
                 : ErroresDeTarifa.CodigoNoConocido(normalizado));
         }
 
-        // La ascendencia, en UNA consulta. Un artículo sin clasificar no tiene ninguna, y entonces
-        // lo único que puede ganar es una línea suya: no es un caso especial, es la lista vacía.
-        IReadOnlyList<Guid> ascendencia = articulo.CategoriaId is { } categoriaId
-            ? await categorias.AscendenciaAsync(categoriaId, cancelacion).ConfigureAwait(false)
-            : [];
-
-        IReadOnlyList<LineaCandidata> candidatas = await lineas
-            .CandidatasAsync(tarifa.Id, articuloId, ascendencia, cancelacion)
+        // Lo que queda —la ascendencia, las candidatas y la línea que gana— lo comparte con el
+        // precio de compra que pide otro módulo (ADR-0077).
+        PrecioResueltoDto? precio = await ElPrecioDelTramo
+            .ResolverAsync(tarifa, articulo, cantidad, dia, lineas, categorias, cancelacion)
             .ConfigureAwait(false);
 
-        LineaCandidata? gana = ElAntepasadoMasCercanoGana.Elegir(candidatas, cantidad);
-
-        if (gana is null)
-        {
-            return Resultado.Fallo<PrecioResueltoDto>(
-                ErroresDeTarifa.SinLineaAplicable(normalizado, articuloId, cantidad));
-        }
-
-        return Resultado.Correcto(new PrecioResueltoDto(
-            tarifa.Id,
-            tarifa.Codigo,
-
-            // La divisa de la TARIFA, y va siempre. Es lo que hace que una tarifa expresada en otra
-            // divisa que la de la empresa sea segura sin haberla rechazado al abrirla.
-            tarifa.Divisa,
-            articuloId,
-            cantidad,
-            dia,
-            gana.Precio,
-            gana.DescuentoPorcentaje,
-            gana.ArticuloId is null ? OrigenDelPrecio.Categoria : OrigenDelPrecio.Articulo,
-            gana.ArticuloId ?? gana.CategoriaId!.Value,
-            gana.Nivel,
-            gana.CantidadDesde));
+        return precio is null
+            ? Resultado.Fallo<PrecioResueltoDto>(
+                ErroresDeTarifa.SinLineaAplicable(normalizado, articuloId, cantidad))
+            : Resultado.Correcto(precio);
     }
 }

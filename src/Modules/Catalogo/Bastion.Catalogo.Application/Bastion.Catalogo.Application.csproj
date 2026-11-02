@@ -69,6 +69,15 @@
       llegaría en otra máquina. Es la lección del ítem 1.7, aplicada antes de necesitarla.
     -->
     <InternalsVisibleTo Include="Bastion.Catalogo.UnitTests" />
+
+    <!--
+      Desde el ítem 3.3, para el precio de compra contra la base. `ConsultaDePrecios` es `internal`
+      como todo lo que no es contrato, y sus motivos los decide una consulta con el filtro de la
+      empresa: un doble contestaría lo que se le programe, que es justo lo que no se quiere saber.
+      Ese carril es `Bastion.Api.IntegrationTests`, el único que levanta todos los módulos sobre
+      PostgreSQL, y compone el puerto a mano con los adaptadores de verdad (ADR-0077).
+    -->
+    <InternalsVisibleTo Include="Bastion.Api.IntegrationTests" />
   </ItemGroup>
 
   <ItemGroup Label="Infraestructura del módulo">

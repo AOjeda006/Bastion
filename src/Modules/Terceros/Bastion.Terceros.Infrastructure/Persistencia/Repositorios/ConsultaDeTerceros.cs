@@ -93,4 +93,20 @@ internal sealed class ConsultaDeTerceros(TercerosDbContext contexto) : IConsulta
 
         return tratables.ToHashSet();
     }
+
+    /// <summary>La tarifa de compra de un proveedor que se puede tratar.</summary>
+    /// <remarks>
+    /// <b>Una consulta, y por los dos filtros</b>, como <see cref="EstadoDeAsync"/>: el de la
+    /// empresa y el del bloqueo dejan fuera la ficha antes de proyectar, así que de una inventada,
+    /// de otra empresa o bloqueada sale el mismo nulo que de una sin tarifa. El papel va en el
+    /// <c>WHERE</c> y no en quien pregunta: la tarifa se queda en la ficha cuando el tercero deja
+    /// de ser proveedor, y sin esa condición la propondría.
+    /// </remarks>
+    /// <param name="proveedorId">Identificador del proveedor.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    public Task<Guid?> TarifaDeCompraDeAsync(Guid proveedorId, CancellationToken cancelacion) =>
+        contexto.Terceros
+            .Where(tercero => tercero.Id == proveedorId && tercero.EsProveedor)
+            .Select(tercero => tercero.TarifaDeCompraId)
+            .FirstOrDefaultAsync(cancelacion);
 }

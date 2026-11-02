@@ -407,7 +407,8 @@ internal static class Inventario
                 "últimos no preguntan «¿existe?» sino «¿en qué estado está?»: la retirada " +
                 "del ADR-0023 solo significa algo si alguien distingue lo que se ofrece " +
                 "para lo nuevo de lo que únicamente resuelve lo viejo, y ese alguien es " +
-                "este módulo.",
+                "este módulo. Desde el 3.3 pregunta también la divisa base de la empresa: " +
+                "el precio de compra solo se propone en ella (ADR-0077).",
 
             ["Catalogo.Application -> Bastion.Inventario.Contracts"] =
                 "el noveno, y la mitad de VUELTA del segundo mutuo (ADR-0048 §7). Inventario " +
@@ -519,6 +520,14 @@ internal static class Inventario
                 "`NoSeAlmacena`. No escribe. El código y la descripción los publica desde el 3.2 por " +
                 "lotes y solo para enseñarlos, lo que enseña su ficha (ADR-0074).",
 
+            ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDePrecios"] =
+                "LECTURA: el precio de compra que propone una tarifa para un artículo, una " +
+                "cantidad y una fecha, o el motivo por el que no lo propone — el pedido de " +
+                "compra del 3.7, con la tarifa que le dice `IConsultaDeTerceros`. Resuelve con el " +
+                "tramo del código que rige ese día, y solo propone una tarifa de compra en la " +
+                "divisa base de la empresa (ADR-0077). Contesta el precio o el motivo, nunca los " +
+                "dos. No escribe.",
+
             ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDeTrazabilidad"] =
                 "LECTURA, con la forma de `IConsultaDeEjercicios`: la declara Catálogo, la " +
                 "implementa Inventario y la llama Inventario. Contesta la marca de trazabilidad de " +
@@ -579,7 +588,7 @@ internal static class Inventario
                 "escribe, y no publica ni las fechas ni el año del ejercicio.",
 
             ["Bastion.Organizacion.Contracts.Ejercicios.IDocumentosDeUnPeriodo"] =
-                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras quince las implementa el módulo " +
+                "LECTURA, y la ÚNICA PUERTA DE ENTRADA: las otras dieciséis las implementa el módulo " +
                 "que las publica y las llaman los demás; ésta la publica Organización y la " +
                 "implementa cada módulo con documentos. Contesta si en un intervalo de fechas " +
                 "queda algún borrador —la pregunta del cierre— o algún documento en el estado " +
@@ -591,7 +600,8 @@ internal static class Inventario
             ["Bastion.Organizacion.Contracts.Empresas.IConsultaDeEmpresas"] =
                 "LECTURA: si una empresa existe y no está bloqueada —Identidad, para poder " +
                 "emitir un testigo con ella dentro— y cuál es su divisa base —Inventario, que " +
-                "lleva en ella los importes de sus documentos (ADR-0046 §7)—. No escribe.",
+                "lleva en ella los importes de sus documentos (ADR-0046 §7), y desde el 3.3 " +
+                "Catálogo, que solo propone un precio de compra en ella (ADR-0077)—. No escribe.",
 
             ["Bastion.Organizacion.Contracts.Impuestos.IConsultaDeImpuestos"] =
                 "LECTURA: en qué estado está un tramo de impuesto para una fecha de devengo, " +
@@ -638,8 +648,9 @@ internal static class Inventario
                 "LECTURA: en qué estado está un tercero para un papel —se puede tratar en esta " +
                 "empresa, hace ese papel— y cuáles de un conjunto se pueden tratar hoy, para " +
                 "quien guarde su identificador: el proveedor de un artículo (§7.3). Lo bloqueado " +
-                "y lo de otra empresa contestan que no existe. No escribe, y no publica ni un " +
-                "dato de la ficha.",
+                "y lo de otra empresa contestan que no existe. Desde el 3.3 contesta también la " +
+                "tarifa de compra de un proveedor, que es la mitad de Terceros del precio de " +
+                "compra (ADR-0077). No escribe, y no publica ni un dato de la ficha.",
         };
 
     /// <summary>
