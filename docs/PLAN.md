@@ -1383,6 +1383,55 @@ media por cuartos—, así que el coste es por página y no por profundidad. Qu�
 que cada página rehace sobre los pares y qué parte las sumas laterales no se midió. Va a una nota
 abierta, la sexta de *Notas / riesgos*.
 
+### La puerta del 3.3, contestada (2026-11-02)
+
+El criterio deja abiertas dos cosas que no salen sin elegir qué se conserva de lo que ya está
+escrito, y se preguntaron juntas antes de escribir nada. Las dos respuestas son la opción
+recomendada:
+
+1. **La divisa de las tarifas que ya existen la copia la migración de Catálogo desde
+   `organizacion.divisas`**, una sola vez, con un `UPDATE … FROM`. Es la única lectura entre
+   esquemas, en una migración y nunca en ejecución, y va con su ADR. Organización migra siempre
+   antes que Catálogo (`MigradorDeArranque`), así que no se pierde nada. Las otras salidas eran un
+   paso del migrador entre dos migraciones, que pregunta los códigos al puerto, y pasarlas todas a
+   `EUR`, que convertiría una tarifa en dólares sin aviso.
+2. **Toda tarifa de hoy pasa a ser de venta, y toda asignación, a la tarifa de venta del
+   tercero**, sea cliente o no. No se pierde nada. Que la de venta pida un cliente lo mira cada
+   asignación nueva, igual que un cliente que deja de serlo conserva la suya; y como es de venta,
+   nunca propone un precio de compra. Las otras eran quitar la de quien solo es proveedor, que
+   pierde el dato, y sacar el tipo de quién la usa, que cruza esquemas en los dos sentidos.
+
+Lo que no se preguntó, porque tiene un precedente o una salida obvia, y se puede cambiar sin tocar
+datos:
+
+- **el tipo va con el código**: los tramos de un código son todos del mismo tipo, y el de un tramo
+  no cambia, como su divisa;
+- **la divisa se escribe y se publica con su código ISO**, en `TarifaDto` y en
+  `PrecioResueltoDto`, y se valida como hoy, ahora por su código: que Organización la tenga y no
+  esté retirada;
+- **una tarifa sin su divisa en `organizacion.divisas` no puede existir**, porque una divisa no se
+  borra, se retira. La migración lo afirma: para con su motivo, en vez de darle una por omisión;
+- **el tercero lleva `tarifa_de_venta_id`, que es `tarifa_asignada_id` renombrada sin tocar una
+  fila, y `tarifa_de_compra_id`, nueva y nula.** La de venta pide un cliente y una tarifa de
+  venta, y la de compra, un proveedor y una tarifa de compra. El puerto de las tarifas dice
+  también su tipo;
+- **la API del tercero tiene dos subrecursos, `tarifa-de-venta` y `tarifa-de-compra`**, con el
+  `GET` y el `PUT` de `tarifa-asignada`, que se retira, y su ficha enseña las dos;
+- **el puerto del precio toma el tramo que lleva el tercero**, un artículo, una cantidad y una
+  fecha, y resuelve con el tramo de su código que rige ese día, como hoy
+  `GET /api/v1/catalogo/tarifas/{codigo}/precio`. Devuelve el precio y el descuento solo con una
+  tarifa de compra en la divisa base de la empresa, y si no, el motivo por el que no propone. La
+  tarifa de compra de un proveedor la dice `Terceros.Contracts`;
+- **el invariante 8 queda desarmado** cuando las dos divisas del tercero, la de su límite y la de
+  su tarifa, son un código ISO. El traspaso de la fase 1 no se reescribe: lo dicen este PLAN y el
+  ADR;
+- **la exportación de tarifas lleva el tipo, y la divisa en una columna con su código**, como la
+  de empresas, sin nombre;
+- **Compras gana el esquema `compras`, `ComprasDbContext` con la bandeja mapeada como los demás, y
+  una primera migración que solo crea el esquema**, porque su primer documento es el pedido del
+  3.7. Entra en el migrador después de Inventario, en `LasMigracionesSobreTablasConFilasTests`, en
+  `comprobar-migraciones.sh` y en los censos de los tests de arquitectura.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 2 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -1390,11 +1439,21 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 *Decisiones tomadas → Traídas por el encargo del 2026-10-26*, y el desglose son **once ítems**, del
 3.1 al 3.11, en el *Checklist*. Los dos primeros, la casa en orden y la exportación, están hechos.
 
-> **Dónde se retoma (2026-11-02): en el 3.3, los puertos, con el tipo de la tarifa**, en una rama
-> nueva, abierta desde `main` en el commit que cierra el 3.2. Lo primero es su puerta: lo esencial
-> que su criterio no fija se pregunta todo junto antes de escribir nada, y las respuestas van a
-> *Decisiones tomadas*, con los dos runs del cierre del 3.2, el de la rama y el de `main`, en el
-> primer commit, como el del 3.2 llevó los del 3.1.
+> **Dónde se retoma (2026-11-02): en el 3.3, los puertos, con el tipo de la tarifa**, en su rama,
+> `3.3-los-puertos`, abierta desde `main` en `714cc6e`. Su puerta está contestada, en *Decisiones
+> tomadas → La puerta del 3.3*. Los temas, cada uno en su subida, y en este orden:
+>
+> 1. la puerta y los dos runs del cierre del 3.2, que es el primer commit;
+> 2. la tarifa, con su tipo y su divisa en ISO: el dominio, la migración que lee
+>    `organizacion.divisas`, con su ADR, el 0076, el contrato y la exportación;
+> 3. sus pantallas: el tipo al crearla, y la divisa por su código;
+> 4. el tercero, con una tarifa por rol: el dominio, la migración, la API y su ficha;
+> 5. los puertos: el precio de compra, en `Catalogo.Contracts`, y la tarifa de compra de un
+>    proveedor, en `Terceros.Contracts`, con el cliente que también es proveedor; y el invariante
+>    8, desarmado;
+> 6. Compras, con persistencia: su esquema, su contexto, su primera migración, el migrador y los
+>    censos;
+> 7. y el cierre: la tanda, la batería y el PLAN.
 >
 > Después, el 3.4, **que se para al cerrarse, antes del 3.5**. Antes de su primer commit se lee
 > `fundamentos/datos-distribuidos/convenciones.md`, de la biblioteca.
@@ -1453,8 +1512,11 @@ agente de desarrollo — ítem 3.2*. Lleva cuatro ADR, del 0072 al 0075, así qu
     Backend `122621400588`, Frontal `122621400826` y Humo `122624057434`.
 17. `0b7661c`, «test(inventario): lo que la tanda de sus exportaciones dejó en verde»:
     **40630426657**, Frontal `122625263719`, Backend `122625264035` y Humo `122629348734`.
-18. El que lo cierra, «docs(plan): cierra el 3.2, con sus tandas, la medida y la batería», por el
-    flujo de la rama. Su run de rama y el de `main` los anota el primer commit del 3.3.
+18. `714cc6e`, «docs(plan): cierra el 3.2, con sus tandas, la medida y la batería», el que lo
+    cierra: en la rama, **41399969691**, Backend `125129465606`, Frontal `125129465771` y Humo
+    `125132226168`; y en `main`, tras el avance rápido, **41401353186**, Backend `125133648911`,
+    Frontal `125133649287` y Humo `125138147969`. La rama se borró después, en local y en el
+    remoto.
 
 Los runs se leyeron con `python -X utf8 vigilar31.py <sha> <rama>`, un guion del *scratchpad* que
 pregunta con `curl`.
