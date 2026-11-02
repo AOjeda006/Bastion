@@ -153,6 +153,39 @@ public sealed class ResolverPrecioTests
         resuelto.Valor.NivelDeLaCategoria.ShouldBeNull("una línea de artículo no está a ningún salto");
     }
 
+    /// <summary>
+    /// La cantidad que se pide es la que elige la línea, y la que vuelve en el precio.
+    /// </summary>
+    /// <remarks>
+    /// Desde el 3.3, la línea que gana la elige <c>ElPrecioDelTramo</c>, que comparten este caso
+    /// de uso y el precio de compra (ADR-0077). Una cantidad que se perdiera por el camino solo la
+    /// veía el contrato de tarifas, contra la base: la mutación 1043.
+    /// </remarks>
+    [Fact]
+    public async Task La_cantidad_que_se_pide_es_la_que_elige_la_linea_y_la_que_vuelve()
+    {
+        CategoriasEnMemoria categorias = new();
+        (Tarifa tarifa, Articulo articulo, TarifasEnMemoria tarifas,
+            LineasDeTarifaEnMemoria lineas, ArticulosEnMemoria articulos) = Escenario(null);
+
+        lineas.Guardadas.Add(LineaTarifa.ParaArticulo(
+            s_empresa, tarifa.Id, articulo.Id, 0m, PrecioODescuento.DePrecio(30m), s_ahora));
+        lineas.Guardadas.Add(LineaTarifa.ParaArticulo(
+            s_empresa, tarifa.Id, articulo.Id, 10m, PrecioODescuento.DePrecio(25m), s_ahora));
+
+        ResolverPrecio resolver = Resolver(tarifas, lineas, articulos, categorias);
+
+        PrecioResueltoDto desdeDiez = (await resolver.EjecutarAsync(
+            tarifa.Codigo, articulo.Id, 10m, null, CancellationToken.None)).Valor;
+
+        desdeDiez.Precio.ShouldBe(25m);
+        desdeDiez.CantidadDesde.ShouldBe(10m);
+        desdeDiez.Cantidad.ShouldBe(10m, "la cantidad que vuelve no es la que se pidió");
+
+        (await resolver.EjecutarAsync(tarifa.Codigo, articulo.Id, 9m, null, CancellationToken.None))
+            .Valor.Precio.ShouldBe(30m, "nueve no llega al tramo de diez");
+    }
+
     [Fact]
     public async Task Un_articulo_sin_clasificar_no_es_un_caso_especial_es_la_lista_vacia()
     {
