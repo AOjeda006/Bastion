@@ -70,7 +70,11 @@ internal static class Inventario
             ["Catalogo"] = Presencia.Montado,
             ["Inventario"] = Presencia.Montado,
 
-            ["Compras"] = Presencia.Andamio,
+            // Montado desde el 3.3 con UNA capa con tipos, la infraestructura: el contexto y su
+            // registro. Las otras cuatro compilan vacías hasta el pedido del 3.7, y lo dice
+            // `EnsambladosConTipos`.
+            ["Compras"] = Presencia.Montado,
+
             ["Contabilidad"] = Presencia.Andamio,
             ["Crm"] = Presencia.Andamio,
             ["Facturacion"] = Presencia.Andamio,
@@ -107,6 +111,10 @@ internal static class Inventario
     /// Auditoría estrene su primera entidad de dominio, este test se pone rojo y obliga a añadir
     /// la línea — que es exactamente el día en que esa regla empieza a proteger algo.
     /// </para>
+    /// <para>
+    /// Desde el 3.3, <b>Compras tiene la misma forma</b>, aunque no por lo mismo: entra con su
+    /// esquema y su contexto, y su primer tipo de dominio llega con el pedido del 3.7.
+    /// </para>
     /// </remarks>
     internal static readonly IReadOnlySet<string> EnsambladosConTipos = new SortedSet<string>(
         StringComparer.Ordinal)
@@ -118,6 +126,11 @@ internal static class Inventario
         "Catalogo.Domain",
         "Catalogo.Endpoints",
         "Catalogo.Infrastructure",
+
+        // Una de cinco, como Auditoría, y por un motivo de calendario y no de forma: el 3.3 le da
+        // al módulo su esquema y su contexto, y su primer tipo de dominio es el pedido del 3.7. El
+        // día que otra capa reciba su primer tipo, el inventario se pone rojo y pide su línea.
+        "Compras.Infrastructure",
 
         "Identidad.Application",
         "Identidad.Contracts",
@@ -287,6 +300,18 @@ internal static class Inventario
         "Catalogo.Endpoints -> Catalogo.Application",
         "Catalogo.Infrastructure -> BuildingBlocks.Infrastructure",
         "Catalogo.Infrastructure -> Catalogo.Application",
+
+        // Las SIETE de Compras, del 3.3, y ninguna cruza: son las de Auditoría, la otra forma de un
+        // módulo con capas vacías. El contrato no referencia nada todavía, ni los bloques comunes;
+        // las aristas que necesite el pedido, y los cruces hacia Terceros, Catálogo e Inventario,
+        // llegan con el primer tipo que las use, y se escriben aquí ese día.
+        "Compras.Application -> BuildingBlocks.Application",
+        "Compras.Application -> Compras.Contracts",
+        "Compras.Application -> Compras.Domain",
+        "Compras.Domain -> BuildingBlocks.Domain",
+        "Compras.Endpoints -> Compras.Application",
+        "Compras.Infrastructure -> BuildingBlocks.Infrastructure",
+        "Compras.Infrastructure -> Compras.Application",
 
         "Identidad.Application -> BuildingBlocks.Application",
         "Identidad.Application -> Identidad.Contracts",

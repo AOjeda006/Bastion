@@ -640,16 +640,16 @@ jobs:
           # escribir. Durante dos módulos, quitar del migrador el contexto de Terceros o el de
           # Catálogo habría dejado el humo en verde y el contenedor sin su esquema.
           FALTAN=
-          for CONTEXTO in AuditoriaDbContext OrganizacionDbContext IdentidadDbContext TercerosDbContext CatalogoDbContext InventarioDbContext; do
+          for CONTEXTO in AuditoriaDbContext OrganizacionDbContext IdentidadDbContext TercerosDbContext CatalogoDbContext InventarioDbContext ComprasDbContext; do
             echo "$REGISTRO" | grep -q "\"Contexto\":\"${CONTEXTO}\".*EsquemaMigrado" \
               || echo "$REGISTRO" | grep -q "EsquemaMigrado.*\"Contexto\":\"${CONTEXTO}\"" \
               || FALTAN="${FALTAN} ${CONTEXTO}"
           done
           if [ -n "$FALTAN" ]; then
-            echo "::error title=Migrador::Sobre una base recién creada los SEIS contextos con persistencia tienen que migrarse, y estos no lo dicen:${FALTAN}."
+            echo "::error title=Migrador::Sobre una base recién creada los SIETE contextos con persistencia tienen que migrarse, y estos no lo dicen:${FALTAN}."
             exit 1
           fi
-          echo "::notice title=Migrador::Esquema aplicado por los seis contextos: Auditoría, Organización, Identidad, Terceros, Catálogo e Inventario."
+          echo "::notice title=Migrador::Esquema aplicado por los siete contextos: Auditoría, Organización, Identidad, Terceros, Catálogo, Inventario y Compras."
 
           # Y LA PISTA DE PARTICIONES DEL LIBRO, que no la deja una migración sino el migrador en
           # cada arranque (ítem 2.3). Sobre una base recién creada la migración ya crea los trece

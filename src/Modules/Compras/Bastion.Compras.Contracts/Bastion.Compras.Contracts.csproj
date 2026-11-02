@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lo ÚNICO público del módulo Compras (§4, regla de frontera 1): DTOs, permisos y eventos de
+    integración. Es lo que otro módulo puede referenciar.
+
+    Compila VACÍO hasta el 3.7, y por eso no referencia nada todavía: las aristas a los bloques
+    comunes llegan con el primer tipo que las use, y se escriben en el inventario del carril de
+    arquitectura. NUNCA referenciará `Bastion.Compras.Domain`: quien usara este proyecto vería el
+    dominio de Compras por la puerta de atrás.
+  -->
+
+</Project>

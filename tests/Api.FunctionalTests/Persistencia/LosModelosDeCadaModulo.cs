@@ -41,6 +41,7 @@ internal static class LosModelosDeCadaModulo
     [
         "AuditoriaDbContext",
         "CatalogoDbContext",
+        "ComprasDbContext",
         "ContextoDeLaBandeja",
         "IdentidadDbContext",
         "InventarioDbContext",

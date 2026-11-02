@@ -40,6 +40,11 @@
     <ProjectReference Include="../Modules/Inventario/Bastion.Inventario.Infrastructure/Bastion.Inventario.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup Label="Módulos de la fase 3">
+    <ProjectReference Include="../Modules/Compras/Bastion.Compras.Endpoints/Bastion.Compras.Endpoints.csproj" />
+    <ProjectReference Include="../Modules/Compras/Bastion.Compras.Infrastructure/Bastion.Compras.Infrastructure.csproj" />
+  </ItemGroup>
+
   <ItemGroup Label="Observabilidad y datos">
     <!--
       Cablear la telemetría y el origen de datos es CONSTRUCCIÓN del sistema, y por eso

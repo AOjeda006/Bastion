@@ -1,5 +1,6 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia;
+using Bastion.Compras.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
@@ -39,6 +40,7 @@ public sealed class EsquemaDeIdentidadTests(PostgresConTodosLosModulos postgres)
     [
         (AuditoriaDbContext.Esquema, AuditoriaDbContext.TablaDelHistorial),
         (CatalogoDbContext.Esquema, CatalogoDbContext.TablaDelHistorial),
+        (ComprasDbContext.Esquema, ComprasDbContext.TablaDelHistorial),
         (IdentidadDbContext.Esquema, IdentidadDbContext.TablaDelHistorial),
         (InventarioDbContext.Esquema, InventarioDbContext.TablaDelHistorial),
         (OrganizacionDbContext.Esquema, OrganizacionDbContext.TablaDelHistorial),

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Controladores REST del módulo Compras, bajo /api/v1/compras/{recurso} (Anexo A.1).
+
+    Compila VACÍO hasta que el módulo tenga borde. Biblioteca de clases con FrameworkReference, no
+    SDK Web: el host es uno solo (src/Api) y este proyecto solo aporta controladores.
+  -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Compras.Application/Bastion.Compras.Application.csproj" />
+  </ItemGroup>
+
+</Project>

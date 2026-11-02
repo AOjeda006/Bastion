@@ -52,6 +52,7 @@
     -->
     <ProjectReference Include="../../src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Bastion.Auditoria.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Catalogo/Bastion.Catalogo.Infrastructure/Bastion.Catalogo.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Compras/Bastion.Compras.Infrastructure/Bastion.Compras.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Identidad/Bastion.Identidad.Infrastructure/Bastion.Identidad.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Inventario/Bastion.Inventario.Infrastructure/Bastion.Inventario.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Bastion.Organizacion.Infrastructure.csproj" />

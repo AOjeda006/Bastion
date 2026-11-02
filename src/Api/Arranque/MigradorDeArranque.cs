@@ -1,6 +1,7 @@
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.Catalogo.Infrastructure.Persistencia;
+using Bastion.Compras.Infrastructure.Persistencia;
 using Bastion.Identidad.Application.Arranque;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia;
@@ -95,6 +96,7 @@ public static partial class MigradorDeArranque
             await MigrarAsync<TercerosDbContext>(alcance, registro).ConfigureAwait(false);
             await MigrarAsync<CatalogoDbContext>(alcance, registro).ConfigureAwait(false);
             await MigrarAsync<InventarioDbContext>(alcance, registro).ConfigureAwait(false);
+            await MigrarAsync<ComprasDbContext>(alcance, registro).ConfigureAwait(false);
 
             // Y DESPUÉS las semillas, en el mismo proceso y con el mismo código de salida. Van
             // aquí y no en el arranque de la API por lo mismo que el DDL: con dos réplicas, dos

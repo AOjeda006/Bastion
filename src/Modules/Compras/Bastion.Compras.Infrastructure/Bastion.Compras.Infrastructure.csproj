@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Infraestructura del módulo Compras: su DbContext propio con su esquema y su propio historial de
+    migraciones (§14). Es la única capa del módulo que lleva tipos desde el 3.3, y lleva solo eso:
+    el contexto, con las tablas compartidas mapeadas como en los demás, y su registro. Las
+    configuraciones y los repositorios llegan con el pedido del 3.7.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Bastion.Compras.Application/Bastion.Compras.Application.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Infrastructure/Bastion.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!--
+    Las migraciones de este módulo viven en `db/migraciones/Compras` (§14): fuera del proyecto,
+    para que todas las del sistema se lean juntas y en orden. Fuera del proyecto quiere decir que
+    el glob por defecto del SDK NO las compila, y una migración que no está en el ensamblado no
+    existe para EF: `Migrate()` aplicaría cero migraciones, sin error y sin aviso. De ahí esta
+    inclusión explícita, que `comprobar-migraciones.sh` vigila contando las que ve EF.
+  -->
+  <ItemGroup Label="Migraciones">
+    <Compile Include="../../../../db/migraciones/Compras/**/*.cs" LinkBase="Migrations" />
+  </ItemGroup>
+
+  <ItemGroup Label="Persistencia">
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+</Project>

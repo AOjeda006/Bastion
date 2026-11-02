@@ -748,6 +748,8 @@
           "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
           "Bastion.Catalogo.Endpoints": "[1.0.0, )",
           "Bastion.Catalogo.Infrastructure": "[1.0.0, )",
+          "Bastion.Compras.Endpoints": "[1.0.0, )",
+          "Bastion.Compras.Infrastructure": "[1.0.0, )",
           "Bastion.Identidad.Endpoints": "[1.0.0, )",
           "Bastion.Identidad.Infrastructure": "[1.0.0, )",
           "Bastion.Inventario.Endpoints": "[1.0.0, )",
@@ -864,6 +866,41 @@
         "dependencies": {
           "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
           "Bastion.Catalogo.Application": "[1.0.0, )",
+          "EFCore.NamingConventions": "[10.0.1, )",
+          "Microsoft.EntityFrameworkCore": "[10.0.9, )",
+          "Microsoft.EntityFrameworkCore.Design": "[10.0.9, )",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.9, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
+        }
+      },
+      "bastion.compras.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Application": "[1.0.0, )",
+          "Bastion.Compras.Contracts": "[1.0.0, )",
+          "Bastion.Compras.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.compras.contracts": {
+        "type": "Project"
+      },
+      "bastion.compras.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.compras.endpoints": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.Compras.Application": "[1.0.0, )"
+        }
+      },
+      "bastion.compras.infrastructure": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Infrastructure": "[1.0.0, )",
+          "Bastion.Compras.Application": "[1.0.0, )",
           "EFCore.NamingConventions": "[10.0.1, )",
           "Microsoft.EntityFrameworkCore": "[10.0.9, )",
           "Microsoft.EntityFrameworkCore.Design": "[10.0.9, )",

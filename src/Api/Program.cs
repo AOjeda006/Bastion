@@ -17,6 +17,7 @@ using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.BuildingBlocks.Infrastructure.Salud;
 using Bastion.Catalogo.Contracts;
 using Bastion.Catalogo.Infrastructure;
+using Bastion.Compras.Infrastructure;
 using Bastion.Identidad.Contracts;
 using Bastion.Identidad.Infrastructure;
 using Bastion.Identidad.Infrastructure.Seguridad;
@@ -207,6 +208,9 @@ builder.Services.AgregarModuloDeInventario(
     avanceDelCorte: ModuloDeInventario.ElAvanceDelCorteVaEncendido(
             builder.Configuration[ModuloDeInventario.VariableDelAvanceDelCorte])
         && cadenaDeConexion.Length > 0);
+
+// Compras, desde el 3.3 con su contexto y nada más: el pedido del 3.7 trae lo demás.
+builder.Services.AgregarModuloDeCompras(cadenaDeConexion);
 
 // --------------------------------------------------------------------- autenticación
 // Quién es quien llama, leído del token de acceso y de ningún otro sitio. Las cuatro

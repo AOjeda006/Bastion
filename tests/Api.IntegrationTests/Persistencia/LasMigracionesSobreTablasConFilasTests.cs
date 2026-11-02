@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using Bastion.Auditoria.Infrastructure.Persistencia;
 using Bastion.Catalogo.Infrastructure.Persistencia;
+using Bastion.Compras.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia;
@@ -67,6 +68,8 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
             Opciones<CatalogoDbContext>(cadena, CatalogoDbContext.Configurar), new InquilinoFijo(null), new AccesoCerrado())),
         new(typeof(InventarioDbContext), cadena => new InventarioDbContext(
             Opciones<InventarioDbContext>(cadena, InventarioDbContext.Configurar), new InquilinoFijo(null), new AccesoCerrado())),
+        new(typeof(ComprasDbContext), cadena => new ComprasDbContext(
+            Opciones<ComprasDbContext>(cadena, ComprasDbContext.Configurar), new InquilinoFijo(null), new AccesoCerrado())),
     ];
 
     /// <summary>

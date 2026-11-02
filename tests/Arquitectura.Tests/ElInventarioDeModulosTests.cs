@@ -139,6 +139,7 @@ public sealed class ElInventarioDeModulosTests
         // Hoy no cuadran por casualidad: Auditoría tiene cuatro de sus cinco capas vacías, y está
         // escrito en el inventario. El día que estrene su primera entidad, esto se pone rojo y
         // obliga a añadir la línea — que es el día en que esas reglas empiezan a proteger algo.
+        // Compras, desde el 3.3, igual, hasta que el pedido del 3.7 le dé su dominio.
         conTipos.ShouldBe([.. Inventario.EnsambladosConTipos.Order(StringComparer.Ordinal)]);
     }
 

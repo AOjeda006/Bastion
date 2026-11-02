@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "bastion.buildingblocks.application": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Contracts": "[1.0.0, )",
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      },
+      "bastion.buildingblocks.contracts": {
+        "type": "Project"
+      },
+      "bastion.buildingblocks.domain": {
+        "type": "Project"
+      },
+      "bastion.compras.contracts": {
+        "type": "Project"
+      },
+      "bastion.compras.domain": {
+        "type": "Project",
+        "dependencies": {
+          "Bastion.BuildingBlocks.Domain": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}

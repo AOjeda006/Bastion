@@ -656,6 +656,7 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
     [
         "src/Modules/Auditoria/Bastion.Auditoria.Infrastructure/Persistencia/AuditoriaDbContext.cs",
         "src/Modules/Catalogo/Bastion.Catalogo.Infrastructure/Persistencia/CatalogoDbContext.cs",
+        "src/Modules/Compras/Bastion.Compras.Infrastructure/Persistencia/ComprasDbContext.cs",
         "src/Modules/Identidad/Bastion.Identidad.Infrastructure/Persistencia/IdentidadDbContext.cs",
         "src/Modules/Inventario/Bastion.Inventario.Infrastructure/Persistencia/InventarioDbContext.cs",
         "src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/OrganizacionDbContext.cs",

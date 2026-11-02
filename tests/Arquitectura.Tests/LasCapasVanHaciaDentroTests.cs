@@ -65,6 +65,10 @@ public sealed class LasCapasVanHaciaDentroTests
     /// también está vacío. O sea que <b>a Auditoría no se le comprueba hoy ni una sola regla de
     /// capas</b>, y hace falta decirlo en voz alta: en una lista de reglas verdes, Auditoría
     /// parecería tan comprobada como los otros dos.
+    /// <para>
+    /// Y faltan los de Compras desde el 3.3, por lo mismo: solo su <c>Infrastructure</c> lleva
+    /// tipos, y lo único que tendría prohibido es su <c>Endpoints</c>, que compila vacío.
+    /// </para>
     /// </remarks>
     private static readonly string[] s_paresComprobados =
     [

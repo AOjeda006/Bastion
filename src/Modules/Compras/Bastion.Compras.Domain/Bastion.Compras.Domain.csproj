@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dominio del módulo Compras (§4): la solicitud, el pedido, la recepción y la devolución del
+    §7.5, con sus invariantes y sus máquinas de estado.
+
+    Compila VACÍO desde el 3.3 hasta el 3.7, que trae el pedido, y está dicho en el inventario de
+    `Arquitectura.Tests`: una regla aplicada a un ensamblado vacío sale verde sin mirar nada.
+
+    Su única referencia permitida es el dominio base. Ni EF Core, ni ASP.NET Core, ni nada de
+    infraestructura (§4, regla de frontera 2).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Domain/Bastion.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

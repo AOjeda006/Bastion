@@ -7,6 +7,7 @@ using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.Catalogo.Infrastructure.Persistencia;
+using Bastion.Compras.Infrastructure.Persistencia;
 using Bastion.Identidad.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Organizacion.Contracts.Empresas;
@@ -338,6 +339,20 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
             opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
     }
 
+    /// <summary>Un contexto de Compras solo para aplicar migraciones.</summary>
+    /// <remarks>
+    /// Entra en el 3.3, con el esquema del módulo y sin una tabla propia: no hay todavía nada que
+    /// abrir como una empresa.
+    /// </remarks>
+    public ComprasDbContext AbrirComprasParaMigrar()
+    {
+        DbContextOptionsBuilder<ComprasDbContext> opciones = new();
+        ComprasDbContext.Configurar(opciones, CadenaDeConexion);
+
+        return new ComprasDbContext(
+            opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
+    }
+
     // El contexto de la bandeja no tiene `Configurar` a propósito: vive en los bloques comunes,
     // que traen EF Core pero NO el proveedor de PostgreSQL, así que quien elige proveedor es el
     // módulo Auditoría en su cableado. Aquí se repite esa elección, que es la misma y es de una
@@ -522,6 +537,13 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
         await using (InventarioDbContext inventario = AbrirInventarioParaMigrar())
         {
             await inventario.Database.MigrateAsync();
+        }
+
+        // Y Compras detrás de Inventario, como en el migrador. Hoy solo deja su esquema y su
+        // historial; cuando tenga tablas, no dependerán de nadie por lo mismo que las de arriba.
+        await using (ComprasDbContext compras = AbrirComprasParaMigrar())
+        {
+            await compras.Database.MigrateAsync();
         }
     }
 
