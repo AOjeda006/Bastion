@@ -22,11 +22,11 @@
 
     <!--
       Contracts de Catálogo, y SOLO Contracts. Es la otra mitad de la pareja MUTUA del ítem 1.10:
-      `Tercero.TarifaAsignadaId` es un `Guid` del esquema `catalogo`, sin clave ajena, y lo que
-      impide que ahí acabe una tarifa inventada, de otra empresa o cuya vigencia ya terminó es
-      `IConsultaDeTarifas`, resuelta en proceso. La flecha de ida está en
-      `Bastion.Catalogo.Application`, y el motivo de que las dos juntas no sean un ciclo está
-      escrito allí: los dos `Contracts` no se ven entre sí.
+      `Tercero.TarifaDeVentaId` y `Tercero.TarifaDeCompraId` son `Guid` del esquema `catalogo`,
+      sin clave ajena, y lo que impide que ahí acabe una tarifa inventada, de otra empresa, del
+      otro tipo o cuya vigencia ya terminó es `IConsultaDeTarifas`, resuelta en proceso. La
+      flecha de ida está en `Bastion.Catalogo.Application`, y el motivo de que las dos juntas no
+      sean un ciclo está escrito allí: los dos `Contracts` no se ven entre sí.
     -->
     <ProjectReference Include="../../Catalogo/Bastion.Catalogo.Contracts/Bastion.Catalogo.Contracts.csproj" />
   </ItemGroup>

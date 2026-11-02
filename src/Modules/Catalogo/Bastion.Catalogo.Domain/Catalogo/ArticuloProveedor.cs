@@ -11,7 +11,7 @@ namespace Bastion.Catalogo.Domain.Catalogo;
 /// <b>Es el primer cruce de Catálogo hacia Terceros, y el primero MUTUO del proyecto.</b> Los tres
 /// cruces que había apuntaban todos a <c>Organizacion.Contracts</c>: un módulo dueño publicaba una
 /// lectura y los demás preguntaban, sin que nadie le preguntara a ellos. Aquí Catálogo mira a
-/// Terceros y Terceros mira a Catálogo —<c>Tercero.TarifaAsignada</c>—, y por eso los dos van en el
+/// Terceros y Terceros mira a Catálogo —las tarifas del tercero—, y por eso los dos van en el
 /// mismo ítem: la dependencia mutua se ve entera o no se ve.
 /// </para>
 /// <para>

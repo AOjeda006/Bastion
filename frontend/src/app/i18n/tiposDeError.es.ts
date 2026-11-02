@@ -507,6 +507,11 @@ export const tiposDeError = {
     'tarifa no se pueden solapar.',
   'tercero-duplicado': 'Esta empresa ya tiene un tercero con ese identificador fiscal.',
   'tercero-no-encontrado': 'Ese tercero ya no existe. Vuelve al listado y actualiza.',
+  // Las dos del 3.3, cuando el tercero pasa a tener una tarifa por rol. La del tipo no dice que
+  // la tarifa esté mal: dice que va en el otro hueco.
+  'tercero-tarifa-de-otro-tipo':
+    'Esa tarifa es del otro tipo: la de venta lleva una tarifa de venta, y la de compra, una de ' +
+    'compra. Elige una del tipo que toca.',
   'tercero-tarifa-no-encontrada': 'Esa tarifa no existe. Elige una del maestro de tarifas.',
   // La retirada del ADR-0023 otra vez, con sujeto nuevo: la tarifa caducada NO desaparece
   // —sigue diciendo a qué precio se vendió lo ya emitido—, lo que no se puede es empezar a
@@ -514,6 +519,9 @@ export const tiposDeError = {
   'tercero-tarifa-no-vigente':
     'Esa tarifa ya no está vigente: sigue valiendo para lo que se emitió mientras regía, ' +
     'pero no se puede asignar hoy. Elige una que esté vigente.',
+  'tercero-tarifa-sin-su-rol':
+    'Este tercero no hace ese papel: la tarifa de venta es la de un cliente, y la de compra, la ' +
+    'de un proveedor. Márcalo antes como tal en su ficha.',
   'tipo-cambio-duplicado': 'Ya hay un tipo de cambio para esa divisa en esa fecha.',
   'tipo-cambio-no-encontrado': 'Ese tipo de cambio ya no existe.',
   // Las veintinueve de la transferencia (ítem 2.11). Las de los maestros son las del ajuste

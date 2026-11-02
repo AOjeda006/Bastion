@@ -440,6 +440,27 @@ public sealed class PostgresConTodosLosModulos : IAsyncLifetime
     }
 
     /// <summary>
+    /// Aplica las migraciones de Terceros hasta la que se diga, como
+    /// <see cref="MigrarCatalogoHastaAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// Entra en el 3.3, con la migración que le da al tercero una tarifa por rol.
+    /// </remarks>
+    /// <param name="cadena">La base nueva.</param>
+    /// <param name="migracion">El identificador entero de la migración, con su fecha.</param>
+    /// <returns>Cuando la base está en esa migración.</returns>
+    public static async Task MigrarTercerosHastaAsync(string cadena, string migracion)
+    {
+        DbContextOptionsBuilder<TercerosDbContext> opciones = new();
+        TercerosDbContext.Configurar(opciones, cadena);
+
+        await using TercerosDbContext contexto =
+            new(opciones.Options, new InquilinoFijo(null), new AccesoCerrado());
+
+        await contexto.GetService<IMigrator>().MigrateAsync(migracion);
+    }
+
+    /// <summary>
     /// Aplica todas las migraciones de Organización en una base de <see cref="CrearBaseNuevaAsync"/>.
     /// </summary>
     /// <param name="cadena">La base nueva.</param>

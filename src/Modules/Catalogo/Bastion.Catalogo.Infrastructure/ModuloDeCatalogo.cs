@@ -91,11 +91,12 @@ public static class ModuloDeCatalogo
 
         // LO QUE ESTE MÓDULO EXPONE A LOS DEMÁS, bajo el tipo de su `Contracts`, y la otra mitad
         // del primer cruce mutuo: Terceros pregunta por aquí en qué estado está la tarifa que
-        // quiere asignarle a un cliente. Misma advertencia que del otro lado: sin esta línea todo
-        // compila, y el fallo no se queda en la asignación. `LoQueCuelgaDelTerceroController`
-        // recibe `IAsignarTarifa` por constructor junto a los contactos, las cuentas, las
-        // condiciones y el límite, y con el contenedor sin validar —como en Production— las TRECE
-        // acciones del controlador contestan 500 (medido en el ítem 1.10, canario 7c).
+        // quiere asignarle a un cliente o a un proveedor. Misma advertencia que del otro lado: sin
+        // esta línea todo compila, y el fallo no se queda en la asignación.
+        // `LoQueCuelgaDelTerceroController` recibe `IAsignarTarifa` por constructor junto a los
+        // contactos, las cuentas, las condiciones y el límite, y con el contenedor sin validar
+        // —como en Production— todas las acciones del controlador contestan 500 (medido en el
+        // ítem 1.10, canario 7c, cuando eran trece).
         servicios.AddScoped<IConsultaDeTarifas, ConsultaDeTarifas>();
 
         // El del ítem 2.2, que hoy no tiene consumidor: lo estrena Inventario en el 2.3, igual

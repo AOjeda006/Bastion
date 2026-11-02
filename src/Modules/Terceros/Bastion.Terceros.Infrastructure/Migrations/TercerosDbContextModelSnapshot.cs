@@ -220,6 +220,10 @@ namespace Bastion.Terceros.Infrastructure.Migrations
                         .HasColumnType("character varying(128)")
                         .HasColumnName("clave");
 
+                    b.Property<DateTimeOffset>("CaducaEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("caduca_en");
+
                     b.Property<int?>("CodigoDeEstado")
                         .HasColumnType("integer")
                         .HasColumnName("codigo_de_estado");
@@ -255,6 +259,9 @@ namespace Bastion.Terceros.Infrastructure.Migrations
 
                     b.HasKey("EmpresaId", "UsuarioId", "Metodo", "Ruta", "Clave")
                         .HasName("pk_claves_de_idempotencia");
+
+                    b.HasIndex("CaducaEn")
+                        .HasDatabaseName("ix_claves_de_idempotencia_caduca_en");
 
                     b.ToTable("claves_de_idempotencia", "auditoria", t =>
                         {
@@ -484,9 +491,14 @@ namespace Bastion.Terceros.Infrastructure.Migrations
                         .HasColumnName("razon_social")
                         .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
-                    b.Property<Guid?>("TarifaAsignadaId")
+                    b.Property<Guid?>("TarifaDeCompraId")
                         .HasColumnType("uuid")
-                        .HasColumnName("tarifa_asignada_id")
+                        .HasColumnName("tarifa_de_compra_id")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
+                    b.Property<Guid?>("TarifaDeVentaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tarifa_de_venta_id")
                         .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<uint>("Version")

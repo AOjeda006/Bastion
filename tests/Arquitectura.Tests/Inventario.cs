@@ -367,9 +367,10 @@ internal static class Inventario
         // y no está bloqueada es Organización, a través de `IConsultaDeEmpresas`.
         "Terceros.Application -> Organizacion.Contracts",
 
-        // La mitad de VUELTA del primer cruce mutuo. `Tercero.TarifaAsignadaId` es un Guid del
-        // esquema `catalogo`, sin clave ajena, y quien dice si esa tarifa existe en esta empresa
-        // y si su vigencia cubre el día de la asignación es Catálogo, por `IConsultaDeTarifas`.
+        // La mitad de VUELTA del primer cruce mutuo. `Tercero.TarifaDeVentaId` y
+        // `Tercero.TarifaDeCompraId` son Guid del esquema `catalogo`, sin clave ajena, y quien
+        // dice si esa tarifa existe en esta empresa, si es del tipo de su hueco y si su vigencia
+        // cubre el día de la asignación es Catálogo, por `IConsultaDeTarifas`.
         // Las dos flechas existen a la vez y no son un ciclo porque lo que se referencia es el
         // `Contracts` del otro, y los dos `Contracts` no se ven entre sí.
         "Terceros.Application -> Catalogo.Contracts",
@@ -481,12 +482,12 @@ internal static class Inventario
 
             ["Terceros.Application -> Bastion.Catalogo.Contracts"] =
                 "el quinto, y la mitad de VUELTA del primero mutuo. Un tercero puede tener " +
-                "asignada la tarifa con la que se le factura, y ese Guid es del esquema de " +
-                "Catálogo: sin clave ajena, porque entre esquemas no se cruza (regla 4). Lo que " +
-                "impide que ahí acabe una tarifa inventada, de otra empresa o caducada es " +
-                "IConsultaDeTarifas, y también pregunta por el ESTADO: una tarifa cuya vigencia " +
-                "terminó sigue resolviendo los precios de lo ya emitido y no se asigna hoy. Es " +
-                "la retirada del ADR-0023 con un sujeto nuevo.",
+                "asignadas la tarifa con la que se le vende y, desde el 3.3, la de compra, y esos " +
+                "Guid son del esquema de Catálogo: sin clave ajena, porque entre esquemas no se " +
+                "cruza (regla 4). Lo que impide que ahí acabe una tarifa inventada, de otra " +
+                "empresa, del otro tipo o caducada es IConsultaDeTarifas, y también pregunta por " +
+                "el ESTADO: una tarifa cuya vigencia terminó sigue resolviendo los precios de lo " +
+                "ya emitido y no se asigna hoy. Es la retirada del ADR-0023 con un sujeto nuevo.",
 
             ["Terceros.Application -> Bastion.Organizacion.Contracts"] =
                 "el segundo, y por la misma puerta. Un tercero pertenece a la empresa que lo " +
@@ -527,8 +528,8 @@ internal static class Inventario
                 "publica ni un dato de la ficha.",
 
             ["Bastion.Catalogo.Contracts.Catalogo.IConsultaDeTarifas"] =
-                "LECTURA: en qué estado está una tarifa para una fecha, para quien guarde su " +
-                "identificador — la tarifa asignada del tercero (§7.2). Es la PRIMERA puerta " +
+                "LECTURA: en qué estado está una tarifa de un tipo para una fecha, para quien " +
+                "guarde su identificador — las dos tarifas del tercero (§7.2). Es la PRIMERA puerta " +
                 "que no publica Organización, y la mitad de vuelta del primer cruce mutuo. No " +
                 "escribe.",
 
@@ -1019,17 +1020,25 @@ internal static class Inventario
                 "puerto antes de construir el agregado, porque un tercero colgado de una empresa " +
                 "que no existe o que está bloqueada es una ficha que nadie va a volver a ver."),
 
-            ["Tercero.TarifaAsignadaId"] = new(
+            ["Tercero.TarifaDeCompraId"] = new(
+                "Tarifa",
+                Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeTarifas",
+                "la gemela de TarifaDeVentaId desde el 3.3, por el mismo puerto y con el tipo " +
+                "contrario: una tarifa de compra, para un proveedor. La heurística por nombre " +
+                "tampoco la ve, por lo mismo."),
+
+            ["Tercero.TarifaDeVentaId"] = new(
                 "Tarifa",
                 Raiz + ".Catalogo.Contracts.Catalogo.IConsultaDeTarifas",
                 "la mitad de vuelta del cruce mutuo del ítem 1.10, y el segundo caso —tras " +
                 "TokenDeRefresco.EmpresaActivaId y Articulo.UnidadBaseId— en que la heurística " +
-                "por nombre NO lo ve: se llama TarifaAsignadaId y no TarifaId, así que el " +
-                "barrido lo sacó como HUÉRFANO y no como cruce. Esa es la infradetección que el " +
-                "ADR-0024 documenta, y es la regla de los huérfanos —no la de los cruces— la " +
-                "que obligó a escribir esta línea. Sin clave ajena: la tarifa vive en el esquema " +
-                "`catalogo`. Se valida por el ESTADO y con la FECHA: una tarifa caducada sigue " +
-                "resolviendo lo ya emitido y no se asigna hoy."),
+                "por nombre NO lo ve: se llamaba TarifaAsignadaId y no TarifaId, así que el " +
+                "barrido lo sacó como HUÉRFANO y no como cruce; desde el 3.3 se llama " +
+                "TarifaDeVentaId, y sigue sin verlo. Esa es la infradetección que el ADR-0024 " +
+                "documenta, y es la regla de los huérfanos —no la de los cruces— la que obligó a " +
+                "escribir esta línea. Sin clave ajena: la tarifa vive en el esquema `catalogo`. " +
+                "Se valida por el TIPO, por el ESTADO y con la FECHA: una de compra no va en este " +
+                "hueco, y una caducada sigue resolviendo lo ya emitido y no se asigna hoy."),
 
             ["TokenDeRefresco.EmpresaActivaId"] = new(
                 "Empresa",

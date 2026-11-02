@@ -204,7 +204,9 @@ public sealed record LimiteCreditoDeAltaDto
     public string? Divisa { get; init; }
 }
 
-/// <summary>La tarifa que tiene asignada un tercero, tal como sale de la API.</summary>
+/// <summary>
+/// La tarifa de venta o la de compra que tiene asignada un tercero, tal como sale de la API.
+/// </summary>
 /// <remarks>
 /// <para>
 /// <b>Sale el identificador y no el código ni el nombre</b>, y la ausencia es la frontera: la
@@ -220,12 +222,17 @@ public sealed record LimiteCreditoDeAltaDto
 /// asignar una creyendo que nunca hubo ninguna. Lo que sí se impide es <b>asignar</b> una caducada,
 /// que es donde la retirada del ADR-0023 significa algo.
 /// </para>
+/// <para>
+/// <b>Es la misma forma para las dos</b> (3.3): de cuál se trata lo dice la ruta,
+/// <c>tarifa-de-venta</c> o <c>tarifa-de-compra</c>, igual que la condición de pago lo dice con
+/// su rol.
+/// </para>
 /// </remarks>
 /// <param name="TerceroId">La ficha de la que cuelga.</param>
 /// <param name="TarifaId">La tarifa de Catálogo, o nula si no tiene ninguna asignada.</param>
 public sealed record TarifaAsignadaDto(Guid TerceroId, Guid? TarifaId);
 
-/// <summary>Lo que hace falta para asignar —o quitar— la tarifa de un tercero.</summary>
+/// <summary>Lo que hace falta para asignar —o quitar— la tarifa de venta o la de compra.</summary>
 /// <remarks>
 /// <b>Un solo campo anulable y no dos verbos.</b> Nulo quita la asignación, que es la misma
 /// operación vista del revés: «a este cliente le toca esta lista de precios» y «a este cliente no

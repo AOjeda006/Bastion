@@ -9,8 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bastion.Terceros.Endpoints;
 
 /// <summary>
-/// Lo que cuelga de un tercero —contactos, cuentas bancarias, condiciones de pago y límite de
-/// crédito— bajo <c>/api/v1/terceros/terceros/{terceroId}/…</c>.
+/// Lo que cuelga de un tercero —contactos, cuentas bancarias, condiciones de pago, límite de
+/// crédito y sus dos tarifas— bajo <c>/api/v1/terceros/terceros/{terceroId}/…</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -297,49 +297,106 @@ public sealed class LoQueCuelgaDelTerceroController(
             ifMatch,
             version => fijarLimite.EjecutarAsync(terceroId, version, peticion, cancelacion));
 
-    /// <summary>Devuelve la tarifa asignada al tercero.</summary>
+    /// <summary>Devuelve la tarifa de venta del tercero.</summary>
     /// <remarks>
+    /// <para>
     /// Devuelve el identificador y no la ficha de la tarifa: es de Catálogo, y se pide en
     /// <c>/api/v1/catalogo/tarifas/{id}</c>. Y la devuelve aunque su vigencia haya terminado —lo
     /// que se guardó fue una decisión, y sigue siendo verdad—; lo que no se deja es asignar una
     /// caducada.
+    /// </para>
+    /// <para>
+    /// <b>Hasta el 3.3 era <c>tarifa-asignada</c></b>, y la de venta es esa misma, con la misma
+    /// columna: toda tarifa de entonces era de venta.
+    /// </para>
     /// </remarks>
     /// <param name="terceroId">Identificador del tercero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    [HttpGet("tarifa-asignada")]
+    [HttpGet("tarifa-de-venta")]
     [ExigePermiso(PermisosDeTerceros.TerceroVer)]
     [ProducesResponseType(typeof(TarifaAsignadaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ObtenerTarifaAsignada(
+    public async Task<IActionResult> ObtenerTarifaDeVenta(
         Guid terceroId,
         CancellationToken cancelacion) =>
-        Responder(await obtenerTarifa.EjecutarAsync(terceroId, cancelacion).ConfigureAwait(false));
+        Responder(await obtenerTarifa
+            .EjecutarAsync(terceroId, RolDeTercero.Cliente, cancelacion)
+            .ConfigureAwait(false));
 
-    /// <summary>Asigna —o quita— la tarifa del tercero.</summary>
+    /// <summary>Asigna —o quita— la tarifa de venta del tercero.</summary>
     /// <remarks>
-    /// <b>El <c>409</c> y el <c>400</c> dicen cosas distintas y hay que separarlas:</b> la tarifa
-    /// no existe (<c>tercero-tarifa-no-encontrada</c>, 400) o existe y su vigencia no cubre hoy
+    /// <b>Cada no tiene su <c>type</c>, y hay que separarlos:</b> la tarifa no existe
+    /// (<c>tercero-tarifa-no-encontrada</c>, 400); el tercero no es cliente
+    /// (<c>tercero-tarifa-sin-su-rol</c>, 409); la tarifa es de compra
+    /// (<c>tercero-tarifa-de-otro-tipo</c>, 409); o su vigencia no cubre hoy
     /// (<c>tercero-tarifa-no-vigente</c>, 409). El frontal escribe el texto humano a partir del
-    /// <c>type</c> (ADR-0030).
+    /// <c>type</c> (ADR-0030). Quitarla no pide nada de eso.
     /// </remarks>
     /// <param name="terceroId">Identificador del tercero.</param>
     /// <param name="ifMatch">Versión de la FICHA sobre la que se escribe.</param>
     /// <param name="peticion">La tarifa, o el campo vacío para quitarla.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
-    [HttpPut("tarifa-asignada")]
-    [ExigePermiso(PermisosDeTerceros.TarifaAsignar)]
+    [HttpPut("tarifa-de-venta")]
+    [ExigePermiso(PermisosDeTerceros.TarifaDeVentaAsignar)]
     [ProducesResponseType(typeof(TarifaAsignadaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
-    public Task<IActionResult> AsignarTarifa(
+    public Task<IActionResult> AsignarTarifaDeVenta(
         Guid terceroId,
         [FromHeader(Name = "If-Match")] string? ifMatch,
         [FromBody] AsignarTarifaDto peticion,
         CancellationToken cancelacion) =>
         ResponderExigiendoVersionAsync(
             ifMatch,
-            version => asignarTarifa.EjecutarAsync(terceroId, version, peticion, cancelacion));
+            version => asignarTarifa.EjecutarAsync(
+                terceroId, RolDeTercero.Cliente, version, peticion, cancelacion));
+
+    /// <summary>Devuelve la tarifa de compra del tercero.</summary>
+    /// <remarks>
+    /// La gemela de <see cref="ObtenerTarifaDeVenta"/>: el identificador, aunque haya dejado de
+    /// regir. Entra en el 3.3, y es la que propone el precio de una línea de compra.
+    /// </remarks>
+    /// <param name="terceroId">Identificador del tercero.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpGet("tarifa-de-compra")]
+    [ExigePermiso(PermisosDeTerceros.TerceroVer)]
+    [ProducesResponseType(typeof(TarifaAsignadaDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ObtenerTarifaDeCompra(
+        Guid terceroId,
+        CancellationToken cancelacion) =>
+        Responder(await obtenerTarifa
+            .EjecutarAsync(terceroId, RolDeTercero.Proveedor, cancelacion)
+            .ConfigureAwait(false));
+
+    /// <summary>Asigna —o quita— la tarifa de compra del tercero.</summary>
+    /// <remarks>
+    /// Los mismos cuatro noes que <see cref="AsignarTarifaDeVenta"/>, con un proveedor y una
+    /// tarifa de compra. Y su propio permiso: elegir con qué precios se le compra a un proveedor
+    /// es una facultad de compras, no de ventas.
+    /// </remarks>
+    /// <param name="terceroId">Identificador del tercero.</param>
+    /// <param name="ifMatch">Versión de la FICHA sobre la que se escribe.</param>
+    /// <param name="peticion">La tarifa, o el campo vacío para quitarla.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPut("tarifa-de-compra")]
+    [ExigePermiso(PermisosDeTerceros.TarifaDeCompraAsignar)]
+    [ProducesResponseType(typeof(TarifaAsignadaDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> AsignarTarifaDeCompra(
+        Guid terceroId,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        [FromBody] AsignarTarifaDto peticion,
+        CancellationToken cancelacion) =>
+        ResponderExigiendoVersionAsync(
+            ifMatch,
+            version => asignarTarifa.EjecutarAsync(
+                terceroId, RolDeTercero.Proveedor, version, peticion, cancelacion));
 }

@@ -3,7 +3,7 @@
   <!--
     Lo ÚNICO público del módulo Catálogo (§4, regla de frontera 1): DTOs y permisos. Es lo que
     otro módulo podrá referenciar — y en la fase 1 lo hará Terceros, por el cruce declarado del
-    ítem 1.10 (`Tercero.TarifaAsignada`).
+    ítem 1.10 (las tarifas del tercero, una por rol desde el 3.3).
 
     NO referencia `Bastion.Catalogo.Domain`, por lo mismo que en Organización y en Terceros: si lo
     hiciera, cualquier módulo que usara este proyecto vería el dominio ajeno por la puerta de

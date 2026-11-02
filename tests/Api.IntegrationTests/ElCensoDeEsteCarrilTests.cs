@@ -90,8 +90,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "ContratoDeLoQueCuelgaTests.Una_divisa_sin_importe_es_400_porque_retirar_el_limite_es_vaciar_LOS_DOS",
         "ContratoDeLoQueCuelgaTests.Una_segunda_cuenta_preferente_baja_a_la_primera_y_solo_queda_UNA",
 
+        "ContratoDeLosCrucesTests.Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte",
         "ContratoDeLosCrucesTests.El_listado_esconde_al_proveedor_bloqueado_y_desbloquearlo_devuelve_la_MISMA_fila",
         "ContratoDeLosCrucesTests.Inventado_ajeno_bloqueado_y_solo_cliente_contestan_el_MISMO_400_y_no_dejan_fila",
+        "ContratoDeLosCrucesTests.Sin_el_rol_del_hueco_es_409_y_quitar_la_de_ese_hueco_no_lo_pide",
         "ContratoDeLosCrucesTests.Un_limite_en_dolares_y_una_tarifa_en_euros_conviven_porque_nadie_compara_divisas",
         "ContratoDeLosCrucesTests.Un_proveedor_de_aqui_se_anade_con_201_y_el_listado_lo_trae",
         "ContratoDeLosCrucesTests.Una_tarifa_inventada_y_una_de_otra_empresa_son_400_y_la_ajena_vale_en_la_suya",
@@ -816,6 +818,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.La_vuelta_sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola",
         "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.Sin_Organizacion_pasa_si_no_hay_tramos_y_si_los_hay_se_para_pidiendola",
         "LaDivisaDeLaTarifaSeTraduceAlMigrarTests.Un_tramo_cuya_divisa_no_esta_para_la_migracion_diciendo_cual_y_no_se_pierde_nada",
+
+        // Del 3.3: la migración que le da al tercero una tarifa por rol, sobre fichas escritas a
+        // mano. La de venta es la columna de antes renombrada, y lo que lo distingue es el valor.
+        "LaTarifaDelTerceroSeConservaAlMigrarTests.Cada_ficha_conserva_su_tarifa_como_la_de_venta_y_la_vuelta_se_la_devuelve",
 
         // Del ítem 2.13 (ADR-0059 §3 a §5): reservar, liberar y leer el disponible, por el caso de uso,
         // porque la reserva no tiene borde. El disponible de la empresa que pregunta, sin lo que vuela.

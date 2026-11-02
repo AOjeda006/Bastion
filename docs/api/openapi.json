@@ -16132,14 +16132,14 @@
         ]
       }
     },
-    "/api/v1/terceros/terceros/{terceroId}/tarifa-asignada": {
+    "/api/v1/terceros/terceros/{terceroId}/tarifa-de-venta": {
       "get": {
         "tags": [
           "LoQueCuelgaDelTercero"
         ],
-        "summary": "Devuelve la tarifa asignada al tercero.",
-        "description": "Devuelve el identificador y no la ficha de la tarifa: es de Catálogo, y se pide en\n`/api/v1/catalogo/tarifas/{id}`. Y la devuelve aunque su vigencia haya terminado —lo\nque se guardó fue una decisión, y sigue siendo verdad—; lo que no se deja es asignar una\ncaducada.",
-        "operationId": "LoQueCuelgaDelTercero_ObtenerTarifaAsignada",
+        "summary": "Devuelve la tarifa de venta del tercero.",
+        "description": "    Devuelve el identificador y no la ficha de la tarifa: es de Catálogo, y se pide en\n/api/v1/catalogo/tarifas/{id}. Y la devuelve aunque su vigencia haya terminado —lo\nque se guardó fue una decisión, y sigue siendo verdad—; lo que no se deja es asignar una\ncaducada.\n    Hasta el 3.3 era tarifa-asignada, y la de venta es esa misma, con la misma\n      columna: toda tarifa de entonces era de venta.",
+        "operationId": "LoQueCuelgaDelTercero_ObtenerTarifaDeVenta",
         "parameters": [
           {
             "name": "terceroId",
@@ -16202,9 +16202,248 @@
         "tags": [
           "LoQueCuelgaDelTercero"
         ],
-        "summary": "Asigna —o quita— la tarifa del tercero.",
-        "description": "<b>El `409` y el `400` dicen cosas distintas y hay que separarlas:</b> la tarifa\n        no existe (`tercero-tarifa-no-encontrada`, 400) o existe y su vigencia no cubre hoy\n        (`tercero-tarifa-no-vigente`, 409). El frontal escribe el texto humano a partir del\n        `type` (ADR-0030).",
-        "operationId": "LoQueCuelgaDelTercero_AsignarTarifa",
+        "summary": "Asigna —o quita— la tarifa de venta del tercero.",
+        "description": "<b>Cada no tiene su `type`, y hay que separarlos:</b> la tarifa no existe\n        (`tercero-tarifa-no-encontrada`, 400); el tercero no es cliente\n        (`tercero-tarifa-sin-su-rol`, 409); la tarifa es de compra\n        (`tercero-tarifa-de-otro-tipo`, 409); o su vigencia no cubre hoy\n        (`tercero-tarifa-no-vigente`, 409). El frontal escribe el texto humano a partir del\n        `type` (ADR-0030). Quitarla no pide nada de eso.",
+        "operationId": "LoQueCuelgaDelTercero_AsignarTarifaDeVenta",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarTarifaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarTarifaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarTarifaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/terceros/terceros/{terceroId}/tarifa-de-compra": {
+      "get": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Devuelve la tarifa de compra del tercero.",
+        "description": "La gemela de Task&lt;IActionResult&gt; LoQueCuelgaDelTerceroController.ObtenerTarifaDeVenta(Guid terceroId, CancellationToken cancelacion): el identificador, aunque haya dejado de\nregir. Entra en el 3.3, y es la que propone el precio de una línea de compra.",
+        "operationId": "LoQueCuelgaDelTercero_ObtenerTarifaDeCompra",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "description": "Identificador del tercero.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaAsignadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "put": {
+        "tags": [
+          "LoQueCuelgaDelTercero"
+        ],
+        "summary": "Asigna —o quita— la tarifa de compra del tercero.",
+        "description": "Los mismos cuatro noes que Task&lt;IActionResult&gt; LoQueCuelgaDelTerceroController.AsignarTarifaDeVenta(Guid terceroId, string? ifMatch, AsignarTarifaDto peticion, CancellationToken cancelacion), con un proveedor y una\ntarifa de compra. Y su propio permiso: elegir con qué precios se le compra a un proveedor\nes una facultad de compras, no de ventas.",
+        "operationId": "LoQueCuelgaDelTercero_AsignarTarifaDeCompra",
         "parameters": [
           {
             "name": "terceroId",
@@ -17744,7 +17983,7 @@
             "format": "uuid"
           }
         },
-        "description": "Lo que hace falta para asignar —o quitar— la tarifa de un tercero."
+        "description": "Lo que hace falta para asignar —o quitar— la tarifa de venta o la de compra."
       },
       "BloqueadoDto": {
         "required": [
@@ -22578,7 +22817,7 @@
             "format": "uuid"
           }
         },
-        "description": "La tarifa que tiene asignada un tercero, tal como sale de la API."
+        "description": "La tarifa de venta o la de compra que tiene asignada un tercero, tal como sale de la API."
       },
       "TarifaDto": {
         "required": [

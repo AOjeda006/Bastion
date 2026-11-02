@@ -106,14 +106,31 @@ public static class PermisosDeTerceros
     /// </remarks>
     public const string LimiteCreditoFijar = "terceros.limite-credito.fijar";
 
-    /// <summary>Asignar —o quitar— la tarifa que se le aplica a un tercero.</summary>
+    /// <summary>Asignar —o quitar— la tarifa de venta de un tercero.</summary>
     /// <remarks>
+    /// <para>
     /// <b>Aparte de <c>tercero.modificar</c>, y es el mismo reparto que en Catálogo.</b> Elegir la
     /// lista de precios de un cliente decide lo que se le va a cobrar; corregirle el domicilio no.
     /// Quien mantiene el maestro de terceros todos los días no tiene por qué llevar esta facultad,
     /// y con un permiso compartido no habría manera de expresarlo.
+    /// </para>
+    /// <para>
+    /// <b>El código conserva <c>tarifa-asignada</c> aunque el subrecurso se retiró en el 3.3.</b>
+    /// Hasta entonces era la única tarifa, y la de venta es esa misma. Los roles guardan el código,
+    /// así que cambiarlo dejaría sin la facultad a cada rol que la tuviera, sin aviso.
+    /// </para>
     /// </remarks>
-    public const string TarifaAsignar = "terceros.tarifa-asignada.fijar";
+    public const string TarifaDeVentaAsignar = "terceros.tarifa-asignada.fijar";
+
+    /// <summary>Asignar —o quitar— la tarifa de compra de un tercero.</summary>
+    /// <remarks>
+    /// <b>Aparte de la de venta (3.3)</b>: elegir con qué precios se le compra a un proveedor es
+    /// una facultad de compras, y elegir con cuáles se le vende a un cliente lo es de ventas. Con
+    /// un permiso para las dos no habría manera de dar la una sin la otra, y la regla de que dos
+    /// escrituras no comparten permiso lo vio antes que nadie. El rol del sistema la recibe al
+    /// arrancar, como cualquier permiso nuevo; un rol propio, cuando alguien se la conceda.
+    /// </remarks>
+    public const string TarifaDeCompraAsignar = "terceros.tarifa-de-compra.fijar";
 
     /// <summary>
     /// Todos los permisos del módulo, para que el <i>composition root</i> componga el catálogo.
@@ -138,6 +155,7 @@ public static class PermisosDeTerceros
         CuentaBancariaQuitar,
         CondicionPagoFijar,
         LimiteCreditoFijar,
-        TarifaAsignar,
+        TarifaDeVentaAsignar,
+        TarifaDeCompraAsignar,
     ];
 }

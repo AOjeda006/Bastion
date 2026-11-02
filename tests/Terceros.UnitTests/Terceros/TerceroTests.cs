@@ -163,6 +163,85 @@ public sealed class TerceroTests
         Alta(nombreComercial: escrito).NombreComercial.ShouldBeNull();
     }
 
+    /// <summary>
+    /// La tarifa de venta pide un cliente y la de compra un proveedor, y lo exige el agregado.
+    /// </summary>
+    /// <remarks>
+    /// La capa de aplicación lo mira antes, para contestar con su <c>type</c>. Este caso es el
+    /// que impide que la regla dependa de que la llamada venga de ese sitio.
+    /// </remarks>
+    [Fact]
+    public void Cada_tarifa_pide_el_rol_de_su_hueco()
+    {
+        Tercero cliente = Alta(esCliente: true, esProveedor: false);
+        Tercero proveedor = Alta(esCliente: false, esProveedor: true);
+
+        Should.Throw<InvalidOperationException>(
+            () => cliente.AsignarTarifaDeCompra(Guid.CreateVersion7()));
+        Should.Throw<InvalidOperationException>(
+            () => proveedor.AsignarTarifaDeVenta(Guid.CreateVersion7()));
+
+        var deVenta = Guid.CreateVersion7();
+        var deCompra = Guid.CreateVersion7();
+        cliente.AsignarTarifaDeVenta(deVenta);
+        proveedor.AsignarTarifaDeCompra(deCompra);
+
+        cliente.TarifaDeVentaId.ShouldBe(deVenta);
+        cliente.TarifaDeCompraId.ShouldBeNull();
+        proveedor.TarifaDeCompraId.ShouldBe(deCompra);
+        proveedor.TarifaDeVentaId.ShouldBeNull();
+    }
+
+    /// <summary>Quitar una tarifa no pide el rol: quien lo perdió tiene que poder soltarla.</summary>
+    [Fact]
+    public void Quitar_una_tarifa_no_pide_el_rol()
+    {
+        Tercero tercero = Alta(esCliente: true, esProveedor: true);
+        tercero.AsignarTarifaDeVenta(Guid.CreateVersion7());
+        tercero.AsignarTarifaDeCompra(Guid.CreateVersion7());
+
+        tercero.Modificar(
+            "Razón Social", nombreComercial: null, s_domicilio, esCliente: false, esProveedor: true,
+            RegimenFiscal.Comun());
+        tercero.AsignarTarifaDeVenta(null);
+
+        tercero.Modificar(
+            "Razón Social", nombreComercial: null, s_domicilio, esCliente: true, esProveedor: false,
+            RegimenFiscal.Comun());
+        tercero.AsignarTarifaDeCompra(null);
+
+        tercero.TarifaDeVentaId.ShouldBeNull();
+        tercero.TarifaDeCompraId.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// <c>Guid.Empty</c> no es «ninguna»: ninguna es <c>null</c>, y lo vacío se rechaza en los dos.
+    /// </summary>
+    [Fact]
+    public void Una_tarifa_vacia_no_es_ninguna()
+    {
+        Tercero tercero = Alta(esCliente: true, esProveedor: true);
+
+        Should.Throw<ArgumentException>(() => tercero.AsignarTarifaDeVenta(Guid.Empty));
+        Should.Throw<ArgumentException>(() => tercero.AsignarTarifaDeCompra(Guid.Empty));
+    }
+
+    /// <summary>A un tercero bloqueado no se le asigna ninguna de las dos, aunque haga el rol.</summary>
+    [Fact]
+    public void Un_tercero_bloqueado_no_recibe_tarifa()
+    {
+        Tercero tercero = Alta(esCliente: true, esProveedor: true);
+        tercero.Bloquear(MotivoDeBloqueo.SupresionSolicitada, s_momento);
+
+        Should.Throw<InvalidOperationException>(
+            () => tercero.AsignarTarifaDeVenta(Guid.CreateVersion7()));
+        Should.Throw<InvalidOperationException>(
+            () => tercero.AsignarTarifaDeCompra(Guid.CreateVersion7()));
+
+        tercero.TarifaDeVentaId.ShouldBeNull();
+        tercero.TarifaDeCompraId.ShouldBeNull();
+    }
+
     private static Nif NifInventado() =>
         Nif.De(IdentificadoresInventados.PersonaJuridica('B', 1_234_567, comoLetra: false).Valido);
 

@@ -5,10 +5,11 @@ namespace Bastion.Catalogo.Contracts.Catalogo;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Son dos preguntas y no una</b>, y por eso son tres valores y no un <c>bool</c>: ¿existe?, y
-/// ¿rige en la fecha por la que se pregunta? Un puerto que solo contestara «existe» dejaría
+/// <b>Son tres preguntas y no una</b>, y por eso no es un <c>bool</c>: ¿existe?, ¿es del tipo por
+/// el que se pregunta?, y ¿rige en esa fecha? Un puerto que solo contestara «existe» dejaría
 /// asignarle a un cliente una tarifa cuya vigencia acabó el año pasado, y el error saldría en la
-/// primera venta, lejos de quien lo causó.
+/// primera venta, lejos de quien lo causó. La del tipo entra en el 3.3, cuando la tarifa pasa a ser
+/// de venta o de compra.
 /// </para>
 /// <para>
 /// <b>Es la misma forma que <c>EstadoDeMaestro</c>, y no es el mismo tipo a propósito.</b> Una
@@ -47,6 +48,44 @@ public enum EstadoDeLaTarifa
     /// misma pregunta —«¿vale para un alta con esta fecha?»— y tienen un solo sitio donde caber.
     /// </remarks>
     SoloResuelveLoViejo = 2,
+
+    /// <summary>
+    /// Existe, pero es del otro tipo: de compra si se preguntó por una de venta, o al revés.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Se contesta antes que la vigencia</b> (3.3). El tipo va con el código y no cambia, así que
+    /// este no tiene arreglo esperando: elegir el tramo vigente del mismo código daría otra vez una
+    /// tarifa del otro tipo. Una caducada de otro tipo contesta esto, que es lo que hay que
+    /// corregir primero.
+    /// </para>
+    /// <para>
+    /// Es el <c>NoHaceEseRol</c> de <c>EstadoDelTercero</c>, la otra mitad del cruce, con otro
+    /// sujeto: la tarifa no sirve para el papel por el que se pregunta.
+    /// </para>
+    /// </remarks>
+    EsDeOtroTipo = 3,
+}
+
+/// <summary>Para qué se pregunta por una tarifa: para vender o para comprar.</summary>
+/// <remarks>
+/// <para>
+/// Es un parámetro del puerto y no un dato que devuelva, por lo mismo que <c>RolDeTercero</c> en
+/// la otra mitad del cruce: el estado <b>depende del tipo por el que se pregunta</b>, y quien
+/// pregunta no puede olvidarse de comparar lo que no recibe.
+/// </para>
+/// <para>
+/// <b>No es el <c>TipoDeTarifa</c> del dominio</b>, que este proyecto no ve (ADR-0076): son los
+/// mismos dos valores con otro nombre, y el adaptador los traduce uno a uno.
+/// </para>
+/// </remarks>
+public enum TipoDeLaTarifa
+{
+    /// <summary>La lista de precios que se le propone a un cliente.</summary>
+    Venta = 0,
+
+    /// <summary>La lista de precios de un proveedor.</summary>
+    Compra = 1,
 }
 
 /// <summary>
@@ -73,7 +112,7 @@ public enum EstadoDeLaTarifa
 /// </remarks>
 public interface IConsultaDeTarifas
 {
-    /// <summary>En qué estado está esa tarifa para esa fecha.</summary>
+    /// <summary>En qué estado está esa tarifa para ese tipo y esa fecha.</summary>
     /// <remarks>
     /// <b>La fecha es un parámetro y no <c>hoy</c> por dentro</b>, por lo mismo que el tramo de
     /// impuesto pide su fecha de devengo: quien pregunta sabe para cuándo pregunta, y una
@@ -81,8 +120,10 @@ public interface IConsultaDeTarifas
     /// mover el reloj de la máquina.
     /// </remarks>
     /// <param name="tarifaId">Identificador de la tarifa.</param>
+    /// <param name="tipo">El tipo que tiene que tener: de venta para un cliente, de compra para
+    /// un proveedor.</param>
     /// <param name="enLaFecha">Día para el que se pregunta.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<EstadoDeLaTarifa> EstadoDeAsync(
-        Guid tarifaId, DateOnly enLaFecha, CancellationToken cancelacion);
+        Guid tarifaId, TipoDeLaTarifa tipo, DateOnly enLaFecha, CancellationToken cancelacion);
 }

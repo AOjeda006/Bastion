@@ -65,16 +65,24 @@ internal static class Mapeos
         tercero.LimiteCredito?.Cantidad,
         tercero.LimiteCredito?.Divisa);
 
-    /// <summary>La tarifa asignada, tal cual está guardada.</summary>
+    /// <summary>La tarifa asignada de ese rol, tal cual está guardada.</summary>
     /// <remarks>
     /// Sale el identificador y nada más: el nombre y el código de la tarifa son de Catálogo, y
     /// traerlos aquí convertiría este mapeo en un lector del catálogo ajeno.
     /// </remarks>
-    internal static TarifaAsignadaDto ATarifaAsignadaDto(this Tercero tercero)
+    internal static TarifaAsignadaDto ATarifaAsignadaDto(this Tercero tercero, RolDeTercero rol)
     {
         ArgumentNullException.ThrowIfNull(tercero);
 
-        return new TarifaAsignadaDto(tercero.Id, tercero.TarifaAsignadaId);
+        return new TarifaAsignadaDto(
+            tercero.Id,
+            rol switch
+            {
+                RolDeTercero.Cliente => tercero.TarifaDeVentaId,
+                RolDeTercero.Proveedor => tercero.TarifaDeCompraId,
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(rol), rol, "Un tercero es cliente o proveedor."),
+            });
     }
 
     internal static TerceroDto ADto(this Tercero tercero) => new(

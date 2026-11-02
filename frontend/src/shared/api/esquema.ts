@@ -2345,7 +2345,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/terceros/terceros/{terceroId}/tarifa-asignada": {
+    "/api/v1/terceros/terceros/{terceroId}/tarifa-de-venta": {
         parameters: {
             query?: never;
             header?: never;
@@ -2353,21 +2353,52 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Devuelve la tarifa asignada al tercero.
+         * Devuelve la tarifa de venta del tercero.
          * @description Devuelve el identificador y no la ficha de la tarifa: es de Catálogo, y se pide en
-         *     `/api/v1/catalogo/tarifas/{id}`. Y la devuelve aunque su vigencia haya terminado —lo
+         *     /api/v1/catalogo/tarifas/{id}. Y la devuelve aunque su vigencia haya terminado —lo
          *     que se guardó fue una decisión, y sigue siendo verdad—; lo que no se deja es asignar una
          *     caducada.
+         *         Hasta el 3.3 era tarifa-asignada, y la de venta es esa misma, con la misma
+         *           columna: toda tarifa de entonces era de venta.
          */
-        get: operations["LoQueCuelgaDelTercero_ObtenerTarifaAsignada"];
+        get: operations["LoQueCuelgaDelTercero_ObtenerTarifaDeVenta"];
         /**
-         * Asigna —o quita— la tarifa del tercero.
-         * @description <b>El `409` y el `400` dicen cosas distintas y hay que separarlas:</b> la tarifa
-         *             no existe (`tercero-tarifa-no-encontrada`, 400) o existe y su vigencia no cubre hoy
+         * Asigna —o quita— la tarifa de venta del tercero.
+         * @description <b>Cada no tiene su `type`, y hay que separarlos:</b> la tarifa no existe
+         *             (`tercero-tarifa-no-encontrada`, 400); el tercero no es cliente
+         *             (`tercero-tarifa-sin-su-rol`, 409); la tarifa es de compra
+         *             (`tercero-tarifa-de-otro-tipo`, 409); o su vigencia no cubre hoy
          *             (`tercero-tarifa-no-vigente`, 409). El frontal escribe el texto humano a partir del
-         *             `type` (ADR-0030).
+         *             `type` (ADR-0030). Quitarla no pide nada de eso.
          */
-        put: operations["LoQueCuelgaDelTercero_AsignarTarifa"];
+        put: operations["LoQueCuelgaDelTercero_AsignarTarifaDeVenta"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terceros/terceros/{terceroId}/tarifa-de-compra": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve la tarifa de compra del tercero.
+         * @description La gemela de Task&lt;IActionResult&gt; LoQueCuelgaDelTerceroController.ObtenerTarifaDeVenta(Guid terceroId, CancellationToken cancelacion): el identificador, aunque haya dejado de
+         *     regir. Entra en el 3.3, y es la que propone el precio de una línea de compra.
+         */
+        get: operations["LoQueCuelgaDelTercero_ObtenerTarifaDeCompra"];
+        /**
+         * Asigna —o quita— la tarifa de compra del tercero.
+         * @description Los mismos cuatro noes que Task&lt;IActionResult&gt; LoQueCuelgaDelTerceroController.AsignarTarifaDeVenta(Guid terceroId, string? ifMatch, AsignarTarifaDto peticion, CancellationToken cancelacion), con un proveedor y una
+         *     tarifa de compra. Y su propio permiso: elegir con qué precios se le compra a un proveedor
+         *     es una facultad de compras, no de ventas.
+         */
+        put: operations["LoQueCuelgaDelTercero_AsignarTarifaDeCompra"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2854,7 +2885,7 @@ export interface components {
              */
             rolId: string;
         };
-        /** @description Lo que hace falta para asignar —o quitar— la tarifa de un tercero. */
+        /** @description Lo que hace falta para asignar —o quitar— la tarifa de venta o la de compra. */
         AsignarTarifaDto: {
             /**
              * Format: uuid
@@ -5089,7 +5120,7 @@ export interface components {
             /** @description Permisos que tiene en la empresa activa, para la interfaz. */
             permisos: string[];
         };
-        /** @description La tarifa que tiene asignada un tercero, tal como sale de la API. */
+        /** @description La tarifa de venta o la de compra que tiene asignada un tercero, tal como sale de la API. */
         TarifaAsignadaDto: {
             /**
              * Format: uuid
@@ -13599,7 +13630,7 @@ export interface operations {
             };
         };
     };
-    LoQueCuelgaDelTercero_ObtenerTarifaAsignada: {
+    LoQueCuelgaDelTercero_ObtenerTarifaDeVenta: {
         parameters: {
             query?: never;
             header?: never;
@@ -13635,7 +13666,131 @@ export interface operations {
             };
         };
     };
-    LoQueCuelgaDelTercero_AsignarTarifa: {
+    LoQueCuelgaDelTercero_AsignarTarifaDeVenta: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AsignarTarifaDto"];
+                "text/json": components["schemas"]["AsignarTarifaDto"];
+                "application/*+json": components["schemas"]["AsignarTarifaDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TarifaAsignadaDto"];
+                    "application/json": components["schemas"]["TarifaAsignadaDto"];
+                    "text/json": components["schemas"]["TarifaAsignadaDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_ObtenerTarifaDeCompra: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador del tercero. */
+                terceroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TarifaAsignadaDto"];
+                    "application/json": components["schemas"]["TarifaAsignadaDto"];
+                    "text/json": components["schemas"]["TarifaAsignadaDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LoQueCuelgaDelTercero_AsignarTarifaDeCompra: {
         parameters: {
             query?: never;
             header?: {

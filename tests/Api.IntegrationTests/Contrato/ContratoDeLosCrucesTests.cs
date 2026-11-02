@@ -39,15 +39,19 @@ namespace Bastion.Api.IntegrationTests.Contrato;
 /// <b>Del lado de Terceros el puerto no se marca aquí</b>: el alta de un proveedor junta los
 /// estados que no autorizan en un solo 400, así que desde la API no se ve cuál contestó. Esas
 /// casillas se afirman en <c>ElPuertoDeTercerosContraLaBaseTests</c>. <b>Del lado de las tarifas,
-/// sí</b>: sus dos noes salen por dos <c>type</c> distintos y el 200 es el tercero, así que cada
-/// respuesta nombra exactamente un estado del puerto.
+/// sí</b>: sus tres noes salen por tres <c>type</c> distintos y el 200 es el cuarto, así que cada
+/// respuesta nombra exactamente un estado del puerto. El 409 de un tercero sin el rol del hueco no
+/// nombra ninguno, porque se contesta sin preguntar.
 /// </para>
 /// <para>
-/// <b>Las semillas son el bloque 200-215</b>: 200-205 en <c>ElPuertoDeTercerosContraLaBaseTests</c>
-/// y 206-215 aquí. Los terceros van del 32 000 001 al 32 000 009 allí y del 32 000 010 en adelante
-/// aquí. El NIF de una empresa es único en toda la instalación, y el de un tercero dentro de su
-/// empresa; <c>ContratoDeTarifasTests</c> tiene el 190-194 y <c>ContratoDeCatalogoTests</c> el
-/// 170-183, y un choque de semillas no sale por el que llega segundo sino por el otro.
+/// <b>Las semillas son el bloque 200-215, y el 224-225 del 3.3</b>: 200-205 en
+/// <c>ElPuertoDeTercerosContraLaBaseTests</c>, 206-215 y 224-225 aquí; 216-218 son de
+/// <c>ElPuertoDelArticuloContraLaBaseTests</c>, y 219-223 se dejaron sin tocar porque el 219 consta
+/// como cogido. Los terceros van del 32 000 001 al 32 000 009 allí y del 32 000 010 en adelante
+/// aquí, hasta el 32 000 025. El NIF de una empresa es único en toda la instalación, y el de un
+/// tercero dentro de su empresa; <c>ContratoDeTarifasTests</c> tiene el 190-194 y
+/// <c>ContratoDeCatalogoTests</c> el 170-183, y un choque de semillas no sale por el que llega
+/// segundo sino por el otro.
 /// </para>
 /// <para>
 /// <b>La divisa de las tarifas es el euro</b>, por lo mismo que en <c>ContratoDeTarifasTests</c>:
@@ -66,6 +70,11 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
     private const string Impuestos = "/api/v1/organizacion/impuestos";
 
     private const string TerceroNoValido = "/errors/articulo-proveedor-tercero-no-valido";
+
+    // Los dos huecos del tercero desde el 3.3: hasta entonces había uno, `tarifa-asignada`, y la
+    // de venta es esa misma con otro nombre.
+    private const string DeVenta = "tarifa-de-venta";
+    private const string DeCompra = "tarifa-de-compra";
 
     private static readonly DateOnly s_desde = new(2000, 1, 1);
 
@@ -400,8 +409,8 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
     /// <remarks>
     /// <para>
     /// <b>Es la decisión de la divisa del ítem 1.10 probada por el efecto</b>, y no por la ausencia de
-    /// una comprobación. Las dos representaciones viven en el mismo agregado —el límite con el código
-    /// ISO dentro de su <c>Importe</c>, la tarifa con un <c>Guid</c> al maestro de Organización— y
+    /// una comprobación. Las dos divisas se leen desde el mismo agregado —el límite con el código
+    /// ISO dentro de su <c>Importe</c>, la tarifa con el suyo en Catálogo desde el 3.3 (ADR-0076)— y
     /// ninguna escritura de una mira la otra. Si alguien añade la comparación al asignar la tarifa, cae
     /// la primera mitad; si la añade al fijar el límite, la segunda.
     /// </para>
@@ -443,6 +452,117 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
 
         (await LimiteAsync(cliente, tercero.Id)).ShouldBe(new LimiteCreditoDto(tercero.Id, 7_500m, "USD"));
         (await TarifaAsignadaAsync(cliente, tercero.Id)).ShouldBe(new TarifaAsignadaDto(tercero.Id, enEuros.Id));
+    }
+
+    /// <summary>
+    /// Una tarifa de compra en el hueco de venta, y una de venta en el de compra, son 409
+    /// <c>tercero-tarifa-de-otro-tipo</c>; cada una en el suyo se asigna, y los dos se leen aparte.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el motivo del 3.3, contestado por la API.</b> Con una sola tarifa por tercero, el que
+    /// es cliente y proveedor recibía su precio de venta como precio de compra. El tercero de este
+    /// caso hace los dos roles, así que el rol no es lo que rechaza: lo que choca es el tipo.
+    /// </para>
+    /// <para>
+    /// <b>Y la segunda mitad es la contraria</b>: las dos tarifas existen y rigen hoy, así que un
+    /// puerto que contestara <c>EsDeOtroTipo</c> a todo pasaría la primera mitad y caería aquí.
+    /// Que la lectura de cada hueco traiga la suya, y no la del otro, es lo que ve una rama cruzada
+    /// en la lectura o en la escritura.
+    /// </para>
+    /// <para>
+    /// <b>La de compra caducada es la del orden</b>: del otro tipo y fuera de vigencia a la vez,
+    /// tiene que contestar el tipo, que es el que no se arregla eligiendo otro tramo del mismo
+    /// código. Un adaptador que mirara antes la vigencia la contaría como no vigente.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    [CubreEstadoDelPuerto(typeof(IConsultaDeTarifas), EstadoDeLaTarifa.EsDeOtroTipo)]
+    public async Task Cada_tarifa_en_el_hueco_del_otro_tipo_es_409_y_en_el_suyo_se_asigna_y_se_lee_aparte()
+    {
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(224);
+        TerceroDto tercero = await TerceroAsync(cliente, 32_000_023, esCliente: true, esProveedor: true);
+        TarifaDto deVenta = await TarifaAsync(cliente, "PVP", s_desde, null);
+        TarifaDto deCompra = await TarifaAsync(cliente, "PRV", s_desde, null, tipo: "Compra");
+        TarifaDto deCompraCaducada = await TarifaAsync(
+            cliente, "PRVVIEJA", s_desde, new DateOnly(2001, 12, 31), tipo: "Compra");
+
+        foreach ((string hueco, TarifaDto tarifa) in (IEnumerable<(string, TarifaDto)>)
+            [(DeVenta, deCompra), (DeCompra, deVenta), (DeVenta, deCompraCaducada)])
+        {
+            using HttpResponseMessage intento = await AsignarTarifaAsync(cliente, tercero.Id, tarifa.Id, hueco);
+
+            intento.StatusCode.ShouldBe(
+                HttpStatusCode.Conflict,
+                $"la tarifa {tarifa.Codigo} se ha asignado en el hueco {hueco}, que es del otro tipo: " +
+                "su precio llegaría a la línea del otro lado. " + await Escenario.Detalle(intento));
+
+            (await TypeDe(intento)).ShouldBe("/errors/tercero-tarifa-de-otro-tipo");
+        }
+
+        using (HttpResponseMessage venta = await AsignarTarifaAsync(cliente, tercero.Id, deVenta.Id, DeVenta))
+        {
+            venta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(venta));
+        }
+
+        using (HttpResponseMessage compra = await AsignarTarifaAsync(cliente, tercero.Id, deCompra.Id, DeCompra))
+        {
+            compra.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(compra));
+            (await compra.Content.ReadFromJsonAsync<TarifaAsignadaDto>())!.TarifaId.ShouldBe(deCompra.Id);
+        }
+
+        (await TarifaAsignadaAsync(cliente, tercero.Id, DeVenta))
+            .ShouldBe(new TarifaAsignadaDto(tercero.Id, deVenta.Id));
+        (await TarifaAsignadaAsync(cliente, tercero.Id, DeCompra))
+            .ShouldBe(new TarifaAsignadaDto(tercero.Id, deCompra.Id));
+    }
+
+    /// <summary>
+    /// Un tercero que no hace el rol del hueco es un 409 <c>tercero-tarifa-sin-su-rol</c>, y
+    /// quitar la de un hueco no lo pide.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El cliente que no es proveedor no tiene tarifa de compra</b>, y al revés. El dominio lo
+    /// exige lanzando, así que sin la guarda de la capa de aplicación esto sería un 500: el caso lo
+    /// ve por el código y por el <c>type</c>.
+    /// </para>
+    /// <para>
+    /// <b>Quitarla con nulo, en cambio, contesta 200 sin el rol</b>: un cliente que deja de serlo
+    /// conserva la suya y tiene que poder soltarla. La ficha de este caso no la tuvo nunca, que es
+    /// lo que se puede montar sin modificar el tercero; lo que se mira es que el nulo no pase por la
+    /// guarda.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Sin_el_rol_del_hueco_es_409_y_quitar_la_de_ese_hueco_no_lo_pide()
+    {
+        HttpClient cliente = await EnUnaEmpresaNuevaAsync(225);
+        TerceroDto soloCliente = await TerceroAsync(cliente, 32_000_024, esCliente: true, esProveedor: false);
+        TerceroDto soloProveedor = await TerceroAsync(cliente, 32_000_025, esCliente: false, esProveedor: true);
+        TarifaDto deVenta = await TarifaAsync(cliente, "PVP", s_desde, null);
+        TarifaDto deCompra = await TarifaAsync(cliente, "PRV", s_desde, null, tipo: "Compra");
+
+        foreach ((string quien, TerceroDto tercero, string hueco, TarifaDto tarifa) in
+            (IEnumerable<(string, TerceroDto, string, TarifaDto)>)
+            [("un cliente que no es proveedor", soloCliente, DeCompra, deCompra),
+             ("un proveedor que no es cliente", soloProveedor, DeVenta, deVenta)])
+        {
+            using HttpResponseMessage intento = await AsignarTarifaAsync(cliente, tercero.Id, tarifa.Id, hueco);
+
+            intento.StatusCode.ShouldBe(
+                HttpStatusCode.Conflict,
+                $"a {quien} se le ha asignado la tarifa del hueco {hueco}. " + await Escenario.Detalle(intento));
+
+            (await TypeDe(intento)).ShouldBe("/errors/tercero-tarifa-sin-su-rol");
+            (await TarifaAsignadaAsync(cliente, tercero.Id, hueco)).TarifaId.ShouldBeNull();
+
+            using HttpResponseMessage quitar = await AsignarTarifaAsync(cliente, tercero.Id, null, hueco);
+
+            quitar.StatusCode.ShouldBe(
+                HttpStatusCode.OK,
+                $"quitar la del hueco {hueco} a {quien} ha pedido el rol. " + await Escenario.Detalle(quitar));
+        }
     }
 
     private async Task<HttpClient> EnUnaEmpresaNuevaAsync(int semilla)
@@ -580,7 +700,8 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
         HttpClient cliente,
         string codigo,
         DateOnly desde,
-        DateOnly? hasta)
+        DateOnly? hasta,
+        string tipo = "Venta")
     {
         using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
             Tarifas,
@@ -588,7 +709,7 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
             {
                 Codigo = codigo,
                 Nombre = "Tarifa " + codigo,
-                Tipo = "Venta",
+                Tipo = tipo,
                 Divisa = await EuroAsync(cliente),
                 VigenteDesde = desde,
                 VigenteHasta = hasta,
@@ -619,24 +740,31 @@ public sealed class ContratoDeLosCrucesTests(PostgresConTodosLosModulos postgres
         return "EUR";
     }
 
-    /// <summary>Asigna la tarifa citando la versión de la FICHA, que es la que se escribe.</summary>
+    /// <summary>
+    /// Asigna la tarifa de un hueco —de venta, si no se dice— citando la versión de la FICHA, que
+    /// es la que se escribe.
+    /// </summary>
     private static async Task<HttpResponseMessage> AsignarTarifaAsync(
         HttpClient cliente,
         Guid terceroId,
-        Guid? tarifaId)
+        Guid? tarifaId,
+        string hueco = DeVenta)
     {
         string etiqueta = await cliente.EtiquetaDeAsync($"{Terceros}/{terceroId}");
 
         return await cliente.EnviarConVersionAsync(
             HttpMethod.Put,
-            $"{Terceros}/{terceroId}/tarifa-asignada",
+            $"{Terceros}/{terceroId}/{hueco}",
             etiqueta,
             JsonContent.Create(new AsignarTarifaDto { TarifaId = tarifaId }));
     }
 
-    private static async Task<TarifaAsignadaDto> TarifaAsignadaAsync(HttpClient cliente, Guid terceroId)
+    private static async Task<TarifaAsignadaDto> TarifaAsignadaAsync(
+        HttpClient cliente,
+        Guid terceroId,
+        string hueco = DeVenta)
     {
-        using HttpResponseMessage lectura = await cliente.GetAsync($"{Terceros}/{terceroId}/tarifa-asignada");
+        using HttpResponseMessage lectura = await cliente.GetAsync($"{Terceros}/{terceroId}/{hueco}");
 
         lectura.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(lectura));
 

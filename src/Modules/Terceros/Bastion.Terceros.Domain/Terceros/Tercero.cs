@@ -150,7 +150,8 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
     public Importe? LimiteCredito { get; private set; }
 
     /// <summary>
-    /// Qué tarifa se le aplica, o nula si se le aplica la que decida cada venta.
+    /// Qué tarifa de venta se le propone como cliente, o nula si se le aplica la que decida cada
+    /// venta.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -164,16 +165,23 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
     /// vigencia, y una cuya vigencia terminó es exactamente el <c>SoloResuelveLoViejo</c> del
     /// ADR-0023 con un sujeto nuevo: sigue poniéndole precio a los pedidos de cuando regía y no se
     /// le puede asignar a un cliente hoy. Que la asignación se guardara igual dejaría una ficha
-    /// apuntando a una política que ya no rige, y el error saldría en la primera venta.
+    /// apuntando a una política que ya no rige, y el error saldría en la primera venta. Desde el
+    /// 3.3 también contesta si es del tipo por el que se pregunta: esta es de venta.
     /// </para>
     /// <para>
-    /// <b>Convive con <see cref="LimiteCredito"/>, y las dos llevan divisa de maneras distintas: no
-    /// se comparan.</b> El límite lleva un código ISO dentro de su <see cref="Importe"/>; la tarifa
-    /// apunta con un <c>Guid</c> al maestro de Organización. Un límite en euros y una tarifa en
-    /// dólares <b>no son una contradicción</b>: el límite es cuánto se le fía, la tarifa es cómo se
-    /// le pone precio, y ningún importe nace aquí. El razonamiento entero —y cuál de las dos
-    /// representaciones es la buena— está en <c>docs/PLAN.md</c>, <i>Decisiones tomadas → ítem
-    /// 1.10</i>. Convertir de una a otra es del <c>TipoCambio</c>, y no es de la fase 1.
+    /// <b>Hasta el 3.3 era la única, <c>TarifaAsignadaId</c></b>, y la columna es la misma,
+    /// renombrada sin tocar una fila: toda tarifa de entonces era de venta, y toda asignación pasó a
+    /// ser la de venta del tercero, fuera cliente o no. Que la de venta pida un cliente lo mira cada
+    /// asignación nueva, igual que un cliente que deja de serlo conserva la suya.
+    /// </para>
+    /// <para>
+    /// <b>Convive con <see cref="LimiteCredito"/>, y no se comparan sus divisas.</b> El límite
+    /// lleva un código ISO dentro de su <see cref="Importe"/>, y la tarifa lo lleva en Catálogo
+    /// desde el 3.3 (ADR-0076). Un límite en euros y una tarifa en dólares <b>no son una
+    /// contradicción</b>: el límite es cuánto se le fía, la tarifa es cómo se le pone precio, y
+    /// ningún importe nace aquí. El razonamiento entero está en <c>docs/PLAN.md</c>, <i>Decisiones
+    /// tomadas → ítem 1.10</i>. Convertir de una a otra es del <c>TipoCambio</c>, y no es de la
+    /// fase 1.
     /// </para>
     /// <para>
     /// <b>Anulable a propósito.</b> Sin tarifa asignada no hay avería: la resolución de precio del
@@ -182,7 +190,23 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
     /// una tarifa «general» que no decide nada.
     /// </para>
     /// </remarks>
-    public Guid? TarifaAsignadaId { get; private set; }
+    public Guid? TarifaDeVentaId { get; private set; }
+
+    /// <summary>
+    /// Qué tarifa de compra tiene como proveedor, o nula si no tiene ninguna.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Entra en el 3.3, y es la que propone el precio de una línea de compra.</b> Antes el
+    /// tercero llevaba una sola tarifa, y uno que fuera cliente y proveedor habría recibido su
+    /// precio de venta como precio de compra. Es el mismo cruce que <see cref="TarifaDeVentaId"/>,
+    /// con el mismo puerto, y pide una tarifa de compra.
+    /// </para>
+    /// <para>
+    /// <b>Nula en todas las fichas de antes</b>: no había tarifas de compra que asignar.
+    /// </para>
+    /// </remarks>
+    public Guid? TarifaDeCompraId { get; private set; }
 
     /// <summary>Las personas con las que se habla en su casa.</summary>
     public IReadOnlyList<Contacto> Contactos => _contactos;
@@ -433,25 +457,39 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
         LimiteCredito = limite;
     }
 
-    /// <summary>Asigna —o retira, con <c>null</c>— la tarifa de este tercero.</summary>
+    /// <summary>Asigna —o retira, con <c>null</c>— la tarifa de venta de este tercero.</summary>
     /// <remarks>
+    /// <para>
     /// El estado de la tarifa <b>ya viene preguntado</b>: el dominio no sale a buscar nada, y
     /// mucho menos a otro módulo. Lo que sí es suyo es negarse mientras esté bloqueado, que es lo
     /// que hace <c>ExigirQueSePuedaTratar</c> — asignarle una tarifa a un tercero con los datos
     /// reservados es tratarlos (art. 32 de la LOPDGDD).
+    /// </para>
+    /// <para>
+    /// <b>Y pide un cliente, que también es suyo.</b> La capa de aplicación lo mira antes para
+    /// contestar con su <c>type</c>; este lo vuelve a exigir lanzando, para que la regla siga
+    /// puesta cuando la llamada venga de otro sitio. Quitarla no lo pide: un cliente que deja de
+    /// serlo conserva la suya, y tiene que poder soltarla.
+    /// </para>
     /// </remarks>
     /// <param name="tarifaId">La tarifa, ya comprobada por su puerto, o <c>null</c> para quitarla.</param>
-    public void AsignarTarifa(Guid? tarifaId)
+    public void AsignarTarifaDeVenta(Guid? tarifaId)
     {
-        ExigirQueSePuedaTratar();
+        ExigirQueSePuedaAsignar(tarifaId, EsCliente, "de venta", "cliente");
 
-        if (tarifaId == Guid.Empty)
-        {
-            throw new ArgumentException(
-                "Una tarifa asignada es alguna tarifa, o ninguna.", nameof(tarifaId));
-        }
+        TarifaDeVentaId = tarifaId;
+    }
 
-        TarifaAsignadaId = tarifaId;
+    /// <summary>Asigna —o retira, con <c>null</c>— la tarifa de compra de este tercero.</summary>
+    /// <remarks>
+    /// La gemela de <see cref="AsignarTarifaDeVenta"/>, con un proveedor en lugar de un cliente.
+    /// </remarks>
+    /// <param name="tarifaId">La tarifa, ya comprobada por su puerto, o <c>null</c> para quitarla.</param>
+    public void AsignarTarifaDeCompra(Guid? tarifaId)
+    {
+        ExigirQueSePuedaAsignar(tarifaId, EsProveedor, "de compra", "proveedor");
+
+        TarifaDeCompraId = tarifaId;
     }
 
     /// <inheritdoc/>
@@ -483,6 +521,23 @@ public sealed class Tercero : EntidadBase, IDeInquilino, IBloqueable
             "Un tercero bloqueado",
             "el art. 32 de la LOPDGDD impide el tratamiento de los datos bloqueados, y " +
             "modificarlos es tratarlos");
+
+    private void ExigirQueSePuedaAsignar(Guid? tarifaId, bool haceEseRol, string tipo, string rol)
+    {
+        ExigirQueSePuedaTratar();
+
+        if (tarifaId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Una tarifa asignada es alguna tarifa, o ninguna.", nameof(tarifaId));
+        }
+
+        if (tarifaId is not null && !haceEseRol)
+        {
+            throw new InvalidOperationException(
+                $"La tarifa {tipo} es la de un {rol}, y este tercero no lo es.");
+        }
+    }
 
     private static void ExigirAlgunRol(bool esCliente, bool esProveedor)
     {

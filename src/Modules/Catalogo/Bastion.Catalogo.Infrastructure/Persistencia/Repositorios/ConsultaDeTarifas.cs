@@ -1,4 +1,5 @@
 using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Catalogo.Domain.Catalogo;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
@@ -10,7 +11,7 @@ namespace Bastion.Catalogo.Infrastructure.Persistencia.Repositorios;
 /// </remarks>
 internal sealed class ConsultaDeTarifas(CatalogoDbContext contexto) : IConsultaDeTarifas
 {
-    /// <summary>Las tres respuestas, de una sola consulta.</summary>
+    /// <summary>Las cuatro respuestas, de una sola consulta.</summary>
     /// <remarks>
     /// <para>
     /// <b>La vigencia se evalúa en SQL y con la misma convención que el dominio:</b> cerrada por
@@ -21,8 +22,9 @@ internal sealed class ConsultaDeTarifas(CatalogoDbContext contexto) : IConsultaD
     /// </para>
     /// <para>
     /// <b>Una sola consulta y no dos</b> —existir y regir—, por lo mismo que en los otros puertos:
-    /// dos lecturas dejan un hueco en el que la fila cambia. El nulo del anulable <b>es</b> la
-    /// respuesta a «¿existe?».
+    /// dos lecturas dejan un hueco en el que la fila cambia. La fila que falta <b>es</b> la
+    /// respuesta a «¿existe?». <b>Y el tipo se mira antes que la vigencia</b>, porque es el que no
+    /// tiene arreglo dentro del mismo código (<see cref="EstadoDeLaTarifa.EsDeOtroTipo"/>).
     /// </para>
     /// <para>
     /// <b>Y va por el filtro de inquilinato (R8).</b> Una tarifa de otra empresa contesta
@@ -31,23 +33,41 @@ internal sealed class ConsultaDeTarifas(CatalogoDbContext contexto) : IConsultaD
     /// </para>
     /// </remarks>
     /// <param name="tarifaId">Identificador de la tarifa.</param>
+    /// <param name="tipo">El tipo que tiene que tener.</param>
     /// <param name="enLaFecha">Día para el que se pregunta.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     public async Task<EstadoDeLaTarifa> EstadoDeAsync(
-        Guid tarifaId, DateOnly enLaFecha, CancellationToken cancelacion)
+        Guid tarifaId, TipoDeLaTarifa tipo, DateOnly enLaFecha, CancellationToken cancelacion)
     {
-        bool? rige = await contexto.Tarifas
+        TipoDeTarifa buscado = tipo switch
+        {
+            TipoDeLaTarifa.Venta => TipoDeTarifa.Venta,
+            TipoDeLaTarifa.Compra => TipoDeTarifa.Compra,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(tipo), tipo, "Una tarifa es de venta o de compra."),
+        };
+
+        var fila = await contexto.Tarifas
             .Where(tarifa => tarifa.Id == tarifaId)
-            .Select(tarifa => (bool?)(tarifa.VigenteDesde <= enLaFecha
-                && (tarifa.VigenteHasta == null || enLaFecha <= tarifa.VigenteHasta)))
+            .Select(tarifa => new
+            {
+                tarifa.Tipo,
+                Rige = tarifa.VigenteDesde <= enLaFecha
+                    && (tarifa.VigenteHasta == null || enLaFecha <= tarifa.VigenteHasta),
+            })
             .FirstOrDefaultAsync(cancelacion)
             .ConfigureAwait(false);
 
-        return rige switch
+        if (fila is null)
         {
-            null => EstadoDeLaTarifa.NoExiste,
-            true => EstadoDeLaTarifa.RigeEnEsaFecha,
-            false => EstadoDeLaTarifa.SoloResuelveLoViejo,
-        };
+            return EstadoDeLaTarifa.NoExiste;
+        }
+
+        if (fila.Tipo != buscado)
+        {
+            return EstadoDeLaTarifa.EsDeOtroTipo;
+        }
+
+        return fila.Rige ? EstadoDeLaTarifa.RigeEnEsaFecha : EstadoDeLaTarifa.SoloResuelveLoViejo;
     }
 }

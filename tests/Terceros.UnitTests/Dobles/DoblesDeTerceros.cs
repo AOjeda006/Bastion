@@ -12,11 +12,13 @@ namespace Bastion.Terceros.UnitTests.Dobles;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Apunta el identificador Y la fecha, y las dos hacen falta.</b> Sin el identificador, un caso
-/// de uso que <b>no llamara</b> al puerto y guardara la tarifa tal cual pasaría el caso de «se
-/// asigna» sin haber preguntado nada: verde por no hacer el trabajo. Sin la fecha, la mitad de la
-/// pregunta que decide —una tarifa rige <i>en un día</i>— se quedaría sin testigo, y preguntar con
-/// <c>DateOnly.MinValue</c> saldría igual de verde.
+/// <b>Apunta el identificador, el tipo Y la fecha, y los tres hacen falta.</b> Sin el
+/// identificador, un caso de uso que <b>no llamara</b> al puerto y guardara la tarifa tal cual
+/// pasaría el caso de «se asigna» sin haber preguntado nada: verde por no hacer el trabajo. Sin la
+/// fecha, la mitad de la pregunta que decide —una tarifa rige <i>en un día</i>— se quedaría sin
+/// testigo, y preguntar con <c>DateOnly.MinValue</c> saldría igual de verde. Y sin el tipo (3.3),
+/// un caso de uso que preguntara siempre por una de venta pasaría todos los casos del proveedor,
+/// porque el doble contesta lo mismo pregunte lo que pregunte.
 /// </para>
 /// <para>
 /// Es el gemelo de <c>DivisasEn</c> y <c>UnidadesEn</c> de Catálogo: mismo patrón, otro módulo,
@@ -27,14 +29,15 @@ namespace Bastion.Terceros.UnitTests.Dobles;
 /// </remarks>
 internal sealed class TarifasEn(EstadoDeLaTarifa estado) : IConsultaDeTarifas
 {
-    internal List<(Guid Tarifa, DateOnly EnLaFecha)> Preguntadas { get; } = [];
+    internal List<(Guid Tarifa, TipoDeLaTarifa Tipo, DateOnly EnLaFecha)> Preguntadas { get; } = [];
 
     public Task<EstadoDeLaTarifa> EstadoDeAsync(
         Guid tarifaId,
+        TipoDeLaTarifa tipo,
         DateOnly enLaFecha,
         CancellationToken cancelacion)
     {
-        Preguntadas.Add((tarifaId, enLaFecha));
+        Preguntadas.Add((tarifaId, tipo, enLaFecha));
 
         return Task.FromResult(estado);
     }

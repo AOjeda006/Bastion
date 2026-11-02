@@ -462,11 +462,17 @@ export const tiposDeError: TiposDeError = {
   'tercero-duplicado': 'This company already has a business partner with that tax identifier.',
   'tercero-no-encontrado':
     'That business partner no longer exists. Go back to the list and refresh.',
+  'tercero-tarifa-de-otro-tipo':
+    'That price list is of the other type: the sales one takes a sales price list, and the ' +
+    'purchase one, a purchase price list. Choose one of the right type.',
   'tercero-tarifa-no-encontrada':
     'That price list does not exist. Choose one from the price lists master.',
   'tercero-tarifa-no-vigente':
     'That price list is no longer in force: it still applies to whatever was issued while ' +
     'it ran, but it cannot be assigned today. Choose one that is in force.',
+  'tercero-tarifa-sin-su-rol':
+    'This business partner does not play that role: the sales price list belongs to a customer, ' +
+    'and the purchase one to a supplier. Mark it as such in its record first.',
   'tipo-cambio-duplicado': 'There is already an exchange rate for that currency on that date.',
   'tipo-cambio-no-encontrado': 'That exchange rate no longer exists.',
   // Ver `tiposDeError.es.ts`: las veintinueve de la transferencia, que dicen qué punta del viaje

@@ -473,8 +473,8 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(171, "acciones en total");
-        cambian.Count.ShouldBe(100, "acciones que cambian estado");
+        todas.Count.ShouldBe(173, "acciones en total");
+        cambian.Count.ShouldBe(101, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
         // seis altas con clave de idempotencia, ocho modificaciones con If-Match —dos de impuestos,
@@ -771,7 +771,13 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         //
         // Ciento setenta y una con las seis de Inventario: ajustes, recuentos y sus líneas,
         // transferencias y sus líneas, que salen de su ficha, y los saldos a una fecha. Seis lecturas.
-        cambian.Count(accion => accion.ExigeVersion).ShouldBe(54, "operaciones que exigen If-Match");
+        //
+        // Ciento setenta y tres desde el 3.3, con una tarifa por rol en el tercero: la asignada del
+        // 1.10 pasa a ser la de venta, con su lectura y su `PUT`, y entra la de compra, con los
+        // suyos. El reparto es +2 al total, +1 a las que cambian estado, +1 a If-Match y cero a todo
+        // lo demás: lo que se modifica sigue siendo el tercero, así que el `PUT` nuevo cita su
+        // versión y no lleva clave, como el de la de venta.
+        cambian.Count(accion => accion.ExigeVersion).ShouldBe(55, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(32, "rutas que admiten Idempotency-Key");
         s_exentas.Count.ShouldBe(17, "acciones exentas con motivo escrito");
@@ -797,7 +803,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // solo las de `s_conLosDos` caen en dos. Los dos primeros tests lo comprueban por nombre;
         // esto lo comprueba por cuenta, que es lo que se rompe si alguien añade una acción y una
         // exención a la vez.
-        (54 + 32 - s_conLosDos.Count + s_exentas.Count).ShouldBe(cambian.Count);
+        (55 + 32 - s_conLosDos.Count + s_exentas.Count).ShouldBe(cambian.Count);
     }
 
     /// <summary>
